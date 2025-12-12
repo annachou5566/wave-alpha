@@ -576,7 +576,7 @@
                 <i class="fas fa-book-open"></i> <span class="d-none d-md-inline">GUIDE</span>
             </button>
 
-            <button class="btn-icon text-gold" onclick="updateAllPrices()" title="Update Price"><i class="fas fa-sync-alt"></i></button>
+            <button class="btn-icon text-gold" onclick="fetchRealAlphaVolume()" title="Update Real Volume (UTC+0)"><i class="fas fa-sync-alt"></i></button>
             <button class="btn-icon" onclick="loadFromCloud()" title="Reload Data"><i class="fas fa-database"></i></button>
             <button class="btn-icon" onclick="openSettingsModal()" title="Wallets"><i class="fas fa-wallet"></i></button>
             <button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
@@ -3296,4 +3296,5 @@ function restoreData(input) {
 </div>
 
 </body>
+
 </html>
