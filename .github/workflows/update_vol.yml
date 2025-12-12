@@ -1,38 +1,34 @@
 name: Update Alpha Volume
 
 on:
-  # Lệnh này sẽ chạy tự động mỗi 30 phút. 
+  # Chạy tự động mỗi 30 phút (Cron schedule)
   schedule:
     - cron: '*/30 * * * *' 
-  # Lệnh này cho phép bạn bấm nút 'Run workflow' bằng tay để kiểm tra ngay lập tức.
+  # Cho phép bấm nút 'Run workflow' thủ công
   workflow_dispatch: 
 
 jobs:
   build:
-    # Chạy trên máy ảo Ubuntu
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        # Lấy code từ Repository của bạn về máy ảo
         uses: actions/checkout@v3
 
       - name: Setup Python
-        # Cài đặt môi trường Python 3.9
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
       - name: Install Dependencies
-        # Cài đặt các thư viện Python cần thiết (cloudscraper, pandas, requests)
         run: pip install cloudscraper pandas requests
 
       - name: Run Python Script to Get Data
-        # Chạy file Python bạn đã tạo ở BƯỚC 2
         run: python get_volume.py
 
-            - name: Commit and Push Data (alpha_data.json)
-        # Sửa lỗi: Đổi tham số 'files' thành 'file_pattern'
+      - name: Commit and Push Data (alpha_data.json)
+        # Sử dụng Action tự động lưu file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          file_pattern: 'alpha_data.json' # <--- ĐÃ SỬA
+          # Đã sửa thành 'file_pattern' (tham số đúng)
+          file_pattern: 'alpha_data.json' 
           commit_message: "Auto update alpha volume data"
