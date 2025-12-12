@@ -1,0 +1,9 @@
+{
+  "name": "wave-alpha-terminal",
+  "version": "1.0.0",
+  "description": "Binance Alpha Tracker",
+  "main": "index.html",
+  "dependencies": {
+    "axios": "^1.7.2"
+  }
+}
