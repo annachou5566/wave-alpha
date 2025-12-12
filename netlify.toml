@@ -1,8 +1,0 @@
-[build]
-  # Thư mục chứa các hàm máy chủ (Netlify Functions)
-  functions = "netlify/functions"
-  # Lệnh build tùy chỉnh: Netlify sẽ chạy lệnh này trước khi triển khai
-  command = "npm install"
-
-[functions]
-  node_bundler = "esbuild"
