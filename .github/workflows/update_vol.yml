@@ -30,10 +30,9 @@ jobs:
         # Chạy file Python bạn đã tạo ở BƯỚC 2
         run: python get_volume.py
 
-      - name: Commit and Push Data (alpha_data.json)
-        # Sử dụng Action tự động lưu file mới tạo (alpha_data.json)
+            - name: Commit and Push Data (alpha_data.json)
+        # Sửa lỗi: Đổi tham số 'files' thành 'file_pattern'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          # Chỉ lưu file JSON vừa được tạo ra
-          files: alpha_data.json
+          file_pattern: 'alpha_data.json' # <--- ĐÃ SỬA
           commit_message: "Auto update alpha volume data"
