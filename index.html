@@ -576,7 +576,8 @@
                 <i class="fas fa-book-open"></i> <span class="d-none d-md-inline">GUIDE</span>
             </button>
 
-            <button class="btn-icon text-gold" onclick="updateAllPrices()" title="Update Price"><i class="fas fa-sync-alt"></i></button>
+            <button class="btn-icon text-gold" onclick="handleSmartRefresh()" title="Smart Sync">
+<i class="fas fa-sync-alt"></i></button>
             <button class="btn-icon" onclick="loadFromCloud()" title="Reload Data"><i class="fas fa-database"></i></button>
             <button class="btn-icon" onclick="openSettingsModal()" title="Wallets"><i class="fas fa-wallet"></i></button>
             <button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
@@ -673,6 +674,37 @@
 </footer>
 
 <!-- AUTH MODAL -->
+<div class="modal fade" id="settingsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-white">MANAGE WALLETS</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-sub small mb-3">Define accounts to track volume separately (e.g. Main, Sub, Friend).</p>
+                
+                <div id="settingsList" class="d-flex flex-column gap-2 mb-3">
+                    </div>
+
+                <label class="small fw-bold text-brand mb-1">ADD NEW WALLET</label>
+                <div class="input-group">
+                    <input type="color" class="form-control form-control-color" id="newAccColor" value="#00F0FF" title="Choose Color">
+                    <input type="text" class="form-control" id="newAccName" placeholder="Name (e.g. Account 3)">
+                    <button class="btn btn-light fw-bold" onclick="addNewAccount()">ADD</button>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button class="btn btn-sm btn-outline-secondary border-0" onclick="syncLocalToCloud()">
+                        <i class="fas fa-cloud-upload-alt me-1"></i> Sync Old Data to Cloud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <div class="modal fade" id="loginModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0" style="background: linear-gradient(145deg, #1a1e23, #111); border: 1px solid var(--border);"><div class="modal-body p-4 text-center"><div class="mb-4"><div style="width:60px;height:60px;background:rgba(0,240,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:1px solid var(--brand);box-shadow:0 0 15px rgba(0,240,255,0.3)"><i class="fas fa-shield-alt text-brand fa-2x"></i></div></div><h5 class="fw-bold text-white mb-1">SECURE ACCESS</h5><p class="text-sub small mb-4">Authenticate via Email OTP</p><div id="login-step-1"><input type="email" id="otp-email" class="form-control mb-3 text-center" placeholder="name@example.com" style="border-radius: 20px;"><button class="btn-action rounded-pill" onclick="sendOtpCode()">SEND CODE <i class="fas fa-paper-plane ms-2"></i></button></div><div id="login-step-2" style="display:none"><input type="text" id="otp-token" class="form-control mb-3 text-center fw-bold text-brand fs-4 letter-spacing-1" placeholder="• • • • • •" maxlength="6" style="border-radius: 20px; background: #000; border-color: var(--brand);"><button class="btn-action rounded-pill mb-3" onclick="verifyOtpCode()">VERIFY LOGIN</button><a href="#" onclick="resetLoginModal()" class="text-sub small text-decoration-none">Change Email</a></div></div></div></div></div>
 
 <!-- PRIVACY POLICY MODAL (REQUIRED FOR ADS) -->
@@ -1656,15 +1688,49 @@ function applyLanguage() {
         }
     });
 
+        /* --- [V46] SMART REFRESH SYSTEM (Anti-Spam) --- */
+    let lastRefreshTime = 0;
+    const REFRESH_COOLDOWN = 10000; // 10 giây
+
+    async function handleSmartRefresh() {
+        const now = Date.now();
+        const timeLeft = Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshTime)) / 1000);
+
+        if (now - lastRefreshTime < REFRESH_COOLDOWN) {
+            showToast(`Please wait ${timeLeft}s to refresh again!`, "error");
+            return;
+        }
+
+        lastRefreshTime = now;
+        
+        // Hiệu ứng xoay icon
+        const icon = document.querySelector('.fa-sync-alt');
+        if(icon) icon.classList.add('fa-spin');
+
+        showToast("Syncing latest Bot data...", "info");
+
+        try {
+            // 1. Tải dữ liệu mới nhất từ Supabase (Do Bot Python nạp)
+            await loadFromCloud(false); 
+            
+            // 2. Tải giá Realtime (DexScreener nhanh hơn Binance cho Web)
+            await updateAllPrices();
+            
+            showToast("Data Updated Successfully!", "success");
+        } catch (e) {
+            showToast("Update failed: " + e.message, "error");
+        } finally {
+            if(icon) icon.classList.remove('fa-spin');
+        }
+    }
+
     async function updateAllPrices() {
+        // Hàm này chỉ chuyên lấy giá (nhẹ)
         for(let c of compList) {
             if(c.contract) {
-                let isEnded = false;
-                if(c.end) {
-                    let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
-                    if(Date.now() > endTime) isEnded = true;
-                }
-                if(isEnded) continue; 
+                // Bỏ qua nếu giải đã kết thúc
+                if(c.end && new Date() > new Date(c.end + 'T' + (c.endTime || '23:59:59'))) continue;
+                
                 try {
                     let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.contract}`);
                     let d = await r.json();
