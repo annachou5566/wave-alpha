@@ -1741,98 +1741,158 @@ function applyLanguage() {
         renderGrid();
     }
 
-                  /* ==========================================================
-       LOGIC HIỂN THỊ CỐ ĐỊNH & KÉO THẢ (FIXED ORDER) - FINAL
-       ========================================================== */
-
-            /* --- HÀM VẼ BIỂU ĐỒ LỊCH SỬ VOLUME (ĐÃ NÂNG CẤP) --- */
+                  
+        /* --- HÀM VẼ BIỂU ĐỒ BUY/SELL + MIN TARGET (V50 PRO) --- */
     let volHistChart = null;
 
     function openVolHistory(dbId) {
         let c = compList.find(x => x.db_id == dbId);
         if(!c) return;
 
-        document.getElementById('vh-title').innerText = c.name + " / USDT";
-        document.getElementById('vh-subtitle').innerText = "Volume History (Last 10 Days)";
+        document.getElementById('vh-title').innerText = c.name + " MARKET DEPTH";
+        document.getElementById('vh-subtitle').innerText = "Green: Buy Vol | Red: Sell Vol | Yellow: Target";
         
-        let history = c.real_vol_history || [];
-        
-        // Sắp xếp tăng dần theo ngày
-        history.sort((a,b) => new Date(a.date) - new Date(b.date));
-        
-        // Cắt lấy 10 ngày cuối cùng
-        let recentHistory = history.slice(-10);
+        let realHistory = c.real_vol_history || [];
+        let minHistory = c.history || [];
 
-        // Fake data nếu chưa có
-        if (recentHistory.length === 0 && c.real_alpha_volume) {
-            let today = new Date().toISOString().split('T')[0];
-            recentHistory = [{date: today, vol: c.real_alpha_volume}];
+        // Gộp ngày
+        let allDates = new Set([
+            ...realHistory.map(x => x.date), 
+            ...minHistory.map(x => x.date)
+        ]);
+        
+        let isRunning = true;
+        if(c.end) {
+            let todayStr = new Date().toISOString().split('T')[0];
+            if (todayStr > c.end) isRunning = false;
         }
 
-        let labels = recentHistory.map(h => {
-            let parts = h.date.split('-');
-            return `${parts[2]}/${parts[1]}`; // DD/MM
-        });
-        let dataVals = recentHistory.map(h => h.vol);
+        if (allDates.size === 0 && isRunning) {
+            allDates.add(new Date().toISOString().split('T')[0]);
+        }
 
+        let sortedDates = Array.from(allDates).sort((a,b) => new Date(a) - new Date(b));
+
+        // Lọc ngày kết thúc
+        if (c.end) {
+            sortedDates = sortedDates.filter(d => d <= c.end);
+        }
+
+        // Lấy 10 ngày cuối
+        let recentDates = sortedDates.slice(-10);
+
+        let labels = [];
+        let dataBuy = [];
+        let dataSell = [];
+        let dataMin = [];
+
+        recentDates.forEach(date => {
+            let parts = date.split('-');
+            labels.push(`${parts[2]}/${parts[1]}`); // DD/MM
+
+            // Xử lý Real Vol
+            let rItem = realHistory.find(x => x.date === date);
+            
+            let total = 0;
+            let buy = 0;
+
+            if (rItem) {
+                total = rItem.vol || 0;
+                buy = rItem.buy_vol || 0; // Lấy Buy Vol từ Bot
+            } else if (date === new Date().toISOString().split('T')[0] && isRunning) {
+                // Nếu chưa có lịch sử, tạm lấy số tổng, coi buy = 50% (tạm) hoặc 0
+                total = c.real_alpha_volume || 0;
+                buy = total * 0.5; // Fake tạm tỉ lệ 50-50 cho ngày hiện tại nếu chưa có Bot chạy
+            }
+
+            // Tính Sell = Total - Buy
+            let sell = total - buy;
+            if (sell < 0) sell = 0; // An toàn
+
+            dataBuy.push(buy);
+            dataSell.push(sell);
+
+            // Min Vol Target
+            let mItem = minHistory.find(x => x.date === date);
+            dataMin.push(mItem ? mItem.target : 0);
+        });
+
+        // Vẽ Chart
         new bootstrap.Modal(document.getElementById('volHistoryModal')).show();
 
         const ctx = document.getElementById('volHistoryChart').getContext('2d');
         if (volHistChart) volHistChart.destroy();
 
-        // Màu Gradient Cyberpunk
-        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(0, 240, 255, 0.8)'); 
-        gradient.addColorStop(1, 'rgba(0, 240, 255, 0.05)'); 
-
         volHistChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Volume',
-                    data: dataVals,
-                    backgroundColor: gradient,
-                    borderColor: '#00F0FF',
-                    borderWidth: 1,
-                    borderRadius: 4,
-                    barPercentage: 0.6,
-                    hoverBackgroundColor: '#fff'
-                }]
+                datasets: [
+                    {
+                        label: 'Min Target',
+                        data: dataMin,
+                        type: 'line',
+                        borderColor: '#F0B90B', // Vàng
+                        backgroundColor: '#F0B90B',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#000',
+                        pointBorderColor: '#F0B90B',
+                        tension: 0.3,
+                        order: 0, // Vẽ trên cùng
+                        yAxisID: 'y1' // Trục phải
+                    },
+                    {
+                        label: 'Sell Vol',
+                        data: dataSell,
+                        backgroundColor: '#F6465D', // Đỏ (Sell)
+                        stack: 'Stack 0', // Chồng lên nhau
+                        order: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Buy Vol',
+                        data: dataBuy,
+                        backgroundColor: '#0ECB81', // Xanh (Buy)
+                        stack: 'Stack 0', // Chồng lên nhau
+                        order: 1,
+                        yAxisID: 'y'
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 scales: {
-                    x: { grid: { display: false }, ticks: { color: '#848e9c', font: { family: 'Rajdhani', size: 11, weight: '600' } } },
+                    x: { 
+                        stacked: true, // Bật chế độ chồng cột
+                        grid: { display: false }, 
+                        ticks: { color: '#848e9c', font: { family: 'Rajdhani', size: 11, weight: 'bold' } } 
+                    },
                     y: { 
-                        position: 'right', 
-                        grid: { color: '#2b3139', borderDash: [4, 4] }, 
-                        ticks: { 
-                            color: '#848e9c',
-                            font: { family: 'Rajdhani', size: 11 },
-                            callback: function(value) { 
-                                // Rút gọn số (k, M)
-                                if(value >= 1000000) return (value/1000000).toFixed(1) + 'M';
-                                if(value >= 1000) return (value/1000).toFixed(0) + 'k';
-                                return value; 
-                            } 
-                        } 
+                        stacked: true, // Bật chế độ chồng cột
+                        type: 'linear', display: true, position: 'left',
+                        grid: { color: '#2b3139', borderDash: [4, 4] },
+                        ticks: { color: '#848e9c', font: { family: 'Rajdhani', size: 10 }, callback: function(v) { return v>=1000000?(v/1000000).toFixed(1)+'M':(v>=1000?(v/1000).toFixed(0)+'k':v); } }
+                    },
+                    y1: { 
+                        type: 'linear', display: true, position: 'right', grid: { display: false },
+                        ticks: { color: '#F0B90B', font: { family: 'Rajdhani', size: 10, weight: 'bold' }, callback: function(v) { return v>=1000000?(v/1000000).toFixed(1)+'M':(v>=1000?(v/1000).toFixed(0)+'k':v); } }
                     }
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: { display: true, labels: { color: '#fff', font: { size: 10 }, boxWidth: 10 } },
                     tooltip: {
-                        backgroundColor: 'rgba(22, 26, 30, 0.95)',
-                        titleColor: '#00F0FF',
-                        titleFont: { family: 'Rajdhani', size: 14 },
-                        bodyFont: { family: 'Rajdhani', size: 14, weight: 'bold' },
-                        borderColor: '#333', borderWidth: 1, padding: 10, displayColors: false,
+                        backgroundColor: 'rgba(22, 26, 30, 0.95)', titleColor: '#fff', bodyColor: '#fff', borderColor: '#333', borderWidth: 1, padding: 10,
                         callbacks: {
-                            title: function(context) { return context[0].label; },
                             label: function(context) {
-                                // KHÔNG HIỆN SỐ LẺ Ở TOOLTIP
-                                return '$ ' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(context.raw);
+                                let label = context.dataset.label || '';
+                                let val = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(context.raw);
+                                return ` ${label}: $${val}`;
                             }
                         }
                     }
@@ -1841,9 +1901,8 @@ function applyLanguage() {
         });
     }
 
-    /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) --- */
-        /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - ĐÃ NÂNG CẤP V45 --- */
-        /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - FINAL FIXED V47 --- */
+
+    /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - FINAL FIXED V47 --- */
     function renderGrid() {
         const grid = document.getElementById('appGrid'); 
         if(!grid) return; 
@@ -1890,9 +1949,9 @@ function applyLanguage() {
                     realVolColor = '#d0aaff'; 
                 }
 
-                // 3. THỜI GIAN CẬP NHẬT (TIME AGO) - ĐÃ SỬA LỖI HIỂN THỊ
+                // 3. THỜI GIAN CẬP NHẬT
                 let lastUpd = c.last_updated_ts || 0;
-                let timeAgoStr = 'Pending update...'; // Mặc định nếu chưa có dữ liệu
+                let timeAgoStr = 'Pending update...'; 
                 
                 if (lastUpd > 0) {
                     let diffMin = Math.floor((Date.now() - lastUpd) / 60000);
@@ -2010,7 +2069,6 @@ function applyLanguage() {
         
         try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) }); } catch (e) {}
     }
-
 
 
     /* --- CÁC HÀM XỬ LÝ DRAG & DROP --- */
