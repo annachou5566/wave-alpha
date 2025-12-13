@@ -1962,9 +1962,7 @@ function applyLanguage() {
         // Hàm này chỉ chuyên lấy giá (nhẹ)
         for(let c of compList) {
             if(c.contract) {
-                // Bỏ qua nếu giải đã kết thúc
-                if(c.end && new Date() > new Date(c.end + 'T' + (c.endTime || '23:59:59'))) continue;
-
+                
                 try {
                     let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.contract}`);
                     let d = await r.json();
