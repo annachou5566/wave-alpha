@@ -1692,38 +1692,46 @@ function applyLanguage() {
     let lastRefreshTime = 0;
     const REFRESH_COOLDOWN = 10000; // 10 giây
 
+    // --- [V49] SUPER REFRESH: DÙNG SUPABASE EDGE FUNCTION ---
     async function handleSmartRefresh() {
+        // 1. Anti-Spam
         const now = Date.now();
+        const REFRESH_COOLDOWN = 10000; 
         const timeLeft = Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshTime)) / 1000);
 
         if (now - lastRefreshTime < REFRESH_COOLDOWN) {
-            showToast(`Please wait ${timeLeft}s to refresh again!`, "error");
+            showToast(`Vui lòng đợi ${timeLeft}s!`, "error");
             return;
         }
-
         lastRefreshTime = now;
-        
-        // Hiệu ứng xoay icon
+
         const icon = document.querySelector('.fa-sync-alt');
         if(icon) icon.classList.add('fa-spin');
-
-        showToast("Syncing latest Bot data...", "info");
+        
+        showToast("Đang gửi lệnh cập nhật lên Server...", "info");
 
         try {
-            // 1. Tải dữ liệu mới nhất từ Supabase (Do Bot Python nạp)
-            await loadFromCloud(false); 
-            
-            // 2. Tải giá Realtime (DexScreener nhanh hơn Binance cho Web)
-            await updateAllPrices();
-            
-            showToast("Data Updated Successfully!", "success");
+            // 2. GỌI SUPABASE EDGE FUNCTION
+            const { data, error } = await supabase.functions.invoke('refresh-volume');
+
+            if (error) throw error;
+
+            if (data && data.success) {
+                showToast(`Thành công! Đã cập nhật ${data.count} tokens.`, "success");
+                
+                // 3. Tải lại dữ liệu hiển thị
+                await loadFromCloud(false); 
+            } else {
+                throw new Error("Server trả về lỗi hoặc không có token nào cần update.");
+            }
+
         } catch (e) {
-            showToast("Update failed: " + e.message, "error");
+            console.error(e);
+            showToast("Lỗi hệ thống: " + e.message, "error");
         } finally {
             if(icon) icon.classList.remove('fa-spin');
         }
     }
-
     async function updateAllPrices() {
         // Hàm này chỉ chuyên lấy giá (nhẹ)
         for(let c of compList) {
@@ -3546,3 +3554,4 @@ function restoreData(input) {
 
 </body>
 </html>
+
