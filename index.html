@@ -3,124 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <!-- V45 SEO & SOCIAL PREVIEW (Đã cập nhật Banner Động) -->
+
     <title>WAVE ALPHA | V45 SECURITY & ARSENAL</title>
     <meta name="description" content="Predict Market Volume, Win USDT. The most advanced crypto simulation terminal.">
     <meta property="og:title" content="WAVE ALPHA TERMINAL">
     <meta property="og:description" content="Tham gia dự đoán Volume Bitcoin & nhận thưởng ngay hôm nay!">
-    <!-- Banner tự động theo theme Cyberpunk (Không cần upload) -->
     <meta property="og:image" content="https://placehold.co/1200x630/0b0e11/00F0FF.png?text=WAVE+ALPHA+TERMINAL&font=montserrat">
     <meta property="og:url" content="https://wave-alpha.app">
     <meta name="twitter:card" content="summary_large_image">
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- GOOGLE ANALYTICS 4 (FIXED: Added missing definition) -->
+
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KTKQYTJ2ZC"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);} // Đã thêm lại dòng này để định nghĩa hàm gtag
-      gtag('js', new Date());
-
-      // Thay G-XXXXXXXXXX bằng ID đo lường của bạn
-      gtag('config', 'G-KTKQYTJ2ZC');
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-KTKQYTJ2ZC');
     </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- V45 NEW LIBS: HTML2CANVAS & QRCODE -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 
     <style>
         /* --- CORE THEME (Original V44) --- */
         :root {
             --bg-body: #0b0e11; --bg-card: #161a1e; --bg-header: #181a20;
             --bg-input: #2b3139; --border: #353a42; --text-main: #eaecef; --text-sub: #848e9c;
-            --brand: #00F0FF; --brand-glow: rgba(0, 240, 255, 0.3); 
-            --accent-yellow: #F0B90B; --accent-green: #0ECB81; --accent-red: #F6465D; 
-            --purple: #9945FF; 
+            --brand: #00F0FF; --brand-glow: rgba(0, 240, 255, 0.3);
+            --accent-yellow: #F0B90B; --accent-green: #0ECB81; --accent-red: #F6465D;
+            --purple: #9945FF;
             --font-main: 'Be Vietnam Pro', sans-serif; --font-num: 'Rajdhani', sans-serif;
         }
         body { background-color: var(--bg-body); color: var(--text-main); font-family: var(--font-main); font-size: 13px; display: flex; flex-direction: column; min-height: 100vh; }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg-body); } ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         .font-num { font-family: var(--font-num); font-weight: 700; letter-spacing: 0.5px; }
-        .text-brand { color: var(--brand) !important; text-shadow: 0 0 10px var(--brand-glow); } 
+        .text-brand { color: var(--brand) !important; text-shadow: 0 0 10px var(--brand-glow); }
         .text-gold { color: var(--accent-yellow) !important; } .text-green { color: var(--accent-green) !important; } .text-red { color: var(--accent-red) !important; }
 
         .navbar { background: var(--bg-header); border-bottom: 1px solid var(--border); padding: 12px 0; position: sticky; top: 0; z-index: 1000; }
         .brand-logo { font-family: var(--font-num); font-weight: 800; font-size: 1.6rem; color: var(--text-main); text-decoration: none; cursor:pointer; display: flex; align-items: center; gap: 4px; }
         .brand-logo span { color: var(--brand); }
-        
+
         .btn-icon { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-sub); background: var(--bg-input); transition: all 0.2s ease-in-out; cursor: pointer; position: relative; }
         .btn-icon:hover { color: #fff; border-color: #fff; background: #333; box-shadow: 0 0 15px 2px rgba(255,255,255,0.6); transform: scale(1.1); z-index: 10; }
-        
+
         .stat-box { background: linear-gradient(145deg, var(--bg-card), #080808); border: 1px solid var(--border); border-radius: 8px; padding: 20px; display: flex; align-items: center; justify-content: space-between; height: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .stat-val { font-size: 2rem; font-weight: 700; font-family: var(--font-num); line-height: 1; }
 
         /* V45 REDESIGN: COMPACT TRADING ARSENAL (Đã sửa lại nhỏ gọn) */
         .arsenal-section { margin-bottom: 25px; }
-        .arsenal-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Tự động dàn cột, tối thiểu 160px */
-            gap: 10px; 
+        .arsenal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
         }
-        .arsenal-card { 
-            background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); 
-            border: 1px solid var(--border); 
-            border-radius: 6px; 
-            padding: 8px 12px; 
-            cursor: pointer; 
-            transition: all 0.2s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            position: relative; 
+        .arsenal-card {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
             overflow: hidden;
-            height: 50px; /* Cố định chiều cao cho gọn */
+            height: 50px;
         }
-        .arsenal-card:hover { 
-            transform: translateY(-2px); 
-            border-color: var(--brand); 
-            background: rgba(0, 240, 255, 0.05); 
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15); 
+        .arsenal-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--brand);
+            background: rgba(0, 240, 255, 0.05);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
         }
-               /* --- ĐÃ SỬA: LOGO CÓ MÀU RỰC RỠ --- */
-        .ex-logo { 
-            width: 24px; height: 24px; 
-            object-fit: contain; 
-            /* Đã bỏ filter grayscale để hiện màu gốc */
-            transition: 0.3s; 
+        /* --- ĐÃ SỬA: LOGO CÓ MÀU RỰC RỠ --- */
+        .ex-logo {
+            width: 24px; height: 24px;
+            object-fit: contain;
+            transition: 0.3s;
             flex-shrink: 0;
-            /* Thêm chút bóng nhẹ cho nổi bật hơn trên nền tối */
-            filter: drop-shadow(0 0 2px rgba(255,255,255,0.2)); 
+            filter: drop-shadow(0 0 2px rgba(255,255,255,0.2));
         }
         /* Khi di chuột vào thì sáng lên và phóng to một chút */
-        .arsenal-card:hover .ex-logo { 
-            transform: scale(1.15); 
+        .arsenal-card:hover .ex-logo {
+            transform: scale(1.15);
             filter: brightness(1.2) drop-shadow(0 0 5px var(--brand));
         }
 
-        
+
         .ex-info { display: flex; flex-direction: column; justify-content: center; line-height: 1.1; overflow: hidden; }
-        .ex-name { 
-            font-family: var(--font-num); 
-            font-weight: 700; 
-            font-size: 0.85rem; 
-            color: var(--text-main); 
+        .ex-name {
+            font-family: var(--font-num);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-main);
             white-space: nowrap;
         }
-        .ex-bonus { 
-            font-size: 0.55rem; 
-            color: var(--accent-yellow); 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            letter-spacing: 0.5px; 
+        .ex-bonus {
+            font-size: 0.55rem;
+            color: var(--accent-yellow);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
@@ -139,23 +124,22 @@
         .sort-select:hover, .sort-select:focus { border-color: var(--brand); box-shadow: 0 0 10px rgba(0,240,255,0.3); }
 
         /* CARD STYLES */
-                .tour-card { 
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; position: relative; 
-            display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; 
-            /* Cập nhật transition mượt mà hơn */
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); 
+        .tour-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; position: relative;
+            display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             transform-origin: center center;
             z-index: 1;
-            height: 100%; /* <--- QUAN TRỌNG: Dòng này giúp thẻ luôn kéo dài bằng chiều cao cột */
+            height: 100%;
         }
 
-        
+
         .tour-card:hover { transform: translateY(-3px); border-color: #666; box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
-        
+
         /* Trạng thái được chọn */
         .tour-card.active-card {
             transform: scale(1.1);
-            z-index: 100; /* Nổi lên trên cùng */
+            z-index: 100;
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 240, 255, 0.15);
             border-color: var(--brand);
             background: linear-gradient(160deg, #1c2127, #0f1115);
@@ -166,7 +150,7 @@
             opacity: 0.4;
             filter: grayscale(0.8) blur(2px);
             transform: scale(0.95);
-            pointer-events: none; /* Chặn click nhầm vào thẻ đang mờ */
+            pointer-events: none;
         }
 
         .tour-card.ended-card { opacity: 0.6; filter: grayscale(0.8); border-color: #333; }
@@ -179,7 +163,7 @@
         .token-logo:hover { transform: scale(1.15); border-color: var(--brand); box-shadow: 0 0 10px var(--brand); }
         .token-title { font-family: var(--font-num); font-weight: 800; font-size: 1.4rem; color: var(--text-main); line-height: 1; }
         .token-status { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
-        
+
         .tag-x4, .tag-x2 { font-family: var(--font-num); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; margin-left: 5px; transition: all 0.3s; }
         .tag-x4 { background: rgba(255, 215, 0, 0.1); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
         .tag-x2 { background: rgba(14, 203, 129, 0.1); color: var(--accent-green); border: 1px solid var(--accent-green); }
@@ -212,7 +196,7 @@
         .btn-card-action.action-update:hover { background: var(--accent-green); color: #000; box-shadow: 0 0 15px var(--accent-green); }
         .btn-card-action.predict { color: #fff; background: rgba(153, 69, 255, 0.15); border-left: 1px solid var(--border); }
         .btn-card-action.predict:hover { background: var(--purple); color: #fff; box-shadow: 0 0 20px var(--purple); text-shadow: 0 0 5px #fff; }
-        
+
         .card-foot { padding: 8px 15px; background: var(--bg-input); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .tour-timer { display: flex; align-items: center; gap: 5px; }
         .tour-timer-label { font-size: 0.6rem; font-weight: 700; color: var(--text-sub); text-transform: uppercase; }
@@ -225,7 +209,7 @@
         .terminal-main { display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
         .terminal-side { display: flex; flex-direction: column; gap: 15px; overflow: hidden; }
         .terminal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-        
+
         .hero-header { display: grid; grid-template-columns: 0.8fr 1.5fr 0.8fr; align-items: center; padding: 25px 30px; background: linear-gradient(90deg, #111 0%, #161616 100%); border: 1px solid var(--border); border-radius: 12px; gap: 20px; }
         .hh-left { display: flex; align-items: center; gap: 15px; }
         #pt-logo { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #444; object-fit: cover; transition:0.2s; cursor: pointer; }
@@ -233,7 +217,7 @@
         #pt-symbol { font-size: 2.2rem; line-height: 1; }
         .hh-center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .big-vol { font-size: 5.5rem; font-weight: 800; font-family: var(--font-num); line-height: 1; color: #fff; text-shadow: 0 0 40px rgba(255,255,255,0.1); margin: 5px 0 15px 0; }
-        
+
         .btn-predict-hero { background: linear-gradient(135deg, var(--purple), #7b2cbf); border: none; color: #fff; font-weight: 800; padding: 12px 50px; border-radius: 50px; font-size: 1.1rem; box-shadow: 0 0 20px rgba(153, 69, 255, 0.4); transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
         .btn-predict-hero:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(153, 69, 255, 0.6); }
         .btn-ended { background: #333 !important; color: #888 !important; border: 1px solid #444 !important; box-shadow: none !important; cursor: not-allowed; opacity: 0.8; }
@@ -251,7 +235,7 @@
         .chat-other { align-self: flex-start; background: #222; border: 1px solid #333; }
         .chat-row { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 5px; }
         .chat-row.me { flex-direction: row-reverse; }
-        
+
         .leaderboard-table th { padding: 10px; text-align: left; color: var(--text-sub); font-size: 0.7rem; }
         .leaderboard-table td { padding: 8px 10px; border-bottom: 1px solid #222; vertical-align: middle; }
         .rank-badge { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.7rem; font-weight: bold; background: #333; color: #aaa; margin-right: 5px; }
@@ -276,7 +260,7 @@
         .btn-action:hover { background: #fff; box-shadow: 0 0 15px var(--brand); }
         .acc-input-row { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px solid transparent; }
         .acc-input-row:hover { border-color: #333; }
-        
+
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; }
         .spinner { width: 50px; height: 50px; border: 4px solid #333; border-top: 4px solid var(--brand); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -284,11 +268,11 @@
         body.is-admin .admin-only { display: flex !important; }
         .back-btn { color: #fff; border: 1px solid #444; padding: 8px 20px; border-radius: 30px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; background:rgba(255,255,255,0.05); }
         .back-btn:hover { background: #fff; color: #000; border-color: #fff; box-shadow: 0 0 10px #fff; }
-        @media (max-width: 1200px) { 
-            .terminal-layout { grid-template-columns: 1fr; height: auto; display: block; } 
-            .hero-header { grid-template-columns: 1fr; text-align: center; gap: 20px; padding: 20px; } 
+        @media (max-width: 1200px) {
+            .terminal-layout { grid-template-columns: 1fr; height: auto; display: block; }
+            .hero-header { grid-template-columns: 1fr; text-align: center; gap: 20px; padding: 20px; }
             .hh-left, .hh-right { justify-content: center; align-items: center; width: 100%; }
-            .btn-predict-hero { width: 100%; } 
+            .btn-predict-hero { width: 100%; }
         }
         .anim-breathe { animation: breathe 3s infinite ease-in-out; }
         @keyframes breathe { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
@@ -299,9 +283,9 @@
         .legal-text { color: #ddd; font-size: 0.9rem; line-height: 1.6; text-align: left; margin-bottom: 25px; max-height: 200px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid #333; }
         .btn-legal { background: var(--brand); color: #000; font-weight: 800; padding: 12px 30px; border: none; border-radius: 30px; text-transform: uppercase; transition: 0.3s; width: 100%; }
         .btn-legal:hover { transform: scale(1.05); background: #fff; box-shadow: 0 0 20px var(--brand); }
-        
+
         .cursor-pointer { cursor: pointer; }
-        
+
         /* AVATAR STYLES */
         .user-avatar-sm { width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid var(--brand); margin-right:5px; }
         .profile-btn-area { display: flex; align-items: center; cursor: pointer; padding: 5px 10px; border-radius: 20px; transition:0.2s; border: 1px solid transparent;}
@@ -311,7 +295,7 @@
         .avatar-upload-box img { width: 100%; height: 100%; object-fit: cover; display: none; }
         .upload-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #666; font-size: 0.8rem; pointer-events: none; }
         #file-input { display: none; }
-        
+
         /* New Avatar Classes */
         .list-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 8px; border: 1px solid #444; vertical-align: middle; }
         .chat-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #444; margin-bottom: 5px; flex-shrink: 0; }
@@ -323,7 +307,7 @@
         #share-card-container {
             width: 100%; max-width: 400px; margin: 0 auto;
             background: #0b0e11;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
             background-size: 20px 20px;
@@ -336,38 +320,38 @@
             content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
             background: linear-gradient(90deg, var(--brand), var(--purple));
         }
-        
+
         .sc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
         .sc-logo-text { font-family: var(--font-num); font-weight: 800; font-size: 1.4rem; color: #fff; letter-spacing: 1px; }
         .sc-logo-text span { color: var(--brand); }
         .sc-date { font-family: var(--font-num); font-size: 0.85rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; }
-        
+
         .sc-main { position: relative; z-index: 2; margin-bottom: 25px; }
         .sc-token-row { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
         .sc-token-img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--brand); box-shadow: 0 0 15px rgba(0,240,255,0.3); }
         .sc-token-name { font-size: 2.2rem; font-weight: 800; font-family: var(--font-num); color: #fff; line-height: 1; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
-        
-        .sc-stat-box { 
+
+        .sc-stat-box {
             background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px;
             display: grid; grid-template-columns: 1fr 1px 1fr; align-items: center;
         }
         .sc-divider { height: 40px; background: rgba(255,255,255,0.1); }
-        
+
         .sc-stat-label { font-size: 0.65rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; font-weight: 700; }
         .sc-stat-val { font-size: 1.5rem; font-weight: 700; font-family: var(--font-num); color: #fff; }
         .sc-stat-val.gold { color: var(--accent-yellow); text-shadow: 0 0 10px rgba(240, 185, 11, 0.4); }
         .sc-stat-val.brand { color: var(--brand); }
-        
-        .sc-footer { 
-            display: flex; align-items: center; justify-content: space-between; 
-            background: linear-gradient(90deg, rgba(0,240,255,0.1), transparent); 
-            padding: 12px 15px; border-radius: 8px; border: 1px solid rgba(0,240,255,0.2); 
+
+        .sc-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            background: linear-gradient(90deg, rgba(0,240,255,0.1), transparent);
+            padding: 12px 15px; border-radius: 8px; border: 1px solid rgba(0,240,255,0.2);
         }
         .sc-qr-box { background: #fff; padding: 4px; border-radius: 4px; height: 58px; width: 58px; display: flex; align-items: center; justify-content: center; }
         .sc-ref-text { text-align: left; font-size: 0.75rem; color: #ddd; line-height: 1.3; font-weight: 500; }
-        .sc-web-link { 
-            font-family: var(--font-num); font-weight: 800; color: var(--brand); 
-            font-size: 0.9rem; margin-top: 3px; letter-spacing: 0.5px; /* Giảm size và spacing để vừa domain dài */
+        .sc-web-link {
+            font-family: var(--font-num); font-weight: 800; color: var(--brand);
+            font-size: 0.9rem; margin-top: 3px; letter-spacing: 0.5px;
         }
 
         /* V45 FIX: Style cho User Profile trên thẻ Share */
@@ -376,175 +360,156 @@
             margin-bottom: 15px; padding-bottom: 15px;
             border-bottom: 1px dashed rgba(255,255,255,0.1);
         }
-        .sc-user-avatar { 
-            width: 45px; height: 45px; border-radius: 50%; object-fit: cover; 
-            border: 2px solid var(--text-sub); 
+        .sc-user-avatar {
+            width: 45px; height: 45px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--text-sub);
         }
         .sc-user-info { text-align: left; }
         .sc-user-label { font-size: 0.6rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
-        .sc-user-name { 
-            font-family: var(--font-num); font-weight: 800; font-size: 1.2rem; color: #fff; 
+        .sc-user-name {
+            font-family: var(--font-num); font-weight: 800; font-size: 1.2rem; color: #fff;
             text-shadow: 0 0 10px rgba(255,255,255,0.1);
         }
 
         /* V45 UX POLISH: TOAST NOTIFICATIONS (Thay thế Alert xấu xí) */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
-        .toast-item { 
-            background: rgba(16, 20, 24, 0.95); border: 1px solid var(--border); border-left: 4px solid var(--brand); 
-            color: #fff; padding: 15px 20px; border-radius: 4px; display: flex; align-items: center; gap: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; 
-            min-width: 300px; backdrop-filter: blur(10px); 
+        .toast-item {
+            background: rgba(16, 20, 24, 0.95); border: 1px solid var(--border); border-left: 4px solid var(--brand);
+            color: #fff; padding: 15px 20px; border-radius: 4px; display: flex; align-items: center; gap: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+            min-width: 300px; backdrop-filter: blur(10px);
         }
         .toast-success { border-left-color: var(--accent-green); }
         .toast-error { border-left-color: var(--accent-red); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-            /* --- [STYLE MỚI] GIAO DIỆN TAG NHỎ GỌN (SLIM PILL) --- */
-    .rule-pill {
-        font-family: var(--font-num);
-        font-size: 0.6rem; /* Chữ nhỏ */
-        font-weight: 700;
-        text-transform: uppercase;
-        padding: 2px 6px; /* Khung nhỏ */
-        border-radius: 4px;
-        letter-spacing: 0.5px;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        margin-bottom: 2px;
-        cursor: help;
-        transition: all 0.2s;
-        border: 1px solid transparent;
-        line-height: 1.1;
-        width: fit-content; /* Chỉ rộng vừa đủ chữ */
-    }
-    .rule-pill:hover { filter: brightness(1.2); transform: translateY(-1px); }
+        /* --- [STYLE MỚI] GIAO DIỆN TAG NHỎ GỌN (SLIM PILL) --- */
+        .rule-pill {
+            font-family: var(--font-num);
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 2px;
+            cursor: help;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            line-height: 1.1;
+            width: fit-content;
+        }
+        .rule-pill:hover { filter: brightness(1.2); transform: translateY(-1px); }
 
-    /* ONLY BUY: Màu xanh nhẹ */
-    .rp-buy {
-        border-color: rgba(14, 203, 129, 0.4);
-        color: #0ECB81;
-        background: rgba(14, 203, 129, 0.05);
-    }
+        /* ONLY BUY: Màu xanh nhẹ */
+        .rp-buy {
+            border-color: rgba(14, 203, 129, 0.4);
+            color: #0ECB81;
+            background: rgba(14, 203, 129, 0.05);
+        }
 
-    /* ALL VOL x4: Màu tím huyền bí */
-    .rp-x4 {
-        border-color: rgba(153, 69, 255, 0.5);
-        color: #d0aaff;
-        background: rgba(153, 69, 255, 0.05);
-    }
-    
-    /* Ô vuông nhỏ bao quanh chữ x4 */
-    .x4-box {
-        background: #9945FF;
-        color: #fff;
-        padding: 1px 3px;
-        border-radius: 2px;
-        font-size: 0.55rem;
-        font-weight: 800;
-    }
-    
-    /* Sắp xếp cột bên phải */
-    .card-head-right {
-        display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 3px;
-    }
-    /* --- STYLE CHO THẺ KẾT QUẢ (WIN/LOSE) --- */
-    .res-badge {
-        font-family: var(--font-num);
-        font-size: 0.65rem;
-        font-weight: 800;
-        padding: 1px 6px;
-        border-radius: 3px;
-        margin-left: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        min-width: 45px; /* Để độ rộng các thẻ đều nhau cho đẹp */
-        justify-content: center;
-    }
-    /* Thẻ Thắng: Vàng rực + Bóng sáng */
-    .res-win {
-        background: #F0B90B; 
-        color: #000;
-        box-shadow: 0 0 8px rgba(240, 185, 11, 0.4);
-    }
-    /* Thẻ Thua: Xám tối + Viền mờ */
-    .res-lose {
-        background: #2b3139; 
-        color: #666;
-        border: 1px solid #444;
-    }
-    /* Thêm vào cuối phần <style> */
-    .text-silver { color: #C0C0C0 !important; text-shadow: 0 0 10px rgba(192, 192, 192, 0.4); }
-    .text-bronze { color: #CD7F32 !important; text-shadow: 0 0 10px rgba(205, 127, 50, 0.4); }
+        /* ALL VOL x4: Màu tím huyền bí */
+        .rp-x4 {
+            border-color: rgba(153, 69, 255, 0.5);
+            color: #d0aaff;
+            background: rgba(153, 69, 255, 0.05);
+        }
 
-    /* --- ADMIN DRAG & DROP (FIXED ORDER) --- */
-    
-    /* Hiệu ứng khi đang kéo */
-    .tour-card.dragging {
-        opacity: 0.5;
-        border: 2px dashed var(--brand);
-        transform: scale(0.95);
-        z-index: 1000;
-    }
+        /* Ô vuông nhỏ bao quanh chữ x4 */
+        .x4-box {
+            background: #9945FF;
+            color: #fff;
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-size: 0.55rem;
+            font-weight: 800;
+        }
 
-    /* Icon tay cầm (Grip) - Mặc định ẩn */
-    .admin-drag-handle {
-        display: none; 
-        color: var(--text-sub); 
-        margin-right: 8px; 
-        font-size: 1.1rem; 
-        cursor: grab;
-        transition: 0.2s;
-    }
-    
-    /* Admin thì LUÔN LUÔN nhìn thấy tay cầm và kéo được */
-    body.is-admin .admin-drag-handle { display: inline-block; }
-    body.is-admin .admin-drag-handle:hover { color: var(--brand); }
-    body.is-admin .tour-card { cursor: grab; }
-    body.is-admin .tour-card:active { cursor: grabbing; }
+        /* Sắp xếp cột bên phải */
+        .card-head-right {
+            display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 3px;
+        }
+        /* --- STYLE CHO THẺ KẾT QUẢ (WIN/LOSE) --- */
+        .res-badge {
+            font-family: var(--font-num);
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            min-width: 45px;
+            justify-content: center;
+        }
+        /* Thẻ Thắng: Vàng rực + Bóng sáng */
+        .res-win {
+            background: #F0B90B;
+            color: #000;
+            box-shadow: 0 0 8px rgba(240, 185, 11, 0.4);
+        }
+        /* Thẻ Thua: Xám tối + Viền mờ */
+        .res-lose {
+            background: #2b3139;
+            color: #666;
+            border: 1px solid #444;
+        }
+        /* Thêm vào cuối phần <style> */
+        .text-silver { color: #C0C0C0 !important; text-shadow: 0 0 10px rgba(192, 192, 192, 0.4); }
+        .text-bronze { color: #CD7F32 !important; text-shadow: 0 0 10px rgba(205, 127, 50, 0.4); }
 
-    
+        /* --- ADMIN DRAG & DROP (FIXED ORDER) --- */
 
+        /* Hiệu ứng khi đang kéo */
+        .tour-card.dragging {
+            opacity: 0.5;
+            border: 2px dashed var(--brand);
+            transform: scale(0.95);
+            z-index: 1000;
+        }
+
+        /* Icon tay cầm (Grip) - Mặc định ẩn */
+        .admin-drag-handle {
+            display: none;
+            color: var(--text-sub);
+            margin-right: 8px;
+            font-size: 1.1rem;
+            cursor: grab;
+            transition: 0.2s;
+        }
+
+        /* Admin thì LUÔN LUÔN nhìn thấy tay cầm và kéo được */
+        body.is-admin .admin-drag-handle { display: inline-block; }
+        body.is-admin .admin-drag-handle:hover { color: var(--brand); }
+        body.is-admin .tour-card { cursor: grab; }
+        body.is-admin .tour-card:active { cursor: grabbing; }
     </style>
 </head>
 <body>
 
-<!-- TOAST CONTAINER (Nơi chứa thông báo bay) -->
 <div id="toast-container"></div>
 
-<!-- SOUND ASSETS -->
-<audio id="sfx-click" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio> 
-<audio id="sfx-hover" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio> 
+<audio id="sfx-click" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio>
+<audio id="sfx-hover" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio>
 
-<div id="loading-overlay"><div class="spinner mb-3"></div><div class="text-brand font-num fw-bold letter-spacing-1">SYSTEM LOADING...</div></div>
+<div id="loading-overlay">
+    <div class="spinner mb-3"></div>
+    <div class="text-brand font-num fw-bold letter-spacing-1">SYSTEM LOADING...</div>
+</div>
 
-<div id="legalModal"><div class="legal-box"><div class="legal-title"><i class="fas fa-shield-alt me-2"></i> DISCLAIMER</div><div class="legal-text"><strong>Welcome to Wave Alpha Terminal.</strong><br><br>1. <strong>Not Financial Advice:</strong> All content, data, and predictions provided herein are for informational and entertainment purposes only.<br>2. <strong>No Real Money:</strong> This is a simulation tracking tool. We do not accept deposits or facilitate real-money gambling.<br>3. <strong>Risk Warning:</strong> Cryptocurrency trading involves significant risk. You are solely responsible for your investment decisions.<br><br>By clicking "I AGREE", you acknowledge that you have read and understood these terms.</div><button class="btn-legal" onclick="acceptLegal(); playSfx('click')">I AGREE & ENTER</button></div></div>
-
-<div class="modal fade" id="helpModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-brand">ICON LEGEND</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="d-flex align-items-center gap-3 mb-3"><div class="btn-icon" style="cursor:default"><i class="fas fa-sync-alt text-gold"></i></div><div><div class="fw-bold">Update Prices</div><div class="text-sub small">Fetch latest token prices from DexScreener.</div></div></div><div class="d-flex align-items-center gap-3 mb-3"><div class="btn-icon" style="cursor:default"><i class="fas fa-database"></i></div><div><div class="fw-bold">Reload Data</div><div class="text-sub small">Force reload data from Cloud Database.</div></div></div><div class="d-flex align-items-center gap-3 mb-3"><div class="btn-icon" style="cursor:default"><i class="fas fa-wallet"></i></div><div><div class="fw-bold">Manage Wallets</div><div class="text-sub small">Add or remove tracking accounts (Main, Clone...).</div></div></div><div class="d-flex align-items-center gap-3"><div class="btn-icon" style="cursor:default"><i class="fas fa-key"></i></div><div><div class="fw-bold">Login</div><div class="text-sub small">Access Admin features via OTP Email.</div></div></div></div></div></div></div>
-
-<!-- RULE MODAL -->
-<div class="modal fade" id="ruleModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-brand"><i class="fas fa-scroll me-2"></i> WAVE ORACLE RULES</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">
-    <h6 class="text-white fw-bold mb-3 text-uppercase letter-spacing-1">Objective</h6>
-    <p class="text-sub small mb-4">Predict the exact <strong>Min Volume</strong> (the volume of the last ranked winner, e.g., Rank #2000) at the tournament snapshot time.</p>
-    
-    <h6 class="text-white fw-bold mb-3 text-uppercase letter-spacing-1">Gameplay Mechanics</h6>
-    <ul class="rule-list">
-        <li><strong>Entry Fee:</strong> Each prediction costs <span class="text-gold fw-bold">100 USDT</span> (Virtual). Added to the Prize Pool.</li>
-        <li><strong>Lock Time:</strong> Predictions CLOSE <span class="text-danger fw-bold">AT TOURNAMENT END</span>. Results are announced the following day after Binance publishes the Min Volume.</li>
-        <li><strong>Winner:</strong> The player with the <span class="text-brand">Closest Guess ≥ Actual Result</span> wins. (Lower guesses are disqualified).</li>
-        <li><strong>Tie-Breaker:</strong> If guesses are equal, the earlier prediction wins.</li>
-    </ul>
-
-    <h6 class="text-white fw-bold mb-3 text-uppercase letter-spacing-1">Prize Distribution</h6>
-    <div class="d-flex gap-2 mb-2">
-        <div class="flex-fill p-2 bg-dark rounded border border-secondary text-center"><div class="text-gold fw-bold">🥇 1st</div><div class="small">50% Pool</div></div>
-        <div class="flex-fill p-2 bg-dark rounded border border-secondary text-center"><div class="text-light fw-bold">🥈 2nd</div><div class="small">30% Pool</div></div>
-        <div class="flex-fill p-2 bg-dark rounded border border-secondary text-center"><div class="text-brand fw-bold">🥉 3rd</div><div class="small">20% Pool</div></div>
+<div id="legalModal">
+    <div class="legal-box">
+        <div class="legal-title"><i class="fas fa-shield-alt me-2"></i> DISCLAIMER</div>
+        <div class="legal-text"><strong>Welcome to Wave Alpha Terminal.</strong><br><br>1. <strong>Not Financial Advice:</strong> All content, data, and predictions provided herein are for informational and entertainment purposes only.<br>2. <strong>No Real Money:</strong> This is a simulation tracking tool. We do not accept deposits or facilitate real-money gambling.<br>3. <strong>Risk Warning:</strong> Cryptocurrency trading involves significant risk. You are solely responsible for your investment decisions.<br><br>By clicking "I AGREE", you acknowledge that you have read and understood these terms.</div>
+        <button class="btn-legal" onclick="acceptLegal(); playSfx('click')">I AGREE & ENTER</button>
     </div>
-</div></div></div></div>
+</div>
 
 <nav class="navbar">
     <div class="container">
@@ -560,7 +525,6 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            
             <div class="dropdown">
                 <button class="btn btn-sm btn-outline-light border-secondary text-sub fw-bold dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" style="min-width: 70px;">
                     <i class="fas fa-globe"></i> <span id="cur-lang-text">EN</span>
@@ -577,13 +541,14 @@
             </button>
 
             <button class="btn-icon text-gold" onclick="handleSmartRefresh()" title="Smart Sync">
-<i class="fas fa-sync-alt"></i></button>
+                <i class="fas fa-sync-alt"></i>
+            </button>
             <button class="btn-icon" onclick="loadFromCloud()" title="Reload Data"><i class="fas fa-database"></i></button>
             <button class="btn-icon" onclick="openSettingsModal()" title="Wallets"><i class="fas fa-wallet"></i></button>
             <button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
 
             <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-2 ms-2" onclick="openLoginModal()" id="loginBtn"><i class="fas fa-key"></i> <span class="d-none d-md-inline">Login</span></button>
-            
+
             <div id="userProfile" class="d-none align-items-center ms-2">
                  <div class="balance-badge" title="Virtual USDT (BSC)">
                     <i class="fas fa-coins"></i> <span id="user-balance">0</span> USDT
@@ -603,56 +568,71 @@
     <div class="hero-banner">
         <div class="container">
             <h1 class="hero-title" data-i18n="hero_title">TOURNAMENT VOLUME TRACKER</h1>
-<p class="hero-sub" data-i18n="hero_sub">Manage your accounts & Join the prediction.</p>
+            <p class="hero-sub" data-i18n="hero_sub">Manage your accounts & Join the prediction.</p>
         </div>
     </div>
 
     <div class="container">
-        <!-- V45: TRADING ARSENAL SECTION (COMPACT) -->
         <div class="d-flex justify-content-between align-items-center mb-3">
              <h6 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num">
-    <i class="fas fa-link me-2"></i> 
-<span data-i18n="sect_arsenal">TRADING PLATFORMS</span>
-</h6>
-             <span class="text-sub small"><i class="fas fa-check-circle text-green me-1"></i> Verified Links</span>
+                <i class="fas fa-link me-2"></i>
+                <span data-i18n="sect_arsenal">TRADING PLATFORMS</span>
+            </h6>
+            <span class="text-sub small"><i class="fas fa-check-circle text-green me-1"></i> Verified Links</span>
         </div>
         <div class="arsenal-section">
             <div class="arsenal-grid" id="arsenal-grid">
-                <!-- Javascript will populate this -->
-            </div>
+                </div>
         </div>
 
         <div class="row g-4 mb-5">
-            <div class="col-md-4"><div class="stat-box"><div><div class="stat-lbl" data-i18n="stat_active">ACTIVE POOLS</div>
-<div class="stat-val text-brand" id="stat-active">0</div></div><i class="fas fa-bolt text-sub opacity-25 fa-2x"></i></div></div>
-            <div class="col-md-4"><div class="stat-box"><div><div class="stat-lbl" data-i18n="stat_pool">TOTAL PREDICTION</div>
-<div class="stat-val text-green" id="stat-pool">0 $</div></div><i class="fas fa-sack-dollar text-sub opacity-25 fa-2x"></i></div></div>
-            <div class="col-md-4 admin-only"><div class="stat-box" style="cursor:pointer; border: 1px dashed var(--border);" onclick="openCreateModal()"><div class="text-brand fw-bold d-flex align-items-center gap-2">
-    <i class="fas fa-plus-circle fa-lg"></i> 
-    <span data-i18n="stat_create">CREATE NEW</span>
-</div>
-</div></div>
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <div>
+                        <div class="stat-lbl" data-i18n="stat_active">ACTIVE POOLS</div>
+                        <div class="stat-val text-brand" id="stat-active">0</div>
+                    </div>
+                    <i class="fas fa-bolt text-sub opacity-25 fa-2x"></i>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <div>
+                        <div class="stat-lbl" data-i18n="stat_pool">TOTAL PREDICTION</div>
+                        <div class="stat-val text-green" id="stat-pool">0 $</div>
+                    </div>
+                    <i class="fas fa-sack-dollar text-sub opacity-25 fa-2x"></i>
+                </div>
+            </div>
+            <div class="col-md-4 admin-only">
+                <div class="stat-box" style="cursor:pointer; border: 1px dashed var(--border);" onclick="openCreateModal()">
+                    <div class="text-brand fw-bold d-flex align-items-center gap-2">
+                        <i class="fas fa-plus-circle fa-lg"></i>
+                        <span data-i18n="stat_create">CREATE NEW</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        
-            <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="d-flex align-items-center gap-3">
                 <h6 class="fw-bold mb-0 text-sub text-uppercase letter-spacing-1 font-num" style="font-size: 1rem;">
-                    <i class="fas fa-list me-2"></i> 
+                    <i class="fas fa-list me-2"></i>
                     <span data-i18n="sect_board">TRACKING BOARD</span>
                 </h6>
-                
+
                 <button class="btn btn-sm btn-brand fw-bold admin-only btn-save-pos" style="display:none; background:var(--brand); color:#000; border:none; padding: 5px 20px; border-radius: 20px; box-shadow: 0 0 10px rgba(0,240,255,0.3); white-space: nowrap;" onclick="saveCustomOrder()">
-    <i class="fas fa-save me-1"></i> SAVE POSITION
-</button>
+                    <i class="fas fa-save me-1"></i> SAVE POSITION
+                </button>
 
             </div>
-            
+
             <div>
                 <button class="btn btn-sm btn-outline-warning border-0 text-sub me-2 admin-only" onclick="openConfigModal()"><i class="fas fa-cog me-1"></i> Site Config</button>
             </div>
         </div>
-          
+
         <div class="row g-4" id="appGrid"></div>
     </div>
 </div>
@@ -661,6 +641,7 @@
     <button class="back-btn mb-4" onclick="playSfx('click'); switchView('dashboard')"><i class="fas fa-arrow-left"></i> BACK TO DASHBOARD</button>
     <div id="predict-content-placeholder"></div>
 </div>
+
 
 <footer class="app-footer">
     <div class="container">
@@ -673,7 +654,6 @@
     </div>
 </footer>
 
-<!-- AUTH MODAL -->
 <div class="modal fade" id="settingsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -683,9 +663,8 @@
             </div>
             <div class="modal-body p-4">
                 <p class="text-sub small mb-3">Define accounts to track volume separately (e.g. Main, Sub, Friend).</p>
-                
-                <div id="settingsList" class="d-flex flex-column gap-2 mb-3">
-                    </div>
+
+                <div id="settingsList" class="d-flex flex-column gap-2 mb-3"></div>
 
                 <label class="small fw-bold text-brand mb-1">ADD NEW WALLET</label>
                 <div class="input-group">
@@ -693,7 +672,7 @@
                     <input type="text" class="form-control" id="newAccName" placeholder="Name (e.g. Account 3)">
                     <button class="btn btn-light fw-bold" onclick="addNewAccount()">ADD</button>
                 </div>
-                
+
                 <div class="text-center mt-4">
                     <button class="btn btn-sm btn-outline-secondary border-0" onclick="syncLocalToCloud()">
                         <i class="fas fa-cloud-upload-alt me-1"></i> Sync Old Data to Cloud
@@ -704,130 +683,246 @@
     </div>
 </div>
 
-
-<div class="modal fade" id="loginModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0" style="background: linear-gradient(145deg, #1a1e23, #111); border: 1px solid var(--border);"><div class="modal-body p-4 text-center"><div class="mb-4"><div style="width:60px;height:60px;background:rgba(0,240,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:1px solid var(--brand);box-shadow:0 0 15px rgba(0,240,255,0.3)"><i class="fas fa-shield-alt text-brand fa-2x"></i></div></div><h5 class="fw-bold text-white mb-1">SECURE ACCESS</h5><p class="text-sub small mb-4">Authenticate via Email OTP</p><div id="login-step-1"><input type="email" id="otp-email" class="form-control mb-3 text-center" placeholder="name@example.com" style="border-radius: 20px;"><button class="btn-action rounded-pill" onclick="sendOtpCode()">SEND CODE <i class="fas fa-paper-plane ms-2"></i></button></div><div id="login-step-2" style="display:none"><input type="text" id="otp-token" class="form-control mb-3 text-center fw-bold text-brand fs-4 letter-spacing-1" placeholder="• • • • • •" maxlength="6" style="border-radius: 20px; background: #000; border-color: var(--brand);"><button class="btn-action rounded-pill mb-3" onclick="verifyOtpCode()">VERIFY LOGIN</button><a href="#" onclick="resetLoginModal()" class="text-sub small text-decoration-none">Change Email</a></div></div></div></div></div>
-
-<!-- PRIVACY POLICY MODAL (REQUIRED FOR ADS) -->
-<div class="modal fade" id="privacyModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title fw-bold text-sub"><i class="fas fa-user-shield me-2"></i> PRIVACY POLICY</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-sub small" style="max-height:400px; overflow-y:auto; line-height:1.6">
-    <p><strong>Last Updated: October 2025</strong></p>
-    <p>1. <strong>Data Collection:</strong> We only collect your email address for authentication purposes via Supabase Auth. We do not sell your data.</p>
-    <p>2. <strong>Usage:</strong> Your data is used solely to track your portfolio progress, leaderboard ranking, and tournament participation within Wave Alpha.</p>
-    <p>3. <strong>Cookies:</strong> We use local storage to save your view preferences. No third-party tracking cookies are used.</p>
-    <p>4. <strong>Rights:</strong> You can request data deletion at any time by contacting support.</p>
-    <div class="text-center mt-4"><button class="btn btn-sm btn-outline-light px-4 rounded-pill" data-bs-dismiss="modal">Close</button></div>
-</div></div></div></div>
-
-<!-- SHARE CARD MODAL (V45 ULTIMATE) -->
-<div class="modal fade" id="shareCardModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title fw-bold text-brand"><i class="fas fa-share-alt me-2"></i> SHARE PREDICTION</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4 text-center d-flex flex-column align-items-center">
-    <!-- Hidden Capture Area -->
-    <div id="share-card-container">
-        <div class="sc-header">
-            <div class="sc-logo-text">WAVE<span>ALPHA</span></div>
-            <div class="sc-date" id="sc-date-display">--/--/----</div>
-        </div>
-        <div class="sc-main">
-            <!-- V45 NEW: User Profile Section -->
-            <div class="sc-user-box">
-                <img id="sc-user-avatar" src="" class="sc-user-avatar" crossOrigin="anonymous">
-                <div class="sc-user-info">
-                    <div class="sc-user-label">TRADER</div>
-                    <div id="sc-user-name" class="sc-user-name">SHARK</div>
+<div class="modal fade" id="loginModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0" style="background: linear-gradient(145deg, #1a1e23, #111); border: 1px solid var(--border);">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-4">
+                    <div style="width:60px;height:60px;background:rgba(0,240,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;border:1px solid var(--brand);box-shadow:0 0 15px rgba(0,240,255,0.3)">
+                        <i class="fas fa-shield-alt text-brand fa-2x"></i>
+                    </div>
+                </div>
+                <h5 class="fw-bold text-white mb-1">SECURE ACCESS</h5>
+                <p class="text-sub small mb-4">Authenticate via Email OTP</p>
+                <div id="login-step-1">
+                    <input type="email" id="otp-email" class="form-control mb-3 text-center" placeholder="name@example.com" style="border-radius: 20px;">
+                    <button class="btn-action rounded-pill" onclick="sendOtpCode()">SEND CODE <i class="fas fa-paper-plane ms-2"></i></button>
+                </div>
+                <div id="login-step-2" style="display:none">
+                    <input type="text" id="otp-token" class="form-control mb-3 text-center fw-bold text-brand fs-4 letter-spacing-1" placeholder="• • • • • •" maxlength="6" style="border-radius: 20px; background: #000; border-color: var(--brand);">
+                    <button class="btn-action rounded-pill mb-3" onclick="verifyOtpCode()">VERIFY LOGIN</button>
+                    <a href="#" onclick="resetLoginModal()" class="text-sub small text-decoration-none">Change Email</a>
                 </div>
             </div>
-
-            <div class="sc-token-row">
-                <!-- Thêm crossOrigin để fix lỗi ảnh đen khi tải -->
-                <img id="sc-token-img" src="" class="sc-token-img" crossOrigin="anonymous">
-                <div id="sc-token-name" class="sc-token-name">BTC</div>
-            </div>
-            
-            <div class="sc-stat-box">
-                <div><div class="sc-stat-label">MIN VOL</div><div class="sc-stat-val brand" id="sc-min-vol">0</div></div>
-                <div class="sc-divider"></div>
-                <div><div class="sc-stat-label">MY PREDICTION</div><div class="sc-stat-val gold" id="sc-my-guess">0</div></div>
-            </div>
-        </div>
-        <div class="sc-footer">
-            <div class="text-start">
-                <div class="sc-ref-text">Challenge me on<br>Prediction Market</div>
-                <!-- Cập nhật đúng tên miền của bạn -->
-                <div class="sc-web-link">wave-alpha.netlify.app</div>
-            </div>
-            <div class="sc-qr-box" id="sc-qr-target"></div>
         </div>
     </div>
-    <!-- Actions -->
-    <div class="mt-4 w-100">
-        <button class="btn btn-light rounded-pill fw-bold w-100 py-2 mb-3" onclick="downloadShareCard()"><i class="fas fa-download me-2"></i> DOWNLOAD IMAGE</button>
-        
-        <!-- V45 FIX: Thêm lại nút Share Nhanh bị thiếu -->
-        <div class="d-flex gap-2 justify-content-center">
-            <button class="btn btn-dark border-secondary flex-fill rounded-pill py-2" onclick="shareToX()" style="background:#000"><i class="fab fa-twitter text-white me-2"></i> Share on X</button>
-            <button class="btn btn-primary border-0 flex-fill rounded-pill py-2" onclick="shareToTele()" style="background:#0088cc"><i class="fab fa-telegram-plane text-white me-2"></i> Telegram</button>
-        </div>
-        
-        <div class="text-sub small mt-3 opacity-50">Share link & challenge friends!</div>
-    </div>
-</div></div></div></div>
+</div>
 
-<div class="modal fade" id="profileModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title fw-bold text-brand"><i class="fas fa-user-cog me-2"></i> PROFILE SETTINGS</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">
-    <div class="avatar-upload-box" onclick="document.getElementById('file-input').click()">
-        <img id="pf-preview" src="">
-        <div class="upload-placeholder" id="pf-placeholder"><i class="fas fa-camera fa-2x mb-1"></i><br>Upload</div>
-        <!-- V45: Loading spinner for upload -->
-        <div id="upload-loading" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);border-radius:50%;display:none;align-items:center;justify-content:center"><div class="spinner-border text-brand spinner-border-sm"></div></div>
-    </div>
-    <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(this)">
-    <input type="hidden" id="pf-avatar-url">
-    
-    <label class="small text-sub fw-bold mb-1">NICKNAME (UNIQUE)</label>
-    <input type="text" id="pf-nickname" class="form-control mb-4" placeholder="Enter unique nickname">
-    
-    <button id="btn-save-profile" class="btn-action" onclick="saveProfile()">SAVE CHANGES</button>
-</div></div></div></div>
-
-<div class="modal fade" id="configModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold text-warning">GLOBAL SETTINGS</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">
-    <!-- Brand Logo -->
-    <div class="mb-4 border-bottom border-secondary border-opacity-25 pb-3">
-        <label class="small text-sub fw-bold mb-2 text-brand">BRAND LOGO (ADMIN)</label>
-        <div class="d-flex align-items-center gap-3">
-            <img id="cfg-logo-preview" src="" style="width:60px; height:60px; object-fit:contain; background:#000; border:1px solid #333; border-radius:4px; display:none">
-            <div style="flex:1">
-                <input type="file" class="form-control form-control-sm mb-1" accept="image/*" onchange="uploadImage(this, 'cfg-logo-preview', 'cfg-logo-url')">
-                <input type="hidden" id="cfg-logo-url">
-                <div class="text-sub" style="font-size:0.7rem">Upload ảnh logo của bạn (PNG/JPG)</div>
+<div class="modal fade" id="privacyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-sub"><i class="fas fa-user-shield me-2"></i> PRIVACY POLICY</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-sub small" style="max-height:400px; overflow-y:auto; line-height:1.6">
+                <p><strong>Last Updated: October 2025</strong></p>
+                <p>1. <strong>Data Collection:</strong> We only collect your email address for authentication purposes via Supabase Auth. We do not sell your data.</p>
+                <p>2. <strong>Usage:</strong> Your data is used solely to track your portfolio progress, leaderboard ranking, and tournament participation within Wave Alpha.</p>
+                <p>3. <strong>Cookies:</strong> We use local storage to save your view preferences. No third-party tracking cookies are used.</p>
+                <p>4. <strong>Rights:</strong> You can request data deletion at any time by contacting support.</p>
+                <div class="text-center mt-4"><button class="btn btn-sm btn-outline-light px-4 rounded-pill" data-bs-dismiss="modal">Close</button></div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Socials -->
-    <div class="mb-3">
-        <label class="small text-sub fw-bold mb-1">X (Twitter) URL</label>
-        <input type="text" id="cfg-x" class="form-control mb-2">
-        <label class="small text-sub fw-bold mb-1">Telegram URL</label>
-        <input type="text" id="cfg-tele" class="form-control mb-2">
-        <label class="small text-sub fw-bold mb-1">Youtube URL</label>
-        <input type="text" id="cfg-yt" class="form-control mb-2">
-    </div>
+<div class="modal fade" id="shareCardModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-brand"><i class="fas fa-share-alt me-2"></i> SHARE PREDICTION</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center d-flex flex-column align-items-center">
+                <div id="share-card-container">
+                    <div class="sc-header">
+                        <div class="sc-logo-text">WAVE<span>ALPHA</span></div>
+                        <div class="sc-date" id="sc-date-display">--/--/----</div>
+                    </div>
+                    <div class="sc-main">
+                        <div class="sc-user-box">
+                            <img id="sc-user-avatar" src="" class="sc-user-avatar" crossOrigin="anonymous">
+                            <div class="sc-user-info">
+                                <div class="sc-user-label">TRADER</div>
+                                <div id="sc-user-name" class="sc-user-name">SHARK</div>
+                            </div>
+                        </div>
 
-        <h6 class="text-gold mb-3 pt-3 border-top border-secondary border-opacity-25">QUẢN LÝ LINK REF (ARSENAL)</h6>
-    
-    <div class="d-flex justify-content-end mb-2">
-        <button class="btn btn-sm btn-outline-success" onclick="addArsenalItem()">
-            <i class="fas fa-plus me-1"></i> Thêm Sàn Mới
-        </button>
-    </div>
+                        <div class="sc-token-row">
+                            <img id="sc-token-img" src="" class="sc-token-img" crossOrigin="anonymous">
+                            <div id="sc-token-name" class="sc-token-name">BTC</div>
+                        </div>
 
-    <div id="cfg-arsenal-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;">
+                        <div class="sc-stat-box">
+                            <div><div class="sc-stat-label">MIN VOL</div><div class="sc-stat-val brand" id="sc-min-vol">0</div></div>
+                            <div class="sc-divider"></div>
+                            <div><div class="sc-stat-label">MY PREDICTION</div><div class="sc-stat-val gold" id="sc-my-guess">0</div></div>
+                        </div>
+                    </div>
+                    <div class="sc-footer">
+                        <div class="text-start">
+                            <div class="sc-ref-text">Challenge me on<br>Prediction Market</div>
+                            <div class="sc-web-link">wave-alpha.netlify.app</div>
+                        </div>
+                        <div class="sc-qr-box" id="sc-qr-target"></div>
+                    </div>
+                </div>
+                <div class="mt-4 w-100">
+                    <button class="btn btn-light rounded-pill fw-bold w-100 py-2 mb-3" onclick="downloadShareCard()"><i class="fas fa-download me-2"></i> DOWNLOAD IMAGE</button>
+
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button class="btn btn-dark border-secondary flex-fill rounded-pill py-2" onclick="shareToX()" style="background:#000"><i class="fab fa-twitter text-white me-2"></i> Share on X</button>
+                        <button class="btn btn-primary border-0 flex-fill rounded-pill py-2" onclick="shareToTele()" style="background:#0088cc"><i class="fab fa-telegram-plane text-white me-2"></i> Telegram</button>
+                    </div>
+
+                    <div class="text-sub small mt-3 opacity-50">Share link & challenge friends!</div>
+                </div>
+            </div>
         </div>
+    </div>
+</div>
+
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-brand"><i class="fas fa-user-cog me-2"></i> PROFILE SETTINGS</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="avatar-upload-box" onclick="document.getElementById('file-input').click()">
+                    <img id="pf-preview" src="">
+                    <div class="upload-placeholder" id="pf-placeholder"><i class="fas fa-camera fa-2x mb-1"></i><br>Upload</div>
+                    <div id="upload-loading" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);border-radius:50%;display:none;align-items:center;justify-content:center"><div class="spinner-border text-brand spinner-border-sm"></div></div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(this)">
+                <input type="hidden" id="pf-avatar-url">
+
+                <label class="small text-sub fw-bold mb-1">NICKNAME (UNIQUE)</label>
+                <input type="text" id="pf-nickname" class="form-control mb-4" placeholder="Enter unique nickname">
+
+                <button id="btn-save-profile" class="btn-action" onclick="saveProfile()">SAVE CHANGES</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-warning">GLOBAL SETTINGS</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4 border-bottom border-secondary border-opacity-25 pb-3">
+                    <label class="small text-sub fw-bold mb-2 text-brand">BRAND LOGO (ADMIN)</label>
+                    <div class="d-flex align-items-center gap-3">
+                        <img id="cfg-logo-preview" src="" style="width:60px; height:60px; object-fit:contain; background:#000; border:1px solid #333; border-radius:4px; display:none">
+                        <div style="flex:1">
+                            <input type="file" class="form-control form-control-sm mb-1" accept="image/*" onchange="uploadImage(this, 'cfg-logo-preview', 'cfg-logo-url')">
+                            <input type="hidden" id="cfg-logo-url">
+                            <div class="text-sub" style="font-size:0.7rem">Upload ảnh logo của bạn (PNG/JPG)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small text-sub fw-bold mb-1">X (Twitter) URL</label>
+                    <input type="text" id="cfg-x" class="form-control mb-2">
+                    <label class="small text-sub fw-bold mb-1">Telegram URL</label>
+                    <input type="text" id="cfg-tele" class="form-control mb-2">
+                    <label class="small text-sub fw-bold mb-1">Youtube URL</label>
+                    <input type="text" id="cfg-yt" class="form-control mb-2">
+                </div>
+
+                <h6 class="text-gold mb-3 pt-3 border-top border-secondary border-opacity-25">QUẢN LÝ LINK REF (ARSENAL)</h6>
+
+                <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm btn-outline-success" onclick="addArsenalItem()">
+                        <i class="fas fa-plus me-1"></i> Thêm Sàn Mới
+                    </button>
+                </div>
+
+                <div id="cfg-arsenal-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;"></div>
 
 
-    <button class="btn-action" onclick="saveGlobalConfig()">SAVE CONFIG</button>
-</div></div></div></div>
+                <button class="btn-action" onclick="saveGlobalConfig()">SAVE CONFIG</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-<div class="modal fade" id="updateModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title fw-bold text-brand">MY TRADING TRACKER</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><input type="hidden" id="u-db-id"><input type="hidden" id="u-original-date"><div class="row"><div class="col-lg-4 border-end border-secondary border-opacity-25 pe-lg-4"><h4 class="font-num fw-bold text-main mb-3" id="u-symbol-display">TOKEN</h4><div class="mb-3"><label class="small text-sub fw-bold mb-1">DATE</label><input type="date" id="u-date" class="form-control text-brand fw-bold"></div><div class="p-3 mb-4 rounded" style="background: rgba(240, 185, 11, 0.05); border: 1px dashed rgba(240, 185, 11, 0.3);"><label class="small text-gold fw-bold mb-1"><i class="fas fa-lock me-1"></i> MIN VOLUME (TARGET)</label><input type="text" id="u-min-vol" class="form-control font-num text-gold fw-bold fs-4" placeholder="---" disabled style="background:transparent; border:none; padding:0" onkeyup="formatCurrency(this)"></div><label class="small text-brand fw-bold mb-2"><i class="fas fa-wallet me-1"></i> MY VOLUMES & GAP</label><div class="d-flex justify-content-between text-sub small fw-bold px-1 mb-1"><span style="width:80px">ACC</span><span class="text-center">VOL</span><span class="text-end">GAP / COST</span></div><div id="u-acc-inputs" class="mb-4"></div><button id="btn-save-progress" class="btn-action" onclick="saveUpdate()">SAVE MY PROGRESS</button></div><div class="col-lg-8 ps-lg-4"><div style="height: 250px; margin-bottom: 20px;"><canvas id="trackerChart"></canvas></div><label class="small text-sub fw-bold mb-2">MY HISTORY</label><div style="max-height:300px;overflow-y:auto"><table class="table table-dark table-sm table-hover align-middle" style="font-size:0.8rem" id="historyTable"><thead><tr id="historyHeader"></tr></thead><tbody id="historyList"></tbody></table></div></div></div></div></div></div></div>
+<div class="modal fade" id="updateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-brand">MY TRADING TRACKER</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="u-db-id">
+                <input type="hidden" id="u-original-date">
+                <div class="row">
+                    <div class="col-lg-4 border-end border-secondary border-opacity-25 pe-lg-4">
+                        <h4 class="font-num fw-bold text-main mb-3" id="u-symbol-display">TOKEN</h4>
+                        <div class="mb-3">
+                            <label class="small text-sub fw-bold mb-1">DATE</label>
+                            <input type="date" id="u-date" class="form-control text-brand fw-bold">
+                        </div>
+                        <div class="p-3 mb-4 rounded" style="background: rgba(240, 185, 11, 0.05); border: 1px dashed rgba(240, 185, 11, 0.3);">
+                            <label class="small text-gold fw-bold mb-1"><i class="fas fa-lock me-1"></i> MIN VOLUME (TARGET)</label>
+                            <input type="text" id="u-min-vol" class="form-control font-num text-gold fw-bold fs-4" placeholder="---" disabled style="background:transparent; border:none; padding:0" onkeyup="formatCurrency(this)">
+                        </div>
+                        <label class="small text-brand fw-bold mb-2"><i class="fas fa-wallet me-1"></i> MY VOLUMES & GAP</label>
+                        <div class="d-flex justify-content-between text-sub small fw-bold px-1 mb-1">
+                            <span style="width:80px">ACC</span>
+                            <span class="text-center">VOL</span>
+                            <span class="text-end">GAP / COST</span>
+                        </div>
+                        <div id="u-acc-inputs" class="mb-4"></div>
+                        <button id="btn-save-progress" class="btn-action" onclick="saveUpdate()">SAVE MY PROGRESS</button>
+                    </div>
+                    <div class="col-lg-8 ps-lg-4">
+                        <div style="height: 250px; margin-bottom: 20px;">
+                            <canvas id="trackerChart"></canvas>
+                        </div>
+                        <label class="small text-sub fw-bold mb-2">MY HISTORY</label>
+                        <div style="max-height:300px;overflow-y:auto">
+                            <table class="table table-dark table-sm table-hover align-middle" style="font-size:0.8rem" id="historyTable">
+                                <thead>
+                                    <tr id="historyHeader"></tr>
+                                </thead>
+                                <tbody id="historyList"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<div class="modal fade" id="inputModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-white">ENTER PREDICTION</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body pt-2"><p class="text-sub small mb-4">Dự đoán Min Volume chốt sổ.</p><label class="text-brand fw-bold small mb-1">YOUR NAME</label><input type="text" id="modal-p-name" class="form-control mb-3" placeholder="Ví dụ: Shark 1"><label class="text-gold fw-bold small mb-1">YOUR GUESS (VOL)</label><input type="number" id="modal-p-guess" class="form-control font-num fs-4 text-gold mb-4" placeholder="Fee: 100 USDT"><button class="btn-action w-100 py-3 text-white" style="background: var(--purple)" onclick="submitPredictionFromModal()">CONFIRM & PAY FEE</button></div></div></div></div>
+<div class="modal fade" id="inputModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-white">ENTER PREDICTION</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-sub small mb-4">Dự đoán Min Volume chốt sổ.</p>
+                <label class="text-brand fw-bold small mb-1">YOUR NAME</label>
+                <input type="text" id="modal-p-name" class="form-control mb-3" placeholder="Ví dụ: Shark 1">
+                <label class="text-gold fw-bold small mb-1">YOUR GUESS (VOL)</label>
+                <input type="number" id="modal-p-guess" class="form-control font-num fs-4 text-gold mb-4" placeholder="Fee: 100 USDT">
+                <button class="btn-action w-100 py-3 text-white" style="background: var(--purple)" onclick="submitPredictionFromModal()">CONFIRM & PAY FEE</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="compModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -837,7 +932,7 @@
             </div>
             <div class="modal-body p-4">
                 <input type="hidden" id="c-db-id">
-                
+
                 <div class="row g-3 mb-3">
                     <div class="col-md-5">
                         <label class="small text-sub fw-bold mb-1">REWARD TOKEN CONTRACT (Để lấy giá tính Pool)</label>
@@ -863,7 +958,7 @@
                 <div class="p-3 rounded mb-3" style="background: rgba(153, 69, 255, 0.1); border: 1px dashed var(--purple);">
                     <label class="small text-white fw-bold mb-1"><i class="fas fa-layer-group me-1"></i> CAMPAIGN MODE (OPTIONAL)</label>
                     <input type="text" id="c-inputTokens" class="form-control" placeholder="Nhập các token cần trade, cách nhau dấu phẩy (VD: VSN, LAVA)">
-                    <div class="text-sub mt-1" style="font-size:0.7rem">* Nếu điền ô này, thẻ sẽ chuyển sang chế độ 'Aggregated Campaign'. Bỏ trống để tạo giải thường.</div>
+                    <div class="text-sub mt-1" style="font-size:0.7rem">* Nếu điền ô này, thẻ sẽ chuyển sang chế độ 'Aggregated Campaign'. Bỏ trống để tạo giải thưởng.</div>
                 </div>
 
                 <div class="mb-3">
@@ -935,17 +1030,149 @@
     </div>
 </div>
 
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-brand">ICON LEGEND</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="btn-icon" style="cursor:default"><i class="fas fa-sync-alt text-gold"></i></div>
+                    <div>
+                        <div class="fw-bold">Update Prices</div>
+                        <div class="text-sub small">Fetch latest token prices from DexScreener.</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="btn-icon" style="cursor:default"><i class="fas fa-database"></i></div>
+                    <div>
+                        <div class="fw-bold">Reload Data</div>
+                        <div class="text-sub small">Force reload data from Cloud Database.</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="btn-icon" style="cursor:default"><i class="fas fa-wallet"></i></div>
+                    <div>
+                        <div class="fw-bold">Manage Wallets</div>
+                        <div class="text-sub small">Add or remove tracking accounts (Main, Clone...).</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="btn-icon" style="cursor:default"><i class="fas fa-key"></i></div>
+                    <div>
+                        <div class="fw-bold">Login</div>
+                        <div class="text-sub small">Access Admin features via OTP Email.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<div class="modal fade" id="ruleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-brand"><i class="fas fa-scroll me-2"></i> WAVE ORACLE RULES</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <h6 class="text-white fw-bold mb-3 text-uppercase letter-spacing-1">Objective</h6>
+                <p class="text-sub small mb-4">Predict the exact <strong>Min Volume</strong> (the volume of the last ranked winner, e.g., Rank #2000) at the tournament snapshot time.</p>
 
+                <h6 class="text-white fw-bold mb-3 text-uppercase letter-spacing-1">Gameplay Mechanics</h6>
+                <ul class="rule-list">
+                    <li><strong>Entry Fee:</strong> Each prediction costs <span class="text-gold fw-bold">100 USDT</span> (Virtual). Added to the Prize Pool.</li>
+                    <li><strong>Lock Time:</strong> Predictions CLOSE <span class="text-danger fw-bold">AT TOURNAMENT END</span>. Results are announced the following day after Binance publishes the Min Volume.</li>
+                    <li><strong>Winner:</strong> The player with the <span class="text-brand">Closest Guess ≥ Actual Result</span> wins. (Lower guesses are disqualified).</li>
+                    <li><strong>Tie-Breaker:</strong> If guesses are equal, the earlier prediction wins.</li>
+                </ul>
+
+                <h6 class="text-white fw-bold mb-3 text-uppercase letter-spacing-1">Prize Distribution</h6>
+                <div class="d-flex gap-2 mb-2">
+                    <div class="flex-fill p-2 bg-dark rounded border border-secondary text-center"><div class="text-gold fw-bold">🥇 1st</div><div class="small">50% Pool</div></div>
+                    <div class="flex-fill p-2 bg-dark rounded border border-secondary text-center"><div class="text-light fw-bold">🥈 2nd</div><div class="small">30% Pool</div></div>
+                    <div class="flex-fill p-2 bg-dark rounded border border-secondary text-center"><div class="text-brand fw-bold">🥉 3rd</div><div class="small">20% Pool</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="guideModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-brand"><i class="fas fa-graduation-cap me-2"></i> QUICK START GUIDE</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-4 text-center">
+                        <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
+                            <div class="mb-2"><i class="fas fa-list-ol fa-2x text-brand"></i></div>
+                            <h6 class="text-white fw-bold">STEP 1: SETUP LIST</h6>
+                            <p class="text-sub small">Define your tracking list (e.g. Account A, Account B) to separate volume sources. <br><strong>No connection needed.</strong></p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
+                            <div class="mb-2"><i class="fas fa-pen-to-square fa-2x text-gold"></i></div>
+                            <h6 class="text-white fw-bold">STEP 2: INPUT VOLUME</h6>
+                            <p class="text-sub small">Click <strong>UPDATE</strong> on any tournament. Manually input your daily volume for each account.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
+                            <div class="mb-2"><i class="fas fa-chart-line fa-2x text-green"></i></div>
+                            <h6 class="text-white fw-bold">STEP 3: TRACK GAP</h6>
+                            <p class="text-sub small">System automatically calculates the <strong>GAP</strong> (Distance) to the target Min Volume.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-center">
+                    <button class="btn-action w-50 mx-auto" data-bs-dismiss="modal" onclick="openSettingsModal()">SETUP MY LIST <i class="fas fa-arrow-right ms-2"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="volHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: #161a1e; border: 1px solid #333;">
+            <div class="modal-header border-bottom border-secondary border-opacity-25">
+                <div>
+                    <h5 class="modal-title fw-bold text-brand font-num" id="vh-title">VOLUME HISTORY</h5>
+                    <div class="text-sub small" id="vh-subtitle">Daily USDT Volume</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div style="height: 300px; width: 100%;">
+                    <canvas id="volHistoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     /* ================= SETUP ================= */
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
-    const ADMIN_EMAILS = [ "annachou60@gmail.com" ]; 
+    const ADMIN_EMAILS = [ "annachou60@gmail.com" ];
     const PREDICT_FEE = 100; // Game Fee
-    
+
 /* --- BỘ TỪ ĐIỂN FULL (ĐÃ CẬP NHẬT TÊN & SLOGAN MỚI) --- */
 let currentLang = localStorage.getItem('wave_lang') || 'en';
 
@@ -954,7 +1181,7 @@ const translations = {
         // --- CHUNG ---
         nav_guide: "GUIDE", nav_login: "Login", nav_logout: "Logout",
         sys_time: "SYSTEM TIME", verified_link: "Verified Links",
-        
+
         // --- HERO (ĐÃ CẬP NHẬT) ---
         hero_title: "TOURNAMENT VOLUME TRACKER",
         hero_sub: "Manage your accounts & Join the prediction.",
@@ -981,7 +1208,7 @@ const translations = {
 
         // --- MODAL: UPDATE ---
         modal_u_title: "MY TRADING TRACKER",
-        lbl_date: "DATE", 
+        lbl_date: "DATE",
         lbl_my_vol: "MY VOLUMES & GAP",
         lbl_history: "MY HISTORY",
         btn_save_prog: "SAVE MY PROGRESS",
@@ -999,7 +1226,7 @@ const translations = {
         modal_l_title: "SECURE ACCESS",
         modal_l_desc: "Authenticate via Email OTP",
         btn_send_code: "SEND CODE", btn_verify: "VERIFY LOGIN",
-        
+
         // --- TOAST ---
         toast_login_req: "Please Login first!",
         toast_success: "Action Successful!",
@@ -1038,7 +1265,7 @@ const translations = {
 
         // --- MODAL: UPDATE ---
         modal_u_title: "CẬP NHẬT VOLUME",
-        lbl_date: "NGÀY", 
+        lbl_date: "NGÀY",
         lbl_my_vol: "VOL CỦA TÔI & KHOẢNG CÁCH",
         lbl_history: "LỊCH SỬ NHẬP",
         btn_save_prog: "LƯU TIẾN ĐỘ",
@@ -1095,7 +1322,7 @@ const translations = {
 
         // --- MODAL: UPDATE ---
         modal_u_title: "我的交易追踪",
-        lbl_date: "日期", 
+        lbl_date: "日期",
         lbl_my_vol: "我的成交量 & 差距",
         lbl_history: "历史记录",
         btn_save_prog: "保存进度",
@@ -1130,7 +1357,7 @@ function changeLanguage(lang) {
     let langBtn = document.getElementById('cur-lang-text');
     if(langBtn) langBtn.innerText = lang.toUpperCase();
     applyLanguage();
-    renderGrid(); 
+    renderGrid();
 }
 
 function applyLanguage() {
@@ -1159,16 +1386,16 @@ function applyLanguage() {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
         toast.className = `toast-item ${type === 'success' ? 'toast-success' : (type === 'error' ? 'toast-error' : '')}`;
-        
+
         let icon = type === 'success' ? 'fa-check-circle text-green' : (type === 'error' ? 'fa-exclamation-triangle text-red' : 'fa-info-circle text-brand');
-        
+
         toast.innerHTML = `<i class="fas ${icon} fa-lg"></i><div style="flex:1; font-size:0.9rem; font-weight:600; font-family:var(--font-main)">${msg}</div>`;
-        
+
         container.appendChild(toast);
         // Play gentle sound
-        if(type === 'error') playSfx('hover'); 
+        if(type === 'error') playSfx('hover');
         else playSfx('click');
-        
+
         setTimeout(() => {
             toast.style.animation = 'fadeOut 0.5s forwards';
             setTimeout(() => toast.remove(), 500);
@@ -1210,7 +1437,7 @@ function applyLanguage() {
     let siteConfig = { x:'', tele:'', yt:'', affiliate: {} };
     let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [{id:'acc1', name:'Main', color:'#00F0FF'}, {id:'acc2', name:'Clone', color:'#FFD700'}];
     let currentUser = null;
-    let userProfile = null; 
+    let userProfile = null;
 
     const fmtNum = n => new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(n);
     const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n).replace('US$', '$').trim();
@@ -1222,14 +1449,14 @@ function applyLanguage() {
 
     if (typeof window.supabase !== 'undefined') {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
+
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
                 currentUser = session.user;
                 document.getElementById('loginBtn').classList.add('d-none');
                 document.getElementById('userProfile').classList.remove('d-none');
                 document.getElementById('userProfile').classList.add('d-flex');
-                
+
                 fetchUserProfile();
                 checkUserAdmin();
                 bootstrap.Modal.getInstance(document.getElementById('loginModal'))?.hide();
@@ -1244,15 +1471,14 @@ function applyLanguage() {
         });
         supabase.channel('public:tournaments').on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, payload => { loadFromCloud(false); }).subscribe();
     }
-    
+
     function init() {
     checkLegal();
-    // ... các dòng cũ ...
     loadFromCloud();
     setInterval(updateClock,1000);
-    
+
     // THÊM DÒNG NÀY:
-    applyLanguage(); 
+    applyLanguage();
     document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
             // --- CODE MỚI: Tự động bật Hướng dẫn ---
     if (!localStorage.getItem('wave_guide_seen')) {
@@ -1280,12 +1506,12 @@ function applyLanguage() {
         if(data) {
             userProfile = data;
             document.getElementById('userNameDisplay').innerText = data.nickname || currentUser.email.split('@')[0];
-            
+
             // V45: Read correct balance column
             let bal = data.balance_usdt !== null ? data.balance_usdt : 0;
             document.getElementById('user-balance').innerText = fmtNum(bal);
             userProfile.balance_usdt = bal;
-            
+
             // CHECK DAILY BONUS
             checkDailyBonus();
 
@@ -1309,18 +1535,18 @@ function applyLanguage() {
         const today = new Date().toISOString().split('T')[0];
         const lastClaimKey = 'wave_daily_claim_' + currentUser.id;
         const lastClaim = localStorage.getItem(lastClaimKey);
-        
+
         if(lastClaim !== today) {
             const bonus = 100;
             const newBal = (userProfile.balance_usdt || 0) + bonus;
-            
+
             // Optimistic UI Update
             userProfile.balance_usdt = newBal;
             document.getElementById('user-balance').innerText = fmtNum(newBal);
-            
+
             showToast(`🎉 Daily Login Bonus: +${bonus} USDT!`, 'success');
             localStorage.setItem(lastClaimKey, today);
-            
+
             // Sync to DB silently
             await supabase.from('profiles').update({ balance_usdt: newBal }).eq('id', currentUser.id);
         }
@@ -1330,7 +1556,7 @@ function applyLanguage() {
         if(!currentUser) return;
         document.getElementById('pf-nickname').value = userProfile?.nickname || '';
         document.getElementById('pf-avatar-url').value = userProfile?.avatar_url || '';
-        
+
         let preview = document.getElementById('pf-preview');
         let placeholder = document.getElementById('pf-placeholder');
         if(userProfile?.avatar_url) {
@@ -1352,19 +1578,19 @@ function applyLanguage() {
         const file = input.files[0];
         const fileExt = file.name.split('.').pop();
         const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
-        
+
         let placeholder = document.getElementById('pf-placeholder');
         let loader = document.getElementById('upload-loading');
         loader.style.display = 'flex';
-        
+
         try {
             const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file);
             if(uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-            
+
             await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
-            
+
             document.getElementById('pf-avatar-url').value = publicUrl;
             document.getElementById('pf-preview').src = publicUrl;
             document.getElementById('pf-preview').style.display = 'block';
@@ -1390,7 +1616,7 @@ function applyLanguage() {
             if(error.code === '23505') showToast("Nickname already taken!", "error");
             else showToast(error.message, "error");
         } else {
-            fetchUserProfile(); 
+            fetchUserProfile();
             bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
             showToast("Profile Saved!", "success");
         }
@@ -1422,7 +1648,7 @@ function applyLanguage() {
 
     function openLoginModal() { resetLoginModal(); new bootstrap.Modal(document.getElementById('loginModal')).show(); }
     function resetLoginModal() { document.getElementById('login-step-1').style.display = 'block'; document.getElementById('login-step-2').style.display = 'none'; document.getElementById('otp-token').value = ''; }
-    
+
     async function sendOtpCode() {
         const email = document.getElementById('otp-email').value.trim();
         if(!email) return showToast("Please enter email", "error");
@@ -1436,7 +1662,7 @@ function applyLanguage() {
             document.getElementById('login-step-2').style.display = 'block';
             setTimeout(() => document.getElementById('otp-token').focus(), 500);
             showToast("OTP Code sent to " + email, "success");
-        } catch (e) { showToast("Error sending code: " + e.message, "error"); } 
+        } catch (e) { showToast("Error sending code: " + e.message, "error"); }
         finally { btn.innerHTML = oldText; btn.disabled = false; }
     }
 
@@ -1462,7 +1688,7 @@ function applyLanguage() {
     function checkUserAdmin() {
         if(currentUser && ADMIN_EMAILS.includes(currentUser.email)) document.body.classList.add('is-admin');
         else document.body.classList.remove('is-admin');
-        renderGrid(); 
+        renderGrid();
     }
 
     // --- MAIN ---
@@ -1472,12 +1698,12 @@ function applyLanguage() {
         if (!error) {
             compList = [];
             data.forEach(row => {
-                if(row.id === -1) { 
-                    siteConfig = row.data || { x:'', tele:'', yt:'', affiliate:{} }; 
+                if(row.id === -1) {
+                    siteConfig = row.data || { x:'', tele:'', yt:'', affiliate:{} };
                     if(!siteConfig.affiliate) siteConfig.affiliate = {};
-                    renderFooter(); 
+                    renderFooter();
                     renderArsenal(); // V45
-                } 
+                }
                 else {
                     let item = row.data || row.Data;
                     if (item) {
@@ -1489,23 +1715,23 @@ function applyLanguage() {
                     }
                 }
             });
-            await updateAllPrices(); 
+            await updateAllPrices();
             if(currentPolyId) updateTerminalData(currentPolyId); else renderGrid();
             renderStats();
         }
         if(showLoading) document.getElementById('loading-overlay').style.display = 'none';
     }
-    
+
         // --- CẬP NHẬT: PHÂN CHIA 2 HÀNG (CEX & DEX/WEB3) ---
         // --- BƯỚC 4: HÀM HIỂN THỊ DANH SÁCH ĐỘNG (ĐỌC TỪ CONFIG) ---
     function renderArsenal() {
         const container = document.getElementById('arsenal-grid');
         if(!container) return;
-        
+
         // 1. Reset container
-        container.className = ''; 
+        container.className = '';
         container.innerHTML = '';
-        
+
         // 2. LẤY DỮ LIỆU TỪ CẤU HÌNH ĐÃ LƯU (Quan trọng!)
         // Nếu chưa có dữ liệu thì dùng mảng rỗng
         let exchanges = siteConfig.arsenal_items || [];
@@ -1527,11 +1753,11 @@ function applyLanguage() {
             let html = '';
             list.forEach(ex => {
                 // Chỉ hiện nếu có Link Ref
-                if(ex.link) { 
+                if(ex.link) {
                     // Dùng logo mặc định nếu user chưa up logo
                     // (Tạo ảnh placeholder bằng chữ cái đầu của tên sàn)
                     let logoUrl = ex.logo || 'https://placehold.co/50x50/333/999?text=' + ex.name.charAt(0).toUpperCase();
-                    
+
                     html += `
                     <div class="arsenal-card" onclick="trackAffiliateClick('${ex.name}'); window.open('${ex.link}', '_blank'); playSfx('click')">
                         <img src="${logoUrl}" class="ex-logo">
@@ -1563,7 +1789,6 @@ function applyLanguage() {
     }
 
 
-
     // New Tracking Function
     function trackAffiliateClick(exchangeId) {
         console.log("Tracking Click:", exchangeId);
@@ -1575,10 +1800,10 @@ function applyLanguage() {
             });
         }
     }
-    
+
         // --- CẬP NHẬT: TỰ ĐỘNG SỬA LINK NẾU THIẾU HTTPS ---
     function renderFooter() {
-        const c = document.getElementById('footer-socials-container'); 
+        const c = document.getElementById('footer-socials-container');
         c.innerHTML = '';
 
         // Hàm nhỏ giúp kiểm tra và thêm https:// nếu thiếu
@@ -1598,36 +1823,36 @@ function applyLanguage() {
         // Render Brand Logo (Giữ nguyên phần logo)
         const brandImg = document.getElementById('nav-brand-img');
         const brandText = document.getElementById('nav-brand-text');
-        if(brandText) brandText.style.display = 'block'; 
+        if(brandText) brandText.style.display = 'block';
         if(siteConfig.brandLogo) {
             brandImg.src = siteConfig.brandLogo;
-            brandImg.style.display = 'block'; 
+            brandImg.style.display = 'block';
         } else {
             brandImg.style.display = 'none';
         }
     }
 
 
-                function openConfigModal() { 
+                function openConfigModal() {
         // ... (Phần Socials & Logo cũ giữ nguyên) ...
-        document.getElementById('cfg-x').value = siteConfig.x || ''; 
-        document.getElementById('cfg-tele').value = siteConfig.tele || ''; 
-        document.getElementById('cfg-yt').value = siteConfig.yt || ''; 
+        document.getElementById('cfg-x').value = siteConfig.x || '';
+        document.getElementById('cfg-tele').value = siteConfig.tele || '';
+        document.getElementById('cfg-yt').value = siteConfig.yt || '';
         document.getElementById('cfg-logo-url').value = siteConfig.brandLogo || '';
         let img = document.getElementById('cfg-logo-preview');
         if(siteConfig.brandLogo) { img.src = siteConfig.brandLogo; img.style.display = 'block'; }
         else { img.style.display = 'none'; }
-        
+
         // --- LOAD DANH SÁCH SÀN ĐỘNG ---
         // Lấy danh sách từ config, nếu chưa có thì dùng mảng rỗng
-        let arsenalList = siteConfig.arsenal_items || []; 
+        let arsenalList = siteConfig.arsenal_items || [];
         renderArsenalInputs(arsenalList);
-        
-        new bootstrap.Modal(document.getElementById('configModal')).show(); 
+
+        new bootstrap.Modal(document.getElementById('configModal')).show();
     }
 
 
-                async function saveGlobalConfig() { 
+                async function saveGlobalConfig() {
         // 1. Quét dữ liệu từ danh sách động
         let arsenalItems = [];
         document.querySelectorAll('.arsenal-item-row').forEach(row => {
@@ -1640,21 +1865,21 @@ function applyLanguage() {
         });
 
         // 2. Tạo object Config mới
-        const newData = { 
-            x: document.getElementById('cfg-x').value, 
-            tele: document.getElementById('cfg-tele').value, 
+        const newData = {
+            x: document.getElementById('cfg-x').value,
+            tele: document.getElementById('cfg-tele').value,
             yt: document.getElementById('cfg-yt').value,
             brandLogo: document.getElementById('cfg-logo-url').value,
-            
+
             // Lưu mảng danh sách sàn vào đây
-            arsenal_items: arsenalItems 
-        }; 
-        
+            arsenal_items: arsenalItems
+        };
+
         // 3. Gửi lên Server
-        await supabase.from('tournaments').upsert({ id: -1, name: 'CONFIG', contract: 'CONFIG', data: newData }); 
-        
-        bootstrap.Modal.getInstance(document.getElementById('configModal')).hide(); 
-        loadFromCloud(false); 
+        await supabase.from('tournaments').upsert({ id: -1, name: 'CONFIG', contract: 'CONFIG', data: newData });
+
+        bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+        loadFromCloud(false);
         showToast("Cấu hình đã lưu!", "success");
     }
 
@@ -1663,7 +1888,7 @@ function applyLanguage() {
     // --- V45 FIX: Card Highlight Logic ---
     function toggleCardHighlight(el) {
         const isAlreadyActive = el.classList.contains('active-card');
-        
+
         // 1. Reset all cards first
         document.querySelectorAll('.tour-card').forEach(card => {
             card.classList.remove('active-card');
@@ -1674,7 +1899,7 @@ function applyLanguage() {
         if (!isAlreadyActive) {
             el.classList.add('active-card');
             document.body.classList.add('has-active-card');
-            
+
             // Scroll to view if needed (smoothly)
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -1732,13 +1957,14 @@ function applyLanguage() {
             if(icon) icon.classList.remove('fa-spin');
         }
     }
+
     async function updateAllPrices() {
         // Hàm này chỉ chuyên lấy giá (nhẹ)
         for(let c of compList) {
             if(c.contract) {
                 // Bỏ qua nếu giải đã kết thúc
                 if(c.end && new Date() > new Date(c.end + 'T' + (c.endTime || '23:59:59'))) continue;
-                
+
                 try {
                     let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.contract}`);
                     let d = await r.json();
@@ -1749,7 +1975,7 @@ function applyLanguage() {
         renderGrid();
     }
 
-                  
+
             /* --- HÀM VẼ BIỂU ĐỒ V49 (REVERT: TOTAL VOL + MIN TARGET) --- */
     let volHistChart = null;
 
@@ -1759,16 +1985,16 @@ function applyLanguage() {
 
         document.getElementById('vh-title').innerText = c.name + " ANALYTICS";
         document.getElementById('vh-subtitle').innerText = "Correlation: Total Vol vs Min Target";
-        
+
         // 1. LẤY DỮ LIỆU
         let realHistory = c.real_vol_history || [];
         let minHistory = c.history || [];
 
         let allDates = new Set([
-            ...realHistory.map(x => x.date), 
+            ...realHistory.map(x => x.date),
             ...minHistory.map(x => x.date)
         ]);
-        
+
         let isRunning = true;
         if(c.end) {
             let todayStr = new Date().toISOString().split('T')[0];
@@ -1818,8 +2044,8 @@ function applyLanguage() {
 
         // Màu Gradient Cyberpunk
         let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(0, 240, 255, 0.6)'); 
-        gradient.addColorStop(1, 'rgba(0, 240, 255, 0.05)'); 
+        gradient.addColorStop(0, 'rgba(0, 240, 255, 0.6)');
+        gradient.addColorStop(1, 'rgba(0, 240, 255, 0.05)');
 
         volHistChart = new Chart(ctx, {
             type: 'bar',
@@ -1860,12 +2086,12 @@ function applyLanguage() {
                 interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: { grid: { display: false }, ticks: { color: '#848e9c', font: { family: 'Rajdhani', size: 11, weight: 'bold' } } },
-                    y: { 
+                    y: {
                         type: 'linear', display: true, position: 'left',
                         grid: { color: '#2b3139', borderDash: [4, 4] },
                         ticks: { color: '#00F0FF', font: { family: 'Rajdhani', size: 10 }, callback: function(v) { return v>=1000000?(v/1000000).toFixed(1)+'M':(v>=1000?(v/1000).toFixed(0)+'k':v); } }
                     },
-                    y1: { 
+                    y1: {
                         type: 'linear', display: true, position: 'right', grid: { display: false },
                         ticks: { color: '#F0B90B', font: { family: 'Rajdhani', size: 10, weight: 'bold' }, callback: function(v) { return v>=1000000?(v/1000000).toFixed(1)+'M':(v>=1000?(v/1000).toFixed(0)+'k':v); } }
                     }
@@ -1891,10 +2117,10 @@ function applyLanguage() {
 
     /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - FINAL FIXED V47 --- */
     function renderGrid() {
-        const grid = document.getElementById('appGrid'); 
-        if(!grid) return; 
+        const grid = document.getElementById('appGrid');
+        if(!grid) return;
         grid.innerHTML = '';
-        
+
         let displayList = [...compList];
         displayList.sort((a,b) => {
             let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
@@ -1902,16 +2128,16 @@ function applyLanguage() {
             return posA - posB;
         });
 
-        if(displayList.length === 0) { 
-            grid.innerHTML = `<div class="col-12 text-center py-5 opacity-25"><i class="fas fa-plus-circle fa-4x mb-3 text-brand"></i><p>Empty List</p></div>`; 
-            return; 
+        if(displayList.length === 0) {
+            grid.innerHTML = `<div class="col-12 text-center py-5 opacity-25"><i class="fas fa-plus-circle fa-4x mb-3 text-brand"></i><p>Empty List</p></div>`;
+            return;
         }
-        
+
         const isAdmin = document.body.classList.contains('is-admin');
-        const btnsSave = document.querySelectorAll('.btn-save-pos'); 
+        const btnsSave = document.querySelectorAll('.btn-save-pos');
         btnsSave.forEach(btn => {
             btn.style.display = isAdmin ? 'inline-block' : 'none';
-            if(isAdmin && btn.closest('.d-flex')) btn.style.display = 'block'; 
+            if(isAdmin && btn.closest('.d-flex')) btn.style.display = 'block';
         });
 
         displayList.forEach(c => {
@@ -1929,17 +2155,17 @@ function applyLanguage() {
                 // 2. REAL VOLUME (FOOTER)
                 let realVol = c.real_alpha_volume || 0;
                 let realVolDisplay = '---';
-                let realVolColor = '#666'; 
-                
+                let realVolColor = '#666';
+
                 if(realVol > 0) {
                     realVolDisplay = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol);
-                    realVolColor = '#d0aaff'; 
+                    realVolColor = '#d0aaff';
                 }
 
                 // 3. THỜI GIAN CẬP NHẬT
                 let lastUpd = c.last_updated_ts || 0;
-                let timeAgoStr = 'Pending update...'; 
-                
+                let timeAgoStr = 'Pending update...';
+
                 if (lastUpd > 0) {
                     let diffMin = Math.floor((Date.now() - lastUpd) / 60000);
                     if(diffMin < 1) timeAgoStr = 'Just now';
@@ -1963,7 +2189,7 @@ function applyLanguage() {
                 `;
 
                 let isCampaign = (c.inputTokens || []).length > 0;
-                let tokenInfoHtml = '', tagHtml = ''; 
+                let tokenInfoHtml = '', tagHtml = '';
                 let priceDisplayHtml = `<div class="stat-lbl">PRICE</div><div class="stat-val text-gold anim-breathe">${fmtNum(c.cachedPrice||0)}</div>`;
 
                 if (isCampaign) {
@@ -1973,7 +2199,7 @@ function applyLanguage() {
                 } else {
                     tokenInfoHtml = `<div class="token-status ${status==='running'?'anim-breathe':''}" style="color:${status==='running'?'var(--accent-green)':'var(--accent-red)'}">${status.toUpperCase()}</div>`;
                     if(!isExpired && status === 'running') {
-                        if(c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`; 
+                        if(c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
                         else if(c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2">X2 OTHER</div>`; }
                     } else {
                         if(c.alphaType === 'x4') tagHtml = `<div class="tag-x4 tag-expired">X4 BSC</div>`;
@@ -1987,7 +2213,7 @@ function applyLanguage() {
                     if(Date.now() > endTime || status === 'ended') { isExpired = true; x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`; }
                     else { x4TimerHtml = `<div class="x4-timer-box"><i class="far fa-clock small"></i> <span class="x4-timer-val" data-list="${c.listingTime}">...</span></div>`; }
                 } else if (status === 'ended') { isExpired = true; x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`; }
-                
+
                 if(c.alphaType === 'x4' && status === 'running' && !isExpired && !isCampaign) cardClass += ' highlight-x4';
                 let ruleHtml = c.ruleType === 'trade_x4' ? `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>` : `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
                 if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
@@ -1995,8 +2221,8 @@ function applyLanguage() {
                 let latestCloud = (c.history && c.history.length > 0) ? c.history[c.history.length-1] : null;
                 let target = latestCloud ? parseFloat(latestCloud.target) : 0;
                 let estVal = (parseFloat(c.rewardQty)||0) * (parseFloat(c.cachedPrice)||0);
-                let estHtml = (estVal > 0) ? `<span class="text-green small fw-bold ms-1 anim-breathe">~$${fmt(estVal).replace('$','')}</span>` : ''; 
-                
+                let estHtml = (estVal > 0) ? `<span class="text-green small fw-bold ms-1 anim-breathe">~$${fmt(estVal).replace('$','')}</span>` : '';
+
                 let accListHtml = '';
                 let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
                 accSettings.forEach(acc => {
@@ -2007,7 +2233,7 @@ function applyLanguage() {
                     }
                     let pct = target > 0 ? (v/target)*100 : 0;
                     let color = pct>=100 ? 'var(--accent-green)' : (pct>=50 ? 'var(--accent-yellow)' : acc.color);
-                    let rightInfoHtml = (status === 'ended') 
+                    let rightInfoHtml = (status === 'ended')
                         ? (v >= target && target > 0 ? `<span class="res-badge res-win">WIN</span>` : `<span class="res-badge res-lose">LOSE</span>`)
                         : (target > 0 ? `<span class="acc-gap ${v-target>=0?'gap-pos':'gap-neg'}">(${v-target>=0?'+':''}${fmtNum(v-target)})</span>` : '');
 
@@ -2053,7 +2279,7 @@ function applyLanguage() {
                 </div>`;
             } catch(e) { console.error("Render error", e); }
         });
-        
+
         try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) }); } catch (e) {}
     }
 
@@ -2061,13 +2287,13 @@ function applyLanguage() {
     /* --- CÁC HÀM XỬ LÝ DRAG & DROP --- */
     let draggedItem = null;
     function allowDrop(ev) { ev.preventDefault(); }
-    
-    function drag(ev) { 
-        draggedItem = ev.currentTarget; 
+
+    function drag(ev) {
+        draggedItem = ev.currentTarget;
         ev.dataTransfer.effectAllowed = 'move';
-        ev.currentTarget.querySelector('.tour-card').classList.add('dragging'); 
+        ev.currentTarget.querySelector('.tour-card').classList.add('dragging');
     }
-    
+
     function drop(ev) {
         ev.preventDefault();
         if(!draggedItem) return;
@@ -2086,12 +2312,12 @@ function applyLanguage() {
         // --- HÀM LƯU VỊ TRÍ MỚI (ĐÃ SỬA LỖI 2 NÚT) ---
             async function saveCustomOrder() {
         if(!confirm("Lưu vị trí hiện tại?")) return;
-        
+
         // Hiệu ứng loading cho tất cả nút Save
         let btns = document.querySelectorAll('.btn-save-pos');
         btns.forEach(btn => {
             btn.dataset.oldText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; 
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
             btn.disabled = true;
         });
 
@@ -2115,26 +2341,26 @@ function applyLanguage() {
             for (let item of updates) {
                 // Tạo bản sao dữ liệu sạch để lưu
                 let dataToSave = { ...item };
-                
+
                 // Xóa các biến hệ thống không cần lưu vào cột data
-                delete dataToSave.db_id;       
-                delete dataToSave.id;          
-                delete dataToSave.cachedPrice; 
-                
+                delete dataToSave.db_id;
+                delete dataToSave.id;
+                delete dataToSave.cachedPrice;
+
                 // Đảm bảo giữ lại lịch sử và dự đoán
                 dataToSave.history = item.history || [];
                 dataToSave.predictions = item.predictions || [];
 
                 // Lệnh Update
-                await supabase.from('tournaments').update({ 
-                    data: dataToSave 
+                await supabase.from('tournaments').update({
+                    data: dataToSave
                 }).eq('id', item.db_id);
             }
 
             showToast("Đã lưu vị trí thành công!", "success");
-            
+
             // 3. Quan trọng: Tải lại dữ liệu từ Server để đồng bộ hiển thị
-            await loadFromCloud(false); 
+            await loadFromCloud(false);
 
         } catch (e) {
             console.error(e);
@@ -2142,7 +2368,7 @@ function applyLanguage() {
         } finally {
             // Trả lại trạng thái nút ban đầu
             btns.forEach(btn => {
-                btn.innerHTML = btn.dataset.oldText || '<i class="fas fa-save me-1"></i> SAVE POSITION'; 
+                btn.innerHTML = btn.dataset.oldText || '<i class="fas fa-save me-1"></i> SAVE POSITION';
                 btn.disabled = false;
             });
         }
@@ -2153,16 +2379,16 @@ function applyLanguage() {
         document.getElementById('view-predict').style.display = view==='predict'?'block':'none';
         if(view==='dashboard') { currentPolyId=null; renderGrid(); }
     }
-    
+
     function switchTab(t) { document.querySelectorAll('.p-tab').forEach(el=>el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); ['chart','activity','chat'].forEach(x => document.getElementById(`content-${x}`).style.display = x===t ? (x==='chat'?'flex':'block') : 'none'); }
-    
+
         // --- CODE MỚI: LẤY DỮ LIỆU TỪ BẢNG PREDICTIONS ---
-    async function openPredictionView(id) { 
-        currentPolyId = id; 
-        
+    async function openPredictionView(id) {
+        currentPolyId = id;
+
         // 1. Hiện loading
         document.getElementById('loading-overlay').style.display = 'flex';
-        
+
         // 2. Gọi Server lấy danh sách dự đoán
         const { data: predsData, error } = await supabase
             .from('predictions')
@@ -2190,22 +2416,22 @@ function applyLanguage() {
 
         // 4. Chuyển màn hình
         switchView('predict');
-        
+
         // 5. Vẽ giao diện (Giữ nguyên HTML cũ)
         document.getElementById('predict-content-placeholder').innerHTML = `
         <div class="terminal-layout">
             <div class="terminal-main">
                 <div class="hero-header">
                     <div class="hh-left"><img id="pt-logo" src="" title="View on Binance Alpha"><div><h1 class="fw-bold text-white mb-0" id="pt-symbol">---</h1><div class="text-sub fw-bold" style="font-size:0.75rem;letter-spacing:2px;">PREDICTION MARKET</div></div></div>
-                    
+
                     <div class="hh-center">
     <div class="text-brand fw-bold small letter-spacing-1" style="font-size:0.85rem; opacity:0.8">CURRENT MIN VOLUME</div>
-    
+
     <div class="big-vol" id="pt-min-vol" style="margin-bottom: 5px;">0</div>
-    
+
     <div id="pt-vol-change" class="mb-4 d-flex align-items-center gap-2" style="font-family: var(--font-num); font-size: 1.1rem;">
         </div>
-    
+
     <div class="d-flex gap-2">
          <button id="btn-predict-action" class="btn-predict-hero" onclick="openInputModal()"><i class="fas fa-crosshairs me-2"></i>MAKE PREDICTION</button>
          <button class="btn btn-outline-light rounded-pill px-3" onclick="new bootstrap.Modal(document.getElementById('ruleModal')).show()"><i class="fas fa-info-circle"></i> RULES</button>
@@ -2218,8 +2444,8 @@ function applyLanguage() {
         <div class="text-sub small mt-1 text-center fst-italic">*System will fetch last Min Volume from History.</div>
     </div>
 </div>
-                    
-                    <div class="hh-right"><div class="text-end"><div class="header-stat-lbl">TIME REMAINING</div><div class="text-gold font-num fw-bold fs-3" id="pt-time">---</div></div><div class="text-end"><div class="header-stat-lbl">TOTAL POOL</div><div class="text-green font-num fw-bold fs-3" id="pt-pool">0 $</div></div></div> 
+
+                    <div class="hh-right"><div class="text-end"><div class="header-stat-lbl">TIME REMAINING</div><div class="text-gold font-num fw-bold fs-3" id="pt-time">---</div></div><div class="text-end"><div class="header-stat-lbl">TOTAL POOL</div><div class="text-green font-num fw-bold fs-3" id="pt-pool">0 $</div></div></div>
                 </div>
                 <div class="terminal-card" style="flex:1;">
                     <div class="p-tabs">
@@ -2229,9 +2455,9 @@ function applyLanguage() {
                     </div>
                     <div style="flex:1; position:relative; padding:25px; display:flex; flex-direction:column; overflow:hidden;">
                         <div id="content-chart" style="height:100%; width:100%;"><canvas id="marketChart"></canvas></div>
-                        
+
                         <div id="content-activity" class="feed-box" style="display:none; height:100%;"></div>
-                        
+
                         <div id="content-chat" style="display:none; height:100%; flex-direction:column;">
                             <div id="chat-feed" class="feed-box" style="flex:1; overflow-y:auto; margin-bottom:10px;"></div>
                             <div class="d-flex gap-2 align-items-center">
@@ -2251,15 +2477,15 @@ function applyLanguage() {
 </thead>
 <tbody id="pt-leaderboard"></tbody></table></div></div></div>
         </div>`;
-        
+
         updateTerminalData(id);
     }
-    
+
         // --- HÀM CẬP NHẬT DỮ LIỆU CHI TIẾT GIẢI ĐẤU (LOGIC CHUẨN V3) ---
     function updateTerminalData(id) {
         let c = compList.find(x => x.db_id == id); if(!c) return;
-        document.getElementById('pt-symbol').innerText = c.name; 
-        
+        document.getElementById('pt-symbol').innerText = c.name;
+
         let logoEl = document.getElementById('pt-logo');
         logoEl.src = c.logo;
         logoEl.onclick = function() { window.open(`https://www.binance.com/en/alpha/${c.chain}/${c.contract}`, '_blank'); };
@@ -2269,12 +2495,12 @@ function applyLanguage() {
         document.getElementById('pt-min-vol').innerText = fmtNum(curMin);
 
         // --- TÍNH TĂNG TRƯỞNG ---
-        let changeHtml = ''; 
+        let changeHtml = '';
         if (c.history && c.history.length >= 2) {
             let todayVal = parseFloat(c.history[c.history.length - 1].target);
             let yestVal = parseFloat(c.history[c.history.length - 2].target);
-            let diff = todayVal - yestVal; 
-            let pct = yestVal > 0 ? ((diff / yestVal) * 100).toFixed(2) : 0; 
+            let diff = todayVal - yestVal;
+            let pct = yestVal > 0 ? ((diff / yestVal) * 100).toFixed(2) : 0;
             let colorClass = diff >= 0 ? 'text-green' : 'text-red';
             let icon = diff >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
             let sign = diff >= 0 ? '+' : '';
@@ -2294,12 +2520,12 @@ function applyLanguage() {
                 let d = Math.floor(dist / (1000 * 60 * 60 * 24));
                 let h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 document.getElementById('pt-time').innerText = `${d}d ${h}h`;
-            } else { 
+            } else {
                 document.getElementById('pt-time').innerText = 'Ended';
                 isEnded = true;
             }
         }
-        
+
         let btn = document.getElementById('btn-predict-action');
         if(isEnded) {
             btn.innerHTML = '<i class="fas fa-trophy me-2"></i> EVENT ENDED - VIEW WINNERS';
@@ -2311,7 +2537,7 @@ function applyLanguage() {
             btn.onclick = openInputModal;
         }
 
-        let totalPool = (c.predictions?.length || 0) * PREDICT_FEE; 
+        let totalPool = (c.predictions?.length || 0) * PREDICT_FEE;
         document.getElementById('pt-pool').innerText = fmt(totalPool);
 
         // --- VẼ BIỂU ĐỒ ---
@@ -2320,19 +2546,19 @@ function applyLanguage() {
             let labels=[], data=[]; if(c.history) c.history.forEach(h=>{ labels.push(h.date.substring(5)); data.push(h.target); });
             marketChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Min Vol', data, borderColor: '#00F0FF', backgroundColor: 'rgba(0,240,255,0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x:{display:false}, y:{grid:{color:'#222'}} }, plugins:{legend:{display:false}} } });
         }
-        
+
         // --- [CODE MỚI V3] BẢNG XẾP HẠNG: LỌC MIN VOL & FIX UI ---
-        let lb = document.getElementById('pt-leaderboard'); 
+        let lb = document.getElementById('pt-leaderboard');
         lb.innerHTML = '';
-        
+
         // Nhóm A: Hợp lệ (>= Min Vol) -> Xếp tăng dần
         let validPreds = (c.predictions || []).filter(p => p.guess >= curMin).sort((a,b) => a.guess - b.guess);
         // Nhóm B: Không hợp lệ (< Min Vol) -> Xếp giảm dần
         let invalidPreds = (c.predictions || []).filter(p => p.guess < curMin).sort((a,b) => b.guess - a.guess);
         // Gộp lại: Nhóm A luôn nằm trên
         let preds = [...validPreds, ...invalidPreds];
-        
-        preds.forEach((p, i) => { 
+
+        preds.forEach((p, i) => {
             let rank = i + 1;
             let prizeAmount = 0;
             let rankIcon = '';
@@ -2373,40 +2599,40 @@ function applyLanguage() {
                 <td class="align-middle"><div class="d-flex align-items-center">${avatarHtml}<span class="fw-bold text-white">${p.name}</span></div></td>
                 <td class="text-center align-middle text-brand font-num fw-bold">${fmtNum(p.guess)}</td>
                 <td class="text-end pe-2 align-middle">${prizeDisplay}</td>
-            </tr>`; 
+            </tr>`;
         });
 
         // --- XỬ LÝ HOẠT ĐỘNG & CHAT ---
         let actDiv = document.getElementById('content-activity'); actDiv.innerHTML = '';
-        (c.predictions || []).sort((a,b)=>b.time-a.time).forEach(p => { 
+        (c.predictions || []).sort((a,b)=>b.time-a.time).forEach(p => {
             let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="act-avatar">` : `<i class="fas fa-bolt text-gold me-3 fa-lg"></i>`;
-            actDiv.innerHTML += `<div class="act-item d-flex align-items-center mb-2">${avatarHtml}<div><span class="text-white fw-bold">${p.name}</span> predicted <span class="text-brand font-num">${fmtNum(p.guess)}</span> <div class="text-sub small">${new Date(p.time).toLocaleTimeString()}</div></div></div>`; 
+            actDiv.innerHTML += `<div class="act-item d-flex align-items-center mb-2">${avatarHtml}<div><span class="text-white fw-bold">${p.name}</span> predicted <span class="text-brand font-num">${fmtNum(p.guess)}</span> <div class="text-sub small">${new Date(p.time).toLocaleTimeString()}</div></div></div>`;
         });
-        
+
         let chatDiv = document.getElementById('chat-feed'); chatDiv.innerHTML = '';
-        (c.comments || []).sort((a,b)=>a.time-b.time).forEach(m => { 
+        (c.comments || []).sort((a,b)=>a.time-b.time).forEach(m => {
             let isMe = m.user === (userProfile?.nickname || currentUser?.email.split('@')[0]);
             let avatarHtml = m.avatar ? `<img src="${m.avatar}" class="chat-avatar">` : `<div class="chat-avatar-placeholder">${m.user.substring(0,1).toUpperCase()}</div>`;
             let cleanText = DOMPurify.sanitize(m.text);
-            chatDiv.innerHTML += `<div class="chat-row ${isMe ? 'me' : ''}">${avatarHtml}<div class="chat-bubble ${isMe ? 'chat-me' : 'chat-other'}"><div class="small fw-bold mb-1 ${isMe ? 'text-end text-brand' : 'text-sub'}">${m.user}</div>${cleanText}</div></div>`; 
+            chatDiv.innerHTML += `<div class="chat-row ${isMe ? 'me' : ''}">${avatarHtml}<div class="chat-bubble ${isMe ? 'chat-me' : 'chat-other'}"><div class="small fw-bold mb-1 ${isMe ? 'text-end text-brand' : 'text-sub'}">${m.user}</div>${cleanText}</div></div>`;
         });
-        chatDiv.scrollTop = chatDiv.scrollHeight;        
+        chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
-    function openInputModal() { 
+    function openInputModal() {
         let c = compList.find(x => x.db_id == currentPolyId);
-        
+
         // CHECK LOCK TIME (6 hours before end)
         if(c.end) {
             let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
-            let lockTime = endTime - (6 * 3600 * 1000); 
-            
+            let lockTime = endTime - (6 * 3600 * 1000);
+
             if(Date.now() > endTime) return showToast("Tournament has ENDED!", "error");
             if(Date.now() > lockTime) return showToast("Prediction Gate CLOSED (6 hours before end).", "error");
         }
 
         if(!currentUser) { showToast("Please login to predict!", "error"); return; }
-        
+
         // CHECK BALANCE
         if((userProfile.balance_usdt || 0) < PREDICT_FEE) {
             return showToast(`Insufficient Balance! You need ${PREDICT_FEE} USDT.`, "error");
@@ -2414,37 +2640,37 @@ function applyLanguage() {
 
         let displayName = userProfile?.nickname || currentUser.email.split('@')[0];
         document.getElementById('modal-p-name').value = displayName;
-        document.getElementById('modal-p-name').disabled = true; 
+        document.getElementById('modal-p-name').disabled = true;
         document.getElementById('modal-p-guess').placeholder = `Fee: ${PREDICT_FEE} USDT`;
-        
-        new bootstrap.Modal(document.getElementById('inputModal')).show(); 
+
+        new bootstrap.Modal(document.getElementById('inputModal')).show();
     }
-    
+
     async function submitPredictionFromModal() {
     let nameInput = document.getElementById('modal-p-name');
     let guessInput = document.getElementById('modal-p-guess');
-    
+
     let name = nameInput.value.trim();
     let guess = parseFloat(guessInput.value);
-    
+
     if(!currentUser) return showToast("Please Login to predict!", "error");
     if(!name) return showToast("Nickname required", "error");
     if(isNaN(guess) || guess < 0) return showToast("Invalid Prediction Volume", "error");
 
     let btn = document.querySelector('#inputModal .btn-action');
     let oldText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> PROCESSING...'; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> PROCESSING...';
     btn.disabled = true;
 
     try {
         const { data, error } = await supabase.rpc('submit_prediction_action', {
-            p_tourn_id: parseInt(currentPolyId), 
-            p_guess: guess,                      
-            p_name: name,                        
-            p_avatar: userProfile?.avatar_url || '' 
+            p_tourn_id: parseInt(currentPolyId),
+            p_guess: guess,
+            p_name: name,
+            p_avatar: userProfile?.avatar_url || ''
         });
 
-        if (error) throw error; 
+        if (error) throw error;
         if (data && data.status === 'error') throw new Error(data.message);
 
         // Update Balance UI
@@ -2459,10 +2685,10 @@ function applyLanguage() {
         bootstrap.Modal.getInstance(document.getElementById('inputModal')).hide();
 
         // --- KHÚC QUAN TRỌNG: CẬP NHẬT MƯỢT MÀ ---
-        
+
         // 1. Cập nhật lại số tiền tổng bên ngoài (không ảnh hưởng giao diện)
-        renderStats(); 
-        
+        renderStats();
+
         // 2. Cập nhật bảng xếp hạng MƯỢT (Không load lại cả khung)
         if(currentPolyId) await silentReload(currentPolyId);
 
@@ -2474,29 +2700,29 @@ function applyLanguage() {
     } catch (e) {
         console.error(e);
         showToast("Error: " + e.message, "error");
-        playSfx('hover'); 
+        playSfx('hover');
     } finally {
-        btn.innerHTML = oldText; 
+        btn.innerHTML = oldText;
         btn.disabled = false;
     }
 }
 
-    
+
     // V45 VIRAL LOOP: GENERATE SHARE CARD
     function generateShareCard(userGuess = null) {
         let c = compList.find(x => x.db_id == currentPolyId);
         if(!c) return;
-        
+
         // 1. Fill Token Data
         document.getElementById('sc-token-name').innerText = c.name;
-        
+
         // 2. Fill User Data (V45 Update)
         let uName = userProfile?.nickname || "Trader";
         // Sử dụng UI Avatars nếu user chưa có ảnh (fallback đẹp)
         let uAvatar = userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${uName}&background=random&color=fff&size=128`;
-        
+
         document.getElementById('sc-user-name').innerText = uName;
-        
+
         // Handle Avatar Image (CORS Safe)
         let uaEl = document.getElementById('sc-user-avatar');
         uaEl.crossOrigin = "anonymous";
@@ -2511,9 +2737,9 @@ function applyLanguage() {
 
         // FIX CORS: Thêm timestamp để tránh cache và set crossOrigin
         let imgEl = document.getElementById('sc-token-img');
-        imgEl.crossOrigin = "anonymous"; 
+        imgEl.crossOrigin = "anonymous";
         imgEl.src = c.logo + (c.logo.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-        
+
         // Fallback nếu ảnh lỗi thì hiện avatar chữ cái (tránh bị đen sì)
         imgEl.onerror = function() {
             this.style.display = 'none'; // Ẩn ảnh lỗi
@@ -2522,23 +2748,23 @@ function applyLanguage() {
         imgEl.onload = function() {
             this.style.display = 'block';
         };
-        
+
         let curMin = (c.history && c.history.length>0) ? c.history[c.history.length-1].target : 0;
         document.getElementById('sc-min-vol').innerText = fmtNum(curMin);
-        
+
         // If userGuess passed, use it. Else try to find from user predictions
         if(!userGuess && currentUser && c.predictions) {
             let myP = c.predictions.find(p => p.user_id === currentUser.id);
             if(myP) userGuess = myP.guess;
         }
         document.getElementById('sc-my-guess').innerText = userGuess ? fmtNum(userGuess) : '---';
-        
+
         // 2. Generate QR Code
         let qrBox = document.getElementById('sc-qr-target');
         qrBox.innerHTML = '';
         let link = siteConfig.affiliate?.binance || window.location.href;
         new QRCode(qrBox, { text: link, width: 50, height: 50 });
-        
+
         // 3. Show Modal
         new bootstrap.Modal(document.getElementById('shareCardModal')).show();
     }
@@ -2549,7 +2775,7 @@ function applyLanguage() {
         let c = compList.find(x => x.db_id == currentPolyId);
         let guess = document.getElementById('sc-my-guess').innerText;
         let webUrl = "https://wave-alpha.netlify.app";
-        
+
         let text = "";
         if (platform === 'x') {
             text = `🚀 I predicted $${c.name} Min Volume: ${guess} on Wave Alpha!\n\nCan you beat me? 👇\n${webUrl}\n\n#WaveAlpha #Crypto #Trading`;
@@ -2559,10 +2785,10 @@ function applyLanguage() {
 
         try {
             showToast("Generating image...", "info");
-            
+
             // 1. Capture Image
-            const canvas = await html2canvas(element, { 
-                backgroundColor: '#161a1e', scale: 2, useCORS: true, allowTaint: true, logging: false 
+            const canvas = await html2canvas(element, {
+                backgroundColor: '#161a1e', scale: 2, useCORS: true, allowTaint: true, logging: false
             });
             const blob = await new Promise(resolve => canvas.toBlob(resolve));
             const file = new File([blob], "WaveAlpha-Prediction.png", { type: "image/png" });
@@ -2582,9 +2808,9 @@ function applyLanguage() {
                 link.download = 'WaveAlpha-Prediction.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-                
+
                 showToast("Image Saved! Please attach it to your post.", "success");
-                
+
                 setTimeout(() => {
                     let shareUrl = "";
                     if (platform === 'x') {
@@ -2606,12 +2832,12 @@ function applyLanguage() {
     // Map old functions to new Smart Logic
     function shareToX() { shareImageSmart('x'); }
     function shareToTele() { shareImageSmart('tele'); }
-    
+
     function downloadShareCard() {
         let element = document.getElementById('share-card-container');
-        
+
         // FIX: Cấu hình html2canvas chuẩn để bắt được ảnh và style
-        html2canvas(element, { 
+        html2canvas(element, {
             backgroundColor: '#161a1e', // Đặt màu nền cứng để tránh trong suốt/mất chữ
             scale: 2, // Tăng độ nét
             useCORS: true, // Quan trọng: Cho phép tải ảnh từ domain khác
@@ -2624,29 +2850,29 @@ function applyLanguage() {
             link.click();
         });
     }
-    
+
     function sendChat() {
         if(!currentUser) return showToast("Please login to chat!", "error");
         let txt = document.getElementById('chat-msg').value;
         if(!txt) return;
         let c = compList.find(x => x.db_id == currentPolyId);
         if(!c.comments) c.comments = [];
-        
+
         let displayName = userProfile?.nickname || currentUser.email.split('@')[0];
-        c.comments.push({ 
-            user: displayName, 
-            text: txt, 
+        c.comments.push({
+            user: displayName,
+            text: txt,
             time: Date.now(),
             avatar: userProfile?.avatar_url || ''
         });
-        
+
         let obj = {...c}; delete obj.db_id;
         const payload = {
             name: obj.name || c.name,
             contract: obj.contract || c.contract,
             data: obj
         };
-        
+
         supabase.from('tournaments').update(payload).eq('id', currentPolyId).then(() => {
             loadFromCloud(false);
         });
@@ -2655,36 +2881,36 @@ function applyLanguage() {
 
     async function saveToCloud(compObj) {
         document.getElementById('loading-overlay').style.display = 'flex';
-        let cloudObj = {...compObj}; delete cloudObj.myProgress; 
-        
-        const payload = { 
-            name: cloudObj.name, 
-            contract: cloudObj.contract, 
-            data: cloudObj 
+        let cloudObj = {...compObj}; delete cloudObj.myProgress;
+
+        const payload = {
+            name: cloudObj.name,
+            contract: cloudObj.contract,
+            data: cloudObj
         };
-        
+
         if (cloudObj.db_id) await supabase.from('tournaments').update(payload).eq('id', cloudObj.db_id);
         else { if(payload.data.db_id) delete payload.data.db_id; await supabase.from('tournaments').insert([payload]); }
         document.getElementById('loading-overlay').style.display = 'none'; loadFromCloud(false);
     }
 
     // --- MODAL UPDATES (TRACKING & HISTORY) ---
-    function openUpdateModal(dbId) { 
-        let c=compList.find(x=>x.db_id==dbId); if(!c)return; 
-        document.getElementById('u-db-id').value=dbId; document.getElementById('u-symbol-display').innerText=c.name; 
-        let today=new Date().toISOString().split('T')[0]; 
-        document.getElementById('u-original-date').value = ""; 
-        document.getElementById('u-date').value=today; 
-        
-        let min=document.getElementById('u-min-vol'); 
-        if(document.body.classList.contains('is-admin')){ min.disabled=false; min.placeholder="Admin Edit"; } else { min.disabled=true; min.placeholder="---"; } 
-        let html=''; 
+    function openUpdateModal(dbId) {
+        let c=compList.find(x=>x.db_id==dbId); if(!c)return;
+        document.getElementById('u-db-id').value=dbId; document.getElementById('u-symbol-display').innerText=c.name;
+        let today=new Date().toISOString().split('T')[0];
+        document.getElementById('u-original-date').value = "";
+        document.getElementById('u-date').value=today;
+
+        let min=document.getElementById('u-min-vol');
+        if(document.body.classList.contains('is-admin')){ min.disabled=false; min.placeholder="Admin Edit"; } else { min.disabled=true; min.placeholder="---"; }
+        let html='';
         accSettings.forEach(acc=>{
             html+=`<div class="acc-input-row" id="row-${acc.id}"><span style="color:${acc.color}; font-weight:700;">${acc.name}</span><input type="number" class="form-control font-num text-center text-brand" id="u-vol-${acc.id}" placeholder="Volume" oninput="calcRowGap('${acc.id}')"><div class="d-flex align-items-center gap-2"><span class="font-num fw-bold text-sub small" id="gap-display-${acc.id}" style="width:70px; text-align:right;">---</span><input type="number" class="form-control font-num text-end text-danger" id="u-cost-${acc.id}" placeholder="Cost ($)" style="max-width:80px"></div></div>`;
-        }); 
-        document.getElementById('u-acc-inputs').innerHTML=html; loadDateData(today); document.getElementById('u-date').onchange=function(){loadDateData(this.value)}; new bootstrap.Modal(document.getElementById('updateModal')).show(); 
+        });
+        document.getElementById('u-acc-inputs').innerHTML=html; loadDateData(today); document.getElementById('u-date').onchange=function(){loadDateData(this.value)}; new bootstrap.Modal(document.getElementById('updateModal')).show();
     }
-    
+
     function calcRowGap(accId) {
         let minInput = document.getElementById('u-min-vol').value.replace(/,/g, '');
         let min = parseFloat(minInput) || 0;
@@ -2695,21 +2921,21 @@ function applyLanguage() {
     }
 
     // V43 UPGRADE: USE TRACKER_DATA FROM CLOUD
-    function loadDateData(d) { 
-        let id=document.getElementById('u-db-id').value; let c=compList.find(x=>x.id==id); 
-        let min=0; 
-        if(c.history){let e=c.history.find(h=>h.date===d); if(e)min=e.target; else if(c.history.length>0)min=c.history[c.history.length-1].target;} 
+    function loadDateData(d) {
+        let id=document.getElementById('u-db-id').value; let c=compList.find(x=>x.id==id);
+        let min=0;
+        if(c.history){let e=c.history.find(h=>h.date===d); if(e)min=e.target; else if(c.history.length>0)min=c.history[c.history.length-1].target;}
         let minInput = document.getElementById('u-min-vol');
-        minInput.value=fmtNum(min).replace(/\./g, ''); 
-        formatCurrency(minInput); 
+        minInput.value=fmtNum(min).replace(/\./g, '');
+        formatCurrency(minInput);
 
-        accSettings.forEach(acc=>{ document.getElementById(`u-vol-${acc.id}`).value=''; document.getElementById(`u-cost-${acc.id}`).value=''; calcRowGap(acc.id); }); 
-        
+        accSettings.forEach(acc=>{ document.getElementById(`u-vol-${acc.id}`).value=''; document.getElementById(`u-cost-${acc.id}`).value=''; calcRowGap(acc.id); });
+
         // GET DATA FROM USER PROFILE INSTEAD OF LOCAL C.MYPROGRESS
         let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[id]) ? userProfile.tracker_data[id] : [];
-        
+
         if(myProgress){
-            let p = myProgress.find(x => x.date === d); 
+            let p = myProgress.find(x => x.date === d);
             if(p && p.accsDetail){
                 accSettings.forEach(acc=>{
                     if(p.accsDetail[acc.id]){
@@ -2719,30 +2945,30 @@ function applyLanguage() {
                     }
                 })
             }
-        } 
+        }
         renderTrackerChart(c); renderHistoryList(c);
     }
-    
+
     function loadHistoryToEdit(date) {
         document.getElementById('u-date').value = date;
-        document.getElementById('u-original-date').value = date; 
+        document.getElementById('u-original-date').value = date;
         loadDateData(date);
-        document.getElementById('u-date').focus(); 
+        document.getElementById('u-date').focus();
     }
 
-    function renderTrackerChart(c) { 
-        const ctx = document.getElementById('trackerChart').getContext('2d'); 
-        if(trackerChart) trackerChart.destroy(); 
-        
-        let labels=[], minData=[], dates=new Set(); 
-        if(c.history) c.history.forEach(x => dates.add(x.date)); 
-        
+    function renderTrackerChart(c) {
+        const ctx = document.getElementById('trackerChart').getContext('2d');
+        if(trackerChart) trackerChart.destroy();
+
+        let labels=[], minData=[], dates=new Set();
+        if(c.history) c.history.forEach(x => dates.add(x.date));
+
         // GET DATA FROM USER PROFILE
         let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
-        if(myProgress) myProgress.forEach(x => dates.add(x.date)); 
-        
+        if(myProgress) myProgress.forEach(x => dates.add(x.date));
+
         let sortedDates = Array.from(dates).sort();
-        
+
         minData = sortedDates.map(d => {
             let h = c.history ? c.history.find(x => x.date === d) : null;
             return h ? h.target : 0;
@@ -2751,13 +2977,13 @@ function applyLanguage() {
         let datasets = [{
             label: 'Target (Min)',
             data: minData,
-            borderColor: '#F0B90B', 
+            borderColor: '#F0B90B',
             borderDash: [6, 4],
             borderWidth: 2,
             pointRadius: 0,
             tension: 0,
             fill: false,
-            order: 0 
+            order: 0
         }];
 
         accSettings.forEach(acc => {
@@ -2783,17 +3009,17 @@ function applyLanguage() {
                     let target = minData[idx] || 0;
                     return val >= target ? '#0ECB81' : '#F6465D';
                 },
-                pointBorderColor: '#fff', 
+                pointBorderColor: '#fff',
             });
         });
 
-        trackerChart = new Chart(ctx, { 
-            type: 'line', 
-            data: { labels: sortedDates.map(d => d.substring(5)), datasets: datasets }, 
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
+        trackerChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: sortedDates.map(d => d.substring(5)), datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
-                plugins: { 
+                plugins: {
                     legend: { labels: { color: '#aaa', boxWidth: 10, font: {size: 10} } },
                     tooltip: {
                         enabled: true, backgroundColor: 'rgba(22, 26, 30, 0.95)', titleColor: '#00F0FF',
@@ -2802,31 +3028,31 @@ function applyLanguage() {
                         borderColor: '#333', borderWidth: 1, padding: 10, displayColors: true, boxPadding: 4,
                         callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += new Intl.NumberFormat('en-US').format(context.parsed.y); } return label; } }
                     }
-                }, 
-                scales: { x: { display: true, ticks: { color: '#555', font:{size:9} }, grid: {display:false} }, y: { display: false } } 
-            } 
-        }); 
+                },
+                scales: { x: { display: true, ticks: { color: '#555', font:{size:9} }, grid: {display:false} }, y: { display: false } }
+            }
+        });
     }
-    
-    function renderHistoryList(c) { 
+
+    function renderHistoryList(c) {
         let headerHtml = `<th class="text-sub small">Date</th><th class="text-gold small">Target</th>`;
         accSettings.forEach(acc => { headerHtml += `<th class="small text-center" style="color:${acc.color}">${acc.name}</th>`; });
         headerHtml += `<th class="text-end small">Action</th>`;
         document.getElementById('historyHeader').innerHTML = headerHtml;
 
-        const l=document.getElementById('historyList'); l.innerHTML=''; 
-        let dates=new Set(); 
-        if(c.history)c.history.forEach(h=>dates.add(h.date)); 
-        
+        const l=document.getElementById('historyList'); l.innerHTML='';
+        let dates=new Set();
+        if(c.history)c.history.forEach(h=>dates.add(h.date));
+
         // GET DATA FROM USER PROFILE
         let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
-        if(myProgress) myProgress.forEach(p => dates.add(p.date)); 
-        
-        Array.from(dates).sort().reverse().forEach(d=>{ 
-            let h=c.history?c.history.find(x=>x.date===d):null; 
-            let p=myProgress?myProgress.find(x=>x.date===d):null; 
-            let min=h?h.target:0; 
-            
+        if(myProgress) myProgress.forEach(p => dates.add(p.date));
+
+        Array.from(dates).sort().reverse().forEach(d=>{
+            let h=c.history?c.history.find(x=>x.date===d):null;
+            let p=myProgress?myProgress.find(x=>x.date===d):null;
+            let min=h?h.target:0;
+
             let accCells = '';
             accSettings.forEach(acc => {
                 let vol = (p && p.accsDetail && p.accsDetail[acc.id]) ? parseFloat(p.accsDetail[acc.id].vol) : 0;
@@ -2842,15 +3068,15 @@ function applyLanguage() {
                     <i class="fas fa-pencil-alt text-secondary me-3 cursor-pointer" onclick="loadHistoryToEdit('${d}')" title="Edit / Move Date"></i>
                     <i class="fas fa-trash text-danger cursor-pointer" onclick="deleteHistory('${d}')" title="Delete"></i>
                 </td>
-            </tr>`; 
-        }); 
+            </tr>`;
+        });
     }
-    
-    async function deleteHistory(date) { 
-        if(!confirm("Delete history for " + date + "?")) return; 
-        let id = document.getElementById('u-db-id').value; 
-        let c = compList.find(x => x.id == id); 
-        
+
+    async function deleteHistory(date) {
+        if(!confirm("Delete history for " + date + "?")) return;
+        let id = document.getElementById('u-db-id').value;
+        let c = compList.find(x => x.id == id);
+
         // V43: DELETE FROM CLOUD TRACKER DATA
         if(userProfile.tracker_data && userProfile.tracker_data[id]) {
             userProfile.tracker_data[id] = userProfile.tracker_data[id].filter(p => p.date !== date);
@@ -2861,7 +3087,7 @@ function applyLanguage() {
         if(document.body.classList.contains('is-admin')) {
              if(c.history) {
                  c.history = c.history.filter(h => h.date !== date);
-                 await saveToCloud(c); 
+                 await saveToCloud(c);
              }
         } else {
             renderTrackerChart(c);
@@ -2874,24 +3100,24 @@ function applyLanguage() {
              loadDateData(document.getElementById('u-date').value);
         }
     }
-    
+
     // V43: SAVE UPDATE TO CLOUD (PROFILES TABLE)
-    async function saveUpdate(){ 
+    async function saveUpdate(){
         if(!currentUser) return showToast("Please Login to save progress!", "error");
 
-        let id = document.getElementById('u-db-id').value; 
-        let c = compList.find(x => x.id == id); 
-        let date = document.getElementById('u-date').value; 
+        let id = document.getElementById('u-db-id').value;
+        let c = compList.find(x => x.id == id);
+        let date = document.getElementById('u-date').value;
         let originalDate = document.getElementById('u-original-date').value;
 
-        let my = {}; 
+        let my = {};
         accSettings.forEach(acc=>{
             my[acc.id] = {
-                vol: parseFloat(document.getElementById(`u-vol-${acc.id}`).value) || 0, 
+                vol: parseFloat(document.getElementById(`u-vol-${acc.id}`).value) || 0,
                 cost: parseFloat(document.getElementById(`u-cost-${acc.id}`).value) || 0
             }
-        }); 
-        
+        });
+
         // Initialize tracker_data if null
         if(!userProfile.tracker_data) userProfile.tracker_data = {};
         if(!userProfile.tracker_data[id]) userProfile.tracker_data[id] = [];
@@ -2902,12 +3128,12 @@ function applyLanguage() {
         if(originalDate && originalDate !== date) {
             currentProg = currentProg.filter(p => p.date !== originalDate);
         }
-        currentProg = currentProg.filter(p => p.date !== date); 
-        
+        currentProg = currentProg.filter(p => p.date !== date);
+
         // Add new entry
-        currentProg.push({date: date, accsDetail: my}); 
-        currentProg.sort((a,b) => new Date(a.date) - new Date(b.date)); 
-        
+        currentProg.push({date: date, accsDetail: my});
+        currentProg.sort((a,b) => new Date(a.date) - new Date(b.date));
+
         // Assign back
         userProfile.tracker_data[id] = currentProg;
 
@@ -2918,16 +3144,16 @@ function applyLanguage() {
 
         await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
 
-        if(document.body.classList.contains('is-admin')){ 
+        if(document.body.classList.contains('is-admin')){
             let minValStr = document.getElementById('u-min-vol').value.replace(/,/g, '');
-            let t = parseFloat(minValStr) || 0; 
-            if(!c.history) c.history = []; 
-            c.history = c.history.filter(h => h.date !== date); 
-            c.history.push({date: date, target: t}); 
-            c.history.sort((a,b) => new Date(a.date) - new Date(b.date)); 
-            saveToCloud(c); 
-        } 
-        
+            let t = parseFloat(minValStr) || 0;
+            if(!c.history) c.history = [];
+            c.history = c.history.filter(h => h.date !== date);
+            c.history.push({date: date, target: t});
+            c.history.sort((a,b) => new Date(a.date) - new Date(b.date));
+            saveToCloud(c);
+        }
+
         btn.innerText = "SAVED!";
         btn.style.background = "#0ECB81";
         btn.disabled = false;
@@ -2939,13 +3165,13 @@ function applyLanguage() {
             renderHistoryList(c);
         }, 1000);
     }
-    
+
     // ADMIN: AUTOMATED SETTLE REWARDS (V45 SECURITY UPGRADE)
     async function settleTournament() {
         if(!confirm("CONFIRM: End tournament and distribute rewards automatically (Server-side)?")) return;
 
         let c = compList.find(x => x.db_id == currentPolyId);
-        
+
         document.getElementById('loading-overlay').style.display = 'flex';
 
         // CALL RPC FUNCTION INSTEAD OF JS LOGIC
@@ -2968,7 +3194,7 @@ function applyLanguage() {
     // --- HÀM ĐỒNG BỘ DỮ LIỆU CŨ LÊN MÂY (MIGRATION TOOL) ---
     async function syncLocalToCloud() {
         if(!currentUser) return showToast("Vui lòng đăng nhập trước!", "error");
-        
+
         if(!confirm("Hành động này sẽ lấy dữ liệu từ máy này GHI ĐÈ lên dữ liệu trên Cloud. Bạn chắc chắn chứ?")) return;
 
         let migrationData = {};
@@ -2978,10 +3204,10 @@ function applyLanguage() {
         for(let i=0; i < localStorage.length; i++) {
             let key = localStorage.key(i);
             if(key.startsWith('wave_progress_')) {
-                let dbId = key.replace('wave_progress_', ''); 
+                let dbId = key.replace('wave_progress_', '');
                 try {
                     let data = JSON.parse(localStorage.getItem(key));
-                    migrationData[dbId] = data; 
+                    migrationData[dbId] = data;
                     count++;
                 } catch(e) {}
             }
@@ -3010,18 +3236,18 @@ function applyLanguage() {
     }
 
     // Standard Utils
-        function openSettingsModal() { 
-        let list = document.getElementById('settingsList'); 
-        list.innerHTML = ''; 
-        accSettings.forEach((acc, i) => { 
+        function openSettingsModal() {
+        let list = document.getElementById('settingsList');
+        list.innerHTML = '';
+        accSettings.forEach((acc, i) => {
             list.innerHTML += `
             <div class="d-flex align-items-center gap-2">
                 <input type="color" class="form-control form-control-color" value="${acc.color}" onchange="updateAccColor(${i}, this.value)" style="height:35px;width:50px">
                 <input value="${acc.name}" class="form-control form-control-sm" onchange="updateAccName(${i}, this.value)" placeholder="Account Name">
                 <button class="btn btn-sm btn-outline-danger border-0" onclick="delAcc(${i})"><i class="fas fa-trash"></i></button>
-            </div>`; 
-        }); 
-        new bootstrap.Modal(document.getElementById('settingsModal')).show(); 
+            </div>`;
+        });
+        new bootstrap.Modal(document.getElementById('settingsModal')).show();
     }
 
     function updateAccName(i, val) { accSettings[i].name = val; localStorage.setItem('wave_settings', JSON.stringify(accSettings)); renderGrid(); }
@@ -3034,9 +3260,9 @@ function applyLanguage() {
         /* --- CÁC HÀM QUẢN LÝ ADMIN (ĐÃ FIX LOGIC CAMPAIGN & PRICE) --- */
 
     // 1. Mở Modal tạo mới
-    function openCreateModal() { 
-        document.getElementById('c-db-id').value = ''; 
-        
+    function openCreateModal() {
+        document.getElementById('c-db-id').value = '';
+
         // Reset các ô nhập liệu
         document.getElementById('c-contract').value = '';
         document.getElementById('c-symbol').value = '';
@@ -3044,52 +3270,52 @@ function applyLanguage() {
         document.getElementById('c-price').value = '';
         document.getElementById('c-logo').value = '';
         document.getElementById('c-logo-preview').style.display = 'none';
-        
+
         document.getElementById('c-rewardQty').value = '';
         document.getElementById('c-winners').value = '';
-        
+
         // Reset ô nhập Token Campaign
         let tokenInput = document.getElementById('c-inputTokens');
-        if(tokenInput) tokenInput.value = ''; 
+        if(tokenInput) tokenInput.value = '';
 
         // Ẩn nút xóa
         document.getElementById('btnDeleteComp').style.display = 'none';
-        
-        new bootstrap.Modal(document.getElementById('compModal')).show(); 
+
+        new bootstrap.Modal(document.getElementById('compModal')).show();
     }
 
     // 2. Mở Modal chỉnh sửa
-    function openEditModal(id) { 
-        let c = compList.find(x => x.db_id == id); 
+    function openEditModal(id) {
+        let c = compList.find(x => x.db_id == id);
         if(!c) return;
 
         // Điền dữ liệu cũ vào form
-        document.getElementById('c-db-id').value = id; 
-        document.getElementById('c-contract').value = c.contract; 
-        document.getElementById('c-symbol').value = c.name; 
-        document.getElementById('c-chain').value = c.chain; 
-        document.getElementById('c-price').value = c.cachedPrice; 
-        
+        document.getElementById('c-db-id').value = id;
+        document.getElementById('c-contract').value = c.contract;
+        document.getElementById('c-symbol').value = c.name;
+        document.getElementById('c-chain').value = c.chain;
+        document.getElementById('c-price').value = c.cachedPrice;
+
         // Logo
-        document.getElementById('c-logo').value = c.logo; 
+        document.getElementById('c-logo').value = c.logo;
         let imgPreview = document.getElementById('c-logo-preview');
-        if(c.logo) { 
-            imgPreview.src = c.logo; 
-            imgPreview.style.display = 'block'; 
-        } else { 
-            imgPreview.style.display = 'none'; 
+        if(c.logo) {
+            imgPreview.src = c.logo;
+            imgPreview.style.display = 'block';
+        } else {
+            imgPreview.style.display = 'none';
         }
-        
+
         // Các chỉ số
-        document.getElementById('c-rewardQty').value = c.rewardQty; 
-        document.getElementById('c-winners').value = c.topWinners; 
-        document.getElementById('c-start').value = c.start; 
-        document.getElementById('c-end').value = c.end; 
-        document.getElementById('c-end-time').value = c.endTime; 
-        document.getElementById('c-alphaType').value = c.alphaType; 
-        document.getElementById('c-listing').value = c.listingTime; 
-        document.getElementById('c-rule').value = c.ruleType; 
-        
+        document.getElementById('c-rewardQty').value = c.rewardQty;
+        document.getElementById('c-winners').value = c.topWinners;
+        document.getElementById('c-start').value = c.start;
+        document.getElementById('c-end').value = c.end;
+        document.getElementById('c-end-time').value = c.endTime;
+        document.getElementById('c-alphaType').value = c.alphaType;
+        document.getElementById('c-listing').value = c.listingTime;
+        document.getElementById('c-rule').value = c.ruleType;
+
         // Load danh sách Token Campaign (Chuyển từ Mảng về Chuỗi để hiển thị)
         let tokenInput = document.getElementById('c-inputTokens');
         if(tokenInput) {
@@ -3100,23 +3326,23 @@ function applyLanguage() {
             }
         }
 
-        toggleListingTime(); 
-        
+        toggleListingTime();
+
         // Hiện nút xóa
-        document.getElementById('btnDeleteComp').style.display = 'inline-block'; 
-        new bootstrap.Modal(document.getElementById('compModal')).show(); 
+        document.getElementById('btnDeleteComp').style.display = 'inline-block';
+        new bootstrap.Modal(document.getElementById('compModal')).show();
     }
 
     // 3. Logic bật tắt ô nhập giờ Listing
-    function toggleListingTime() { 
-        document.getElementById('c-listing').disabled = document.getElementById('c-alphaType').value === 'none'; 
+    function toggleListingTime() {
+        document.getElementById('c-listing').disabled = document.getElementById('c-alphaType').value === 'none';
     }
 
     // 4. Lưu giải đấu (Save to Cloud)
-    function saveComp() { 
-        let id = document.getElementById('c-db-id').value; 
-        let c = id ? compList.find(x => x.db_id == id) : {}; 
-        
+    function saveComp() {
+        let id = document.getElementById('c-db-id').value;
+        let c = id ? compList.find(x => x.db_id == id) : {};
+
         // Xử lý ô Input Tokens (Tách chuỗi thành mảng)
         let tokensArr = [];
         let tokenInput = document.getElementById('c-inputTokens');
@@ -3125,75 +3351,75 @@ function applyLanguage() {
         }
 
         let obj = {
-            db_id: id ? parseInt(id) : null, 
-            name: document.getElementById('c-symbol').value.toUpperCase(), 
+            db_id: id ? parseInt(id) : null,
+            name: document.getElementById('c-symbol').value.toUpperCase(),
             contract: document.getElementById('c-contract').value, // Vẫn lưu Contract ARB để tính giá
-            chain: document.getElementById('c-chain').value, 
-            logo: document.getElementById('c-logo').value, 
-            cachedPrice: document.getElementById('c-price').value, 
-            rewardQty: document.getElementById('c-rewardQty').value, 
-            topWinners: document.getElementById('c-winners').value, 
-            start: document.getElementById('c-start').value, 
-            end: document.getElementById('c-end').value, 
-            endTime: document.getElementById('c-end-time').value, 
-            alphaType: document.getElementById('c-alphaType').value, 
-            listingTime: document.getElementById('c-listing').value, 
-            ruleType: document.getElementById('c-rule').value, 
-            
+            chain: document.getElementById('c-chain').value,
+            logo: document.getElementById('c-logo').value,
+            cachedPrice: document.getElementById('c-price').value,
+            rewardQty: document.getElementById('c-rewardQty').value,
+            topWinners: document.getElementById('c-winners').value,
+            start: document.getElementById('c-start').value,
+            end: document.getElementById('c-end').value,
+            endTime: document.getElementById('c-end-time').value,
+            alphaType: document.getElementById('c-alphaType').value,
+            listingTime: document.getElementById('c-listing').value,
+            ruleType: document.getElementById('c-rule').value,
+
             // Lưu mảng token campaign
             inputTokens: tokensArr,
 
             // Giữ lại dữ liệu mảng con
-            history: c.history || [], 
-            predictions: c.predictions || [], 
-            comments: c.comments || [] 
-        }; 
-        
-        saveToCloud(obj); 
-        bootstrap.Modal.getInstance(document.getElementById('compModal')).hide(); 
+            history: c.history || [],
+            predictions: c.predictions || [],
+            comments: c.comments || []
+        };
+
+        saveToCloud(obj);
+        bootstrap.Modal.getInstance(document.getElementById('compModal')).hide();
     }
 
     // 5. Xóa giải đấu
-    function deleteComp() { 
+    function deleteComp() {
         if(confirm('Delete this tournament?')) {
-            deleteFromCloud(document.getElementById('c-db-id').value); 
-            bootstrap.Modal.getInstance(document.getElementById('compModal')).hide(); 
+            deleteFromCloud(document.getElementById('c-db-id').value);
+            bootstrap.Modal.getInstance(document.getElementById('compModal')).hide();
         }
     }
 
     // 6. Hàm gọi Server xóa
-    async function deleteFromCloud(id) { 
-        await supabase.from('tournaments').delete().eq('id', id); 
-        loadFromCloud(); 
+    async function deleteFromCloud(id) {
+        await supabase.from('tournaments').delete().eq('id', id);
+        loadFromCloud();
     }
 
-    
-    async function fetchTokenInfo(q) { 
-        if(!q) return; 
-        try { 
-            let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${q}`); 
-            let d = await r.json(); 
-            if(d.pairs && d.pairs.length) { 
-                let p = d.pairs[0]; 
-                document.getElementById('c-symbol').value = p.baseToken.symbol; 
-                document.getElementById('c-price').value = p.priceUsd; 
-                document.getElementById('c-chain').value = p.chainId; 
-                
+
+    async function fetchTokenInfo(q) {
+        if(!q) return;
+        try {
+            let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${q}`);
+            let d = await r.json();
+            if(d.pairs && d.pairs.length) {
+                let p = d.pairs[0];
+                document.getElementById('c-symbol').value = p.baseToken.symbol;
+                document.getElementById('c-price').value = p.priceUsd;
+                document.getElementById('c-chain').value = p.chainId;
+
                 let logoUrl = p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`;
                 document.getElementById('c-logo').value = logoUrl;
                 let img = document.getElementById('c-logo-preview');
                 img.src = logoUrl; img.style.display = 'block';
-            } 
-        } catch(e){} 
+            }
+        } catch(e){}
     }
 
         // --- FIX: RENDER STATS TỪ SERVER ---
             // --- CẬP NHẬT: CHỈ TÍNH TỔNG TIỀN CÁC GIẢI ĐANG CHẠY (ACTIVE ONLY) ---
-    function renderStats() { 
+    function renderStats() {
         const now = new Date();
         let activeCount = 0;
-        let totalEstValue = 0; 
-        
+        let totalEstValue = 0;
+
         compList.forEach(c => {
             // 1. Kiểm tra trạng thái: Còn hạn hay hết hạn?
             let isRunning = true;
@@ -3215,8 +3441,8 @@ function applyLanguage() {
         });
 
         // 3. Hiển thị ra màn hình
-        document.getElementById('stat-active').innerText = activeCount; 
-        document.getElementById('stat-pool').innerText = fmt(totalEstValue); 
+        document.getElementById('stat-active').innerText = activeCount;
+        document.getElementById('stat-pool').innerText = fmt(totalEstValue);
     }
 
 
@@ -3228,18 +3454,18 @@ function applyLanguage() {
         if(document.getElementById('sysClock')) {
             // Lấy giờ gốc UTC
             const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            
+
             // Xác định Offset
-            let offset = 0; 
-            if (currentLang === 'vi') offset = 7;      
-            else if (currentLang === 'zh') offset = 8; 
-            
+            let offset = 0;
+            if (currentLang === 'vi') offset = 7;
+            else if (currentLang === 'zh') offset = 8;
+
             // Tính giờ hiển thị
             const targetTime = new Date(utc + (3600000 * offset));
-            
+
             // Hiển thị giờ (00:00:00)
-            document.getElementById('sysClock').innerText = targetTime.toLocaleTimeString('en-GB', { 
-                hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" 
+            document.getElementById('sysClock').innerText = targetTime.toLocaleTimeString('en-GB', {
+                hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit"
             });
 
             // --- CẬP NHẬT NHÃN UTC BÊN CẠNH CHỮ "SYSTEM TIME" ---
@@ -3249,13 +3475,13 @@ function applyLanguage() {
                 let baseText = translations[currentLang].sys_time;
                 // Thêm đuôi (UTC +X) vào sau
                 labelEl.innerText = `${baseText} (UTC +${offset})`;
-                
+
                 // Tô màu chút cho chữ UTC nổi bật (Optional)
-                labelEl.style.color = "var(--brand)"; 
+                labelEl.style.color = "var(--brand)";
                 labelEl.style.fontWeight = "bold";
             }
         }
-        
+
         // 2. Cập nhật X4 Timers (GIỮ NGUYÊN)
         document.querySelectorAll('.x4-timer-val').forEach(el => {
             const listDate = el.dataset.list;
@@ -3288,7 +3514,7 @@ function applyLanguage() {
             }
 
             let todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-            
+
             if (endDateStr === todayStr) {
                 let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -3317,7 +3543,7 @@ function applyLanguage() {
                     let d = Math.floor(dist / (1000 * 60 * 60 * 24));
                     let h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     let m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
-                    timerEl.innerText = `${d}d : ${h}h : ${m}m`; 
+                    timerEl.innerText = `${d}d : ${h}h : ${m}m`;
                     timerEl.className = "text-gold font-num fw-bold fs-3 anim-breathe";
                 }
             }
@@ -3351,31 +3577,31 @@ async function silentReload(id) {
         // 3. Cập nhật lại Tổng Pool và Min Volume
         let pool = (c.predictions.length || 0) * PREDICT_FEE;
         document.getElementById('pt-pool').innerText = fmt(pool);
-        
+
         let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length - 1].target : 0;
 
         // 4. Vẽ lại Bảng xếp hạng (Leaderboard) nhẹ nhàng
         let lb = document.getElementById('pt-leaderboard');
         lb.innerHTML = ''; // Chỉ xóa nội dung bảng, không xóa cả khung
-        
+
         let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
 
         preds.forEach((p, i) => {
             let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0, 1).toUpperCase()}</div>`;
             let badgeHtml = i < 3 ? `<span class="rank-badge rank-${i + 1}">${i + 1}</span>` : `<span class="rank-badge">${i + 1}</span>`;
-            
+
             // Hiệu ứng nhấp nháy nhẹ cho dòng của chính mình vừa mới thêm
             let highlightClass = (p.name === document.getElementById('modal-p-name').value) ? 'anim-breathe' : '';
-            
+
             lb.innerHTML += `<tr class="${highlightClass}"><td class="ps-4">${badgeHtml}</td><td>${avatarHtml}<span class="fw-bold text-white">${p.name}</span></td><td class="text-end pe-4 text-brand font-num fw-bold">${fmtNum(p.guess)}</td></tr>`;
         });
-        
+
         // 5. Cập nhật Activity Feed
-        let actDiv = document.getElementById('content-activity'); 
+        let actDiv = document.getElementById('content-activity');
         actDiv.innerHTML = '';
-        (c.predictions || []).sort((a,b)=>b.time-a.time).forEach(p => { 
+        (c.predictions || []).sort((a,b)=>b.time-a.time).forEach(p => {
             let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="act-avatar">` : `<i class="fas fa-bolt text-gold me-3 fa-lg"></i>`;
-            actDiv.innerHTML += `<div class="act-item d-flex align-items-center mb-2">${avatarHtml}<div><span class="text-white fw-bold">${p.name}</span> predicted <span class="text-brand font-num">${fmtNum(p.guess)}</span> <div class="text-sub small">${new Date(p.time).toLocaleTimeString()}</div></div></div>`; 
+            actDiv.innerHTML += `<div class="act-item d-flex align-items-center mb-2">${avatarHtml}<div><span class="text-white fw-bold">${p.name}</span> predicted <span class="text-brand font-num">${fmtNum(p.guess)}</span> <div class="text-sub small">${new Date(p.time).toLocaleTimeString()}</div></div></div>`;
         });
     }
 }
@@ -3400,7 +3626,7 @@ function backupData() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    
+
     // Notification in English
     alert("Backup file downloaded successfully!");
 }
@@ -3427,7 +3653,7 @@ function restoreData(input) {
 // ----------------------------------------
 
     /* ================= ARSENAL DYNAMIC CONFIG LOGIC ================= */
-    
+
     // 1. Hàm vẽ lại danh sách Input trong Modal từ dữ liệu đã lưu
     function renderArsenalInputs(items = []) {
         const container = document.getElementById('cfg-arsenal-list');
@@ -3442,7 +3668,7 @@ function restoreData(input) {
     function addArsenalItem(data = null, index = null) {
         const container = document.getElementById('cfg-arsenal-list');
         const uniqueId = Date.now() + Math.random().toString(36).substr(2, 9); // Tạo ID ngẫu nhiên
-        
+
         const name = data ? data.name : '';
         const link = data ? data.link : '';
         const logo = data ? data.logo : '';
@@ -3458,10 +3684,10 @@ function restoreData(input) {
                     <option value="DEX SWAP" ${type==='DEX SWAP'?'selected':''}>Sàn DEX</option>
                 </select>
             </div>
-            
+
             <div class="d-flex gap-2 mb-2 align-items-center">
                 <input type="text" class="form-control form-control-sm inp-link" placeholder="Link Ref (https://...)" value="${link}">
-                
+
                 <div class="position-relative btn btn-sm btn-outline-secondary" style="width:35px; overflow:hidden;" title="Logo">
                     <i class="fas fa-camera"></i>
                     <input type="file" onchange="uploadImage(this, 'prev-${uniqueId}', 'val-${uniqueId}')" style="position:absolute;left:0;top:0;opacity:0;cursor:pointer;width:100%;height:100%">
@@ -3492,66 +3718,8 @@ function restoreData(input) {
             container.insertBefore(row.nextElementSibling, row);
         }
     }
-    
+
 
 </script>
-<div class="modal fade" id="guideModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-brand"><i class="fas fa-graduation-cap me-2"></i> QUICK START GUIDE</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="row g-4">
-                    <div class="col-md-4 text-center">
-                        <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
-                            <div class="mb-2"><i class="fas fa-list-ol fa-2x text-brand"></i></div>
-                            <h6 class="text-white fw-bold">STEP 1: SETUP LIST</h6>
-                            <p class="text-sub small">Define your tracking list (e.g. Account A, Account B) to separate volume sources. <br><strong>No connection needed.</strong></p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
-                            <div class="mb-2"><i class="fas fa-pen-to-square fa-2x text-gold"></i></div>
-                            <h6 class="text-white fw-bold">STEP 2: INPUT VOLUME</h6>
-                            <p class="text-sub small">Click <strong>UPDATE</strong> on any tournament. Manually input your daily volume for each account.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
-                            <div class="mb-2"><i class="fas fa-chart-line fa-2x text-green"></i></div>
-                            <h6 class="text-white fw-bold">STEP 3: TRACK GAP</h6>
-                            <p class="text-sub small">System automatically calculates the <strong>GAP</strong> (Distance) to the target Min Volume.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4 text-center">
-                    <button class="btn-action w-50 mx-auto" data-bs-dismiss="modal" onclick="openSettingsModal()">SETUP MY LIST <i class="fas fa-arrow-right ms-2"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="volHistoryModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="background: #161a1e; border: 1px solid #333;">
-            <div class="modal-header border-bottom border-secondary border-opacity-25">
-                <div>
-                    <h5 class="modal-title fw-bold text-brand font-num" id="vh-title">VOLUME HISTORY</h5>
-                    <div class="text-sub small" id="vh-subtitle">Daily USDT Volume</div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div style="height: 300px; width: 100%;">
-                    <canvas id="volHistoryChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 </body>
 </html>
-
