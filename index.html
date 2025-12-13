@@ -3352,12 +3352,16 @@ function restoreData(input) {
         }
     }
 
-       // --- GẮN KẾT VOLUME THỰC TẾ (CHỨC NĂNG CỦA BẠN) ---
+     /* ======================================================
+       TÍNH NĂNG MỚI: VOLUME & KHÔI PHỤC HÀM BỊ THIẾU
+       ====================================================== */
+
+    // 1. HÀM LẤY VOLUME TỪ FILE JSON CỦA GITHUB
     async function fetchRealAlphaVolume() {
         showToast("Đang tải dữ liệu Volume tức thời...", "info");
 
         try {
-            // Đọc file alpha_data.json
+            // Thêm tham số t=... để tránh cache cũ
             const response = await fetch('./alpha_data.json?t=' + new Date().getTime());
             
             if (!response.ok) throw new Error("Chưa có file dữ liệu.");
@@ -3375,7 +3379,7 @@ function restoreData(input) {
                     if (data[symbol] && data[symbol].volume !== undefined) {
                         let realVol = data[symbol].volume; 
                         
-                        // Gán vào ID mới (real-vol-<db_id>)
+                        // Tìm thẻ HTML hiển thị volume (ID: real-vol-<db_id>)
                         let targetEl = document.getElementById(`real-vol-${dbId}`);
                         
                         if(targetEl) {
@@ -3395,15 +3399,15 @@ function restoreData(input) {
             showToast("Lỗi: Không tải được Volume mới. Vui lòng thử lại sau.", "error");
         }
     }
-    
-    // --- KHÔI PHỤC CÁC HÀM CẦN THIẾT BỊ THIẾU ---
-    // (Bổ sung các hàm Admin và Utility mà website gốc cần)
-    
+
+    // 2. KHÔI PHỤC HÀM XÓA (ADMIN)
     async function deleteFromCloud(id) { 
+        if(!confirm("Bạn chắc chắn muốn xóa?")) return;
         await supabase.from('tournaments').delete().eq('id', id); 
         loadFromCloud(); 
     }
 
+    // 3. KHÔI PHỤC HÀM LẤY GIÁ TOKEN (ADMIN)
     async function fetchTokenInfo(q) { 
         if(!q) return; 
         try { 
@@ -3423,10 +3427,25 @@ function restoreData(input) {
         } catch(e){} 
     }
 
+    // 4. KHÔI PHỤC LOGIC ẨN/HIỆN GIỜ
     function toggleListingTime() { 
-        document.getElementById('c-listing').disabled = document.getElementById('c-alphaType').value === 'none'; 
+        let typeVal = document.getElementById('c-alphaType').value;
+        document.getElementById('c-listing').disabled = (typeVal === 'none'); 
     }
-</script>
+
+    // 5. KÍCH HOẠT WEBSITE (QUAN TRỌNG NHẤT)
+    // Nếu không có dòng này, web sẽ trắng trơn
+    if (typeof init === 'function') {
+        init();
+    } else {
+        window.onload = function() {
+            checkLegal();
+            loadFromCloud();
+            setInterval(updateClock, 1000);
+            applyLanguage();
+        };
+    }
+
 
 
 <div class="modal fade" id="guideModal" tabindex="-1">
@@ -3471,6 +3490,7 @@ function restoreData(input) {
 </body>
 
 </html>
+
 
 
 
