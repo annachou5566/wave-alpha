@@ -1,9 +1,9 @@
 name: Update Alpha Volume
 
 on:
-  # Chạy tự động mỗi 30 phút (Cron schedule)
+  # Chạy tự động mỗi 5 phút (Cron schedule)
   schedule:
-    - cron: '*/30 * * * *' 
+    - cron: '*/5 * * * *' 
   # Cho phép bấm nút 'Run workflow' thủ công
   workflow_dispatch: 
 
