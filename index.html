@@ -1843,6 +1843,7 @@ function applyLanguage() {
 
     /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) --- */
         /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - ĐÃ NÂNG CẤP V45 --- */
+        /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - FINAL FIXED V47 --- */
     function renderGrid() {
         const grid = document.getElementById('appGrid'); 
         if(!grid) return; 
@@ -1873,29 +1874,34 @@ function applyLanguage() {
                 let cardClass = status === 'ended' ? 'tour-card ended-card' : 'tour-card';
                 let isExpired = false;
 
-                // 1. LOGIC TIMER (ĐƯA LÊN ĐẦU)
+                // 1. TIMER (HEADER)
                 let timerHtml = '';
                 if(c.end) {
                     timerHtml = `<div class="d-flex align-items-center gap-1 mt-1" style="opacity:0.8"><i class="far fa-clock text-sub" style="font-size:0.65rem"></i><span class="text-sub fw-bold smart-timer" style="font-size:0.75rem; letter-spacing:0.5px" data-end="${c.end}" data-time="${c.endTime || '23:59:59'}">${c.end}</span></div>`;
                 }
 
-                // 2. LOGIC REAL VOLUME (ĐƯA XUỐNG CHÂN - KHÔNG SỐ LẺ)
+                // 2. REAL VOLUME (FOOTER)
                 let realVol = c.real_alpha_volume || 0;
                 let realVolDisplay = '---';
                 let realVolColor = '#666'; 
                 
                 if(realVol > 0) {
-                    // KHÔNG HIỆN SỐ LẺ (maximumFractionDigits: 0)
                     realVolDisplay = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol);
                     realVolColor = '#d0aaff'; 
                 }
 
-                                // --- TÍNH TOÁN THỜI GIAN CẬP NHẬT ---
+                // 3. THỜI GIAN CẬP NHẬT (TIME AGO) - ĐÃ SỬA LỖI HIỂN THỊ
                 let lastUpd = c.last_updated_ts || 0;
-                let timeAgoStr = '';
+                let timeAgoStr = 'Pending update...'; // Mặc định nếu chưa có dữ liệu
+                
                 if (lastUpd > 0) {
                     let diffMin = Math.floor((Date.now() - lastUpd) / 60000);
-                    timeAgoStr = diffMin < 1 ? 'Just now' : `${diffMin}m ago`;
+                    if(diffMin < 1) timeAgoStr = 'Just now';
+                    else if(diffMin < 60) timeAgoStr = `${diffMin}m ago`;
+                    else {
+                        let h = Math.floor(diffMin/60);
+                        timeAgoStr = `${h}h ago`;
+                    }
                 }
 
                 let footerRealVolHtml = `
@@ -1904,8 +1910,8 @@ function applyLanguage() {
                         <div class="font-num fw-bold" style="color: ${realVolColor}; font-size: 1.1rem; text-shadow: 0 0 10px rgba(153, 69, 255, 0.25); line-height:1;">
                             ${realVolDisplay}
                         </div>
-                        <div class="text-sub" style="font-size: 0.6rem; opacity: 0.6; margin-top: 2px;">
-                            <i class="fas fa-history me-1"></i>${timeAgoStr}
+                        <div class="text-sub d-flex align-items-center gap-1" style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; font-style:italic;">
+                            <i class="fas fa-history"></i> <span>${timeAgoStr}</span>
                         </div>
                     </div>
                 `;
@@ -1975,7 +1981,8 @@ function applyLanguage() {
                                 <div class="token-text">
                                     <div class="token-title">${c.name}</div>
                                     ${tokenInfoHtml}
-                                    ${timerHtml} </div>
+                                    ${timerHtml}
+                                </div>
                             </div>
                             <div class="card-head-right">${ruleHtml}${tagHtml}${x4TimerHtml}</div>
                         </div>
@@ -1990,7 +1997,8 @@ function applyLanguage() {
                             <button class="btn-card-action predict" onclick="event.stopPropagation(); openPredictionView('${c.db_id}')"><i class="fas fa-bolt"></i> ${translations[currentLang].btn_predict}</button>
                         </div>
                         <div class="card-foot">
-                            <div class="real-vol-box">${footerRealVolHtml}</div> <div class="admin-only mx-2"><button class="btn btn-edit-foot" onclick="openEditModal('${c.db_id}')"><i class="fas fa-pencil-alt"></i></button></div>
+                            <div class="real-vol-box">${footerRealVolHtml}</div>
+                            <div class="admin-only mx-2"><button class="btn btn-edit-foot" onclick="openEditModal('${c.db_id}')"><i class="fas fa-pencil-alt"></i></button></div>
                             <div class="ms-auto text-end lh-1">
                                 <div class="stat-lbl text-brand" style="font-weight:800; letter-spacing:0.5px; opacity:0.9; margin-bottom:2px;">${translations[currentLang].lbl_min_target}</div>
                                 <div class="stat-val text-gold anim-breathe" style="font-size: 1.4rem; text-shadow: 0 0 15px rgba(240, 185, 11, 0.4);">${fmtNum(target)}</div>
