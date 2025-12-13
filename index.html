@@ -29,8 +29,15 @@
       gtag('config', 'G-KTKQYTJ2ZC');
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- V45 NEW LIBS: HTML2CANVAS & QRCODE -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 
-       <style>
+    <style>
         /* --- CORE THEME (Original V44) --- */
         :root {
             --bg-body: #0b0e11; --bg-card: #161a1e; --bg-header: #181a20;
@@ -569,7 +576,7 @@
                 <i class="fas fa-book-open"></i> <span class="d-none d-md-inline">GUIDE</span>
             </button>
 
-            <button class="btn-icon text-gold" onclick="fetchRealAlphaVolume()" title="Update Real Volume (UTC+0)"><i class="fas fa-sync-alt"></i></button>
+            <button class="btn-icon text-gold" onclick="updateAllPrices()" title="Update Price"><i class="fas fa-sync-alt"></i></button>
             <button class="btn-icon" onclick="loadFromCloud()" title="Reload Data"><i class="fas fa-database"></i></button>
             <button class="btn-icon" onclick="openSettingsModal()" title="Wallets"><i class="fas fa-wallet"></i></button>
             <button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
@@ -1672,37 +1679,127 @@ function applyLanguage() {
        LOGIC HIỂN THỊ CỐ ĐỊNH & KÉO THẢ (FIXED ORDER) - FINAL
        ========================================================== */
 
+            /* --- HÀM VẼ BIỂU ĐỒ LỊCH SỬ VOLUME (ĐÃ NÂNG CẤP) --- */
+    let volHistChart = null;
+
+    function openVolHistory(dbId) {
+        let c = compList.find(x => x.db_id == dbId);
+        if(!c) return;
+
+        document.getElementById('vh-title').innerText = c.name + " / USDT";
+        document.getElementById('vh-subtitle').innerText = "Volume History (Last 10 Days)";
+        
+        let history = c.real_vol_history || [];
+        
+        // Sắp xếp tăng dần theo ngày
+        history.sort((a,b) => new Date(a.date) - new Date(b.date));
+        
+        // Cắt lấy 10 ngày cuối cùng
+        let recentHistory = history.slice(-10);
+
+        // Fake data nếu chưa có
+        if (recentHistory.length === 0 && c.real_alpha_volume) {
+            let today = new Date().toISOString().split('T')[0];
+            recentHistory = [{date: today, vol: c.real_alpha_volume}];
+        }
+
+        let labels = recentHistory.map(h => {
+            let parts = h.date.split('-');
+            return `${parts[2]}/${parts[1]}`; // DD/MM
+        });
+        let dataVals = recentHistory.map(h => h.vol);
+
+        new bootstrap.Modal(document.getElementById('volHistoryModal')).show();
+
+        const ctx = document.getElementById('volHistoryChart').getContext('2d');
+        if (volHistChart) volHistChart.destroy();
+
+        // Màu Gradient Cyberpunk
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(0, 240, 255, 0.8)'); 
+        gradient.addColorStop(1, 'rgba(0, 240, 255, 0.05)'); 
+
+        volHistChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Volume',
+                    data: dataVals,
+                    backgroundColor: gradient,
+                    borderColor: '#00F0FF',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.6,
+                    hoverBackgroundColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#848e9c', font: { family: 'Rajdhani', size: 11, weight: '600' } } },
+                    y: { 
+                        position: 'right', 
+                        grid: { color: '#2b3139', borderDash: [4, 4] }, 
+                        ticks: { 
+                            color: '#848e9c',
+                            font: { family: 'Rajdhani', size: 11 },
+                            callback: function(value) { 
+                                // Rút gọn số (k, M)
+                                if(value >= 1000000) return (value/1000000).toFixed(1) + 'M';
+                                if(value >= 1000) return (value/1000).toFixed(0) + 'k';
+                                return value; 
+                            } 
+                        } 
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(22, 26, 30, 0.95)',
+                        titleColor: '#00F0FF',
+                        titleFont: { family: 'Rajdhani', size: 14 },
+                        bodyFont: { family: 'Rajdhani', size: 14, weight: 'bold' },
+                        borderColor: '#333', borderWidth: 1, padding: 10, displayColors: false,
+                        callbacks: {
+                            title: function(context) { return context[0].label; },
+                            label: function(context) {
+                                // KHÔNG HIỆN SỐ LẺ Ở TOOLTIP
+                                return '$ ' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(context.raw);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) --- */
+        /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - ĐÃ NÂNG CẤP V45 --- */
     function renderGrid() {
         const grid = document.getElementById('appGrid'); 
         if(!grid) return; 
         grid.innerHTML = '';
         
         let displayList = [...compList];
-        
-        // --- 1. LUÔN SẮP XẾP THEO THỨ TỰ CỦA ADMIN (orderIndex) ---
-        // Nếu giải mới chưa có index thì đẩy xuống cuối (9999)
-                // Sửa lỗi logic: Nếu là số 0 thì giữ nguyên, nếu không có mới tính là 9999
         displayList.sort((a,b) => {
             let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
             let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
             return posA - posB;
         });
 
-
         if(displayList.length === 0) { 
             grid.innerHTML = `<div class="col-12 text-center py-5 opacity-25"><i class="fas fa-plus-circle fa-4x mb-3 text-brand"></i><p>Empty List</p></div>`; 
             return; 
         }
         
-                // [CODE MỚI] Kiểm tra quyền Admin để hiện TẤT CẢ nút Save
         const isAdmin = document.body.classList.contains('is-admin');
-        const btnsSave = document.querySelectorAll('.btn-save-pos'); // Chọn theo class mới
+        const btnsSave = document.querySelectorAll('.btn-save-pos'); 
         btnsSave.forEach(btn => {
             btn.style.display = isAdmin ? 'inline-block' : 'none';
-            // Fix style hiển thị cho nút trên header và body
             if(isAdmin && btn.closest('.d-flex')) btn.style.display = 'block'; 
         });
-
 
         displayList.forEach(c => {
             try {
@@ -1710,10 +1807,34 @@ function applyLanguage() {
                 let cardClass = status === 'ended' ? 'tour-card ended-card' : 'tour-card';
                 let isExpired = false;
 
-                // --- XỬ LÝ CAMPAIGN (VSN/LAVA) ---
+                // 1. LOGIC TIMER (ĐƯA LÊN ĐẦU)
+                let timerHtml = '';
+                if(c.end) {
+                    timerHtml = `<div class="d-flex align-items-center gap-1 mt-1" style="opacity:0.8"><i class="far fa-clock text-sub" style="font-size:0.65rem"></i><span class="text-sub fw-bold smart-timer" style="font-size:0.75rem; letter-spacing:0.5px" data-end="${c.end}" data-time="${c.endTime || '23:59:59'}">${c.end}</span></div>`;
+                }
+
+                // 2. LOGIC REAL VOLUME (ĐƯA XUỐNG CHÂN - KHÔNG SỐ LẺ)
+                let realVol = c.real_alpha_volume || 0;
+                let realVolDisplay = '---';
+                let realVolColor = '#666'; 
+                
+                if(realVol > 0) {
+                    // KHÔNG HIỆN SỐ LẺ (maximumFractionDigits: 0)
+                    realVolDisplay = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol);
+                    realVolColor = '#d0aaff'; 
+                }
+
+                let footerRealVolHtml = `
+                    <div class="d-flex flex-column" onclick="openVolHistory('${c.db_id}')" style="cursor: pointer;" title="View Chart">
+                        <div class="stat-lbl text-sub" style="margin-bottom:2px">VOL (TODAY) <i class="fas fa-chart-bar ms-1 text-brand"></i></div>
+                        <div class="font-num fw-bold" style="color: ${realVolColor}; font-size: 1.1rem; text-shadow: 0 0 10px rgba(153, 69, 255, 0.25);">
+                            ${realVolDisplay}
+                        </div>
+                    </div>
+                `;
+
                 let isCampaign = (c.inputTokens || []).length > 0;
                 let tokenInfoHtml = '', tagHtml = ''; 
-                // [FIX] Luôn hiện giá
                 let priceDisplayHtml = `<div class="stat-lbl">PRICE</div><div class="stat-val text-gold anim-breathe">${fmtNum(c.cachedPrice||0)}</div>`;
 
                 if (isCampaign) {
@@ -1731,7 +1852,6 @@ function applyLanguage() {
                     }
                 }
 
-                // Timer Logic
                 let x4TimerHtml = `<div class="x4-timer-box" style="visibility:hidden">--</div>`;
                 if(c.listingTime && c.alphaType !== 'none') {
                     const endTime = new Date(c.listingTime).getTime() + (30 * 24 * 60 * 60 * 1000);
@@ -1740,12 +1860,9 @@ function applyLanguage() {
                 } else if (status === 'ended') { isExpired = true; x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`; }
                 
                 if(c.alphaType === 'x4' && status === 'running' && !isExpired && !isCampaign) cardClass += ' highlight-x4';
-
-                // Rule Tag
                 let ruleHtml = c.ruleType === 'trade_x4' ? `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>` : `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
                 if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
 
-                // Progress Calculation
                 let latestCloud = (c.history && c.history.length > 0) ? c.history[c.history.length-1] : null;
                 let target = latestCloud ? parseFloat(latestCloud.target) : 0;
                 let estVal = (parseFloat(c.rewardQty)||0) * (parseFloat(c.cachedPrice)||0);
@@ -1768,111 +1885,9 @@ function applyLanguage() {
                     accListHtml += `<div class="acc-item"><div class="acc-info"><span style="width:6px;height:6px;border-radius:50%;background:${acc.color};box-shadow:0 0 5px ${acc.color}"></span><span class="text-truncate">${acc.name}</span></div><div style="flex:1; margin:0 10px; position:relative"><div class="acc-bar-bg"><div class="acc-bar-fill" style="width:${Math.min(pct,100)}%; background:${color}; box-shadow:0 0 5px ${color}"></div></div></div><div class="acc-stats"><span class="acc-vol">${fmtNum(v)}</span>${rightInfoHtml}</div></div>`;
                 });
 
-                // --- DRAG ATTRIBUTES (ADMIN ONLY) ---
                 let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
                 let dragHandleHtml = (isAdmin) ? `<i class="fas fa-grip-vertical admin-drag-handle" title="Kéo để sắp xếp"></i>` : '';
 
-                    function renderGrid() {
-        const grid = document.getElementById('appGrid'); 
-        if(!grid) return; 
-        grid.innerHTML = '';
-        
-        let displayList = [...compList];
-        
-        // --- 1. LUÔN SẮP XẾP THEO THỨ TỰ CỦA ADMIN (orderIndex) ---
-        // Nếu giải mới chưa có index thì đẩy xuống cuối (9999)
-        // Sửa lỗi logic: Nếu là số 0 thì giữ nguyên, nếu không có mới tính là 9999
-        displayList.sort((a,b) => {
-            let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
-            let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
-            return posA - posB;
-        });
-
-
-        if(displayList.length === 0) { 
-            grid.innerHTML = `<div class="col-12 text-center py-5 opacity-25"><i class="fas fa-plus-circle fa-4x mb-3 text-brand"></i><p>Empty List</p></div>`; 
-            return; 
-        }
-        
-        // [CODE MỚI] Kiểm tra quyền Admin để hiện TẤT CẢ nút Save
-        const isAdmin = document.body.classList.contains('is-admin');
-        const btnsSave = document.querySelectorAll('.btn-save-pos'); // Chọn theo class mới
-        btnsSave.forEach(btn => {
-            btn.style.display = isAdmin ? 'inline-block' : 'none';
-            // Fix style hiển thị cho nút trên header và body
-            if(isAdmin && btn.closest('.d-flex')) btn.style.display = 'block'; 
-        });
-
-
-        displayList.forEach(c => {
-            try {
-                let status = c.end && new Date() > new Date(c.end + 'T' + (c.endTime||'23:59')) ? 'ended' : 'running';
-                let cardClass = status === 'ended' ? 'tour-card ended-card' : 'tour-card';
-                let isExpired = false;
-
-                // --- XỬ LÝ CAMPAIGN (VSN/LAVA) ---
-                let isCampaign = (c.inputTokens || []).length > 0;
-                let tokenInfoHtml = '', tagHtml = ''; 
-                // [FIX] Luôn hiện giá
-                let priceDisplayHtml = `<div class="stat-lbl">PRICE</div><div class="stat-val text-gold anim-breathe">${fmtNum(c.cachedPrice||0)}</div>`;
-
-                if (isCampaign) {
-                    let iconsHtml = (c.inputTokens || []).map(t => `<span style="background:#333; color:#fff; border:1px solid #555; padding:1px 4px; border-radius:3px; font-size:0.6rem; margin-right:3px;">${t}</span>`).join('');
-                    tokenInfoHtml = `<div style="margin-top:2px;"><span class="text-sub" style="font-size:0.55rem; font-weight:700; text-transform:uppercase;">REQ TRADE:</span><div class="d-inline-flex flex-wrap">${iconsHtml}</div></div>`;
-                    tagHtml = `<div class="tag-x2" style="background:#9945FF; color:#fff; border:none; box-shadow:0 0 5px #9945FF">ECOSYSTEM</div>`;
-                } else {
-                    tokenInfoHtml = `<div class="token-status ${status==='running'?'anim-breathe':''}" style="color:${status==='running'?'var(--accent-green)':'var(--accent-red)'}">${status.toUpperCase()}</div>`;
-                    if(!isExpired && status === 'running') {
-                        if(c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`; 
-                        else if(c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2">X2 OTHER</div>`; }
-                    } else {
-                        if(c.alphaType === 'x4') tagHtml = `<div class="tag-x4 tag-expired">X4 BSC</div>`;
-                        else if(c.alphaType === 'x2') tagHtml = `<div class="tag-x2 tag-expired">X2 OTHER</div>`;
-                    }
-                }
-
-                // Timer Logic
-                let x4TimerHtml = `<div class="x4-timer-box" style="visibility:hidden">--</div>`;
-                if(c.listingTime && c.alphaType !== 'none') {
-                    const endTime = new Date(c.listingTime).getTime() + (30 * 24 * 60 * 60 * 1000);
-                    if(Date.now() > endTime || status === 'ended') { isExpired = true; x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`; }
-                    else { x4TimerHtml = `<div class="x4-timer-box"><i class="far fa-clock small"></i> <span class="x4-timer-val" data-list="${c.listingTime}">...</span></div>`; }
-                } else if (status === 'ended') { isExpired = true; x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`; }
-                
-                if(c.alphaType === 'x4' && status === 'running' && !isExpired && !isCampaign) cardClass += ' highlight-x4';
-
-                // Rule Tag
-                let ruleHtml = c.ruleType === 'trade_x4' ? `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>` : `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
-                if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
-
-                // Progress Calculation
-                let latestCloud = (c.history && c.history.length > 0) ? c.history[c.history.length-1] : null;
-                let target = latestCloud ? parseFloat(latestCloud.target) : 0;
-                let estVal = (parseFloat(c.rewardQty)||0) * (parseFloat(c.cachedPrice)||0);
-                let estHtml = (estVal > 0) ? `<span class="text-green small fw-bold ms-1 anim-breathe">~$${fmt(estVal).replace('$','')}</span>` : ''; 
-                
-                let accListHtml = '';
-                let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
-                accSettings.forEach(acc => {
-                    let v = 0;
-                    if(myProgress && myProgress.length > 0) {
-                        let lastP = myProgress[myProgress.length-1];
-                        if(lastP.accsDetail && lastP.accsDetail[acc.id]) v = parseFloat(lastP.accsDetail[acc.id].vol);
-                    }
-                    let pct = target > 0 ? (v/target)*100 : 0;
-                    let color = pct>=100 ? 'var(--accent-green)' : (pct>=50 ? 'var(--accent-yellow)' : acc.color);
-                    let rightInfoHtml = (status === 'ended') 
-                        ? (v >= target && target > 0 ? `<span class="res-badge res-win">WIN</span>` : `<span class="res-badge res-lose">LOSE</span>`)
-                        : (target > 0 ? `<span class="acc-gap ${v-target>=0?'gap-pos':'gap-neg'}">(${v-target>=0?'+':''}${fmtNum(v-target)})</span>` : '');
-
-                    accListHtml += `<div class="acc-item"><div class="acc-info"><span style="width:6px;height:6px;border-radius:50%;background:${acc.color};box-shadow:0 0 5px ${acc.color}"></span><span class="text-truncate">${acc.name}</span></div><div style="flex:1; margin:0 10px; position:relative"><div class="acc-bar-bg"><div class="acc-bar-fill" style="width:${Math.min(pct,100)}%; background:${color}; box-shadow:0 0 5px ${color}"></div></div></div><div class="acc-stats"><span class="acc-vol">${fmtNum(v)}</span>${rightInfoHtml}</div></div>`;
-                });
-
-                // --- DRAG ATTRIBUTES (ADMIN ONLY) ---
-                let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
-                let dragHandleHtml = (isAdmin) ? `<i class="fas fa-grip-vertical admin-drag-handle" title="Kéo để sắp xếp"></i>` : '';
-
-                // HTML Card Structure
                 grid.innerHTML += `
                 <div class="col-md-6 col-lg-4 col-xl-3 card-wrapper" ${dragAttr} data-id="${c.db_id}">
                     <div class="${cardClass}" onclick="playSfx('click'); toggleCardHighlight(this)">
@@ -1883,7 +1898,7 @@ function applyLanguage() {
                                 <div class="token-text">
                                     <div class="token-title">${c.name}</div>
                                     ${tokenInfoHtml}
-                                </div>
+                                    ${timerHtml} </div>
                             </div>
                             <div class="card-head-right">${ruleHtml}${tagHtml}${x4TimerHtml}</div>
                         </div>
@@ -1898,13 +1913,7 @@ function applyLanguage() {
                             <button class="btn-card-action predict" onclick="event.stopPropagation(); openPredictionView('${c.db_id}')"><i class="fas fa-bolt"></i> ${translations[currentLang].btn_predict}</button>
                         </div>
                         <div class="card-foot">
-                            <div class="tour-timer"><div class="tour-timer-label">${translations[currentLang].lbl_ends}</div><div class="tour-timer-val smart-timer" data-end="${c.end}" data-time="${c.endTime || '23:59:59'}">${c.end || '--/--'}</div></div>
-                            
-                            <div class="ms-auto text-end lh-1 me-4">
-                                <div class="stat-lbl text-danger" style="font-weight:800; letter-spacing:0.5px; opacity:0.9; margin-bottom:2px;">VOLUME REAL (UTC)</div>
-                                <div id="real-vol-${c.db_id}" class="stat-val text-danger anim-breathe" style="font-size: 1.4rem; text-shadow: 0 0 15px rgba(255, 0, 0, 0.4);">---</div>
-                            </div>
-                            <div class="admin-only mx-2"><button class="btn btn-edit-foot" onclick="openEditModal('${c.db_id}')"><i class="fas fa-pencil-alt"></i></button></div>
+                            <div class="real-vol-box">${footerRealVolHtml}</div> <div class="admin-only mx-2"><button class="btn btn-edit-foot" onclick="openEditModal('${c.db_id}')"><i class="fas fa-pencil-alt"></i></button></div>
                             <div class="ms-auto text-end lh-1">
                                 <div class="stat-lbl text-brand" style="font-weight:800; letter-spacing:0.5px; opacity:0.9; margin-bottom:2px;">${translations[currentLang].lbl_min_target}</div>
                                 <div class="stat-val text-gold anim-breathe" style="font-size: 1.4rem; text-shadow: 0 0 15px rgba(240, 185, 11, 0.4);">${fmtNum(target)}</div>
@@ -1916,6 +1925,8 @@ function applyLanguage() {
         
         try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) }); } catch (e) {}
     }
+
+
 
     /* --- CÁC HÀM XỬ LÝ DRAG & DROP --- */
     let draggedItem = null;
@@ -3351,103 +3362,9 @@ function restoreData(input) {
             container.insertBefore(row.nextElementSibling, row);
         }
     }
-
-     /* ======================================================
-       TÍNH NĂNG MỚI: VOLUME & KHÔI PHỤC HÀM BỊ THIẾU
-       ====================================================== */
-
-    // 1. HÀM LẤY VOLUME TỪ FILE JSON CỦA GITHUB
-    async function fetchRealAlphaVolume() {
-        showToast("Đang tải dữ liệu Volume tức thời...", "info");
-
-        try {
-            // Thêm tham số t=... để tránh cache cũ
-            const response = await fetch('./alpha_data.json?t=' + new Date().getTime());
-            
-            if (!response.ok) throw new Error("Chưa có file dữ liệu.");
-            
-            const data = await response.json();
-            let count = 0;
-            
-            document.querySelectorAll('.card-wrapper').forEach(card => {
-                let dbId = card.getAttribute('data-id');
-                let comp = compList.find(c => c.db_id == dbId);
-                
-                if (comp) {
-                    let symbol = comp.name.toUpperCase();
-                    
-                    if (data[symbol] && data[symbol].volume !== undefined) {
-                        let realVol = data[symbol].volume; 
-                        
-                        // Tìm thẻ HTML hiển thị volume (ID: real-vol-<db_id>)
-                        let targetEl = document.getElementById(`real-vol-${dbId}`);
-                        
-                        if(targetEl) {
-                            targetEl.innerText = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol);
-                            targetEl.style.color = "#FF3030"; 
-                            targetEl.classList.add('anim-breathe');
-                        }
-                        count++;
-                    }
-                }
-            });
-
-            showToast(`🚀 Đã cập nhật Volume thực cho ${count} token!`, "success");
-
-        } catch (e) {
-            console.error("Lỗi đọc file JSON:", e);
-            showToast("Lỗi: Không tải được Volume mới. Vui lòng thử lại sau.", "error");
-        }
-    }
-
-    // 2. KHÔI PHỤC HÀM XÓA (ADMIN)
-    async function deleteFromCloud(id) { 
-        if(!confirm("Bạn chắc chắn muốn xóa?")) return;
-        await supabase.from('tournaments').delete().eq('id', id); 
-        loadFromCloud(); 
-    }
-
-    // 3. KHÔI PHỤC HÀM LẤY GIÁ TOKEN (ADMIN)
-    async function fetchTokenInfo(q) { 
-        if(!q) return; 
-        try { 
-            let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${q}`); 
-            let d = await r.json(); 
-            if(d.pairs && d.pairs.length) { 
-                let p = d.pairs[0]; 
-                document.getElementById('c-symbol').value = p.baseToken.symbol; 
-                document.getElementById('c-price').value = p.priceUsd; 
-                document.getElementById('c-chain').value = p.chainId; 
-                
-                let logoUrl = p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`;
-                document.getElementById('c-logo').value = logoUrl;
-                let img = document.getElementById('c-logo-preview');
-                img.src = logoUrl; img.style.display = 'block';
-            } 
-        } catch(e){} 
-    }
-
-    // 4. KHÔI PHỤC LOGIC ẨN/HIỆN GIỜ
-    function toggleListingTime() { 
-        let typeVal = document.getElementById('c-alphaType').value;
-        document.getElementById('c-listing').disabled = (typeVal === 'none'); 
-    }
-
-    // 5. KÍCH HOẠT WEBSITE (QUAN TRỌNG NHẤT)
-    // Nếu không có dòng này, web sẽ trắng trơn
-    if (typeof init === 'function') {
-        init();
-    } else {
-        window.onload = function() {
-            checkLegal();
-            loadFromCloud();
-            setInterval(updateClock, 1000);
-            applyLanguage();
-        };
-    }
+    
 
 </script>
-
 <div class="modal fade" id="guideModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -3486,14 +3403,24 @@ function restoreData(input) {
         </div>
     </div>
 </div>
+<div class="modal fade" id="volHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: #161a1e; border: 1px solid #333;">
+            <div class="modal-header border-bottom border-secondary border-opacity-25">
+                <div>
+                    <h5 class="modal-title fw-bold text-brand font-num" id="vh-title">VOLUME HISTORY</h5>
+                    <div class="text-sub small" id="vh-subtitle">Daily USDT Volume</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div style="height: 300px; width: 100%;">
+                    <canvas id="volHistoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 </body>
-
 </html>
-
-
-
-
-
-
-
