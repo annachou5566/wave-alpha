@@ -1890,11 +1890,22 @@ function applyLanguage() {
                     realVolColor = '#d0aaff'; 
                 }
 
+                                // --- TÍNH TOÁN THỜI GIAN CẬP NHẬT ---
+                let lastUpd = c.last_updated_ts || 0;
+                let timeAgoStr = '';
+                if (lastUpd > 0) {
+                    let diffMin = Math.floor((Date.now() - lastUpd) / 60000);
+                    timeAgoStr = diffMin < 1 ? 'Just now' : `${diffMin}m ago`;
+                }
+
                 let footerRealVolHtml = `
                     <div class="d-flex flex-column" onclick="openVolHistory('${c.db_id}')" style="cursor: pointer;" title="View Chart">
                         <div class="stat-lbl text-sub" style="margin-bottom:2px">VOL (TODAY) <i class="fas fa-chart-bar ms-1 text-brand"></i></div>
-                        <div class="font-num fw-bold" style="color: ${realVolColor}; font-size: 1.1rem; text-shadow: 0 0 10px rgba(153, 69, 255, 0.25);">
+                        <div class="font-num fw-bold" style="color: ${realVolColor}; font-size: 1.1rem; text-shadow: 0 0 10px rgba(153, 69, 255, 0.25); line-height:1;">
                             ${realVolDisplay}
+                        </div>
+                        <div class="text-sub" style="font-size: 0.6rem; opacity: 0.6; margin-top: 2px;">
+                            <i class="fas fa-history me-1"></i>${timeAgoStr}
                         </div>
                     </div>
                 `;
