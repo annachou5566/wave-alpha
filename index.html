@@ -1473,24 +1473,62 @@ function applyLanguage() {
     }
 
     function init() {
-    checkLegal();
-    loadFromCloud();
-    setInterval(updateClock,1000);
+        checkLegal();
+        
+        // 1. Load dữ liệu từ DB ngay lập tức (để user thấy hình ảnh liền, không phải chờ)
+        // Tham số 'true' nghĩa là hiện loading overlay lúc đầu
+        loadFromCloud(true).then(() => {
+            // 2. Load xong thì âm thầm kiểm tra xem dữ liệu có cũ quá không
+            checkAndAutoRefresh();
+        });
 
-    // THÊM DÒNG NÀY:
-    applyLanguage();
-    document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
-            // --- CODE MỚI: Tự động bật Hướng dẫn ---
-    if (!localStorage.getItem('wave_guide_seen')) {
-        setTimeout(() => {
-            const guideEl = document.getElementById('guideModal');
-            if(guideEl) {
-                new bootstrap.Modal(guideEl).show();
-                localStorage.setItem('wave_guide_seen', 'true');
+        setInterval(updateClock, 1000);
+
+        applyLanguage();
+        if(document.getElementById('cur-lang-text')) {
+            document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
+        }
+
+        // Tự động bật Hướng dẫn (nếu chưa xem)
+        if (!localStorage.getItem('wave_guide_seen')) {
+            setTimeout(() => {
+                const guideEl = document.getElementById('guideModal');
+                if(guideEl) {
+                    new bootstrap.Modal(guideEl).show();
+                    localStorage.setItem('wave_guide_seen', 'true');
+                }
+            }, 1500);
+        }
+    }
+
+    // --- LOGIC MỚI: AUTO REFRESH THÔNG MINH (ANTI-LAG) ---
+    function checkAndAutoRefresh() {
+        let oldestTime = Date.now();
+        let hasRunning = false;
+
+        compList.forEach(c => {
+            let isRunning = !c.end || (new Date() < new Date(c.end + 'T' + (c.endTime||'23:59')));
+            if (isRunning) {
+                hasRunning = true;
+                let t = c.last_updated_ts || 0;
+                if (t < oldestTime) oldestTime = t;
             }
-        }, 1500);
+        });
+
+        if (!hasRunning) return; 
+
+        const STALE_THRESHOLD = 2 * 60 * 1000; 
+        const timeDiff = Date.now() - oldestTime;
+
+        if (timeDiff > STALE_THRESHOLD) {
+            // QUAN TRỌNG: Truyền tham số 'true' để kích hoạt chế độ im lặng
+            handleSmartRefresh(true); 
+        } else {
+            console.log("Data fresh. No auto-refresh needed.");
+        }
     }
-    }
+
+    // --- GIỮ NGUYÊN 2 HÀM NÀY (QUAN TRỌNG) ---
     function checkLegal() {
         if (!localStorage.getItem('wave_legal_accepted')) document.getElementById('legalModal').style.display = 'flex';
     }
@@ -1498,7 +1536,6 @@ function applyLanguage() {
         localStorage.setItem('wave_legal_accepted', 'true');
         document.getElementById('legalModal').style.display = 'none';
     }
-
     // --- AUTH & PROFILE ---
     async function fetchUserProfile() {
         if(!currentUser) return;
@@ -1917,24 +1954,29 @@ function applyLanguage() {
     let lastRefreshTime = 0;
     const REFRESH_COOLDOWN = 10000; // 10 giây
 
-    // --- [V49] SUPER REFRESH: DÙNG SUPABASE EDGE FUNCTION ---
-    async function handleSmartRefresh() {
+    // --- [V50] SUPER REFRESH: CÓ CHẾ ĐỘ SILENT ---
+    async function handleSmartRefresh(isSilent = false) {
         // 1. Anti-Spam Check
         const now = Date.now();
-        const REFRESH_COOLDOWN = 10000; // 10 seconds
-        const timeLeft = Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshTime)) / 1000);
-
-        if (now - lastRefreshTime < REFRESH_COOLDOWN) {
-            showToast(`Please wait ${timeLeft}s!`, "error");
-            return;
+        // Nếu chạy ngầm (Silent) thì không cần check cooldown gắt gao, cứ cho chạy nếu cần
+        // Nhưng nếu User bấm thì phải check để tránh spam nút
+        if (!isSilent) {
+            const timeLeft = Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshTime)) / 1000);
+            if (now - lastRefreshTime < REFRESH_COOLDOWN) {
+                showToast(`Please wait ${timeLeft}s!`, "error");
+                return;
+            }
         }
         lastRefreshTime = now;
 
-        // 2. UI Loading Effect
+        // 2. UI Loading Effect (CHỈ HIỆN KHI USER BẤM)
         const icon = document.querySelector('.fa-sync-alt');
-        if(icon) icon.classList.add('fa-spin');
-        
-        showToast("Syncing data...", "info");
+        if (!isSilent) {
+            if(icon) icon.classList.add('fa-spin');
+            showToast("Syncing data...", "info");
+        } else {
+            console.log("[System] Auto-refreshing data in background...");
+        }
 
         try {
             // 3. Call Supabase Edge Function
@@ -1948,10 +1990,8 @@ function applyLanguage() {
                     let updateCount = 0;
                     
                     data.updatedItems.forEach(newItem => {
-                        // Find local item
                         let localItem = compList.find(c => c.db_id === newItem.id);
                         if (localItem) {
-                            // Overwrite specific fields instantly
                             if(newItem.data.real_alpha_volume) localItem.real_alpha_volume = newItem.data.real_alpha_volume;
                             if(newItem.data.real_vol_history) localItem.real_vol_history = newItem.data.real_vol_history;
                             if(newItem.data.last_updated_ts) localItem.last_updated_ts = newItem.data.last_updated_ts;
@@ -1963,10 +2003,13 @@ function applyLanguage() {
                     renderGrid();
                     renderStats(); 
                     
-                    showToast(`Instantly updated ${updateCount} tokens!`, "success");
+                    // CHỈ HIỆN THÔNG BÁO THÀNH CÔNG KHI USER BẤM
+                    if (!isSilent) {
+                        showToast(`Instantly updated ${updateCount} tokens!`, "success");
+                    }
                 } else {
                     // Fallback
-                    showToast(`Success! Reloading...`, "success");
+                    if (!isSilent) showToast(`Success! Reloading...`, "success");
                     await loadFromCloud(false);
                 }
             } else {
@@ -1975,7 +2018,8 @@ function applyLanguage() {
 
         } catch (e) {
             console.error(e);
-            showToast("System Error: " + e.message, "error");
+            // Lỗi thì chỉ hiện nếu User bấm, còn tự động thì thôi (để tránh spam lỗi đỏ lòm)
+            if (!isSilent) showToast("System Error: " + e.message, "error");
         } finally {
             if(icon) icon.classList.remove('fa-spin');
         }
@@ -2197,45 +2241,99 @@ function applyLanguage() {
                     }
                 }
 
-                let footerRealVolHtml = `
-                    <div class="d-flex flex-column" onclick="openVolHistory('${c.db_id}')" style="cursor: pointer;" title="View Chart">
-                        <div class="stat-lbl text-sub" style="margin-bottom:2px">VOL (TODAY) <i class="fas fa-chart-bar ms-1 text-brand"></i></div>
-                        <div class="font-num fw-bold" style="color: ${realVolColor}; font-size: 1.1rem; text-shadow: 0 0 10px rgba(153, 69, 255, 0.25); line-height:1;">
-                            ${realVolDisplay}
-                        </div>
-                        <div class="text-sub d-flex align-items-center gap-1" style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; font-style:italic;">
-                            <i class="fas fa-history"></i> <span>${timeAgoStr}</span>
-                        </div>
-                    </div>
-                `;
+     // --- SỬA UI: ICON CÓ CHẾ ĐỘ TỰ ĐỘNG TẮT ---
+let footerRealVolHtml = `
+    <div class="d-flex flex-column" onclick="openVolHistory('${c.db_id}')" style="cursor: pointer;" title="View Chart">
+        <div class="stat-lbl text-sub d-flex align-items-center gap-1" style="margin-bottom:2px">
+            LIMIT VOL (CEX) 
+            
+            <i class="fas fa-info-circle text-sub opacity-50 auto-close-tooltip" 
+               style="font-size:0.9rem; cursor:pointer; padding: 10px; margin: -5px; outline: none;" 
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               data-bs-trigger="hover focus click"
+               tabindex="0"
+               title="Off-chain Order Book data only. Excludes On-chain Swap (Instant) volume."
+               onclick="event.stopPropagation()"></i>
+        </div>
+
+        <div class="font-num fw-bold" style="color: ${realVolColor}; font-size: 1.1rem; text-shadow: 0 0 10px rgba(153, 69, 255, 0.25); line-height:1;">
+            ${realVolDisplay}
+        </div>
+        
+        <div class="text-sub d-flex align-items-center gap-1" style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; font-style:italic;">
+            <i class="fas fa-history"></i> <span>${timeAgoStr}</span>
+        </div>
+    </div>
+`;
 
                 let isCampaign = (c.inputTokens || []).length > 0;
                 let tokenInfoHtml = '', tagHtml = '';
                 let priceDisplayHtml = `<div class="stat-lbl">PRICE</div><div class="stat-val text-gold anim-breathe">${fmtNum(c.cachedPrice||0)}</div>`;
 
+             // --- BẮT ĐẦU CODE MỚI ---
+                
+                // 1. Tính toán trạng thái hết hạn (30 ngày kể từ Listing Time)
+                let isListingExpired = false;
+                let listingEndTime = 0;
+
+                if (c.listingTime && c.alphaType !== 'none') {
+                    // 30 ngày tính bằng milliseconds
+                    listingEndTime = new Date(c.listingTime).getTime() + (30 * 24 * 60 * 60 * 1000);
+                    // Nếu quá hạn 30 ngày HOẶC giải đấu đã kết thúc -> Coi như Tag hết hạn
+                    if (Date.now() > listingEndTime || status === 'ended') {
+                        isListingExpired = true;
+                    }
+                } else {
+                    // Nếu không có listing time nhưng giải đã End -> Cũng tính là hết
+                    if (status === 'ended') isListingExpired = true;
+                }
+
+                // 2. Xử lý hiển thị Tag & Token Info
                 if (isCampaign) {
                     let iconsHtml = (c.inputTokens || []).map(t => `<span style="background:#333; color:#fff; border:1px solid #555; padding:1px 4px; border-radius:3px; font-size:0.6rem; margin-right:3px;">${t}</span>`).join('');
                     tokenInfoHtml = `<div style="margin-top:2px;"><span class="text-sub" style="font-size:0.55rem; font-weight:700; text-transform:uppercase;">REQ TRADE:</span><div class="d-inline-flex flex-wrap">${iconsHtml}</div></div>`;
                     tagHtml = `<div class="tag-x2" style="background:#9945FF; color:#fff; border:none; box-shadow:0 0 5px #9945FF">ECOSYSTEM</div>`;
                 } else {
                     tokenInfoHtml = `<div class="token-status ${status==='running'?'anim-breathe':''}" style="color:${status==='running'?'var(--accent-green)':'var(--accent-red)'}">${status.toUpperCase()}</div>`;
-                    if(!isExpired && status === 'running') {
-                        if(c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
-                        else if(c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2">X2 OTHER</div>`; }
+
+                    // Logic hiển thị Tag dựa trên biến isListingExpired vừa tính
+                    if (!isListingExpired) {
+                        // CÒN HẠN: Hiện màu sáng
+                        if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
+                        else if (c.alphaType === 'x2') {
+                            cardClass += ' highlight-x2'; // Highlight viền xanh
+                            tagHtml = `<div class="tag-x2">X2 OTHER</div>`;
+                        }
                     } else {
-                        if(c.alphaType === 'x4') tagHtml = `<div class="tag-x4 tag-expired">X4 BSC</div>`;
-                        else if(c.alphaType === 'x2') tagHtml = `<div class="tag-x2 tag-expired">X2 OTHER</div>`;
+                        // HẾT HẠN (Do quá 30 ngày HOẶC giải ended): Làm mờ
+                        if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4 tag-expired">X4 BSC</div>`;
+                        else if (c.alphaType === 'x2') tagHtml = `<div class="tag-x2 tag-expired">X2 OTHER</div>`;
                     }
                 }
 
+                // 3. Xử lý đồng hồ đếm ngược (x4TimerHtml) - Logic giống hệt Tag
                 let x4TimerHtml = `<div class="x4-timer-box" style="visibility:hidden">--</div>`;
-                if(c.listingTime && c.alphaType !== 'none') {
-                    const endTime = new Date(c.listingTime).getTime() + (30 * 24 * 60 * 60 * 1000);
-                    if(Date.now() > endTime || status === 'ended') { isExpired = true; x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`; }
-                    else { x4TimerHtml = `<div class="x4-timer-box"><i class="far fa-clock small"></i> <span class="x4-timer-val" data-list="${c.listingTime}">...</span></div>`; }
-                } else if (status === 'ended') { isExpired = true; x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`; }
+                
+                if (c.listingTime && c.alphaType !== 'none') {
+                    if (isListingExpired) {
+                        // Hết hạn -> Hiện chữ ENDED mờ mờ
+                        x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`;
+                    } else {
+                        // Còn hạn -> Hiện đồng hồ đếm ngược
+                        x4TimerHtml = `<div class="x4-timer-box"><i class="far fa-clock small"></i> <span class="x4-timer-val" data-list="${c.listingTime}">...</span></div>`;
+                    }
+                } else if (status === 'ended') {
+                    // Trường hợp không có Listing Time nhưng giải đã End
+                    x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`;
+                }
 
-                if(c.alphaType === 'x4' && status === 'running' && !isExpired && !isCampaign) cardClass += ' highlight-x4';
+                // LOGIC MỚI: Highlight thẻ X4 nếu còn hạn và chưa kết thúc
+                if (c.alphaType === 'x4' && !isListingExpired && !isCampaign && status === 'running') {
+                    cardClass += ' highlight-x4';
+                }
+                // --- KẾT THÚC CODE MỚI ---
+             
                 let ruleHtml = c.ruleType === 'trade_x4' ? `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>` : `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
                 if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
 
@@ -2301,7 +2399,25 @@ function applyLanguage() {
             } catch(e) { console.error("Render error", e); }
         });
 
-        try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) }); } catch (e) {}
+        // --- ĐOẠN CODE KHỞI TẠO TOOLTIP MỚI (AUTO HIDE) ---
+        try {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                // Tạo tooltip
+                var tooltip = new bootstrap.Tooltip(tooltipTriggerEl);
+
+                // Nếu là icon Limit Vol (có class auto-close-tooltip) -> Thêm logic tự tắt
+                if (tooltipTriggerEl.classList.contains('auto-close-tooltip')) {
+                    tooltipTriggerEl.addEventListener('shown.bs.tooltip', function () {
+                        // Đặt hẹn giờ 3 giây (3000ms) sau khi hiện thì tự ẩn
+                        setTimeout(function () {
+                            tooltip.hide();
+                        }, 3000);
+                    });
+                }
+                return tooltip;
+            });
+        } catch (e) { console.error(e); }
     }
 
 
