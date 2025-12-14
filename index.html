@@ -175,8 +175,14 @@
         .card-stats-grid { display: grid; grid-template-columns: 0.8fr 1.4fr 1fr; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
         .stat-cell { padding: 12px 5px; text-align: center; position: relative; display: flex; flex-direction: column; justify-content: center; }
         .stat-cell:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 20%; height: 60%; width: 1px; background: #333; }
-        .stat-lbl { font-size: 0.6rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
-        .stat-val { font-family: var(--font-num); font-weight: 700; font-size: 1rem; color: var(--text-main); line-height: 1; }
+              
+        /* 1. Style nhỏ cho trong thẻ bài (Card) */
+        .card-stats-grid .stat-lbl { font-size: 0.6rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+        .card-stats-grid .stat-val { font-family: var(--font-num); font-weight: 700; font-size: 1rem; color: var(--text-main); line-height: 1; }
+
+        /* 2. Style to cho Hộp thống kê (Market Overview) */
+        .stat-box .stat-lbl { font-size: 0.9rem; color: var(--text-sub); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .stat-box .stat-val { font-family: var(--font-num); font-weight: 700; font-size: 2.8rem; color: var(--text-main); line-height: 1; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
         .card-list { padding: 10px 15px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
         .acc-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; position: relative; padding: 2px 0; }
@@ -573,16 +579,25 @@
     </div>
 
     <div class="container">
+        
         <div class="d-flex justify-content-between align-items-center mb-3">
-             <h6 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num">
+             <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num" style="text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);">
                 <i class="fas fa-link me-2"></i>
                 <span data-i18n="sect_arsenal">TRADING PLATFORMS</span>
-            </h6>
-            <span class="text-sub small"><i class="fas fa-check-circle text-green me-1"></i> Verified Links</span>
+            </h4>
+            <span class="text-sub small"><i class="fas fa-check-circle text-green me-1"></i> <span data-i18n="verified_link">Verified Links</span></span>
         </div>
+        
         <div class="arsenal-section">
             <div class="arsenal-grid" id="arsenal-grid">
                 </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+             <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num" style="text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);">
+                <i class="fas fa-chart-pie me-2"></i>
+                <span data-i18n="sect_market">MARKET OVERVIEW</span>
+            </h4>
         </div>
 
         <div class="row g-4 mb-5">
@@ -595,25 +610,30 @@
                     <i class="fas fa-bolt text-sub opacity-25 fa-2x"></i>
                 </div>
             </div>
+
             <div class="col-md-4">
                 <div class="stat-box">
                     <div>
-                        <div class="stat-lbl" data-i18n="stat_pool">TOTAL PREDICTION</div>
+                        <div class="stat-lbl" data-i18n="stat_pool">TOTAL ACTIVE REWARDS</div>
                         <div class="stat-val text-green" id="stat-pool">0 $</div>
                     </div>
                     <i class="fas fa-sack-dollar text-sub opacity-25 fa-2x"></i>
                 </div>
             </div>
-            <div class="col-md-4 admin-only">
-                <div class="stat-box" style="cursor:pointer; border: 1px dashed var(--border);" onclick="openCreateModal()">
-                    <div class="text-brand fw-bold d-flex align-items-center gap-2">
-                        <i class="fas fa-plus-circle fa-lg"></i>
-                        <span data-i18n="stat_create">CREATE NEW</span>
+
+            <div class="col-md-4">
+                <div class="stat-box" style="position: relative; overflow: hidden; border-color: var(--accent-yellow);">
+                    <div style="z-index: 2; position: relative;">
+                        <div class="stat-lbl text-gold" data-i18n="stat_top_reward">HIGHEST REWARD</div>
+                        <div class="d-flex align-items-baseline gap-3"> <div class="stat-val text-white anim-breathe" id="stat-top-symbol">---</div>
+    <div class="fw-bold text-gold font-num" id="stat-top-val" style="font-size: 1.8rem; text-shadow: 0 0 10px rgba(240, 185, 11, 0.5);">$0</div>
+</div>
                     </div>
+                    <img id="stat-top-img" src="" style="position: absolute; right: -10px; bottom: -10px; width: 80px; height: 80px; opacity: 0.15; border-radius: 50%; filter: grayscale(100%); transform: rotate(-15deg); display:none">
+                    <i class="fas fa-trophy text-gold opacity-25 fa-2x" style="position: absolute; right: 20px; top: 20px;"></i>
                 </div>
             </div>
         </div>
-
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="d-flex align-items-center gap-3">
@@ -622,10 +642,13 @@
                     <span data-i18n="sect_board">TRACKING BOARD</span>
                 </h6>
 
+                <button class="btn btn-sm btn-outline-success fw-bold admin-only" onclick="openCreateModal()" style="border-radius: 20px; padding: 5px 20px;">
+                    <i class="fas fa-plus me-1"></i> <span data-i18n="stat_create">CREATE</span>
+                </button>
+
                 <button class="btn btn-sm btn-brand fw-bold admin-only btn-save-pos" style="display:none; background:var(--brand); color:#000; border:none; padding: 5px 20px; border-radius: 20px; box-shadow: 0 0 10px rgba(0,240,255,0.3); white-space: nowrap;" onclick="saveCustomOrder()">
                     <i class="fas fa-save me-1"></i> SAVE POSITION
                 </button>
-
             </div>
 
             <div>
@@ -1034,36 +1057,39 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-brand">ICON LEGEND</h5>
+                <h5 class="modal-title fw-bold text-brand" data-i18n="legend_title">ICON LEGEND</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="btn-icon" style="cursor:default"><i class="fas fa-sync-alt text-gold"></i></div>
                     <div>
-                        <div class="fw-bold">Update Prices</div>
-                        <div class="text-sub small">Fetch latest token prices from DexScreener.</div>
+                        <div class="fw-bold" data-i18n="leg_sync_t">Smart Sync</div>
+                        <div class="text-sub small" data-i18n="leg_sync_d">Update latest prices & volume from Server.</div>
                     </div>
                 </div>
+
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="btn-icon" style="cursor:default"><i class="fas fa-database"></i></div>
                     <div>
-                        <div class="fw-bold">Reload Data</div>
-                        <div class="text-sub small">Force reload data from Cloud Database.</div>
+                        <div class="fw-bold" data-i18n="leg_reload_t">Reload Data</div>
+                        <div class="text-sub small" data-i18n="leg_reload_d">Force reload data from Cloud Database.</div>
                     </div>
                 </div>
+
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="btn-icon" style="cursor:default"><i class="fas fa-wallet"></i></div>
                     <div>
-                        <div class="fw-bold">Manage Wallets</div>
-                        <div class="text-sub small">Add or remove tracking accounts (Main, Clone...).</div>
+                        <div class="fw-bold" data-i18n="leg_wallet_t">Manage Wallets</div>
+                        <div class="text-sub small" data-i18n="leg_wallet_d">Add or remove tracking accounts.</div>
                     </div>
                 </div>
+
                 <div class="d-flex align-items-center gap-3">
                     <div class="btn-icon" style="cursor:default"><i class="fas fa-key"></i></div>
                     <div>
-                        <div class="fw-bold">Login</div>
-                        <div class="text-sub small">Access Admin features via OTP Email.</div>
+                        <div class="fw-bold" data-i18n="leg_login_t">Login</div>
+                        <div class="text-sub small" data-i18n="leg_login_d">Access Admin features via OTP Email.</div>
                     </div>
                 </div>
             </div>
@@ -1182,21 +1208,21 @@ const translations = {
         nav_guide: "GUIDE", nav_login: "Login", nav_logout: "Logout",
         sys_time: "SYSTEM TIME", verified_link: "Verified Links",
 
-        // --- HERO (ĐÃ CẬP NHẬT) ---
+        // --- HERO ---
         hero_title: "TOURNAMENT VOLUME TRACKER",
         hero_sub: "Manage your accounts & Join the prediction.",
 
         // --- SECTION HEADERS ---
         sect_arsenal: "TRADING PLATFORMS",
+        sect_market: "MARKET OVERVIEW",
+        stat_top_reward: "HIGHEST REWARD",
         sect_board: "TRACKING BOARD",
 
-        // --- STATS BOX ---
+        // --- STATS ---
         stat_active: "ACTIVE POOLS", stat_pool: "TOTAL ACTIVE REWARDS", stat_create: "CREATE NEW",
 
-        // --- SORT FILTER ---
-        sort_newest: "Newest (Start Date)",
-        sort_ending: "Ending Soon",
-        sort_reward: "Highest Reward ($)",
+        // --- SORT ---
+        sort_newest: "Newest (Start Date)", sort_ending: "Ending Soon", sort_reward: "Highest Reward ($)",
 
         // --- CARD ---
         lbl_top: "TOP", lbl_reward: "REWARD", lbl_price: "PRICE",
@@ -1206,54 +1232,44 @@ const translations = {
         tag_x4: "X4 BSC", tag_x2: "X2 OTHER",
         res_win: "WIN", res_lose: "LOSE",
 
-        // --- MODAL: UPDATE ---
-        modal_u_title: "MY TRADING TRACKER",
-        lbl_date: "DATE",
-        lbl_my_vol: "MY VOLUMES & GAP",
-        lbl_history: "MY HISTORY",
-        btn_save_prog: "SAVE MY PROGRESS",
-        btn_saving: "SAVING...", btn_saved: "SAVED!",
-        ph_vol: "Volume", ph_cost: "Cost ($)",
-
-        // --- MODAL: PREDICT ---
-        modal_p_title: "ENTER PREDICTION",
-        modal_p_desc: "Predict the final Min Volume.",
-        lbl_p_name: "YOUR NAME", lbl_p_guess: "YOUR GUESS (VOL)",
-        ph_p_name: "Ex: Shark 1", ph_p_fee: "Fee: 100 USDT",
-        btn_confirm: "CONFIRM & PAY FEE", btn_processing: "PROCESSING...",
-
-        // --- MODAL: LOGIN ---
-        modal_l_title: "SECURE ACCESS",
-        modal_l_desc: "Authenticate via Email OTP",
-        btn_send_code: "SEND CODE", btn_verify: "VERIFY LOGIN",
+        // --- MODALS ---
+        modal_u_title: "MY TRADING TRACKER", lbl_date: "DATE", lbl_my_vol: "MY VOLUMES & GAP", lbl_history: "MY HISTORY",
+        btn_save_prog: "SAVE MY PROGRESS", btn_saving: "SAVING...", btn_saved: "SAVED!", ph_vol: "Volume", ph_cost: "Cost ($)",
+        modal_p_title: "ENTER PREDICTION", modal_p_desc: "Predict the final Min Volume.", lbl_p_name: "YOUR NAME", lbl_p_guess: "YOUR GUESS (VOL)",
+        ph_p_name: "Ex: Shark 1", ph_p_fee: "Fee: 100 USDT", btn_confirm: "CONFIRM & PAY FEE", btn_processing: "PROCESSING...",
+        modal_l_title: "SECURE ACCESS", modal_l_desc: "Authenticate via Email OTP", btn_send_code: "SEND CODE", btn_verify: "VERIFY LOGIN",
 
         // --- TOAST ---
-        toast_login_req: "Please Login first!",
-        toast_success: "Action Successful!",
-        toast_error: "Error occurred!",
-        toast_insufficient: "Insufficient Balance!",
-        toast_saved: "Tracking Data Saved!"
+        toast_login_req: "Please Login first!", toast_success: "Action Successful!", toast_error: "Error occurred!",
+        toast_insufficient: "Insufficient Balance!", toast_saved: "Tracking Data Saved!",
+
+        // --- [MỚI] ICON LEGEND (TIẾNG ANH) ---
+        legend_title: "ICON LEGEND",
+        leg_sync_t: "Smart Sync", leg_sync_d: "Update latest prices & volume from Server.",
+        leg_reload_t: "Reload Data", leg_reload_d: "Force reload data from Cloud Database.",
+        leg_wallet_t: "Manage Wallets", leg_wallet_d: "Add/Remove tracking portfolios.",
+        leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data."
     },
     vi: {
         // --- CHUNG ---
         nav_guide: "HƯỚNG DẪN", nav_login: "Đăng nhập", nav_logout: "Đăng xuất",
         sys_time: "GIỜ HỆ THỐNG", verified_link: "Link Chính Chủ",
 
-        // --- HERO (ĐÃ CẬP NHẬT) ---
+        // --- HERO ---
         hero_title: "TRÌNH THEO DÕI VOLUME GIẢI ĐẤU",
         hero_sub: "Quản lý các tài khoản & Tham gia dự đoán.",
 
         // --- SECTION HEADERS ---
         sect_arsenal: "SÀN GIAO DỊCH",
+        sect_market: "TỔNG QUAN THỊ TRƯỜNG",
+        stat_top_reward: "GIẢI THƯỞNG CAO NHẤT",
         sect_board: "BẢNG THEO DÕI",
 
-        // --- STATS BOX ---
+        // --- STATS ---
         stat_active: "GIẢI ĐANG CHẠY", stat_pool: "TỔNG GIÁ TRỊ GIẢI (ACTIVE)", stat_create: "TẠO GIẢI MỚI",
 
-        // --- SORT FILTER ---
-        sort_newest: "Mới nhất (Ngày bắt đầu)",
-        sort_ending: "Sắp kết thúc",
-        sort_reward: "Thưởng cao nhất ($)",
+        // --- SORT ---
+        sort_newest: "Mới nhất (Ngày bắt đầu)", sort_ending: "Sắp kết thúc", sort_reward: "Thưởng cao nhất ($)",
 
         // --- CARD ---
         lbl_top: "TOP", lbl_reward: "THƯỞNG", lbl_price: "GIÁ",
@@ -1263,54 +1279,44 @@ const translations = {
         tag_x4: "X4 MẠNG BSC", tag_x2: "X2 MẠNG KHÁC",
         res_win: "THẮNG", res_lose: "THUA",
 
-        // --- MODAL: UPDATE ---
-        modal_u_title: "CẬP NHẬT VOLUME",
-        lbl_date: "NGÀY",
-        lbl_my_vol: "VOL CỦA TÔI & KHOẢNG CÁCH",
-        lbl_history: "LỊCH SỬ NHẬP",
-        btn_save_prog: "LƯU TIẾN ĐỘ",
-        btn_saving: "ĐANG LƯU...", btn_saved: "ĐÃ LƯU!",
-        ph_vol: "Nhập Vol", ph_cost: "Vốn ($)",
-
-        // --- MODAL: PREDICT ---
-        modal_p_title: "NHẬP DỰ ĐOÁN",
-        modal_p_desc: "Dự đoán Min Volume khi chốt sổ.",
-        lbl_p_name: "TÊN BẠN", lbl_p_guess: "DỰ ĐOÁN (VOL)",
-        ph_p_name: "Ví dụ: Shark 1", ph_p_fee: "Phí: 100 USDT",
-        btn_confirm: "XÁC NHẬN & TRẢ PHÍ", btn_processing: "ĐANG XỬ LÝ...",
-
-        // --- MODAL: LOGIN ---
-        modal_l_title: "ĐĂNG NHẬP",
-        modal_l_desc: "Xác thực qua Email OTP",
-        btn_send_code: "GỬI MÃ CODE", btn_verify: "XÁC NHẬN",
+        // --- MODALS ---
+        modal_u_title: "CẬP NHẬT VOLUME", lbl_date: "NGÀY", lbl_my_vol: "VOL CỦA TÔI & KHOẢNG CÁCH", lbl_history: "LỊCH SỬ NHẬP",
+        btn_save_prog: "LƯU TIẾN ĐỘ", btn_saving: "ĐANG LƯU...", btn_saved: "ĐÃ LƯU!", ph_vol: "Nhập Vol", ph_cost: "Vốn ($)",
+        modal_p_title: "NHẬP DỰ ĐOÁN", modal_p_desc: "Dự đoán Min Volume khi chốt sổ.", lbl_p_name: "TÊN BẠN", lbl_p_guess: "DỰ ĐOÁN (VOL)",
+        ph_p_name: "Ví dụ: Shark 1", ph_p_fee: "Phí: 100 USDT", btn_confirm: "XÁC NHẬN & TRẢ PHÍ", btn_processing: "ĐANG XỬ LÝ...",
+        modal_l_title: "ĐĂNG NHẬP", modal_l_desc: "Xác thực qua Email OTP", btn_send_code: "GỬI MÃ CODE", btn_verify: "XÁC NHẬN",
 
         // --- TOAST ---
-        toast_login_req: "Vui lòng đăng nhập trước!",
-        toast_success: "Thao tác thành công!",
-        toast_error: "Có lỗi xảy ra!",
-        toast_insufficient: "Số dư không đủ!",
-        toast_saved: "Dữ liệu đã được lưu!"
+        toast_login_req: "Vui lòng đăng nhập trước!", toast_success: "Thao tác thành công!", toast_error: "Có lỗi xảy ra!",
+        toast_insufficient: "Số dư không đủ!", toast_saved: "Dữ liệu đã được lưu!",
+
+        // --- [MỚI] ICON LEGEND (TIẾNG VIỆT) ---
+        legend_title: "CHÚ THÍCH BIỂU TƯỢNG",
+        leg_sync_t: "Đồng bộ Thông minh", leg_sync_d: "Cập nhật giá & volume mới nhất từ Server.",
+        leg_reload_t: "Tải lại Dữ liệu", leg_reload_d: "Buộc tải lại toàn bộ dữ liệu từ Cloud.",
+        leg_wallet_t: "Quản lý Ví", leg_wallet_d: "Thêm/Xóa danh mục theo dõi.",
+        leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu."
     },
     zh: {
         // --- CHUNG ---
         nav_guide: "指南", nav_login: "登录", nav_logout: "登出",
         sys_time: "系统时间", verified_link: "官方链接",
 
-        // --- HERO (ĐÃ CẬP NHẬT) ---
+        // --- HERO ---
         hero_title: "锦标赛成交量追踪器",
         hero_sub: "管理您的账户 & 参与预测。",
 
         // --- SECTION HEADERS ---
         sect_arsenal: "交易平台",
+        sect_market: "市场概览",
+        stat_top_reward: "最高奖池",
         sect_board: "追踪板",
 
-        // --- STATS BOX ---
+        // --- STATS ---
         stat_active: "活跃池", stat_pool: "当前活跃奖池总值", stat_create: "创建新池",
 
-        // --- SORT FILTER ---
-        sort_newest: "最新 (开始日期)",
-        sort_ending: "即将结束",
-        sort_reward: "最高奖励 ($)",
+        // --- SORT ---
+        sort_newest: "最新 (开始日期)", sort_ending: "即将结束", sort_reward: "最高奖励 ($)",
 
         // --- CARD ---
         lbl_top: "排名", lbl_reward: "奖励", lbl_price: "价格",
@@ -1320,36 +1326,25 @@ const translations = {
         tag_x4: "X4 BSC链", tag_x2: "X2 其他链",
         res_win: "获胜", res_lose: "未中",
 
-        // --- MODAL: UPDATE ---
-        modal_u_title: "我的交易追踪",
-        lbl_date: "日期",
-        lbl_my_vol: "我的成交量 & 差距",
-        lbl_history: "历史记录",
-        btn_save_prog: "保存进度",
-        btn_saving: "保存中...", btn_saved: "已保存!",
-        ph_vol: "成交量", ph_cost: "成本 ($)",
-
-        // --- MODAL: PREDICT ---
-        modal_p_title: "输入预测",
-        modal_p_desc: "预测最终最低成交量。",
-        lbl_p_name: "昵称", lbl_p_guess: "预测值 (VOL)",
-        ph_p_name: "例如: Shark 1", ph_p_fee: "费用: 100 USDT",
-        btn_confirm: "确认并支付", btn_processing: "处理中...",
-
-        // --- MODAL: LOGIN ---
-        modal_l_title: "安全登录",
-        modal_l_desc: "通过邮箱 OTP 验证",
-        btn_send_code: "发送验证码", btn_verify: "验证登录",
+        // --- MODALS ---
+        modal_u_title: "我的交易追踪", lbl_date: "日期", lbl_my_vol: "我的成交量 & 差距", lbl_history: "历史记录",
+        btn_save_prog: "保存进度", btn_saving: "保存中...", btn_saved: "已保存!", ph_vol: "成交量", ph_cost: "成本 ($)",
+        modal_p_title: "输入预测", modal_p_desc: "预测最终最低成交量。", lbl_p_name: "昵称", lbl_p_guess: "预测值 (VOL)",
+        ph_p_name: "例如: Shark 1", ph_p_fee: "费用: 100 USDT", btn_confirm: "确认并支付", btn_processing: "处理中...",
+        modal_l_title: "安全登录", modal_l_desc: "通过邮箱 OTP 验证", btn_send_code: "发送验证码", btn_verify: "验证登录",
 
         // --- TOAST ---
-        toast_login_req: "请先登录!",
-        toast_success: "操作成功!",
-        toast_error: "发生错误!",
-        toast_insufficient: "余额不足!",
-        toast_saved: "数据已保存!"
+        toast_login_req: "请先登录!", toast_success: "操作成功!", toast_error: "发生错误!",
+        toast_insufficient: "余额不足!", toast_saved: "数据已保存!",
+
+        // --- [MỚI] ICON LEGEND (TIẾNG TRUNG) ---
+        legend_title: "图标说明",
+        leg_sync_t: "智能同步", leg_sync_d: "从服务器更新最新价格和成交量。",
+        leg_reload_t: "重新加载", leg_reload_d: "强制从云数据库重新加载数据。",
+        leg_wallet_t: "管理钱包", leg_wallet_d: "添加/删除追踪组合。",
+        leg_login_t: "登录", leg_login_d: "安全登录以保存数据。"
     }
 };
-/* --- HÀM XỬ LÝ NGÔN NGỮ NÂNG CẤP (Dán đoạn này ngay sau bộ từ điển translations) --- */
 
 function changeLanguage(lang) {
     currentLang = lang;
@@ -3572,29 +3567,58 @@ let footerRealVolHtml = `
         let activeCount = 0;
         let totalEstValue = 0;
 
+        // Biến để tìm Token có giải to nhất
+        let maxRewardVal = 0;
+        let topToken = null;
+
         compList.forEach(c => {
-            // 1. Kiểm tra trạng thái: Còn hạn hay hết hạn?
+            // 1. Kiểm tra trạng thái Running (Còn hạn)
             let isRunning = true;
             if (c.end) {
-                // Ghép ngày + giờ để so sánh chính xác từng giây
                 let endDateTime = new Date(c.end + 'T' + (c.endTime || '23:59:59'));
                 if (now > endDateTime) isRunning = false;
             }
 
-            // 2. Nếu ĐANG CHẠY thì mới tính toán
+            // 2. Tính toán
             if (isRunning) {
-                activeCount++; // Tăng số lượng giải đang chạy
-
-                // Tính tiền: (Số lượng coin * Giá hiện tại)
+                activeCount++;
                 let qty = parseFloat(c.rewardQty) || 0;
                 let price = parseFloat(c.cachedPrice) || 0;
-                totalEstValue += (qty * price);
+                let currentVal = qty * price;
+
+                totalEstValue += currentVal;
+
+                // So sánh tìm Top 1 (Giải thưởng lớn nhất)
+                if (currentVal > maxRewardVal) {
+                    maxRewardVal = currentVal;
+                    topToken = c;
+                }
             }
         });
 
-        // 3. Hiển thị ra màn hình
+        // 3. Hiển thị 2 ô cơ bản
         document.getElementById('stat-active').innerText = activeCount;
         document.getElementById('stat-pool').innerText = fmt(totalEstValue);
+
+        // 4. Hiển thị ô Top 1 (Highest Reward)
+        if (topToken) {
+            document.getElementById('stat-top-symbol').innerText = topToken.name;
+            document.getElementById('stat-top-val').innerText = fmt(maxRewardVal);
+            
+            // Hiển thị logo token làm nền (nếu có)
+            if(topToken.logo) {
+                let imgEl = document.getElementById('stat-top-img');
+                imgEl.src = topToken.logo;
+                imgEl.style.display = 'block';
+            } else {
+                document.getElementById('stat-top-img').style.display = 'none';
+            }
+        } else {
+            // Nếu không có giải nào chạy
+            document.getElementById('stat-top-symbol').innerText = "---";
+            document.getElementById('stat-top-val').innerText = "$0";
+            document.getElementById('stat-top-img').style.display = 'none';
+        }
     }
 
 
