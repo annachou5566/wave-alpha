@@ -1470,10 +1470,25 @@ function applyLanguage() {
     function init() {
         checkLegal();
         
-        // 1. Load dữ liệu từ DB ngay lập tức (để user thấy hình ảnh liền, không phải chờ)
-        // Tham số 'true' nghĩa là hiện loading overlay lúc đầu
-        loadFromCloud(true).then(() => {
-            // 2. Load xong thì âm thầm kiểm tra xem dữ liệu có cũ quá không
+        // --- GIẢI PHÁP 3: LOAD TỪ CACHE (HIỆN NGAY LẬP TỨC) ---
+        const cachedData = localStorage.getItem('wave_comp_list');
+        if (cachedData) {
+            try {
+                compList = JSON.parse(cachedData);
+                // Vẽ giao diện ngay lập tức bằng dữ liệu cũ
+                renderGrid();
+                renderStats();
+                // Ẩn loading ngay để người dùng không phải chờ
+                document.getElementById('loading-overlay').style.display = 'none';
+                console.log("Loaded from Cache");
+            } catch (e) { console.error("Cache Error", e); }
+        }
+
+        // Sau đó vẫn gọi loadFromCloud để đồng bộ dữ liệu mới nhất từ Server
+        // Truyền tham số 'false' để không hiện lại cái vòng xoay Loading (nếu đã có cache)
+        const showLoading = !cachedData; 
+        loadFromCloud(showLoading).then(() => {
+            // Sau khi load xong data mới, check xem có cần auto refresh không
             checkAndAutoRefresh();
         });
 
@@ -1484,7 +1499,6 @@ function applyLanguage() {
             document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
         }
 
-        // Tự động bật Hướng dẫn (nếu chưa xem)
         if (!localStorage.getItem('wave_guide_seen')) {
             setTimeout(() => {
                 const guideEl = document.getElementById('guideModal');
@@ -1726,6 +1740,7 @@ function applyLanguage() {
     // --- MAIN ---
     async function loadFromCloud(showLoading = true) {
         if(showLoading) document.getElementById('loading-overlay').style.display = 'flex';
+        
         const { data, error } = await supabase.from('tournaments').select('*');
         if (!error) {
             compList = [];
@@ -1734,24 +1749,37 @@ function applyLanguage() {
                     siteConfig = row.data || { x:'', tele:'', yt:'', affiliate:{} };
                     if(!siteConfig.affiliate) siteConfig.affiliate = {};
                     renderFooter();
-                    renderArsenal(); // V45
+                    renderArsenal(); 
                 }
                 else {
                     let item = row.data || row.Data;
                     if (item) {
                         item.db_id = row.id; item.id = item.db_id;
-                        // Backup logic for column mapping
                         if(!item.name && row.name) item.name = row.name;
                         if(!item.contract && row.contract) item.contract = row.contract;
                         compList.push(item);
                     }
                 }
             });
-            await updateAllPrices();
-            if(currentPolyId) updateTerminalData(currentPolyId); else renderGrid();
+
+            // --- GIẢI PHÁP 3: LƯU CACHE MỚI ---
+            localStorage.setItem('wave_comp_list', JSON.stringify(compList));
+
+            // --- GIẢI PHÁP 2: RENDER TRƯỚC (HIỆN HÌNH NGAY) ---
+            renderGrid();
             renderStats();
+            
+            // Tắt loading ngay lập tức
+            if(showLoading) document.getElementById('loading-overlay').style.display = 'none';
+
+            // Sau đó mới âm thầm đi cập nhật giá (chạy ngầm)
+            updateAllPrices().then(() => {
+                console.log("Prices updated via background fetch");
+            });
+        } else {
+            // Nếu lỗi thì nhớ tắt loading
+            if(showLoading) document.getElementById('loading-overlay').style.display = 'none';
         }
-        if(showLoading) document.getElementById('loading-overlay').style.display = 'none';
     }
 
         // --- CẬP NHẬT: PHÂN CHIA 2 HÀNG (CEX & DEX/WEB3) ---
@@ -2021,18 +2049,33 @@ function applyLanguage() {
     }
 
     async function updateAllPrices() {
-        // Hàm này chỉ chuyên lấy giá (nhẹ)
-        for(let c of compList) {
+        // --- GIẢI PHÁP 1: GỌI API SONG SONG (SIÊU TỐC) ---
+        // Thay vì chờ từng cái (tuần tự), ta bắn request lấy giá cho TẤT CẢ cùng lúc
+        const promises = compList.map(async (c) => {
             if(c.contract) {
-                
                 try {
+                    // Gọi API DexScreener
                     let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.contract}`);
                     let d = await r.json();
-                    if(d.pairs && d.pairs.length > 0) c.cachedPrice = d.pairs[0].priceUsd;
-                } catch(e) {}
+                    if(d.pairs && d.pairs.length > 0) {
+                        c.cachedPrice = d.pairs[0].priceUsd;
+                    }
+                } catch(e) {
+                    console.warn(`Failed to fetch price for ${c.name}`);
+                }
             }
-        }
+        });
+
+        // Chờ tất cả các request chạy xong cùng một lúc (chỉ mất ~0.5s thay vì 5-10s)
+        await Promise.all(promises);
+
+        // Sau khi có giá mới thì vẽ lại lưới và thanh thống kê một lần nữa
         renderGrid();
+        renderStats();
+        
+        // Cập nhật lại Cache lần nữa để lưu giá mới nhất vào máy người dùng
+        // Lần sau F5 là có giá này hiện ra ngay lập tức
+        localStorage.setItem('wave_comp_list', JSON.stringify(compList));
     }
 
 
