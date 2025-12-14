@@ -2077,28 +2077,43 @@ function applyLanguage() {
             sortedDates = sortedDates.filter(d => d <= c.end);
         }
 
+
         // Lấy 10 ngày gần nhất
         let recentDates = sortedDates.slice(-10);
 
         let labels = [];
         let dataReal = [];
         let dataMin = [];
+        
+        // Lấy ngày hiện tại (YYYY-MM-DD) để so sánh
+        let todayStr = new Date().toISOString().split('T')[0];
 
         recentDates.forEach(date => {
             let parts = date.split('-');
             labels.push(`${parts[2]}/${parts[1]}`);
 
-            // Real Vol (Cột)
+            // 1. XỬ LÝ TOTAL VOL (CỘT) - VẼ BÌNH THƯỜNG
             let rItem = realHistory.find(x => x.date === date);
             let rVal = rItem ? rItem.vol : 0;
-            if (!rItem && date === new Date().toISOString().split('T')[0] && isRunning) {
+            
+            // Nếu là hôm nay mà chưa có trong history thì lấy số Real-time
+            if (!rItem && date === todayStr && isRunning) {
                 rVal = c.real_alpha_volume || 0;
             }
             dataReal.push(rVal);
 
-            // Min Vol (Đường)
+            // 2. XỬ LÝ MIN TARGET (ĐƯỜNG) - CẮT NẾU LÀ HÔM NAY
             let mItem = minHistory.find(x => x.date === date);
-            dataMin.push(mItem ? mItem.target : 0);
+            let mVal = mItem ? parseFloat(mItem.target) : 0;
+
+            // LOGIC MỚI: 
+            // Nếu là ngày hôm nay (date === todayStr) VÀ Giá trị = 0 (Binance chưa cập nhật)
+            // Thì đẩy vào 'null'. ChartJS sẽ tự động ngắt nét vẽ tại điểm này.
+            if (date === todayStr && mVal === 0) {
+                dataMin.push(null); 
+            } else {
+                dataMin.push(mVal);
+            }
         });
 
         // 3. VẼ CHART
