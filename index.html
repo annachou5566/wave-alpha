@@ -1919,40 +1919,63 @@ function applyLanguage() {
 
     // --- [V49] SUPER REFRESH: DÙNG SUPABASE EDGE FUNCTION ---
     async function handleSmartRefresh() {
-        // 1. Anti-Spam
+        // 1. Anti-Spam Check
         const now = Date.now();
-        const REFRESH_COOLDOWN = 10000; 
+        const REFRESH_COOLDOWN = 10000; // 10 seconds
         const timeLeft = Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshTime)) / 1000);
 
         if (now - lastRefreshTime < REFRESH_COOLDOWN) {
-            showToast(`Vui lòng đợi ${timeLeft}s!`, "error");
+            showToast(`Please wait ${timeLeft}s!`, "error");
             return;
         }
         lastRefreshTime = now;
 
+        // 2. UI Loading Effect
         const icon = document.querySelector('.fa-sync-alt');
         if(icon) icon.classList.add('fa-spin');
         
-        showToast("Đang gửi lệnh cập nhật lên Server...", "info");
+        showToast("Syncing data...", "info");
 
         try {
-            // 2. GỌI SUPABASE EDGE FUNCTION
+            // 3. Call Supabase Edge Function
             const { data, error } = await supabase.functions.invoke('refresh-volume');
 
             if (error) throw error;
 
             if (data && data.success) {
-                showToast(`Thành công! Đã cập nhật ${data.count} tokens.`, "success");
-                
-                // 3. Tải lại dữ liệu hiển thị
-                await loadFromCloud(false); 
+                // --- INSTANT UPDATE LOGIC ---
+                if (data.updatedItems && Array.isArray(data.updatedItems)) {
+                    let updateCount = 0;
+                    
+                    data.updatedItems.forEach(newItem => {
+                        // Find local item
+                        let localItem = compList.find(c => c.db_id === newItem.id);
+                        if (localItem) {
+                            // Overwrite specific fields instantly
+                            if(newItem.data.real_alpha_volume) localItem.real_alpha_volume = newItem.data.real_alpha_volume;
+                            if(newItem.data.real_vol_history) localItem.real_vol_history = newItem.data.real_vol_history;
+                            if(newItem.data.last_updated_ts) localItem.last_updated_ts = newItem.data.last_updated_ts;
+                            updateCount++;
+                        }
+                    });
+
+                    // Re-render UI immediately
+                    renderGrid();
+                    renderStats(); 
+                    
+                    showToast(`Instantly updated ${updateCount} tokens!`, "success");
+                } else {
+                    // Fallback
+                    showToast(`Success! Reloading...`, "success");
+                    await loadFromCloud(false);
+                }
             } else {
-                throw new Error("Server trả về lỗi hoặc không có token nào cần update.");
+                throw new Error("Server returned no data.");
             }
 
         } catch (e) {
             console.error(e);
-            showToast("Lỗi hệ thống: " + e.message, "error");
+            showToast("System Error: " + e.message, "error");
         } finally {
             if(icon) icon.classList.remove('fa-spin');
         }
@@ -3721,3 +3744,4 @@ function restoreData(input) {
 </script>
 </body>
 </html>
+
