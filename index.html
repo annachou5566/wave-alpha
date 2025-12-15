@@ -2573,39 +2573,7 @@ function renderGrid() {
             let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
             let dragHandleHtml = (isAdmin) ? `<i class="fas fa-grip-vertical admin-drag-handle" title="Kéo để sắp xếp"></i>` : '';
 
-            // --- [ĐOẠN ĐÃ SỬA] XỬ LÝ DỮ LIỆU HEALTH ---
-            // Chỉ dùng c.market_analysis (Đây là nơi chứa dữ liệu đúng)
-            let ma = c.market_analysis || {};
             
-            let spread = (ma.spread !== undefined) ? ma.spread : null;
-            let vel = (ma.velocity !== undefined) ? ma.velocity : null;
-            let mom = (ma.momentum !== undefined) ? ma.momentum : null;
-            let isPerfect = (ma.label && ma.label.includes("PERFECT"));
-
-            // Logic màu sắc
-            let spreadColor = (spread !== null) ? (spread < 0.2 ? 'text-green' : (spread > 1.0 ? 'text-red' : 'text-main')) : 'text-sub';
-            let velColor    = (vel !== null)    ? (vel > 5 ? 'text-green' : (vel < 1 ? 'text-red' : 'text-main'))     : 'text-sub';
-            let momColor    = (mom !== null)    ? (mom > 0 ? 'text-green' : (mom < 0 ? 'text-red' : 'text-main'))     : 'text-sub';
-
-            let spreadTxt = (spread !== null) ? spread.toFixed(2) + '%' : '--';
-            let velTxt    = (vel !== null)    ? vel.toFixed(1) : '--';
-            let momTxt    = (mom !== null)    ? (mom > 0 ? '+' : '') + mom.toFixed(2) + '%' : '--';
-
-            let healthHtml = `
-            <div class="health-grid">
-                <div class="h-item">
-                    <div class="h-lbl">SPREAD</div>
-                    <div class="h-val ${spreadColor}">${spreadTxt}</div>
-                </div>
-                <div class="h-item">
-                    <div class="h-lbl">SPEED</div>
-                    <div class="h-val ${velColor}">${velTxt}</div>
-                </div>
-                <div class="h-item">
-                    <div class="h-lbl">CHANGE</div>
-                    <div class="h-val ${momColor}">${momTxt}</div>
-                </div>
-            </div>`;
 
             let rocketBadgeHtml = "";
             if (isPerfect) {
@@ -2632,7 +2600,7 @@ function renderGrid() {
                         <div class="card-head-right">${ruleHtml}${tagHtml}${x4TimerHtml}</div>
                     </div>
 
-                    ${healthHtml}
+            
 
                     <div class="card-stats-grid">
                         <div class="stat-cell"><div class="stat-lbl">TOP</div><div class="stat-val text-main">${c.topWinners||'--'}</div></div>
@@ -4341,3 +4309,4 @@ function calculateSafeAvg(id, currentTotalVol) {
 </script>
 </body>
 </html>
+
