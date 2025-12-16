@@ -882,7 +882,7 @@
                 <tr>
                     <th class="ps-4">TOKEN</th>
                     <th class="text-end text-sub">PRICE</th>
-                    <th class="text-end text-sub">VOL (Today)</th>
+                    <th class="text-end text-sub">Limit VOL (Today)</th>
                     <th class="text-end text-sub">TXs (Day)</th>
                     
                     <th class="text-end text-sub">
@@ -911,7 +911,7 @@
     <div class="guide-grid">
         <div>
             <div class="guide-title"><i class="fas fa-info-circle"></i> <span data-i18n="g_title">CHÚ THÍCH THÔNG SỐ</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">VOL (Today):</strong> <span data-i18n="g_vol">Tổng giá trị giao dịch (USDT) từ 00:00 UTC.</span></div>
+            <div class="guide-item mb-2"><strong class="text-sub">Limit VOL (Today):</strong> <span data-i18n="g_vol">Tổng giá trị giao dịch lệnh Limit (USDT) từ 00:00 UTC.</span></div>
             <div class="guide-item mb-2"><strong class="text-sub">TXs (Day):</strong> <span data-i18n="g_txs">Tổng số lệnh đã khớp trong ngày.</span></div>
             <div class="guide-item mb-2"><strong class="text-sub">SPEED (tx/s):</strong> <span data-i18n="g_speed">Tốc độ khớp lệnh (Số lệnh trên giây).</span></div>
             <div class="guide-item mb-2"><strong class="text-sub">AVG 1s MATCH:</strong> <span data-i18n="g_match">Trung bình mỗi giây thị trường khớp được bao nhiêu Đô ($).</span></div>
@@ -3740,19 +3740,39 @@ function renderMarketHealthTable() {
         document.getElementById('chat-msg').value = '';
     }
 
+    // --- HÀM GỬI DỮ LIỆU LÊN SERVER (FIXED) ---
     async function saveToCloud(compObj) {
-        document.getElementById('loading-overlay').style.display = 'flex';
-        let cloudObj = {...compObj}; delete cloudObj.myProgress;
+        // Tạo bản sao để xử lý, tránh làm hỏng dữ liệu đang hiển thị
+        let cloudObj = { ...compObj };
+        
+        // Xóa các biến tạm thời không cần lưu vào DB
+        delete cloudObj.myProgress;
+        delete cloudObj.db_id; 
+        delete cloudObj.id;
+        delete cloudObj.cachedPrice;
 
         const payload = {
             name: cloudObj.name,
             contract: cloudObj.contract,
-            data: cloudObj
+            data: cloudObj // Dữ liệu history nằm trong này
         };
 
-        if (cloudObj.db_id) await supabase.from('tournaments').update(payload).eq('id', cloudObj.db_id);
-        else { if(payload.data.db_id) delete payload.data.db_id; await supabase.from('tournaments').insert([payload]); }
-        document.getElementById('loading-overlay').style.display = 'none'; loadFromCloud(false);
+        let result;
+        // Nếu đã có ID thì Update
+        if (compObj.db_id) {
+            result = await supabase.from('tournaments').update(payload).eq('id', compObj.db_id);
+        } else {
+            // Nếu chưa có thì Insert
+            result = await supabase.from('tournaments').insert([payload]);
+        }
+
+        if (result.error) {
+            console.error("Lỗi Save Server:", result.error);
+            throw result.error; // Ném lỗi ra để hàm saveUpdate bắt được
+        }
+        
+        // Lưu xong thì tải lại dữ liệu ngầm để đồng bộ tất cả
+        await loadFromCloud(false);
     }
 
     // --- MODAL UPDATES (TRACKING & HISTORY) ---
@@ -3962,69 +3982,109 @@ function renderMarketHealthTable() {
         }
     }
 
-    // V43: SAVE UPDATE TO CLOUD (PROFILES TABLE)
-    async function saveUpdate(){
-        if(!currentUser) return showToast("Please Login to save progress!", "error");
+    // --- HÀM LƯU CẬP NHẬT (ENGLISH VERSION & FIXED AWAIT) ---
+    async function saveUpdate() {
+        // 1. Kiểm tra đăng nhập
+        if (!currentUser) return showToast("Please Login to save progress!", "error");
 
-        let id = document.getElementById('u-db-id').value;
-        let c = compList.find(x => x.id == id);
-        let date = document.getElementById('u-date').value;
-        let originalDate = document.getElementById('u-original-date').value;
-
-        let my = {};
-        accSettings.forEach(acc=>{
-            my[acc.id] = {
-                vol: parseFloat(document.getElementById(`u-vol-${acc.id}`).value) || 0,
-                cost: parseFloat(document.getElementById(`u-cost-${acc.id}`).value) || 0
-            }
-        });
-
-        // Initialize tracker_data if null
-        if(!userProfile.tracker_data) userProfile.tracker_data = {};
-        if(!userProfile.tracker_data[id]) userProfile.tracker_data[id] = [];
-
-        let currentProg = userProfile.tracker_data[id];
-
-        // Remove old entry if editing existing date
-        if(originalDate && originalDate !== date) {
-            currentProg = currentProg.filter(p => p.date !== originalDate);
-        }
-        currentProg = currentProg.filter(p => p.date !== date);
-
-        // Add new entry
-        currentProg.push({date: date, accsDetail: my});
-        currentProg.sort((a,b) => new Date(a.date) - new Date(b.date));
-
-        // Assign back
-        userProfile.tracker_data[id] = currentProg;
-
-        // SAVE TO CLOUD
         let btn = document.getElementById('btn-save-progress');
-        let orgText = btn.innerText;
-        btn.innerText = "SAVING..."; btn.disabled = true;
+        let orgText = btn.innerText; // Lưu lại chữ gốc của nút
+        
+        // 2. Chuyển nút sang trạng thái đang lưu
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; 
+        btn.disabled = true;
 
-        await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
+        try {
+            let id = document.getElementById('u-db-id').value;
+            let c = compList.find(x => x.id == id);
+            let date = document.getElementById('u-date').value;
+            let originalDate = document.getElementById('u-original-date').value;
 
-        if(document.body.classList.contains('is-admin')){
-            let minValStr = document.getElementById('u-min-vol').value.replace(/,/g, '');
-            let t = parseFloat(minValStr) || 0;
-            if(!c.history) c.history = [];
-            c.history = c.history.filter(h => h.date !== date);
-            c.history.push({date: date, target: t});
-            c.history.sort((a,b) => new Date(a.date) - new Date(b.date));
-            saveToCloud(c);
+            // --- PHẦN 1: LƯU TIẾN ĐỘ CÁ NHÂN (USER PROFILE) ---
+            let my = {};
+            accSettings.forEach(acc => {
+                let vEl = document.getElementById(`u-vol-${acc.id}`);
+                let cEl = document.getElementById(`u-cost-${acc.id}`);
+                my[acc.id] = {
+                    vol: vEl ? (parseFloat(vEl.value) || 0) : 0,
+                    cost: cEl ? (parseFloat(cEl.value) || 0) : 0
+                }
+            });
+
+            if (!userProfile.tracker_data) userProfile.tracker_data = {};
+            if (!userProfile.tracker_data[id]) userProfile.tracker_data[id] = [];
+
+            let currentProg = userProfile.tracker_data[id];
+            
+            // Xóa dữ liệu ngày cũ nếu đổi ngày
+            if (originalDate && originalDate !== date) currentProg = currentProg.filter(p => p.date !== originalDate);
+            // Xóa dữ liệu ngày hiện tại để ghi đè
+            currentProg = currentProg.filter(p => p.date !== date);
+            
+            // Chỉ lưu nếu có dữ liệu nhập vào
+            let hasData = Object.values(my).some(v => v.vol > 0 || v.cost > 0);
+            if(hasData) {
+                currentProg.push({ date: date, accsDetail: my });
+                currentProg.sort((a, b) => new Date(a.date) - new Date(b.date));
+            }
+            userProfile.tracker_data[id] = currentProg;
+
+            // Gửi lên Server (Bảng Profiles)
+            const { error: profileError } = await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
+            if (profileError) throw profileError;
+
+            // --- PHẦN 2: LƯU MIN TARGET (CHỈ ADMIN MỚI ĐƯỢC QUYỀN) ---
+            if (document.body.classList.contains('is-admin')) {
+                let minValStr = document.getElementById('u-min-vol').value.replace(/,/g, '');
+                let t = parseFloat(minValStr); 
+
+                if (!c.history) c.history = [];
+                // Xóa cũ thêm mới
+                c.history = c.history.filter(h => h.date !== date);
+                
+                // Nếu có nhập số hợp lệ thì mới lưu
+                if (!isNaN(t)) {
+                    c.history.push({ date: date, target: t });
+                    c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    
+                    // QUAN TRỌNG: AWAIT để đợi Server lưu xong
+                    await saveToCloud(c); 
+                }
+            }
+
+            // --- HOÀN TẤT & THÔNG BÁO ---
+            btn.innerHTML = '<i class="fas fa-check"></i> SAVED!';
+            btn.style.background = "#0ECB81"; // Màu xanh thành công
+            btn.style.color = "#000";
+            showToast("Data Saved Successfully!", "success");
+
+            // Reset nút về ban đầu sau 1 giây
+            setTimeout(() => {
+                btn.innerText = orgText;
+                btn.style.background = "";
+                btn.style.color = "";
+                btn.disabled = false;
+                
+                // Vẽ lại biểu đồ để thấy thay đổi ngay
+                renderTrackerChart(c);
+                renderHistoryList(c);
+            }, 1000);
+
+        } catch (e) {
+            console.error(e);
+            showToast("Save Error: " + e.message, "error");
+            
+            // Báo lỗi trên nút
+            btn.innerText = "FAILED";
+            btn.style.background = "var(--accent-red)";
+            
+            // Reset nút sau 2 giây
+            setTimeout(() => { 
+                btn.innerText = orgText; 
+                btn.style.background = ""; 
+                btn.disabled = false; 
+            }, 2000);
         }
-
-        btn.innerText = "SAVED!";
-        btn.style.background = "#0ECB81";
-        btn.disabled = false;
-        showToast("Tracking Data Saved!", "success");
-        setTimeout(() => {
-            btn.innerText = orgText;
-            btn.style.background = "";
-            renderTrackerChart(c);
-            renderHistoryList(c);
-        }, 1000);
     }
 
     // ADMIN: AUTOMATED SETTLE REWARDS (V45 SECURITY UPGRADE)
@@ -4727,4 +4787,3 @@ initCalendar();
 </script>
 </body>
 </html>
-
