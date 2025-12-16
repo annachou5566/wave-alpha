@@ -644,6 +644,87 @@
    END: MARKET HEALTH V50
    ============================================= */
         
+        /* --- BẮT ĐẦU: GIAO DIỆN LỊCH MỚI (FIXED STYLE) --- */
+    .timeline-wrapper {
+        margin-bottom: 30px;
+        position: relative;
+    }
+    
+    /* Thanh cuộn ngang ẩn nhưng vẫn vuốt được */
+    .timeline-scroll {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 5px 2px 15px 2px; /* Padding để không bị cắt bóng đổ */
+        scrollbar-width: none; /* Firefox */
+        -webkit-overflow-scrolling: touch;
+    }
+    .timeline-scroll::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+    /* Ô ngày: Thiết kế khối hộp nổi */
+    .date-box {
+        flex: 0 0 auto; /* Không cho co giãn */
+        width: 75px;
+        height: 85px;
+        background: #161a1e; /* Màu nền trùng màu thẻ bài */
+        border: 1px solid #353a42;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    /* Hiệu ứng khi di chuột */
+    .date-box:hover {
+        transform: translateY(-5px);
+        border-color: var(--text-sub);
+        background: #2b3139;
+    }
+
+    /* Trạng thái ĐANG CHỌN (Active) */
+    .date-box.active {
+        background: rgba(0, 240, 255, 0.1); /* Xanh neon nhạt */
+        border: 1px solid var(--brand);
+        box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); /* Phát sáng */
+    }
+
+    /* Chữ Thứ (MON, TUE...) */
+    .date-box .d-name {
+        font-size: 0.7rem;
+        color: #848e9c;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+    .date-box.active .d-name { color: var(--brand); }
+
+    /* Số Ngày (12, 13...) */
+    .date-box .d-num {
+        font-family: var(--font-num); /* Font số chuyên dụng */
+        font-size: 1.6rem;
+        color: #fff;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    /* Chấm thông báo số lượng (Góc trên phải) */
+    .date-dot {
+        position: absolute;
+        top: 6px; right: 6px;
+        width: 8px; height: 8px;
+        background: var(--accent-yellow);
+        border-radius: 50%;
+        box-shadow: 0 0 5px var(--accent-yellow);
+        display: none; /* Mặc định ẩn, có giải mới hiện */
+    }
+    .date-dot.has-event { display: block; }
+    /* --- KẾT THÚC: GIAO DIỆN LỊCH MỚI --- */
+        
+        
     </style>
 </head>
 <body>
@@ -846,6 +927,23 @@
             </div>
         </div>
     </div>
+
+<div class="row mb-4"> <div class="col-12">
+                <div class="d-flex justify-content-between align-items-end mb-2">
+                    <h6 class="text-brand fw-bold font-num letter-spacing-1 mb-0" style="font-size: 1rem; text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);">
+                        <i class="far fa-calendar-alt me-2"></i>DEADLINE RADAR
+                    </h6>
+                    <button class="btn btn-sm btn-dark border-secondary text-sub" onclick="filterByDate(null)" style="font-size: 0.75rem;">
+                        <i class="fas fa-sync-alt me-1"></i> View All
+                    </button>
+                </div>
+                
+                <div class="timeline-wrapper">
+                    <div class="timeline-scroll" id="calendar-wrapper">
+                        </div>
+                </div>
+            </div>
+        </div>
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="d-flex align-items-center gap-3">
@@ -2139,7 +2237,7 @@ function applyLanguage() {
             // Dù thành công hay thất bại, dòng này vẫn chạy để hiện thẻ bài hoặc hiện chữ "Empty List"
             renderGrid();
             renderStats();
-            
+            initCalendar();
             // Tắt màn hình loading
             if(showLoading) document.getElementById('loading-overlay').style.display = 'none';
             
@@ -2584,22 +2682,30 @@ async function handleSmartRefresh(isSilent = false) {
 
 
 
-    /* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - FINAL FIXED V47 --- */
-/* --- HÀM VẼ GIAO DIỆN LƯỚI THẺ (GRID) - ĐÃ FIX DATA PATH & DỌN DẸP --- */
-function renderGrid() {
+    /* --- HÀM VẼ GIAO DIỆN (ĐÃ NÂNG CẤP ĐỂ HỖ TRỢ LỌC) --- */
+function renderGrid(customData = null) {
     const grid = document.getElementById('appGrid');
     if(!grid) return;
     grid.innerHTML = '';
 
-    let displayList = [...compList];
-    displayList.sort((a,b) => {
+    // ĐIỂM KHÁC BIỆT: Nếu có dữ liệu lọc (customData) thì dùng, không thì dùng toàn bộ (compList)
+    let listToRender = customData ? customData : compList;
+
+    // Sắp xếp
+    listToRender.sort((a,b) => {
         let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
         let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
         return posA - posB;
     });
 
-    if(displayList.length === 0) {
-        grid.innerHTML = `<div class="col-12 text-center py-5 opacity-25"><i class="fas fa-plus-circle fa-4x mb-3 text-brand"></i><p>Empty List</p></div>`;
+    // Nếu lọc xong mà không có giải nào
+    if(listToRender.length === 0) {
+        grid.innerHTML = `
+            <div class="col-12 text-center py-5 opacity-50">
+                <i class="fas fa-calendar-times fa-3x mb-3 text-sub"></i>
+                <h5 class="text-sub font-num">NO DATA FOUND</h5>
+                <button class="btn btn-sm btn-outline-secondary mt-2 rounded-pill px-4" onclick="filterByDate(null)">Show All</button>
+            </div>`;
         return;
     }
 
@@ -2610,7 +2716,7 @@ function renderGrid() {
         if(isAdmin && btn.closest('.d-flex')) btn.style.display = 'block';
     });
 
-    displayList.forEach(c => {
+    listToRender.forEach(c => {
         try {
             let status = c.end && new Date() > new Date(c.end + 'T' + (c.endTime||'23:59')) ? 'ended' : 'running';
             let cardClass = status === 'ended' ? 'tour-card ended-card' : 'tour-card';
@@ -2653,30 +2759,25 @@ function renderGrid() {
 
             let isCampaign = (c.inputTokens || []).length > 0;
             let tokenInfoHtml = '', tagHtml = '';
-            // --- [BƯỚC 1] SỬA LOGIC HIỂN THỊ GIÁ TRONG renderGrid ---
-let finalPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
+            
+            // LOGIC PRICE
+            let finalPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
+            let priceStr = '---';
+            if (finalPrice > 0) {
+                if (finalPrice < 1) {
+                    priceStr = '$' + finalPrice.toLocaleString('en-US', { maximumFractionDigits: 6 });
+                } else {
+                    priceStr = '$' + finalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+            }
 
-// Format gọn hơn: Nếu nhiều số 0 quá thì cắt bớt, font chữ nhỏ lại
-let priceStr = '---';
-if (finalPrice > 0) {
-    if (finalPrice < 1) {
-        // Ví dụ: 0.00012345 -> Lấy 6 số lẻ tối đa
-        priceStr = '$' + finalPrice.toLocaleString('en-US', { maximumFractionDigits: 6 });
-    } else {
-        // Ví dụ: 1234.56 -> Lấy 2 số lẻ
-        priceStr = '$' + finalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-}
+            let priceDisplayHtml = `
+                <div class="stat-lbl">PRICE</div>
+                <div class="stat-val text-brand fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">
+                    ${priceStr}
+                </div>`;
 
-// Giảm font-size từ 1.15rem xuống 1rem (vừa vặn), thêm class 'live-price-val' để dễ tìm cập nhật sau này
-let priceDisplayHtml = `
-    <div class="stat-lbl">PRICE</div>
-    <div class="stat-val text-brand fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">
-        ${priceStr}
-    </div>`;
-// --------------------------------------------------------
-
-            // --- LOGIC TAG ---
+            // LOGIC TAG
             let isListingExpired = false;
             let listingEndTime = 0;
             if (c.listingTime && c.alphaType !== 'none') {
@@ -2712,16 +2813,13 @@ let priceDisplayHtml = `
 
             let latestCloud = (c.history && c.history.length > 0) ? c.history[c.history.length-1] : null;
             let target = latestCloud ? parseFloat(latestCloud.target) : 0;
-            // --- SỬA ĐOẠN NÀY ---
-// Lấy giá chuẩn (ưu tiên Binance) để tính toán ban đầu cho khớp
-let calPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice||0);
-let estVal = (parseFloat(c.rewardQty)||0) * calPrice;
+            
+            let calPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice||0);
+            let estVal = (parseFloat(c.rewardQty)||0) * calPrice;
 
-// THÊM class 'live-est-val' và 'data-qty' để dùng cho update sau này
-let estHtml = (estVal > 0) 
-    ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` 
-    : '<span class="live-est-val" data-qty="' + (c.rewardQty||0) + '"></span>'; // Vẫn render span rỗng để chờ update
-// --------------------
+            let estHtml = (estVal > 0) 
+                ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` 
+                : '<span class="live-est-val" data-qty="' + (c.rewardQty||0) + '"></span>';
 
             let accListHtml = '';
             let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
@@ -2742,33 +2840,15 @@ let estHtml = (estVal > 0)
             let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
             let dragHandleHtml = (isAdmin) ? `<i class="fas fa-grip-vertical admin-drag-handle" title="Kéo để sắp xếp"></i>` : '';
 
-            // --- [ĐOẠN ĐÃ SỬA] XỬ LÝ DỮ LIỆU HEALTH ---
-            // Chỉ dùng c.market_analysis (Đây là nơi chứa dữ liệu đúng)
+            // HEALTH
             let ma = c.market_analysis || {};
-            
-            let spread = (ma.spread !== undefined) ? ma.spread : null;
-            let vel = (ma.velocity !== undefined) ? ma.velocity : null;
-            let mom = (ma.momentum !== undefined) ? ma.momentum : null;
             let isPerfect = (ma.label && ma.label.includes("PERFECT"));
-
-            // Logic màu sắc
-            let spreadColor = (spread !== null) ? (spread < 0.2 ? 'text-green' : (spread > 1.0 ? 'text-red' : 'text-main')) : 'text-sub';
-            let velColor    = (vel !== null)    ? (vel > 5 ? 'text-green' : (vel < 1 ? 'text-red' : 'text-main'))     : 'text-sub';
-            let momColor    = (mom !== null)    ? (mom > 0 ? 'text-green' : (mom < 0 ? 'text-red' : 'text-main'))     : 'text-sub';
-
-            let spreadTxt = (spread !== null) ? spread.toFixed(2) + '%' : '--';
-            let velTxt    = (vel !== null)    ? vel.toFixed(1) : '--';
-            let momTxt    = (mom !== null)    ? (mom > 0 ? '+' : '') + mom.toFixed(2) + '%' : '--';
-
-                        
             let rocketBadgeHtml = "";
             if (isPerfect) {
                 cardClass += " card-perfect";
                 rocketBadgeHtml = `<div class="rocket-badge"><i class="fas fa-rocket"></i> GEM</div>`;
             }
-            // --- KẾT THÚC XỬ LÝ HEALTH ---
 
-            // RENDER CARD
             grid.innerHTML += `
             <div class="col-md-6 col-lg-4 col-xl-3 card-wrapper" ${dragAttr} data-id="${c.db_id}">
                 <div class="${cardClass}" onclick="playSfx('click'); toggleCardHighlight(this)">
@@ -2785,8 +2865,7 @@ let estHtml = (estVal > 0)
                         </div>
                         <div class="card-head-right">${ruleHtml}${tagHtml}${x4TimerHtml}</div>
                     </div>
-
-                                        
+                                                    
                     <div class="card-stats-grid">
                         <div class="stat-cell"><div class="stat-lbl">TOP</div><div class="stat-val text-main">${c.topWinners||'--'}</div></div>
                         <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">REWARD</div><div class="stat-val text-brand">${fmtNum(c.rewardQty)}${estHtml}</div></div>
@@ -2824,6 +2903,10 @@ let estHtml = (estVal > 0)
         });
     } catch (e) { console.error(e); }
 }
+
+
+
+
 // --- [FINAL V4 - FIX TOP REWARD NOT UPDATING] ---
 function updateGridValuesOnly() {
     // 1. CẬP NHẬT BẢNG MARKET HEALTH
@@ -4572,7 +4655,76 @@ function calculateSafeAvg(id, currentTotalVol) {
     return avg;
 }
 
+// --- LOGIC LỊCH: DEADLINE RADAR ---
+let currentFilterDate = null;
 
+function initCalendar() {
+    const container = document.getElementById('calendar-wrapper');
+    if (!container) return;
+    container.innerHTML = ''; 
+
+    // 1. Thống kê giải theo ngày
+    let eventCounts = {};
+    compList.forEach(c => {
+        if(c.end) eventCounts[c.end] = (eventCounts[c.end] || 0) + 1;
+    });
+
+    // 2. Vẽ 14 ngày
+    const today = new Date();
+    let html = '';
+
+    for (let i = 0; i < 15; i++) {
+        let d = new Date();
+        d.setDate(today.getDate() + i);
+
+        // Format YYYY-MM-DD
+        let year = d.getFullYear();
+        let month = String(d.getMonth() + 1).padStart(2, '0');
+        let day = String(d.getDate()).padStart(2, '0');
+        let dateStr = `${year}-${month}-${day}`;
+
+        // Tên thứ (MON, TUE...)
+        let dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+        let dayNum = d.getDate();
+
+        // Kiểm tra có giải không
+        let count = eventCounts[dateStr] || 0;
+        let dotClass = count > 0 ? 'has-event' : '';
+        let activeClass = (currentFilterDate === dateStr) ? 'active' : '';
+
+        html += `
+            <div class="date-box ${activeClass}" id="dbox-${dateStr}" onclick="filterByDate('${dateStr}')">
+                <div class="date-dot ${dotClass}"></div>
+                <div class="d-name">${dayName}</div>
+                <div class="d-num">${dayNum}</div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+function filterByDate(dateStr) {
+    // UI Update
+    document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
+    
+    // Nếu bấm Reset hoặc bấm lại ngày đang chọn
+    if (dateStr === null || currentFilterDate === dateStr) {
+        currentFilterDate = null;
+        renderGrid(null); // Vẽ lại toàn bộ
+        return;
+    }
+
+    // Chọn ngày mới
+    currentFilterDate = dateStr;
+    let box = document.getElementById(`dbox-${dateStr}`);
+    if(box) box.classList.add('active');
+
+    // Lọc dữ liệu
+    let filteredList = compList.filter(c => c.end === dateStr);
+    renderGrid(filteredList);
+}
+initCalendar();
 </script>
 </body>
 </html>
+
