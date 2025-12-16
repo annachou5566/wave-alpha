@@ -829,23 +829,23 @@
 
     <div class="guide-grid">
         <div>
-            <div class="guide-title"><i class="fas fa-info-circle"></i> CHÚ THÍCH THÔNG SỐ</div>
-            <div class="guide-item mb-2"><strong class="text-sub">VOL (Today):</strong> Tổng giá trị giao dịch (USDT) từ 00:00 UTC.</div>
-            <div class="guide-item mb-2"><strong class="text-gold">TXs (Day):</strong> Tổng số lệnh đã khớp trong ngày.</div>
-            <div class="guide-item mb-2"><strong class="text-white">SPEED (tx/s):</strong> Tốc độ khớp lệnh (Số lệnh trên giây).</div>
-            <div class="guide-item mb-2"><strong class="text-brand">AVG 1s MATCH:</strong> Trung bình mỗi giây thị trường khớp được bao nhiêu Đô ($).</div>
+            <div class="guide-title"><i class="fas fa-info-circle"></i> <span data-i18n="g_title">CHÚ THÍCH THÔNG SỐ</span></div>
+            <div class="guide-item mb-2"><strong class="text-sub">VOL (Today):</strong> <span data-i18n="g_vol">Tổng giá trị giao dịch (USDT) từ 00:00 UTC.</span></div>
+            <div class="guide-item mb-2"><strong class="text-gold">TXs (Day):</strong> <span data-i18n="g_txs">Tổng số lệnh đã khớp trong ngày.</span></div>
+            <div class="guide-item mb-2"><strong class="text-white">SPEED (tx/s):</strong> <span data-i18n="g_speed">Tốc độ khớp lệnh (Số lệnh trên giây).</span></div>
+            <div class="guide-item mb-2"><strong class="text-brand">AVG 1s MATCH:</strong> <span data-i18n="g_match">Trung bình mỗi giây thị trường khớp được bao nhiêu Đô ($).</span></div>
         </div>
         <div>
             <div class="guide-title d-none d-md-block" style="visibility: hidden;">.</div>
-            <div class="guide-item mb-2"><strong class="text-white">AVG ORDER (24h):</strong> Giá trị trung bình của 1 lệnh (Cả ngày).</div>
-            <div class="guide-item mb-2"><strong class="text-white">NET FLOW (1m):</strong> Dòng tiền ròng trong 1 phút qua.</div>
-            <div class="guide-item mb-2"><strong class="text-white">SPREAD (%):</strong> Biên độ chênh lệch giá Mua/Bán.</div>
-            <div class="disclaimer-box mt-3">
-                Dữ liệu on-chain & CEX được tổng hợp tự động. Chỉ mang tính chất tham khảo.
+            <div class="guide-item mb-2"><strong class="text-white">AVG ORDER (24h):</strong> <span data-i18n="g_ord">Giá trị trung bình của 1 lệnh (Cả ngày).</span></div>
+            <div class="guide-item mb-2"><strong class="text-white">NET FLOW (1m):</strong> <span data-i18n="g_flow">Dòng tiền ròng trong 1 phút qua.</span></div>
+            <div class="guide-item mb-2"><strong class="text-white">SPREAD (%):</strong> <span data-i18n="g_spread">Biên độ chênh lệch giá Mua/Bán.</span></div>
+            
+            <div class="disclaimer-box mt-3" data-i18n="g_disc">
+                Dữ liệu tự động. Miễn trừ trách nhiệm: Chỉ mang tính tham khảo. Vui lòng tự nghiên cứu (DYOR) kỹ trước khi ra quyết định.
             </div>
         </div>
     </div>
-</div>
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="d-flex align-items-center gap-3">
@@ -1458,12 +1458,22 @@ const translations = {
         toast_login_req: "Please Login first!", toast_success: "Action Successful!", toast_error: "Error occurred!",
         toast_insufficient: "Insufficient Balance!", toast_saved: "Tracking Data Saved!",
 
-        // --- [MỚI] ICON LEGEND (TIẾNG ANH) ---
+        // --- LEGEND & DISCLAIMER (NEW) ---
         legend_title: "ICON LEGEND",
         leg_sync_t: "Smart Sync", leg_sync_d: "Update latest prices & volume from Server.",
         leg_reload_t: "Reload Data", leg_reload_d: "Force reload data from Cloud Database.",
         leg_wallet_t: "Manage Wallets", leg_wallet_d: "Add/Remove tracking portfolios.",
-        leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data."
+        leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data.",
+
+        g_title: "METRIC LEGEND",
+        g_vol: "Total trading volume (USDT) since 00:00 UTC.",
+        g_txs: "Total executed orders today.",
+        g_speed: "Execution speed (Orders/sec).",
+        g_match: "Avg market absorption per second ($).",
+        g_ord: "Average value per order (24h).",
+        g_flow: "Net cash flow in the last 1m.",
+        g_spread: "Bid/Ask price spread.",
+        g_disc: "Automated Data. Disclaimer: For reference only. We accept no liability, please Do Your Own Research (DYOR)."
     },
     vi: {
         // --- CHUNG ---
@@ -1505,12 +1515,22 @@ const translations = {
         toast_login_req: "Vui lòng đăng nhập trước!", toast_success: "Thao tác thành công!", toast_error: "Có lỗi xảy ra!",
         toast_insufficient: "Số dư không đủ!", toast_saved: "Dữ liệu đã được lưu!",
 
-        // --- [MỚI] ICON LEGEND (TIẾNG VIỆT) ---
+        // --- LEGEND & DISCLAIMER (NEW) ---
         legend_title: "CHÚ THÍCH BIỂU TƯỢNG",
         leg_sync_t: "Đồng bộ Thông minh", leg_sync_d: "Cập nhật giá & volume mới nhất từ Server.",
         leg_reload_t: "Tải lại Dữ liệu", leg_reload_d: "Buộc tải lại toàn bộ dữ liệu từ Cloud.",
         leg_wallet_t: "Quản lý Ví", leg_wallet_d: "Thêm/Xóa danh mục theo dõi.",
-        leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu."
+        leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu.",
+
+        g_title: "CHÚ THÍCH THÔNG SỐ",
+        g_vol: "Tổng giá trị giao dịch (USDT) từ 00:00 UTC.",
+        g_txs: "Tổng số lệnh đã khớp trong ngày.",
+        g_speed: "Tốc độ khớp lệnh (Số lệnh trên giây).",
+        g_match: "Trung bình mỗi giây thị trường khớp được bao nhiêu Đô ($).",
+        g_ord: "Giá trị trung bình của 1 lệnh (Cả ngày).",
+        g_flow: "Dòng tiền ròng trong 1 phút qua.",
+        g_spread: "Biên độ chênh lệch giá Mua/Bán.",
+        g_disc: "Dữ liệu tự động. Miễn trừ trách nhiệm: Chỉ mang tính tham khảo. Vui lòng tự nghiên cứu (DYOR) kỹ trước khi ra quyết định."
     },
     zh: {
         // --- CHUNG ---
@@ -1552,12 +1572,22 @@ const translations = {
         toast_login_req: "请先登录!", toast_success: "操作成功!", toast_error: "发生错误!",
         toast_insufficient: "余额不足!", toast_saved: "数据已保存!",
 
-        // --- [MỚI] ICON LEGEND (TIẾNG TRUNG) ---
+        // --- LEGEND & DISCLAIMER (NEW) ---
         legend_title: "图标说明",
         leg_sync_t: "智能同步", leg_sync_d: "从服务器更新最新价格和成交量。",
         leg_reload_t: "重新加载", leg_reload_d: "强制从云数据库重新加载数据。",
         leg_wallet_t: "管理钱包", leg_wallet_d: "添加/删除追踪组合。",
-        leg_login_t: "登录", leg_login_d: "安全登录以保存数据。"
+        leg_login_t: "登录", leg_login_d: "安全登录以保存数据。",
+
+        g_title: "指标说明",
+        g_vol: "自00:00 UTC起的总交易量 (USDT)。",
+        g_txs: "今日已成交订单总数。",
+        g_speed: "成交速度 (每秒订单数)。",
+        g_match: "市场每秒平均成交额 ($)。",
+        g_ord: "平均每单价值 (24小时)。",
+        g_flow: "过去1分钟的净资金流。",
+        g_spread: "买卖价差幅度。",
+        g_disc: "自动数据。免责声明：仅供参考，概不负责。请务必自行研究 (DYOR)。"
     }
 };
 
@@ -2573,8 +2603,25 @@ function renderGrid() {
             let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
             let dragHandleHtml = (isAdmin) ? `<i class="fas fa-grip-vertical admin-drag-handle" title="Kéo để sắp xếp"></i>` : '';
 
+            // --- [ĐOẠN ĐÃ SỬA] XỬ LÝ DỮ LIỆU HEALTH ---
+            // Chỉ dùng c.market_analysis (Đây là nơi chứa dữ liệu đúng)
+            let ma = c.market_analysis || {};
             
+            let spread = (ma.spread !== undefined) ? ma.spread : null;
+            let vel = (ma.velocity !== undefined) ? ma.velocity : null;
+            let mom = (ma.momentum !== undefined) ? ma.momentum : null;
+            let isPerfect = (ma.label && ma.label.includes("PERFECT"));
 
+            // Logic màu sắc
+            let spreadColor = (spread !== null) ? (spread < 0.2 ? 'text-green' : (spread > 1.0 ? 'text-red' : 'text-main')) : 'text-sub';
+            let velColor    = (vel !== null)    ? (vel > 5 ? 'text-green' : (vel < 1 ? 'text-red' : 'text-main'))     : 'text-sub';
+            let momColor    = (mom !== null)    ? (mom > 0 ? 'text-green' : (mom < 0 ? 'text-red' : 'text-main'))     : 'text-sub';
+
+            let spreadTxt = (spread !== null) ? spread.toFixed(2) + '%' : '--';
+            let velTxt    = (vel !== null)    ? vel.toFixed(1) : '--';
+            let momTxt    = (mom !== null)    ? (mom > 0 ? '+' : '') + mom.toFixed(2) + '%' : '--';
+
+                        
             let rocketBadgeHtml = "";
             if (isPerfect) {
                 cardClass += " card-perfect";
@@ -2600,8 +2647,7 @@ function renderGrid() {
                         <div class="card-head-right">${ruleHtml}${tagHtml}${x4TimerHtml}</div>
                     </div>
 
-            
-
+                                        
                     <div class="card-stats-grid">
                         <div class="stat-cell"><div class="stat-lbl">TOP</div><div class="stat-val text-main">${c.topWinners||'--'}</div></div>
                         <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">REWARD</div><div class="stat-val text-brand">${fmtNum(c.rewardQty)}${estHtml}</div></div>
@@ -2661,35 +2707,26 @@ function updateGridValuesOnly() {
             timeEl.innerText = timeStr;
         }
 
-        // 3. Cập nhật Health Grid (Chỉ cập nhật 3 ô Spread, Speed, Momentum)
-        // Tuyệt đối không chạm vào phần Header chứa Timer
-        const healthVals = cardWrapper.querySelectorAll('.h-val');
-        if (healthVals.length >= 3 && c.market_analysis) {
-            let ma = c.market_analysis;
-            
-            // [0] SPREAD
-            healthVals[0].innerText = (ma.spread !== undefined) ? ma.spread.toFixed(2) + '%' : '--';
-            healthVals[0].className = `h-val ${(ma.spread < 0.5 ? 'text-green' : (ma.spread > 2.0 ? 'text-red' : 'text-main'))}`;
-            
-            // [1] SPEED (Tx/Min)
-            healthVals[1].innerText = (ma.velocity !== undefined) ? ma.velocity.toFixed(1) : '--';
-            healthVals[1].className = `h-val ${(ma.velocity > 10 ? 'text-green' : (ma.velocity < 1 ? 'text-sub' : 'text-main'))}`;
-
-            // [2] MOMENTUM (Change)
-            healthVals[2].innerText = (ma.momentum !== undefined) ? (ma.momentum > 0 ? '+' : '') + ma.momentum.toFixed(2) + '%' : '--';
-            healthVals[2].className = `h-val ${(ma.momentum > 0 ? 'text-green' : (ma.momentum < 0 ? 'text-red' : 'text-main'))}`;
-        }
-    });
+            });
 }
-
+        
 // --- [V11 FINAL] RENDER TABLE: AVG 1s MATCH (VOLUME PER SECOND) ---
 function renderMarketHealthTable() {
     const tbody = document.getElementById('healthTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. Lọc giải đang chạy
-    let activeProjects = compList.filter(c => !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59')));
+    // 1. Lọc giải đang chạy VÀ KHÔNG PHẢI LÀ ECOSYSTEM (Campaign)
+    let activeProjects = compList.filter(c => {
+        // Kiểm tra còn hạn
+        let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59'));
+        
+        // Kiểm tra có phải Ecosystem không (nếu inputTokens có dữ liệu > 0 thì là Ecosystem)
+        let isEcosystem = (c.inputTokens && c.inputTokens.length > 0);
+        
+        // Chỉ lấy những cái ĐANG CHẠY và KHÔNG PHẢI ECOSYSTEM
+        return isRunning && !isEcosystem;
+    });
     
     // 2. Sắp xếp: Ưu tiên con nào có Dòng tiền/giây mạnh nhất
     activeProjects.sort((a, b) => {
@@ -4309,4 +4346,6 @@ function calculateSafeAvg(id, currentTotalVol) {
 </script>
 </body>
 </html>
+
+
 
