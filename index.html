@@ -655,7 +655,7 @@
         display: flex;
         gap: 12px;
         overflow-x: auto;
-        padding: 5px 2px 15px 2px; /* Padding để không bị cắt bóng đổ */
+        padding: 20px 2px 15px 2px; /* Padding để không bị cắt bóng đổ */
         scrollbar-width: none; /* Firefox */
         -webkit-overflow-scrolling: touch;
     }
@@ -711,15 +711,40 @@
         line-height: 1;
     }
 
-    /* Chấm thông báo số lượng (Góc trên phải) */
+    /* CHẤM SỐ LƯỢNG GIẢI (ĐÃ FIX HIỆN LÊN) */
     .date-dot {
         position: absolute;
-        top: 6px; right: 6px;
-        width: 8px; height: 8px;
+        top: -6px; right: -6px; /* Đẩy ra góc ngoài một chút cho đẹp */
+        min-width: 20px; height: 20px; /* Đủ rộng để chứa số */
         background: var(--accent-yellow);
+        color: #000; /* Chữ màu đen cho nổi trên nền vàng */
         border-radius: 50%;
-        box-shadow: 0 0 5px var(--accent-yellow);
-        display: none; /* Mặc định ẩn, có giải mới hiện */
+        font-family: var(--font-num);
+        font-size: 0.7rem; font-weight: 800;
+        display: flex; align-items: center; justify-content: center; /* Căn giữa số */
+        box-shadow: 0 0 8px rgba(240, 185, 11, 0.8);
+        border: 2px solid var(--bg-body); /* Tạo viền cắt với nền */
+        z-index: 5;
+        animation: bounceBadge 2s infinite; /* Hiệu ứng nhún nhảy cho dễ thấy */
+    }
+    
+    @keyframes bounceBadge { 
+        0%, 100% { transform: translateY(0); } 
+        50% { transform: translateY(-3px); } 
+    }
+    /* HIỂN THỊ SỐ TIỀN TRONG LỊCH */
+    .d-val {
+        font-family: var(--font-num);
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #0ECB81; /* Màu xanh lá tiền tài */
+        background: rgba(14, 203, 129, 0.15);
+        padding: 1px 6px;
+        border-radius: 4px;
+        line-height: 1;
+        white-space: nowrap;
+        min-width: 45px; text-align: center;
+        margin-top: 4px; /* Cách số ngày ra một chút */
     }
     .date-dot.has-event { display: block; }
     /* --- KẾT THÚC: GIAO DIỆN LỊCH MỚI --- */
@@ -2907,109 +2932,100 @@ function renderGrid(customData = null) {
 
 
 
-// --- [FINAL V4 - FIX TOP REWARD NOT UPDATING] ---
+// --- HÀM CẬP NHẬT SỐ LIỆU (CHẠY REALTIME) ---
 function updateGridValuesOnly() {
-    // 1. CẬP NHẬT BẢNG MARKET HEALTH
-    if (document.getElementById('healthTableBody')) {
-        renderMarketHealthTable();
-    }
-
-    let maxRewardVal = 0;
-    let topToken = null;
-    let totalEstPool = 0;
-    
-    // 2. DUYỆT QUA TỪNG TOKEN
-    compList.forEach(c => {
-        // --- A. Logic cập nhật dữ liệu gốc & Tìm Top ---
-        let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59'));
-        
-        // Lấy giá mới nhất từ Market Analysis
-        let currentPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
-        
-        // [QUAN TRỌNG] Cập nhật lại giá vào cache để dùng cho các logic khác
-        if (currentPrice > 0) c.cachedPrice = currentPrice;
-
-        let qty = parseFloat(c.rewardQty) || 0;
-        let currentTotalVal = qty * currentPrice;
-
-        if (isRunning) {
-            totalEstPool += currentTotalVal;
-            if (currentTotalVal > maxRewardVal) {
-                maxRewardVal = currentTotalVal;
-                topToken = c;
-            }
+    try {
+        // 1. Cập nhật bảng Market Health (nếu có)
+        if (typeof renderMarketHealthTable === 'function' && document.getElementById('healthTableBody')) {
+            renderMarketHealthTable();
         }
 
-        // --- B. Update UI Thẻ Bài ---
-        const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
-        if (cardWrapper) {
-            // Update Volume
-            const volEl = cardWrapper.querySelector('.real-vol-box .font-num');
-            if (volEl) {
-                let rv = c.real_alpha_volume || 0;
-                let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
-            }
+        let maxRewardVal = 0;
+        let topToken = null;
+        let totalEstPool = 0;
+
+        // 2. Duyệt qua từng Token để cập nhật
+        compList.forEach(c => {
+            // Logic tính toán cơ bản
+            let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59'));
             
-            // Update Price (Đơn giá)
-            const priceEl = cardWrapper.querySelector('.live-price-val');
-            if (priceEl && currentPrice > 0) {
-                let pStr = currentPrice < 1 
-                    ? '$' + currentPrice.toLocaleString('en-US', { maximumFractionDigits: 6 }) 
-                    : '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            // Lấy giá mới nhất
+            let currentPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
+            if (currentPrice > 0) c.cachedPrice = currentPrice; // Lưu cache
 
-                if (priceEl.innerText !== pStr) {
-                    priceEl.innerText = pStr;
-                    priceEl.style.textShadow = "0 0 8px #00F0FF";
-                    setTimeout(() => priceEl.style.textShadow = "none", 500);
+            let qty = parseFloat(c.rewardQty) || 0;
+            let currentTotalVal = qty * currentPrice;
+
+            if (isRunning) {
+                totalEstPool += currentTotalVal;
+                if (currentTotalVal > maxRewardVal) {
+                    maxRewardVal = currentTotalVal;
+                    topToken = c;
                 }
             }
 
-            // Update Est Value (Giá trị trên thẻ)
-            const estEl = cardWrapper.querySelector('.live-est-val');
-            if (estEl) {
-                let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
-                let estTotal = estQty * currentPrice;
-                let valStr = '';
-                if (estTotal > 0) valStr = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
+            // --- CẬP NHẬT GIAO DIỆN THẺ BÀI ---
+            const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
+            if (cardWrapper) {
+                // A. Cập nhật Volume (Real-time)
+                const volEl = cardWrapper.querySelector('.real-vol-box .font-num');
+                if (volEl) {
+                    let rv = c.real_alpha_volume || 0;
+                    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
+                    if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
+                }
 
-                if (estEl.innerText !== valStr) {
-                    estEl.innerText = valStr;
-                    if(valStr !== '') estEl.className = "text-green small fw-bold ms-1 anim-breathe live-est-val";
+                // B. Cập nhật Giá (Price) - Có hiệu ứng nháy màu xanh
+                const priceEl = cardWrapper.querySelector('.live-price-val');
+                if (priceEl && currentPrice > 0) {
+                    let pStr = currentPrice < 1 
+                        ? '$' + currentPrice.toLocaleString('en-US', { maximumFractionDigits: 6 }) 
+                        : '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    
+                    if(priceEl.innerText !== pStr) {
+                        priceEl.innerText = pStr;
+                        priceEl.style.color = "#00F0FF"; 
+                        priceEl.style.textShadow = "0 0 10px #00F0FF";
+                        setTimeout(() => { 
+                            priceEl.style.color = ""; 
+                            priceEl.style.textShadow = ""; 
+                        }, 500);
+                    }
+                }
+
+                // C. Cập nhật Giá trị ước tính (Reward Value)
+                const estEl = cardWrapper.querySelector('.live-est-val');
+                if (estEl) {
+                    // Lấy số lượng từ attribute data-qty (đã gán lúc render)
+                    let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
+                    let estTotal = estQty * currentPrice;
+                    if (estTotal > 0) {
+                        estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
+                    }
                 }
             }
-        }
-    });
+        });
 
-    // 3. CẬP NHẬT THANH THỐNG KÊ (HEADER)
-    const poolEl = document.getElementById('stat-pool');
-    if (poolEl) poolEl.innerText = fmt(totalEstPool);
+        // 3. Cập nhật thanh thống kê (Header)
+        const poolEl = document.getElementById('stat-pool');
+        if (poolEl) poolEl.innerText = fmt(totalEstPool);
 
-    if (topToken) {
-        const topSymbolEl = document.getElementById('stat-top-symbol');
-        const topValEl = document.getElementById('stat-top-val');
-        const topImgEl = document.getElementById('stat-top-img');
-
-        if (topSymbolEl) topSymbolEl.innerText = topToken.name;
-        
-        if (topValEl) {
-            let newValStr = fmt(maxRewardVal);
-            if (topValEl.innerText !== newValStr) {
-                topValEl.innerText = newValStr;
-                // Hiệu ứng nháy khi giá trị Top thay đổi
-                topValEl.style.color = "#fff";
-                topValEl.style.textShadow = "0 0 20px #F0B90B";
-                setTimeout(() => {
-                    topValEl.style.color = ""; // Trả về màu gốc (text-gold)
-                    topValEl.style.textShadow = "0 0 10px rgba(240, 185, 11, 0.5)";
-                }, 500);
-            }
+        if (topToken) {
+            const topSymbolEl = document.getElementById('stat-top-symbol');
+            const topValEl = document.getElementById('stat-top-val');
+            const topImgEl = document.getElementById('stat-top-img');
+            
+            if(topSymbolEl) topSymbolEl.innerText = topToken.name;
+            if(topValEl) topValEl.innerText = fmt(maxRewardVal);
+            if(topImgEl && topToken.logo) { topImgEl.src = topToken.logo; topImgEl.style.display = 'block'; }
         }
 
-        if (topImgEl && topToken.logo) {
-            topImgEl.src = topToken.logo;
-            topImgEl.style.display = 'block';
-        }
+        // 4. CẬP NHẬT LỊCH (ĐỂ TỔNG TIỀN TRÊN LỊCH NHẢY THEO GIÁ)
+        // Đây là dòng quan trọng nhất bạn đang thiếu
+        if (typeof initCalendar === 'function') initCalendar();
+
+    } catch (e) {
+        console.error("Lỗi cập nhật giao diện:", e);
     }
 }
         
@@ -3740,40 +3756,56 @@ function renderMarketHealthTable() {
         document.getElementById('chat-msg').value = '';
     }
 
-    // --- HÀM GỬI DỮ LIỆU LÊN SERVER (FIXED) ---
-    async function saveToCloud(compObj) {
-        // Tạo bản sao để xử lý, tránh làm hỏng dữ liệu đang hiển thị
-        let cloudObj = { ...compObj };
-        
-        // Xóa các biến tạm thời không cần lưu vào DB
-        delete cloudObj.myProgress;
-        delete cloudObj.db_id; 
-        delete cloudObj.id;
-        delete cloudObj.cachedPrice;
+    // --- 3. HÀM GỬI LÊN SERVER (ĐÃ FIX: KIỂM TRA KẾT QUẢ TRẢ VỀ) ---
+async function saveToCloud(compObj) {
+    // 1. Tạo bản sao dữ liệu sạch
+    let cloudObj = { ...compObj };
+    
+    // Xóa các biến tạm không cần lưu vào DB
+    delete cloudObj.myProgress; 
+    delete cloudObj.db_id; 
+    delete cloudObj.id; 
+    delete cloudObj.cachedPrice;
+    // Xóa luôn predictions/comments để tránh ghi đè dữ liệu user khác (chỉ lưu cấu hình giải)
+    // (Tùy logic của bạn, nhưng thường admin chỉ sửa info giải đấu)
+    // delete cloudObj.predictions; 
+    // delete cloudObj.comments;
 
-        const payload = {
-            name: cloudObj.name,
-            contract: cloudObj.contract,
-            data: cloudObj // Dữ liệu history nằm trong này
-        };
+    const payload = { 
+        name: cloudObj.name, 
+        contract: cloudObj.contract, 
+        data: cloudObj 
+    };
 
-        let result;
-        // Nếu đã có ID thì Update
-        if (compObj.db_id) {
-            result = await supabase.from('tournaments').update(payload).eq('id', compObj.db_id);
-        } else {
-            // Nếu chưa có thì Insert
-            result = await supabase.from('tournaments').insert([payload]);
-        }
-
-        if (result.error) {
-            console.error("Lỗi Save Server:", result.error);
-            throw result.error; // Ném lỗi ra để hàm saveUpdate bắt được
-        }
-        
-        // Lưu xong thì tải lại dữ liệu ngầm để đồng bộ tất cả
-        await loadFromCloud(false);
+    let result;
+    
+    // 2. Thực hiện lệnh Save có kiểm tra (.select())
+    if (compObj.db_id) {
+        // Update
+        result = await supabase
+            .from('tournaments')
+            .update(payload)
+            .eq('id', compObj.db_id)
+            .select(); // <--- QUAN TRỌNG: Phải có cái này để biết có lưu được không
+    } else {
+        // Insert
+        result = await supabase
+            .from('tournaments')
+            .insert([payload])
+            .select();
     }
+
+    // 3. Kiểm tra lỗi kỹ càng
+    if (result.error) throw result.error;
+    
+    // Nếu không có lỗi nhưng dữ liệu trả về rỗng -> Nghĩa là không lưu được (Do quyền Admin hoặc sai ID)
+    if (!result.data || result.data.length === 0) {
+        throw new Error("Lỗi quyền Admin! Server từ chối lưu (RLS Policy).");
+    }
+
+    // 4. Tải lại dữ liệu để đồng bộ
+    await loadFromCloud(false);
+}
 
     // --- MODAL UPDATES (TRACKING & HISTORY) ---
     function openUpdateModal(dbId) {
@@ -3982,110 +4014,98 @@ function renderMarketHealthTable() {
         }
     }
 
-    // --- HÀM LƯU CẬP NHẬT (ENGLISH VERSION & FIXED AWAIT) ---
-    async function saveUpdate() {
-        // 1. Kiểm tra đăng nhập
-        if (!currentUser) return showToast("Please Login to save progress!", "error");
+    // --- 2. HÀM LƯU CẬP NHẬT (FIXED MIN TARGET) ---
+async function saveUpdate() {
+    if (!currentUser) return showToast("Please Login to save progress!", "error");
 
-        let btn = document.getElementById('btn-save-progress');
-        let orgText = btn.innerText; // Lưu lại chữ gốc của nút
+    let btn = document.getElementById('btn-save-progress');
+    let orgText = btn.innerText;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; 
+    btn.disabled = true;
+
+    try {
+        let id = document.getElementById('u-db-id').value;
+        let c = compList.find(x => x.id == id);
+        let date = document.getElementById('u-date').value;
+        let originalDate = document.getElementById('u-original-date').value;
+
+        // --- PHẦN 1: LƯU PROFILE CÁ NHÂN ---
+        let my = {};
+        accSettings.forEach(acc => {
+            let vEl = document.getElementById(`u-vol-${acc.id}`);
+            let cEl = document.getElementById(`u-cost-${acc.id}`);
+            my[acc.id] = {
+                vol: vEl ? (parseFloat(vEl.value) || 0) : 0,
+                cost: cEl ? (parseFloat(cEl.value) || 0) : 0
+            }
+        });
+
+        if (!userProfile.tracker_data) userProfile.tracker_data = {};
+        if (!userProfile.tracker_data[id]) userProfile.tracker_data[id] = [];
+
+        let currentProg = userProfile.tracker_data[id];
+        if (originalDate && originalDate !== date) currentProg = currentProg.filter(p => p.date !== originalDate);
+        currentProg = currentProg.filter(p => p.date !== date);
         
-        // 2. Chuyển nút sang trạng thái đang lưu
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; 
-        btn.disabled = true;
-
-        try {
-            let id = document.getElementById('u-db-id').value;
-            let c = compList.find(x => x.id == id);
-            let date = document.getElementById('u-date').value;
-            let originalDate = document.getElementById('u-original-date').value;
-
-            // --- PHẦN 1: LƯU TIẾN ĐỘ CÁ NHÂN (USER PROFILE) ---
-            let my = {};
-            accSettings.forEach(acc => {
-                let vEl = document.getElementById(`u-vol-${acc.id}`);
-                let cEl = document.getElementById(`u-cost-${acc.id}`);
-                my[acc.id] = {
-                    vol: vEl ? (parseFloat(vEl.value) || 0) : 0,
-                    cost: cEl ? (parseFloat(cEl.value) || 0) : 0
-                }
-            });
-
-            if (!userProfile.tracker_data) userProfile.tracker_data = {};
-            if (!userProfile.tracker_data[id]) userProfile.tracker_data[id] = [];
-
-            let currentProg = userProfile.tracker_data[id];
-            
-            // Xóa dữ liệu ngày cũ nếu đổi ngày
-            if (originalDate && originalDate !== date) currentProg = currentProg.filter(p => p.date !== originalDate);
-            // Xóa dữ liệu ngày hiện tại để ghi đè
-            currentProg = currentProg.filter(p => p.date !== date);
-            
-            // Chỉ lưu nếu có dữ liệu nhập vào
-            let hasData = Object.values(my).some(v => v.vol > 0 || v.cost > 0);
-            if(hasData) {
-                currentProg.push({ date: date, accsDetail: my });
-                currentProg.sort((a, b) => new Date(a.date) - new Date(b.date));
-            }
-            userProfile.tracker_data[id] = currentProg;
-
-            // Gửi lên Server (Bảng Profiles)
-            const { error: profileError } = await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
-            if (profileError) throw profileError;
-
-            // --- PHẦN 2: LƯU MIN TARGET (CHỈ ADMIN MỚI ĐƯỢC QUYỀN) ---
-            if (document.body.classList.contains('is-admin')) {
-                let minValStr = document.getElementById('u-min-vol').value.replace(/,/g, '');
-                let t = parseFloat(minValStr); 
-
-                if (!c.history) c.history = [];
-                // Xóa cũ thêm mới
-                c.history = c.history.filter(h => h.date !== date);
-                
-                // Nếu có nhập số hợp lệ thì mới lưu
-                if (!isNaN(t)) {
-                    c.history.push({ date: date, target: t });
-                    c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
-                    
-                    // QUAN TRỌNG: AWAIT để đợi Server lưu xong
-                    await saveToCloud(c); 
-                }
-            }
-
-            // --- HOÀN TẤT & THÔNG BÁO ---
-            btn.innerHTML = '<i class="fas fa-check"></i> SAVED!';
-            btn.style.background = "#0ECB81"; // Màu xanh thành công
-            btn.style.color = "#000";
-            showToast("Data Saved Successfully!", "success");
-
-            // Reset nút về ban đầu sau 1 giây
-            setTimeout(() => {
-                btn.innerText = orgText;
-                btn.style.background = "";
-                btn.style.color = "";
-                btn.disabled = false;
-                
-                // Vẽ lại biểu đồ để thấy thay đổi ngay
-                renderTrackerChart(c);
-                renderHistoryList(c);
-            }, 1000);
-
-        } catch (e) {
-            console.error(e);
-            showToast("Save Error: " + e.message, "error");
-            
-            // Báo lỗi trên nút
-            btn.innerText = "FAILED";
-            btn.style.background = "var(--accent-red)";
-            
-            // Reset nút sau 2 giây
-            setTimeout(() => { 
-                btn.innerText = orgText; 
-                btn.style.background = ""; 
-                btn.disabled = false; 
-            }, 2000);
+        let hasData = Object.values(my).some(v => v.vol > 0 || v.cost > 0);
+        if(hasData) {
+            currentProg.push({ date: date, accsDetail: my });
+            currentProg.sort((a, b) => new Date(a.date) - new Date(b.date));
         }
+        userProfile.tracker_data[id] = currentProg;
+
+        const { error: profileError } = await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
+        if (profileError) throw profileError;
+
+        // --- PHẦN 2: LƯU MIN TARGET (QUAN TRỌNG) ---
+        if (document.body.classList.contains('is-admin')) {
+            let minValStr = document.getElementById('u-min-vol').value.replace(/,/g, '');
+            let t = parseFloat(minValStr); 
+            
+            // Đảm bảo history tồn tại
+            if (!c.history) c.history = [];
+            
+            // Xóa dữ liệu cũ của ngày này đi để ghi đè
+            c.history = c.history.filter(h => h.date !== date);
+            
+            // Nếu nhập số hợp lệ thì push vào
+            if (!isNaN(t)) {
+                c.history.push({ date: date, target: t });
+                // Sắp xếp lại theo ngày
+                c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                // Gọi lệnh lưu và ĐỢI kết quả
+                await saveToCloud(c); 
+            }
+        }
+
+        // --- THÔNG BÁO THÀNH CÔNG ---
+        btn.innerHTML = '<i class="fas fa-check"></i> SAVED!';
+        btn.style.background = "#0ECB81";
+        btn.style.color = "#000";
+        showToast("Data Saved Successfully!", "success");
+
+        setTimeout(() => {
+            btn.innerText = orgText;
+            btn.style.background = "";
+            btn.style.color = "";
+            btn.disabled = false;
+            // Vẽ lại biểu đồ
+            renderTrackerChart(c);
+            renderHistoryList(c);
+            // Vẽ lại lịch
+            if (typeof initCalendar === 'function') initCalendar();
+        }, 1000);
+
+    } catch (e) {
+        console.error(e);
+        // Hiển thị lỗi rõ ràng
+        showToast("Save Error: " + e.message, "error");
+        btn.innerText = "FAILED";
+        btn.style.background = "var(--accent-red)";
+        setTimeout(() => { btn.innerText = orgText; btn.style.background = ""; btn.disabled = false; }, 3000);
     }
+}
 
     // ADMIN: AUTOMATED SETTLE REWARDS (V45 SECURITY UPGRADE)
     async function settleTournament() {
@@ -4715,7 +4735,7 @@ function calculateSafeAvg(id, currentTotalVol) {
     return avg;
 }
 
-// --- LOGIC LỊCH: DEADLINE RADAR ---
+// --- LOGIC LỊCH: DEADLINE RADAR (CÓ TỔNG TIỀN) ---
 let currentFilterDate = null;
 
 function initCalendar() {
@@ -4723,13 +4743,26 @@ function initCalendar() {
     if (!container) return;
     container.innerHTML = ''; 
 
-    // 1. Thống kê giải theo ngày
-    let eventCounts = {};
+    // 1. Thống kê: Số lượng giải & Tổng giá trị theo ngày
+    let dateStats = {}; 
+
     compList.forEach(c => {
-        if(c.end) eventCounts[c.end] = (eventCounts[c.end] || 0) + 1;
+        if(c.end) {
+            if(!dateStats[c.end]) dateStats[c.end] = { count: 0, totalVal: 0 };
+            
+            // Tăng biến đếm số lượng
+            dateStats[c.end].count++;
+
+            // Tính tiền: Qty * Giá (Ưu tiên giá mới nhất, nếu không có thì lấy giá cache)
+            let qty = parseFloat(c.rewardQty) || 0;
+            let price = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
+            
+            // Cộng dồn vào tổng ngày đó (Tính cả giải đang chạy và đã kết thúc trong ngày)
+            dateStats[c.end].totalVal += (qty * price);
+        }
     });
 
-    // 2. Vẽ 14 ngày
+    // 2. Vẽ 15 ngày
     const today = new Date();
     let html = '';
 
@@ -4737,52 +4770,68 @@ function initCalendar() {
         let d = new Date();
         d.setDate(today.getDate() + i);
 
-        // Format YYYY-MM-DD
+        // Format YYYY-MM-DD để so sánh
         let year = d.getFullYear();
         let month = String(d.getMonth() + 1).padStart(2, '0');
         let day = String(d.getDate()).padStart(2, '0');
         let dateStr = `${year}-${month}-${day}`;
 
-        // Tên thứ (MON, TUE...)
+        // Hiển thị: THỨ (T2...) & NGÀY (16...)
         let dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
         let dayNum = d.getDate();
 
-        // Kiểm tra có giải không
-        let count = eventCounts[dateStr] || 0;
-        let dotClass = count > 0 ? 'has-event' : '';
+        // Lấy dữ liệu thống kê của ngày này
+        let stat = dateStats[dateStr] || { count: 0, totalVal: 0 };
+        
+        // HTML Badge số lượng (Nếu có giải thì hiện chấm vàng)
+        let badgeHtml = stat.count > 0 ? `<div class="date-dot">${stat.count}</div>` : '';
+        
+        // HTML Số tiền (Format: 1.5k, 2M...)
+        let moneyHtml = '';
+        if (stat.totalVal > 0) {
+            let val = stat.totalVal;
+            let txt = '';
+            if (val >= 1000000) txt = '$' + (val / 1000000).toFixed(1) + 'M';
+            else if (val >= 1000) txt = '$' + (val / 1000).toFixed(0) + 'k';
+            else txt = '$' + Math.round(val);
+            
+            moneyHtml = `<div class="d-val">${txt}</div>`;
+        } else {
+            // Để trống 1 dòng ẩn (visibility:hidden) để các ô cao bằng nhau
+            moneyHtml = `<div class="d-val" style="visibility:hidden">-</div>`;
+        }
+
         let activeClass = (currentFilterDate === dateStr) ? 'active' : '';
 
         html += `
             <div class="date-box ${activeClass}" id="dbox-${dateStr}" onclick="filterByDate('${dateStr}')">
-                <div class="date-dot ${dotClass}"></div>
+                ${badgeHtml}
                 <div class="d-name">${dayName}</div>
                 <div class="d-num">${dayNum}</div>
+                ${moneyHtml}
             </div>
         `;
     }
     container.innerHTML = html;
 }
 
+// Hàm lọc (Giữ nguyên logic chuẩn)
 function filterByDate(dateStr) {
-    // UI Update
-    document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
-    
-    // Nếu bấm Reset hoặc bấm lại ngày đang chọn
+    document.querySelectorAll('.date-card').forEach(el => el.classList.remove('active'));
     if (dateStr === null || currentFilterDate === dateStr) {
         currentFilterDate = null;
-        renderGrid(null); // Vẽ lại toàn bộ
+        renderGrid(null);
         return;
     }
-
-    // Chọn ngày mới
     currentFilterDate = dateStr;
-    let box = document.getElementById(`dbox-${dateStr}`);
+    let box = document.getElementById(`date-${dateStr}`);
     if(box) box.classList.add('active');
 
-    // Lọc dữ liệu
     let filteredList = compList.filter(c => c.end === dateStr);
     renderGrid(filteredList);
 }
+
+// 3. Kích hoạt ngay lập tức
 initCalendar();
 </script>
 </body>
