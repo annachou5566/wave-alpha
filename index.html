@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="vi" data-theme="dark">
 <head>
+<head>
+    <script>
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            alert("LỖI TÌM THẤY:\n" + msg + "\nTại dòng: " + lineNo);
+            return false;
+        };
+        
+        window.addEventListener('unhandledrejection', function (event) {
+            alert("LỖI KẾT NỐI (Promise):\n" + event.reason);
+        });
+    </script>
+    
+    <meta charset="UTF-8">
+
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
@@ -1795,7 +1810,6 @@ function applyLanguage() {
     });
     /* ========================================= */
 
-    let supabase = null;
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
     let siteConfig = { x:'', tele:'', yt:'', affiliate: {} };
     let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [{id:'acc1', name:'Main', color:'#00F0FF'}, {id:'acc2', name:'Clone', color:'#FFD700'}];
