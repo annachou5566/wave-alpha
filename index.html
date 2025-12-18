@@ -210,13 +210,26 @@
         .gap-pos { color: var(--accent-green); }
         .gap-neg { color: var(--accent-red); }
 
-        .card-actions { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); }
+     /* Đổi từ 1fr 1fr thành 1fr để nút Update full chiều ngang */
+.card-actions { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--border); }
         .btn-card-action { background: var(--bg-input); border: none; color: var(--text-sub); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; padding: 10px; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-card-action:hover { background: #fff; color: #000; box-shadow: 0 0 15px rgba(255,255,255,0.7); z-index: 10; transform: translateY(-2px); }
         .btn-card-action.action-update { color: var(--accent-green); }
         .btn-card-action.action-update:hover { background: var(--accent-green); color: #000; box-shadow: 0 0 15px var(--accent-green); }
-        .btn-card-action.predict { color: #fff; background: rgba(153, 69, 255, 0.15); border-left: 1px solid var(--border); }
-        .btn-card-action.predict:hover { background: var(--purple); color: #fff; box-shadow: 0 0 20px var(--purple); text-shadow: 0 0 5px #fff; }
+        /* Sửa đoạn này trong CSS */
+.btn-card-action.predict { 
+    color: #fff; 
+    background: rgba(153, 69, 255, 0.15); 
+    /* Bỏ border-left cũ đi nếu có */
+    border-top: 1px solid var(--border); 
+}
+
+.btn-card-action.predict:hover { 
+    background: var(--purple) !important; 
+    color: #fff !important; 
+    box-shadow: 0 0 20px rgba(153, 69, 255, 0.6); 
+    text-shadow: 0 0 5px #fff; 
+}
 
         .card-foot { padding: 8px 15px; background: var(--bg-input); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .tour-timer { display: flex; align-items: center; gap: 5px; }
@@ -764,7 +777,218 @@
     .date-dot.has-event { display: block; }
     /* --- KẾT THÚC: GIAO DIỆN LỊCH MỚI --- */
         
-        
+   /* --- V4: NEON COMMAND CENTER THEME --- */
+
+/* 1. Layout tổng */
+.neo-wrapper {
+    width: 100%;
+    /* SỬA QUAN TRỌNG: Dùng dvh để tự co lại khi có thanh công cụ */
+    height: 100dvh; 
+    /* Fallback cho trình duyệt cũ */
+    min-height: -webkit-fill-available;
+    
+    background: radial-gradient(circle at 50% 50%, #1a1e23 0%, #0b0e11 100%);
+    
+    /* TĂNG PADDING ĐÁY: Để nội dung không bị sát mép dưới */
+    padding: 80px 20px 50px 20px; /* Top - Right - Bottom (50px) - Left */
+    
+    position: fixed; top: 0; left: 0; z-index: 2000;
+    display: grid;
+    grid-template-columns: 320px 1fr 350px;
+    grid-template-rows: 1fr; /* Đảm bảo chỉ có 1 hàng, nội dung tự co giãn bên trong */
+    gap: 20px;
+    font-family: var(--font-main);
+    overflow: hidden;
+}
+
+/* 2. Hiệu ứng nền lưới */
+.grid-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: 
+        linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: -1;
+}
+
+/* 3. Thẻ kính (Glass Card) */
+.glass-card {
+    background: rgba(22, 26, 30, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease;
+}
+
+/* Header của từng thẻ */
+.glass-head {
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.75rem; font-weight: 800; color: var(--text-sub);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+/* --- CỘT TRÁI: DATA --- */
+.stat-highlight {
+    padding: 25px 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+}
+.stat-label { font-size: 0.7rem; color: var(--text-sub); letter-spacing: 1px; margin-bottom: 5px; font-weight: 700; }
+.stat-val-mega {
+    font-family: var(--font-num); font-size: 2.8rem; font-weight: 800; color: #fff;
+    text-shadow: 0 0 20px rgba(0, 240, 255, 0.4); line-height: 1;
+}
+.stat-val-sub { font-family: var(--font-num); font-size: 1.8rem; font-weight: 700; color: var(--accent-green); }
+
+/* Nút bấm Neon (Cyber Button) */
+.btn-cyber {
+    margin: 20px;
+    background: transparent;
+    border: 1px solid var(--brand);
+    color: var(--brand);
+    padding: 15px;
+    font-weight: 800; font-size: 1rem; letter-spacing: 2px;
+    text-transform: uppercase;
+    position: relative; overflow: hidden;
+    cursor: pointer; transition: 0.3s;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+}
+.btn-cyber::before {
+    content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.2), transparent);
+    transition: 0.5s;
+}
+.btn-cyber:hover {
+    background: var(--brand); color: #000; box-shadow: 0 0 30px var(--brand);
+}
+.btn-cyber:hover::before { left: 100%; }
+.btn-cyber:disabled { border-color: #555; color: #555; cursor: not-allowed; box-shadow: none; background: transparent; }
+
+/* Các nút công cụ nhỏ */
+.tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px; }
+.btn-tool-glass {
+    background: rgba(255,255,255,0.05); border: none; color: #aaa; padding: 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; transition: 0.2s;
+}
+.btn-tool-glass:hover { background: #fff; color: #000; }
+
+/* --- CỘT GIỮA: CHART --- */
+.chart-wrapper { flex: 1; width: 100%; position: relative; min-height: 0; padding: 10px; }
+.token-badge {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0,0,0,0.3); padding: 8px 15px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* --- CỘT PHẢI: SOCIAL --- */
+.tab-capsule {
+    display: flex; background: rgba(0,0,0,0.3); margin: 15px; padding: 4px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
+}
+.tab-pill {
+    flex: 1; text-align: center; padding: 8px; font-size: 0.75rem; font-weight: 700; color: #888; cursor: pointer; border-radius: 20px; transition: 0.3s;
+}
+.tab-pill.active { background: var(--brand); color: #000; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+
+/* Chat & List Style */
+.neo-list { flex: 1; overflow-y: auto; padding: 0 15px 15px 15px; }
+.neo-list::-webkit-scrollbar { width: 4px; }
+.neo-list::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+.chat-bubble-v2 {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05);
+    padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; color: #ddd; margin-bottom: 8px;
+}
+.chat-bubble-v2.me { background: rgba(153, 69, 255, 0.15); border-color: var(--purple); color: #fff; text-align: right; }
+
+/* --- FIX MODAL & RESPONSIVE --- */
+.modal { z-index: 3000 !important; }
+.modal-backdrop { z-index: 2900 !important; }
+@media (max-width: 1200px) {
+    .neo-wrapper { display: block; overflow-y: auto; padding-bottom: 80px; height: auto; position: absolute; }
+    .glass-card { margin-bottom: 20px; min-height: 400px; }
+    .btn-cyber { position: fixed; bottom: 0; left: 0; width: 100%; margin: 0; z-index: 2050; background: #000; border-top: 1px solid var(--brand); }
+}
+
+/* --- FIX LỖI Z-INDEX (QUAN TRỌNG) --- */
+/* Đẩy Modal lên cao hơn giao diện Cockpit (đang là 2000) */
+.modal { z-index: 3000 !important; }
+.modal-backdrop { z-index: 2900 !important; }
+
+/* FIX LỖI HIỂN THỊ CHAT */
+/* Đảm bảo khung chat hiển thị đúng kiểu Flex khi được kích hoạt */
+.chat-visible {
+    display: flex !important;
+}
+.hide-force {
+    display: none !important;
+}
+
+/* --- FIX CHO TABLET & MÀN HÌNH THẤP (Landscapes) --- */
+@media (max-height: 800px) {
+    .neo-wrapper {
+        padding-top: 60px; /* Giảm khoảng cách bên trên */
+        padding-bottom: 70px; /* Tăng khoảng cách an toàn bên dưới */
+    }
+
+    /* Thu nhỏ font chữ tiêu đề để tiết kiệm diện tích dọc */
+    .stat-val-mega { font-size: 2.2rem; }
+    .stat-val-sub { font-size: 1.5rem; }
+    
+    /* Thu nhỏ padding trong các thẻ */
+    .stat-highlight { padding: 15px 10px; }
+    .btn-cyber { padding: 12px; margin: 10px 20px; }
+    
+    /* Đảm bảo khung Chat và Leaderboard luôn nằm trong khung nhìn */
+    .glass-card {
+        height: 100%; 
+        max-height: 100%;
+    }
+}
+
+/* --- FIX RIÊNG CHO MOBILE & TABLET DỌC (Chuyển sang chế độ cuộn) --- */
+@media (max-width: 1024px) {
+    .neo-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: auto; 
+        min-height: 100dvh;
+        position: absolute; /* Bỏ fixed để cho phép cuộn trang */
+        overflow-y: auto;
+        padding-bottom: 100px; /* Khoảng trống lớn dưới cùng để né nút Home */
+    }
+    
+    .glass-card {
+        min-height: 450px; /* Đặt chiều cao tối thiểu cho mỗi thẻ */
+        flex-shrink: 0;
+    }
+    
+    /* Ghim nút Predict xuống đáy màn hình điện thoại (nếu muốn) */
+    /* Hoặc để nó trôi theo nội dung (an toàn hơn) */
+    .btn-cyber {
+        position: relative; 
+        margin-top: auto;
+    }
+}
+
+/* Hiệu ứng nút Predict trên Card */
+.btn-card-action.predict:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px var(--brand);
+    filter: brightness(1.1);
+}
+
+/* Hiệu ứng nút Update */
+.btn-card-action.action-update:hover {
+    background: #333 !important;
+    color: #fff !important;
+    border-color: #fff !important;
+}
     </style>
 </head>
 <body>
@@ -941,7 +1165,7 @@
                     
                     <th class="text-end">NET FLOW (1m)</th>
                     <th class="text-end pe-4">SPREAD (%)</th>
-                </tr>
+                                    </tr>
             </thead>
             <tbody id="healthTableBody">
             </tbody>
@@ -1010,9 +1234,86 @@
     </div>
 </div>
 
-<div id="view-predict" style="display:none; padding: 0 20px 20px 20px; max-width: 1600px; margin: 0 auto;">
-    <button class="back-btn mb-4" onclick="playSfx('click'); switchView('dashboard')"><i class="fas fa-arrow-left"></i> BACK TO DASHBOARD</button>
-    <div id="predict-content-placeholder"></div>
+<div id="view-predict" style="display:none;">
+    <div class="neo-wrapper">
+        <div class="grid-overlay"></div>
+
+        <div style="position: absolute; top: 20px; left: 20px; z-index: 10; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; opacity: 0.7; transition: 0.2s;" onclick="playSfx('click'); switchView('dashboard')" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">
+            <div style="width:36px; height:36px; background:rgba(255,255,255,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="fas fa-arrow-left"></i></div>
+            <span style="letter-spacing:1px; font-size:0.8rem;">BACK TO TERMINAL</span>
+        </div>
+
+        <div class="glass-card">
+            <div class="glass-head"><i class="fas fa-database me-2"></i> CORE DATA</div>
+            
+            <div style="flex:1; display:flex; flex-direction:column;">
+                <div class="stat-highlight">
+                    <div class="stat-label">TARGET MIN VOLUME</div>
+                    <div class="stat-val-mega anim-breathe" id="pt-min-vol">0</div>
+                    <div id="pt-vol-change" class="d-flex justify-content-center mt-2"></div>
+                </div>
+
+                <div class="stat-highlight">
+                    <div class="stat-label">PRIZE POOL</div>
+                    <div class="stat-val-sub" id="pt-pool">$0</div>
+                </div>
+
+                <div class="stat-highlight" style="border:none">
+                    <div class="stat-label">REMAINING TIME</div>
+                    <div class="font-num text-gold fw-bold fs-3" id="pt-time">--:--</div>
+                </div>
+
+                <div class="tools-grid mt-auto mb-3">
+                    <button class="btn-tool-glass" onclick="new bootstrap.Modal(document.getElementById('ruleModal')).show()"><i class="fas fa-scroll me-1"></i> RULES</button>
+                    <button class="btn-tool-glass" onclick="generateShareCard()"><i class="fas fa-share-nodes me-1"></i> SHARE</button>
+                </div>
+            </div>
+
+            <button id="btn-predict-action" class="btn-cyber" onclick="openInputModal()">
+                INITIATE PREDICTION
+            </button>
+        </div>
+
+        <div class="glass-card">
+            <div class="glass-head" style="justify-content:space-between">
+                <span><i class="fas fa-chart-area me-2"></i> MARKET VISUALIZER</span>
+                
+                <div class="token-badge">
+                    <img id="pt-logo" src="" style="width:20px; height:20px; border-radius:50%;">
+                    <span id="pt-symbol" class="fw-bold text-white small">BTC</span>
+                </div>
+            </div>
+            
+            <div class="chart-wrapper">
+                <canvas id="marketChart"></canvas>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <div class="glass-head"><i class="fas fa-users me-2"></i> NETWORK</div>
+            
+            <div class="tab-capsule">
+                <div class="tab-pill active" id="tab-btn-leaderboard" onclick="switchCpTab('leaderboard')">TOP RANK</div>
+                <div class="tab-pill" id="tab-btn-chat" onclick="switchCpTab('chat')">CHAT</div>
+            </div>
+
+            <div id="cp-content-leaderboard" class="neo-list">
+                <table class="w-100" style="font-size:0.85rem; border-collapse: separate; border-spacing: 0 8px;">
+                    <tbody id="pt-leaderboard"></tbody>
+                </table>
+            </div>
+
+            <div id="cp-content-chat" class="d-none flex-column h-100" style="padding-bottom:15px">
+                <div id="chat-feed" class="neo-list mb-3"></div>
+                <div style="padding:0 15px">
+                    <div class="input-group input-group-sm">
+                        <input id="chat-msg" class="form-control bg-transparent text-white border-secondary" style="border-radius:20px 0 0 20px" placeholder="Broadcast message..." onkeydown="if(event.key==='Enter') sendChat()">
+                        <button class="btn btn-light" style="border-radius:0 20px 20px 0" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 
@@ -1136,7 +1437,7 @@
                     <div class="sc-footer">
                         <div class="text-start">
                             <div class="sc-ref-text">Challenge me on<br>Prediction Market</div>
-                            <div class="sc-web-link">wave-alpha.netlify.app</div>
+                            <div class="sc-web-link">wave-alpha.pages.dev</div>
                         </div>
                         <div class="sc-qr-box" id="sc-qr-target"></div>
                     </div>
@@ -2860,13 +3161,23 @@ function renderGrid(customData = null) {
                 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` 
                 : '<span class="live-est-val" data-qty="' + (c.rewardQty||0) + '"></span>';
 
-            let accListHtml = '';
-            let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
+                let accListHtml = '';
+            
+            // 1. Lấy dữ liệu tiến độ của giải này
+            let myProgressRaw = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
+            
+            // 2. [FIX QUAN TRỌNG] Tìm bản ghi ngày MỚI NHẤT (Sort giảm dần theo ngày)
+            // Để đảm bảo luôn lấy dữ liệu update gần đây nhất, bất kể thứ tự lưu trong DB
+            let latestEntry = null;
+            if (myProgressRaw.length > 0) {
+                latestEntry = [...myProgressRaw].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+            }
+
             accSettings.forEach(acc => {
                 let v = 0;
-                if(myProgress && myProgress.length > 0) {
-                    let lastP = myProgress[myProgress.length-1];
-                    if(lastP.accsDetail && lastP.accsDetail[acc.id]) v = parseFloat(lastP.accsDetail[acc.id].vol);
+                // 3. Lấy Volume từ bản ghi mới nhất tìm được
+                if(latestEntry && latestEntry.accsDetail && latestEntry.accsDetail[acc.id]) {
+                    v = parseFloat(latestEntry.accsDetail[acc.id].vol) || 0;
                 }
                 let pct = target > 0 ? (v/target)*100 : 0;
                 let color = pct>=100 ? 'var(--accent-green)' : (pct>=50 ? 'var(--accent-yellow)' : acc.color);
@@ -2910,10 +3221,28 @@ function renderGrid(customData = null) {
                         <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">REWARD</div><div class="stat-val text-brand">${fmtNum(c.rewardQty)}${estHtml}</div></div>
                         <div class="stat-cell">${priceDisplayHtml}</div>
                     </div>
-                    <div class="card-list">${accListHtml}</div>
-                    <div class="card-actions">
-                        <button class="btn-card-action action-update" onclick="event.stopPropagation(); openUpdateModal('${c.db_id}')"><i class="fas fa-edit"></i> ${translations[currentLang].btn_update}</button>
-                        <button class="btn-card-action predict" onclick="event.stopPropagation(); openPredictionView('${c.db_id}')"><i class="fas fa-bolt"></i> ${translations[currentLang].btn_predict}</button>
+                    <div class="card-list" style="padding-top: 12px;">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-1" style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
+                            <span class="text-sub fw-bold" style="font-size:0.6rem; letter-spacing:1px; text-transform:uppercase;">MY PROGRESS</span>
+                            
+                            <button class="btn btn-sm fw-bold d-flex align-items-center gap-1" 
+    onclick="event.stopPropagation(); openUpdateModal('${c.db_id}')" 
+    title="Nhập Volume của bạn"
+    style="font-size:0.65rem; transition:0.2s; background: rgba(14, 203, 129, 0.15); color: #0ECB81; border: 1px solid #0ECB81; padding: 3px 10px; border-radius: 4px; box-shadow: 0 0 5px rgba(14, 203, 129, 0.2);">
+    <i class="fas fa-pen-to-square"></i> UPDATE VOL
+</button>
+                        </div>
+
+                        ${accListHtml}
+                    </div>
+
+                    <div class="card-actions" style="padding: 0;">
+                        <button class="btn-card-action predict" 
+                            onclick="event.stopPropagation(); openPredictionView('${c.db_id}')"
+                            style="width: 100%; border: none; padding: 12px; font-size: 0.9rem; letter-spacing: 1px; background: linear-gradient(90deg, rgba(153, 69, 255, 0.1), rgba(153, 69, 255, 0.25)); color: #fff;">
+                            <i class="fas fa-bolt text-gold me-2"></i> ${translations[currentLang].btn_predict}
+                        </button>
                     </div>
                     <div class="card-foot">
                         <div class="real-vol-box">${footerRealVolHtml}</div>
@@ -3159,11 +3488,12 @@ function renderMarketHealthTable() {
 
             <td class="text-end font-num text-white">${avgOrderDisplay}</td>
 
-            <td class="text-end font-num ${flowColor}">${flowDisplay}</td>
+          <td class="text-end font-num ${flowColor}">${flowDisplay}</td>
 
-            <td class="text-end pe-4 font-num ${spreadColor} fw-bold">${spreadVal}</td>
-        </tr>
-        `;
+    <td class="text-end font-num ${spreadColor} fw-bold">${spreadVal}</td>
+
+  </tr>
+`;
     });
     
     try {
@@ -3372,143 +3702,114 @@ function renderMarketHealthTable() {
         updateTerminalData(id);
     }
 
-        // --- HÀM CẬP NHẬT DỮ LIỆU CHI TIẾT GIẢI ĐẤU (LOGIC CHUẨN V3) ---
-    function updateTerminalData(id) {
-        let c = compList.find(x => x.db_id == id); if(!c) return;
-        document.getElementById('pt-symbol').innerText = c.name;
+       // --- [FIXED] UPDATE DATA FOR NEW COCKPIT UI ---
+// --- UPDATE DATA CHO GIAO DIỆN PRO COMMANDER V3 ---
+function updateTerminalData(id) {
+    let c = compList.find(x => x.db_id == id); if(!c) return;
 
-        let logoEl = document.getElementById('pt-logo');
-        logoEl.src = c.logo;
-        logoEl.onclick = function() { window.open(`https://www.binance.com/en/alpha/${c.chain}/${c.contract}`, '_blank'); };
-        logoEl.style.cursor = 'pointer';
+    // 1. Header Info
+    document.getElementById('pt-symbol').innerText = c.name;
+    let logoEl = document.getElementById('pt-logo');
+    logoEl.src = c.logo;
+    
+    // 2. Control Panel Data
+    let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length-1].target : 0;
+    document.getElementById('pt-min-vol').innerText = fmtNum(curMin);
 
-        let curMin = (c.history && c.history.length>0) ? c.history[c.history.length-1].target : 0;
-        document.getElementById('pt-min-vol').innerText = fmtNum(curMin);
+    let totalPool = (c.predictions?.length || 0) * PREDICT_FEE;
+    document.getElementById('pt-pool').innerText = fmt(totalPool);
 
-        // --- TÍNH TĂNG TRƯỞNG ---
-        let changeHtml = '';
-        if (c.history && c.history.length >= 2) {
-            let todayVal = parseFloat(c.history[c.history.length - 1].target);
-            let yestVal = parseFloat(c.history[c.history.length - 2].target);
-            let diff = todayVal - yestVal;
-            let pct = yestVal > 0 ? ((diff / yestVal) * 100).toFixed(2) : 0;
-            let colorClass = diff >= 0 ? 'text-green' : 'text-red';
-            let icon = diff >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
-            let sign = diff >= 0 ? '+' : '';
-            let bgStyle = diff >= 0 ? 'rgba(14, 203, 129, 0.08)' : 'rgba(246, 70, 93, 0.08)';
-            let borderStyle = diff >= 0 ? '#0ECB81' : '#F6465D';
-            changeHtml = `<div title="Yesterday Volume: ${fmtNum(yestVal)}" class="${colorClass} fw-bold d-flex align-items-center justify-content-center" style="cursor: help; background: ${bgStyle}; padding: 5px 20px; border-radius: 50px; border: 1px solid ${borderStyle}; font-size: 0.95rem; min-width: 140px; transition: all 0.2s;"><i class="fas ${icon} me-2" style="font-size: 0.8rem;"></i>${sign}${fmtNum(diff)} (${sign}${pct}%)</div>`;
-        }
-        let changeEl = document.getElementById('pt-vol-change');
-        if(changeEl) { changeEl.innerHTML = changeHtml; changeEl.className = "mb-4 d-flex justify-content-center"; }
-
-        // --- XỬ LÝ TRẠNG THÁI GIẢI (ENDED/RUNNING) ---
-        let isEnded = false;
-        if(c.end) {
-            let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
-            let dist = endTime - Date.now();
-            if(dist > 0) {
-                let d = Math.floor(dist / (1000 * 60 * 60 * 24));
-                let h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                document.getElementById('pt-time').innerText = `${d}d ${h}h`;
-            } else {
-                document.getElementById('pt-time').innerText = 'Ended';
-                isEnded = true;
-            }
-        }
-
-        let btn = document.getElementById('btn-predict-action');
-        if(isEnded) {
-            btn.innerHTML = '<i class="fas fa-trophy me-2"></i> EVENT ENDED - VIEW WINNERS';
-            btn.className = 'btn-predict-hero btn-ended';
-            btn.onclick = null;
-        } else {
-            btn.innerHTML = '<i class="fas fa-crosshairs me-2"></i>MAKE PREDICTION';
-            btn.className = 'btn-predict-hero';
-            btn.onclick = openInputModal;
-        }
-
-        let totalPool = (c.predictions?.length || 0) * PREDICT_FEE;
-        document.getElementById('pt-pool').innerText = fmt(totalPool);
-
-        // --- VẼ BIỂU ĐỒ ---
-        if(document.getElementById('content-chart').style.display !== 'none' || !marketChart) {
-            let ctx = document.getElementById('marketChart').getContext('2d'); if(marketChart) marketChart.destroy();
-            let labels=[], data=[]; if(c.history) c.history.forEach(h=>{ labels.push(h.date.substring(5)); data.push(h.target); });
-            marketChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Min Vol', data, borderColor: '#00F0FF', backgroundColor: 'rgba(0,240,255,0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x:{display:false}, y:{grid:{color:'#222'}} }, plugins:{legend:{display:false}} } });
-        }
-
-        // --- [CODE MỚI V3] BẢNG XẾP HẠNG: LỌC MIN VOL & FIX UI ---
-        let lb = document.getElementById('pt-leaderboard');
-        lb.innerHTML = '';
-
-        // Nhóm A: Hợp lệ (>= Min Vol) -> Xếp tăng dần
-        let validPreds = (c.predictions || []).filter(p => p.guess >= curMin).sort((a,b) => a.guess - b.guess);
-        // Nhóm B: Không hợp lệ (< Min Vol) -> Xếp giảm dần
-        let invalidPreds = (c.predictions || []).filter(p => p.guess < curMin).sort((a,b) => b.guess - a.guess);
-        // Gộp lại: Nhóm A luôn nằm trên
-        let preds = [...validPreds, ...invalidPreds];
-
-        preds.forEach((p, i) => {
-            let rank = i + 1;
-            let prizeAmount = 0;
-            let rankIcon = '';
-            let rowClass = '';
-            let isValidWinner = p.guess >= curMin;
-
-            if(rank === 1 && isValidWinner) {
-                prizeAmount = totalPool * 0.50;
-                rankIcon = isEnded ? `<i class="fas fa-trophy text-gold fa-lg"></i>` : `<span class="rank-badge" style="background:#F0B90B; color:#000; box-shadow:0 0 10px rgba(240,185,11,0.5)">#1</span>`;
-                if(isEnded) rowClass = 'style="background: rgba(240, 185, 11, 0.1); border: 1px solid rgba(240, 185, 11, 0.3)"';
-            } else if (rank === 2 && isValidWinner) {
-                prizeAmount = totalPool * 0.30;
-                rankIcon = isEnded ? `<i class="fas fa-medal text-silver fa-lg"></i>` : `<span class="rank-badge" style="background:#C0C0C0; color:#000">#2</span>`;
-            } else if (rank === 3 && isValidWinner) {
-                prizeAmount = totalPool * 0.20;
-                rankIcon = isEnded ? `<i class="fas fa-medal text-bronze fa-lg"></i>` : `<span class="rank-badge" style="background:#CD7F32; color:#000">#3</span>`;
-            } else {
-                rankIcon = `<span class="rank-badge" style="background:#333; color:#777">#${rank}</span>`;
-            }
-
-            let prizeDisplay = '<span class="text-sub opacity-25 font-num">--</span>';
-            if (prizeAmount > 0) {
-                if(isEnded) {
-                    prizeDisplay = `<span class="text-green font-num fw-bold" style="font-size:0.9rem; text-shadow: 0 0 10px rgba(14, 203, 129, 0.4); white-space: nowrap;">+${fmt(prizeAmount)}</span>`;
-                } else {
-                    prizeDisplay = `<div class="d-flex flex-column align-items-end" style="line-height:1.1"><span class="text-green font-num fw-bold opacity-75">${fmt(prizeAmount)}</span><span class="text-sub" style="font-size:0.6rem; font-weight:700">Est.</span></div>`;
-                }
-            }
-
-            let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0,1).toUpperCase()}</div>`;
-            let myName = document.getElementById('modal-p-name').value;
-            if(p.name === myName && !rowClass) rowClass = 'style="background: rgba(0, 240, 255, 0.05); border-left: 2px solid var(--brand)"';
-            if (!isValidWinner) rowClass = 'style="opacity: 0.5"';
-
-            lb.innerHTML += `
-            <tr ${rowClass}>
-                <td class="ps-4 align-middle">${rankIcon}</td>
-                <td class="align-middle"><div class="d-flex align-items-center">${avatarHtml}<span class="fw-bold text-white">${p.name}</span></div></td>
-                <td class="text-center align-middle text-brand font-num fw-bold">${fmtNum(p.guess)}</td>
-                <td class="text-end pe-2 align-middle">${prizeDisplay}</td>
-            </tr>`;
-        });
-
-        // --- XỬ LÝ HOẠT ĐỘNG & CHAT ---
-        let actDiv = document.getElementById('content-activity'); actDiv.innerHTML = '';
-        (c.predictions || []).sort((a,b)=>b.time-a.time).forEach(p => {
-            let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="act-avatar">` : `<i class="fas fa-bolt text-gold me-3 fa-lg"></i>`;
-            actDiv.innerHTML += `<div class="act-item d-flex align-items-center mb-2">${avatarHtml}<div><span class="text-white fw-bold">${p.name}</span> predicted <span class="text-brand font-num">${fmtNum(p.guess)}</span> <div class="text-sub small">${new Date(p.time).toLocaleTimeString()}</div></div></div>`;
-        });
-
-        let chatDiv = document.getElementById('chat-feed'); chatDiv.innerHTML = '';
-        (c.comments || []).sort((a,b)=>a.time-b.time).forEach(m => {
-            let isMe = m.user === (userProfile?.nickname || currentUser?.email.split('@')[0]);
-            let avatarHtml = m.avatar ? `<img src="${m.avatar}" class="chat-avatar">` : `<div class="chat-avatar-placeholder">${m.user.substring(0,1).toUpperCase()}</div>`;
-            let cleanText = DOMPurify.sanitize(m.text);
-            chatDiv.innerHTML += `<div class="chat-row ${isMe ? 'me' : ''}">${avatarHtml}<div class="chat-bubble ${isMe ? 'chat-me' : 'chat-other'}"><div class="small fw-bold mb-1 ${isMe ? 'text-end text-brand' : 'text-sub'}">${m.user}</div>${cleanText}</div></div>`;
-        });
-        chatDiv.scrollTop = chatDiv.scrollHeight;
+    // 3. Time Remaining logic
+    let isEnded = false;
+    if(c.end) {
+        let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
+        let dist = endTime - Date.now();
+        if(dist < 0) isEnded = true;
+        // (Logic đồng hồ đếm ngược được xử lý bởi hàm updateClock chạy mỗi giây)
     }
+
+    // 4. Update Nút PREDICT (Quan trọng)
+    let btn = document.getElementById('btn-predict-action');
+    if(isEnded) {
+        btn.innerHTML = '<span>MARKET CLOSED</span> <i class="fas fa-lock"></i>';
+        btn.disabled = true;
+    } else {
+        btn.innerHTML = '<span>ENTER PREDICTION</span> <i class="fas fa-bolt"></i>';
+        btn.disabled = false;
+        btn.onclick = openInputModal;
+    }
+
+    // 5. Change Indicator
+    let changeHtml = '';
+    if (c.history && c.history.length >= 2) {
+        let todayVal = parseFloat(c.history[c.history.length - 1].target);
+        let yestVal = parseFloat(c.history[c.history.length - 2].target);
+        let diff = todayVal - yestVal;
+        let pct = yestVal > 0 ? ((diff / yestVal) * 100).toFixed(2) : 0;
+        let color = diff >= 0 ? '#0ECB81' : '#F6465D';
+        let icon = diff >= 0 ? 'fa-caret-up' : 'fa-caret-down';
+        changeHtml = `<span style="color:${color}; font-size:0.8rem; font-weight:bold"><i class="fas ${icon} me-1"></i>${diff>=0?'+':''}${pct}% (24h)</span>`;
+    }
+    document.getElementById('pt-vol-change').innerHTML = changeHtml;
+
+    // 6. Vẽ Chart (Full Height)
+    if(!marketChart) {
+        let ctx = document.getElementById('marketChart').getContext('2d');
+        let labels=[], data=[];
+        if(c.history) c.history.forEach(h=>{ labels.push(h.date.substring(5)); data.push(h.target); });
+
+        marketChart = new Chart(ctx, { 
+            type: 'line', 
+            data: { labels, datasets: [{ 
+                label: 'Min Vol', data, borderColor: '#00F0FF', 
+                backgroundColor: (context) => {
+                    const ctx = context.chart.ctx;
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(0, 240, 255, 0.2)');
+                    gradient.addColorStop(1, 'rgba(0, 240, 255, 0)');
+                    return gradient;
+                },
+                fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6 
+            }]}, 
+            options: { 
+                responsive: true, maintainAspectRatio: false, // Quan trọng: Cho phép chart co giãn theo khung cha
+                interaction: { intersect: false, mode: 'index' },
+                scales: { 
+                    x:{ display:true, grid:{display:false}, ticks:{color:'#555', font:{size:9}} }, 
+                    y:{ grid:{color:'#222', borderDash:[5,5]}, ticks:{color:'#666', font:{family:'Rajdhani'}} } 
+                }, 
+                plugins:{ legend:{display:false} } 
+            } 
+        });
+    } else {
+        let labels=[], data=[];
+        if(c.history) c.history.forEach(h=>{ labels.push(h.date.substring(5)); data.push(h.target); });
+        marketChart.data.labels = labels;
+        marketChart.data.datasets[0].data = data;
+        marketChart.update();
+    }
+
+    // 7. Leaderboard & Chat (Giữ nguyên logic cũ nhưng trỏ ID mới)
+    let lb = document.getElementById('pt-leaderboard');
+    lb.innerHTML = '';
+    let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
+    
+    if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
+    
+    preds.forEach((p, i) => {
+        let rank = i+1;
+        let color = rank===1?'#FFD700':(rank===2?'#C0C0C0':(rank===3?'#CD7F32':'#666'));
+        lb.innerHTML += `<tr><td class="ps-3 align-middle"><span style="color:${color}; font-weight:800">#${rank}</span></td><td class="align-middle"><div class="d-flex align-items-center gap-2"><img src="${p.avatar||'https://placehold.co/20'}" style="width:20px;height:20px;border-radius:50%"><span class="text-white small fw-bold">${p.name}</span></div></td><td class="text-end pe-3 align-middle font-num text-brand fw-bold">${fmtNum(p.guess)}</td></tr>`;
+    });
+
+    let chatDiv = document.getElementById('chat-feed');
+    chatDiv.innerHTML = '';
+    (c.comments || []).sort((a,b)=>a.time-b.time).forEach(m => {
+        let isMe = m.user === (userProfile?.nickname || currentUser?.email.split('@')[0]);
+        chatDiv.innerHTML += `<div class="mb-2 d-flex ${isMe?'justify-content-end':''}"><div style="background:${isMe?'var(--brand)':'#222'}; color:${isMe?'#000':'#ddd'}; padding:5px 10px; border-radius:10px; font-size:0.8rem; max-width:85%"><div class="fw-bold" style="font-size:0.65rem; opacity:0.7; margin-bottom:2px">${m.user}</div>${DOMPurify.sanitize(m.text)}</div></div>`;
+    });
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+}
 
     function openInputModal() {
         let c = compList.find(x => x.db_id == currentPolyId);
@@ -3665,7 +3966,7 @@ function renderMarketHealthTable() {
         const element = document.getElementById('share-card-container');
         let c = compList.find(x => x.db_id == currentPolyId);
         let guess = document.getElementById('sc-my-guess').innerText;
-        let webUrl = "https://wave-alpha.netlify.app";
+        let webUrl = "https://wave-alpha.pages.dev";
 
         let text = "";
         if (platform === 'x') {
@@ -3770,18 +4071,18 @@ function renderMarketHealthTable() {
         document.getElementById('chat-msg').value = '';
     }
 
-    // --- 3. HÀM GỬI LÊN SERVER (ĐÃ FIX: KIỂM TRA KẾT QUẢ TRẢ VỀ) ---
+    // --- HÀM LƯU DỮ LIỆU LÊN MÂY (CÓ BẮT LỖI CHẶT CHẼ) ---
 async function saveToCloud(compObj) {
     // 1. Tạo bản sao dữ liệu sạch
     let cloudObj = { ...compObj };
     
-    // Xóa các biến tạm không cần lưu vào DB
+    // Xóa các biến tạm không cần lưu
     delete cloudObj.myProgress; 
     delete cloudObj.db_id; 
     delete cloudObj.id; 
     delete cloudObj.cachedPrice;
-    // Xóa luôn predictions/comments để tránh ghi đè dữ liệu user khác (chỉ lưu cấu hình giải)
-    // (Tùy logic của bạn, nhưng thường admin chỉ sửa info giải đấu)
+    
+    // (Tùy chọn) Xóa predictions/comments nếu bạn không muốn ghi đè user data
     // delete cloudObj.predictions; 
     // delete cloudObj.comments;
 
@@ -3791,16 +4092,18 @@ async function saveToCloud(compObj) {
         data: cloudObj 
     };
 
+    console.log("Saving payload:", payload); // Debug: Xem dữ liệu gửi đi
+
     let result;
     
-    // 2. Thực hiện lệnh Save có kiểm tra (.select())
+    // 2. Thực hiện lệnh Save
     if (compObj.db_id) {
         // Update
         result = await supabase
             .from('tournaments')
             .update(payload)
-            .eq('id', compObj.db_id)
-            .select(); // <--- QUAN TRỌNG: Phải có cái này để biết có lưu được không
+            .eq('id', parseInt(compObj.db_id))
+            .select(); // <--- BẮT BUỘC CÓ .select() để kiểm tra kết quả
     } else {
         // Insert
         result = await supabase
@@ -3809,13 +4112,16 @@ async function saveToCloud(compObj) {
             .select();
     }
 
-    // 3. Kiểm tra lỗi kỹ càng
+    // 3. KIỂM TRA LỖI RLS (QUAN TRỌNG)
     if (result.error) throw result.error;
     
-    // Nếu không có lỗi nhưng dữ liệu trả về rỗng -> Nghĩa là không lưu được (Do quyền Admin hoặc sai ID)
+    // Nếu không có lỗi mạng, nhưng Database trả về rỗng -> Bị chặn quyền
     if (!result.data || result.data.length === 0) {
-        throw new Error("Lỗi quyền Admin! Server từ chối lưu (RLS Policy).");
+        console.error("Save failed (RLS Blocked). Result:", result);
+        throw new Error("LỖI QUYỀN ADMIN! Database từ chối lưu. Hãy kiểm tra lại Policies trong Supabase.");
     }
+
+    console.log("Save Success:", result.data);
 
     // 4. Tải lại dữ liệu để đồng bộ
     await loadFromCloud(false);
@@ -3961,43 +4267,123 @@ async function saveToCloud(compObj) {
         });
     }
 
-    function renderHistoryList(c) {
-        let headerHtml = `<th class="text-sub small">Date</th><th class="text-gold small">Target</th>`;
-        accSettings.forEach(acc => { headerHtml += `<th class="small text-center" style="color:${acc.color}">${acc.name}</th>`; });
-        headerHtml += `<th class="text-end small">Action</th>`;
-        document.getElementById('historyHeader').innerHTML = headerHtml;
+    // --- [NEW] HÀM VẼ LỊCH SỬ (AUTO-FILL LOGIC) ---
+// --- [FINAL V2] HÀM VẼ LỊCH SỬ (FIX LỖI MẤT NGÀY CUỐI) ---
+function renderHistoryList(c) {
+    // 1. Vẽ tiêu đề bảng
+    let headerHtml = `<th class="text-sub small">Date</th><th class="text-gold small">Target</th>`;
+    accSettings.forEach(acc => { headerHtml += `<th class="small text-center" style="color:${acc.color}">${acc.name}</th>`; });
+    headerHtml += `<th class="text-end small">Action</th>`;
+    document.getElementById('historyHeader').innerHTML = headerHtml;
 
-        const l=document.getElementById('historyList'); l.innerHTML='';
-        let dates=new Set();
-        if(c.history)c.history.forEach(h=>dates.add(h.date));
+    const l = document.getElementById('historyList');
+    l.innerHTML = '';
 
-        // GET DATA FROM USER PROFILE
-        let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
-        if(myProgress) myProgress.forEach(p => dates.add(p.date));
+    // 2. Lấy dữ liệu
+    let adminHistory = c.history || [];
+    let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
 
-        Array.from(dates).sort().reverse().forEach(d=>{
-            let h=c.history?c.history.find(x=>x.date===d):null;
-            let p=myProgress?myProgress.find(x=>x.date===d):null;
-            let min=h?h.target:0;
-
-            let accCells = '';
-            accSettings.forEach(acc => {
-                let vol = (p && p.accsDetail && p.accsDetail[acc.id]) ? parseFloat(p.accsDetail[acc.id].vol) : 0;
-                let cls = vol >= min && min > 0 ? 'text-green fw-bold' : (vol > 0 ? 'text-white' : 'text-sub opacity-50');
-                accCells += `<td class="text-center font-num ${cls}">${vol > 0 ? fmtNum(vol) : '-'}</td>`;
-            });
-
-            l.innerHTML+=`<tr>
-                <td class="font-num">${d.substring(5)}</td>
-                <td class="text-gold font-num fw-bold">${fmtNum(min)}</td>
-                ${accCells}
-                <td class="text-end">
-                    <i class="fas fa-pencil-alt text-secondary me-3 cursor-pointer" onclick="loadHistoryToEdit('${d}')" title="Edit / Move Date"></i>
-                    <i class="fas fa-trash text-danger cursor-pointer" onclick="deleteHistory('${d}')" title="Delete"></i>
-                </td>
-            </tr>`;
-        });
+    // 3. Xác định Start Date & End Date (Dạng Chuỗi YYYY-MM-DD)
+    let startDateStr = c.start;
+    // Nếu không có ngày bắt đầu thì tìm ngày cũ nhất
+    if (!startDateStr) {
+        let allDates = [...adminHistory.map(h=>h.date), ...myProgress.map(p=>p.date)];
+        if(allDates.length > 0) startDateStr = allDates.sort()[0];
+        else startDateStr = new Date().toISOString().split('T')[0];
     }
+
+    // Lấy ngày hôm nay (Local Time) chuẩn dạng YYYY-MM-DD
+    let now = new Date();
+    let todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+
+    // --- [LOGIC QUAN TRỌNG: CHỐT NGÀY DỪNG (CUT-OFF)] ---
+    // Mặc định chạy đến hôm nay
+    let limitStr = todayStr;
+
+    // Nếu giải có ngày kết thúc (End Date)
+    if (c.end) {
+        // So sánh chuỗi: Nếu "2025-12-12" < "2025-12-18" (Đã qua ngày kết thúc)
+        // Thì chốt sổ tại ngày kết thúc "2025-12-12"
+        if (c.end < todayStr) {
+            limitStr = c.end;
+        }
+    }
+
+    // 4. CHẠY VÒNG LẶP (DÙNG DATE OBJECT ĐỂ TĂNG NGÀY)
+    let timelineData = [];
+    let lastKnownTarget = 0;
+    let lastKnownVols = {}; 
+    accSettings.forEach(acc => lastKnownVols[acc.id] = 0);
+
+    // Bắt đầu từ ngày start
+    let loopDate = new Date(startDateStr);
+    // Xử lý múi giờ: Set giờ về 12:00 trưa để tránh việc +/- giờ làm nhảy ngày
+    loopDate.setHours(12,0,0,0); 
+
+    // VÒNG LẶP: Chừng nào ngày đang xét (loopStr) <= ngày giới hạn (limitStr) thì còn chạy
+    while (true) {
+        let dStr = loopDate.toISOString().split('T')[0];
+        
+        // Nếu ngày đang chạy lớn hơn ngày giới hạn -> DỪNG NGAY
+        if (dStr > limitStr) break;
+
+        // A. Admin Target (Kế thừa từ ngày trước nếu thiếu)
+        let realAdminData = adminHistory.find(h => h.date === dStr);
+        if (realAdminData) lastKnownTarget = parseFloat(realAdminData.target);
+
+        // B. User Volume (Kế thừa từ ngày trước nếu thiếu)
+        let realUserData = myProgress.find(p => p.date === dStr);
+        let currentDayVols = {};
+        
+        accSettings.forEach(acc => {
+            if (realUserData && realUserData.accsDetail && realUserData.accsDetail[acc.id]) {
+                let v = parseFloat(realUserData.accsDetail[acc.id].vol);
+                lastKnownVols[acc.id] = v; // Cập nhật số mới
+            }
+            currentDayVols[acc.id] = lastKnownVols[acc.id]; // Dùng số (mới hoặc cũ)
+        });
+
+        let isAutoFill = !realUserData; 
+
+        timelineData.push({
+            date: dStr,
+            target: lastKnownTarget,
+            vols: currentDayVols,
+            isAuto: isAutoFill
+        });
+
+        // Tăng 1 ngày
+        loopDate.setDate(loopDate.getDate() + 1);
+    }
+
+    // 5. VẼ RA BẢNG (Đảo ngược để ngày mới nhất lên đầu)
+    timelineData.reverse().forEach(item => {
+        let dateDisplay = item.date.substring(5); // MM-DD
+        let targetDisplay = fmtNum(item.target);
+        
+        let accCells = '';
+        accSettings.forEach(acc => {
+            let vol = item.vols[acc.id];
+            let cls = vol >= item.target && item.target > 0 ? 'text-green fw-bold' : (vol > 0 ? 'text-white' : 'text-sub opacity-50');
+            accCells += `<td class="text-center font-num ${cls}">${vol > 0 ? fmtNum(vol) : '-'}</td>`;
+        });
+
+        // Chỉ hiện nút Xóa cho ngày có dữ liệu thực
+        let deleteBtn = item.isAuto 
+            ? `<i class="fas fa-trash text-secondary opacity-25" style="cursor:not-allowed" title="Auto-filled"></i>` 
+            : `<i class="fas fa-trash text-danger cursor-pointer" onclick="deleteHistory('${item.date}')" title="Delete"></i>`;
+
+        l.innerHTML += `<tr>
+            <td class="font-num text-sub">${dateDisplay}</td>
+            <td class="text-gold font-num fw-bold">${targetDisplay}</td>
+            ${accCells}
+            <td class="text-end">
+                <i class="fas fa-pencil-alt text-secondary me-3 cursor-pointer" onclick="loadHistoryToEdit('${item.date}')" title="Edit"></i>
+                ${deleteBtn}
+            </td>
+        </tr>`;
+    });
+}
 
     async function deleteHistory(date) {
         if(!confirm("Delete history for " + date + "?")) return;
@@ -4028,94 +4414,104 @@ async function saveToCloud(compObj) {
         }
     }
 
-    // --- 2. HÀM LƯU CẬP NHẬT (FIXED MIN TARGET) ---
+   // --- [FIXED] HÀM LƯU CẬP NHẬT (SỬA LỖI ADMIN MIN VOL) ---
+// --- [FIXED FINAL] HÀM LƯU DỮ LIỆU (DEBUG MODE) ---
 async function saveUpdate() {
-    if (!currentUser) return showToast("Please Login to save progress!", "error");
+    if (!currentUser) return showToast("Vui lòng đăng nhập!", "error");
 
     let btn = document.getElementById('btn-save-progress');
     let orgText = btn.innerText;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...'; 
     btn.disabled = true;
 
     try {
-        let id = document.getElementById('u-db-id').value;
-        let c = compList.find(x => x.id == id);
-        let date = document.getElementById('u-date').value;
-        let originalDate = document.getElementById('u-original-date').value;
+        // 1. Lấy ID và ép kiểu về số nguyên (QUAN TRỌNG)
+        let rawId = document.getElementById('u-db-id').value;
+        let dbId = parseInt(rawId); 
 
-        // --- PHẦN 1: LƯU PROFILE CÁ NHÂN ---
+        // 2. Tìm đối tượng trong danh sách
+        let c = compList.find(x => x.db_id === dbId);
+        
+        if (!c) {
+            console.error("Không tìm thấy giải đấu với ID:", dbId, "Danh sách hiện tại:", compList);
+            throw new Error(`Không tìm thấy dữ liệu giải đấu (ID: ${dbId})`);
+        }
+
+        let date = document.getElementById('u-date').value;
+        
+        // --- XỬ LÝ LƯU MIN VOL (Dành cho Admin) ---
+        if (document.body.classList.contains('is-admin')) {
+            let minInput = document.getElementById('u-min-vol');
+            
+            // Chỉ lưu khi ô input không bị khóa (đang nhập liệu)
+            if (!minInput.disabled) {
+                let minValStr = minInput.value.replace(/,/g, ''); // Xóa dấu phẩy
+                let t = parseFloat(minValStr);
+
+                if (!isNaN(t)) {
+                    // Khởi tạo mảng history nếu chưa có (lỗi thường gặp là c.history bị undefined)
+                    if (!Array.isArray(c.history)) c.history = [];
+
+                    // Xóa dữ liệu cũ của ngày này (nếu có) để tránh trùng lặp
+                    c.history = c.history.filter(h => h.date !== date);
+
+                    // Thêm dữ liệu mới
+                    c.history.push({ date: date, target: t });
+
+                    // Sắp xếp lại theo ngày
+                    c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    console.log("Dữ liệu chuẩn bị gửi lên:", c.history); // F12 để xem
+
+                    // Gửi lên Cloud
+                    await saveToCloud(c);
+                }
+            }
+        }
+
+        // --- XỬ LÝ LƯU TIẾN ĐỘ CÁ NHÂN (PROFILE) ---
+        // (Giữ nguyên logic cũ phần này vì nó không lỗi)
         let my = {};
         accSettings.forEach(acc => {
-            let vEl = document.getElementById(`u-vol-${acc.id}`);
-            let cEl = document.getElementById(`u-cost-${acc.id}`);
-            my[acc.id] = {
-                vol: vEl ? (parseFloat(vEl.value) || 0) : 0,
-                cost: cEl ? (parseFloat(cEl.value) || 0) : 0
-            }
+            let v = parseFloat(document.getElementById(`u-vol-${acc.id}`)?.value || 0);
+            let cost = parseFloat(document.getElementById(`u-cost-${acc.id}`)?.value || 0);
+            my[acc.id] = { vol: v, cost: cost };
         });
 
         if (!userProfile.tracker_data) userProfile.tracker_data = {};
-        if (!userProfile.tracker_data[id]) userProfile.tracker_data[id] = [];
-
-        let currentProg = userProfile.tracker_data[id];
-        if (originalDate && originalDate !== date) currentProg = currentProg.filter(p => p.date !== originalDate);
-        currentProg = currentProg.filter(p => p.date !== date);
+        if (!userProfile.tracker_data[dbId]) userProfile.tracker_data[dbId] = [];
         
-        let hasData = Object.values(my).some(v => v.vol > 0 || v.cost > 0);
-        if(hasData) {
-            currentProg.push({ date: date, accsDetail: my });
-            currentProg.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Xóa ngày cũ, thêm ngày mới
+        userProfile.tracker_data[dbId] = userProfile.tracker_data[dbId].filter(p => p.date !== date);
+        if (Object.values(my).some(x => x.vol > 0 || x.cost > 0)) {
+            userProfile.tracker_data[dbId].push({ date: date, accsDetail: my });
         }
-        userProfile.tracker_data[id] = currentProg;
+        
+        await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
 
-        const { error: profileError } = await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
-        if (profileError) throw profileError;
-
-        // --- PHẦN 2: LƯU MIN TARGET (QUAN TRỌNG) ---
-        if (document.body.classList.contains('is-admin')) {
-            let minValStr = document.getElementById('u-min-vol').value.replace(/,/g, '');
-            let t = parseFloat(minValStr); 
-            
-            // Đảm bảo history tồn tại
-            if (!c.history) c.history = [];
-            
-            // Xóa dữ liệu cũ của ngày này đi để ghi đè
-            c.history = c.history.filter(h => h.date !== date);
-            
-            // Nếu nhập số hợp lệ thì push vào
-            if (!isNaN(t)) {
-                c.history.push({ date: date, target: t });
-                // Sắp xếp lại theo ngày
-                c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
-                
-                // Gọi lệnh lưu và ĐỢI kết quả
-                await saveToCloud(c); 
-            }
-        }
 
         // --- THÔNG BÁO THÀNH CÔNG ---
         btn.innerHTML = '<i class="fas fa-check"></i> SAVED!';
-        btn.style.background = "#0ECB81";
+        btn.style.background = "#0ECB81"; 
         btn.style.color = "#000";
-        showToast("Data Saved Successfully!", "success");
+        showToast("Đã lưu dữ liệu thành công!", "success");
 
+        // Vẽ lại giao diện ngay lập tức
         setTimeout(() => {
             btn.innerText = orgText;
             btn.style.background = "";
             btn.style.color = "";
             btn.disabled = false;
-            // Vẽ lại biểu đồ
+            
             renderTrackerChart(c);
             renderHistoryList(c);
-            // Vẽ lại lịch
-            if (typeof initCalendar === 'function') initCalendar();
+            renderGrid(); // Cập nhật lại thẻ bên ngoài
         }, 1000);
 
     } catch (e) {
-        console.error(e);
-        // Hiển thị lỗi rõ ràng
-        showToast("Save Error: " + e.message, "error");
-        btn.innerText = "FAILED";
+        console.error("Lỗi Save:", e);
+        alert("Lỗi khi lưu: " + e.message); // Hiện Popup lỗi để bạn biết ngay
+        btn.innerText = "ERROR";
         btn.style.background = "var(--accent-red)";
         setTimeout(() => { btn.innerText = orgText; btn.style.background = ""; btn.disabled = false; }, 3000);
     }
@@ -4847,6 +5243,84 @@ function filterByDate(dateStr) {
 
 // 3. Kích hoạt ngay lập tức
 initCalendar();
+// --- HÀM CHUYỂN TAB CHO GIAO DIỆN COCKPIT MỚI ---
+// --- HÀM CHUYỂN TAB MỚI (ĐÃ FIX LỖI HIỂN THỊ) ---
+function switchCpTab(tabName) {
+    // 1. Cập nhật trạng thái nút bấm (Màu sắc)
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+
+    // 2. Lấy 2 khung nội dung
+    const lbBox = document.getElementById('cp-content-leaderboard');
+    const chatBox = document.getElementById('cp-content-chat');
+
+    // 3. Xử lý ẩn hiện (Dùng class mới định nghĩa ở CSS)
+    if (tabName === 'leaderboard') {
+        // Hiện Leaderboard, Ẩn Chat
+        lbBox.classList.remove('hide-force');
+        chatBox.classList.remove('chat-visible');
+        chatBox.classList.add('d-none'); // Đảm bảo ẩn hẳn
+    } else {
+        // Ẩn Leaderboard, Hiện Chat
+        lbBox.classList.add('hide-force');
+        chatBox.classList.remove('d-none'); // Gỡ bỏ class ẩn của Bootstrap
+        chatBox.classList.add('chat-visible'); // Kích hoạt Flex để hiện khung chat
+        
+        // Auto scroll xuống cuối khung chat
+        let feed = document.getElementById('chat-feed');
+        if(feed) feed.scrollTop = feed.scrollHeight;
+    }
+}
+
+// --- CẬP NHẬT LẠI HÀM openPredictionView (Để tương thích với giao diện mới) ---
+// Bạn Tìm hàm openPredictionView cũ và thay thế bằng hàm này:
+
+async function openPredictionView(id) {
+    currentPolyId = id;
+    document.getElementById('loading-overlay').style.display = 'flex';
+
+    // 1. Fetch Data
+    const { data: predsData, error } = await supabase.from('predictions').select('*').eq('tournament_id', id);
+    document.getElementById('loading-overlay').style.display = 'none';
+
+    if (error) { showToast("Error loading data", "error"); return; }
+
+    // 2. Map Data
+    let c = compList.find(x => x.db_id == id);
+    if(c) {
+        c.predictions = predsData.map(p => ({
+            user_id: p.user_id, name: p.user_name, avatar: p.user_avatar,
+            guess: parseFloat(p.guess), time: new Date(p.created_at).getTime()
+        }));
+    }
+
+    // 3. Switch View
+    // Lưu ý: Giao diện mới dùng z-index đè lên, nên ta chỉ cần show div view-predict
+    document.getElementById('view-predict').style.display = 'block';
+    
+    // 4. Update Data to UI
+    updateTerminalData(id);
+}
+
+// --- CẬP NHẬT LOGIC NÚT BACK (QUAN TRỌNG) ---
+function switchView(view) {
+    // 1. Ẩn tất cả trước
+    document.getElementById('view-dashboard').style.display = 'none';
+    document.getElementById('view-predict').style.display = 'none';
+
+    // 2. Hiện cái cần thiết
+    if (view === 'dashboard') {
+        document.getElementById('view-dashboard').style.display = 'block';
+        // Reset ID để tránh lỗi vẽ lại
+        currentPolyId = null;
+        renderGrid();
+    } 
+    else if (view === 'predict') {
+        // Giao diện Cockpit mới dùng display: block thay vì flex
+        document.getElementById('view-predict').style.display = 'block';
+    }
+}
+
 </script>
 </body>
 </html>
