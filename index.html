@@ -989,6 +989,154 @@
     color: #fff !important;
     border-color: #fff !important;
 }
+
+/* --- V50: MINI CHART TRONG THẺ BÀI --- */
+.mini-chart-box {
+    position: relative;
+    height: 110px; /* Chiều cao vừa đủ đẹp */
+    width: 100%;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    padding: 5px;
+    margin-bottom: 5px;
+}
+.chart-legend {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 5px;
+    margin-bottom: 5px;
+}
+.legend-item {
+    font-size: 0.6rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-sub);
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* --- V55 FINAL: NEW CARD LAYOUT CSS --- */
+
+/* 1. Khung Chart & Info */
+.mini-chart-wrapper {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 10px 5px 0 5px; /* Padding bottom = 0 để nối liền với lưới info */
+    border: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 0; /* Dính liền với phần dưới */
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* --- V57 FINAL STYLE --- */
+
+/* 1. Lưới Acc Info (Auto Fit & Căn giữa) */
+.acc-stats-grid {
+    display: grid;
+    /* Tự động chia cột, tối thiểu 30% chiều rộng */
+    grid-template-columns: repeat(auto-fit, minmax(30%, 1fr));
+    gap: 1px;
+    background: rgba(255,255,255,0.05); /* Đường kẻ */
+    border: 1px solid rgba(255,255,255,0.05);
+    border-top: none; /* Dính liền với chart */
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.as-item {
+    background: rgba(20, 24, 28, 0.9); /* Màu nền đậm hơn chút */
+    padding: 10px 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.as-head { font-size: 0.6rem; color: var(--text-sub); display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.as-vol { font-family: var(--font-num); font-size: 1rem; font-weight: 700; color: #fff; line-height: 1; }
+.as-gap { font-family: var(--font-num); font-size: 0.75rem; font-weight: 700; margin-top: 3px; }
+
+/* 2. Market Bar (Căn chỉnh thẳng hàng) */
+.market-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Căn đáy */
+    padding: 10px 15px;
+    background: #111;
+    border-top: 1px solid var(--border);
+}
+.mb-item { display: flex; flex-direction: column; gap: 4px; }
+.mb-label { font-size: 0.55rem; color: #666; text-transform: uppercase; font-weight: 700; display: flex; align-items: center; gap: 4px; height: 14px; }
+.mb-val { font-family: var(--font-num); font-size: 1.1rem; font-weight: 700; line-height: 1; height: 20px; display: flex; align-items: center; }
+
+/* 3. Nút Predict (Xanh Alpha) */
+.btn-card-action.predict {
+    width: 100%;
+    border: none;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: var(--font-main) !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), rgba(0, 240, 255, 0.2)); 
+    border-top: 1px solid rgba(0, 240, 255, 0.3);
+    color: var(--brand);
+    transition: 0.3s;
+}
+.btn-card-action.predict:hover {
+    background: var(--brand) !important;
+    color: #000 !important;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+}
+
+/* 4. Timer bên phải Header */
+.card-head-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2px;
+}
+.tag-timer {
+    font-family: var(--font-num);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ccc;
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+}
+
+/* --- V58 FIX: DUAL TIMERS STYLE --- */
+
+/* 1. Đồng hồ kết thúc giải (Bên Trái - Dưới Status) */
+.tour-end-timer {
+    font-size: 0.7rem; 
+    color: #ccc; 
+    display: flex; 
+    align-items: center; 
+    gap: 4px; 
+    margin-top: 2px;
+    font-weight: 600;
+}
+
+/* 2. Đồng hồ hạn X4/X2 (Bên Phải - Dưới Tag) */
+.promo-timer {
+    font-family: var(--font-num);
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-top: 1px;
+    letter-spacing: 0.5px;
+    /* Mặc định màu vàng cam cho giống khuyến mãi */
+    color: var(--accent-yellow); 
+    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
     </style>
 </head>
 <body>
@@ -3026,186 +3174,125 @@ async function handleSmartRefresh(isSilent = false) {
 
 
 
-    /* --- HÀM VẼ GIAO DIỆN (ĐÃ NÂNG CẤP ĐỂ HỖ TRỢ LỌC) --- */
+    // --- [V58 FINAL] RENDER GRID: DUAL TIMERS (LEFT & RIGHT) ---
 function renderGrid(customData = null) {
     const grid = document.getElementById('appGrid');
     if(!grid) return;
-    grid.innerHTML = '';
-
-    // ĐIỂM KHÁC BIỆT: Nếu có dữ liệu lọc (customData) thì dùng, không thì dùng toàn bộ (compList)
+    
     let listToRender = customData ? customData : compList;
 
-    // Sắp xếp
     listToRender.sort((a,b) => {
         let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
         let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
         return posA - posB;
     });
 
-    // Nếu lọc xong mà không có giải nào
     if(listToRender.length === 0) {
-        grid.innerHTML = `
-            <div class="col-12 text-center py-5 opacity-50">
-                <i class="fas fa-calendar-times fa-3x mb-3 text-sub"></i>
-                <h5 class="text-sub font-num">NO DATA FOUND</h5>
-                <button class="btn btn-sm btn-outline-secondary mt-2 rounded-pill px-4" onclick="filterByDate(null)">Show All</button>
-            </div>`;
+        grid.innerHTML = `<div class="col-12 text-center py-5 opacity-50"><i class="fas fa-calendar-times fa-3x mb-3 text-sub"></i><h5 class="text-sub font-num">NO DATA FOUND</h5><button class="btn btn-sm btn-outline-secondary mt-2 rounded-pill px-4" onclick="filterByDate(null)">Show All</button></div>`;
         return;
     }
 
     const isAdmin = document.body.classList.contains('is-admin');
-    const btnsSave = document.querySelectorAll('.btn-save-pos');
-    btnsSave.forEach(btn => {
-        btn.style.display = isAdmin ? 'inline-block' : 'none';
-        if(isAdmin && btn.closest('.d-flex')) btn.style.display = 'block';
-    });
+    document.querySelectorAll('.btn-save-pos').forEach(btn => btn.style.display = isAdmin ? 'block' : 'none');
+
+    let fullHtml = '';
+    let now = new Date();
 
     listToRender.forEach(c => {
         try {
             let status = c.end && new Date() > new Date(c.end + 'T' + (c.endTime||'23:59')) ? 'ended' : 'running';
             let cardClass = status === 'ended' ? 'tour-card ended-card' : 'tour-card';
             
-            // 1. TIMER
-            let timerHtml = '';
+            // --- 1. ĐỒNG HỒ KẾT THÚC GIẢI (HIỂN THỊ BÊN TRÁI) ---
+            let tourTimerHtml = '';
             if(c.end) {
-                timerHtml = `<div class="d-flex align-items-center gap-1 mt-1" style="opacity:0.8"><i class="far fa-clock text-sub" style="font-size:0.65rem"></i><span class="text-sub fw-bold smart-timer" style="font-size:0.75rem; letter-spacing:0.5px" data-end="${c.end}" data-time="${c.endTime || '23:59:59'}">${c.end}</span></div>`;
-            }
-
-            // 2. REAL VOLUME
-            let realVol = c.real_alpha_volume || 0;
-            let realVolDisplay = '---';
-            let realVolColor = '#666';
-            if(realVol > 0) {
-                realVolDisplay = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol);
-                realVolColor = '#d0aaff';
-            }
-
-            // 3. THỜI GIAN CẬP NHẬT
-            let lastUpd = c.last_updated_ts || 0;
-            let timeAgoStr = 'Pending update...';
-            if (lastUpd > 0) {
-                let diffMin = Math.floor((Date.now() - lastUpd) / 60000);
-                if(diffMin < 1) timeAgoStr = 'Just now';
-                else if(diffMin < 60) timeAgoStr = `${diffMin}m ago`;
-                else { let h = Math.floor(diffMin/60); timeAgoStr = `${h}h ago`; }
-            }
-
-            let footerRealVolHtml = `
-            <div class="d-flex flex-column" onclick="openVolHistory('${c.db_id}')" style="cursor: pointer;" title="View Chart">
-                <div class="stat-lbl text-sub d-flex align-items-center gap-1" style="margin-bottom:2px">
-                    Limit Vol <i class="fas fa-info-circle text-sub opacity-50 auto-close-tooltip" title="Off-chain Order Book data only." onclick="event.stopPropagation()"></i>
-                </div>
-                <div class="font-num fw-bold" style="color: ${realVolColor}; font-size: 1.1rem; line-height:1;">${realVolDisplay}</div>
-                <div class="text-sub d-flex align-items-center gap-1" style="font-size: 0.65rem; opacity: 0.7; margin-top: 4px; font-style:italic;">
-                    <i class="fas fa-history"></i> <span>${timeAgoStr}</span>
-                </div>
-            </div>`;
-
-            let isCampaign = (c.inputTokens || []).length > 0;
-            let tokenInfoHtml = '', tagHtml = '';
-            
-            // LOGIC PRICE
-            let finalPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
-            let priceStr = '---';
-            if (finalPrice > 0) {
-                if (finalPrice < 1) {
-                    priceStr = '$' + finalPrice.toLocaleString('en-US', { maximumFractionDigits: 6 });
-                } else {
-                    priceStr = '$' + finalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                let endDateTime = new Date(c.end + 'T' + (c.endTime || '23:59:59'));
+                let diff = endDateTime - now;
+                let tText = "Ended";
+                
+                if (diff > 0) {
+                    let d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    // Logic hiển thị: Nếu còn > 0 ngày thì hiện Ngày + Giờ, ngược lại hiện Giờ + Phút
+                    if (d > 0) tText = `${d}d ${h}h`; 
+                    else tText = `${h}h ${m}m`;
                 }
+                
+                // Màu sắc cảnh báo sắp hết giờ giải
+                let tColor = (diff < 86400000 && diff > 0) ? '#F6465D' : '#999'; 
+                
+                tourTimerHtml = `<div class="tour-end-timer" style="color:${tColor}"><i class="far fa-clock" style="font-size:0.6rem"></i> ${tText}</div>`;
             }
 
-            let priceDisplayHtml = `
-                <div class="stat-lbl">PRICE</div>
-                <div class="stat-val text-brand fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">
-                    ${priceStr}
-                </div>`;
-
-            // LOGIC TAG
+            // --- 2. ĐỒNG HỒ KHUYẾN MÃI X4/X2 (HIỂN THỊ BÊN PHẢI) ---
+            let promoTimerHtml = '';
             let isListingExpired = false;
-            let listingEndTime = 0;
-            if (c.listingTime && c.alphaType !== 'none') {
-                listingEndTime = new Date(c.listingTime).getTime() + (30 * 24 * 60 * 60 * 1000);
-                if (Date.now() > listingEndTime || status === 'ended') isListingExpired = true;
-            } else { if (status === 'ended') isListingExpired = true; }
 
-            if (isCampaign) {
-                let iconsHtml = (c.inputTokens || []).map(t => `<span style="background:#333; color:#fff; border:1px solid #555; padding:1px 4px; border-radius:3px; font-size:0.6rem; margin-right:3px;">${t}</span>`).join('');
-                tokenInfoHtml = `<div style="margin-top:2px;"><span class="text-sub" style="font-size:0.55rem; font-weight:700; text-transform:uppercase;">REQ TRADE:</span><div class="d-inline-flex flex-wrap">${iconsHtml}</div></div>`;
-                tagHtml = `<div class="tag-x2" style="background:#9945FF; color:#fff; border:none; box-shadow:0 0 5px #9945FF">ECOSYSTEM</div>`;
-            } else {
-                tokenInfoHtml = `<div class="token-status ${status==='running'?'anim-breathe':''}" style="color:${status==='running'?'var(--accent-green)':'var(--accent-red)'}">${status.toUpperCase()}</div>`;
-                if (!isListingExpired) {
-                    if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
-                    else if (c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2">X2 OTHER</div>`; }
+            // Kiểm tra xem có ngày Listing và có loại Alpha (x4/x2) không
+            if (c.listingTime && c.alphaType !== 'none') {
+                // Tính thời hạn 30 ngày kể từ ngày Listing
+                let listingDate = new Date(c.listingTime);
+                let expiryDate = new Date(listingDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // +30 ngày
+                let diff = expiryDate - now;
+
+                if (diff > 0) {
+                    let d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    // Chỉ hiện nếu còn hạn
+                    promoTimerHtml = `<div class="promo-timer" title="X4/X2 Promo expires in"><i class="fas fa-bolt" style="font-size:0.6rem"></i> ${d}d ${h}h</div>`;
                 } else {
-                    if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4 tag-expired">X4 BSC</div>`;
-                    else if (c.alphaType === 'x2') tagHtml = `<div class="tag-x2 tag-expired">X2 OTHER</div>`;
+                    isListingExpired = true; // Đã hết hạn X4
                 }
             }
+            
+            // Nếu giải đã kết thúc thì cũng coi như hết hạn Promo (để làm mờ tag)
+            if (status === 'ended') isListingExpired = true;
 
-            let x4TimerHtml = `<div class="x4-timer-box" style="visibility:hidden">--</div>`;
-            if (c.listingTime && c.alphaType !== 'none') {
-                if (isListingExpired) x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`;
-                else x4TimerHtml = `<div class="x4-timer-box"><i class="far fa-clock small"></i> <span class="x4-timer-val" data-list="${c.listingTime}">...</span></div>`;
-            } else if (status === 'ended') x4TimerHtml = `<div class="x4-timer-box" style="color:#666;border-color:#333;background:transparent;">ENDED</div>`;
 
-            if (c.alphaType === 'x4' && !isListingExpired && !isCampaign && status === 'running') cardClass += ' highlight-x4';
+            // --- XỬ LÝ TAG HTML (DỰA TRÊN TRẠNG THÁI HẾT HẠN) ---
+            let tagHtml = '';
+            if (!isListingExpired) {
+                if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
+                else if (c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2">X2 OTHER</div>`; }
+            } else { 
+                // Nếu hết hạn thì hiện tag xám
+                tagHtml = `<div class="${c.alphaType==='x4'?'tag-x4':'tag-x2'} tag-expired">${c.alphaType==='x4'?'X4 BSC':'X2 OTHER'}</div>`; 
+                promoTimerHtml = ''; // Hết hạn thì ẩn luôn đồng hồ đếm ngược Promo
+            }
+            
+            if ((c.inputTokens||[]).length > 0) tagHtml = `<div class="tag-x2" style="background:#9945FF; color:#fff; border:none; box-shadow:0 0 5px #9945FF">ECOSYSTEM</div>`;
+            if (c.alphaType === 'x4' && !isListingExpired && !(c.inputTokens||[]).length && status === 'running') cardClass += ' highlight-x4';
 
             let ruleHtml = c.ruleType === 'trade_x4' ? `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>` : `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
             if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
 
-            let latestCloud = (c.history && c.history.length > 0) ? c.history[c.history.length-1] : null;
-            let target = latestCloud ? parseFloat(latestCloud.target) : 0;
-            
-            let calPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice||0);
-            let estVal = (parseFloat(c.rewardQty)||0) * calPrice;
 
-            let estHtml = (estVal > 0) 
-                ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` 
-                : '<span class="live-est-val" data-qty="' + (c.rewardQty||0) + '"></span>';
+            // Các chỉ số khác
+            let realVol = c.real_alpha_volume || 0;
+            let realVolDisplay = realVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
+            let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
 
-                let accListHtml = '';
-            
-            // 1. Lấy dữ liệu tiến độ của giải này
-            let myProgressRaw = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
-            
-            // 2. [FIX QUAN TRỌNG] Tìm bản ghi ngày MỚI NHẤT (Sort giảm dần theo ngày)
-            // Để đảm bảo luôn lấy dữ liệu update gần đây nhất, bất kể thứ tự lưu trong DB
-            let latestEntry = null;
-            if (myProgressRaw.length > 0) {
-                latestEntry = [...myProgressRaw].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-            }
+            let target = (c.history && c.history.length > 0) ? parseFloat(c.history[c.history.length-1].target) : 0;
 
-            accSettings.forEach(acc => {
-                let v = 0;
-                // 3. Lấy Volume từ bản ghi mới nhất tìm được
-                if(latestEntry && latestEntry.accsDetail && latestEntry.accsDetail[acc.id]) {
-                    v = parseFloat(latestEntry.accsDetail[acc.id].vol) || 0;
-                }
-                let pct = target > 0 ? (v/target)*100 : 0;
-                let color = pct>=100 ? 'var(--accent-green)' : (pct>=50 ? 'var(--accent-yellow)' : acc.color);
-                let rightInfoHtml = (status === 'ended')
-                    ? (v >= target && target > 0 ? `<span class="res-badge res-win">WIN</span>` : `<span class="res-badge res-lose">LOSE</span>`)
-                    : (target > 0 ? `<span class="acc-gap ${v-target>=0?'gap-pos':'gap-neg'}">(${v-target>=0?'+':''}${fmtNum(v-target)})</span>` : '');
-                accListHtml += `<div class="acc-item"><div class="acc-info"><span style="width:6px;height:6px;border-radius:50%;background:${acc.color};box-shadow:0 0 5px ${acc.color}"></span><span class="text-truncate">${acc.name}</span></div><div style="flex:1; margin:0 10px; position:relative"><div class="acc-bar-bg"><div class="acc-bar-fill" style="width:${Math.min(pct,100)}%; background:${color}; box-shadow:0 0 5px ${color}"></div></div></div><div class="acc-stats"><span class="acc-vol">${fmtNum(v)}</span>${rightInfoHtml}</div></div>`;
-            });
+            let priceStr = (c.cachedPrice > 0) ? '$' + parseFloat(c.cachedPrice).toLocaleString('en-US', { maximumFractionDigits: 6 }) : '---';
+            let estVal = (parseFloat(c.rewardQty)||0) * (c.cachedPrice||0);
+            let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
+            let adminEditBtn = isAdmin ? `<i class="fas fa-pencil-alt ms-2 text-sub cursor-pointer hover-white" style="font-size:0.7rem" onclick="openEditModal('${c.db_id}')"></i>` : '';
             let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
             let dragHandleHtml = (isAdmin) ? `<i class="fas fa-grip-vertical admin-drag-handle" title="Kéo để sắp xếp"></i>` : '';
+            
+            let isPerfect = (c.market_analysis?.label && c.market_analysis.label.includes("PERFECT"));
+            let rocketBadgeHtml = isPerfect ? `<div class="rocket-badge"><i class="fas fa-rocket"></i> GEM</div>` : "";
+            if(isPerfect) cardClass += " card-perfect";
 
-            // HEALTH
-            let ma = c.market_analysis || {};
-            let isPerfect = (ma.label && ma.label.includes("PERFECT"));
-            let rocketBadgeHtml = "";
-            if (isPerfect) {
-                cardClass += " card-perfect";
-                rocketBadgeHtml = `<div class="rocket-badge"><i class="fas fa-rocket"></i> GEM</div>`;
-            }
-
-            grid.innerHTML += `
+            // --- HTML STRUCTURE ---
+            fullHtml += `
             <div class="col-md-6 col-lg-4 col-xl-3 card-wrapper" ${dragAttr} data-id="${c.db_id}">
                 <div class="${cardClass}" onclick="playSfx('click'); toggleCardHighlight(this)">
+                    
                     <div class="card-head">
                         ${rocketBadgeHtml}
                         <div class="token-info-wrapper">
@@ -3213,67 +3300,70 @@ function renderGrid(customData = null) {
                             <img src="${c.logo || 'https://placehold.co/40x40/222'}" class="token-logo" onclick="event.stopPropagation(); window.open('https://www.binance.com/en/alpha/${c.chain}/${c.contract}', '_blank')">
                             <div class="token-text">
                                 <div class="token-title">${c.name}</div>
-                                ${tokenInfoHtml}
-                                ${timerHtml}
+                                
+                                ${status==='running' ? `<div class="token-status anim-breathe text-green">RUNNING</div>` : `<div class="token-status text-red">ENDED</div>`}
+                                ${tourTimerHtml} 
                             </div>
                         </div>
-                        <div class="card-head-right">${ruleHtml}${tagHtml}${x4TimerHtml}</div>
+                        
+                        <div class="card-head-right">
+                            ${ruleHtml}
+                            ${tagHtml}
+                            ${promoTimerHtml}
+                        </div>
                     </div>
-                                                    
+                    
                     <div class="card-stats-grid">
                         <div class="stat-cell"><div class="stat-lbl">TOP</div><div class="stat-val text-main">${c.topWinners||'--'}</div></div>
                         <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">REWARD</div><div class="stat-val text-brand">${fmtNum(c.rewardQty)}${estHtml}</div></div>
-                        <div class="stat-cell">${priceDisplayHtml}</div>
+                        <div class="stat-cell"><div class="stat-lbl">PRICE</div><div class="stat-val text-brand fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">${priceStr}</div></div>
                     </div>
-                    <div class="card-list" style="padding-top: 12px;">
-                        
-                        <div class="d-flex justify-content-between align-items-center mb-2 pb-1" style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
+
+                    <div class="card-list" style="padding: 10px 15px 0 15px;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="text-sub fw-bold" style="font-size:0.6rem; letter-spacing:1px; text-transform:uppercase;">MY PROGRESS</span>
-                            
                             <button class="btn btn-sm fw-bold d-flex align-items-center gap-1" 
-    onclick="event.stopPropagation(); openUpdateModal('${c.db_id}')" 
-    title="Nhập Volume của bạn"
-    style="font-size:0.65rem; transition:0.2s; background: rgba(14, 203, 129, 0.15); color: #0ECB81; border: 1px solid #0ECB81; padding: 3px 10px; border-radius: 4px; box-shadow: 0 0 5px rgba(14, 203, 129, 0.2);">
-    <i class="fas fa-pen-to-square"></i> UPDATE VOL
-</button>
+                                onclick="event.stopPropagation(); openUpdateModal('${c.db_id}')" 
+                                title="Nhập Volume của bạn"
+                                style="font-size:0.65rem; transition:0.2s; background: rgba(14, 203, 129, 0.15); color: #0ECB81; border: 1px solid #0ECB81; padding: 2px 8px; border-radius: 4px;">
+                                <i class="fas fa-pen-to-square"></i> UPDATE VOL
+                            </button>
                         </div>
-
-                        ${accListHtml}
+                        <div class="mini-chart-wrapper" onclick="event.stopPropagation()">
+                            <canvas id="miniChart-${c.db_id}"></canvas>
+                        </div>
+                        <div class="acc-stats-grid" id="accGrid-${c.db_id}"></div>
                     </div>
 
-                    <div class="card-actions" style="padding: 0;">
+                    <div class="market-bar">
+                        <div class="mb-item text-start">
+                            <div class="mb-label">Limit Vol (Mkt) <i class="fas fa-info-circle opacity-50" title="Tổng Vol Limit toàn thị trường"></i></div>
+                            <div class="mb-val" style="color:${realVolColor}">${realVolDisplay}</div>
+                        </div>
+                        <div class="mb-item text-end">
+                            <div class="mb-label" style="justify-content: flex-end; color:#F0B90B">Min Target (Goal)</div>
+                            <div class="mb-val text-gold anim-breathe">
+                                ${fmtNum(target)}
+                                ${adminEditBtn}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-actions" style="padding: 0; border:none;">
                         <button class="btn-card-action predict" 
-                            onclick="event.stopPropagation(); openPredictionView('${c.db_id}')"
-                            style="width: 100%; border: none; padding: 12px; font-size: 0.9rem; letter-spacing: 1px; background: linear-gradient(90deg, rgba(153, 69, 255, 0.1), rgba(153, 69, 255, 0.25)); color: #fff;">
-                            <i class="fas fa-bolt text-gold me-2"></i> ${translations[currentLang].btn_predict}
+                            onclick="event.stopPropagation(); openPredictionView('${c.db_id}')">
+                            <i class="fas fa-bolt me-2"></i> ${translations[currentLang].btn_predict}
                         </button>
                     </div>
-                    <div class="card-foot">
-                        <div class="real-vol-box">${footerRealVolHtml}</div>
-                        <div class="admin-only mx-2"><button class="btn btn-edit-foot" onclick="openEditModal('${c.db_id}')"><i class="fas fa-pencil-alt"></i></button></div>
-                        <div class="ms-auto text-end lh-1">
-                            <div class="stat-lbl text-brand" style="font-weight:800; letter-spacing:0.5px; opacity:0.9; margin-bottom:2px;">${translations[currentLang].lbl_min_target}</div>
-                            <div class="stat-val text-gold anim-breathe" style="font-size: 1.4rem; text-shadow: 0 0 15px rgba(240, 185, 11, 0.4);">${fmtNum(target)}</div>
-                        </div>
-                    </div>
+
                 </div>
             </div>`;
         } catch(e) { console.error("Render error", e); }
     });
 
-    // Tooltip Init
-    try {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            var tooltip = new bootstrap.Tooltip(tooltipTriggerEl);
-            if (tooltipTriggerEl.classList.contains('auto-close-tooltip')) {
-                tooltipTriggerEl.addEventListener('shown.bs.tooltip', function () {
-                    setTimeout(function () { tooltip.hide(); }, 3000);
-                });
-            }
-            return tooltip;
-        });
-    } catch (e) { console.error(e); }
+    grid.innerHTML = fullHtml;
+    listToRender.forEach(c => { renderCardMiniChart(c); });
+    try { [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).map(el => new bootstrap.Tooltip(el)); } catch(e) {}
 }
 
 
@@ -5339,6 +5429,136 @@ function switchView(view) {
         // Giao diện Cockpit mới dùng display: block thay vì flex
         document.getElementById('view-predict').style.display = 'block';
     }
+}
+
+// --- [V55 FINAL] MINI CHART & INFO GRID GENERATOR ---
+function renderCardMiniChart(c) {
+    const ctx = document.getElementById(`miniChart-${c.db_id}`);
+    if (!ctx) return;
+
+    // ... (Giữ nguyên logic chuẩn bị dữ liệu Anchor Date & Datasets như V53) ...
+    // --- COPY LẠI LOGIC CHUẨN BỊ DỮ LIỆU TỪ BƯỚC TRƯỚC (V53) VÀO ĐÂY ---
+    // (Để ngắn gọn, tôi viết tóm tắt phần logic này, bạn hãy copy lại phần logic từ hàm cũ V53 nhé)
+    // ... Bắt đầu logic xử lý dữ liệu ...
+    let now = new Date();
+    let isEnded = false;
+    if (c.end) { let endDateTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')); if (now > endDateTime) isEnded = true; }
+    let anchorDate = new Date();
+    if (isEnded && c.end) { let parts = c.end.split('-'); anchorDate = new Date(parts[0], parts[1]-1, parts[2]); }
+    anchorDate.setHours(12, 0, 0, 0);
+    let realTodayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    let adminHistory = c.history || [];
+    let realHistory = c.real_vol_history || []; 
+    let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
+    let labels = [], targetData = [], limitVolData = [], accDatasets = {}; 
+    accSettings.forEach(acc => accDatasets[acc.id] = []);
+
+    for (let i = 6; i >= 0; i--) {
+        let d = new Date(anchorDate); d.setDate(anchorDate.getDate() - i);
+        let dStr = d.toISOString().split('T')[0];
+        if(c.start && dStr < c.start) continue;
+        labels.push(d.getDate() + '/' + (d.getMonth()+1));
+
+        let rVal = 0; let rItem = realHistory.find(x => x.date === dStr);
+        if (rItem) rVal = parseFloat(rItem.vol); else if (dStr === realTodayStr) rVal = parseFloat(c.real_alpha_volume || 0);
+        limitVolData.push(rVal);
+
+        let shouldHideLine = (dStr === realTodayStr && !isEnded);
+        if (shouldHideLine) { targetData.push(null); accSettings.forEach(acc => accDatasets[acc.id].push(null)); } 
+        else {
+            let tVal = 0; let hItem = adminHistory.find(h => h.date === dStr);
+            if(hItem) tVal = parseFloat(hItem.target);
+            else { let prev = adminHistory.filter(h => h.date < dStr).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]; if(prev) tVal = parseFloat(prev.target); }
+            targetData.push(tVal);
+
+            let pItem = myProgress.find(p => p.date === dStr);
+            accSettings.forEach(acc => {
+                let vVal = 0;
+                if (pItem && pItem.accsDetail && pItem.accsDetail[acc.id]) vVal = parseFloat(pItem.accsDetail[acc.id].vol);
+                else { let prevP = myProgress.filter(p => p.date < dStr).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]; if(prevP && prevP.accsDetail && prevP.accsDetail[acc.id]) vVal = parseFloat(prevP.accsDetail[acc.id].vol); }
+                accDatasets[acc.id].push(vVal);
+            });
+        }
+    }
+    // ... Kết thúc logic xử lý dữ liệu ...
+
+    // Cấu hình Chart (Giữ nguyên Dual Axis)
+    let chartDatasets = [];
+    chartDatasets.push({ type: 'bar', label: 'Limit Vol', data: limitVolData, backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: 'rgba(0, 240, 255, 0.3)', borderWidth: 1, borderRadius: 3, barPercentage: 0.7, order: 3, yAxisID: 'y_limit' });
+    chartDatasets.push({ type: 'line', label: 'Min Target', data: targetData, borderColor: '#F0B90B', borderWidth: 2, borderDash: [3, 3], pointRadius: 0, fill: false, tension: 0.4, order: 2, yAxisID: 'y_user', spanGaps: false });
+    accSettings.forEach(acc => {
+        chartDatasets.push({ type: 'line', label: acc.name, data: accDatasets[acc.id], borderColor: acc.color, backgroundColor: hexToRgba(acc.color, 0.1), borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4, order: 1, yAxisID: 'y_user', spanGaps: false });
+    });
+
+    new Chart(ctx, {
+        data: { labels: labels, datasets: chartDatasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { 
+    legend: { display: false }, 
+    tooltip: { 
+        mode: 'index', 
+        intersect: false, 
+        backgroundColor: 'rgba(0,0,0,0.95)', 
+        callbacks: { 
+            label: function(ctx) { 
+                let val = ctx.raw; 
+                if (val === null) return null; 
+                
+                // --- SỬA Ở ĐÂY: Format về số nguyên (0 số lẻ) ---
+                let valStr = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(val); 
+                
+                if(ctx.dataset.type === 'bar') return ` Limit Vol: $${valStr}`; 
+                return ` ${ctx.dataset.label}: ${valStr}`; 
+            } 
+        } 
+    } 
+},            scales: { x: { display: false }, y_user: { type: 'linear', display: false, position: 'left', min: 0 }, y_limit: { type: 'linear', display: false, position: 'right', min: 0, suggestedMax: Math.max(...limitVolData) * 1.5 } },
+            layout: { padding: { left: -5, right: -5, top: 5, bottom: 0 } }
+        }
+    });
+
+    // --- PHẦN MỚI: ĐIỀN DỮ LIỆU VÀO LƯỚI THÔNG TIN (INFO GRID) ---
+    let accGridEl = document.getElementById(`accGrid-${c.db_id}`);
+    
+    // Lấy Target cuối cùng để tính GAP
+    let lastTargetData = targetData.filter(v => v !== null);
+    let lastTarget = lastTargetData.length > 0 ? lastTargetData[lastTargetData.length - 1] : 0;
+
+    if(accGridEl) {
+        let gridHtml = '';
+        
+        accSettings.forEach(acc => {
+            // Lấy Vol cuối cùng của acc này
+            let validUser = accDatasets[acc.id].filter(v => v !== null);
+            let lastUserVal = validUser.length > 0 ? validUser[validUser.length - 1] : 0;
+            
+            // Tính Gap
+            let gap = lastUserVal - lastTarget;
+            let gapColor = gap >= 0 ? 'text-green' : 'text-red';
+            let gapIcon = gap >= 0 ? 'fa-caret-up' : 'fa-caret-down';
+            
+            // Render ô thông tin
+            gridHtml += `
+            <div class="as-item">
+                <div class="as-head"><div class="dot" style="background:${acc.color}"></div> ${acc.name}</div>
+                <div class="as-vol">${fmtNum(lastUserVal)}</div>
+                <div class="as-gap ${gapColor}">
+                    ${lastTarget > 0 ? `<i class="fas ${gapIcon}"></i> ${fmtNum(Math.abs(gap))}` : '<span class="text-sub opacity-50">--</span>'}
+                </div>
+            </div>`;
+        });
+
+        accGridEl.innerHTML = gridHtml;
+    }
+}
+
+// Helper: Chuyển HEX sang RGBA
+function hexToRgba(hex, alpha) {
+    let r = parseInt(hex.slice(1, 3), 16),
+        g = parseInt(hex.slice(3, 5), 16),
+        b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
 }
 
 </script>
