@@ -1856,6 +1856,7 @@ const SAFETY_WINDOW = 10; // Tính trung bình 10 mẫu gần nhất
 /* --- BỘ TỪ ĐIỂN FULL (ĐÃ CẬP NHẬT TÊN & SLOGAN MỚI) --- */
 let currentLang = localStorage.getItem('wave_lang') || 'en';
 
+/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FULL LOCALIZATION - ĐÃ SỬA ĐỊNH NGHĨA LIMIT VOL) --- */
 const translations = {
     en: {
         // --- CHUNG ---
@@ -1881,9 +1882,9 @@ const translations = {
         // --- CARD ---
         lbl_top: "TOP", lbl_reward: "REWARD", lbl_price: "PRICE",
         lbl_ends: "ENDS:", lbl_min_target: "MIN TARGET",
-        btn_update: "UPDATE", btn_predict: "PREDICT",
+        btn_update: "UPDATE VOL", btn_predict: "PREDICT",
         status_running: "RUNNING", status_ended: "ENDED",
-        tag_x4: "X4 BSC", tag_x2: "X2 OTHER",
+        tag_x4: "X4 BSC CHAIN", tag_x2: "X2 OTHER CHAINS",
         res_win: "WIN", res_lose: "LOSE",
 
         // --- MODALS ---
@@ -1897,15 +1898,16 @@ const translations = {
         toast_login_req: "Please Login first!", toast_success: "Action Successful!", toast_error: "Error occurred!",
         toast_insufficient: "Insufficient Balance!", toast_saved: "Tracking Data Saved!",
 
-        // --- LEGEND & DISCLAIMER (NEW) ---
+        // --- LEGEND & DISCLAIMER ---
         legend_title: "ICON LEGEND",
         leg_sync_t: "Smart Sync", leg_sync_d: "Update latest prices & volume from Server.",
         leg_reload_t: "Reload Data", leg_reload_d: "Force reload data from Cloud Database.",
-        leg_wallet_t: "Manage Wallets", leg_wallet_d: "Add/Remove tracking portfolios.",
+        leg_wallet_t: "Manage Wallets", leg_wallet_d: "Add or remove tracking accounts.",
         leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data.",
 
         g_title: "METRIC LEGEND",
-        g_vol: "Total trading volume (USDT) since 00:00 UTC.",
+        // Đã sửa theo yêu cầu: Chỉ Limit Trading
+        g_vol: "Volume generated solely from Limit Trading (Off-chain) since 00:00 UTC.",
         g_txs: "Total executed orders today.",
         g_speed: "Execution speed (Orders/sec).",
         g_match: "Avg market absorption per second ($).",
@@ -1920,7 +1922,7 @@ const translations = {
         sys_time: "GIỜ HỆ THỐNG", verified_link: "Link Chính Chủ",
 
         // --- HERO ---
-        hero_title: "TRÌNH THEO DÕI VOLUME GIẢI ĐẤU",
+        hero_title: "CÔNG CỤ THEO DÕI VOLUME",
         hero_sub: "Quản lý các tài khoản & Tham gia dự đoán.",
 
         // --- SECTION HEADERS ---
@@ -1930,7 +1932,7 @@ const translations = {
         sect_board: "BẢNG THEO DÕI",
 
         // --- STATS ---
-        stat_active: "GIẢI ĐANG CHẠY", stat_pool: "TỔNG GIÁ TRỊ GIẢI (ACTIVE)", stat_create: "TẠO GIẢI MỚI",
+        stat_active: "GIẢI ĐANG CHẠY", stat_pool: "TỔNG GIÁ TRỊ GIẢI", stat_create: "TẠO GIẢI MỚI",
 
         // --- SORT ---
         sort_newest: "Mới nhất (Ngày bắt đầu)", sort_ending: "Sắp kết thúc", sort_reward: "Thưởng cao nhất ($)",
@@ -1938,13 +1940,13 @@ const translations = {
         // --- CARD ---
         lbl_top: "TOP", lbl_reward: "THƯỞNG", lbl_price: "GIÁ",
         lbl_ends: "KẾT THÚC:", lbl_min_target: "MỤC TIÊU MIN",
-        btn_update: "CẬP NHẬT", btn_predict: "DỰ ĐOÁN",
+        btn_update: "CẬP NHẬT VOL", btn_predict: "DỰ ĐOÁN",
         status_running: "ĐANG CHẠY", status_ended: "ĐÃ KẾT THÚC",
         tag_x4: "X4 MẠNG BSC", tag_x2: "X2 MẠNG KHÁC",
         res_win: "THẮNG", res_lose: "THUA",
 
         // --- MODALS ---
-        modal_u_title: "CẬP NHẬT VOLUME", lbl_date: "NGÀY", lbl_my_vol: "VOL CỦA TÔI & KHOẢNG CÁCH", lbl_history: "LỊCH SỬ NHẬP",
+        modal_u_title: "CẬP NHẬT TIẾN ĐỘ", lbl_date: "NGÀY", lbl_my_vol: "VOL CỦA TÔI & KHOẢNG CÁCH", lbl_history: "LỊCH SỬ NHẬP",
         btn_save_prog: "LƯU TIẾN ĐỘ", btn_saving: "ĐANG LƯU...", btn_saved: "ĐÃ LƯU!", ph_vol: "Nhập Vol", ph_cost: "Vốn ($)",
         modal_p_title: "NHẬP DỰ ĐOÁN", modal_p_desc: "Dự đoán Min Volume khi chốt sổ.", lbl_p_name: "TÊN BẠN", lbl_p_guess: "DỰ ĐOÁN (VOL)",
         ph_p_name: "Ví dụ: Shark 1", ph_p_fee: "Phí: 100 USDT", btn_confirm: "XÁC NHẬN & TRẢ PHÍ", btn_processing: "ĐANG XỬ LÝ...",
@@ -1954,7 +1956,7 @@ const translations = {
         toast_login_req: "Vui lòng đăng nhập trước!", toast_success: "Thao tác thành công!", toast_error: "Có lỗi xảy ra!",
         toast_insufficient: "Số dư không đủ!", toast_saved: "Dữ liệu đã được lưu!",
 
-        // --- LEGEND & DISCLAIMER (NEW) ---
+        // --- LEGEND & DISCLAIMER ---
         legend_title: "CHÚ THÍCH BIỂU TƯỢNG",
         leg_sync_t: "Đồng bộ Thông minh", leg_sync_d: "Cập nhật giá & volume mới nhất từ Server.",
         leg_reload_t: "Tải lại Dữ liệu", leg_reload_d: "Buộc tải lại toàn bộ dữ liệu từ Cloud.",
@@ -1962,10 +1964,11 @@ const translations = {
         leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu.",
 
         g_title: "CHÚ THÍCH THÔNG SỐ",
-        g_vol: "Tổng giá trị giao dịch (USDT) từ 00:00 UTC.",
+        // Đã sửa: Định nghĩa Limit Only
+        g_vol: "Chỉ tính Volume sinh ra từ giao dịch Limit (Off-chain) tính từ 00:00 UTC.",
         g_txs: "Tổng số lệnh đã khớp trong ngày.",
         g_speed: "Tốc độ khớp lệnh (Số lệnh trên giây).",
-        g_match: "Trung bình mỗi giây thị trường khớp được bao nhiêu Đô ($).",
+        g_match: "Sức mua trung bình thị trường mỗi giây ($).",
         g_ord: "Giá trị trung bình của 1 lệnh (Cả ngày).",
         g_flow: "Dòng tiền ròng trong 1 phút qua.",
         g_spread: "Biên độ chênh lệch giá Mua/Bán.",
@@ -1973,8 +1976,8 @@ const translations = {
     },
     zh: {
         // --- CHUNG ---
-        nav_guide: "指南", nav_login: "登录", nav_logout: "登出",
-        sys_time: "系统时间", verified_link: "官方链接",
+        nav_guide: "使用指南", nav_login: "登录", nav_logout: "登出",
+        sys_time: "系统时间", verified_link: "官方验证链接",
 
         // --- HERO ---
         hero_title: "锦标赛成交量追踪器",
@@ -1987,7 +1990,7 @@ const translations = {
         sect_board: "追踪板",
 
         // --- STATS ---
-        stat_active: "活跃池", stat_pool: "当前活跃奖池总值", stat_create: "创建新池",
+        stat_active: "进行中的奖池", stat_pool: "当前总奖池", stat_create: "创建新池",
 
         // --- SORT ---
         sort_newest: "最新 (开始日期)", sort_ending: "即将结束", sort_reward: "最高奖励 ($)",
@@ -1995,15 +1998,15 @@ const translations = {
         // --- CARD ---
         lbl_top: "排名", lbl_reward: "奖励", lbl_price: "价格",
         lbl_ends: "结束:", lbl_min_target: "最低目标",
-        btn_update: "更新", btn_predict: "预测",
+        btn_update: "更新成交量", btn_predict: "预测",
         status_running: "进行中", status_ended: "已结束",
         tag_x4: "X4 BSC链", tag_x2: "X2 其他链",
         res_win: "获胜", res_lose: "未中",
 
         // --- MODALS ---
         modal_u_title: "我的交易追踪", lbl_date: "日期", lbl_my_vol: "我的成交量 & 差距", lbl_history: "历史记录",
-        btn_save_prog: "保存进度", btn_saving: "保存中...", btn_saved: "已保存!", ph_vol: "成交量", ph_cost: "成本 ($)",
-        modal_p_title: "输入预测", modal_p_desc: "预测最终最低成交量。", lbl_p_name: "昵称", lbl_p_guess: "预测值 (VOL)",
+        btn_save_prog: "保存进度", btn_saving: "保存中...", btn_saved: "已保存!", ph_vol: "输入成交量", ph_cost: "成本 ($)",
+        modal_p_title: "输入预测", modal_p_desc: "预测最终最低成交量。", lbl_p_name: "您的昵称", lbl_p_guess: "预测值 (VOL)",
         ph_p_name: "例如: Shark 1", ph_p_fee: "费用: 100 USDT", btn_confirm: "确认并支付", btn_processing: "处理中...",
         modal_l_title: "安全登录", modal_l_desc: "通过邮箱 OTP 验证", btn_send_code: "发送验证码", btn_verify: "验证登录",
 
@@ -2011,7 +2014,7 @@ const translations = {
         toast_login_req: "请先登录!", toast_success: "操作成功!", toast_error: "发生错误!",
         toast_insufficient: "余额不足!", toast_saved: "数据已保存!",
 
-        // --- LEGEND & DISCLAIMER (NEW) ---
+        // --- LEGEND & DISCLAIMER ---
         legend_title: "图标说明",
         leg_sync_t: "智能同步", leg_sync_d: "从服务器更新最新价格和成交量。",
         leg_reload_t: "重新加载", leg_reload_d: "强制从云数据库重新加载数据。",
@@ -2019,10 +2022,11 @@ const translations = {
         leg_login_t: "登录", leg_login_d: "安全登录以保存数据。",
 
         g_title: "指标说明",
-        g_vol: "自00:00 UTC起的总交易量 (USDT)。",
+        // Đã sửa: Limit Only Definition
+        g_vol: "自 UTC 00:00 起仅计算限价交易 (Limit Trading) 的成交量。",
         g_txs: "今日已成交订单总数。",
         g_speed: "成交速度 (每秒订单数)。",
-        g_match: "市场每秒平均成交额 ($)。",
+        g_match: "市场每秒平均撮合额 ($)。",
         g_ord: "平均每单价值 (24小时)。",
         g_flow: "过去1分钟的净资金流。",
         g_spread: "买卖价差幅度。",
@@ -4827,108 +4831,124 @@ async function saveUpdate() {
 
 
         // --- V46 UPDATE: ĐỒNG HỒ THÔNG MINH (KÈM NHÃN UTC) ---
-    function updateClock() {
-        const now = new Date();
+    // --- [V48 UPDATE] ĐỒNG HỒ THÔNG MINH (CÓ NGÀY THÁNG) ---
+function updateClock() {
+    const now = new Date();
 
-        // 1. XỬ LÝ GIỜ & NHÃN UTC
-        if(document.getElementById('sysClock')) {
-            // Lấy giờ gốc UTC
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    // 1. XỬ LÝ GIỜ HỆ THỐNG
+    if(document.getElementById('sysClock')) {
+        // Lấy giờ gốc UTC
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
 
-            // Xác định Offset
-            let offset = 0;
-            if (currentLang === 'vi') offset = 7;
-            else if (currentLang === 'zh') offset = 8;
+        // Xác định Offset (Múi giờ)
+        let offset = 0;
+        if (currentLang === 'vi') offset = 7;      // Việt Nam UTC+7
+        else if (currentLang === 'zh') offset = 8; // Trung Quốc UTC+8
+        // English mặc định UTC+0 (hoặc bạn muốn chỉnh thành +7 thì sửa ở đây)
 
-            // Tính giờ hiển thị
-            const targetTime = new Date(utc + (3600000 * offset));
+        // Tính thời gian mục tiêu
+        const targetTime = new Date(utc + (3600000 * offset));
 
-            // Hiển thị giờ (00:00:00)
-            document.getElementById('sysClock').innerText = targetTime.toLocaleTimeString('en-GB', {
-                hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit"
-            });
+        // A. Lấy Ngày (DD/MM/YYYY)
+        let dateStr = targetTime.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        });
 
-            // --- CẬP NHẬT NHÃN UTC BÊN CẠNH CHỮ "SYSTEM TIME" ---
-            let labelEl = document.querySelector('[data-i18n="sys_time"]');
-            if(labelEl) {
-                // Lấy tên gốc từ từ điển (để đảm bảo đúng ngôn ngữ)
-                let baseText = translations[currentLang].sys_time;
-                // Thêm đuôi (UTC +X) vào sau
-                labelEl.innerText = `${baseText} (UTC +${offset})`;
+        // B. Lấy Giờ (HH:MM:SS)
+        let timeStr = targetTime.toLocaleTimeString('en-GB', {
+            hour12: false, 
+            hour: "2-digit", 
+            minute: "2-digit", 
+            second: "2-digit"
+        });
 
-                // Tô màu chút cho chữ UTC nổi bật (Optional)
-                labelEl.style.color = "var(--brand)";
-                labelEl.style.fontWeight = "bold";
+        // C. Hiển thị kết hợp: "18/12/2025 14:30:45"
+        // Tôi thêm thẻ <br> để ngày nằm trên, giờ nằm dưới cho gọn, hoặc để cùng hàng cũng được.
+        // Ở đây để cùng hàng cho giống style Terminal:
+        document.getElementById('sysClock').innerText = `${dateStr} ${timeStr}`;
+        
+        // Chỉnh lại css font-size một chút bằng JS để chuỗi dài không bị tràn (Optional)
+        document.getElementById('sysClock').style.fontSize = "1rem"; 
+
+        // --- CẬP NHẬT NHÃN UTC ---
+        let labelEl = document.querySelector('[data-i18n="sys_time"]');
+        if(labelEl) {
+            let baseText = translations[currentLang].sys_time;
+            labelEl.innerText = `${baseText} (UTC +${offset})`;
+            labelEl.style.color = "var(--brand)";
+            labelEl.style.fontWeight = "bold";
+        }
+    }
+
+    // 2. Cập nhật X4 Timers (GIỮ NGUYÊN)
+    document.querySelectorAll('.x4-timer-val').forEach(el => {
+        const listDate = el.dataset.list;
+        if(listDate) {
+            const endTime = new Date(listDate).getTime() + (30*24*60*60*1000);
+            const dist = endTime - now.getTime();
+            if(dist < 0) { el.innerText="EXPIRED"; el.style.color='#555'; }
+            else {
+                const d = Math.floor(dist/(1000*60*60*24));
+                const h = Math.floor((dist%(1000*60*60*24))/(1000*60*60));
+                el.innerText = `${d}d ${h}h`;
             }
         }
+    });
 
-        // 2. Cập nhật X4 Timers (GIỮ NGUYÊN)
-        document.querySelectorAll('.x4-timer-val').forEach(el => {
-            const listDate = el.dataset.list;
-            if(listDate) {
-                const endTime = new Date(listDate).getTime() + (30*24*60*60*1000);
-                const dist = endTime - now.getTime();
-                if(dist < 0) { el.innerText="EXPIRED"; el.style.color='#555'; }
-                else {
-                    const d = Math.floor(dist/(1000*60*60*24));
-                    const h = Math.floor((dist%(1000*60*60*24))/(1000*60*60));
-                    el.innerText = `${d}d ${h}h`;
-                }
-            }
-        });
+    // 3. Smart Timer cho Ngày kết thúc (GIỮ NGUYÊN)
+    document.querySelectorAll('.smart-timer').forEach(el => {
+        let endDateStr = el.dataset.end;
+        let endTimeStr = el.dataset.time;
+        if(!endDateStr) return;
 
-        // 3. Smart Timer cho Ngày kết thúc (GIỮ NGUYÊN)
-        document.querySelectorAll('.smart-timer').forEach(el => {
-            let endDateStr = el.dataset.end;
-            let endTimeStr = el.dataset.time;
-            if(!endDateStr) return;
+        let endDateTime = new Date(endDateStr + 'T' + endTimeStr);
+        let diff = endDateTime - now;
 
-            let endDateTime = new Date(endDateStr + 'T' + endTimeStr);
-            let diff = endDateTime - now;
+        if (diff < 0) {
+            el.innerText = "ENDED";
+            el.style.color = 'var(--text-sub)';
+            el.classList.remove('anim-breathe');
+            return;
+        }
 
-            if (diff < 0) {
-                el.innerText = "ENDED";
-                el.style.color = 'var(--text-sub)';
-                el.classList.remove('anim-breathe');
-                return;
-            }
+        let todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
-            let todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        if (endDateStr === todayStr) {
+            let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            let s = Math.floor((diff % (1000 * 60)) / 1000);
+            el.innerText = `${h}h ${m}m ${s}s`;
+            el.style.color = 'var(--brand)';
+            el.classList.add('anim-breathe');
+        } else {
+            el.innerText = endDateStr;
+            el.style.color = '';
+            el.classList.remove('anim-breathe');
+        }
+    });
 
-            if (endDateStr === todayStr) {
-                let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                let s = Math.floor((diff % (1000 * 60)) / 1000);
-                el.innerText = `${h}h ${m}m ${s}s`;
-                el.style.color = 'var(--brand)';
-                el.classList.add('anim-breathe');
+    // 4. Đồng hồ trang chi tiết (GIỮ NGUYÊN)
+    if (currentPolyId && document.getElementById('view-predict').style.display === 'block') {
+        let c = compList.find(x => x.db_id == currentPolyId);
+        let timerEl = document.getElementById('pt-time');
+        if (c && c.end && timerEl) {
+            let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
+            let dist = endTime - now.getTime();
+            if (dist < 0) {
+                timerEl.innerText = "MARKET CLOSED";
+                timerEl.className = "text-danger font-num fw-bold fs-3";
             } else {
-                el.innerText = endDateStr;
-                el.style.color = '';
-                el.classList.remove('anim-breathe');
-            }
-        });
-
-        // 4. Đồng hồ trang chi tiết (GIỮ NGUYÊN)
-        if (currentPolyId && document.getElementById('view-predict').style.display === 'block') {
-            let c = compList.find(x => x.db_id == currentPolyId);
-            let timerEl = document.getElementById('pt-time');
-            if (c && c.end && timerEl) {
-                let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
-                let dist = endTime - now.getTime();
-                if (dist < 0) {
-                    timerEl.innerText = "MARKET CLOSED";
-                    timerEl.className = "text-danger font-num fw-bold fs-3";
-                } else {
-                    let d = Math.floor(dist / (1000 * 60 * 60 * 24));
-                    let h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    let m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
-                    timerEl.innerText = `${d}d : ${h}h : ${m}m`;
-                    timerEl.className = "text-gold font-num fw-bold fs-3 anim-breathe";
-                }
+                let d = Math.floor(dist / (1000 * 60 * 60 * 24));
+                let h = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                let m = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
+                timerEl.innerText = `${d}d : ${h}h : ${m}m`;
+                timerEl.className = "text-gold font-num fw-bold fs-3 anim-breathe";
             }
         }
     }
+}
 
 
 /* ============================================================
