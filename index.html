@@ -3822,10 +3822,10 @@ function renderMarketHealthTable() {
     }
 
        // --- [FIXED] UPDATE DATA FOR NEW COCKPIT UI ---
-// --- UPDATE DATA CHO GIAO DIỆN PRO COMMANDER V3 ---
+// --- [FIXED] UPDATE DATA & BUTTON STATE (ĐỒNG BỘ GIỜ UTC) ---
 function updateTerminalData(id) {
     let c = compList.find(x => x.db_id == id); if(!c) return;
-
+    
     // 1. Header Info
     document.getElementById('pt-symbol').innerText = c.name;
     let logoEl = document.getElementById('pt-logo');
@@ -3834,31 +3834,35 @@ function updateTerminalData(id) {
     // 2. Control Panel Data
     let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length-1].target : 0;
     document.getElementById('pt-min-vol').innerText = fmtNum(curMin);
-
+    
     let totalPool = (c.predictions?.length || 0) * PREDICT_FEE;
     document.getElementById('pt-pool').innerText = fmt(totalPool);
 
-    // 3. Time Remaining logic
+    // 3. LOGIC TIME REMAINING & BUTTON STATE (QUAN TRỌNG)
     let isEnded = false;
     if(c.end) {
-        let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
-        let dist = endTime - Date.now();
-        if(dist < 0) isEnded = true;
-        // (Logic đồng hồ đếm ngược được xử lý bởi hàm updateClock chạy mỗi giây)
+        // [FIX] Thêm 'Z' để tính theo giờ UTC chuẩn (Khớp với openInputModal)
+        let endString = c.end + 'T' + (c.endTime || '23:59:59') + 'Z';
+        let endTime = new Date(endString).getTime();
+        
+        // Chỉ khi nào thời gian hiện tại VƯỢT QUÁ giờ kết thúc thì mới khóa
+        if(Date.now() > endTime) isEnded = true;
     }
 
-    // 4. Update Nút PREDICT (Quan trọng)
+    // 4. Update Nút PREDICT
     let btn = document.getElementById('btn-predict-action');
     if(isEnded) {
         btn.innerHTML = '<span>MARKET CLOSED</span> <i class="fas fa-lock"></i>';
-        btn.disabled = true;
+        btn.classList.add('btn-ended'); // Thêm class xám màu nếu cần
+        btn.disabled = true; // Khóa nút
     } else {
         btn.innerHTML = '<span>ENTER PREDICTION</span> <i class="fas fa-bolt"></i>';
-        btn.disabled = false;
-        btn.onclick = openInputModal;
+        btn.classList.remove('btn-ended');
+        btn.disabled = false; // Mở khóa nút
+        btn.onclick = openInputModal; // Gán lại sự kiện click
     }
 
-    // 5. Change Indicator
+    // 5. Change Indicator (Giữ nguyên)
     let changeHtml = '';
     if (c.history && c.history.length >= 2) {
         let todayVal = parseFloat(c.history[c.history.length - 1].target);
@@ -3871,17 +3875,17 @@ function updateTerminalData(id) {
     }
     document.getElementById('pt-vol-change').innerHTML = changeHtml;
 
-    // 6. Vẽ Chart (Full Height)
+    // 6. Vẽ Chart (Giữ nguyên)
     if(!marketChart) {
         let ctx = document.getElementById('marketChart').getContext('2d');
         let labels=[], data=[];
         if(c.history) c.history.forEach(h=>{ labels.push(h.date.substring(5)); data.push(h.target); });
-
+        
         marketChart = new Chart(ctx, { 
-            type: 'line', 
-            data: { labels, datasets: [{ 
-                label: 'Min Vol', data, borderColor: '#00F0FF', 
-                backgroundColor: (context) => {
+             type: 'line', 
+             data: { labels, datasets: [{ 
+                 label: 'Min Vol', data, borderColor: '#00F0FF', 
+                 backgroundColor: (context) => {
                     const ctx = context.chart.ctx;
                     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
                     gradient.addColorStop(0, 'rgba(0, 240, 255, 0.2)');
@@ -3889,17 +3893,17 @@ function updateTerminalData(id) {
                     return gradient;
                 },
                 fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6 
-            }]}, 
-            options: { 
-                responsive: true, maintainAspectRatio: false, // Quan trọng: Cho phép chart co giãn theo khung cha
-                interaction: { intersect: false, mode: 'index' },
-                scales: { 
-                    x:{ display:true, grid:{display:false}, ticks:{color:'#555', font:{size:9}} }, 
-                    y:{ grid:{color:'#222', borderDash:[5,5]}, ticks:{color:'#666', font:{family:'Rajdhani'}} } 
-                }, 
-                plugins:{ legend:{display:false} } 
-            } 
-        });
+             }]}, 
+             options: { 
+                 responsive: true, maintainAspectRatio: false, 
+                 interaction: { intersect: false, mode: 'index' },
+                 scales: { 
+                     x:{ display:true, grid:{display:false}, ticks:{color:'#555', font:{size:9}} }, 
+                     y:{ grid:{color:'#222', borderDash:[5,5]}, ticks:{color:'#666', font:{family:'Rajdhani'}} } 
+                 }, 
+                 plugins:{ legend:{display:false} } 
+             } 
+         });
     } else {
         let labels=[], data=[];
         if(c.history) c.history.forEach(h=>{ labels.push(h.date.substring(5)); data.push(h.target); });
@@ -3910,57 +3914,80 @@ function updateTerminalData(id) {
 
     // 7. Leaderboard & Chat (Giữ nguyên logic cũ nhưng trỏ ID mới)
     let lb = document.getElementById('pt-leaderboard');
-    lb.innerHTML = '';
-    let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
-    
-    if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
-    
-    preds.forEach((p, i) => {
-        let rank = i+1;
-        let color = rank===1?'#FFD700':(rank===2?'#C0C0C0':(rank===3?'#CD7F32':'#666'));
-        lb.innerHTML += `<tr><td class="ps-3 align-middle"><span style="color:${color}; font-weight:800">#${rank}</span></td><td class="align-middle"><div class="d-flex align-items-center gap-2"><img src="${p.avatar||'https://placehold.co/20'}" style="width:20px;height:20px;border-radius:50%"><span class="text-white small fw-bold">${p.name}</span></div></td><td class="text-end pe-3 align-middle font-num text-brand fw-bold">${fmtNum(p.guess)}</td></tr>`;
-    });
+    if(lb) {
+        lb.innerHTML = '';
+        let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
+        
+        if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
+        
+        preds.forEach((p, i) => {
+            let rank = i+1;
+            let color = rank===1?'#FFD700':(rank===2?'#C0C0C0':(rank===3?'#CD7F32':'#666'));
+            lb.innerHTML += `<tr><td class="ps-3 align-middle"><span style="color:${color}; font-weight:800">#${rank}</span></td><td class="align-middle"><div class="d-flex align-items-center gap-2"><img src="${p.avatar||'https://placehold.co/20'}" style="width:20px;height:20px;border-radius:50%"><span class="text-white small fw-bold">${p.name}</span></div></td><td class="text-end pe-3 align-middle font-num text-brand fw-bold">${fmtNum(p.guess)}</td></tr>`;
+        });
+    }
 
     let chatDiv = document.getElementById('chat-feed');
-    chatDiv.innerHTML = '';
-    (c.comments || []).sort((a,b)=>a.time-b.time).forEach(m => {
-        let isMe = m.user === (userProfile?.nickname || currentUser?.email.split('@')[0]);
-        chatDiv.innerHTML += `<div class="mb-2 d-flex ${isMe?'justify-content-end':''}"><div style="background:${isMe?'var(--brand)':'#222'}; color:${isMe?'#000':'#ddd'}; padding:5px 10px; border-radius:10px; font-size:0.8rem; max-width:85%"><div class="fw-bold" style="font-size:0.65rem; opacity:0.7; margin-bottom:2px">${m.user}</div>${DOMPurify.sanitize(m.text)}</div></div>`;
-    });
-    chatDiv.scrollTop = chatDiv.scrollHeight;
+    if(chatDiv) {
+        chatDiv.innerHTML = '';
+        (c.comments || []).sort((a,b)=>a.time-b.time).forEach(m => {
+            let isMe = m.user === (userProfile?.nickname || currentUser?.email.split('@')[0]);
+            chatDiv.innerHTML += `<div class="mb-2 d-flex ${isMe?'justify-content-end':''}"><div style="background:${isMe?'var(--brand)':'#222'}; color:${isMe?'#000':'#ddd'}; padding:5px 10px; border-radius:10px; font-size:0.8rem; max-width:85%"><div class="fw-bold" style="font-size:0.65rem; opacity:0.7; margin-bottom:2px">${m.user}</div>${DOMPurify.sanitize(m.text)}</div></div>`;
+        });
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
 }
 
     function openInputModal() {
-        let c = compList.find(x => x.db_id == currentPolyId);
+    // [SAFETY 1] Kiểm tra xem đã chọn giải đấu chưa
+    if (!currentPolyId) return showToast("System Error: No Tournament Selected", "error");
 
-        // CHECK LOCK TIME (6 hours before end)
-        if(c.end) {
-            let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
-            let lockTime = endTime - (6 * 3600 * 1000);
-
-            if(Date.now() > endTime) return showToast("Tournament has ENDED!", "error");
-            if(Date.now() > lockTime) return showToast("Prediction Gate CLOSED (6 hours before end).", "error");
-        }
-
-        if(!currentUser) { showToast("Please login to predict!", "error"); return; }
-
-        // CHECK BALANCE
-        if((userProfile.balance_usdt || 0) < PREDICT_FEE) {
-            return showToast(`Insufficient Balance! You need ${PREDICT_FEE} USDT.`, "error");
-        }
-
-        let displayName = userProfile?.nickname || currentUser.email.split('@')[0];
-        document.getElementById('modal-p-name').value = displayName;
-        document.getElementById('modal-p-name').disabled = true;
-        document.getElementById('modal-p-guess').placeholder = `Fee: ${PREDICT_FEE} USDT`;
-
-        new bootstrap.Modal(document.getElementById('inputModal')).show();
+    let c = compList.find(x => x.db_id == currentPolyId);
+    
+    // [SAFETY 2] Quan trọng: Nếu không tìm thấy dữ liệu giải -> Báo lỗi chứ không để Crash
+    if (!c) {
+        console.error("Data missing for ID: " + currentPolyId);
+        return showToast("Data not ready. Please reload page!", "error");
     }
 
-    async function submitPredictionFromModal() {
+    // --- LOGIC KHÓA CỔNG (Theo giờ chuẩn UTC) ---
+    if(c.end) {
+        // Thêm 'Z' để máy hiểu là giờ UTC
+        let endString = c.end + 'T' + (c.endTime || '23:59:59') + 'Z';
+        let endTime = new Date(endString).getTime();
+        
+        // Chỉ chặn nếu giờ hiện tại ĐÃ VƯỢT QUÁ giờ kết thúc
+        if(Date.now() > endTime) {
+            return showToast("⛔ Tournament has ENDED! Prediction closed.", "error");
+        }
+    }
+    // ---------------------------------------------
+
+    if(!currentUser) { showToast("Please login to predict!", "error"); return; }
+    
+    // CHECK BALANCE
+    if((userProfile.balance_usdt || 0) < PREDICT_FEE) {
+        return showToast(`Insufficient Balance! You need ${PREDICT_FEE} USDT.`, "error");
+    }
+
+    let displayName = userProfile?.nickname || currentUser.email.split('@')[0];
+    let nameInput = document.getElementById('modal-p-name');
+    if(nameInput) {
+        nameInput.value = displayName;
+        nameInput.disabled = true;
+    }
+    
+    let guessInput = document.getElementById('modal-p-guess');
+    if(guessInput) guessInput.placeholder = `Fee: ${PREDICT_FEE} USDT`;
+
+    new bootstrap.Modal(document.getElementById('inputModal')).show();
+}
+
+async function submitPredictionFromModal() {
     let nameInput = document.getElementById('modal-p-name');
     let guessInput = document.getElementById('modal-p-guess');
-
+    
+    // Validate dữ liệu đầu vào
     let name = nameInput.value.trim();
     let guess = parseFloat(guessInput.value);
 
@@ -3968,12 +3995,14 @@ function updateTerminalData(id) {
     if(!name) return showToast("Nickname required", "error");
     if(isNaN(guess) || guess < 0) return showToast("Invalid Prediction Volume", "error");
 
+    // Hiệu ứng nút bấm
     let btn = document.querySelector('#inputModal .btn-action');
     let oldText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> PROCESSING...';
     btn.disabled = true;
 
     try {
+        // Gọi RPC Supabase
         const { data, error } = await supabase.rpc('submit_prediction_action', {
             p_tourn_id: parseInt(currentPolyId),
             p_guess: guess,
@@ -3984,7 +4013,7 @@ function updateTerminalData(id) {
         if (error) throw error;
         if (data && data.status === 'error') throw new Error(data.message);
 
-        // Update Balance UI
+        // Update số dư ngay lập tức
         if(data && data.new_balance !== undefined) {
             userProfile.balance_usdt = data.new_balance;
             document.getElementById('user-balance').innerText = fmtNum(data.new_balance);
@@ -3992,19 +4021,19 @@ function updateTerminalData(id) {
 
         showToast(`🚀 ENTRY CONFIRMED! (-${PREDICT_FEE} USDT)`, "success");
         playSfx('click');
-
+        
+        // Đóng Modal
         bootstrap.Modal.getInstance(document.getElementById('inputModal')).hide();
 
-        // --- KHÚC QUAN TRỌNG: CẬP NHẬT MƯỢT MÀ ---
-
-        // 1. Cập nhật lại số tiền tổng bên ngoài (không ảnh hưởng giao diện)
+        // --- CẬP NHẬT GIAO DIỆN (MƯỢT MÀ) ---
+        // 1. Cập nhật lại thanh thống kê Pool bên ngoài
         renderStats();
 
-        // 2. Cập nhật bảng xếp hạng MƯỢT (Không load lại cả khung)
+        // 2. Gọi hàm Reload An Toàn (Đã sửa ở trên)
         if(currentPolyId) await silentReload(currentPolyId);
 
-        // 3. Hiện bảng khoe thành tích
-        setTimeout(() => {
+        // 3. Hiện bảng khoe thành tích (Share Card)
+        setTimeout(() => { 
              generateShareCard(guess);
         }, 800);
 
@@ -4013,8 +4042,11 @@ function updateTerminalData(id) {
         showToast("Error: " + e.message, "error");
         playSfx('hover');
     } finally {
-        btn.innerHTML = oldText;
-        btn.disabled = false;
+        // Trả lại trạng thái nút bấm
+        if(btn) {
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
     }
 }
 
@@ -5065,55 +5097,54 @@ function updateClock() {
 /* ============================================================
    V47: SILENT RELOAD (CẬP NHẬT MƯỢT MÀ KHÔNG NHÁY MÀN HÌNH)
    ============================================================ */
+// --- [FIXED] HÀM CẬP NHẬT NGẦM AN TOÀN (SAFE RELOAD) ---
 async function silentReload(id) {
-    // 1. Âm thầm lấy dữ liệu mới từ Server
-    const { data: predsData, error } = await supabase
-        .from('predictions')
-        .select('*')
-        .eq('tournament_id', id);
-
+    // 1. Âm thầm lấy dữ liệu mới
+    const { data: predsData, error } = await supabase.from('predictions').select('*').eq('tournament_id', id);
     if (error) return console.error(error);
 
-    // 2. Cập nhật dữ liệu vào bộ nhớ đệm
+    // 2. Cập nhật dữ liệu vào bộ nhớ
     let c = compList.find(x => x.db_id == id);
     if (c && predsData) {
         c.predictions = predsData.map(p => ({
-            user_id: p.user_id,
-            name: p.user_name,
-            avatar: p.user_avatar,
-            guess: parseFloat(p.guess),
-            time: new Date(p.created_at).getTime()
+            user_id: p.user_id, name: p.user_name, avatar: p.user_avatar,
+            guess: parseFloat(p.guess), time: new Date(p.created_at).getTime()
         }));
 
-        // 3. Cập nhật lại Tổng Pool và Min Volume
+        // 3. Cập nhật Pool & Min Vol (Chỉ update nếu tìm thấy ID trên màn hình)
         let pool = (c.predictions.length || 0) * PREDICT_FEE;
-        document.getElementById('pt-pool').innerText = fmt(pool);
+        let poolEl = document.getElementById('pt-pool');
+        if(poolEl) poolEl.innerText = fmt(pool);
 
         let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length - 1].target : 0;
 
-        // 4. Vẽ lại Bảng xếp hạng (Leaderboard) nhẹ nhàng
+        // 4. Cập nhật Bảng Xếp Hạng (Leaderboard) - QUAN TRỌNG: CÓ KIỂM TRA TỒN TẠI
         let lb = document.getElementById('pt-leaderboard');
-        lb.innerHTML = ''; // Chỉ xóa nội dung bảng, không xóa cả khung
+        if (lb) { 
+            lb.innerHTML = ''; 
+            let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
+            
+            if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
 
-        let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
+            preds.forEach((p, i) => {
+                let badgeHtml = i < 3 ? `<span class="rank-badge rank-${i + 1}">${i + 1}</span>` : `<span class="rank-badge">${i + 1}</span>`;
+                let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0, 1).toUpperCase()}</div>`;
+                
+                // Highlight dòng của chính mình
+                let myName = document.getElementById('modal-p-name')?.value || '';
+                let highlightClass = (p.name === myName) ? 'anim-breathe' : '';
 
-        preds.forEach((p, i) => {
-            let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0, 1).toUpperCase()}</div>`;
-            let badgeHtml = i < 3 ? `<span class="rank-badge rank-${i + 1}">${i + 1}</span>` : `<span class="rank-badge">${i + 1}</span>`;
-
-            // Hiệu ứng nhấp nháy nhẹ cho dòng của chính mình vừa mới thêm
-            let highlightClass = (p.name === document.getElementById('modal-p-name').value) ? 'anim-breathe' : '';
-
-            lb.innerHTML += `<tr class="${highlightClass}"><td class="ps-4">${badgeHtml}</td><td>${avatarHtml}<span class="fw-bold text-white">${p.name}</span></td><td class="text-end pe-4 text-brand font-num fw-bold">${fmtNum(p.guess)}</td></tr>`;
-        });
-
-        // 5. Cập nhật Activity Feed
+                lb.innerHTML += `<tr class="${highlightClass}"><td class="ps-4">${badgeHtml}</td><td>${avatarHtml}<span class="fw-bold text-white">${p.name}</span></td><td class="text-end pe-4 text-brand font-num fw-bold">${fmtNum(p.guess)}</td></tr>`;
+            });
+        }
+        
+        // 5. [FIX] Bỏ qua cập nhật 'content-activity' vì giao diện mới không dùng nữa
+        // (Hoặc nếu bạn muốn dùng lại sau này, hãy thêm if(actDiv) như dưới đây)
         let actDiv = document.getElementById('content-activity');
-        actDiv.innerHTML = '';
-        (c.predictions || []).sort((a,b)=>b.time-a.time).forEach(p => {
-            let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="act-avatar">` : `<i class="fas fa-bolt text-gold me-3 fa-lg"></i>`;
-            actDiv.innerHTML += `<div class="act-item d-flex align-items-center mb-2">${avatarHtml}<div><span class="text-white fw-bold">${p.name}</span> predicted <span class="text-brand font-num">${fmtNum(p.guess)}</span> <div class="text-sub small">${new Date(p.time).toLocaleTimeString()}</div></div></div>`;
-        });
+        if (actDiv) {
+            actDiv.innerHTML = '';
+            // Logic cũ nếu cần...
+        }
     }
 }
 
@@ -5452,36 +5483,48 @@ function switchView(view) {
     }
 }
 
-// --- [V64 FINAL] MINI CHART: INTERACTIVE DOTS (DỄ BẤM HƠN) ---
+// --- [V75 FINAL LOGIC] CHART: SMART TOOLTIP (CHỈ HIỆN EST. FINAL Ở CỘT CUỐI) ---
 function renderCardMiniChart(c) {
     const ctx = document.getElementById(`miniChart-${c.db_id}`);
     if (!ctx) return;
 
-    // 1. CHUẨN BỊ DỮ LIỆU
     let now = new Date();
+
+    // 1. TÍNH TOÁN DATA & THỜI GIAN
+    let tournamentEndTime = null;
     let isEnded = false;
     if (c.end) {
-        // Thêm 'Z' chuẩn UTC
-        let endDateTime = new Date(c.end + 'T' + (c.endTime || '23:59:59') + 'Z');
-        if (now > endDateTime) isEnded = true;
+        tournamentEndTime = new Date(c.end + 'T' + (c.endTime || '23:59:59') + 'Z');
+        if (now > tournamentEndTime) isEnded = true;
     }
+
+    let todayMidnight = new Date();
+    todayMidnight.setUTCHours(23, 59, 59, 999);
+    let projectionTargetTime = todayMidnight;
+    
+    if (tournamentEndTime && tournamentEndTime < todayMidnight) {
+        projectionTargetTime = tournamentEndTime;
+    }
+
+    let secondsRemaining = (projectionTargetTime - now) / 1000;
+    if (secondsRemaining < 0) secondsRemaining = 0;
+    if (isEnded) secondsRemaining = 0;
 
     let anchorDate = new Date();
-    // Logic Anchor Date giữ nguyên
     if (isEnded && c.end) {
         let parts = c.end.split('-'); 
-        anchorDate = new Date(parts[0], parts[1]-1, parts[2]);
+        anchorDate = new Date(Date.UTC(parts[0], parts[1]-1, parts[2], 12, 0, 0));
+    } else {
+        anchorDate.setUTCHours(12, 0, 0, 0);
     }
-    anchorDate.setHours(12, 0, 0, 0);
-    
-    // Ngày thực tế hôm nay (Local String để so sánh)
-    let realTodayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
 
+    let todayStr = now.toISOString().split('T')[0];
     let adminHistory = c.history || [];
     let realHistory = c.real_vol_history || [];
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
-
-    let labels = [], targetData = [], limitVolData = [];
+    
+    let labels = [];
+    let limitVolData = [], projectedData = [], targetData = [];
     let accDatasets = {}; 
     accSettings.forEach(acc => accDatasets[acc.id] = []);
 
@@ -5489,35 +5532,42 @@ function renderCardMiniChart(c) {
         let d = new Date(anchorDate);
         d.setDate(anchorDate.getDate() - i);
         let dStr = d.toISOString().split('T')[0];
+        
         if(c.start && dStr < c.start) continue;
+        labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-        labels.push(d.getDate() + '/' + (d.getMonth()+1));
-
-        // A. Limit Vol
+        // Limit Vol
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
         if (rItem) rVal = parseFloat(rItem.vol);
-        else if (dStr === realTodayStr) rVal = parseFloat(c.real_alpha_volume || 0);
+        else if (dStr === todayStr) rVal = parseFloat(c.real_alpha_volume || 0);
         limitVolData.push(rVal);
 
-        // B. Target & User Lines
-        let shouldHideLine = (dStr === realTodayStr && !isEnded);
+        // Forecast Vol (Chỉ tính cho hôm nay)
+        let projVal = 0;
+        if (dStr === todayStr && !isEnded && secondsRemaining > 0) {
+            let stableSpeed = 0;
+            if (c.market_analysis && c.market_analysis.realTimeVol) {
+                stableSpeed = parseFloat(c.market_analysis.realTimeVol);
+            }
+            if (stableSpeed > 0) projVal = stableSpeed * secondsRemaining;
+        }
+        projectedData.push(projVal);
 
-        if (shouldHideLine) {
-            targetData.push(null);
+        // Target
+        let tVal = 0;
+        let hItem = adminHistory.find(h => h.date === dStr);
+        if(hItem) tVal = parseFloat(hItem.target);
+        else {
+            let prev = adminHistory.filter(h => h.date < dStr).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+            if(prev) tVal = parseFloat(prev.target);
+        }
+        
+        if (dStr === todayStr && !isEnded) {
+            targetData.push(null); 
             accSettings.forEach(acc => accDatasets[acc.id].push(null));
         } else {
-            // Target
-            let tVal = 0;
-            let hItem = adminHistory.find(h => h.date === dStr);
-            if(hItem) tVal = parseFloat(hItem.target);
-            else {
-                let prev = adminHistory.filter(h => h.date < dStr).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
-                if(prev) tVal = parseFloat(prev.target);
-            }
             targetData.push(tVal);
-
-            // User Accs
             let pItem = myProgress.find(p => p.date === dStr);
             accSettings.forEach(acc => {
                 let vVal = 0;
@@ -5525,139 +5575,152 @@ function renderCardMiniChart(c) {
                 else {
                     let prevP = myProgress.filter(p => p.date < dStr).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
                     if(prevP && prevP.accsDetail && prevP.accsDetail[acc.id]) vVal = parseFloat(prevP.accsDetail[acc.id].vol);
+                    else vVal = null;
                 }
                 accDatasets[acc.id].push(vVal);
             });
         }
     }
 
-    // 2. CẤU HÌNH DATASETS (CÓ DẤU CHẤM TRÒN)
-    let chartDatasets = [];
+    // 2. CHECK & UPDATE
+    let existingChart = Chart.getChart(`miniChart-${c.db_id}`);
+    if (existingChart) {
+        existingChart.data.labels = labels;
+        existingChart.data.datasets[0].data = limitVolData;
+        existingChart.data.datasets[1].data = projectedData;
+        existingChart.data.datasets[2].data = targetData;
+        accSettings.forEach((acc, index) => {
+            if(existingChart.data.datasets[3 + index]) {
+                existingChart.data.datasets[3 + index].data = accDatasets[acc.id];
+            }
+        });
+        if(typeof updateGridInfo === 'function') updateGridInfo(c, targetData, accDatasets);
+        existingChart.update('none'); 
+        return; 
+    }
 
-    // Lớp 1: Cột Limit Vol
-    chartDatasets.push({
-        type: 'bar',
-        label: 'Limit Vol',
-        data: limitVolData,
-        backgroundColor: 'rgba(0, 240, 255, 0.15)',
-        borderColor: 'rgba(0, 240, 255, 0.0)',
-        borderRadius: 4,
-        barPercentage: 0.6,
-        categoryPercentage: 0.8,
-        order: 3,
-        yAxisID: 'y_limit'
-    });
+    // 3. DRAW NEW CHART
+    let chartDatasets = [
+        {
+            type: 'bar', label: 'Current', 
+            data: limitVolData,
+            backgroundColor: (context) => {
+                const ctx = context.chart.ctx;
+                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, 'rgba(0, 240, 255, 0.9)');
+                gradient.addColorStop(1, 'rgba(0, 240, 255, 0.1)');
+                return gradient;
+            },
+            borderRadius: 4, order: 3, stack: 'volStack', yAxisID: 'y_limit'
+        },
+        {
+            type: 'bar', label: 'Forecast (+)', 
+            data: projectedData,
+            backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+            borderColor: 'rgba(255, 255, 255, 0.5)',
+            borderWidth: {top: 2, right: 2, left: 2, bottom: 0}, 
+            borderDash: [4, 4],
+            borderRadius: 4, order: 3, stack: 'volStack', yAxisID: 'y_limit'
+        },
+        {
+            type: 'line', label: 'Target', data: targetData,
+            borderColor: '#F0B90B', borderWidth: 2, borderDash: [3, 3],
+            pointRadius: 2, pointHoverRadius: 5, pointBackgroundColor: '#000', pointBorderColor: '#F0B90B',
+            pointBorderWidth: 2, pointHitRadius: 10, 
+            fill: false, tension: 0.3, order: 2, yAxisID: 'y_user'
+        }
+    ];
 
-    // Lớp 2: Target Line
-    chartDatasets.push({
-        type: 'line',
-        label: 'Target',
-        data: targetData,
-        borderColor: '#F0B90B',
-        borderWidth: 2,
-        borderDash: [3, 3],
-        
-        // --- [NEW] CẤU HÌNH DẤU CHẤM CHO TARGET ---
-        pointRadius: 2,          // Hiện chấm nhỏ (2px)
-        pointHoverRadius: 5,     // Phóng to khi hover (5px)
-        pointBackgroundColor: '#000', // Nền đen để tách biệt với đường kẻ
-        pointBorderColor: '#F0B90B',
-        pointBorderWidth: 2,
-        pointHitRadius: 10,      // Vùng cảm ứng rộng 10px (Dễ bấm)
-        
-        fill: false,
-        tension: 0.4,
-        order: 2,
-        yAxisID: 'y_user',
-        spanGaps: false
-    });
-
-    // Lớp 3: User Lines
     accSettings.forEach(acc => {
         chartDatasets.push({
-            type: 'line',
-            label: acc.name,
-            data: accDatasets[acc.id],
-            borderColor: acc.color,
-            backgroundColor: hexToRgba(acc.color, 0.1),
-            borderWidth: 2,
-            
-            // --- [NEW] CẤU HÌNH DẤU CHẤM CHO USER ---
-            pointRadius: 3,          // Chấm to hơn Target chút (3px)
-            pointHoverRadius: 6,     // Phóng to rõ khi hover (6px)
-            pointBackgroundColor: '#161a1e', // Trùng màu nền thẻ
-            pointBorderColor: acc.color,
-            pointBorderWidth: 2,
-            pointHitRadius: 15,      // Vùng cảm ứng rộng 15px (Rất dễ bấm trên mobile)
-            
-            fill: true,
-            tension: 0.4,
-            order: 1,
-            yAxisID: 'y_user',
-            spanGaps: false
+            type: 'line', label: acc.name, data: accDatasets[acc.id],
+            borderColor: acc.color, backgroundColor: hexToRgba(acc.color, 0.1), borderWidth: 2,
+            pointRadius: 3, pointHoverRadius: 6, pointBackgroundColor: '#161a1e', pointBorderColor: acc.color,
+            pointBorderWidth: 2, pointHitRadius: 15,
+            fill: false, tension: 0.3, order: 1, yAxisID: 'y_user'
         });
     });
 
-    // 3. VẼ CHART
     new Chart(ctx, {
         data: { labels: labels, datasets: chartDatasets },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            // [QUAN TRỌNG] Interaction Mode: Index
-            interaction: {
-                mode: 'index',    // Rê chuột vào 1 điểm X, hiện tất cả số liệu của cột dọc đó
-                intersect: false, // Không cần chạm chính xác vào chấm, chỉ cần cùng trục dọc
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    // Cấu hình Tooltip đẹp
-                    backgroundColor: 'rgba(22, 26, 30, 0.95)',
+            responsive: true, maintainAspectRatio: false,
+            animation: false,
+            interaction: { mode: 'index', intersect: false, axis: 'x' },
+            plugins: { 
+                legend: { display: false }, 
+                tooltip: { 
+                    backgroundColor: 'rgba(22, 26, 30, 0.95)', 
                     titleColor: '#888',
-                    bodyFont: { family: 'Rajdhani', size: 12 },
                     padding: 10,
                     cornerRadius: 6,
-                    displayColors: true,
+                    displayColors: true, 
                     callbacks: {
                         label: function(ctx) {
-                            let val = ctx.raw;
-                            if (val === null) return null;
-                            
-                            // Format số nguyên, không lấy số lẻ
+                            let val = ctx.raw; if (!val) return null;
                             let valStr = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(val);
                             
-                            if(ctx.dataset.type === 'bar') return ` Limit Vol: $${valStr}`;
+                            // Chỉ hiện Text, bỏ Icon
+                            if (ctx.dataset.label === 'Current') return ` Current: $${valStr}`;
+                            if (ctx.dataset.label === 'Forecast (+)') return ` Forecast: +$${valStr}`;
+                            
                             return ` ${ctx.dataset.label}: ${valStr}`;
+                        },
+                        footer: function(tooltipItems) {
+                            let total = 0; 
+                            let forecastVal = 0; // Biến kiểm tra xem có dự báo không
+                            
+                            tooltipItems.forEach(t => { 
+                                if(t.dataset.stack === 'volStack') { 
+                                    total += t.raw; 
+                                    // Kiểm tra xem cột Forecast của ngày này có giá trị không
+                                    if(t.dataset.label.includes('Forecast')) {
+                                        forecastVal = t.raw;
+                                    }
+                                } 
+                            });
+
+                            // --- [LOGIC MỚI] ---
+                            // Chỉ hiện Est. Final nếu cột Forecast > 0
+                            // (Nghĩa là chỉ hiện ở cột ngày hôm nay khi đang chạy)
+                            // Các ngày quá khứ (forecast = 0) sẽ KHÔNG hiện dòng này nữa.
+                            if (forecastVal > 0) {
+                                return '----------------\n🏁 Est. Final: $' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(total);
+                            }
+                            return '';
                         }
-                    }
+                    } 
                 }
             },
             scales: {
                 x: { display: false },
-                y_user: { type: 'linear', display: false, position: 'left', min: 0 },
-                y_limit: { 
-                    type: 'linear', display: false, position: 'right', min: 0,
-                    suggestedMax: Math.max(...limitVolData) * 1.3 
-                }
+                y_user: { display: false, position: 'left', min: 0 },
+                y_limit: { display: false, position: 'right', min: 0, stacked: true, suggestedMax: Math.max(...limitVolData) * 1.5 }
             },
-            layout: { padding: { left: -5, right: -5, top: 10, bottom: 5 } }
+            layout: { padding: { top: 10, bottom: 5 } }
         }
     });
 
-    // 4. CẬP NHẬT LEGEND BÊN DƯỚI (INFO GRID)
+    if(typeof updateGridInfo === 'function') updateGridInfo(c, targetData, accDatasets);
+}
+
+    
+    // --- HÀM PHỤ: CẬP NHẬT THÔNG SỐ GRID BÊN DƯỚI BIỂU ĐỒ ---
+function updateGridInfo(c, targetData, accDatasets) {
     let accGridEl = document.getElementById(`accGrid-${c.db_id}`);
     
-    // Lấy Target cuối cùng
+    // Tìm giá trị Target mới nhất (bỏ qua null)
     let lastTargetData = targetData.filter(v => v !== null);
     let lastTarget = lastTargetData.length > 0 ? lastTargetData[lastTargetData.length - 1] : 0;
 
     if(accGridEl) {
         let gridHtml = '';
         accSettings.forEach(acc => {
+            // Tìm giá trị User mới nhất (bỏ qua null)
             let validUser = accDatasets[acc.id].filter(v => v !== null);
             let lastUserVal = validUser.length > 0 ? validUser[validUser.length - 1] : 0;
             
+            // Tính khoảng cách Gap
             let gap = lastUserVal - lastTarget;
             let gapColor = gap >= 0 ? 'text-green' : 'text-red';
             let gapIcon = gap >= 0 ? 'fa-caret-up' : 'fa-caret-down';
@@ -5699,7 +5762,23 @@ async function updateCloudWallets() {
     
     console.log("✅ Wallets config synced to Cloud");
 }
+
+// --- [NEW] REALTIME CHART LOOP (TỰ ĐỘNG CẬP NHẬT CHART MỖI 5 GIÂY) ---
+setInterval(() => {
+    // Chỉ cập nhật khi User đang xem tab Dashboard (để tiết kiệm pin)
+    if (document.hidden) return; 
+
+    // Lặp qua tất cả các giải đấu đang có
+    compList.forEach(c => {
+        // Chỉ vẽ lại nếu thẻ đang hiển thị trên màn hình (có canvas)
+        let canvas = document.getElementById(`miniChart-${c.db_id}`);
+        if (canvas) {
+            // Gọi lại hàm vẽ (Nó sẽ tự tính lại thời gian secondsRemaining)
+            renderCardMiniChart(c);
+        }
+    });
+}, 5000); // 5000ms = 5 giây
+
 </script>
 </body>
 </html>
-
