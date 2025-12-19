@@ -3386,10 +3386,10 @@ function renderGrid(customData = null) {
 
 
 
-// --- HÀM CẬP NHẬT SỐ LIỆU (CHẠY REALTIME) ---
+// --- [FIX V65] UPDATE GRID VALUES (REALTIME LIMIT VOL & PRICE) ---
 function updateGridValuesOnly() {
     try {
-        // 1. Cập nhật bảng Market Health (nếu có)
+        // 1. Cập nhật bảng Market Health (Nếu đang mở)
         if (typeof renderMarketHealthTable === 'function' && document.getElementById('healthTableBody')) {
             renderMarketHealthTable();
         }
@@ -3398,14 +3398,14 @@ function updateGridValuesOnly() {
         let topToken = null;
         let totalEstPool = 0;
 
-        // 2. Duyệt qua từng Token để cập nhật
+        // 2. Duyệt qua từng Token để cập nhật thẻ bài
         compList.forEach(c => {
-            // Logic tính toán cơ bản
-            let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59'));
+            // Logic tính toán Pool tổng
+            let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59') + 'Z');
             
-            // Lấy giá mới nhất
+            // Lấy giá mới nhất (Ưu tiên từ Market Analysis nếu có)
             let currentPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
-            if (currentPrice > 0) c.cachedPrice = currentPrice; // Lưu cache
+            if (currentPrice > 0) c.cachedPrice = currentPrice;
 
             let qty = parseFloat(c.rewardQty) || 0;
             let currentTotalVal = qty * currentPrice;
@@ -3418,18 +3418,32 @@ function updateGridValuesOnly() {
                 }
             }
 
-            // --- CẬP NHẬT GIAO DIỆN THẺ BÀI ---
+            // --- TÌM THẺ BÀI CỦA TOKEN NÀY ---
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
+            
             if (cardWrapper) {
-                // A. Cập nhật Volume (Real-time)
-                const volEl = cardWrapper.querySelector('.real-vol-box .font-num');
+                // A. [FIX] CẬP NHẬT LIMIT VOL (REALTIME)
+                // Tìm đúng vị trí Limit Vol trong giao diện mới (Market Bar -> Item đầu tiên)
+                const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
+                
                 if (volEl) {
                     let rv = c.real_alpha_volume || 0;
                     let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                    if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
+                    
+                    // Chỉ cập nhật DOM nếu số liệu thay đổi (để tối ưu hiệu năng)
+                    if(volEl.innerText !== rvStr) {
+                        volEl.innerText = rvStr;
+                        // Hiệu ứng nháy sáng nhẹ để báo hiệu có update
+                        volEl.style.color = '#fff';
+                        volEl.style.textShadow = '0 0 5px #fff';
+                        setTimeout(() => { 
+                            volEl.style.color = ''; // Trả về màu tím nhạt cũ (hoặc màu gốc trong CSS)
+                            volEl.style.textShadow = ''; 
+                        }, 300);
+                    }
                 }
 
-                // B. Cập nhật Giá (Price) - Có hiệu ứng nháy màu xanh
+                // B. CẬP NHẬT GIÁ (PRICE)
                 const priceEl = cardWrapper.querySelector('.live-price-val');
                 if (priceEl && currentPrice > 0) {
                     let pStr = currentPrice < 1 
@@ -3438,19 +3452,14 @@ function updateGridValuesOnly() {
                     
                     if(priceEl.innerText !== pStr) {
                         priceEl.innerText = pStr;
-                        priceEl.style.color = "#00F0FF"; 
-                        priceEl.style.textShadow = "0 0 10px #00F0FF";
-                        setTimeout(() => { 
-                            priceEl.style.color = ""; 
-                            priceEl.style.textShadow = ""; 
-                        }, 500);
+                        priceEl.classList.add('text-brand'); // Màu xanh neon
+                        setTimeout(() => priceEl.classList.remove('text-brand'), 500);
                     }
                 }
 
-                // C. Cập nhật Giá trị ước tính (Reward Value)
+                // C. CẬP NHẬT GIÁ TRỊ ƯỚC TÍNH (REWARD VALUE)
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
-                    // Lấy số lượng từ attribute data-qty (đã gán lúc render)
                     let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
                     let estTotal = estQty * currentPrice;
                     if (estTotal > 0) {
@@ -3460,7 +3469,7 @@ function updateGridValuesOnly() {
             }
         });
 
-        // 3. Cập nhật thanh thống kê (Header)
+        // 3. Cập nhật thanh thống kê (Header Stats)
         const poolEl = document.getElementById('stat-pool');
         if (poolEl) poolEl.innerText = fmt(totalEstPool);
 
@@ -3474,12 +3483,11 @@ function updateGridValuesOnly() {
             if(topImgEl && topToken.logo) { topImgEl.src = topToken.logo; topImgEl.style.display = 'block'; }
         }
 
-        // 4. CẬP NHẬT LỊCH (ĐỂ TỔNG TIỀN TRÊN LỊCH NHẢY THEO GIÁ)
-        // Đây là dòng quan trọng nhất bạn đang thiếu
+        // 4. Cập nhật số liệu trên Lịch
         if (typeof initCalendar === 'function') initCalendar();
 
     } catch (e) {
-        console.error("Lỗi cập nhật giao diện:", e);
+        console.error("Lỗi cập nhật số liệu Realtime:", e);
     }
 }
         
