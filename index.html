@@ -3174,7 +3174,7 @@ async function handleSmartRefresh(isSilent = false) {
 
 
 
-    // --- [V58 FINAL] RENDER GRID: DUAL TIMERS (LEFT & RIGHT) ---
+    // --- [V59 FINAL] RENDER GRID: UTC TIME STANDARD ---
 function renderGrid(customData = null) {
     const grid = document.getElementById('appGrid');
     if(!grid) return;
@@ -3200,13 +3200,18 @@ function renderGrid(customData = null) {
 
     listToRender.forEach(c => {
         try {
-            let status = c.end && new Date() > new Date(c.end + 'T' + (c.endTime||'23:59')) ? 'ended' : 'running';
+            // --- [FIX QUAN TRỌNG] THÊM 'Z' ĐỂ HIỂU LÀ GIỜ UTC ---
+            // Nếu c.endTime thiếu, mặc định là cuối ngày UTC
+            let timeString = (c.endTime || '23:59:59');
+            // Ghép chuỗi chuẩn ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)
+            let endDateTime = new Date(c.end + 'T' + timeString + 'Z');
+
+            let status = endDateTime > now ? 'running' : 'ended';
             let cardClass = status === 'ended' ? 'tour-card ended-card' : 'tour-card';
             
-            // --- 1. ĐỒNG HỒ KẾT THÚC GIẢI (HIỂN THỊ BÊN TRÁI) ---
+            // --- 1. ĐỒNG HỒ KẾT THÚC GIẢI (BÊN TRÁI) ---
             let tourTimerHtml = '';
             if(c.end) {
-                let endDateTime = new Date(c.end + 'T' + (c.endTime || '23:59:59'));
                 let diff = endDateTime - now;
                 let tText = "Ended";
                 
@@ -3215,51 +3220,50 @@ function renderGrid(customData = null) {
                     let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     
-                    // Logic hiển thị: Nếu còn > 0 ngày thì hiện Ngày + Giờ, ngược lại hiện Giờ + Phút
                     if (d > 0) tText = `${d}d ${h}h`; 
                     else tText = `${h}h ${m}m`;
                 }
                 
-                // Màu sắc cảnh báo sắp hết giờ giải
                 let tColor = (diff < 86400000 && diff > 0) ? '#F6465D' : '#999'; 
-                
                 tourTimerHtml = `<div class="tour-end-timer" style="color:${tColor}"><i class="far fa-clock" style="font-size:0.6rem"></i> ${tText}</div>`;
             }
 
-            // --- 2. ĐỒNG HỒ KHUYẾN MÃI X4/X2 (HIỂN THỊ BÊN PHẢI) ---
+            // --- 2. ĐỒNG HỒ KHUYẾN MÃI X4/X2 (BÊN PHẢI) ---
             let promoTimerHtml = '';
             let isListingExpired = false;
 
-            // Kiểm tra xem có ngày Listing và có loại Alpha (x4/x2) không
             if (c.listingTime && c.alphaType !== 'none') {
-                // Tính thời hạn 30 ngày kể từ ngày Listing
-                let listingDate = new Date(c.listingTime);
-                let expiryDate = new Date(listingDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // +30 ngày
+                // Listing Time trong DB thường lưu dạng "YYYY-MM-DDTHH:mm" (Local input)
+                // Ta cũng nên thêm 'Z' nếu muốn chuẩn UTC, hoặc để tự nhiên nếu muốn tính theo giờ máy admin.
+                // Tốt nhất là chuẩn hóa UTC luôn:
+                let listingDate = new Date(c.listingTime + 'Z'); 
+                // Nếu input datetime-local không có giây, + 'Z' vẫn chạy tốt.
+                
+                // Fallback nếu ngày bị lỗi (do input cũ không đúng chuẩn)
+                if(isNaN(listingDate.getTime())) listingDate = new Date(c.listingTime);
+
+                let expiryDate = new Date(listingDate.getTime() + (30 * 24 * 60 * 60 * 1000)); 
                 let diff = expiryDate - now;
 
                 if (diff > 0) {
                     let d = Math.floor(diff / (1000 * 60 * 60 * 24));
                     let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    // Chỉ hiện nếu còn hạn
-                    promoTimerHtml = `<div class="promo-timer" title="X4/X2 Promo expires in"><i class="fas fa-bolt" style="font-size:0.6rem"></i> ${d}d ${h}h</div>`;
+                    promoTimerHtml = `<div class="promo-timer" title="Promo expires in"><i class="fas fa-bolt" style="font-size:0.6rem"></i> ${d}d ${h}h</div>`;
                 } else {
-                    isListingExpired = true; // Đã hết hạn X4
+                    isListingExpired = true; 
                 }
             }
             
-            // Nếu giải đã kết thúc thì cũng coi như hết hạn Promo (để làm mờ tag)
             if (status === 'ended') isListingExpired = true;
 
-
-            // --- XỬ LÝ TAG HTML (DỰA TRÊN TRẠNG THÁI HẾT HẠN) ---
+            // TAGS & RULES
             let tagHtml = '';
             if (!isListingExpired) {
                 if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
                 else if (c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2">X2 OTHER</div>`; }
             } else { 
-                // Nếu hết hạn thì hiện tag xám
                 tagHtml = `<div class="${c.alphaType==='x4'?'tag-x4':'tag-x2'} tag-expired">${c.alphaType==='x4'?'X4 BSC':'X2 OTHER'}</div>`; 
-                promoTimerHtml = ''; // Hết hạn thì ẩn luôn đồng hồ đếm ngược Promo
+                promoTimerHtml = ''; 
             }
             
             if ((c.inputTokens||[]).length > 0) tagHtml = `<div class="tag-x2" style="background:#9945FF; color:#fff; border:none; box-shadow:0 0 5px #9945FF">ECOSYSTEM</div>`;
@@ -3268,31 +3272,26 @@ function renderGrid(customData = null) {
             let ruleHtml = c.ruleType === 'trade_x4' ? `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>` : `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
             if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
 
-
-            // Các chỉ số khác
-            let realVol = c.real_alpha_volume || 0;
-            let realVolDisplay = realVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
-            let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
-
-            let target = (c.history && c.history.length > 0) ? parseFloat(c.history[c.history.length-1].target) : 0;
-
-            let priceStr = (c.cachedPrice > 0) ? '$' + parseFloat(c.cachedPrice).toLocaleString('en-US', { maximumFractionDigits: 6 }) : '---';
-            let estVal = (parseFloat(c.rewardQty)||0) * (c.cachedPrice||0);
-            let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
-
             let adminEditBtn = isAdmin ? `<i class="fas fa-pencil-alt ms-2 text-sub cursor-pointer hover-white" style="font-size:0.7rem" onclick="openEditModal('${c.db_id}')"></i>` : '';
             let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
             let dragHandleHtml = (isAdmin) ? `<i class="fas fa-grip-vertical admin-drag-handle" title="Kéo để sắp xếp"></i>` : '';
-            
             let isPerfect = (c.market_analysis?.label && c.market_analysis.label.includes("PERFECT"));
             let rocketBadgeHtml = isPerfect ? `<div class="rocket-badge"><i class="fas fa-rocket"></i> GEM</div>` : "";
             if(isPerfect) cardClass += " card-perfect";
 
-            // --- HTML STRUCTURE ---
+            // Các chỉ số
+            let realVol = c.real_alpha_volume || 0;
+            let realVolDisplay = realVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
+            let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
+            let target = (c.history && c.history.length > 0) ? parseFloat(c.history[c.history.length-1].target) : 0;
+            let priceStr = (c.cachedPrice > 0) ? '$' + parseFloat(c.cachedPrice).toLocaleString('en-US', { maximumFractionDigits: 6 }) : '---';
+            let estVal = (parseFloat(c.rewardQty)||0) * (c.cachedPrice||0);
+            let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
+
+            // HTML
             fullHtml += `
             <div class="col-md-6 col-lg-4 col-xl-3 card-wrapper" ${dragAttr} data-id="${c.db_id}">
                 <div class="${cardClass}" onclick="playSfx('click'); toggleCardHighlight(this)">
-                    
                     <div class="card-head">
                         ${rocketBadgeHtml}
                         <div class="token-info-wrapper">
@@ -3300,32 +3299,25 @@ function renderGrid(customData = null) {
                             <img src="${c.logo || 'https://placehold.co/40x40/222'}" class="token-logo" onclick="event.stopPropagation(); window.open('https://www.binance.com/en/alpha/${c.chain}/${c.contract}', '_blank')">
                             <div class="token-text">
                                 <div class="token-title">${c.name}</div>
-                                
                                 ${status==='running' ? `<div class="token-status anim-breathe text-green">RUNNING</div>` : `<div class="token-status text-red">ENDED</div>`}
-                                ${tourTimerHtml} 
+                                ${tourTimerHtml}
                             </div>
                         </div>
-                        
                         <div class="card-head-right">
                             ${ruleHtml}
                             ${tagHtml}
                             ${promoTimerHtml}
                         </div>
                     </div>
-                    
                     <div class="card-stats-grid">
                         <div class="stat-cell"><div class="stat-lbl">TOP</div><div class="stat-val text-main">${c.topWinners||'--'}</div></div>
                         <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">REWARD</div><div class="stat-val text-brand">${fmtNum(c.rewardQty)}${estHtml}</div></div>
                         <div class="stat-cell"><div class="stat-lbl">PRICE</div><div class="stat-val text-brand fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">${priceStr}</div></div>
                     </div>
-
                     <div class="card-list" style="padding: 10px 15px 0 15px;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="text-sub fw-bold" style="font-size:0.6rem; letter-spacing:1px; text-transform:uppercase;">MY PROGRESS</span>
-                            <button class="btn btn-sm fw-bold d-flex align-items-center gap-1" 
-                                onclick="event.stopPropagation(); openUpdateModal('${c.db_id}')" 
-                                title="Nhập Volume của bạn"
-                                style="font-size:0.65rem; transition:0.2s; background: rgba(14, 203, 129, 0.15); color: #0ECB81; border: 1px solid #0ECB81; padding: 2px 8px; border-radius: 4px;">
+                            <button class="btn btn-sm fw-bold d-flex align-items-center gap-1" onclick="event.stopPropagation(); openUpdateModal('${c.db_id}')" style="font-size:0.65rem; transition:0.2s; background: rgba(14, 203, 129, 0.15); color: #0ECB81; border: 1px solid #0ECB81; padding: 2px 8px; border-radius: 4px;">
                                 <i class="fas fa-pen-to-square"></i> UPDATE VOL
                             </button>
                         </div>
@@ -3334,7 +3326,6 @@ function renderGrid(customData = null) {
                         </div>
                         <div class="acc-stats-grid" id="accGrid-${c.db_id}"></div>
                     </div>
-
                     <div class="market-bar">
                         <div class="mb-item text-start">
                             <div class="mb-label">Limit Vol (Mkt) <i class="fas fa-info-circle opacity-50" title="Tổng Vol Limit toàn thị trường"></i></div>
@@ -3348,14 +3339,11 @@ function renderGrid(customData = null) {
                             </div>
                         </div>
                     </div>
-
                     <div class="card-actions" style="padding: 0; border:none;">
-                        <button class="btn-card-action predict" 
-                            onclick="event.stopPropagation(); openPredictionView('${c.db_id}')">
+                        <button class="btn-card-action predict" onclick="event.stopPropagation(); openPredictionView('${c.db_id}')">
                             <i class="fas fa-bolt me-2"></i> ${translations[currentLang].btn_predict}
                         </button>
                     </div>
-
                 </div>
             </div>`;
         } catch(e) { console.error("Render error", e); }
@@ -4729,100 +4717,88 @@ async function saveUpdate() {
         new bootstrap.Modal(document.getElementById('compModal')).show();
     }
 
-    // 2. Mở Modal chỉnh sửa
-    function openEditModal(id) {
-        let c = compList.find(x => x.db_id == id);
-        if(!c) return;
+    // --- 1. ADMIN EDIT: LẤY DỮ LIỆU THÔ TỪ DB HIỆN LÊN (KHÔNG CONVERT) ---
+function openEditModal(id) {
+    let c = compList.find(x => x.db_id == id);
+    if(!c) return;
 
-        // Điền dữ liệu cũ vào form
-        document.getElementById('c-db-id').value = id;
-        document.getElementById('c-contract').value = c.contract;
-        document.getElementById('c-symbol').value = c.name;
-        document.getElementById('c-chain').value = c.chain;
-        document.getElementById('c-price').value = c.cachedPrice;
+    document.getElementById('c-db-id').value = id;
+    document.getElementById('c-contract').value = c.contract;
+    document.getElementById('c-symbol').value = c.name;
+    document.getElementById('c-chain').value = c.chain;
+    document.getElementById('c-price').value = c.cachedPrice;
+    document.getElementById('c-logo').value = c.logo;
+    let imgPreview = document.getElementById('c-logo-preview');
+    if(c.logo) { imgPreview.src = c.logo; imgPreview.style.display = 'block'; }
+    else { imgPreview.style.display = 'none'; }
 
-        // Logo
-        document.getElementById('c-logo').value = c.logo;
-        let imgPreview = document.getElementById('c-logo-preview');
-        if(c.logo) {
-            imgPreview.src = c.logo;
-            imgPreview.style.display = 'block';
-        } else {
-            imgPreview.style.display = 'none';
-        }
+    document.getElementById('c-rewardQty').value = c.rewardQty;
+    document.getElementById('c-winners').value = c.topWinners;
+    document.getElementById('c-alphaType').value = c.alphaType;
+    document.getElementById('c-rule').value = c.ruleType;
 
-        // Các chỉ số
-        document.getElementById('c-rewardQty').value = c.rewardQty;
-        document.getElementById('c-winners').value = c.topWinners;
-        document.getElementById('c-start').value = c.start;
-        document.getElementById('c-end').value = c.end;
-        document.getElementById('c-end-time').value = c.endTime;
-        document.getElementById('c-alphaType').value = c.alphaType;
-        document.getElementById('c-listing').value = c.listingTime;
-        document.getElementById('c-rule').value = c.ruleType;
+    // --- NGÀY GIỜ: HIỂN THỊ Y NGUYÊN (ADMIN TỰ HIỂU LÀ UTC) ---
+    document.getElementById('c-start').value = c.start;
+    document.getElementById('c-end').value = c.end;
+    document.getElementById('c-end-time').value = c.endTime;
+    
+    // Listing Time (DB lưu "YYYY-MM-DDTHH:mm", Input cũng dùng định dạng đó -> Khớp)
+    document.getElementById('c-listing').value = c.listingTime || '';
 
-        // Load danh sách Token Campaign (Chuyển từ Mảng về Chuỗi để hiển thị)
-        let tokenInput = document.getElementById('c-inputTokens');
-        if(tokenInput) {
-            if (c.inputTokens && Array.isArray(c.inputTokens)) {
-                tokenInput.value = c.inputTokens.join(', '); // VD: "VSN, LAVA"
-            } else {
-                tokenInput.value = '';
-            }
-        }
-
-        toggleListingTime();
-
-        // Hiện nút xóa
-        document.getElementById('btnDeleteComp').style.display = 'inline-block';
-        new bootstrap.Modal(document.getElementById('compModal')).show();
+    let tokenInput = document.getElementById('c-inputTokens');
+    if(tokenInput) {
+        if (c.inputTokens && Array.isArray(c.inputTokens)) tokenInput.value = c.inputTokens.join(', ');
+        else tokenInput.value = '';
     }
 
-    // 3. Logic bật tắt ô nhập giờ Listing
+    toggleListingTime();
+    document.getElementById('btnDeleteComp').style.display = 'inline-block';
+    new bootstrap.Modal(document.getElementById('compModal')).show();
+}
+
+            // 3. Logic bật tắt ô nhập giờ Listing
     function toggleListingTime() {
         document.getElementById('c-listing').disabled = document.getElementById('c-alphaType').value === 'none';
     }
 
-    // 4. Lưu giải đấu (Save to Cloud)
-    function saveComp() {
-        let id = document.getElementById('c-db-id').value;
-        let c = id ? compList.find(x => x.db_id == id) : {};
+    // --- 2. ADMIN SAVE: LƯU Y NGUYÊN (KHÔNG CONVERT) ---
+function saveComp() {
+    let id = document.getElementById('c-db-id').value;
+    let c = id ? compList.find(x => x.db_id == id) : {};
 
-        // Xử lý ô Input Tokens (Tách chuỗi thành mảng)
-        let tokensArr = [];
-        let tokenInput = document.getElementById('c-inputTokens');
-        if (tokenInput && tokenInput.value.trim() !== "") {
-            tokensArr = tokenInput.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s !== '');
-        }
-
-        let obj = {
-            db_id: id ? parseInt(id) : null,
-            name: document.getElementById('c-symbol').value.toUpperCase(),
-            contract: document.getElementById('c-contract').value, // Vẫn lưu Contract ARB để tính giá
-            chain: document.getElementById('c-chain').value,
-            logo: document.getElementById('c-logo').value,
-            cachedPrice: document.getElementById('c-price').value,
-            rewardQty: document.getElementById('c-rewardQty').value,
-            topWinners: document.getElementById('c-winners').value,
-            start: document.getElementById('c-start').value,
-            end: document.getElementById('c-end').value,
-            endTime: document.getElementById('c-end-time').value,
-            alphaType: document.getElementById('c-alphaType').value,
-            listingTime: document.getElementById('c-listing').value,
-            ruleType: document.getElementById('c-rule').value,
-
-            // Lưu mảng token campaign
-            inputTokens: tokensArr,
-
-            // Giữ lại dữ liệu mảng con
-            history: c.history || [],
-            predictions: c.predictions || [],
-            comments: c.comments || []
-        };
-
-        saveToCloud(obj);
-        bootstrap.Modal.getInstance(document.getElementById('compModal')).hide();
+    let tokensArr = [];
+    let tokenInput = document.getElementById('c-inputTokens');
+    if (tokenInput && tokenInput.value.trim() !== "") {
+        tokensArr = tokenInput.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s !== '');
     }
+
+    let obj = {
+        db_id: id ? parseInt(id) : null,
+        name: document.getElementById('c-symbol').value.toUpperCase(),
+        contract: document.getElementById('c-contract').value,
+        chain: document.getElementById('c-chain').value,
+        logo: document.getElementById('c-logo').value,
+        cachedPrice: document.getElementById('c-price').value,
+        rewardQty: document.getElementById('c-rewardQty').value,
+        topWinners: document.getElementById('c-winners').value,
+        
+        // LƯU THẲNG GIÁ TRỊ NHẬP VÀO
+        start: document.getElementById('c-start').value,
+        end: document.getElementById('c-end').value,
+        endTime: document.getElementById('c-end-time').value,
+        listingTime: document.getElementById('c-listing').value,
+
+        alphaType: document.getElementById('c-alphaType').value,
+        ruleType: document.getElementById('c-rule').value,
+        inputTokens: tokensArr,
+        history: c.history || [],
+        predictions: c.predictions || [],
+        comments: c.comments || []
+    };
+
+    saveToCloud(obj);
+    bootstrap.Modal.getInstance(document.getElementById('compModal')).hide();
+}
 
     // 5. Xóa giải đấu
     function deleteComp() {
@@ -4920,63 +4896,40 @@ async function saveUpdate() {
     }
 
 
-        // --- V46 UPDATE: ĐỒNG HỒ THÔNG MINH (KÈM NHÃN UTC) ---
-    // --- [V48 UPDATE] ĐỒNG HỒ THÔNG MINH (CÓ NGÀY THÁNG) ---
+        // --- [V61 FINAL] SYSTEM CLOCK: STANDARD UTC+0 ---
 function updateClock() {
     const now = new Date();
 
-    // 1. XỬ LÝ GIỜ HỆ THỐNG
+    // 1. HIỂN THỊ GIỜ HỆ THỐNG (LUÔN LÀ UTC)
     if(document.getElementById('sysClock')) {
-        // Lấy giờ gốc UTC
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-
-        // Xác định Offset (Múi giờ)
-        let offset = 0;
-        if (currentLang === 'vi') offset = 7;      // Việt Nam UTC+7
-        else if (currentLang === 'zh') offset = 8; // Trung Quốc UTC+8
-        // English mặc định UTC+0 (hoặc bạn muốn chỉnh thành +7 thì sửa ở đây)
-
-        // Tính thời gian mục tiêu
-        const targetTime = new Date(utc + (3600000 * offset));
-
-        // A. Lấy Ngày (DD/MM/YYYY)
-        let dateStr = targetTime.toLocaleDateString('en-GB', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
+        // Lấy ngày giờ theo chuẩn UTC
+        let dateStr = now.toLocaleDateString('en-GB', { 
+            day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' 
+        });
+        let timeStr = now.toLocaleTimeString('en-GB', {
+            hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: 'UTC'
         });
 
-        // B. Lấy Giờ (HH:MM:SS)
-        let timeStr = targetTime.toLocaleTimeString('en-GB', {
-            hour12: false, 
-            hour: "2-digit", 
-            minute: "2-digit", 
-            second: "2-digit"
-        });
-
-        // C. Hiển thị kết hợp: "18/12/2025 14:30:45"
-        // Tôi thêm thẻ <br> để ngày nằm trên, giờ nằm dưới cho gọn, hoặc để cùng hàng cũng được.
-        // Ở đây để cùng hàng cho giống style Terminal:
         document.getElementById('sysClock').innerText = `${dateStr} ${timeStr}`;
-        
-        // Chỉnh lại css font-size một chút bằng JS để chuỗi dài không bị tràn (Optional)
         document.getElementById('sysClock').style.fontSize = "1rem"; 
 
-        // --- CẬP NHẬT NHÃN UTC ---
+        // Luôn ghi chú là UTC để user không nhầm lẫn
         let labelEl = document.querySelector('[data-i18n="sys_time"]');
         if(labelEl) {
             let baseText = translations[currentLang].sys_time;
-            labelEl.innerText = `${baseText} (UTC +${offset})`;
+            labelEl.innerText = `${baseText} (UTC)`; 
             labelEl.style.color = "var(--brand)";
             labelEl.style.fontWeight = "bold";
         }
     }
 
-    // 2. Cập nhật X4 Timers (GIỮ NGUYÊN)
+    // 2. Cập nhật các bộ đếm ngược (X4 Timer - Dùng chuẩn UTC)
     document.querySelectorAll('.x4-timer-val').forEach(el => {
-        const listDate = el.dataset.list;
-        if(listDate) {
-            const endTime = new Date(listDate).getTime() + (30*24*60*60*1000);
+        const listDateStr = el.dataset.list; // Chuỗi ngày giờ từ DB (UTC)
+        if(listDateStr) {
+            // Thêm 'Z' để báo là UTC
+            let endTimeStr = listDateStr.includes('T') ? listDateStr : listDateStr + 'T00:00:00';
+            const endTime = new Date(endTimeStr + 'Z').getTime() + (30*24*60*60*1000);
             const dist = endTime - now.getTime();
             if(dist < 0) { el.innerText="EXPIRED"; el.style.color='#555'; }
             else {
@@ -4987,25 +4940,25 @@ function updateClock() {
         }
     });
 
-    // 3. Smart Timer cho Ngày kết thúc (GIỮ NGUYÊN)
+    // 3. Smart Timer (Nếu có dùng ở đâu đó)
     document.querySelectorAll('.smart-timer').forEach(el => {
         let endDateStr = el.dataset.end;
         let endTimeStr = el.dataset.time;
         if(!endDateStr) return;
-
-        let endDateTime = new Date(endDateStr + 'T' + endTimeStr);
+        // Thêm 'Z' vào cuối để tính theo UTC
+        let endDateTime = new Date(endDateStr + 'T' + endTimeStr + 'Z'); 
         let diff = endDateTime - now;
-
-        if (diff < 0) {
-            el.innerText = "ENDED";
+        
+        if (diff < 0) { 
+            el.innerText = "ENDED"; 
             el.style.color = 'var(--text-sub)';
             el.classList.remove('anim-breathe');
-            return;
+            return; 
         }
 
-        let todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-
-        if (endDateStr === todayStr) {
+        // Logic hiển thị
+        let todayUTC = new Date().toISOString().split('T')[0];
+        if (endDateStr === todayUTC) {
             let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             let s = Math.floor((diff % (1000 * 60)) / 1000);
@@ -5019,12 +4972,13 @@ function updateClock() {
         }
     });
 
-    // 4. Đồng hồ trang chi tiết (GIỮ NGUYÊN)
+    // 4. Đồng hồ trang chi tiết (View Predict) - Dùng chuẩn UTC
     if (currentPolyId && document.getElementById('view-predict').style.display === 'block') {
         let c = compList.find(x => x.db_id == currentPolyId);
         let timerEl = document.getElementById('pt-time');
         if (c && c.end && timerEl) {
-            let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59')).getTime();
+            // Thêm 'Z' chuẩn UTC
+            let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59') + 'Z').getTime(); 
             let dist = endTime - now.getTime();
             if (dist < 0) {
                 timerEl.innerText = "MARKET CLOSED";
@@ -5564,3 +5518,4 @@ function hexToRgba(hex, alpha) {
 </script>
 </body>
 </html>
+
