@@ -2109,7 +2109,204 @@
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
     const ADMIN_EMAILS = [ "annachou60@gmail.com" ];
-    const PREDICT_FEE = 100; // Game Fee
+const PREDICT_FEE = 100;
+
+// --- CẤU HÌNH TELEGRAM (BẢO MẬT - SECURE MODE) ---
+const TELE_BOT_CONFIG = {
+    // Tự động tìm Token trong bộ nhớ trình duyệt (không lộ trên code)
+    get token() {
+        return localStorage.getItem('WAVE_TELE_TOKEN'); 
+    },
+    // ID Group của bạn (Công khai được)
+    chatId: '-1003355713341' // <--- THAY ID GROUP CỦA BẠN VÀO ĐÂY
+};
+
+// 1. Hàm hỗ trợ nhập Token (Chạy 1 lần là nhớ mãi trên máy này)
+function requireBotToken() {
+    let currentToken = TELE_BOT_CONFIG.token;
+    if (!currentToken) {
+        // Hiện bảng hỏi Token
+        let input = prompt("⚠️ CHƯA CÓ TOKEN BOT!\n\nVui lòng dán Token BotFather vào đây (Chỉ cần làm 1 lần trên máy này):");
+        if (input && input.trim() !== "") {
+            localStorage.setItem('WAVE_TELE_TOKEN', input.trim());
+            alert("✅ Đã lưu Token vào máy! Từ giờ bạn có thể cập nhật thoải mái.");
+            return true;
+        } else {
+            alert("❌ Bạn chưa nhập Token nên không thể gửi tin nhắn Telegram.");
+            return false;
+        }
+    }
+    return true;
+}
+
+// --- HÀM GỬI TIN NHẮN (BẢN FINAL FIX: HIỆN SO SÁNH & CẮT SỐ LẺ) ---
+async function sendTeleAlert(comp, newTarget) {
+    
+    // 1. Kiểm tra Token
+    if (!requireBotToken()) return; 
+    const token = TELE_BOT_CONFIG.token;
+    const chatId = TELE_BOT_CONFIG.chatId;
+    if (!token || !chatId) return;
+
+    // 2. Lấy Ngày hiện tại
+    let dateStr = new Date().toLocaleDateString('en-GB'); // VD: 20/12/2025
+    
+    // --- A. TÍNH TOÁN REWARD & PRICE ---
+    let qty = parseFloat(comp.rewardQty) || 0;
+    let price = comp.cachedPrice || comp.market_analysis?.price || 0;
+    let estVal = qty * price;
+    let rewardStr = estVal > 0 ? `~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}` : '---';
+    
+    // Price giữ 4 số lẻ nếu nhỏ
+    let priceStr = price > 0 
+        ? '$' + price.toLocaleString('en-US', { maximumFractionDigits: price < 1 ? 4 : 2 }) 
+        : '---';
+
+    // --- B. THỜI GIAN ---
+    let timeStatus = "Running 🟢";
+    let isEnded = false;
+    
+    if (comp.end) {
+        let endString = comp.end + 'T' + (comp.endTime || '23:59:59') + 'Z';
+        let endTime = new Date(endString).getTime();
+        let now = Date.now();
+        if (now > endTime) {
+            timeStatus = "🔴 ENDED";
+            isEnded = true;
+        } else {
+            let diff = endTime - now;
+            let d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeStatus = `${d}d ${h}h`;
+        }
+    }
+
+    let promoStr = "";
+    if (!isEnded && comp.alphaType !== 'none' && comp.listingTime) {
+        let typeLabel = comp.alphaType === 'x4' ? 'X4 BSC' : 'X2 Other';
+        let listingDate = new Date(comp.listingTime.includes('T') ? comp.listingTime + 'Z' : comp.listingTime);
+        let promoEndTime = listingDate.getTime() + (30 * 24 * 60 * 60 * 1000);
+        let now = Date.now();
+        if (now < promoEndTime) {
+            let diff = promoEndTime - now;
+            let d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            promoStr = ` | ⚡ ${typeLabel}: ${d}d left`;
+        }
+    }
+
+    // --- C. MIN VOL: LOGIC SO SÁNH (FIX LỖI MẤT DÒNG) ---
+    let changeStr = ""; 
+    let currentTargetVal = parseFloat(newTarget.replace(/,/g, ''));
+
+    if (comp.history && Array.isArray(comp.history) && comp.history.length >= 1) {
+        // 1. Hàm parse ngày an toàn (xử lý cả 20/12/2025 và 2025-12-20)
+        const parseDateSafe = (dStr) => {
+            if(!dStr) return 0;
+            // Nếu là dạng YYYY-MM-DD
+            if (dStr.includes('-')) return new Date(dStr).getTime();
+            // Nếu là dạng DD/MM/YYYY
+            if (dStr.includes('/')) {
+                let [day, month, year] = dStr.split('/');
+                return new Date(`${year}-${month}-${day}`).getTime();
+            }
+            return new Date(dStr).getTime();
+        };
+
+        // 2. Sắp xếp lịch sử theo thời gian tăng dần
+        let sortedHist = [...comp.history].sort((a, b) => parseDateSafe(a.date) - parseDateSafe(b.date));
+        
+        let prevTarget = 0;
+        // Lấy phần tử áp chót (vì phần tử cuối cùng là cái vừa nhập)
+        if (sortedHist.length >= 2) {
+            prevTarget = parseFloat(sortedHist[sortedHist.length - 2].target);
+        }
+
+        // Tính toán chênh lệch
+        let diff = currentTargetVal - prevTarget;
+        
+        // Format số tiền (Tuyệt đối không có số lẻ)
+        let diffFormatted = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.abs(diff));
+        let sign = diff >= 0 ? '+' : '-';
+
+        // Tạo chuỗi (Nếu có sự thay đổi hoặc là bản ghi mới)
+        if (prevTarget > 0 && diff !== 0) {
+            changeStr = ` <i>(${sign}$${diffFormatted} vs prev)</i>`;
+        } else if (prevTarget === 0 && currentTargetVal > 0) {
+            changeStr = ` <i>(🚀 New Record)</i>`;
+        }
+    }
+
+    // --- D. LIMIT VOL: FIX LỖI SỐ LẺ DÀI LOẰNG NGOẰNG ---
+    let volHistory = comp.real_vol_history || [];
+    const getIsoDate = (d) => d.toISOString().split('T')[0];
+    let d1 = new Date(); d1.setDate(d1.getDate() - 1); 
+    let d2 = new Date(); d2.setDate(d2.getDate() - 2); 
+    let yStr = getIsoDate(d1); 
+    let pStr = getIsoDate(d2);
+    let dateLabel = `${yStr.split('-')[2]}/${yStr.split('-')[1]}`;
+
+    let volYest = volHistory.find(h => h.date === yStr)?.vol || 0;
+    let volPrev = volHistory.find(h => h.date === pStr)?.vol || 0;
+    
+    let limitVolDisplay = "Waiting Update...";
+    let volChangeStr = "";
+
+    if (volYest > 0) {
+        // Cắt sạch số thập phân
+        limitVolDisplay = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(volYest);
+        
+        if (volPrev > 0) {
+            let diffVol = volYest - volPrev;
+            // Cắt sạch số thập phân ở phần chênh lệch luôn
+            let diffVolFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.abs(diffVol));
+            let signVol = diffVol >= 0 ? '+' : '-';
+            let iconVol = diffVol >= 0 ? "🔼" : "🔽";
+            volChangeStr = ` (${iconVol} ${signVol}$${diffVolFmt})`;
+        }
+    } else {
+        let realNow = comp.real_alpha_volume || 0;
+        if(realNow > 0) limitVolDisplay = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realNow) + ' (Today)';
+    }
+
+    // --- E. SOẠN TIN NHẮN (GỘP DÒNG MIN VOL) ---
+    let msg = `
+<b>🔔 UPDATE: ${comp.name} MIN TARGET</b>
+📅 <i>${dateStr}</i>
+
+🎯 <b>Min Vol:</b> ${newTarget}${changeStr}
+💰 <b>Reward:</b> <b>${rewardStr}</b>
+
+💵 <b>Price:</b> ${priceStr}
+📊 <b>Limit Vol (${dateLabel}):</b>
+👉 <b>${limitVolDisplay}</b>${volChangeStr}
+
+⏳ <b>Time:</b> ${timeStatus}${promoStr}
+
+👉 <a href="https://wave-alpha.pages.dev">Open Wave Alpha</a>
+    `;
+
+    try {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: msg,
+                parse_mode: 'HTML',
+                disable_web_page_preview: true
+            })
+        });
+        console.log("✅ Telegram sent!");
+    } catch (e) {
+        console.error("Tele Error:", e);
+        if(e.message && e.message.includes('401')) {
+            alert("❌ Token sai! Vui lòng nhập lại.");
+            localStorage.removeItem('WAVE_TELE_TOKEN');
+        }
+    }
+}
+
+
 // --- [MỚI] BIẾN LƯU TRỮ LỊCH SỬ KHỚP LỆNH CHO TỪNG TOKEN ---
 // Dùng để tính trung bình 10s cho nhiều token cùng lúc
 let tokenVolHistory = {}; 
@@ -2871,7 +3068,7 @@ async function fetchUserProfile() {
                 compList = JSON.parse(cached);
             }
             // Hiện thông báo nhỏ góc màn hình (Toast) thay vì Alert
-            showToast("Kết nối Server chập chờn: " + (err.message || "Unknown error"), "error");
+            showToast("Server connection unstable: " + (err.message || "Unknown error"), "error");
         } finally {
             // --- QUAN TRỌNG NHẤT: LUÔN LUÔN VẼ LẠI GIAO DIỆN ---
             // Dù thành công hay thất bại, dòng này vẫn chạy để hiện thẻ bài hoặc hiện chữ "Empty List"
@@ -3039,13 +3236,12 @@ async function fetchUserProfile() {
             arsenal_items: arsenalItems
         };
 
-        // 3. Gửi lên Server
-        await supabase.from('tournaments').upsert({ id: -1, name: 'CONFIG', contract: 'CONFIG', data: newData });
+       await supabase.from('tournaments').upsert({ id: -1, name: 'CONFIG', contract: 'CONFIG', data: newData });
 
-        bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
-        loadFromCloud(false);
-        showToast("Cấu hình đã lưu!", "success");
-    }
+bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+loadFromCloud(false);
+showToast("Configuration saved!", "success"); // Đã sửa dòng này
+}
 
 
 
@@ -3792,75 +3988,61 @@ function renderMarketHealthTable() {
             let dragIdx = [...container.children].indexOf(draggedItem);
             let dropIdx = [...container.children].indexOf(targetItem);
             if (dragIdx < dropIdx) targetItem.after(draggedItem); else targetItem.before(draggedItem);
-            showToast("Vị trí đã đổi! Bấm SAVE POSITION để lưu.", "info");
-        }
+    showToast("Position changed! Click SAVE POSITION to save.", "info"); // Đã sửa dòng này
+}
     }
 
-    // --- HÀM LƯU VỊ TRÍ XUỐNG DB ---
-        // --- HÀM LƯU VỊ TRÍ MỚI (ĐÃ SỬA LỖI 2 NÚT) ---
-            async function saveCustomOrder() {
-        if(!confirm("Lưu vị trí hiện tại?")) return;
+    async function saveCustomOrder() {
+    // Sửa confirm
+    if(!confirm("Save current position?")) return;
 
-        // Hiệu ứng loading cho tất cả nút Save
-        let btns = document.querySelectorAll('.btn-save-pos');
-        btns.forEach(btn => {
-            btn.dataset.oldText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
-            btn.disabled = true;
+    let btns = document.querySelectorAll('.btn-save-pos');
+    btns.forEach(btn => {
+        btn.dataset.oldText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
+        btn.disabled = true;
+    });
+
+    try {
+        const container = document.getElementById('appGrid');
+        const items = container.querySelectorAll('.card-wrapper');
+        let updates = [];
+
+        items.forEach((item, index) => {
+            let dbId = parseInt(item.getAttribute('data-id'));
+            let comp = compList.find(c => c.db_id === dbId);
+            if(comp) {
+                comp.orderIndex = index;
+                updates.push(comp);
+            }
         });
 
-        try {
-            const container = document.getElementById('appGrid');
-            const items = container.querySelectorAll('.card-wrapper');
-            let updates = [];
+        for (let item of updates) {
+            let dataToSave = { ...item };
+            delete dataToSave.db_id;
+            delete dataToSave.id;
+            delete dataToSave.cachedPrice;
+            dataToSave.history = item.history || [];
+            dataToSave.predictions = item.predictions || [];
 
-            // 1. Cập nhật số thứ tự mới (0, 1, 2...) vào bộ nhớ
-            items.forEach((item, index) => {
-                let dbId = parseInt(item.getAttribute('data-id'));
-                let comp = compList.find(c => c.db_id === dbId);
-                if(comp) {
-                    comp.orderIndex = index; // Gán vị trí mới
-                    updates.push(comp);
-                }
-            });
-
-            // 2. Lưu từng cái xuống Server
-            // Dùng vòng lặp for...of để đợi lưu xong cái này mới lưu cái kia (tránh lỗi đường truyền)
-            for (let item of updates) {
-                // Tạo bản sao dữ liệu sạch để lưu
-                let dataToSave = { ...item };
-
-                // Xóa các biến hệ thống không cần lưu vào cột data
-                delete dataToSave.db_id;
-                delete dataToSave.id;
-                delete dataToSave.cachedPrice;
-
-                // Đảm bảo giữ lại lịch sử và dự đoán
-                dataToSave.history = item.history || [];
-                dataToSave.predictions = item.predictions || [];
-
-                // Lệnh Update
-                await supabase.from('tournaments').update({
-                    data: dataToSave
-                }).eq('id', item.db_id);
-            }
-
-            showToast("Đã lưu vị trí thành công!", "success");
-
-            // 3. Quan trọng: Tải lại dữ liệu từ Server để đồng bộ hiển thị
-            await loadFromCloud(false);
-
-        } catch (e) {
-            console.error(e);
-            showToast("Lỗi khi lưu: " + e.message, "error");
-        } finally {
-            // Trả lại trạng thái nút ban đầu
-            btns.forEach(btn => {
-                btn.innerHTML = btn.dataset.oldText || '<i class="fas fa-save me-1"></i> SAVE POSITION';
-                btn.disabled = false;
-            });
+            await supabase.from('tournaments').update({
+                data: dataToSave
+            }).eq('id', item.db_id);
         }
+
+        showToast("Position saved successfully!", "success"); // Đã sửa
+        await loadFromCloud(false);
+
+    } catch (e) {
+        console.error(e);
+        showToast("Error saving: " + e.message, "error"); // Đã sửa
+    } finally {
+        btns.forEach(btn => {
+            btn.innerHTML = btn.dataset.oldText || '<i class="fas fa-save me-1"></i> SAVE POSITION';
+            btn.disabled = false;
+        });
     }
+}
 
     function switchView(view) {
         document.getElementById('view-dashboard').style.display = view==='dashboard'?'block':'none';
@@ -4436,12 +4618,12 @@ async function saveToCloud(compObj) {
     }
 
     // 3. KIỂM TRA LỖI RLS (QUAN TRỌNG)
-    if (result.error) throw result.error;
+        if (result.error) throw result.error;
     
-    // Nếu không có lỗi mạng, nhưng Database trả về rỗng -> Bị chặn quyền
     if (!result.data || result.data.length === 0) {
         console.error("Save failed (RLS Blocked). Result:", result);
-        throw new Error("LỖI QUYỀN ADMIN! Database từ chối lưu. Hãy kiểm tra lại Policies trong Supabase.");
+        // Sửa thông báo lỗi này sang tiếng Anh
+        throw new Error("ADMIN PERMISSION ERROR! Database refused to save. Check RLS Policies.");
     }
 
     console.log("Save Success:", result.data);
@@ -4737,10 +4919,8 @@ function renderHistoryList(c) {
         }
     }
 
-   // --- [FIXED] HÀM LƯU CẬP NHẬT (SỬA LỖI ADMIN MIN VOL) ---
-// --- [FIXED FINAL] HÀM LƯU DỮ LIỆU (DEBUG MODE) ---
-async function saveUpdate() {
-    if (!currentUser) return showToast("Vui lòng đăng nhập!", "error");
+  async function saveUpdate() {
+    if (!currentUser) return showToast("Please login first!", "error"); // Đã sửa
 
     let btn = document.getElementById('btn-save-progress');
     let orgText = btn.innerText;
@@ -4748,52 +4928,39 @@ async function saveUpdate() {
     btn.disabled = true;
 
     try {
-        // 1. Lấy ID và ép kiểu về số nguyên (QUAN TRỌNG)
         let rawId = document.getElementById('u-db-id').value;
         let dbId = parseInt(rawId); 
-
-        // 2. Tìm đối tượng trong danh sách
         let c = compList.find(x => x.db_id === dbId);
         
-        if (!c) {
-            console.error("Không tìm thấy giải đấu với ID:", dbId, "Danh sách hiện tại:", compList);
-            throw new Error(`Không tìm thấy dữ liệu giải đấu (ID: ${dbId})`);
-        }
+        // Đã sửa thông báo lỗi
+        if (!c) throw new Error(`Tournament ID not found: ${dbId}`);
 
         let date = document.getElementById('u-date').value;
-        
-        // --- XỬ LÝ LƯU MIN VOL (Dành cho Admin) ---
+        let telegramTriggered = false; 
+        let newMinVol = "0";
+
+        // --- LOGIC ADMIN ---
         if (document.body.classList.contains('is-admin')) {
             let minInput = document.getElementById('u-min-vol');
             
-            // Chỉ lưu khi ô input không bị khóa (đang nhập liệu)
-            if (!minInput.disabled) {
-                let minValStr = minInput.value.replace(/,/g, ''); // Xóa dấu phẩy
+            if (!minInput.disabled && minInput.value.trim() !== "") {
+                let minValStr = minInput.value.replace(/,/g, ''); 
                 let t = parseFloat(minValStr);
 
                 if (!isNaN(t)) {
-                    // Khởi tạo mảng history nếu chưa có (lỗi thường gặp là c.history bị undefined)
                     if (!Array.isArray(c.history)) c.history = [];
-
-                    // Xóa dữ liệu cũ của ngày này (nếu có) để tránh trùng lặp
                     c.history = c.history.filter(h => h.date !== date);
-
-                    // Thêm dữ liệu mới
                     c.history.push({ date: date, target: t });
-
-                    // Sắp xếp lại theo ngày
                     c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                    console.log("Dữ liệu chuẩn bị gửi lên:", c.history); // F12 để xem
-
-                    // Gửi lên Cloud
                     await saveToCloud(c);
+                    telegramTriggered = true;
+                    newMinVol = new Intl.NumberFormat('en-US').format(t);
                 }
             }
         }
 
-        // --- XỬ LÝ LƯU TIẾN ĐỘ CÁ NHÂN (PROFILE) ---
-        // (Giữ nguyên logic cũ phần này vì nó không lỗi)
+        // --- LOGIC USER ---
         let my = {};
         accSettings.forEach(acc => {
             let v = parseFloat(document.getElementById(`u-vol-${acc.id}`)?.value || 0);
@@ -4803,40 +4970,40 @@ async function saveUpdate() {
 
         if (!userProfile.tracker_data) userProfile.tracker_data = {};
         if (!userProfile.tracker_data[dbId]) userProfile.tracker_data[dbId] = [];
-        
-        // Xóa ngày cũ, thêm ngày mới
         userProfile.tracker_data[dbId] = userProfile.tracker_data[dbId].filter(p => p.date !== date);
         if (Object.values(my).some(x => x.vol > 0 || x.cost > 0)) {
             userProfile.tracker_data[dbId].push({ date: date, accsDetail: my });
         }
-        
         await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
 
+        // --- SỬA THÔNG BÁO THÀNH CÔNG ---
+        if (telegramTriggered) {
+             await sendTeleAlert(c, newMinVol);
+             showToast("Updated & Telegram Alert sent successfully!", "success"); // Đã sửa
+        } else {
+             showToast("Data saved successfully!", "success"); // Đã sửa
+        }
 
-        // --- THÔNG BÁO THÀNH CÔNG ---
+        // --- HOÀN TẤT ---
         btn.innerHTML = '<i class="fas fa-check"></i> SAVED!';
         btn.style.background = "#0ECB81"; 
         btn.style.color = "#000";
-        showToast("Đã lưu dữ liệu thành công!", "success");
 
-        // Vẽ lại giao diện ngay lập tức
         setTimeout(() => {
             btn.innerText = orgText;
             btn.style.background = "";
             btn.style.color = "";
             btn.disabled = false;
-            
             renderTrackerChart(c);
             renderHistoryList(c);
-            renderGrid(); // Cập nhật lại thẻ bên ngoài
+            renderGrid();
         }, 1000);
 
     } catch (e) {
-        console.error("Lỗi Save:", e);
-        alert("Lỗi khi lưu: " + e.message); // Hiện Popup lỗi để bạn biết ngay
+        console.error("Save Error:", e);
+        showToast("Error: " + e.message, "error"); // Đã sửa
         btn.innerText = "ERROR";
-        btn.style.background = "var(--accent-red)";
-        setTimeout(() => { btn.innerText = orgText; btn.style.background = ""; btn.disabled = false; }, 3000);
+        setTimeout(() => { btn.innerText = orgText; btn.disabled = false; }, 3000);
     }
 }
 
@@ -4867,47 +5034,45 @@ async function saveUpdate() {
 
     // --- HÀM ĐỒNG BỘ DỮ LIỆU CŨ LÊN MÂY (MIGRATION TOOL) ---
     async function syncLocalToCloud() {
-        if(!currentUser) return showToast("Vui lòng đăng nhập trước!", "error");
+    if(!currentUser) return showToast("Please login first!", "error"); // Đã sửa
 
-        if(!confirm("Hành động này sẽ lấy dữ liệu từ máy này GHI ĐÈ lên dữ liệu trên Cloud. Bạn chắc chắn chứ?")) return;
+    // Đã sửa confirm
+    if(!confirm("This action will OVERWRITE Cloud data with local data. Are you sure?")) return;
 
-        let migrationData = {};
-        let count = 0;
+    let migrationData = {};
+    let count = 0;
 
-        // 1. Quét toàn bộ dữ liệu trong máy (Local Storage)
-        for(let i=0; i < localStorage.length; i++) {
-            let key = localStorage.key(i);
-            if(key.startsWith('wave_progress_')) {
-                let dbId = key.replace('wave_progress_', '');
-                try {
-                    let data = JSON.parse(localStorage.getItem(key));
-                    migrationData[dbId] = data;
-                    count++;
-                } catch(e) {}
-            }
-        }
-
-        if(count === 0) return showToast("Không tìm thấy dữ liệu cũ nào trên máy này!", "error");
-
-        // 2. Gửi gói hàng lên Supabase
-        let btn = document.querySelector('button[onclick="syncLocalToCloud()"]');
-        let oldText = btn.innerHTML;
-        btn.innerHTML = "UPLOADING..."; btn.disabled = true;
-
-        const { error } = await supabase.from('profiles').update({ tracker_data: migrationData }).eq('id', currentUser.id);
-
-        btn.innerHTML = oldText; btn.disabled = false;
-
-        if(error) {
-            showToast("Lỗi: " + error.message, "error");
-        } else {
-            showToast(`Thành công! Đã chuyển ${count} giải đấu lên Mây.`, "success");
-            // Update local state and UI
-            if(userProfile) userProfile.tracker_data = migrationData;
-            renderGrid();
-            bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+    for(let i=0; i < localStorage.length; i++) {
+        let key = localStorage.key(i);
+        if(key.startsWith('wave_progress_')) {
+            let dbId = key.replace('wave_progress_', '');
+            try {
+                let data = JSON.parse(localStorage.getItem(key));
+                migrationData[dbId] = data;
+                count++;
+            } catch(e) {}
         }
     }
+
+    if(count === 0) return showToast("No local data found on this device!", "error"); // Đã sửa
+
+    let btn = document.querySelector('button[onclick="syncLocalToCloud()"]');
+    let oldText = btn.innerHTML;
+    btn.innerHTML = "UPLOADING..."; btn.disabled = true;
+
+    const { error } = await supabase.from('profiles').update({ tracker_data: migrationData }).eq('id', currentUser.id);
+
+    btn.innerHTML = oldText; btn.disabled = false;
+
+    if(error) {
+        showToast("Error: " + error.message, "error"); // Đã sửa
+    } else {
+        showToast(`Success! Migrated ${count} tournaments to Cloud.`, "success"); // Đã sửa
+        if(userProfile) userProfile.tracker_data = migrationData;
+        renderGrid();
+        bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+    }
+}
 
     // Standard Utils
         function openSettingsModal() {
@@ -6021,6 +6186,90 @@ async function sendFeedbackToDb() {
     }
 }
 
+// --- TELEGRAM SYSTEM CONFIG (English) ---
+
+const TELE_CONFIG = {
+    get token() { return localStorage.getItem('WAVE_TELE_TOKEN'); },
+    chatId: '-1003355713341' // <-- ĐIỀN CHANNEL ID CỦA BẠN VÀO ĐÂY
+};
+
+// 1. Logic Admin Panel Toggle
+window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mode') === 'admin') {
+        document.getElementById('admin-control-panel').classList.remove('hidden');
+        checkTokenStatus();
+    }
+});
+
+function closeAdmin() {
+    document.getElementById('admin-control-panel').classList.add('hidden');
+    window.history.replaceState({}, document.title, "/");
+}
+
+// 2. Logic Save Token
+window.saveTokenFromUI = function() {
+    const inputToken = document.getElementById('bot-token-input').value.trim();
+    if (!inputToken) return alert("❌ Token is empty!");
+    
+    localStorage.setItem('WAVE_TELE_TOKEN', inputToken);
+    alert("✅ Token saved to this device!");
+    checkTokenStatus();
+}
+
+function checkTokenStatus() {
+    const statusText = document.getElementById('token-status');
+    if (localStorage.getItem('WAVE_TELE_TOKEN')) {
+        statusText.innerText = "✅ Status: Token Ready. System Operational.";
+        statusText.style.color = "#00ff88";
+    } else {
+        statusText.innerText = "⚠️ Status: Missing Token.";
+        statusText.style.color = "orange";
+    }
+}
+
+// 3. Logic Send Message (English Content)
+window.sendReportFromUI = async function() {
+    if (!TELE_CONFIG.token) return alert("⚠️ Token missing! Please save token first.");
+
+    let name = document.getElementById('report-name').value;
+    let vol = document.getElementById('report-vol').value;
+    let time = document.getElementById('report-time').value;
+    let date = new Date().toLocaleDateString('en-GB'); // Định dạng ngày quốc tế DD/MM/YYYY
+
+    // Nội dung tin nhắn Tiếng Anh
+    let msg = `
+<b>🔔 VOLUME UPDATE (${date})</b>
+
+🏆 <b>Tournament:</b> ${name}
+📊 <b>Min Volume:</b> <code>${vol}</code>
+⏳ <b>Time Left:</b> ${time}
+
+⚠️ <i>Alert: High volatility detected. Check your position!</i>
+
+👉 <a href="https://wave-alpha.pages.dev">Open Wave Alpha Terminal</a>
+    `;
+
+    const url = `https://api.telegram.org/bot${TELE_CONFIG.token}/sendMessage`;
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                chat_id: TELE_CONFIG.chatId,
+                text: msg,
+                parse_mode: 'HTML',
+                disable_web_page_preview: true
+            })
+        });
+        const data = await res.json();
+        if(data.ok) alert("✅ Alert sent to Channel successfully!");
+        else alert("❌ Telegram Error: " + data.description);
+    } catch (err) {
+        alert("❌ Network Error!");
+    }
+}
+
 </script>
 <a href="https://t.me/+VHBHlDAk9LwxNDE1" target="_blank" class="fab-telegram" title="Join Community">
     <i class="fab fa-telegram-plane"></i>
@@ -6061,5 +6310,105 @@ async function sendFeedbackToDb() {
         </div>
     </div>
 </div>
+
+<a href="https://t.me/wavealphachannel" target="_blank" class="tele-floating-btn">
+    <div class="tele-icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+            <path fill="currentColor" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.68.02zm6.57 6.61-2.57 10.7c-.2.86-1.14 1.2-1.92.73l-5.3-3.9-2.56-1.23c-.57-.27-.58-1.12.02-1.37l12.33-4.93z"/>
+        </svg>
+    </div>
+    <div class="tele-text">
+        <span>Get Vol Alerts ⚡</span>
+    </div>
+</a>
+
+<div id="admin-control-panel" class="admin-panel hidden">
+    <div class="admin-header">
+        <h3>🚀 TELEGRAM BROADCAST</h3>
+        <button onclick="closeAdmin()" class="close-btn">×</button>
+    </div>
+    
+    <div class="admin-body">
+        <div class="admin-section">
+            <label>Bot Token (First time only):</label>
+            <input type="password" id="bot-token-input" placeholder="712345:AAF..." />
+            <button onclick="saveTokenFromUI()" class="btn-save">Save Token to Browser</button>
+            <p id="token-status" style="font-size: 12px; color: gray; margin-top: 5px;">Status: Checking...</p>
+        </div>
+
+        <hr>
+
+        <div class="admin-section">
+            <label>Tournament Name:</label>
+            <input type="text" id="report-name" value="Grand Tournament" />
+            
+            <label>Current Min Volume:</label>
+            <input type="text" id="report-vol" placeholder="$5,000,000" />
+            
+            <label>Time Remaining:</label>
+            <input type="text" id="report-time" placeholder="24h" />
+            
+            <button onclick="sendReportFromUI()" class="btn-send">🔥 SEND ALERT NOW</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* CSS cho nút Telegram */
+    .tele-floating-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #0088cc; /* Màu xanh Tele */
+        color: white;
+        padding: 12px 24px; /* Tăng padding chút cho nút to đẹp */
+        border-radius: 50px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(0, 136, 204, 0.4);
+        z-index: 9999;
+        transition: all 0.3s ease;
+        animation: bounce 2s infinite;
+    }
+    
+    .tele-floating-btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 136, 204, 0.6);
+    }
+    
+    .tele-text span {
+        font-weight: bold;
+        font-size: 15px; /* Chữ to hơn một chút */
+        letter-spacing: 0.5px;
+    }
+    
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+        40% {transform: translateY(-6px);}
+        60% {transform: translateY(-3px);}
+    }
+
+/* Admin CSS */
+.admin-panel {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 90%; max-width: 400px;
+    background: #1a1a1a; border: 1px solid #333; border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 10000;
+    color: white; font-family: sans-serif; padding: 20px;
+}
+.admin-panel.hidden { display: none; }
+.admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.admin-header h3 { margin: 0; font-size: 16px; color: #00ff88; }
+.close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+.admin-section { display: flex; flex-direction: column; gap: 10px; }
+.admin-section label { font-size: 12px; color: #ccc; }
+.admin-section input { background: #333; border: 1px solid #444; color: white; padding: 10px; border-radius: 6px; }
+.btn-save { background: #444; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; }
+.btn-send { background: #0088cc; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.btn-send:hover { background: #0099ff; }
+</style>
+
 </body>
 </html>
