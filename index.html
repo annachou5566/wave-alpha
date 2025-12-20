@@ -1189,6 +1189,60 @@
     text-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
 
+/* --- FEEDBACK & COMMUNITY STYLES (REFINED) --- */
+
+/* 1. Nút Telegram "Tinh Tế" (Glass Style) */
+.fab-telegram {
+    position: fixed; 
+    bottom: 25px; 
+    right: 25px;
+    width: 48px; height: 48px; /* Nhỏ gọn hơn (Cũ là 60px) */
+    
+    /* Hiệu ứng kính mờ sang trọng */
+    background: rgba(0, 136, 204, 0.2);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: 1px solid rgba(0, 136, 204, 0.5);
+    
+    border-radius: 50%; 
+    display: flex; align-items: center; justify-content: center;
+    color: #0088cc; /* Màu logo Tele gốc */
+    font-size: 1.4rem;
+    z-index: 9990; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Hover vào mới sáng lên và nổi bật */
+.fab-telegram:hover { 
+    transform: translateY(-3px);
+    background: #0088cc; 
+    color: #fff;
+    box-shadow: 0 0 20px rgba(0, 136, 204, 0.6);
+    border-color: #fff;
+}
+
+/* Badge thông báo nhỏ xíu (Dấu chấm đỏ) */
+.fab-dot {
+    position: absolute; top: 10px; right: 10px;
+    width: 8px; height: 8px;
+    background: #F6465D;
+    border-radius: 50%;
+    box-shadow: 0 0 5px #F6465D;
+}
+
+/* 2. Style cho Modal Form */
+.feedback-type-btn {
+    flex: 1; padding: 10px; border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text-sub);
+    border-radius: 8px; font-size: 0.85rem; font-weight: 700;
+    transition: 0.2s;
+}
+.feedback-type-btn.active {
+    border-color: var(--brand); background: rgba(0, 240, 255, 0.1); color: #fff;
+}
+
     </style>
 </head>
 <body>
@@ -1246,7 +1300,12 @@
 </button>
             <button class="btn-icon" onclick="loadFromCloud()" title="Reload Data"><i class="fas fa-database"></i></button>
             <button class="btn-icon" onclick="openSettingsModal()" title="Wallets"><i class="fas fa-wallet"></i></button>
-            <button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
+
+            <button class="btn-icon text-brand me-2" onclick="openFeedbackModal()" title="Feedback / Support">
+                <i class="fas fa-comment-dots"></i>
+            </button>
+</button>
+<button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
 
             <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-2 ms-2" onclick="openLoginModal()" id="loginBtn"><i class="fas fa-key"></i> <span class="d-none d-md-inline">Login</span></button>
 
@@ -1912,14 +1971,15 @@
                 <h5 class="modal-title fw-bold text-brand" data-i18n="legend_title">ICON LEGEND</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="btn-icon" style="cursor:default"><i class="fas fa-sync-alt text-gold"></i></div>
-                    <div>
-                        <div class="fw-bold" data-i18n="leg_sync_t">Smart Sync</div>
-                        <div class="text-sub small" data-i18n="leg_sync_d">Update latest prices & volume from Server.</div>
-                    </div>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="btn-icon" style="cursor:default">
+                    <i class="fas fa-comment-dots text-brand"></i>
                 </div>
+                <div>
+                    <div class="fw-bold" data-i18n="leg_feedback_t">Feedback / Support</div>
+                    <div class="text-sub small" data-i18n="leg_feedback_d">Send ideas or report bugs directly to Admin.</div>
+                </div>
+            </div>
 
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="btn-icon" style="cursor:default"><i class="fas fa-database"></i></div>
@@ -2101,7 +2161,9 @@ const translations = {
 
         // --- LEGEND & DISCLAIMER ---
         legend_title: "ICON LEGEND",
-        leg_sync_t: "Smart Sync", leg_sync_d: "Update latest prices & volume from Server.",
+        // Thay dòng leg_sync cũ bằng dòng này:
+leg_feedback_t: "Feedback / Support", 
+leg_feedback_d: "Send ideas or report bugs directly to Admin.",
         leg_reload_t: "Reload Data", leg_reload_d: "Force reload data from Cloud Database.",
         leg_wallet_t: "Manage Wallets", leg_wallet_d: "Add or remove tracking accounts.",
         leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data.",
@@ -2159,7 +2221,9 @@ const translations = {
 
         // --- LEGEND & DISCLAIMER ---
         legend_title: "CHÚ THÍCH BIỂU TƯỢNG",
-        leg_sync_t: "Đồng bộ Thông minh", leg_sync_d: "Cập nhật giá & volume mới nhất từ Server.",
+        // Thay dòng leg_sync cũ bằng dòng này:
+leg_feedback_t: "Góp ý / Hỗ trợ", 
+leg_feedback_d: "Gửi ý tưởng hoặc báo lỗi trực tiếp cho Admin.",
         leg_reload_t: "Tải lại Dữ liệu", leg_reload_d: "Buộc tải lại toàn bộ dữ liệu từ Cloud.",
         leg_wallet_t: "Quản lý Ví", leg_wallet_d: "Thêm/Xóa danh mục theo dõi.",
         leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu.",
@@ -2217,7 +2281,9 @@ const translations = {
 
         // --- LEGEND & DISCLAIMER ---
         legend_title: "图标说明",
-        leg_sync_t: "智能同步", leg_sync_d: "从服务器更新最新价格和成交量。",
+        // Thay dòng leg_sync cũ bằng dòng này:
+leg_feedback_t: "反馈 / 支持", 
+leg_feedback_d: "直接向管理员发送想法或报告错误。",
         leg_reload_t: "重新加载", leg_reload_d: "强制从云数据库重新加载数据。",
         leg_wallet_t: "管理钱包", leg_wallet_d: "添加/删除追踪组合。",
         leg_login_t: "登录", leg_login_d: "安全登录以保存数据。",
@@ -5885,6 +5951,115 @@ setInterval(() => {
     });
 }, 5000); // 5000ms = 5 giây
 
+/* === BẮT ĐẦU ĐOẠN CODE FIX LỖI === */
+document.addEventListener('click', function(e) {
+    // Kiểm tra xem người dùng có bấm vào nút Predict (hoặc icon bên trong nó) không
+    if (e.target.closest('.btn-predict')) {
+        
+        // 1. Tìm thẻ cha (.card-item) đang chứa cái nút này
+        const currentCard = e.target.closest('.card-item');
+        
+        // 2. Tắt chế độ phóng to của thẻ bài
+        if (currentCard) {
+            // Xóa các class thường dùng để phóng to (active, expanded, open...)
+            // Code này sẽ thử xóa hết các tên thông dụng, trúng cái nào thì ăn cái đó
+            currentCard.classList.remove('active');
+            currentCard.classList.remove('expanded');
+            currentCard.classList.remove('show');
+            currentCard.classList.remove('open');
+
+            // Reset style nếu bạn dùng style inline (đề phòng)
+            currentCard.style.zIndex = ''; 
+            currentCard.style.position = '';
+        }
+    }
+});
+/* === KẾT THÚC ĐOẠN CODE FIX LỖI === */
+
+// --- FEEDBACK LOGIC (ENGLISH) ---
+function openFeedbackModal() {
+    // Auto-fill name if logged in
+    if(typeof userProfile !== 'undefined' && userProfile && userProfile.nickname) {
+        document.getElementById('fb-name').value = userProfile.nickname;
+    }
+    new bootstrap.Modal(document.getElementById('feedbackModal')).show();
+}
+
+function selectFbType(btn, type) {
+    document.querySelectorAll('.feedback-type-btn').forEach(el => el.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('fb-type').value = type;
+}
+
+async function sendFeedbackToDb() {
+    const name = document.getElementById('fb-name').value.trim() || 'Anonymous';
+    const type = document.getElementById('fb-type').value;
+    const msg = document.getElementById('fb-msg').value.trim();
+
+    if (!msg) return showToast("Please enter your message!", "error");
+
+    let btn = document.querySelector('#feedbackModal .btn-action');
+    let oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...'; btn.disabled = true;
+
+    try {
+        const { error } = await supabase.from('feedback').insert({
+            sender_name: name,
+            type: type,
+            message: msg
+        });
+        if (error) throw error;
+
+        showToast("Sent successfully! Thank you.", "success");
+        document.getElementById('fb-msg').value = ''; 
+        bootstrap.Modal.getInstance(document.getElementById('feedbackModal')).hide();
+    } catch (e) {
+        console.error(e);
+        showToast("Error: " + e.message, "error");
+    } finally {
+        btn.innerHTML = oldHtml; btn.disabled = false;
+    }
+}
+
 </script>
+<a href="https://t.me/+VHBHlDAk9LwxNDE1" target="_blank" class="fab-telegram" title="Join Community">
+    <i class="fab fa-telegram-plane"></i>
+    <div class="fab-dot"></div>
+</a>
+
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-brand"><i class="fas fa-comments me-2"></i> FEEDBACK & SUPPORT</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-sub small mb-3">Your feedback helps Wave Alpha improve every day.</p>
+                
+                <div class="d-flex gap-2 mb-3">
+                    <button type="button" class="feedback-type-btn active" onclick="selectFbType(this, 'IDEA')">
+                        <i class="fas fa-lightbulb text-gold me-1"></i> Idea / Feature
+                    </button>
+                    <button type="button" class="feedback-type-btn" onclick="selectFbType(this, 'BUG')">
+                        <i class="fas fa-tools text-danger me-1"></i> Report Bug
+                    </button>
+                </div>
+                <input type="hidden" id="fb-type" value="IDEA">
+
+                <div class="mb-3">
+                    <input type="text" id="fb-name" class="form-control" placeholder="Your Name (Optional)">
+                </div>
+                <div class="mb-4">
+                    <textarea id="fb-msg" class="form-control" rows="4" placeholder="Describe your idea or the bug you found..."></textarea>
+                </div>
+
+                <button class="btn-action w-100" onclick="sendFeedbackToDb()">
+                    <i class="fas fa-paper-plane me-2"></i> SEND MESSAGE
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
