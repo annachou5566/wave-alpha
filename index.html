@@ -151,23 +151,75 @@
 
         .tour-card:hover { transform: translateY(-3px); border-color: #666; box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
 
-        /* Trạng thái được chọn */
+        /* --- CODE MỚI (V2): ZOOM CARD - CHUYÊN NGHIỆP HƠN --- */
+        
+        /* 1. Màn hình nền đen */
+        #card-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            z-index: 9998; display: none; opacity: 0; transition: opacity 0.3s ease;
+        }
+        #card-backdrop.show { display: block; opacity: 1; }
+
+        /* 2. Thẻ bài khi phóng to (Fixed ra giữa màn hình) */
         .tour-card.active-card {
-            transform: scale(1.1);
-            z-index: 100;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 240, 255, 0.15);
-            border-color: var(--brand);
-            background: linear-gradient(160deg, #1c2127, #0f1115);
+            position: fixed !important; 
+            top: 50% !important; left: 50% !important;
+            transform: translate(-50%, -50%) scale(1.15) !important;
+            width: 100% !important; max-width: 380px !important;
+            height: auto !important; max-height: 90vh !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            
+            /* UPDATE 1: ĐỔ BÓNG CHUYÊN NGHIỆP (DEEP SHADOW) */
+            /* Bóng đen sâu tạo độ nổi + Viền sáng cực nhẹ (0.2) tạo nét tinh tế */
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 1), 
+                0 0 0 1px rgba(0, 240, 255, 0.2) !important;
+                
+            border-color: rgba(0, 240, 255, 0.3) !important; /* Viền thẻ bớt gắt */
+            background: #161a1e !important;
+            overflow-y: auto !important; cursor: default !important;
         }
 
-        /* Khi có 1 thẻ đang active, các thẻ khác sẽ bị mờ đi */
-        body.has-active-card .tour-card:not(.active-card) {
-            opacity: 0.4;
-            filter: grayscale(0.8) blur(2px);
-            transform: scale(0.95);
-            pointer-events: none;
+        /* UPDATE 2: XỬ LÝ THẺ ĐÃ KẾT THÚC (ENDED) KHI CLICK */
+        /* Khi thẻ Ended được Active -> Trở về sáng rõ bình thường */
+        .tour-card.ended-card.active-card {
+            opacity: 1 !important;     /* Hết mờ */
+            filter: none !important;   /* Hết trắng đen (có màu lại) */
+            border-color: #444 !important; /* Viền xám nhẹ cho phân biệt với thẻ đang chạy */
         }
 
+        /* Mobile: Không phóng to quá mức */
+        @media (max-width: 768px) {
+            .tour-card.active-card { width: 95% !important; transform: translate(-50%, -50%) scale(1) !important; }
+        }
+
+        /* 3. Ô trống thế thân (giữ khung không bị lệch) */
+        .tour-card-placeholder {
+            visibility: hidden; border: 1px dashed #333; border-radius: 10px; height: 100%; width: 100%;
+        }
+
+        /* 4. FIX LỖI KHOẢNG TRỐNG NÚT PREDICT */
+        .tour-card {
+            display: flex; flex-direction: column; height: 100%;
+        }
+        .card-list { flex: 1; }
+        .card-actions {
+            margin-top: auto;
+            display: grid; grid-template-columns: 1fr;
+            border-top: 1px solid var(--border); padding: 0;
+        }
+        .btn-card-action.predict { margin-bottom: 0 !important; border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+
+        /* Các class cũ giữ nguyên */
+        body.has-active-card .tour-card:not(.active-card) { opacity: 0; pointer-events: none; }
+        
+        /* Style mặc định cho thẻ Ended khi CHƯA click (nằm trong lưới) */
+        .tour-card.ended-card { opacity: 0.6; filter: grayscale(0.8); border-color: #333; }
+
+
+        
         .tour-card.ended-card { opacity: 0.6; filter: grayscale(0.8); border-color: #333; }
         .tour-card.highlight-x4 { border: 1px solid rgba(240, 185, 11, 0.8); box-shadow: 0 0 15px rgba(240, 185, 11, 0.15); }
         .tour-card.highlight-x2 { border: 1px solid rgba(14, 203, 129, 0.8); box-shadow: 0 0 15px rgba(14, 203, 129, 0.15); }
@@ -1142,6 +1194,7 @@
 <body>
 
 <div id="toast-container"></div>
+<div id="card-backdrop" onclick="closeActiveCard()"></div>
 
 <audio id="sfx-click" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio>
 <audio id="sfx-hover" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"></audio>
@@ -2930,33 +2983,62 @@ async function fetchUserProfile() {
 
 
 
-    // --- V45 FIX: Card Highlight Logic ---
+    // --- BIẾN TOÀN CỤC ĐỂ LƯU Ô THẾ THÂN ---
+    let activeCardClonePlaceholder = null; 
+
     function toggleCardHighlight(el) {
-        const isAlreadyActive = el.classList.contains('active-card');
-
-        // 1. Reset all cards first
-        document.querySelectorAll('.tour-card').forEach(card => {
-            card.classList.remove('active-card');
-        });
-        document.body.classList.remove('has-active-card');
-
-        // 2. Activate clicked card if it wasn't active
-        if (!isAlreadyActive) {
-            el.classList.add('active-card');
-            document.body.classList.add('has-active-card');
-
-            // Scroll to view if needed (smoothly)
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Nếu thẻ đang mở -> Click lại thì đóng
+        if (el.classList.contains('active-card')) {
+            closeActiveCard();
+            return;
         }
+        // Nếu có thẻ khác đang mở -> Đóng thẻ đó trước
+        if (document.querySelector('.tour-card.active-card')) {
+            closeActiveCard();
+        }
+
+        // 1. TẠO Ô THẾ THÂN (Placeholder)
+        // Lấy chiều cao thực tế của thẻ hiện tại để tạo ô trống y hệt
+        activeCardClonePlaceholder = document.createElement('div');
+        activeCardClonePlaceholder.className = 'tour-card-placeholder';
+        activeCardClonePlaceholder.style.height = el.offsetHeight + 'px'; 
+        
+        // 2. CHÈN Ô THẾ THÂN VÀO VỊ TRÍ CŨ
+        el.parentNode.insertBefore(activeCardClonePlaceholder, el);
+
+        // 3. BIẾN THẺ THẬT THÀNH FIXED (Nổi lên giữa màn hình)
+        el.classList.add('active-card');
+        
+        // 4. HIỆN MÀN HÌNH ĐEN
+        const backdrop = document.getElementById('card-backdrop');
+        if(backdrop) {
+            backdrop.style.display = 'block';
+            setTimeout(() => backdrop.classList.add('show'), 10);
+        }
+        document.body.classList.add('has-active-card');
     }
 
-    // Đóng focus khi click ra ngoài khoảng trống
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.tour-card') && document.body.classList.contains('has-active-card')) {
-            document.querySelectorAll('.tour-card').forEach(c => c.classList.remove('active-card'));
-            document.body.classList.remove('has-active-card');
+    function closeActiveCard() {
+        const activeEl = document.querySelector('.tour-card.active-card');
+        if (!activeEl) return;
+
+        // 1. Bỏ class active (để nó hết fixed)
+        activeEl.classList.remove('active-card');
+
+        // 2. Xóa ô thế thân đi
+        if (activeCardClonePlaceholder) {
+            activeCardClonePlaceholder.remove();
+            activeCardClonePlaceholder = null;
         }
-    });
+
+        // 3. Ẩn màn hình đen
+        const backdrop = document.getElementById('card-backdrop');
+        if(backdrop) {
+            backdrop.classList.remove('show');
+            setTimeout(() => backdrop.style.display = 'none', 300);
+        }
+        document.body.classList.remove('has-active-card');
+    }
 
         /* --- [V46] SMART REFRESH SYSTEM (Anti-Spam) --- */
     let lastRefreshTime = 0;
@@ -3722,8 +3804,13 @@ function renderMarketHealthTable() {
 
     function switchTab(t) { document.querySelectorAll('.p-tab').forEach(el=>el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); ['chart','activity','chat'].forEach(x => document.getElementById(`content-${x}`).style.display = x===t ? (x==='chat'?'flex':'block') : 'none'); }
 
-        // --- CODE MỚI: LẤY DỮ LIỆU TỪ BẢNG PREDICTIONS ---
+        // --- CODE MỚI: LẤY DỮ LIỆU TỪ BẢNG PREDICTIONS (ĐÃ MERGE) ---
     async function openPredictionView(id) {
+        // [FIX MỚI] Đóng thẻ bài đang phóng to trước khi làm bất cứ gì
+        if (typeof closeActiveCard === 'function') {
+            closeActiveCard();
+        }
+
         currentPolyId = id;
 
         // 1. Hiện loading
@@ -3755,37 +3842,48 @@ function renderMarketHealthTable() {
         }
 
         // 4. Chuyển màn hình
+        // (Đảm bảo ẩn dashboard đi để tránh bị đè)
+        document.getElementById('view-dashboard').style.display = 'none';
         switchView('predict');
 
-        // 5. Vẽ giao diện (Giữ nguyên HTML cũ)
-        document.getElementById('predict-content-placeholder').innerHTML = `
+        // [AN TOÀN] Kiểm tra xem thẻ chứa nội dung có tồn tại không
+        // Nếu file HTML chưa có thẻ 'predict-content-placeholder', ta tự tạo nó
+        let container = document.getElementById('predict-content-placeholder');
+        if (!container) {
+            let viewPredict = document.getElementById('view-predict');
+            viewPredict.innerHTML = '<div id="predict-content-placeholder"></div>';
+            container = document.getElementById('predict-content-placeholder');
+        }
+
+        // 5. Vẽ giao diện (Code HTML của bạn giữ nguyên 100%)
+        container.innerHTML = `
         <div class="terminal-layout">
             <div class="terminal-main">
                 <div class="hero-header">
                     <div class="hh-left"><img id="pt-logo" src="" title="View on Binance Alpha"><div><h1 class="fw-bold text-white mb-0" id="pt-symbol">---</h1><div class="text-sub fw-bold" style="font-size:0.75rem;letter-spacing:2px;">PREDICTION MARKET</div></div></div>
 
                     <div class="hh-center">
-    <div class="text-brand fw-bold small letter-spacing-1" style="font-size:0.85rem; opacity:0.8">CURRENT MIN VOLUME</div>
+                        <div class="text-brand fw-bold small letter-spacing-1" style="font-size:0.85rem; opacity:0.8">CURRENT MIN VOLUME</div>
+                        <div class="big-vol" id="pt-min-vol" style="margin-bottom: 5px;">0</div>
+                        <div id="pt-vol-change" class="mb-4 d-flex align-items-center gap-2" style="font-family: var(--font-num); font-size: 1.1rem;"></div>
 
-    <div class="big-vol" id="pt-min-vol" style="margin-bottom: 5px;">0</div>
+                        <div class="d-flex gap-2">
+                             <button id="btn-predict-action" class="btn-predict-hero" onclick="openInputModal()"><i class="fas fa-crosshairs me-2"></i>MAKE PREDICTION</button>
+                             <button class="btn btn-outline-light rounded-pill px-3" onclick="new bootstrap.Modal(document.getElementById('ruleModal')).show()"><i class="fas fa-info-circle"></i> RULES</button>
+                             <button class="btn btn-dark border-secondary rounded-pill px-3 text-white" onclick="generateShareCard()" title="Share Card"><i class="fas fa-share-alt"></i></button>
+                        </div>
 
-    <div id="pt-vol-change" class="mb-4 d-flex align-items-center gap-2" style="font-family: var(--font-num); font-size: 1.1rem;">
-        </div>
+                        <div class="admin-only admin-settle-box mt-3" style="width:100%">
+                            <label class="text-danger fw-bold small mb-1">TOURNAMENT SETTLEMENT</label>
+                            <button class="btn btn-danger w-100 fw-bold" onclick="settleTournament()"><i class="fas fa-gavel me-2"></i> AUTO SETTLE & DISTRIBUTE</button>
+                            <div class="text-sub small mt-1 text-center fst-italic">*System will fetch last Min Volume from History.</div>
+                        </div>
+                    </div>
 
-    <div class="d-flex gap-2">
-         <button id="btn-predict-action" class="btn-predict-hero" onclick="openInputModal()"><i class="fas fa-crosshairs me-2"></i>MAKE PREDICTION</button>
-         <button class="btn btn-outline-light rounded-pill px-3" onclick="new bootstrap.Modal(document.getElementById('ruleModal')).show()"><i class="fas fa-info-circle"></i> RULES</button>
-         <button class="btn btn-dark border-secondary rounded-pill px-3 text-white" onclick="generateShareCard()" title="Share Card"><i class="fas fa-share-alt"></i></button>
-    </div>
-
-    <div class="admin-only admin-settle-box mt-3" style="width:100%">
-        <label class="text-danger fw-bold small mb-1">TOURNAMENT SETTLEMENT</label>
-        <button class="btn btn-danger w-100 fw-bold" onclick="settleTournament()"><i class="fas fa-gavel me-2"></i> AUTO SETTLE & DISTRIBUTE</button>
-        <div class="text-sub small mt-1 text-center fst-italic">*System will fetch last Min Volume from History.</div>
-    </div>
-</div>
-
-                    <div class="hh-right"><div class="text-end"><div class="header-stat-lbl">TIME REMAINING</div><div class="text-gold font-num fw-bold fs-3" id="pt-time">---</div></div><div class="text-end"><div class="header-stat-lbl">TOTAL POOL</div><div class="text-green font-num fw-bold fs-3" id="pt-pool">0 $</div></div></div>
+                    <div class="hh-right">
+                        <div class="text-end"><div class="header-stat-lbl">TIME REMAINING</div><div class="text-gold font-num fw-bold fs-3" id="pt-time">---</div></div>
+                        <div class="text-end"><div class="header-stat-lbl">TOTAL POOL</div><div class="text-green font-num fw-bold fs-3" id="pt-pool">0 $</div></div>
+                    </div>
                 </div>
                 <div class="terminal-card" style="flex:1;">
                     <div class="p-tabs">
@@ -3795,9 +3893,7 @@ function renderMarketHealthTable() {
                     </div>
                     <div style="flex:1; position:relative; padding:25px; display:flex; flex-direction:column; overflow:hidden;">
                         <div id="content-chart" style="height:100%; width:100%;"><canvas id="marketChart"></canvas></div>
-
                         <div id="content-activity" class="feed-box" style="display:none; height:100%;"></div>
-
                         <div id="content-chat" style="display:none; height:100%; flex-direction:column;">
                             <div id="chat-feed" class="feed-box" style="flex:1; overflow-y:auto; margin-bottom:10px;"></div>
                             <div class="d-flex gap-2 align-items-center">
@@ -3808,14 +3904,24 @@ function renderMarketHealthTable() {
                     </div>
                 </div>
             </div>
-            <div class="terminal-side"><div class="terminal-card" style="flex:1;"><div class="p-4 border-bottom border-secondary border-opacity-25 bg-panel"><h6 class="fw-bold m-0 text-gold letter-spacing-1">TOP TRADERS</h6></div><div style="flex:1;overflow-y:auto;"><table class="leaderboard-table w-100"><thead>
-    <tr>
-        <th class="ps-4">RANK</th>
-        <th>TRADER</th>
-        <th class="text-center">GUESS</th>
-        <th class="text-end pe-2">PRIZE</th> </tr>
-</thead>
-<tbody id="pt-leaderboard"></tbody></table></div></div></div>
+            <div class="terminal-side">
+                <div class="terminal-card" style="flex:1;">
+                    <div class="p-4 border-bottom border-secondary border-opacity-25 bg-panel"><h6 class="fw-bold m-0 text-gold letter-spacing-1">TOP TRADERS</h6></div>
+                    <div style="flex:1;overflow-y:auto;">
+                        <table class="leaderboard-table w-100">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4">RANK</th>
+                                    <th>TRADER</th>
+                                    <th class="text-center">GUESS</th>
+                                    <th class="text-end pe-2">PRIZE</th> 
+                                </tr>
+                            </thead>
+                            <tbody id="pt-leaderboard"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>`;
 
         updateTerminalData(id);
