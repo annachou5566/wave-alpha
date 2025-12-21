@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" data-theme="dark">
 <head>
-<head>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             alert("LỖI TÌM THẤY:\n" + msg + "\nTại dòng: " + lineNo);
@@ -6409,6 +6409,33 @@ window.sendReportFromUI = async function() {
 .btn-send { background: #0088cc; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 .btn-send:hover { background: #0099ff; }
 </style>
+
+
+<script>
+    // --- TELEGRAM MINI APP INTEGRATION ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const tg = window.Telegram.WebApp;
+        
+        // 1. Báo cho Telegram biết App đã sẵn sàng (để mở rộng full màn hình)
+        tg.ready();
+        tg.expand(); 
+
+        // 2. Tự động lấy User ID từ Telegram điền vào form Login (Optional)
+        // Nếu user mở từ Telegram, ta có thể biết họ là ai ngay
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            console.log("User from Tele:", user);
+            // Bạn có thể dùng logic này để auto-login hoặc điền tên vào ô dự đoán
+            // Ví dụ:
+            if(document.getElementById('modal-p-name')) {
+                document.getElementById('modal-p-name').value = user.username || user.first_name;
+            }
+        }
+
+        // 3. Chỉnh màu Header của App trùng màu Header của Telegram
+        tg.setHeaderColor('#161a1e'); // Màu nền app của bạn
+    });
+</script>
 
 </body>
 </html>
