@@ -1243,6 +1243,27 @@
     border-color: var(--brand); background: rgba(0, 240, 255, 0.1); color: #fff;
 }
 
+/* --- BACKUP BUTTON STYLES --- */
+.action-btn {
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.action-btn:hover {
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.action-btn:active {
+    transform: translateY(0);
+}
+
     </style>
 </head>
 <body>
@@ -1607,10 +1628,27 @@
                     <button class="btn btn-light fw-bold" onclick="addNewAccount()">ADD</button>
                 </div>
 
-                <div class="text-center mt-4">
-                    <button class="btn btn-sm btn-outline-secondary border-0" onclick="syncLocalToCloud()">
-                        <i class="fas fa-cloud-upload-alt me-1"></i> Sync Old Data to Cloud
-                    </button>
+                <div class="backup-restore-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                    <div style="font-size: 11px; color: #888; margin-bottom: 10px; font-weight:bold; letter-spacing: 1px; text-transform: uppercase;">
+                        🛡️ Data Management
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="downloadBackup()" class="action-btn" style="flex: 1; background: #1a3a1a; border: 1px solid #00ff88; color: #00ff88;">
+                            <i class="fas fa-download me-2"></i> Export
+                        </button>
+                
+                        <button onclick="triggerRestore()" class="action-btn" style="flex: 1; background: #3a2a1a; border: 1px solid #ffaa00; color: #ffaa00;">
+                            <i class="fas fa-upload me-2"></i> Import
+                        </button>
+                    </div>
+                
+                    <input type="file" id="restoreFile" accept=".json" style="display: none" onchange="handleRestore(this)">
+                    
+                    <p style="font-size: 10px; color: #666; margin-top: 8px; font-style: italic; line-height: 1.4;">
+                        *Save your wallets & settings to a local file. Use this to restore data when switching devices.
+                    </p>
+                </div>
                 </div>
             </div>
         </div>
@@ -2679,8 +2717,8 @@ function applyLanguage() {
             isSyncing = false; 
             
             // --- 3. QUAN TRỌNG: DÙNG SETTIMEOUT ĐỆ QUY (KHÔNG BAO GIỜ ĐƠ) ---
-            // Làm xong việc mới nghỉ 5 giây rồi làm tiếp
-            setTimeout(quickSyncData, 5000); 
+            // Làm xong việc mới nghỉ 20 giây rồi làm tiếp
+            setTimeout(quickSyncData, 20000); 
         }
     }
 
@@ -6435,6 +6473,106 @@ window.sendReportFromUI = async function() {
         // 3. Chỉnh màu Header của App trùng màu Header của Telegram
         tg.setHeaderColor('#161a1e'); // Màu nền app của bạn
     });
+
+// ==========================================
+// DATA BACKUP & RESTORE SYSTEM
+// ==========================================
+
+// 1. Export Data (Download)
+function downloadBackup() {
+    try {
+        // Collect data
+        const backupData = {
+            app: "WaveAlpha",
+            version: "2.0",
+            timestamp: new Date().toISOString(),
+            settings: typeof accSettings !== 'undefined' ? accSettings : [], // Wallet list
+            profile: typeof userProfile !== 'undefined' ? userProfile : null // User profile
+        };
+
+        // Create file
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().split('T')[0];
+        
+        a.href = dataStr;
+        a.download = `WaveAlpha_Backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        // Notification
+        if(typeof showToast === 'function') {
+            showToast("✅ Backup file downloaded successfully!", "success");
+        } else {
+            alert("✅ Backup file downloaded successfully!");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("❌ Error creating backup: " + e.message);
+    }
+}
+
+// 2. Trigger Import
+function triggerRestore() {
+    const msg = "⚠️ WARNING: IMPORTING DATA\n\nThis will OVERWRITE your current local data with the backup file.\nAre you sure you want to continue?";
+    if(!confirm(msg)) return;
+    document.getElementById('restoreFile').click();
+}
+
+// 3. Handle File Import
+function handleRestore(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            // Validation
+            if (!data.app || data.app !== "WaveAlpha" || !data.settings) {
+                alert("❌ Invalid file! Please select a valid Wave Alpha backup file.");
+                return;
+            }
+
+            // --- RESTORE PROCESS ---
+            
+            // 1. Update Global Variable
+            if (typeof accSettings !== 'undefined') {
+                accSettings = data.settings;
+            }
+
+            // 2. Save to LocalStorage
+            localStorage.setItem('wave_settings', JSON.stringify(data.settings));
+            
+            // Optional: Restore Profile if exists
+            if (data.profile) {
+                localStorage.setItem('wave_profile', JSON.stringify(data.profile));
+            }
+
+            // 3. Sync to Cloud (Crucial Step)
+            // This replaces the old "Sync Old Data" button
+            if (typeof updateCloudWallets === 'function') {
+                if(typeof showToast === 'function') showToast("⏳ Syncing to server...", "info");
+                await updateCloudWallets(); // Push restored data to new Supabase
+            } else if (typeof syncDataToCloud === 'function') {
+                 // Fallback if function name is different
+                 await syncDataToCloud();
+            }
+
+            alert("✅ Data restored successfully! The page will now reload.");
+            window.location.reload();
+
+        } catch (err) {
+            console.error(err);
+            alert("❌ Error reading file: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    input.value = ''; // Reset input
+}
+
 </script>
 
 </body>
