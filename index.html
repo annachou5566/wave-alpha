@@ -1886,7 +1886,15 @@
                         </div>
                         <div class="p-3 mb-4 rounded" style="background: rgba(240, 185, 11, 0.05); border: 1px dashed rgba(240, 185, 11, 0.3);">
                             <label class="small text-gold fw-bold mb-1"><i class="fas fa-lock me-1"></i> MIN VOLUME (TARGET)</label>
-                            <input type="text" id="u-min-vol" class="form-control font-num text-gold fw-bold fs-4" placeholder="---" disabled style="background:transparent; border:none; padding:0" onkeyup="formatCurrency(this)">
+                            
+                            <div class="input-group">
+                                <input type="text" id="u-min-vol" class="form-control font-num text-gold fw-bold fs-4 border-0 bg-transparent" placeholder="---" disabled onkeyup="formatCurrency(this)">
+                                
+                                <button class="btn btn-sm btn-warning fw-bold admin-only" onclick="saveAdminTargetOnly()" title="Save Target & Send Tele Alert">
+                                    <i class="fas fa-paper-plane"></i> SEND
+                                </button>
+                            </div>
+                            <div class="text-sub mt-1 admin-only" style="font-size:0.65rem; opacity:0.7">* Nút SEND sẽ cập nhật Min Vol lên Server & Bắn Bot Tele.</div>
                         </div>
                         <label class="small text-brand fw-bold mb-2"><i class="fas fa-wallet me-1"></i> MY VOLUMES & GAP</label>
                         <div class="d-flex justify-content-between text-sub small fw-bold px-1 mb-1">
@@ -4998,91 +5006,143 @@ function renderHistoryList(c) {
         }
     }
 
-  async function saveUpdate() {
-    if (!currentUser) return showToast("Please login first!", "error"); // Đã sửa
-
-    let btn = document.getElementById('btn-save-progress');
-    let orgText = btn.innerText;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SENDING...'; 
-    btn.disabled = true;
+// --- HÀM MỚI: CHỈ CẬP NHẬT MIN VOLUME & GỬI TELEGRAM (ADMIN ONLY) ---
+async function saveAdminTargetOnly() {
+    if (!document.body.classList.contains('is-admin')) return;
+    
+    let btn = document.querySelector('#updateModal .btn-warning');
+    let orgHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
 
     try {
         let rawId = document.getElementById('u-db-id').value;
-        let dbId = parseInt(rawId); 
+        let dbId = parseInt(rawId);
         let c = compList.find(x => x.db_id === dbId);
+        let date = document.getElementById('u-date').value;
+        let minInput = document.getElementById('u-min-vol');
+
+        if (minInput.value.trim() === "") throw new Error("Min Volume is empty!");
+
+        let minValStr = minInput.value.replace(/,/g, '');
+        let t = parseFloat(minValStr);
+
+        // 1. Cập nhật dữ liệu Admin vào biến cục bộ
+        if (!Array.isArray(c.history)) c.history = [];
+        c.history = c.history.filter(h => h.date !== date); // Xóa cũ nếu trùng ngày
+        c.history.push({ date: date, target: t });
+        c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // 2. Lưu lên Server
+        await saveToCloud(c);
+
+        // 3. Gửi Telegram
+        let newMinVol = new Intl.NumberFormat('en-US').format(t);
+        await sendTeleAlert(c, newMinVol);
+
+        showToast("✅ Target Updated & Alert Sent!", "success");
         
-        // Đã sửa thông báo lỗi
-        if (!c) throw new Error(`Tournament ID not found: ${dbId}`);
+        // Vẽ lại biểu đồ để thấy thay đổi ngay
+        renderTrackerChart(c);
+        renderHistoryList(c);
+        renderGrid();
+
+    } catch (e) {
+        console.error(e);
+        showToast("Error: " + e.message, "error");
+    } finally {
+        btn.innerHTML = orgHtml; btn.disabled = false;
+    }
+}
+
+  // --- HÀM LƯU TIẾN ĐỘ CÁ NHÂN (Đã sửa lỗi cú pháp) ---
+async function saveUpdate() {
+    // 1. Kiểm tra đăng nhập
+    if (!currentUser) return showToast("Please login first!", "error");
+
+    // 2. Xử lý giao diện nút bấm (Loading)
+    let btn = document.getElementById('btn-save-progress');
+    let orgText = btn.innerText;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
+    btn.disabled = true;
+
+    try {
+        // 3. Lấy dữ liệu ID và Ngày từ giao diện
+        let rawId = document.getElementById('u-db-id').value;
+        let dbId = parseInt(rawId);
+        
+        // Tìm giải đấu tương ứng để lát nữa vẽ lại biểu đồ
+        let c = compList.find(x => x.db_id === dbId);
+        if (!c) throw new Error("Tournament not found");
 
         let date = document.getElementById('u-date').value;
-        let telegramTriggered = false; 
-        let newMinVol = "0";
 
-        // --- LOGIC ADMIN ---
-        if (document.body.classList.contains('is-admin')) {
-            let minInput = document.getElementById('u-min-vol');
-            
-            if (!minInput.disabled && minInput.value.trim() !== "") {
-                let minValStr = minInput.value.replace(/,/g, ''); 
-                let t = parseFloat(minValStr);
+        // 4. Thu thập dữ liệu từ các ô nhập liệu (Volume & Cost)
+        let my = {};
+        if (typeof accSettings !== 'undefined' && Array.isArray(accSettings)) {
+            accSettings.forEach(acc => {
+                let volInput = document.getElementById(`u-vol-${acc.id}`);
+                let costInput = document.getElementById(`u-cost-${acc.id}`);
+                
+                let v = volInput ? parseFloat(volInput.value || 0) : 0;
+                let cost = costInput ? parseFloat(costInput.value || 0) : 0;
 
-                if (!isNaN(t)) {
-                    if (!Array.isArray(c.history)) c.history = [];
-                    c.history = c.history.filter(h => h.date !== date);
-                    c.history.push({ date: date, target: t });
-                    c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                    await saveToCloud(c);
-                    telegramTriggered = true;
-                    newMinVol = new Intl.NumberFormat('en-US').format(t);
-                }
-            }
+                my[acc.id] = { vol: v, cost: cost };
+            });
         }
 
-        // --- LOGIC USER ---
-        let my = {};
-        accSettings.forEach(acc => {
-            let v = parseFloat(document.getElementById(`u-vol-${acc.id}`)?.value || 0);
-            let cost = parseFloat(document.getElementById(`u-cost-${acc.id}`)?.value || 0);
-            my[acc.id] = { vol: v, cost: cost };
-        });
-
+        // 5. Chuẩn bị dữ liệu để lưu vào Profile
         if (!userProfile.tracker_data) userProfile.tracker_data = {};
         if (!userProfile.tracker_data[dbId]) userProfile.tracker_data[dbId] = [];
+
+        // Xóa dữ liệu cũ của ngày đang chọn (để ghi đè mới)
         userProfile.tracker_data[dbId] = userProfile.tracker_data[dbId].filter(p => p.date !== date);
-        if (Object.values(my).some(x => x.vol > 0 || x.cost > 0)) {
+
+        // Chỉ thêm vào danh sách nếu người dùng có nhập dữ liệu (> 0)
+        let hasData = Object.values(my).some(x => x.vol > 0 || x.cost > 0);
+        if (hasData) {
             userProfile.tracker_data[dbId].push({ date: date, accsDetail: my });
         }
-        await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
 
-        // --- SỬA THÔNG BÁO THÀNH CÔNG ---
-        if (telegramTriggered) {
-             await sendTeleAlert(c, newMinVol);
-             showToast("Updated & Telegram Alert sent successfully!", "success"); // Đã sửa
-        } else {
-             showToast("Data saved successfully!", "success"); // Đã sửa
-        }
+        // 6. Gửi lên Server (Supabase)
+        // Lệnh await này nằm TRONG hàm async và TRONG khối try -> Chạy đúng
+        const { error } = await supabase
+            .from('profiles')
+            .update({ tracker_data: userProfile.tracker_data })
+            .eq('id', currentUser.id);
 
-        // --- HOÀN TẤT ---
+        if (error) throw error;
+
+        // 7. Thông báo thành công
+        showToast("Personal Data saved successfully!", "success");
+
+        // Đổi màu nút để báo hiệu thành công
         btn.innerHTML = '<i class="fas fa-check"></i> SAVED!';
-        btn.style.background = "#0ECB81"; 
+        btn.style.background = "#0ECB81";
         btn.style.color = "#000";
 
+        // Sau 1 giây thì reset nút và vẽ lại biểu đồ
         setTimeout(() => {
             btn.innerText = orgText;
             btn.style.background = "";
             btn.style.color = "";
             btn.disabled = false;
-            renderTrackerChart(c);
-            renderHistoryList(c);
-            renderGrid();
+
+            // Cập nhật lại giao diện ngay lập tức
+            if (typeof renderTrackerChart === 'function') renderTrackerChart(c);
+            if (typeof renderHistoryList === 'function') renderHistoryList(c);
+            if (typeof renderGrid === 'function') renderGrid();
         }, 1000);
 
     } catch (e) {
+        // Xử lý lỗi nếu có
         console.error("Save Error:", e);
-        showToast("Error: " + e.message, "error"); // Đã sửa
+        showToast("Error: " + (e.message || e), "error");
+        
         btn.innerText = "ERROR";
-        setTimeout(() => { btn.innerText = orgText; btn.disabled = false; }, 3000);
+        setTimeout(() => { 
+            btn.innerText = orgText; 
+            btn.disabled = false; 
+        }, 3000);
     }
 }
 
