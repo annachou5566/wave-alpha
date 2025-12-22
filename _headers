@@ -1,0 +1,11 @@
+# Áp dụng cho toàn bộ website
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# (Tùy chọn) Nếu sau này bạn tách file ảnh ra riêng folder /assets
+# Bạn có thể cho phép cache ảnh để web tải nhanh hơn:
+# /assets/*
+#   Cache-Control: public, max-age=31536000, immutable
