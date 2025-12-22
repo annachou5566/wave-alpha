@@ -2267,8 +2267,7 @@ function requireBotToken() {
     return true;
 }
 
-// --- HÀM GỬI ẢNH TELEGRAM (THAY THẾ HÀM CŨ) ---
-// --- HÀM GỬI ẢNH TELEGRAM (FIX: CƯỠNG ÉP HIỆN GIÁ & REWARD LÊN ẢNH) ---
+// --- HÀM GỬI ẢNH TELEGRAM (FINAL UPDATE: ĐỒNG BỘ LOGIC T+1 VỚI BOT) ---
 async function sendTelePhoto(comp, newTarget) {
     
     // 1. Kiểm tra Token
@@ -2284,8 +2283,14 @@ async function sendTelePhoto(comp, newTarget) {
     }
     const cardElement = cardWrapper.querySelector('.tour-card');
 
+    // --- HELPER: LÀM SẠCH SỐ (Chống lỗi NaN do dấu phẩy) ---
+    const cleanNum = (val) => {
+        if (!val) return 0;
+        return parseFloat(val.toString().replace(/,/g, '').trim()) || 0;
+    };
+
     // 3. CHUẨN BỊ SỐ LIỆU (Tính toán trước khi chụp)
-    // Ưu tiên lấy giá từ Market Analysis (mới nhất) hoặc Cached Price
+    // Ưu tiên lấy giá từ Market Analysis (mới nhất)
     let currentPrice = (comp.market_analysis && comp.market_analysis.price) ? comp.market_analysis.price : (comp.cachedPrice || 0);
     
     // Format Giá
@@ -2295,41 +2300,36 @@ async function sendTelePhoto(comp, newTarget) {
     }
 
     // Format Reward
-    let qty = parseFloat(comp.rewardQty) || 0;
+    let qty = cleanNum(comp.rewardQty);
     let rewardVal = qty * currentPrice;
-    let rewardHtml = fmtNum(qty); // Mặc định chỉ hiện số lượng (VD: 1,700)
+    let rewardHtml = fmtNum(qty); 
     if (rewardVal > 0) {
-        // Thêm dòng giá trị $ (VD: ~$2,500)
         let valStr = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rewardVal);
-        // Dùng thẻ span màu xanh để html2canvas nhận diện
         rewardHtml += ` <span style="color:#0ECB81; font-size:0.8em; font-weight:bold;">${valStr}</span>`;
     }
 
-    // 4. CAN THIỆP DOM (GHI ĐÈ SỐ LIỆU LÊN THẺ ĐỂ CHỤP)
-    // Lưu lại nội dung cũ để restore sau khi chụp (nếu cần)
+    // 4. CAN THIỆP DOM (Tiêm dữ liệu vào thẻ để chụp)
     let statsGrid = cardElement.querySelector('.card-stats-grid');
-    let oldRewardHTML = "";
-    let oldPriceHTML = "";
+    let oldRewardHTML = "", oldPriceHTML = "";
     let priceEl, rewardEl;
 
     if (statsGrid) {
-        // Tìm ô Reward (Ô thứ 2)
+        // Ô Reward
         rewardEl = statsGrid.children[1].querySelector('.stat-val');
         if (rewardEl) {
             oldRewardHTML = rewardEl.innerHTML;
-            rewardEl.innerHTML = rewardHtml; // <--- Ghi đè Reward có $
+            rewardEl.innerHTML = rewardHtml; 
         }
-
-        // Tìm ô Price (Ô thứ 3)
+        // Ô Price
         priceEl = statsGrid.children[2].querySelector('.stat-val');
         if (priceEl) {
             oldPriceHTML = priceEl.innerHTML;
-            priceEl.innerHTML = priceStr;    // <--- Ghi đè Giá
-            priceEl.style.color = "#00F0FF"; // Cưỡng ép màu xanh Neon
+            priceEl.innerHTML = priceStr;    
+            priceEl.style.color = "#00F0FF"; 
         }
     }
 
-    // 5. BẬT CHẾ ĐỘ CHỤP (Snapshot Mode)
+    // 5. BẬT CHẾ ĐỘ CHỤP
     cardElement.classList.add('snapshot-mode');
     showToast("📸 Snapping...", "info");
 
@@ -2341,10 +2341,8 @@ async function sendTelePhoto(comp, newTarget) {
             backgroundColor: '#161a1e',
             logging: false,
             allowTaint: true,
-            // Đợi một chút để render font chữ và style
             onclone: (clonedDoc) => {
                 let clonedCard = clonedDoc.querySelector('.tour-card');
-                // Đảm bảo style trong bản clone cũng chuẩn
                 if(clonedCard) {
                     clonedCard.style.transform = 'none';
                     clonedCard.style.boxShadow = 'none';
@@ -2352,19 +2350,25 @@ async function sendTelePhoto(comp, newTarget) {
             }
         });
 
-        // 7. Tạo Blob ảnh
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 
-        // --- TÍNH TOÁN CAPTION CHO TIN NHẮN ---
-        let estVal = qty * currentPrice;
-        let rewardMsg = estVal > 0 ? `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}` : '---';
+        // --- TÍNH TOÁN CAPTION & LOGIC CHANGE (QUAN TRỌNG) ---
+        let rewardMsg = rewardVal > 0 ? `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rewardVal)}` : '---';
         
-        // Tính Change
         let changeText = "";
-        let currVal = parseFloat(newTarget.replace(/,/g, ''));
-        if (comp.history && comp.history.length >= 2) {
-            let prev = parseFloat(comp.history[comp.history.length - 2].target);
-            let diff = currVal - prev;
+        let currVal = cleanNum(newTarget); // Giá trị vừa nhập (đang là phần tử cuối)
+
+        // Clone mảng history và sắp xếp lại theo ngày cho chắc chắn
+        let history = comp.history ? [...comp.history] : [];
+        history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Logic: Vì hàm saveAdminTargetOnly đã push dữ liệu mới vào history rồi
+        // Nên history.length - 1 chính là số vừa nhập (T)
+        // history.length - 2 chính là số cũ (T-1)
+        if (history.length >= 2) {
+            let prevVal = cleanNum(history[history.length - 2].target);
+            let diff = currVal - prevVal;
+            
             if (diff !== 0) {
                 let sign = diff > 0 ? '+' : '-';
                 let icon = diff > 0 ? '📈' : '📉';
@@ -2375,7 +2379,6 @@ async function sendTelePhoto(comp, newTarget) {
             changeText = ` (🚀 New)`;
         }
 
-        // Nội dung tin nhắn
         const caption = `
 🌊 <b>OFFICIAL UPDATE: ${comp.name}</b>
 ━━━━━━━━━━━━━━━━━━
@@ -2386,8 +2389,7 @@ async function sendTelePhoto(comp, newTarget) {
 👇 <b>Tap to Open Wave Alpha Mini App</b>
         `.trim();
 
-        
-        // 8. GỬI API
+        // 7. GỬI API
         const formData = new FormData();
         formData.append('chat_id', chatId);
         formData.append('photo', blob, 'update.png');
@@ -2416,16 +2418,12 @@ async function sendTelePhoto(comp, newTarget) {
         console.error("Tele Photo Error:", e);
         showToast("❌ Failed: " + e.message, "error");
     } finally {
-        // 9. DỌN DẸP CHIẾN TRƯỜNG (Trả lại như cũ)
+        // 8. DỌN DẸP
         cardElement.classList.remove('snapshot-mode');
-        
-        // Trả lại nội dung cũ cho giao diện web (để ko bị lỗi hiển thị animation nếu có)
-        // Nếu bạn muốn giữ luôn số liệu mới thì có thể bỏ qua bước này, 
-        // nhưng tốt nhất là trả lại để đảm bảo logic web hoạt động đúng.
         if (rewardEl && oldRewardHTML) rewardEl.innerHTML = oldRewardHTML;
         if (priceEl && oldPriceHTML) {
             priceEl.innerHTML = oldPriceHTML;
-            priceEl.style.color = ""; // Bỏ màu cưỡng ép
+            priceEl.style.color = "";
         }
     }
 }
