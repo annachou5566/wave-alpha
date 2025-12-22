@@ -3836,11 +3836,15 @@ function renderGrid(customData = null) {
                             <div class="mb-val" style="color:${realVolColor}">${realVolDisplay}</div>
                         </div>
                         <div class="mb-item text-end">
-                            <div class="mb-label" style="justify-content: flex-end; color:#F0B90B">Min Target (Goal)</div>
-                            <div class="mb-val text-gold anim-breathe">
-                                ${fmtNum(target)}
-                                ${adminEditBtn}
-                            </div>
+    <div class="mb-label" style="justify-content: flex-end; color:#F0B90B">Min Target (Goal)</div>
+    
+    <div class="mb-val text-gold anim-breathe" style="align-items: center; justify-content: flex-end;">
+        <span style="font-size: 1.4rem !important; font-weight: 900 !important; color: #ffca28 !important; line-height: 1; display: inline-block; text-shadow: 0 0 15px rgba(240, 185, 11, 0.5);">
+            $${fmtNum(target)}
+        </span>
+        ${adminEditBtn}
+    </div>
+</div>
                         </div>
                     </div>
                     <div class="card-actions" style="padding: 0; border:none;">
