@@ -3510,7 +3510,12 @@ async function handleSmartRefresh(isSilent = false) {
     }
 
     try {
-        const { data, error } = await supabase.functions.invoke('refresh-volume');
+
+ // const { data, error } = await supabase.functions.invoke('refresh-volume'); 
+// Thay bằng dòng dưới để chỉ tải lại dữ liệu nhẹ nhàng từ DB
+const { data, error } = { data: { success: true }, error: null }; 
+await loadFromCloud(false);
+        
         if (error) throw error;
 
         if (data && data.success) {
@@ -6879,3 +6884,4 @@ function handleRestore(input) {
 
 </body>
 </html>
+
