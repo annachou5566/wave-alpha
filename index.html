@@ -3748,6 +3748,13 @@ await loadFromCloud(false);
 
     // --- [V59 FINAL] RENDER GRID: UTC TIME STANDARD ---
 function renderGrid(customData = null) {
+
+    if (document.querySelector('.tour-card.active-card')) {
+            updateGridValuesOnly(); // Chỉ update số (Vol, Price...)
+            if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); // Update bảng Health
+            return; // DỪNG HÀM NGAY LẬP TỨC
+        }
+
     const grid = document.getElementById('appGrid');
     if(!grid) return;
     
@@ -6951,5 +6958,3 @@ function handleRestore(input) {
 
 </body>
 </html>
-
-
