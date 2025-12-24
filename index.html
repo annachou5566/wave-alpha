@@ -6538,11 +6538,6 @@ window.sendReportFromUI = async function() {
 }
 
 </script>
-<a href="https://t.me/+VHBHlDAk9LwxNDE1" target="_blank" class="fab-telegram" title="Join Community">
-    <i class="fab fa-telegram-plane"></i>
-    <div class="fab-dot"></div>
-</a>
-
 <div class="modal fade" id="feedbackModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -6891,29 +6886,65 @@ function handleRestore(input) {
 </script>
 
 <script>
+    // --- HÀM GỬI BÁO CÁO TỔNG HỢP (ĐÃ SỬA LỖI ĐỌC DATA) ---
     async function broadcastDailyReport() {
+        // 1. Hỏi xác nhận trước khi gửi
         if(!confirm("⚠️ XÁC NHẬN:\nTổng hợp dữ liệu ngày HÔM QUA và gửi lên Telegram?")) return;
         
-        showToast("⏳ Đang tổng hợp báo cáo...", "info");
+        // 2. Hiển thị trạng thái đang xử lý
+        showToast("⏳ Đang kết nối Server...", "info");
         const btn = document.getElementById('btn-broadcast');
-        if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+        if(btn) { 
+            btn.disabled = true; 
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; 
+        }
     
         try {
-            // Gọi function daily-report trên Supabase
+            // 3. Gọi Function trên Supabase
             const { data, error } = await supabase.functions.invoke('daily-report');
             
-            if (error) throw error;
-            
-            if (data && data.success) {
-                showToast(`✅ Đã gửi báo cáo (${data.count} tokens)!`, "success");
-            } else {
-                showToast("⚠️ " + (data.message || "Lỗi server"), "error");
+            // 4. Kiểm tra lỗi kết nối (Mạng, Sai tên function, Thiếu Key)
+            if (error) {
+                console.error("Supabase Error:", error);
+                alert("❌ LỖI KẾT NỐI SERVER:\n" + JSON.stringify(error, null, 2));
+                throw error;
             }
+    
+            // 5. XỬ LÝ DỮ LIỆU (QUAN TRỌNG: Tránh lỗi Server trả về Text)
+            let finalData = data;
+            
+            // Nếu Server trả về chuỗi văn bản (thường là thông báo lỗi HTML hoặc Text)
+            if (typeof data === 'string') {
+                console.log("Server trả về Text:", data);
+                try {
+                    // Cố gắng chuyển nó thành JSON
+                    finalData = JSON.parse(data);
+                } catch (parseError) {
+                    // Nếu không chuyển được, nghĩa là Server báo lỗi nặng -> Hiện Alert để đọc
+                    alert("⚠️ SERVER BÁO LỖI (TEXT):\n" + data);
+                    throw new Error("Server trả về dữ liệu không hợp lệ (Non-JSON).");
+                }
+            }
+    
+            // 6. Kiểm tra kết quả logic
+            if (finalData && finalData.success) {
+                showToast(`✅ Đã gửi báo cáo (${finalData.count} tokens)!`, "success");
+                alert(`✅ GỬI THÀNH CÔNG!\nĐã báo cáo ${finalData.count} token lên Telegram.`);
+            } else {
+                // Lấy thông báo lỗi từ server
+                const msg = finalData ? (finalData.message || finalData.error) : "Dữ liệu rỗng";
+                showToast("⚠️ SERVER TỪ CHỐI: " + msg, "error");
+            }
+    
         } catch (e) {
             console.error(e);
             showToast("❌ Lỗi: " + e.message, "error");
         } finally {
-            if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bullhorn me-2"></i> GỬI BÁO CÁO TỔNG HỢP'; }
+            // 7. Mở lại nút bấm
+            if(btn) { 
+                btn.disabled = false; 
+                btn.innerHTML = '<i class="fas fa-bullhorn me-2"></i> GỬI BÁO CÁO TỔNG HỢP'; 
+            }
         }
     }
     </script>
