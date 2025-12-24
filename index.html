@@ -1971,8 +1971,16 @@
 
                 <div id="cfg-arsenal-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;"></div>
 
-
                 <button class="btn-action" onclick="saveGlobalConfig()">SAVE CONFIG</button>
+
+                <div class="mt-4 pt-3 border-top border-secondary border-opacity-25 admin-only">
+                    <h6 class="text-brand fw-bold mb-2">QUẢN LÝ HÀNG NGÀY</h6>
+                    <p class="text-sub small mb-2">Sau khi nhập đủ số liệu Min Vol hôm qua, bấm nút này để gửi báo cáo tổng hợp.</p>
+                    <button id="btn-broadcast" class="btn btn-primary w-100 fw-bold py-2" onclick="broadcastDailyReport()">
+                        <i class="fas fa-bullhorn me-2"></i> GỬI BÁO CÁO TỔNG HỢP
+                    </button>
+                </div>
+
             </div>
         </div>
     </div>
@@ -5157,7 +5165,7 @@ async function saveAdminTargetOnly() {
 
         // 3. Gửi Telegram
         let newMinVol = new Intl.NumberFormat('en-US').format(t);
-        await sendTelePhoto(c, newMinVol);
+        //await sendTelePhoto(c, newMinVol);
 
         showToast("✅ Target Updated & Alert Sent!", "success");
         
@@ -6882,6 +6890,35 @@ function handleRestore(input) {
 
 </script>
 
+<script>
+    async function broadcastDailyReport() {
+        if(!confirm("⚠️ XÁC NHẬN:\nTổng hợp dữ liệu ngày HÔM QUA và gửi lên Telegram?")) return;
+        
+        showToast("⏳ Đang tổng hợp báo cáo...", "info");
+        const btn = document.getElementById('btn-broadcast');
+        if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+    
+        try {
+            // Gọi function daily-report trên Supabase
+            const { data, error } = await supabase.functions.invoke('daily-report');
+            
+            if (error) throw error;
+            
+            if (data && data.success) {
+                showToast(`✅ Đã gửi báo cáo (${data.count} tokens)!`, "success");
+            } else {
+                showToast("⚠️ " + (data.message || "Lỗi server"), "error");
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("❌ Lỗi: " + e.message, "error");
+        } finally {
+            if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bullhorn me-2"></i> GỬI BÁO CÁO TỔNG HỢP'; }
+        }
+    }
+    </script>
+
 </body>
 </html>
+
 
