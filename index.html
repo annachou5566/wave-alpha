@@ -1343,7 +1343,7 @@
     padding-bottom: 0 !important; /* Cắt bỏ đệm dưới để dính vào phần Min Target */
 }
 
-/* 3. Kéo thanh Min Target/Limit Vol dính chặt lên trên */
+/* 3. Kéo thanh Min Target/Total Vol dính chặt lên trên */
 .market-bar {
     margin-top: 0 !important;
     padding-top: 8px !important;
@@ -1579,7 +1579,7 @@
                 <tr>
                     <th class="ps-4">TOKEN</th>
                     <th class="text-end text-sub">PRICE</th>
-                    <th class="text-end text-sub">Limit VOL (Today)</th>
+                    <th class="text-end text-sub">Total VOL (Today)</th>
                     <th class="text-end text-sub">TXs (Day)</th>
                     
                     <th class="text-end text-sub">
@@ -1608,7 +1608,7 @@
     <div class="guide-grid">
         <div>
             <div class="guide-title"><i class="fas fa-info-circle"></i> <span data-i18n="g_title">CHÚ THÍCH THÔNG SỐ</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">Limit VOL (Today):</strong> <span data-i18n="g_vol">Tổng giá trị giao dịch lệnh Limit (USDT) từ 00:00 UTC.</span></div>
+            <div class="guide-item mb-2"><strong class="text-sub">Total VOL (Today):</strong> <span data-i18n="g_vol">Tổng giá trị giao dịch (USDT) từ 00:00 UTC.</span></div>
             <div class="guide-item mb-2"><strong class="text-sub">TXs (Day):</strong> <span data-i18n="g_txs">Tổng số lệnh đã khớp trong ngày.</span></div>
             <div class="guide-item mb-2"><strong class="text-sub">SPEED (tx/s):</strong> <span data-i18n="g_speed">Tốc độ khớp lệnh (Số lệnh trên giây).</span></div>
             <div class="guide-item mb-2"><strong class="text-sub">AVG 1s MATCH:</strong> <span data-i18n="g_match">Trung bình mỗi giây thị trường khớp được bao nhiêu Đô ($).</span></div>
@@ -2511,7 +2511,7 @@ const SAFETY_WINDOW = 10; // Tính trung bình 10 mẫu gần nhất
 /* --- BỘ TỪ ĐIỂN FULL (ĐÃ CẬP NHẬT TÊN & SLOGAN MỚI) --- */
 let currentLang = localStorage.getItem('wave_lang') || 'en';
 
-/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FULL LOCALIZATION - ĐÃ SỬA ĐỊNH NGHĨA LIMIT VOL) --- */
+/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FULL LOCALIZATION - ĐÃ SỬA ĐỊNH NGHĨA Total VOL) --- */
 const translations = {
     en: {
         // --- CHUNG ---
@@ -2562,8 +2562,8 @@ leg_feedback_d: "Send ideas or report bugs directly to Admin.",
         leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data.",
 
         g_title: "METRIC LEGEND",
-        // Đã sửa theo yêu cầu: Chỉ Limit Trading
-        g_vol: "Volume generated solely from Limit Trading (Off-chain) since 00:00 UTC.",
+        
+        g_vol: "Aggregated Volume from both On-chain (Instant) and Off-chain (Limit) orders on Binance Alpha since 00:00 UTC.",
         g_txs: "Total executed orders today.",
         g_speed: "Execution speed (Orders/sec).",
         g_match: "Avg market absorption per second ($).",
@@ -2621,8 +2621,8 @@ leg_feedback_d: "Gửi ý tưởng hoặc báo lỗi trực tiếp cho Admin.",
         leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu.",
 
         g_title: "CHÚ THÍCH THÔNG SỐ",
-        // Đã sửa: Định nghĩa Limit Only
-        g_vol: "Chỉ tính Volume sinh ra từ giao dịch Limit (Off-chain) tính từ 00:00 UTC.",
+        
+        g_vol: "Tổng Volume từ cả khớp lệnh On-chain (Instant) và lệnh Limit (Off-chain) trên Binance Alpha tính từ 00:00 UTC.",
         g_txs: "Tổng số lệnh đã khớp trong ngày.",
         g_speed: "Tốc độ khớp lệnh (Số lệnh trên giây).",
         g_match: "Sức mua trung bình thị trường mỗi giây ($).",
@@ -2680,8 +2680,8 @@ leg_feedback_d: "直接向管理员发送想法或报告错误。",
         leg_login_t: "登录", leg_login_d: "安全登录以保存数据。",
 
         g_title: "指标说明",
-        // Đã sửa: Limit Only Definition
-        g_vol: "自 UTC 00:00 起仅计算限价交易 (Limit Trading) 的成交量。",
+        
+        g_vol: "自 UTC 00:00 起计算 Binance Alpha 上的综合成交量（包含链上即时交易与链下限价挂单）。",
         g_txs: "今日已成交订单总数。",
         g_speed: "成交速度 (每秒订单数)。",
         g_match: "市场每秒平均撮合额 ($)。",
@@ -3919,7 +3919,7 @@ function renderGrid(customData = null) {
                     </div>
                     <div class="market-bar">
                         <div class="mb-item text-start">
-                            <div class="mb-label">Limit Vol (Mkt) <i class="fas fa-info-circle opacity-50" title="Tổng Vol Limit toàn thị trường"></i></div>
+                            <div class="mb-label">Total Vol (Alpha) <i class="fas fa-info-circle opacity-50" title="Tổng Vol Alpha"></i></div>
                             <div class="mb-val" style="color:${realVolColor}">${realVolDisplay}</div>
                         </div>
                         <div class="mb-item text-end">
@@ -3952,7 +3952,7 @@ function renderGrid(customData = null) {
 
 
 
-// --- [FIX V65] UPDATE GRID VALUES (REALTIME LIMIT VOL & PRICE) ---
+// --- [FIX V65] UPDATE GRID VALUES (REALTIME VOL & PRICE) ---
 function updateGridValuesOnly() {
     try {
         // 1. Cập nhật bảng Market Health (Nếu đang mở)
@@ -3988,8 +3988,8 @@ function updateGridValuesOnly() {
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             
             if (cardWrapper) {
-                // A. [FIX] CẬP NHẬT LIMIT VOL (REALTIME)
-                // Tìm đúng vị trí Limit Vol trong giao diện mới (Market Bar -> Item đầu tiên)
+                // A. [FIX] CẬP NHẬT VOL (REALTIME)
+                // Tìm đúng vị trí Vol trong giao diện mới (Market Bar -> Item đầu tiên)
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
                 
                 if (volEl) {
@@ -6150,7 +6150,7 @@ function renderCardMiniChart(c) {
         if(c.start && dStr < c.start) continue;
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-        // Limit Vol
+        // Total Vol
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
         if (rItem) rVal = parseFloat(rItem.vol);
