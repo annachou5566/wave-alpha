@@ -4065,7 +4065,10 @@ function renderMarketHealthTable() {
 
     // 1. Lọc giải đang chạy & Không phải Ecosystem
     let activeProjects = compList.filter(c => {
-        let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59'));
+        let endTimeStr = (c.endTime || '23:59');
+        if(endTimeStr.length === 5) endTimeStr += ":00"; // Đảm bảo format HH:mm:ss
+        
+        let isRunning = !c.end || new Date() < new Date(c.end + 'T' + endTimeStr + 'Z');
         let isEcosystem = (c.inputTokens && c.inputTokens.length > 0);
         return isRunning && !isEcosystem;
     });
