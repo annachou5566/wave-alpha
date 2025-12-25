@@ -1575,52 +1575,97 @@
 
     <div class="table-responsive">
         <table class="table table-dark table-hover mb-0 align-middle health-table">
+            
             <thead>
                 <tr>
-                    <th class="ps-4">TOKEN</th>
-                    <th class="text-end text-sub">PRICE</th>
-                    <th class="text-end text-sub">Total VOL (Today)</th>
-                    <th class="text-end text-sub">TXs (Day)</th>
+                    <th class="ps-4 text-sub" style="font-size:0.7rem">TOKEN</th>
+                    <th class="text-end text-sub" style="font-size:0.7rem">PRICE</th>
+                    <th class="text-end text-sub" style="font-size:0.7rem">REWARD</th>
                     
-                    <th class="text-end text-sub">
-                        SPEED (tx/s) <i class="fas fa-info-circle ms-1 text-sub opacity-50" title="Tốc độ khớp lệnh (Số lệnh/Giây)"></i>
+                    <th class="text-end text-sub" style="font-size:0.7rem">
+                        MIN VOL<i class="fas fa-info-circle ms-1 opacity-50" title="Target Min Vol gần nhất & So sánh Hôm qua vs Hôm kia"></i>
                     </th>
 
-                    <th class="text-end text-sub">
-                        AVG 1s MATCH 
-                        <i class="fas fa-info-circle ms-1 text-sub opacity-50" title="Giá trị trung bình ($) thị trường hấp thụ được trong mỗi 1 Giây."></i>
-                    </th>
-
-                    <th class="text-end">
-                        AVG ORDER (24h)
-                        <i class="fas fa-info-circle ms-1 text-sub opacity-50" title="Giá trị bình quân 1 lệnh tính cả ngày."></i>
-                    </th>
+                    <th class="text-end text-sub" style="font-size:0.7rem">DAILY VOL</th>
                     
-                    <th class="text-end">NET FLOW (1m)</th>
-                    <th class="text-end pe-4">SPREAD (%)</th>
-                                    </tr>
+                    <th class="text-end text-sub" style="font-size:0.7rem">CAMP. VOL</th>
+
+                    <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem">SPEED</th>
+                    <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem">AVG MATCH</th>
+                    <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem">AVG ORDER</th>
+                    <th class="text-end text-sub d-none d-md-table-cell pe-4" style="font-size:0.7rem">SPREAD</th>
+                </tr>
             </thead>
+
             <tbody id="healthTableBody">
             </tbody>
         </table>
     </div>
 
-    <div class="guide-grid">
-        <div>
-            <div class="guide-title"><i class="fas fa-info-circle"></i> <span data-i18n="g_title">CHÚ THÍCH THÔNG SỐ</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">Total VOL (Today):</strong> <span data-i18n="g_vol">Tổng giá trị giao dịch (USDT) từ 00:00 UTC.</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">TXs (Day):</strong> <span data-i18n="g_txs">Tổng số lệnh đã khớp trong ngày.</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">SPEED (tx/s):</strong> <span data-i18n="g_speed">Tốc độ khớp lệnh (Số lệnh trên giây).</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">AVG 1s MATCH:</strong> <span data-i18n="g_match">Trung bình mỗi giây thị trường khớp được bao nhiêu Đô ($).</span></div>
+    <div class="mt-5 p-4 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);">
+    
+        <div class="d-flex align-items-center mb-3">
+            <i class="fas fa-book-open text-sub me-2"></i>
+            <h6 class="text-uppercase text-white fw-bold m-0" style="letter-spacing: 1px;" data-i18n="g_title">METRIC LEGEND</h6>
         </div>
-        <div>
-            <div class="guide-title d-none d-md-block" style="visibility: hidden;">.</div>
-            <div class="guide-item mb-2"><strong class="text-sub">AVG ORDER (24h):</strong> <span data-i18n="g_ord">Giá trị trung bình của 1 lệnh (Cả ngày).</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">NET FLOW (1m):</strong> <span data-i18n="g_flow">Dòng tiền ròng trong 1 phút qua.</span></div>
-            <div class="guide-item mb-2"><strong class="text-sub">SPREAD (%):</strong> <span data-i18n="g_spread">Biên độ chênh lệch giá Mua/Bán.</span></div>
-            
-            <div class="disclaimer-box mt-3" data-i18n="g_disc">
-                Dữ liệu tự động. Miễn trừ trách nhiệm: Chỉ mang tính tham khảo. Vui lòng tự nghiên cứu (DYOR) kỹ trước khi ra quyết định.
+    
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span style="color: #00F0FF; font-weight:bold; min-width: 110px;">PRICE</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_price">Current market price (Live).</span>
+                </div>
+    
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-green fw-bold" style="min-width: 110px;">REWARD</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_reward">Est. Prize Value (Reward Qty * Price).</span>
+                </div>
+    
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-gold fw-bold" style="min-width: 110px;">MIN VOL</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_min_vol">Target Vol. (Compares Yesterday vs Day-2).</span>
+                </div>
+    
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-white fw-bold" style="min-width: 110px;">DAILY VOL</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_daily_vol">Real-time Vol (Subtext: Yesterday's Vol).</span>
+                </div>
+                
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-white fw-bold" style="min-width: 110px;">CAMP. VOL</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_camp_vol">Cumulative Volume since start.</span>
+                </div>
+    
+            </div>
+    
+            <div class="col-12 col-md-6">
+                
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-sub fw-bold" style="min-width: 110px;">SPEED</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_speed">Execution speed (Orders/sec).</span>
+                </div>
+    
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-sub fw-bold" style="min-width: 110px;">AVG MATCH</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_match">Avg market absorption per second ($).</span>
+                </div>
+    
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-sub fw-bold" style="min-width: 110px;">AVG ORDER</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_ord">Average value per single order ($).</span>
+                </div>
+    
+                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                    <span class="text-sub fw-bold" style="min-width: 110px;">SPREAD</span>
+                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_spread">Bid/Ask price gap (%).</span>
+                </div>
+    
+                <div class="mt-3 p-2 rounded bg-black bg-opacity-25 text-center">
+                    <small class="text-sub opacity-50 fst-italic" style="font-size: 0.7rem;" data-i18n="g_disc">
+                        * Automated Data. For reference only. Please Do Your Own Research (DYOR).
+                    </small>
+                </div>
             </div>
         </div>
     </div>
@@ -2511,7 +2556,7 @@ const SAFETY_WINDOW = 10; // Tính trung bình 10 mẫu gần nhất
 /* --- BỘ TỪ ĐIỂN FULL (ĐÃ CẬP NHẬT TÊN & SLOGAN MỚI) --- */
 let currentLang = localStorage.getItem('wave_lang') || 'en';
 
-/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FULL LOCALIZATION - ĐÃ SỬA ĐỊNH NGHĨA Total VOL) --- */
+/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FULL LOCALIZATION - UPDATED V2) --- */
 const translations = {
     en: {
         // --- CHUNG ---
@@ -2555,22 +2600,25 @@ const translations = {
 
         // --- LEGEND & DISCLAIMER ---
         legend_title: "ICON LEGEND",
-        // Thay dòng leg_sync cũ bằng dòng này:
-leg_feedback_t: "Feedback / Support", 
-leg_feedback_d: "Send ideas or report bugs directly to Admin.",
+        leg_feedback_t: "Feedback / Support", 
+        leg_feedback_d: "Send ideas or report bugs directly to Admin.",
         leg_wallet_t: "Manage Wallets", leg_wallet_d: "Add or remove tracking accounts.",
         leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data.",
 
+        // --- METRIC LEGEND (NEW) ---
         g_title: "METRIC LEGEND",
+        g_price: "Current market price (Live).",
+        g_reward: "Est. Prize Value (Reward Qty × Price).",
+        g_min_vol: "Target Vol. (Compares Yesterday vs Day-2).",
+        g_daily_vol: "Real-time Vol (Subtext: Yesterday's Vol).",
+        g_camp_vol: "Cumulative Volume since start.",
         
-        g_vol: "Aggregated Volume from both On-chain (Instant) and Off-chain (Limit) orders on Binance Alpha since 00:00 UTC.",
-        g_txs: "Total executed orders today.",
         g_speed: "Execution speed (Orders/sec).",
         g_match: "Avg market absorption per second ($).",
-        g_ord: "Average value per order (24h).",
-        g_flow: "Net cash flow in the last 1m.",
-        g_spread: "Bid/Ask price spread.",
-        g_disc: "Automated Data. Disclaimer: For reference only. We accept no liability, please Do Your Own Research (DYOR)."
+        g_ord: "Average value per single order ($).",
+        g_spread: "Gap between Bid and Ask price (%).",
+        
+        g_disc: "Automated Data. For reference only. Please Do Your Own Research (DYOR)."
     },
     vi: {
         // --- CHUNG ---
@@ -2614,21 +2662,24 @@ leg_feedback_d: "Send ideas or report bugs directly to Admin.",
 
         // --- LEGEND & DISCLAIMER ---
         legend_title: "CHÚ THÍCH BIỂU TƯỢNG",
-        // Thay dòng leg_sync cũ bằng dòng này:
-leg_feedback_t: "Góp ý / Hỗ trợ", 
-leg_feedback_d: "Gửi ý tưởng hoặc báo lỗi trực tiếp cho Admin.",
+        leg_feedback_t: "Góp ý / Hỗ trợ", 
+        leg_feedback_d: "Gửi ý tưởng hoặc báo lỗi trực tiếp cho Admin.",
         leg_wallet_t: "Quản lý Ví", leg_wallet_d: "Thêm/Xóa danh mục theo dõi.",
         leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu.",
 
+        // --- METRIC LEGEND (NEW) ---
         g_title: "CHÚ THÍCH THÔNG SỐ",
+        g_price: "Giá thị trường hiện tại (Live).",
+        g_reward: "Giải thưởng ước tính (Qty * Price).",
+        g_min_vol: "Mục tiêu Vol (So sánh chốt sổ Hôm qua vs Hôm kia).",
+        g_daily_vol: "Vol thực hôm nay (Dòng dưới: Vol hôm qua).",
+        g_camp_vol: "Tổng Volume tích lũy từ đầu giải.",
         
-        g_vol: "Tổng Volume từ cả khớp lệnh On-chain (Instant) và lệnh Limit (Off-chain) trên Binance Alpha tính từ 00:00 UTC.",
-        g_txs: "Tổng số lệnh đã khớp trong ngày.",
         g_speed: "Tốc độ khớp lệnh (Số lệnh trên giây).",
         g_match: "Sức mua trung bình thị trường mỗi giây ($).",
-        g_ord: "Giá trị trung bình của 1 lệnh (Cả ngày).",
-        g_flow: "Dòng tiền ròng trong 1 phút qua.",
-        g_spread: "Biên độ chênh lệch giá Mua/Bán.",
+        g_ord: "Giá trị trung bình của 1 lệnh đơn lẻ.",
+        g_spread: "Biên độ chênh lệch giá Mua/Bán (%).",
+        
         g_disc: "Dữ liệu tự động. Miễn trừ trách nhiệm: Chỉ mang tính tham khảo. Vui lòng tự nghiên cứu (DYOR) kỹ trước khi ra quyết định."
     },
     zh: {
@@ -2673,21 +2724,24 @@ leg_feedback_d: "Gửi ý tưởng hoặc báo lỗi trực tiếp cho Admin.",
 
         // --- LEGEND & DISCLAIMER ---
         legend_title: "图标说明",
-        // Thay dòng leg_sync cũ bằng dòng này:
-leg_feedback_t: "反馈 / 支持", 
-leg_feedback_d: "直接向管理员发送想法或报告错误。",
+        leg_feedback_t: "反馈 / 支持", 
+        leg_feedback_d: "直接向管理员发送想法或报告错误。",
         leg_wallet_t: "管理钱包", leg_wallet_d: "添加/删除追踪组合。",
         leg_login_t: "登录", leg_login_d: "安全登录以保存数据。",
 
+        // --- METRIC LEGEND (NEW) ---
         g_title: "指标说明",
+        g_price: "当前市场价格 (实时)。",
+        g_reward: "预估奖池价值 (数量 * 价格)。",
+        g_min_vol: "最低目标 (对比昨日与前日数据)。",
+        g_daily_vol: "今日实时成交量 (下方显示昨日成交量)。",
+        g_camp_vol: "自开赛以来的累计成交量。",
         
-        g_vol: "自 UTC 00:00 起计算 Binance Alpha 上的综合成交量（包含链上即时交易与链下限价挂单）。",
-        g_txs: "今日已成交订单总数。",
         g_speed: "成交速度 (每秒订单数)。",
         g_match: "市场每秒平均撮合额 ($)。",
-        g_ord: "平均每单价值 (24小时)。",
-        g_flow: "过去1分钟的净资金流。",
-        g_spread: "买卖价差幅度。",
+        g_ord: "平均每单价值。",
+        g_spread: "买卖价差幅度 (%)。",
+        
         g_disc: "自动数据。免责声明：仅供参考，概不负责。请务必自行研究 (DYOR)。"
     }
 };
@@ -4047,7 +4101,6 @@ function updateGridValuesOnly() {
     }
 }
         
-// --- [V13 FINAL] RENDER TABLE: CLEAN & WHITE STYLE ---
 function renderMarketHealthTable() {
     const tbody = document.getElementById('healthTableBody');
     if (!tbody) return;
@@ -4056,130 +4109,145 @@ function renderMarketHealthTable() {
     // 1. Lọc giải đang chạy & Không phải Ecosystem
     let activeProjects = compList.filter(c => {
         let endTimeStr = (c.endTime || '23:59');
-        if(endTimeStr.length === 5) endTimeStr += ":00"; // Đảm bảo format HH:mm:ss
-        
+        if(endTimeStr.length === 5) endTimeStr += ":00"; 
         let isRunning = !c.end || new Date() < new Date(c.end + 'T' + endTimeStr + 'Z');
         let isEcosystem = (c.inputTokens && c.inputTokens.length > 0);
         return isRunning && !isEcosystem;
     });
-    
-    // 2. Sắp xếp theo Dòng tiền/giây (Mạnh nhất lên đầu)
+
+    // Sắp xếp theo giá trị giải thưởng giảm dần
     activeProjects.sort((a, b) => {
-        let maA = a.market_analysis || {};
-        let maB = b.market_analysis || {};
-        return (maB.realTimeVol || 0) - (maA.realTimeVol || 0);
+        let pA = (a.market_analysis && a.market_analysis.price) ? a.market_analysis.price : (a.cachedPrice || 0);
+        let valA = (parseFloat(a.rewardQty)||0) * pA;
+        
+        let pB = (b.market_analysis && b.market_analysis.price) ? b.market_analysis.price : (b.cachedPrice || 0);
+        let valB = (parseFloat(b.rewardQty)||0) * pB;
+        
+        return valB - valA;
     });
 
     if (activeProjects.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-sub py-4 opacity-50">No active market data</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center text-sub py-4 opacity-50">No active market data</td></tr>`;
         return;
     }
+
+    // Format số đầy đủ ($1,250,000)
+    const fmtFull = (num) => {
+        if(!num) return '$0';
+        return '$' + Math.round(num).toLocaleString('en-US');
+    };
+    
+    // Format rút gọn (Chỉ dùng cho Reward)
+    const fmtCompact = (num) => {
+        if(!num) return '$0';
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
+    };
+    
+    const getDaysAgo = (days) => {
+        let d = new Date();
+        d.setDate(d.getDate() - days);
+        return d.toISOString().split('T')[0];
+    };
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yestStr = getDaysAgo(1);
+    const dayBeforeStr = getDaysAgo(2);
 
     activeProjects.forEach(c => {
         let ma = c.market_analysis || {};
         
-        // --- A. AVG 1s MATCH ---
-        let avg1sVal = ma.realTimeVol || 0;
-        let avgColor = 'text-sub opacity-50'; 
-        let avgDisplay = '<span class="text-sub small fw-normal">Scanning...</span>';
+        // --- PRICE ---
+        let price = ma.price || c.cachedPrice || 0;
+        let priceDisplay = price > 0 
+            ? '$' + price.toLocaleString('en-US', { maximumFractionDigits: price < 1 ? 6 : 2 }) 
+            : '--';
+            
+        // --- REWARD ---
+        let qty = parseFloat(c.rewardQty) || 0;
+        let rewardVal = qty * price;
+        let rewardDisplay = fmtCompact(rewardVal); 
 
-        if (avg1sVal > 0) {
-            avgDisplay = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(avg1sVal);
-            // Giữ màu cho cột này vì nó quan trọng nhất (Highlight)
-            if (avg1sVal > 5000) avgColor = 'text-gold fw-bold';       
-            else if (avg1sVal > 1000) avgColor = 'text-brand fw-bold'; 
-            else if (avg1sVal > 200) avgColor = 'text-green';          
+        // --- MIN VOL (TARGET) ---
+        let history = c.history || [];
+        let latestTarget = history.length > 0 ? parseFloat(history[history.length-1].target) : 0;
+        let targetDisplay = fmtFull(latestTarget);
+
+        let yestRec = history.find(h => h.date === yestStr);
+        let dayBeforeRec = history.find(h => h.date === dayBeforeStr);
+        
+        let yestVal = yestRec ? parseFloat(yestRec.target) : 0;
+        let dayBeforeVal = dayBeforeRec ? parseFloat(dayBeforeRec.target) : 0;
+        
+        let diffHtml = '<span class="text-sub opacity-25" style="font-size:0.7rem">No Data</span>';
+        
+        if (yestVal > 0 && dayBeforeVal > 0) {
+            let diff = yestVal - dayBeforeVal;
+            let percent = ((diff / dayBeforeVal) * 100).toFixed(1);
+            let color = diff >= 0 ? 'text-green' : 'text-red';
+            let icon = diff >= 0 ? 'fa-caret-up' : 'fa-caret-down';
+            diffHtml = `<span class="${color}" style="font-size:0.75rem"><i class="fas ${icon}"></i> ${fmtFull(Math.abs(diff))} (${percent}%)</span>`;
+        } else if (yestVal > 0) {
+             diffHtml = `<span class="text-sub" style="font-size:0.7rem">New Data</span>`;
         }
 
-        // --- B. PRICE (GIÁ TOKEN) - [ĐÃ SỬA: MÀU TRẮNG] ---
-        let priceVal = ma.price || 0;
-        let priceDisplay = '--';
-        // Dùng class text-white để đồng bộ
-        let priceColor = 'text-white font-num'; 
+        // --- CAMP. VOL ---
+        let realHistory = c.real_vol_history || [];
+        let totalCampVol = realHistory.reduce((sum, item) => sum + parseFloat(item.vol || 0), 0);
+        let hasTodayInHist = realHistory.some(h => h.date === todayStr);
+        if (!hasTodayInHist) totalCampVol += (c.real_alpha_volume || 0);
+        let campVolDisplay = fmtFull(totalCampVol);
 
-        if (priceVal > 0) {
-            let digits = priceVal < 1 ? 6 : 2;
-            priceDisplay = '$' + priceVal.toLocaleString('en-US', { 
-                minimumFractionDigits: digits, 
-                maximumFractionDigits: digits 
-            });
-        }
+        // --- DAILY VOL ---
+        let todayVol = c.real_alpha_volume || 0;
+        let yestVolRec = realHistory.find(h => h.date === yestStr);
+        let yestVol = yestVolRec ? parseFloat(yestVolRec.vol) : 0;
+        
+        let todayVolStr = fmtFull(todayVol);
+        let yestVolStr = yestVol > 0 ? fmtFull(yestVol) : '--';
+        let yestClass = yestVol > 0 ? 'text-sub opacity-75' : 'text-sub opacity-25';
 
-        // --- C. SPEED (Tx/s) ---
-        let txPerMin = parseFloat(ma.velocity) || 0;
-        let txPerSec = txPerMin / 60; 
-        let speedDisplay = '--';
-        let speedColor = 'text-sub'; // Mặc định xám
-        
-        if (txPerSec > 0) {
-            speedDisplay = txPerSec.toFixed(2); 
-            // Vẫn giữ tô màu nhẹ cho Speed để phân biệt nhanh/chậm
-            if (txPerSec > 5.0) speedColor = 'text-gold fw-bold';       
-            else if (txPerSec > 1.0) speedColor = 'text-green fw-bold'; 
-            else speedColor = 'text-white';         
-        }
-
-        // --- D. AVG ORDER (24H) ---
-        let volDay = c.real_alpha_volume || 0;
-        let txDayCount = c.daily_tx_count || 0;
-        let avgOrderDayVal = txDayCount > 0 ? (volDay / txDayCount) : 0;
-        let avgOrderDisplay = avgOrderDayVal > 0 ? '$' + Math.round(avgOrderDayVal) : '--';
-
-        // --- E. CÁC BIẾN CÒN LẠI ---
-        let volToday = volDay ? '$' + new Intl.NumberFormat('en-US', { notation: "compact" }).format(volDay) : '--';
-        
-        // [ĐÃ SỬA: TXs DAY MÀU TRẮNG]
-        let txDayDisplay = txDayCount ? new Intl.NumberFormat('en-US', { notation: "compact" }).format(txDayCount) : '--';
-        
-        let flowVal = ma.flowValue || 0;
-        let flowDisplay = (flowVal > 0 ? '+' : '') + '$' + new Intl.NumberFormat('en-US', { notation: "compact" }).format(flowVal);
-        let flowColor = flowVal > 0 ? 'text-green' : (flowVal < 0 ? 'text-red' : 'text-sub');
-        
+        // --- CÁC CỘT PC ONLY ---
+        let speed = (parseFloat(ma.velocity) || 0) / 60;
+        let avgMatch = ma.realTimeVol || 0;
+        let avgOrder = ma.avgTicket || 0;
         let spread = ma.spread || 0;
-        let spreadVal = spread ? spread.toFixed(2) + '%' : '--';
-        let spreadColor = spread < 0.2 ? 'text-green' : (spread > 1.0 ? 'text-red' : 'text-warning');
 
-        // --- F. VẼ HTML ---
+        // Render HTML
         tbody.innerHTML += `
-        <tr style="cursor:pointer; transition: background 0.2s;" onclick="document.querySelector('.card-wrapper[data-id=\\'${c.db_id}\\']').scrollIntoView({behavior: 'smooth', block: 'center'}); toggleCardHighlight(document.querySelector('.card-wrapper[data-id=\\'${c.db_id}\\'] .tour-card'))">
+        <tr style="cursor:pointer; transition: background 0.2s; border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="document.querySelector('.card-wrapper[data-id=\\'${c.db_id}\\']').scrollIntoView({behavior: 'smooth', block: 'center'}); toggleCardHighlight(document.querySelector('.card-wrapper[data-id=\\'${c.db_id}\\'] .tour-card'))">
             
             <td class="ps-4">
                 <div class="d-flex align-items-center gap-2">
-                    <img src="${c.logo || 'https://placehold.co/30x30/333'}" style="width:24px; height:24px; border-radius:50%;">
-                    <span class="fw-bold text-white font-num">${c.name}</span>
+                    <img src="${c.logo || 'https://placehold.co/30x30/333'}" style="width:28px; height:28px; border-radius:50%; border:1px solid #333">
+                    <span class="fw-bold text-white font-num" style="font-size:0.9rem">${c.name}</span>
                 </div>
             </td>
             
-            <!-- CỘT PRICE (MÀU TRẮNG) -->
-            <td class="text-end font-num text-white opacity-75">${priceDisplay}</td>
-
-            <td class="text-end font-num text-sub">${volToday}</td>
+            <td class="text-end font-num fw-bold" style="color: #00F0FF; font-size:0.9rem;">${priceDisplay}</td>
             
-            <!-- CỘT TXs DAY (MÀU TRẮNG) -->
-            <td class="text-end font-num text-white opacity-75">${txDayDisplay}</td>
-
-            <td class="text-end font-num ${speedColor}">${speedDisplay}</td>
-
-            <td class="text-end font-num ${avgColor} col-highlight fw-bold" style="font-size:1.1rem">
-                ${avgDisplay}
+            <td class="text-end font-num fw-bold text-green" style="font-size:0.95rem;">${rewardDisplay}</td>
+            
+            <td class="text-end font-num">
+                <div class="text-gold fw-bold" style="font-size:0.9rem">${targetDisplay}</div>
+                <div>${diffHtml}</div>
             </td>
 
-            <td class="text-end font-num text-white">${avgOrderDisplay}</td>
+            <td class="text-end font-num">
+                <div class="text-white fw-bold" style="font-size:0.9rem">${todayVolStr}</div>
+                <div class="${yestClass}" style="font-size:0.7rem">Yest: ${yestVolStr}</div>
+            </td>
 
-          <td class="text-end font-num ${flowColor}">${flowDisplay}</td>
+            <td class="text-end font-num fw-bold" style="font-size:0.95rem;">${campVolDisplay}</td>
 
-    <td class="text-end font-num ${spreadColor} fw-bold">${spreadVal}</td>
-
-  </tr>
-`;
+            <td class="text-end font-num text-sub d-none d-md-table-cell">${speed.toFixed(2)}</td>
+            <td class="text-end font-num text-sub d-none d-md-table-cell">${fmtFull(avgMatch)}</td>
+            <td class="text-end font-num text-white d-none d-md-table-cell">${avgOrder > 0 ? '$'+avgOrder : '--'}</td>
+            <td class="text-end font-num pe-4 d-none d-md-table-cell ${spread > 1 ? 'text-red' : 'text-green'}">${spread.toFixed(2)}%</td>
+        </tr>
+        `;
     });
     
-    try {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    } catch(e) {}
+    try { [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).map(el => new bootstrap.Tooltip(el)); } catch(e) {}
 }
              
 
