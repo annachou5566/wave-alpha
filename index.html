@@ -497,6 +497,14 @@
             background: rgba(14, 203, 129, 0.05);
         }
 
+        
+        /* ALL VOL x2: Màu Xanh Neon */
+        .rp-x2 {
+            border-color: rgba(0, 240, 255, 0.5);
+            color: #00F0FF;
+            background: rgba(0, 240, 255, 0.05);
+        }
+
         /* ALL VOL x4: Màu tím huyền bí */
         .rp-x4 {
             border-color: rgba(153, 69, 255, 0.5);
@@ -2175,6 +2183,7 @@
                             <label class="small text-sub fw-bold mb-1">RULE TYPE</label>
                             <select id="c-rule" class="form-select form-select-sm">
                                 <option value="buy_only">ONLY BUY</option>
+                                <option value="trade_x2">BUY + SELL (x2)</option>
                                 <option value="trade_x4">BUY + SELL (x4)</option>
                             </select>
                         </div>
@@ -3895,8 +3904,22 @@ function renderGrid(customData = null) {
             if ((c.inputTokens||[]).length > 0) tagHtml = `<div class="tag-x2" style="background:#9945FF; color:#fff; border:none; box-shadow:0 0 5px #9945FF">ECOSYSTEM</div>`;
             if (c.alphaType === 'x4' && !isListingExpired && !(c.inputTokens||[]).length && status === 'running') cardClass += ' highlight-x4';
 
-            let ruleHtml = c.ruleType === 'trade_x4' ? `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>` : `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
+                        // --- SỬA LOGIC HIỂN THỊ TAG (THÊM X2) ---
+            let ruleHtml = '';
+            if (c.ruleType === 'trade_x4') {
+                // Nếu là x4 (Màu tím)
+                ruleHtml = `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>`;
+            } else if (c.ruleType === 'trade_x2') {
+                // Nếu là x2 (Màu xanh - MỚI)
+                ruleHtml = `<div class="rule-pill rp-x2"><i class="fas fa-retweet" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box" style="background:var(--brand); color:#000">x2</span></div>`;
+            } else {
+                // Mặc định là Only Buy (Màu xanh lá)
+                ruleHtml = `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
+            }
+            
+            // Giữ nguyên logic làm mờ khi giải kết thúc
             if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
+
 
             let adminEditBtn = isAdmin ? `<i class="fas fa-pencil-alt ms-2 text-sub cursor-pointer hover-white" style="font-size:0.7rem" onclick="openEditModal('${c.db_id}')"></i>` : '';
             let dragAttr = (isAdmin) ? `draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)"` : '';
@@ -6989,3 +7012,4 @@ function updateSingleCardUI(rawRow) {
 
 </body>
 </html>
+
