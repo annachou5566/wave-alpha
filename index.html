@@ -2874,7 +2874,7 @@ function applyLanguage() {
             
             // --- 3. QUAN TRỌNG: DÙNG SETTIMEOUT ĐỆ QUY (KHÔNG BAO GIỜ ĐƠ) ---
             // Làm xong việc mới nghỉ 20 giây rồi làm tiếp
-            //setTimeout(quickSyncData, 20000); 
+            // setTimeout(quickSyncData, 20000); 
         }
     }
 
@@ -2920,65 +2920,55 @@ function applyLanguage() {
             document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
         }
 
-        // 4. REALTIME LISTENER (Hỗ trợ nhận tín hiệu tức thì)
-        console.log("📡 Kết nối Realtime...");
-        if (supabase) {
-            const channel = supabase
-                .channel('public:tournaments')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
-                    const newRow = payload.new;
-                    if (newRow) {
-                        let localItem = compList.find(c => c.db_id === newRow.id);
-                        if (localItem) {
-                            let newData = newRow.data || newRow.Data;
-                            if (newData) Object.assign(localItem, newData);
-                        }
-                        updateGridValuesOnly();
-                        if (document.getElementById('healthTableBody')) renderMarketHealthTable();
-                        renderStats();
-                    }
-                })
-                .subscribe();
-        }
-            
-        // Modal hướng dẫn
-        if (!localStorage.getItem('wave_guide_seen')) {
-            setTimeout(() => {
-                const guideEl = document.getElementById('guideModal');
-                if(guideEl) new bootstrap.Modal(guideEl).show();
-                localStorage.setItem('wave_guide_seen', 'true');
-            }, 1500);
-        }
-    }
+       // --- 4. ĐĂNG KÝ REALTIME (CHÍNH THỨC - ĐÃ SỬA LỖI) ---
+    console.log("📡 Đang khởi tạo kết nối Realtime...");
 
-        // --- BẮT ĐẦU: REALTIME (VẪN GIỮ ĐỂ NHẬN TÍN HIỆU TỨC THÌ NẾU CÓ) ---
-        console.log("📡 Đang khởi động kết nối Realtime...");
-        const channel = supabase
-            .channel('public:tournaments')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
-                // Khi có tín hiệu Realtime (từ Edge Function bắn về), cập nhật ngay lập tức
-                // (Cái này hỗ trợ cho cái Quick Sync ở trên, giúp dữ liệu luôn tươi mới)
-                const newRow = payload.new;
-                if (newRow) {
-                    let localItem = compList.find(c => c.db_id === newRow.id);
-                    if (localItem) {
-                        let newData = newRow.data || newRow.Data;
-                        if (newData) {
-                            if (newData.real_alpha_volume !== undefined) localItem.real_alpha_volume = newData.real_alpha_volume;
-                            if (newData.daily_tx_count !== undefined) localItem.daily_tx_count = newData.daily_tx_count;
-                            if (newData.real_vol_history) localItem.real_vol_history = newData.real_vol_history;
-                            if (newData.market_analysis) localItem.market_analysis = newData.market_analysis;
-                            if (newData.last_updated_ts) localItem.last_updated_ts = newData.last_updated_ts;
-                        }
-                    }
-                    updateGridValuesOnly();
-                    if (document.getElementById('healthTableBody')) renderMarketHealthTable();
-                    renderStats();
+if (typeof supabase !== 'undefined') {
+    // Hủy kênh cũ để tránh trùng lặp
+    supabase.removeAllChannels();
+
+    supabase.channel('public:tournaments')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
+            const newData = payload.new;
+            if (!newData) return;
+            
+            console.log('🔔 CÓ DATA MỚI:', newData.name);
+
+            // 1. Cập nhật vào bộ nhớ
+            let localItem = compList.find(c => c.db_id === newData.id);
+            if (localItem) {
+                let newContent = newData.data || newData.Data;
+                if (newContent) {
+                    if (newContent.real_alpha_volume !== undefined) localItem.real_alpha_volume = newContent.real_alpha_volume;
+                    if (newContent.daily_tx_count !== undefined) localItem.daily_tx_count = newContent.daily_tx_count;
+                    if (newContent.market_analysis) localItem.market_analysis = newContent.market_analysis;
                 }
-            })
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') console.log("✅ Đã kết nối Realtime thành công!");
-            });
+            }
+
+            // 2. Vẽ lại giao diện (Chỉ số liệu)
+            if (typeof updateSingleCardUI === 'function') updateSingleCardUI(newData);
+            else renderGrid();
+
+            if (document.getElementById('healthTableBody')) renderMarketHealthTable();
+            renderStats();
+        })
+        .subscribe((status) => {
+            console.log(`📡 TRẠNG THÁI: ${status}`);
+            if (status === 'SUBSCRIBED') showToast("✅ Đã kết nối dữ liệu trực tiếp", "success");
+        });
+}
+
+// Modal hướng dẫn (Giữ nguyên logic cũ)
+if (!localStorage.getItem('wave_guide_seen')) {
+    setTimeout(() => {
+        const guideEl = document.getElementById('guideModal');
+        if(guideEl) new bootstrap.Modal(guideEl).show();
+        localStorage.setItem('wave_guide_seen', 'true');
+    }, 1500);
+}
+} 
+// --- KẾT THÚC HÀM INIT ---
+
 
     // --- HÀM checkAndAutoRefresh (KHÔNG CẦN DÙNG NỮA - ĐỂ TRỐNG) ---
     function checkAndAutoRefresh() {
@@ -3920,7 +3910,7 @@ function renderGrid(customData = null) {
                     <div class="market-bar">
                         <div class="mb-item text-start">
                             <div class="mb-label">Total Vol (Alpha) <i class="fas fa-info-circle opacity-50" title="Tổng Vol Alpha"></i></div>
-                            <div class="mb-val" style="color:${realVolColor}">${realVolDisplay}</div>
+                            <div class="mb-val" id="live-vol-${c.db_id}" style="color:${realVolColor}">${realVolDisplay}</div>
                         </div>
                         <div class="mb-item text-end">
     <div class="mb-label" style="justify-content: flex-end; color:#F0B90B">Min Target (Goal)</div>
@@ -4277,129 +4267,7 @@ function renderMarketHealthTable() {
 
     function switchTab(t) { document.querySelectorAll('.p-tab').forEach(el=>el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); ['chart','activity','chat'].forEach(x => document.getElementById(`content-${x}`).style.display = x===t ? (x==='chat'?'flex':'block') : 'none'); }
 
-        // --- CODE MỚI: LẤY DỮ LIỆU TỪ BẢNG PREDICTIONS (ĐÃ MERGE) ---
-    async function openPredictionView(id) {
-        // [FIX MỚI] Đóng thẻ bài đang phóng to trước khi làm bất cứ gì
-        if (typeof closeActiveCard === 'function') {
-            closeActiveCard();
-        }
-
-        currentPolyId = id;
-
-        // 1. Hiện loading
-        document.getElementById('loading-overlay').style.display = 'flex';
-
-        // 2. Gọi Server lấy danh sách dự đoán
-        const { data: predsData, error } = await supabase
-            .from('predictions')
-            .select('*')
-            .eq('tournament_id', id);
-
-        document.getElementById('loading-overlay').style.display = 'none';
-
-        if (error) {
-            alert("Lỗi tải dữ liệu: " + error.message);
-            return;
-        }
-
-        // 3. Gắn dữ liệu vào
-        let c = compList.find(x => x.db_id == id);
-        if(c) {
-            c.predictions = predsData.map(p => ({
-                user_id: p.user_id,
-                name: p.user_name,
-                avatar: p.user_avatar,
-                guess: parseFloat(p.guess),
-                time: new Date(p.created_at).getTime()
-            }));
-        }
-
-        // 4. Chuyển màn hình
-        // (Đảm bảo ẩn dashboard đi để tránh bị đè)
-        document.getElementById('view-dashboard').style.display = 'none';
-        switchView('predict');
-
-        // [AN TOÀN] Kiểm tra xem thẻ chứa nội dung có tồn tại không
-        // Nếu file HTML chưa có thẻ 'predict-content-placeholder', ta tự tạo nó
-        let container = document.getElementById('predict-content-placeholder');
-        if (!container) {
-            let viewPredict = document.getElementById('view-predict');
-            viewPredict.innerHTML = '<div id="predict-content-placeholder"></div>';
-            container = document.getElementById('predict-content-placeholder');
-        }
-
-        // 5. Vẽ giao diện (Code HTML của bạn giữ nguyên 100%)
-        container.innerHTML = `
-        <div class="terminal-layout">
-            <div class="terminal-main">
-                <div class="hero-header">
-                    <div class="hh-left"><img id="pt-logo" src="" title="View on Binance Alpha"><div><h1 class="fw-bold text-white mb-0" id="pt-symbol">---</h1><div class="text-sub fw-bold" style="font-size:0.75rem;letter-spacing:2px;">PREDICTION MARKET</div></div></div>
-
-                    <div class="hh-center">
-                        <div class="text-brand fw-bold small letter-spacing-1" style="font-size:0.85rem; opacity:0.8">CURRENT MIN VOLUME</div>
-                        <div class="big-vol" id="pt-min-vol" style="margin-bottom: 5px;">0</div>
-                        <div id="pt-vol-change" class="mb-4 d-flex align-items-center gap-2" style="font-family: var(--font-num); font-size: 1.1rem;"></div>
-
-                        <div class="d-flex gap-2">
-                             <button id="btn-predict-action" class="btn-predict-hero" onclick="openInputModal()"><i class="fas fa-crosshairs me-2"></i>MAKE PREDICTION</button>
-                             <button class="btn btn-outline-light rounded-pill px-3" onclick="new bootstrap.Modal(document.getElementById('ruleModal')).show()"><i class="fas fa-info-circle"></i> RULES</button>
-                             <button class="btn btn-dark border-secondary rounded-pill px-3 text-white" onclick="generateShareCard()" title="Share Card"><i class="fas fa-share-alt"></i></button>
-                        </div>
-
-                        <div class="admin-only admin-settle-box mt-3" style="width:100%">
-                            <label class="text-danger fw-bold small mb-1">TOURNAMENT SETTLEMENT</label>
-                            <button class="btn btn-danger w-100 fw-bold" onclick="settleTournament()"><i class="fas fa-gavel me-2"></i> AUTO SETTLE & DISTRIBUTE</button>
-                            <div class="text-sub small mt-1 text-center fst-italic">*System will fetch last Min Volume from History.</div>
-                        </div>
-                    </div>
-
-                    <div class="hh-right">
-                        <div class="text-end"><div class="header-stat-lbl">TIME REMAINING</div><div class="text-gold font-num fw-bold fs-3" id="pt-time">---</div></div>
-                        <div class="text-end"><div class="header-stat-lbl">TOTAL POOL</div><div class="text-green font-num fw-bold fs-3" id="pt-pool">0 $</div></div>
-                    </div>
-                </div>
-                <div class="terminal-card" style="flex:1;">
-                    <div class="p-tabs">
-                        <div class="p-tab active" onclick="switchTab('chart')" id="tab-chart">CHART</div>
-                        <div class="p-tab" onclick="switchTab('activity')" id="tab-activity">ACTIVITY</div>
-                        <div class="p-tab" onclick="switchTab('chat')" id="tab-chat">CHAT</div>
-                    </div>
-                    <div style="flex:1; position:relative; padding:25px; display:flex; flex-direction:column; overflow:hidden;">
-                        <div id="content-chart" style="height:100%; width:100%;"><canvas id="marketChart"></canvas></div>
-                        <div id="content-activity" class="feed-box" style="display:none; height:100%;"></div>
-                        <div id="content-chat" style="display:none; height:100%; flex-direction:column;">
-                            <div id="chat-feed" class="feed-box" style="flex:1; overflow-y:auto; margin-bottom:10px;"></div>
-                            <div class="d-flex gap-2 align-items-center">
-                                <input id="chat-msg" class="form-control rounded-pill" placeholder="Type a message..." style="padding: 10px 20px; background: #222; border: 1px solid #444; color: #fff;" onkeydown="if(event.key==='Enter') sendChat()">
-                                <button class="btn btn-icon text-brand border-0 bg-transparent" onclick="sendChat()" style="width: 45px; height: 45px;"><i class="fas fa-paper-plane fa-lg"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="terminal-side">
-                <div class="terminal-card" style="flex:1;">
-                    <div class="p-4 border-bottom border-secondary border-opacity-25 bg-panel"><h6 class="fw-bold m-0 text-gold letter-spacing-1">TOP TRADERS</h6></div>
-                    <div style="flex:1;overflow-y:auto;">
-                        <table class="leaderboard-table w-100">
-                            <thead>
-                                <tr>
-                                    <th class="ps-4">RANK</th>
-                                    <th>TRADER</th>
-                                    <th class="text-center">GUESS</th>
-                                    <th class="text-end pe-2">PRIZE</th> 
-                                </tr>
-                            </thead>
-                            <tbody id="pt-leaderboard"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-
-        updateTerminalData(id);
-    }
-
+        
        // --- [FIXED] UPDATE DATA FOR NEW COCKPIT UI ---
 // --- [FIXED] UPDATE DATA & BUTTON STATE (ĐỒNG BỘ GIỜ UTC) ---
 function updateTerminalData(id) {
@@ -5547,35 +5415,67 @@ function saveComp() {
         } catch(e){}
     }
 
-        // --- FIX: RENDER STATS TỪ SERVER ---
-            // --- CẬP NHẬT: CHỈ TÍNH TỔNG TIỀN CÁC GIẢI ĐANG CHẠY (ACTIVE ONLY) ---
+        // ============================================================
+    // [FIX TIME] RENDER STATS - KHÔNG BỎ SÓT TOKEN CÒN HẠN TRONG NGÀY
+    // ============================================================
     function renderStats() {
         const now = new Date();
         let activeCount = 0;
         let totalEstValue = 0;
 
-        // Biến để tìm Token có giải to nhất
         let maxRewardVal = 0;
         let topToken = null;
 
+        const fmt = (num) => new Intl.NumberFormat('en-US', { 
+            style: 'currency', currency: 'USD', maximumFractionDigits: 0 
+        }).format(num);
+
         compList.forEach(c => {
-            // 1. Kiểm tra trạng thái Running (Còn hạn)
-            let isRunning = true;
-            if (c.end) {
-                let endDateTime = new Date(c.end + 'T' + (c.endTime || '23:59:59'));
-                if (now > endDateTime) isRunning = false;
+            // --- 1. XỬ LÝ THỜI GIAN (QUAN TRỌNG) ---
+            let endDateTime;
+
+            // Trường hợp A: Có trường end_time đầy đủ (ví dụ: "2025-12-25T11:00:00")
+            if (c.end_time) {
+                let t = c.end_time;
+                if (!t.endsWith("Z")) t += "Z"; // Ép về UTC
+                endDateTime = new Date(t);
+            } 
+            // Trường hợp B: Dữ liệu tách riêng Ngày (c.end) và Giờ (c.endTime)
+            else if (c.end) {
+                // Nếu có giờ thì dùng giờ đó (endTime), nếu không có thì cho sống đến hết ngày (23:59:59)
+                let timePart = c.endTime || "23:59:59"; 
+                
+                // Ghép thành chuỗi chuẩn UTC: YYYY-MM-DD + T + HH:mm:ss + Z
+                let fullTimeStr = `${c.end}T${timePart}`;
+                if (!fullTimeStr.endsWith("Z")) fullTimeStr += "Z";
+                
+                endDateTime = new Date(fullTimeStr);
+            } 
+            else {
+                // Nếu không có ngày kết thúc -> Mặc định là token vĩnh viễn (Active)
+                endDateTime = new Date("2099-12-31T23:59:59Z");
             }
 
-            // 2. Tính toán
-            if (isRunning) {
+            // --- 2. KIỂM TRA: CÒN HẠN KHÔNG? ---
+            // So sánh thời điểm hiện tại với hạn chót (tính từng giây)
+            if (now.getTime() < endDateTime.getTime()) {
                 activeCount++;
-                let qty = parseFloat(c.rewardQty) || 0;
-                let price = parseFloat(c.cachedPrice) || 0;
-                let currentVal = qty * price;
 
+                // Tính toán tiền thưởng
+                let qty = parseFloat(c.reward_qty || c.rewardQty || 0);
+                
+                // Lấy giá: Ưu tiên giá Realtime
+                let price = 0;
+                if (c.data && c.data.price) {
+                    price = parseFloat(c.data.price);
+                } else {
+                    price = parseFloat(c.cachedPrice || 0);
+                }
+
+                let currentVal = qty * price;
                 totalEstValue += currentVal;
 
-                // So sánh tìm Top 1 (Giải thưởng lớn nhất)
+                // Tìm Top 1
                 if (currentVal > maxRewardVal) {
                     maxRewardVal = currentVal;
                     topToken = c;
@@ -5583,28 +5483,40 @@ function saveComp() {
             }
         });
 
-        // 3. Hiển thị 2 ô cơ bản
-        document.getElementById('stat-active').innerText = activeCount;
-        document.getElementById('stat-pool').innerText = fmt(totalEstValue);
+        // ========================================================
+        // CẬP NHẬT GIAO DIỆN
+        // ========================================================
+        
+        // 1. Số giải đang chạy
+        const elActive = document.getElementById('stat-active');
+        if (elActive) elActive.innerText = activeCount;
 
-        // 4. Hiển thị ô Top 1 (Highest Reward)
+        // 2. Tổng giá trị Pool
+        const elPool = document.getElementById('stat-pool');
+        if (elPool) elPool.innerText = fmt(totalEstValue);
+
+        // 3. Highest Reward
+        const elTopSym = document.getElementById('stat-top-symbol');
+        const elTopVal = document.getElementById('stat-top-val');
+        const elTopImg = document.getElementById('stat-top-img');
+
         if (topToken) {
-            document.getElementById('stat-top-symbol').innerText = topToken.name;
-            document.getElementById('stat-top-val').innerText = fmt(maxRewardVal);
+            if (elTopSym) elTopSym.innerText = topToken.name;
+            if (elTopVal) elTopVal.innerText = fmt(maxRewardVal);
             
-            // Hiển thị logo token làm nền (nếu có)
-            if(topToken.logo) {
-                let imgEl = document.getElementById('stat-top-img');
-                imgEl.src = topToken.logo;
-                imgEl.style.display = 'block';
-            } else {
-                document.getElementById('stat-top-img').style.display = 'none';
+            if (elTopImg) {
+                if (topToken.logo) {
+                    elTopImg.src = topToken.logo;
+                    elTopImg.style.display = 'block';
+                } else {
+                    elTopImg.style.display = 'none';
+                }
             }
         } else {
-            // Nếu không có giải nào chạy
-            document.getElementById('stat-top-symbol').innerText = "---";
-            document.getElementById('stat-top-val').innerText = "$0";
-            document.getElementById('stat-top-img').style.display = 'none';
+            // Không có giải nào
+            if (elTopSym) elTopSym.innerText = "---";
+            if (elTopVal) elTopVal.innerText = "$0";
+            if (elTopImg) elTopImg.style.display = 'none';
         }
     }
 
@@ -6547,6 +6459,9 @@ window.sendReportFromUI = async function() {
     }
 }
 
+
+
+
 </script>
 <div class="modal fade" id="feedbackModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -6893,6 +6808,51 @@ function handleRestore(input) {
     input.value = ''; // Reset input
 }
 
+// --- HÀM CẬP NHẬT GIAO DIỆN (CHẠY KHI CÓ REALTIME) ---
+function updateSingleCardUI(rawRow) {
+    const data = rawRow.data || rawRow.Data;
+    const dbId = rawRow.id;
+    
+    if (!data) return;
+
+    // 1. Cập nhật số Total Volume (Tìm theo ID mới gắn)
+    const volEl = document.getElementById(`live-vol-${dbId}`);
+    if (volEl) {
+        let newVol = parseFloat(data.real_alpha_volume || 0);
+        // Format số tiền: $1,234,567
+        let volStr = newVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(newVol) : '---';
+        
+        // Chỉ cập nhật và nháy màu nếu số thay đổi
+        if (volEl.innerText !== volStr) {
+            volEl.innerText = volStr;
+            
+            // Hiệu ứng nháy màu trắng sáng
+            volEl.style.color = '#fff';
+            volEl.style.textShadow = '0 0 10px #fff';
+            volEl.style.transition = 'none'; // Bỏ transition để nháy ngay
+            
+            setTimeout(() => {
+                volEl.style.transition = 'color 0.5s ease';
+                volEl.style.color = ''; // Trả về màu cũ (hoặc CSS mặc định)
+                volEl.style.textShadow = '';
+            }, 500);
+        }
+    }
+
+    // 2. Cập nhật Giá (Price)
+    const priceEl = document.querySelector(`.live-price-val[data-id="${dbId}"]`);
+    if (priceEl && data.market_analysis && data.market_analysis.price) {
+        let price = data.market_analysis.price;
+        let pStr = '$' + price.toLocaleString('en-US', { maximumFractionDigits: 6 });
+        if (priceEl.innerText !== pStr) {
+            priceEl.innerText = pStr;
+            priceEl.classList.add('text-brand');
+            setTimeout(() => priceEl.classList.remove('text-brand'), 500);
+        }
+    }
+}
+
+
 </script>
 
 <script>
@@ -6961,4 +6921,3 @@ function handleRestore(input) {
 
 </body>
 </html>
-
