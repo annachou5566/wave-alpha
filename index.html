@@ -2129,7 +2129,7 @@
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-5">
-                        <label class="small text-sub fw-bold mb-1">REWARD TOKEN CONTRACT (Để lấy giá tính Pool)</label>
+                        <label class="small text-sub fw-bold mb-1">REWARD TOKEN CONTRACT</label>
                         <div class="input-group">
                             <input type="text" id="c-contract" class="form-control" onchange="fetchTokenInfo(this.value)">
                             <button class="btn btn-outline-secondary border-secondary" onclick="fetchTokenInfo(document.getElementById('c-contract').value)"><i class="fas fa-search"></i></button>
@@ -2140,7 +2140,7 @@
                         <input type="text" id="c-chain" class="form-control text-uppercase fw-bold" placeholder="bsc">
                     </div>
                     <div class="col-md-2">
-                        <label class="small text-sub fw-bold mb-1">SYMBOL (TÊN)</label>
+                        <label class="small text-sub fw-bold mb-1">SYMBOL</label>
                         <input type="text" id="c-symbol" class="form-control text-uppercase text-brand font-num fw-bold">
                     </div>
                     <div class="col-md-3">
@@ -2167,9 +2167,13 @@
                 </div>
 
                 <div class="p-3 rounded border border-secondary border-opacity-25 mb-4" style="background: rgba(255,255,255,0.02)">
+                    <h6 class="text-warning mb-3 small fw-bold text-uppercase border-bottom border-secondary border-opacity-25 pb-2">
+                        <i class="fas fa-cogs me-2"></i>SETTINGS & TELEGRAM DETAILS
+                    </h6>
+
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="small text-sub fw-bold mb-1">ALPHA POINTS</label>
+                            <label class="small text-sub fw-bold mb-1">ALPHA POINTS (Multiplier)</label>
                             <select id="c-alphaType" class="form-select form-select-sm" onchange="toggleListingTime()">
                                 <option value="none">None (1x)</option>
                                 <option value="x2">Other (x2)</option>
@@ -2181,12 +2185,23 @@
                             <input type="datetime-local" id="c-listing" class="form-control form-control-sm" disabled>
                         </div>
                         <div class="col-md-4">
-                            <label class="small text-sub fw-bold mb-1">RULE TYPE</label>
+                            <label class="small text-sub fw-bold mb-1">RULE TYPE (Volume)</label>
                             <select id="c-rule" class="form-select form-select-sm">
                                 <option value="buy_only">ONLY BUY</option>
                                 <option value="trade_all">ALL VOL (Buy + Sell)</option>
                                 <option value="trade_x4">BUY + SELL (x4)</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-8">
+                            <label class="small text-sub fw-bold mb-1">CAMPAIGN TITLE (TELEGRAM)</label>
+                            <input type="text" id="c-campaign-title" class="form-control form-control-sm" placeholder="VD: ARB Trading Competition">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small text-sub fw-bold mb-1">PRIZE: ALPHA POINTS</label>
+                            <input type="number" id="c-alpha-prize" class="form-control form-control-sm" placeholder="VD: 5">
                         </div>
                     </div>
                 </div>
@@ -3615,35 +3630,15 @@ await loadFromCloud(false);
     }
 }
 
-    async function updateAllPrices() {
-        // --- GIẢI PHÁP 1: GỌI API SONG SONG (SIÊU TỐC) ---
-        // Thay vì chờ từng cái (tuần tự), ta bắn request lấy giá cho TẤT CẢ cùng lúc
-        const promises = compList.map(async (c) => {
-            if(c.contract) {
-                try {
-                    // Gọi API DexScreener
-                    let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.contract}`);
-                    let d = await r.json();
-                    if(d.pairs && d.pairs.length > 0) {
-                        c.cachedPrice = d.pairs[0].priceUsd;
-                    }
-                } catch(e) {
-                    console.warn(`Failed to fetch price for ${c.name}`);
-                }
-            }
-        });
-
-        // Chờ tất cả các request chạy xong cùng một lúc (chỉ mất ~0.5s thay vì 5-10s)
-        await Promise.all(promises);
-
-        // Sau khi có giá mới thì vẽ lại lưới và thanh thống kê một lần nữa
-        renderGrid();
-        renderStats();
-        
-        // Cập nhật lại Cache lần nữa để lưu giá mới nhất vào máy người dùng
-        // Lần sau F5 là có giá này hiện ra ngay lập tức
-        localStorage.setItem('wave_comp_list', JSON.stringify(compList));
-    }
+    // --- HÀM FIX: CẬP NHẬT GIÁ (PHIÊN BẢN MỚI: KHÔNG GỌI DEXSCREENER) ---
+// Hàm này cần tồn tại để loadFromCloud không bị báo lỗi ReferenceError
+function updateAllPrices() {
+    console.log("⚠️ Đã chặn DexScreener.");
+    
+    // Chỉ vẽ lại giao diện để đảm bảo thống nhất dữ liệu
+    renderGrid();
+    renderStats();
+}
 
 
             /* --- HÀM VẼ BIỂU ĐỒ V49 (REVERT: TOTAL VOL + MIN TARGET) --- */
@@ -3938,8 +3933,12 @@ function renderGrid(customData = null) {
             let realVolDisplay = realVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
             let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
             let target = (c.history && c.history.length > 0) ? parseFloat(c.history[c.history.length-1].target) : 0;
-            let priceStr = (c.cachedPrice > 0) ? '$' + parseFloat(c.cachedPrice).toLocaleString('en-US', { maximumFractionDigits: 6 }) : '---';
-            let estVal = (parseFloat(c.rewardQty)||0) * (c.cachedPrice||0);
+            
+let usePrice = (c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0;
+
+let priceStr = (usePrice > 0) ? '$' + usePrice.toLocaleString('en-US', { maximumFractionDigits: usePrice < 1 ? 6 : 2 }) : '---';
+let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
+
             let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
             // HTML
@@ -5560,13 +5559,13 @@ function saveComp() {
                 // Tính toán tiền thưởng
                 let qty = parseFloat(c.reward_qty || c.rewardQty || 0);
                 
-                // Lấy giá: Ưu tiên giá Realtime
-                let price = 0;
-                if (c.data && c.data.price) {
-                    price = parseFloat(c.data.price);
-                } else {
-                    price = parseFloat(c.cachedPrice || 0);
-                }
+                // --- FIX: Ưu tiên Market Analysis ---
+let price = 0;
+if (c.market_analysis && c.market_analysis.price) {
+    price = parseFloat(c.market_analysis.price);
+} else if (c.data && c.data.price) {
+    price = parseFloat(c.data.price); // Fallback dữ liệu cũ
+}
 
                 let currentVal = qty * price;
                 totalEstValue += currentVal;
@@ -7017,6 +7016,3 @@ function updateSingleCardUI(rawRow) {
 
 </body>
 </html>
-
-
-
