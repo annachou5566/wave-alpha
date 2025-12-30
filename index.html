@@ -2274,7 +2274,9 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-brand"><i class="fas fa-graduation-cap me-2"></i> QUICK START GUIDE</h5>
+                <h5 class="modal-title fw-bold text-brand">
+                    <i class="fas fa-graduation-cap me-2"></i> <span data-i18n="guide_title">QUICK START GUIDE</span>
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
@@ -2282,27 +2284,29 @@
                     <div class="col-md-4 text-center">
                         <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
                             <div class="mb-2"><i class="fas fa-list-ol fa-2x text-brand"></i></div>
-                            <h6 class="text-white fw-bold">STEP 1: SETUP LIST</h6>
-                            <p class="text-sub small">Define your tracking list (e.g. Account A, Account B) to separate volume sources. <br><strong>No connection needed.</strong></p>
+                            <h6 class="text-white fw-bold" data-i18n="guide_s1_t">STEP 1: SETUP LIST</h6>
+                            <p class="text-sub small" data-i18n="guide_s1_d">Define your tracking list (e.g. Account A, Account B) to separate volume sources. No connection needed.</p>
                         </div>
                     </div>
                     <div class="col-md-4 text-center">
                         <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
                             <div class="mb-2"><i class="fas fa-pen-to-square fa-2x text-gold"></i></div>
-                            <h6 class="text-white fw-bold">STEP 2: INPUT VOLUME</h6>
-                            <p class="text-sub small">Click <strong>UPDATE</strong> on any tournament. Manually input your daily volume for each account.</p>
+                            <h6 class="text-white fw-bold" data-i18n="guide_s2_t">STEP 2: INPUT VOLUME</h6>
+                            <p class="text-sub small" data-i18n="guide_s2_d">Click UPDATE on any tournament. Manually input your daily volume for each account.</p>
                         </div>
                     </div>
                     <div class="col-md-4 text-center">
                         <div class="p-3 rounded h-100" style="border: 1px solid #333; background: rgba(255,255,255,0.03);">
                             <div class="mb-2"><i class="fas fa-chart-line fa-2x text-green"></i></div>
-                            <h6 class="text-white fw-bold">STEP 3: TRACK GAP</h6>
-                            <p class="text-sub small">System automatically calculates the <strong>GAP</strong> (Distance) to the target Min Volume.</p>
+                            <h6 class="text-white fw-bold" data-i18n="guide_s3_t">STEP 3: TRACK GAP</h6>
+                            <p class="text-sub small" data-i18n="guide_s3_d">System automatically calculates the GAP (Distance) to the target Min Volume.</p>
                         </div>
                     </div>
                 </div>
                 <div class="mt-4 text-center">
-                    <button class="btn-action w-50 mx-auto" data-bs-dismiss="modal" onclick="openSettingsModal()">SETUP MY LIST <i class="fas fa-arrow-right ms-2"></i></button>
+                    <button class="btn-action w-50 mx-auto" data-bs-dismiss="modal" onclick="openSettingsModal()">
+                        <span data-i18n="btn_setup_list">SETUP MY LIST</span> <i class="fas fa-arrow-right ms-2"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -2603,7 +2607,7 @@ const translations = {
         card_update: "UPDATE VOL",
         card_total_vol: "Total Vol (Alpha)",
         card_min_target: "Min Target (Goal)",
-        btn_predict: "ENTER PREDICTION",
+        btn_predict: "PREDICT",
         btn_market_closed: "MARKET CLOSED",
         
         // --- TAGS & STATUS ---
@@ -2652,8 +2656,20 @@ const translations = {
         toast_success: "Action Successful!",
         toast_error: "Error occurred!",
         toast_saved: "Data Saved!",
-        toast_copied: "Copied to clipboard!"
-    },
+        toast_copied: "Copied to clipboard!",
+
+        // --- GUIDE MODAL ---
+        guide_title: "QUICK START GUIDE",
+        guide_s1_t: "STEP 1: SETUP LIST",
+        guide_s1_d: "Define your tracking list (e.g. Account A, Account B) to separate volume sources. No connection needed.",
+        guide_s2_t: "STEP 2: INPUT VOLUME",
+        guide_s2_d: "Click UPDATE on any tournament. Manually input your daily volume for each account.",
+        guide_s3_t: "STEP 3: TRACK GAP",
+        guide_s3_d: "System automatically calculates the GAP (Distance) to the target Min Volume.",
+        btn_setup_list: "SETUP MY LIST"
+        },
+
+
     vi: {
         // --- NAV & COMMON ---
         nav_sys_time: "GIỜ HỆ THỐNG",
@@ -2747,7 +2763,7 @@ const translations = {
         lbl_history: "LỊCH SỬ NHẬP",
         btn_save_prog: "LƯU TIẾN ĐỘ",
 
-        modal_pred_title: "NHẬP DỰ ĐOÁN",
+        modal_pred_title: "DỰ ĐOÁN",
         modal_pred_desc: "Dự đoán Min Volume chốt sổ.",
         lbl_your_name: "TÊN BẠN",
         lbl_your_guess: "DỰ ĐOÁN (VOL)",
@@ -2758,7 +2774,18 @@ const translations = {
         toast_success: "Thao tác thành công!",
         toast_error: "Có lỗi xảy ra!",
         toast_saved: "Dữ liệu đã lưu!",
-        toast_copied: "Đã sao chép!"
+        toast_copied: "Đã sao chép!",
+
+        // --- GUIDE MODAL ---
+        guide_title: "HƯỚNG DẪN NHANH",
+        guide_s1_t: "BƯỚC 1: TẠO DANH SÁCH",
+        guide_s1_d: "Định nghĩa các ví cần theo dõi (VD: Ví Chính, Ví Phụ). Không cần kết nối ví thật.",
+        guide_s2_t: "BƯỚC 2: NHẬP VOLUME",
+        guide_s2_d: "Bấm CẬP NHẬT trên thẻ giải đấu. Nhập số Vol thực tế hàng ngày của từng ví.",
+        guide_s3_t: "BƯỚC 3: THEO DÕI GAP",
+        guide_s3_d: "Hệ thống tự động tính khoảng cách (GAP) đến mức Min Volume mục tiêu.",
+        btn_setup_list: "CÀI ĐẶT DANH SÁCH"
+
     },
     zh: {
         // --- NAV & COMMON ---
@@ -2818,7 +2845,7 @@ const translations = {
         card_update: "更新量",
         card_total_vol: "总成交量 (Alpha)",
         card_min_target: "最低目标 (Min)",
-        btn_predict: "输入预测",
+        btn_predict: "预测",
         btn_market_closed: "市场已关闭",
 
         // --- TAGS & STATUS ---
@@ -2864,7 +2891,18 @@ const translations = {
         toast_success: "操作成功!",
         toast_error: "发生错误!",
         toast_saved: "数据已保存!",
-        toast_copied: "已复制!"
+        toast_copied: "已复制!",
+
+        // --- GUIDE MODAL ---
+        guide_title: "快速入门指南",
+        guide_s1_t: "步骤 1: 设置列表",
+        guide_s1_d: "定义您的追踪列表（如：账户 A，账户 B）。无需连接钱包。",
+        guide_s2_t: "步骤 2: 输入交易量",
+        guide_s2_d: "点击锦标赛上的更新 (UPDATE)。手动输入每个账户的每日交易量。",
+        guide_s3_t: "步骤 3: 追踪差距",
+        guide_s3_d: "系统自动计算与目标最低交易量的差距 (GAP)。",
+        btn_setup_list: "设置我的列表"
+
     },
     ko: {
         // --- NAV & COMMON ---
@@ -2970,7 +3008,17 @@ const translations = {
         toast_success: "작업 성공!",
         toast_error: "오류가 발생했습니다!",
         toast_saved: "데이터 저장됨!",
-        toast_copied: "클립보드에 복사됨!"
+        toast_copied: "클립보드에 복사됨!",
+
+        // --- GUIDE MODAL ---
+        guide_title: "빠른 시작 가이드",
+        guide_s1_t: "1단계: 리스트 설정",
+        guide_s1_d: "추적할 리스트를 정의하세요 (예: 계정 A, 계정 B). 지갑 연결 필요 없음.",
+        guide_s2_t: "2단계: 거래량 입력",
+        guide_s2_d: "토너먼트에서 업데이트(UPDATE)를 클릭하세요. 각 계정의 일일 거래량을 수동 입력.",
+        guide_s3_t: "3단계: 격차 추적",
+        guide_s3_d: "목표 최소 거래량까지의 격차(GAP)를 시스템이 자동 계산합니다.",
+        btn_setup_list: "내 리스트 설정"
     }
 };
 
