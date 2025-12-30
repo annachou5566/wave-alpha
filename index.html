@@ -1415,7 +1415,7 @@
                 <div id="nav-brand-text">WAVE<span>ALPHA</span></div>
             </a>
             <div class="d-none d-md-block ps-4 border-start border-secondary border-opacity-25">
-                <span class="text-sub" style="font-size:0.65rem; font-weight:700; letter-spacing:1px" data-i18n="sys_time">SYSTEM TIME</span>
+                <span class="text-sub" id="sys-time-lbl" data-i18n="nav_sys_time">SYSTEM TIME</span>
                 <div id="sysClock" class="font-num fw-bold text-brand" style="line-height:1; font-size: 1.2rem;">--:--:--</div>
             </div>
         </div>
@@ -1428,12 +1428,13 @@
                 <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow" style="border: 1px solid var(--border);">
                     <li><a class="dropdown-item" href="#" onclick="changeLanguage('en')"><i class="fas fa-flag-usa me-2"></i>ENGLISH</a></li>
                     <li><a class="dropdown-item" href="#" onclick="changeLanguage('vi')"><i class="fas fa-star text-danger me-2"></i>TIẾNG VIỆT</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="changeLanguage('zh')"><i class="fas fa-circle text-danger me-2"></i>中文</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="changeLanguage('zh')"><i class="fas fa-circle text-danger me-2"></i>中文 (CHINESE)</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="changeLanguage('ko')"><i class="fas fa-circle text-white me-2"></i>한국어 (KOREAN)</a></li>
                 </ul>
             </div>
 
             <button class="btn btn-sm btn-outline-light border-secondary text-brand fw-bold d-flex align-items-center gap-2 me-2" onclick="new bootstrap.Modal(document.getElementById('guideModal')).show()">
-                <i class="fas fa-book-open"></i> <span class="d-none d-md-inline">GUIDE</span>
+                <i class="fas fa-book-open"></i> <span class="d-none d-md-inline" data-i18n="nav_guide">GUIDE</span>
             </button>
 
             <button class="btn-icon text-gold" onclick="handleSmartRefresh()" title="Smart Sync" style="display:none">
@@ -1447,7 +1448,7 @@
 </button>
 <button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
 
-            <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-2 ms-2" onclick="openLoginModal()" id="loginBtn"><i class="fas fa-key"></i> <span class="d-none d-md-inline">Login</span></button>
+            <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-2 ms-2" onclick="openLoginModal()" id="loginBtn"><i class="fas fa-key"></i> <span class="d-none d-md-inline" data-i18n="nav_login">Login</span></button>
 
             <div id="userProfile" class="d-none align-items-center ms-2">
                  <div class="balance-badge" title="Virtual USDT (BSC)">
@@ -1466,254 +1467,206 @@
 
 <div id="view-dashboard">
     <div class="hero-banner">
-
-        <div class="hero-banner">
-        </div>
-    
-        <div class="container">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <h6 class="text-brand fw-bold font-num letter-spacing-1 mb-0" style="font-size: 1rem;">
-                    <i class="fas fa-network-wired me-2"></i>WAVE ALPHA ECOSYSTEM
-                </h6>
-                <div style="flex:1; height:1px; background: #333;"></div>
-            </div>
-    
-            <div class="eco-grid">
-                
-                <a href="http://t.me/WaveAlphaSignal_bot/miniapp" target="_blank" class="eco-card tele">
-                    <div class="eco-icon"><i class="fas fa-mobile-alt"></i></div>
-                    <div class="eco-content">
-                        <div class="eco-title">Mini App</div>
-                        <div class="eco-desc">Open Wave Alpha directly on Telegram.</div>
-                    </div>
-                </a>
-    
-                <a href="https://t.me/wavealphachannel" target="_blank" class="eco-card channel">
-                    <div class="eco-icon"><i class="fas fa-bullhorn"></i></div>
-                    <div class="eco-content">
-                        <div class="eco-title">Wave Alpha Channel</div>
-                        <div class="eco-desc">News & Updates.</div>
-                    </div>
-                </a>
-    
-                <a href="https://t.me/WaveAlphaSignal_bot" target="_blank" class="eco-card">
-                    <div class="eco-icon"><i class="fas fa-robot"></i></div>
-                    <div class="eco-content">
-                        <div class="eco-title">Signal Bot</div>
-                        <div class="eco-desc">Check Volume & Price.</div>
-                    </div>
-                </a>
-    
-            </div>
-        </div>
-        <div class="container">
-        
-        <div class="container">
+        <div class="container text-center">
             <h1 class="hero-title" data-i18n="hero_title">TOURNAMENT VOLUME TRACKER</h1>
             <p class="hero-sub" data-i18n="hero_sub">Manage your accounts & Join the prediction.</p>
         </div>
     </div>
 
     <div class="container">
-        
-        <div class="d-flex justify-content-between align-items-center mb-3">
-             <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num" style="text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);">
-                <i class="fas fa-link me-2"></i>
-                <span data-i18n="sect_arsenal">TRADING PLATFORMS</span>
-            </h4>
-            <span class="text-sub small"><i class="fas fa-check-circle text-green me-1"></i> <span data-i18n="verified_link">Verified Links</span></span>
+        <div id="eventCarousel" class="carousel slide event-carousel mb-4" data-bs-ride="carousel" style="display:none;">
+            <div class="carousel-indicators"></div> 
+            <div class="carousel-inner"></div> 
         </div>
-        
-        <div class="arsenal-section">
-            <div class="arsenal-grid" id="arsenal-grid">
+
+        <div class="command-deck">
+            
+            <div>
+                <div class="cmd-label">
+                    <i class="fas fa-network-wired text-brand"></i> <span data-i18n="cmd_eco">ECOSYSTEM</span>
                 </div>
+                <div class="cmd-grid">
+                    <a href="https://t.me/WaveAlphaSignal_bot/miniapp" target="_blank" class="cmd-card cc-eco">
+                        <div class="cmd-icon"><i class="fas fa-mobile-alt"></i></div>
+                        <div class="cmd-title" data-i18n="cmd_miniapp">Mini App</div>
+                        <div class="cmd-sub">Direct Access</div>
+                    </a>
+                    <a href="https://t.me/wavealphachannel" target="_blank" class="cmd-card cc-eco">
+                        <div class="cmd-icon"><i class="fas fa-bullhorn"></i></div>
+                        <div class="cmd-title" data-i18n="cmd_channel">Channel</div>
+                        <div class="cmd-sub">Updates</div>
+                    </a>
+                    <a href="https://t.me/WaveAlphaSignal_bot" target="_blank" class="cmd-card cc-eco">
+                        <div class="cmd-icon"><i class="fas fa-robot"></i></div>
+                        <div class="cmd-title" data-i18n="cmd_bot">Bot</div>
+                        <div class="cmd-sub">Get Market Data</div>
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <div class="cmd-label">
+                    <i class="fas fa-link text-gold"></i> <span data-i18n="cmd_platform">PLATFORMS</span>
+                </div>
+                <div id="arsenal-grid" style="display:none"></div> 
+
+                <div class="cmd-grid">
+                    <a id="ui-ref-binance" href="#" target="_blank" class="cmd-card cc-binance">
+                        <div class="cmd-icon"><i class="fas fa-coins"></i></div>
+                        <div class="cmd-title" data-i18n="cmd_cex">BINANCE</div>
+                        <div class="cmd-sub">CEX</div>
+                    </a>
+                    <a id="ui-ref-web3" href="#" target="_blank" class="cmd-card cc-web3">
+                        <div class="cmd-icon"><i class="fas fa-wallet"></i></div>
+                        <div class="cmd-title" data-i18n="cmd_web3">BINANCE WALLET</div>
+                        <div class="cmd-sub">Web3</div>
+                    </a>
+                    <a id="ui-ref-dex" href="#" target="_blank" class="cmd-card cc-dex">
+                        <div class="cmd-icon"><i class="fas fa-layer-group"></i></div>
+                        <div class="cmd-title" data-i18n="cmd_dex">ASTER</div>
+                        <div class="cmd-sub">Dex</div>
+                    </a>
+                </div>
+            </div>
+
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-             <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num" style="text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);">
-                <i class="fas fa-chart-pie me-2"></i>
-                <span data-i18n="sect_market">MARKET OVERVIEW</span>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+             <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num">
+                <i class="fas fa-chart-pie me-2"></i><span data-i18n="sect_market">MARKET OVERVIEW</span>
             </h4>
         </div>
-
-        <div class="row g-4 mb-5">
+        
+        <div class="row g-3 mb-5">
             <div class="col-md-4">
                 <div class="stat-box">
-                    <div>
-                        <div class="stat-lbl" data-i18n="stat_active">ACTIVE POOLS</div>
-                        <div class="stat-val text-brand" id="stat-active">0</div>
-                    </div>
+                    <div><div class="stat-lbl" data-i18n="stat_active">ACTIVE POOLS</div><div class="stat-val text-brand" id="stat-active">0</div></div>
                     <i class="fas fa-bolt text-sub opacity-25 fa-2x"></i>
                 </div>
             </div>
-
             <div class="col-md-4">
                 <div class="stat-box">
-                    <div>
-                        <div class="stat-lbl" data-i18n="stat_pool">TOTAL ACTIVE REWARDS</div>
-                        <div class="stat-val text-green" id="stat-pool">0 $</div>
-                    </div>
+                    <div><div class="stat-lbl" data-i18n="stat_pool">TOTAL ACTIVE REWARDS</div><div class="stat-val text-green" id="stat-pool">0 $</div></div>
                     <i class="fas fa-sack-dollar text-sub opacity-25 fa-2x"></i>
                 </div>
             </div>
-
             <div class="col-md-4">
                 <div class="stat-box" style="position: relative; overflow: hidden; border-color: var(--accent-yellow);">
                     <div style="z-index: 2; position: relative;">
                         <div class="stat-lbl text-gold" data-i18n="stat_top_reward">HIGHEST REWARD</div>
-                        <div class="d-flex align-items-baseline gap-3"> <div class="stat-val text-white anim-breathe" id="stat-top-symbol">---</div>
-    <div class="fw-bold text-gold font-num" id="stat-top-val" style="font-size: 1.8rem; text-shadow: 0 0 10px rgba(240, 185, 11, 0.5);">$0</div>
-</div>
+                        <div class="d-flex align-items-baseline gap-3"> 
+                            <div class="stat-val text-white anim-breathe" id="stat-top-symbol">---</div>    
+                            <div class="fw-bold text-gold font-num" id="stat-top-val" style="font-size: 1.8rem;">$0</div>
+                        </div>
                     </div>
                     <img id="stat-top-img" src="" style="position: absolute; right: -10px; bottom: -10px; width: 80px; height: 80px; opacity: 0.15; border-radius: 50%; filter: grayscale(100%); transform: rotate(-15deg); display:none">
-                    <i class="fas fa-trophy text-gold opacity-25 fa-2x" style="position: absolute; right: 20px; top: 20px;"></i>
                 </div>
             </div>
         </div>
 
-<div class="health-panel">
-    <div class="health-header">
-        <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num">
-            <i class="fas fa-heartbeat me-2"></i> MARKET HEALTH
-        </h4>
-        <span class="text-sub small">
-            <i class="fas fa-circle text-green me-1" style="font-size: 6px; vertical-align: middle;"></i> 
-            Real-time
-        </span>
-    </div>
+        <div class="health-panel mb-4">
+            <div class="health-header">
+                <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1 font-num">
+                    <i class="fas fa-heartbeat me-2"></i> <span data-i18n="health_title">MARKET HEALTH</span>
+                </h4>
+                <span class="text-sub small"><i class="fas fa-circle text-green me-1" style="font-size: 6px; vertical-align: middle;"></i> <span data-i18n="health_realtime">Real-time</span></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0 align-middle health-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4 text-sub" style="font-size:0.7rem" data-i18n="col_token">TOKEN</th>
+                            <th class="text-end text-sub" style="font-size:0.7rem" data-i18n="col_price">PRICE</th>
+                            <th class="text-end text-sub" style="font-size:0.7rem" data-i18n="col_reward">REWARD</th>
+                            <th class="text-end text-sub" style="font-size:0.7rem">
+                                <span data-i18n="col_min_vol">MIN VOL</span><i class="fas fa-info-circle ms-1 opacity-50" title="Target Min Vol"></i>
+                            </th>
+                            <th class="text-end text-sub" style="font-size:0.7rem" data-i18n="col_daily_vol">DAILY VOL</th>
+                            <th class="text-end text-sub" style="font-size:0.7rem" data-i18n="col_camp_vol">CAMP. VOL</th>
+                            <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem" data-i18n="col_speed">SPEED</th>
+                            <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem" data-i18n="col_match">AVG MATCH</th>
+                            <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem" data-i18n="col_ord">AVG ORDER</th>
+                            <th class="text-end text-sub d-none d-md-table-cell pe-4" style="font-size:0.7rem" data-i18n="col_spread">SPREAD</th>
+                        </tr>
+                    </thead>
+                    <tbody id="healthTableBody"></tbody>
+                </table>
+            </div>
 
-    <div class="table-responsive">
-        <table class="table table-dark table-hover mb-0 align-middle health-table">
+            <div class="mt-4 p-4" style="background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.1);">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-book-open text-sub me-2"></i>
+                    <h6 class="text-uppercase text-white fw-bold m-0" style="letter-spacing: 1px;" data-i18n="leg_title">METRIC LEGEND</h6>
+                </div>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="fw-bold" style="color: #00F0FF; min-width: 110px;" data-i18n="col_price">PRICE</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_price">Current market price (Live).</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="text-green fw-bold" style="min-width: 110px;" data-i18n="col_reward">REWARD</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_reward">Est. Prize Value (Reward Qty * Price).</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="text-gold fw-bold" style="min-width: 110px;" data-i18n="col_min_vol">MIN VOL</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_min_vol">Target Vol. (Compares Yesterday vs Day-2).</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="text-white fw-bold" style="min-width: 110px;" data-i18n="col_daily_vol">DAILY VOL</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_daily_vol">Real-time Vol (Subtext: Yesterday's Vol).</span>
+                        </div>
+                    </div>
             
-            <thead>
-                <tr>
-                    <th class="ps-4 text-sub" style="font-size:0.7rem">TOKEN</th>
-                    <th class="text-end text-sub" style="font-size:0.7rem">PRICE</th>
-                    <th class="text-end text-sub" style="font-size:0.7rem">REWARD</th>
-                    
-                    <th class="text-end text-sub" style="font-size:0.7rem">
-                        MIN VOL<i class="fas fa-info-circle ms-1 opacity-50" title="Target Min Vol gần nhất & So sánh Hôm qua vs Hôm kia"></i>
-                    </th>
-
-                    <th class="text-end text-sub" style="font-size:0.7rem">DAILY VOL</th>
-                    
-                    <th class="text-end text-sub" style="font-size:0.7rem">CAMP. VOL</th>
-
-                    <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem">SPEED</th>
-                    <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem">AVG MATCH</th>
-                    <th class="text-end text-sub d-none d-md-table-cell" style="font-size:0.7rem">AVG ORDER</th>
-                    <th class="text-end text-sub d-none d-md-table-cell pe-4" style="font-size:0.7rem">SPREAD</th>
-                </tr>
-            </thead>
-
-            <tbody id="healthTableBody">
-            </tbody>
-        </table>
-    </div>
-
-    <div class="mt-5 p-4 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);">
-    
-        <div class="d-flex align-items-center mb-3">
-            <i class="fas fa-book-open text-sub me-2"></i>
-            <h6 class="text-uppercase text-white fw-bold m-0" style="letter-spacing: 1px;" data-i18n="g_title">METRIC LEGEND</h6>
-        </div>
-    
-        <div class="row g-3">
-            <div class="col-12 col-md-6">
-                
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span style="color: #00F0FF; font-weight:bold; min-width: 110px;">PRICE</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_price">Current market price (Live).</span>
-                </div>
-    
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-green fw-bold" style="min-width: 110px;">REWARD</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_reward">Est. Prize Value (Reward Qty * Price).</span>
-                </div>
-    
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-gold fw-bold" style="min-width: 110px;">MIN VOL</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_min_vol">Target Vol. (Compares Yesterday vs Day-2).</span>
-                </div>
-    
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-white fw-bold" style="min-width: 110px;">DAILY VOL</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_daily_vol">Real-time Vol (Subtext: Yesterday's Vol).</span>
-                </div>
-                
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-white fw-bold" style="min-width: 110px;">CAMP. VOL</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_camp_vol">Cumulative Volume since start.</span>
-                </div>
-    
-            </div>
-    
-            <div class="col-12 col-md-6">
-                
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-sub fw-bold" style="min-width: 110px;">SPEED</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_speed">Execution speed (Orders/sec).</span>
-                </div>
-    
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-sub fw-bold" style="min-width: 110px;">AVG MATCH</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_match">Avg market absorption per second ($).</span>
-                </div>
-    
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-sub fw-bold" style="min-width: 110px;">AVG ORDER</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_ord">Average value per single order ($).</span>
-                </div>
-    
-                <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
-                    <span class="text-sub fw-bold" style="min-width: 110px;">SPREAD</span>
-                    <span class="text-sub" style="font-size: 0.85rem;" data-i18n="g_spread">Bid/Ask price gap (%).</span>
-                </div>
-    
-                <div class="mt-3 p-2 rounded bg-black bg-opacity-25 text-center">
-                    <small class="text-sub opacity-50 fst-italic" style="font-size: 0.7rem;" data-i18n="g_disc">
-                        * Automated Data. For reference only. Please Do Your Own Research (DYOR).
-                    </small>
+                    <div class="col-12 col-md-6">
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="text-sub fw-bold" style="min-width: 110px;" data-i18n="col_speed">SPEED</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_speed">Execution speed (Orders/sec).</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="text-sub fw-bold" style="min-width: 110px;" data-i18n="col_match">AVG MATCH</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_match">Avg market absorption per second ($).</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="text-sub fw-bold" style="min-width: 110px;" data-i18n="col_ord">AVG ORDER</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_ord">Average value per single order ($).</span>
+                        </div>
+                        <div class="d-flex align-items-start mb-2 border-bottom border-secondary border-opacity-10 pb-1">
+                            <span class="text-sub fw-bold" style="min-width: 110px;" data-i18n="col_spread">SPREAD</span>
+                            <span class="text-sub" style="font-size: 0.85rem;" data-i18n="leg_spread">Bid/Ask price gap (%).</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-<div class="row mb-4"> <div class="col-12">
+        <div class="row mb-4">
+             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-end mb-2">
-                    <h6 class="text-brand fw-bold font-num letter-spacing-1 mb-0" style="font-size: 1rem; text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);">
-                        <i class="far fa-calendar-alt me-2"></i>DEADLINE RADAR
+                    <h6 class="text-brand fw-bold font-num letter-spacing-1 mb-0" style="font-size: 1rem;">
+                        <i class="far fa-calendar-alt me-2"></i><span data-i18n="sect_deadline">DEADLINE RADAR</span>
                     </h6>
                     <button class="btn btn-sm btn-dark border-secondary text-sub" onclick="filterByDate(null)" style="font-size: 0.75rem;">
-                        <i class="fas fa-sync-alt me-1"></i> View All
+                        <i class="fas fa-sync-alt me-1"></i> <span data-i18n="btn_view_all">View All</span>
                     </button>
                 </div>
-                
-                <div class="timeline-wrapper">
-                    <div class="timeline-scroll" id="calendar-wrapper">
-                        </div>
-                </div>
+                <div class="timeline-wrapper"><div class="timeline-scroll" id="calendar-wrapper"></div></div>
             </div>
         </div>
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="d-flex align-items-center gap-3">
                 <h6 class="fw-bold mb-0 text-sub text-uppercase letter-spacing-1 font-num" style="font-size: 1rem;">
-                    <i class="fas fa-list me-2"></i>
-                    <span data-i18n="sect_board">TRACKING BOARD</span>
+                    <i class="fas fa-list me-2"></i> <span data-i18n="sect_board">TRACKING BOARD</span>
                 </h6>
-
                 <button class="btn btn-sm btn-outline-success fw-bold admin-only" onclick="openCreateModal()" style="border-radius: 20px; padding: 5px 20px;">
                     <i class="fas fa-plus me-1"></i> <span data-i18n="stat_create">CREATE</span>
                 </button>
-
-                <button class="btn btn-sm btn-brand fw-bold admin-only btn-save-pos" style="display:none; background:var(--brand); color:#000; border:none; padding: 5px 20px; border-radius: 20px; box-shadow: 0 0 10px rgba(0,240,255,0.3); white-space: nowrap;" onclick="saveCustomOrder()">
+                <button class="btn btn-sm btn-brand fw-bold admin-only btn-save-pos" style="display:none; background:var(--brand); color:#000; border:none; padding: 5px 20px; border-radius: 20px;" onclick="saveCustomOrder()">
                     <i class="fas fa-save me-1"></i> SAVE POSITION
                 </button>
             </div>
-
             <div>
-                <button class="btn btn-sm btn-outline-warning border-0 text-sub me-2 admin-only" onclick="openConfigModal()"><i class="fas fa-cog me-1"></i> Site Config</button>
+                <button class="btn btn-sm btn-outline-warning border-0 text-sub me-2 admin-only" onclick="openConfigModal()"><i class="fas fa-cog me-1"></i> <span data-i18n="btn_config">Site Config</span>/button>
             </div>
         </div>
 
@@ -1721,6 +1674,8 @@
     </div>
 </div>
 
+</div>
+</div> 
 <div id="view-predict" style="display:none;">
     <div class="neo-wrapper">
         <div class="grid-overlay"></div>
@@ -1732,7 +1687,6 @@
 
         <div class="glass-card">
             <div class="glass-head"><i class="fas fa-database me-2"></i> CORE DATA</div>
-            
             <div style="flex:1; display:flex; flex-direction:column;">
                 <div class="stat-highlight">
                     <div class="stat-label">TARGET MIN VOLUME</div>
@@ -1764,13 +1718,11 @@
         <div class="glass-card">
             <div class="glass-head" style="justify-content:space-between">
                 <span><i class="fas fa-chart-area me-2"></i> MARKET VISUALIZER</span>
-                
                 <div class="token-badge">
                     <img id="pt-logo" src="" style="width:20px; height:20px; border-radius:50%;">
                     <span id="pt-symbol" class="fw-bold text-white small">BTC</span>
                 </div>
             </div>
-            
             <div class="chart-wrapper">
                 <canvas id="marketChart"></canvas>
             </div>
@@ -1778,7 +1730,6 @@
 
         <div class="glass-card">
             <div class="glass-head"><i class="fas fa-users me-2"></i> NETWORK</div>
-            
             <div class="tab-capsule">
                 <div class="tab-pill active" id="tab-btn-leaderboard" onclick="switchCpTab('leaderboard')">TOP RANK</div>
                 <div class="tab-pill" id="tab-btn-chat" onclick="switchCpTab('chat')">CHAT</div>
@@ -1802,7 +1753,6 @@
         </div>
     </div>
 </div>
-
 
 <footer class="app-footer">
     <div class="container">
@@ -1870,15 +1820,15 @@
                         <i class="fas fa-shield-alt text-brand fa-2x"></i>
                     </div>
                 </div>
-                <h5 class="fw-bold text-white mb-1">SECURE ACCESS</h5>
-                <p class="text-sub small mb-4">Authenticate via Email OTP</p>
+                <h5 class="fw-bold text-white mb-1" data-i18n="modal_login_title">SECURE ACCESS</h5>
+                <p class="text-sub small mb-4" data-i18n="modal_login_desc">Authenticate via Email OTP</p>
                 <div id="login-step-1">
                     <input type="email" id="otp-email" class="form-control mb-3 text-center" placeholder="name@example.com" style="border-radius: 20px;">
-                    <button class="btn-action rounded-pill" onclick="sendOtpCode()">SEND CODE <i class="fas fa-paper-plane ms-2"></i></button>
+                    <button class="btn-action rounded-pill" onclick="sendOtpCode()"><span data-i18n="btn_send_code">SEND CODE</span> <i class="fas fa-paper-plane ms-2"></i></button>
                 </div>
                 <div id="login-step-2" style="display:none">
                     <input type="text" id="otp-token" class="form-control mb-3 text-center fw-bold text-brand fs-4 letter-spacing-1" placeholder="• • • • • •" maxlength="6" style="border-radius: 20px; background: #000; border-color: var(--brand);">
-                    <button class="btn-action rounded-pill mb-3" onclick="verifyOtpCode()">VERIFY LOGIN</button>
+                    <button class="btn-action rounded-pill mb-3" onclick="verifyOtpCode()"><span data-i18n="btn_verify">VERIFY LOGIN</span></button>
                     <a href="#" onclick="resetLoginModal()" class="text-sub small text-decoration-none">Change Email</a>
                 </div>
             </div>
@@ -2008,14 +1958,26 @@
 
                 <div class="mb-3">
                     <label class="small text-sub fw-bold mb-1">X (Twitter) URL</label>
-                    <input type="text" id="cfg-x" class="form-control mb-2">
+                    <input type="text" id="cfg-x" class="form-control mb-2" placeholder="https://x.com/...">
                     <label class="small text-sub fw-bold mb-1">Telegram URL</label>
-                    <input type="text" id="cfg-tele" class="form-control mb-2">
+                    <input type="text" id="cfg-tele" class="form-control mb-2" placeholder="https://t.me/...">
                     <label class="small text-sub fw-bold mb-1">Youtube URL</label>
-                    <input type="text" id="cfg-yt" class="form-control mb-2">
+                    <input type="text" id="cfg-yt" class="form-control mb-2" placeholder="https://youtube.com/...">
                 </div>
 
-                <h6 class="text-gold mb-3 pt-3 border-top border-secondary border-opacity-25">QUẢN LÝ LINK REF (ARSENAL)</h6>
+                <h6 class="text-warning mb-2 pt-3 border-top border-secondary border-opacity-25">LINK REF CHÍNH (3 NÚT LỚN)</h6>
+                <div class="mb-3">
+                    <label class="small text-sub fw-bold mb-1 text-gold">BINANCE CEX URL</label>
+                    <input type="text" id="cfg-ref-binance" class="form-control mb-2" placeholder="Link Ref Binance">
+                    
+                    <label class="small text-sub fw-bold mb-1 text-green">WEB3 WALLET URL</label>
+                    <input type="text" id="cfg-ref-web3" class="form-control mb-2" placeholder="Link Ref Web3">
+                    
+                    <label class="small text-sub fw-bold mb-1" style="color:#9945FF">DEX / ASTER URL</label>
+                    <input type="text" id="cfg-ref-dex" class="form-control mb-2" placeholder="Link Ref Dex">
+                </div>
+
+                <h6 class="text-brand mb-3 pt-3 border-top border-secondary border-opacity-25">QUẢN LÝ DANH SÁCH SÀN KHÁC</h6>
 
                 <div class="d-flex justify-content-end mb-2">
                     <button class="btn btn-sm btn-outline-success" onclick="addArsenalItem()">
@@ -2025,7 +1987,7 @@
 
                 <div id="cfg-arsenal-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 10px;"></div>
 
-                <button class="btn-action" onclick="saveGlobalConfig()">SAVE CONFIG</button>
+                <button class="btn-action mt-3" onclick="saveGlobalConfig()">SAVE CONFIG</button>
 
                 <div class="mt-4 pt-3 border-top border-secondary border-opacity-25 admin-only">
                     <h6 class="text-brand fw-bold mb-2">QUẢN LÝ HÀNG NGÀY</h6>
@@ -2044,7 +2006,7 @@
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold text-brand">MY TRADING TRACKER</h5>
+                <h5 class="modal-title fw-bold text-brand" data-i18n="modal_update_title">MY TRADING TRACKER</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
@@ -2054,7 +2016,7 @@
                     <div class="col-lg-4 border-end border-secondary border-opacity-25 pe-lg-4">
                         <h4 class="font-num fw-bold text-main mb-3" id="u-symbol-display">TOKEN</h4>
                         <div class="mb-3">
-                            <label class="small text-sub fw-bold mb-1">DATE</label>
+                            <label class="small text-sub fw-bold mb-1" data-i18n="lbl_date">DATE</label>
                             <input type="date" id="u-date" class="form-control text-brand fw-bold">
                         </div>
                         <div class="p-3 mb-4 rounded" style="background: rgba(240, 185, 11, 0.05); border: 1px dashed rgba(240, 185, 11, 0.3);">
@@ -2069,20 +2031,20 @@
                             </div>
                             <div class="text-sub mt-1 admin-only" style="font-size:0.65rem; opacity:0.7">* Nút SEND sẽ cập nhật Min Vol lên Server & Bắn Bot Tele.</div>
                         </div>
-                        <label class="small text-brand fw-bold mb-2"><i class="fas fa-wallet me-1"></i> MY VOLUMES & GAP</label>
+                        <label class="small text-brand fw-bold mb-2"><i class="fas fa-wallet me-1"></i> <span data-i18n="lbl_acc_vol">MY VOLUMES & GAP</span></label>
                         <div class="d-flex justify-content-between text-sub small fw-bold px-1 mb-1">
                             <span style="width:80px">ACC</span>
                             <span class="text-center">VOL</span>
                             <span class="text-end">GAP / COST</span>
                         </div>
                         <div id="u-acc-inputs" class="mb-4"></div>
-                        <button id="btn-save-progress" class="btn-action" onclick="saveUpdate()">SAVE MY PROGRESS</button>
+                        <button id="btn-save-progress" class="btn-action" onclick="saveUpdate()"><span data-i18n="btn_save_prog">SAVE MY PROGRESS</span></button>
                     </div>
                     <div class="col-lg-8 ps-lg-4">
                         <div style="height: 250px; margin-bottom: 20px;">
                             <canvas id="trackerChart"></canvas>
                         </div>
-                        <label class="small text-sub fw-bold mb-2">MY HISTORY</label>
+                        <label class="small text-sub fw-bold mb-2" data-i18n="lbl_history">MY HISTORY</label>
                         <div style="max-height:300px;overflow-y:auto">
                             <table class="table table-dark table-sm table-hover align-middle" style="font-size:0.8rem" id="historyTable">
                                 <thead>
@@ -2102,16 +2064,16 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-white">ENTER PREDICTION</h5>
+                <h5 class="modal-title fw-bold text-white" data-i18n="modal_pred_title">ENTER PREDICTION</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body pt-2">
-                <p class="text-sub small mb-4">Dự đoán Min Volume chốt sổ.</p>
-                <label class="text-brand fw-bold small mb-1">YOUR NAME</label>
+                <p class="text-sub small mb-4" data-i18n="modal_pred_desc">Dự đoán Min Volume chốt sổ.</p>
+                <label class="text-brand fw-bold small mb-1" data-i18n="lbl_your_name">YOUR NAME</label>
                 <input type="text" id="modal-p-name" class="form-control mb-3" placeholder="Ví dụ: Shark 1">
-                <label class="text-gold fw-bold small mb-1">YOUR GUESS (VOL)</label>
+                <label class="text-gold fw-bold small mb-1" data-i18n="lbl_your_guess">YOUR GUESS (VOL)</label>
                 <input type="number" id="modal-p-guess" class="form-control font-num fs-4 text-gold mb-4" placeholder="Fee: 100 USDT">
-                <button class="btn-action w-100 py-3 text-white" style="background: var(--purple)" onclick="submitPredictionFromModal()">CONFIRM & PAY FEE</button>
+                <button class="btn-action w-100 py-3 text-white" style="background: var(--purple)" onclick="submitPredictionFromModal()"><span data-i18n="btn_pay_fee">CONFIRM & PAY FEE</span></button>
             </div>
         </div>
     </div>
@@ -2581,193 +2543,434 @@ const SAFETY_WINDOW = 10; // Tính trung bình 10 mẫu gần nhất
 /* --- BỘ TỪ ĐIỂN FULL (ĐÃ CẬP NHẬT TÊN & SLOGAN MỚI) --- */
 let currentLang = localStorage.getItem('wave_lang') || 'en';
 
-/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FULL LOCALIZATION - UPDATED V2) --- */
+/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FULL: EN - VI - ZH - KO) --- */
 const translations = {
     en: {
-        // --- CHUNG ---
-        nav_guide: "GUIDE", nav_login: "Login", nav_logout: "Logout",
-        sys_time: "SYSTEM TIME", verified_link: "Verified Links",
-
+        // --- NAV & COMMON ---
+        nav_sys_time: "SYSTEM TIME",
+        nav_guide: "GUIDE",
+        nav_login: "Login",
+        nav_logout: "Logout",
+        nav_wallet: "Wallets",
+        nav_feedback: "Feedback",
+        
         // --- HERO ---
         hero_title: "TOURNAMENT VOLUME TRACKER",
         hero_sub: "Manage your accounts & Join the prediction.",
+        
+        // --- COMMAND DECK ---
+        cmd_eco: "ECOSYSTEM",
+        cmd_platform: "PLATFORMS",
+        cmd_miniapp: "Mini App",
+        cmd_channel: "Channel",
+        cmd_bot: "Bot",
+        cmd_cex: "BINANCE CEX",
+        cmd_web3: "BINANCE WALLET",
+        cmd_dex: "ASTER DEX",
 
-        // --- SECTION HEADERS ---
-        sect_arsenal: "TRADING PLATFORMS",
+        // --- MARKET OVERVIEW ---
         sect_market: "MARKET OVERVIEW",
+        stat_active: "ACTIVE POOLS",
+        stat_pool: "TOTAL REWARDS",
         stat_top_reward: "HIGHEST REWARD",
+
+        // --- MARKET HEALTH ---
+        health_title: "MARKET HEALTH",
+        health_realtime: "Real-time",
+        col_token: "TOKEN",
+        col_price: "PRICE",
+        col_reward: "REWARD",
+        col_min_vol: "MIN VOL",
+        col_daily_vol: "DAILY VOL",
+        col_camp_vol: "CAMP. VOL",
+        col_speed: "SPEED",
+        col_match: "AVG MATCH",
+        col_ord: "AVG ORDER",
+        col_spread: "SPREAD",
+
+        // --- DEADLINE & BOARD ---
+        sect_deadline: "DEADLINE RADAR",
+        btn_view_all: "View All",
         sect_board: "TRACKING BOARD",
+        btn_create: "CREATE",
+        btn_config: "Site Config",
 
-        // --- STATS ---
-        stat_active: "ACTIVE POOLS", stat_pool: "TOTAL ACTIVE REWARDS", stat_create: "CREATE NEW",
+        // --- CARD ITEMS ---
+        card_top: "TOP",
+        card_reward: "REWARD",
+        card_price: "PRICE",
+        card_my_prog: "MY PROGRESS",
+        card_update: "UPDATE VOL",
+        card_total_vol: "Total Vol (Alpha)",
+        card_min_target: "Min Target (Goal)",
+        btn_predict: "ENTER PREDICTION",
+        btn_market_closed: "MARKET CLOSED",
+        
+        // --- TAGS & STATUS ---
+        status_running: "RUNNING",
+        status_ended: "ENDED",
+        tag_x4: "X4 BSC",
+        tag_x2: "X2 OTHER",
+        rule_buy: "ONLY BUY",
+        rule_all: "ALL VOL",
+        rule_x4: "ALL VOL x4",
 
-        // --- SORT ---
-        sort_newest: "Newest (Start Date)", sort_ending: "Ending Soon", sort_reward: "Highest Reward ($)",
-
-        // --- CARD ---
-        lbl_top: "TOP", lbl_reward: "REWARD", lbl_price: "PRICE",
-        lbl_ends: "ENDS:", lbl_min_target: "MIN TARGET",
-        btn_update: "UPDATE VOL", btn_predict: "PREDICT",
-        status_running: "RUNNING", status_ended: "ENDED",
-        tag_x4: "X4 BSC CHAIN", tag_x2: "X2 OTHER CHAINS",
-        res_win: "WIN", res_lose: "LOSE",
-
+        // --- LEGEND ---
+        leg_title: "METRIC LEGEND",
+        leg_price: "Current market price (Live).",
+        leg_reward: "Est. Prize Value (Qty * Price).",
+        leg_min_vol: "Target Vol (Yesterday vs Day-2).",
+        leg_daily_vol: "Real-time Vol (Sub: Yesterday).",
+        leg_speed: "Execution speed (Orders/sec).",
+        leg_match: "Avg market absorption per second ($).",
+        leg_ord: "Average value per single order ($).",
+        leg_spread: "Bid/Ask price gap (%).",
+        
         // --- MODALS ---
-        modal_u_title: "MY TRADING TRACKER", lbl_date: "DATE", lbl_my_vol: "MY VOLUMES & GAP", lbl_history: "MY HISTORY",
-        btn_save_prog: "SAVE MY PROGRESS", btn_saving: "SAVING...", btn_saved: "SAVED!", ph_vol: "Volume", ph_cost: "Cost ($)",
-        modal_p_title: "ENTER PREDICTION", modal_p_desc: "Predict the final Min Volume.", lbl_p_name: "YOUR NAME", lbl_p_guess: "YOUR GUESS (VOL)",
-        ph_p_name: "Ex: Shark 1", ph_p_fee: "Fee: 100 USDT", btn_confirm: "CONFIRM & PAY FEE", btn_processing: "PROCESSING...",
-        modal_l_title: "SECURE ACCESS", modal_l_desc: "Authenticate via Email OTP", btn_send_code: "SEND CODE", btn_verify: "VERIFY LOGIN",
-
-        // --- TOAST ---
-        toast_login_req: "Please Login first!", toast_success: "Action Successful!", toast_error: "Error occurred!",
-        toast_insufficient: "Insufficient Balance!", toast_saved: "Tracking Data Saved!",
-
-        // --- LEGEND & DISCLAIMER ---
-        legend_title: "ICON LEGEND",
-        leg_feedback_t: "Feedback / Support", 
-        leg_feedback_d: "Send ideas or report bugs directly to Admin.",
-        leg_wallet_t: "Manage Wallets", leg_wallet_d: "Add or remove tracking accounts.",
-        leg_login_t: "Login / Access", leg_login_d: "Secure access via Email OTP to save data.",
-
-        // --- METRIC LEGEND (NEW) ---
-        g_title: "METRIC LEGEND",
-        g_price: "Current market price (Live).",
-        g_reward: "Est. Prize Value (Reward Qty × Price).",
-        g_min_vol: "Target Vol. (Compares Yesterday vs Day-2).",
-        g_daily_vol: "Real-time Vol (Subtext: Yesterday's Vol).",
-        g_camp_vol: "Cumulative Volume since start.",
+        // Login
+        modal_login_title: "SECURE ACCESS",
+        modal_login_desc: "Authenticate via Email OTP",
+        btn_send_code: "SEND CODE",
+        btn_verify: "VERIFY LOGIN",
         
-        g_speed: "Execution speed (Orders/sec).",
-        g_match: "Avg market absorption per second ($).",
-        g_ord: "Average value per single order ($).",
-        g_spread: "Gap between Bid and Ask price (%).",
+        // Update
+        modal_update_title: "MY TRADING TRACKER",
+        lbl_date: "DATE",
+        lbl_acc_vol: "MY VOLUMES & GAP",
+        lbl_history: "MY HISTORY",
+        btn_save_prog: "SAVE MY PROGRESS",
         
-        g_disc: "Automated Data. For reference only. Please Do Your Own Research (DYOR)."
+        // Predict
+        modal_pred_title: "ENTER PREDICTION",
+        modal_pred_desc: "Predict the final Min Volume.",
+        lbl_your_name: "YOUR NAME",
+        lbl_your_guess: "YOUR GUESS (VOL)",
+        btn_pay_fee: "CONFIRM & PAY FEE",
+
+        // --- TOASTS ---
+        toast_login: "Please Login first!",
+        toast_success: "Action Successful!",
+        toast_error: "Error occurred!",
+        toast_saved: "Data Saved!",
+        toast_copied: "Copied to clipboard!"
     },
     vi: {
-        // --- CHUNG ---
-        nav_guide: "HƯỚNG DẪN", nav_login: "Đăng nhập", nav_logout: "Đăng xuất",
-        sys_time: "GIỜ HỆ THỐNG", verified_link: "Link Chính Chủ",
+        // --- NAV & COMMON ---
+        nav_sys_time: "GIỜ HỆ THỐNG",
+        nav_guide: "HƯỚNG DẪN",
+        nav_login: "Đăng nhập",
+        nav_logout: "Đăng xuất",
+        nav_wallet: "Quản lý Ví",
+        nav_feedback: "Góp ý",
 
         // --- HERO ---
         hero_title: "CÔNG CỤ THEO DÕI VOLUME",
-        hero_sub: "Quản lý các tài khoản & Tham gia dự đoán.",
+        hero_sub: "Quản lý tài khoản & Tham gia dự đoán.",
 
-        // --- SECTION HEADERS ---
-        sect_arsenal: "SÀN GIAO DỊCH",
+        // --- COMMAND DECK ---
+        cmd_eco: "HỆ SINH THÁI",
+        cmd_platform: "SÀN GIAO DỊCH",
+        cmd_miniapp: "Mini App",
+        cmd_channel: "Kênh Tin Tức",
+        cmd_bot: "Bot Data",
+        cmd_cex: "SÀN BINANCE",
+        cmd_web3: "VÍ BINANCE",
+        cmd_dex: "SÀN ASTER",
+
+        // --- MARKET OVERVIEW ---
         sect_market: "TỔNG QUAN THỊ TRƯỜNG",
-        stat_top_reward: "GIẢI THƯỞNG CAO NHẤT",
+        stat_active: "GIẢI ĐANG CHẠY",
+        stat_pool: "TỔNG GIẢI THƯỞNG",
+        stat_top_reward: "THƯỞNG CAO NHẤT",
+
+        // --- MARKET HEALTH ---
+        health_title: "SỨC KHỎE THỊ TRƯỜNG",
+        health_realtime: "Thời gian thực",
+        col_token: "TOKEN",
+        col_price: "GIÁ",
+        col_reward: "THƯỞNG",
+        col_min_vol: "VOL MỤC TIÊU",
+        col_daily_vol: "VOL HÔM NAY",
+        col_camp_vol: "TỔNG VOL",
+        col_speed: "TỐC ĐỘ",
+        col_match: "KHỚP LỆNH",
+        col_ord: "TB LỆNH",
+        col_spread: "CHÊNH GIÁ",
+
+        // --- DEADLINE & BOARD ---
+        sect_deadline: "LỊCH CHỐT SỔ",
+        btn_view_all: "Xem Tất Cả",
         sect_board: "BẢNG THEO DÕI",
+        btn_create: "TẠO GIẢI",
+        btn_config: "Cấu hình",
 
-        // --- STATS ---
-        stat_active: "GIẢI ĐANG CHẠY", stat_pool: "TỔNG GIÁ TRỊ GIẢI", stat_create: "TẠO GIẢI MỚI",
+        // --- CARD ITEMS ---
+        card_top: "TOP",
+        card_reward: "THƯỞNG",
+        card_price: "GIÁ",
+        card_my_prog: "TIẾN ĐỘ CỦA TÔI",
+        card_update: "CẬP NHẬT VOL",
+        card_total_vol: "Tổng Vol (Alpha)",
+        card_min_target: "Mục Tiêu Min (Goal)",
+        btn_predict: "DỰ ĐOÁN",
+        btn_market_closed: "ĐÃ ĐÓNG SỔ",
 
-        // --- SORT ---
-        sort_newest: "Mới nhất (Ngày bắt đầu)", sort_ending: "Sắp kết thúc", sort_reward: "Thưởng cao nhất ($)",
+        // --- TAGS & STATUS ---
+        status_running: "ĐANG CHẠY",
+        status_ended: "KẾT THÚC",
+        tag_x4: "X4 MẠNG BSC",
+        tag_x2: "X2 MẠNG KHÁC",
+        rule_buy: "CHỈ MUA",
+        rule_all: "MUA + BÁN",
+        rule_x4: "MUA + BÁN (x4)",
 
-        // --- CARD ---
-        lbl_top: "TOP", lbl_reward: "THƯỞNG", lbl_price: "GIÁ",
-        lbl_ends: "KẾT THÚC:", lbl_min_target: "MỤC TIÊU MIN",
-        btn_update: "CẬP NHẬT VOL", btn_predict: "DỰ ĐOÁN",
-        status_running: "ĐANG CHẠY", status_ended: "ĐÃ KẾT THÚC",
-        tag_x4: "X4 MẠNG BSC", tag_x2: "X2 MẠNG KHÁC",
-        res_win: "THẮNG", res_lose: "THUA",
+        // --- LEGEND ---
+        leg_title: "CHÚ THÍCH THÔNG SỐ",
+        leg_price: "Giá thị trường hiện tại (Live).",
+        leg_reward: "Giá trị giải thưởng (Qty * Price).",
+        leg_min_vol: "Mục tiêu (So sánh Hôm qua vs Hôm kia).",
+        leg_daily_vol: "Vol thực (Dòng dưới: Vol hôm qua).",
+        leg_speed: "Tốc độ khớp lệnh (Lệnh/giây).",
+        leg_match: "Thanh khoản trung bình mỗi giây ($).",
+        leg_ord: "Giá trị trung bình 1 lệnh ($).",
+        leg_spread: "Chênh lệch giá Mua/Bán (%).",
 
         // --- MODALS ---
-        modal_u_title: "CẬP NHẬT TIẾN ĐỘ", lbl_date: "NGÀY", lbl_my_vol: "VOL CỦA TÔI & KHOẢNG CÁCH", lbl_history: "LỊCH SỬ NHẬP",
-        btn_save_prog: "LƯU TIẾN ĐỘ", btn_saving: "ĐANG LƯU...", btn_saved: "ĐÃ LƯU!", ph_vol: "Nhập Vol", ph_cost: "Vốn ($)",
-        modal_p_title: "NHẬP DỰ ĐOÁN", modal_p_desc: "Dự đoán Min Volume khi chốt sổ.", lbl_p_name: "TÊN BẠN", lbl_p_guess: "DỰ ĐOÁN (VOL)",
-        ph_p_name: "Ví dụ: Shark 1", ph_p_fee: "Phí: 100 USDT", btn_confirm: "XÁC NHẬN & TRẢ PHÍ", btn_processing: "ĐANG XỬ LÝ...",
-        modal_l_title: "ĐĂNG NHẬP", modal_l_desc: "Xác thực qua Email OTP", btn_send_code: "GỬI MÃ CODE", btn_verify: "XÁC NHẬN",
+        modal_login_title: "ĐĂNG NHẬP",
+        modal_login_desc: "Xác thực qua Email OTP",
+        btn_send_code: "GỬI MÃ CODE",
+        btn_verify: "XÁC NHẬN",
 
-        // --- TOAST ---
-        toast_login_req: "Vui lòng đăng nhập trước!", toast_success: "Thao tác thành công!", toast_error: "Có lỗi xảy ra!",
-        toast_insufficient: "Số dư không đủ!", toast_saved: "Dữ liệu đã được lưu!",
+        modal_update_title: "CẬP NHẬT TIẾN ĐỘ",
+        lbl_date: "NGÀY",
+        lbl_acc_vol: "VOL VÀ KHOẢNG CÁCH",
+        lbl_history: "LỊCH SỬ NHẬP",
+        btn_save_prog: "LƯU TIẾN ĐỘ",
 
-        // --- LEGEND & DISCLAIMER ---
-        legend_title: "CHÚ THÍCH BIỂU TƯỢNG",
-        leg_feedback_t: "Góp ý / Hỗ trợ", 
-        leg_feedback_d: "Gửi ý tưởng hoặc báo lỗi trực tiếp cho Admin.",
-        leg_wallet_t: "Quản lý Ví", leg_wallet_d: "Thêm/Xóa danh mục theo dõi.",
-        leg_login_t: "Đăng nhập", leg_login_d: "Truy cập bảo mật để lưu dữ liệu.",
+        modal_pred_title: "NHẬP DỰ ĐOÁN",
+        modal_pred_desc: "Dự đoán Min Volume chốt sổ.",
+        lbl_your_name: "TÊN BẠN",
+        lbl_your_guess: "DỰ ĐOÁN (VOL)",
+        btn_pay_fee: "XÁC NHẬN & TRẢ PHÍ",
 
-        // --- METRIC LEGEND (NEW) ---
-        g_title: "CHÚ THÍCH THÔNG SỐ",
-        g_price: "Giá thị trường hiện tại (Live).",
-        g_reward: "Giải thưởng ước tính (Qty * Price).",
-        g_min_vol: "Mục tiêu Vol (So sánh chốt sổ Hôm qua vs Hôm kia).",
-        g_daily_vol: "Vol thực hôm nay (Dòng dưới: Vol hôm qua).",
-        g_camp_vol: "Tổng Volume tích lũy từ đầu giải.",
-        
-        g_speed: "Tốc độ khớp lệnh (Số lệnh trên giây).",
-        g_match: "Sức mua trung bình thị trường mỗi giây ($).",
-        g_ord: "Giá trị trung bình của 1 lệnh đơn lẻ.",
-        g_spread: "Biên độ chênh lệch giá Mua/Bán (%).",
-        
-        g_disc: "Dữ liệu tự động. Miễn trừ trách nhiệm: Chỉ mang tính tham khảo. Vui lòng tự nghiên cứu (DYOR) kỹ trước khi ra quyết định."
+        // --- TOASTS ---
+        toast_login: "Vui lòng đăng nhập trước!",
+        toast_success: "Thao tác thành công!",
+        toast_error: "Có lỗi xảy ra!",
+        toast_saved: "Dữ liệu đã lưu!",
+        toast_copied: "Đã sao chép!"
     },
     zh: {
-        // --- CHUNG ---
-        nav_guide: "使用指南", nav_login: "登录", nav_logout: "登出",
-        sys_time: "系统时间", verified_link: "官方验证链接",
+        // --- NAV & COMMON ---
+        nav_sys_time: "系统时间",
+        nav_guide: "指南",
+        nav_login: "登录",
+        nav_logout: "登出",
+        nav_wallet: "钱包管理",
+        nav_feedback: "反馈",
 
         // --- HERO ---
-        hero_title: "锦标赛成交量追踪器",
-        hero_sub: "管理您的账户 & 参与预测。",
+        hero_title: "锦标赛成交量追踪",
+        hero_sub: "管理账户并参与预测。",
 
-        // --- SECTION HEADERS ---
-        sect_arsenal: "交易平台",
+        // --- COMMAND DECK ---
+        cmd_eco: "生态系统",
+        cmd_platform: "交易平台",
+        cmd_miniapp: "小程序",
+        cmd_channel: "频道",
+        cmd_bot: "机器人",
+        cmd_cex: "币安交易所",
+        cmd_web3: "币安钱包",
+        cmd_dex: "ASTER去中心化",
+
+        // --- MARKET OVERVIEW ---
         sect_market: "市场概览",
-        stat_top_reward: "最高奖池",
-        sect_board: "追踪板",
+        stat_active: "进行中奖池",
+        stat_pool: "总奖励价值",
+        stat_top_reward: "最高奖励",
 
-        // --- STATS ---
-        stat_active: "进行中的奖池", stat_pool: "当前总奖池", stat_create: "创建新池",
+        // --- MARKET HEALTH ---
+        health_title: "市场健康度",
+        health_realtime: "实时",
+        col_token: "代币",
+        col_price: "价格",
+        col_reward: "奖励",
+        col_min_vol: "最低量",
+        col_daily_vol: "今日量",
+        col_camp_vol: "累计量",
+        col_speed: "速度",
+        col_match: "撮合",
+        col_ord: "均单值",
+        col_spread: "价差",
 
-        // --- SORT ---
-        sort_newest: "最新 (开始日期)", sort_ending: "即将结束", sort_reward: "最高奖励 ($)",
+        // --- DEADLINE & BOARD ---
+        sect_deadline: "截止雷达",
+        btn_view_all: "查看全部",
+        sect_board: "追踪面板",
+        btn_create: "创建",
+        btn_config: "配置",
 
-        // --- CARD ---
-        lbl_top: "排名", lbl_reward: "奖励", lbl_price: "价格",
-        lbl_ends: "结束:", lbl_min_target: "最低目标",
-        btn_update: "更新成交量", btn_predict: "预测",
-        status_running: "进行中", status_ended: "已结束",
-        tag_x4: "X4 BSC链", tag_x2: "X2 其他链",
-        res_win: "获胜", res_lose: "未中",
+        // --- CARD ITEMS ---
+        card_top: "排名",
+        card_reward: "奖励",
+        card_price: "价格",
+        card_my_prog: "我的进度",
+        card_update: "更新量",
+        card_total_vol: "总成交量 (Alpha)",
+        card_min_target: "最低目标 (Min)",
+        btn_predict: "输入预测",
+        btn_market_closed: "市场已关闭",
+
+        // --- TAGS & STATUS ---
+        status_running: "进行中",
+        status_ended: "已结束",
+        tag_x4: "X4 BSC链",
+        tag_x2: "X2 其他链",
+        rule_buy: "仅买入",
+        rule_all: "买入 + 卖出",
+        rule_x4: "全量 x4",
+
+        // --- LEGEND ---
+        leg_title: "指标说明",
+        leg_price: "当前市场价格 (实时)。",
+        leg_reward: "预估奖池价值 (数量 * 价格)。",
+        leg_min_vol: "目标量 (对比昨日与前日)。",
+        leg_daily_vol: "实时量 (下方: 昨日)。",
+        leg_speed: "交易速度 (订单/秒)。",
+        leg_match: "每秒平均吸筹 ($)。",
+        leg_ord: "单笔订单平均值 ($)。",
+        leg_spread: "买卖价差 (Spread %)。",
 
         // --- MODALS ---
-        modal_u_title: "我的交易追踪", lbl_date: "日期", lbl_my_vol: "我的成交量 & 差距", lbl_history: "历史记录",
-        btn_save_prog: "保存进度", btn_saving: "保存中...", btn_saved: "已保存!", ph_vol: "输入成交量", ph_cost: "成本 ($)",
-        modal_p_title: "输入预测", modal_p_desc: "预测最终最低成交量。", lbl_p_name: "您的昵称", lbl_p_guess: "预测值 (VOL)",
-        ph_p_name: "例如: Shark 1", ph_p_fee: "费用: 100 USDT", btn_confirm: "确认并支付", btn_processing: "处理中...",
-        modal_l_title: "安全登录", modal_l_desc: "通过邮箱 OTP 验证", btn_send_code: "发送验证码", btn_verify: "验证登录",
+        modal_login_title: "安全登录",
+        modal_login_desc: "通过邮箱 OTP 验证",
+        btn_send_code: "发送验证码",
+        btn_verify: "验证登录",
 
-        // --- TOAST ---
-        toast_login_req: "请先登录!", toast_success: "操作成功!", toast_error: "发生错误!",
-        toast_insufficient: "余额不足!", toast_saved: "数据已保存!",
+        modal_update_title: "我的交易追踪",
+        lbl_date: "日期",
+        lbl_acc_vol: "我的成交量 & 差距",
+        lbl_history: "历史记录",
+        btn_save_prog: "保存进度",
 
-        // --- LEGEND & DISCLAIMER ---
-        legend_title: "图标说明",
-        leg_feedback_t: "反馈 / 支持", 
-        leg_feedback_d: "直接向管理员发送想法或报告错误。",
-        leg_wallet_t: "管理钱包", leg_wallet_d: "添加/删除追踪组合。",
-        leg_login_t: "登录", leg_login_d: "安全登录以保存数据。",
+        modal_pred_title: "输入预测",
+        modal_pred_desc: "预测最终最低成交量。",
+        lbl_your_name: "您的昵称",
+        lbl_your_guess: "预测值 (VOL)",
+        btn_pay_fee: "确认并支付",
 
-        // --- METRIC LEGEND (NEW) ---
-        g_title: "指标说明",
-        g_price: "当前市场价格 (实时)。",
-        g_reward: "预估奖池价值 (数量 * 价格)。",
-        g_min_vol: "最低目标 (对比昨日与前日数据)。",
-        g_daily_vol: "今日实时成交量 (下方显示昨日成交量)。",
-        g_camp_vol: "自开赛以来的累计成交量。",
-        
-        g_speed: "成交速度 (每秒订单数)。",
-        g_match: "市场每秒平均撮合额 ($)。",
-        g_ord: "平均每单价值。",
-        g_spread: "买卖价差幅度 (%)。",
-        
-        g_disc: "自动数据。免责声明：仅供参考，概不负责。请务必自行研究 (DYOR)。"
+        // --- TOASTS ---
+        toast_login: "请先登录!",
+        toast_success: "操作成功!",
+        toast_error: "发生错误!",
+        toast_saved: "数据已保存!",
+        toast_copied: "已复制!"
+    },
+    ko: {
+        // --- NAV & COMMON ---
+        nav_sys_time: "시스템 시간",
+        nav_guide: "가이드",
+        nav_login: "로그인",
+        nav_logout: "로그아웃",
+        nav_wallet: "지갑 관리",
+        nav_feedback: "피드백",
+
+        // --- HERO ---
+        hero_title: "토너먼트 거래량 트래커",
+        hero_sub: "계정을 관리하고 예측에 참여하세요.",
+
+        // --- COMMAND DECK ---
+        cmd_eco: "생태계",
+        cmd_platform: "거래 플랫폼",
+        cmd_miniapp: "미니 앱",
+        cmd_channel: "채널",
+        cmd_bot: "봇",
+        cmd_cex: "바이낸스 CEX",
+        cmd_web3: "바이낸스 지갑",
+        cmd_dex: "ASTER DEX",
+
+        // --- MARKET OVERVIEW ---
+        sect_market: "시장 개요",
+        stat_active: "진행 중인 풀",
+        stat_pool: "총 보상",
+        stat_top_reward: "최고 보상",
+
+        // --- MARKET HEALTH ---
+        health_title: "시장 건전성",
+        health_realtime: "실시간",
+        col_token: "토큰",
+        col_price: "가격",
+        col_reward: "보상",
+        col_min_vol: "최소 거래량",
+        col_daily_vol: "일일 거래량",
+        col_camp_vol: "누적 거래량",
+        col_speed: "속도",
+        col_match: "체결",
+        col_ord: "평균 주문",
+        col_spread: "스프레드",
+
+        // --- DEADLINE & BOARD ---
+        sect_deadline: "마감 레이더",
+        btn_view_all: "모두 보기",
+        sect_board: "추적 보드",
+        btn_create: "생성",
+        btn_config: "설정",
+
+        // --- CARD ITEMS ---
+        card_top: "순위",
+        card_reward: "보상",
+        card_price: "가격",
+        card_my_prog: "나의 진행 상황",
+        card_update: "거래량 업데이트",
+        card_total_vol: "총 거래량 (Alpha)",
+        card_min_target: "최소 목표 (Goal)",
+        btn_predict: "예측하기",
+        btn_market_closed: "시장 마감",
+
+        // --- TAGS & STATUS ---
+        status_running: "진행 중",
+        status_ended: "종료됨",
+        tag_x4: "X4 BSC 체인",
+        tag_x2: "X2 기타 체인",
+        rule_buy: "매수 전용",
+        rule_all: "매수 + 매도",
+        rule_x4: "전체 볼륨 x4",
+
+        // --- LEGEND ---
+        leg_title: "지표 범례",
+        leg_price: "현재 시장 가격 (실시간).",
+        leg_reward: "예상 상금 가치 (수량 * 가격).",
+        leg_min_vol: "목표 거래량 (어제 vs 그제).",
+        leg_daily_vol: "실시간 볼륨 (하단: 어제).",
+        leg_speed: "체결 속도 (주문/초).",
+        leg_match: "초당 평균 매수 ($).",
+        leg_ord: "주문당 평균 가치 ($).",
+        leg_spread: "매수/매도 스프레드 (%).",
+
+        // --- MODALS ---
+        modal_login_title: "보안 접속",
+        modal_login_desc: "이메일 OTP 인증",
+        btn_send_code: "코드 전송",
+        btn_verify: "로그인 확인",
+
+        modal_update_title: "거래 추적기",
+        lbl_date: "날짜",
+        lbl_acc_vol: "나의 볼륨 & 격차",
+        lbl_history: "나의 기록",
+        btn_save_prog: "진행 상황 저장",
+
+        modal_pred_title: "예측 입력",
+        modal_pred_desc: "최종 최소 거래량을 예측하세요.",
+        lbl_your_name: "닉네임",
+        lbl_your_guess: "예측값 (VOL)",
+        btn_pay_fee: "확인 및 수수료 지불",
+
+        // --- TOASTS ---
+        toast_login: "먼저 로그인해주세요!",
+        toast_success: "작업 성공!",
+        toast_error: "오류가 발생했습니다!",
+        toast_saved: "데이터 저장됨!",
+        toast_copied: "클립보드에 복사됨!"
     }
 };
 
@@ -3303,7 +3506,8 @@ async function fetchUserProfile() {
                         siteConfig = row.data || { x:'', tele:'', yt:'', affiliate:{} };
                         if(!siteConfig.affiliate) siteConfig.affiliate = {};
                         renderFooter();
-                        renderArsenal(); 
+                        renderArsenal();
+                        renderCustomHub(); 
                     }
                     else {
                         // Dữ liệu giải đấu
@@ -3457,53 +3661,82 @@ async function fetchUserProfile() {
     }
 
 
-                function openConfigModal() {
-        // ... (Phần Socials & Logo cũ giữ nguyên) ...
-        document.getElementById('cfg-x').value = siteConfig.x || '';
-        document.getElementById('cfg-tele').value = siteConfig.tele || '';
-        document.getElementById('cfg-yt').value = siteConfig.yt || '';
-        document.getElementById('cfg-logo-url').value = siteConfig.brandLogo || '';
-        let img = document.getElementById('cfg-logo-preview');
-        if(siteConfig.brandLogo) { img.src = siteConfig.brandLogo; img.style.display = 'block'; }
-        else { img.style.display = 'none'; }
+    function openConfigModal() {
+    // 1. Load Socials & Logo
+    document.getElementById('cfg-x').value = siteConfig.x || '';
+    document.getElementById('cfg-tele').value = siteConfig.tele || '';
+    document.getElementById('cfg-yt').value = siteConfig.yt || '';
+    document.getElementById('cfg-logo-url').value = siteConfig.brandLogo || '';
+    
+    // 2. [FIX] Load 3 Link Ref Chính
+    document.getElementById('cfg-ref-binance').value = siteConfig.ref_binance || '';
+    document.getElementById('cfg-ref-web3').value = siteConfig.ref_web3 || '';
+    document.getElementById('cfg-ref-dex').value = siteConfig.ref_dex || '';
 
-        // --- LOAD DANH SÁCH SÀN ĐỘNG ---
-        // Lấy danh sách từ config, nếu chưa có thì dùng mảng rỗng
-        let arsenalList = siteConfig.arsenal_items || [];
-        renderArsenalInputs(arsenalList);
+    // Preview Logo
+    let img = document.getElementById('cfg-logo-preview');
+    if(siteConfig.brandLogo) { img.src = siteConfig.brandLogo; img.style.display = 'block'; }
+    else { img.style.display = 'none'; }
 
-        new bootstrap.Modal(document.getElementById('configModal')).show();
-    }
+    // 3. Load Danh Sách Động (Arsenal)
+    let arsenalList = siteConfig.arsenal_items || [];
+    renderArsenalInputs(arsenalList);
+
+    new bootstrap.Modal(document.getElementById('configModal')).show();
+}
 
 
-                async function saveGlobalConfig() {
-        // 1. Quét dữ liệu từ danh sách động
-        let arsenalItems = [];
-        document.querySelectorAll('.arsenal-item-row').forEach(row => {
-            arsenalItems.push({
-                name: row.querySelector('.inp-name').value,
-                link: row.querySelector('.inp-link').value,
-                type: row.querySelector('.inp-type').value,
-                logo: row.querySelector('.inp-logo').value
-            });
+async function saveGlobalConfig() {
+    // 1. Quét dữ liệu từ danh sách động (Arsenal)
+    let arsenalItems = [];
+    document.querySelectorAll('.arsenal-item-row').forEach(row => {
+        arsenalItems.push({
+            name: row.querySelector('.inp-name').value,
+            link: row.querySelector('.inp-link').value,
+            type: row.querySelector('.inp-type').value,
+            logo: row.querySelector('.inp-logo').value
         });
+    });
 
-        // 2. Tạo object Config mới
-        const newData = {
-            x: document.getElementById('cfg-x').value,
-            tele: document.getElementById('cfg-tele').value,
-            yt: document.getElementById('cfg-yt').value,
-            brandLogo: document.getElementById('cfg-logo-url').value,
+    // 2. Tạo object Config mới (BAO GỒM CẢ 3 LINK FIX MỚI)
+    const newData = {
+        x: document.getElementById('cfg-x').value.trim(),
+        tele: document.getElementById('cfg-tele').value.trim(),
+        yt: document.getElementById('cfg-yt').value.trim(),
+        brandLogo: document.getElementById('cfg-logo-url').value.trim(),
 
-            // Lưu mảng danh sách sàn vào đây
-            arsenal_items: arsenalItems
-        };
+        // [FIX] Lưu 3 Link Ref Chính
+        ref_binance: document.getElementById('cfg-ref-binance').value.trim(),
+        ref_web3: document.getElementById('cfg-ref-web3').value.trim(),
+        ref_dex: document.getElementById('cfg-ref-dex').value.trim(),
 
-       await supabase.from('tournaments').upsert({ id: -1, name: 'CONFIG', contract: 'CONFIG', data: newData });
+        // Lưu mảng danh sách sàn phụ
+        arsenal_items: arsenalItems
+    };
 
-bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
-loadFromCloud(false);
-showToast("Configuration saved!", "success"); // Đã sửa dòng này
+    // 3. Gửi lên Server
+    let btn = document.querySelector('button[onclick="saveGlobalConfig()"]');
+    let oldText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; btn.disabled = true;
+
+    try {
+        const { error } = await supabase.from('tournaments')
+            .upsert({ id: -1, name: 'CONFIG', contract: 'CONFIG', data: newData });
+
+        if (error) throw error;
+
+        bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+        
+        // Tải lại dữ liệu ngay lập tức để thấy thay đổi
+        await loadFromCloud(false);
+        showToast("Configuration saved successfully!", "success");
+
+    } catch (e) {
+        console.error(e);
+        showToast("Save failed: " + e.message, "error");
+    } finally {
+        btn.innerHTML = oldText; btn.disabled = false;
+    }
 }
 
 
@@ -5843,7 +6076,7 @@ function restoreData(input) {
                 <input type="text" class="form-control form-control-sm inp-name" placeholder="Tên sàn (VD: Binance)" value="${name}" style="flex:1">
                 <select class="form-select form-select-sm inp-type" style="width:130px">
                     <option value="EXCHANGE" ${type==='EXCHANGE'?'selected':''}>Sàn CEX</option>
-                    <option value="WEB3 WALLET" ${type==='WEB3 WALLET'?'selected':''}>Ví Web3</option>
+                    <option value="WEB3 WALLET" ${type==='WEB3 WALLET'?'selected':''}>Binance Wallet</option>
                     <option value="DEX SWAP" ${type==='DEX SWAP'?'selected':''}>Sàn DEX</option>
                 </select>
             </div>
@@ -6771,6 +7004,172 @@ window.sendReportFromUI = async function() {
 .eco-card.channel:hover .eco-icon { background: #F0B90B; color: #000; }
 
 
+/* --- [NEW UI UPDATE] GIAO DIỆN TỐI ƯU --- */
+
+/* 1. HERO HEADER (ĐƯA LÊN ĐẦU) */
+.hero-banner {
+    background: radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+    padding: 40px 0 20px 0; 
+    text-align: center; 
+    border-bottom: none; /* Bỏ viền cũ */
+    margin-bottom: 20px;
+}
+.hero-title { 
+    font-size: 2.2rem; font-weight: 900; letter-spacing: 1px; color: #fff; 
+    text-shadow: 0 0 30px rgba(0,240,255,0.3); margin-bottom: 5px; 
+}
+.hero-sub { color: var(--text-sub); font-size: 0.9rem; }
+
+/* 2. CAROUSEL BANNER (SLIDE ẢNH) */
+.event-carousel { 
+    border: 1px solid var(--brand); border-radius: 12px; overflow: hidden; 
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.15); margin-bottom: 30px; position: relative; 
+}
+.carousel-item img { width: 100%; height: 180px; object-fit: cover; filter: brightness(0.9); }
+
+/* 3. TRADING HUB (3 CỘT GỌN GÀNG) */
+.trading-hub-wrapper { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+.hub-item {
+    background: linear-gradient(180deg, #161a1e 0%, #0b0e11 100%);
+    border: 1px solid var(--border); border-radius: 8px; padding: 15px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    text-decoration: none; transition: 0.3s; cursor: pointer;
+}
+.hub-item:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.03); }
+/* Màu riêng cho từng loại */
+.hub-binance { border-bottom: 3px solid #F0B90B; }
+.hub-web3 { border-bottom: 3px solid var(--brand); }
+.hub-dex { border-bottom: 3px solid #9945FF; }
+.hub-icon { font-size: 1.8rem; margin-bottom: 8px; }
+.hub-title { font-family: var(--font-num); font-weight: 800; color: #fff; text-transform:uppercase; font-size: 0.9rem;}
+.btn-join-hub { font-size: 0.65rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,0.1); margin-top: 5px; color: #fff; }
+
+/* 4. ECOSYSTEM (NHỎ GỌN LẠI) */
+.eco-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 30px; }
+.eco-card { 
+    background: #161a1e; border: 1px solid var(--border); padding: 10px; border-radius: 8px; 
+    display: flex; align-items: center; gap: 10px; text-decoration: none; transition: 0.2s; 
+}
+.eco-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+.eco-icon { font-size: 1.2rem; color: var(--text-sub); width: 30px; text-align: center; }
+.eco-title { color: #fff; font-weight: 700; font-size: 0.85rem; }
+.eco-desc { font-size: 0.7rem; color: var(--text-sub); }
+
+/* Mobile */
+@media (max-width: 768px) { .trading-hub-wrapper { grid-template-columns: 1fr; } }
+
+
+/* --- COMMAND CENTER (GIAO DIỆN ĐIỀU KHIỂN) --- */
+
+/* 1. Khung bao ngoài */
+.command-deck {
+    display: grid;
+    gap: 20px; /* Khoảng cách giữa 2 hàng */
+    margin-bottom: 35px;
+}
+
+/* 2. Tiêu đề nhỏ (Label) */
+.cmd-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cmd-label::after {
+    content: ''; flex: 1; height: 1px; 
+    background: rgba(255,255,255,0.1);
+}
+
+/* 3. Lưới hiển thị (3 Cột đều nhau) */
+.cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 cột bằng nhau */
+    gap: 12px;
+}
+
+/* 4. Thẻ chức năng (Design đồng bộ) */
+.cmd-card {
+    background: linear-gradient(145deg, #161a1e 0%, #0e1114 100%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 15px 10px;
+    display: flex;
+    flex-direction: column; /* Xếp dọc: Icon trên, Chữ dưới */
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-height: 85px; /* Chiều cao cố định để đều nhau */
+}
+
+/* Hiệu ứng Hover */
+.cmd-card:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Màu sắc riêng (Accent) */
+/* Ecosystem (Xanh Brand) */
+.cc-eco:hover { border-color: var(--brand); }
+.cc-eco .cmd-icon { color: var(--brand); filter: drop-shadow(0 0 5px rgba(0, 240, 255, 0.4)); }
+
+/* Binance (Vàng) */
+.cc-binance:hover { border-color: #F0B90B; }
+.cc-binance .cmd-icon { color: #F0B90B; filter: drop-shadow(0 0 5px rgba(240, 185, 11, 0.4)); }
+
+/* Web3 (Xanh lá/Xanh ngọc) */
+.cc-web3:hover { border-color: #0ECB81; }
+.cc-web3 .cmd-icon { color: #0ECB81; filter: drop-shadow(0 0 5px rgba(14, 203, 129, 0.4)); }
+
+/* Dex (Tím) */
+.cc-dex:hover { border-color: #9945FF; }
+.cc-dex .cmd-icon { color: #9945FF; filter: drop-shadow(0 0 5px rgba(153, 69, 255, 0.4)); }
+
+
+/* Nội dung bên trong thẻ */
+.cmd-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    transition: 0.3s;
+}
+.cmd-title {
+    color: #fff;
+    font-family: var(--font-num);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.cmd-sub {
+    font-size: 0.65rem;
+    color: var(--text-sub);
+    margin-top: 2px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .cmd-grid {
+        grid-template-columns: repeat(3, 1fr); /* Vẫn giữ 3 cột trên mobile cho gọn */
+        gap: 8px;
+    }
+    .cmd-card {
+        padding: 10px 5px;
+        min-height: 70px;
+    }
+    .cmd-icon { font-size: 1.2rem; margin-bottom: 5px; }
+    .cmd-title { font-size: 0.7rem; }
+    .cmd-sub { display: none; /* Ẩn mô tả trên mobile cho thoáng */ }
+}
+
 </style>
 
 
@@ -7012,6 +7411,48 @@ function updateSingleCardUI(rawRow) {
             }
         }
     }
+
+// --- [NEW] HÀM HIỂN THỊ BANNER & HUB MỚI (FIX LỖI) ---
+function renderCustomHub() {
+    // 1. Xử lý Banner Slide
+    const inner = document.querySelector('.carousel-inner');
+    const indicators = document.querySelector('.carousel-indicators');
+    
+    // Kiểm tra xem có dữ liệu banner trong config không
+    if (inner && siteConfig.banners && Array.isArray(siteConfig.banners) && siteConfig.banners.length > 0) {
+        inner.innerHTML = ''; 
+        indicators.innerHTML = '';
+        
+        siteConfig.banners.forEach((b, i) => {
+            if(!b.img) return; // Bỏ qua nếu không có ảnh
+            const active = i === 0 ? 'active' : '';
+            
+            // Tạo ảnh
+            inner.innerHTML += `
+                <div class="carousel-item ${active}" data-bs-interval="4000">
+                    <a href="${b.link||'#'}" target="_blank">
+                        <img src="${b.img}" class="d-block w-100" style="height: 180px; object-fit: cover;">
+                    </a>
+                </div>`;
+                
+            // Tạo nút chấm tròn
+            indicators.innerHTML += `
+                <button type="button" data-bs-target="#eventCarousel" data-bs-slide-to="${i}" class="${active}"></button>`;
+        });
+        const carousel = document.getElementById('eventCarousel');
+        if(carousel) carousel.style.display = 'block';
+    } else {
+        // Nếu không có banner nào -> Ẩn khung slide đi
+        const carousel = document.getElementById('eventCarousel');
+        if(carousel) carousel.style.display = 'none';
+    }
+
+    // 2. Cập nhật Link 3 Sàn (Binance, Web3, Dex)
+    if(siteConfig.ref_binance && document.getElementById('ui-ref-binance')) document.getElementById('ui-ref-binance').href = siteConfig.ref_binance;
+    if(siteConfig.ref_web3 && document.getElementById('ui-ref-web3')) document.getElementById('ui-ref-web3').href = siteConfig.ref_web3;
+    if(siteConfig.ref_dex && document.getElementById('ui-ref-dex')) document.getElementById('ui-ref-dex').href = siteConfig.ref_dex;
+}
+
     </script>
 
 </body>
