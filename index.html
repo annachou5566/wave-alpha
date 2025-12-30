@@ -4736,19 +4736,69 @@ function updateTerminalData(id) {
     }
 
     // 7. Leaderboard & Chat (Giữ nguyên logic cũ nhưng trỏ ID mới)
+    // --- ĐOẠN CODE DÙNG CHUNG CHO CẢ 2 VỊ TRÍ (Paste đè vào đoạn số 4 và số 7) ---
     let lb = document.getElementById('pt-leaderboard');
-    if(lb) {
-        lb.innerHTML = '';
-        let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
-        
-        if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
-        
-        preds.forEach((p, i) => {
-            let rank = i+1;
-            let color = rank===1?'#FFD700':(rank===2?'#C0C0C0':(rank===3?'#CD7F32':'#666'));
-            lb.innerHTML += `<tr><td class="ps-3 align-middle"><span style="color:${color}; font-weight:800">#${rank}</span></td><td class="align-middle"><div class="d-flex align-items-center gap-2"><img src="${p.avatar||'https://placehold.co/20'}" style="width:20px;height:20px;border-radius:50%"><span class="text-white small fw-bold">${p.name}</span></div></td><td class="text-end pe-3 align-middle font-num text-brand fw-bold">${fmtNum(p.guess)}</td></tr>`;
-        });
-    }
+        if (lb) { 
+            lb.innerHTML = ''; 
+            
+            // LOGIC SẮP XẾP MỚI: Ưu tiên >= Min, sau đó xếp người gần Min nhất lên đầu
+            let preds = (c.predictions || []).sort((a, b) => {
+                let aValid = a.guess >= curMin;
+                let bValid = b.guess >= curMin;
+
+                // 1. Ai hợp lệ (>= Min) cho lên trên, ai trượt cho xuống dưới
+                if (aValid && !bValid) return -1;
+                if (!aValid && bValid) return 1;
+
+                // 2. Nếu cùng hợp lệ: Ai nhỏ hơn (gần Min hơn) thì xếp trên
+                if (aValid && bValid) {
+                    return a.guess - b.guess;
+                } 
+                // 3. Nếu cùng trượt: Ai lớn hơn (gần Min hơn) thì xếp trên (để vớt vát)
+                else {
+                    return b.guess - a.guess;
+                }
+            });
+            
+            if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
+
+            preds.forEach((p, i) => {
+                // Kiểm tra lại lần nữa để tô màu
+                let isValid = p.guess >= curMin;
+                
+                // Top 1,2,3 màu Vàng/Bạc/Đồng. Còn lại màu xám. Người thua cuộc màu tối hơn.
+                let rankColor = isValid 
+                    ? (i===0?'#FFD700':(i===1?'#C0C0C0':(i===2?'#CD7F32':'#666'))) 
+                    : '#333'; 
+
+                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; // Hiện dấu X nếu loại
+
+                let badgeHtml = `<span class="rank-badge" style="background:${rankColor}; color:${isValid && i<3 ? '#000' : '#fff'}; border:1px solid #444">${rankText}</span>`;
+                
+                let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0, 1).toUpperCase()}</div>`;
+                
+                // Highlight chính mình
+                let myName = document.getElementById('modal-p-name')?.value || '';
+                let highlightClass = (p.name === myName) ? 'anim-breathe' : '';
+                
+                // Làm mờ dòng bị loại (Opacity 0.4)
+                let rowStyle = isValid ? '' : 'opacity: 0.4; filter: grayscale(1);';
+
+                lb.innerHTML += `
+                <tr class="${highlightClass}" style="${rowStyle}">
+                    <td class="ps-4 align-middle">${badgeHtml}</td>
+                    <td class="align-middle">
+                        <div class="d-flex align-items-center gap-2">
+                            ${avatarHtml}
+                            <span class="text-white small fw-bold">${p.name}</span>
+                        </div>
+                    </td>
+                    <td class="text-end pe-4 align-middle font-num fw-bold" style="color:${isValid ? 'var(--brand)' : '#666'}">
+                        ${fmtNum(p.guess)}
+                    </td>
+                </tr>`;
+            });
+        }
 
     let chatDiv = document.getElementById('chat-feed');
     if(chatDiv) {
@@ -6021,22 +6071,64 @@ async function silentReload(id) {
         let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length - 1].target : 0;
 
         // 4. Cập nhật Bảng Xếp Hạng (Leaderboard) - QUAN TRỌNG: CÓ KIỂM TRA TỒN TẠI
+        // --- ĐOẠN CODE DÙNG CHUNG CHO CẢ 2 VỊ TRÍ (Paste đè vào đoạn số 4 và số 7) ---
         let lb = document.getElementById('pt-leaderboard');
         if (lb) { 
             lb.innerHTML = ''; 
-            let preds = (c.predictions || []).sort((a, b) => Math.abs(a.guess - curMin) - Math.abs(b.guess - curMin));
+            
+            // --- LOGIC XẾP HẠNG MỚI (Đồng bộ với hàm trên) ---
+            let preds = (c.predictions || []).sort((a, b) => {
+                let aValid = a.guess >= curMin;
+                let bValid = b.guess >= curMin;
+
+                if (aValid && !bValid) return -1;
+                if (!aValid && bValid) return 1;
+
+                if (aValid && bValid) {
+                    if (a.guess !== b.guess) return a.guess - b.guess;
+                } else {
+                    if (a.guess !== b.guess) return b.guess - a.guess;
+                }
+                return a.time - b.time;
+            });
             
             if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
 
             preds.forEach((p, i) => {
-                let badgeHtml = i < 3 ? `<span class="rank-badge rank-${i + 1}">${i + 1}</span>` : `<span class="rank-badge">${i + 1}</span>`;
+                // Kiểm tra lại lần nữa để tô màu
+                let isValid = p.guess >= curMin;
+                
+                // Top 1,2,3 màu Vàng/Bạc/Đồng. Còn lại màu xám. Người thua cuộc màu tối hơn.
+                let rankColor = isValid 
+                    ? (i===0?'#FFD700':(i===1?'#C0C0C0':(i===2?'#CD7F32':'#666'))) 
+                    : '#333'; 
+
+                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; // Hiện dấu X nếu loại
+
+                let badgeHtml = `<span class="rank-badge" style="background:${rankColor}; color:${isValid && i<3 ? '#000' : '#fff'}; border:1px solid #444">${rankText}</span>`;
+                
                 let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0, 1).toUpperCase()}</div>`;
                 
-                // Highlight dòng của chính mình
+                // Highlight chính mình
                 let myName = document.getElementById('modal-p-name')?.value || '';
                 let highlightClass = (p.name === myName) ? 'anim-breathe' : '';
+                
+                // Làm mờ dòng bị loại (Opacity 0.4)
+                let rowStyle = isValid ? '' : 'opacity: 0.4; filter: grayscale(1);';
 
-                lb.innerHTML += `<tr class="${highlightClass}"><td class="ps-4">${badgeHtml}</td><td>${avatarHtml}<span class="fw-bold text-white">${p.name}</span></td><td class="text-end pe-4 text-brand font-num fw-bold">${fmtNum(p.guess)}</td></tr>`;
+                lb.innerHTML += `
+                <tr class="${highlightClass}" style="${rowStyle}">
+                    <td class="ps-4 align-middle">${badgeHtml}</td>
+                    <td class="align-middle">
+                        <div class="d-flex align-items-center gap-2">
+                            ${avatarHtml}
+                            <span class="text-white small fw-bold">${p.name}</span>
+                        </div>
+                    </td>
+                    <td class="text-end pe-4 align-middle font-num fw-bold" style="color:${isValid ? 'var(--brand)' : '#666'}">
+                        ${fmtNum(p.guess)}
+                    </td>
+                </tr>`;
             });
         }
         
