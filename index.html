@@ -4570,12 +4570,26 @@ function renderMarketHealthTable() {
              diffHtml = `<span class="text-sub" style="font-size:0.7rem">New Data</span>`;
         }
 
-        // --- CAMP. VOL ---
-        let realHistory = c.real_vol_history || [];
-        let totalCampVol = realHistory.reduce((sum, item) => sum + parseFloat(item.vol || 0), 0);
-        let hasTodayInHist = realHistory.some(h => h.date === todayStr);
-        if (!hasTodayInHist) totalCampVol += (c.real_alpha_volume || 0);
-        let campVolDisplay = fmtFull(totalCampVol);
+        // --- CAMP. VOL (FIXED) ---
+let realHistory = c.real_vol_history || [];
+let startDate = c.start || '2000-01-01'; // Nếu không có ngày start thì lấy hết
+
+// Chỉ cộng những ngày >= ngày Start
+let totalCampVol = realHistory.reduce((sum, item) => {
+    if (item.date >= startDate) {
+        return sum + parseFloat(item.vol || 0);
+    }
+    return sum;
+}, 0);
+
+// Xử lý ngày hôm nay (Realtime)
+let hasTodayInHist = realHistory.some(h => h.date === todayStr);
+// Nếu hôm nay chưa có trong history VÀ hôm nay >= ngày start thì cộng thêm
+if (!hasTodayInHist && todayStr >= startDate) {
+    totalCampVol += (c.real_alpha_volume || 0);
+}
+
+let campVolDisplay = fmtFull(totalCampVol);
 
         // --- DAILY VOL ---
         let todayVol = c.real_alpha_volume || 0;
