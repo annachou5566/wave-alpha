@@ -1951,18 +1951,31 @@ let usePrice = (c.market_analysis && c.market_analysis.price) ? parseFloat(c.mar
 let priceStr = (usePrice > 0) ? '$' + usePrice.toLocaleString('en-US', { maximumFractionDigits: usePrice < 1 ? 6 : 2 }) : '---';
 let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 
-            let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
+           
+// ... (giữ nguyên dòng estHtml cũ) ...
+let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
-            // HTML
-            fullHtml += `
-            <div class="col-md-6 col-lg-4 col-xl-3 card-wrapper" ${dragAttr} data-id="${c.db_id}">
-                <div class="${cardClass}" onclick="playSfx('click'); toggleCardHighlight(this)">
-                    <div class="card-head">
-                        ${rocketBadgeHtml}
-                        <div class="token-info-wrapper">
-                            ${dragHandleHtml}
-                            <img src="${c.logo || 'https://placehold.co/40x40/222'}" class="token-logo" onclick="event.stopPropagation(); window.open('https://www.binance.com/en/alpha/${c.chain}/${c.contract}', '_blank')">
-                            <div class="token-text">
+// --- [BẮT ĐẦU SỬA: LOGIC ẢNH LOCAL] ---
+let tokenSymbol = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
+let localImgPath = `./assets/tokens/${tokenSymbol}.png`;
+let defaultImgPath = `./assets/tokens/default.png`;
+// --- [KẾT THÚC SỬA] ---
+
+// HTML
+fullHtml += `
+<div class="col-md-6 col-lg-4 col-xl-3 card-wrapper" ${dragAttr} data-id="${c.db_id}">
+    <div class="${cardClass}" onclick="playSfx('click'); toggleCardHighlight(this)">
+        <div class="card-head">
+            ${rocketBadgeHtml}
+            <div class="token-info-wrapper">
+                ${dragHandleHtml}
+                <img src="${localImgPath}" 
+                     onerror="this.onerror=null; this.src='${defaultImgPath}';" 
+                     class="token-logo" 
+                     onclick="event.stopPropagation(); window.open('https://www.binance.com/en/alpha/${c.chain}/${c.contract}', '_blank')">
+                
+                <div class="token-text">
+
                                 <div class="token-title d-flex align-items-center">
                                     ${c.name}
                                     <a href="${botLink}" target="_blank" onclick="event.stopPropagation()" 
