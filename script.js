@@ -2307,14 +2307,22 @@ function renderMarketHealthTable() {
         let contractHtml = c.contract ? 
             `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.substring(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
         
+                // --- [SỬA ĐOẠN NÀY] LOGIC ẢNH LOCAL CHO BẢNG MARKET ---
+        let tokenSymbol = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
+        let localImgPath = `./assets/tokens/${tokenSymbol}.png`;
+        let defaultImgPath = `./assets/tokens/default.png`;
+
         let tokenHtml = `
             <div class="token-cell-wrapper">
-                <img src="${c.logo || 'https://placehold.co/30x30/333'}" style="width:32px; height:32px; border-radius:50%; border:1px solid #333; flex-shrink:0;">
+                <img src="${localImgPath}" 
+                     onerror="this.onerror=null; this.src='${defaultImgPath}';" 
+                     style="width:32px; height:32px; border-radius:50%; border:1px solid #333; flex-shrink:0;">
                 <div class="token-info-col">
                     <div class="token-name-row"><span class="token-name-text">${c.name}</span>${badgeHtml}</div>
                     ${contractHtml}
                 </div>
             </div>`;
+        // --- [HẾT PHẦN SỬA] ---
 
         let countStr = t.txt_ended || 'Ended'; 
         let dateRange = '--';
