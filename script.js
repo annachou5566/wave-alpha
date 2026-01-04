@@ -870,7 +870,6 @@ function applyLanguage() {
                 document.body.classList.remove('is-admin');
             }
         });
-        supabase.channel('public:tournaments').on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, payload => { loadFromCloud(false); }).subscribe();
     }
 
 // --- [SỬA LỖI] BIẾN CỜ CHỐNG ĐƠ & AUTO-WAKEUP ---
@@ -945,7 +944,7 @@ function applyLanguage() {
         // --- 1. ƯU TIÊN HIỆN CACHE (ĐỂ USER VÀO LÀ THẤY NGAY) ---
         const cachedData = localStorage.getItem('wave_comp_list');
         let hasCache = false;
-
+    
         if (cachedData) {
             try {
                 compList = JSON.parse(cachedData);
@@ -959,76 +958,91 @@ function applyLanguage() {
                 console.log("Loaded from Cache");
             } catch (e) { console.error(e); }
         }
-
+    
         // --- 2. GỌI DỮ LIỆU MỚI TỪ SERVER ---
         // Nếu ĐÃ có cache (hasCache = true) -> Load ngầm (false), user vẫn xem được web
         // Nếu CHƯA có cache (hasCache = false) -> Hiện loading (true) để user đợi tải xong
         loadFromCloud(!hasCache).then(() => {
-            // Tải xong mới bắt đầu kích hoạt vòng lặp cập nhật
-            quickSyncData();
+            // Tải xong mới bắt đầu kích hoạt vòng lặp cập nhật thông minh (chống đơ)
+            if (typeof quickSyncData === 'function') quickSyncData();
             
             // Nếu nãy giờ đang hiện loading thì giờ tắt đi
             if (!hasCache) {
                 document.getElementById('loading-overlay').style.display = 'none';
             }
         });
-
+    
         // 3. Đồng hồ hệ thống (Giữ nguyên)
         setInterval(updateClock, 1000);
-
+    
         applyLanguage();
         if(document.getElementById('cur-lang-text')) {
             document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
         }
-
-       // --- 4. ĐĂNG KÝ REALTIME (CHÍNH THỨC - ĐÃ SỬA LỖI) ---
-    console.log("📡 Đang khởi tạo kết nối Realtime...");
-
-if (typeof supabase !== 'undefined') {
-    // Hủy kênh cũ để tránh trùng lặp
-    supabase.removeAllChannels();
-
-    supabase.channel('public:tournaments')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
-            const newData = payload.new;
-            if (!newData) return;
-            
-            console.log('🔔 CÓ DATA MỚI:', newData.name);
-
-            // 1. Cập nhật vào bộ nhớ
-            let localItem = compList.find(c => c.db_id === newData.id);
-            if (localItem) {
-                let newContent = newData.data || newData.Data;
-                if (newContent) {
-                    if (newContent.real_alpha_volume !== undefined) localItem.real_alpha_volume = newContent.real_alpha_volume;
-                    if (newContent.daily_tx_count !== undefined) localItem.daily_tx_count = newContent.daily_tx_count;
-                    if (newContent.market_analysis) localItem.market_analysis = newContent.market_analysis;
-                }
-            }
-
-            // 2. Vẽ lại giao diện (Chỉ số liệu)
-            if (typeof updateSingleCardUI === 'function') updateSingleCardUI(newData);
-            else renderGrid();
-
-            if (document.getElementById('healthTableBody')) renderMarketHealthTable();
-            renderStats();
-        })
-        .subscribe((status) => {
-            console.log(`📡 TRẠNG THÁI: ${status}`);
-            if (status === 'SUBSCRIBED') showToast("✅ Đã kết nối dữ liệu trực tiếp", "success");
-        });
-}
-
-// Modal hướng dẫn (Giữ nguyên logic cũ)
-if (!localStorage.getItem('wave_guide_seen')) {
-    setTimeout(() => {
-        const guideEl = document.getElementById('guideModal');
-        if(guideEl) new bootstrap.Modal(guideEl).show();
-        localStorage.setItem('wave_guide_seen', 'true');
-    }, 1500);
-}
-} 
-// --- KẾT THÚC HÀM INIT ---
+    
+        // --- 4. ĐĂNG KÝ REALTIME (CHÍNH THỨC - ĐẦY ĐỦ & TỐI ƯU) ---
+        console.log("📡 Đang khởi tạo kết nối Realtime...");
+    
+        if (typeof supabase !== 'undefined') {
+            // Hủy kênh cũ để tránh trùng lặp
+            supabase.removeAllChannels();
+    
+            supabase.channel('public:tournaments')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
+                    const newData = payload.new;
+                    if (!newData) return;
+                    
+                    console.log('🔔 CÓ DATA MỚI:', newData.name);
+    
+                    // 1. Cập nhật vào bộ nhớ trình duyệt (CompList)
+                    let localItem = compList.find(c => c.db_id === newData.id);
+                    if (localItem) {
+                        let newContent = newData.data || newData.Data;
+                        if (newContent) {
+                            // a. Cập nhật Volume & Tx
+                            if (newContent.real_alpha_volume !== undefined) localItem.real_alpha_volume = newContent.real_alpha_volume;
+                            if (newContent.daily_tx_count !== undefined) localItem.daily_tx_count = newContent.daily_tx_count;
+                            
+                            // b. [QUAN TRỌNG] Cập nhật Lịch sử (Để chart nhỏ không bị đơ)
+                            if (newContent.real_vol_history) localItem.real_vol_history = newContent.real_vol_history;
+    
+                            // c. Cập nhật Market Analysis (Giá, Spread...)
+                            if (newContent.market_analysis) {
+                                localItem.market_analysis = newContent.market_analysis;
+                                
+                                // [QUAN TRỌNG] Đồng bộ giá vào cache để tính Reward (Tiền thưởng) ngay lập tức
+                                if (newContent.market_analysis.price) {
+                                    localItem.cachedPrice = newContent.market_analysis.price;
+                                }
+                            }
+                        }
+                    }
+    
+                    // 2. Vẽ lại giao diện (Chỉ số liệu - Không reload trang)
+                    if (typeof updateSingleCardUI === 'function') updateSingleCardUI(newData);
+                    else renderGrid();
+    
+                    // Vẽ lại bảng Market Health (Spread, Speed...)
+                    if (document.getElementById('healthTableBody')) renderMarketHealthTable();
+                    
+                    // Vẽ lại thanh thống kê tổng (Total Pool)
+                    renderStats();
+                })
+                .subscribe((status) => {
+                    console.log(`📡 TRẠNG THÁI: ${status}`);
+                    if (status === 'SUBSCRIBED') showToast("✅ Đã kết nối dữ liệu trực tiếp", "success");
+                });
+        }
+    
+        // Modal hướng dẫn (Giữ nguyên logic cũ)
+        if (!localStorage.getItem('wave_guide_seen')) {
+            setTimeout(() => {
+                const guideEl = document.getElementById('guideModal');
+                if(guideEl) new bootstrap.Modal(guideEl).show();
+                localStorage.setItem('wave_guide_seen', 'true');
+            }, 1500);
+        }
+    }
 
 
     // --- HÀM checkAndAutoRefresh (KHÔNG CẦN DÙNG NỮA - ĐỂ TRỐNG) ---
