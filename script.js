@@ -2526,8 +2526,19 @@ function updateTerminalData(id) {
     
     // 1. Header Info
     document.getElementById('pt-symbol').innerText = c.name;
+    
+    // --- [SỬA LẠI] ẢNH LOCAL CHO MỤC PREDICT ---
     let logoEl = document.getElementById('pt-logo');
-    logoEl.src = c.logo;
+    
+    let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
+    let cleanSymbol = rawName.split('(')[0].trim(); // Cắt bỏ (P1), (P2)...
+    
+    let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
+    let defaultImgPath = `./assets/tokens/default.png`;
+
+    logoEl.src = localImgPath;
+    logoEl.onerror = function() { this.src = defaultImgPath; };
+    // -------------------------------------------
     
     // 2. Control Panel Data
     let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length-1].target : 0;
@@ -2826,19 +2837,28 @@ async function submitPredictionFromModal() {
         const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         document.getElementById('sc-date-display').innerText = `${dateStr} | ${timeStr}`;
 
-        // FIX CORS: Thêm timestamp để tránh cache và set crossOrigin
+        // --- [ĐÃ SỬA] LOGIC ẢNH LOCAL CHO SHARE CARD ---
         let imgEl = document.getElementById('sc-token-img');
-        imgEl.crossOrigin = "anonymous";
-        imgEl.src = c.logo + (c.logo.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-
-        // Fallback nếu ảnh lỗi thì hiện avatar chữ cái (tránh bị đen sì)
-        imgEl.onerror = function() {
-            this.style.display = 'none'; // Ẩn ảnh lỗi
-            // Có thể thêm logic hiện avatar chữ ở đây nếu muốn kỹ hơn
+        
+        // 1. Làm sạch tên (VD: "STAR (P1)" -> "STAR")
+        let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
+        let cleanSymbol = rawName.split('(')[0].trim();
+        
+        // 2. Tạo đường dẫn ảnh Local
+        let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
+        
+        // 3. Gán ảnh
+        imgEl.crossOrigin = "anonymous"; // Giữ nguyên để html2canvas hoạt động
+        imgEl.src = localImgPath;
+        
+        // 4. Xử lý lỗi (Ẩn đi nếu không tìm thấy ảnh)
+        imgEl.onerror = function() { 
+            this.style.display = 'none'; 
         };
         imgEl.onload = function() {
             this.style.display = 'block';
         };
+        // -------------------------------------------
 
         let curMin = (c.history && c.history.length>0) ? c.history[c.history.length-1].target : 0;
         document.getElementById('sc-min-vol').innerText = fmtNum(curMin);
