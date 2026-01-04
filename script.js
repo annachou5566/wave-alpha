@@ -849,15 +849,7 @@ function applyLanguage() {
     };
 
     if (typeof window.supabase !== 'undefined') {
-        // --- CẤU HÌNH TIMEOUT 60 GIÂY (CHỐNG MẠNG LAG) ---
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            realtime: {
-                timeout: 60000, // Tăng thời gian chờ lên 60s (Mặc định chỉ 10s)
-                headers: {
-                    'Connection': 'keep-alive'
-                }
-            }
-        });
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         supabase.auth.onAuthStateChange((event, session) => {
             if (session) {
@@ -949,42 +941,100 @@ function applyLanguage() {
     function init() {
         checkLegal();
         
-        // --- 1. LOAD CACHE & CLOUD ---
+        // --- 1. ƯU TIÊN HIỆN CACHE (ĐỂ USER VÀO LÀ THẤY NGAY) ---
         const cachedData = localStorage.getItem('wave_comp_list');
         let hasCache = false;
     
         if (cachedData) {
             try {
                 compList = JSON.parse(cachedData);
+                // Có cache -> Vẽ ngay lập tức
                 renderGrid();
                 renderStats();
                 hasCache = true;
+                
+                // CÓ DỮ LIỆU RỒI MỚI ĐƯỢC TẮT LOADING
                 document.getElementById('loading-overlay').style.display = 'none';
+                console.log("Loaded from Cache");
             } catch (e) { console.error(e); }
         }
     
+        // --- 2. GỌI DỮ LIỆU MỚI TỪ SERVER ---
+        // Nếu ĐÃ có cache (hasCache = true) -> Load ngầm (false), user vẫn xem được web
+        // Nếu CHƯA có cache (hasCache = false) -> Hiện loading (true) để user đợi tải xong
         loadFromCloud(!hasCache).then(() => {
+            // Tải xong mới bắt đầu kích hoạt vòng lặp cập nhật thông minh (chống đơ)
             if (typeof quickSyncData === 'function') quickSyncData();
-            if (!hasCache) document.getElementById('loading-overlay').style.display = 'none';
             
-            // Debug: Kiểm tra ID đang dùng là gì
-            if(compList.length > 0) {
-                console.log("👉 Đang dùng ID là:", compList[0].id ? "id" : "db_id");
+            // Nếu nãy giờ đang hiện loading thì giờ tắt đi
+            if (!hasCache) {
+                document.getElementById('loading-overlay').style.display = 'none';
             }
         });
     
+        // 3. Đồng hồ hệ thống (Giữ nguyên)
         setInterval(updateClock, 1000);
+    
         applyLanguage();
         if(document.getElementById('cur-lang-text')) {
             document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
         }
     
-        // --- 3. REALTIME (PHIÊN BẢN CÓ RETRY - CHỐNG TIMEOUT) ---
+        // --- 4. ĐĂNG KÝ REALTIME (CHÍNH THỨC - ĐẦY ĐỦ & TỐI ƯU) ---
+        console.log("📡 Đang khởi tạo kết nối Realtime...");
+    
         if (typeof supabase !== 'undefined') {
-            setupRealtimeConnection();
+            // Hủy kênh cũ để tránh trùng lặp
+            supabase.removeAllChannels();
+    
+            supabase.channel('public:tournaments')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
+                    const newData = payload.new;
+                    if (!newData) return;
+                    
+                    console.log('🔔 CÓ DATA MỚI:', newData.name);
+    
+                    // 1. Cập nhật vào bộ nhớ trình duyệt (CompList)
+                    let localItem = compList.find(c => c.db_id === newData.id);
+                    if (localItem) {
+                        let newContent = newData.data || newData.Data;
+                        if (newContent) {
+                            // a. Cập nhật Volume & Tx
+                            if (newContent.real_alpha_volume !== undefined) localItem.real_alpha_volume = newContent.real_alpha_volume;
+                            if (newContent.daily_tx_count !== undefined) localItem.daily_tx_count = newContent.daily_tx_count;
+                            
+                            // b. [QUAN TRỌNG] Cập nhật Lịch sử (Để chart nhỏ không bị đơ)
+                            if (newContent.real_vol_history) localItem.real_vol_history = newContent.real_vol_history;
+    
+                            // c. Cập nhật Market Analysis (Giá, Spread...)
+                            if (newContent.market_analysis) {
+                                localItem.market_analysis = newContent.market_analysis;
+                                
+                                // [QUAN TRỌNG] Đồng bộ giá vào cache để tính Reward (Tiền thưởng) ngay lập tức
+                                if (newContent.market_analysis.price) {
+                                    localItem.cachedPrice = newContent.market_analysis.price;
+                                }
+                            }
+                        }
+                    }
+    
+                    // 2. Vẽ lại giao diện (Chỉ số liệu - Không reload trang)
+                    if (typeof updateSingleCardUI === 'function') updateSingleCardUI(newData);
+                    else renderGrid();
+    
+                    // Vẽ lại bảng Market Health (Spread, Speed...)
+                    if (document.getElementById('healthTableBody')) renderMarketHealthTable();
+                    
+                    // Vẽ lại thanh thống kê tổng (Total Pool)
+                    renderStats();
+                })
+                .subscribe((status) => {
+                    console.log(`📡 TRẠNG THÁI: ${status}`);
+                    if (status === 'SUBSCRIBED') showToast("✅ Đã kết nối dữ liệu trực tiếp", "success");
+                });
         }
     
-        // Modal hướng dẫn
+        // Modal hướng dẫn (Giữ nguyên logic cũ)
         if (!localStorage.getItem('wave_guide_seen')) {
             setTimeout(() => {
                 const guideEl = document.getElementById('guideModal');
@@ -992,58 +1042,6 @@ function applyLanguage() {
                 localStorage.setItem('wave_guide_seen', 'true');
             }, 1500);
         }
-    }
-    
-    // --- HÀM KẾT NỐI REALTIME RIÊNG BIỆT (ĐỂ GỌI LẠI KHI LỖI) ---
-    function setupRealtimeConnection() {
-        console.warn("📡 BẮT ĐẦU KẾT NỐI REALTIME (RETRY MODE)...");
-        
-        supabase.removeAllChannels();
-    
-        const channel = supabase.channel('public:tournaments');
-        
-        channel
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
-                const newData = payload.new;
-                console.warn('🔔 TÍN HIỆU DATA MỚI:', newData.name);
-    
-                // Tìm kiếm thông minh (chấp nhận cả id và db_id)
-                let localItem = compList.find(c => (c.db_id || c.id) == newData.id);
-    
-                if (localItem) {
-                    console.log("✅ Đã update số liệu cho:", newData.name);
-                    
-                    let newContent = newData.data || newData.Data;
-                    if (newContent) {
-                        if (newContent.real_alpha_volume !== undefined) localItem.real_alpha_volume = newContent.real_alpha_volume;
-                        if (newContent.daily_tx_count !== undefined) localItem.daily_tx_count = newContent.daily_tx_count;
-                        if (newContent.real_vol_history) localItem.real_vol_history = newContent.real_vol_history;
-                        if (newContent.market_analysis) {
-                            localItem.market_analysis = newContent.market_analysis;
-                            if (newContent.market_analysis.price) localItem.cachedPrice = newContent.market_analysis.price;
-                        }
-                    }
-                    
-                    if (typeof updateSingleCardUI === 'function') updateSingleCardUI(newData);
-                    else renderGrid();
-    
-                    if (document.getElementById('healthTableBody')) renderMarketHealthTable();
-                    renderStats();
-                }
-            })
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    console.warn("✅ ĐÃ KẾT NỐI THÀNH CÔNG!");
-                } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
-                    console.error(`❌ LỖI KẾT NỐI: ${status}. Đang thử lại sau 3s...`);
-                    // Tự động kết nối lại sau 3 giây
-                    setTimeout(() => {
-                        setupRealtimeConnection();
-                    }, 3000);
-                } else {
-                    console.log("ℹ️ Trạng thái:", status);
-                }
-            });
     }
 
 
