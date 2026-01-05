@@ -876,173 +876,158 @@ function applyLanguage() {
     let isSyncing = false; 
     let lastWakeupTime = 0;
 
-    // --- [HÀM MỚI] QUÉT DỮ LIỆU THÔNG MINH (ANTI-FREEZE + AUTO-WAKEUP) ---
-    async function quickSyncData() {
-        // 1. CHỐNG ĐƠ: Nếu lượt trước chưa xong, HỦY lượt này ngay
-        if (isSyncing || !supabase) return; 
-        isSyncing = true;
+   // --- [BẢN CẬP NHẬT FIX TOTAL VOL] ---
+async function quickSyncData() {
+    if (isSyncing || !supabase) return; 
+    isSyncing = true;
 
-        try {
-            // Lấy dữ liệu từ DB (Cực nhẹ & Miễn phí)
-            const { data, error } = await supabase.from('tournaments').select('*').neq('id', -1);
-            
-            if (data && data.length > 0) {
-                let maxTimestamp = 0;
+    try {
+        // Gọi hàm RPC mới (đã bao gồm Total Accumulated Vol)
+        const { data, error } = await supabase.rpc('get_minimal_market_data');
+        
+        if (!error && data && data.length > 0) {
+            let hasChanges = false;
 
-                // Cập nhật dữ liệu vào biến bộ nhớ (compList)
-                data.forEach(newRow => {
-                    let localItem = compList.find(c => c.db_id === newRow.id);
-                    if (localItem) {
-                        let newData = newRow.data || newRow.Data;
-                        if (newData) {
-                            // Chỉ update các trường số liệu quan trọng
-                            if (newData.real_alpha_volume !== undefined) localItem.real_alpha_volume = newData.real_alpha_volume;
-                            if (newData.daily_tx_count !== undefined) localItem.daily_tx_count = newData.daily_tx_count;
-                            if (newData.real_vol_history) localItem.real_vol_history = newData.real_vol_history;
-                            if (newData.market_analysis) localItem.market_analysis = newData.market_analysis;
-                            
-                            // Kiểm tra thời gian dữ liệu
-                            if (newData.last_updated_ts) {
-                                localItem.last_updated_ts = newData.last_updated_ts;
-                                if (newData.last_updated_ts > maxTimestamp) maxTimestamp = newData.last_updated_ts;
-                            }
-                        }
+            data.forEach(miniRow => {
+                let localItem = compList.find(c => c.db_id === miniRow.id);
+                if (localItem) {
+                    
+                    // 1. Cập nhật Daily Volume
+                    if (localItem.real_alpha_volume !== miniRow.real_alpha_volume) {
+                        localItem.real_alpha_volume = miniRow.real_alpha_volume;
+                        hasChanges = true;
                     }
-                });
 
-                // Vẽ lại số liệu (Chỉ update số, không vẽ lại khung -> Mượt)
-                updateGridValuesOnly();
-                if (document.getElementById('healthTableBody')) renderMarketHealthTable();
-                renderStats();
-                
-                // --- 2. CƠ CHẾ TỰ ĐỘNG ĐÁNH THỨC SERVER (AUTO-WAKEUP) ---
-                // Nếu dữ liệu cũ quá 5 giây -> Server đang ngủ -> Gọi dậy!
-                const now = Date.now();
-                if (maxTimestamp > 0 && (now - maxTimestamp > 8000)) {
-                    if (now - lastWakeupTime > 15000) { // Chỉ gọi lại sau mỗi 15s để tránh spam
-                        console.log("💤 Data cũ, đang gọi Server dậy...");
-                        lastWakeupTime = now;
-                        handleSmartRefresh(true); // Gọi ngầm
+                    // 2. [MỚI] Cập nhật Total Accumulated Volume (Tổng tích lũy)
+                    if (localItem.total_accumulated_volume !== miniRow.total_accumulated_volume) {
+                        localItem.total_accumulated_volume = miniRow.total_accumulated_volume;
+                        hasChanges = true;
+                    }
+
+                    // 3. Cập nhật Market Analysis
+                    if (JSON.stringify(localItem.market_analysis) !== JSON.stringify(miniRow.market_analysis)) {
+                        localItem.market_analysis = miniRow.market_analysis;
+                        hasChanges = true;
+                    }
+
+                    // 4. Cập nhật Tx Count
+                    if (localItem.daily_tx_count !== miniRow.daily_tx_count) {
+                        localItem.daily_tx_count = miniRow.daily_tx_count;
+                        hasChanges = true;
                     }
                 }
+            });
+
+            if (hasChanges) {
+                updateGridValuesOnly(); // Vẽ lại thẻ bài
+                if (typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
+                renderStats();
+                console.log("⚡ Data synced (Full Vol)");
             }
-        } catch (e) { 
-            console.error("Sync Error:", e); 
-        } finally {
-            // Mở khóa
-            isSyncing = false; 
-            
-            // --- 3. QUAN TRỌNG: DÙNG SETTIMEOUT ĐỆ QUY (KHÔNG BAO GIỜ ĐƠ) ---
-            // Làm xong việc mới nghỉ 20 giây rồi làm tiếp
-            // setTimeout(quickSyncData, 20000); 
         }
+    } catch (e) { 
+        console.error("Sync Error:", e); 
+    } finally {
+        isSyncing = false; 
+        setTimeout(quickSyncData, 60000); 
+    }
+}
+
+function init() {
+    checkLegal();
+    
+    // --- 1. ƯU TIÊN HIỆN CACHE (ĐỂ USER VÀO LÀ THẤY NGAY) ---
+    const cachedData = localStorage.getItem('wave_comp_list');
+    let hasCache = false;
+
+    if (cachedData) {
+        try {
+            compList = JSON.parse(cachedData);
+            // Có cache -> Vẽ ngay lập tức
+            renderGrid();
+            renderStats();
+            hasCache = true;
+            
+            // CÓ DỮ LIỆU RỒI MỚI ĐƯỢC TẮT LOADING
+            document.getElementById('loading-overlay').style.display = 'none';
+            console.log("Loaded from Cache");
+        } catch (e) { console.error(e); }
     }
 
-    function init() {
-        checkLegal();
+    // --- 2. GỌI DỮ LIỆU MỚI TỪ SERVER ---
+    loadFromCloud(!hasCache).then(() => {
+        // Tải xong mới bắt đầu kích hoạt vòng lặp cập nhật thông minh
+        if (typeof quickSyncData === 'function') quickSyncData();
         
-        // --- 1. ƯU TIÊN HIỆN CACHE (ĐỂ USER VÀO LÀ THẤY NGAY) ---
-        const cachedData = localStorage.getItem('wave_comp_list');
-        let hasCache = false;
-    
-        if (cachedData) {
-            try {
-                compList = JSON.parse(cachedData);
-                // Có cache -> Vẽ ngay lập tức
-                renderGrid();
-                renderStats();
-                hasCache = true;
-                
-                // CÓ DỮ LIỆU RỒI MỚI ĐƯỢC TẮT LOADING
-                document.getElementById('loading-overlay').style.display = 'none';
-                console.log("Loaded from Cache");
-            } catch (e) { console.error(e); }
+        if (!hasCache) {
+            document.getElementById('loading-overlay').style.display = 'none';
         }
-    
-        // --- 2. GỌI DỮ LIỆU MỚI TỪ SERVER ---
-        // Nếu ĐÃ có cache (hasCache = true) -> Load ngầm (false), user vẫn xem được web
-        // Nếu CHƯA có cache (hasCache = false) -> Hiện loading (true) để user đợi tải xong
-        loadFromCloud(!hasCache).then(() => {
-            // Tải xong mới bắt đầu kích hoạt vòng lặp cập nhật thông minh (chống đơ)
-            if (typeof quickSyncData === 'function') quickSyncData();
-            
-            // Nếu nãy giờ đang hiện loading thì giờ tắt đi
-            if (!hasCache) {
-                document.getElementById('loading-overlay').style.display = 'none';
-            }
-        });
-    
-        // 3. Đồng hồ hệ thống (Giữ nguyên)
-        setInterval(updateClock, 1000);
-    
-        applyLanguage();
-        if(document.getElementById('cur-lang-text')) {
-            document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
-        }
-    
-        // --- 4. ĐĂNG KÝ REALTIME (CHÍNH THỨC - ĐẦY ĐỦ & TỐI ƯU) ---
-        console.log("📡 Đang khởi tạo kết nối Realtime...");
-    
-        if (typeof supabase !== 'undefined') {
-            // Hủy kênh cũ để tránh trùng lặp
-            supabase.removeAllChannels();
-    
-            supabase.channel('public:tournaments')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
-                    const newData = payload.new;
-                    if (!newData) return;
-                    
-                    console.log('🔔 CÓ DATA MỚI:', newData.name);
-    
-                    // 1. Cập nhật vào bộ nhớ trình duyệt (CompList)
-                    let localItem = compList.find(c => c.db_id === newData.id);
-                    if (localItem) {
-                        let newContent = newData.data || newData.Data;
-                        if (newContent) {
-                            // a. Cập nhật Volume & Tx
-                            if (newContent.real_alpha_volume !== undefined) localItem.real_alpha_volume = newContent.real_alpha_volume;
-                            if (newContent.daily_tx_count !== undefined) localItem.daily_tx_count = newContent.daily_tx_count;
-                            
-                            // b. [QUAN TRỌNG] Cập nhật Lịch sử (Để chart nhỏ không bị đơ)
-                            if (newContent.real_vol_history) localItem.real_vol_history = newContent.real_vol_history;
-    
-                            // c. Cập nhật Market Analysis (Giá, Spread...)
-                            if (newContent.market_analysis) {
-                                localItem.market_analysis = newContent.market_analysis;
-                                
-                                // [QUAN TRỌNG] Đồng bộ giá vào cache để tính Reward (Tiền thưởng) ngay lập tức
-                                if (newContent.market_analysis.price) {
-                                    localItem.cachedPrice = newContent.market_analysis.price;
-                                }
-                            }
-                        }
-                    }
-    
-                    // 2. Vẽ lại giao diện (Chỉ số liệu - Không reload trang)
-                    if (typeof updateSingleCardUI === 'function') updateSingleCardUI(newData);
-                    else renderGrid();
-    
-                    // Vẽ lại bảng Market Health (Spread, Speed...)
-                    if (document.getElementById('healthTableBody')) renderMarketHealthTable();
-                    
-                    // Vẽ lại thanh thống kê tổng (Total Pool)
-                    renderStats();
-                })
-                .subscribe((status) => {
-                    console.log(`📡 TRẠNG THÁI: ${status}`);
-                    if (status === 'SUBSCRIBED') showToast("✅ Đã kết nối dữ liệu trực tiếp", "success");
-                });
-        }
-    
-        // Modal hướng dẫn (Giữ nguyên logic cũ)
-        if (!localStorage.getItem('wave_guide_seen')) {
-            setTimeout(() => {
-                const guideEl = document.getElementById('guideModal');
-                if(guideEl) new bootstrap.Modal(guideEl).show();
-                localStorage.setItem('wave_guide_seen', 'true');
-            }, 1500);
-        }
+    });
+
+    // 3. Đồng hồ hệ thống
+    setInterval(updateClock, 1000);
+
+    applyLanguage();
+    if(document.getElementById('cur-lang-text')) {
+        document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
     }
+
+    // --- 4. ĐĂNG KÝ REALTIME (ĐÃ FIX HỨNG TOTAL VOL) ---
+    console.log("📡 Đang khởi tạo kết nối Realtime...");
+
+    if (typeof supabase !== 'undefined') {
+        supabase.removeAllChannels();
+
+        supabase.channel('public:tournaments')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournaments' }, (payload) => {
+                const newData = payload.new;
+                if (!newData) return;
+                
+                // 1. Cập nhật ngay vào bộ nhớ trình duyệt
+                let localItem = compList.find(c => c.db_id === newData.id);
+                if (localItem) {
+                    let newContent = newData.data || newData.Data;
+                    if (newContent) {
+                        // --- [FIX QUAN TRỌNG] HỨNG BIẾN TOTAL TÍCH LŨY ---
+                        if (newContent.total_accumulated_volume) {
+                            localItem.total_accumulated_volume = newContent.total_accumulated_volume;
+                        }
+                        // -------------------------------------------------
+
+                        // Cập nhật Volume Daily
+                        if (newContent.real_alpha_volume) localItem.real_alpha_volume = newContent.real_alpha_volume;
+                        
+                        // Cập nhật các thông số khác
+                        if (newContent.market_analysis) localItem.market_analysis = newContent.market_analysis;
+                        if (newContent.daily_tx_count) localItem.daily_tx_count = newContent.daily_tx_count;
+                        if (newContent.real_vol_history) localItem.real_vol_history = newContent.real_vol_history;
+                    }
+                }
+
+                // 2. VẼ LẠI GIAO DIỆN (Gọi hàm tổng hợp)
+                if (typeof updateSingleCardUI === 'function') {
+                    updateSingleCardUI(newData);
+                } else {
+                    // Fallback
+                    updateGridValuesOnly();
+                    if (typeof updateHealthTableRealtime === 'function') updateHealthTableRealtime();
+                    renderStats();
+                }
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') console.log("✅ Realtime Connected");
+            });
+    }
+
+    // Modal hướng dẫn
+    if (!localStorage.getItem('wave_guide_seen')) {
+        setTimeout(() => {
+            const guideEl = document.getElementById('guideModal');
+            if(guideEl) new bootstrap.Modal(guideEl).show();
+            localStorage.setItem('wave_guide_seen', 'true');
+        }, 1500);
+    }
+}
 
 
     // --- HÀM checkAndAutoRefresh (KHÔNG CẦN DÙNG NỮA - ĐỂ TRỐNG) ---
@@ -2030,7 +2015,7 @@ fullHtml += `
                     </div>
                     <div class="market-bar">
                         <div class="mb-item text-start">
-                            <div class="mb-label">Total Vol (Alpha) <i class="fas fa-info-circle opacity-50" title="Tổng Vol Alpha"></i></div>
+                            <div class="mb-label">Daily Vol <i class="fas fa-info-circle opacity-50" title="Volume Hôm Nay"></i></div>
                             <div class="mb-val" id="live-vol-${c.db_id}" style="color:${realVolColor}">${realVolDisplay}</div>
                         </div>
                         <div class="mb-item text-end">
@@ -2069,8 +2054,8 @@ fullHtml += `
 function updateGridValuesOnly() {
     try {
         // 1. Cập nhật bảng Market Health (Nếu đang mở)
-        if (typeof renderMarketHealthTable === 'function' && document.getElementById('healthTableBody')) {
-            renderMarketHealthTable();
+        if (typeof updateHealthTableRealtime === 'function') {
+            updateHealthTableRealtime();
         }
 
         let maxRewardVal = 0;
@@ -2102,25 +2087,26 @@ function updateGridValuesOnly() {
             
             if (cardWrapper) {
                 // A. [FIX] CẬP NHẬT VOL (REALTIME)
-                // Tìm đúng vị trí Vol trong giao diện mới (Market Bar -> Item đầu tiên)
-                const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
-                
-                if (volEl) {
-                    let rv = c.real_alpha_volume || 0;
-                    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                    
-                    // Chỉ cập nhật DOM nếu số liệu thay đổi (để tối ưu hiệu năng)
-                    if(volEl.innerText !== rvStr) {
-                        volEl.innerText = rvStr;
-                        // Hiệu ứng nháy sáng nhẹ để báo hiệu có update
-                        volEl.style.color = '#fff';
-                        volEl.style.textShadow = '0 0 5px #fff';
-                        setTimeout(() => { 
-                            volEl.style.color = ''; // Trả về màu tím nhạt cũ (hoặc màu gốc trong CSS)
-                            volEl.style.textShadow = ''; 
-                        }, 300);
-                    }
-                }
+                // Tìm phần tử hiển thị Vol
+const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
+
+if (volEl) {
+    // Ưu tiên hiển thị Tổng Tích Lũy, nếu không có thì dùng Vol Ngày
+    let rv = c.real_alpha_volume || 0;
+    
+    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
+    
+    if(volEl.innerText !== rvStr) {
+        volEl.innerText = rvStr;
+        // Hiệu ứng nháy
+        volEl.style.color = '#fff';
+        volEl.style.textShadow = '0 0 5px #fff';
+        setTimeout(() => { 
+            volEl.style.color = ''; 
+            volEl.style.textShadow = ''; 
+        }, 300);
+    }
+}
 
                 // B. CẬP NHẬT GIÁ (PRICE)
                 const priceEl = cardWrapper.querySelector('.live-price-val');
@@ -2418,7 +2404,7 @@ function renderMarketHealthTable() {
         let sDate = c.start || '2000-01-01';
         let tVol = (c.real_vol_history||[]).reduce((s,i)=>i.date>=sDate?s+parseFloat(i.vol):s, 0);
         if(!(c.real_vol_history||[]).some(x=>x.date===todayStr) && todayStr>=sDate) tVol += todayVol;
-        let campVolHtml = `<div class="cell-stack"><span class="cell-primary text-white">${fmtFull(tVol)}</span><span class="cell-secondary" style="opacity:0">&nbsp;</span></div>`;
+        let campVolHtml = `<div class="cell-stack"><span id="mh-total-${c.db_id}" class="cell-primary text-white">${fmtFull(tVol)}</span><span class="cell-secondary" style="opacity:0">&nbsp;</span></div>`;
 
         let spd = (parseFloat(ma.velocity)||0)/60;
         let match = ma.realTimeVol || 0;
@@ -4965,46 +4951,31 @@ function handleRestore(input) {
     input.value = ''; // Reset input
 }
 
-// --- HÀM CẬP NHẬT GIAO DIỆN (CHẠY KHI CÓ REALTIME) ---
+// --- [ĐÃ SỬA TOÀN DIỆN] HÀM CẬP NHẬT GIAO DIỆN ĐỒNG BỘ ---
 function updateSingleCardUI(rawRow) {
-    const data = rawRow.data || rawRow.Data;
-    const dbId = rawRow.id;
-    
-    if (!data) return;
+    // Thay vì chỉ cập nhật lẻ tẻ 1 thẻ (gây lỗi sót dữ liệu Daily Volume),
+    // hàm này sẽ kích hoạt làm mới TOÀN BỘ giao diện để đảm bảo sự đồng nhất.
 
-    // 1. Cập nhật số Total Volume (Tìm theo ID mới gắn)
-    const volEl = document.getElementById(`live-vol-${dbId}`);
-    if (volEl) {
-        let newVol = parseFloat(data.real_alpha_volume || 0);
-        // Format số tiền: $1,234,567
-        let volStr = newVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(newVol) : '---';
-        
-        // Chỉ cập nhật và nháy màu nếu số thay đổi
-        if (volEl.innerText !== volStr) {
-            volEl.innerText = volStr;
-            
-            // Hiệu ứng nháy màu trắng sáng
-            volEl.style.color = '#fff';
-            volEl.style.textShadow = '0 0 10px #fff';
-            volEl.style.transition = 'none'; // Bỏ transition để nháy ngay
-            
-            setTimeout(() => {
-                volEl.style.transition = 'color 0.5s ease';
-                volEl.style.color = ''; // Trả về màu cũ (hoặc CSS mặc định)
-                volEl.style.textShadow = '';
-            }, 500);
-        }
+    // 1. Cập nhật số liệu trên các Thẻ bài (Card Grid)
+    // Hàm này bên trong đã bao gồm lệnh vẽ lại bảng Market Health (Daily Volume)
+    if (typeof updateGridValuesOnly === 'function') {
+        updateGridValuesOnly();
     }
 
-    // 2. Cập nhật Giá (Price)
-    const priceEl = document.querySelector(`.live-price-val[data-id="${dbId}"]`);
-    if (priceEl && data.market_analysis && data.market_analysis.price) {
-        let price = data.market_analysis.price;
-        let pStr = '$' + price.toLocaleString('en-US', { maximumFractionDigits: 6 });
-        if (priceEl.innerText !== pStr) {
-            priceEl.innerText = pStr;
-            priceEl.classList.add('text-brand');
-            setTimeout(() => priceEl.classList.remove('text-brand'), 500);
+    // 2. Cập nhật bảng Market Health (Dự phòng để chắc chắn Daily Volume luôn mới)
+    if (typeof renderMarketHealthTable === 'function' && document.getElementById('healthTableBody')) {
+        renderMarketHealthTable();
+    }
+    
+    // 3. Cập nhật thanh Thống kê trên cùng (Total Pool, Active Pools)
+    if (typeof renderStats === 'function') {
+        renderStats();
+    }
+
+    // 4. (Tính năng thêm) Nếu đang mở chi tiết Token này (Cockpit) -> Cập nhật luôn
+    if (rawRow && typeof currentPolyId !== 'undefined' && currentPolyId && rawRow.id === parseInt(currentPolyId)) {
+        if (typeof updateTerminalData === 'function') {
+            updateTerminalData(currentPolyId);
         }
     }
 }
@@ -5135,4 +5106,56 @@ function jumpToCard(dbId) {
     }
 }
 
+// --- [BƯỚC 2] DÁN VÀO CUỐI FILE SCRIPT.JS ---
+function updateHealthTableRealtime() {
+    // Nếu bảng chưa mở thì thoát
+    if (!document.getElementById('healthTableBody')) return;
+
+    compList.forEach(c => {
+        let dbId = c.db_id || c.id;
+
+        // 1. CẬP NHẬT DAILY VOL (Đang chạy tốt)
+        let dailyEl = document.getElementById(`vol-${dbId}`);
+        if(dailyEl) {
+             let dailyVal = parseFloat(c.real_alpha_volume || 0);
+             let dailyText = '$' + parseInt(dailyVal).toLocaleString('en-US');
+             if(dailyEl.innerText !== dailyText) {
+                 dailyEl.innerText = dailyText;
+                 dailyEl.style.color = '#fff'; // Nháy trắng nhẹ
+                 setTimeout(() => dailyEl.style.color = '', 300);
+             }
+        }
+
+        // 2. CẬP NHẬT TOTAL VOL (LẤY TRỰC TIẾP TỪ BIẾN MỚI HỨNG ĐƯỢC)
+        let totalVal = parseFloat(c.total_accumulated_volume || 0);
+        
+        // Fallback: Nếu server chưa gửi về kịp thì mới tính tạm
+        if (totalVal === 0) {
+            let sDate = c.start || '2000-01-01';
+            let todayStr = new Date().toISOString().split('T')[0];
+            let histSum = (c.real_vol_history || []).reduce((s, i) => i.date >= sDate && i.date !== todayStr ? s + parseFloat(i.vol) : s, 0);
+            totalVal = histSum + (c.real_alpha_volume || 0);
+        }
+
+        // Tìm đúng cái ID mh-total-... để điền số
+        let totalEl = document.getElementById(`mh-total-${dbId}`);
+        if (totalEl) {
+            let newTotalText = '$' + parseInt(totalVal).toLocaleString('en-US');
+            
+            if (totalEl.innerText !== newTotalText) {
+                totalEl.innerText = newTotalText;
+                // Hiệu ứng nháy xanh báo hiệu
+                totalEl.style.transition = 'none';
+                totalEl.style.color = '#00F0FF';
+                totalEl.style.textShadow = '0 0 10px #00F0FF';
+                
+                setTimeout(() => { 
+                    totalEl.style.transition = 'color 0.5s ease';
+                    totalEl.style.color = ''; 
+                    totalEl.style.textShadow = ''; 
+                }, 500);
+            }
+        }
+    });
+}
 
