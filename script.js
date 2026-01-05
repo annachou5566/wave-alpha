@@ -1267,10 +1267,19 @@ async function fetchUserProfile() {
         
         try {
             // 1. Gọi dữ liệu
-            const { data, error } = await supabase
-                .from('tournaments')
-                .select('*')
-                .order('id', { ascending: true });
+            // Lấy thêm bảng tournament_history, lọc lấy ngày hôm nay
+const todayStr = new Date().toISOString().split('T')[0];
+
+const { data, error } = await supabase
+    .from('tournaments')
+    .select(`
+        *,
+        tournament_history (
+            vol,
+            date
+        )
+    `)
+    .order('id', { ascending: true });
 
             // 2. Nếu có lỗi mạng/server -> Ném lỗi xuống dưới để xử lý, KHÔNG IM LẶNG
             if (error) throw error;
@@ -1292,6 +1301,23 @@ async function fetchUserProfile() {
                         let item = row.data || row.Data;
                         if (item) {
                             item.db_id = row.id; item.id = item.db_id;
+                            
+                            // --- [LOGIC MỚI] LẤY TOTAL VOL TỪ BẢNG HISTORY (CHÍNH XÁC HƠN) ---
+                            // Tìm record của ngày hôm nay trong mảng history vừa fetch được
+                            if (row.tournament_history && Array.isArray(row.tournament_history)) {
+                                // Lọc lấy đúng ngày hôm nay (Backend lưu ngày theo giờ UTC hoặc Server time, cần khớp chuỗi YYYY-MM-DD)
+                                const historyToday = row.tournament_history.find(h => h.date === todayStr);
+                                
+                                if (historyToday && historyToday.vol > 0) {
+                                    // Ghi đè giá trị này vào biến hiển thị
+                                    item.total_accumulated_volume = historyToday.vol;
+                                    
+                                    // Console log để kiểm tra (có thể xóa sau này)
+                                    console.log(`✅ [${item.name}] Total Vol from History Table:`, historyToday.vol);
+                                }
+                            }
+                            // ----------------------------------------------------------------
+                        
                             // Fix lỗi thiếu trường dữ liệu quan trọng
                             if(!item.name && row.name) item.name = row.name;
                             if(!item.contract && row.contract) item.contract = row.contract;
@@ -2401,9 +2427,8 @@ function renderMarketHealthTable() {
         let yestVol = (c.real_vol_history||[]).find(x=>x.date===yestStr)?.vol || 0;
         let dailyVolHtml = `<div class="cell-stack"><span class="cell-primary text-white">${fmtFull(todayVol)}</span><span class="cell-secondary">${t.txt_yest}: ${yestVol>0?fmtFull(yestVol):'--'}</span></div>`;
 
-        let sDate = c.start || '2000-01-01';
-        let tVol = (c.real_vol_history||[]).reduce((s,i)=>i.date>=sDate?s+parseFloat(i.vol):s, 0);
-        if(!(c.real_vol_history||[]).some(x=>x.date===todayStr) && todayStr>=sDate) tVol += todayVol;
+        let tVol = parseFloat(c.total_accumulated_volume || 0);
+
         let campVolHtml = `<div class="cell-stack"><span id="mh-total-${c.db_id}" class="cell-primary text-white">${fmtFull(tVol)}</span><span class="cell-secondary" style="opacity:0">&nbsp;</span></div>`;
 
         let spd = (parseFloat(ma.velocity)||0)/60;
@@ -5158,4 +5183,3 @@ function updateHealthTableRealtime() {
         }
     });
 }
-
