@@ -1276,6 +1276,7 @@ const { data, error } = await supabase
         *,
         tournament_history (
             vol,
+            daily_vol,
             date
         )
     `)
@@ -1302,18 +1303,21 @@ const { data, error } = await supabase
                         if (item) {
                             item.db_id = row.id; item.id = item.db_id;
                             
-                            // --- [LOGIC MỚI] LẤY TOTAL VOL TỪ BẢNG HISTORY (CHÍNH XÁC HƠN) ---
-                            // Tìm record của ngày hôm nay trong mảng history vừa fetch được
-                            if (row.tournament_history && Array.isArray(row.tournament_history)) {
-                                // Lọc lấy đúng ngày hôm nay (Backend lưu ngày theo giờ UTC hoặc Server time, cần khớp chuỗi YYYY-MM-DD)
-                                const historyToday = row.tournament_history.find(h => h.date === todayStr);
+                            // --- [FIX BIỂU ĐỒ & TOTAL VOL CHUẨN] ---
+                            if (row.tournament_history && Array.isArray(row.tournament_history) && row.tournament_history.length > 0) {
                                 
+                                // 1. BIỂU ĐỒ (Cần Daily Vol):
+                                // Ta map cột 'daily_vol' từ SQL vào thuộc tính 'vol' mà ChartJS đang chờ
+                                item.real_vol_history = row.tournament_history
+                                    .map(h => ({ date: h.date, vol: h.daily_vol })) 
+                                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                                // 2. MARKET HEALTH (Cần Total Vol):
+                                // Tìm ngày hôm nay để lấy số tổng tích lũy mới nhất
+                                const historyToday = row.tournament_history.find(h => h.date === todayStr);
                                 if (historyToday && historyToday.vol > 0) {
-                                    // Ghi đè giá trị này vào biến hiển thị
                                     item.total_accumulated_volume = historyToday.vol;
-                                    
-                                    // Console log để kiểm tra (có thể xóa sau này)
-                                    console.log(`✅ [${item.name}] Total Vol from History Table:`, historyToday.vol);
+                                    // console.log(`✅ [${item.name}] Synced Total Vol:`, historyToday.vol);
                                 }
                             }
                             // ----------------------------------------------------------------
