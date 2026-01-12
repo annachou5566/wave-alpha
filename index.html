@@ -843,11 +843,15 @@
 
                 <div class="row g-3 mb-3">
                     <div class="col-6">
-                        <label class="small text-sub fw-bold mb-1">START DATE</label>
-                        <input type="date" id="c-start" class="form-control">
+                        <label class="small text-sub fw-bold mb-1">START DATE (UTC)</label>
+                        <div class="input-group">
+                            <input type="date" id="c-start" class="form-control">
+                            <input type="time" id="c-start-time" class="form-control" style="max-width:100px">
+                        </div>
                     </div>
+
                     <div class="col-6">
-                        <label class="small text-sub fw-bold mb-1">END DATE</label>
+                        <label class="small text-sub fw-bold mb-1">END DATE (UTC)</label>
                         <div class="input-group">
                             <input type="date" id="c-end" class="form-control">
                             <input type="time" id="c-end-time" class="form-control" style="max-width:100px">
