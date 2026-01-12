@@ -406,7 +406,7 @@ const translations = {
         col_speed: "TỐC ĐỘ",
         col_match: "KHỚP/TỐC ĐỘ",
         col_ord_spr: "LỆNH / SPR",
-        col_target: "DỰ BÁO",
+        col_target: "DỰ ĐOÁN",
 
         tip_time: "Ngày bắt đầu - Kết thúc & Đếm ngược",
         tip_win_pool: "Số người thắng & Tổng giải",
@@ -439,11 +439,11 @@ const translations = {
                 </div>
             </div>`,
 
-        tip_model_title: "DỰ BÁO MÔ HÌNH",
+        tip_model_title: "MÔ HÌNH DỰ ĐOÁN",
         tip_model_active: "Mục tiêu dựa trên biến động lịch sử và đà tăng trưởng thực tế.",
         tip_vote_guide: "Quan điểm? <b class='text-brand'>Đồng ý</b>, <b class='text-danger'>Thấp hơn</b> hay <b class='text-success'>Cao hơn</b>.",
         tip_model_wait_title: "ĐANG THU THẬP DỮ LIỆU",
-        tip_model_wait_body: "Mô hình cần dữ liệu phiên đầy đủ. Dự báo kích hoạt <span style='color:#ffd700'>16 giờ</span> trước khi đóng phiên.",
+        tip_model_wait_body: "Mô hình cần dữ liệu phiên đầy đủ. Dự đoán kích hoạt <span style='color:#ffd700'>16 giờ</span> trước khi đóng phiên.",
 
         txt_ended: "Kết thúc",
         txt_yest: "H.Qua",
