@@ -2275,7 +2275,40 @@ function renderGrid(customData = null) {
             let realVol = c.real_alpha_volume || 0;
             let realVolDisplay = realVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
             let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
-            let target = (c.history && c.history.length > 0) ? parseFloat(c.history[c.history.length-1].target) : 0;
+            // --- [FIX FINAL] LOGIC LẤY TARGET CHUẨN (CHỐT SỔ NGÀY CUỐI) ---
+            let target = 0;
+            let rawHist = c.history || [];
+
+            // 1. Sắp xếp lịch sử theo ngày (Mới nhất lên đầu để dễ tìm)
+            // Copy ra mảng mới để không ảnh hưởng dữ liệu gốc
+            let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            if (status === 'ended' && c.end) {
+                // A. GIẢI ĐÃ KẾT THÚC:
+                // Tìm chính xác record của ngày kết thúc (Ví dụ: NIGHT End 25/12 -> Tìm record 25/12)
+                let endRecord = sortedHist.find(h => h.date === c.end);
+                
+                if (endRecord && parseFloat(endRecord.target) > 0) {
+                    target = parseFloat(endRecord.target); // Lấy đúng số 338,588
+                } else {
+                    // Fallback: Nếu ngày End chưa có số liệu, tìm ngày gần nhất trong quá khứ có số > 0
+                    // (Để tránh hiện số 0 hoặc NaN khi admin chưa kịp nhập ngày cuối)
+                    let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
+                    if (validItem) {
+                        target = parseFloat(validItem.target);
+                    }
+                }
+            } else {
+                // B. GIẢI ĐANG CHẠY:
+                // Luôn lấy target của ngày mới nhất đang có
+                if (sortedHist.length > 0) {
+                    target = parseFloat(sortedHist[0].target);
+                }
+            }
+            
+            // Chống lỗi hiển thị
+            if (isNaN(target)) target = 0;
+            // -----------------------------------------------------------
             
 let usePrice = (c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0;
 
