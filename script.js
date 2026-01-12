@@ -2707,6 +2707,14 @@ function renderMarketHealthTable(dataInput) {
 
     // 4. SORT DATA
     if (typeof mhSort !== 'undefined' && projectsToRender.length > 0) {
+        
+        // --- [FIX] NẾU LÀ HISTORY VÀ ĐANG SORT MẶC ĐỊNH -> CHUYỂN SANG SORT NGÀY ---
+        if (isHistoryTab && mhSort.col === 'reward') {
+            mhSort.col = 'duration';
+            mhSort.dir = 'desc'; // Mới nhất lên đầu
+        }
+        // --------------------------------------------------------------------------
+
         projectsToRender.sort((a, b) => {
             let pA = (a.market_analysis?.price) || (a.cachedPrice || 0);
             let pB = (b.market_analysis?.price) || (b.cachedPrice || 0);
@@ -2717,7 +2725,16 @@ function renderMarketHealthTable(dataInput) {
                 case 'token':       valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); break;
                 case 'daily_vol':   valA = parseFloat(a.real_alpha_volume || 0); valB = parseFloat(b.real_alpha_volume || 0); break;
                 case 'camp_vol':    valA = calcCamp(a); valB = calcCamp(b); break;
-                case 'min_vol':     
+                
+                // --- THÊM CASE SORT THEO NGÀY (DURATION) ---
+                case 'duration':    
+                    // Nếu là history thì sort theo ngày kết thúc (end), còn lại sort theo ngày bắt đầu (start)
+                    valA = new Date(isHistoryTab ? a.end : a.start).getTime();
+                    valB = new Date(isHistoryTab ? b.end : b.start).getTime();
+                    break;
+                // -------------------------------------------
+
+                case 'min_vol':      
                     let getT1 = (item) => {
                         let h = item.history || [];
                         if(h.length === 0) return 0;
