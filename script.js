@@ -3026,37 +3026,33 @@ function saveMicVote(id) {
 }
 
 /* ==========================================================
-   HÀM KẾT NỐI BACKEND (SUPABASE EDGE FUNCTION)
+   HÀM KẾT NỐI BACKEND (GỌI TRỰC TIẾP TABLE SUPABASE)
    ========================================================== */
 async function callVoteBackend(tournamentId, voteType, estVal) {
-    // Lấy Token đăng nhập (Cần thiết để qua lớp bảo mật RLS)
-    // Bạn thay 'sb-access-token' bằng key bạn dùng để lưu session token
-    const userToken = localStorage.getItem('sb-access-token'); 
+    // 1. Kiểm tra User
+    if (!currentUser) return console.warn("Vote skipped: No user logged in");
 
-    // Nếu không có token, backend sẽ trả về lỗi (nhưng UI vẫn hiện vote để không làm phiền user)
-    // Tốt nhất là nên check userToken trước khi cho vote, nhưng ở đây ta làm Optimistic
-    
     try {
-        const res = await fetch(SB_PROJECT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userToken || SB_ANON_KEY}`
-            },
-            body: JSON.stringify({
-                tournament_id: tournamentId,
-                vote_type: voteType,
-                estimated_value: estVal
-            })
-        });
-        
-        // Debug kết quả (Có thể tắt log khi production)
-        const data = await res.json();
-        if(data.error) console.warn("Vote Warning:", data.error);
-        else console.log("Vote synced to DB");
+        // 2. Gọi trực tiếp vào bảng 'prediction_votes'
+        const { data, error } = await supabase
+            .from('prediction_votes')
+            .upsert({
+                user_id: currentUser.id,
+                tournament_id: parseInt(tournamentId),
+                vote_type: voteType, // <--- QUAN TRỌNG: Tên cột phải khớp DB
+                estimated_value: estVal ? parseFloat(estVal) : null,
+                updated_at: new Date().toISOString()
+            }, { 
+                onConflict: 'user_id, tournament_id'  // Đảm bảo không trùng lặp
+            });
+
+        if (error) throw error;
+        console.log("✅ Vote synced to DB:", voteType);
 
     } catch (e) {
-        console.error("Vote Sync Error:", e);
+        console.error("❌ Vote Sync Error:", e.message);
+        // Nếu lỗi do chưa có quyền (RLS), thông báo nhẹ
+        if(e.code === '42501') console.warn("RLS Policy chặn ghi dữ liệu.");
     }
 }
 
