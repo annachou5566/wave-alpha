@@ -1949,7 +1949,8 @@ margin-top: 2px;
 .token-cell-wrapper {
     display: flex;
     align-items: center;
-    justify-content: center !important; /* Căn giữa toàn bộ cụm Token */
+    justify-content: flex-start !important; /* Đổi center -> flex-start */
+    padding-left: 15px; /* Thêm dòng này để cách lề ra chút cho thoáng */
     gap: 8px !important;
 }
 
