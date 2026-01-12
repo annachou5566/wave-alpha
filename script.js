@@ -2953,6 +2953,13 @@ function calculateAiTarget(c, isHistory = false) {
 function submitVote(id, type) {
     if(event) event.stopPropagation();
 
+    // --- [FIX START] CHECK LOGIN FIRST ---
+    if (!currentUser) {
+        showToast("Please login to vote!", "error");
+        openLoginModal(); // Automatically open the login modal
+        return; // STOP HERE! Do not run the UI animation below
+    }
+
     // 1. OPTIMISTIC UPDATE: Cập nhật giao diện NGAY LẬP TỨC
     // Tắt hết active cũ trong ô này
     const cell = document.getElementById(`cell-${id}`);
