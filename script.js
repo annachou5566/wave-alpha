@@ -2680,9 +2680,7 @@ function renderMarketHealthTable(dataInput) {
     ];
 
     if (!isHistoryTab) {
-        if (!isHistoryTab) {
-        // Đã xóa 'd-none d-md-table-cell'
-        cols.push({ key: 'speed_match', label: 'SPD / MATCH', align: 'text-center', tooltip: 'tip_speed_match' });
+         cols.push({ key: 'speed_match', label: 'SPD / MATCH', align: 'text-center', tooltip: 'tip_speed_match' });
         cols.push({ key: 'ord_spr',     label: 'ORD / SPR',   align: 'text-center', tooltip: 'tip_ord_spr' });
         }
 
