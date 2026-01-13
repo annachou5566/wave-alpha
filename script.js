@@ -1453,31 +1453,31 @@ let appData = {
     currentTab: localStorage.getItem('wave_active_tab') || 'running' 
 };
 
-// 2. HÀM KHỞI TẠO (FIX: NHỚ TAB CŨ)
 async function initMarketRadar() {
     console.log("🚀 System Starting...");
     
-    // 1. Khôi phục Tab từ bộ nhớ (Nếu chưa có thì mặc định running)
+    // 1. Khôi phục Tab từ bộ nhớ
     let savedTab = localStorage.getItem('wave_active_tab') || 'running';
     appData.currentTab = savedTab;
 
-    // 2. Active UI cho Tab đó ngay lập tức
+    // 2. Active UI cho Tab đó
     document.querySelectorAll('.radar-tab').forEach(el => el.classList.remove('active'));
     let tabEl = document.getElementById(`tab-${savedTab}`);
     if(tabEl) tabEl.classList.add('active');
 
-    // 3. Tải dữ liệu
-    await fetchProjects();
+    // 3. Tải dữ liệu (SỬA LẠI CHỖ NÀY: Gọi đúng tên hàm mới)
+    // Xóa hết mấy cái if/else cũ đi, chỉ để lại dòng này:
+    await loadFromCloud(); 
     
-    // --- SỬA THÀNH ---
-// 4. Auto refresh (Chạy ngầm) - Dùng QuickSync (RPC) thay vì Fetch Full Data
-setInterval(() => {
-    // fetchProjects(true); // <--- TẮT CÁI NÀY ĐI (Nặng)
-    if (typeof quickSyncData === 'function') {
-        quickSyncData(); // <--- DÙNG CÁI NÀY (Nhẹ, chỉ lấy số liệu Vol/Price)
-    }
-}, 60000); // Có thể giảm xuống 30s hoặc 15s vì RPC này rất nhẹ
-    }
+    // 4. Auto refresh (Chạy ngầm) - Dùng QuickSync (RPC) thay vì Fetch Full Data
+    setInterval(() => {
+        // Chỉ chạy cái này (Nhẹ)
+        if (typeof quickSyncData === 'function') {
+            quickSyncData(); 
+        }
+    }, 30000); 
+
+} 
 
     
 // 3. HÀM CHUYỂN TAB (FIX: LƯU TRẠNG THÁI)
