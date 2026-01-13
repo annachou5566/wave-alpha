@@ -1476,7 +1476,8 @@ setInterval(() => {
     if (typeof quickSyncData === 'function') {
         quickSyncData(); // <--- DÙNG CÁI NÀY (Nhẹ, chỉ lấy số liệu Vol/Price)
     }
-}, 30000); // Có thể giảm xuống 30s hoặc 15s vì RPC này rất nhẹ
+}, 60000); // Có thể giảm xuống 30s hoặc 15s vì RPC này rất nhẹ
+    }
 
     
 // 3. HÀM CHUYỂN TAB (FIX: LƯU TRẠNG THÁI)
@@ -1500,7 +1501,7 @@ function switchRadarTab(type) {
 /* ==========================================================
    4. HÀM GỌI API (ĐÃ SỬA LỖI FLASH NHẢY TAB TRONG CATCH BLOCK)
    ========================================================== */
-async function fetchProjects(isSilent = false) {
+async function loadFromCloud(isSilent = false) {
     // Chỉ hiện loading nếu không phải chạy ngầm (silent)
     if(!isSilent && !appData.isDataReady && document.getElementById('loading-overlay')) {
         document.getElementById('loading-overlay').style.display = 'flex';
