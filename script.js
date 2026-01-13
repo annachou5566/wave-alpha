@@ -1475,7 +1475,7 @@ async function initMarketRadar() {
         if (typeof quickSyncData === 'function') {
             quickSyncData(); 
         }
-    }, 30000); 
+    }, 60000); 
 
 } 
 
