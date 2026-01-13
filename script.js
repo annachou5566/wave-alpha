@@ -1150,7 +1150,7 @@ function init() {
     // --- 4. ĐĂNG KÝ REALTIME (ĐÃ FIX HỨNG TOTAL VOL) ---
     console.log("📡 Đang khởi tạo kết nối Realtime...");
 
-    if (typeof supabase !== 'undefined') {
+    /*if (typeof supabase !== 'undefined') {
         supabase.removeAllChannels();
 
         supabase.channel('public:tournaments')
@@ -1196,7 +1196,7 @@ function init() {
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') console.log("✅ Realtime Connected");
             });
-    }
+    }*/
 
     // Modal hướng dẫn
     if (!localStorage.getItem('wave_guide_seen')) {
