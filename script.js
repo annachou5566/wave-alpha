@@ -1469,12 +1469,16 @@ async function initMarketRadar() {
     // 3. Tải dữ liệu
     await fetchProjects();
     
-    // 4. Auto refresh (Chạy ngầm)
-    setInterval(() => {
-        fetchProjects(true); 
-    }, 60000);
-}
+    // --- SỬA THÀNH ---
+// 4. Auto refresh (Chạy ngầm) - Dùng QuickSync (RPC) thay vì Fetch Full Data
+setInterval(() => {
+    // fetchProjects(true); // <--- TẮT CÁI NÀY ĐI (Nặng)
+    if (typeof quickSyncData === 'function') {
+        quickSyncData(); // <--- DÙNG CÁI NÀY (Nhẹ, chỉ lấy số liệu Vol/Price)
+    }
+}, 30000); // Có thể giảm xuống 30s hoặc 15s vì RPC này rất nhẹ
 
+    
 // 3. HÀM CHUYỂN TAB (FIX: LƯU TRẠNG THÁI)
 function switchRadarTab(type) {
     appData.currentTab = type;
@@ -2140,7 +2144,7 @@ function updateAllPrices() {
 
     // --- [V59 FINAL] RENDER GRID: UTC TIME STANDARD ---
 function renderGrid(customData = null) {
-
+const SHOW_PREDICT_BTN = false;
     if (document.querySelector('.tour-card.active-card')) {
             updateGridValuesOnly(); // Chỉ update số (Vol, Price...)
             if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); // Update bảng Health
@@ -2444,11 +2448,17 @@ fullHtml += `
 </div>
                         </div>
                     </div>
+
+
+${SHOW_PREDICT_BTN ? `
                     <div class="card-actions" style="padding: 0; border:none;">
                         <button class="btn-card-action predict" onclick="event.stopPropagation(); openPredictionView('${c.db_id}')">
                             <i class="fas fa-bolt me-2"></i> ${translations[currentLang].btn_predict}
                         </button>
                     </div>
+                    ` : ''}
+
+                    
                 </div>
             </div>`;
         } catch(e) { console.error("Render error", e); }
