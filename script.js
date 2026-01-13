@@ -1449,8 +1449,9 @@ let appData = {
     running: [],        
     history: [],        
     isDataReady: false, 
-    // [FIX] Khôi phục tab từ bộ nhớ (Mặc định là 'running' nếu chưa có)
-    currentTab: localStorage.getItem('wave_active_tab') || 'running' 
+    currentTab: localStorage.getItem('wave_active_tab') || 'running',
+    
+    gridTab: 'running' 
 };
 
 async function initMarketRadar() {
@@ -1497,6 +1498,22 @@ function switchRadarTab(type) {
         renderMarketHealthTable(appData.history);
     }
 }
+
+// --- [MỚI] HÀM CHUYỂN TAB CHO TRACKING BOARD (CARD GRID) ---
+function switchGridTab(tabName) {
+    // 1. Cập nhật trạng thái
+    appData.gridTab = tabName;
+
+    // 2. Cập nhật giao diện nút bấm (Active Class)
+    // Giả sử bạn đặt ID nút là 'gtab-running' và 'gtab-history'
+    document.querySelectorAll('.grid-tab-btn').forEach(el => el.classList.remove('active'));
+    const btn = document.getElementById(`gtab-${tabName}`);
+    if(btn) btn.classList.add('active');
+
+    // 3. Vẽ lại lưới thẻ bài
+    renderGrid();
+}
+
 
 /* ==========================================================
    4. HÀM GỌI API (ĐÃ SỬA LỖI FLASH NHẢY TAB TRONG CATCH BLOCK)
@@ -2155,7 +2172,19 @@ const SHOW_PREDICT_BTN = false;
     const grid = document.getElementById('appGrid');
     if(!grid) return;
     
-    let listToRender = customData ? customData : compList;
+    // --- [SỬA ĐOẠN NÀY] ---
+    let listToRender = customData;
+
+    // Nếu không có customData (không phải đang lọc theo ngày), thì lấy theo Tab
+    if (!listToRender) {
+        if (appData.gridTab === 'history') {
+            listToRender = appData.history;
+        } else {
+            // Mặc định là Running
+            listToRender = appData.running;
+        }
+    }
+    // ----------------------
 
     listToRender.sort((a,b) => {
         let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
