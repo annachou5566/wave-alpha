@@ -2680,9 +2680,11 @@ function renderMarketHealthTable(dataInput) {
     ];
 
     if (!isHistoryTab) {
-        cols.push({ key: 'speed_match', label: 'SPD / MATCH', align: 'text-center d-none d-md-table-cell', tooltip: 'tip_speed_match' });
-        cols.push({ key: 'ord_spr',     label: 'ORD / SPR',   align: 'text-center d-none d-md-table-cell', tooltip: 'tip_ord_spr' });
-    }
+        if (!isHistoryTab) {
+        // Đã xóa 'd-none d-md-table-cell'
+        cols.push({ key: 'speed_match', label: 'SPD / MATCH', align: 'text-center', tooltip: 'tip_speed_match' });
+        cols.push({ key: 'ord_spr',     label: 'ORD / SPR',   align: 'text-center', tooltip: 'tip_ord_spr' });
+        }
 
     cols.push({ key: 'min_vol', label: 'MIN VOL', align: 'text-center', tooltip: 'tip_min_vol' });
     cols.push({ key: 'target', label: 'PREDICTION', align: 'text-center px-2', tooltip: 'tip_pred_header_body', title_key: 'tip_pred_header_title' });
@@ -2873,7 +2875,7 @@ let durationHtml = `<div class="cell-stack justify-content-center"><span class="
         if (!isHistoryTab) {
             let matchSpdHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.realTimeVol)||0).toLocaleString()}</span><span class="cell-secondary">${(parseFloat(ma.velocity)||0) > 0 ? ((parseFloat(ma.velocity)||0)/60).toFixed(1)+' ops' : '0 ops'}</span></div>`;
             let ordSprHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.avgTicket)||0).toLocaleString()}</span><span class="cell-secondary ${(parseFloat(ma.spread)||0)>1?'text-red':'text-green'}">${(parseFloat(ma.spread)||0).toFixed(2)}%</span></div>`;
-            extraCols = `<td class="text-center d-none d-md-table-cell">${matchSpdHtml}</td><td class="text-center font-num d-none d-md-table-cell">${ordSprHtml}</td>`;
+                    extraCols = `<td class="text-center">${matchSpdHtml}</td><td class="text-center font-num">${ordSprHtml}</td>`;
         }
 
         let h = c.history || [];
