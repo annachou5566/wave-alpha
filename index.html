@@ -241,10 +241,22 @@
         </div>
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-             <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1">
-                <i class="fas fa-chart-pie me-2"></i><span data-i18n="sect_market">MARKET OVERVIEW</span>
-            </h4>
-        </div>
+    <h4 class="fw-bold mb-0 text-brand text-uppercase letter-spacing-1">
+        <i class="fas fa-chart-pie me-2"></i><span data-i18n="sect_market">MARKET OVERVIEW</span>
+    </h4>
+
+    <div class="d-flex gap-2 admin-only">
+        <button class="btn btn-sm btn-outline-success fw-bold" onclick="openCreateModal()">
+            <i class="fas fa-plus me-1"></i> <span data-i18n="btn_create">CREATE</span>
+        </button>
+        <button class="btn btn-sm btn-outline-warning fw-bold btn-save-pos" onclick="saveCustomOrder()">
+            <i class="fas fa-save me-1"></i> SAVE POS
+        </button>
+        <button class="btn btn-sm btn-outline-info fw-bold" onclick="openConfigModal()">
+            <i class="fas fa-cog me-1"></i> CONFIG
+        </button>
+    </div>
+</div>
         
         <div class="row g-3 mb-5">
             <div class="col-md-4">
