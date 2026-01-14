@@ -2622,10 +2622,6 @@ window.toggleHealthSort = function(col) {
         mhSort.dir = 'desc';
     }
 
-    // 2. Gọi hàm vẽ bảng (KHÔNG TRUYỀN THAM SỐ)
-    // Để hàm render tự động lấy dữ liệu Running/History chuẩn xác
-    renderMarketHealthTable(); 
-}
 
     // 2. [FIX] Xác định đang ở Tab nào để lấy đúng dữ liệu
     let currentData = [];
