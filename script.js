@@ -1444,15 +1444,66 @@ async function fetchUserProfile() {
    [BƯỚC 3 FIX FINAL v3] LOGIC TẢI DATA: RUNNING (JSON) vs ENDED (SQL)
    ========================================================== */
 
-// 1. BIẾN TOÀN CỤC
 let appData = {
     running: [],        
     history: [],        
     isDataReady: false, 
-    currentTab: localStorage.getItem('wave_active_tab') || 'running',
-    
-    gridTab: 'running' 
+    currentTab: 'running', // Mặc định là Running
+    currentView: 'list',   // Mặc định là List (Radar)
+    gridTab: 'running'     // Để tương thích code cũ
 };
+
+function switchViewMode(mode) {
+    appData.currentView = mode;
+
+    // Đổi màu nút
+    const btnList = document.getElementById('btn-view-list');
+    const btnGrid = document.getElementById('btn-view-grid');
+
+    if (mode === 'list') {
+        // Active nút Radar
+        btnList.className = 'btn btn-sm btn-primary fw-bold';
+        btnGrid.className = 'btn btn-sm btn-outline-secondary fw-bold text-sub border-0';
+        
+        // Hiện Bảng, Ẩn Thẻ
+        document.getElementById('view-list-container').classList.remove('d-none');
+        document.getElementById('view-grid-container').classList.add('d-none');
+        
+        // Vẽ lại bảng (Dùng code cũ của bạn)
+        if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); 
+    } else {
+        // Active nút Board
+        btnGrid.className = 'btn btn-sm btn-primary fw-bold';
+        btnList.className = 'btn btn-sm btn-outline-secondary fw-bold text-sub border-0';
+
+        // Hiện Thẻ, Ẩn Bảng
+        document.getElementById('view-grid-container').classList.remove('d-none');
+        document.getElementById('view-list-container').classList.add('d-none');
+
+        // Vẽ lại thẻ (Dùng code cũ của bạn)
+        if(typeof renderGrid === 'function') renderGrid(); 
+    }
+}
+
+
+function switchGlobalTab(tabName) {
+    appData.currentTab = tabName;
+    appData.gridTab = tabName; // Đồng bộ tab cho Grid
+    localStorage.setItem('wave_active_tab', tabName);
+    
+    // Đổi màu nút tab
+    document.querySelectorAll('.radar-tab').forEach(el => {
+        if(el.id === `tab-${tabName}`) el.classList.add('active');
+        else el.classList.remove('active');
+    });
+
+    // 1. Vẽ lại bảng Radar
+    if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
+    
+    // 2. [FIX] LUÔN VẼ LẠI GRID (Kể cả khi đang ẩn) để chuẩn bị DOM cho tính năng "Jump to Card"
+    if(typeof renderGrid === 'function') renderGrid(); 
+}
+
 
 async function initMarketRadar() {
     console.log("🚀 System Starting...");
@@ -1873,62 +1924,7 @@ async function saveGlobalConfig() {
 
 
 
-    // --- BIẾN TOÀN CỤC ĐỂ LƯU Ô THẾ THÂN ---
-    let activeCardClonePlaceholder = null; 
-
-    function toggleCardHighlight(el) {
-        // Nếu thẻ đang mở -> Click lại thì đóng
-        if (el.classList.contains('active-card')) {
-            closeActiveCard();
-            return;
-        }
-        // Nếu có thẻ khác đang mở -> Đóng thẻ đó trước
-        if (document.querySelector('.tour-card.active-card')) {
-            closeActiveCard();
-        }
-
-        // 1. TẠO Ô THẾ THÂN (Placeholder)
-        // Lấy chiều cao thực tế của thẻ hiện tại để tạo ô trống y hệt
-        activeCardClonePlaceholder = document.createElement('div');
-        activeCardClonePlaceholder.className = 'tour-card-placeholder';
-        activeCardClonePlaceholder.style.height = el.offsetHeight + 'px'; 
-        
-        // 2. CHÈN Ô THẾ THÂN VÀO VỊ TRÍ CŨ
-        el.parentNode.insertBefore(activeCardClonePlaceholder, el);
-
-        // 3. BIẾN THẺ THẬT THÀNH FIXED (Nổi lên giữa màn hình)
-        el.classList.add('active-card');
-        
-        // 4. HIỆN MÀN HÌNH ĐEN
-        const backdrop = document.getElementById('card-backdrop');
-        if(backdrop) {
-            backdrop.style.display = 'block';
-            setTimeout(() => backdrop.classList.add('show'), 10);
-        }
-        document.body.classList.add('has-active-card');
-    }
-
-    function closeActiveCard() {
-        const activeEl = document.querySelector('.tour-card.active-card');
-        if (!activeEl) return;
-
-        // 1. Bỏ class active (để nó hết fixed)
-        activeEl.classList.remove('active-card');
-
-        // 2. Xóa ô thế thân đi
-        if (activeCardClonePlaceholder) {
-            activeCardClonePlaceholder.remove();
-            activeCardClonePlaceholder = null;
-        }
-
-        // 3. Ẩn màn hình đen
-        const backdrop = document.getElementById('card-backdrop');
-        if(backdrop) {
-            backdrop.classList.remove('show');
-            setTimeout(() => backdrop.style.display = 'none', 300);
-        }
-        document.body.classList.remove('has-active-card');
-    }
+    
 
         /* --- [V46] SMART REFRESH SYSTEM (Anti-Spam) --- */
     let lastRefreshTime = 0;
@@ -2628,14 +2624,13 @@ window.toggleHealthSort = function(col) {
     // 2. [FIX] Xác định đang ở Tab nào để lấy đúng dữ liệu
     let currentData = [];
     if (typeof appData !== 'undefined') {
-        if (appData.currentTab === 'ended') {
-            currentData = appData.history;
-        } else {
-            currentData = appData.running;
+            // [FIX] Kiểm tra cả 'ended' VÀ 'history'
+            if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
+                projectsToRender = appData.history;
+            } else {
+                projectsToRender = appData.running;
+            }
         }
-    } else {
-        currentData = compList; // Fallback cũ
-    }
 
     // 3. Render lại với dữ liệu đúng
     renderMarketHealthTable(currentData); 
@@ -2649,43 +2644,32 @@ function copyContract(addr) {
 }
 
 /* ==========================================================
-   2. RENDER MARKET HEALTH (ĐÃ SỬA LỖI FALLBACK)
+   2. RENDER MARKET HEALTH (BẢN FULL: CÓ HEADER + TỐI ƯU BODY)
    ========================================================== */
 function renderMarketHealthTable(dataInput) {
     const table = document.querySelector('.health-table');
     const tbody = document.getElementById('healthTableBody');
     if (!table || !tbody) return;
 
-    // --- SỬA LỖI 2: ƯU TIÊN DỮ LIỆU ĐÚNG TAB ---
+    // --- 1. LẤY DỮ LIỆU ĐÚNG TAB ---
     let projectsToRender = dataInput; 
-
-    // Nếu không truyền data đầu vào (do hàm update gọi tự động)
     if (!projectsToRender) {
         if (typeof appData !== 'undefined') {
-            // Kiểm tra Tab đang Active là gì để lấy dữ liệu đúng
-            if (appData.currentTab === 'ended') {
+            // [FIX QUAN TRỌNG] Thêm điều kiện 'history'
+            if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
                 projectsToRender = appData.history;
             } else {
                 projectsToRender = appData.running;
             }
         } else {
-            // Fallback cuối cùng: Nếu chưa có appData, tự lọc từ compList
-            // Thay vì lấy tất cả, ta lọc sơ bộ để tránh hiện Ending trong Running
-            let all = (typeof compList !== 'undefined' ? compList : []);
-            let tab = localStorage.getItem('wave_active_tab') || 'running';
-            const todayStr = new Date().toISOString().split('T')[0];
-            
-            if(tab === 'running') {
-                projectsToRender = all.filter(c => !c.end || c.end >= todayStr);
-            } else {
-                projectsToRender = all.filter(c => c.end && c.end < todayStr);
-            }
+            // Fallback cũ
+            projectsToRender = typeof compList !== 'undefined' ? compList : [];
         }
     }
-    // -----------------------------------------------------------
 
-    // Kiểm tra Tab History (để ẩn hiện cột)
-    let isHistoryTab = (typeof appData !== 'undefined' && appData.currentTab === 'ended') || (localStorage.getItem('wave_active_tab') === 'ended');
+    // Biến kiểm tra History
+    let isHistoryTab = (typeof appData !== 'undefined' && (appData.currentTab === 'ended' || appData.currentTab === 'history')) || 
+                       (localStorage.getItem('wave_active_tab') === 'ended' || localStorage.getItem('wave_active_tab') === 'history');
 
     const lang = (typeof currentLang !== 'undefined') ? currentLang : 'en';
     const t = (typeof translations !== 'undefined' && translations[lang]) ? translations[lang] : translations['en'];
@@ -2694,10 +2678,8 @@ function renderMarketHealthTable(dataInput) {
     const healthTitleEl = document.querySelector('[data-i18n="health_title"]');
     if(healthTitleEl) healthTitleEl.innerText = t.health_title;
 
-    // ... (Phần còn lại của hàm giữ nguyên như code cũ của bạn) ...
-    // Để cho gọn, tôi sẽ viết tiếp phần logic render bên dưới, bạn dán đè vào là được.
-    
-    // 2. CẤU HÌNH CỘT
+    // --- 2. RENDER HEADER (ĐÃ KHÔI PHỤC) ---
+    // Cấu hình cột
     let cols = [
         { key: 'token',       label: 'TOKEN',       align: 'text-center' },
         { key: 'duration',    label: 'TIME',        align: 'text-center', tooltip: 'tip_time' },
@@ -2710,13 +2692,13 @@ function renderMarketHealthTable(dataInput) {
 
     if (!isHistoryTab) {
          cols.push({ key: 'speed_match', label: 'SPD / MATCH', align: 'text-center', tooltip: 'tip_speed_match' });
-        cols.push({ key: 'ord_spr',     label: 'ORD / SPR',   align: 'text-center', tooltip: 'tip_ord_spr' });
-        }
+         cols.push({ key: 'ord_spr',     label: 'ORD / SPR',   align: 'text-center', tooltip: 'tip_ord_spr' });
+    }
 
     cols.push({ key: 'min_vol', label: 'MIN VOL', align: 'text-center', tooltip: 'tip_min_vol' });
     cols.push({ key: 'target', label: 'PREDICTION', align: 'text-center px-2', tooltip: 'tip_pred_header_body', title_key: 'tip_pred_header_title' });
 
-    // 3. RENDER HEADER
+    // Vẽ Header
     let thead = table.querySelector('thead');
     if (!thead) { thead = document.createElement('thead'); table.prepend(thead); }
     
@@ -2745,16 +2727,12 @@ function renderMarketHealthTable(dataInput) {
     theadHtml += '</tr>';
     thead.innerHTML = theadHtml;
 
-    // 4. SORT DATA
+    // --- 3. SORT DATA ---
     if (typeof mhSort !== 'undefined' && projectsToRender.length > 0) {
-        
-        // --- [FIX] NẾU LÀ HISTORY VÀ ĐANG SORT MẶC ĐỊNH -> CHUYỂN SANG SORT NGÀY ---
         if (isHistoryTab && mhSort.col === 'reward') {
             mhSort.col = 'duration';
-            mhSort.dir = 'desc'; // Mới nhất lên đầu
+            mhSort.dir = 'desc'; 
         }
-        // --------------------------------------------------------------------------
-
         projectsToRender.sort((a, b) => {
             let pA = (a.market_analysis?.price) || (a.cachedPrice || 0);
             let pB = (b.market_analysis?.price) || (b.cachedPrice || 0);
@@ -2765,15 +2743,10 @@ function renderMarketHealthTable(dataInput) {
                 case 'token':       valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); break;
                 case 'daily_vol':   valA = parseFloat(a.real_alpha_volume || 0); valB = parseFloat(b.real_alpha_volume || 0); break;
                 case 'camp_vol':    valA = calcCamp(a); valB = calcCamp(b); break;
-                
-                // --- THÊM CASE SORT THEO NGÀY (DURATION) ---
                 case 'duration':    
-                    // Nếu là history thì sort theo ngày kết thúc (end), còn lại sort theo ngày bắt đầu (start)
                     valA = new Date(isHistoryTab ? a.end : a.start).getTime();
                     valB = new Date(isHistoryTab ? b.end : b.start).getTime();
                     break;
-                // -------------------------------------------
-
                 case 'min_vol':      
                     let getT1 = (item) => {
                         let h = item.history || [];
@@ -2793,180 +2766,148 @@ function renderMarketHealthTable(dataInput) {
         });
     }
 
-    // 5. RENDER BODY
-    tbody.innerHTML = ''; 
-    const fmtNoDec = (num) => !num ? '$0' : '$' + Math.round(num).toLocaleString('en-US');
-    const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
-    const formatDateShort = (dateStr) => { if(!dateStr) return '--'; return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
-    
-    const now = new Date(); 
-    const yestDate = new Date(); yestDate.setDate(yestDate.getDate() - 1);
-    const yestStr = yestDate.toISOString().split('T')[0];
-    const dayBeforeDate = new Date(); dayBeforeDate.setDate(dayBeforeDate.getDate() - 2);
-    const dayBeforeStr = dayBeforeDate.toISOString().split('T')[0];
+    // --- 4. RENDER BODY (TỐI ƯU HIỆU NĂNG) ---
+    // Khởi tạo chuỗi HTML rỗng
+    let html = '';
 
     if(projectsToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${cols.length}" class="text-center py-4 text-sub opacity-50">No Data Available</td></tr>`;
-        return;
+        html = `<tr><td colspan="${cols.length}" class="text-center py-4 text-sub opacity-50">No Data Available</td></tr>`;
+    } else {
+        // Helper functions
+        const fmtNoDec = (num) => !num ? '$0' : '$' + Math.round(num).toLocaleString('en-US');
+        const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
+        const formatDateShort = (dateStr) => { if(!dateStr) return '--'; return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+        const now = new Date(); 
+        const yestDate = new Date(); yestDate.setDate(yestDate.getDate() - 1);
+        const yestStr = yestDate.toISOString().split('T')[0];
+        const dayBeforeDate = new Date(); dayBeforeDate.setDate(dayBeforeDate.getDate() - 2);
+        const dayBeforeStr = dayBeforeDate.toISOString().split('T')[0];
+
+        // VÒNG LẶP CHÍNH
+        projectsToRender.forEach(c => {
+            if (isHistoryTab && c.name && c.name.toUpperCase().includes('ARB')) return;
+            let ma = c.market_analysis || {};
+            
+            // Badge
+            let badgeHtml = '';
+            if (c.listingTime) {
+                let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (30*86400000) - now)/86400000);
+                if (d >= 0) {
+                    let iconUrl = (c.alphaType === 'x4') ? 'https://i.ibb.co/hRS0Z6wf/1000003428.png' : 'https://i.ibb.co/ZyqMBQp/1000003438.png';
+                    badgeHtml = `<span class="promo-badge-inline"><img src="${iconUrl}" class="promo-icon-inline"> ${d}d</span>`;
+                }
+            }
+            
+            // Token Info
+            let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
+            let localImgPath = `./assets/tokens/${(c.name||'UNKNOWN').toUpperCase().split('(')[0].trim()}.png`;
+            let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;"><img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;"><div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
+
+            // Time Logic
+            let sTime = c.startTime || "00:00:00"; if(sTime.length===5) sTime+=":00";
+            let startDt = new Date(c.start + 'T' + sTime + 'Z');
+            let eTime = c.endTime || "23:59:59"; if(eTime.length===5) eTime+=":00";
+            let endDt = new Date(c.end + 'T' + eTime + 'Z');
+            let isUpcoming = now < startDt;
+            let isEnded = now > endDt;
+            
+            let countStr = t.txt_ended || 'Ended';
+            let timeColor = "text-secondary";
+
+            if (isUpcoming) {
+                let diff = startDt - now;
+                let d = Math.floor(diff/86400000); let h = Math.floor((diff%86400000)/3600000); let m = Math.floor((diff%3600000)/60000);
+                let timeText = d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`;
+                countStr = `<i class="fas fa-hourglass-start"></i> In ${timeText}`;
+                timeColor = "text-gold";
+            } else if (!isEnded) {
+                let diff = endDt - now;
+                if (diff > 0) countStr = `${Math.floor(diff/86400000)}d ${Math.floor((diff%86400000)/3600000)}h ${Math.floor((diff%3600000)/60000)}m`;
+                timeColor = "text-green";
+            } else if (isHistoryTab) {
+                countStr = `<span class="text-secondary" style="font-size:0.8rem">Ended: ${formatDateShort(c.end)}</span>`;
+            }
+            let durationHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary ${timeColor}" style="font-size:0.8rem; font-weight:bold">${countStr}</span><span class="cell-secondary">${c.start ? formatDateShort(c.start) + ' - ' + formatDateShort(c.end) : '--'}</span></div>`;
+
+            // Win Pool & Price
+            let winPoolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">${c.topWinners ? c.topWinners.replace(/\(p\d+\)/gi, '').trim() : '--'}</span><span class="cell-secondary">${(parseFloat(c.rewardQty)||0).toLocaleString()} ${c.name}</span></div>`;
+            let price = ma.price || c.cachedPrice || 0;
+            let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary">$${price.toLocaleString()}</span></div>`;
+
+            // Rule
+            let rt = c.ruleType || 'buy_only'; 
+            let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
+
+            // Vol
+            let dailyVolHtml = '', campVolHtml = '';
+            if (isUpcoming) {
+                dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span><span class="cell-secondary text-gold" style="font-size:0.6rem; font-weight:bold">UPCOMING</span></div>`;
+                campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
+            } else {
+                let todayVol = c.real_alpha_volume || 0;
+                let subDailyVol = '--';
+                if (!isHistoryTab && c.real_vol_history) {
+                     let yestItem = c.real_vol_history.find(x => x.date === yestStr);
+                     if(yestItem) subDailyVol = `Yest: ${fmtNoDec(yestItem.vol)}`;
+                }
+                dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
+                campVolHtml = `<div class="cell-stack justify-content-center"><span id="mh-total-${c.db_id || c.id}" class="cell-primary text-white">${fmtNoDec(c.total_accumulated_volume || 0)}</span></div>`;
+            }
+
+            // Extra Cols
+            let extraCols = '';
+            if (!isHistoryTab) {
+                let matchSpdHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.realTimeVol)||0).toLocaleString()}</span><span class="cell-secondary">${(parseFloat(ma.velocity)||0) > 0 ? ((parseFloat(ma.velocity)||0)/60).toFixed(1)+' ops' : '0 ops'}</span></div>`;
+                let ordSprHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.avgTicket)||0).toLocaleString()}</span><span class="cell-secondary ${(parseFloat(ma.spread)||0)>1?'text-red':'text-green'}">${(parseFloat(ma.spread)||0).toFixed(2)}%</span></div>`;
+                extraCols = `<td class="text-center">${matchSpdHtml}</td><td class="text-center font-num">${ordSprHtml}</td>`;
+            }
+
+            // Target Logic
+            let h = c.history || [];
+            let curTarget = 0, diff = 0, hasData = false;
+            let targetDateStr = isHistoryTab ? c.end : yestStr;
+            let prevTargetDateStr = isHistoryTab ? new Date(new Date(c.end).setDate(new Date(c.end).getDate()-1)).toISOString().split('T')[0] : dayBeforeStr;
+            let latest = h.find(x => x.date === targetDateStr);
+            let prev = h.find(x => x.date === prevTargetDateStr);
+
+            if (!isHistoryTab && !latest && h.length > 0) {
+                let todayStr = now.toISOString().split('T')[0];
+                let validHist = h.filter(x => x.date !== todayStr && x.target > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
+                if(validHist.length > 0) { latest = validHist[validHist.length - 1]; if(validHist.length > 1) prev = validHist[validHist.length - 2]; }
+            }
+            if (latest) { curTarget = parseFloat(latest.target); if (prev) { diff = curTarget - parseFloat(prev.target); hasData = true; } }
+
+            let diffHtml = `<span class="cell-secondary opacity-50">${t.txt_no_data || '--'}</span>`;
+            if (hasData) {
+                let pct = (curTarget - diff) > 0 ? ((diff / (curTarget - diff)) * 100).toFixed(1) : 0;
+                let color = diff >= 0 ? 'text-green' : 'text-red';
+                let sign = diff >= 0 ? '+' : '';
+                diffHtml = `<span class="${color} cell-secondary" style="font-size:0.7rem; font-weight:bold">${sign}${Math.abs(diff).toLocaleString('en-US')} (${pct}%)</span>`;
+            } else if (curTarget > 0) { diffHtml = `<span class="cell-secondary text-brand" style="font-size:0.6rem; font-weight:bold">${t.txt_new || 'NEW'}</span>`; }
+            let minVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-gold">${fmtNoDec(curTarget)}</span>${diffHtml}</div>`;
+
+            let aiTargetHtml = (typeof calculateAiTarget === 'function') ? calculateAiTarget(c, isHistoryTab) : '<td class="text-center">--</td>';
+
+            // --- NỐI CHUỖI HTML ---
+            html += `<tr style="cursor:pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="jumpToCard('${c.db_id}')">
+                <td class="text-center">${tokenHtml}</td>
+                <td class="text-center">${durationHtml}</td>
+                <td class="text-center">${winPoolHtml}</td>
+                <td class="text-center">${priceValHtml}</td>
+                <td class="text-center">${ruleHtml}</td>
+                <td class="text-center font-num">${dailyVolHtml}</td>
+                <td class="text-center font-num">${campVolHtml}</td>
+                ${extraCols}
+                <td class="text-center font-num">${minVolHtml}</td>
+                ${aiTargetHtml}
+            </tr>`;
+        });
     }
 
-    projectsToRender.forEach(c => {
-        if (isHistoryTab && c.name && c.name.toUpperCase().includes('ARB')) return;
-        let ma = c.market_analysis || {};
-        
-        let badgeHtml = '';
-        if (c.listingTime) {
-            let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (30*86400000) - now)/86400000);
-            if (d >= 0) {
-                let iconUrl = (c.alphaType === 'x4') ? 'https://i.ibb.co/hRS0Z6wf/1000003428.png' : 'https://i.ibb.co/ZyqMBQp/1000003438.png';
-                badgeHtml = `<span class="promo-badge-inline"><img src="${iconUrl}" class="promo-icon-inline"> ${d}d</span>`;
-            }
-        }
-        let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
-        let localImgPath = `./assets/tokens/${(c.name||'UNKNOWN').toUpperCase().split('(')[0].trim()}.png`;
-        let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;"><img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;"><div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
-
-        
-
-// --- [CODE MỚI] LOGIC TRẠNG THÁI UPCOMING CHO TABLE ---
-        
-        // 1. Xác định thời điểm
-        let sTime = c.startTime || "00:00:00"; if(sTime.length===5) sTime+=":00";
-        let startDt = new Date(c.start + 'T' + sTime + 'Z');
-        
-        let eTime = c.endTime || "23:59:59"; if(eTime.length===5) eTime+=":00";
-        let endDt = new Date(c.end + 'T' + eTime + 'Z');
-
-        let isUpcoming = now < startDt;
-        let isEnded = now > endDt;
-        
-        // 2. Xử lý cột THỜI GIAN (Duration)
-        let countStr = t.txt_ended || 'Ended';
-        let timeColor = "text-secondary"; // Mặc định màu xám (Ended)
-
-        if (isUpcoming) {
-            // Đếm ngược đến giờ BẮT ĐẦU
-            let diff = startDt - now;
-            let d = Math.floor(diff/86400000);
-            let h = Math.floor((diff%86400000)/3600000);
-            let m = Math.floor((diff%3600000)/60000);
-            
-            let timeText = d > 0 ? `${d}d ${h}h` : `${h}h ${m}m`;
-            countStr = `<i class="fas fa-hourglass-start"></i> In ${timeText}`;
-            timeColor = "text-gold"; // Màu vàng cho Upcoming
-        } 
-        else if (!isEnded) {
-            // Đếm ngược đến giờ KẾT THÚC (Running)
-            let diff = endDt - now;
-            if (diff > 0) countStr = `${Math.floor(diff/86400000)}d ${Math.floor((diff%86400000)/3600000)}h ${Math.floor((diff%3600000)/60000)}m`;
-            timeColor = "text-green"; // Màu xanh cho Running
-        } else if (isHistoryTab) {
-             countStr = `<span class="text-secondary" style="font-size:0.8rem">Ended: ${formatDateShort(c.end)}</span>`;
-        }
-
-        // Đã thêm lại phần hiển thị ngày kết thúc
-let durationHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary ${timeColor}" style="font-size:0.8rem; font-weight:bold">${countStr}</span><span class="cell-secondary">${c.start ? formatDateShort(c.start) + ' - ' + formatDateShort(c.end) : '--'}</span></div>`;
-
-        // Các cột tĩnh (Win Pool, Price, Rule)
-        let winPoolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">${c.topWinners ? c.topWinners.replace(/\(p\d+\)/gi, '').trim() : '--'}</span><span class="cell-secondary">${(parseFloat(c.rewardQty)||0).toLocaleString()} ${c.name}</span></div>`;
-
-        let price = ma.price || c.cachedPrice || 0;
-        let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary">$${price.toLocaleString()}</span></div>`;
-
-        let rt = c.ruleType || 'buy_only'; 
-        let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
-
-        // 3. Xử lý hiển thị VOLUME (Nếu chưa bắt đầu thì hiện gạch ngang --)
-        let dailyVolHtml = '';
-        let campVolHtml = '';
-        
-        if (isUpcoming) {
-            // Nếu là Upcoming -> Buộc Volume = -- và hiển thị "UPCOMING"
-            dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span><span class="cell-secondary text-gold" style="font-size:0.6rem; font-weight:bold">UPCOMING</span></div>`;
-            campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
-        } else {
-            // Logic cũ cho Running/Ended
-            let todayVol = c.real_alpha_volume || 0;
-            let subDailyVol = '--';
-            if (!isHistoryTab && c.real_vol_history) {
-                 let yestItem = c.real_vol_history.find(x => x.date === yestStr);
-                 if(yestItem) subDailyVol = `Yest: ${fmtNoDec(yestItem.vol)}`;
-            }
-            dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
-            campVolHtml = `<div class="cell-stack justify-content-center"><span id="mh-total-${c.db_id || c.id}" class="cell-primary text-white">${fmtNoDec(c.total_accumulated_volume || 0)}</span></div>`;
-        }
-        // -----------------------------------------------------------
-
-
-        let extraCols = '';
-        if (!isHistoryTab) {
-            let matchSpdHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.realTimeVol)||0).toLocaleString()}</span><span class="cell-secondary">${(parseFloat(ma.velocity)||0) > 0 ? ((parseFloat(ma.velocity)||0)/60).toFixed(1)+' ops' : '0 ops'}</span></div>`;
-            let ordSprHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.avgTicket)||0).toLocaleString()}</span><span class="cell-secondary ${(parseFloat(ma.spread)||0)>1?'text-red':'text-green'}">${(parseFloat(ma.spread)||0).toFixed(2)}%</span></div>`;
-                    extraCols = `<td class="text-center">${matchSpdHtml}</td><td class="text-center font-num">${ordSprHtml}</td>`;
-        }
-
-        let h = c.history || [];
-        let curTarget = 0, diff = 0, hasData = false;
-        let targetDateStr, prevTargetDateStr;
-
-        if (isHistoryTab) {
-            targetDateStr = c.end; 
-            let d = new Date(c.end); d.setDate(d.getDate() - 1);
-            prevTargetDateStr = d.toISOString().split('T')[0];
-        } else {
-            targetDateStr = yestStr; 
-            prevTargetDateStr = dayBeforeStr;
-        }
-
-        let latest = h.find(x => x.date === targetDateStr);
-        let prev = h.find(x => x.date === prevTargetDateStr);
-
-        if (!isHistoryTab && !latest && h.length > 0) {
-            let todayStr = now.toISOString().split('T')[0];
-            let validHist = h.filter(x => x.date !== todayStr && x.target > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
-            if(validHist.length > 0) {
-                latest = validHist[validHist.length - 1];
-                if(validHist.length > 1) prev = validHist[validHist.length - 2];
-            }
-        }
-
-        if (latest) {
-            curTarget = parseFloat(latest.target);
-            if (prev) {
-                diff = curTarget - parseFloat(prev.target);
-                hasData = true;
-            }
-        }
-
-        let diffHtml = `<span class="cell-secondary opacity-50">${t.txt_no_data || '--'}</span>`;
-        if (hasData) {
-            let pct = (curTarget - diff) > 0 ? ((diff / (curTarget - diff)) * 100).toFixed(1) : 0;
-            let color = diff >= 0 ? 'text-green' : 'text-red';
-            let sign = diff >= 0 ? '+' : '';
-            let diffStr = Math.abs(diff).toLocaleString('en-US');
-            diffHtml = `<span class="${color} cell-secondary" style="font-size:0.7rem; font-weight:bold">${sign}${diffStr} (${pct}%)</span>`;
-        } else if (curTarget > 0) { 
-            diffHtml = `<span class="cell-secondary text-brand" style="font-size:0.6rem; font-weight:bold">${t.txt_new || 'NEW'}</span>`; 
-        }
-
-        let minVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-gold">${fmtNoDec(curTarget)}</span>${diffHtml}</div>`;
-
-        let aiTargetHtml = (typeof calculateAiTarget === 'function') ? calculateAiTarget(c, isHistoryTab) : '<td class="text-center">--</td>';
-
-        tbody.innerHTML += `<tr style="cursor:pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="jumpToCard('${c.db_id}')">
-            <td class="text-center">${tokenHtml}</td>
-            <td class="text-center">${durationHtml}</td>
-            <td class="text-center">${winPoolHtml}</td>
-            <td class="text-center">${priceValHtml}</td>
-            <td class="text-center">${ruleHtml}</td>
-            <td class="text-center font-num">${dailyVolHtml}</td>
-            <td class="text-center font-num">${campVolHtml}</td>
-            ${extraCols}
-            <td class="text-center font-num">${minVolHtml}</td>
-            ${aiTargetHtml}
-        </tr>`;
-    });
+    // --- GÁN HTML VÀO DOM 1 LẦN ---
+    tbody.innerHTML = html;
     
+    // Init Tooltip
     try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); }); } catch(e) {}
 }
 
@@ -5093,20 +5034,41 @@ function initCalendar() {
     container.innerHTML = html;
 }
 
-// Hàm lọc (Giữ nguyên logic chuẩn)
 function filterByDate(dateStr) {
-    document.querySelectorAll('.date-card').forEach(el => el.classList.remove('active'));
-    if (dateStr === null || currentFilterDate === dateStr) {
+    // 1. Nếu bấm "View All" (Hủy lọc)
+    if (!dateStr) {
         currentFilterDate = null;
-        renderGrid(null);
+        document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
+        
+        // Vẽ lại toàn bộ theo tab hiện tại
+        switchGlobalTab(appData.currentTab);
         return;
     }
+
+    // 2. Active ô ngày vừa chọn trên lịch
     currentFilterDate = dateStr;
-    let box = document.getElementById(`date-${dateStr}`);
+    document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
+    let box = document.getElementById(`dbox-${dateStr}`);
     if(box) box.classList.add('active');
 
+    // --- [LOGIC MỚI: TỰ ĐỘNG CHUYỂN TAB THÔNG MINH] ---
+    let today = new Date().toISOString().split('T')[0];
+    // Nếu ngày chọn >= Hôm nay -> Tự nhảy sang Running. Ngược lại -> History.
+    let targetTab = (dateStr >= today) ? 'running' : 'history';
+
+    if (appData.currentTab !== targetTab) {
+        switchGlobalTab(targetTab); 
+            }
+    // --------------------------------------------------
+
+    // 3. Lọc dữ liệu
     let filteredList = compList.filter(c => c.end === dateStr);
-    renderGrid(filteredList);
+
+    // 4. Vẽ lại giao diện
+    renderMarketHealthTable(filteredList);
+    if (appData.currentView === 'grid') {
+        renderGrid(filteredList);
+    }
 }
 
 // 3. Kích hoạt ngay lập tức
@@ -5189,14 +5151,17 @@ function switchView(view) {
     }
 }
 
-// --- [V75 FINAL LOGIC] CHART: SMART TOOLTIP (CHỈ HIỆN EST. FINAL Ở CỘT CUỐI) ---
-function renderCardMiniChart(c) {
-    const ctx = document.getElementById(`miniChart-${c.db_id}`);
-    if (!ctx) return;
+// --- [FIX] CẬP NHẬT HÀM VẼ CHART (HỖ TRỢ THẺ CLONE) ---
+function renderCardMiniChart(c, customCanvasId = null) {
+    // Nếu có customCanvasId (từ thẻ clone) thì dùng, không thì dùng ID mặc định
+    const targetId = customCanvasId || `miniChart-${c.db_id}`;
+    const ctxElement = document.getElementById(targetId);
+    
+    if (!ctxElement) return; // Không tìm thấy thẻ canvas thì thoát
 
     let now = new Date();
 
-    // 1. TÍNH TOÁN DATA & THỜI GIAN
+    // 1. TÍNH TOÁN DATA & THỜI GIAN (Giữ nguyên logic cũ)
     let tournamentEndTime = null;
     let isEnded = false;
     if (c.end) {
@@ -5249,7 +5214,7 @@ function renderCardMiniChart(c) {
         else if (dStr === todayStr) rVal = parseFloat(c.real_alpha_volume || 0);
         limitVolData.push(rVal);
 
-        // Forecast Vol (Chỉ tính cho hôm nay)
+        // Forecast
         let projVal = 0;
         if (dStr === todayStr && !isEnded && secondsRemaining > 0) {
             let stableSpeed = 0;
@@ -5289,7 +5254,7 @@ function renderCardMiniChart(c) {
     }
 
     // 2. CHECK & UPDATE
-    let existingChart = Chart.getChart(`miniChart-${c.db_id}`);
+    let existingChart = Chart.getChart(targetId);
     if (existingChart) {
         existingChart.data.labels = labels;
         existingChart.data.datasets[0].data = limitVolData;
@@ -5300,12 +5265,12 @@ function renderCardMiniChart(c) {
                 existingChart.data.datasets[3 + index].data = accDatasets[acc.id];
             }
         });
-        if(typeof updateGridInfo === 'function') updateGridInfo(c, targetData, accDatasets);
         existingChart.update('none'); 
         return; 
     }
 
     // 3. DRAW NEW CHART
+    const ctx = ctxElement.getContext('2d'); // Lấy context từ element đã tìm được
     let chartDatasets = [
         {
             type: 'bar', label: 'Current', 
@@ -5366,7 +5331,6 @@ function renderCardMiniChart(c) {
                             let val = ctx.raw; if (!val) return null;
                             let valStr = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(val);
                             
-                            // Chỉ hiện Text, bỏ Icon
                             if (ctx.dataset.label === 'Current') return ` Current: $${valStr}`;
                             if (ctx.dataset.label === 'Forecast (+)') return ` Forecast: +$${valStr}`;
                             
@@ -5374,22 +5338,17 @@ function renderCardMiniChart(c) {
                         },
                         footer: function(tooltipItems) {
                             let total = 0; 
-                            let forecastVal = 0; // Biến kiểm tra xem có dự báo không
+                            let forecastVal = 0;
                             
                             tooltipItems.forEach(t => { 
                                 if(t.dataset.stack === 'volStack') { 
                                     total += t.raw; 
-                                    // Kiểm tra xem cột Forecast của ngày này có giá trị không
                                     if(t.dataset.label.includes('Forecast')) {
                                         forecastVal = t.raw;
                                     }
                                 } 
                             });
 
-                            // --- [LOGIC MỚI] ---
-                            // Chỉ hiện Est. Final nếu cột Forecast > 0
-                            // (Nghĩa là chỉ hiện ở cột ngày hôm nay khi đang chạy)
-                            // Các ngày quá khứ (forecast = 0) sẽ KHÔNG hiện dòng này nữa.
                             if (forecastVal > 0) {
                                 return '----------------\n🏁 Est. Final: $' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(total);
                             }
@@ -5406,8 +5365,6 @@ function renderCardMiniChart(c) {
             layout: { padding: { top: 10, bottom: 5 } }
         }
     });
-
-    if(typeof updateGridInfo === 'function') updateGridInfo(c, targetData, accDatasets);
 }
 
     
@@ -5900,28 +5857,154 @@ function renderCustomHub() {
     if(siteConfig.ref_web3 && document.getElementById('ui-ref-web3')) document.getElementById('ui-ref-web3').href = siteConfig.ref_web3;
     if(siteConfig.ref_dex && document.getElementById('ui-ref-dex')) document.getElementById('ui-ref-dex').href = siteConfig.ref_dex;
 }
-    // --- HÀM FIX LỖI CLICK VÀO BẢNG RA MÀN ĐEN ---
-function jumpToCard(dbId) {
-    // 1. Tìm thẻ bài tương ứng trong lưới Card
-    const cardWrapper = document.querySelector(`.card-wrapper[data-id="${dbId}"]`);
-    
-    if (cardWrapper) {
-        // 2. Lấy phần tử tour-card bên trong
-        const card = cardWrapper.querySelector('.tour-card');
+   /* --- LOGIC ĐỒNG NHẤT: ĐEM THẺ RA GIỮA MÀN HÌNH (BORROW STRATEGY) --- */
+let activeCardPlaceholder = null; // Biến lưu vị trí cũ
+
+function toggleCardHighlight(el) {
+    // Nếu có thẻ đang mở thì đóng trước
+    if (document.querySelector('.tour-card.active-card')) {
+        closeActiveCard();
+    }
+
+    // 1. Tạo "cọc tiêu" giữ chỗ cũ (để tí nữa trả thẻ về đúng chỗ)
+    activeCardPlaceholder = document.createElement('div');
+    activeCardPlaceholder.className = 'tour-card-placeholder';
+    activeCardPlaceholder.style.display = 'none'; // Chỉ giữ chỗ trong DOM
+    el.parentNode.insertBefore(activeCardPlaceholder, el);
+
+    // 2. Di chuyển thẻ ra Body (Để nó nổi lên trên cùng, thoát khỏi Grid ẩn)
+    document.body.appendChild(el);
+
+    // 3. Thêm class Active (CSS sẽ làm nó hiện ra giữa màn hình)
+    // Dùng requestAnimationFrame để hiệu ứng mượt hơn
+    requestAnimationFrame(() => {
+        el.classList.add('active-card');
         
-        // 3. Cuộn màn hình tới đó để user thấy
-        cardWrapper.scrollIntoView({behavior: 'smooth', block: 'center'});
-        
-        // 4. Kích hoạt hiệu ứng phóng to thẻ bài
-        // Đợi 1 xíu cho cuộn xong rồi mới phóng to cho mượt
-        setTimeout(() => {
-            toggleCardHighlight(card);
-        }, 300);
+        // [QUAN TRỌNG] Vẽ lại Chart ngay lập tức để không bị mất hình
+        let canvas = el.querySelector('canvas');
+        if (canvas) {
+            // Lấy ID chart từ wrapper cũ hoặc ID canvas
+            let dbId = canvas.id.split('-')[1];
+            let c = compList.find(x => x.db_id == dbId);
+            if(c) renderCardMiniChart(c); 
+        }
+    });
+
+    // 4. Hiện màn hình đen (Backdrop)
+    const backdrop = document.getElementById('card-backdrop');
+    if(backdrop) {
+        backdrop.style.display = 'block';
+        backdrop.onclick = closeActiveCard; // Click ra ngoài thì tắt
+        setTimeout(() => backdrop.classList.add('show'), 10);
+    }
+    document.body.classList.add('has-active-card');
+}
+
+function closeActiveCard() {
+    const activeEl = document.querySelector('.tour-card.active-card');
+    if (!activeEl) return;
+
+    // 1. Bỏ class Active
+    activeEl.classList.remove('active-card');
+
+    // 2. Trả thẻ về chỗ cũ (Dựa vào cọc tiêu)
+    if (activeCardPlaceholder && activeCardPlaceholder.parentNode) {
+        activeCardPlaceholder.parentNode.insertBefore(activeEl, activeCardPlaceholder);
+        activeCardPlaceholder.remove();
     } else {
-        // Nếu không tìm thấy thẻ (do đang lọc), thì mở Modal Update luôn
-        openUpdateModal(dbId);
+        // Fallback: Nếu mất cọc tiêu thì xóa thẻ luôn (tránh lỗi)
+        activeEl.remove(); 
+    }
+    activeCardPlaceholder = null;
+
+    // 3. Ẩn màn hình đen
+    const backdrop = document.getElementById('card-backdrop');
+    if(backdrop) {
+        backdrop.classList.remove('show');
+        setTimeout(() => backdrop.style.display = 'none', 300);
+    }
+    document.body.classList.remove('has-active-card');
+}
+
+function jumpToCard(dbId) {
+    // 1. Tìm wrapper chứa thẻ trong Grid
+    const wrapper = document.querySelector(`.card-wrapper[data-id="${dbId}"]`);
+    
+    if (wrapper) {
+        const card = wrapper.querySelector('.tour-card');
+        // 2. Dù đang ở tab nào, cứ gọi hàm toggleCardHighlight
+        // Hàm này sẽ tự động lôi thẻ ra body và hiện lên -> Đảm bảo đồng nhất 100%
+        if (card) toggleCardHighlight(card);
     }
 }
+
+// --- [FIX FINAL] HÀM HIỂN THỊ POPUP (ĐÃ XÓA XUNG ĐỘT SỰ KIỆN) ---
+function openCardOverlay(originalCard) {
+    // 1. Đóng cái cũ trước nếu có
+    closeActiveCard();
+
+    // 2. Clone thẻ bài
+    const clone = originalCard.cloneNode(true);
+    
+    // --- [QUAN TRỌNG NHẤT] XÓA SỰ KIỆN CLICK CŨ ---
+    // Loại bỏ onclick="toggleCardHighlight..." để tránh bị dính
+    clone.removeAttribute('onclick'); 
+    clone.onclick = null; 
+
+    // 3. Thêm class định vị
+    clone.classList.remove('active-card'); // Reset trạng thái
+    clone.classList.add('overlay-clone');
+    
+    // 4. Thêm nút Đóng (X) thủ công vào thẻ clone
+    const closeBtn = document.createElement('div');
+    closeBtn.className = 'btn-close-overlay';
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.onclick = function(e) {
+        e.stopPropagation(); // Chặn lan truyền
+        closeActiveCard();   // Gọi lệnh đóng ngay
+    };
+    clone.appendChild(closeBtn);
+
+    // 5. Xử lý lại Chart cho thẻ Clone (Vẽ lại ID mới)
+    let cardWrapper = originalCard.closest('.card-wrapper');
+    let dbId = cardWrapper ? cardWrapper.getAttribute('data-id') : null;
+
+    if (dbId) {
+        let cloneCanvas = clone.querySelector('canvas');
+        if (cloneCanvas) {
+            let newCanvasId = `miniChart-CLONE-${dbId}`;
+            cloneCanvas.id = newCanvasId;
+            cloneCanvas.style.display = 'block';
+            
+            // Vẽ lại chart sau 50ms
+            setTimeout(() => {
+                let c = compList.find(x => x.db_id == dbId);
+                if (c) renderCardMiniChart(c, newCanvasId);
+            }, 50);
+        }
+    }
+
+    // 6. Ngăn click vào thẻ clone làm đóng thẻ (Chỉ đóng khi bấm nút X hoặc bấm ra ngoài)
+    clone.addEventListener('click', function(e) {
+        e.stopPropagation(); 
+    });
+
+    // 7. Thêm vào Body & Hiện Backdrop
+    document.body.appendChild(clone);
+
+    const backdrop = document.getElementById('card-backdrop');
+    if(backdrop) {
+        backdrop.style.display = 'block';
+        // Gán sự kiện: Click vào vùng đen -> Đóng thẻ
+        backdrop.onclick = function() {
+            closeActiveCard();
+        };
+        setTimeout(() => backdrop.classList.add('show'), 10);
+    }
+    document.body.classList.add('has-active-card');
+}
+
+
 
 // --- [BƯỚC 2] DÁN VÀO CUỐI FILE SCRIPT.JS ---
 function updateHealthTableRealtime() {
