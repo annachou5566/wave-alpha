@@ -2610,9 +2610,8 @@ if (volEl) {
 let mhSort = { col: 'reward', dir: 'desc' };
 
 /* ==========================================================
-   FIX 1: HÀM SORT NHẬN DIỆN ĐÚNG TAB HIỆN TẠI
+   FIX 1: HÀM SORT NHẬN DIỆN ĐÚNG TAB HIỆN TẠI (ĐÃ SỬA LỖI BIẾN)
    ========================================================== */
-/* --- FIX LỖI SORT: CẬP NHẬT TRẠNG THÁI & VẼ LẠI --- */
 window.toggleHealthSort = function(col) {
     // 1. Cập nhật trạng thái sắp xếp (Tăng/Giảm)
     if (mhSort.col === col) {
@@ -2622,8 +2621,19 @@ window.toggleHealthSort = function(col) {
         mhSort.dir = 'desc';
     }
 
+    // 2. [FIX] Xác định đang ở Tab nào để lấy đúng dữ liệu
+    let currentData = []; // Khởi tạo biến chứa dữ liệu
 
-      // 3. Render lại với dữ liệu đúng
+    if (typeof appData !== 'undefined') {
+        // Kiểm tra cả 'ended' VÀ 'history'
+        if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
+            currentData = appData.history; // <--- SỬA: Gán vào currentData
+        } else {
+            currentData = appData.running; // <--- SỬA: Gán vào currentData
+        }
+    }
+
+    // 3. Render lại với dữ liệu đúng
     renderMarketHealthTable(currentData); 
 }
 
