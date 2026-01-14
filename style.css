@@ -120,16 +120,7 @@
         }
         #card-backdrop.show { display: block; opacity: 1; }
 
-        /* 2. Thẻ bài khi phóng to (Fixed ra giữa màn hình) */
-        .tour-card.active-card {
-            position: fixed !important; 
-            top: 50% !important; left: 50% !important;
-            transform: translate(-50%, -50%) scale(1.15) !important;
-            width: 100% !important; max-width: 380px !important;
-            height: auto !important; max-height: 90vh !important;
-            z-index: 9999 !important;
-            margin: 0 !important;
-            
+                    
             /* UPDATE 1: ĐỔ BÓNG CHUYÊN NGHIỆP (DEEP SHADOW) */
             /* Bóng đen sâu tạo độ nổi + Viền sáng cực nhẹ (0.2) tạo nét tinh tế */
             box-shadow: 
@@ -149,10 +140,7 @@
             border-color: #444 !important; /* Viền xám nhẹ cho phân biệt với thẻ đang chạy */
         }
 
-        /* Mobile: Không phóng to quá mức */
-        @media (max-width: 768px) {
-            .tour-card.active-card { width: 95% !important; transform: translate(-50%, -50%) scale(1) !important; }
-        }
+        
 
         /* 3. Ô trống thế thân (giữ khung không bị lệch) */
         .tour-card-placeholder {
@@ -174,12 +162,16 @@
         /* Các class cũ giữ nguyên */
         body.has-active-card .tour-card:not(.active-card) { opacity: 0; pointer-events: none; }
         
-        /* Style mặc định cho thẻ Ended khi CHƯA click (nằm trong lưới) */
-        .tour-card.ended-card { opacity: 0.6; filter: grayscale(0.8); border-color: #333; }
+        /* [FIX] Bỏ làm mờ thẻ History - Để sáng rõ 100% như thẻ Running */
+.tour-card.ended-card { 
+    opacity: 1 !important;       /* Không làm mờ */
+    filter: none !important;     /* Không làm trắng đen */
+    border-color: var(--border); /* Viền sáng bình thường */
+}
 
 
         
-        .tour-card.ended-card { opacity: 0.6; filter: grayscale(0.8); border-color: #333; }
+       
         .tour-card.highlight-x4 { border: 1px solid rgba(240, 185, 11, 0.8); box-shadow: 0 0 15px rgba(240, 185, 11, 0.15); }
         .tour-card.highlight-x2 { border: 1px solid rgba(14, 203, 129, 0.8); box-shadow: 0 0 15px rgba(14, 203, 129, 0.15); }
 
@@ -2286,4 +2278,179 @@ margin-top: 2px;
 /* 5. Căn trái dòng Contract bên dưới */
 .token-sub-row {
     justify-content: flex-start !important;
+}
+
+/* --- FIX LỖI LỊCH --- */
+#calendar-wrapper {
+    padding-top: 15px !important; /* Đẩy lịch xuống 15px để Badge vàng không bị cắt */
+    padding-bottom: 10px !important;
+    width: 100%; /* Ép chiều rộng full 100% */
+    display: flex;
+    gap: 8px; /* Khoảng cách giữa các ô */
+    overflow-x: auto; /* Cho phép trượt ngang */
+    
+    /* Ẩn thanh cuộn cho đẹp */
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
+}
+#calendar-wrapper::-webkit-scrollbar { 
+    display: none; 
+}
+
+/* Đảm bảo ô ngày không bị co lại */
+.date-box {
+    flex: 0 0 auto; /* Không cho phép co giãn, giữ nguyên kích thước */
+    min-width: 85px; /* Đảm bảo độ rộng tối thiểu */
+}
+
+/* --- FIX 3: STICKY COLUMN (CỐ ĐỊNH CỘT ĐẦU TIÊN) --- */
+/* Cố định tiêu đề cột đầu */
+.health-table th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 20; /* Cao hơn các cột khác */
+    background-color: #161a1e !important; /* Màu nền trùng màu web để che nội dung trôi qua */
+    box-shadow: 2px 0 5px rgba(0,0,0,0.5); /* Đổ bóng để tách biệt */
+}
+
+/* Cố định nội dung cột đầu */
+.health-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: #161a1e !important;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+    border-right: 1px solid rgba(255,255,255,0.05); /* Đường kẻ mờ */
+}
+
+/* --- FIX 4: MOBILE CLICK AREA (TĂNG VÙNG BẤM) --- */
+@media (max-width: 768px) {
+    /* Tăng vùng bấm cho icon sort, edit, copy */
+    .sort-icon, 
+    .fa-pencil-alt, 
+    .contract-box i,
+    .btn-sm {
+        padding: 10px !important;
+        margin: -5px !important; /* Bù lại padding để không vỡ layout */
+        cursor: pointer;
+    }
+    
+    /* Riêng cho tiêu đề bảng để dễ bấm sort */
+    .health-table th {
+        padding-top: 15px !important;
+        padding-bottom: 15px !important;
+    }
+}
+
+/* --- HỖ TRỢ FIX 1: CARD OVERLAY (THẺ BÀI POPUP TỪ LIST) --- */
+.overlay-clone {
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10000 !important; /* Đè lên tất cả */
+    width: 90%;
+    max-width: 380px;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8) !important;
+    margin: 0 !important;
+    animation: popupFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes popupFadeIn {
+    from { opacity: 0; transform: translate(-50%, -45%) scale(0.9); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Nút đóng thẻ bài Clone (Overlay) */
+.btn-close-overlay {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 35px;
+    height: 35px;
+    background: #ff4d4d;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    z-index: 10001; /* Cao hơn thẻ clone */
+    font-size: 1.2rem;
+    border: 2px solid #fff;
+    transition: transform 0.2s;
+}
+
+.btn-close-overlay:hover {
+    transform: scale(1.1);
+    background: #ff0000;
+}
+
+/* --- FIX FINAL: GIAO DIỆN THẺ BÀI CHUẨN (KHÔNG MÉO, KHÔNG DÀI) --- */
+.tour-card.active-card {
+    /* 1. Vị trí: Căn giữa màn hình */
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important; /* KHÔNG DÙNG SCALE */
+    z-index: 10000 !important;
+    margin: 0 !important;
+
+    /* 2. Kích thước cố định (Chuẩn đẹp) */
+    width: 360px !important; 
+    max-width: 95vw !important; /* Mobile nhỏ thì tự co lại */
+    
+    /* 3. Chiều cao: Tự động theo nội dung nhưng có giới hạn */
+    height: auto !important;
+    max-height: 85vh !important; /* Không bao giờ tràn màn hình */
+    min-height: 500px !important; /* Xóa bỏ chiều cao tối thiểu để không bị khoảng đen */
+
+    /* 4. Giao diện */
+    background: #161a1e !important;
+    border: 1px solid rgba(0, 240, 255, 0.5) !important;
+    box-shadow: 0 0 50px rgba(0,0,0,0.95) !important;
+    border-radius: 12px !important;
+    
+    /* 5. Nội dung */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    overflow-y: auto !important; /* Cho phép cuộn nếu dài */
+    overflow-x: hidden !important;
+}
+
+/* Fix riêng cho màn hình xoay ngang (Landscape) */
+@media (max-height: 500px) {
+    .tour-card.active-card {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        max-width: 600px !important;
+    }
+}
+
+/* --- FIX FINAL: NỘI DUNG TỰ GIÃN KHI THẺ BÀI DÀI RA --- */
+
+/* 1. Cho phép phần thân (chứa Chart & List) giãn ra lấp đầy khoảng trống */
+.tour-card.active-card .card-list {
+    flex: 1 1 auto !important; /* Tự động giãn nở */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important; /* Dàn đều khoảng cách các thành phần con */
+    padding-bottom: 10px !important; /* Thêm chút đệm dưới cho thoáng */
+}
+
+/* 2. Đẩy phần biểu đồ (Chart) căng ra một chút cho đẹp */
+.tour-card.active-card .mini-chart-wrapper {
+    flex: 1 !important; /* Chart chiếm phần lớn không gian thừa */
+    min-height: 120px !important; /* Đảm bảo chart không bị bẹp */
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* 3. Đảm bảo Canvas Chart tự chỉnh lại tỷ lệ */
+.tour-card.active-card canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 200px !important; /* Giới hạn chiều cao chart để không bị vỡ hạt */
 }
