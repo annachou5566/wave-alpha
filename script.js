@@ -2623,18 +2623,7 @@ window.toggleHealthSort = function(col) {
     }
 
 
-    // 2. [FIX] Xác định đang ở Tab nào để lấy đúng dữ liệu
-    let currentData = [];
-    if (typeof appData !== 'undefined') {
-            // [FIX] Kiểm tra cả 'ended' VÀ 'history'
-            if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
-                projectsToRender = appData.history;
-            } else {
-                projectsToRender = appData.running;
-            }
-        }
-
-    // 3. Render lại với dữ liệu đúng
+      // 3. Render lại với dữ liệu đúng
     renderMarketHealthTable(currentData); 
 }
 
