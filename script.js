@@ -2612,14 +2612,20 @@ let mhSort = { col: 'reward', dir: 'desc' };
 /* ==========================================================
    FIX 1: HÀM SORT NHẬN DIỆN ĐÚNG TAB HIỆN TẠI
    ========================================================== */
+/* --- FIX LỖI SORT: CẬP NHẬT TRẠNG THÁI & VẼ LẠI --- */
 window.toggleHealthSort = function(col) {
-    // 1. Cập nhật trạng thái sort
+    // 1. Cập nhật trạng thái sắp xếp (Tăng/Giảm)
     if (mhSort.col === col) {
         mhSort.dir = mhSort.dir === 'desc' ? 'asc' : 'desc';
     } else {
         mhSort.col = col;
         mhSort.dir = 'desc';
     }
+
+    // 2. Gọi hàm vẽ bảng (KHÔNG TRUYỀN THAM SỐ)
+    // Để hàm render tự động lấy dữ liệu Running/History chuẩn xác
+    renderMarketHealthTable(); 
+}
 
     // 2. [FIX] Xác định đang ở Tab nào để lấy đúng dữ liệu
     let currentData = [];
