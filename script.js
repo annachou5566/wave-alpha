@@ -2858,10 +2858,33 @@ function renderMarketHealthTable(dataInput) {
             } else {
                 let todayVol = c.real_alpha_volume || 0;
                 let subDailyVol = '--';
-                if (!isHistoryTab && c.real_vol_history) {
-                     let yestItem = c.real_vol_history.find(x => x.date === yestStr);
-                     if(yestItem) subDailyVol = `Yest: ${fmtNoDec(yestItem.vol)}`;
+                
+                // --- [ĐÃ SỬA] CHO PHÉP HIỆN SO SÁNH Ở CẢ HISTORY TAB ---
+                // Logic cũ có đoạn "if (!isHistoryTab...)" nên bị ẩn. Giờ ta mở ra:
+                let hList = c.real_vol_history || [];
+                let compareDateStr = yestStr; // Mặc định Running: So với Hôm qua
+
+                if (isHistoryTab && c.end) {
+                    // Nếu là History: So với ngày trước khi kết thúc (End Date - 1)
+                    let d = new Date(c.end);
+                    d.setDate(d.getDate() - 1);
+                    compareDateStr = d.toISOString().split('T')[0];
                 }
+
+                let prevItem = hList.find(x => x.date === compareDateStr);
+                
+                // Fallback: Nếu không tìm thấy ngày chính xác (do lệch giờ), lấy item áp chót trong danh sách
+                if (!prevItem && isHistoryTab && hList.length >= 2) {
+                    let sorted = [...hList].sort((a,b) => new Date(a.date) - new Date(b.date));
+                    prevItem = sorted[sorted.length - 2];
+                }
+
+                if (prevItem) {
+                    let label = isHistoryTab ? 'Prev' : 'Yest';
+                    subDailyVol = `${label}: ${fmtNoDec(prevItem.vol)}`;
+                }
+                // --------------------------------------------------------
+
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
                 campVolHtml = `<div class="cell-stack justify-content-center"><span id="mh-total-${c.db_id || c.id}" class="cell-primary text-white">${fmtNoDec(c.total_accumulated_volume || 0)}</span></div>`;
             }
