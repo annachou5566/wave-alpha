@@ -1616,6 +1616,17 @@ async function loadFromCloud(isSilent = false) {
                         if (!isRunning) {
                             // HISTORY TAB
                             let sqlList = row.tournament_history || [];
+
+                                if (sqlList.length > 0) {
+                                item.real_vol_history = sqlList.map(h => ({
+                                    date: h.date,
+                                    vol: h.daily_vol
+                                })).sort((a,b) => new Date(a.date) - new Date(b.date));
+                            } else {
+                                item.real_vol_history = [];
+                            }
+                            // ---------------------------------------------------------
+
                             let endRecord = sqlList.find(h => h.date === item.end);
                             
                             if (!endRecord && sqlList.length > 0) {
