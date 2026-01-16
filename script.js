@@ -2866,16 +2866,52 @@ function renderMarketHealthTable(dataInput) {
             // Target Logic
             let h = c.history || [];
             let curTarget = 0, diff = 0, hasData = false;
-            let targetDateStr = isHistoryTab ? c.end : yestStr;
-            let prevTargetDateStr = isHistoryTab ? new Date(new Date(c.end).setDate(new Date(c.end).getDate()-1)).toISOString().split('T')[0] : dayBeforeStr;
-            let latest = h.find(x => x.date === targetDateStr);
-            let prev = h.find(x => x.date === prevTargetDateStr);
+            
+            let latest = null;
+            let prev = null;
 
-            if (!isHistoryTab && !latest && h.length > 0) {
-                let todayStr = now.toISOString().split('T')[0];
-                let validHist = h.filter(x => x.date !== todayStr && x.target > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
-                if(validHist.length > 0) { latest = validHist[validHist.length - 1]; if(validHist.length > 1) prev = validHist[validHist.length - 2]; }
+            if (isHistoryTab) {
+                // === PHẦN SỬA: LOGIC CHO HISTORY (FIX T+1) ===
+                
+                // 1. Ưu tiên tìm đúng ngày kết thúc (c.end)
+                latest = h.find(x => x.date === c.end);
+
+                // 2. Nếu không tìm thấy (do vừa End chưa có số), lấy record MỚI NHẤT có target > 0
+                if (!latest && h.length > 0) {
+                    // Sắp xếp ngày giảm dần (Mới -> Cũ)
+                    let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
+                    // Tìm cái đầu tiên có số liệu
+                    latest = sorted.find(x => parseFloat(x.target) > 0);
+                }
+
+                // 3. Tìm ngày trước đó (dựa trên ngày của latest tìm được)
+                if (latest) {
+                    let d = new Date(latest.date);
+                    d.setDate(d.getDate() - 1);
+                    let prevDateStr = d.toISOString().split('T')[0]; // Tính ngày hôm trước
+                    prev = h.find(x => x.date === prevDateStr);
+                }
+
+            } else {
+                // === PHẦN GIỮ NGUYÊN: LOGIC CHO RUNNING (Y HỆT CODE CŨ) ===
+                let targetDateStr = yestStr;
+                let prevTargetDateStr = dayBeforeStr;
+                
+                latest = h.find(x => x.date === targetDateStr);
+                prev = h.find(x => x.date === prevTargetDateStr);
+
+                // Fallback cũ của bạn cho Running
+                if (!latest && h.length > 0) {
+                    let todayStr = now.toISOString().split('T')[0];
+                    let validHist = h.filter(x => x.date !== todayStr && x.target > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
+                    if(validHist.length > 0) { 
+                        latest = validHist[validHist.length - 1]; 
+                        if(validHist.length > 1) prev = validHist[validHist.length - 2]; 
+                    }
+                }
             }
+
+            // Tính toán hiển thị (Giữ nguyên)
             if (latest) { curTarget = parseFloat(latest.target); if (prev) { diff = curTarget - parseFloat(prev.target); hasData = true; } }
 
             let diffHtml = `<span class="cell-secondary opacity-50">${t.txt_no_data || '--'}</span>`;
@@ -2888,7 +2924,7 @@ function renderMarketHealthTable(dataInput) {
             let minVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-gold">${fmtNoDec(curTarget)}</span>${diffHtml}</div>`;
 
             let aiTargetHtml = (typeof calculateAiTarget === 'function') ? calculateAiTarget(c, isHistoryTab) : '<td class="text-center">--</td>';
-
+            
             // --- NỐI CHUỖI HTML ---
             html += `<tr style="cursor:pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="jumpToCard('${c.db_id}')">
                 <td class="text-center">${tokenHtml}</td>
