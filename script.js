@@ -1579,10 +1579,23 @@ async function loadFromCloud(isSilent = false) {
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        // 1. Query dữ liệu
         let query = supabase.from('tournaments')
-            .select(`*, tournament_history (vol, daily_vol, date, target, price, tx_count)`)
-            .order('id', { ascending: true });
+    .select(`
+        id, 
+        name, 
+        contract, 
+        chain, 
+        start, end, startTime, endTime, 
+        listingTime, 
+        rewardQty, topWinners, 
+        alphaType, ruleType,
+        real_alpha_volume, total_accumulated_volume,
+        market_analysis,
+        ai_prediction,
+        tournament_history (vol, daily_vol, date, target, price)
+    `) 
+    // Tuyệt đối KHÔNG chọn cột 'data'
+    .order('id', { ascending: true });
 
         const { data, error } = await query;
         if (error) throw error;
