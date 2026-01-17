@@ -1583,18 +1583,10 @@ async function loadFromCloud(isSilent = false) {
     .select(`
         id, 
         name, 
-        contract, 
-        chain, 
-        start, end, startTime, endTime, 
-        listingTime, 
-        rewardQty, topWinners, 
-        alphaType, ruleType,
-        real_alpha_volume, total_accumulated_volume,
-        market_analysis,
-        ai_prediction,
-        tournament_history (vol, daily_vol, date, target, price)
-    `) 
-    // Tuyệt đối KHÔNG chọn cột 'data'
+        contract,
+        data, 
+        tournament_history (vol, daily_vol, date, target, price, tx_count)
+    `)
     .order('id', { ascending: true });
 
         const { data, error } = await query;
