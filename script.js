@@ -2891,7 +2891,36 @@ function renderMarketHealthTable(dataInput) {
                 // --------------------------------------------------------
 
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
-                campVolHtml = `<div class="cell-stack justify-content-center"><span id="mh-total-${c.db_id || c.id}" class="cell-primary text-white">${fmtNoDec(c.total_accumulated_volume || 0)}</span></div>`;
+               // --- BẮT ĐẦU ĐOẠN CODE ĐÃ SỬA (FULL SỐ) ---
+                let currentTotal = c.total_accumulated_volume || 0;
+                let estLine = '';
+
+                // Chỉ tính dự phóng nếu giải đang chạy (chưa End) và không phải tab Lịch sử
+                if (!isEnded && !isHistoryTab) {
+                    // 1. Tính thời gian còn lại (giây)
+                    let tPart = (c.endTime || "23:59:59").trim();
+                    if(tPart.length === 5) tPart += ":00";
+                    let endObj = new Date(`${c.end}T${tPart}Z`);
+                    let diffMs = endObj - now;
+
+                    // 2. Lấy tốc độ khớp lệnh (USD/giây)
+                    let speed = parseFloat(ma.realTimeVol) || 0;
+
+                    if (diffMs > 0 && speed > 0) {
+                        let secondsLeft = diffMs / 1000;
+                        let estFinal = currentTotal + (speed * secondsLeft);
+                        
+                        // [ĐÃ SỬA] Dùng fmtNoDec để hiện full số: Est: $934,876,546
+                        estLine = `<span class="cell-secondary text-info opacity-75" style="font-size:0.65rem; font-weight:500;" title="Estimated Final Volume">Est: ${fmtNoDec(estFinal)}</span>`;
+                    }
+                }
+                
+                // Render HTML: Dòng trên là số thực, dòng dưới là ước tính
+                campVolHtml = `<div class="cell-stack justify-content-center">
+                    <span id="mh-total-${c.db_id || c.id}" class="cell-primary text-white">${fmtNoDec(currentTotal)}</span>
+                    ${estLine}
+                </div>`;
+                // --- KẾT THÚC ĐOẠN CODE ---
             }
 
             // Extra Cols
