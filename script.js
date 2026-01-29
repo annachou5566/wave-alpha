@@ -2187,7 +2187,13 @@ const SHOW_PREDICT_BTN = false;
     // --- [SỬA ĐOẠN NÀY] ---
     let listToRender = customData;
 
-    // Nếu không có customData (không phải đang lọc theo ngày), thì lấy theo Tab
+    // [FIX LOGIC] Nếu hệ thống tự refresh (customData = null) NHƯNG đang lọc theo ngày
+    // Thì phải lấy lại danh sách của ngày đó, chứ không nhảy về Tab mặc định
+    if (!listToRender && typeof currentFilterDate !== 'undefined' && currentFilterDate) {
+        listToRender = compList.filter(c => c.end === currentFilterDate);
+    }
+
+    // Nếu vẫn chưa có list (tức là không có customData và cũng không lọc ngày) -> Lấy theo Tab
     if (!listToRender) {
         if (appData.gridTab === 'history') {
             listToRender = appData.history;
