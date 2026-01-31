@@ -1,63 +1,58 @@
-/* pro-mode.js - Module Bảo trì & Market Pro */
+/* pro-mode.js - Wave Alpha Pro Logic */
 
 const MARKET_API = 'public/data/market-data.json';
 
-// --- HTML CÁC THÀNH PHẦN MỚI ---
-const HTML_TICKER = `
-<div class="pm-ticker-bar">
-    <div class="pm-container">
-        <div class="pm-stats">
-            <div class="pm-stat-box">
-                <span class="pm-lbl">TOTAL VOLUME</span>
-                <span class="pm-val" id="pm-total">LOADING...</span>
-            </div>
-            <div class="pm-stat-box">
-                <span class="pm-lbl">LIMIT (CEX)</span>
-                <span class="pm-val c-purple" id="pm-limit">---</span>
-            </div>
-            <div class="pm-stat-box">
-                <span class="pm-lbl">ON-CHAIN (DEX)</span>
-                <span class="pm-val c-blue" id="pm-onchain">---</span>
-            </div>
-        </div>
-        <div class="pm-tabs">
-            <button class="pm-tab-btn active" id="tab-new" onclick="window.switchProTab('market')">MARKET PRO</button>
-            <button class="pm-tab-btn" id="tab-old" onclick="window.switchProTab('classic')">TOURNAMENTS</button>
-        </div>
+// --- HTML FRAMEWORK ---
+const HTML_FRAMEWORK = `
+<div id="pm-header" class="pm-nav-bar">
+    <div class="pm-nav-links">
+        <div class="pm-nav-item active">Alpha Market</div>
+        <div class="pm-nav-item" style="opacity:0.5; cursor:not-allowed">Smart Money</div>
+        <div class="pm-nav-item" style="opacity:0.5; cursor:not-allowed">Social Hype</div>
     </div>
-</div>`;
-
-const HTML_MARKET_VIEW = `
-<div id="view-market-pro" class="pm-container">
-    <div class="pm-table-card">
-        <div class="pm-header">
-            <div>
-                <h5 style="margin:0; font-weight:700; color:#F0B90B">ALPHA MARKET DATA</h5>
-                <small style="color:#848e9c; font-size:0.75rem" id="pm-updated">Auto-update active</small>
-            </div>
+    
+    <div class="pm-ticker-group">
+        <div class="pm-ticker-mini">
+            <span class="pm-ticker-label">24H VOLUME</span>
+            <span class="pm-ticker-value" id="tk-total">---</span>
         </div>
-        <div class="pm-table-responsive">
-            <table class="pm-table">
-                <thead>
-                    <tr>
-                        <th>TOKEN</th>
-                        <th>PRICE</th>
-                        <th>24H CHANGE</th>
-                        <th>TOTAL VOL</th>
-                        <th class="c-purple">LIMIT VOL</th>
-                        <th class="c-blue">ON-CHAIN</th>
-                        <th class="text-center">SOURCE</th>
-                    </tr>
-                </thead>
-                <tbody id="pm-table-body">
-                    <tr><td colspan="7" style="text-align:center; padding:30px">Loading Alpha Data...</td></tr>
+        <div class="pm-ticker-mini">
+            <span class="pm-ticker-label">LIMIT (CEX)</span>
+            <span class="pm-ticker-value" style="color:#bb86fc" id="tk-limit">---</span>
+        </div>
+        <div class="pm-ticker-mini">
+            <span class="pm-ticker-label">ON-CHAIN</span>
+            <span class="pm-ticker-value" style="color:#00b8ff" id="tk-onchain">---</span>
+        </div>
+        <button class="btn-back-classic" onclick="window.exitProMode()">
+            <span>Legacy View</span> <i class="fas fa-external-link-alt"></i>
+        </button>
+    </div>
+</div>
+
+<div id="view-market-pro">
+    <div class="pm-table-container">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th style="padding-left:0">Token</th>
+                    <th class="text-right">Price</th>
+                    <th class="text-right">24h Change</th>
+                    <th class="text-right">Total Vol</th>
+                    <th class="text-right" style="color:#bb86fc">Limit Vol</th>
+                    <th class="text-right" style="color:#00b8ff">On-Chain</th>
+                    <th class="text-right">Market Cap</th>
+                    <th class="text-right">Info</th>
+                </tr>
+            </thead>
+            <tbody id="pm-table-body">
                 </tbody>
-            </table>
-        </div>
+        </table>
     </div>
-</div>`;
+</div>
+`;
 
-// --- LOGIC CHÍNH ---
+// --- LOGIC ---
 (function() {
     // 1. Check Admin
     const urlParams = new URLSearchParams(window.location.search);
@@ -67,116 +62,94 @@ const HTML_MARKET_VIEW = `
 
     if (isUrlAdmin) localStorage.setItem('wave_alpha_admin', 'true');
 
-    // 2. Nếu KHÔNG phải Admin -> Hiện bảo trì & Dừng luôn
+    // 2. Bảo trì (Cho khách)
     if (!isAdmin) {
-        console.log("Visitor detected. Showing Maintenance.");
         const maintenanceHTML = `
         <div id="maintenance-overlay">
             <div class="pm-loader"></div>
             <div class="pm-title">SYSTEM UPGRADE</div>
-            <p class="pm-desc">Hệ thống đang bảo trì để nâng cấp dữ liệu Real-time.<br>Vui lòng quay lại sau.</p>
+            <p class="pm-desc">Chúng tôi đang nâng cấp dữ liệu Real-time.<br>Vui lòng quay lại sau.</p>
         </div>`;
         document.body.insertAdjacentHTML('afterbegin', maintenanceHTML);
         document.body.style.overflow = 'hidden';
         return; 
     }
 
-    // 3. Nếu LÀ Admin -> Tiêm giao diện mới vào web cũ
-    console.log("Admin detected. Injecting Pro Features...");
+    // 3. Admin: Vào giao diện Pro
+    console.log("Admin detected. Loading Pro UI...");
     
-    // Chèn Ticker sau Navbar
-    const navbar = document.querySelector('.navbar');
-    if (navbar) navbar.insertAdjacentHTML('afterend', HTML_TICKER);
+    // Ẩn Web cũ
+    const oldApp = document.getElementById('app-container') || document.querySelector('body > :not(script):not(link)');
+    if(oldApp) oldApp.classList.add('hidden-view');
 
-    // Chèn Bảng Market trước Dashboard cũ
-    const oldDashboard = document.getElementById('view-dashboard');
-    if (oldDashboard) {
-        // Mặc định ẩn dashboard cũ đi
-        oldDashboard.classList.add('hidden-view');
-        oldDashboard.insertAdjacentHTML('beforebegin', HTML_MARKET_VIEW);
-    }
+    // Chèn Web mới
+    document.body.insertAdjacentHTML('afterbegin', HTML_FRAMEWORK);
 
-    // Tải dữ liệu
+    // Load dữ liệu
     loadMarketData();
-
 })();
 
-// --- HÀM TẢI DỮ LIỆU ---
 async function loadMarketData() {
     try {
         const res = await fetch(MARKET_API);
-        if (!res.ok) throw new Error("Data file not found");
+        if (!res.ok) return;
         const data = await res.json();
-        const stats = data.global_stats;
-
-        // Format tiền tệ
-        const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
-
+        
         // Update Ticker
-        document.getElementById('pm-total').innerText = fmt(stats.total_volume_24h);
-        document.getElementById('pm-limit').innerText = fmt(stats.total_limit_volume);
-        document.getElementById('pm-onchain').innerText = fmt(stats.total_onchain_volume);
-        document.getElementById('pm-updated').innerText = 'Updated: ' + data.last_updated;
+        const fmtUsd = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
+        document.getElementById('tk-total').innerText = fmtUsd(data.global_stats.total_volume_24h);
+        document.getElementById('tk-limit').innerText = fmtUsd(data.global_stats.total_limit_volume);
+        document.getElementById('tk-onchain').innerText = fmtUsd(data.global_stats.total_onchain_volume);
 
-        // Render Table
+        // Update Table
         const tbody = document.getElementById('pm-table-body');
         tbody.innerHTML = '';
 
         data.tokens.slice(0, 100).forEach(t => {
-            let badge = `<span class="pm-badge">On-Chain</span>`;
-            if (t.volume.source.includes('Limit')) badge = `<span class="pm-badge mix">Hybrid</span>`;
-            if (t.volume.source === 'Limit Only') badge = `<span class="pm-badge limit">Limit</span>`;
+            const price = t.price < 1 ? t.price.toFixed(6) : t.price.toFixed(2);
+            const changeClass = t.change_24h >= 0 ? 'text-up' : 'text-down';
+            const changeSign = t.change_24h >= 0 ? '+' : '';
+            
+            let sourceBadge = `<span class="source-tag">On-Chain</span>`;
+            if (t.volume.source.includes('Limit')) sourceBadge = `<span class="source-tag mix">Hybrid</span>`;
 
-            let color = t.change_24h >= 0 ? 'c-up' : 'c-down';
-            let sign = t.change_24h >= 0 ? '+' : '';
-            // Link Binance Alpha (Giả định ID đúng)
+            // Link Binance Alpha
             let link = `https://www.binance.com/en/alpha/${t.id.replace('ALPHA_','')}`;
 
-            let row = `
+            const row = `
             <tr onclick="window.open('${link}', '_blank')">
-                <td>
-                    <div style="display:flex; align-items:center; gap:10px">
-                        <img src="${t.icon || 'assets/tokens/default.png'}" style="width:28px; height:28px; border-radius:50%; background:#000" onerror="this.src='assets/tokens/default.png'">
+                <td style="padding-left:0">
+                    <div class="td-token">
+                        <img src="${t.icon || 'assets/tokens/default.png'}" class="token-icon" onerror="this.src='assets/tokens/default.png'">
                         <div>
-                            <div style="font-weight:700; color:#fff">${t.symbol}</div>
-                            <div style="font-size:0.7rem; color:#666">${t.name}</div>
+                            <span class="token-symbol">${t.symbol}</span>
+                            <span class="token-name">${t.name}</span>
                         </div>
                     </div>
                 </td>
-                <td style="font-weight:700">$${t.price < 1 ? t.price.toFixed(6) : t.price.toFixed(2)}</td>
-                <td class="${color}" style="font-weight:700">${sign}${t.change_24h.toFixed(2)}%</td>
-                <td style="font-weight:700; color:#fff">${fmt(t.volume.total)}</td>
-                <td class="c-purple">${fmt(t.volume.limit)}</td>
-                <td class="c-blue">${fmt(t.volume.onchain)}</td>
-                <td class="text-center">${badge}</td>
+                <td class="text-right">$${price}</td>
+                <td class="text-right ${changeClass}">${changeSign}${t.change_24h.toFixed(2)}%</td>
+                <td class="text-right">${fmtUsd(t.volume.total)}</td>
+                <td class="text-right" style="color:#bb86fc">${fmtUsd(t.volume.limit)}</td>
+                <td class="text-right" style="color:#00b8ff">${fmtUsd(t.volume.onchain)}</td>
+                <td class="text-right">${fmtUsd(t.market_cap)}</td>
+                <td class="text-right">${sourceBadge}</td>
             </tr>`;
             tbody.innerHTML += row;
         });
 
-    } catch (e) {
-        console.error("Lỗi tải data:", e);
-    }
+    } catch (e) { console.error(e); }
 }
 
-// --- HÀM CHUYỂN TAB ---
-window.switchProTab = function(tab) {
-    const marketView = document.getElementById('view-market-pro');
-    const classicView = document.getElementById('view-dashboard');
-    const btnNew = document.getElementById('tab-new');
-    const btnOld = document.getElementById('tab-old');
-
-    if (tab === 'market') {
-        marketView.classList.remove('hidden-view');
-        classicView.classList.add('hidden-view');
-        btnNew.classList.add('active');
-        btnOld.classList.remove('active');
-    } else {
-        marketView.classList.add('hidden-view');
-        classicView.classList.remove('hidden-view');
-        btnNew.classList.remove('active');
-        btnOld.classList.add('active');
-        
-        // Fix lỗi grid cũ không hiện khi ẩn/hiện lại
-        if (typeof renderGrid === 'function') setTimeout(renderGrid, 100);
-    }
-};
+// Hàm thoát về web cũ
+window.exitProMode = function() {
+    document.getElementById('pm-header').remove();
+    document.getElementById('view-market-pro').remove();
+    
+    // Hiện lại web cũ
+    const oldApps = document.querySelectorAll('.hidden-view');
+    oldApps.forEach(el => el.classList.remove('hidden-view'));
+    
+    // Chạy lại grid cũ nếu cần
+    if(typeof renderGrid === 'function') renderGrid();
+}
