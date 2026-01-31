@@ -1,4 +1,4 @@
-/* pro-mode.js - Fix Data Loading & Tab Switching */
+/* pro-mode.js - FIX LOADING & CACHE BUG */
 
 let ALL_TOKENS = [];
 let VISIBLE_COUNT = 10;
@@ -65,53 +65,79 @@ const HTML_TOOLBAR = `
         return;
     }
 
-    console.log("Loading Pro Mode...");
+    // Inject HTML
     const navbar = document.querySelector('.navbar');
     if(navbar && !document.getElementById('pm-toolbar')) {
         navbar.insertAdjacentHTML('afterend', HTML_TOOLBAR);
-        document.getElementById('pm-toolbar').insertAdjacentHTML('afterend', document.getElementById('view-market-pro')?.outerHTML || HTML_MARKET_VIEW_RAW());
-        const ghost = document.querySelectorAll('#view-market-pro')[1]; 
-        if(ghost) ghost.remove();
+        document.getElementById('pm-toolbar').insertAdjacentHTML('afterend', document.getElementById('view-market-pro')?.outerHTML || HTML_TOOLBAR.split('</div></div>')[1]);
+        const ghost = document.querySelectorAll('#view-market-pro')[1]; if(ghost) ghost.remove();
     }
 
     switchMode('market');
     loadData();
 })();
 
-function HTML_MARKET_VIEW_RAW() { return HTML_TOOLBAR.split('</div></div>')[1]; }
-
-// --- HÀM TẢI DATA (Fix đường dẫn) ---
+// --- HÀM TẢI DATA (THÊM LOG & CHỐNG CACHE) ---
 async function loadData() {
-    try {
-        // Thử tìm file ở 3 chỗ khác nhau để chắc chắn tìm thấy
-        let paths = ['data/market-data.json', 'public/data/market-data.json', './market-data.json'];
-        let data = null;
+    const tbody = document.getElementById('pm-body');
+    
+    // Thử 3 đường dẫn khác nhau
+    // Thêm ?v=Time để ép trình duyệt không dùng Cache cũ
+    const timestamp = Date.now();
+    let paths = [
+        `public/data/market-data.json?v=${timestamp}`, 
+        `data/market-data.json?v=${timestamp}`, 
+        `./market-data.json?v=${timestamp}`
+    ];
+    
+    let data = null;
+    let errorMsg = "";
 
-        for (let p of paths) {
-            try {
-                let res = await fetch(p);
-                if (res.ok) {
-                    data = await res.json();
-                    console.log("Data loaded from:", p);
-                    break;
-                }
-            } catch(e) {}
+    for (let p of paths) {
+        try {
+            console.log(`Trying to fetch: ${p}`);
+            let res = await fetch(p);
+            if (res.ok) {
+                data = await res.json();
+                console.log("✅ Success load from:", p);
+                break;
+            } else {
+                errorMsg += `Failed ${p}: ${res.status} | `;
+            }
+        } catch(e) {
+            errorMsg += `Error ${p}: ${e.message} | `;
+        }
+    }
+
+    if (!data) {
+        console.error("ALL PATHS FAILED:", errorMsg);
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:#F6465D">
+            <strong>❌ KHÔNG TẢI ĐƯỢC DỮ LIỆU!</strong><br>
+            <small>${errorMsg}</small><br>
+            <small>Vui lòng kiểm tra lại file public/data/market-data.json trên GitHub</small>
+        </td></tr>`;
+        return;
+    }
+
+    // --- RENDER DỮ LIỆU ---
+    try {
+        const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
+        
+        // Update Ticker (Dùng optional chaining ?. đề phòng null)
+        if(data.global_stats) {
+            document.getElementById('tk-total').innerText = fmt(data.global_stats.total_volume_24h || 0);
+            document.getElementById('tk-limit').innerText = fmt(data.global_stats.total_limit_volume || 0);
+            document.getElementById('tk-onchain').innerText = fmt(data.global_stats.total_onchain_volume || 0);
         }
 
-        if (!data) throw new Error("No data found");
-
-        // Update Ticker
-        const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
-        document.getElementById('tk-total').innerText = fmt(data.global_stats.total_volume_24h);
-        document.getElementById('tk-limit').innerText = fmt(data.global_stats.total_limit_volume);
-        document.getElementById('tk-onchain').innerText = fmt(data.global_stats.total_onchain_volume);
-
-        ALL_TOKENS = data.tokens.sort((a,b) => b.volume.total - a.volume.total);
+        // Sort
+        ALL_TOKENS = (data.tokens || []).sort((a,b) => (b.volume?.total || 0) - (a.volume?.total || 0));
+        
         renderTable();
-
-    } catch(e) { 
-        console.error(e);
-        document.getElementById('pm-body').innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--pm-red)">⚠️ Data not found. Run Python script!</td></tr>`;
+        
+    } catch (renderError) {
+        console.error("Render Error:", renderError);
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:red">JSON Format Error: ${renderError.message}</td></tr>`;
     }
 }
 
@@ -123,19 +149,29 @@ function renderTable() {
     ALL_TOKENS.slice(0, VISIBLE_COUNT).forEach(t => {
         const p = t.price < 1 ? t.price.toFixed(6) : t.price.toFixed(2);
         const cls = t.change_24h >= 0 ? 'c-up' : 'c-down';
+        const sign = t.change_24h >= 0 ? '+' : '';
         const link = `https://www.binance.com/en/alpha/${t.id.replace('ALPHA_','')}`;
         
         html += `<tr onclick="window.open('${link}', '_blank')">
-            <td style="padding-left:25px"><img src="${t.icon}" class="token-icon" onerror="this.src='assets/tokens/default.png'"><span style="font-weight:700;color:#fff">${t.symbol}</span> <span style="font-size:12px;color:#666">${t.name}</span></td>
+            <td style="padding-left:25px">
+                <img src="${t.icon}" class="token-icon" onerror="this.src='assets/tokens/default.png'">
+                <span style="font-weight:700;color:#fff">${t.symbol}</span> 
+                <span style="font-size:12px;color:#666;margin-left:5px">${t.name}</span>
+            </td>
             <td style="font-weight:700">$${p}</td>
-            <td class="${cls}">${t.change_24h.toFixed(2)}%</td>
-            <td style="color:#ddd">${fmt(t.liquidity||0)}</td>
-            <td style="color:#fff">${fmt(t.volume.total)}</td>
-            <td class="c-purple">${fmt(t.volume.limit)}</td>
-            <td class="c-blue">${fmt(t.volume.onchain)}</td>
-            <td style="padding-right:25px;color:#888">${fmt(t.market_cap)}</td>
+            <td class="${cls}">${sign}${t.change_24h.toFixed(2)}%</td>
+            <td style="color:#ddd">${fmt(t.liquidity || 0)}</td>
+            <td style="color:#fff">${fmt(t.volume?.total || 0)}</td>
+            <td class="c-purple">${fmt(t.volume?.limit || 0)}</td>
+            <td class="c-blue">${fmt(t.volume?.onchain || 0)}</td>
+            <td style="padding-right:25px;color:#888">${fmt(t.market_cap || 0)}</td>
         </tr>`;
     });
+    
+    if (ALL_TOKENS.length === 0) {
+        html = `<tr><td colspan="8" style="text-align:center; padding:30px">No tokens found in data.</td></tr>`;
+    }
+    
     tbody.innerHTML = html;
     
     const btn = document.querySelector('.btn-more');
@@ -148,33 +184,21 @@ window.loadMore = function() {
     setTimeout(() => { VISIBLE_COUNT += LOAD_STEP; renderTable(); }, 200);
 }
 
-// --- HÀM CHUYỂN TAB (Dùng style.display trực tiếp) ---
 window.switchMode = function(mode) {
-    const marketEl = document.getElementById('view-market-pro');
-    const tourneyEl = document.getElementById('view-dashboard');
-    const btnM = document.getElementById('btn-tab-market');
-    const btnT = document.getElementById('btn-tab-tourney');
-
-    if (mode === 'market') {
-        if(marketEl) marketEl.style.display = 'block';
-        if(tourneyEl) tourneyEl.style.display = 'none';
-        
-        // Ẩn các phần thừa của web cũ
+    const m = document.getElementById('view-market-pro');
+    const t = document.getElementById('view-dashboard');
+    if(mode === 'market') {
+        if(m) m.style.display = 'block';
+        if(t) t.style.display = 'none';
         document.querySelectorAll('.hero-banner, .command-deck').forEach(e => e.style.display = 'none');
-        
-        btnM.classList.add('active');
-        btnT.classList.remove('active');
+        document.getElementById('btn-tab-market').classList.add('active');
+        document.getElementById('btn-tab-tourney').classList.remove('active');
     } else {
-        if(marketEl) marketEl.style.display = 'none';
-        if(tourneyEl) tourneyEl.style.display = 'block';
-        
-        // Hiện lại web cũ
+        if(m) m.style.display = 'none';
+        if(t) t.style.display = 'block';
         document.querySelectorAll('.hero-banner, .command-deck').forEach(e => e.style.display = 'block');
-
-        btnM.classList.remove('active');
-        btnT.classList.add('active');
-        
-        // Vẽ lại grid cũ (nếu hàm tồn tại) để tránh lỗi layout
+        document.getElementById('btn-tab-market').classList.remove('active');
+        document.getElementById('btn-tab-tourney').classList.add('active');
         if(typeof renderGrid === 'function') setTimeout(renderGrid, 100);
     }
 };
