@@ -1,210 +1,175 @@
-/* pro-mode.js - Wave Alpha Logic (Load More & Sorting) */
+/* pro-mode.js - Fix Layout & Logic */
 
 const MARKET_API = 'public/data/market-data.json';
-let ALL_TOKENS = []; // Chứa toàn bộ token
-let VISIBLE_COUNT = 10; // Số lượng hiển thị ban đầu
-const LOAD_STEP = 10; // Mỗi lần load thêm bao nhiêu
+let ALL_TOKENS = [];
+let VISIBLE = 10;
+const STEP = 10;
 
-// --- HTML HEADER MỚI (CHỨA TAB) ---
-const HTML_HEADER = `
-<div id="pm-header" class="pm-header-wrapper">
-    <div class="pm-nav-bar">
-        <div class="pm-tabs">
-            <button class="pm-tab-btn active" id="tab-new" onclick="window.switchProTab('market')">
+// HTML Toolbar (Nằm dưới Navbar)
+const HTML_TOOLBAR = `
+<div id="pm-toolbar" class="pm-toolbar-wrapper">
+    <div class="pm-container">
+        <div class="pm-tab-group">
+            <button class="pm-tab-item active" id="btn-tab-market" onclick="switchMode('market')">
                 <i class="fas fa-chart-line"></i> ALPHA MARKET
             </button>
-            <button class="pm-tab-btn" id="tab-old" onclick="window.switchProTab('classic')">
+            <button class="pm-tab-item" id="btn-tab-tourney" onclick="switchMode('tourney')">
                 <i class="fas fa-trophy"></i> TOURNAMENTS
             </button>
         </div>
-        
-        <div class="pm-ticker-group">
-            <div class="pm-ticker-mini">
-                <span class="pm-ticker-label">TOTAL ALPHA VOL</span>
-                <span class="pm-ticker-value" id="tk-total">---</span>
-            </div>
-            <div class="pm-ticker-mini">
-                <span class="pm-ticker-label">LIMIT (CEX)</span>
-                <span class="pm-ticker-value c-purple" id="tk-limit">---</span>
-            </div>
-            <div class="pm-ticker-mini">
-                <span class="pm-ticker-label">ON-CHAIN (DEX)</span>
-                <span class="pm-ticker-value c-blue" id="tk-onchain">---</span>
-            </div>
+
+        <div class="pm-ticker">
+            <div class="pm-tick-box"><span class="pm-tick-lbl">TOTAL VOL</span><span class="pm-tick-val" id="tk-total">---</span></div>
+            <div class="pm-tick-box"><span class="pm-tick-lbl">LIMIT</span><span class="pm-tick-val c-purple" id="tk-limit">---</span></div>
+            <div class="pm-tick-box"><span class="pm-tick-lbl">ON-CHAIN</span><span class="pm-tick-val c-blue" id="tk-onchain">---</span></div>
         </div>
     </div>
 </div>
 
 <div id="view-market-pro">
-    <div class="pm-table-card">
-        <div class="pm-table-container">
+    <div class="pm-card">
+        <div style="overflow-x:auto">
             <table class="pm-table">
                 <thead>
                     <tr>
-                        <th style="padding-left:20px">Token Name</th>
-                        <th class="text-right">Price</th>
-                        <th class="text-right">24h Change</th>
-                        <th class="text-right">Total Vol</th>
-                        <th class="text-right c-purple">Limit Vol</th>
-                        <th class="text-right c-blue">On-Chain</th>
-                        <th class="text-right">Liquidity</th> <th class="text-right">Market Cap</th>
-                        <th class="text-center" style="padding-right:20px">Source</th>
+                        <th style="padding-left:25px">Token</th>
+                        <th>Price</th>
+                        <th>24h %</th>
+                        <th>Liquidity</th> <th>Total Vol</th>
+                        <th class="c-purple">Limit Vol</th>
+                        <th class="c-blue">On-Chain</th>
+                        <th style="padding-right:25px">Cap</th>
                     </tr>
                 </thead>
-                <tbody id="pm-table-body">
-                    </tbody>
+                <tbody id="pm-body"></tbody>
             </table>
         </div>
-        <div class="pm-load-more-area">
-            <button class="btn-load-more" onclick="window.loadMoreTokens()">
-                Show More Tokens <i class="fas fa-chevron-down ms-1"></i>
-            </button>
+        <div class="pm-footer">
+            <button class="btn-more" onclick="loadMore()">Load More <i class="fas fa-chevron-down"></i></button>
         </div>
     </div>
 </div>
 `;
 
-// --- LOGIC KHỞI TẠO ---
+// Khởi chạy
 (function() {
     // Check Admin
     const urlParams = new URLSearchParams(window.location.search);
-    const isUrlAdmin = urlParams.get('mode') === 'admin';
-    const isSavedAdmin = localStorage.getItem('wave_alpha_admin') === 'true';
-    const isAdmin = isUrlAdmin || isSavedAdmin;
-
-    if (isUrlAdmin) localStorage.setItem('wave_alpha_admin', 'true');
-
-    // Nếu không phải Admin -> Hiện bảo trì
-    if (!isAdmin) {
-        const maintenanceHTML = `
-        <div id="maintenance-overlay">
-            <div class="pm-loader"></div>
-            <div class="pm-title">SYSTEM UPGRADE</div>
-            <p class="pm-desc">Chúng tôi đang nâng cấp dữ liệu Real-time.<br>Vui lòng quay lại sau.</p>
-        </div>`;
-        document.body.insertAdjacentHTML('afterbegin', maintenanceHTML);
-        document.body.style.overflow = 'hidden';
-        return; 
+    const isAdmin = urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_admin') === 'true';
+    
+    if (isAdmin) localStorage.setItem('wave_alpha_admin', 'true');
+    else {
+        // Bảo trì cho khách
+        document.body.insertAdjacentHTML('afterbegin', `<div id="maintenance-overlay" style="z-index:999999;background:#000;position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#888"><h1 style="color:#fff">MAINTENANCE</h1></div>`);
+        return;
     }
 
-    // Nếu là Admin -> Inject giao diện
-    console.log("Admin detected. Loading Wave Alpha Pro...");
-    const oldApp = document.getElementById('app-container') || document.querySelector('body > :not(script):not(link)');
-    if(oldApp) oldApp.classList.add('hidden-view'); // Ẩn web cũ trước
-
-    document.body.insertAdjacentHTML('afterbegin', HTML_HEADER);
+    console.log("Loading Pro Mode...");
     
-    loadMarketData();
+    // 1. Chèn Toolbar vào SAU Navbar (Để không mất Logo/Login)
+    const navbar = document.querySelector('.navbar');
+    if(navbar) {
+        navbar.insertAdjacentHTML('afterend', HTML_TOOLBAR);
+    } else {
+        // Fallback nếu không tìm thấy navbar
+        document.body.insertAdjacentHTML('afterbegin', HTML_TOOLBAR);
+    }
+
+    // 2. Mặc định vào Market -> Ẩn Dashboard cũ
+    switchMode('market');
+
+    // 3. Tải data
+    loadData();
 })();
 
-// --- HÀM TẢI & XỬ LÝ DỮ LIỆU ---
-async function loadMarketData() {
+async function loadData() {
     try {
         const res = await fetch(MARKET_API);
-        if (!res.ok) return;
         const data = await res.json();
         
-        // 1. Cập nhật Ticker
-        const fmtUsd = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
-        document.getElementById('tk-total').innerText = fmtUsd(data.global_stats.total_volume_24h);
-        document.getElementById('tk-limit').innerText = fmtUsd(data.global_stats.total_limit_volume);
-        document.getElementById('tk-onchain').innerText = fmtUsd(data.global_stats.total_onchain_volume);
+        // Update Ticker
+        const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
+        document.getElementById('tk-total').innerText = fmt(data.global_stats.total_volume_24h);
+        document.getElementById('tk-limit').innerText = fmt(data.global_stats.total_limit_volume);
+        document.getElementById('tk-onchain').innerText = fmt(data.global_stats.total_onchain_volume);
 
-        // 2. Lưu và Sắp xếp Token (Volume cao nhất lên đầu)
-        ALL_TOKENS = data.tokens.sort((a, b) => b.volume.total - a.volume.total);
-        
-        // 3. Render lần đầu (10 token)
+        // Sort & Save
+        ALL_TOKENS = data.tokens.sort((a,b) => b.volume.total - a.volume.total);
         renderTable();
 
-    } catch (e) { console.error("Error loading data:", e); }
+    } catch(e) { console.error(e); }
 }
 
-// --- HÀM VẼ BẢNG (RENDER) ---
 function renderTable() {
-    const tbody = document.getElementById('pm-table-body');
-    tbody.innerHTML = ''; // Xóa cũ
+    const tbody = document.getElementById('pm-body');
+    const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
+    
+    // Chỉ render phần mới thêm (nếu cần tối ưu) hoặc render lại hết chunk
+    const currentList = ALL_TOKENS.slice(0, VISIBLE);
+    
+    let html = '';
+    currentList.forEach(t => {
+        const p = t.price < 1 ? t.price.toFixed(6) : t.price.toFixed(2);
+        const cls = t.change_24h >= 0 ? 'c-up' : 'c-down';
+        const link = `https://www.binance.com/en/alpha/${t.id.replace('ALPHA_','')}`;
+        const liq = t.liquidity ? fmt(t.liquidity) : '$0'; // Liquidity
 
-    const tokensToShow = ALL_TOKENS.slice(0, VISIBLE_COUNT);
-    const fmtUsd = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n);
-
-    tokensToShow.forEach((t, index) => {
-        const price = t.price < 1 ? t.price.toFixed(6) : t.price.toFixed(2);
-        const changeClass = t.change_24h >= 0 ? 'text-up' : 'text-down';
-        const changeSign = t.change_24h >= 0 ? '+' : '';
-        
-        let sourceBadge = `<span class="source-tag">On-Chain</span>`;
-        if (t.volume.source.includes('Limit')) sourceBadge = `<span class="source-tag mix">Hybrid</span>`;
-
-        let link = `https://www.binance.com/en/alpha/${t.id.replace('ALPHA_','')}`;
-
-        const row = `
+        html += `
         <tr onclick="window.open('${link}', '_blank')">
-            <td style="padding-left:20px">
-                <div class="td-token">
-                    <span class="token-rank">#${index + 1}</span>
-                    <img src="${t.icon || 'assets/tokens/default.png'}" class="token-icon" onerror="this.src='assets/tokens/default.png'">
-                    <div class="token-info">
-                        <span class="token-symbol">${t.symbol}</span>
-                        <span class="token-name">${t.name}</span>
-                    </div>
-                </div>
+            <td style="padding-left:25px">
+                <img src="${t.icon}" class="token-icon" onerror="this.src='assets/tokens/default.png'">
+                ${t.symbol} <span style="color:#666;font-size:12px;margin-left:5px">${t.name}</span>
             </td>
-            <td class="text-right" style="font-weight:700">$${price}</td>
-            <td class="text-right ${changeClass}" style="font-weight:700">${changeSign}${t.change_24h.toFixed(2)}%</td>
-            <td class="text-right" style="font-weight:700; color:#fff">${fmtUsd(t.volume.total)}</td>
-            <td class="text-right c-purple">${fmtUsd(t.volume.limit)}</td>
-            <td class="text-right c-blue">${fmtUsd(t.volume.onchain)}</td>
-            <td class="text-right" style="color:#ddd">${fmtUsd(t.liquidity || 0)}</td> <td class="text-right" style="color:#888">${fmtUsd(t.market_cap)}</td>
-            <td class="text-center" style="padding-right:20px">${sourceBadge}</td>
+            <td>$${p}</td>
+            <td class="${cls}">${t.change_24h.toFixed(2)}%</td>
+            <td style="color:#ddd">${liq}</td>
+            <td style="color:#fff">${fmt(t.volume.total)}</td>
+            <td class="c-purple">${fmt(t.volume.limit)}</td>
+            <td class="c-blue">${fmt(t.volume.onchain)}</td>
+            <td style="padding-right:25px;color:#888">${fmt(t.market_cap)}</td>
         </tr>`;
-        tbody.innerHTML += row;
     });
+    tbody.innerHTML = html;
 
-    // Ẩn nút Load More nếu đã hiện hết
-    const loadBtn = document.querySelector('.btn-load-more');
-    if (VISIBLE_COUNT >= ALL_TOKENS.length) {
-        loadBtn.style.display = 'none';
-    } else {
-        loadBtn.style.display = 'inline-block';
-        loadBtn.innerHTML = `Show Next ${LOAD_STEP} Tokens <i class="fas fa-chevron-down ms-1"></i>`;
-    }
+    // Ẩn nút Load More nếu hết
+    if(VISIBLE >= ALL_TOKENS.length) document.querySelector('.btn-more').style.display = 'none';
 }
 
-// --- HÀM LOAD MORE ---
-window.loadMoreTokens = function() {
-    VISIBlE_COUNT += LOAD_STEP;
-    // Hiệu ứng loading giả lập cho chuyên nghiệp
-    const btn = document.querySelector('.btn-load-more');
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-    
+window.loadMore = function() {
+    VISIBLE += STEP;
+    document.querySelector('.btn-more').innerHTML = 'Loading...';
     setTimeout(() => {
-        VISIBLE_COUNT += LOAD_STEP; // Tăng số lượng hiển thị
-        renderTable(); // Vẽ lại
-    }, 300); // Delay nhẹ 0.3s cho mượt
-};
+        renderTable();
+        document.querySelector('.btn-more').innerHTML = 'Load More <i class="fas fa-chevron-down"></i>';
+    }, 200);
+}
 
-// --- HÀM CHUYỂN TAB ---
-window.switchProTab = function(tab) {
+window.switchMode = function(mode) {
     const marketView = document.getElementById('view-market-pro');
-    const oldView = document.getElementById('view-dashboard') || document.getElementById('app-container');
-    const btnNew = document.getElementById('tab-new');
-    const btnOld = document.getElementById('tab-old');
+    // Tìm dashboard cũ (thường là div ngay sau navbar hoặc có id view-dashboard)
+    const oldView = document.getElementById('view-dashboard') || document.querySelector('.hero-banner')?.parentElement;
+    
+    const btnM = document.getElementById('btn-tab-market');
+    const btnT = document.getElementById('btn-tab-tourney');
 
-    // Chuyển UI Tab
-    if (tab === 'market') {
-        btnNew.classList.add('active');
-        btnOld.classList.remove('active');
+    if(mode === 'market') {
         marketView.classList.remove('hidden-view');
         if(oldView) oldView.classList.add('hidden-view');
+        btnM.classList.add('active');
+        btnT.classList.remove('active');
+        
+        // Ẩn các thành phần rác của web cũ (nếu có)
+        document.querySelectorAll('.command-deck, .hero-banner').forEach(el => el.classList.add('hidden-view'));
     } else {
-        btnNew.classList.remove('active');
-        btnOld.classList.add('active');
         marketView.classList.add('hidden-view');
-        if(oldView) {
-            oldView.classList.remove('hidden-view');
-            oldView.style.display = 'block'; // Force hiện
-        }
-        // Fix grid layout cũ (nếu có)
-        if (typeof renderGrid === 'function') setTimeout(renderGrid, 100);
+        if(oldView) oldView.classList.remove('hidden-view');
+        btnM.classList.remove('active');
+        btnT.classList.add('active');
+        
+        // Hiện lại
+        document.querySelectorAll('.command-deck, .hero-banner').forEach(el => el.classList.remove('hidden-view'));
+        
+        // Fix grid layout
+        if(typeof renderGrid === 'function') setTimeout(renderGrid, 100);
     }
-};
+}

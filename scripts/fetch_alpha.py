@@ -1,128 +1,126 @@
 import requests
 import json
-import time
 import os
 from datetime import datetime
 
 # --- CẤU HÌNH API ---
+# 1. API Danh sách Token (Lấy Liquidity, Tên, ID)
 API_TOKEN_LIST = "https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list"
-API_TICKER = "https://www.binance.com/bapi/defi/v1/public/alpha-trade/ticker"
-OUTPUT_FILE = "public/data/market-data.json"
+# 2. API Tổng hợp (Lấy Giá, Total Volume chuẩn)
+API_AGG_TICKER = "https://www.binance.com/bapi/defi/v1/public/alpha-trade/aggTicker24?dataType=aggregate"
+# 3. API Limit (Lấy Volume Limit)
+API_LIMIT_TICKER = "https://www.binance.com/bapi/defi/v1/public/alpha-trade/ticker"
 
-# Đảm bảo thư mục tồn tại
+OUTPUT_FILE = "public/data/market-data.json"
 os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 
-# Hàm chuyển đổi số an toàn (Chống lỗi NoneType)
 def safe_float(val):
     try:
-        if val is None: return 0.0
-        return float(val)
-    except (ValueError, TypeError):
+        return float(val) if val else 0.0
+    except:
         return 0.0
 
 def fetch_data():
-    print("⏳ Đang kết nối Binance Alpha...")
+    print("⏳ Đang tải dữ liệu đa nguồn từ Binance...")
+    
     try:
-        # 1. Lấy Token List
-        resp = requests.get(API_TOKEN_LIST)
-        data = resp.json()
-        
-        if not data.get("success"):
-            print("❌ Lỗi: Không lấy được danh sách Token")
-            return
+        # A. Lấy Token List (Metadata + Liquidity)
+        list_resp = requests.get(API_TOKEN_LIST).json()
+        token_map = {}
+        if list_resp.get("success"):
+            for t in list_resp["data"]:
+                if t.get("symbol"):
+                    token_map[t["symbol"]] = t
 
-        token_list = data.get("data", [])
+        # B. Lấy Aggregated Data (Total Vol, Price)
+        agg_resp = requests.get(API_AGG_TICKER).json()
+        agg_data = agg_resp.get("data", [])
+
         processed_tokens = []
-        
         global_stats = {
             "total_volume_24h": 0,
             "total_limit_volume": 0,
             "total_onchain_volume": 0,
-            "total_market_cap": 0,
             "active_tokens": 0
         }
 
-        print(f"✅ Tìm thấy {len(token_list)} tokens. Đang phân tích...")
+        print(f"✅ Đã tải {len(agg_data)} token từ AggTicker. Bắt đầu ghép dữ liệu...")
 
-        # 2. Duyệt từng token
-        for token in token_list:
-            # Bỏ qua token không có symbol
-            if not token.get("symbol"): continue
+        for agg in agg_data:
+            symbol = agg.get("s")
+            # Tìm thông tin trong map (để lấy alphaId, Icon, Liquidity)
+            meta = token_map.get(symbol)
+            if not meta: continue # Bỏ qua nếu không khớp danh sách chính
 
-            alpha_id = token.get("alphaId")
-            symbol = token.get("symbol")
+            # 1. Total Data (Từ AggTicker)
+            price = safe_float(agg.get("c")) # Close price
+            total_vol = safe_float(agg.get("q")) # Quote Volume (USDT)
+            change_24h = safe_float(agg.get("P")) # Percent change
+
+            # 2. Limit Data (Gọi riêng API Ticker hoặc ước lượng)
+            # Để tối ưu tốc độ, ta gọi API Limit cho từng con sẽ rất chậm (500 requests).
+            # Giải pháp: Nếu API Agg trả về volume, ta tạm thời lấy Limit Vol từ Meta hoặc 
+            # giả lập gọi API Ticker cho Top 20 con volume to nhất thôi.
+            # Tuy nhiên, trong code mẫu của bạn dùng API riêng. Ở đây tôi sẽ dùng logic:
+            # Limit Vol = QuoteVol trong Ticker Limit (nếu có)
             
-            # --- API TICKER (Lấy Limit Volume) ---
-            ticker_symbol = f"{alpha_id}USDT" 
+            alpha_id = meta.get("alphaId")
             limit_vol = 0.0
             
-            # Chỉ gọi ticker nếu token có volume tổng > 0 để tiết kiệm thời gian
-            # (Hoặc bỏ check này nếu muốn chính xác tuyệt đối)
-            raw_total_vol = safe_float(token.get("volume24h"))
-            
-            if raw_total_vol > 0:
+            # Chỉ gọi Limit Ticker cho các token có volume đáng kể để tránh rate limit
+            if total_vol > 1000: 
                 try:
-                    # Timeout ngắn để không bị treo
-                    ticker_resp = requests.get(f"{API_TICKER}?symbol={ticker_symbol}", timeout=1)
-                    t_data = ticker_resp.json()
-                    if t_data.get("success") and t_data.get("data"):
-                        limit_vol = safe_float(t_data["data"].get("quoteVolume"))
+                    # Giả định USDT, cần fix nếu là USDC
+                    limit_symbol = f"{alpha_id}USDT"
+                    limit_url = f"{API_LIMIT_TICKER}?symbol={limit_symbol}"
+                    limit_res = requests.get(limit_url, timeout=0.5).json()
+                    if limit_res.get("success"):
+                        limit_vol = safe_float(limit_res["data"].get("quoteVolume"))
                 except:
                     limit_vol = 0.0
 
-            # --- TÍNH TOÁN AN TOÀN ---
-            price = safe_float(token.get("price"))
-            total_vol = raw_total_vol
-            market_cap = safe_float(token.get("marketCap"))
-            holders = int(safe_float(token.get("holders")))
-            
-            # Logic sửa sai nếu Limit > Total do độ trễ
-            if limit_vol > total_vol: total_vol = limit_vol
-            
+            # 3. Liquidity (Từ Token List)
+            liquidity = safe_float(meta.get("liquidity"))
+
+            # 4. Tính toán On-chain
+            if limit_vol > total_vol: total_vol = limit_vol # Fix lệch pha
             onchain_vol = total_vol - limit_vol
-            if onchain_vol < 0: onchain_vol = 0.0
+            if onchain_vol < 0: onchain_vol = 0
 
-            # Phân loại Source
-            source_type = "On-Chain Only"
-            if limit_vol > 10: # Lọc nhiễu số quá nhỏ
-                if onchain_vol > 10:
-                    source_type = "On-Chain + Limit"
-                else:
-                    source_type = "Limit Only"
+            # Phân loại nguồn
+            source = "On-Chain"
+            if limit_vol > 100: source = "Hybrid" if onchain_vol > 100 else "Limit Only"
 
-            # Đóng gói dữ liệu
             token_obj = {
                 "id": alpha_id,
                 "symbol": symbol,
-                "name": token.get("name", "Unknown"),
-                "icon": token.get("iconUrl", ""),
+                "name": meta.get("name", symbol),
+                "icon": meta.get("iconUrl"),
                 "price": price,
-                "change_24h": safe_float(token.get("percentChange24h")),
+                "change_24h": change_24h,
+                "liquidity": liquidity,
+                "market_cap": safe_float(meta.get("marketCap")),
                 "volume": {
                     "total": total_vol,
                     "limit": limit_vol,
                     "onchain": onchain_vol,
-                    "source": source_type
-                },
-                "market_cap": market_cap,
-                "holders": holders,
-                "is_hot": token.get("hotTag", False)
+                    "source": source
+                }
             }
             
             processed_tokens.append(token_obj)
-            
+
             # Cộng dồn Global
             global_stats["total_volume_24h"] += total_vol
             global_stats["total_limit_volume"] += limit_vol
             global_stats["total_onchain_volume"] += onchain_vol
-            global_stats["total_market_cap"] += market_cap
             global_stats["active_tokens"] += 1
 
         # Sắp xếp theo Volume giảm dần
         processed_tokens.sort(key=lambda x: x["volume"]["total"], reverse=True)
 
         final_data = {
-            "last_updated": datetime.now().strftime("%H:%M %d/%m/%Y"),
+            "last_updated": datetime.now().strftime("%H:%M %d/%m"),
             "global_stats": global_stats,
             "tokens": processed_tokens
         }
@@ -130,13 +128,10 @@ def fetch_data():
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
             
-        print(f"🎉 XONG! Dữ liệu đã lưu tại: {OUTPUT_FILE}")
-        print(f"📊 Tổng Volume: ${global_stats['total_volume_24h']:,.2f}")
-        print(f"🔹 Limit: ${global_stats['total_limit_volume']:,.2f}")
-        print(f"🔸 On-chain: ${global_stats['total_onchain_volume']:,.2f}")
+        print(f"🎉 XONG! Lưu {len(processed_tokens)} token vào {OUTPUT_FILE}")
 
     except Exception as e:
-        print(f"❌ Lỗi không mong muốn: {str(e)}")
+        print(f"❌ Lỗi: {str(e)}")
 
 if __name__ == "__main__":
     fetch_data()
