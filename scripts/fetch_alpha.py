@@ -62,6 +62,9 @@ def fetch_data():
             alpha_id = item.get("alphaId")
             icon = item.get("iconUrl")
             name = item.get("name")
+            
+            # --- THÊM MỚI: LẤY CONTRACT ---
+            contract = item.get("contractAddress", "") 
 
             # --- TÍNH TOÁN LIMIT / ON-CHAIN ---
             # Mặc định lấy Total làm On-chain trước
@@ -89,6 +92,7 @@ def fetch_data():
                 "symbol": symbol,
                 "name": name,
                 "icon": icon,
+                "contract": contract, # <-- Đã thêm vào JSON
                 "price": price,
                 "change_24h": change_24h,
                 "liquidity": liquidity,
