@@ -1,0 +1,38 @@
+name: Update Alpha Market Data
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Chạy mỗi 15 phút
+  workflow_dispatch: # Cho phép bấm nút chạy tay nếu muốn
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install requests
+
+    - name: Run Fetch Script
+      run: |
+        python scripts/fetch_alpha.py
+
+    - name: Commit and Push Data
+      run: |
+        git config --global user.name "AlphaBot"
+        git config --global user.email "bot@wave-alpha.com"
+        git add public/data/market-data.json
+        git commit -m "🤖 Update Market Data: $(date)" || exit 0
+        git push
