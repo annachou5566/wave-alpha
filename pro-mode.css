@@ -1,4 +1,4 @@
-/* pro-mode.css - Fixed Layout & Gray Identity */
+/* pro-mode.css - Wave Alpha Identity */
 
 :root {
     --pm-bg-body: #0b0e11;
@@ -13,27 +13,41 @@
     --font-text: 'Be Vietnam Pro', sans-serif;
 }
 
-/* 1. Thanh Công Cụ (Ticker + Tabs) */
+/* 1. Màn hình bảo trì */
+#maintenance-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--pm-bg-body); z-index: 999999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.pm-loader {
+    width: 50px; height: 50px; border: 2px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--pm-gold); border-radius: 50%;
+    animation: spin 0.8s infinite linear; margin-bottom: 20px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.pm-title { font-family: var(--font-num); font-size: 2rem; font-weight: 700; color: #fff; letter-spacing: 2px; }
+.pm-desc { font-family: var(--font-text); color: var(--pm-sub); font-size: 0.9rem; margin-top: 10px; }
+
+/* 2. Thanh Công Cụ Mới (Toolbar) */
 .pm-toolbar-wrapper {
-    background: var(--pm-bg-body);
+    background: #0b0e11; /* Trùng màu nền header */
     border-bottom: 1px solid var(--pm-line);
-    padding: 10px 0;
-    position: sticky; top: 0; z-index: 90; /* Sticky dưới Navbar */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    padding: 15px 0;
+    margin-bottom: 20px;
 }
 
 .pm-container {
     max-width: 1400px; margin: 0 auto; padding: 0 20px;
-    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;
 }
 
-/* Tab Switcher (Style Xám hiện đại) */
+/* Tabs Switcher */
 .pm-tab-group {
     display: flex; background: #20252b; padding: 4px; border-radius: 8px; border: 1px solid var(--pm-line);
 }
 .pm-tab-item {
-    padding: 8px 24px; border-radius: 6px; cursor: pointer;
-    color: var(--pm-sub); font-family: var(--font-text); font-weight: 600; font-size: 13px;
+    padding: 8px 20px; border-radius: 6px; cursor: pointer;
+    color: var(--pm-sub); font-family: var(--font-text); font-weight: 700; font-size: 13px;
     transition: 0.2s; border: none; background: transparent; display: flex; align-items: center; gap: 8px;
 }
 .pm-tab-item.active {
@@ -42,41 +56,42 @@
 .pm-tab-item:hover:not(.active) { color: var(--pm-text); background: rgba(255,255,255,0.05); }
 
 /* Ticker Mini */
-.pm-ticker { display: flex; gap: 25px; }
+.pm-ticker { display: flex; gap: 30px; }
 .pm-tick-box { display: flex; flex-direction: column; align-items: flex-end; }
 .pm-tick-lbl { font-size: 10px; color: var(--pm-sub); text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-text); }
-.pm-tick-val { font-size: 15px; color: var(--pm-text); font-weight: 700; font-family: var(--font-num); }
+.pm-tick-val { font-size: 16px; color: var(--pm-text); font-weight: 700; font-family: var(--font-num); }
 
-/* 2. Bảng Market (Nền Xám Gốc) */
+/* 3. Bảng Market Pro */
 #view-market-pro {
-    background: var(--pm-bg-body); min-height: 100vh; padding: 20px 0;
-    animation: fadeIn 0.3s;
+    background: var(--pm-bg-body); min-height: 80vh; padding-bottom: 50px;
+    animation: fadeIn 0.4s;
 }
 .pm-card {
     max-width: 1400px; margin: 0 auto;
     background: var(--pm-bg-card); border-radius: 12px; border: 1px solid var(--pm-line);
-    overflow: hidden;
+    overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 .pm-table { width: 100%; border-collapse: collapse; }
 .pm-table th {
-    background: #1b2026; /* Xám đậm hơn card chút */
-    color: var(--pm-sub); font-family: var(--font-text); font-size: 12px; text-transform: uppercase;
-    padding: 15px 20px; text-align: right; border-bottom: 1px solid var(--pm-line);
+    background: #1b2026; 
+    color: var(--pm-sub); font-family: var(--font-text); font-size: 12px; text-transform: uppercase; font-weight: 600;
+    padding: 16px 20px; text-align: right; border-bottom: 1px solid var(--pm-line); white-space: nowrap;
 }
-.pm-table th:first-child { text-align: left; }
+.pm-table th:first-child { text-align: left; padding-left: 25px; }
 .pm-table td {
-    padding: 15px 20px; border-bottom: 1px solid var(--pm-line); color: var(--pm-text);
+    padding: 16px 20px; border-bottom: 1px solid var(--pm-line); color: var(--pm-text);
     font-family: var(--font-num); font-size: 16px; font-weight: 600; text-align: right; vertical-align: middle;
 }
-.pm-table td:first-child { text-align: left; }
+.pm-table td:first-child { text-align: left; padding-left: 25px; }
 .pm-table tr:hover { background: var(--pm-bg-hover); cursor: pointer; }
 
-/* Utilities */
+/* Các thành phần nhỏ */
 .c-purple { color: #bb86fc !important; }
 .c-blue { color: #00b8ff !important; }
 .c-up { color: var(--pm-green); }
 .c-down { color: var(--pm-red); }
-.token-icon { width: 30px; height: 30px; border-radius: 50%; background: #000; border: 1px solid var(--pm-line); margin-right: 10px; vertical-align: middle; }
+.token-icon { width: 32px; height: 32px; border-radius: 50%; background: #000; border: 1px solid var(--pm-line); margin-right: 12px; vertical-align: middle; }
+.token-name { color: var(--pm-sub); font-size: 12px; font-family: var(--font-text); margin-left: 6px; }
 
 /* Nút Load More */
 .pm-footer { padding: 20px; text-align: center; border-top: 1px solid var(--pm-line); }
@@ -85,8 +100,8 @@
     padding: 10px 40px; border-radius: 30px; font-family: var(--font-text); font-weight: 600; font-size: 13px;
     cursor: pointer; transition: 0.3s;
 }
-.btn-more:hover { border-color: var(--pm-gold); color: var(--pm-gold); }
+.btn-more:hover { border-color: var(--pm-gold); color: var(--pm-gold); transform: translateY(-2px); }
 
-/* Class Ẩn Hiện */
+/* QUAN TRỌNG: Class ẩn/hiện */
 .hidden-view { display: none !important; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
