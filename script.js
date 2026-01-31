@@ -1038,77 +1038,72 @@ function applyLanguage() {
     let isSyncing = false; 
     let lastWakeupTime = 0;
 
-   // --- [BẢN CẬP NHẬT FIX TOTAL VOL] ---
-async function quickSyncData() {
-    if (isSyncing || !supabase) return; 
+   async function quickSyncData() {
+    if (isSyncing || !supabase) return;
     isSyncing = true;
 
     try {
-        // Gọi hàm RPC mới (đã bao gồm Total Accumulated Vol)
         const { data, error } = await supabase.rpc('get_minimal_market_data');
         
         if (!error && data && data.length > 0) {
             let hasChanges = false;
 
-            // --- SỬA LỖI 1: CHẶN REALTIME GHI ĐÈ VOL CỦA GIẢI ĐÃ END ---
-data.forEach(miniRow => {
-    let localItem = compList.find(c => c.db_id === miniRow.id);
-    if (localItem) {
-        // Kiểm tra xem giải đã kết thúc chưa
-        let isEnded = false;
-        if (localItem.end) {
-            // Logic so sánh ngày đơn giản: Nếu ngày kết thúc nhỏ hơn hôm nay -> Ended
-            let todayStr = new Date().toISOString().split('T')[0];
-            if (localItem.end < todayStr) isEnded = true;
-        }
+            data.forEach(miniRow => {
+                let localItem = compList.find(c => c.db_id === miniRow.id);
+                if (localItem) {
+                    let isEnded = false;
+                    if (localItem.end) {
+                        let todayStr = new Date().toISOString().split('T')[0];
+                        if (localItem.end < todayStr) isEnded = true;
+                    }
 
-        // --- CẬP NHẬT AI PREDICTION (Luôn cập nhật) ---
-        if (miniRow.ai_prediction) {
-            localItem.ai_prediction = miniRow.ai_prediction;
-            hasChanges = true;
-        }
+                    // --- CẬP NHẬT AI PREDICTION ---
+                    if (miniRow.ai_prediction) {
+                        localItem.ai_prediction = miniRow.ai_prediction;
+                        hasChanges = true;
+                    }
 
-        // --- 1. Cập nhật Daily Volume (QUAN TRỌNG: CHỈ CẬP NHẬT NẾU ĐANG CHẠY) ---
-        // Nếu giải đã End, ta giữ nguyên Vol lịch sử, không cho Realtime ghi đè bằng 0
-        if (!isEnded) {
-            if (localItem.real_alpha_volume !== miniRow.real_alpha_volume) {
-                localItem.real_alpha_volume = miniRow.real_alpha_volume;
-                hasChanges = true;
-            }
-        }
+                    // --- [FIX] CẬP NHẬT LIMIT DATA (CHỈ DÙNG LIMIT) ---
+                    // Cập nhật Limit Daily
+                    if (!isEnded && miniRow.limit_daily_volume !== undefined) {
+                        if (localItem.limit_daily_volume !== miniRow.limit_daily_volume) {
+                            localItem.limit_daily_volume = miniRow.limit_daily_volume;
+                            hasChanges = true;
+                        }
+                    }
 
-        // --- 2. Cập nhật Total Accumulated Volume (Cũng chỉ nên cập nhật nếu đang chạy hoặc dữ liệu tăng lên) ---
-        if (!isEnded && localItem.total_accumulated_volume !== miniRow.total_accumulated_volume) {
-            localItem.total_accumulated_volume = miniRow.total_accumulated_volume;
-            hasChanges = true;
-        }
+                    // Cập nhật Limit Total Accumulated
+                    if (!isEnded && miniRow.limit_accumulated_volume !== undefined) {
+                        if (localItem.limit_accumulated_volume !== miniRow.limit_accumulated_volume) {
+                            localItem.limit_accumulated_volume = miniRow.limit_accumulated_volume;
+                            hasChanges = true;
+                        }
+                    }
+                    
+                    // Cập nhật Limit TX
+                    if (!isEnded && miniRow.limit_accumulated_tx !== undefined) {
+                         localItem.limit_accumulated_tx = miniRow.limit_accumulated_tx;
+                    }
 
-        // 3. Cập nhật Market Analysis
-        if (JSON.stringify(localItem.market_analysis) !== JSON.stringify(miniRow.market_analysis)) {
-            localItem.market_analysis = miniRow.market_analysis;
-            hasChanges = true;
-        }
-
-        // 4. Cập nhật Tx Count
-        if (!isEnded && localItem.daily_tx_count !== miniRow.daily_tx_count) {
-            localItem.daily_tx_count = miniRow.daily_tx_count;
-            hasChanges = true;
-        }
-    }
-});
+                    // Cập nhật Market Analysis
+                    if (miniRow.market_analysis && JSON.stringify(localItem.market_analysis) !== JSON.stringify(miniRow.market_analysis)) {
+                        localItem.market_analysis = miniRow.market_analysis;
+                        hasChanges = true;
+                    }
+                }
+            });
 
             if (hasChanges) {
-                updateGridValuesOnly(); // Vẽ lại thẻ bài
+                updateGridValuesOnly(); 
                 if (typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
                 renderStats();
-                console.log("⚡ Data synced (Full Vol)");
+                console.log("⚡ Data synced (Limit Vol)");
             }
         }
     } catch (e) { 
         console.error("Sync Error:", e); 
     } finally {
         isSyncing = false; 
-        //setTimeout(quickSyncData, 60000); 
     }
 }
 
@@ -2874,7 +2869,7 @@ function renderMarketHealthTable(dataInput) {
                 campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
             } else {
 
-                } else {
+            
                 // [FIX FINAL] CHỈ DÙNG LIMIT (USD)
                 let todayVol = c.limit_daily_volume || 0;
                 let subDailyVol = '--';
