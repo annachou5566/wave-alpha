@@ -2508,3 +2508,84 @@ margin-top: 2px;
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* === THÊM VÀO CUỐI FILE style.css === */
+
+/* Market Ticker (Thanh chỉ số trên cùng) */
+.market-ticker-bar {
+    background: rgba(11, 14, 17, 0.95);
+    border-bottom: 1px solid #2b3139;
+    padding: 10px 0;
+    margin-bottom: 20px;
+    white-space: nowrap;
+    overflow-x: auto;
+}
+
+.ticker-item {
+    display: inline-flex;
+    flex-direction: column;
+    padding: 0 15px;
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+.ticker-label { font-size: 0.7rem; color: #848e9c; letter-spacing: 0.5px; }
+.ticker-val { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 1.1rem; color: #eaecef; }
+
+/* Màu sắc chỉ số */
+.text-purple { color: #bb86fc !important; }
+.text-blue { color: #00b8ff !important; }
+.text-up { color: #0ecb81 !important; }
+.text-down { color: #f6465d !important; }
+
+/* Bảng dữ liệu Market (Table) */
+.market-table-container {
+    background: #161a1e;
+    border-radius: 8px;
+    border: 1px solid #2b3139;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.market-table th {
+    background: #1e2329;
+    color: #848e9c;
+    font-size: 0.75rem;
+    padding: 12px;
+    border-bottom: 1px solid #2b3139;
+}
+
+.market-table td {
+    padding: 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #2b3139;
+    font-size: 0.9rem;
+    color: #eaecef;
+}
+
+.market-table tr:hover { background-color: #2b3139; cursor: pointer; }
+
+/* Badges (Nhãn nguồn dữ liệu) */
+.source-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: #2b3139;
+    color: #848e9c;
+}
+.source-mix { background: rgba(252, 213, 53, 0.15); color: #fcd535; border: 1px solid rgba(252, 213, 53, 0.3); }
+.source-limit { background: rgba(187, 134, 252, 0.15); color: #bb86fc; border: 1px solid rgba(187, 134, 252, 0.3); }
+
+/* Nút chuyển Tab đẹp hơn */
+.nav-pills-custom .nav-link {
+    color: #848e9c;
+    font-weight: 600;
+    border-radius: 20px;
+    padding: 6px 20px;
+    font-size: 0.9rem;
+}
+.nav-pills-custom .nav-link.active {
+    background-color: #fcd535;
+    color: #000;
+}
