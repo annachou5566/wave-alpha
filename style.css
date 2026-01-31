@@ -2454,67 +2454,57 @@ margin-top: 2px;
     height: 100% !important;
     max-height: 200px !important; /* Giới hạn chiều cao chart để không bị vỡ hạt */
 }
-/* === GIAO DIỆN BẢO TRÌ === */
+
+
+/* === GIAO DIỆN BẢO TRÌ (Minimal & Professional) === */
 #maintenance-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #0a0b0c; /* Màu nền trùng với web */
+    background: #0a0b0c; /* Nền tối đồng nhất */
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 9999;
     text-align: center;
-    color: #e0e0e0;
 }
 
 .maintenance-content {
     padding: 2rem;
-    max-width: 500px;
+    max-width: 600px;
 }
 
-.maintenance-logo {
-    width: 120px;
-    height: auto;
-    margin-bottom: 2rem;
-    animation: pulse 2s infinite;
-}
-
+/* Tiêu đề lớn, rõ ràng, màu trắng */
 #maintenance-screen h1 {
-    font-size: 1.8rem;
+    font-family: sans-serif; /* Đảm bảo font sạch sẽ */
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #ffffff;
     margin-bottom: 1rem;
-    background: linear-gradient(45deg, #00ff88, #00b8ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: -0.5px;
 }
 
+/* Đoạn văn ngắn gọn, màu xám nhẹ để tạo thứ bậc */
 #maintenance-screen p {
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: #8892b0;
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
+    line-height: 1.6;
 }
 
-/* Hiệu ứng xoay tròn */
+/* Loader nhỏ gọn, tinh tế hơn */
 .loader {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(0, 255, 136, 0.1);
+    width: 30px;
+    height: 30px;
+    border: 2px solid rgba(255, 255, 255, 0.1); /* Viền mờ nền */
     border-radius: 50%;
-    border-top-color: #00ff88;
-    animation: spin 1s ease-in-out infinite;
+    border-top-color: #00ff88; /* Màu accent chỉ ở viền trên */
+    animation: spin 0.8s linear infinite; /* Quay đều và nhanh hơn xíu */
     margin: 0 auto;
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.8; }
-    100% { transform: scale(1); opacity: 1; }
 }
