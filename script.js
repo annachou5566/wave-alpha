@@ -2370,7 +2370,20 @@ let fullHtml = '';
             // Nếu chưa bắt đầu (upcoming) thì Vol = 0, ngược lại lấy Vol thật
 
 // [FIX CHUẨN] Daily Vol = Limit Daily (Volume của riêng ngày hôm nay, đã cắt giờ chuẩn từ Backend)
+// [FIX LOGIC] Tự động tìm Vol trong lịch sử nếu Daily = 0
 let realVol = (status === 'upcoming') ? 0 : (c.limit_daily_volume || 0);
+
+if (realVol === 0 && status !== 'upcoming') {
+    let lh = c.limit_vol_history || [];
+    if (lh.length > 0) {
+        // Tìm vol của ngày hôm nay (hoặc ngày End nếu đã kết thúc)
+        let dateKey = (status === 'ended' && c.end) ? c.end : new Date().toISOString().split('T')[0];
+        let found = lh.find(x => x.date === dateKey);
+        if (found) realVol = parseFloat(found.vol);
+        // Fallback: Lấy ngày mới nhất có dữ liệu
+        else realVol = parseFloat(lh[lh.length - 1].vol);
+    }
+}
 
 // Thêm ký hiệu $ nếu là Limit USD
 let prefix = (c.limit_daily_volume > 0) ? '$' : ''; 
@@ -2565,12 +2578,20 @@ const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-va
 
 if (volEl) {
                     // [FIX FINAL] CHỈ LẤY LIMIT DAILY
-                    let rv = c.limit_daily_volume || 0;
-                    
-                    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                    
-                    if(volEl.innerText !== rvStr) {
-                        volEl.innerText = rvStr;
+                    if (volEl) {
+    // [FIX LOGIC] Tìm Vol chuẩn từ lịch sử nếu Daily = 0
+    let rv = c.limit_daily_volume || 0;
+    
+    if (rv === 0) {
+        let lh = c.limit_vol_history || [];
+        if (lh.length > 0) {
+            let nowStr = new Date().toISOString().split('T')[0];
+            let checkDate = (c.end && c.end < nowStr) ? c.end : nowStr;
+            let item = lh.find(x => x.date === checkDate);
+            if(item) rv = parseFloat(item.vol);
+            else rv = parseFloat(lh[lh.length-1].vol);
+        }
+    }
                         // Hiệu ứng nháy
                         volEl.style.color = '#fff';
                         volEl.style.textShadow = '0 0 5px #fff';
@@ -2871,7 +2892,21 @@ function renderMarketHealthTable(dataInput) {
 
             
                 // [FIX FINAL] CHỈ DÙNG LIMIT (USD)
-                let todayVol = c.limit_daily_volume || 0;
+               // [FIX LOGIC] Lấy Vol từ lịch sử Limit nếu biến Daily = 0
+let hList = c.limit_vol_history || [];
+let todayVol = c.limit_daily_volume || 0;
+
+// Nếu Vol Daily = 0 (do qua ngày mới/kết thúc), tìm lại trong mảng lịch sử
+if (todayVol === 0 && hList.length > 0) {
+    // Nếu là tab Lịch Sử -> Lấy Vol của ngày kết thúc
+    // Nếu là tab Đang Chạy -> Lấy Vol của ngày hôm nay (UTC)
+    let dateToCheck = isHistoryTab && c.end ? c.end : new Date().toISOString().split('T')[0];
+    
+    let match = hList.find(h => h.date === dateToCheck);
+    if (match) todayVol = parseFloat(match.vol);
+    // Nếu không tìm thấy (ví dụ hôm nay chưa có vol), lấy ngày gần nhất
+    else if (hList.length > 0) todayVol = parseFloat(hList[hList.length - 1].vol);
+}
                 let subDailyVol = '--';
                 
                 // Logic Prev (Hôm qua)
