@@ -2373,8 +2373,14 @@ let fullHtml = '';
 
             // Các chỉ số
             // Nếu chưa bắt đầu (upcoming) thì Vol = 0, ngược lại lấy Vol thật
-let realVol = (status === 'upcoming') ? 0 : (c.real_alpha_volume || 0);
-            let realVolDisplay = realVol > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
+
+// [FIX] Ưu tiên hiển thị TOTAL LIMIT VOLUME (USD)
+let realVol = (status === 'upcoming') ? 0 : (c.limit_accumulated_volume || c.total_accumulated_volume || 0);
+
+// Nếu dùng Limit (USD) thì thêm chữ 'Limit' hoặc '$' cho rõ
+let prefix = (c.limit_accumulated_volume > 0) ? '$' : ''; 
+let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
+            
             let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
             // --- [FIX FINAL] LOGIC LẤY TARGET CHUẨN (CHỐT SỔ NGÀY CUỐI) ---
             let target = 0;
@@ -2867,7 +2873,7 @@ function renderMarketHealthTable(dataInput) {
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span><span class="cell-secondary text-gold" style="font-size:0.6rem; font-weight:bold">UPCOMING</span></div>`;
                 campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
             } else {
-                let todayVol = c.real_alpha_volume || 0;
+                let todayVol = (c.limit_daily_volume > 0) ? c.limit_daily_volume : (c.real_alpha_volume || 0);
                 let subDailyVol = '--';
                 
                 // --- [ĐÃ SỬA] CHO PHÉP HIỆN SO SÁNH Ở CẢ HISTORY TAB ---
@@ -2898,7 +2904,7 @@ function renderMarketHealthTable(dataInput) {
 
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
                // --- BẮT ĐẦU ĐOẠN CODE ĐÃ SỬA (FULL SỐ) ---
-                let currentTotal = c.total_accumulated_volume || 0;
+               let currentTotal = (c.limit_accumulated_volume > 0) ? c.limit_accumulated_volume : (c.total_accumulated_volume || 0);
                 let estLine = '';
 
                 // Chỉ tính dự phóng nếu giải đang chạy (chưa End) và không phải tab Lịch sử
@@ -5301,8 +5307,17 @@ function renderCardMiniChart(c, customCanvasId = null) {
     }
 
     let todayStr = now.toISOString().split('T')[0];
+
     let adminHistory = c.history || [];
-    let realHistory = c.real_vol_history || [];
+    
+    // [FIX] Ưu tiên dùng Limit History (USD)
+    let realHistory = (c.limit_vol_history && c.limit_vol_history.length > 0) 
+        ? c.limit_vol_history 
+        : (c.real_vol_history || []);
+    
+    // Cờ kiểm tra xem đang dùng Limit hay Aggregate
+    let isLimitData = (c.limit_vol_history && c.limit_vol_history.length > 0);
+
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
     
     let labels = [];
@@ -5318,11 +5333,16 @@ function renderCardMiniChart(c, customCanvasId = null) {
         if(c.start && dStr < c.start) continue;
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-        // Total Vol
+        // Total Vol (Limit USD)
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
         if (rItem) rVal = parseFloat(rItem.vol);
-        else if (dStr === todayStr) rVal = parseFloat(c.real_alpha_volume || 0);
+        else if (dStr === todayStr) {
+            // [FIX] Lấy đúng biến Limit cho ngày hôm nay
+            rVal = isLimitData 
+                ? parseFloat(c.limit_daily_volume || 0) 
+                : parseFloat(c.real_alpha_volume || 0);
+        }
         limitVolData.push(rVal);
 
         // Forecast
@@ -6126,19 +6146,21 @@ function updateHealthTableRealtime() {
         let dbId = c.db_id || c.id;
 
         // 1. CẬP NHẬT DAILY VOL (Đang chạy tốt)
-        let dailyEl = document.getElementById(`vol-${dbId}`);
-        if(dailyEl) {
-             let dailyVal = parseFloat(c.real_alpha_volume || 0);
-             let dailyText = '$' + parseInt(dailyVal).toLocaleString('en-US');
-             if(dailyEl.innerText !== dailyText) {
-                 dailyEl.innerText = dailyText;
-                 dailyEl.style.color = '#fff'; // Nháy trắng nhẹ
-                 setTimeout(() => dailyEl.style.color = '', 300);
-             }
-        }
+        // 1. CẬP NHẬT DAILY VOL (FIX)
+    let dailyEl = document.getElementById(`vol-${dbId}`);
+    if(dailyEl) {
+         // Ưu tiên Limit
+         let dailyVal = parseFloat(c.limit_daily_volume || c.real_alpha_volume || 0);
+         let dailyText = '$' + parseInt(dailyVal).toLocaleString('en-US');
+         if(dailyEl.innerText !== dailyText) {
+             dailyEl.innerText = dailyText;
+             dailyEl.style.color = '#fff';
+             setTimeout(() => dailyEl.style.color = '', 300);
+         }
+    }
 
-        // 2. CẬP NHẬT TOTAL VOL (LẤY TRỰC TIẾP TỪ BIẾN MỚI HỨNG ĐƯỢC)
-        let totalVal = parseFloat(c.total_accumulated_volume || 0);
+    // 2. CẬP NHẬT TOTAL VOL (FIX)
+    let totalVal = parseFloat(c.limit_accumulated_volume || c.total_accumulated_volume || 0);
         
         // Fallback: Nếu server chưa gửi về kịp thì mới tính tạm
         if (totalVal === 0) {
