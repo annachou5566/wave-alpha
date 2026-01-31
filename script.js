@@ -2375,7 +2375,7 @@ let fullHtml = '';
             // Nếu chưa bắt đầu (upcoming) thì Vol = 0, ngược lại lấy Vol thật
 
 // [FIX CHUẨN] Daily Vol = Limit Daily (Volume của riêng ngày hôm nay, đã cắt giờ chuẩn từ Backend)
-let realVol = (status === 'upcoming') ? 0 : (c.limit_daily_volume || c.real_alpha_volume || 0);
+let realVol = (status === 'upcoming') ? 0 : (c.limit_daily_volume || 0);
 
 // Thêm ký hiệu $ nếu là Limit USD
 let prefix = (c.limit_daily_volume > 0) ? '$' : ''; 
@@ -2569,22 +2569,22 @@ function updateGridValuesOnly() {
 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
 
 if (volEl) {
-    // Ưu tiên hiển thị Tổng Tích Lũy, nếu không có thì dùng Vol Ngày
-    let rv = c.limit_daily_volume || c.real_alpha_volume || 0;
-    
-    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-    
-    if(volEl.innerText !== rvStr) {
-        volEl.innerText = rvStr;
-        // Hiệu ứng nháy
-        volEl.style.color = '#fff';
-        volEl.style.textShadow = '0 0 5px #fff';
-        setTimeout(() => { 
-            volEl.style.color = ''; 
-            volEl.style.textShadow = ''; 
-        }, 300);
-    }
-}
+                    // [FIX FINAL] CHỈ LẤY LIMIT DAILY
+                    let rv = c.limit_daily_volume || 0;
+                    
+                    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
+                    
+                    if(volEl.innerText !== rvStr) {
+                        volEl.innerText = rvStr;
+                        // Hiệu ứng nháy
+                        volEl.style.color = '#fff';
+                        volEl.style.textShadow = '0 0 5px #fff';
+                        setTimeout(() => { 
+                            volEl.style.color = ''; 
+                            volEl.style.textShadow = ''; 
+                        }, 300);
+                    }
+                }
 
                 // B. CẬP NHẬT GIÁ (PRICE)
                 const priceEl = cardWrapper.querySelector('.live-price-val');
@@ -2873,18 +2873,17 @@ function renderMarketHealthTable(dataInput) {
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span><span class="cell-secondary text-gold" style="font-size:0.6rem; font-weight:bold">UPCOMING</span></div>`;
                 campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
             } else {
-                // [FIX] Daily Vol: Ưu tiên Limit Daily
-                let todayVol = (c.limit_daily_volume > 0) ? c.limit_daily_volume : (c.real_alpha_volume || 0);
-                
+
+                } else {
+                // [FIX FINAL] CHỈ DÙNG LIMIT (USD)
+                let todayVol = c.limit_daily_volume || 0;
                 let subDailyVol = '--';
                 
-                // --- [ĐÃ SỬA] CHO PHÉP HIỆN SO SÁNH Ở CẢ HISTORY TAB ---
-                // Logic cũ có đoạn "if (!isHistoryTab...)" nên bị ẩn. Giờ ta mở ra:
-                let hList = c.real_vol_history || [];
-                let compareDateStr = yestStr; // Mặc định Running: So với Hôm qua
+                // Logic Prev (Hôm qua)
+                let hList = c.limit_vol_history || []; // <--- CHỈ LẤY LIMIT HISTORY
+                let compareDateStr = yestStr; 
 
                 if (isHistoryTab && c.end) {
-                    // Nếu là History: So với ngày trước khi kết thúc (End Date - 1)
                     let d = new Date(c.end);
                     d.setDate(d.getDate() - 1);
                     compareDateStr = d.toISOString().split('T')[0];
@@ -2892,7 +2891,6 @@ function renderMarketHealthTable(dataInput) {
 
                 let prevItem = hList.find(x => x.date === compareDateStr);
                 
-                // Fallback: Nếu không tìm thấy ngày chính xác (do lệch giờ), lấy item áp chót trong danh sách
                 if (!prevItem && isHistoryTab && hList.length >= 2) {
                     let sorted = [...hList].sort((a,b) => new Date(a.date) - new Date(b.date));
                     prevItem = sorted[sorted.length - 2];
@@ -2902,13 +2900,11 @@ function renderMarketHealthTable(dataInput) {
                     let label = isHistoryTab ? 'Prev' : 'Yest';
                     subDailyVol = `${label}: ${fmtNoDec(prevItem.vol)}`;
                 }
-                // --------------------------------------------------------
-
-                dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
-               // --- BẮT ĐẦU ĐOẠN CODE ĐÃ SỬA (FULL SỐ) ---
                 
-                // [FIX] Total Vol: Ưu tiên Limit Accumulated
-                let currentTotal = (c.limit_accumulated_volume > 0) ? c.limit_accumulated_volume : (c.total_accumulated_volume || 0);
+                dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
+               
+                // [FIX FINAL] CHỈ DÙNG LIMIT ACCUMULATED
+                let currentTotal = c.limit_accumulated_volume || 0;
                 
                 let estLine = '';
 
@@ -5315,14 +5311,9 @@ function renderCardMiniChart(c, customCanvasId = null) {
 
     let adminHistory = c.history || [];
     
-    // [FIX] Ưu tiên dùng Limit History (USD)
-    let realHistory = (c.limit_vol_history && c.limit_vol_history.length > 0) 
-        ? c.limit_vol_history 
-        : (c.real_vol_history || []);
+    // [FIX FINAL] CHỈ DÙNG LIMIT HISTORY
+    let realHistory = c.limit_vol_history || [];
     
-    // Cờ kiểm tra xem đang dùng Limit hay Aggregate
-    let isLimitData = (c.limit_vol_history && c.limit_vol_history.length > 0);
-
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
     
     let labels = [];
@@ -5338,15 +5329,13 @@ function renderCardMiniChart(c, customCanvasId = null) {
         if(c.start && dStr < c.start) continue;
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-        // Total Vol (Limit USD)
+        // Total Vol (CHỈ LẤY LIMIT)
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
         if (rItem) rVal = parseFloat(rItem.vol);
         else if (dStr === todayStr) {
-            // [FIX CHUẨN] Chart hôm nay vẽ bằng Limit Daily Volume (đúng tính chất cắt giờ)
-            rVal = isLimitData 
-                ? parseFloat(c.limit_daily_volume || 0) 
-                : parseFloat(c.real_alpha_volume || 0);
+            // Nếu là hôm nay: Lấy Limit Daily
+            rVal = parseFloat(c.limit_daily_volume || 0);
         }
         limitVolData.push(rVal);
 
@@ -6150,31 +6139,21 @@ function updateHealthTableRealtime() {
     compList.forEach(c => {
         let dbId = c.db_id || c.id;
 
-        // 1. CẬP NHẬT DAILY VOL (Đang chạy tốt)
-        // 1. CẬP NHẬT DAILY VOL (FIX)
-    let dailyEl = document.getElementById(`vol-${dbId}`);
-    if(dailyEl) {
-         // Ưu tiên Limit
-         let dailyVal = parseFloat(c.limit_daily_volume || c.real_alpha_volume || 0);
-         let dailyText = '$' + parseInt(dailyVal).toLocaleString('en-US');
-         if(dailyEl.innerText !== dailyText) {
-             dailyEl.innerText = dailyText;
-             dailyEl.style.color = '#fff';
-             setTimeout(() => dailyEl.style.color = '', 300);
-         }
-    }
-
-    // 2. CẬP NHẬT TOTAL VOL (FIX)
-    let totalVal = parseFloat(c.limit_accumulated_volume || c.total_accumulated_volume || 0);
-        
-        // Fallback: Nếu server chưa gửi về kịp thì mới tính tạm
-        if (totalVal === 0) {
-            let sDate = c.start || '2000-01-01';
-            let todayStr = new Date().toISOString().split('T')[0];
-            let histSum = (c.real_vol_history || []).reduce((s, i) => i.date >= sDate && i.date !== todayStr ? s + parseFloat(i.vol) : s, 0);
-            totalVal = histSum + (c.real_alpha_volume || 0);
+        // 1. CẬP NHẬT DAILY VOL (CHỈ LIMIT)
+        let dailyEl = document.getElementById(`vol-${dbId}`);
+        if(dailyEl) {
+             let dailyVal = parseFloat(c.limit_daily_volume || 0);
+             let dailyText = '$' + parseInt(dailyVal).toLocaleString('en-US');
+             if(dailyEl.innerText !== dailyText) {
+                 dailyEl.innerText = dailyText;
+                 dailyEl.style.color = '#fff';
+                 setTimeout(() => dailyEl.style.color = '', 300);
+             }
         }
 
+        // 2. CẬP NHẬT TOTAL VOL (CHỈ LIMIT ACCUMULATED)
+        let totalVal = parseFloat(c.limit_accumulated_volume || 0);
+        
         // Tìm đúng cái ID mh-total-... để điền số
         let totalEl = document.getElementById(`mh-total-${dbId}`);
         if (totalEl) {
