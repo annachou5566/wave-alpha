@@ -2374,11 +2374,11 @@ let fullHtml = '';
             // Các chỉ số
             // Nếu chưa bắt đầu (upcoming) thì Vol = 0, ngược lại lấy Vol thật
 
-// [FIX] Ưu tiên hiển thị TOTAL LIMIT VOLUME (USD)
-let realVol = (status === 'upcoming') ? 0 : (c.limit_accumulated_volume || c.total_accumulated_volume || 0);
+// [FIX CHUẨN] Daily Vol = Limit Daily (Volume của riêng ngày hôm nay, đã cắt giờ chuẩn từ Backend)
+let realVol = (status === 'upcoming') ? 0 : (c.limit_daily_volume || c.real_alpha_volume || 0);
 
-// Nếu dùng Limit (USD) thì thêm chữ 'Limit' hoặc '$' cho rõ
-let prefix = (c.limit_accumulated_volume > 0) ? '$' : ''; 
+// Thêm ký hiệu $ nếu là Limit USD
+let prefix = (c.limit_daily_volume > 0) ? '$' : ''; 
 let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
             
             let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
@@ -2570,7 +2570,7 @@ const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-va
 
 if (volEl) {
     // Ưu tiên hiển thị Tổng Tích Lũy, nếu không có thì dùng Vol Ngày
-    let rv = c.real_alpha_volume || 0;
+    let rv = c.limit_daily_volume || c.real_alpha_volume || 0;
     
     let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
     
@@ -2873,7 +2873,9 @@ function renderMarketHealthTable(dataInput) {
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span><span class="cell-secondary text-gold" style="font-size:0.6rem; font-weight:bold">UPCOMING</span></div>`;
                 campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
             } else {
+                // [FIX] Daily Vol: Ưu tiên Limit Daily
                 let todayVol = (c.limit_daily_volume > 0) ? c.limit_daily_volume : (c.real_alpha_volume || 0);
+                
                 let subDailyVol = '--';
                 
                 // --- [ĐÃ SỬA] CHO PHÉP HIỆN SO SÁNH Ở CẢ HISTORY TAB ---
@@ -2904,7 +2906,10 @@ function renderMarketHealthTable(dataInput) {
 
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
                // --- BẮT ĐẦU ĐOẠN CODE ĐÃ SỬA (FULL SỐ) ---
-               let currentTotal = (c.limit_accumulated_volume > 0) ? c.limit_accumulated_volume : (c.total_accumulated_volume || 0);
+                
+                // [FIX] Total Vol: Ưu tiên Limit Accumulated
+                let currentTotal = (c.limit_accumulated_volume > 0) ? c.limit_accumulated_volume : (c.total_accumulated_volume || 0);
+                
                 let estLine = '';
 
                 // Chỉ tính dự phóng nếu giải đang chạy (chưa End) và không phải tab Lịch sử
@@ -5338,7 +5343,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
         let rItem = realHistory.find(x => x.date === dStr);
         if (rItem) rVal = parseFloat(rItem.vol);
         else if (dStr === todayStr) {
-            // [FIX] Lấy đúng biến Limit cho ngày hôm nay
+            // [FIX CHUẨN] Chart hôm nay vẽ bằng Limit Daily Volume (đúng tính chất cắt giờ)
             rVal = isLimitData 
                 ? parseFloat(c.limit_daily_volume || 0) 
                 : parseFloat(c.real_alpha_volume || 0);
