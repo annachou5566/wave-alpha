@@ -94,12 +94,17 @@ function renderTable() {
     const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n || 0);
     let html = '';
     
-    ALL_TOKENS.slice(0, VISIBLE_COUNT).forEach(t => {
+    const list = ALL_TOKENS.slice(0, VISIBLE_COUNT);
+    
+    list.forEach(t => {
         const p = t.price < 1 ? (t.price || 0).toFixed(6) : (t.price || 0).toFixed(2);
         const cls = t.change_24h >= 0 ? 'c-up' : 'c-down';
         const sign = t.change_24h >= 0 ? '+' : '';
         const alphaIdClean = t.id ? t.id.replace('ALPHA_','') : '';
         const link = `https://www.binance.com/en/alpha/${alphaIdClean}`;
+        
+        // Fix Logo: Sử dụng t.icon và thêm chính sách no-referrer để hiện ảnh từ bnbstatic
+        const logoUrl = t.icon || 'assets/tokens/default.png';
         
         const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
         const contractHtml = t.contract 
@@ -110,7 +115,10 @@ function renderTable() {
         <tr onclick="window.open('${link}', '_blank')">
             <td style="padding-left:25px">
                 <div class="td-token">
-                    <img src="${t.icon || 'assets/tokens/default.png'}" class="token-icon" onerror="this.src='assets/tokens/default.png'">
+                    <img src="${logoUrl}" 
+                         class="token-icon" 
+                         referrerpolicy="no-referrer" 
+                         onerror="this.src='assets/tokens/default.png'">
                     <div class="token-info">
                         <div class="token-symbol">${t.symbol || '???'}</div>
                         ${contractHtml}
