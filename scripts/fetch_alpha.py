@@ -23,7 +23,7 @@ def safe_float(val):
         return 0.0
 
 def fetch_data():
-    print("🚀 Updating Data: Fetching Chain Icons & Limit Vol (USDT/USDC)...")
+    print("🚀 Updating Data: Fetching All Tokens Limit Vol (No Threshold)...")
     
     try:
         resp = requests.get(API_AGG_TICKER, headers=FAKE_HEADERS, timeout=15)
@@ -43,13 +43,12 @@ def fetch_data():
             alpha_id = item.get("alphaId")
             contract = item.get("contractAddress", "")
             
-            # --- 1. LẤY DATA MỚI (Thêm chainIconUrl) ---
             chain_name = item.get("chainName", "UNK")
-            chain_icon = item.get("chainIconUrl", "") # <-- Lấy link icon chain
+            chain_icon = item.get("chainIconUrl", "")
             mul_point = safe_float(item.get("mulPoint"))
             listing_time = item.get("listingTime", 0)
 
-            # --- 2. LOGIC TRẠNG THÁI ---
+            # LOGIC TRẠNG THÁI
             listing_cex = item.get("listingCex", False) is True
             is_offline = item.get("offline", False) is True
 
@@ -59,33 +58,33 @@ def fetch_data():
             elif (not listing_cex) and is_offline:
                 status = "DELISTED"
 
-            # --- 3. LOGIC LIMIT VOL (Updated for USDC support) ---
+            # --- SỬA LOGIC TẠI ĐÂY: Bỏ điều kiện > 50000 để lấy hết Limit Vol ---
             limit_vol = 0.0
-            if (status == "SPOT" or total_vol > 50000) and alpha_id:
+            if alpha_id:
                 try:
-                    # Thử USDT trước
+                    # Thử cặp USDT
                     limit_url = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDT"
                     limit_res = requests.get(limit_url, headers=FAKE_HEADERS, timeout=0.5).json()
                     
-                    if limit_res.get("success"):
+                    if limit_res.get("success") and limit_res.get("data"):
                         limit_vol = safe_float(limit_res["data"].get("quoteVolume"))
                     else:
-                        # Nếu USDT fail, thử USDC (VD: ELSA trên Base)
+                        # Thử cặp USDC (Fallback)
                         limit_url_usdc = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDC"
                         limit_res_usdc = requests.get(limit_url_usdc, headers=FAKE_HEADERS, timeout=0.5).json()
-                        if limit_res_usdc.get("success"):
+                        if limit_res_usdc.get("success") and limit_res_usdc.get("data"):
                             limit_vol = safe_float(limit_res_usdc["data"].get("quoteVolume"))
                 except: pass
 
-            if limit_vol > total_vol: limit_vol = total_vol * 0.95
-            onchain_vol = total_vol - limit_vol
-            if onchain_vol < 0: onchain_vol = 0
+            # Ràng buộc dữ liệu
+            if limit_vol > total_vol: limit_vol = total_vol
+            onchain_vol = max(0, total_vol - limit_vol)
 
-            # --- 4. SOURCE ---
+            # SOURCE
             source_type = "On-Chain"
             if status == "DELISTED": source_type = "DELISTED"
             elif status == "SPOT": source_type = "SPOT"
-            elif limit_vol > 1000: source_type = "Hybrid"
+            elif limit_vol > 0: source_type = "Hybrid" # Chỉ cần có limit vol là Hybrid
 
             token_obj = {
                 "id": alpha_id,
@@ -120,7 +119,7 @@ def fetch_data():
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
             
-        print(f"🎉 Updated! Fetched {len(processed_tokens)} tokens (Limit Vol fixed for USDC).")
+        print(f"🎉 Updated! Fetched {len(processed_tokens)} tokens including small Limit Vol.")
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")
