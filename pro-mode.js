@@ -1,4 +1,4 @@
-/* pro-mode.js - FIXED LAYOUT & BADGES */
+/* pro-mode.js - PHASE 1: DAILY VOL INTEGRATED */
 
 // 1. MAINT CHECK
 (function() {
@@ -26,9 +26,15 @@ const HTML_UI = `
             <button class="pm-tab-item active" id="btn-tab-market" onclick="safeSwitch('market')">ALPHA MARKET</button>
             <button class="pm-tab-item" id="btn-tab-tourney" onclick="safeSwitch('tourney')">COMPETITION</button>
         </div>
-        <div style="text-align:right">
-            <div style="font-size:10px;color:#888;letter-spacing:1px">TOTAL VOL (ALPHA)</div>
-            <div style="font-size:16px;font-weight:700;color:#fff" id="tk-total">---</div>
+        <div style="text-align:right; display:flex; gap:20px">
+            <div>
+                <div style="font-size:10px;color:#888;letter-spacing:1px">TOTAL VOL (24H)</div>
+                <div style="font-size:16px;font-weight:700;color:#fff" id="tk-total">---</div>
+            </div>
+            <div style="border-left:1px solid #333; padding-left:20px">
+                <div style="font-size:10px;color:#F0B90B;letter-spacing:1px">DAILY VOL (UTC)</div>
+                <div style="font-size:16px;font-weight:700;color:#F0B90B" id="tk-daily">---</div>
+            </div>
         </div>
     </div>
 </div>
@@ -50,7 +56,7 @@ const HTML_UI = `
                             <th onclick="sortData('symbol')" style="padding-left:25px;width:240px">Token <i class="fas fa-sort"></i></th>
                             <th onclick="sortData('price')">Price <i class="fas fa-sort"></i></th>
                             <th onclick="sortData('change_24h')">24h % <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('liquidity')">Liquidity <i class="fas fa-sort"></i></th>
+                            <th onclick="sortData('volume.daily')" style="color:#F0B90B">Daily Vol <i class="fas fa-sort"></i></th>
                             <th onclick="sortData('volume.total')">Total Vol <i class="fas fa-sort"></i></th>
                             <th onclick="sortData('volume.limit')" class="c-purple">Limit Vol <i class="fas fa-sort"></i></th>
                             <th onclick="sortData('volume.onchain')" class="c-blue">On-Chain <i class="fas fa-sort"></i></th>
@@ -167,10 +173,8 @@ function renderTable() {
         if(t.listing_time > 0) {
             const days = Math.ceil(((t.listing_time + 30*86400000) - Date.now())/86400000);
             if(days > 0 && t.mul_point >= 2) {
-                // Gold for BSC & >=4x, Blue for others
                 const isGold = (t.chain==='BSC' && t.mul_point >= 4);
                 const bdCls = (isGold || t.mul_point >= 4) ? 'bd-4x' : 'bd-2x';
-                // FORMAT: x4 19d
                 badges += `<span class="badge ${bdCls}">x${t.mul_point}<span class="bd-time">${days}d</span></span>`;
             }
         }
@@ -179,7 +183,7 @@ function renderTable() {
         <tr onclick="window.open('${link}','_blank')" class="${isPinned?'pinned-row':''}" style="cursor:pointer">
             <td style="padding-left:15px">
                 <div class="td-token">
-                    <i class="fas fa-star btn-pin ${isPinned?'active':''}" onclick="togglePin(event,'${t.symbol}')"></i>
+                    <i class="fas fa-star btn-pin ${isPinned?'active' : ''}" onclick="togglePin(event,'${t.symbol}')"></i>
                     <div class="logo-wrapper">
                         <img src="${t.icon||'assets/tokens/default.png'}" class="token-icon-main" referrerpolicy="no-referrer">
                         ${t.chain_icon ? `<img src="${t.chain_icon}" class="chain-icon-sub" referrerpolicy="no-referrer">` : ''}
@@ -194,7 +198,9 @@ function renderTable() {
             </td>
             <td style="font-weight:700">$${p}</td>
             <td class="${cls}">${t.change_24h>=0?'+':''}${(t.change_24h||0).toFixed(2)}%</td>
-            <td style="color:#aaa">${fmt(t.liquidity)}</td>
+            
+            <td style="color:#F0B90B;font-weight:700">${fmt(t.volume?.daily)}</td>
+            
             <td style="font-weight:700;color:#fff">${fmt(t.volume?.total)}</td>
             <td class="c-purple">${fmt(t.volume?.limit)}</td>
             <td class="c-blue">${fmt(t.volume?.onchain)}</td>
@@ -208,7 +214,12 @@ function renderTable() {
 // 5. INIT
 window.safeSwitch('market');
 fetch(`${DATA_FILES[0]}?v=${Date.now()}`).then(r=>r.json()).then(data=>{
-    if(data.global_stats) document.getElementById('tk-total').innerText = '$'+parseInt(data.global_stats.total_volume_24h).toLocaleString();
+    if(data.global_stats) {
+        document.getElementById('tk-total').innerText = '$'+parseInt(data.global_stats.total_volume_24h).toLocaleString();
+        if(document.getElementById('tk-daily')) {
+            document.getElementById('tk-daily').innerText = '$'+parseInt(data.global_stats.total_volume_daily || 0).toLocaleString();
+        }
+    }
     ALL_TOKENS = data.tokens || [];
     FILTERED_TOKENS = [...ALL_TOKENS];
     renderTable();
