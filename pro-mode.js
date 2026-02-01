@@ -83,7 +83,7 @@ if (navbar && !document.getElementById('pm-toolbar')) {
 
 // --- 3. FUNCTIONS ---
 
-// Chuyển Tab (Sửa lại để không Alert nữa)
+// Chuyển Tab
 window.safeSwitch = function(mode) {
     const marketView = document.getElementById('view-market-pro');
     const btnM = document.getElementById('btn-tab-market');
@@ -101,7 +101,7 @@ window.safeSwitch = function(mode) {
         if(btnM) btnM.classList.add('active');
         if(btnT) btnT.classList.remove('active');
     } else {
-        // Tab Competition: Tạm thời ẩn Market, hiện lại Dashboard cũ (hoặc để trống)
+        // Tab Competition
         if(marketView) marketView.style.display = 'none';
         if(oldView) oldView.style.display = 'block';
         extras.forEach(e => e.style.display = 'block');
@@ -111,7 +111,7 @@ window.safeSwitch = function(mode) {
     }
 };
 
-// Sắp xếp (Restore Full Logic)
+// Sắp xếp
 window.sortData = function(column) {
     if (SORT_STATE.col === column) {
         SORT_STATE.dir = SORT_STATE.dir === 'desc' ? 'asc' : 'desc';
@@ -130,9 +130,7 @@ window.sortData = function(column) {
     // Highlight cột đang sort
     const headers = document.querySelectorAll('.pm-table th');
     const map = ['symbol','price','change_24h','liquidity','volume.total','volume.limit','volume.onchain','market_cap'];
-    const idx = map.indexOf(column); // Fix mapping đơn giản
-    // Lưu ý: Mapping này phải khớp thứ tự cột TH. 
-    // Symbol(0), Price(1), Change(2), Liq(3), Vol(4), Lim(5), Chain(6), Cap(7)
+    const idx = map.indexOf(column); 
     
     // Logic sort mảng
     ALL_TOKENS.sort((a, b) => {
@@ -154,7 +152,7 @@ window.sortData = function(column) {
     renderTable();
 };
 
-// Copy Contract (Restore Full Logic)
+// Copy Contract
 window.copyContract = function(addr, symbol) {
     if(!addr) return;
     navigator.clipboard.writeText(addr).then(() => {
@@ -185,13 +183,12 @@ function renderTable() {
         const sign = t.change_24h >= 0 ? '+' : '';
         const link = `https://www.binance.com/en/alpha/${t.id ? t.id.replace('ALPHA_','') : ''}`;
         
-        // --- LOGO LỒNG NHAU ---
-        let chainUrl = t.chain_icon;
-        // Fallback BSC icon nếu thiếu
-        if (!chainUrl && t.chain === 'BSC') {
-            chainUrl = 'https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250228/d0216ce4-a3e9-4bda-8937-4a6aa943ccf2.png';
-        }
-        const chainImg = chainUrl ? `<img src="${chainUrl}" class="chain-icon-sub" onerror="this.style.display='none'">` : '';
+        // --- LOGO LỒNG NHAU (FIXED: Thêm referrerPolicy) ---
+        // Lấy trực tiếp từ Backend như bạn yêu cầu
+        const chainUrl = t.chain_icon; 
+        
+        // Quan trọng: Thêm referrerpolicy="no-referrer" để ảnh không bị chặn 403
+        const chainImg = chainUrl ? `<img src="${chainUrl}" class="chain-icon-sub" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : '';
         const logoUrl = t.icon || 'assets/tokens/default.png';
 
         // --- BADGES ---
@@ -212,8 +209,8 @@ function renderTable() {
                 // Logic màu sắc: BSC 4x là vàng, còn lại là tím/xanh
                 const isGold = (t.chain === 'BSC' && t.mul_point >= 4);
                 let badgeClass = 'bd-2x';
-                if (isGold) badgeClass = 'bd-4x'; // Vàng
-                else if (t.mul_point >= 4) badgeClass = 'bd-4x'; // Vàng/Tím tùy chỉnh css (ở đây dùng chung vàng cho 4x)
+                if (isGold) badgeClass = 'bd-4x'; 
+                else if (t.mul_point >= 4) badgeClass = 'bd-4x';
                 
                 mulBadge = `<span class="badge ${badgeClass}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
             }
