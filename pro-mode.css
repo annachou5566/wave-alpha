@@ -1,145 +1,51 @@
-/* pro-mode.css - Wave Alpha Identity */
+/* pro-mode.css */
+:root { --pm-bg-body: #0b0e11; --pm-bg-card: #161a1e; --pm-line: #2b3139; --pm-text: #EAECEF; --pm-sub: #848E9C; --pm-gold: #F0B90B; --pm-green: #0ECB81; --pm-red: #F6465D; --font-num: 'Rajdhani', sans-serif; --font-text: 'Be Vietnam Pro', sans-serif; }
 
-:root {
-    --pm-bg-body: #0b0e11;
-    --pm-bg-card: #161a1e;
-    --pm-line: #2b3139;
-    --pm-text: #EAECEF;
-    --pm-sub: #848E9C;
-    --pm-gold: #F0B90B;
-    --pm-green: #0ECB81;
-    --pm-red: #F6465D;
-    --font-num: 'Rajdhani', sans-serif;
-    --font-text: 'Be Vietnam Pro', sans-serif;
-}
-
-/* 1. Màn hình bảo trì */
-#maintenance-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--pm-bg-body); z-index: 999999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
-.pm-loader {
-    width: 50px; height: 50px; border: 2px solid rgba(255, 255, 255, 0.1);
-    border-top-color: var(--pm-gold); border-radius: 50%;
-    animation: spin 0.8s infinite linear; margin-bottom: 20px;
-}
+#maintenance-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--pm-bg-body); z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.pm-loader { width: 50px; height: 50px; border: 2px solid rgba(255, 255, 255, 0.1); border-top-color: var(--pm-gold); border-radius: 50%; animation: spin 0.8s infinite linear; margin-bottom: 20px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.pm-title { font-family: var(--font-num); font-size: 2rem; font-weight: 700; color: #fff; letter-spacing: 2px; }
-.pm-desc { font-family: var(--font-text); color: var(--pm-sub); font-size: 0.9rem; margin-top: 10px; }
 
-/* 2. Thanh Công Cụ Mới (Toolbar) */
-.pm-toolbar-wrapper {
-    background: #0b0e11; /* Trùng màu nền header */
-    border-bottom: 1px solid var(--pm-line);
-    padding: 15px 0;
-    margin-bottom: 20px;
-}
+.pm-toolbar-wrapper { background: #0b0e11; border-bottom: 1px solid var(--pm-line); padding: 15px 0; margin-bottom: 20px; }
+.pm-container { max-width: 1400px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
 
-.pm-container {
-    max-width: 1400px; margin: 0 auto; padding: 0 20px;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;
-}
-
-/* Tabs Switcher */
-.pm-tab-group {
-    display: flex; background: #20252b; padding: 4px; border-radius: 8px; border: 1px solid var(--pm-line);
-}
-.pm-tab-item {
-    padding: 8px 20px; border-radius: 6px; cursor: pointer;
-    color: var(--pm-sub); font-family: var(--font-text); font-weight: 700; font-size: 13px;
-    transition: 0.2s; border: none; background: transparent; display: flex; align-items: center; gap: 8px;
-}
-.pm-tab-item.active {
-    background: var(--pm-gold); color: #000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
+.pm-tab-group { display: flex; background: #20252b; padding: 4px; border-radius: 8px; border: 1px solid var(--pm-line); }
+.pm-tab-item { padding: 8px 20px; border-radius: 6px; cursor: pointer; color: var(--pm-sub); font-family: var(--font-text); font-weight: 700; font-size: 13px; transition: 0.2s; border: none; background: transparent; display: flex; align-items: center; gap: 8px; }
+.pm-tab-item.active { background: var(--pm-gold); color: #000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 .pm-tab-item:hover:not(.active) { color: var(--pm-text); background: rgba(255,255,255,0.05); }
 
-/* Ticker Mini */
 .pm-ticker { display: flex; gap: 30px; }
 .pm-tick-box { display: flex; flex-direction: column; align-items: flex-end; }
 .pm-tick-lbl { font-size: 10px; color: var(--pm-sub); text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-text); }
 .pm-tick-val { font-size: 16px; color: var(--pm-text); font-weight: 700; font-family: var(--font-num); }
 
-/* 3. Bảng Market Pro */
-#view-market-pro {
-    background: var(--pm-bg-body); min-height: 80vh; padding-bottom: 50px;
-    animation: fadeIn 0.4s;
-}
-.pm-card {
-    max-width: 1400px; margin: 0 auto;
-    background: var(--pm-bg-card); border-radius: 12px; border: 1px solid var(--pm-line);
-    overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
+#view-market-pro { background: var(--pm-bg-body); min-height: 80vh; padding-bottom: 50px; animation: fadeIn 0.4s; }
+.pm-card { max-width: 1400px; margin: 0 auto; background: var(--pm-bg-card); border-radius: 12px; border: 1px solid var(--pm-line); overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+
 .pm-table { width: 100%; border-collapse: collapse; }
-.pm-table th {
-    background: #1b2026; 
-    color: var(--pm-sub); font-family: var(--font-text); font-size: 12px; text-transform: uppercase; font-weight: 600;
-    padding: 16px 20px; text-align: right; border-bottom: 1px solid var(--pm-line); white-space: nowrap;
-}
-.pm-table th:first-child { text-align: left; padding-left: 25px; }
-.pm-table td {
-    padding: 16px 20px; border-bottom: 1px solid var(--pm-line); color: var(--pm-text);
-    font-family: var(--font-num); font-size: 16px; font-weight: 600; text-align: right; vertical-align: middle;
-}
-.pm-table td:first-child { text-align: left; padding-left: 25px; }
-.pm-table tr:hover { background: var(--pm-bg-hover); cursor: pointer; }
-
-/* Các thành phần nhỏ */
-.c-purple { color: #bb86fc !important; }
-.c-blue { color: #00b8ff !important; }
-.c-up { color: var(--pm-green); }
-.c-down { color: var(--pm-red); }
-.token-icon { width: 32px; height: 32px; border-radius: 50%; background: #000; border: 1px solid var(--pm-line); margin-right: 12px; vertical-align: middle; }
-.token-name { color: var(--pm-sub); font-size: 12px; font-family: var(--font-text); margin-left: 6px; }
-
-/* Nút Load More */
-.pm-footer { padding: 20px; text-align: center; border-top: 1px solid var(--pm-line); }
-.btn-more {
-    background: var(--pm-bg-hover); color: var(--pm-text); border: 1px solid var(--pm-line);
-    padding: 10px 40px; border-radius: 30px; font-family: var(--font-text); font-weight: 600; font-size: 13px;
-    cursor: pointer; transition: 0.3s;
-}
-.btn-more:hover { border-color: var(--pm-gold); color: var(--pm-gold); transform: translateY(-2px); }
-
-/* QUAN TRỌNG: Class ẩn/hiện */
-.hidden-view { display: none !important; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-/* HEADER BẢNG: Thêm trỏ chuột để bấm sort */
-.pm-table th {
-    background: #1b2026; 
-    color: var(--pm-sub); font-family: var(--font-text); font-size: 11px; 
-    text-transform: uppercase; font-weight: 700;
-    padding: 12px 15px; border-bottom: 1px solid var(--pm-line); 
-    white-space: nowrap; cursor: pointer; user-select: none;
-}
+.pm-table th { background: #1b2026; color: var(--pm-sub); font-family: var(--font-text); font-size: 11px; text-transform: uppercase; font-weight: 700; padding: 12px 15px; border-bottom: 1px solid var(--pm-line); white-space: nowrap; cursor: pointer; user-select: none; }
 .pm-table th:hover { color: var(--pm-text); background: #252a30; }
 .pm-table th.active-sort { color: var(--pm-gold); }
+.pm-table td { padding: 12px 15px; border-bottom: 1px solid var(--pm-line); color: var(--pm-text); font-family: var(--font-num); font-size: 16px; font-weight: 600; text-align: right; vertical-align: middle; }
+.pm-table td:first-child { text-align: left; padding-left: 25px; }
+.pm-table tr:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
 
-/* Mũi tên Sort */
-.sort-icon { margin-left: 5px; font-size: 10px; opacity: 0.5; }
-.active-sort .sort-icon { opacity: 1; }
+/* BADGES MỚI */
+.badge-spot { background: #F0B90B; color: #000; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; display: inline-block; }
+.badge-delisted { background: #F6465D; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; display: inline-block; }
 
-/* TOKEN CELL: Logo & Contract */
+/* Components */
+.c-purple { color: #bb86fc !important; } .c-blue { color: #00b8ff !important; } .c-up { color: var(--pm-green); } .c-down { color: var(--pm-red); }
 .td-token { display: flex; align-items: center; gap: 10px; }
 .token-icon { width: 32px; height: 32px; border-radius: 50%; background: #000; border: 1px solid var(--pm-line); }
-.token-info { display: flex; flex-direction: column; line-height: 1.3; }
 .token-symbol { font-family: var(--font-num); font-weight: 700; font-size: 15px; color: #fff; }
-
-/* CONTRACT ADDRESS STYLE */
-.token-contract {
-    font-family: monospace; font-size: 11px; color: #555; 
-    cursor: copy; display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px; margin-top: 2px;
-}
+.token-contract { font-family: monospace; font-size: 11px; color: #555; cursor: copy; display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px; margin-top: 2px; }
 .token-contract:hover { color: var(--pm-gold); background: rgba(240, 185, 11, 0.1); }
+.sort-icon { margin-left: 5px; font-size: 10px; opacity: 0.5; } .active-sort .sort-icon { opacity: 1; }
 
-/* Toast thông báo copy */
-#copy-toast {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--pm-gold); color: #000; padding: 8px 16px; border-radius: 20px;
-    font-weight: 700; font-size: 12px; font-family: var(--font-text);
-    opacity: 0; transition: 0.3s; z-index: 999999; pointer-events: none;
-}
+.pm-footer { padding: 20px; text-align: center; border-top: 1px solid var(--pm-line); }
+.btn-more { background: rgba(255,255,255,0.05); color: var(--pm-text); border: 1px solid var(--pm-line); padding: 10px 40px; border-radius: 30px; font-family: var(--font-text); font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.3s; }
+.btn-more:hover { border-color: var(--pm-gold); color: var(--pm-gold); transform: translateY(-2px); }
+
+#copy-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--pm-gold); color: #000; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 12px; opacity: 0; transition: 0.3s; z-index: 999999; pointer-events: none; }
 .show-toast { opacity: 1 !important; transform: translateY(-10px) !important; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
