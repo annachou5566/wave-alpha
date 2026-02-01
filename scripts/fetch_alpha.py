@@ -23,7 +23,7 @@ def safe_float(val):
         return 0.0
 
 def fetch_data():
-    print("🚀 Updating Data: Fetching All Tokens Limit Vol (No Threshold)...")
+    print("🚀 Updating Data: Fetching Tokens & Filtering Global Stats (Alpha Only)...")
     
     try:
         resp = requests.get(API_AGG_TICKER, headers=FAKE_HEADERS, timeout=15)
@@ -48,7 +48,7 @@ def fetch_data():
             mul_point = safe_float(item.get("mulPoint"))
             listing_time = item.get("listingTime", 0)
 
-            # LOGIC TRẠNG THÁI
+            # --- LOGIC TRẠNG THÁI ---
             listing_cex = item.get("listingCex", False) is True
             is_offline = item.get("offline", False) is True
 
@@ -58,33 +58,29 @@ def fetch_data():
             elif (not listing_cex) and is_offline:
                 status = "DELISTED"
 
-            # --- SỬA LOGIC TẠI ĐÂY: Bỏ điều kiện > 50000 để lấy hết Limit Vol ---
+            # --- LIMIT VOL ---
             limit_vol = 0.0
-            if alpha_id:
+            if alpha_id: 
                 try:
-                    # Thử cặp USDT
                     limit_url = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDT"
                     limit_res = requests.get(limit_url, headers=FAKE_HEADERS, timeout=0.5).json()
                     
                     if limit_res.get("success") and limit_res.get("data"):
                         limit_vol = safe_float(limit_res["data"].get("quoteVolume"))
                     else:
-                        # Thử cặp USDC (Fallback)
                         limit_url_usdc = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDC"
                         limit_res_usdc = requests.get(limit_url_usdc, headers=FAKE_HEADERS, timeout=0.5).json()
                         if limit_res_usdc.get("success") and limit_res_usdc.get("data"):
                             limit_vol = safe_float(limit_res_usdc["data"].get("quoteVolume"))
                 except: pass
 
-            # Ràng buộc dữ liệu
             if limit_vol > total_vol: limit_vol = total_vol
             onchain_vol = max(0, total_vol - limit_vol)
 
-            # SOURCE
             source_type = "On-Chain"
             if status == "DELISTED": source_type = "DELISTED"
             elif status == "SPOT": source_type = "SPOT"
-            elif limit_vol > 0: source_type = "Hybrid" # Chỉ cần có limit vol là Hybrid
+            elif limit_vol > 0: source_type = "Hybrid"
 
             token_obj = {
                 "id": alpha_id,
@@ -104,9 +100,12 @@ def fetch_data():
                 "volume": { "total": total_vol, "limit": limit_vol, "onchain": onchain_vol, "source": source_type }
             }
             processed_tokens.append(token_obj)
-            global_stats["total_volume_24h"] += total_vol
-            global_stats["total_limit_volume"] += limit_vol
-            global_stats["total_onchain_volume"] += onchain_vol
+
+            # --- CHỈ TÍNH VOLUME ALPHA VÀO GLOBAL STATS ---
+            if status == "ALPHA":
+                global_stats["total_volume_24h"] += total_vol
+                global_stats["total_limit_volume"] += limit_vol
+                global_stats["total_onchain_volume"] += onchain_vol
 
         processed_tokens.sort(key=lambda x: x["volume"]["total"], reverse=True)
 
@@ -119,7 +118,7 @@ def fetch_data():
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
             
-        print(f"🎉 Updated! Fetched {len(processed_tokens)} tokens including small Limit Vol.")
+        print(f"🎉 Updated! Global Stats exclude SPOT/DELISTED.")
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")
