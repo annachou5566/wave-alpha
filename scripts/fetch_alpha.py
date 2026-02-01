@@ -23,7 +23,7 @@ def safe_float(val):
         return 0.0
 
 def fetch_data():
-    print("🚀 Updating Data: Chain, Multiplier & Listing Time...")
+    print("🚀 Updating Data: Fetching Chain Icons...")
     
     try:
         resp = requests.get(API_AGG_TICKER, headers=FAKE_HEADERS, timeout=15)
@@ -43,12 +43,13 @@ def fetch_data():
             alpha_id = item.get("alphaId")
             contract = item.get("contractAddress", "")
             
-            # --- 1. LẤY DATA MỚI ---
-            chain = item.get("chainName", "UNK")        # Hệ Token
-            mul_point = safe_float(item.get("mulPoint")) # Hệ số nhân (4, 2, 1...)
-            listing_time = item.get("listingTime", 0)    # Thời gian list (miliseconds)
+            # --- 1. LẤY DATA MỚI (Thêm chainIconUrl) ---
+            chain_name = item.get("chainName", "UNK")
+            chain_icon = item.get("chainIconUrl", "") # <-- Lấy link icon chain
+            mul_point = safe_float(item.get("mulPoint"))
+            listing_time = item.get("listingTime", 0)
 
-            # --- 2. LOGIC TRẠNG THÁI (Spot/Delisted) ---
+            # --- 2. LOGIC TRẠNG THÁI ---
             listing_cex = item.get("listingCex", False) is True
             is_offline = item.get("offline", False) is True
 
@@ -83,11 +84,12 @@ def fetch_data():
                 "symbol": symbol,
                 "name": item.get("name"),
                 "icon": item.get("iconUrl"),
+                "chain": chain_name,
+                "chain_icon": chain_icon, # <-- Lưu vào JSON
                 "contract": contract,
                 "status": status,
-                "chain": chain,          # <-- Hệ
-                "mul_point": mul_point,  # <-- Hệ số nhân
-                "listing_time": listing_time, # <-- Ngày lên sàn
+                "mul_point": mul_point,
+                "listing_time": listing_time,
                 "price": price,
                 "change_24h": safe_float(item.get("percentChange24h")),
                 "liquidity": safe_float(item.get("liquidity")),
@@ -110,7 +112,7 @@ def fetch_data():
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
             
-        print(f"🎉 Updated! Added ListingTime & Multiplier for {len(processed_tokens)} tokens.")
+        print(f"🎉 Updated! Fetched Chain Icons for {len(processed_tokens)} tokens.")
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")

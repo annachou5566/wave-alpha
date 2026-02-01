@@ -1,23 +1,10 @@
-/* pro-mode.js - Final Clean UI */
+/* pro-mode.js - Final: Nested Logos (Binance Style) */
 
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
 let VISIBLE_COUNT = 10;
 const LOAD_STEP = 10;
 let SORT_STATE = { col: 'volume.total', dir: 'desc' };
-
-/* --- HELPER: CHỌN MÀU HỆ --- */
-function getChainClass(chainName) {
-    if (!chainName || chainName === 'UNK') return 'chain-UNK';
-    const c = chainName.toUpperCase();
-    if (c.includes('BSC') || c.includes('BINANCE')) return 'chain-BSC';
-    if (c.includes('ETH')) return 'chain-ETH';
-    if (c.includes('SOL')) return 'chain-SOL';
-    if (c.includes('ARB')) return 'chain-ARB';
-    if (c.includes('BASE')) return 'chain-BASE';
-    if (c.includes('MATIC') || c.includes('POLY')) return 'chain-MATIC';
-    return 'chain-UNK';
-}
 
 window.safeSwitch = function(mode) {
     const marketView = document.getElementById('view-market-pro');
@@ -78,7 +65,7 @@ window.loadMore = function() {
     setTimeout(() => {
         VISIBLE_COUNT += LOAD_STEP;
         renderTable();
-        if(btn) btn.innerHTML = 'Show Next 10 Tokens <i class="fas fa-chevron-down"></i>';
+        if(btn) btn.innerHTML = 'Show Next 10 Tokens';
     }, 150);
 };
 
@@ -112,19 +99,17 @@ function renderTable() {
         const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
         const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
 
-        // --- BADGE RENDER ---
+        // 1. ẢNH LỒNG NHAU (Token + Chain)
+        // Nếu có chain_icon thì hiện ảnh nhỏ, không thì thôi
+        let chainImgHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-icon-sub" title="${t.chain}">` : '';
         
-        // 1. Hệ (Chain): Nhỏ, trước tên
-        const chainName = t.chain && t.chain !== 'UNK' ? t.chain : '';
-        let chainHtml = chainName ? `<span class="badge ${getChainClass(chainName)}">${chainName}</span>` : '';
+        // 2. BADGE STATUS
+        let statusBadge = '';
+        if (t.status === 'SPOT') statusBadge = `<span class="badge bd-spot">SPOT</span>`;
+        else if (t.status === 'DELISTED') statusBadge = `<span class="badge bd-delist">DELISTED</span>`;
 
-        // 2. Status (Spot/Delisted): Nhỏ, sau tên
-        let statusHtml = '';
-        if (t.status === 'SPOT') statusHtml = `<span class="badge bd-spot">SPOT</span>`;
-        else if (t.status === 'DELISTED') statusHtml = `<span class="badge bd-delist">DELISTED</span>`;
-
-        // 3. Multiplier (4x 19d): Nhỏ, sau tên
-        let mulHtml = '';
+        // 3. BADGE MULTIPLIER
+        let mulBadge = '';
         if (t.listing_time > 0) {
             const now = Date.now();
             const expiry = t.listing_time + (30 * 24 * 60 * 60 * 1000);
@@ -133,9 +118,8 @@ function renderTable() {
 
             if (daysLeft > 0 && t.mul_point >= 2) {
                 const isBSC4x = (t.chain === 'BSC' && t.mul_point >= 4);
-                let cls = isBSC4x ? 'bd-4x' : (t.mul_point >= 4 ? 'bd-4x' : 'bd-2x'); // 4x có viền, 2x thường
-                // Format: "4x 19d"
-                mulHtml = `<span class="badge ${cls}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
+                let cls = isBSC4x ? 'bd-4x' : (t.mul_point >= 4 ? 'bd-4x' : 'bd-2x');
+                mulBadge = `<span class="badge ${cls}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
             }
         }
 
@@ -143,10 +127,13 @@ function renderTable() {
         <tr onclick="window.open('${link}', '_blank')">
             <td style="padding-left:25px">
                 <div class="td-token">
-                    <img src="${logoUrl}" class="token-icon" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
+                    <div class="logo-wrapper">
+                        <img src="${logoUrl}" class="token-icon-main" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
+                        ${chainImgHtml}
+                    </div>
                     <div class="token-info">
                         <div class="token-symbol">
-                            ${chainHtml} ${t.symbol || '???'} ${statusHtml} ${mulHtml}
+                            ${t.symbol || '???'} ${statusBadge} ${mulBadge}
                         </div>
                         ${contractHtml}
                     </div>

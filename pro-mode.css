@@ -1,60 +1,48 @@
-/* pro-mode.css - Final Clean Version */
+/* pro-mode.css - Cleanest Version */
 :root { 
     --pm-bg: #0b0e11; --pm-card: #161a1e; --pm-line: #2b3139; 
     --pm-text: #EAECEF; --pm-gold: #F0B90B; --pm-red: #F6465D;
-    --font-main: 'Be Vietnam Pro', sans-serif; 
-    --font-num: 'Rajdhani', sans-serif;
+    --font-main: 'Be Vietnam Pro', sans-serif; --font-num: 'Rajdhani', sans-serif;
 }
 
-/* --- 1. GIAO DIỆN BẢO TRÌ (Tiếng Anh - Pro) --- */
-.maint-box { 
-    height: 100vh; display: flex; flex-direction: column; 
-    align-items: center; justify-content: center; 
-    background: var(--pm-bg); font-family: var(--font-main); text-align: center;
+/* 1. LOGO LỒNG NHAU (CHAIN ICON) */
+.logo-wrapper {
+    position: relative;
+    width: 32px; height: 32px;
+    display: inline-block;
+    margin-right: 8px;
 }
-.spinner { 
-    width: 40px; height: 40px; 
-    border: 3px solid rgba(240, 185, 11, 0.1); 
-    border-top-color: var(--pm-gold); border-radius: 50%; 
-    animation: spin 0.8s linear infinite; margin-bottom: 20px;
+.token-icon-main {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 1px solid var(--pm-line);
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-.maint-title { font-size: 24px; font-weight: 700; color: #fff; letter-spacing: 1px; margin-bottom: 8px; }
-.maint-desc { font-size: 13px; color: #848E9C; }
-
-/* --- 2. BADGE SIÊU NHỎ & MÀU SẮC --- */
-.token-symbol { 
-    font-size: 15px; font-weight: 700; color: #fff; /* Tên to rõ */
-    display: flex; align-items: center; gap: 4px; 
-}
-
-/* Base style cho tất cả badge */
-.badge {
-    font-size: 8px; font-weight: 800; /* Chữ nhỏ */
-    padding: 1px 4px; border-radius: 3px; /* Gọn gàng */
-    line-height: 1.2; white-space: nowrap;
-    vertical-align: middle;
+.chain-icon-sub {
+    position: absolute;
+    bottom: -2px; right: -2px; /* Góc dưới phải */
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--pm-card); /* Viền trùng màu nền để tách biệt */
+    background: #000;
 }
 
-/* Màu từng hệ (Thêm nhiều hệ phổ biến) */
-.chain-BSC { background: #F0B90B; color: #000; }
-.chain-ETH, .chain-Ethereum { background: #627EEA; color: #fff; }
-.chain-SOL, .chain-Solana { background: #14F195; color: #000; }
-.chain-ARB, .chain-Arbitrum { background: #28A0F0; color: #fff; }
-.chain-BASE { background: #0052FF; color: #fff; }
-.chain-MATIC, .chain-Polygon { background: #8247E5; color: #fff; }
-.chain-UNK { background: #2b3139; color: #888; border: 1px solid #444; }
-
-/* Status Badge */
+/* 2. BADGE NHỎ */
+.badge { font-size: 8px; font-weight: 800; padding: 1px 4px; border-radius: 3px; vertical-align: middle; margin-left: 4px; }
 .bd-spot { background: #F0B90B; color: #000; }
 .bd-delist { background: #F6465D; color: #fff; }
-
-/* Multiplier Badge */
 .bd-4x { background: #F0B90B; color: #000; border: 1px solid #fff; box-shadow: 0 0 5px rgba(240,185,11,0.5); }
 .bd-2x { background: #2b3139; color: #fff; border: 1px solid #555; }
 .bd-time { opacity: 0.8; font-weight: 500; margin-left: 2px; }
 
-/* --- CÁC THÀNH PHẦN KHÁC (Giữ nguyên) --- */
+/* 3. GIAO DIỆN BẢO TRÌ */
+.maint-box { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--pm-bg); font-family: var(--font-main); text-align: center; }
+.spinner { width: 40px; height: 40px; border: 3px solid rgba(240, 185, 11, 0.1); border-top-color: var(--pm-gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.maint-title { font-size: 24px; font-weight: 700; color: #fff; letter-spacing: 1px; margin-bottom: 8px; }
+.maint-desc { font-size: 13px; color: #848E9C; }
+
+/* 4. BASE UI */
+.token-symbol { font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; }
 .pm-toolbar-wrapper { background: #0b0e11; border-bottom: 1px solid var(--pm-line); padding: 15px 0; margin-bottom: 20px; }
 .pm-container { max-width: 1400px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
 .pm-tab-group { display: flex; background: #20252b; padding: 4px; border-radius: 8px; border: 1px solid var(--pm-line); }
@@ -70,8 +58,7 @@
 .pm-table th:first-child { text-align: left; padding-left: 25px; }
 .pm-table td { padding: 10px 15px; border-bottom: 1px solid var(--pm-line); color: var(--pm-text); font-family: var(--font-num); font-size: 16px; font-weight: 600; text-align: right; vertical-align: middle; }
 .pm-table td:first-child { text-align: left; padding-left: 25px; }
-.td-token { display: flex; align-items: center; gap: 10px; }
-.token-icon { width: 28px; height: 28px; border-radius: 50%; } /* Icon nhỏ lại chút cho gọn */
+.td-token { display: flex; align-items: center; } /* Xóa gap để logo sát vào */
 .token-contract { font-family: monospace; font-size: 10px; color: #555; cursor: copy; display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 3px; }
 .c-purple { color: #bb86fc !important; } .c-blue { color: #00b8ff !important; } .c-up { color: #0ECB81; } .c-down { color: #F6465D; }
 .btn-more { background: rgba(255,255,255,0.05); color: var(--pm-text); border: 1px solid var(--pm-line); padding: 10px 40px; border-radius: 30px; margin-top:20px; cursor: pointer; }
