@@ -1,10 +1,65 @@
 :root { --pm-bg: #0b0e11; --pm-card: #161a1e; --pm-line: #2b3139; --pm-text: #EAECEF; --pm-gold: #F0B90B; }
-.pm-controls-row { width: 100%; display: flex; justify-content: flex-end; margin-bottom: 12px; }
-.pm-search-wrapper { position: relative; width: 300px; }
-.pm-search-input { width: 100%; background: #161a1e; border: 1px solid var(--pm-line); border-radius: 6px; padding: 10px 38px; color: #fff; }
-.search-icon-inside { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #666; }
-.badge { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 700; margin-left: 5px; }
-.bd-4x { background: rgba(240,185,11,0.15); color: #F0B90B; border: 1px solid rgba(240,185,11,0.3); }
-.bd-2x { background: rgba(56,189,248,0.1); color: #38bdf8; border: 1px solid rgba(56,189,248,0.2); }
-.bd-time { opacity: 0.7; font-size: 9px; margin-left: 4px; }
-/* ... giữ các style table/maint box cũ ... */
+
+/* 1. LAYOUT CHÍNH */
+.pm-container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+.pm-controls-row { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; margin-top: 10px; }
+
+/* 2. SEARCH BAR (Góc phải) */
+.pm-search-wrapper { position: relative; width: 280px; }
+.pm-search-input { width: 100%; background: #161a1e; border: 1px solid var(--pm-line); border-radius: 8px; padding: 10px 10px 10px 40px; color: #fff; font-size: 13px; transition: 0.2s; }
+.pm-search-input:focus { outline: none; border-color: var(--pm-gold); background: #0b0e11; }
+.search-icon-inside { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #666; font-size: 14px; }
+
+/* 3. TABLE STYLES */
+.pm-card { background: var(--pm-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--pm-line); margin-bottom: 30px; }
+.pm-table { width: 100%; border-collapse: collapse; color: #fff; }
+.pm-table th { padding: 14px 15px; border-bottom: 1px solid var(--pm-line); text-align: right; color: #888; font-size: 11px; cursor: pointer; }
+.pm-table td { padding: 12px 15px; border-bottom: 1px solid var(--pm-line); text-align: right; vertical-align: middle; font-weight: 600; font-size: 14px; }
+.pm-table th:first-child, .pm-table td:first-child { text-align: left; padding-left: 25px; }
+
+/* 4. TOKEN INFO & BADGES */
+.td-token { display: flex; align-items: center; }
+.logo-wrapper { position: relative; width: 32px; height: 32px; margin-right: 12px; flex-shrink: 0; }
+.token-icon-main { width: 100%; height: 100%; border-radius: 50%; background: #000; }
+.chain-icon-sub { position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--pm-card); background: #fff; }
+
+.token-symbol { font-weight: 700; font-size: 15px; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+.token-contract { font-size: 11px; color: #555; cursor: copy; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
+.token-contract:hover { color: var(--pm-gold); }
+
+/* BADGES STYLE (Tech/Cyber) */
+.badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; white-space: nowrap; letter-spacing: 0.5px; }
+.bd-spot { background: #F0B90B; color: #000; }
+.bd-delist { background: #F6465D; color: #fff; }
+
+/* x4: Vàng lợt, trong suốt, viền mờ */
+.bd-4x { 
+    background: rgba(240, 185, 11, 0.1); 
+    color: #F0B90B; 
+    border: 1px solid rgba(240, 185, 11, 0.3);
+}
+/* x2: Xanh dương chìm */
+.bd-2x { 
+    background: rgba(56, 189, 248, 0.08); 
+    color: #38bdf8; 
+    border: 1px solid rgba(56, 189, 248, 0.15); 
+}
+.bd-time { opacity: 0.7; font-size: 9px; margin-left: 3px; font-weight: 500; }
+
+/* 5. COMPONENTS */
+.btn-pin { color: #333; cursor: pointer; margin-right: 10px; font-size: 14px; transition: 0.2s; }
+.btn-pin.active { color: var(--pm-gold); text-shadow: 0 0 8px rgba(240,185,11,0.4); }
+.pinned-row { background: rgba(240, 185, 11, 0.02); }
+.c-purple { color: #bb86fc; } .c-blue { color: #00b8ff; } .c-up { color: #0ECB81; } .c-down { color: #F6465D; }
+
+/* Maint & Toolbar */
+.maint-box { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--pm-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; }
+.spinner { width: 50px; height: 50px; border: 4px solid rgba(240,185,11,0.1); border-top-color: var(--pm-gold); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pm-toolbar-wrapper { background: #0b0e11; padding: 15px 0; border-bottom: 1px solid var(--pm-line); }
+.pm-tab-group { background: #20252b; padding: 4px; border-radius: 8px; display: inline-flex; }
+.pm-tab-item { padding: 8px 20px; border-radius: 6px; cursor: pointer; color: #888; font-weight: 700; border: none; background: transparent; }
+.pm-tab-item.active { background: var(--pm-gold); color: #000; }
+.btn-more { display: block; margin: 20px auto; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--pm-line); padding: 10px 40px; border-radius: 30px; cursor: pointer; }
+#copy-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--pm-gold); color: #000; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 12px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 9999; }
+.show-toast { opacity: 1 !important; transform: translateY(-10px) !important; }
