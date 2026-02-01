@@ -19,11 +19,19 @@
 .pm-tab-item { padding: 8px 20px; border-radius: 6px; cursor: pointer; color: #888; font-weight: 700; border: none; background: transparent; font-size: 13px; }
 .pm-tab-item.active { background: var(--pm-gold); color: #000; }
 
-/* 4. SEARCH & PIN (NEW) */
-.pm-search-wrapper { position: relative; width: 250px; }
-.pm-search-input { width: 100%; background: #20252b; border: 1px solid var(--pm-line); border-radius: 6px; padding: 8px 10px 8px 35px; color: #fff; font-size: 13px; transition: 0.2s; }
-.pm-search-input:focus { outline: none; border-color: var(--pm-gold); box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.1); }
-.search-icon-inside { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #555; font-size: 12px; }
+/* 4. SEARCH & PIN (UPDATED POSITION) */
+.pm-controls-row {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end; /* Canh phải */
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.pm-search-wrapper { position: relative; width: 300px; }
+.pm-search-input { width: 100%; background: #161a1e; border: 1px solid var(--pm-line); border-radius: 6px; padding: 10px 10px 10px 38px; color: #fff; font-size: 13px; transition: 0.2s; }
+.pm-search-input:focus { outline: none; border-color: var(--pm-gold); box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.1); background: #0b0e11; }
+.search-icon-inside { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #666; font-size: 13px; }
 
 .btn-pin { cursor: pointer; color: #333; transition: 0.2s; font-size: 14px; margin-right: 8px; }
 .btn-pin:hover { color: #666; }

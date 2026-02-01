@@ -1,4 +1,4 @@
-/* pro-mode.js - SEARCH MOVED TO MARKET TAB */
+/* pro-mode.js - SEARCH FIXED POSITION ABOVE TABLE */
 
 // --- 1. CHECK BẢO TRÌ ---
 (function() {
@@ -38,7 +38,7 @@ const HTML_UI = `
 <div id="view-market-pro">
     <div class="pm-container">
         
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+        <div class="pm-controls-row">
             <div class="pm-search-wrapper">
                 <i class="fas fa-search search-icon-inside"></i>
                 <input type="text" id="pm-search" class="pm-search-input" placeholder="Search Token / Contract..." oninput="handleSearch(this.value)">
@@ -101,45 +101,29 @@ window.safeSwitch = function(mode) {
     }
 };
 
-// SEARCH
 window.handleSearch = function(val) {
     const query = val.toLowerCase().trim();
-    if (!query) {
-        FILTERED_TOKENS = [...ALL_TOKENS];
-    } else {
-        FILTERED_TOKENS = ALL_TOKENS.filter(t => 
-            t.symbol.toLowerCase().includes(query) || 
-            (t.name && t.name.toLowerCase().includes(query)) ||
-            (t.contract && t.contract.toLowerCase().includes(query))
-        );
-    }
+    FILTERED_TOKENS = !query ? [...ALL_TOKENS] : ALL_TOKENS.filter(t => 
+        t.symbol.toLowerCase().includes(query) || 
+        (t.name && t.name.toLowerCase().includes(query)) ||
+        (t.contract && t.contract.toLowerCase().includes(query))
+    );
     VISIBLE_COUNT = 10;
     sortInternal(); 
     renderTable();
 };
 
-// PIN
 window.togglePin = function(e, symbol) {
     e.stopPropagation();
-    if (PINNED_SYMBOLS.includes(symbol)) {
-        PINNED_SYMBOLS = PINNED_SYMBOLS.filter(s => s !== symbol);
-    } else {
-        PINNED_SYMBOLS.push(symbol);
-    }
+    PINNED_SYMBOLS = PINNED_SYMBOLS.includes(symbol) ? PINNED_SYMBOLS.filter(s => s !== symbol) : [...PINNED_SYMBOLS, symbol];
     localStorage.setItem('alpha_pinned', JSON.stringify(PINNED_SYMBOLS));
     renderTable();
 };
 
-// SORT
 window.sortData = function(column) {
     if (SORT_STATE.col === column) { SORT_STATE.dir = SORT_STATE.dir === 'desc' ? 'asc' : 'desc'; } 
     else { SORT_STATE.col = column; SORT_STATE.dir = 'desc'; }
-    
-    document.querySelectorAll('.pm-table th').forEach(th => {
-        th.classList.remove('active-sort');
-        if(th.innerText.toLowerCase().includes(column.split('.')[0])) th.classList.add('active-sort');
-    });
-
+    document.querySelectorAll('.pm-table th').forEach(th => th.classList.remove('active-sort'));
     sortInternal();
     renderTable();
 };
@@ -150,9 +134,7 @@ function sortInternal() {
         let valB = SORT_STATE.col.split('.').reduce((o, i) => (o ? o[i] : 0), b);
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
-        
-        if (SORT_STATE.dir === 'asc') return valA > valB ? 1 : -1;
-        return valA < valB ? 1 : -1;
+        return SORT_STATE.dir === 'asc' ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
     });
 }
 
@@ -171,8 +153,6 @@ function renderTable() {
     const tbody = document.getElementById('pm-body');
     if(!tbody) return;
     const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n || 0);
-    
-    // Logic hiển thị: Pinned lên đầu
     const pinned = FILTERED_TOKENS.filter(t => PINNED_SYMBOLS.includes(t.symbol));
     const others = FILTERED_TOKENS.filter(t => !PINNED_SYMBOLS.includes(t.symbol));
     const displayList = [...pinned, ...others].slice(0, VISIBLE_COUNT);
@@ -182,37 +162,18 @@ function renderTable() {
         const isPinned = PINNED_SYMBOLS.includes(t.symbol);
         const p = t.price < 1 ? (t.price || 0).toFixed(6) : (t.price || 0).toFixed(2);
         const cls = t.change_24h >= 0 ? 'c-up' : 'c-down';
-        const sign = t.change_24h >= 0 ? '+' : '';
-        
         const link = `https://www.binance.com/en/alpha/${t.id ? t.id.replace('ALPHA_','') : ''}`;
-        const chainImg = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-icon-sub" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : '';
-        const logoUrl = t.icon || 'assets/tokens/default.png';
-
-        // Badge Logic
-        let statusBadge = '';
-        if (t.status === 'SPOT') statusBadge = '<span class="badge bd-spot">SPOT</span>';
-        else if (t.status === 'DELISTED') statusBadge = '<span class="badge bd-delist">DELISTED</span>';
-        
-        let mulBadge = '';
-        if (t.listing_time > 0) {
-            const daysLeft = Math.ceil(((t.listing_time + (30*86400000)) - Date.now()) / 86400000);
-            if (daysLeft > 0 && t.mul_point >= 2) {
-                const isGold = (t.chain === 'BSC' && t.mul_point >= 4);
-                mulBadge = `<span class="badge ${isGold || t.mul_point >= 4 ? 'bd-4x' : 'bd-2x'}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
-            }
-        }
-
         html += `
         <tr onclick="window.open('${link}', '_blank')" class="${isPinned ? 'pinned-row' : ''}" style="cursor:pointer">
             <td style="padding-left:15px">
                 <div class="td-token">
-                    <i class="fas fa-star btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin(event, '${t.symbol}')" title="Pin/Unpin"></i>
+                    <i class="fas fa-star btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin(event, '${t.symbol}')"></i>
                     <div class="logo-wrapper">
-                        <img src="${logoUrl}" class="token-icon-main" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
-                        ${chainImg}
+                        <img src="${t.icon || 'assets/tokens/default.png'}" class="token-icon-main" referrerpolicy="no-referrer">
+                        ${t.chain_icon ? `<img src="${t.chain_icon}" class="chain-icon-sub" referrerpolicy="no-referrer">` : ''}
                     </div>
                     <div>
-                        <div class="token-symbol">${t.symbol} ${statusBadge} ${mulBadge}</div>
+                        <div class="token-symbol">${t.symbol} ${t.status === 'SPOT' ? '<span class="badge bd-spot">SPOT</span>' : ''}</div>
                         <div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">
                             ${t.contract ? t.contract.substring(0,6)+'...'+t.contract.slice(-4) : ''} <i class="far fa-copy"></i>
                         </div>
@@ -220,7 +181,7 @@ function renderTable() {
                 </div>
             </td>
             <td style="font-weight:700">$${p}</td>
-            <td class="${cls}">${sign}${(t.change_24h||0).toFixed(2)}%</td>
+            <td class="${cls}">${t.change_24h >= 0 ? '+' : ''}${(t.change_24h||0).toFixed(2)}%</td>
             <td style="color:#aaa">${fmt(t.liquidity)}</td>
             <td style="font-weight:700;color:#fff">${fmt(t.volume?.total)}</td>
             <td class="c-purple">${fmt(t.volume?.limit)}</td>
@@ -228,10 +189,8 @@ function renderTable() {
             <td style="padding-right:25px;color:#888">${fmt(t.market_cap)}</td>
         </tr>`;
     });
-    tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888">No data available.</td></tr>';
-    
-    const btn = document.querySelector('.btn-more');
-    if(btn) btn.style.display = (VISIBLE_COUNT >= FILTERED_TOKENS.length) ? 'none' : 'inline-block';
+    tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888">No data found.</td></tr>';
+    document.querySelector('.btn-more').style.display = (VISIBLE_COUNT >= FILTERED_TOKENS.length) ? 'none' : 'inline-block';
 }
 
 // --- 5. INIT ---
@@ -241,4 +200,4 @@ fetch(`${DATA_FILES[0]}?v=${Date.now()}`).then(r => r.json()).then(data => {
     ALL_TOKENS = data.tokens || [];
     FILTERED_TOKENS = [...ALL_TOKENS];
     renderTable();
-}).catch(e => console.log(e));
+});
