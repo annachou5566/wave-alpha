@@ -1,6 +1,6 @@
-/* pro-mode.js - RESTORED FULL */
+/* pro-mode.js - FULL RESTORED FUNCTIONALITY */
 
-// --- 1. KIỂM TRA BẢO TRÌ NGAY LẬP TỨC ---
+// --- 1. CHECK BẢO TRÌ ---
 (function() {
     const urlParams = new URLSearchParams(window.location.search);
     const isAdmin = urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_admin') === 'true';
@@ -12,20 +12,20 @@
                 <div class="maint-title">SYSTEM MAINTENANCE</div>
                 <div class="maint-desc">Optimizing Alpha Market engine. Please check back shortly.</div>
             </div>`;
-        throw new Error("Maintenance Mode Active"); // Dừng script tại đây
+        throw new Error("Maintenance Mode");
     } else {
         localStorage.setItem('wave_alpha_admin', 'true');
     }
 })();
 
-// --- 2. LOGIC CHÍNH ---
+// --- 2. CONFIG & STATE ---
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
 let VISIBLE_COUNT = 10;
 const LOAD_STEP = 10;
 let SORT_STATE = { col: 'volume.total', dir: 'desc' };
 
-// HTML Giao diện Tabs & Bảng
+// HTML UI
 const HTML_UI = `
 <div id="pm-toolbar" class="pm-toolbar-wrapper">
     <div class="pm-container">
@@ -35,7 +35,7 @@ const HTML_UI = `
         </div>
         <div class="pm-ticker">
             <div style="text-align:right">
-                <div style="font-size:10px;color:#888">TOTAL VOL</div>
+                <div style="font-size:10px;color:#888;letter-spacing:1px">TOTAL VOL</div>
                 <div style="font-size:16px;font-weight:700;color:#fff" id="tk-total">---</div>
             </div>
         </div>
@@ -49,30 +49,31 @@ const HTML_UI = `
                 <table class="pm-table">
                     <thead>
                         <tr>
-                            <th onclick="sortData('symbol')" style="padding-left:25px">Token <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('price')">Price <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('change_24h')">24h % <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('liquidity')">Liq <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('volume.total')">Total Vol <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('volume.limit')" class="c-purple">Limit <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('volume.onchain')" class="c-blue">Chain <i class="fas fa-sort"></i></th>
-                            <th onclick="sortData('market_cap')" style="padding-right:25px">Cap <i class="fas fa-sort"></i></th>
+                            <th onclick="sortData('symbol')" style="padding-left:25px;width:220px">Token <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('price')">Price <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('change_24h')">24h % <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('liquidity')">Liquidity <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('volume.total')">Total Vol <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('volume.limit')" class="c-purple">Limit Vol <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('volume.onchain')" class="c-blue">On-Chain <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('market_cap')" style="padding-right:25px">Cap <i class="fas fa-sort sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="pm-body">
-                        <tr><td colspan="8" style="text-align:center;padding:40px;color:#888">Loading...</td></tr>
+                        <tr><td colspan="8" style="text-align:center;padding:40px;color:#888"><i class="fas fa-circle-notch fa-spin"></i> Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
-            <div style="padding:20px;text-align:center">
-                <button onclick="loadMore()" style="background:#333;color:#fff;border:none;padding:10px 30px;border-radius:20px;cursor:pointer">Show More</button>
+            <div class="pm-footer" style="text-align:center;padding:20px">
+                <button class="btn-more" onclick="loadMore()">Show Next 10 Tokens</button>
             </div>
         </div>
     </div>
 </div>
+<div id="copy-toast">Copied to clipboard!</div>
 `;
 
-// Chèn Giao diện vào Web
+// Inject UI
 const navbar = document.querySelector('.navbar');
 if (navbar && !document.getElementById('pm-toolbar')) { 
     navbar.insertAdjacentHTML('afterend', HTML_UI); 
@@ -80,25 +81,98 @@ if (navbar && !document.getElementById('pm-toolbar')) {
     document.body.insertAdjacentHTML('afterbegin', HTML_UI); 
 }
 
-// Hàm Chuyển Tab
+// --- 3. FUNCTIONS ---
+
+// Chuyển Tab (Sửa lại để không Alert nữa)
 window.safeSwitch = function(mode) {
     const marketView = document.getElementById('view-market-pro');
     const btnM = document.getElementById('btn-tab-market');
     const btnT = document.getElementById('btn-tab-tourney');
     
+    // Nếu có view cũ (dashboard), ẩn/hiện nó
+    const oldView = document.getElementById('view-dashboard');
+    const extras = document.querySelectorAll('.hero-banner, .command-deck, .stats-row');
+
     if (mode === 'market') {
         if(marketView) marketView.style.display = 'block';
+        if(oldView) oldView.style.display = 'none';
+        extras.forEach(e => e.style.display = 'none');
+        
         if(btnM) btnM.classList.add('active');
         if(btnT) btnT.classList.remove('active');
     } else {
+        // Tab Competition: Tạm thời ẩn Market, hiện lại Dashboard cũ (hoặc để trống)
         if(marketView) marketView.style.display = 'none';
+        if(oldView) oldView.style.display = 'block';
+        extras.forEach(e => e.style.display = 'block');
+
         if(btnM) btnM.classList.remove('active');
         if(btnT) btnT.classList.add('active');
-        alert("Competition Tab is coming soon!");
     }
 };
 
-// Hàm Render Bảng (Có icon lồng nhau)
+// Sắp xếp (Restore Full Logic)
+window.sortData = function(column) {
+    if (SORT_STATE.col === column) {
+        SORT_STATE.dir = SORT_STATE.dir === 'desc' ? 'asc' : 'desc';
+    } else {
+        SORT_STATE.col = column;
+        SORT_STATE.dir = 'desc';
+    }
+    
+    // Cập nhật icon sort UI
+    document.querySelectorAll('.pm-table th').forEach(th => {
+        th.classList.remove('active-sort');
+        const icon = th.querySelector('.sort-icon');
+        if(icon) icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Highlight cột đang sort
+    const headers = document.querySelectorAll('.pm-table th');
+    const map = ['symbol','price','change_24h','liquidity','volume.total','volume.limit','volume.onchain','market_cap'];
+    const idx = map.indexOf(column); // Fix mapping đơn giản
+    // Lưu ý: Mapping này phải khớp thứ tự cột TH. 
+    // Symbol(0), Price(1), Change(2), Liq(3), Vol(4), Lim(5), Chain(6), Cap(7)
+    
+    // Logic sort mảng
+    ALL_TOKENS.sort((a, b) => {
+        let valA = column.split('.').reduce((o, i) => (o ? o[i] : 0), a);
+        let valB = column.split('.').reduce((o, i) => (o ? o[i] : 0), b);
+        
+        // Xử lý chuỗi/số
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        
+        if (SORT_STATE.dir === 'asc') {
+            return valA > valB ? 1 : -1;
+        } else {
+            return valA < valB ? 1 : -1;
+        }
+    });
+
+    VISIBLE_COUNT = 10;
+    renderTable();
+};
+
+// Copy Contract (Restore Full Logic)
+window.copyContract = function(addr, symbol) {
+    if(!addr) return;
+    navigator.clipboard.writeText(addr).then(() => {
+        const toast = document.getElementById('copy-toast');
+        if(toast) {
+            toast.innerText = `Copied ${symbol} Contract!`;
+            toast.classList.add('show-toast');
+            setTimeout(() => toast.classList.remove('show-toast'), 2000);
+        }
+    });
+};
+
+window.loadMore = function() {
+    VISIBLE_COUNT += 10;
+    renderTable();
+};
+
+// Render Bảng (Logo lồng nhau + Badges)
 function renderTable() {
     const tbody = document.getElementById('pm-body');
     if(!tbody) return;
@@ -111,54 +185,78 @@ function renderTable() {
         const sign = t.change_24h >= 0 ? '+' : '';
         const link = `https://www.binance.com/en/alpha/${t.id ? t.id.replace('ALPHA_','') : ''}`;
         
-        // Icon logic
+        // --- LOGO LỒNG NHAU ---
         let chainUrl = t.chain_icon;
-        if (!chainUrl && t.chain === 'BSC') chainUrl = 'https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250228/d0216ce4-a3e9-4bda-8937-4a6aa943ccf2.png';
+        // Fallback BSC icon nếu thiếu
+        if (!chainUrl && t.chain === 'BSC') {
+            chainUrl = 'https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250228/d0216ce4-a3e9-4bda-8937-4a6aa943ccf2.png';
+        }
         const chainImg = chainUrl ? `<img src="${chainUrl}" class="chain-icon-sub" onerror="this.style.display='none'">` : '';
         const logoUrl = t.icon || 'assets/tokens/default.png';
 
-        // Badge logic
-        let statusBadge = t.status === 'SPOT' ? '<span class="badge bd-spot">SPOT</span>' : (t.status === 'DELISTED' ? '<span class="badge bd-delist">DELISTED</span>' : '');
+        // --- BADGES ---
+        // Spot/Delist
+        let statusBadge = '';
+        if (t.status === 'SPOT') statusBadge = '<span class="badge bd-spot">SPOT</span>';
+        else if (t.status === 'DELISTED') statusBadge = '<span class="badge bd-delist">DELISTED</span>';
         
+        // Multiplier (4x 19d)
         let mulBadge = '';
         if (t.listing_time > 0) {
-            const daysLeft = Math.ceil((t.listing_time + (30*86400000) - Date.now()) / 86400000);
+            const now = Date.now();
+            const expiry = t.listing_time + (30 * 24 * 60 * 60 * 1000);
+            const diff = expiry - now;
+            const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
             if (daysLeft > 0 && t.mul_point >= 2) {
-                const isGold = t.chain === 'BSC' && t.mul_point >= 4;
-                mulBadge = `<span class="badge ${isGold ? 'bd-4x' : (t.mul_point>=4 ? 'bd-4x':'bd-2x')}">${t.mul_point}x ${daysLeft}d</span>`;
+                // Logic màu sắc: BSC 4x là vàng, còn lại là tím/xanh
+                const isGold = (t.chain === 'BSC' && t.mul_point >= 4);
+                let badgeClass = 'bd-2x';
+                if (isGold) badgeClass = 'bd-4x'; // Vàng
+                else if (t.mul_point >= 4) badgeClass = 'bd-4x'; // Vàng/Tím tùy chỉnh css (ở đây dùng chung vàng cho 4x)
+                
+                mulBadge = `<span class="badge ${badgeClass}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
             }
         }
+
+        // --- CONTRACT ---
+        const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
+        const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
 
         html += `
         <tr onclick="window.open('${link}', '_blank')" style="cursor:pointer">
             <td style="padding-left:25px">
-                <div style="display:flex;align-items:center">
+                <div class="td-token">
                     <div class="logo-wrapper">
-                        <img src="${logoUrl}" class="token-icon-main" onerror="this.src='assets/tokens/default.png'">
+                        <img src="${logoUrl}" class="token-icon-main" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
                         ${chainImg}
                     </div>
                     <div>
-                        <div class="token-symbol">${t.symbol} ${statusBadge} ${mulBadge}</div>
-                        <div style="font-size:10px;color:#666">${t.contract ? t.contract.substring(0,6)+'...' : ''}</div>
+                        <div class="token-symbol">
+                            ${t.symbol} ${statusBadge} ${mulBadge}
+                        </div>
+                        ${contractHtml}
                     </div>
                 </div>
             </td>
-            <td>$${p}</td>
+            <td style="font-weight:700">$${p}</td>
             <td class="${cls}">${sign}${(t.change_24h || 0).toFixed(2)}%</td>
             <td style="color:#aaa">${fmt(t.liquidity)}</td>
-            <td style="font-weight:bold;color:#fff">${fmt(t.volume?.total)}</td>
+            <td style="font-weight:700;color:#fff">${fmt(t.volume?.total)}</td>
             <td class="c-purple">${fmt(t.volume?.limit)}</td>
             <td class="c-blue">${fmt(t.volume?.onchain)}</td>
             <td style="padding-right:25px;color:#888">${fmt(t.market_cap)}</td>
         </tr>`;
     });
-    tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:20px">No data matches</td></tr>';
+    tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888">No data available.</td></tr>';
+    
+    // Ẩn hiện nút Load More
+    const btn = document.querySelector('.btn-more');
+    if(btn) btn.style.display = (VISIBLE_COUNT >= ALL_TOKENS.length) ? 'none' : 'inline-block';
 }
 
-// Load Data
-window.sortData = function(col) { /* Logic sort giữ nguyên */ };
-window.loadMore = function() { VISIBLE_COUNT += 10; renderTable(); };
-
+// --- 4. INIT LOAD ---
+window.safeSwitch('market');
 const ts = Date.now();
 DATA_FILES.forEach(path => {
     fetch(`${path}?v=${ts}`).then(r => r.json()).then(data => {
