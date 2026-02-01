@@ -1,4 +1,4 @@
-/* pro-mode.js - Fix Icon Render */
+/* pro-mode.js - Final HTML Structure */
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
 let VISIBLE_COUNT = 10;
@@ -98,13 +98,14 @@ function renderTable() {
         const shortContract = t.contract ? \`\${t.contract.substring(0,6)}...\${t.contract.substring(t.contract.length-4)}\` : '';
         const contractHtml = t.contract ? \`<div class="token-contract" onclick="event.stopPropagation(); copyContract('\${t.contract}', '\${t.symbol}')">\${shortContract} <i class="far fa-copy"></i></div>\` : '';
 
-        // --- CHAIN ICON (LỒNG NHAU) ---
-        // Nếu không có chain_icon, ta thử dùng icon mặc định của BSC nếu chainName là BSC
+        // --- ICON CHAIN LỒNG NHAU ---
+        // Nếu không có chain_icon trong data, ta check nếu là BSC thì gán cứng icon BSC
         let chainUrl = t.chain_icon;
         if (!chainUrl && t.chain === 'BSC') {
             chainUrl = 'https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250228/d0216ce4-a3e9-4bda-8937-4a6aa943ccf2.png';
         }
 
+        // Render ảnh con: Nếu lỗi (onerror) thì ẩn đi
         let chainImgHtml = chainUrl 
             ? \`<img src="\${chainUrl}" class="chain-icon-sub" title="\${t.chain}" onerror="this.style.display='none'">\` 
             : '';
