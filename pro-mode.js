@@ -1,4 +1,4 @@
-/* pro-mode.js - Final: Spot/Delisted Logic */
+/* pro-mode.js - RESTORED STABLE VERSION */
 
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
@@ -6,6 +6,7 @@ let VISIBLE_COUNT = 10;
 const LOAD_STEP = 10;
 let SORT_STATE = { col: 'volume.total', dir: 'desc' };
 
+// 1. Hàm chuyển Tab an toàn
 window.safeSwitch = function(mode) {
     const marketView = document.getElementById('view-market-pro');
     const oldView = document.getElementById('view-dashboard');
@@ -25,10 +26,12 @@ window.safeSwitch = function(mode) {
         extras.forEach(e => e.style.display = 'block');
         if(btnM) btnM.classList.remove('active');
         if(btnT) btnT.classList.add('active');
+        // Fix lỗi grid cũ
         if(typeof renderGrid === 'function') setTimeout(renderGrid, 100);
     }
 };
 
+// 2. Hàm Sort
 window.sortData = function(column) {
     if (SORT_STATE.col === column) {
         SORT_STATE.dir = SORT_STATE.dir === 'desc' ? 'asc' : 'desc';
@@ -48,12 +51,13 @@ window.sortData = function(column) {
     updateSortIcons();
 };
 
+// 3. Hàm Copy
 window.copyContract = function(addr, symbol) {
     if(!addr) return;
     navigator.clipboard.writeText(addr);
     const toast = document.getElementById('copy-toast');
     if(toast) {
-        toast.innerText = \`Copied \${symbol} Contract!\`;
+        toast.innerText = `Copied ${symbol} Contract!`;
         toast.classList.add('show-toast');
         setTimeout(() => toast.classList.remove('show-toast'), 2000);
     }
@@ -61,7 +65,7 @@ window.copyContract = function(addr, symbol) {
 
 window.loadMore = function() {
     const btn = document.querySelector('.btn-more');
-    if(btn) btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
+    if(btn) btn.innerHTML = 'Loading...';
     setTimeout(() => {
         VISIBLE_COUNT += LOAD_STEP;
         renderTable();
@@ -94,39 +98,31 @@ function renderTable() {
         const cls = t.change_24h >= 0 ? 'c-up' : 'c-down';
         const sign = t.change_24h >= 0 ? '+' : '';
         const alphaIdClean = t.id ? t.id.replace('ALPHA_','') : '';
-        const link = `https://www.binance.com/en/alpha/\${alphaIdClean}`;
+        const link = `https://www.binance.com/en/alpha/${alphaIdClean}`;
         
         const logoUrl = t.icon || 'assets/tokens/default.png';
-        const shortContract = t.contract ? \`\${t.contract.substring(0,6)}...\${t.contract.substring(t.contract.length-4)}\` : '';
-        const contractHtml = t.contract ? \`<div class="token-contract" onclick="event.stopPropagation(); copyContract('\${t.contract}', '\${t.symbol}')">\${shortContract} <i class="far fa-copy"></i></div>\` : '';
+        const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
+        const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
 
-        // BADGE LOGIC CHÍNH XÁC
-        let badgeHtml = '';
-        if (t.status === 'SPOT') {
-            badgeHtml = \`<span class="badge-spot">SPOT</span>\`;
-        } else if (t.status === 'DELISTED') {
-            badgeHtml = \`<span class="badge-delisted">DELISTED</span>\`;
-        }
-
-        html += \`
-        <tr onclick="window.open('\${link}', '_blank')">
+        html += `
+        <tr onclick="window.open('${link}', '_blank')">
             <td style="padding-left:25px">
                 <div class="td-token">
-                    <img src="\${logoUrl}" class="token-icon" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
+                    <img src="${logoUrl}" class="token-icon" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
                     <div class="token-info">
-                        <div class="token-symbol">\${t.symbol || '???'} \${badgeHtml}</div>
-                        \${contractHtml}
+                        <div class="token-symbol">${t.symbol || '???'}</div>
+                        ${contractHtml}
                     </div>
                 </div>
             </td>
-            <td class="text-right" style="font-weight:700">$\${p}</td>
-            <td class="text-right \${cls}">\${sign}\${(t.change_24h || 0).toFixed(2)}%</td>
-            <td class="text-right" style="color:#ddd">\${fmt(t.liquidity)}</td>
-            <td class="text-right" style="font-weight:700; color:#fff">\${fmt(t.volume?.total)}</td>
-            <td class="text-right c-purple">\${fmt(t.volume?.limit)}</td>
-            <td class="text-right c-blue">\${fmt(t.volume?.onchain)}</td>
-            <td class="text-right" style="padding-right:25px;color:#888">\${fmt(t.market_cap)}</td>
-        </tr>\`;
+            <td class="text-right" style="font-weight:700">$${p}</td>
+            <td class="text-right ${cls}">${sign}${(t.change_24h || 0).toFixed(2)}%</td>
+            <td class="text-right" style="color:#ddd">${fmt(t.liquidity)}</td>
+            <td class="text-right" style="font-weight:700; color:#fff">${fmt(t.volume?.total)}</td>
+            <td class="text-right c-purple">${fmt(t.volume?.limit)}</td>
+            <td class="text-right c-blue">${fmt(t.volume?.onchain)}</td>
+            <td class="text-right" style="padding-right:25px;color:#888">${fmt(t.market_cap)}</td>
+        </tr>`;
     });
     tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:20px">No data matches.</td></tr>';
     
@@ -134,8 +130,8 @@ function renderTable() {
     if(btn) btn.style.display = (VISIBLE_COUNT >= ALL_TOKENS.length) ? 'none' : 'inline-block';
 }
 
-// UI TEMPLATE
-const HTML_UI = \`
+// UI Template
+const HTML_UI = `
 <div id="pm-toolbar" class="pm-toolbar-wrapper">
     <div class="pm-container">
         <div class="pm-tab-group">
@@ -182,26 +178,39 @@ const HTML_UI = \`
     </div>
 </div>
 <div id="copy-toast">Copied to clipboard!</div>
-\`;
+`;
 
+// 4. KHỞI CHẠY (QUAN TRỌNG: CHECK BẢO TRÌ)
 (function init() {
+    // Check Admin
     const urlParams = new URLSearchParams(window.location.search);
     const isAdmin = urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_admin') === 'true';
-    if (isAdmin) { localStorage.setItem('wave_alpha_admin', 'true'); }
-    else { document.body.innerHTML = '<div style="background:#0b0e11;height:100vh;display:flex;align-items:center;justify-content:center;color:#888;font-family:sans-serif"><h1>SYSTEM UPGRADE</h1></div>'; return; }
+    
+    if (isAdmin) {
+        localStorage.setItem('wave_alpha_admin', 'true');
+    } else {
+        // ==> ĐÂY LÀ CHỖ HIỆN BẢO TRÌ MÀ BẠN CẦN <==
+        document.body.innerHTML = '<div style="background:#0b0e11;height:100vh;display:flex;align-items:center;justify-content:center;color:#888;font-family:sans-serif"><h1>SYSTEM UPGRADE</h1></div>';
+        return; 
+    }
 
+    // Nếu là admin thì mới chạy tiếp
     const navbar = document.querySelector('.navbar');
-    if (navbar && !document.getElementById('pm-toolbar')) { navbar.insertAdjacentHTML('afterend', HTML_UI); }
-    else if (!document.getElementById('pm-toolbar')) { document.body.insertAdjacentHTML('afterbegin', HTML_UI); }
+    if (navbar && !document.getElementById('pm-toolbar')) {
+        navbar.insertAdjacentHTML('afterend', HTML_UI);
+    } else if (!document.getElementById('pm-toolbar')) {
+        document.body.insertAdjacentHTML('afterbegin', HTML_UI);
+    }
 
     window.safeSwitch('market');
     
+    // Tải Data
     const ts = Date.now();
     let loaded = false;
     const tryLoad = async (path) => {
         if(loaded) return;
         try {
-            const res = await fetch(\`\${path}?v=\${ts}\`);
+            const res = await fetch(`${path}?v=${ts}`);
             if(res.ok) {
                 const data = await res.json();
                 const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n || 0);
