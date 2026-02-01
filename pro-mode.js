@@ -1,4 +1,4 @@
-/* pro-mode.js - SEARCH & PIN ENABLED */
+/* pro-mode.js - SEARCH MOVED TO MARKET TAB */
 
 // --- 1. CHECK BẢO TRÌ ---
 (function() {
@@ -22,15 +22,9 @@ let PINNED_SYMBOLS = JSON.parse(localStorage.getItem('alpha_pinned') || '[]');
 const HTML_UI = `
 <div id="pm-toolbar" class="pm-toolbar-wrapper">
     <div class="pm-container">
-        <div class="d-flex align-items-center gap-3" style="display:flex; gap:15px">
-            <div class="pm-tab-group">
-                <button class="pm-tab-item active" id="btn-tab-market" onclick="safeSwitch('market')">ALPHA MARKET</button>
-                <button class="pm-tab-item" id="btn-tab-tourney" onclick="safeSwitch('tourney')">COMPETITION</button>
-            </div>
-            <div class="pm-search-wrapper">
-                <i class="fas fa-search search-icon-inside"></i>
-                <input type="text" id="pm-search" class="pm-search-input" placeholder="Search Token / Contract..." oninput="handleSearch(this.value)">
-            </div>
+        <div class="pm-tab-group">
+            <button class="pm-tab-item active" id="btn-tab-market" onclick="safeSwitch('market')">ALPHA MARKET</button>
+            <button class="pm-tab-item" id="btn-tab-tourney" onclick="safeSwitch('tourney')">COMPETITION</button>
         </div>
         <div class="pm-ticker">
             <div style="text-align:right">
@@ -43,6 +37,14 @@ const HTML_UI = `
 
 <div id="view-market-pro">
     <div class="pm-container">
+        
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+            <div class="pm-search-wrapper">
+                <i class="fas fa-search search-icon-inside"></i>
+                <input type="text" id="pm-search" class="pm-search-input" placeholder="Search Token / Contract..." oninput="handleSearch(this.value)">
+            </div>
+        </div>
+
         <div class="pm-card">
             <div style="overflow-x:auto">
                 <table class="pm-table">
@@ -112,8 +114,6 @@ window.handleSearch = function(val) {
         );
     }
     VISIBLE_COUNT = 10;
-    
-    // Sort lại để giữ thứ tự sort hiện tại sau khi search
     sortInternal(); 
     renderTable();
 };
