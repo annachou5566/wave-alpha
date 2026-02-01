@@ -1,5 +1,4 @@
-/* pro-mode.js - Fix: Icon Glitch Handler */
-
+/* pro-mode.js - Fix Icon Render */
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
 let VISIBLE_COUNT = 10;
@@ -53,7 +52,7 @@ window.copyContract = function(addr, symbol) {
     navigator.clipboard.writeText(addr);
     const toast = document.getElementById('copy-toast');
     if(toast) {
-        toast.innerText = `Copied ${symbol} Contract!`;
+        toast.innerText = \`Copied \${symbol} Contract!\`;
         toast.classList.add('show-toast');
         setTimeout(() => toast.classList.remove('show-toast'), 2000);
     }
@@ -94,22 +93,27 @@ function renderTable() {
         const cls = t.change_24h >= 0 ? 'c-up' : 'c-down';
         const sign = t.change_24h >= 0 ? '+' : '';
         const alphaIdClean = t.id ? t.id.replace('ALPHA_','') : '';
-        const link = `https://www.binance.com/en/alpha/${alphaIdClean}`;
+        const link = `https://www.binance.com/en/alpha/\${alphaIdClean}`;
         const logoUrl = t.icon || 'assets/tokens/default.png';
-        const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
-        const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
+        const shortContract = t.contract ? \`\${t.contract.substring(0,6)}...\${t.contract.substring(t.contract.length-4)}\` : '';
+        const contractHtml = t.contract ? \`<div class="token-contract" onclick="event.stopPropagation(); copyContract('\${t.contract}', '\${t.symbol}')">\${shortContract} <i class="far fa-copy"></i></div>\` : '';
 
-        // --- FIX ICON CHAIN: Thêm onerror để ẩn nếu lỗi ---
-        let chainImgHtml = t.chain_icon 
-            ? `<img src="${t.chain_icon}" class="chain-icon-sub" title="${t.chain}" onerror="this.style.display='none'">` 
+        // --- CHAIN ICON (LỒNG NHAU) ---
+        // Nếu không có chain_icon, ta thử dùng icon mặc định của BSC nếu chainName là BSC
+        let chainUrl = t.chain_icon;
+        if (!chainUrl && t.chain === 'BSC') {
+            chainUrl = 'https://bin.bnbstatic.com/image/admin_mgs_image_upload/20250228/d0216ce4-a3e9-4bda-8937-4a6aa943ccf2.png';
+        }
+
+        let chainImgHtml = chainUrl 
+            ? \`<img src="\${chainUrl}" class="chain-icon-sub" title="\${t.chain}" onerror="this.style.display='none'">\` 
             : '';
         
-        // STATUS BADGE
+        // --- BADGES ---
         let statusBadge = '';
-        if (t.status === 'SPOT') statusBadge = `<span class="badge bd-spot">SPOT</span>`;
-        else if (t.status === 'DELISTED') statusBadge = `<span class="badge bd-delist">DELISTED</span>`;
+        if (t.status === 'SPOT') statusBadge = \`<span class="badge bd-spot">SPOT</span>\`;
+        else if (t.status === 'DELISTED') statusBadge = \`<span class="badge bd-delist">DELISTED</span>\`;
 
-        // MULTIPLIER BADGE
         let mulBadge = '';
         if (t.listing_time > 0) {
             const now = Date.now();
@@ -120,34 +124,34 @@ function renderTable() {
             if (daysLeft > 0 && t.mul_point >= 2) {
                 const isBSC4x = (t.chain === 'BSC' && t.mul_point >= 4);
                 let cls = isBSC4x ? 'bd-4x' : (t.mul_point >= 4 ? 'bd-4x' : 'bd-2x');
-                mulBadge = `<span class="badge ${cls}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
+                mulBadge = \`<span class="badge \${cls}">\${t.mul_point}x <span class="bd-time">\${daysLeft}d</span></span>\`;
             }
         }
 
-        html += `
-        <tr onclick="window.open('${link}', '_blank')">
+        html += \`
+        <tr onclick="window.open('\${link}', '_blank')">
             <td style="padding-left:25px">
                 <div class="td-token">
                     <div class="logo-wrapper">
-                        <img src="${logoUrl}" class="token-icon-main" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
-                        ${chainImgHtml}
+                        <img src="\${logoUrl}" class="token-icon-main" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
+                        \${chainImgHtml}
                     </div>
                     <div class="token-info">
                         <div class="token-symbol">
-                            ${t.symbol || '???'} ${statusBadge} ${mulBadge}
+                            \${t.symbol || '???'} \${statusBadge} \${mulBadge}
                         </div>
-                        ${contractHtml}
+                        \${contractHtml}
                     </div>
                 </div>
             </td>
-            <td class="text-right" style="font-weight:700">$${p}</td>
-            <td class="text-right ${cls}">${sign}${(t.change_24h || 0).toFixed(2)}%</td>
-            <td class="text-right" style="color:#ddd">${fmt(t.liquidity)}</td>
-            <td class="text-right" style="font-weight:700; color:#fff">${fmt(t.volume?.total)}</td>
-            <td class="text-right c-purple">${fmt(t.volume?.limit)}</td>
-            <td class="text-right c-blue">${fmt(t.volume?.onchain)}</td>
-            <td class="text-right" style="padding-right:25px;color:#888">${fmt(t.market_cap)}</td>
-        </tr>`;
+            <td class="text-right" style="font-weight:700">$\${p}</td>
+            <td class="text-right \${cls}">\${sign}\${(t.change_24h || 0).toFixed(2)}%</td>
+            <td class="text-right" style="color:#ddd">\${fmt(t.liquidity)}</td>
+            <td class="text-right" style="font-weight:700; color:#fff">\${fmt(t.volume?.total)}</td>
+            <td class="text-right c-purple">\${fmt(t.volume?.limit)}</td>
+            <td class="text-right c-blue">\${fmt(t.volume?.onchain)}</td>
+            <td class="text-right" style="padding-right:25px;color:#888">\${fmt(t.market_cap)}</td>
+        </tr>\`;
     });
     tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:20px">No data matches.</td></tr>';
     
@@ -155,7 +159,7 @@ function renderTable() {
     if(btn) btn.style.display = (VISIBLE_COUNT >= ALL_TOKENS.length) ? 'none' : 'inline-block';
 }
 
-const HTML_UI = `
+const HTML_UI = \`
 <div id="pm-toolbar" class="pm-toolbar-wrapper">
     <div class="pm-container">
         <div class="pm-tab-group">
@@ -198,18 +202,18 @@ const HTML_UI = `
     </div>
 </div>
 <div id="copy-toast">Copied to clipboard!</div>
-`;
+\`;
 
 (function init() {
     const urlParams = new URLSearchParams(window.location.search);
     const isAdmin = urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_admin') === 'true';
     if (!isAdmin) {
-        document.body.innerHTML = `
+        document.body.innerHTML = \`
             <div class="maint-box">
                 <div class="spinner"></div>
                 <div class="maint-title">SYSTEM MAINTENANCE</div>
                 <div class="maint-desc">Optimizing Alpha Market engine. Please check back shortly.</div>
-            </div>`;
+            </div>\`;
         return; 
     }
     localStorage.setItem('wave_alpha_admin', 'true');
@@ -222,7 +226,7 @@ const HTML_UI = `
     const tryLoad = async (path) => {
         if(loaded) return;
         try {
-            const res = await fetch(`${path}?v=${ts}`);
+            const res = await fetch(\`\${path}?v=\${ts}\`);
             if(res.ok) {
                 const data = await res.json();
                 const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n || 0);
