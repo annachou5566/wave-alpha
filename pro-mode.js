@@ -1,4 +1,4 @@
-/* pro-mode.js - SEARCH FIXED POSITION ABOVE TABLE */
+/* pro-mode.js - RESTORED BADGES + SEARCH TOP RIGHT */
 
 // --- 1. CHECK BẢO TRÌ ---
 (function() {
@@ -103,11 +103,15 @@ window.safeSwitch = function(mode) {
 
 window.handleSearch = function(val) {
     const query = val.toLowerCase().trim();
-    FILTERED_TOKENS = !query ? [...ALL_TOKENS] : ALL_TOKENS.filter(t => 
-        t.symbol.toLowerCase().includes(query) || 
-        (t.name && t.name.toLowerCase().includes(query)) ||
-        (t.contract && t.contract.toLowerCase().includes(query))
-    );
+    if (!query) {
+        FILTERED_TOKENS = [...ALL_TOKENS];
+    } else {
+        FILTERED_TOKENS = ALL_TOKENS.filter(t => 
+            t.symbol.toLowerCase().includes(query) || 
+            (t.name && t.name.toLowerCase().includes(query)) ||
+            (t.contract && t.contract.toLowerCase().includes(query))
+        );
+    }
     VISIBLE_COUNT = 10;
     sortInternal(); 
     renderTable();
@@ -115,7 +119,11 @@ window.handleSearch = function(val) {
 
 window.togglePin = function(e, symbol) {
     e.stopPropagation();
-    PINNED_SYMBOLS = PINNED_SYMBOLS.includes(symbol) ? PINNED_SYMBOLS.filter(s => s !== symbol) : [...PINNED_SYMBOLS, symbol];
+    if (PINNED_SYMBOLS.includes(symbol)) {
+        PINNED_SYMBOLS = PINNED_SYMBOLS.filter(s => s !== symbol);
+    } else {
+        PINNED_SYMBOLS.push(symbol);
+    }
     localStorage.setItem('alpha_pinned', JSON.stringify(PINNED_SYMBOLS));
     renderTable();
 };
@@ -123,7 +131,12 @@ window.togglePin = function(e, symbol) {
 window.sortData = function(column) {
     if (SORT_STATE.col === column) { SORT_STATE.dir = SORT_STATE.dir === 'desc' ? 'asc' : 'desc'; } 
     else { SORT_STATE.col = column; SORT_STATE.dir = 'desc'; }
-    document.querySelectorAll('.pm-table th').forEach(th => th.classList.remove('active-sort'));
+    
+    document.querySelectorAll('.pm-table th').forEach(th => {
+        th.classList.remove('active-sort');
+        if(th.innerText.toLowerCase().includes(column.split('.')[0])) th.classList.add('active-sort');
+    });
+
     sortInternal();
     renderTable();
 };
@@ -153,6 +166,7 @@ function renderTable() {
     const tbody = document.getElementById('pm-body');
     if(!tbody) return;
     const fmt = (n) => '$' + new Intl.NumberFormat('en-US', {maximumFractionDigits:0}).format(n || 0);
+    
     const pinned = FILTERED_TOKENS.filter(t => PINNED_SYMBOLS.includes(t.symbol));
     const others = FILTERED_TOKENS.filter(t => !PINNED_SYMBOLS.includes(t.symbol));
     const displayList = [...pinned, ...others].slice(0, VISIBLE_COUNT);
@@ -162,18 +176,45 @@ function renderTable() {
         const isPinned = PINNED_SYMBOLS.includes(t.symbol);
         const p = t.price < 1 ? (t.price || 0).toFixed(6) : (t.price || 0).toFixed(2);
         const cls = t.change_24h >= 0 ? 'c-up' : 'c-down';
+        const sign = t.change_24h >= 0 ? '+' : '';
         const link = `https://www.binance.com/en/alpha/${t.id ? t.id.replace('ALPHA_','') : ''}`;
+        const logoUrl = t.icon || 'assets/tokens/default.png';
+        const chainImg = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-icon-sub" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : '';
+
+        // --- KHÔI PHỤC FULL LOGIC BADGES (SPOT/DELIST/4X/TIME) ---
+        let statusBadge = '';
+        if (t.status === 'SPOT') statusBadge = '<span class="badge bd-spot">SPOT</span>';
+        else if (t.status === 'DELISTED') statusBadge = '<span class="badge bd-delist">DELISTED</span>';
+        
+        let mulBadge = '';
+        if (t.listing_time > 0) {
+            const now = Date.now();
+            const expiry = t.listing_time + (30 * 24 * 60 * 60 * 1000);
+            const diff = expiry - now;
+            const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+            if (daysLeft > 0 && t.mul_point >= 2) {
+                // Logic màu sắc: BSC 4x là vàng, còn lại là tím/xanh
+                const isGold = (t.chain === 'BSC' && t.mul_point >= 4);
+                let badgeClass = 'bd-2x';
+                if (isGold) badgeClass = 'bd-4x'; // Vàng
+                else if (t.mul_point >= 4) badgeClass = 'bd-4x'; 
+                
+                mulBadge = `<span class="badge ${badgeClass}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
+            }
+        }
+
         html += `
         <tr onclick="window.open('${link}', '_blank')" class="${isPinned ? 'pinned-row' : ''}" style="cursor:pointer">
             <td style="padding-left:15px">
                 <div class="td-token">
                     <i class="fas fa-star btn-pin ${isPinned ? 'active' : ''}" onclick="togglePin(event, '${t.symbol}')"></i>
                     <div class="logo-wrapper">
-                        <img src="${t.icon || 'assets/tokens/default.png'}" class="token-icon-main" referrerpolicy="no-referrer">
-                        ${t.chain_icon ? `<img src="${t.chain_icon}" class="chain-icon-sub" referrerpolicy="no-referrer">` : ''}
+                        <img src="${logoUrl}" class="token-icon-main" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
+                        ${chainImg}
                     </div>
                     <div>
-                        <div class="token-symbol">${t.symbol} ${t.status === 'SPOT' ? '<span class="badge bd-spot">SPOT</span>' : ''}</div>
+                        <div class="token-symbol">${t.symbol} ${statusBadge} ${mulBadge}</div>
                         <div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">
                             ${t.contract ? t.contract.substring(0,6)+'...'+t.contract.slice(-4) : ''} <i class="far fa-copy"></i>
                         </div>
@@ -181,7 +222,7 @@ function renderTable() {
                 </div>
             </td>
             <td style="font-weight:700">$${p}</td>
-            <td class="${cls}">${t.change_24h >= 0 ? '+' : ''}${(t.change_24h||0).toFixed(2)}%</td>
+            <td class="${cls}">${sign}${(t.change_24h||0).toFixed(2)}%</td>
             <td style="color:#aaa">${fmt(t.liquidity)}</td>
             <td style="font-weight:700;color:#fff">${fmt(t.volume?.total)}</td>
             <td class="c-purple">${fmt(t.volume?.limit)}</td>
@@ -200,4 +241,4 @@ fetch(`${DATA_FILES[0]}?v=${Date.now()}`).then(r => r.json()).then(data => {
     ALL_TOKENS = data.tokens || [];
     FILTERED_TOKENS = [...ALL_TOKENS];
     renderTable();
-});
+}).catch(e => console.log(e));
