@@ -1,12 +1,10 @@
-/* pro-mode.js - Final Stable: Maintenance + Badges */
+/* pro-mode.js - Final: Chain, Multiplier & Countdown */
 
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
 let VISIBLE_COUNT = 10;
 const LOAD_STEP = 10;
 let SORT_STATE = { col: 'volume.total', dir: 'desc' };
-
-// --- 1. CÁC HÀM XỬ LÝ (Định nghĩa trước) ---
 
 window.safeSwitch = function(mode) {
     const marketView = document.getElementById('view-market-pro');
@@ -27,7 +25,6 @@ window.safeSwitch = function(mode) {
         extras.forEach(e => e.style.display = 'block');
         if(btnM) btnM.classList.remove('active');
         if(btnT) btnT.classList.add('active');
-        // Fix grid layout cũ nếu cần
         if(typeof renderGrid === 'function') setTimeout(renderGrid, 100);
     }
 };
@@ -98,17 +95,39 @@ function renderTable() {
         const sign = t.change_24h >= 0 ? '+' : '';
         const alphaIdClean = t.id ? t.id.replace('ALPHA_','') : '';
         const link = `https://www.binance.com/en/alpha/${alphaIdClean}`;
-        
         const logoUrl = t.icon || 'assets/tokens/default.png';
         const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
         const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
 
-        // --- BADGE LOGIC (Dựa trên dữ liệu Python đã lấy) ---
-        let badgeHtml = '';
-        if (t.status === 'SPOT') {
-            badgeHtml = `<span class="badge-spot">SPOT</span>`;
-        } else if (t.status === 'DELISTED') {
-            badgeHtml = `<span class="badge-delisted">DELISTED</span>`;
+        // 1. BADGE STATUS (Spot/Delisted)
+        let statusBadge = '';
+        if (t.status === 'SPOT') statusBadge = `<span class="badge-spot">SPOT</span>`;
+        else if (t.status === 'DELISTED') statusBadge = `<span class="badge-delisted">DELISTED</span>`;
+
+        // 2. BADGE CHAIN (BSC, ETH...)
+        let chainBadge = t.chain && t.chain !== 'UNK' ? `<span class="badge-chain">${t.chain}</span>` : '';
+
+        // 3. BADGE POINTS & COUNTDOWN (4x, 2x)
+        let pointsBadge = '';
+        let daysLeftHtml = '';
+        
+        // Tính ngày còn lại: listing_time + 30 ngày
+        if (t.listing_time > 0) {
+            const now = Date.now();
+            const expiry = t.listing_time + (30 * 24 * 60 * 60 * 1000); // 30 ngày
+            const diff = expiry - now;
+            const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+            if (daysLeft > 0) {
+                // Chỉ hiện badge nếu còn hạn
+                if (t.mul_point >= 4) {
+                    pointsBadge = `<span class="badge-mul mul-4x">4x PTS</span>`;
+                    daysLeftHtml = `<span class="days-left">${daysLeft}d left</span>`;
+                } else if (t.mul_point >= 2) {
+                    pointsBadge = `<span class="badge-mul mul-2x">2x PTS</span>`;
+                    daysLeftHtml = `<span class="days-left">${daysLeft}d left</span>`;
+                }
+            }
         }
 
         html += `
@@ -117,7 +136,9 @@ function renderTable() {
                 <div class="td-token">
                     <img src="${logoUrl}" class="token-icon" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
                     <div class="token-info">
-                        <div class="token-symbol">${t.symbol || '???'} ${badgeHtml}</div>
+                        <div class="token-symbol">
+                            ${chainBadge}${t.symbol || '???'} ${statusBadge} ${pointsBadge}${daysLeftHtml}
+                        </div>
                         ${contractHtml}
                     </div>
                 </div>
@@ -137,7 +158,6 @@ function renderTable() {
     if(btn) btn.style.display = (VISIBLE_COUNT >= ALL_TOKENS.length) ? 'none' : 'inline-block';
 }
 
-// UI TEMPLATE
 const HTML_UI = `
 <div id="pm-toolbar" class="pm-toolbar-wrapper">
     <div class="pm-container">
@@ -187,25 +207,15 @@ const HTML_UI = `
 <div id="copy-toast">Copied to clipboard!</div>
 `;
 
-// --- 2. KHỞI CHẠY (LOGIC BẢO TRÌ) ---
 (function init() {
-    // Check Admin
     const urlParams = new URLSearchParams(window.location.search);
     const isAdmin = urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_admin') === 'true';
+    if (isAdmin) { localStorage.setItem('wave_alpha_admin', 'true'); }
+    else { document.body.innerHTML = '<div style="background:#0b0e11;height:100vh;display:flex;align-items:center;justify-content:center;color:#888;font-family:sans-serif"><h1>SYSTEM UPGRADE</h1></div>'; return; }
     
-    // NẾU KHÔNG PHẢI ADMIN -> DỪNG NGAY, HIỆN BẢO TRÌ
-    if (!isAdmin) {
-        document.body.innerHTML = '<div style="background:#0b0e11;height:100vh;display:flex;align-items:center;justify-content:center;color:#888;font-family:sans-serif"><h1>SYSTEM UPGRADE</h1></div>';
-        return; 
-    }
-    
-    // NẾU LÀ ADMIN -> LƯU QUYỀN VÀ CHẠY TIẾP
-    localStorage.setItem('wave_alpha_admin', 'true');
-
     const navbar = document.querySelector('.navbar');
     if (navbar && !document.getElementById('pm-toolbar')) { navbar.insertAdjacentHTML('afterend', HTML_UI); }
     else if (!document.getElementById('pm-toolbar')) { document.body.insertAdjacentHTML('afterbegin', HTML_UI); }
-
     window.safeSwitch('market');
     
     const ts = Date.now();

@@ -23,7 +23,7 @@ def safe_float(val):
         return 0.0
 
 def fetch_data():
-    print("🚀 Updating Data (Stricter Spot/Delisted Logic)...")
+    print("🚀 Updating Data: Chain, Multiplier & Listing Time...")
     
     try:
         resp = requests.get(API_AGG_TICKER, headers=FAKE_HEADERS, timeout=15)
@@ -43,25 +43,23 @@ def fetch_data():
             alpha_id = item.get("alphaId")
             contract = item.get("contractAddress", "")
             
-            # --- 1. PHÂN LOẠI TRẠNG THÁI (STATUS) ---
-            # listingCex: True (Đã có trên sàn) / False (Chưa)
-            # offline: True (Đã ngừng bên Alpha) / False (Còn chạy)
-            
+            # --- 1. LẤY DATA MỚI ---
+            chain = item.get("chainName", "UNK")        # Hệ Token
+            mul_point = safe_float(item.get("mulPoint")) # Hệ số nhân (4, 2, 1...)
+            listing_time = item.get("listingTime", 0)    # Thời gian list (miliseconds)
+
+            # --- 2. LOGIC TRẠNG THÁI (Spot/Delisted) ---
             listing_cex = item.get("listingCex", False) is True
             is_offline = item.get("offline", False) is True
 
-            status = "ALPHA" # Mặc định
-
+            status = "ALPHA"
             if listing_cex and is_offline:
-                status = "SPOT"     # Chỉ Spot khi đã Offline bên Alpha (Ví dụ: SENT)
+                status = "SPOT"
             elif (not listing_cex) and is_offline:
-                status = "DELISTED" # Không lên Spot mà bị Offline (Ví dụ: UPTOP)
-            
-            # Trường hợp KOGE: listing_cex=True, offline=False -> Vẫn là ALPHA
+                status = "DELISTED"
 
-            # --- 2. TÍNH LIMIT VOL ---
+            # --- 3. LOGIC LIMIT VOL ---
             limit_vol = 0.0
-            # Nếu là SPOT hoặc vol to thì check limit
             if (status == "SPOT" or total_vol > 50000) and alpha_id:
                 try:
                     limit_url = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDT"
@@ -74,7 +72,7 @@ def fetch_data():
             onchain_vol = total_vol - limit_vol
             if onchain_vol < 0: onchain_vol = 0
 
-            # --- 3. XÁC ĐỊNH SOURCE ---
+            # --- 4. SOURCE ---
             source_type = "On-Chain"
             if status == "DELISTED": source_type = "DELISTED"
             elif status == "SPOT": source_type = "SPOT"
@@ -86,7 +84,10 @@ def fetch_data():
                 "name": item.get("name"),
                 "icon": item.get("iconUrl"),
                 "contract": contract,
-                "status": status, 
+                "status": status,
+                "chain": chain,          # <-- Hệ
+                "mul_point": mul_point,  # <-- Hệ số nhân
+                "listing_time": listing_time, # <-- Ngày lên sàn
                 "price": price,
                 "change_24h": safe_float(item.get("percentChange24h")),
                 "liquidity": safe_float(item.get("liquidity")),
@@ -109,7 +110,7 @@ def fetch_data():
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
             
-        print(f"🎉 Updated! KOGE is now ALPHA. SENT is SPOT. UPTOP is DELISTED.")
+        print(f"🎉 Updated! Added ListingTime & Multiplier for {len(processed_tokens)} tokens.")
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")

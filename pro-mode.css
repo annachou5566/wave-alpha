@@ -54,3 +54,31 @@
     border-radius: 4px; margin-left: 6px; vertical-align: middle; 
     display: inline-block; 
 }
+
+/* BADGE HỆ TOKEN (CHAIN) */
+.badge-chain {
+    background: #2b3139; 
+    color: var(--pm-sub);
+    font-size: 9px; font-weight: 700; 
+    padding: 2px 5px; border-radius: 3px; 
+    margin-right: 4px; border: 1px solid rgba(255,255,255,0.1);
+    vertical-align: middle;
+}
+
+/* BADGE MULTIPLIER (4x, 2x) */
+.badge-mul {
+    font-size: 9px; font-weight: 800;
+    padding: 2px 5px; border-radius: 4px;
+    margin-left: 6px; vertical-align: middle;
+    display: inline-block;
+}
+.mul-4x { background: linear-gradient(90deg, #8E2DE2, #4A00E0); color: #fff; box-shadow: 0 0 5px rgba(142,45,226,0.4); }
+.mul-2x { background: linear-gradient(90deg, #00c6ff, #0072ff); color: #fff; }
+
+/* TEXT ĐẾM NGƯỢC NGÀY */
+.days-left {
+    font-size: 9px; color: var(--pm-gold);
+    margin-left: 4px; font-weight: 600;
+    font-family: var(--font-num);
+    vertical-align: middle;
+}
