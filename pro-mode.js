@@ -87,6 +87,8 @@ function updateSortIcons() {
     }
 }
 
+/* Tìm hàm renderTable trong pro-mode.js và thay thế bằng hàm này */
+
 function renderTable() {
     const tbody = document.getElementById('pm-body');
     if(!tbody) return;
@@ -102,7 +104,17 @@ function renderTable() {
         
         const logoUrl = t.icon || 'assets/tokens/default.png';
         const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
-        const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
+        const contractHtml = t.contract 
+            ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` 
+            : '';
+
+        // --- LOGIC BADGE MỚI ---
+        let badgeHtml = '';
+        if (t.status === 'SPOT') {
+            badgeHtml = `<span class="badge-spot">SPOT</span>`;
+        } else if (t.status === 'DELISTED') {
+            badgeHtml = `<span class="badge-delisted">DELISTED</span>`;
+        }
 
         html += `
         <tr onclick="window.open('${link}', '_blank')">
@@ -110,7 +122,9 @@ function renderTable() {
                 <div class="td-token">
                     <img src="${logoUrl}" class="token-icon" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
                     <div class="token-info">
-                        <div class="token-symbol">${t.symbol || '???'}</div>
+                        <div class="token-symbol">
+                            ${t.symbol || '???'} ${badgeHtml}
+                        </div>
                         ${contractHtml}
                     </div>
                 </div>

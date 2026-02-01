@@ -23,7 +23,7 @@ def safe_float(val):
         return 0.0
 
 def fetch_data():
-    print("🚀 Restoring Stable Data Fetcher...")
+    print("🚀 Updating Data with Status (Limit Vol Kept)...")
     
     try:
         resp = requests.get(API_AGG_TICKER, headers=FAKE_HEADERS, timeout=15)
@@ -43,9 +43,19 @@ def fetch_data():
             alpha_id = item.get("alphaId")
             contract = item.get("contractAddress", "")
             
-            # --- LOGIC LIMIT VOL (GIỮ NGUYÊN) ---
+            # --- 1. XÁC ĐỊNH TRẠNG THÁI (STATUS) ---
+            is_spot = item.get("listingCex", False) is True
+            is_offline = item.get("offline", False) is True
+
+            status = "ALPHA"
+            if is_spot:
+                status = "SPOT"
+            elif is_offline:
+                status = "DELISTED"
+
+            # --- 2. TÍNH LIMIT VOL (GIỮ NGUYÊN QUAN TRỌNG) ---
             limit_vol = 0.0
-            if total_vol > 50000 and alpha_id:
+            if (status == "SPOT" or total_vol > 50000) and alpha_id:
                 try:
                     limit_url = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDT"
                     limit_res = requests.get(limit_url, headers=FAKE_HEADERS, timeout=0.3).json()
@@ -57,8 +67,11 @@ def fetch_data():
             onchain_vol = total_vol - limit_vol
             if onchain_vol < 0: onchain_vol = 0
 
+            # --- 3. XÁC ĐỊNH NGUỒN ---
             source_type = "On-Chain"
-            if limit_vol > 1000: source_type = "Hybrid"
+            if status == "DELISTED": source_type = "DELISTED"
+            elif status == "SPOT": source_type = "SPOT"
+            elif limit_vol > 1000: source_type = "Hybrid"
 
             token_obj = {
                 "id": alpha_id,
@@ -66,6 +79,7 @@ def fetch_data():
                 "name": item.get("name"),
                 "icon": item.get("iconUrl"),
                 "contract": contract,
+                "status": status,  # <-- Trường quan trọng mới thêm
                 "price": price,
                 "change_24h": safe_float(item.get("percentChange24h")),
                 "liquidity": safe_float(item.get("liquidity")),
@@ -88,7 +102,7 @@ def fetch_data():
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
             
-        print(f"🎉 RESTORED DATA: {len(processed_tokens)} tokens.")
+        print(f"🎉 Data Updated: {len(processed_tokens)} tokens processed.")
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")
