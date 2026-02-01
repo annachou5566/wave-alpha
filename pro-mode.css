@@ -40,3 +40,17 @@
 /* BADGES STYLES (MỚI) */
 .badge-spot { background: #F0B90B; color: #000; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; display: inline-block; }
 .badge-delisted { background: #F6465D; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; display: inline-block; }
+
+/* BADGES SPOT & DELISTED */
+.badge-spot { 
+    background: #F0B90B; color: #000; 
+    font-size: 10px; font-weight: 800; padding: 2px 6px; 
+    border-radius: 4px; margin-left: 6px; vertical-align: middle; 
+    display: inline-block; 
+}
+.badge-delisted { 
+    background: #F6465D; color: #fff; 
+    font-size: 10px; font-weight: 800; padding: 2px 6px; 
+    border-radius: 4px; margin-left: 6px; vertical-align: middle; 
+    display: inline-block; 
+}
