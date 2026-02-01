@@ -1,4 +1,4 @@
-/* pro-mode.js - Final: Chain, Multiplier & Countdown */
+/* pro-mode.js - Final: Compact Badges & Chain Colors */
 
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
@@ -104,29 +104,33 @@ function renderTable() {
         if (t.status === 'SPOT') statusBadge = `<span class="badge-spot">SPOT</span>`;
         else if (t.status === 'DELISTED') statusBadge = `<span class="badge-delisted">DELISTED</span>`;
 
-        // 2. BADGE CHAIN (BSC, ETH...)
-        let chainBadge = t.chain && t.chain !== 'UNK' ? `<span class="badge-chain">${t.chain}</span>` : '';
+        // 2. BADGE CHAIN (Tự động màu theo hệ)
+        let chainClass = 'chain-UNK';
+        if (t.chain) {
+            if (t.chain === 'BSC') chainClass = 'chain-BSC';
+            else if (t.chain === 'ETH') chainClass = 'chain-ETH';
+            else if (t.chain === 'SOL') chainClass = 'chain-SOL';
+        }
+        let chainBadge = t.chain && t.chain !== 'UNK' ? `<span class="badge-chain ${chainClass}">${t.chain}</span>` : '';
 
-        // 3. BADGE POINTS & COUNTDOWN (4x, 2x)
-        let pointsBadge = '';
-        let daysLeftHtml = '';
+        // 3. BADGE MULTIPLIER (GỘP: "4x 19d")
+        let mulBadge = '';
         
-        // Tính ngày còn lại: listing_time + 30 ngày
         if (t.listing_time > 0) {
             const now = Date.now();
             const expiry = t.listing_time + (30 * 24 * 60 * 60 * 1000); // 30 ngày
             const diff = expiry - now;
             const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
 
-            if (daysLeft > 0) {
-                // Chỉ hiện badge nếu còn hạn
-                if (t.mul_point >= 4) {
-                    pointsBadge = `<span class="badge-mul mul-4x">4x PTS</span>`;
-                    daysLeftHtml = `<span class="days-left">${daysLeft}d left</span>`;
-                } else if (t.mul_point >= 2) {
-                    pointsBadge = `<span class="badge-mul mul-2x">2x PTS</span>`;
-                    daysLeftHtml = `<span class="days-left">${daysLeft}d left</span>`;
-                }
+            if (daysLeft > 0 && t.mul_point >= 2) {
+                const isBSC4x = (t.chain === 'BSC' && t.mul_point >= 4);
+                
+                let badgeClass = 'mul-blue'; // Mặc định 2x
+                if (isBSC4x) badgeClass = 'mul-bsc-gold'; // BSC 4x -> Vàng ngầu
+                else if (t.mul_point >= 4) badgeClass = 'mul-purple'; // Hệ khác 4x -> Tím
+
+                // GỘP TEXT: "4x 19d"
+                mulBadge = `<span class="badge-mul ${badgeClass}">${t.mul_point}x ${daysLeft}d</span>`;
             }
         }
 
@@ -137,7 +141,7 @@ function renderTable() {
                     <img src="${logoUrl}" class="token-icon" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
                     <div class="token-info">
                         <div class="token-symbol">
-                            ${chainBadge}${t.symbol || '???'} ${statusBadge} ${pointsBadge}${daysLeftHtml}
+                            ${chainBadge}${t.symbol || '???'} ${statusBadge} ${mulBadge}
                         </div>
                         ${contractHtml}
                     </div>
@@ -212,12 +216,10 @@ const HTML_UI = `
     const isAdmin = urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_admin') === 'true';
     if (isAdmin) { localStorage.setItem('wave_alpha_admin', 'true'); }
     else { document.body.innerHTML = '<div style="background:#0b0e11;height:100vh;display:flex;align-items:center;justify-content:center;color:#888;font-family:sans-serif"><h1>SYSTEM UPGRADE</h1></div>'; return; }
-    
     const navbar = document.querySelector('.navbar');
     if (navbar && !document.getElementById('pm-toolbar')) { navbar.insertAdjacentHTML('afterend', HTML_UI); }
     else if (!document.getElementById('pm-toolbar')) { document.body.insertAdjacentHTML('afterbegin', HTML_UI); }
     window.safeSwitch('market');
-    
     const ts = Date.now();
     let loaded = false;
     const tryLoad = async (path) => {

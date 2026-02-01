@@ -82,3 +82,46 @@
     font-family: var(--font-num);
     vertical-align: middle;
 }
+
+/* --- BADGE HỆ TOKEN (CHAIN COLORS) --- */
+.badge-chain {
+    font-size: 9px; font-weight: 800; 
+    padding: 2px 5px; border-radius: 3px; 
+    margin-right: 4px; vertical-align: middle;
+    display: inline-block; border: 1px solid rgba(255,255,255,0.1);
+}
+/* Màu đặc trưng từng hệ */
+.chain-BSC { background: #F0B90B; color: #000; } /* Binance Yellow */
+.chain-ETH { background: #627EEA; color: #fff; } /* Ethereum Blue */
+.chain-SOL { background: linear-gradient(135deg, #00FFA3, #DC1FFF); color: #000; } /* Solana Gradient */
+.chain-UNK { background: #2b3139; color: #888; } /* Mặc định */
+
+/* --- BADGE MULTIPLIER (GỘP NGÀY) --- */
+.badge-mul {
+    font-size: 9px; font-weight: 800;
+    padding: 2px 6px; border-radius: 4px;
+    margin-left: 6px; vertical-align: middle;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+
+/* Style đặc biệt cho BSC 4x (Vàng ngầu) */
+.mul-bsc-gold {
+    background: #F0B90B; 
+    color: #000; 
+    border: 1px solid #fff; /* Viền trắng cho nổi bật trên nền tối */
+    box-shadow: 0 0 10px rgba(240, 185, 11, 0.5); /* Phát sáng */
+}
+
+/* Style cho 4x thường (Tím mộng mơ) */
+.mul-purple {
+    background: linear-gradient(90deg, #8E2DE2, #4A00E0); 
+    color: #fff;
+    box-shadow: 0 0 5px rgba(142, 45, 226, 0.4);
+}
+
+/* Style cho 2x (Xanh dương) */
+.mul-blue {
+    background: linear-gradient(90deg, #00c6ff, #0072ff); 
+    color: #fff;
+}
