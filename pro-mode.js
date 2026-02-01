@@ -1,4 +1,4 @@
-/* pro-mode.js - Final: Nested Logos (Binance Style) */
+/* pro-mode.js - Fix: Icon Glitch Handler */
 
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
@@ -99,16 +99,17 @@ function renderTable() {
         const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
         const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
 
-        // 1. ẢNH LỒNG NHAU (Token + Chain)
-        // Nếu có chain_icon thì hiện ảnh nhỏ, không thì thôi
-        let chainImgHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-icon-sub" title="${t.chain}">` : '';
+        // --- FIX ICON CHAIN: Thêm onerror để ẩn nếu lỗi ---
+        let chainImgHtml = t.chain_icon 
+            ? `<img src="${t.chain_icon}" class="chain-icon-sub" title="${t.chain}" onerror="this.style.display='none'">` 
+            : '';
         
-        // 2. BADGE STATUS
+        // STATUS BADGE
         let statusBadge = '';
         if (t.status === 'SPOT') statusBadge = `<span class="badge bd-spot">SPOT</span>`;
         else if (t.status === 'DELISTED') statusBadge = `<span class="badge bd-delist">DELISTED</span>`;
 
-        // 3. BADGE MULTIPLIER
+        // MULTIPLIER BADGE
         let mulBadge = '';
         if (t.listing_time > 0) {
             const now = Date.now();
