@@ -19,20 +19,30 @@
 .pm-tab-item { padding: 8px 20px; border-radius: 6px; cursor: pointer; color: #888; font-weight: 700; border: none; background: transparent; font-size: 13px; }
 .pm-tab-item.active { background: var(--pm-gold); color: #000; }
 
-/* 4. TABLE & BADGES */
+/* 4. SEARCH & PIN (NEW) */
+.pm-search-wrapper { position: relative; width: 250px; }
+.pm-search-input { width: 100%; background: #20252b; border: 1px solid var(--pm-line); border-radius: 6px; padding: 8px 10px 8px 35px; color: #fff; font-size: 13px; transition: 0.2s; }
+.pm-search-input:focus { outline: none; border-color: var(--pm-gold); box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.1); }
+.search-icon-inside { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #555; font-size: 12px; }
+
+.btn-pin { cursor: pointer; color: #333; transition: 0.2s; font-size: 14px; margin-right: 8px; }
+.btn-pin:hover { color: #666; }
+.btn-pin.active { color: var(--pm-gold); text-shadow: 0 0 10px rgba(240, 185, 11, 0.4); animation: pop 0.3s; }
+.pinned-row { background: rgba(240, 185, 11, 0.03) !important; border-left: 2px solid var(--pm-gold); }
+@keyframes pop { 50% { transform: scale(1.4); } }
+
+/* 5. TABLE & BADGES */
 .pm-card { max-width: 1400px; margin: 0 auto; background: var(--pm-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--pm-line); }
 .pm-table { width: 100%; border-collapse: collapse; color: #fff; }
 .pm-table th { padding: 12px 15px; border-bottom: 1px solid var(--pm-line); text-align: right; color: #888; font-size: 11px; cursor: pointer; user-select: none; }
 .pm-table td { padding: 10px 15px; border-bottom: 1px solid var(--pm-line); text-align: right; vertical-align: middle; font-weight: 600; font-size: 15px; }
 .pm-table th:first-child, .pm-table td:first-child { text-align: left; padding-left: 25px; }
 
-/* Token Info */
 .td-token { display: flex; align-items: center; }
 .token-symbol { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; color: #fff; margin-bottom: 2px; }
 .token-contract { font-size: 10px; color: #555; background: rgba(255,255,255,0.05); padding: 1px 4px; border-radius: 3px; display: inline-flex; align-items: center; gap: 3px; cursor: copy; transition: 0.2s; }
 .token-contract:hover { color: var(--pm-gold); background: rgba(240,185,11,0.1); }
 
-/* Badges */
 .badge { font-size: 9px; padding: 2px 6px; border-radius: 3px; font-weight: 800; white-space: nowrap; display: inline-block; vertical-align: middle; }
 .bd-spot { background: #F0B90B; color: #000; }
 .bd-delist { background: #F6465D; color: #fff; }
@@ -40,7 +50,6 @@
 .bd-2x { background: #2b3139; color: #fff; border: 1px solid #555; }
 .bd-time { opacity: 0.8; font-weight: 600; margin-left: 3px; font-size: 8px; }
 
-/* Colors & Components */
 .c-purple { color: #bb86fc; } .c-blue { color: #00b8ff; } .c-up { color: #0ECB81; } .c-down { color: #F6465D; }
 .btn-more { background: rgba(255,255,255,0.05); color: var(--pm-text); border: 1px solid var(--pm-line); padding: 10px 40px; border-radius: 30px; margin-top:20px; cursor: pointer; }
 #copy-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--pm-gold); color: #000; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 12px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 9999; }
