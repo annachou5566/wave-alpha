@@ -1,10 +1,23 @@
-/* pro-mode.js - Final: Compact Badges & Chain Colors */
+/* pro-mode.js - Final Clean UI */
 
 const DATA_FILES = ['public/data/market-data.json', 'data/market-data.json', 'market-data.json'];
 let ALL_TOKENS = [];
 let VISIBLE_COUNT = 10;
 const LOAD_STEP = 10;
 let SORT_STATE = { col: 'volume.total', dir: 'desc' };
+
+/* --- HELPER: CHỌN MÀU HỆ --- */
+function getChainClass(chainName) {
+    if (!chainName || chainName === 'UNK') return 'chain-UNK';
+    const c = chainName.toUpperCase();
+    if (c.includes('BSC') || c.includes('BINANCE')) return 'chain-BSC';
+    if (c.includes('ETH')) return 'chain-ETH';
+    if (c.includes('SOL')) return 'chain-SOL';
+    if (c.includes('ARB')) return 'chain-ARB';
+    if (c.includes('BASE')) return 'chain-BASE';
+    if (c.includes('MATIC') || c.includes('POLY')) return 'chain-MATIC';
+    return 'chain-UNK';
+}
 
 window.safeSwitch = function(mode) {
     const marketView = document.getElementById('view-market-pro');
@@ -61,7 +74,7 @@ window.copyContract = function(addr, symbol) {
 
 window.loadMore = function() {
     const btn = document.querySelector('.btn-more');
-    if(btn) btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
+    if(btn) btn.innerHTML = 'Loading...';
     setTimeout(() => {
         VISIBLE_COUNT += LOAD_STEP;
         renderTable();
@@ -99,38 +112,30 @@ function renderTable() {
         const shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.substring(t.contract.length-4)}` : '';
         const contractHtml = t.contract ? `<div class="token-contract" onclick="event.stopPropagation(); copyContract('${t.contract}', '${t.symbol}')">${shortContract} <i class="far fa-copy"></i></div>` : '';
 
-        // 1. BADGE STATUS (Spot/Delisted)
-        let statusBadge = '';
-        if (t.status === 'SPOT') statusBadge = `<span class="badge-spot">SPOT</span>`;
-        else if (t.status === 'DELISTED') statusBadge = `<span class="badge-delisted">DELISTED</span>`;
-
-        // 2. BADGE CHAIN (Tự động màu theo hệ)
-        let chainClass = 'chain-UNK';
-        if (t.chain) {
-            if (t.chain === 'BSC') chainClass = 'chain-BSC';
-            else if (t.chain === 'ETH') chainClass = 'chain-ETH';
-            else if (t.chain === 'SOL') chainClass = 'chain-SOL';
-        }
-        let chainBadge = t.chain && t.chain !== 'UNK' ? `<span class="badge-chain ${chainClass}">${t.chain}</span>` : '';
-
-        // 3. BADGE MULTIPLIER (GỘP: "4x 19d")
-        let mulBadge = '';
+        // --- BADGE RENDER ---
         
+        // 1. Hệ (Chain): Nhỏ, trước tên
+        const chainName = t.chain && t.chain !== 'UNK' ? t.chain : '';
+        let chainHtml = chainName ? `<span class="badge ${getChainClass(chainName)}">${chainName}</span>` : '';
+
+        // 2. Status (Spot/Delisted): Nhỏ, sau tên
+        let statusHtml = '';
+        if (t.status === 'SPOT') statusHtml = `<span class="badge bd-spot">SPOT</span>`;
+        else if (t.status === 'DELISTED') statusHtml = `<span class="badge bd-delist">DELISTED</span>`;
+
+        // 3. Multiplier (4x 19d): Nhỏ, sau tên
+        let mulHtml = '';
         if (t.listing_time > 0) {
             const now = Date.now();
-            const expiry = t.listing_time + (30 * 24 * 60 * 60 * 1000); // 30 ngày
+            const expiry = t.listing_time + (30 * 24 * 60 * 60 * 1000);
             const diff = expiry - now;
             const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
 
             if (daysLeft > 0 && t.mul_point >= 2) {
                 const isBSC4x = (t.chain === 'BSC' && t.mul_point >= 4);
-                
-                let badgeClass = 'mul-blue'; // Mặc định 2x
-                if (isBSC4x) badgeClass = 'mul-bsc-gold'; // BSC 4x -> Vàng ngầu
-                else if (t.mul_point >= 4) badgeClass = 'mul-purple'; // Hệ khác 4x -> Tím
-
-                // GỘP TEXT: "4x 19d"
-                mulBadge = `<span class="badge-mul ${badgeClass}">${t.mul_point}x ${daysLeft}d</span>`;
+                let cls = isBSC4x ? 'bd-4x' : (t.mul_point >= 4 ? 'bd-4x' : 'bd-2x'); // 4x có viền, 2x thường
+                // Format: "4x 19d"
+                mulHtml = `<span class="badge ${cls}">${t.mul_point}x<span class="bd-time">${daysLeft}d</span></span>`;
             }
         }
 
@@ -141,7 +146,7 @@ function renderTable() {
                     <img src="${logoUrl}" class="token-icon" referrerpolicy="no-referrer" onerror="this.src='assets/tokens/default.png'">
                     <div class="token-info">
                         <div class="token-symbol">
-                            ${chainBadge}${t.symbol || '???'} ${statusBadge} ${mulBadge}
+                            ${chainHtml} ${t.symbol || '???'} ${statusHtml} ${mulHtml}
                         </div>
                         ${contractHtml}
                     </div>
@@ -166,12 +171,8 @@ const HTML_UI = `
 <div id="pm-toolbar" class="pm-toolbar-wrapper">
     <div class="pm-container">
         <div class="pm-tab-group">
-            <button class="pm-tab-item active" id="btn-tab-market" onclick="safeSwitch('market')">
-                <i class="fas fa-chart-line"></i> ALPHA MARKET
-            </button>
-            <button class="pm-tab-item" id="btn-tab-tourney" onclick="safeSwitch('tourney')">
-                <i class="fas fa-trophy"></i> TRADING COMPETITION
-            </button>
+            <button class="pm-tab-item active" id="btn-tab-market" onclick="safeSwitch('market')">ALPHA MARKET</button>
+            <button class="pm-tab-item" id="btn-tab-tourney" onclick="safeSwitch('tourney')">COMPETITION</button>
         </div>
         <div class="pm-ticker">
             <div class="pm-tick-box"><span class="pm-tick-lbl">TOTAL VOL</span><span class="pm-tick-val" id="tk-total">---</span></div>
@@ -188,13 +189,13 @@ const HTML_UI = `
                     <thead>
                         <tr>
                             <th onclick="sortData('symbol')" style="padding-left:25px; width:220px">Token <i class="fas fa-sort sort-icon"></i></th>
-                            <th onclick="sortData('price')" class="text-right">Price <i class="fas fa-sort sort-icon"></i></th>
-                            <th onclick="sortData('change_24h')" class="text-right">24h % <i class="fas fa-sort sort-icon"></i></th>
-                            <th onclick="sortData('liquidity')" class="text-right">Liquidity <i class="fas fa-sort sort-icon"></i></th>
-                            <th onclick="sortData('volume.total')" class="text-right">Total Vol <i class="fas fa-sort sort-icon"></i></th>
-                            <th onclick="sortData('volume.limit')" class="text-right c-purple">Limit Vol <i class="fas fa-sort sort-icon"></i></th>
-                            <th onclick="sortData('volume.onchain')" class="text-right c-blue">On-Chain <i class="fas fa-sort sort-icon"></i></th>
-                            <th onclick="sortData('market_cap')" class="text-right" style="padding-right:25px">Cap <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('price')">Price <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('change_24h')">24h % <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('liquidity')">Liquidity <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('volume.total')">Total Vol <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('volume.limit')" class="c-purple">Limit Vol <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('volume.onchain')" class="c-blue">On-Chain <i class="fas fa-sort sort-icon"></i></th>
+                            <th onclick="sortData('market_cap')" style="padding-right:25px">Cap <i class="fas fa-sort sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="pm-body">
@@ -203,7 +204,7 @@ const HTML_UI = `
                 </table>
             </div>
             <div class="pm-footer">
-                <button class="btn-more" onclick="loadMore()">Show Next 10 Tokens <i class="fas fa-chevron-down"></i></button>
+                <button class="btn-more" onclick="loadMore()">Show Next 10 Tokens</button>
             </div>
         </div>
     </div>
@@ -214,8 +215,16 @@ const HTML_UI = `
 (function init() {
     const urlParams = new URLSearchParams(window.location.search);
     const isAdmin = urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_admin') === 'true';
-    if (isAdmin) { localStorage.setItem('wave_alpha_admin', 'true'); }
-    else { document.body.innerHTML = '<div style="background:#0b0e11;height:100vh;display:flex;align-items:center;justify-content:center;color:#888;font-family:sans-serif"><h1>SYSTEM UPGRADE</h1></div>'; return; }
+    if (!isAdmin) {
+        document.body.innerHTML = `
+            <div class="maint-box">
+                <div class="spinner"></div>
+                <div class="maint-title">SYSTEM MAINTENANCE</div>
+                <div class="maint-desc">Optimizing Alpha Market engine. Please check back shortly.</div>
+            </div>`;
+        return; 
+    }
+    localStorage.setItem('wave_alpha_admin', 'true');
     const navbar = document.querySelector('.navbar');
     if (navbar && !document.getElementById('pm-toolbar')) { navbar.insertAdjacentHTML('afterend', HTML_UI); }
     else if (!document.getElementById('pm-toolbar')) { document.body.insertAdjacentHTML('afterbegin', HTML_UI); }
