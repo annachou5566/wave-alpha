@@ -23,7 +23,7 @@ def safe_float(val):
         return 0.0
 
 def fetch_data():
-    print("🚀 Updating Data: Fetching Chain Icons...")
+    print("🚀 Updating Data: Fetching Chain Icons & Limit Vol (USDT/USDC)...")
     
     try:
         resp = requests.get(API_AGG_TICKER, headers=FAKE_HEADERS, timeout=15)
@@ -59,14 +59,22 @@ def fetch_data():
             elif (not listing_cex) and is_offline:
                 status = "DELISTED"
 
-            # --- 3. LOGIC LIMIT VOL ---
+            # --- 3. LOGIC LIMIT VOL (Updated for USDC support) ---
             limit_vol = 0.0
             if (status == "SPOT" or total_vol > 50000) and alpha_id:
                 try:
+                    # Thử USDT trước
                     limit_url = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDT"
-                    limit_res = requests.get(limit_url, headers=FAKE_HEADERS, timeout=0.3).json()
+                    limit_res = requests.get(limit_url, headers=FAKE_HEADERS, timeout=0.5).json()
+                    
                     if limit_res.get("success"):
                         limit_vol = safe_float(limit_res["data"].get("quoteVolume"))
+                    else:
+                        # Nếu USDT fail, thử USDC (VD: ELSA trên Base)
+                        limit_url_usdc = f"{API_LIMIT_TICKER}?symbol={alpha_id}USDC"
+                        limit_res_usdc = requests.get(limit_url_usdc, headers=FAKE_HEADERS, timeout=0.5).json()
+                        if limit_res_usdc.get("success"):
+                            limit_vol = safe_float(limit_res_usdc["data"].get("quoteVolume"))
                 except: pass
 
             if limit_vol > total_vol: limit_vol = total_vol * 0.95
@@ -85,7 +93,7 @@ def fetch_data():
                 "name": item.get("name"),
                 "icon": item.get("iconUrl"),
                 "chain": chain_name,
-                "chain_icon": chain_icon, # <-- Lưu vào JSON
+                "chain_icon": chain_icon,
                 "contract": contract,
                 "status": status,
                 "mul_point": mul_point,
@@ -112,7 +120,7 @@ def fetch_data():
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             json.dump(final_data, f, ensure_ascii=False, indent=2)
             
-        print(f"🎉 Updated! Fetched Chain Icons for {len(processed_tokens)} tokens.")
+        print(f"🎉 Updated! Fetched {len(processed_tokens)} tokens (Limit Vol fixed for USDC).")
 
     except Exception as e:
         print(f"❌ Error: {str(e)}")
