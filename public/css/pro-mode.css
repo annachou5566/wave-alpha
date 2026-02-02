@@ -1,202 +1,134 @@
 /* public/css/pro-mode.css */
 
-/* --- 1. CORE VARIABLES --- */
+/* --- CORE & RESET --- */
 :root {
     --bg-dark: #0b0e11;
+    --bg-card: #1e2329;
     --text-primary: #eaecef;
-    --text-secondary: #848e9c;
+    --text-muted: #848e9c;
     --accent: #fcd535;
-    --green: #0ecb81;
-    --red: #f6465d;
     --neon-green: #00ff88;
-    --blue-liq: #00f0ff;
+    --neon-blue: #00f0ff;
+    --red: #f6465d;
     --font-main: 'Be Vietnam Pro', sans-serif;
     --font-num: 'Rajdhani', sans-serif;
+    --border-color: #2b3139;
 }
 
-/* --- 2. MAINTENANCE OVERLAY (FIXED) --- */
+/* --- MAINTENANCE --- */
 #maintenance-overlay {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #0b0e11 !important;
-    z-index: 2147483647 !important; /* Max Z-Index: Luôn nằm trên cùng */
-    display: flex !important; /* Luôn hiện mặc định */
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
+    position: fixed !important; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: var(--bg-dark) !important;
+    z-index: 2147483647 !important;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
+.maintenance-icon { font-size: 50px; margin-bottom: 20px; animation: pulse 2s infinite; }
+#maintenance-overlay h1 { color: var(--accent); font-family: var(--font-num); font-size: 32px; text-transform:uppercase; margin-bottom: 5px; }
+#maintenance-overlay p { color: var(--text-muted); }
+@keyframes pulse { 0% {opacity: 1;} 50% {opacity: 0.6;} 100% {opacity: 1;} }
 
-/* Class này chỉ được thêm vào bởi JS khi là Admin */
-body.is-admin-mode #maintenance-overlay {
-    display: none !important; /* Ẩn khi là Admin */
-}
-
-.maintenance-content {
-    text-align: center;
-}
-
-.maintenance-icon {
-    font-size: 60px;
-    margin-bottom: 20px;
-    animation: bounce 2s infinite;
-}
-
-#maintenance-overlay h1 {
-    color: var(--accent);
-    font-family: var(--font-main);
-    font-size: 28px;
-    letter-spacing: 2px;
-    margin: 0 0 10px 0;
-    text-transform: uppercase;
-}
-
-#maintenance-overlay p {
-    color: var(--text-secondary);
-    font-family: var(--font-main);
-    font-size: 16px;
-}
-
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-    40% {transform: translateY(-10px);}
-    60% {transform: translateY(-5px);}
-}
-
-/* --- 3. TAB NAVIGATION (Thanh chuyển Tab) --- */
+/* --- TAB NAVIGATION (GLASS STYLE) --- */
 #alpha-tab-nav {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    background: rgba(30, 35, 41, 0.9);
-    padding: 6px;
-    border-radius: 50px;
-    border: 1px solid #2b3139;
-    backdrop-filter: blur(10px);
-    display: flex;
-    gap: 5px;
+    position: fixed !important;
+    top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 2147483600 !important;
+    background: rgba(20, 20, 20, 0.9);
+    padding: 4px; border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: none; gap: 4px;
+    backdrop-filter: blur(12px);
 }
-
 .tab-btn {
-    background: transparent;
-    border: none;
-    color: #848e9c;
-    padding: 8px 20px;
-    border-radius: 40px;
-    cursor: pointer;
-    font-weight: 600;
-    font-family: var(--font-main);
-    font-size: 14px;
-    transition: all 0.2s;
+    background: transparent; border: none; color: var(--text-muted);
+    padding: 8px 20px; border-radius: 8px; cursor: pointer;
+    font-weight: 600; font-family: var(--font-main); font-size: 13px;
+    display: flex; align-items: center; gap: 6px; transition: all 0.2s;
 }
+.tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.tab-btn.active { background: #2b3139; color: #fff; border: 1px solid #444; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.badge-pro { background: var(--accent); color: #000; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 800; }
 
-.tab-btn.active {
-    background: #2b3139;
-    color: #fff;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
-
-.badge-pro {
-    background: var(--accent);
-    color: #000;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 5px;
-    font-weight: 800;
-}
-
-/* --- 4. ALPHA MARKET VIEW (Giao diện chính) --- */
+/* --- MARKET VIEW --- */
 #alpha-market-view {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    position: fixed !important; top: 0; left: 0; width: 100vw; height: 100vh;
     background: var(--bg-dark);
-    z-index: 100;
-    overflow-y: auto;
-    padding-top: 80px;
-    display: none; /* Mặc định ẩn, chờ JS bật */
+    z-index: 2147483000;
+    overflow-y: auto; padding-top: 140px; display: none;
 }
+.alpha-container { max-width: 1400px; margin: 0 auto; padding: 0 20px 80px; }
 
-.alpha-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 20px 100px;
+/* Header & Search */
+.alpha-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.search-group {
+    position: relative; width: 320px;
+    background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color);
+    transition: border-color 0.2s;
 }
+.search-group:focus-within { border-color: var(--accent); }
+#alpha-search { width: 100%; background: transparent; border: none; color: #fff; padding: 10px 10px 10px 42px; outline: none; font-size: 14px; }
+.search-icon { position: absolute; left: 14px; top: 13px; color: var(--text-muted); font-size: 14px; }
+.time-badge { color: var(--text-muted); font-size: 12px; font-family: var(--font-num); background: #161a1e; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); }
 
-.alpha-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.search-wrapper {
-    position: relative;
-    width: 300px;
-}
-
-#search-input {
-    width: 100%;
-    background: #1e2329;
-    border: 1px solid #2b3139;
-    color: #fff;
-    padding: 10px 10px 10px 40px;
-    border-radius: 8px;
-    outline: none;
-    font-family: var(--font-main);
-}
-
-#search-input:focus { border-color: var(--accent); }
-.search-icon { position: absolute; left: 12px; top: 13px; color: #848e9c; }
-
-.table-responsive { overflow-x: auto; overflow-y: visible; padding-bottom: 50px; }
+/* --- PROFESSIONAL TABLE --- */
+.table-responsive { overflow-x: auto; min-height: 400px; padding-bottom: 50px; }
 .alpha-table { width: 100%; border-collapse: separate; border-spacing: 0; color: var(--text-primary); }
 
 .alpha-table th {
-    background: #161a1e;
-    color: var(--text-secondary);
-    font-size: 11px;
-    padding: 10px;
-    border-bottom: 1px solid #2b3139;
-    border-right: 1px solid #2b3139;
-    vertical-align: middle;
+    background: #161a1e; color: var(--text-muted); font-size: 11px; font-weight: 600;
+    padding: 12px 10px; text-transform: uppercase; border-bottom: 1px solid var(--border-color);
+    white-space: nowrap; position: sticky; top: 0; z-index: 10;
 }
+.h-top th { border-bottom: none; border-top: 1px solid var(--border-color); }
+.h-sub th { border-top: none; font-size: 10px; padding-top: 0; padding-bottom: 8px; }
 
 .alpha-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #2b3139;
-    background: var(--bg-dark);
-    font-family: var(--font-num);
-    font-size: 14px;
-    vertical-align: middle;
+    padding: 8px 12px; border-bottom: 1px solid var(--border-color);
+    background: var(--bg-dark); font-family: var(--font-num); font-size: 14px; vertical-align: middle;
 }
 
-/* Column Colors */
-.col-total { color: #ffffff; font-weight: 700; }
-.col-limit { color: #4a4f55; }
-.col-onchain { color: var(--neon-green); font-weight: 700; text-shadow: 0 0 10px rgba(0, 255, 136, 0.2); }
-.col-liq { color: var(--blue-liq); font-weight: 600; }
-.rank-num { color: var(--text-secondary); font-weight: 600; }
+/* --- COLUMN STYLING --- */
+.rank-col { color: var(--text-muted); font-weight: 600; width: 40px; }
+.token-col { min-width: 220px; }
+.price-col { min-width: 100px; }
 
-/* Nested Icons */
-.token-cell { display: flex; align-items: center; gap: 12px; }
-.logo-wrapper { position: relative; width: 40px; height: 32px; overflow: visible; }
-.token-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #2b3139; }
-.chain-badge { position: absolute; bottom: -2px; right: 4px; width: 14px; height: 14px; border-radius: 50%; background: #000; border: 1px solid #848e9c; z-index: 10; }
+/* Nested Logo Logic (Chuẩn) */
+.logo-wrapper { position: relative; width: 32px; height: 32px; margin-right: 12px; display: inline-block; vertical-align: middle; }
+.token-logo { width: 32px; height: 32px; border-radius: 50%; display: block; }
+.chain-badge {
+    position: absolute;
+    bottom: -2px; right: -2px; /* Đẩy ra góc dưới phải */
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #000; /* Nền đen để tách biệt */
+    border: 1px solid var(--text-muted);
+    z-index: 5;
+}
 
-/* Badges */
-.badge-row { display: flex; gap: 4px; margin-top: 4px; }
-.smart-badge { font-size: 9px; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase; font-family: var(--font-num); }
-.badge-spot { background: rgba(252, 213, 53, 0.15); color: var(--accent); border: 1px solid var(--accent); }
-.badge-delisted { background: rgba(246, 70, 93, 0.15); color: var(--red); border: 1px solid var(--red); }
-.badge-alpha { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
+.token-cell { display: flex; align-items: center; }
+.token-meta { display: flex; flex-direction: column; justify-content: center; }
+.symbol-text { font-weight: 700; color: #fff; font-family: var(--font-main); }
+.copy-icon { font-size: 10px; color: #444; opacity: 0; transition: opacity 0.2s; }
+.token-cell:hover .copy-icon { opacity: 1; }
+
+/* Data Columns */
+.col-total { color: #fff; font-weight: 700; }
+.col-limit { color: var(--text-muted); }
+.col-onchain { color: var(--neon-green); font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.2); }
+.col-liq { color: var(--neon-blue); }
+
+.price-val { font-weight: 700; color: #fff; }
+.price-change { font-size: 11px; font-weight: 600; }
+.price-change.up { color: var(--green); }
+.price-change.down { color: var(--red); }
+
+/* Borders & Badges */
+.group-header { border-left: 1px solid #333; }
+.group-start { border-left: 1px solid #333; }
+.group-end { border-right: 1px solid #333; }
+
+.smart-badge { font-size: 9px; padding: 1px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px; }
+.badge-spot { border: 1px solid var(--accent); color: var(--accent); background: rgba(252, 213, 53, 0.1); }
+.badge-alpha { border: 1px solid var(--neon-green); color: var(--neon-green); background: rgba(0, 255, 136, 0.1); }
+.badge-delisted { border: 1px solid var(--red); color: var(--red); background: rgba(246, 70, 93, 0.1); }
 .glow-row td { background: rgba(252, 213, 53, 0.03); }
-.glow-row .token-logo { box-shadow: 0 0 10px rgba(252, 213, 53, 0.6); border: 1px solid var(--accent); }
-.cursor-pointer { cursor: pointer; }
