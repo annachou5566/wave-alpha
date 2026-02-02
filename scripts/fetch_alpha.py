@@ -100,7 +100,12 @@ def get_sparkline_data(chain_id, contract_addr):
     return chart
 
 # --- 3. WORKER ---
+# --- 3. WORKER ---
 def process_token_securely(item):
+    """
+    Hàm xử lý từng token. Đã cập nhật logic lấy trường 'offline', 'listingCex',
+    'onlineTge' và 'onlineAirdrop' từ dữ liệu mẫu thực tế.
+    """
     aid = item.get("alphaId")
     if not aid: return None
 
@@ -108,9 +113,7 @@ def process_token_securely(item):
     vol_24h = safe_float(item.get("volume24h"))
     contract = item.get("contractAddress")
     
-    # --- LOGIC THÔNG MINH: LẤY CHAIN ID TRỰC TIẾP TỪ DATA ---
-    # Không cần map thủ công qua tên nữa, API trả về gì dùng nấy.
-    # Ví dụ: API trả "CT_501" -> Dùng luôn "CT_501".
+    # Lấy Chain ID trực tiếp từ API (Thông minh hơn)
     chain_id = item.get("chainId") 
     chain_name = item.get("chainName", "")
 
@@ -128,13 +131,11 @@ def process_token_securely(item):
     daily_onchain = 0.0
     chart_data = []
 
-    # Chỉ quét dữ liệu chi tiết nếu Volume > 0 và có Contract + ChainID
+    # Chỉ quét dữ liệu chi tiết nếu là Token ALPHA (Đang chạy) và có Volume
     if status == "ALPHA" and vol_24h > 0 and contract and chain_id:
-        
-        # Gọi API lấy dữ liệu chi tiết bằng chính chain_id lấy được
         daily_total, daily_limit = fetch_daily_utc_stats(chain_id, contract)
         
-        # Fallback dữ liệu
+        # Logic sửa lỗi dữ liệu (Fallback)
         if daily_total == 0 and daily_limit > 0: daily_total = daily_limit
         if daily_total < daily_limit: daily_total = daily_limit
         
@@ -149,85 +150,14 @@ def process_token_securely(item):
         "chain": chain_name,
         "chain_icon": item.get("chainIconUrl"),
         "contract": contract,
+        
+        # --- CÁC TRƯỜNG QUAN TRỌNG CHO WEB ---
         "offline": is_offline,
         "listingCex": is_listing_cex,
         "status": status,
-        "mul_point": safe_float(item.get("mulPoint")),
-        "listing_time": item.get("listingTime", 0),
-        "price": safe_float(item.get("price")),
-        "change_24h": safe_float(item.get("percentChange24h")),
-        "liquidity": safe_float(item.get("liquidity")),
-        "market_cap": safe_float(item.get("marketCap")),
-        "tx_count": safe_float(item.get("count24h")),
-        "volume": {
-            "rolling_24h": vol_24h,
-            "daily_total": daily_total,
-            "daily_limit": daily_limit,
-            "daily_onchain": daily_onchain
-        },
-        "chart": chart_data
-    }
-    """
-    Hàm xử lý từng token. Đã cập nhật logic lấy trường 'offline' và 'listingCex' 
-    từ dữ liệu mẫu thực tế.
-    """
-    aid = item.get("alphaId")
-    if not aid: return None
-
-    # Lấy các chỉ số cơ bản
-    vol_24h = safe_float(item.get("volume24h"))
-    contract = item.get("contractAddress")
-    chain_name = item.get("chainName", "")
-    
-    # --- LOGIC PHÂN LOẠI TRẠNG THÁI (STATUS LOGIC) ---
-    # Lấy giá trị trực tiếp từ API (API trả về boolean true/false nên lấy trực tiếp được)
-    is_offline = item.get("offline", False)     
-    is_listing_cex = item.get("listingCex", False)
-    
-    status = "ALPHA"
-    # Logic: Nếu Offline = True -> Kiểm tra tiếp ListingCex
-    if is_offline is True:
-        if is_listing_cex is True:
-            status = "SPOT"      # Đã list CEX -> Spot
-        else:
-            status = "DELISTED"  # Không list CEX -> Delisted
-    
-    # --- LOGIC TÍNH TOÁN VOLUME (AGGREGATION) ---
-    daily_total = 0.0
-    daily_limit = 0.0
-    daily_onchain = 0.0
-    chart_data = []
-
-    # Chỉ quét dữ liệu chi tiết nếu là Token ALPHA (Đang chạy) và có Volume
-    # Giúp tiết kiệm API và không làm sai lệch số liệu tổng của giải
-    if status == "ALPHA" and vol_24h > 0 and contract:
-        chain_id = CHAIN_MAP.get(chain_name) or CHAIN_MAP.get(chain_name.upper())
-        if chain_id:
-            daily_total, daily_limit = fetch_daily_utc_stats(chain_id, contract)
-            
-            # Logic sửa lỗi dữ liệu (Fallback)
-            if daily_total == 0 and daily_limit > 0: daily_total = daily_limit
-            if daily_total < daily_limit: daily_total = daily_limit
-            
-            daily_onchain = daily_total - daily_limit
-            chart_data = get_sparkline_data(chain_id, contract)
-
-    return {
-        "id": aid,
-        "symbol": item.get("symbol"),
-        "name": item.get("name"),
-        "icon": item.get("iconUrl"),
-        "chain": chain_name,
-        "chain_icon": item.get("chainIconUrl"),
-        "contract": contract,
-        
-        # --- QUAN TRỌNG: XUẤT CÁC TRƯỜNG NÀY RA JSON CHO WEB SỬ DỤNG ---
-        "offline": is_offline,       # True/False
-        "listingCex": is_listing_cex,# True/False
-        "status": status,            # "SPOT" | "DELISTED" | "ALPHA"
-        "onlineTge": item.get("onlineTge", False),         # Badge TGE
-        "onlineAirdrop": item.get("onlineAirdrop", False), # Badge Airdrop
-        # ---------------------------------------------------------------
+        "onlineTge": item.get("onlineTge", False),
+        "onlineAirdrop": item.get("onlineAirdrop", False),
+        # -------------------------------------
         
         "mul_point": safe_float(item.get("mulPoint")),
         "listing_time": item.get("listingTime", 0),
