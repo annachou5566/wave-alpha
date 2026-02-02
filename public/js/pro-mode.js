@@ -5,158 +5,79 @@ const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
 let displayedTokens = [];
 let displayCount = 50; 
-let isAdmin = false;
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
-// --- INIT ---
+// --- MAIN EVENTS ---
 document.addEventListener('DOMContentLoaded', () => {
-    injectAppStructure(); // TỰ TẠO GIAO DIỆN
+    // 1. Kiểm tra chế độ bảo trì ngay lập tức
     checkMaintenanceMode();
+
+    // 2. Khởi tạo dữ liệu thị trường (Chạy ngầm)
     initMarket();
     setupEventListeners();
 });
 
-// --- 1. INJECT UI (CORE FIX) ---
-function injectAppStructure() {
-    // 1. Tạo Tab Navigation (Thanh điều hướng)
-    const nav = document.createElement('div');
-    nav.id = 'alpha-tab-nav';
-    nav.innerHTML = `
-        <div class="nav-content">
-            <button id="btn-tab-competition" class="tab-btn active" onclick="switchTab('competition')">
-                🏆 Trading Competition
-            </button>
-            <button id="btn-tab-alpha" class="tab-btn" onclick="switchTab('alpha')">
-                🌊 Alpha Market <span class="badge-pro">PRO</span>
-            </button>
-        </div>
-    `;
-    document.body.prepend(nav); // Chèn lên đầu trang
-
-    // 2. Tạo Container cho Alpha Market (Mặc định ẩn)
-    const container = document.createElement('div');
-    container.id = 'alpha-market-view';
-    container.style.display = 'none'; // Ẩn lúc đầu
-    container.innerHTML = `
-        <div class="alpha-container">
-            <div class="alpha-header">
-                <div class="search-wrapper">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="search-input" placeholder="Search Token, Contract..." autocomplete="off">
-                </div>
-                <div id="last-updated" class="time-badge">Loading...</div>
-            </div>
-            
-            <div class="table-responsive">
-                <table class="alpha-table">
-                    <thead>
-                        <tr class="head-top">
-                            <th rowspan="2" class="text-center" style="width: 40px;">#</th>
-                            <th rowspan="2" style="width: 250px;">TOKEN / CONTRACT</th>
-                            <th rowspan="2" class="text-end" style="width: 100px;">PRICE</th>
-                            <th colspan="3" class="text-center border-group">DAILY VOLUME (UTC)</th>
-                            <th colspan="3" class="text-center border-group">MARKET STATS (24h)</th>
-                        </tr>
-                        <tr class="head-sub">
-                            <th class="text-end cursor-pointer border-group" onclick="handleSort('volume.daily_total')">TOTAL</th>
-                            <th class="text-end cursor-pointer" onclick="handleSort('volume.daily_limit')">LIMIT</th>
-                            <th class="text-end cursor-pointer" onclick="handleSort('volume.daily_onchain')">ON-CHAIN</th>
-                            <th class="text-end cursor-pointer border-group" onclick="handleSort('volume.rolling_24h')">VOL 24H</th>
-                            <th class="text-end cursor-pointer" onclick="handleSort('tx_count')">TXs</th>
-                            <th class="text-end cursor-pointer" onclick="handleSort('liquidity')">LIQ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="market-table-body"></tbody>
-                </table>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(container);
-
-    // 3. Tạo Maintenance Overlay (Nếu chưa có)
-    if (!document.getElementById('maintenance-overlay')) {
-        const overlay = document.createElement('div');
-        overlay.id = 'maintenance-overlay';
-        overlay.innerHTML = `
-            <div class="maintenance-box">
-                <h1>🚧 SYSTEM UPGRADE</h1>
-                <p>Wave Alpha Terminal is updating data logic.</p>
-                <div class="loader"></div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    }
-}
-
-function switchTab(tab) {
-    const alphaView = document.getElementById('alpha-market-view');
-    const compBtn = document.getElementById('btn-tab-competition');
-    const alphaBtn = document.getElementById('btn-tab-alpha');
-    
-    // Logic ẩn hiện: Alpha View dùng position fixed đè lên giao diện cũ
-    if (tab === 'alpha') {
-        alphaView.style.display = 'block';
-        compBtn.classList.remove('active');
-        alphaBtn.classList.add('active');
-    } else {
-        alphaView.style.display = 'none';
-        compBtn.classList.add('active');
-        alphaBtn.classList.remove('active');
-    }
-}
-
-// --- 2. LOGIC CŨ (GIỮ NGUYÊN) ---
-
+// --- 1. LOGIC MAINTENANCE MODE (QUAN TRỌNG) ---
 function checkMaintenanceMode() {
+    // Lấy tham số ?mode=... trên URL
     const urlParams = new URLSearchParams(window.location.search);
-    const overlay = document.getElementById('maintenance-overlay');
+    const mode = urlParams.get('mode');
     
-    if (urlParams.get('mode') === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
-        isAdmin = true;
+    // Kiểm tra: Nếu là admin trên URL hoặc đã lưu trong máy
+    if (mode === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
+        
+        // Lưu quyền vào LocalStorage để lần sau không cần gõ lại
         localStorage.setItem('wave_alpha_role', 'admin');
-        if(overlay) overlay.style.display = 'none';
+        
+        // Thêm class vào body -> CSS sẽ tự động ẩn #maintenance-overlay
+        document.body.classList.add('is-admin-mode');
+        
+        console.log("✅ Admin Access Granted: Overlay Hidden");
     } else {
-        if(overlay) overlay.style.display = 'flex';
+        console.log("🔒 Restricted Access: Overlay Active");
     }
 }
+
+// --- 2. LOGIC MARKET DATA (Cốt lõi) ---
 
 async function initMarket() {
     await fetchMarketData();
-    // Auto refresh mỗi 30s
-    setInterval(fetchMarketData, 30000);
+    setInterval(fetchMarketData, 60000); // Tự động cập nhật mỗi 60s
 }
 
 async function fetchMarketData() {
     try {
         const res = await fetch(DATA_URL + '?t=' + Date.now());
         const data = await res.json();
+        
         allTokens = data.tokens || [];
-        applyFilterAndSort(); 
+        applyFilterAndSort(); // Xử lý và render
         
         const timeLbl = document.getElementById('last-updated');
-        if(timeLbl) timeLbl.innerText = 'UPDATED: ' + data.last_updated;
+        if(timeLbl) timeLbl.innerText = 'Updated: ' + data.last_updated;
     } catch (e) {
-        console.error("Fetch error:", e);
+        console.error("Lỗi tải data:", e);
     }
 }
 
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    // Nếu chưa có bảng (do chưa sửa HTML bước sau) thì dừng lại, không lỗi
+    if (!tbody) return; 
     
+    tbody.innerHTML = '';
     const listToRender = displayedTokens.slice(0, displayCount);
 
     listToRender.forEach((t, index) => {
         const tr = document.createElement('tr');
         
-        // Logic Badges
+        // Logic Badge
         let badgesHtml = '';
         if (t.status === 'SPOT') badgesHtml += `<span class="smart-badge badge-spot">SPOT</span>`;
         else if (t.status === 'DELISTED') badgesHtml += `<span class="smart-badge badge-delisted">DELISTED</span>`;
         
         if (t.listing_time && t.mul_point) {
-            const diffDays = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000);
+            const diffDays = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000); // 30 ngày
             if (diffDays > 0) {
                 if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
                 badgesHtml += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${diffDays}d]</span>`;
@@ -167,42 +88,54 @@ function renderTable() {
         const tokenIcon = t.icon || 'https://placehold.co/32';
 
         tr.innerHTML = `
-            <td class="text-center rank-col">${index + 1}</td>
+            <td class="text-center"><div class="rank-num">${index + 1}</div></td>
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="${tokenIcon}" class="token-logo">
+                        <img src="${tokenIcon}" class="token-logo" onerror="this.src='https://placehold.co/32'">
                         <img src="${chainIcon}" class="chain-badge">
                     </div>
                     <div class="token-info">
                         <div class="d-flex align-items-center gap-2 cursor-pointer" onclick="copyContract('${t.contract}')">
-                            <span class="symbol">${t.symbol}</span>
-                            <i class="fas fa-copy copy-icon"></i>
+                            <span class="symbol fw-bold text-white">${t.symbol}</span>
+                            <i class="fas fa-copy text-secondary" style="font-size:10px; opacity:0.5"></i>
                         </div>
                         <div class="badge-row">${badgesHtml}</div>
                     </div>
                 </div>
             </td>
-            <td class="text-end fw-bold">$${formatPrice(t.price)}</td>
+            <td>
+                <div class="price-box text-end">
+                    <div class="font-num fw-bold">$${formatPrice(t.price)}</div>
+                    <div class="small ${t.change_24h >= 0 ? 'text-success' : 'text-danger'}">
+                        ${t.change_24h >= 0 ? '+' : ''}${t.change_24h}%
+                    </div>
+                </div>
+            </td>
             
-            <td class="text-end col-total border-group">$${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end col-total border-start border-secondary" style="border-color:#2b3139!important">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end col-limit">$${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end col-onchain">$${formatNum(t.volume.daily_onchain)}</td>
 
-            <td class="text-end col-vol24h border-group">$${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end col-tx">${formatInt(t.tx_count)}</td>
+            <td class="text-end col-vol24h border-start border-secondary" style="border-color:#2b3139!important">$${formatNum(t.volume.rolling_24h)}</td>
+            <td class="text-end col-tx font-num">${formatInt(t.tx_count)}</td>
             <td class="text-end col-liq">$${formatNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-// --- 3. HELPERS (SEARCH, SORT, FORMAT) ---
-window.handleSort = (key) => {
-    if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
-    else { sortConfig.key = key; sortConfig.dir = 'desc'; }
-    applyFilterAndSort();
-};
+// --- 3. HELPER FUNCTIONS ---
+
+function formatNum(num) {
+    if (!num) return '0';
+    if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
+    return num.toFixed(2);
+}
+
+function formatInt(num) { return num ? new Intl.NumberFormat('en-US').format(num) : '0'; }
+function formatPrice(num) { return !num ? '0' : (num < 0.0001 ? num.toExponential(2) : num.toFixed(4)); }
 
 window.copyContract = (addr) => {
     if(!addr) return;
@@ -210,8 +143,27 @@ window.copyContract = (addr) => {
     alert(`Copied: ${addr}`);
 };
 
+// --- 4. FILTER & SORT ---
+
+function setupEventListeners() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', () => applyFilterAndSort());
+    }
+    
+    window.addEventListener('scroll', () => {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+            if (displayCount < displayedTokens.length) {
+                displayCount += 50;
+                renderTable();
+            }
+        }
+    });
+}
+
 function applyFilterAndSort() {
     const term = document.getElementById('search-input')?.value.toLowerCase() || '';
+    
     displayedTokens = allTokens.filter(t => 
         (t.symbol && t.symbol.toLowerCase().includes(term)) || 
         (t.contract && t.contract.toLowerCase().includes(term))
@@ -223,23 +175,17 @@ function applyFilterAndSort() {
         return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
     });
     
+    // Reset khi search
     displayCount = 50; 
     renderTable();
 }
 
-function getNestedVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
-function formatNum(n) { return !n ? '0' : (n >= 1e6 ? (n/1e6).toFixed(2)+'M' : (n >= 1e3 ? (n/1e3).toFixed(2)+'K' : n.toFixed(2))); }
-function formatInt(n) { return n ? new Intl.NumberFormat().format(n) : '0'; }
-function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
+window.handleSort = (key) => {
+    if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
+    else { sortConfig.key = key; sortConfig.dir = 'desc'; }
+    applyFilterAndSort();
+};
 
-// Scroll Load More
-window.addEventListener('scroll', () => {
-    if (document.getElementById('alpha-market-view')?.style.display !== 'none') {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-            if (displayCount < displayedTokens.length) {
-                displayCount += 50;
-                renderTable();
-            }
-        }
-    }
-});
+function getNestedVal(obj, path) {
+    return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj);
+}

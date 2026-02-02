@@ -337,3 +337,69 @@ body {
 .badge-spot { color: #fcd535; border: 1px solid #fcd535; background: rgba(252,213,53,0.1); }
 .badge-alpha { color: #00ff88; border: 1px solid #00ff88; background: rgba(0,255,136,0.1); }
 .glow-row td { background: rgba(252, 213, 53, 0.05) !important; }
+
+/* public/css/pro-mode.css */
+
+/* --- MAINTENANCE OVERLAY --- */
+#maintenance-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0b0e11; /* Màu nền tối trùng với theme */
+    z-index: 9999; /* Luôn nằm trên cùng */
+    display: flex; /* Mặc định là hiện */
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.maintenance-content {
+    text-align: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.maintenance-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+#maintenance-overlay h1 {
+    color: #fcd535; /* Màu vàng thương hiệu */
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+#maintenance-overlay p {
+    color: #848e9c;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 16px;
+    margin: 5px 0;
+}
+
+.sub-text {
+    font-size: 14px !important;
+    opacity: 0.7;
+}
+
+/* Hiệu ứng chuyển động nhẹ */
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Class ẩn overlay khi là Admin */
+.is-admin-mode #maintenance-overlay {
+    display: none !important;
+}
