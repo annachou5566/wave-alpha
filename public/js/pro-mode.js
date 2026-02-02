@@ -1,27 +1,5 @@
 // public/js/pro-mode.js
-
-// --- 0. FORCE ADMIN CHECK (SIÊU MẠNH) ---
-(function forceAdminCheck() {
-    const params = new URLSearchParams(window.location.search);
-    // Kiểm tra URL hoặc LocalStorage
-    if (params.get('mode') === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
-        
-        console.log("🚀 FORCE ADMIN UNLOCK ACTIVATED");
-        localStorage.setItem('wave_alpha_role', 'admin');
-        
-        // 1. Gắn class vào thẻ HTML (thẻ cha cao nhất)
-        document.documentElement.classList.add('is-admin-mode');
-        
-        // 2. Bơm CSS ẩn Overlay NGAY LẬP TỨC
-        const style = document.createElement('style');
-        style.innerHTML = \`
-            html.is-admin-mode body #maintenance-overlay { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-            html.is-admin-mode #alpha-tab-nav { display: flex !important; }
-            html.is-admin-mode body { overflow: auto !important; }
-        \`;
-        document.head.appendChild(style);
-    }
-})();
+// NHIỆM VỤ: XỬ LÝ DỮ LIỆU & GIAO DIỆN ALPHA MARKET (KHÔNG LO BẢO TRÌ)
 
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
@@ -29,12 +7,7 @@ let displayCount = 50;
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Xóa các element cũ nếu bị trùng
-    document.getElementById('alpha-tab-nav')?.remove();
-    document.getElementById('alpha-market-view')?.remove();
-    // (Không xóa overlay cũ vội để tránh nhấp nháy, CSS sẽ ẩn nó)
-
-    // Load CSS
+    // Tự động load CSS nếu thiếu
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -42,82 +15,63 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
     
-    injectHTML();
-    checkAccessLoop(); // Chạy lại lần nữa để đảm bảo
+    // Kiểm tra nếu là Admin thì mở Tab mặc định
+    if (localStorage.getItem('wave_alpha_role') === 'admin') {
+        window.pluginSwitchTab('alpha');
+    }
+
     initMarket();
     setupEvents();
 });
 
-function checkAccessLoop() {
-    if (localStorage.getItem('wave_alpha_role') === 'admin') {
-        const overlay = document.getElementById('maintenance-overlay');
-        const nav = document.getElementById('alpha-tab-nav');
-        // CSS đã ẩn rồi, nhưng JS ẩn thêm cho chắc
-        if (overlay) overlay.style.display = 'none';
-        if (nav) nav.style.display = 'flex';
-        
-        // Mở Tab Alpha ngay
-        window.pluginSwitchTab('alpha');
+// --- LOGIC GIAO DIỆN ---
+window.pluginSwitchTab = (tab) => {
+    const newView = document.getElementById('alpha-market-view');
+    const oldView = document.getElementById('view-dashboard');
+    const btnA = document.getElementById('btn-tab-alpha');
+    const btnC = document.getElementById('btn-tab-competition');
+
+    if (tab === 'alpha') {
+        if(newView) newView.style.display = 'block';
+        if(oldView) oldView.style.display = 'none';
+        btnA?.classList.add('active'); btnC?.classList.remove('active');
+    } else {
+        if(newView) newView.style.display = 'none';
+        if(oldView) oldView.style.display = 'block';
+        btnC?.classList.add('active'); btnA?.classList.remove('active');
     }
-}
+};
 
-function injectHTML() {
-    const root = document.createElement('div');
-    root.id = 'alpha-plugin-root';
-    root.innerHTML = \`
-        <div id="maintenance-overlay">
-            <div class="maintenance-content">
-                <div class="maintenance-icon">🚧</div>
-                <h1>SYSTEM MAINTENANCE</h1>
-                <p>Restricted Access.</p>
-            </div>
-        </div>
+window.pluginSort = (key) => {
+    if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
+    else { sortConfig.key = key; sortConfig.dir = 'desc'; }
+    renderTable();
+};
 
-        <div id="alpha-tab-nav" style="display:none">
-            <button id="btn-tab-alpha" class="tab-btn active" onclick="window.pluginSwitchTab('alpha')">
-                <i class="fas fa-layer-group"></i> ALPHA MARKET <span class="badge-pro">PRO</span>
-            </button>
-            <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">
-                <i class="fas fa-trophy"></i> COMPETITION
-            </button>
-        </div>
+window.pluginCopy = (txt) => { 
+    if(txt) {
+        navigator.clipboard.writeText(txt);
+        // Simple Toast
+        const t = document.createElement('div');
+        t.innerText = 'COPIED';
+        t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#00F0FF;color:#000;padding:5px 10px;font-weight:bold;z-index:9999;border-radius:4px;';
+        document.body.appendChild(t);
+        setTimeout(()=>t.remove(), 1500);
+    }
+};
 
-        <div id="alpha-market-view" style="display:none">
-            <div class="alpha-container">
-                <div class="alpha-header">
-                    <div class="search-group">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
-                    </div>
-                    <div class="time-badge" id="last-updated">Waiting...</div>
-                </div>
-                
-                <div class="table-responsive">
-                    <table class="alpha-table">
-                        <thead>
-                            <tr class="h-top">
-                                <th rowspan="2" class="text-center" style="width:40px">#</th>
-                                <th rowspan="2" style="min-width:200px">TOKEN INFO</th>
-                                <th rowspan="2" class="text-end">PRICE</th>
-                                <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
-                                <th colspan="3" class="text-center">MARKET STATS (24h)</th>
-                            </tr>
-                            <tr class="h-sub">
-                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
-                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT (CEX)</th>
-                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
-                                <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
-                                <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="market-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    \`;
-    document.body.appendChild(root);
+// --- LOGIC DỮ LIỆU ---
+async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
+
+async function fetchMarketData() {
+    try {
+        const res = await fetch(DATA_URL + '?t=' + Date.now());
+        const data = await res.json();
+        allTokens = data.tokens || [];
+        renderTable();
+        const timeLbl = document.getElementById('last-updated');
+        if(timeLbl) timeLbl.innerText = 'Updated: ' + data.last_updated;
+    } catch (e) { console.error("Data error:", e); }
 }
 
 function renderTable() {
@@ -139,7 +93,6 @@ function renderTable() {
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         
-        // Badge Logic
         let badgesHtml = '';
         if (t.status === 'SPOT') badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
         if (t.status === 'DELISTED') badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
@@ -200,41 +153,6 @@ function formatNum(n) {
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
-
-window.pluginCopy = (txt) => { 
-    if(txt) {
-        navigator.clipboard.writeText(txt);
-        const t = document.createElement('div');
-        t.innerText = 'Copied Contract!';
-        t.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#00F0FF; color:#000; padding:8px 16px; border-radius:4px; font-weight:bold; z-index:99999;';
-        document.body.appendChild(t);
-        setTimeout(() => t.remove(), 2000);
-    }
-};
-
-window.pluginSwitchTab = (tab) => {
-    const newView = document.getElementById('alpha-market-view');
-    const oldView = document.getElementById('view-dashboard');
-    const btnA = document.getElementById('btn-tab-alpha');
-    const btnC = document.getElementById('btn-tab-competition');
-
-    if (tab === 'alpha') {
-        if(newView) newView.style.display = 'block';
-        if(oldView) oldView.style.display = 'none';
-        btnA?.classList.add('active'); btnC?.classList.remove('active');
-    } else {
-        if(newView) newView.style.display = 'none';
-        if(oldView) oldView.style.display = 'block';
-        btnC?.classList.add('active'); btnA?.classList.remove('active');
-    }
-};
-
-window.pluginSort = (key) => {
-    if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
-    else { sortConfig.key = key; sortConfig.dir = 'desc'; }
-    renderTable();
-};
-
 function setupEvents() {
     document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable());
     window.addEventListener('scroll', () => {
@@ -244,16 +162,4 @@ function setupEvents() {
             }
         }
     });
-}
-
-async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
-async function fetchMarketData() {
-    try {
-        const res = await fetch(DATA_URL + '?t=' + Date.now());
-        const data = await res.json();
-        allTokens = data.tokens || [];
-        renderTable();
-        const timeLbl = document.getElementById('last-updated');
-        if(timeLbl) timeLbl.innerText = 'Updated: ' + data.last_updated;
-    } catch (e) { console.error("Data error:", e); }
 }

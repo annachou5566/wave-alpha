@@ -1066,13 +1066,55 @@
     <div class="maintenance-content">
         <div class="maintenance-icon">🚧</div>
         <h1>SYSTEM MAINTENANCE</h1>
-        <p>Wave Alpha Terminal is updating data logic.</p>
-        <p class="sub-text">Please check back later.</p>
+        <p>Restricted Access.</p>
     </div>
 </div>
 
-<script src="public/js/pro-mode.js"></script>
+<div id="alpha-tab-nav" style="display:none"> <button id="btn-tab-alpha" class="tab-btn active" onclick="window.pluginSwitchTab('alpha')">
+        <i class="fas fa-layer-group"></i> ALPHA MARKET <span class="badge-pro">PRO</span>
+    </button>
+    <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">
+        <i class="fas fa-trophy"></i> COMPETITION
+    </button>
+</div>
 
+<div id="alpha-market-view" style="display:none">
+    <div class="alpha-container">
+        <div class="alpha-header">
+            <div class="search-group">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+            </div>
+            <div class="time-badge" id="last-updated">Waiting...</div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="alpha-table">
+                <thead>
+                    <tr class="h-top">
+                        <th rowspan="2" class="text-center" style="width:40px">#</th>
+                        <th rowspan="2" style="min-width:200px">TOKEN INFO</th>
+                        <th rowspan="2" class="text-end">PRICE</th>
+                        <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
+                        <th colspan="3" class="text-center">MARKET STATS (24h)</th>
+                    </tr>
+                    <tr class="h-sub">
+                        <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                        <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT (CEX)</th>
+                        <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                        <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                        <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
+                        <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
+                    </tr>
+                </thead>
+                <tbody id="market-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="public/js/maintenance.js?v=999"></script> 
+<script src="public/js/pro-mode.js?v=999"></script>
 
 
 </body>
