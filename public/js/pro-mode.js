@@ -1,18 +1,14 @@
-// public/js/pro-mode.js - PHIÊN BẢN CHỈ XỬ LÝ DỮ LIỆU & GIAO DIỆN (KHÔNG ĐỤNG BẢO TRÌ)
-
+// public/js/pro-mode.js
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
 let displayCount = 50; 
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. CHỈ XÓA GIAO DIỆN MARKET CŨ (Để tránh trùng lặp khi code chạy 2 lần)
-    // TUYỆT ĐỐI KHÔNG XÓA maintenance-overlay VÌ NÓ NẰM Ở INDEX.HTML
     document.getElementById('alpha-plugin-root')?.remove();
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
 
-    // 2. LOAD CSS (Nếu chưa có)
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -20,23 +16,17 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
-    // 3. TẠO GIAO DIỆN MARKET & TAB
     injectHTML();
 
-    // 4. KIỂM TRA QUYỀN ADMIN ĐỂ CHUYỂN TAB
-    // (Lưu ý: maintenance.js đã chạy trước để mở khóa overlay rồi)
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
         window.pluginSwitchTab('alpha');
     }
 
-    // 5. TẢI DỮ LIỆU
     initMarket();
     setupEvents();
 });
 
-// --- HÀM XỬ LÝ TAB ---
 window.pluginSwitchTab = (tab) => {
-    // Luôn hiện thanh Tab
     const nav = document.getElementById('alpha-tab-nav');
     if (nav) nav.style.display = 'flex';
 
@@ -78,7 +68,8 @@ window.pluginCopy = (txt) => {
 function injectHTML() {
     const root = document.createElement('div');
     root.id = 'alpha-plugin-root';
-    root.innerHTML = \`
+    // Đã sửa lỗi syntax ở đây
+    root.innerHTML = `
         <div id="alpha-tab-nav" style="display:none">
             <button id="btn-tab-alpha" class="tab-btn active" onclick="window.pluginSwitchTab('alpha')">
                 <i class="fas fa-layer-group" style="margin-right:6px"></i> ALPHA MARKET <span class="badge-pro" style="margin-left:6px">PRO</span>
@@ -122,11 +113,10 @@ function injectHTML() {
                 </div>
             </div>
         </div>
-    \`;
+    `;
     document.body.appendChild(root);
 }
 
-// --- LOGIC DỮ LIỆU ---
 async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
 async function fetchMarketData() {
     try {
@@ -165,43 +155,44 @@ function renderTable() {
             const diff = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000);
             if (diff > 0) {
                 if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
-                badgesHtml += \`<span class="smart-badge badge-alpha">[x\${t.mul_point} \${diff}d]</span>\`;
+                badgesHtml += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${diff}d]</span>`;
             }
         }
 
         const tokenImg = t.icon || 'https://placehold.co/32';
         const chainImg = t.chain_icon || 'https://placehold.co/14';
 
-        tr.innerHTML = \`
-            <td class="text-center font-num text-secondary">\${i + 1}</td>
+        // Đã sửa lỗi syntax ở đây
+        tr.innerHTML = `
+            <td class="text-center font-num text-secondary">${i + 1}</td>
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="\${tokenImg}" class="token-logo" onerror="this.src='https://placehold.co/32'">
-                        <img src="\${chainImg}" class="chain-badge" onerror="this.style.display='none'">
+                        <img src="${tokenImg}" class="token-logo" onerror="this.src='https://placehold.co/32'">
+                        <img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'">
                     </div>
                     <div class="token-meta">
-                        <div class="symbol-row" onclick="window.pluginCopy('\${t.contract}')">
-                            <span class="symbol-text">\${t.symbol}</span>
+                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
+                            <span class="symbol-text">${t.symbol}</span>
                             <i class="fas fa-copy copy-icon"></i>
                         </div>
-                        <div class="badge-row">\${badgesHtml}</div>
+                        <div class="badge-row">${badgesHtml}</div>
                     </div>
                 </div>
             </td>
             <td class="text-end font-num">
-                <div class="text-white-bold">$\${formatPrice(t.price)}</div>
-                <div style="font-size:11px" class="\${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
-                    \${t.change_24h >= 0 ? '+' : ''}\${t.change_24h}%
+                <div class="text-white-bold">$${formatPrice(t.price)}</div>
+                <div style="font-size:11px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+                    ${t.change_24h >= 0 ? '+' : ''}${t.change_24h}%
                 </div>
             </td>
-            <td class="text-end font-num text-white-bold">$\${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end font-num text-dim">$\${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end font-num text-neon border-right-dim">$\${formatNum(t.volume.daily_onchain)}</td>
-            <td class="text-end font-num text-white">$\${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end font-num text-secondary">\${formatInt(t.tx_count)}</td>
-            <td class="text-end font-num text-brand">$\${formatNum(t.liquidity)}</td>
-        \`;
+            <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_limit)}</td>
+            <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end font-num text-white">$${formatNum(t.volume.rolling_24h)}</td>
+            <td class="text-end font-num text-secondary">${formatInt(t.tx_count)}</td>
+            <td class="text-end font-num text-brand">$${formatNum(t.liquidity)}</td>
+        `;
         tbody.appendChild(tr);
     });
 }
