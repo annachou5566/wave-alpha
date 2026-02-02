@@ -1,4 +1,4 @@
-// public/js/pro-mode.js - CLEAN VERSION
+// public/js/pro-mode.js - PHIÊN BẢN CHỈ XỬ LÝ DỮ LIỆU & GIAO DIỆN (KHÔNG ĐỤNG BẢO TRÌ)
 
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
@@ -6,13 +6,13 @@ let displayCount = 50;
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. DỌN DẸP
-    const oldRoot = document.getElementById('alpha-plugin-root');
-    if (oldRoot) oldRoot.remove();
+    // 1. CHỈ XÓA GIAO DIỆN MARKET CŨ (Để tránh trùng lặp khi code chạy 2 lần)
+    // TUYỆT ĐỐI KHÔNG XÓA maintenance-overlay VÌ NÓ NẰM Ở INDEX.HTML
+    document.getElementById('alpha-plugin-root')?.remove();
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
 
-    // 2. LOAD CSS
+    // 2. LOAD CSS (Nếu chưa có)
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -20,21 +20,23 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
-    // 3. TẠO HTML
+    // 3. TẠO GIAO DIỆN MARKET & TAB
     injectHTML();
 
-    // 4. CHECK ADMIN -> CHUYỂN TAB
+    // 4. KIỂM TRA QUYỀN ADMIN ĐỂ CHUYỂN TAB
+    // (Lưu ý: maintenance.js đã chạy trước để mở khóa overlay rồi)
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
         window.pluginSwitchTab('alpha');
     }
 
-    // 5. LẤY DỮ LIỆU
+    // 5. TẢI DỮ LIỆU
     initMarket();
     setupEvents();
 });
 
-// CHUYỂN TAB
+// --- HÀM XỬ LÝ TAB ---
 window.pluginSwitchTab = (tab) => {
+    // Luôn hiện thanh Tab
     const nav = document.getElementById('alpha-tab-nav');
     if (nav) nav.style.display = 'flex';
 
@@ -124,7 +126,7 @@ function injectHTML() {
     document.body.appendChild(root);
 }
 
-// FETCH DATA
+// --- LOGIC DỮ LIỆU ---
 async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
 async function fetchMarketData() {
     try {
