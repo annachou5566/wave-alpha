@@ -214,20 +214,29 @@ function renderTable() {
             badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>'; // Vàng
         } else if (status === 'DELISTED') {
             badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>'; // Đỏ
-        } else {
-            // ALPHA - Chỉ hiện Badge [xN Yd] nếu còn hạn
-            if (t.listing_time && t.mul_point) {
-                const expiryTime = t.listing_time + 2592000000; // 30 ngày
-                const diffDays = Math.ceil((expiryTime - now) / 86400000);
-                if (diffDays > 0) {
-                    const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
-                    badgesHtml += `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
-                    
-                    // Glow row cho BSC xịn
-                    if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
-                }
+        
+            /* --- CODE MỚI --- */
+} else {
+    // ALPHA - Chỉ hiện Badge [xN Yd] nếu còn hạn
+    if (t.listing_time && t.mul_point) {
+        const expiryTime = t.listing_time + 2592000000; // 30 ngày
+        const diffDays = Math.ceil((expiryTime - now) / 86400000);
+        
+        if (diffDays > 0) {
+            // SỬA Ở ĐÂY: Chỉ hiện Badge nếu điểm nhân > 1 (x2, x3, x4...)
+            // Nếu x1 thì ẩn đi cho gọn.
+            if (t.mul_point > 1) {
+                const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
+                badgesHtml += `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
+            }
+            
+            // Logic Glow Row vẫn giữ nguyên (nếu x4 thì vẫn sáng)
+            if (t.chain === 'BSC' && t.mul_point >= 4) {
+                tr.classList.add('glow-row');
             }
         }
+    }
+}
 
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
