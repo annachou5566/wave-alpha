@@ -1,42 +1,32 @@
 // public/js/pro-mode.js
 
-// --- 0. FORCE ADMIN (CHẠY NGAY LẬP TỨC - FIX LỖI KHÔNG VÀO ĐƯỢC) ---
+// --- 0. FORCE ADMIN ---
 (function forceAdminCheck() {
-    // 1. Kiểm tra URL và LocalStorage ngay lập tức
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode');
-    const savedRole = localStorage.getItem('wave_alpha_role');
-
-    // 2. Nếu là Admin -> Kích hoạt chế độ ADMIN ngay
-    if (mode === 'admin' || savedRole === 'admin') {
-        console.log("🚀 ADMIN DETECTED: Force Unlocking...");
-        
-        // Lưu quyền lại
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
         localStorage.setItem('wave_alpha_role', 'admin');
-        
-        // Đánh dấu vào thẻ HTML (thẻ này luôn tồn tại sớm nhất)
         document.documentElement.classList.add('is-admin-mode');
-        
-        // Bơm ngay CSS "Cưỡng chế" vào đầu trang (Không chờ file CSS tải)
         const style = document.createElement('style');
-        style.innerHTML = `
-            html.is-admin-mode body #maintenance-overlay { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
-            html.is-admin-mode #alpha-tab-nav { display: flex !important; }
-        `;
+        style.innerHTML = 'body.is-admin-mode #maintenance-overlay { display: none !important; } body.is-admin-mode #alpha-tab-nav { display: flex !important; }';
         document.head.appendChild(style);
     }
 })();
-
-// ... (Giữ nguyên phần code phía dưới của bạn: const DATA_URL = ...)
 
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
 let displayCount = 50; 
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
-// --- 1. BOOTSTRAP ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Load CSS
+    // 1. Dọn dẹp các element cũ nếu bị trùng (Fix lỗi 2 tab bấm)
+    const oldNav = document.getElementById('alpha-tab-nav');
+    if (oldNav) oldNav.remove(); 
+    const oldView = document.getElementById('alpha-market-view');
+    if (oldView) oldView.remove();
+    const oldOverlay = document.getElementById('maintenance-overlay');
+    if (oldOverlay) oldOverlay.remove();
+
+    // 2. Load CSS
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -50,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
-// --- 2. LOGIC QUYỀN & TAB ---
 function checkAccessLoop() {
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
         const overlay = document.getElementById('maintenance-overlay');
@@ -62,13 +51,10 @@ function checkAccessLoop() {
     }
 }
 
-// --- 3. INJECT HTML (Cấu trúc Bảng 2 Tầng) ---
 function injectHTML() {
-    if (document.getElementById('alpha-plugin-root')) return;
-
     const root = document.createElement('div');
     root.id = 'alpha-plugin-root';
-    root.innerHTML = `
+    root.innerHTML = \`
         <div id="maintenance-overlay">
             <div class="maintenance-content">
                 <div class="maintenance-icon">🚧</div>
@@ -120,17 +106,15 @@ function injectHTML() {
                 </div>
             </div>
         </div>
-    `;
+    \`;
     document.body.appendChild(root);
 }
 
-// --- 4. RENDER LOGIC ---
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
     
-    // Filter & Sort trước khi render
     let list = allTokens.filter(t => {
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
         return (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
@@ -145,71 +129,60 @@ function renderTable() {
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         
-        // --- LOGIC BADGE [x4 19d] ---
+        // Badge Logic
         let badgesHtml = '';
-        let isGlow = false;
-
-        // Badge Trạng thái
-        if (t.status === 'SPOT') badgesHtml += `<span class="smart-badge badge-spot">SPOT</span>`;
-        if (t.status === 'DELISTED') badgesHtml += `<span class="smart-badge badge-delisted">DELISTED</span>`;
-
-        // Badge Alpha Time
+        if (t.status === 'SPOT') badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
+        if (t.status === 'DELISTED') badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
         if (t.listing_time && t.mul_point) {
             const now = Date.now();
-            const end = t.listing_time + (30 * 24 * 60 * 60 * 1000); // 30 ngày
-            const diff = Math.ceil((end - now) / 86400000); // Đổi ra ngày
-            
+            const end = t.listing_time + (30 * 24 * 60 * 60 * 1000);
+            const diff = Math.ceil((end - now) / 86400000);
             if (diff > 0) {
-                // Hiệu ứng Glow cho BSC x4
-                if (t.chain === 'BSC' && t.mul_point >= 4) {
-                    isGlow = true;
-                    tr.classList.add('glow-row');
-                }
-                badgesHtml += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${diff}d]</span>`;
+                if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
+                badgesHtml += \`<span class="smart-badge badge-alpha">[x\${t.mul_point} \${diff}d]</span>\`;
             }
         }
 
-        // --- HÌNH ẢNH (Từ API) ---
+        // Image Logic (API Fallback)
         const tokenImg = t.icon || 'https://placehold.co/32';
         const chainImg = t.chain_icon || 'https://placehold.co/14';
 
-        tr.innerHTML = `
-            <td class="text-center font-num text-secondary">${i + 1}</td>
+        tr.innerHTML = \`
+            <td class="text-center font-num text-secondary">\${i + 1}</td>
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="${tokenImg}" class="token-logo" onerror="this.src='https://placehold.co/32'">
-                        <img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'">
+                        <img src="\${tokenImg}" class="token-logo" onerror="this.src='https://placehold.co/32'">
+                        <img src="\${chainImg}" class="chain-badge" onerror="this.style.display='none'">
                     </div>
                     <div class="token-meta">
-                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
-                            <span class="symbol-text">${t.symbol}</span>
+                        <div class="symbol-row" onclick="window.pluginCopy('\${t.contract}')">
+                            <span class="symbol-text">\${t.symbol}</span>
                             <i class="fas fa-copy copy-icon"></i>
                         </div>
-                        <div class="badge-row">${badgesHtml}</div>
+                        <div class="badge-row">\${badgesHtml}</div>
                     </div>
                 </div>
             </td>
             <td class="text-end font-num">
-                <div class="text-white-bold">$${formatPrice(t.price)}</div>
-                <div style="font-size:11px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
-                    ${t.change_24h >= 0 ? '+' : ''}${t.change_24h}%
+                <div class="text-white-bold">$\${formatPrice(t.price)}</div>
+                <div style="font-size:11px" class="\${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+                    \${t.change_24h >= 0 ? '+' : ''}\${t.change_24h}%
                 </div>
             </td>
             
-            <td class="text-end font-num text-white-bold" style="font-size:15px">$${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end font-num text-neon">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end font-num text-white-bold" style="font-size:15px">$\${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end font-num text-dim">$\${formatNum(t.volume.daily_limit)}</td>
+            <td class="text-end font-num text-neon">$\${formatNum(t.volume.daily_onchain)}</td>
             
-            <td class="text-end font-num text-white">$${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end font-num text-secondary">${formatInt(t.tx_count)}</td>
-            <td class="text-end font-num text-cyber">$${formatNum(t.liquidity)}</td>
-        `;
+            <td class="text-end font-num text-white">$\${formatNum(t.volume.rolling_24h)}</td>
+            <td class="text-end font-num text-secondary">\${formatInt(t.tx_count)}</td>
+            <td class="text-end font-num text-brand">$\${formatNum(t.liquidity)}</td>
+        \`;
         tbody.appendChild(tr);
     });
 }
 
-// --- UTILS ---
 function formatNum(n) { 
     if (!n) return '0';
     if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
@@ -221,14 +194,12 @@ function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
 
-// --- EVENTS ---
 window.pluginCopy = (txt) => { 
     if(txt) {
         navigator.clipboard.writeText(txt);
-        // Toast đơn giản
         const t = document.createElement('div');
         t.innerText = 'Copied Contract!';
-        t.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0ecb81; color:#000; padding:8px 16px; border-radius:4px; font-weight:bold; z-index:99999;';
+        t.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#00F0FF; color:#000; padding:8px 16px; border-radius:4px; font-weight:bold; z-index:99999;';
         document.body.appendChild(t);
         setTimeout(() => t.remove(), 2000);
     }
@@ -254,7 +225,7 @@ window.pluginSwitchTab = (tab) => {
 window.pluginSort = (key) => {
     if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
     else { sortConfig.key = key; sortConfig.dir = 'desc'; }
-    renderTable(); // Re-render với data đã sort
+    renderTable();
 };
 
 function setupEvents() {
