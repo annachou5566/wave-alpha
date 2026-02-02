@@ -3,6 +3,7 @@ let allTokens = [];
 let displayCount = 50; 
 let pinnedTokens = JSON.parse(localStorage.getItem('alpha_pins')) || [];
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
+let currentFilter = 'ALL'; // Các giá trị: 'ALL', 'ALPHA', 'SPOT', 'DELISTED'
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Meta bypass
@@ -33,15 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function injectLayout() {
-    // Xóa các element cũ nếu có để tránh trùng lặp
+    // Cleanup cũ
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
 
-    // Tìm Navbar có sẵn của trang web
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // 1. Tạo thanh Tab điều hướng
+    // 1. Tạo thanh Tab
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
@@ -54,20 +54,39 @@ function injectLayout() {
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
 
-    // 2. Tạo nội dung Market View
+    // 2. Tạo Market View (Gồm Summary Cards + Header Search + Table)
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
     marketView.style.display = 'none'; 
     marketView.innerHTML = `
         <div class="alpha-container" style="padding-top: 20px;">
-            <div class="alpha-header">
-    <div class="time-badge" id="last-updated">Connecting...</div>
+            
+            <div class="summary-grid">
+                <div class="summary-card" id="card-alpha-vol" onclick="window.toggleFilter('ALPHA')">
+                    <div class="card-title">ALPHA VOL (24H)</div>
+                    <div class="card-value val-neon" id="sum-vol">Connecting...</div>
+                </div>
+                <div class="summary-card" id="card-active" onclick="window.toggleFilter('ALPHA')">
+                    <div class="card-title">ACTIVE TOKENS</div>
+                    <div class="card-value val-white" id="sum-active">0</div>
+                </div>
+                <div class="summary-card" id="card-spot" onclick="window.toggleFilter('SPOT')">
+                    <div class="card-title">LISTED SPOT</div>
+                    <div class="card-value val-spot" id="sum-spot">0</div>
+                </div>
+                <div class="summary-card" id="card-delist" onclick="window.toggleFilter('DELISTED')">
+                    <div class="card-title">DELISTED</div>
+                    <div class="card-value val-delist" id="sum-delisted">0</div>
+                </div>
+            </div>
 
-    <div class="search-group">
-        <i class="fas fa-search search-icon"></i>
-        <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
-    </div>
-</div>
+            <div class="alpha-header">
+                <div class="time-badge" id="last-updated">Connecting...</div>
+                <div class="search-group">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+                </div>
+            </div>
 
             <div class="table-responsive">
                 <table class="alpha-table">
@@ -145,6 +164,7 @@ async function fetchMarketData() {
         const res = await fetch(DATA_URL + '?t=' + Date.now());
         const data = await res.json();
         allTokens = data.tokens || [];
+        updateSummary();
         renderTable();
         const timeLbl = document.getElementById('last-updated');
         if(timeLbl) timeLbl.innerText = 'Updated: ' + (data.last_updated || new Date().toLocaleTimeString());
@@ -156,100 +176,92 @@ function renderTable() {
     if (!tbody) return;
     tbody.innerHTML = '';
     
+    // 1. Lọc theo Search & Status Filter
     let list = allTokens.filter(t => {
+        // Lọc Search
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
-        return (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
+        const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
+        if (!matchSearch) return false;
+
+        // Lọc theo Status (Click vào thẻ Card)
+        const status = getTokenStatus(t);
+        if (currentFilter === 'ALL') return true;
+        return status === currentFilter; 
     });
 
-    /* --- SỬA LẠI ĐOẠN SORT --- */
+    // 2. Sắp xếp (Ưu tiên Pin -> Sort Config)
     list.sort((a, b) => {
-        // Kiểm tra xem token có được Pin không
         const pinA = pinnedTokens.includes(a.symbol);
         const pinB = pinnedTokens.includes(b.symbol);
-
-        // Logic: Nếu A được Pin thì A lên đầu (return -1)
         if (pinA && !pinB) return -1;
         if (!pinA && pinB) return 1;
 
-        // Nếu cả 2 cùng Pin hoặc cùng không Pin thì sort như bình thường
         const valA = getVal(a, sortConfig.key);
         const valB = getVal(b, sortConfig.key);
         return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
     });
 
-    /* --- THAY THẾ TOÀN BỘ ĐOẠN RENDER TRONG VÒNG LẶP --- */
+    // 3. Render
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         const now = Date.now();
-        
-        // 1. Xử lý Badge (Yêu cầu 1)
+        const status = getTokenStatus(t); // Lấy trạng thái chuẩn (SPOT/DELISTED/ALPHA)
+
+        // --- XỬ LÝ BADGE ---
         let badgesHtml = '';
-        
-        // Badge Spot/Delisted (Giữ nguyên logic cũ của bạn)
-        if (t.offline === true) {
-            if (t.listingCex === true) badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
-            else badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
-        }
 
-        // Badge Multiplier (SỬA Ở ĐÂY: Bỏ ngoặc [], thêm màu vàng cho BSC)
-        if (t.listing_time && t.mul_point) {
-            const expiryTime = t.listing_time + 2592000000; 
-            const diffDays = Math.ceil((expiryTime - now) / 86400000);
-
-            if (diffDays > 0) {
-                // Logic màu sắc: Nếu là BSC thì dùng class 'badge-bsc', ngược lại dùng 'badge-alpha'
-                const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
-                
-                // Nội dung: Bỏ dấu ngoặc vuông [ ]
-                badgesHtml += `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
-                
-                // Glow row (Giữ nguyên)
-                if (t.chain === 'BSC' && t.mul_point >= 4) {
-                    tr.classList.add('glow-row');
+        if (status === 'SPOT') {
+            badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>'; // Vàng
+        } else if (status === 'DELISTED') {
+            badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>'; // Đỏ
+        } else {
+            // ALPHA - Chỉ hiện Badge [xN Yd] nếu còn hạn
+            if (t.listing_time && t.mul_point) {
+                const expiryTime = t.listing_time + 2592000000; // 30 ngày
+                const diffDays = Math.ceil((expiryTime - now) / 86400000);
+                if (diffDays > 0) {
+                    const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
+                    badgesHtml += `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
+                    
+                    // Glow row cho BSC xịn
+                    if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
                 }
             }
         }
 
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
-
-        // 2. Xử lý Ngôi sao Pin (Yêu cầu 3)
         const isPinned = pinnedTokens.includes(t.symbol);
-        // Nếu đã pin: sao đặc (fas), màu brand. Chưa pin: sao rỗng (far), màu tối.
         const starClass = isPinned ? 'fas fa-star text-brand' : 'far fa-star text-secondary';
 
-        /* --- TRONG HÀM RENDER TABLE --- */
-tr.innerHTML = `
-    <td class="text-center">
-        <i class="${starClass} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
-    </td>
-    
-    <td>
-        <div class="token-cell">
-            <div class="logo-wrapper">
-                <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
-                ${chainBadgeHtml}
-            </div>
-            <div class="token-meta">
-                <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
-                    <span class="symbol-text">${t.symbol}</span> <i class="fas fa-copy copy-icon"></i>
+        tr.innerHTML = `
+            <td class="text-center">
+                <i class="${starClass} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
+            </td>
+            <td>
+                <div class="token-cell">
+                    <div class="logo-wrapper">
+                        <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
+                        ${chainBadgeHtml}
+                    </div>
+                    <div class="token-meta">
+                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
+                            <span class="symbol-text">${t.symbol}</span>
+                            <i class="fas fa-copy copy-icon"></i>
+                        </div>
+                        <div class="badge-row">${badgesHtml}</div>
+                    </div>
                 </div>
-                <div class="badge-row">${badgesHtml}</div>
-            </div>
-        </div>
-    </td>
-    
-    <td class="text-end"> <div class="text-white-bold">$${formatPrice(t.price)}</div>
-        <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
-            ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}% </div>
-    </td>
-            
+            </td>
+            <td class="text-end">
+                <div class="text-white-bold">$${formatPrice(t.price)}</div>
+                <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+                    ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}%
+                </div>
+            </td>
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
-            
             <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_limit)}</td>
-            
             <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_onchain)}</td>
-            
             <td class="text-end font-num text-white">$${formatNum(t.volume.rolling_24h)}</td>
             <td class="text-end font-num text-secondary">${formatInt(t.tx_count)}</td>
             <td class="text-end font-num text-brand">$${formatNum(t.liquidity)}</td>
@@ -257,6 +269,7 @@ tr.innerHTML = `
         tbody.appendChild(tr);
     });
 }
+
 /* --- CODE MỚI HOÀN TOÀN --- */
 window.togglePin = (symbol) => {
     // Nếu đang Pin thì bỏ Pin, chưa Pin thì thêm vào
@@ -275,3 +288,70 @@ function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
 function setupEvents() { document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable()); window.addEventListener('scroll', () => { if (document.getElementById('alpha-market-view')?.style.display === 'block') { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) { if (displayCount < allTokens.length) { displayCount += 50; renderTable(); } } } }); }
+
+
+// Helper: Xác định trạng thái Token
+function getTokenStatus(t) {
+    // Offline = True mới xét tiếp
+    if (t.offline === true) {
+        if (t.listingCex === true) return 'SPOT';
+        return 'DELISTED'; // listingCex = false
+    }
+    return 'ALPHA'; // Active
+}
+
+// Tính toán số liệu tổng hợp
+function updateSummary() {
+    let totalVol = 0;
+    let countAlpha = 0;
+    let countSpot = 0;
+    let countDelisted = 0;
+
+    allTokens.forEach(t => {
+        const status = getTokenStatus(t);
+        if (status === 'ALPHA') {
+            countAlpha++;
+            // CHỈ CỘNG VOL CỦA TOKEN ALPHA (Yêu cầu logic mới)
+            totalVol += (t.volume?.rolling_24h || 0); 
+        } else if (status === 'SPOT') {
+            countSpot++;
+        } else if (status === 'DELISTED') {
+            countDelisted++;
+        }
+    });
+
+    // Cập nhật giao diện
+    const elVol = document.getElementById('sum-vol');
+    const elActive = document.getElementById('sum-active');
+    const elSpot = document.getElementById('sum-spot');
+    const elDelist = document.getElementById('sum-delisted');
+
+    if(elVol) elVol.innerText = '$' + formatNum(totalVol);
+    if(elActive) elActive.innerText = countAlpha;
+    if(elSpot) elSpot.innerText = countSpot;
+    if(elDelist) elDelist.innerText = countDelisted;
+}
+
+// Xử lý khi click vào thẻ Filter
+window.toggleFilter = (filterType) => {
+    // Nếu bấm lại thẻ đang chọn -> Hủy filter (về ALL)
+    if (currentFilter === filterType) {
+        currentFilter = 'ALL';
+    } else {
+        currentFilter = filterType;
+    }
+    
+    // Highlight thẻ đang chọn
+    document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
+    if (currentFilter === 'ALPHA') {
+        document.getElementById('card-alpha-vol')?.classList.add('active-filter');
+        document.getElementById('card-active')?.classList.add('active-filter');
+    } else if (currentFilter === 'SPOT') {
+        document.getElementById('card-spot')?.classList.add('active-filter');
+    } else if (currentFilter === 'DELISTED') {
+        document.getElementById('card-delist')?.classList.add('active-filter');
+    }
+
+    renderTable(); // Vẽ lại bảng
+};
+

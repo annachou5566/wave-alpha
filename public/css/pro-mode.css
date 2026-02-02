@@ -355,3 +355,61 @@ body {
 .copy-icon { opacity: 0; transition: opacity 0.2s; margin-left: 5px; color: var(--text-secondary); }
 .symbol-row:hover .copy-icon { opacity: 1; }
 .badge-row { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+
+/* --- SUMMARY CARDS (KHU VỰC TỔNG QUAN) --- */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* Chia 4 cột đều nhau */
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.summary-card {
+    background: rgba(22, 26, 30, 0.6);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+}
+
+.summary-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Trạng thái đang chọn (Filter Active) */
+.summary-card.active-filter {
+    background: rgba(0, 240, 255, 0.15);
+    border-color: var(--brand);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+.card-title {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+}
+
+.card-value {
+    font-family: var(--font-num);
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* Màu sắc riêng cho từng thẻ */
+.val-neon { color: var(--neon-green) !important; text-shadow: 0 0 10px rgba(0, 255, 136, 0.4); }
+.val-white { color: #fff !important; }
+.val-spot { color: var(--accent) !important; }
+.val-delist { color: #cf304a !important; }
