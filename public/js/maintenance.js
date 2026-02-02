@@ -1,33 +1,37 @@
 // public/js/maintenance.js
-// NHIỆM VỤ DUY NHẤT: KIỂM TRA QUYỀN ADMIN ĐỂ ẨN/HIỆN MÀN HÌNH BẢO TRÌ
+// NHIỆM VỤ: KIỂM TRA QUYỀN VÀ MỞ KHÓA GIAO DIỆN
 
 (function() {
-    console.log("🛡️ Maintenance System Checking...");
-    
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get('mode');
-    const savedRole = localStorage.getItem('wave_alpha_role');
-    
-    // Nếu phát hiện là Admin
+    // 1. Kiểm tra URL hoặc LocalStorage
+    var urlParams = new URLSearchParams(window.location.search);
+    var mode = urlParams.get('mode');
+    var savedRole = localStorage.getItem('wave_alpha_role');
+
+    // 2. Nếu là Admin
     if (mode === 'admin' || savedRole === 'admin') {
-        console.log("🚀 ADMIN ACCESS: GRANTED");
+        console.log("🛡️ MAINTENANCE: Admin Detected - Unlocking...");
         
-        // 1. Lưu quyền
+        // Lưu quyền
         localStorage.setItem('wave_alpha_role', 'admin');
         
-        // 2. Gắn cờ vào <html> và <body> để CSS xử lý ẩn/hiện
+        // Đánh dấu vào HTML
         document.documentElement.classList.add('is-admin-mode');
-        if (document.body) document.body.classList.add('is-admin-mode');
         
-        // 3. Mở sẵn Tab Alpha (nếu code tab đã chạy)
-        if (window.pluginSwitchTab) {
-            window.pluginSwitchTab('alpha');
-        }
+        // Bơm CSS cưỡng chế ẩn Overlay NGAY LẬP TỨC (quan trọng nhất)
+        var style = document.createElement('style');
+        style.innerHTML = `
+            #maintenance-overlay { display: none !important; visibility: hidden !important; }
+            #alpha-tab-nav { display: flex !important; }
+            body { overflow: auto !important; }
+        `;
+        document.head.appendChild(style);
+        
+        // Nếu Tab Script đã load, kích hoạt tab Alpha
+        if (window.pluginSwitchTab) window.pluginSwitchTab('alpha');
+        
     } else {
-        console.log("🔒 USER ACCESS: RESTRICTED");
-        // Xóa quyền nếu không phải admin
+        console.log("🔒 MAINTENANCE: Restricted Access");
         localStorage.removeItem('wave_alpha_role');
         document.documentElement.classList.remove('is-admin-mode');
-        if (document.body) document.body.classList.remove('is-admin-mode');
     }
 })();

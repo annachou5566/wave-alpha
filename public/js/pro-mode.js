@@ -1,31 +1,35 @@
 // public/js/pro-mode.js
-// NHIỆM VỤ: XỬ LÝ DỮ LIỆU & GIAO DIỆN ALPHA MARKET (KHÔNG LO BẢO TRÌ)
+// NHIỆM VỤ: DỮ LIỆU THỊ TRƯỜNG & TAB
 
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
+let displayedTokens = [];
 let displayCount = 50; 
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tự động load CSS nếu thiếu
+    // Nạp CSS giao diện
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = 'public/css/pro-mode.css?v=' + Date.now();
         document.head.appendChild(link);
     }
-    
-    // Kiểm tra nếu là Admin thì mở Tab mặc định
+
+    injectHTML();
+    // Nếu là Admin (đã check bởi maintenance.js), mở tab Alpha
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
         window.pluginSwitchTab('alpha');
     }
-
     initMarket();
     setupEvents();
 });
 
-// --- LOGIC GIAO DIỆN ---
+// --- UI HELPERS ---
 window.pluginSwitchTab = (tab) => {
+    const nav = document.getElementById('alpha-tab-nav');
+    if (nav) nav.style.display = 'flex'; // Đảm bảo thanh tab hiện
+
     const newView = document.getElementById('alpha-market-view');
     const oldView = document.getElementById('view-dashboard');
     const btnA = document.getElementById('btn-tab-alpha');
@@ -51,18 +55,68 @@ window.pluginSort = (key) => {
 window.pluginCopy = (txt) => { 
     if(txt) {
         navigator.clipboard.writeText(txt);
-        // Simple Toast
+        // Toast Neon Blue
         const t = document.createElement('div');
         t.innerText = 'COPIED';
-        t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#00F0FF;color:#000;padding:5px 10px;font-weight:bold;z-index:9999;border-radius:4px;';
+        t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#00F0FF;color:#000;padding:6px 12px;font-weight:800;font-family:sans-serif;z-index:9999;border-radius:4px;box-shadow:0 0 10px #00F0FF;';
         document.body.appendChild(t);
         setTimeout(()=>t.remove(), 1500);
     }
 };
 
-// --- LOGIC DỮ LIỆU ---
-async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
+// --- DATA LOGIC ---
+function injectHTML() {
+    if (document.getElementById('alpha-plugin-root')) return;
+    const root = document.createElement('div');
+    root.id = 'alpha-plugin-root';
+    root.innerHTML = \`
+        <div id="alpha-tab-nav" style="display:none">
+            <button id="btn-tab-alpha" class="tab-btn active" onclick="window.pluginSwitchTab('alpha')">
+                🌊 ALPHA MARKET <span class="badge-pro">PRO</span>
+            </button>
+            <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">
+                🏆 COMPETITION
+            </button>
+        </div>
 
+        <div id="alpha-market-view" style="display:none">
+            <div class="alpha-container">
+                <div class="alpha-header">
+                    <div class="search-group">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="alpha-search" placeholder="Search Token..." autocomplete="off">
+                    </div>
+                    <div class="time-badge" id="last-updated">Wait...</div>
+                </div>
+                <div class="table-responsive">
+                    <table class="alpha-table">
+                        <thead>
+                            <tr class="h-top">
+                                <th rowspan="2" class="text-center" style="width:40px">#</th>
+                                <th rowspan="2" style="min-width:180px">TOKEN</th>
+                                <th rowspan="2" class="text-end">PRICE</th>
+                                <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
+                                <th colspan="3" class="text-center">STATS (24h)</th>
+                            </tr>
+                            <tr class="h-sub">
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="market-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    \`;
+    document.body.appendChild(root);
+}
+
+async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
 async function fetchMarketData() {
     try {
         const res = await fetch(DATA_URL + '?t=' + Date.now());
@@ -97,9 +151,7 @@ function renderTable() {
         if (t.status === 'SPOT') badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
         if (t.status === 'DELISTED') badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
         if (t.listing_time && t.mul_point) {
-            const now = Date.now();
-            const end = t.listing_time + (30 * 24 * 60 * 60 * 1000);
-            const diff = Math.ceil((end - now) / 86400000);
+            const diff = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000);
             if (diff > 0) {
                 if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
                 badgesHtml += \`<span class="smart-badge badge-alpha">[x\${t.mul_point} \${diff}d]</span>\`;
@@ -132,7 +184,7 @@ function renderTable() {
                     \${t.change_24h >= 0 ? '+' : ''}\${t.change_24h}%
                 </div>
             </td>
-            <td class="text-end font-num text-white-bold" style="font-size:15px">$\${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end font-num text-white-bold">$\${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-dim">$\${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end font-num text-neon">$\${formatNum(t.volume.daily_onchain)}</td>
             <td class="text-end font-num text-white">$\${formatNum(t.volume.rolling_24h)}</td>
