@@ -1,56 +1,53 @@
-// public/js/pro-mode.js
+// public/js/pro-mode.js - PRO MODE LOGIC
 
-// --- 0. FORCE ADMIN CHECK (Giữ nguyên logic cũ) ---
+// --- 0. FORCE ADMIN (Mở khóa ngay lập tức) ---
 (function forceAdminCheck() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode');
-    const savedRole = localStorage.getItem('wave_alpha_role');
-    if (mode === 'admin' || savedRole === 'admin') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
         localStorage.setItem('wave_alpha_role', 'admin');
         document.documentElement.classList.add('is-admin-mode');
-        document.body ? document.body.classList.add('is-admin-mode') : null;
+        // Inject CSS ẩn Overlay khẩn cấp
         const style = document.createElement('style');
-        style.innerHTML = `
-            body.is-admin-mode #maintenance-overlay { display: none !important; }
-            body.is-admin-mode #alpha-tab-nav { display: flex !important; }
-        `;
+        style.innerHTML = `body.is-admin-mode #maintenance-overlay { display: none !important; } 
+                           body.is-admin-mode #alpha-tab-nav { display: flex !important; }`;
         document.head.appendChild(style);
     }
 })();
 
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
-let displayedTokens = [];
 let displayCount = 50; 
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
 // --- 1. BOOTSTRAP ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Load CSS
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = 'public/css/pro-mode.css?v=' + Date.now();
         document.head.appendChild(link);
     }
+    
     injectHTML();
     checkAccessLoop();
     initMarket();
     setupEvents();
 });
 
-// --- 2. LOGIC QUYỀN (GIỮ NGUYÊN) ---
+// --- 2. LOGIC QUYỀN & TAB ---
 function checkAccessLoop() {
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
-        document.body.classList.add('is-admin-mode');
         const overlay = document.getElementById('maintenance-overlay');
         const nav = document.getElementById('alpha-tab-nav');
         if (overlay) overlay.style.display = 'none';
         if (nav) nav.style.display = 'flex';
+        // Mặc định mở Tab Alpha
         window.pluginSwitchTab('alpha');
     }
 }
 
-// --- 3. BƠM GIAO DIỆN (ĐÚNG FORMAT TRADING COMP) ---
+// --- 3. INJECT HTML (Cấu trúc Bảng 2 Tầng) ---
 function injectHTML() {
     if (document.getElementById('alpha-plugin-root')) return;
 
@@ -67,7 +64,7 @@ function injectHTML() {
 
         <div id="alpha-tab-nav" style="display:none">
             <button id="btn-tab-alpha" class="tab-btn active" onclick="window.pluginSwitchTab('alpha')">
-                <i class="fas fa-layer-group"></i> ALPHA MARKET
+                <i class="fas fa-layer-group"></i> ALPHA MARKET <span class="badge-pro">PRO</span>
             </button>
             <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">
                 <i class="fas fa-trophy"></i> COMPETITION
@@ -81,25 +78,23 @@ function injectHTML() {
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                     </div>
-                    <div class="header-meta">
-                        <div id="last-updated" class="time-badge">Loading...</div>
-                    </div>
+                    <div class="time-badge" id="last-updated">Waiting...</div>
                 </div>
                 
                 <div class="table-responsive">
                     <table class="alpha-table">
                         <thead>
                             <tr class="h-top">
-                                <th rowspan="2" class="text-center sticky-col" style="width:50px">RANK</th>
-                                <th rowspan="2" class="sticky-col-2">TOKEN & CONTRACT</th>
+                                <th rowspan="2" class="text-center" style="width:40px">#</th>
+                                <th rowspan="2" style="min-width:200px">TOKEN INFO</th>
                                 <th rowspan="2" class="text-end">PRICE</th>
-                                <th colspan="3" class="text-center border-left-dim border-right-dim">DAILY VOLUME (UTC)</th>
+                                <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
                                 <th colspan="3" class="text-center">MARKET STATS (24h)</th>
                             </tr>
                             <tr class="h-sub">
-                                <th class="text-end cursor-pointer border-left-dim" onclick="window.pluginSort('volume.daily_total')">TOTAL <i class="fas fa-sort"></i></th>
-                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
-                                <th class="text-end cursor-pointer border-right-dim" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT (CEX)</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
                                 <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
                                 <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
                                 <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
@@ -114,103 +109,145 @@ function injectHTML() {
     document.body.appendChild(root);
 }
 
-// --- 4. RENDER TABLE (ĐẸP & DỮ LIỆU API) ---
+// --- 4. RENDER LOGIC ---
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
     
-    displayedTokens.slice(0, displayCount).forEach((t, i) => {
+    // Filter & Sort trước khi render
+    let list = allTokens.filter(t => {
+        const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
+        return (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
+    });
+
+    list.sort((a, b) => {
+        const valA = getVal(a, sortConfig.key);
+        const valB = getVal(b, sortConfig.key);
+        return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
+    });
+
+    list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         
-        // Logic Badge
-        let badges = '';
-        if (t.status === 'SPOT') badges += `<span class="smart-badge badge-spot">SPOT</span>`;
-        if (t.status === 'DELISTED') badges += `<span class="smart-badge badge-delisted">DELISTED</span>`;
-        
+        // --- LOGIC BADGE [x4 19d] ---
+        let badgesHtml = '';
+        let isGlow = false;
+
+        // Badge Trạng thái
+        if (t.status === 'SPOT') badgesHtml += `<span class="smart-badge badge-spot">SPOT</span>`;
+        if (t.status === 'DELISTED') badgesHtml += `<span class="smart-badge badge-delisted">DELISTED</span>`;
+
+        // Badge Alpha Time
         if (t.listing_time && t.mul_point) {
-            const days = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000);
-            if (days > 0) {
-                if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
-                badges += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${days}d]</span>`;
+            const now = Date.now();
+            const end = t.listing_time + (30 * 24 * 60 * 60 * 1000); // 30 ngày
+            const diff = Math.ceil((end - now) / 86400000); // Đổi ra ngày
+            
+            if (diff > 0) {
+                // Hiệu ứng Glow cho BSC x4
+                if (t.chain === 'BSC' && t.mul_point >= 4) {
+                    isGlow = true;
+                    tr.classList.add('glow-row');
+                }
+                badgesHtml += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${diff}d]</span>`;
             }
         }
 
-        // --- MÀU SẮC SỐ LIỆU ---
-        const pClass = t.change_24h >= 0 ? 'text-green' : 'text-red';
-        const pSign = t.change_24h >= 0 ? '+' : '';
-
-        // --- ẢNH TỪ API ---
+        // --- HÌNH ẢNH (Từ API) ---
         const tokenImg = t.icon || 'https://placehold.co/32';
         const chainImg = t.chain_icon || 'https://placehold.co/14';
 
         tr.innerHTML = `
-            <td class="text-center rank-col font-num text-secondary">${i + 1}</td>
-            <td class="token-col">
+            <td class="text-center font-num text-secondary">${i + 1}</td>
+            <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
                         <img src="${tokenImg}" class="token-logo" onerror="this.src='https://placehold.co/32'">
                         <img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'">
                     </div>
                     <div class="token-meta">
-                        <div class="d-flex align-items-center gap-2 cursor-pointer" onclick="window.pluginCopy('${t.contract}')">
-                            <span class="symbol-text text-white fw-bold">${t.symbol}</span>
+                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
+                            <span class="symbol-text">${t.symbol}</span>
                             <i class="fas fa-copy copy-icon"></i>
                         </div>
-                        <div class="badge-row">${badges}</div>
+                        <div class="badge-row">${badgesHtml}</div>
                     </div>
                 </div>
             </td>
-            <td class="text-end price-col">
-                <div class="price-val font-num text-white">$${formatPrice(t.price)}</div>
-                <div class="price-change ${pClass} font-num">${pSign}${t.change_24h}%</div>
+            <td class="text-end font-num">
+                <div class="text-white-bold">$${formatPrice(t.price)}</div>
+                <div style="font-size:11px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+                    ${t.change_24h >= 0 ? '+' : ''}${t.change_24h}%
+                </div>
             </td>
             
-            <td class="text-end border-left-dim font-num text-white fw-bold">$${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end font-num text-secondary">$${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end border-right-dim font-num text-green fw-bold" style="color:#00ff88 !important">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end font-num text-white-bold" style="font-size:15px">$${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_limit)}</td>
+            <td class="text-end font-num text-neon">$${formatNum(t.volume.daily_onchain)}</td>
             
             <td class="text-end font-num text-white">$${formatNum(t.volume.rolling_24h)}</td>
             <td class="text-end font-num text-secondary">${formatInt(t.tx_count)}</td>
-            <td class="text-end font-num text-brand fw-bold">$${formatNum(t.liquidity)}</td>
+            <td class="text-end font-num text-cyber">$${formatNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
 // --- UTILS ---
+function formatNum(n) { 
+    if (!n) return '0';
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(2) + 'k';
+    return n.toFixed(2);
+}
+function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
+function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
+function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
+
+// --- EVENTS ---
+window.pluginCopy = (txt) => { 
+    if(txt) {
+        navigator.clipboard.writeText(txt);
+        // Toast đơn giản
+        const t = document.createElement('div');
+        t.innerText = 'Copied Contract!';
+        t.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#0ecb81; color:#000; padding:8px 16px; border-radius:4px; font-weight:bold; z-index:99999;';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2000);
+    }
+};
+
 window.pluginSwitchTab = (tab) => {
-    const oldView = document.getElementById('view-dashboard');
     const newView = document.getElementById('alpha-market-view');
-    const btnComp = document.getElementById('btn-tab-competition');
-    const btnAlpha = document.getElementById('btn-tab-alpha');
+    const oldView = document.getElementById('view-dashboard');
+    const btnA = document.getElementById('btn-tab-alpha');
+    const btnC = document.getElementById('btn-tab-competition');
 
     if (tab === 'alpha') {
         if(newView) newView.style.display = 'block';
         if(oldView) oldView.style.display = 'none';
-        btnAlpha?.classList.add('active');
-        btnComp?.classList.remove('active');
+        btnA?.classList.add('active'); btnC?.classList.remove('active');
     } else {
         if(newView) newView.style.display = 'none';
         if(oldView) oldView.style.display = 'block';
-        btnComp?.classList.add('active');
-        btnAlpha?.classList.remove('active');
+        btnC?.classList.add('active'); btnA?.classList.remove('active');
     }
 };
 
 window.pluginSort = (key) => {
     if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
     else { sortConfig.key = key; sortConfig.dir = 'desc'; }
-    applyFilterAndSort();
+    renderTable(); // Re-render với data đã sort
 };
-window.pluginCopy = (txt) => { if(txt) navigator.clipboard.writeText(txt); };
 
 function setupEvents() {
-    document.getElementById('alpha-search')?.addEventListener('keyup', applyFilterAndSort);
+    document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable());
     window.addEventListener('scroll', () => {
         if (document.getElementById('alpha-market-view')?.style.display === 'block') {
             if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                if (displayCount < displayedTokens.length) { displayCount += 50; renderTable(); }
+                if (displayCount < allTokens.length) { displayCount += 50; renderTable(); }
             }
         }
     });
@@ -222,23 +259,8 @@ async function fetchMarketData() {
         const res = await fetch(DATA_URL + '?t=' + Date.now());
         const data = await res.json();
         allTokens = data.tokens || [];
-        applyFilterAndSort();
+        renderTable();
         const timeLbl = document.getElementById('last-updated');
-        if(timeLbl) timeLbl.innerText = 'UPDATED: ' + data.last_updated;
+        if(timeLbl) timeLbl.innerText = 'Updated: ' + data.last_updated;
     } catch (e) { console.error("Data error:", e); }
 }
-
-function applyFilterAndSort() {
-    const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
-    displayedTokens = allTokens.filter(t => (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term)));
-    displayedTokens.sort((a, b) => {
-        const valA = key => key.split('.').reduce((o, i) => (o ? o[i] : 0), a);
-        const valB = key => key.split('.').reduce((o, i) => (o ? o[i] : 0), b);
-        return sortConfig.dir === 'desc' ? valB(sortConfig.key) - valA(sortConfig.key) : valA(sortConfig.key) - valB(sortConfig.key);
-    });
-    displayCount = 50; renderTable();
-}
-
-function formatNum(n) { return !n ? '0' : (n >= 1e6 ? (n/1e6).toFixed(2)+'M' : (n >= 1e3 ? (n/1e3).toFixed(2)+'K' : n.toFixed(2))); }
-function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
-function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
