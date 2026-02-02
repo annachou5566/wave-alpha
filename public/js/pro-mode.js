@@ -303,8 +303,7 @@ window.togglePin = (symbol) => {
 
 function formatNum(n) {
     if (!n) return '0';
-    // Dùng Intl.NumberFormat để tự động thêm dấu phẩy
-    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n);
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n);
 }
 
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
