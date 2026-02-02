@@ -6,34 +6,57 @@ let displayedTokens = [];
 let displayCount = 50; 
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
-// --- 1. BOOTSTRAP (KHỞI ĐỘNG PLUGIN) ---
+// --- 1. KHỞI ĐỘNG PLUGIN ---
 (function initPlugin() {
-    // A. Tự động nạp CSS (Không cần sửa thẻ Head trong index.html)
+    // Tự nạp CSS nếu thiếu
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'public/css/pro-mode.css?v=' + Date.now(); // Cache busting
+        link.href = 'public/css/pro-mode.css?v=' + Date.now();
         document.head.appendChild(link);
     }
 
-    // B. Chờ DOM load xong thì bơm HTML vào
     document.addEventListener('DOMContentLoaded', () => {
-        injectHTML();       // Bơm giao diện
-        checkAccess();      // Kiểm tra quyền Admin
-        initMarket();       // Tải dữ liệu
-        setupEvents();      // Bắt sự kiện click/scroll
+        injectHTML();
+        checkAccess(); // <--- ĐÂY LÀ HÀM QUAN TRỌNG
+        initMarket();
+        setupEvents();
     });
 })();
 
-// --- 2. HTML INJECTION (BƠM GIAO DIỆN) ---
+// --- 2. LOGIC KIỂM TRA QUYỀN (ĐÃ FIX) ---
+function checkAccess() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const savedRole = localStorage.getItem('wave_alpha_role');
+    
+    const overlay = document.getElementById('maintenance-overlay');
+    const nav = document.getElementById('alpha-tab-nav');
+
+    // Logic Fix: Thêm class vào Body để CSS tự ẩn Overlay
+    if (mode === 'admin' || savedRole === 'admin') {
+        localStorage.setItem('wave_alpha_role', 'admin');
+        
+        // [QUAN TRỌNG NHẤT] Kích hoạt class admin trên body
+        document.body.classList.add('is-admin-mode'); 
+        
+        if (overlay) overlay.style.display = 'none'; // Dự phòng
+        if (nav) nav.style.display = 'flex';         // Hiện Tab
+        
+        console.log("🔓 ACCESS GRANTED: Admin Mode Active");
+    } else {
+        document.body.classList.remove('is-admin-mode');
+        if (overlay) overlay.style.display = 'flex';
+        if (nav) nav.style.display = 'none';
+    }
+}
+
+// --- 3. BƠM HTML ---
 function injectHTML() {
-    // Nếu đã có rồi thì không bơm nữa
     if (document.getElementById('alpha-plugin-root')) return;
 
     const root = document.createElement('div');
     root.id = 'alpha-plugin-root';
-    
-    // Template String chứa toàn bộ HTML của Alpha Market
     root.innerHTML = `
         <div id="maintenance-overlay">
             <div class="maintenance-content">
@@ -60,9 +83,8 @@ function injectHTML() {
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                     </div>
-                    <div id="last-updated" class="time-badge">Loading Data...</div>
+                    <div id="last-updated" class="time-badge">Loading...</div>
                 </div>
-                
                 <div class="table-responsive">
                     <table class="alpha-table">
                         <thead>
@@ -88,32 +110,12 @@ function injectHTML() {
             </div>
         </div>
     `;
-
     document.body.appendChild(root);
 }
 
-// --- 3. LOGIC XỬ LÝ ---
-
-function checkAccess() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode');
-    const overlay = document.getElementById('maintenance-overlay');
-    const nav = document.getElementById('alpha-tab-nav');
-
-    if (mode === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
-        localStorage.setItem('wave_alpha_role', 'admin');
-        if (overlay) overlay.style.display = 'none'; // Tắt bảo trì
-        if (nav) nav.style.display = 'flex';         // Hiện Tab
-        console.log("🔓 Alpha Plugin: Admin Access Granted");
-    } else {
-        if (overlay) overlay.style.display = 'flex'; // Hiện bảo trì
-        if (nav) nav.style.display = 'none';         // Ẩn Tab
-    }
-}
-
-// Export hàm ra window để HTML gọi được (vì module scope)
+// --- 4. CÁC HÀM XỬ LÝ SỰ KIỆN ---
 window.pluginSwitchTab = (tab) => {
-    const oldView = document.getElementById('view-dashboard'); // ID của web cũ
+    const oldView = document.getElementById('view-dashboard');
     const newView = document.getElementById('alpha-market-view');
     const btnComp = document.getElementById('btn-tab-competition');
     const btnAlpha = document.getElementById('btn-tab-alpha');
@@ -137,6 +139,8 @@ window.pluginSort = (key) => {
     applyFilterAndSort();
 };
 
+window.pluginCopy = (txt) => { if(txt) navigator.clipboard.writeText(txt); };
+
 function setupEvents() {
     document.getElementById('alpha-search')?.addEventListener('keyup', applyFilterAndSort);
     window.addEventListener('scroll', () => {
@@ -147,8 +151,6 @@ function setupEvents() {
         }
     });
 }
-
-// --- 4. DATA FETCHING (GIỮ NGUYÊN) ---
 
 async function initMarket() {
     await fetchMarketData();
@@ -187,7 +189,6 @@ function renderTable() {
     
     displayedTokens.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
-        
         let badges = '';
         if (t.status === 'SPOT') badges += `<span class="smart-badge badge-spot">SPOT</span>`;
         else if (t.status === 'DELISTED') badges += `<span class="smart-badge badge-delisted">DELISTED</span>`;
@@ -198,7 +199,6 @@ function renderTable() {
                 badges += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${days}d]</span>`;
             }
         }
-
         tr.innerHTML = `
             <td class="text-center"><span style="color:#848e9c; font-weight:600">${i + 1}</span></td>
             <td>
@@ -227,8 +227,6 @@ function renderTable() {
         tbody.appendChild(tr);
     });
 }
-
 function formatNum(n) { return !n ? '0' : (n >= 1e6 ? (n/1e6).toFixed(2)+'M' : (n >= 1e3 ? (n/1e3).toFixed(2)+'K' : n.toFixed(2))); }
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
-window.pluginCopy = (txt) => { if(txt) navigator.clipboard.writeText(txt); };
