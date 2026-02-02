@@ -32,20 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
-// --- HÀM CHÈN LAYOUT VÀO SAU NAVBAR CÓ SẴN ---
 function injectLayout() {
-    // Xóa các element cũ nếu có
+    // Xóa các element cũ nếu có để tránh trùng lặp
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
 
-    // TÌM NAVBAR CÓ SẴN TRONG INDEX.HTML
+    // Tìm Navbar có sẵn của trang web
     const navbar = document.querySelector('.navbar');
-    if (!navbar) {
-        console.error("Không tìm thấy .navbar! Kiểm tra lại file index.html");
-        return;
-    }
+    if (!navbar) return;
 
-    // 1. Tạo thanh Tab
+    // 1. Tạo thanh Tab điều hướng
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
@@ -56,24 +52,23 @@ function injectLayout() {
             <i class="fas fa-trophy"></i> COMPETITION
         </button>
     `;
-
-    // CHÈN THANH TAB NGAY SAU NAVBAR
     navbar.insertAdjacentElement('afterend', tabNav);
 
-    // 2. Tạo Market View
+    // 2. Tạo nội dung Market View
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
-    marketView.style.display = 'none'; // Mặc định ẩn
+    marketView.style.display = 'none'; 
     marketView.innerHTML = `
         <div class="alpha-container" style="padding-top: 20px;">
             <div class="alpha-header">
-            
                 <div class="search-group">
                     <i class="fas fa-search search-icon"></i>
                     <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                 </div>
-                
+
+                <div class="time-badge" id="last-updated">Connecting...</div>
             </div>
+
             <div class="table-responsive">
                 <table class="alpha-table">
                     <thead>
@@ -98,8 +93,6 @@ function injectLayout() {
             </div>
         </div>
     `;
-
-    // CHÈN MARKET VIEW NGAY SAU THANH TAB
     tabNav.insertAdjacentElement('afterend', marketView);
 }
 
