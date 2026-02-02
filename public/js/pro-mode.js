@@ -134,14 +134,27 @@ function renderTable() {
     if (!tbody) return;
     tbody.innerHTML = '';
     
-    // ... (Giữ nguyên phần lọc list và sort)
+    // 1. Lọc dữ liệu
+    let list = allTokens.filter(t => {
+        const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
+        return (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
+    });
 
+    // 2. Sắp xếp dữ liệu
+    list.sort((a, b) => {
+        const valA = getVal(a, sortConfig.key);
+        const valB = getVal(b, sortConfig.key);
+        return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
+    });
+
+    // 3. Render từng dòng
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         const now = Date.now();
         let badgesHtml = '';
-        
-        // 1. Logic SPOT / DELISTED
+
+        // --- LOGIC BADGE SPOT / DELISTED ---
+        // Ưu tiên hiển thị trạng thái Offline trước
         if (t.offline === true) {
             if (t.listingCex === true) {
                 badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
@@ -150,49 +163,60 @@ function renderTable() {
             }
         }
 
-        // 2. Logic Multiplier Badge [xN Yd]
-        // Yd = (listing_time + 30 ngày) - current_time
+        // --- LOGIC BADGE MULTIPLIER [xN Yd] ---
+        // Chỉ hiện nếu còn trong thời hạn 30 ngày kể từ listing_time
         if (t.listing_time && t.mul_point) {
-            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-            const expiryTime = t.listing_time + thirtyDaysMs;
-            const diffDays = Math.ceil((expiryTime - now) / (1000 * 60 * 60 * 24));
+            // 30 ngày = 2592000000 ms
+            const expiryTime = t.listing_time + 2592000000; 
+            const diffDays = Math.ceil((expiryTime - now) / 86400000); // 1 ngày = 86400000 ms
 
             if (diffDays > 0) {
                 badgesHtml += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${diffDays}d]</span>`;
                 
-                // Hiệu ứng Glow: Hệ BSC và mul_point >= 4
+                // Hiệu ứng Glow cho hàng: Chỉ hệ BSC và x4 trở lên
                 if (t.chain === 'BSC' && t.mul_point >= 4) {
                     tr.classList.add('glow-row');
                 }
             }
         }
 
+        // --- XỬ LÝ HÌNH ẢNH ---
+        // Fallback sang hình mặc định nếu dữ liệu null
         const tokenImg = t.icon || 'assets/tokens/default.png';
-        const chainImg = t.chain_icon || ''; // Icon mạng lưới
+        
+        // Logic hiển thị icon chain: Nếu có link thì hiện, không thì ẩn
+        // Sử dụng class chain-badge để CSS định vị đè lên
+        const chainBadgeHtml = t.chain_icon 
+            ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` 
+            : '';
 
+        // --- RENDER HTML ---
         tr.innerHTML = `
             <td class="text-center font-num text-secondary">${i + 1}</td>
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
-                        ${chainImg ? `<img src="${chainImg}" class="chain-badge">` : ''}
+                        <img src="${tokenImg}" class="token-logo" onerror="this.onerror=null;this.src='assets/tokens/default.png'">
+                        ${chainBadgeHtml}
                     </div>
+                    
                     <div class="token-meta">
-                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')" title="Click to copy contract">
+                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
                             <span class="symbol-text">${t.symbol}</span>
-                            <i class="fas fa-copy copy-icon" style="font-size: 10px; margin-left: 4px; opacity: 0.5;"></i>
+                            <i class="fas fa-copy copy-icon" style="font-size:10px; margin-left:5px; opacity:0.6"></i>
                         </div>
                         <div class="badge-row">${badgesHtml}</div>
                     </div>
                 </div>
             </td>
+            
             <td class="text-end font-num">
                 <div class="text-white-bold">$${formatPrice(t.price)}</div>
                 <div style="font-size:11px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
                     ${t.change_24h >= 0 ? '+' : ''}${t.change_24h}%
                 </div>
             </td>
+            
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_onchain)}</td>
