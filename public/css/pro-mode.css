@@ -78,12 +78,19 @@ body {
 
 /* --- 3. MARKET VIEW CONTAINER --- */
 #alpha-market-view {
+    /* Đưa về luồng hiển thị bình thường để Popup đè lên được */
+    display: none; 
     width: 100%;
     min-height: 100vh;
     background: var(--bg-dark);
-    display: none; /* Mặc định ẩn, JS sẽ bật */
-    opacity: 1;
-    transition: opacity 0.2s ease-in-out;
+    
+    /* Xóa position: fixed và z-index khủng đi */
+    margin-top: 0; 
+    padding-bottom: 50px;
+    
+    /* Đảm bảo nó nằm dưới Header và Tab */
+    position: relative; 
+    z-index: 1; 
 }
 
 #view-dashboard {
