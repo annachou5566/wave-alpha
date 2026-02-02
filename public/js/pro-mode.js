@@ -206,66 +206,64 @@ function renderTable() {
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         const now = Date.now();
-        const status = getTokenStatus(t); // Lấy trạng thái chuẩn (SPOT/DELISTED/ALPHA)
-
-        // --- XỬ LÝ BADGE ---
+        
+        // --- 1. Xử lý Badge (Đã chỉnh sửa) ---
         let badgesHtml = '';
+        
+        // Badge Spot/Delisted
+        if (t.offline === true) {
+            if (t.listingCex === true) badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
+            else badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
+        }
 
-        if (status === 'SPOT') {
-            badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>'; // Vàng
-        } else if (status === 'DELISTED') {
-            badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>'; // Đỏ
-        
-            /* --- CODE MỚI --- */
-} else {
-    // ALPHA - Chỉ hiện Badge [xN Yd] nếu còn hạn
-    if (t.listing_time && t.mul_point) {
-        const expiryTime = t.listing_time + 2592000000; // 30 ngày
-        const diffDays = Math.ceil((expiryTime - now) / 86400000);
-        
-        if (diffDays > 0) {
-            // SỬA Ở ĐÂY: Chỉ hiện Badge nếu điểm nhân > 1 (x2, x3, x4...)
-            // Nếu x1 thì ẩn đi cho gọn.
-            if (t.mul_point > 1) {
+        // Badge Multiplier
+        if (t.listing_time && t.mul_point) {
+            const expiryTime = t.listing_time + 2592000000; 
+            const diffDays = Math.ceil((expiryTime - now) / 86400000);
+
+            if (diffDays > 0 && t.mul_point > 1) {
+                // Chỉ hiện nếu x2 trở lên
                 const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
                 badgesHtml += `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
             }
-            
-            // Logic Glow Row vẫn giữ nguyên (nếu x4 thì vẫn sáng)
-            if (t.chain === 'BSC' && t.mul_point >= 4) {
-                tr.classList.add('glow-row');
-            }
         }
-    }
-}
+        // ĐÃ XÓA ĐOẠN CODE GLOW-ROW (TÔ MÀU NỀN) TẠI ĐÂY THEO YÊU CẦU
 
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
         const isPinned = pinnedTokens.includes(t.symbol);
         const starClass = isPinned ? 'fas fa-star text-brand' : 'far fa-star text-secondary';
         
-        // Tạo Chart SVG từ dữ liệu chart (nếu có)
+        // Tạo Contract rút gọn (VD: 0x123...abc4)
+        const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
+
+        // Tạo Chart SVG
         const chartHtml = getSparklineSVG(t.chart);
 
         tr.innerHTML = `
             <td class="text-center">
                 <i class="${starClass} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
             </td>
+            
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
+                        <img src="${tokenImg}" class="token-logo" onerror="this.onerror=null;this.src='assets/tokens/default.png'">
                         ${chainBadgeHtml}
                     </div>
                     <div class="token-meta">
-                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
+                        <div class="symbol-row">
                             <span class="symbol-text">${t.symbol}</span>
-                            <i class="fas fa-copy copy-icon"></i>
+                            <span style="margin-left: 8px;">${badgesHtml}</span>
                         </div>
-                        <div class="badge-row">${badgesHtml}</div>
+                        
+                        <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:11px; margin-top:2px;">
+                            ${shortContract} <i class="fas fa-copy" style="margin-left:4px;"></i>
+                        </div>
                     </div>
                 </div>
             </td>
+            
             <td class="text-end">
                 <div class="text-white-bold">$${formatPrice(t.price)}</div>
                 <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
@@ -276,6 +274,7 @@ function renderTable() {
             <td class="chart-cell">
                 ${chartHtml}
             </td>
+
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_onchain)}</td>
@@ -300,7 +299,14 @@ window.togglePin = (symbol) => {
     // Vẽ lại bảng ngay lập tức
     renderTable();
 };
-function formatNum(n) { if (!n) return '0'; if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(2) + 'k'; return n.toFixed(2); }
+
+
+function formatNum(n) {
+    if (!n) return '0';
+    // Dùng Intl.NumberFormat để tự động thêm dấu phẩy
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n);
+}
+
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
