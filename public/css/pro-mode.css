@@ -138,3 +138,78 @@
 .badge-spot { background: #F0B90B; color: #000; } /* Màu vàng Binance */
 .badge-delisted { background: #cf304a; color: #fff; }
 .badge-alpha { color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.1); }
+
+/* --- STICKY HEADER WRAPPER --- */
+/* Đây là khung cố định sẽ chứa: Logo/Title cũ + Tabs mới */
+#sticky-header-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    background: #0b0e11; /* Màu nền trùng với web */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+}
+
+/* Spacer: Khoảng trống vô hình để nội dung không bị Header che mất */
+#header-spacer {
+    display: block;
+    width: 100%;
+    /* Height sẽ được JS tính toán tự động */
+}
+
+/* Tinh chỉnh lại Title cũ khi nằm trong Header mới (nếu cần) */
+#sticky-header-wrapper h1 {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 24px; /* Điều chỉnh kích thước cho gọn */
+    line-height: 1.2;
+}
+#sticky-header-wrapper img {
+    max-height: 50px; /* Giới hạn chiều cao logo */
+    width: auto;
+}
+
+/* Phần Tabs nằm ngay dưới tiêu đề */
+#alpha-tab-nav {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 15px;
+    width: 100%;
+    background: rgba(255,255,255,0.02); /* Nền nhẹ phân cách */
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 25px;
+    cursor: pointer;
+    position: relative;
+    text-transform: uppercase;
+    transition: color 0.3s;
+}
+
+.tab-btn:hover, .tab-btn.active {
+    color: #00F0FF;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: #00F0FF;
+    box-shadow: 0 0 10px #00F0FF;
+}
