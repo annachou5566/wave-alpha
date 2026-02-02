@@ -1,4 +1,4 @@
-/* public/css/pro-mode.css - PRO TRADING UI */
+/* public/css/pro-mode.css - FIX CLICK & Z-INDEX */
 
 :root {
     --bg-dark: #0b0e11;
@@ -6,14 +6,9 @@
     --border-dim: #2b3139;
     --text-primary: #eaecef;
     --text-secondary: #848e9c;
-    
-    /* COLORS */
-    --brand: #00F0FF;        /* Neon Blue */
-    --accent: #F0B90B;       /* Gold */
-    --neon-green: #00ff88;   /* On-chain */
-    --red: #F6465D;
-    --green: #0ECB81;
-    
+    --brand: #00F0FF;
+    --accent: #F0B90B;
+    --neon-green: #00ff88;
     --font-main: 'Be Vietnam Pro', sans-serif;
     --font-num: 'Rajdhani', sans-serif;
 }
@@ -21,152 +16,101 @@
 /* --- OVERLAY BẢO TRÌ --- */
 #maintenance-overlay {
     position: fixed !important; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: var(--bg-dark); z-index: 2147483647 !important;
+    background-color: var(--bg-dark); 
+    z-index: 2000000000 !important; /* Thấp hơn Tab một xíu */
     display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 .maintenance-icon { font-size: 4rem; animation: pulse 2s infinite; margin-bottom: 1rem; color: var(--brand); }
 #maintenance-overlay h1 { color: var(--brand); font-family: var(--font-num); font-size: 2rem; letter-spacing: 2px; }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-/* --- NEW TAB NAVIGATION (THANH NGANG CHUYÊN NGHIỆP) --- */
+/* --- TAB NAVIGATION (FIX CLICK) --- */
 #alpha-tab-nav {
-    position: fixed; 
-    top: 60px; /* Nằm ngay dưới Navbar chính (giả sử Navbar cao ~60px) */
-    left: 0; 
-    width: 100%;
-    z-index: 9000; /* Cao hơn content, thấp hơn modal */
-    display: none; /* JS sẽ bật */
-    justify-content: center;
-    gap: 0; /* Liền mạch */
-    
-    background: rgba(11, 14, 17, 0.95); /* Nền tối mờ */
+    position: fixed !important; 
+    top: 60px; left: 0; width: 100%;
+    z-index: 2147483647 !important; /* CAO NHẤT MỌI THỜI ĐẠI */
+    display: none; /* JS sẽ bật flex */
+    justify-content: center; gap: 0;
+    background: rgba(11, 14, 17, 0.98); 
     border-bottom: 1px solid var(--border-dim);
     backdrop-filter: blur(10px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    height: 50px; /* Chiều cao cố định để dễ bấm */
 }
 
 .tab-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    padding: 15px 30px; /* Rộng rãi, dễ bấm */
-    font-family: var(--font-main);
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    position: relative;
-    border-bottom: 2px solid transparent; /* Chuẩn bị cho hover/active */
+    background: transparent; border: none; color: var(--text-secondary);
+    padding: 0 30px; height: 100%; /* Full height */
+    font-family: var(--font-main); font-weight: 700; font-size: 13px;
+    cursor: pointer; transition: all 0.2s;
+    text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 2px solid transparent;
+    display: flex; align-items: center; gap: 8px;
+    position: relative; z-index: 2147483647; /* Đảm bảo nút bấm được */
 }
 
-/* Hiệu ứng Hover */
-.tab-btn:hover {
-    color: #fff;
-    background: rgba(255,255,255,0.02);
-}
+.tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
 
-/* Tab đang chọn (Active) */
 .tab-btn.active { 
-    color: var(--brand);
-    border-bottom: 2px solid var(--brand); /* Gạch chân Neon */
+    color: var(--brand); 
+    border-bottom: 2px solid var(--brand);
     background: linear-gradient(180deg, transparent 0%, rgba(0, 240, 255, 0.05) 100%);
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
 }
 
-.badge-pro { 
-    background: var(--brand); color: #000; 
-    font-size: 9px; padding: 2px 5px; border-radius: 2px; 
-    font-weight: 800; margin-left: 6px; 
-    vertical-align: middle;
-}
+.badge-pro { background: var(--brand); color: #000; font-size: 9px; padding: 2px 4px; border-radius: 3px; font-weight: 800; }
 
-/* --- MAIN LAYOUT --- */
+/* --- MARKET VIEW --- */
 #alpha-market-view {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: var(--bg-dark); z-index: 8000;
-    overflow-y: auto; 
-    padding-top: 130px; /* Đẩy xuống để không bị Tab che */
-    display: none;
+    background: var(--bg-dark); 
+    z-index: 99999; /* Dưới Tab */
+    overflow-y: auto; padding-top: 120px; display: none;
 }
 .alpha-container { max-width: 1440px; margin: 0 auto; padding: 0 20px 80px; }
 
-/* HEADER */
-.alpha-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
-.search-group { position: relative; width: 350px; }
+/* Header & Table giữ nguyên đẹp */
+.alpha-header { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+.search-group { position: relative; width: 300px; }
 #alpha-search {
     width: 100%; background: var(--bg-card); border: 1px solid var(--border-dim);
     color: #fff; padding: 10px 10px 10px 40px; border-radius: 4px; font-family: var(--font-main);
-    transition: all 0.2s;
 }
-#alpha-search:focus { border-color: var(--brand); box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
-.search-icon { position: absolute; left: 14px; top: 13px; color: var(--text-secondary); font-size: 14px; }
-.time-badge { 
-    color: var(--text-secondary); font-size: 12px; font-family: var(--font-num); 
-    background: var(--bg-card); padding: 8px 16px; border-radius: 4px; border: 1px solid var(--border-dim); 
-}
+#alpha-search:focus { border-color: var(--brand); }
+.search-icon { position: absolute; left: 12px; top: 12px; color: var(--text-secondary); font-size: 14px; }
+.time-badge { color: var(--text-secondary); font-size: 12px; font-family: var(--font-num); background: var(--bg-card); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border-dim); }
 
-/* --- TABLE STYLING --- */
-.table-responsive { 
-    overflow-x: auto; background: var(--bg-card); 
-    border: 1px solid var(--border-dim); border-radius: 6px; min-height: 500px; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
+.table-responsive { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 4px; min-height: 500px; }
 .alpha-table { width: 100%; border-collapse: separate; border-spacing: 0; color: var(--text-primary); }
-
 .alpha-table th {
-    background: #1A1E23; color: var(--text-secondary);
-    font-size: 11px; font-weight: 700; padding: 12px 15px;
+    background: #1e2329; color: var(--text-secondary);
+    font-size: 11px; font-weight: 600; padding: 10px 12px;
     border-bottom: 1px solid var(--border-dim); border-right: 1px solid var(--border-dim);
-    white-space: nowrap; position: sticky; top: 0; z-index: 10;
-    text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap; position: sticky; top: 0; z-index: 10; text-transform: uppercase;
 }
-.h-top th { border-bottom: none; text-align: center; border-top: none; }
-.h-sub th { border-top: 1px solid var(--border-dim); font-size: 10px; padding-top: 8px; padding-bottom: 8px; }
-
+.h-top th { border-bottom: none; text-align: center; }
+.h-sub th { border-top: 1px solid #2b3139; font-size: 10px; }
 .alpha-table td {
-    padding: 10px 15px; border-bottom: 1px solid var(--border-dim); border-right: 1px solid #252b33;
+    padding: 8px 12px; border-bottom: 1px solid var(--border-dim); border-right: 1px solid #252b33;
     background: var(--bg-card); vertical-align: middle;
-    font-family: var(--font-num); font-size: 15px; font-weight: 500;
+    font-family: var(--font-num); font-size: 14px; font-weight: 500;
 }
-.alpha-table tr:hover td { background: #23282E; }
+.alpha-table tr:hover td { background: #2b3139; }
 
-/* COLORS & UTILS */
+/* Colors & Utils */
 .text-brand { color: var(--brand) !important; }
 .text-neon { color: var(--neon-green) !important; text-shadow: 0 0 8px rgba(0, 255, 136, 0.3); font-weight: 700; }
 .text-dim { color: #5E6673 !important; }
 .text-white-bold { color: #fff; font-weight: 700; }
 .border-right-dim { border-right: 1px solid var(--border-dim); }
 
-/* NESTED ICONS */
+/* Icons & Badges */
 .token-cell { display: flex; align-items: center; gap: 12px; }
-.logo-wrapper {
-    position: relative; width: 36px; height: 36px; 
-    overflow: visible !important; flex-shrink: 0;
-}
+.logo-wrapper { position: relative; width: 32px; height: 32px; overflow: visible !important; flex-shrink: 0; }
 .token-logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #2b3139; }
-.chain-badge {
-    position: absolute; bottom: -2px; right: -2px;
-    width: 15px; height: 15px; border-radius: 50%;
-    background: #000; border: 1px solid var(--text-secondary); z-index: 5;
-}
-
-/* BADGES */
+.chain-badge { position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; background: #000; border: 1px solid var(--text-secondary); z-index: 5; }
 .token-meta { display: flex; flex-direction: column; justify-content: center; }
-.symbol-row { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-.symbol-text { font-family: var(--font-main); font-weight: 700; font-size: 14px; color: #fff; }
-.copy-icon { font-size: 11px; color: var(--text-secondary); opacity: 0.5; transition: 0.2s; }
-.symbol-row:hover .copy-icon { opacity: 1; color: var(--brand); }
-
-.badge-row { display: flex; gap: 4px; margin-top: 3px; }
-.smart-badge { 
-    font-size: 10px; padding: 1px 5px; border-radius: 3px; 
-    font-weight: 700; font-family: var(--font-num); text-transform: uppercase;
-    border: 1px solid transparent; letter-spacing: 0.5px;
-}
+.symbol-text { font-family: var(--font-main); font-weight: 700; font-size: 13px; color: #fff; }
+.badge-row { display: flex; gap: 4px; margin-top: 2px; }
+.smart-badge { font-size: 9px; padding: 0px 4px; border-radius: 2px; font-weight: 700; font-family: var(--font-num); text-transform: uppercase; border: 1px solid transparent; }
 .badge-spot { color: var(--accent); border-color: var(--accent); background: rgba(240, 185, 11, 0.1); }
-.badge-delisted { color: var(--red); border-color: var(--red); background: rgba(246, 70, 93, 0.1); }
 .badge-alpha { color: var(--brand); border-color: var(--brand); background: rgba(0, 240, 255, 0.1); }
 .glow-row td { background: rgba(0, 240, 255, 0.03); }
-.glow-row .token-logo { box-shadow: 0 0 12px rgba(0, 240, 255, 0.5); border: 1px solid var(--brand); }
