@@ -1,18 +1,33 @@
-// public/js/pro-mode.js - PRO MODE LOGIC
+// public/js/pro-mode.js
 
-// --- 0. FORCE ADMIN (Mở khóa ngay lập tức) ---
+// --- 0. FORCE ADMIN (CHẠY NGAY LẬP TỨC - FIX LỖI KHÔNG VÀO ĐƯỢC) ---
 (function forceAdminCheck() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
+    // 1. Kiểm tra URL và LocalStorage ngay lập tức
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const savedRole = localStorage.getItem('wave_alpha_role');
+
+    // 2. Nếu là Admin -> Kích hoạt chế độ ADMIN ngay
+    if (mode === 'admin' || savedRole === 'admin') {
+        console.log("🚀 ADMIN DETECTED: Force Unlocking...");
+        
+        // Lưu quyền lại
         localStorage.setItem('wave_alpha_role', 'admin');
+        
+        // Đánh dấu vào thẻ HTML (thẻ này luôn tồn tại sớm nhất)
         document.documentElement.classList.add('is-admin-mode');
-        // Inject CSS ẩn Overlay khẩn cấp
+        
+        // Bơm ngay CSS "Cưỡng chế" vào đầu trang (Không chờ file CSS tải)
         const style = document.createElement('style');
-        style.innerHTML = `body.is-admin-mode #maintenance-overlay { display: none !important; } 
-                           body.is-admin-mode #alpha-tab-nav { display: flex !important; }`;
+        style.innerHTML = `
+            html.is-admin-mode body #maintenance-overlay { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+            html.is-admin-mode #alpha-tab-nav { display: flex !important; }
+        `;
         document.head.appendChild(style);
     }
 })();
+
+// ... (Giữ nguyên phần code phía dưới của bạn: const DATA_URL = ...)
 
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
