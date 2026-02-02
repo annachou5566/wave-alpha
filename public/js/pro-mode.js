@@ -1,135 +1,155 @@
 // public/js/pro-mode.js
 
-// --- CONFIG ---
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
 let displayedTokens = [];
 let displayCount = 50; 
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
-// --- MAIN EXECUTION ---
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. BUỘC PHẢI CHẠY ĐẦU TIÊN: Tạo giao diện nếu thiếu
-    ensureInterfaceExists(); 
+// --- 1. BOOTSTRAP (KHỞI ĐỘNG PLUGIN) ---
+(function initPlugin() {
+    // A. Tự động nạp CSS (Không cần sửa thẻ Head trong index.html)
+    if (!document.querySelector('link[href*="pro-mode.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'public/css/pro-mode.css?v=' + Date.now(); // Cache busting
+        document.head.appendChild(link);
+    }
 
-    // 2. Kiểm tra quyền Admin
-    checkMaintenanceMode();
+    // B. Chờ DOM load xong thì bơm HTML vào
+    document.addEventListener('DOMContentLoaded', () => {
+        injectHTML();       // Bơm giao diện
+        checkAccess();      // Kiểm tra quyền Admin
+        initMarket();       // Tải dữ liệu
+        setupEvents();      // Bắt sự kiện click/scroll
+    });
+})();
 
-    // 3. Khởi tạo dữ liệu
-    initMarket();
-    setupEventListeners();
-});
+// --- 2. HTML INJECTION (BƠM GIAO DIỆN) ---
+function injectHTML() {
+    // Nếu đã có rồi thì không bơm nữa
+    if (document.getElementById('alpha-plugin-root')) return;
 
-// --- 1. CORE SYSTEM: AUTO-INJECT UI (FIX LỖI MẤT GIAO DIỆN) ---
-function ensureInterfaceExists() {
-    // A. Chèn Maintenance Overlay nếu chưa có
-    if (!document.getElementById('maintenance-overlay')) {
-        const overlay = document.createElement('div');
-        overlay.id = 'maintenance-overlay';
-        overlay.innerHTML = `
+    const root = document.createElement('div');
+    root.id = 'alpha-plugin-root';
+    
+    // Template String chứa toàn bộ HTML của Alpha Market
+    root.innerHTML = `
+        <div id="maintenance-overlay">
             <div class="maintenance-content">
                 <div class="maintenance-icon">🚧</div>
                 <h1>SYSTEM MAINTENANCE</h1>
-                <p>Wave Alpha Terminal is upgrading.</p>
-                <p style="font-size:12px; opacity:0.6; margin-top:5px">Restricted Access</p>
+                <p>Wave Alpha Terminal is updating data logic.</p>
+                <p class="sub-text">Restricted Access.</p>
             </div>
-        `;
-        document.body.appendChild(overlay);
-    }
+        </div>
 
-    // B. Chèn Tab Navigation nếu chưa có
-    if (!document.getElementById('alpha-tab-nav')) {
-        const nav = document.createElement('div');
-        nav.id = 'alpha-tab-nav';
-        nav.innerHTML = `
-            <div class="nav-content">
-                <button id="btn-tab-competition" class="tab-btn active" onclick="switchTab('competition')">
-                    🏆 Competition
-                </button>
-                <button id="btn-tab-alpha" class="tab-btn" onclick="switchTab('alpha')">
-                    🌊 Alpha Market <span class="badge-pro">PRO</span>
-                </button>
-            </div>
-        `;
-        document.body.prepend(nav);
-    }
+        <div id="alpha-tab-nav" style="display:none">
+            <button id="btn-tab-competition" class="tab-btn active" onclick="window.pluginSwitchTab('competition')">
+                🏆 Competition
+            </button>
+            <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">
+                🌊 Alpha Market <span class="badge-pro">PRO</span>
+            </button>
+        </div>
 
-    // C. Chèn Container Alpha Market nếu chưa có
-    if (!document.getElementById('alpha-market-view')) {
-        const container = document.createElement('div');
-        container.id = 'alpha-market-view';
-        container.innerHTML = `
+        <div id="alpha-market-view" style="display:none">
             <div class="alpha-container">
                 <div class="alpha-header">
                     <div class="search-wrapper">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="search-input" placeholder="Search Token / Contract..." autocomplete="off">
+                        <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                     </div>
-                    <div id="last-updated" style="color:#848e9c; font-family:'Rajdhani'">Loading...</div>
+                    <div id="last-updated" class="time-badge">Loading Data...</div>
                 </div>
+                
                 <div class="table-responsive">
                     <table class="alpha-table">
                         <thead>
-                            <tr class="head-top">
+                            <tr>
                                 <th rowspan="2" class="text-center" style="width:40px">#</th>
                                 <th rowspan="2">TOKEN / CONTRACT</th>
                                 <th rowspan="2" class="text-end">PRICE</th>
-                                <th colspan="3" class="text-center" style="border-left:1px solid #2b3139">DAILY VOLUME (UTC)</th>
-                                <th colspan="3" class="text-center" style="border-left:1px solid #2b3139">MARKET STATS (24h)</th>
+                                <th colspan="3" class="text-center border-left-dim">DAILY VOLUME (UTC)</th>
+                                <th colspan="3" class="text-center border-left-dim">MARKET STATS (24h)</th>
                             </tr>
-                            <tr class="head-sub">
-                                <th class="text-end cursor-pointer" style="border-left:1px solid #2b3139" onclick="handleSort('volume.daily_total')">TOTAL</th>
-                                <th class="text-end cursor-pointer" onclick="handleSort('volume.daily_limit')">LIMIT</th>
-                                <th class="text-end cursor-pointer" onclick="handleSort('volume.daily_onchain')">ON-CHAIN</th>
-                                <th class="text-end cursor-pointer" style="border-left:1px solid #2b3139" onclick="handleSort('volume.rolling_24h')">VOL 24H</th>
-                                <th class="text-end cursor-pointer" onclick="handleSort('tx_count')">TXs</th>
-                                <th class="text-end cursor-pointer" onclick="handleSort('liquidity')">LIQ</th>
+                            <tr>
+                                <th class="text-end cursor-pointer border-left-dim" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                                <th class="text-end cursor-pointer border-left-dim" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
                             </tr>
                         </thead>
                         <tbody id="market-table-body"></tbody>
                     </table>
                 </div>
             </div>
-        `;
-        document.body.appendChild(container);
-    }
+        </div>
+    `;
+
+    document.body.appendChild(root);
 }
 
-// --- 2. LOGIC MAINTENANCE (QUAN TRỌNG) ---
-function checkMaintenanceMode() {
+// --- 3. LOGIC XỬ LÝ ---
+
+function checkAccess() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
-    
-    // Logic: Nếu URL có admin HOẶC localStorage có admin -> Unlock
+    const overlay = document.getElementById('maintenance-overlay');
+    const nav = document.getElementById('alpha-tab-nav');
+
     if (mode === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
         localStorage.setItem('wave_alpha_role', 'admin');
-        document.body.classList.add('is-admin-mode'); // Class này sẽ kích hoạt CSS display:none cho overlay
-        console.log("🔓 Admin Access Granted");
+        if (overlay) overlay.style.display = 'none'; // Tắt bảo trì
+        if (nav) nav.style.display = 'flex';         // Hiện Tab
+        console.log("🔓 Alpha Plugin: Admin Access Granted");
     } else {
-        localStorage.removeItem('wave_alpha_role'); // Đảm bảo sạch sẽ
-        document.body.classList.remove('is-admin-mode');
-        console.log("🔒 Maintenance Mode Active");
+        if (overlay) overlay.style.display = 'flex'; // Hiện bảo trì
+        if (nav) nav.style.display = 'none';         // Ẩn Tab
     }
 }
 
-// --- 3. LOGIC TAB SWITCHING ---
-window.switchTab = (tab) => {
-    const alphaView = document.getElementById('alpha-market-view');
-    const compBtn = document.getElementById('btn-tab-competition');
-    const alphaBtn = document.getElementById('btn-tab-alpha');
-    
+// Export hàm ra window để HTML gọi được (vì module scope)
+window.pluginSwitchTab = (tab) => {
+    const oldView = document.getElementById('view-dashboard'); // ID của web cũ
+    const newView = document.getElementById('alpha-market-view');
+    const btnComp = document.getElementById('btn-tab-competition');
+    const btnAlpha = document.getElementById('btn-tab-alpha');
+
     if (tab === 'alpha') {
-        alphaView.style.display = 'block';
-        compBtn.classList.remove('active');
-        alphaBtn.classList.add('active');
+        if(newView) newView.style.display = 'block';
+        if(oldView) oldView.style.display = 'none';
+        btnAlpha.classList.add('active');
+        btnComp.classList.remove('active');
     } else {
-        alphaView.style.display = 'none';
-        compBtn.classList.add('active');
-        alphaBtn.classList.remove('active');
+        if(newView) newView.style.display = 'none';
+        if(oldView) oldView.style.display = 'block';
+        btnComp.classList.add('active');
+        btnAlpha.classList.remove('active');
     }
 };
 
-// --- 4. MARKET DATA LOGIC ---
+window.pluginSort = (key) => {
+    if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
+    else { sortConfig.key = key; sortConfig.dir = 'desc'; }
+    applyFilterAndSort();
+};
+
+function setupEvents() {
+    document.getElementById('alpha-search')?.addEventListener('keyup', applyFilterAndSort);
+    window.addEventListener('scroll', () => {
+        if (document.getElementById('alpha-market-view')?.style.display === 'block') {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                if (displayCount < displayedTokens.length) { displayCount += 50; renderTable(); }
+            }
+        }
+    });
+}
+
+// --- 4. DATA FETCHING (GIỮ NGUYÊN) ---
+
 async function initMarket() {
     await fetchMarketData();
     setInterval(fetchMarketData, 60000);
@@ -146,81 +166,8 @@ async function fetchMarketData() {
     } catch (e) { console.error("Data error:", e); }
 }
 
-function renderTable() {
-    const tbody = document.getElementById('market-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    
-    const list = displayedTokens.slice(0, displayCount);
-    list.forEach((t, i) => {
-        const tr = document.createElement('tr');
-        
-        let badges = '';
-        if (t.status === 'SPOT') badges += `<span class="smart-badge badge-spot">SPOT</span>`;
-        else if (t.status === 'DELISTED') badges += `<span class="smart-badge badge-delisted">DELISTED</span>`;
-        
-        if (t.listing_time && t.mul_point) {
-            const days = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000);
-            if (days > 0) {
-                if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
-                badges += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${days}d]</span>`;
-            }
-        }
-
-        tr.innerHTML = `
-            <td class="text-center"><span class="rank-num">${i + 1}</span></td>
-            <td>
-                <div class="token-cell">
-                    <div class="logo-wrapper">
-                        <img src="${t.icon || 'https://placehold.co/32'}" class="token-logo" onerror="this.src='https://placehold.co/32'">
-                        <img src="${t.chain_icon || 'https://placehold.co/14'}" class="chain-badge">
-                    </div>
-                    <div>
-                        <div class="d-flex align-items-center gap-2 cursor-pointer" onclick="copy('${t.contract}')">
-                            <span class="fw-bold text-white">${t.symbol}</span>
-                            <i class="fas fa-copy text-secondary" style="font-size:10px"></i>
-                        </div>
-                        <div class="badge-row">${badges}</div>
-                    </div>
-                </div>
-            </td>
-            <td class="text-end fw-bold">$${formatPrice(t.price)}</td>
-            <td class="text-end col-total" style="border-left:1px solid #2b3139">$${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end col-limit">$${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end col-onchain">$${formatNum(t.volume.daily_onchain)}</td>
-            <td class="text-end" style="border-left:1px solid #2b3139">$${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end font-num">${formatInt(t.tx_count)}</td>
-            <td class="text-end col-liq">$${formatNum(t.liquidity)}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// --- HELPERS ---
-function formatNum(n) { return !n ? '0' : (n >= 1e6 ? (n/1e6).toFixed(2)+'M' : (n >= 1e3 ? (n/1e3).toFixed(2)+'K' : n.toFixed(2))); }
-function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
-function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
-
-window.copy = (txt) => { if(txt) navigator.clipboard.writeText(txt); };
-window.handleSort = (key) => {
-    if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
-    else { sortConfig.key = key; sortConfig.dir = 'desc'; }
-    applyFilterAndSort();
-};
-
-function setupEventListeners() {
-    document.getElementById('search-input')?.addEventListener('keyup', applyFilterAndSort);
-    window.addEventListener('scroll', () => {
-        if (document.getElementById('alpha-market-view').style.display === 'block') {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                if (displayCount < displayedTokens.length) { displayCount += 50; renderTable(); }
-            }
-        }
-    });
-}
-
 function applyFilterAndSort() {
-    const term = document.getElementById('search-input')?.value.toLowerCase() || '';
+    const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
     displayedTokens = allTokens.filter(t => 
         (t.symbol && t.symbol.toLowerCase().includes(term)) || 
         (t.contract && t.contract.toLowerCase().includes(term))
@@ -232,3 +179,56 @@ function applyFilterAndSort() {
     });
     displayCount = 50; renderTable();
 }
+
+function renderTable() {
+    const tbody = document.getElementById('market-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    displayedTokens.slice(0, displayCount).forEach((t, i) => {
+        const tr = document.createElement('tr');
+        
+        let badges = '';
+        if (t.status === 'SPOT') badges += `<span class="smart-badge badge-spot">SPOT</span>`;
+        else if (t.status === 'DELISTED') badges += `<span class="smart-badge badge-delisted">DELISTED</span>`;
+        if (t.listing_time && t.mul_point) {
+            const days = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000);
+            if (days > 0) {
+                if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
+                badges += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${days}d]</span>`;
+            }
+        }
+
+        tr.innerHTML = `
+            <td class="text-center"><span style="color:#848e9c; font-weight:600">${i + 1}</span></td>
+            <td>
+                <div class="token-cell">
+                    <div class="logo-wrapper">
+                        <img src="${t.icon || 'https://placehold.co/32'}" class="token-logo" onerror="this.src='https://placehold.co/32'">
+                        <img src="${t.chain_icon || 'https://placehold.co/14'}" class="chain-badge">
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 cursor-pointer" onclick="window.pluginCopy('${t.contract}')">
+                            <span class="fw-bold text-white">${t.symbol}</span>
+                            <i class="fas fa-copy" style="font-size:10px; color:#555"></i>
+                        </div>
+                        <div style="display:flex; margin-top:3px">${badges}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="text-end fw-bold">$${formatPrice(t.price)}</td>
+            <td class="text-end col-total border-left-dim">$${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end col-limit">$${formatNum(t.volume.daily_limit)}</td>
+            <td class="text-end col-onchain">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end border-left-dim">$${formatNum(t.volume.rolling_24h)}</td>
+            <td class="text-end font-num">${formatInt(t.tx_count)}</td>
+            <td class="text-end col-liq">$${formatNum(t.liquidity)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function formatNum(n) { return !n ? '0' : (n >= 1e6 ? (n/1e6).toFixed(2)+'M' : (n >= 1e3 ? (n/1e3).toFixed(2)+'K' : n.toFixed(2))); }
+function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
+function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
+window.pluginCopy = (txt) => { if(txt) navigator.clipboard.writeText(txt); };
