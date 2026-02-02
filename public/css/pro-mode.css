@@ -76,21 +76,46 @@ body {
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
-/* --- 3. MARKET VIEW CONTAINER --- */
+/* --- SỬA LỖI MÀN HÌNH ĐEN & KHÔNG BẤM ĐƯỢC NÚT --- */
+
+/* 1. Navbar (Header): Phải nằm trên nội dung nhưng dưới Popup Login */
+.navbar {
+    position: sticky !important;
+    top: 0;
+    z-index: 1000 !important; /* Bootstrap Modal thường là 1050, nên cái này để 1000 là đẹp */
+    background: rgba(22, 26, 30, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* 2. Thanh Tab: Nằm ngay dưới Navbar */
+#alpha-tab-nav {
+    position: sticky !important;
+    top: 76px; /* Chiều cao Navbar */
+    z-index: 990; /* Thấp hơn Navbar chút */
+    /* ... giữ nguyên các thuộc tính khác ... */
+    background: #0b0e11;
+    border-bottom: 1px solid var(--border-dim);
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* 3. Alpha Market View: QUAN TRỌNG NHẤT - HẠ CẤP NÓ XUỐNG */
 #alpha-market-view {
-    /* Đưa về luồng hiển thị bình thường để Popup đè lên được */
-    display: none; 
+    /* TUYỆT ĐỐI KHÔNG DÙNG: position: fixed hay z-index: 2000000000 */
+    
+    position: relative; /* Để nó chảy theo dòng chảy trang web bình thường */
+    z-index: 1; /* Thấp nhất, để mọi Popup đều đè lên được */
+    
     width: 100%;
     min-height: 100vh;
     background: var(--bg-dark);
-    
-    /* Xóa position: fixed và z-index khủng đi */
-    margin-top: 0; 
+    display: none; /* JS sẽ bật nó lên sau */
     padding-bottom: 50px;
-    
-    /* Đảm bảo nó nằm dưới Header và Tab */
-    position: relative; 
-    z-index: 1; 
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
 }
 
 #view-dashboard {
