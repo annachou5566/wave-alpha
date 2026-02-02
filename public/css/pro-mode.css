@@ -170,20 +170,38 @@ body {
     color: var(--text-primary);
 }
 
+/* TỐI ƯU TIÊU ĐỀ BẢNG */
 .alpha-table th {
     background: #1e2329;
     color: var(--text-secondary);
-    font-size: 11px;
-    font-weight: 700;
+    font-family: var(--font-main); /* Chuyển sang font chính */
+    font-size: 10px; /* Nhỏ lại cho chuyên nghiệp */
+    font-weight: 800;
     padding: 12px 12px;
-    border-bottom: 1px solid var(--border-dim);
-    border-right: 1px solid var(--border-dim);
-    white-space: nowrap;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    letter-spacing: 1px; /* Khoảng cách chữ rộng ra */
     text-transform: uppercase;
+    border-bottom: 2px solid var(--border-dim); /* Viền đậm hơn chút */
 }
+
+/* TỐI ƯU DỮ LIỆU TRONG BẢNG */
+.alpha-table td {
+    padding: 12px;
+    font-family: var(--font-num); /* Mặc định cho số */
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03); /* Viền mờ hơn */
+}
+
+/* RIÊNG PHẦN SYMBOL THÌ DÙNG FONT CHỮ */
+.symbol-text {
+    font-family: var(--font-main);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.3px;
+    color: #fff;
+}
+
+
 
 .h-top th {
     border-bottom: none;
@@ -212,8 +230,19 @@ body {
     font-weight: 500;
 }
 
+.alpha-table tr {
+    transition: all 0.2s ease;
+}
+
 .alpha-table tr:hover td {
-    background: #23282E;
+    background: rgba(255, 255, 255, 0.03) !important;
+    cursor: default;
+}
+
+/* Dải màu bên trái khi hover */
+.alpha-table tr:hover td:first-child {
+    border-left: 3px solid var(--brand);
+    padding-left: 9px; /* Trừ đi 3px border để không bị lệch */
 }
 
 /* --- 6. LOGO LỒNG NHAU (Nested Icons) --- */
@@ -257,13 +286,10 @@ body {
 
 /* --- 7. BADGES & COLORS --- */
 .smart-badge {
-    font-size: 10px;
-    font-weight: 800;
-    padding: 2px 5px;
-    border-radius: 4px;
-    margin-right: 4px;
-    white-space: nowrap;
-    display: inline-block;
+    border-radius: 20px; /* Bo tròn hoàn toàn */
+    padding: 2px 8px;
+    font-size: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .badge-spot { background: var(--accent); color: #000; }
@@ -315,7 +341,11 @@ body {
 .text-neon { color: var(--neon-green) !important; text-shadow: 0 0 8px rgba(0, 255, 136, 0.3); font-weight: 700; }
 .text-dim { color: #5E6673 !important; }
 .text-secondary { color: var(--text-secondary) !important; }
-.text-white-bold { color: #fff; font-weight: 700; }
+.text-white-bold {
+    color: #ffffff;
+    font-size: 15px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
 .text-green { color: #0ecb81 !important; }
 .text-red { color: #f6465d !important; }
 

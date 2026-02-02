@@ -218,33 +218,31 @@ function renderTable() {
         // Nếu đã pin: sao đặc (fas), màu brand. Chưa pin: sao rỗng (far), màu tối.
         const starClass = isPinned ? 'fas fa-star text-brand' : 'far fa-star text-secondary';
 
-        tr.innerHTML = `
-            <td class="text-center">
-                <i class="${starClass} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
-            </td>
-            
-            <td>
-                <div class="token-cell">
-                    <div class="logo-wrapper">
-                        <img src="${tokenImg}" class="token-logo" onerror="this.onerror=null;this.src='assets/tokens/default.png'">
-                        ${chainBadgeHtml}
-                    </div>
-                    <div class="token-meta">
-                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
-                            <span class="symbol-text">${t.symbol}</span>
-                            <i class="fas fa-copy copy-icon" style="font-size:10px; margin-left:5px; opacity:0.6"></i>
-                        </div>
-                        <div class="badge-row">${badgesHtml}</div>
-                    </div>
+        /* --- TRONG HÀM RENDER TABLE --- */
+tr.innerHTML = `
+    <td class="text-center">
+        <i class="${starClass} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
+    </td>
+    
+    <td>
+        <div class="token-cell">
+            <div class="logo-wrapper">
+                <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
+                ${chainBadgeHtml}
+            </div>
+            <div class="token-meta">
+                <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
+                    <span class="symbol-text">${t.symbol}</span> <i class="fas fa-copy copy-icon"></i>
                 </div>
-            </td>
-            
-            <td class="text-end font-num">
-                <div class="text-white-bold">$${formatPrice(t.price)}</div>
-                <div style="font-size:11px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
-                    ${t.change_24h >= 0 ? '+' : ''}${t.change_24h}%
-                </div>
-            </td>
+                <div class="badge-row">${badgesHtml}</div>
+            </div>
+        </div>
+    </td>
+    
+    <td class="text-end"> <div class="text-white-bold">$${formatPrice(t.price)}</div>
+        <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+            ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}% </div>
+    </td>
             
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
             
