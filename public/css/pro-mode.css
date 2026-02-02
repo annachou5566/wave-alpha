@@ -1,41 +1,141 @@
 :root {
     --bg-dark: #0b0e11;
     --bg-card: #1e2329;
+    --bg-hover: #2b3139;
     --text-primary: #eaecef;
     --text-secondary: #848e9c;
-    --color-up: #0ecb81;
-    --color-down: #f6465d;
-    --color-onchain: #fcd535;
-    --border-color: #2b3139;
+    --accent: #fcd535; /* Vàng Binance */
+    --green: #0ecb81;
+    --red: #f6465d;
+    --font-main: 'Be Vietnam Pro', sans-serif;
 }
-body { background-color: var(--bg-dark); color: var(--text-primary); font-family: Arial, sans-serif; margin: 0; }
-.container { width: 95%; margin: 0 auto; padding: 20px 0; }
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { text-align: right; padding: 12px; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); }
-th:first-child { text-align: left; }
-td { padding: 12px; border-bottom: 1px solid var(--border-color); text-align: right; vertical-align: middle; }
-td:first-child { text-align: left; }
-tr:hover { background-color: var(--bg-card); }
 
-/* Token Info */
-.token-cell { display: flex; align-items: center; gap: 10px; }
-.token-icon { width: 32px; height: 32px; border-radius: 50%; }
-.chain-icon { width: 14px; height: 14px; position: absolute; bottom: -2px; right: -2px; border-radius: 50%; border: 2px solid var(--bg-dark); }
-.icon-wrapper { position: relative; width: 32px; height: 32px; }
-.symbol { font-weight: bold; display: block; }
-.name { font-size: 11px; color: var(--text-secondary); }
-.badges { display: flex; gap: 5px; margin-top: 4px; }
-.badge { font-size: 10px; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
-.b-mul { background: rgba(252, 213, 53, 0.2); color: #fcd535; }
-.b-day { background: rgba(132, 142, 156, 0.2); color: #b7bdc6; }
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    margin: 0;
+    overflow-x: hidden;
+}
 
-/* Colors */
-.up { color: var(--color-up); }
-.down { color: var(--color-down); }
-.vol-group { display: flex; flex-direction: column; gap: 2px; }
-.v-total { color: var(--text-primary); font-weight: bold; }
-.v-limit { color: var(--text-secondary); font-size: 11px; }
-.v-onchain { color: var(--color-onchain); font-weight: bold; font-size: 12px; }
-.stats { font-size: 11px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 2px; }
-.stat-row span { color: var(--text-primary); }
+/* --- MAINTENANCE OVERLAY --- */
+#maintenance-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #0b0e11; z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+    flex-direction: column;
+}
+.spinner {
+    width: 50px; height: 50px;
+    border: 4px solid var(--bg-card);
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* --- LAYOUT --- */
+.nav-container {
+    padding: 15px 20px;
+    background: var(--bg-card);
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #2b3139;
+}
+.logo { font-weight: 700; font-size: 18px; color: var(--accent); letter-spacing: 1px; }
+.tabs { display: flex; gap: 10px; }
+.tab-btn {
+    background: transparent; border: none;
+    color: var(--text-secondary); padding: 8px 16px;
+    cursor: pointer; font-family: var(--font-main); font-weight: 600;
+    border-radius: 4px; transition: 0.3s;
+}
+.tab-btn.active, .tab-btn:hover { background: #2b3139; color: var(--text-primary); }
+
+.main-container { padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+/* --- MARKET TABLE --- */
+.table-responsive { overflow-x: auto; }
+.alpha-table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+.alpha-table th {
+    text-align: right; padding: 12px; color: var(--text-secondary);
+    border-bottom: 1px solid #2b3139; cursor: pointer; user-select: none;
+}
+.alpha-table th:first-child { text-align: left; }
+.alpha-table td {
+    padding: 12px; border-bottom: 1px solid #2b3139;
+    text-align: right; vertical-align: middle;
+}
+.alpha-table td:first-child { text-align: left; }
+.alpha-table tr:hover { background-color: var(--bg-card); }
+
+/* --- TOKEN INFO (Logo lồng nhau) --- */
+.token-cell { display: flex; align-items: center; gap: 12px; }
+.logo-wrapper { position: relative; width: 36px; height: 36px; }
+.token-logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.chain-badge {
+    position: absolute; bottom: -2px; right: -2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--bg-dark);
+}
+.token-info { display: flex; flex-direction: column; }
+.symbol-row { display: flex; align-items: center; gap: 6px; }
+.symbol { font-weight: 700; font-size: 14px; color: var(--text-primary); cursor: pointer; }
+.symbol:hover { color: var(--accent); text-decoration: underline; }
+
+/* --- BADGES (Spot, Delisted, x4) --- */
+.badge-row { display: flex; gap: 4px; margin-top: 4px; }
+.bd { font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 700; }
+
+.bd-spot { background: rgba(252, 213, 53, 0.15); color: #fcd535; border: 1px solid rgba(252, 213, 53, 0.3); }
+.bd-delist { background: rgba(246, 70, 93, 0.15); color: #f6465d; border: 1px solid rgba(246, 70, 93, 0.3); }
+
+/* Multiplier Badge */
+.bd-mul { background: #2b3139; color: #b7bdc6; display: flex; gap: 3px; }
+.bd-mul .x-val { color: var(--text-primary); }
+.bd-mul .d-val { color: var(--text-secondary); font-weight: 500; }
+
+/* Hiệu ứng phát sáng cho x4 hệ BSC */
+.glow-bsc {
+    box-shadow: 0 0 8px rgba(252, 213, 53, 0.4);
+    border: 1px solid #fcd535;
+    color: #fcd535 !important;
+}
+
+/* --- COLORS & STATS --- */
+.text-up { color: var(--green); }
+.text-down { color: var(--red); }
+.vol-col { display: flex; flex-direction: column; gap: 2px; }
+.v-total { font-weight: 700; font-size: 13px; }
+.v-limit { font-size: 11px; color: var(--text-secondary); }
+.v-onchain { font-size: 12px; color: var(--green); font-weight: 600; }
+.v-zero { font-size: 11px; color: #444; }
+
+.stats-col { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-secondary); }
+.s-row { display: flex; justify-content: flex-end; gap: 5px; }
+.s-val { color: var(--text-primary); }
+
+/* --- ACTION BTN --- */
+.trade-btn {
+    text-decoration: none; font-size: 12px;
+    padding: 5px 10px; border-radius: 4px;
+    background: rgba(252, 213, 53, 0.1); color: var(--accent);
+    border: 1px solid rgba(252, 213, 53, 0.3); transition: 0.2s;
+}
+.trade-btn:hover { background: var(--accent); color: #000; }
+
+/* --- TOAST --- */
+#toast {
+    visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+    text-align: center; border-radius: 4px; padding: 12px;
+    position: fixed; z-index: 1000; bottom: 30px; left: 50%; transform: translateX(-50%);
+}
+#toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+@keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+@keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+.load-more {
+    text-align: center; padding: 15px; margin-top: 10px;
+    color: var(--text-secondary); cursor: pointer;
+    background: var(--bg-card); border-radius: 4px;
+}
+.load-more:hover { color: var(--accent); }

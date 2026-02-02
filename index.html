@@ -1,31 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alpha Market Pro</title>
+    <title>Wave Alpha | Trading Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="public/css/pro-mode.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h2 style="margin:0">🔥 Alpha Market <span style="color:#fcd535">PRO</span></h2>
-            <div id="updated-time" style="font-size:12px; color:#848e9c">Waiting for data...</div>
+
+    <div id="maintenance-overlay">
+        <div class="m-content">
+            <div class="spinner"></div>
+            <h1 style="color:#fcd535; margin-top:20px;">SYSTEM MAINTENANCE</h1>
+            <p style="color:#848e9c;">Hệ thống đang đồng bộ dữ liệu On-chain & Limit.</p>
+            <p style="font-size:12px; opacity:0.6">Vui lòng quay lại sau.</p>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Token</th>
-                    <th>Price</th>
-                    <th>Daily Volume (UTC)</th>
-                    <th>Market Stats</th>
-                    <th>Trend (7D)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-        </table>
     </div>
+
+    <div class="nav-container">
+        <div class="logo">WAVE ALPHA</div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="safeSwitch('market')">Alpha Market</button>
+            <button class="tab-btn" onclick="safeSwitch('tourney')">Trading Competition</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        
+        <div id="market-section">
+            <div class="market-header">
+                <div class="last-update" id="last-updated">Updating...</div>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Tìm Token / Contract..." onkeyup="filterTable()">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="alpha-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('token')">Token Info ⬍</th>
+                            <th onclick="sortTable('price')">Price ⬍</th>
+                            <th onclick="sortTable('total_vol')">Daily Vol (UTC) ⬍</th>
+                            <th>Market Stats (24h)</th>
+                            <th>Trend (7D)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="market-table-body">
+                        </tbody>
+                </table>
+                <div id="load-more-btn" class="load-more" onclick="loadMore()">Xem thêm</div>
+            </div>
+        </div>
+
+        <div id="tourney-section" style="display: none;">
+            <div style="padding:50px; text-align:center; color:#848e9c;">
+                <h2>🏆 Trading Competition Section</h2>
+                <p>Khu vực này được kết nối với Supabase (Giữ nguyên trạng thái).</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast">Đã copy contract!</div>
+
     <script src="public/js/pro-mode.js"></script>
 </body>
 </html>
