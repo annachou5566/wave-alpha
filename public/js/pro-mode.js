@@ -95,6 +95,7 @@ function injectLayout() {
                             <th rowspan="2" class="text-center" style="width:40px">#</th>
                             <th rowspan="2" style="min-width:200px">TOKEN INFO</th>
                             <th rowspan="2" class="text-end">PRICE</th>
+                            <th rowspan="2" class="text-center">CHART (7D)</th>
                             <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
                             <th colspan="3" class="text-center">MARKET STATS (24h)</th>
                         </tr>
@@ -242,6 +243,9 @@ function renderTable() {
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
         const isPinned = pinnedTokens.includes(t.symbol);
         const starClass = isPinned ? 'fas fa-star text-brand' : 'far fa-star text-secondary';
+        
+        // Tạo Chart SVG từ dữ liệu chart (nếu có)
+        const chartHtml = getSparklineSVG(t.chart);
 
         tr.innerHTML = `
             <td class="text-center">
@@ -267,6 +271,10 @@ function renderTable() {
                 <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
                     ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}%
                 </div>
+            </td>
+            
+            <td class="chart-cell">
+                ${chartHtml}
             </td>
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_limit)}</td>
@@ -364,3 +372,33 @@ window.toggleFilter = (filterType) => {
     renderTable(); // Vẽ lại bảng
 };
 
+// --- HÀM VẼ BIỂU ĐỒ MINI (SPARKLINE SVG) ---
+function getSparklineSVG(data) {
+    // Nếu không có dữ liệu hoặc dữ liệu ít hơn 2 điểm -> Không vẽ
+    if (!data || !Array.isArray(data) || data.length < 2) return '';
+
+    const width = 80;  // Chiều rộng biểu đồ
+    const height = 30; // Chiều cao biểu đồ
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1; // Tránh chia cho 0
+
+    // Logic màu sắc: Giá cuối > Giá đầu = Xanh, ngược lại = Đỏ
+    const isUp = data[data.length - 1] >= data[0];
+    const color = isUp ? '#0ecb81' : '#f6465d'; 
+
+    // Tạo đường dẫn SVG (Path Command)
+    // Công thức: M x1 y1 L x2 y2 ...
+    let pathD = data.map((val, i) => {
+        const x = (i / (data.length - 1)) * width;
+        // SVG toạ độ y=0 là ở trên cùng, nên phải đảo ngược lại (height - val)
+        const y = height - ((val - min) / range) * height; 
+        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+
+    return `
+        <svg width="${width}" height="${height}" class="mini-chart">
+            <path d="${pathD}" stroke="${color}" class="chart-path" />
+        </svg>
+    `;
+}

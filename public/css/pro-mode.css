@@ -413,3 +413,25 @@ body {
 .val-white { color: #fff !important; }
 .val-spot { color: var(--accent) !important; }
 .val-delist { color: #cf304a !important; }
+
+/* --- MINI CHART (SPARKLINE) --- */
+.chart-cell {
+    width: 100px;
+    padding: 5px !important;
+    text-align: center;
+}
+
+.mini-chart {
+    display: block;
+    margin: 0 auto;
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+}
+
+/* Đường vẽ biểu đồ */
+.chart-path {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: all 0.3s;
+}
