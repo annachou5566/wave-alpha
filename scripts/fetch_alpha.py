@@ -100,41 +100,51 @@ def get_sparkline_data(chain_id, contract_addr):
     return chart
 
 # --- 3. WORKER ---
+# --- 3. WORKER ---
 def process_token_securely(item):
+    """
+    Hàm xử lý từng token. Đã cập nhật logic lấy trường 'offline' và 'listingCex' 
+    từ dữ liệu mẫu thực tế.
+    """
     aid = item.get("alphaId")
     if not aid: return None
 
+    # Lấy các chỉ số cơ bản
     vol_24h = safe_float(item.get("volume24h"))
     contract = item.get("contractAddress")
     chain_name = item.get("chainName", "")
     
+    # --- LOGIC PHÂN LOẠI TRẠNG THÁI (STATUS LOGIC) ---
+    # Lấy giá trị trực tiếp từ API (API trả về boolean true/false nên lấy trực tiếp được)
+    is_offline = item.get("offline", False)     
+    is_listing_cex = item.get("listingCex", False)
+    
     status = "ALPHA"
-    if item.get("listingCex") is True and item.get("offline") is True: status = "SPOT"
-    elif item.get("listingCex") is False and item.get("offline") is True: status = "DELISTED"
-
+    # Logic: Nếu Offline = True -> Kiểm tra tiếp ListingCex
+    if is_offline is True:
+        if is_listing_cex is True:
+            status = "SPOT"      # Đã list CEX -> Spot
+        else:
+            status = "DELISTED"  # Không list CEX -> Delisted
+    
+    # --- LOGIC TÍNH TOÁN VOLUME (AGGREGATION) ---
     daily_total = 0.0
     daily_limit = 0.0
     daily_onchain = 0.0
     chart_data = []
 
+    # Chỉ quét dữ liệu chi tiết nếu là Token ALPHA (Đang chạy) và có Volume
+    # Giúp tiết kiệm API và không làm sai lệch số liệu tổng của giải
     if status == "ALPHA" and vol_24h > 0 and contract:
         chain_id = CHAIN_MAP.get(chain_name) or CHAIN_MAP.get(chain_name.upper())
         if chain_id:
             daily_total, daily_limit = fetch_daily_utc_stats(chain_id, contract)
             
-            # --- LOGIC TỰ SỬA LỖI (FALLBACK) ---
-            # 1. Nếu Total bị 0 (do lỗi mạng/API) mà Limit có dữ liệu -> Gán Total = Limit
-            # Để tránh việc hiển thị Total = 0 vô lý.
-            if daily_total == 0 and daily_limit > 0:
-                daily_total = daily_limit
-
-            # 2. Nếu Total < Limit (do lệch thời gian cache) -> Gán Total = Limit
-            if daily_total < daily_limit:
-                daily_total = daily_limit
-
-            # 3. Tính On-chain
-            daily_onchain = daily_total - daily_limit
+            # Logic sửa lỗi dữ liệu (Fallback)
+            if daily_total == 0 and daily_limit > 0: daily_total = daily_limit
+            if daily_total < daily_limit: daily_total = daily_limit
             
+            daily_onchain = daily_total - daily_limit
             chart_data = get_sparkline_data(chain_id, contract)
 
     return {
@@ -145,7 +155,13 @@ def process_token_securely(item):
         "chain": chain_name,
         "chain_icon": item.get("chainIconUrl"),
         "contract": contract,
-        "status": status,
+        
+        # --- QUAN TRỌNG: XUẤT CÁC TRƯỜNG NÀY RA JSON CHO WEB SỬ DỤNG ---
+        "offline": is_offline,       # True/False
+        "listingCex": is_listing_cex,# True/False
+        "status": status,            # "SPOT" | "DELISTED" | "ALPHA"
+        # ---------------------------------------------------------------
+        
         "mul_point": safe_float(item.get("mulPoint")),
         "listing_time": item.get("listingTime", 0),
         "price": safe_float(item.get("price")),
