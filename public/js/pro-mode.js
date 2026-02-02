@@ -66,13 +66,13 @@ function injectLayout() {
     marketView.style.display = 'none'; // Mặc định ẩn
     marketView.innerHTML = `
         <div class="alpha-container" style="padding-top: 20px;">
-                        <div class="time-badge" id="last-updated">Connecting...</div>
-  
-        <div class="alpha-header">
+            <div class="alpha-header">
+            
                 <div class="search-group">
                     <i class="fas fa-search search-icon"></i>
                     <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                 </div>
+                
             </div>
             <div class="table-responsive">
                 <table class="alpha-table">
