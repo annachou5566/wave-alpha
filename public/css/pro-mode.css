@@ -74,57 +74,67 @@
 .text-dim { color: #5E6673 !important; }
 .text-white-bold { color: #fff; font-weight: 700; }
 .token-cell { display: flex; align-items: center; gap: 12px; }
-/* Container chứa logo chính và badge mạng lưới */
+
+
+/* --- 1. CSS CHO LOGO LỒNG NHAU (FIX CỨNG) --- */
 .logo-wrapper {
     position: relative;
-    width: 32px;
-    height: 32px;
+    width: 36px; /* Tăng nhẹ kích thước để thoáng hơn */
+    height: 36px;
     margin-right: 12px;
-    overflow: visible; /* Quan trọng để icon con không bị mất */
-    flex-shrink: 0;
+    display: inline-block;
+    vertical-align: middle;
 }
 
-/* Logo Token chính */
 .token-logo {
     width: 100%;
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    display: block;
-    background: #2a2a2a; /* Nền tối khi ảnh chưa load */
+    background: #1e2026; /* Nền tối để che khi ảnh đang load */
+    border: 1px solid #333;
 }
 
-/* Icon mạng lưới (nhỏ) nằm đè lên */
 .chain-badge {
     position: absolute;
     bottom: -2px;
     right: -2px;
-    width: 14px;
-    height: 14px;
-    z-index: 10;
+    width: 16px; /* Icon chain rõ hơn */
+    height: 16px;
     border-radius: 50%;
-    background: #1a1a1a;
-    border: 1px solid #000;
+    background: #0b0e11;
+    border: 1.5px solid #000; /* Viền dày hơn để tách biệt logo chính */
+    z-index: 10;
+    object-fit: cover;
 }
 
-/* Hiệu ứng Glow cho hệ BSC điểm cao */
-.glow-row {
-    box-shadow: inset 0 0 12px rgba(255, 184, 0, 0.2);
-}
-.glow-row .token-logo {
-    border: 2px solid #ffb800;
-    box-shadow: 0 0 8px rgba(255, 184, 0, 0.6);
+/* --- 2. CSS CHO TAB CHUYỂN ĐỔI MƯỢT MÀ --- */
+/* Ẩn hiện mặc định */
+#alpha-market-view, #view-dashboard {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
 }
 
-/* Badge Styling */
-.smart-badge {
-    font-size: 10px;
-    font-weight: 800;
-    padding: 1px 4px;
-    border-radius: 3px;
-    margin-right: 4px;
-    white-space: nowrap;
+.fade-out {
+    opacity: 0 !important;
+    pointer-events: none;
 }
-.badge-spot { background: #ffb800; color: #000; }
-.badge-delisted { background: #ff4d4d; color: #fff; }
-.badge-alpha { color: #00f0ff; border: 1px solid #00f0ff; }
+
+.tab-btn {
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    opacity: 0.6;
+}
+
+.tab-btn.active {
+    opacity: 1;
+    border-bottom: 2px solid #00F0FF;
+    background: rgba(0, 240, 255, 0.1);
+}
+
+/* Giữ nguyên các class cũ (glow-row, badge, table...) */
+.glow-row .token-logo { box-shadow: 0 0 10px rgba(255, 184, 0, 0.5); border-color: #ffb800; }
+.smart-badge { font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; margin-right: 4px; }
+.badge-spot { background: #F0B90B; color: #000; } /* Màu vàng Binance */
+.badge-delisted { background: #cf304a; color: #fff; }
+.badge-alpha { color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.1); }
