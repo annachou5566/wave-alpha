@@ -1,13 +1,24 @@
 // public/js/pro-mode.js
 
-// --- 0. FORCE ADMIN ---
+// --- 0. FORCE ADMIN CHECK (SIÊU MẠNH) ---
 (function forceAdminCheck() {
     const params = new URLSearchParams(window.location.search);
+    // Kiểm tra URL hoặc LocalStorage
     if (params.get('mode') === 'admin' || localStorage.getItem('wave_alpha_role') === 'admin') {
+        
+        console.log("🚀 FORCE ADMIN UNLOCK ACTIVATED");
         localStorage.setItem('wave_alpha_role', 'admin');
+        
+        // 1. Gắn class vào thẻ HTML (thẻ cha cao nhất)
         document.documentElement.classList.add('is-admin-mode');
+        
+        // 2. Bơm CSS ẩn Overlay NGAY LẬP TỨC
         const style = document.createElement('style');
-        style.innerHTML = 'body.is-admin-mode #maintenance-overlay { display: none !important; } body.is-admin-mode #alpha-tab-nav { display: flex !important; }';
+        style.innerHTML = \`
+            html.is-admin-mode body #maintenance-overlay { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+            html.is-admin-mode #alpha-tab-nav { display: flex !important; }
+            html.is-admin-mode body { overflow: auto !important; }
+        \`;
         document.head.appendChild(style);
     }
 })();
@@ -18,15 +29,12 @@ let displayCount = 50;
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Dọn dẹp các element cũ nếu bị trùng (Fix lỗi 2 tab bấm)
-    const oldNav = document.getElementById('alpha-tab-nav');
-    if (oldNav) oldNav.remove(); 
-    const oldView = document.getElementById('alpha-market-view');
-    if (oldView) oldView.remove();
-    const oldOverlay = document.getElementById('maintenance-overlay');
-    if (oldOverlay) oldOverlay.remove();
+    // Xóa các element cũ nếu bị trùng
+    document.getElementById('alpha-tab-nav')?.remove();
+    document.getElementById('alpha-market-view')?.remove();
+    // (Không xóa overlay cũ vội để tránh nhấp nháy, CSS sẽ ẩn nó)
 
-    // 2. Load CSS
+    // Load CSS
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -35,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     injectHTML();
-    checkAccessLoop();
+    checkAccessLoop(); // Chạy lại lần nữa để đảm bảo
     initMarket();
     setupEvents();
 });
@@ -44,9 +52,11 @@ function checkAccessLoop() {
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
         const overlay = document.getElementById('maintenance-overlay');
         const nav = document.getElementById('alpha-tab-nav');
+        // CSS đã ẩn rồi, nhưng JS ẩn thêm cho chắc
         if (overlay) overlay.style.display = 'none';
         if (nav) nav.style.display = 'flex';
-        // Mặc định mở Tab Alpha
+        
+        // Mở Tab Alpha ngay
         window.pluginSwitchTab('alpha');
     }
 }
@@ -143,7 +153,6 @@ function renderTable() {
             }
         }
 
-        // Image Logic (API Fallback)
         const tokenImg = t.icon || 'https://placehold.co/32';
         const chainImg = t.chain_icon || 'https://placehold.co/14';
 
@@ -170,11 +179,9 @@ function renderTable() {
                     \${t.change_24h >= 0 ? '+' : ''}\${t.change_24h}%
                 </div>
             </td>
-            
             <td class="text-end font-num text-white-bold" style="font-size:15px">$\${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-dim">$\${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end font-num text-neon">$\${formatNum(t.volume.daily_onchain)}</td>
-            
             <td class="text-end font-num text-white">$\${formatNum(t.volume.rolling_24h)}</td>
             <td class="text-end font-num text-secondary">\${formatInt(t.tx_count)}</td>
             <td class="text-end font-num text-brand">$\${formatNum(t.liquidity)}</td>
