@@ -1,10 +1,8 @@
 /* public/css/pro-mode.css */
 
-/* --- 1. CORE VARIABLES & RESET --- */
+/* --- 1. CORE VARIABLES --- */
 :root {
     --bg-dark: #0b0e11;
-    --bg-card: #1e2329;
-    --bg-hover: #2b3139;
     --text-primary: #eaecef;
     --text-secondary: #848e9c;
     --accent: #fcd535;
@@ -12,197 +10,62 @@
     --red: #f6465d;
     --neon-green: #00ff88;
     --blue-liq: #00f0ff;
-    --gray-dim: #4a4f55;
     --font-main: 'Be Vietnam Pro', sans-serif;
     --font-num: 'Rajdhani', sans-serif;
 }
 
-body {
-    background: var(--bg-dark);
-    color: var(--text-primary);
-    font-family: var(--font-main);
-    margin: 0;
-}
-
-/* --- 2. MAINTENANCE OVERLAY --- */
+/* --- 2. MAINTENANCE OVERLAY (FIXED) --- */
 #maintenance-overlay {
-    position: fixed;
+    position: fixed !important;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(11, 14, 17, 0.98);
-    z-index: 9999;
-    display: flex;
+    background-color: #0b0e11 !important;
+    z-index: 2147483647 !important; /* Max Z-Index: Luôn nằm trên cùng */
+    display: flex !important; /* Luôn hiện mặc định */
     align-items: center;
     justify-content: center;
     flex-direction: column;
 }
 
-/* --- 3. TABLE STYLES (PRO MODE) --- */
-.table-responsive {
-    overflow-x: auto;
-    /* Cho phép icon tràn ra ngoài nếu cần thiết */
-    overflow-y: visible; 
-    padding-bottom: 50px; /* Khoảng trống cho dropdown/tooltip */
+/* Class này chỉ được thêm vào bởi JS khi là Admin */
+body.is-admin-mode #maintenance-overlay {
+    display: none !important; /* Ẩn khi là Admin */
 }
 
-.alpha-table {
-    width: 100%;
-    font-size: 13px;
-    border-collapse: separate;
-    border-spacing: 0;
-    color: var(--text-primary);
+.maintenance-content {
+    text-align: center;
 }
 
-/* Header Grouping Styles */
-.alpha-table thead th {
-    background: #161a1e !important;
-    vertical-align: middle;
-    border-bottom: 1px solid #2b3139;
-    font-weight: 600;
+.maintenance-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
 }
 
-.head-top th {
-    color: var(--text-secondary);
-    padding: 12px 8px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-right: 1px solid #2b3139;
-}
-
-.head-sub th {
-    font-size: 10px;
-    padding: 8px 10px;
-    color: var(--text-secondary);
-    border-top: 1px solid #2b3139;
-}
-
-.alpha-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #2b3139;
-    vertical-align: middle;
-    background: var(--bg-dark);
-    font-family: var(--font-num);
-    font-size: 14px;
-}
-
-.alpha-table tr:hover td {
-    background: var(--bg-hover);
-}
-
-/* --- 4. COLUMN SPECIFIC STYLES --- */
-/* Group 1: Daily Volume */
-.col-total {
-    color: #ffffff;
-    font-weight: 700;
-}
-
-.col-limit {
-    color: var(--gray-dim);
-    font-weight: 500;
-}
-
-.col-onchain {
-    color: var(--neon-green);
-    font-weight: 700;
-    text-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
-}
-
-/* Group 2: Market Stats */
-.col-vol24h {
-    color: var(--text-primary);
-}
-
-.col-tx {
-    color: var(--text-secondary);
-}
-
-.col-liq {
-    color: var(--blue-liq);
-    font-weight: 600;
-}
-
-/* --- 5. NESTED ICONS & TOKEN CELL --- */
-.token-cell {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.logo-wrapper {
-    position: relative;
-    width: 40px; /* Đủ rộng để chứa logo */
-    height: 32px;
-    display: flex;
-    align-items: center;
-    overflow: visible !important; /* QUAN TRỌNG: Để icon chain không bị cắt */
-}
-
-.token-logo {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #2b3139;
-    border: 1px solid #2b3139;
-}
-
-.chain-badge {
-    position: absolute;
-    bottom: -2px; /* Đẩy xuống góc dưới */
-    right: 4px;   /* Đẩy sang phải logo chính một chút */
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #000;
-    border: 1px solid var(--text-secondary);
-    z-index: 10; /* Nằm trên logo token */
-}
-
-/* --- 6. SMART BADGES --- */
-.badge-row {
-    display: flex;
-    gap: 4px;
-    margin-top: 4px;
-}
-
-.smart-badge {
-    font-size: 9px;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-weight: 700;
-    font-family: var(--font-num);
+#maintenance-overlay h1 {
+    color: var(--accent);
+    font-family: var(--font-main);
+    font-size: 28px;
+    letter-spacing: 2px;
+    margin: 0 0 10px 0;
     text-transform: uppercase;
 }
 
-.badge-spot { background: rgba(252, 213, 53, 0.15); color: var(--accent); border: 1px solid var(--accent); }
-.badge-delisted { background: rgba(246, 70, 93, 0.15); color: var(--red); border: 1px solid var(--red); }
-.badge-alpha { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
-
-/* --- 7. GLOW EFFECT (BSC x4) --- */
-.glow-row td {
-    background: rgba(252, 213, 53, 0.03);
-}
-.glow-row .token-logo {
-    box-shadow: 0 0 10px rgba(252, 213, 53, 0.6);
-    border-color: var(--accent);
-}
-
-/* --- 8. UTILS --- */
-.rank-num {
+#maintenance-overlay p {
     color: var(--text-secondary);
-    font-weight: 600;
-    font-family: var(--font-num);
+    font-family: var(--font-main);
+    font-size: 16px;
 }
 
-.cursor-pointer { cursor: pointer; }
-.text-brand { color: var(--accent); }
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-10px);}
+    60% {transform: translateY(-5px);}
+}
 
-/* public/css/pro-mode.css */
-
-/* --- 1. NEW TAB NAVIGATION --- */
+/* --- 3. TAB NAVIGATION (Thanh chuyển Tab) --- */
 #alpha-tab-nav {
     position: fixed;
     top: 20px;
@@ -226,7 +89,7 @@ body {
     border-radius: 40px;
     cursor: pointer;
     font-weight: 600;
-    font-family: 'Be Vietnam Pro', sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     transition: all 0.2s;
 }
@@ -238,7 +101,7 @@ body {
 }
 
 .badge-pro {
-    background: #fcd535;
+    background: var(--accent);
     color: #000;
     font-size: 10px;
     padding: 2px 6px;
@@ -247,17 +110,18 @@ body {
     font-weight: 800;
 }
 
-/* --- 2. ALPHA MARKET VIEW (FULLSCREEN OVERLAY) --- */
+/* --- 4. ALPHA MARKET VIEW (Giao diện chính) --- */
 #alpha-market-view {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: #0b0e11;
-    z-index: 100; /* Nằm đè lên web cũ */
+    background: var(--bg-dark);
+    z-index: 100;
     overflow-y: auto;
-    padding-top: 80px; /* Tránh Tab Bar */
+    padding-top: 80px;
+    display: none; /* Mặc định ẩn, chờ JS bật */
 }
 
 .alpha-container {
@@ -266,7 +130,6 @@ body {
     padding: 0 20px 100px;
 }
 
-/* Header Controls */
 .alpha-header {
     display: flex;
     justify-content: space-between;
@@ -287,119 +150,53 @@ body {
     padding: 10px 10px 10px 40px;
     border-radius: 8px;
     outline: none;
+    font-family: var(--font-main);
 }
 
-#search-input:focus { border-color: #fcd535; }
+#search-input:focus { border-color: var(--accent); }
 .search-icon { position: absolute; left: 12px; top: 13px; color: #848e9c; }
 
-.time-badge {
-    color: #848e9c;
-    font-size: 12px;
-    font-family: 'Rajdhani', sans-serif;
+.table-responsive { overflow-x: auto; overflow-y: visible; padding-bottom: 50px; }
+.alpha-table { width: 100%; border-collapse: separate; border-spacing: 0; color: var(--text-primary); }
+
+.alpha-table th {
+    background: #161a1e;
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: 10px;
+    border-bottom: 1px solid #2b3139;
+    border-right: 1px solid #2b3139;
+    vertical-align: middle;
 }
 
-/* --- 3. MAINTENANCE OVERLAY --- */
-#maintenance-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(11, 14, 17, 0.98);
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #fcd535;
+.alpha-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #2b3139;
+    background: var(--bg-dark);
+    font-family: var(--font-num);
+    font-size: 14px;
+    vertical-align: middle;
 }
 
-.maintenance-box h1 { font-size: 24px; letter-spacing: 2px; }
-.maintenance-box p { color: #848e9c; margin-top: 10px; }
-
-/* --- 4. TABLE STYLES (Update) --- */
-.alpha-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.alpha-table th { background: #161a1e; color: #848e9c; font-size: 12px; padding: 10px; position: sticky; top: 0; }
-.border-group { border-left: 1px solid #2b3139; }
-
-.col-total { color: #fff; font-weight: 700; }
-.col-onchain { color: #00ff88; font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.2); }
+/* Column Colors */
+.col-total { color: #ffffff; font-weight: 700; }
 .col-limit { color: #4a4f55; }
-.col-liq { color: #00f0ff; }
+.col-onchain { color: var(--neon-green); font-weight: 700; text-shadow: 0 0 10px rgba(0, 255, 136, 0.2); }
+.col-liq { color: var(--blue-liq); font-weight: 600; }
+.rank-num { color: var(--text-secondary); font-weight: 600; }
 
 /* Nested Icons */
+.token-cell { display: flex; align-items: center; gap: 12px; }
 .logo-wrapper { position: relative; width: 40px; height: 32px; overflow: visible; }
-.token-logo { width: 32px; height: 32px; border-radius: 50%; }
-.chain-badge { position: absolute; bottom: -2px; right: 4px; width: 14px; height: 14px; border-radius: 50%; background: #000; border: 1px solid #848e9c; }
+.token-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #2b3139; }
+.chain-badge { position: absolute; bottom: -2px; right: 4px; width: 14px; height: 14px; border-radius: 50%; background: #000; border: 1px solid #848e9c; z-index: 10; }
 
 /* Badges */
-.smart-badge { font-size: 9px; padding: 2px 4px; border-radius: 3px; margin-right: 4px; font-weight: bold; }
-.badge-spot { color: #fcd535; border: 1px solid #fcd535; background: rgba(252,213,53,0.1); }
-.badge-alpha { color: #00ff88; border: 1px solid #00ff88; background: rgba(0,255,136,0.1); }
-.glow-row td { background: rgba(252, 213, 53, 0.05) !important; }
-
-/* public/css/pro-mode.css */
-
-/* --- MAINTENANCE OVERLAY --- */
-#maintenance-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #0b0e11; /* Màu nền tối trùng với theme */
-    z-index: 9999; /* Luôn nằm trên cùng */
-    display: flex; /* Mặc định là hiện */
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-}
-
-.maintenance-content {
-    text-align: center;
-    animation: fadeIn 0.5s ease-out;
-}
-
-.maintenance-icon {
-    font-size: 60px;
-    margin-bottom: 20px;
-    animation: bounce 2s infinite;
-}
-
-#maintenance-overlay h1 {
-    color: #fcd535; /* Màu vàng thương hiệu */
-    font-family: 'Be Vietnam Pro', sans-serif;
-    font-size: 28px;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-}
-
-#maintenance-overlay p {
-    color: #848e9c;
-    font-family: 'Be Vietnam Pro', sans-serif;
-    font-size: 16px;
-    margin: 5px 0;
-}
-
-.sub-text {
-    font-size: 14px !important;
-    opacity: 0.7;
-}
-
-/* Hiệu ứng chuyển động nhẹ */
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-    40% {transform: translateY(-10px);}
-    60% {transform: translateY(-5px);}
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Class ẩn overlay khi là Admin */
-.is-admin-mode #maintenance-overlay {
-    display: none !important;
-}
+.badge-row { display: flex; gap: 4px; margin-top: 4px; }
+.smart-badge { font-size: 9px; padding: 1px 4px; border-radius: 3px; font-weight: 700; text-transform: uppercase; font-family: var(--font-num); }
+.badge-spot { background: rgba(252, 213, 53, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+.badge-delisted { background: rgba(246, 70, 93, 0.15); color: var(--red); border: 1px solid var(--red); }
+.badge-alpha { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid var(--neon-green); }
+.glow-row td { background: rgba(252, 213, 53, 0.03); }
+.glow-row .token-logo { box-shadow: 0 0 10px rgba(252, 213, 53, 0.6); border: 1px solid var(--accent); }
+.cursor-pointer { cursor: pointer; }
