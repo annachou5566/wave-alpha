@@ -1,14 +1,39 @@
 // public/js/pro-mode.js
 
+// --- 0. CHẠY NGAY LẬP TỨC (QUAN TRỌNG) ---
+// Kiểm tra quyền ngay dòng đầu tiên để tránh hiện màn hình bảo trì
+(function forceAdminCheck() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const savedRole = localStorage.getItem('wave_alpha_role');
+
+    if (mode === 'admin' || savedRole === 'admin') {
+        // 1. Lưu quyền ngay
+        localStorage.setItem('wave_alpha_role', 'admin');
+        // 2. Gắn cờ vào body ngay lập tức
+        document.documentElement.classList.add('is-admin-mode');
+        document.body ? document.body.classList.add('is-admin-mode') : null;
+        
+        // 3. Bơm CSS ẩn Overlay khẩn cấp (Phòng hờ file CSS tải chậm)
+        const style = document.createElement('style');
+        style.innerHTML = `
+            body.is-admin-mode #maintenance-overlay { display: none !important; }
+            body.is-admin-mode #alpha-tab-nav { display: flex !important; }
+        `;
+        document.head.appendChild(style);
+        console.log("🚀 ADMIN DETECTED: Force Unlocked");
+    }
+})();
+
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
 let displayedTokens = [];
 let displayCount = 50; 
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
-// --- 1. BOOTSTRAP PLUGIN ---
-(function initPlugin() {
-    // Tự động nạp CSS
+// --- 1. BOOTSTRAP ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Nạp CSS giao diện
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -16,40 +41,28 @@ let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
         document.head.appendChild(link);
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        injectHTML();
-        checkAccess();
-        initMarket();
-        setupEvents();
-    });
-})();
+    injectHTML();       // Bơm HTML
+    checkAccessLoop();  // Kiểm tra quyền lần 2 (để chắc chắn)
+    initMarket();       // Tải data
+    setupEvents();      // Sự kiện
+});
 
-// --- 2. LOGIC QUYỀN TRUY CẬP & TAB MẶC ĐỊNH ---
-function checkAccess() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode');
-    const savedRole = localStorage.getItem('wave_alpha_role');
-    const overlay = document.getElementById('maintenance-overlay');
-    const nav = document.getElementById('alpha-tab-nav');
-
-    if (mode === 'admin' || savedRole === 'admin') {
-        localStorage.setItem('wave_alpha_role', 'admin');
+// --- 2. LOGIC QUYỀN (DỰ PHÒNG) ---
+function checkAccessLoop() {
+    // Hàm này chạy lại để đảm bảo các element được ẩn/hiện đúng sau khi bơm HTML
+    if (localStorage.getItem('wave_alpha_role') === 'admin') {
         document.body.classList.add('is-admin-mode');
-        
+        const overlay = document.getElementById('maintenance-overlay');
+        const nav = document.getElementById('alpha-tab-nav');
         if (overlay) overlay.style.display = 'none';
         if (nav) nav.style.display = 'flex';
         
-        // [QUAN TRỌNG] Mặc định bật Tab Alpha Market ngay lập tức
+        // Mở Tab Alpha ngay
         window.pluginSwitchTab('alpha');
-        
-    } else {
-        document.body.classList.remove('is-admin-mode');
-        if (overlay) overlay.style.display = 'flex';
-        if (nav) nav.style.display = 'none';
     }
 }
 
-// --- 3. BƠM GIAO DIỆN (ALPHA MARKET ĐỨNG TRƯỚC) ---
+// --- 3. BƠM HTML (Tab Alpha Đầu Tiên) ---
 function injectHTML() {
     if (document.getElementById('alpha-plugin-root')) return;
 
@@ -60,8 +73,7 @@ function injectHTML() {
             <div class="maintenance-content">
                 <div class="maintenance-icon">🚧</div>
                 <h1>SYSTEM MAINTENANCE</h1>
-                <p>Wave Alpha Terminal is updating data logic.</p>
-                <p class="sub-text">Restricted Access.</p>
+                <p>Restricted Access.</p>
             </div>
         </div>
 
@@ -82,7 +94,7 @@ function injectHTML() {
                         <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                     </div>
                     <div class="header-meta">
-                        <div id="last-updated" class="time-badge"><i class="fas fa-clock me-1"></i> Loading...</div>
+                        <div id="last-updated" class="time-badge">Loading...</div>
                     </div>
                 </div>
                 
@@ -91,7 +103,7 @@ function injectHTML() {
                         <thead>
                             <tr class="h-top">
                                 <th rowspan="2" class="text-center sticky-col" style="width:40px">#</th>
-                                <th rowspan="2" class="sticky-col-2">TOKEN / CHAIN</th>
+                                <th rowspan="2" class="sticky-col-2">TOKEN</th>
                                 <th rowspan="2" class="text-end">PRICE</th>
                                 <th colspan="3" class="text-center group-header">DAILY VOLUME (UTC)</th>
                                 <th colspan="3" class="text-center group-header">MARKET STATS (24h)</th>
@@ -114,7 +126,7 @@ function injectHTML() {
     document.body.appendChild(root);
 }
 
-// --- 4. RENDER TABLE (SỬ DỤNG LINK ẢNH API CHUẨN) ---
+// --- 4. RENDER TABLE (ẢNH TỪ API JSON) ---
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
@@ -123,7 +135,7 @@ function renderTable() {
     displayedTokens.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         
-        // Logic Badge
+        // Badge logic
         let badges = '';
         if (t.status === 'SPOT') badges += `<span class="smart-badge badge-spot">SPOT</span>`;
         if (t.status === 'DELISTED') badges += `<span class="smart-badge badge-delisted">DELISTED</span>`;
@@ -136,9 +148,7 @@ function renderTable() {
             }
         }
 
-        // --- XỬ LÝ ẢNH (Theo mẫu JSON bạn đưa) ---
-        // t.icon: Link ảnh Token
-        // t.chain_icon: Link ảnh Chain
+        // --- LẤY ẢNH TỪ API ---
         const tokenImg = t.icon || 'https://placehold.co/32';
         const chainImg = t.chain_icon || 'https://placehold.co/14';
 
@@ -148,8 +158,7 @@ function renderTable() {
                 <div class="token-cell">
                     <div class="logo-wrapper">
                         <img src="${tokenImg}" class="token-logo" onerror="this.src='https://placehold.co/32'">
-                        
-                        <img src="${chainImg}" class="chain-badge" title="${t.chain || 'Chain'}" onerror="this.style.display='none'">
+                        <img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'">
                     </div>
                     <div class="token-meta">
                         <div class="d-flex align-items-center gap-2 cursor-pointer" onclick="window.pluginCopy('${t.contract}')">
@@ -177,7 +186,7 @@ function renderTable() {
     });
 }
 
-// --- UTILS & EVENTS ---
+// --- UTILS ---
 window.pluginSwitchTab = (tab) => {
     const oldView = document.getElementById('view-dashboard');
     const newView = document.getElementById('alpha-market-view');
@@ -224,7 +233,7 @@ async function fetchMarketData() {
         allTokens = data.tokens || [];
         applyFilterAndSort();
         const timeLbl = document.getElementById('last-updated');
-        if(timeLbl) timeLbl.innerText = '<i class="fas fa-sync-alt me-1"></i> Updated: ' + data.last_updated;
+        if(timeLbl) timeLbl.innerText = 'UPDATED: ' + data.last_updated;
     } catch (e) { console.error("Data error:", e); }
 }
 
