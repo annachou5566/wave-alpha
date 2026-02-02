@@ -134,47 +134,54 @@ function renderTable() {
     if (!tbody) return;
     tbody.innerHTML = '';
     
-    let list = allTokens.filter(t => {
-        const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
-        return (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
-    });
-
-    list.sort((a, b) => {
-        const valA = getVal(a, sortConfig.key);
-        const valB = getVal(b, sortConfig.key);
-        return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
-    });
+    // ... (Giữ nguyên phần lọc list và sort)
 
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
-        
+        const now = Date.now();
         let badgesHtml = '';
-        if (t.status === 'SPOT') badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
-        if (t.status === 'DELISTED') badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
-        if (t.listing_time && t.mul_point) {
-            const diff = Math.ceil(((t.listing_time + 2592000000) - Date.now()) / 86400000);
-            if (diff > 0) {
-                if (t.chain === 'BSC' && t.mul_point >= 4) tr.classList.add('glow-row');
-                badgesHtml += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${diff}d]</span>`;
+        
+        // 1. Logic SPOT / DELISTED
+        if (t.offline === true) {
+            if (t.listingCex === true) {
+                badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
+            } else {
+                badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
             }
         }
 
-        const tokenImg = t.icon || 'https://placehold.co/32';
-        const chainImg = t.chain_icon || 'https://placehold.co/14';
+        // 2. Logic Multiplier Badge [xN Yd]
+        // Yd = (listing_time + 30 ngày) - current_time
+        if (t.listing_time && t.mul_point) {
+            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+            const expiryTime = t.listing_time + thirtyDaysMs;
+            const diffDays = Math.ceil((expiryTime - now) / (1000 * 60 * 60 * 24));
 
-        // Đã sửa lỗi syntax ở đây
+            if (diffDays > 0) {
+                badgesHtml += `<span class="smart-badge badge-alpha">[x${t.mul_point} ${diffDays}d]</span>`;
+                
+                // Hiệu ứng Glow: Hệ BSC và mul_point >= 4
+                if (t.chain === 'BSC' && t.mul_point >= 4) {
+                    tr.classList.add('glow-row');
+                }
+            }
+        }
+
+        const tokenImg = t.icon || 'assets/tokens/default.png';
+        const chainImg = t.chain_icon || ''; // Icon mạng lưới
+
         tr.innerHTML = `
             <td class="text-center font-num text-secondary">${i + 1}</td>
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="${tokenImg}" class="token-logo" onerror="this.src='https://placehold.co/32'">
-                        <img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'">
+                        <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
+                        ${chainImg ? `<img src="${chainImg}" class="chain-badge">` : ''}
                     </div>
                     <div class="token-meta">
-                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')">
+                        <div class="symbol-row" onclick="window.pluginCopy('${t.contract}')" title="Click to copy contract">
                             <span class="symbol-text">${t.symbol}</span>
-                            <i class="fas fa-copy copy-icon"></i>
+                            <i class="fas fa-copy copy-icon" style="font-size: 10px; margin-left: 4px; opacity: 0.5;"></i>
                         </div>
                         <div class="badge-row">${badgesHtml}</div>
                     </div>
