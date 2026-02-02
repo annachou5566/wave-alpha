@@ -435,3 +435,28 @@ body {
     stroke-linejoin: round;
     transition: all 0.3s;
 }
+
+/* --- BADGE TGE & AIRDROP --- */
+.badge-tge {
+    background: #6f42c1; /* Màu tím */
+    color: #fff;
+    border: 1px solid rgba(111, 66, 193, 0.4);
+}
+
+.badge-airdrop {
+    background: #0dcaf0; /* Màu xanh cyan */
+    color: #000;
+    font-weight: 700;
+    border: 1px solid rgba(13, 202, 240, 0.4);
+}
+
+/* Style cho ngày Listing */
+.listing-date {
+    font-size: 10px;
+    color: #5E6673; /* Màu xám dim */
+    margin-left: auto; /* Đẩy sang phải nếu dùng flex */
+    font-family: var(--font-num);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}

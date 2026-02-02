@@ -207,39 +207,52 @@ function renderTable() {
         const tr = document.createElement('tr');
         const now = Date.now();
         
-        // --- 1. Xử lý Badge (Đã chỉnh sửa) ---
+        // 1. Xử lý Ngày Listing (Chuyển timestamp thành MM/DD/YYYY)
+        let dateHtml = '';
+        if (t.listing_time) {
+            const dateObj = new Date(t.listing_time);
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const year = dateObj.getFullYear();
+            
+            // Format: MM/DD/YYYY
+            const dateStr = `${day}/${month}/${year}`;
+            
+            dateHtml = `<span class="listing-date"><i class="far fa-clock"></i> ${dateStr}</span>`;
+        }
+
+        // 2. Xử lý Badge (Kết hợp Spot/Delist + Multiplier + TGE + Airdrop)
         let badgesHtml = '';
         
-        // Badge Spot/Delisted
+        // Badge Trạng thái
         if (t.offline === true) {
             if (t.listingCex === true) badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
             else badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
         }
 
-        // Badge Multiplier
+        // Badge Sự kiện (TGE / Airdrop) -> Thêm vào đây
+        if (t.onlineTge === true) badgesHtml += '<span class="smart-badge badge-tge">TGE</span>';
+        if (t.onlineAirdrop === true) badgesHtml += '<span class="smart-badge badge-airdrop">AIRDROP</span>';
+
+        // Badge Hệ số nhân (xN) - Chỉ hiện nếu x2 trở lên và còn hạn
         if (t.listing_time && t.mul_point) {
             const expiryTime = t.listing_time + 2592000000; 
             const diffDays = Math.ceil((expiryTime - now) / 86400000);
-
+            
             if (diffDays > 0 && t.mul_point > 1) {
-                // Chỉ hiện nếu x2 trở lên
                 const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
                 badgesHtml += `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
             }
         }
-        // ĐÃ XÓA ĐOẠN CODE GLOW-ROW (TÔ MÀU NỀN) TẠI ĐÂY THEO YÊU CẦU
 
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
         const isPinned = pinnedTokens.includes(t.symbol);
         const starClass = isPinned ? 'fas fa-star text-brand' : 'far fa-star text-secondary';
-        
-        // Tạo Contract rút gọn (VD: 0x123...abc4)
         const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
-
-        // Tạo Chart SVG
         const chartHtml = getSparklineSVG(t.chart);
 
+        /* --- PHẦN HTML HIỂN THỊ --- */
         tr.innerHTML = `
             <td class="text-center">
                 <i class="${starClass} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
@@ -251,14 +264,18 @@ function renderTable() {
                         <img src="${tokenImg}" class="token-logo" onerror="this.onerror=null;this.src='assets/tokens/default.png'">
                         ${chainBadgeHtml}
                     </div>
-                    <div class="token-meta">
-                        <div class="symbol-row">
+                    <div class="token-meta" style="width: 100%;">
+                        <div class="symbol-row" style="margin-bottom: 3px;">
                             <span class="symbol-text">${t.symbol}</span>
-                            <span style="margin-left: 8px;">${badgesHtml}</span>
+                            <span style="margin-left: 8px; display:inline-flex; gap:3px;">${badgesHtml}</span>
                         </div>
                         
-                        <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:11px; margin-top:2px;">
-                            ${shortContract} <i class="fas fa-copy" style="margin-left:4px;"></i>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:11px;">
+                                ${shortContract} <i class="fas fa-copy" style="margin-left:2px;"></i>
+                            </div>
+                            
+                            ${dateHtml}
                         </div>
                     </div>
                 </div>
@@ -271,10 +288,7 @@ function renderTable() {
                 </div>
             </td>
             
-            <td class="chart-cell">
-                ${chartHtml}
-            </td>
-
+            <td class="chart-cell">${chartHtml}</td>
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_onchain)}</td>

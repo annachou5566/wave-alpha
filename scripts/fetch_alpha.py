@@ -225,6 +225,8 @@ def process_token_securely(item):
         "offline": is_offline,       # True/False
         "listingCex": is_listing_cex,# True/False
         "status": status,            # "SPOT" | "DELISTED" | "ALPHA"
+        "onlineTge": item.get("onlineTge", False),         # Badge TGE
+        "onlineAirdrop": item.get("onlineAirdrop", False), # Badge Airdrop
         # ---------------------------------------------------------------
         
         "mul_point": safe_float(item.get("mulPoint")),
