@@ -139,77 +139,59 @@
 .badge-delisted { background: #cf304a; color: #fff; }
 .badge-alpha { color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.1); }
 
-/* --- STICKY HEADER WRAPPER --- */
-/* Đây là khung cố định sẽ chứa: Logo/Title cũ + Tabs mới */
-#sticky-header-wrapper {
-    position: fixed;
+/* --- 1. GHIM THANH HEADER CÓ SẴN (NAVBAR) --- */
+.navbar {
+    position: sticky !important;
     top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
-    background: #0b0e11; /* Màu nền trùng với web */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    z-index: 1050; /* Cao hơn mọi thứ */
+    background: rgba(22, 26, 30, 0.95) !important; /* Màu nền tối trùng web */
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     transition: all 0.3s ease;
 }
 
-/* Spacer: Khoảng trống vô hình để nội dung không bị Header che mất */
-#header-spacer {
-    display: block;
-    width: 100%;
-    /* Height sẽ được JS tính toán tự động */
-}
-
-/* Tinh chỉnh lại Title cũ khi nằm trong Header mới (nếu cần) */
-#sticky-header-wrapper h1 {
-    margin: 0 !important;
-    padding: 0 !important;
-    font-size: 24px; /* Điều chỉnh kích thước cho gọn */
-    line-height: 1.2;
-}
-#sticky-header-wrapper img {
-    max-height: 50px; /* Giới hạn chiều cao logo */
-    width: auto;
-}
-
-/* Phần Tabs nằm ngay dưới tiêu đề */
+/* --- 2. THANH TAB NẰM NGAY DƯỚI HEADER --- */
 #alpha-tab-nav {
+    position: sticky !important;
+    top: 76px; /* Chiều cao của Navbar (khoảng 76px) */
+    z-index: 1040;
+    background: #0b0e11; /* Màu nền body */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: center;
-    gap: 30px;
-    margin-top: 15px;
-    width: 100%;
-    background: rgba(255,255,255,0.02); /* Nền nhẹ phân cách */
+    padding: 10px 0;
+    margin-bottom: 0;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
+/* Style cho nút Tab (giữ nguyên độ đẹp) */
 .tab-btn {
     background: transparent;
     border: none;
-    color: #888;
-    font-size: 14px;
+    color: #6c757d;
+    font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
-    padding: 12px 25px;
-    cursor: pointer;
-    position: relative;
+    font-size: 16px;
+    padding: 8px 25px;
+    margin: 0 10px;
+    border-radius: 4px;
+    transition: all 0.2s;
     text-transform: uppercase;
-    transition: color 0.3s;
+    letter-spacing: 1px;
 }
 
-.tab-btn:hover, .tab-btn.active {
-    color: #00F0FF;
-}
-
-.tab-btn.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
+.tab-btn:hover { color: #fff; }
+.tab-btn.active {
+    color: #000;
     background: #00F0FF;
-    box-shadow: 0 0 10px #00F0FF;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
+
+/* Logo lồng nhau (Giữ nguyên như đã chốt) */
+.logo-wrapper { position: relative; width: 32px; height: 32px; margin-right: 12px; display: inline-block; vertical-align: middle; }
+.token-logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #1e2026; }
+.chain-badge { position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; background: #0b0e11; border: 1px solid #000; z-index: 10; }
+
+/* Ẩn hiện mượt mà */
+.fade-out { opacity: 0 !important; pointer-events: none; }
+#alpha-market-view, #view-dashboard { transition: opacity 0.2s ease-in-out; opacity: 1; }
