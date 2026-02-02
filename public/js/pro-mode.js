@@ -1,27 +1,20 @@
 // public/js/pro-mode.js
 
-// --- 0. CHẠY NGAY LẬP TỨC (QUAN TRỌNG) ---
-// Kiểm tra quyền ngay dòng đầu tiên để tránh hiện màn hình bảo trì
+// --- 0. FORCE ADMIN CHECK (Giữ nguyên logic cũ) ---
 (function forceAdminCheck() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
     const savedRole = localStorage.getItem('wave_alpha_role');
-
     if (mode === 'admin' || savedRole === 'admin') {
-        // 1. Lưu quyền ngay
         localStorage.setItem('wave_alpha_role', 'admin');
-        // 2. Gắn cờ vào body ngay lập tức
         document.documentElement.classList.add('is-admin-mode');
         document.body ? document.body.classList.add('is-admin-mode') : null;
-        
-        // 3. Bơm CSS ẩn Overlay khẩn cấp (Phòng hờ file CSS tải chậm)
         const style = document.createElement('style');
         style.innerHTML = `
             body.is-admin-mode #maintenance-overlay { display: none !important; }
             body.is-admin-mode #alpha-tab-nav { display: flex !important; }
         `;
         document.head.appendChild(style);
-        console.log("🚀 ADMIN DETECTED: Force Unlocked");
     }
 })();
 
@@ -33,36 +26,31 @@ let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
 
 // --- 1. BOOTSTRAP ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Nạp CSS giao diện
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = 'public/css/pro-mode.css?v=' + Date.now();
         document.head.appendChild(link);
     }
-
-    injectHTML();       // Bơm HTML
-    checkAccessLoop();  // Kiểm tra quyền lần 2 (để chắc chắn)
-    initMarket();       // Tải data
-    setupEvents();      // Sự kiện
+    injectHTML();
+    checkAccessLoop();
+    initMarket();
+    setupEvents();
 });
 
-// --- 2. LOGIC QUYỀN (DỰ PHÒNG) ---
+// --- 2. LOGIC QUYỀN (GIỮ NGUYÊN) ---
 function checkAccessLoop() {
-    // Hàm này chạy lại để đảm bảo các element được ẩn/hiện đúng sau khi bơm HTML
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
         document.body.classList.add('is-admin-mode');
         const overlay = document.getElementById('maintenance-overlay');
         const nav = document.getElementById('alpha-tab-nav');
         if (overlay) overlay.style.display = 'none';
         if (nav) nav.style.display = 'flex';
-        
-        // Mở Tab Alpha ngay
         window.pluginSwitchTab('alpha');
     }
 }
 
-// --- 3. BƠM HTML (Tab Alpha Đầu Tiên) ---
+// --- 3. BƠM GIAO DIỆN (ĐÚNG FORMAT TRADING COMP) ---
 function injectHTML() {
     if (document.getElementById('alpha-plugin-root')) return;
 
@@ -79,10 +67,10 @@ function injectHTML() {
 
         <div id="alpha-tab-nav" style="display:none">
             <button id="btn-tab-alpha" class="tab-btn active" onclick="window.pluginSwitchTab('alpha')">
-                🌊 Alpha Market <span class="badge-pro">PRO</span>
+                <i class="fas fa-layer-group"></i> ALPHA MARKET
             </button>
             <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">
-                🏆 Competition
+                <i class="fas fa-trophy"></i> COMPETITION
             </button>
         </div>
 
@@ -102,19 +90,19 @@ function injectHTML() {
                     <table class="alpha-table">
                         <thead>
                             <tr class="h-top">
-                                <th rowspan="2" class="text-center sticky-col" style="width:40px">#</th>
-                                <th rowspan="2" class="sticky-col-2">TOKEN</th>
+                                <th rowspan="2" class="text-center sticky-col" style="width:50px">RANK</th>
+                                <th rowspan="2" class="sticky-col-2">TOKEN & CONTRACT</th>
                                 <th rowspan="2" class="text-end">PRICE</th>
-                                <th colspan="3" class="text-center group-header">DAILY VOLUME (UTC)</th>
-                                <th colspan="3" class="text-center group-header">MARKET STATS (24h)</th>
+                                <th colspan="3" class="text-center border-left-dim border-right-dim">DAILY VOLUME (UTC)</th>
+                                <th colspan="3" class="text-center">MARKET STATS (24h)</th>
                             </tr>
                             <tr class="h-sub">
-                                <th class="text-end cursor-pointer group-start" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                                <th class="text-end cursor-pointer border-left-dim" onclick="window.pluginSort('volume.daily_total')">TOTAL <i class="fas fa-sort"></i></th>
                                 <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
-                                <th class="text-end cursor-pointer group-end" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                                <th class="text-end cursor-pointer group-start" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                                <th class="text-end cursor-pointer border-right-dim" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
                                 <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
-                                <th class="text-end cursor-pointer group-end" onclick="window.pluginSort('liquidity')">LIQ</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
                             </tr>
                         </thead>
                         <tbody id="market-table-body"></tbody>
@@ -126,7 +114,7 @@ function injectHTML() {
     document.body.appendChild(root);
 }
 
-// --- 4. RENDER TABLE (ẢNH TỪ API JSON) ---
+// --- 4. RENDER TABLE (ĐẸP & DỮ LIỆU API) ---
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
@@ -135,7 +123,7 @@ function renderTable() {
     displayedTokens.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         
-        // Badge logic
+        // Logic Badge
         let badges = '';
         if (t.status === 'SPOT') badges += `<span class="smart-badge badge-spot">SPOT</span>`;
         if (t.status === 'DELISTED') badges += `<span class="smart-badge badge-delisted">DELISTED</span>`;
@@ -148,12 +136,16 @@ function renderTable() {
             }
         }
 
-        // --- LẤY ẢNH TỪ API ---
+        // --- MÀU SẮC SỐ LIỆU ---
+        const pClass = t.change_24h >= 0 ? 'text-green' : 'text-red';
+        const pSign = t.change_24h >= 0 ? '+' : '';
+
+        // --- ẢNH TỪ API ---
         const tokenImg = t.icon || 'https://placehold.co/32';
         const chainImg = t.chain_icon || 'https://placehold.co/14';
 
         tr.innerHTML = `
-            <td class="text-center rank-col">${i + 1}</td>
+            <td class="text-center rank-col font-num text-secondary">${i + 1}</td>
             <td class="token-col">
                 <div class="token-cell">
                     <div class="logo-wrapper">
@@ -162,7 +154,7 @@ function renderTable() {
                     </div>
                     <div class="token-meta">
                         <div class="d-flex align-items-center gap-2 cursor-pointer" onclick="window.pluginCopy('${t.contract}')">
-                            <span class="symbol-text">${t.symbol}</span>
+                            <span class="symbol-text text-white fw-bold">${t.symbol}</span>
                             <i class="fas fa-copy copy-icon"></i>
                         </div>
                         <div class="badge-row">${badges}</div>
@@ -170,17 +162,17 @@ function renderTable() {
                 </div>
             </td>
             <td class="text-end price-col">
-                <div class="price-val">$${formatPrice(t.price)}</div>
-                <div class="price-change ${t.change_24h >= 0 ? 'up' : 'down'}">${t.change_24h >= 0 ? '+' : ''}${t.change_24h}%</div>
+                <div class="price-val font-num text-white">$${formatPrice(t.price)}</div>
+                <div class="price-change ${pClass} font-num">${pSign}${t.change_24h}%</div>
             </td>
             
-            <td class="text-end col-total group-start">$${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end col-limit">$${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end col-onchain group-end">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end border-left-dim font-num text-white fw-bold">$${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end font-num text-secondary">$${formatNum(t.volume.daily_limit)}</td>
+            <td class="text-end border-right-dim font-num text-green fw-bold" style="color:#00ff88 !important">$${formatNum(t.volume.daily_onchain)}</td>
             
-            <td class="text-end group-start">$${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end font-num">${formatInt(t.tx_count)}</td>
-            <td class="text-end col-liq group-end">$${formatNum(t.liquidity)}</td>
+            <td class="text-end font-num text-white">$${formatNum(t.volume.rolling_24h)}</td>
+            <td class="text-end font-num text-secondary">${formatInt(t.tx_count)}</td>
+            <td class="text-end font-num text-brand fw-bold">$${formatNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -211,7 +203,6 @@ window.pluginSort = (key) => {
     else { sortConfig.key = key; sortConfig.dir = 'desc'; }
     applyFilterAndSort();
 };
-
 window.pluginCopy = (txt) => { if(txt) navigator.clipboard.writeText(txt); };
 
 function setupEvents() {
