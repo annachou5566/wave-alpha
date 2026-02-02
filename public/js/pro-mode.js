@@ -75,97 +75,76 @@ async function fetchMarketData() {
 
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
+    if (!tbody) return;
     tbody.innerHTML = '';
     
     const listToRender = allTokens.slice(0, displayCount);
 
-    listToRender.forEach(t => {
+    listToRender.forEach((t, index) => {
         const tr = document.createElement('tr');
         
-        // --- XỬ LÝ BADGE & LOGIC ---
-        // 1. Tính ngày còn lại (Listing Time + 30 ngày)
-        // Lưu ý: listing_time từ API là ms. 
-        const endTime = t.listing_time + (30 * 24 * 60 * 60 * 1000);
-        const now = Date.now();
-        const daysLeft = Math.ceil((endTime - now) / (1000 * 60 * 60 * 24));
-        const dayText = daysLeft > 0 ? `${daysLeft}d` : 'End';
-
-        // 2. Logic Trạng thái
-        let badgesHtml = '';
-        
-        // Ưu tiên 1: SPOT hoặc DELISTED
-        if (t.listingCex === true && t.offline === true) {
-            badgesHtml += `<span class="bd bd-spot">SPOT</span>`;
-        } else if (t.listingCex === false && t.offline === true) {
-            badgesHtml += `<span class="bd bd-delist">DELISTED</span>`;
-        } else {
-            // Nếu vẫn là Alpha: Hiển thị Multiplier
-            const isBsc4x = (t.chain === 'BSC' || t.chain === 'BNB') && t.mul_point >= 4;
-            const glowClass = isBsc4x ? 'glow-bsc' : '';
-            
-            if (t.mul_point > 1) {
-                badgesHtml += `
-                    <div class="bd bd-mul ${glowClass}">
-                        <span class="x-val">${t.mul_point}x</span>
-                        <span class="d-val">${dayText}</span>
-                    </div>
-                `;
-            }
-        }
-
-        // 3. Chain Color & Icon
-        // Nếu API trả về chain_icon lỗi, ta có thể fallback (tạm thời dùng API icon)
-        const chainImg = t.chain_icon || 'https://via.placeholder.com/14';
-
-        // 4. Chart SVG
-        const chartSvg = createSparkline(t.chart, t.change_24h >= 0);
-        const priceClass = t.change_24h >= 0 ? 'text-up' : 'text-down';
+        // --- 1. PREPARE DATA ---
+        const priceClass = t.change_24h >= 0 ? 'text-up' : 'text-down'; // text-up = Green defined in CSS
         const sign = t.change_24h >= 0 ? '+' : '';
+        const chartSvg = createSparkline(t.chart, t.change_24h >= 0);
+        const chainIcon = t.chain_icon || 'https://via.placeholder.com/12';
 
-        // --- RENDER ROW ---
+        // --- 2. RENDER ROW HTML ---
         tr.innerHTML = `
+            <td class="text-center"><div class="rank-num">${index + 1}</div></td>
+
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
                         <img src="${t.icon}" class="token-logo" onerror="this.src='https://via.placeholder.com/32'">
-                        <img src="${chainImg}" class="chain-badge" title="${t.chain}">
+                        <img src="${chainIcon}" class="chain-badge" title="${t.chain}">
                     </div>
                     <div class="token-info">
-                        <div class="symbol-row">
-                            <span class="symbol" onclick="copyContract('${t.contract}')">${t.symbol}</span>
-                        </div>
-                        <div class="badge-row">${badgesHtml}</div>
+                        <span class="symbol" onclick="copyContract('${t.contract}')">${t.symbol}</span>
+                        <span class="name-chain">${t.name} <span style="opacity:0.5">(${t.chain})</span></span>
                     </div>
                 </div>
             </td>
+
             <td>
-                <div class="${priceClass}" style="font-weight:700">$${formatPrice(t.price)}</div>
-                <div class="${priceClass}" style="font-size:11px">${sign}${t.change_24h.toFixed(2)}%</div>
-            </td>
-            <td>
-                <div class="vol-col">
-                    <span class="v-total">${formatNum(t.volume.daily_total)}</span>
-                    <span class="v-limit">CEX: ${formatNum(t.volume.daily_limit)}</span>
-                    ${t.volume.daily_onchain > 0 ? 
-                        `<span class="v-onchain">DEX: ${formatNum(t.volume.daily_onchain)}</span>` : 
-                        '<span class="v-zero">DEX: -</span>'}
+                <div class="price-box">
+                    <span class="price-val">$${formatPrice(t.price)}</span>
+                    <span class="change-val ${priceClass}">${sign}${t.change_24h.toFixed(2)}%</span>
                 </div>
             </td>
-            <td>
-                <div class="stats-col">
-                    <div class="s-row"><span>Vol24h:</span> <span class="s-val">${formatNum(t.volume.rolling_24h)}</span></div>
-                    <div class="s-row"><span>Tx:</span> <span class="s-val">${formatNum(t.tx_count)}</span></div>
-                    <div class="s-row"><span>Cap:</span> <span class="s-val">${formatNum(t.market_cap)}</span></div>
-                </div>
+
+            <td class="text-end col-total border-start border-secondary" style="border-color: #2b3139 !important;">
+                $${formatNum(t.volume.daily_total)}
             </td>
-            <td>${chartSvg}</td>
-            <td>
-                <a href="https://www.binance.com/en/trade/${t.symbol}_USDT" target="_blank" class="trade-btn">Trade</a>
+            <td class="text-end col-limit">
+                $${formatNum(t.volume.daily_limit)}
+            </td>
+            <td class="text-end col-onchain border-end border-secondary" style="border-color: #2b3139 !important;">
+                $${formatNum(t.volume.daily_onchain)}
+            </td>
+
+            <td class="text-end col-vol24">
+                $${formatNum(t.volume.rolling_24h)}
+            </td>
+            <td class="text-end col-tx">
+                ${parseInt(t.tx_count).toLocaleString()}
+            </td>
+            <td class="text-end col-liq border-end border-secondary" style="border-color: #2b3139 !important;">
+                $${formatNum(t.liquidity)}
+            </td>
+
+            <td class="text-center" style="padding:0">
+                ${chartSvg}
+            </td>
+
+            <td class="text-end">
+                <a href="https://www.binance.com/en/trade/${t.symbol}_USDT" target="_blank" class="btn-trade">TRADE</a>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
+
 
 // --- UTILS ---
 function loadMore() {

@@ -1,13 +1,24 @@
+/* =========================================
+   1. CORE VARIABLES & RESET
+   ========================================= */
 :root {
     --bg-dark: #0b0e11;
     --bg-card: #1e2329;
     --bg-hover: #2b3139;
     --text-primary: #eaecef;
     --text-secondary: #848e9c;
-    --accent: #fcd535; /* Vàng Binance */
-    --green: #0ecb81;
-    --red: #f6465d;
+    
+    /* Brand Colors */
+    --accent: #fcd535;       /* Vàng Binance */
+    --green: #0ecb81;        /* Xanh Tăng giá */
+    --red: #f6465d;          /* Đỏ Giảm giá */
+    
+    /* New Colors for Pro Table */
+    --neon-green: #00ff88;   /* On-chain nổi */
+    --blue-liq: #00f0ff;     /* Liquidity */
+    
     --font-main: 'Be Vietnam Pro', sans-serif;
+    --font-num: 'Rajdhani', sans-serif; /* Font số cho ngầu */
 }
 
 body {
@@ -18,7 +29,9 @@ body {
     overflow-x: hidden;
 }
 
-/* --- MAINTENANCE OVERLAY --- */
+/* =========================================
+   2. MAINTENANCE OVERLAY (GIỮ NGUYÊN)
+   ========================================= */
 #maintenance-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: #0b0e11; z-index: 9999;
@@ -34,108 +47,161 @@ body {
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- LAYOUT --- */
-.nav-container {
-    padding: 15px 20px;
-    background: var(--bg-card);
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 1px solid #2b3139;
-}
-.logo { font-weight: 700; font-size: 18px; color: var(--accent); letter-spacing: 1px; }
-.tabs { display: flex; gap: 10px; }
-.tab-btn {
-    background: transparent; border: none;
-    color: var(--text-secondary); padding: 8px 16px;
-    cursor: pointer; font-family: var(--font-main); font-weight: 600;
-    border-radius: 4px; transition: 0.3s;
-}
-.tab-btn.active, .tab-btn:hover { background: #2b3139; color: var(--text-primary); }
-
+/* =========================================
+   3. LAYOUT & SEARCH
+   ========================================= */
 .main-container { padding: 20px; max-width: 1400px; margin: 0 auto; }
 
-/* --- MARKET TABLE --- */
+/* =========================================
+   4. NEW PRO TABLE STYLES (HEADER 2 TẦNG)
+   ========================================= */
 .table-responsive { overflow-x: auto; }
-.alpha-table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
-.alpha-table th {
-    text-align: right; padding: 12px; color: var(--text-secondary);
-    border-bottom: 1px solid #2b3139; cursor: pointer; user-select: none;
-}
-.alpha-table th:first-child { text-align: left; }
-.alpha-table td {
-    padding: 12px; border-bottom: 1px solid #2b3139;
-    text-align: right; vertical-align: middle;
-}
-.alpha-table td:first-child { text-align: left; }
-.alpha-table tr:hover { background-color: var(--bg-card); }
 
-/* --- TOKEN INFO (Logo lồng nhau) --- */
+.alpha-table {
+    width: 100%;
+    font-size: 13px;
+    border-collapse: separate; /* Để border-radius hoạt động nếu cần */
+    border-spacing: 0;
+    white-space: nowrap;
+}
+
+/* --- HEADERS --- */
+.alpha-table thead th {
+    background-color: #161a1e !important;
+    vertical-align: middle;
+    border-bottom: 1px solid #2b3139;
+    font-weight: 600;
+}
+
+/* Header Tầng 1 (To) */
+.head-top th {
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+/* Header Tầng 2 (Nhỏ) */
+.head-sub th {
+    font-size: 10px;
+    padding-top: 6px;
+    padding-bottom: 10px;
+    border-top: none !important;
+    font-family: var(--font-main);
+}
+
+/* Rows */
+.alpha-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #2b3139;
+    background-color: var(--bg-dark);
+    vertical-align: middle;
+}
+.alpha-table tr:hover td {
+    background-color: var(--bg-card);
+}
+
+/* --- COLUMN COLORS (CÁI ÔNG VẼ) --- */
+/* Cột Total: Trắng đậm, font số */
+.col-total { 
+    color: #ffffff; 
+    font-weight: 700; 
+    font-family: var(--font-num); 
+    font-size: 14px; 
+}
+/* Cột Limit: Xám mờ */
+.col-limit { 
+    color: #5e6673; 
+    font-size: 13px; 
+    font-family: var(--font-num);
+} 
+/* Cột On-chain: Xanh Neon Nổi Bật */
+.col-onchain { 
+    color: var(--neon-green); 
+    font-weight: 700; 
+    font-family: var(--font-num); 
+    font-size: 14px; 
+    text-shadow: 0 0 5px rgba(0, 255, 136, 0.2); 
+}
+/* Cột Vol 24h & Liq */
+.col-vol24 { color: #ffffff; font-family: var(--font-num); }
+.col-tx { color: #848e9c; font-family: var(--font-num); }
+.col-liq { color: var(--blue-liq); font-family: var(--font-num); }
+
+/* --- TOKEN CELL (Logo lồng nhau) --- */
 .token-cell { display: flex; align-items: center; gap: 12px; }
-.logo-wrapper { position: relative; width: 36px; height: 36px; }
+.rank-num { color: var(--text-secondary); font-weight: bold; width: 20px; text-align: center; font-size: 12px; }
+.logo-wrapper { position: relative; width: 34px; height: 34px; flex-shrink: 0; }
 .token-logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .chain-badge {
     position: absolute; bottom: -2px; right: -2px;
     width: 14px; height: 14px; border-radius: 50%;
     border: 2px solid var(--bg-dark);
 }
-.token-info { display: flex; flex-direction: column; }
-.symbol-row { display: flex; align-items: center; gap: 6px; }
-.symbol { font-weight: 700; font-size: 14px; color: var(--text-primary); cursor: pointer; }
+.token-info { display: flex; flex-direction: column; justify-content: center; }
+.symbol { font-weight: 700; font-size: 14px; color: var(--text-primary); cursor: pointer; line-height: 1.2; }
 .symbol:hover { color: var(--accent); text-decoration: underline; }
+.name-chain { font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; line-height: 1.2; }
 
-/* --- BADGES (Spot, Delisted, x4) --- */
-.badge-row { display: flex; gap: 4px; margin-top: 4px; }
-.bd { font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 700; }
+/* --- PRICE CELL --- */
+.price-box { display: flex; flex-direction: column; align-items: flex-end; }
+.price-val { font-weight: 600; font-family: var(--font-num); font-size: 14px; color: #fff; }
+.change-val { font-size: 11px; font-weight: 600; font-family: var(--font-num); }
+
+/* =========================================
+   5. COMPONENTS (BADGES, BUTTONS)
+   ========================================= */
+/* Màu chữ */
+.text-up { color: var(--green); }
+.text-down { color: var(--red); }
+
+/* Badges (Spot, Delist, x4) - GIỮ NGUYÊN */
+.badge-row { display: flex; gap: 4px; margin-top: 3px; }
+.bd { font-size: 9px; padding: 1px 4px; border-radius: 2px; font-weight: 700; text-transform: uppercase; }
 
 .bd-spot { background: rgba(252, 213, 53, 0.15); color: #fcd535; border: 1px solid rgba(252, 213, 53, 0.3); }
 .bd-delist { background: rgba(246, 70, 93, 0.15); color: #f6465d; border: 1px solid rgba(246, 70, 93, 0.3); }
 
 /* Multiplier Badge */
-.bd-mul { background: #2b3139; color: #b7bdc6; display: flex; gap: 3px; }
+.bd-mul { background: #2b3139; color: #b7bdc6; display: flex; align-items: center; gap: 3px; border: 1px solid #333; }
 .bd-mul .x-val { color: var(--text-primary); }
 .bd-mul .d-val { color: var(--text-secondary); font-weight: 500; }
 
-/* Hiệu ứng phát sáng cho x4 hệ BSC */
+/* Glow effect cho BSC x4 */
 .glow-bsc {
-    box-shadow: 0 0 8px rgba(252, 213, 53, 0.4);
+    box-shadow: 0 0 6px rgba(252, 213, 53, 0.4);
     border: 1px solid #fcd535;
     color: #fcd535 !important;
 }
 
-/* --- COLORS & STATS --- */
-.text-up { color: var(--green); }
-.text-down { color: var(--red); }
-.vol-col { display: flex; flex-direction: column; gap: 2px; }
-.v-total { font-weight: 700; font-size: 13px; }
-.v-limit { font-size: 11px; color: var(--text-secondary); }
-.v-onchain { font-size: 12px; color: var(--green); font-weight: 600; }
-.v-zero { font-size: 11px; color: #444; }
-
-.stats-col { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-secondary); }
-.s-row { display: flex; justify-content: flex-end; gap: 5px; }
-.s-val { color: var(--text-primary); }
-
-/* --- ACTION BTN --- */
-.trade-btn {
-    text-decoration: none; font-size: 12px;
-    padding: 5px 10px; border-radius: 4px;
+/* Action Button */
+.btn-trade {
+    text-decoration: none; font-size: 11px;
+    padding: 4px 12px; border-radius: 4px;
     background: rgba(252, 213, 53, 0.1); color: var(--accent);
     border: 1px solid rgba(252, 213, 53, 0.3); transition: 0.2s;
+    font-weight: 700; letter-spacing: 0.5px;
 }
-.trade-btn:hover { background: var(--accent); color: #000; }
+.btn-trade:hover { background: var(--accent); color: #000; border-color: var(--accent); }
 
-/* --- TOAST --- */
+/* Load More */
+.load-more {
+    text-align: center; padding: 12px; margin-top: 10px;
+    color: var(--text-secondary); cursor: pointer;
+    background: var(--bg-card); border-radius: 4px; font-weight: 600; font-size: 13px;
+    transition: 0.2s;
+}
+.load-more:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* Toast */
 #toast {
     visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
     text-align: center; border-radius: 4px; padding: 12px;
     position: fixed; z-index: 1000; bottom: 30px; left: 50%; transform: translateX(-50%);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
 @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
 @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-
-.load-more {
-    text-align: center; padding: 15px; margin-top: 10px;
-    color: var(--text-secondary); cursor: pointer;
-    background: var(--bg-card); border-radius: 4px;
-}
-.load-more:hover { color: var(--accent); }

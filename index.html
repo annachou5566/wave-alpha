@@ -190,29 +190,59 @@
     </div>
 </div>
 
-<div id="market-section" class="container mt-4">
+<div id="market-section" class="container-fluid mt-4" style="padding: 0 30px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="text-muted" id="last-updated">Updating...</div>
-        <input type="text" id="search-input" class="form-control w-25 bg-dark text-white border-secondary" placeholder="Search..." onkeyup="filterTable()">
+        <div class="d-flex align-items-center gap-3">
+            <h4 class="text-warning fw-bold m-0"><i class="fas fa-chart-line me-2"></i>ALPHA MARKET</h4>
+            <span class="text-secondary small border-start border-secondary ps-3" id="last-updated">Updating...</span>
+        </div>
+        <div class="search-box" style="position:relative;">
+            <i class="fas fa-search text-secondary" style="position:absolute; left:10px; top:10px;"></i>
+            <input type="text" id="search-input" class="form-control bg-dark text-white border-secondary ps-4" placeholder="Search Token / Contract..." onkeyup="filterTable()" style="width: 300px;">
+        </div>
     </div>
-    
+
     <div class="table-responsive">
-        <table class="table table-dark table-hover alpha-table" style="font-size:0.9rem">
+        <table class="table table-dark table-hover alpha-table align-middle">
             <thead>
-                <tr>
-                    <th onclick="sortTable('token')">Token Info</th>
-                    <th onclick="sortTable('price')">Price</th>
-                    <th>Daily Vol (UTC)</th>
-                    <th>Stats (24h)</th>
-                    <th>Chart</th>
-                    <th>Action</th>
+                <tr class="head-top">
+                    <th rowspan="2" class="text-center" style="width: 40px;">#</th>
+                    <th rowspan="2">TOKEN INFO</th>
+                    <th rowspan="2" class="text-end">PRICE & CHANGE</th>
+                    
+                    <th colspan="3" class="text-center border-start border-end border-secondary">
+                        DAILY VOLUME (00:00 UTC) - "HÔM NAY"
+                    </th>
+                    
+                    <th colspan="3" class="text-center border-end border-secondary">
+                        MARKET STATS (Rolling 24h)
+                    </th>
+                    
+                    <th rowspan="2" class="text-center">TREND (7D)</th>
+                    <th rowspan="2" class="text-end">ACTION</th>
+                </tr>
+
+                <tr class="head-sub small text-secondary">
+                    <th class="text-end border-start border-secondary text-white">TOTAL (AGG)</th>
+                    <th class="text-end text-secondary">LIMIT (CEX)</th>
+                    <th class="text-end border-end border-secondary text-success fw-bold">ON-CHAIN (DEX)</th>
+                    
+                    <th class="text-end text-white">VOL 24H ($)</th>
+                    <th class="text-end text-secondary">TX COUNT</th>
+                    <th class="text-end border-end border-secondary text-info">LIQUIDITY</th>
                 </tr>
             </thead>
-            <tbody id="market-table-body"></tbody>
+            
+            <tbody id="market-table-body">
+                </tbody>
         </table>
-        <div class="text-center p-3 text-muted" onclick="loadMore()" style="background:#1e2329;cursor:pointer;border-radius:4px">Load More</div>
+        
+        <div class="text-center mt-3">
+            <button class="btn btn-outline-secondary btn-sm" onclick="loadMore()">Load More Tokens</button>
+        </div>
     </div>
-    <div id="toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:5px; display:none;">Contract Copied!</div>
+    
+    <div id="toast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 20px; border-radius:4px; z-index:9999;">Contract Copied!</div>
 </div>
 
 <div id="tourney-section" style="display:none">
