@@ -1,4 +1,4 @@
-/* public/css/pro-mode.css - FINAL FIXED */
+/* public/css/pro-mode.css - FINAL FIXED & CLEANED */
 
 :root {
     --bg-dark: #0b0e11;
@@ -13,150 +13,32 @@
     --font-num: 'Rajdhani', sans-serif;
 }
 
-/* TAB NAVIGATION */
-#alpha-tab-nav {
-    position: fixed; top: 60px; left: 0; width: 100%; height: 50px;
-    z-index: 2147483600; display: none; justify-content: center; gap: 0;
-    background: rgba(11, 14, 17, 0.95); border-bottom: 1px solid var(--border-dim);
-    backdrop-filter: blur(10px);
-}
-.tab-btn {
-    background: transparent; border: none; color: var(--text-secondary);
-    padding: 0 40px; height: 100%; font-family: var(--font-main); font-weight: 700;
-    font-size: 13px; cursor: pointer; transition: 0.2s; text-transform: uppercase;
-    border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 8px;
-}
-.tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
-.tab-btn.active { 
-    color: var(--brand); border-bottom: 2px solid var(--brand);
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 240, 255, 0.05) 100%);
-}
-.badge-pro { background: var(--brand); color: #000; font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 800; }
-
-/* MARKET VIEW */
-#alpha-market-view {
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: var(--bg-dark); z-index: 2000000000;
-    overflow-y: auto; padding-top: 130px; display: none;
-}
-.alpha-container { max-width: 1440px; margin: 0 auto; padding: 0 20px 100px; }
-
-/* HEADER & SEARCH */
-.alpha-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.search-group { position: relative; width: 320px; }
-#alpha-search {
-    width: 100%; background: var(--bg-card); border: 1px solid var(--border-dim);
-    color: #fff; padding: 10px 10px 10px 40px; border-radius: 4px; font-family: var(--font-main);
-}
-#alpha-search:focus { border-color: var(--brand); box-shadow: 0 0 10px rgba(0,240,255,0.2); }
-.search-icon { position: absolute; left: 14px; top: 13px; color: var(--text-secondary); font-size: 14px; }
-.time-badge { color: var(--text-secondary); font-size: 12px; font-family: var(--font-num); background: var(--bg-card); padding: 8px 16px; border-radius: 4px; border: 1px solid var(--border-dim); }
-
-/* TABLE */
-.table-responsive { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: 6px; min-height: 400px; }
-.alpha-table { width: 100%; border-collapse: separate; border-spacing: 0; color: var(--text-primary); }
-.alpha-table th {
-    background: #1e2329; color: var(--text-secondary); font-size: 11px; font-weight: 700;
-    padding: 10px 12px; border-bottom: 1px solid var(--border-dim); border-right: 1px solid var(--border-dim);
-    white-space: nowrap; position: sticky; top: 0; z-index: 10; text-transform: uppercase;
-}
-.h-top th { border-bottom: none; text-align: center; border-top: none; }
-.h-sub th { border-top: 1px solid var(--border-dim); font-size: 10px; }
-.alpha-table td {
-    padding: 8px 12px; border-bottom: 1px solid var(--border-dim); border-right: 1px solid #252b33;
-    background: var(--bg-card); vertical-align: middle; font-family: var(--font-num); font-size: 14px; font-weight: 500;
-}
-.alpha-table tr:hover td { background: #23282E; }
-
-/* UTILS */
-.text-brand { color: var(--brand) !important; }
-.text-neon { color: var(--neon-green) !important; text-shadow: 0 0 8px rgba(0, 255, 136, 0.3); font-weight: 700; }
-.text-dim { color: #5E6673 !important; }
-.text-white-bold { color: #fff; font-weight: 700; }
-.token-cell { display: flex; align-items: center; gap: 12px; }
-
-
-/* --- 1. CSS CHO LOGO LỒNG NHAU (FIX CỨNG) --- */
-.logo-wrapper {
-    position: relative;
-    width: 36px; /* Tăng nhẹ kích thước để thoáng hơn */
-    height: 36px;
-    margin-right: 12px;
-    display: inline-block;
-    vertical-align: middle;
+/* --- 1. GLOBAL LAYOUT & SCROLLING --- */
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    overflow-x: hidden; /* Tránh thanh cuộn ngang không mong muốn */
 }
 
-.token-logo {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #1e2026; /* Nền tối để che khi ảnh đang load */
-    border: 1px solid #333;
-}
-
-.chain-badge {
-    position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 16px; /* Icon chain rõ hơn */
-    height: 16px;
-    border-radius: 50%;
-    background: #0b0e11;
-    border: 1.5px solid #000; /* Viền dày hơn để tách biệt logo chính */
-    z-index: 10;
-    object-fit: cover;
-}
-
-/* --- 2. CSS CHO TAB CHUYỂN ĐỔI MƯỢT MÀ --- */
-/* Ẩn hiện mặc định */
-#alpha-market-view, #view-dashboard {
-    transition: opacity 0.3s ease-in-out;
-    opacity: 1;
-}
-
-.fade-out {
-    opacity: 0 !important;
-    pointer-events: none;
-}
-
-.tab-btn {
-    transition: all 0.2s;
-    border-bottom: 2px solid transparent;
-    opacity: 0.6;
-}
-
-.tab-btn.active {
-    opacity: 1;
-    border-bottom: 2px solid #00F0FF;
-    background: rgba(0, 240, 255, 0.1);
-}
-
-/* Giữ nguyên các class cũ (glow-row, badge, table...) */
-.glow-row .token-logo { box-shadow: 0 0 10px rgba(255, 184, 0, 0.5); border-color: #ffb800; }
-.smart-badge { font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; margin-right: 4px; }
-.badge-spot { background: #F0B90B; color: #000; } /* Màu vàng Binance */
-.badge-delisted { background: #cf304a; color: #fff; }
-.badge-alpha { color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(0, 240, 255, 0.1); }
-
-/* --- 1. GHIM THANH HEADER CÓ SẴN (NAVBAR) --- */
+/* Navbar có sẵn của bạn -> Ghim chặt lên đầu */
 .navbar {
     position: sticky !important;
     top: 0;
-    z-index: 1050; /* Cao hơn mọi thứ */
-    background: rgba(22, 26, 30, 0.95) !important; /* Màu nền tối trùng web */
+    z-index: 1050; /* Layer cao nhất */
+    background: rgba(22, 26, 30, 0.95) !important;
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     transition: all 0.3s ease;
 }
 
-/* --- 2. THANH TAB NẰM NGAY DƯỚI HEADER --- */
+/* --- 2. TAB NAVIGATION (Thanh Tab Alpha/Competition) --- */
 #alpha-tab-nav {
     position: sticky !important;
-    top: 76px; /* Chiều cao của Navbar (khoảng 76px) */
+    top: 76px; /* Cách đỉnh đúng bằng chiều cao Navbar (khoảng 70-80px) */
     z-index: 1040;
-    background: #0b0e11; /* Màu nền body */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+    background: #0b0e11;
+    border-bottom: 1px solid var(--border-dim);
     display: flex;
     justify-content: center;
     padding: 10px 0;
@@ -164,34 +46,257 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
-/* Style cho nút Tab (giữ nguyên độ đẹp) */
 .tab-btn {
     background: transparent;
     border: none;
     color: #6c757d;
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-num);
     font-weight: 700;
     font-size: 16px;
     padding: 8px 25px;
     margin: 0 10px;
     border-radius: 4px;
+    cursor: pointer;
     transition: all 0.2s;
     text-transform: uppercase;
     letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.tab-btn:hover { color: #fff; }
+.tab-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+}
+
 .tab-btn.active {
     color: #000;
-    background: #00F0FF;
+    background: var(--brand);
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
-/* Logo lồng nhau (Giữ nguyên như đã chốt) */
-.logo-wrapper { position: relative; width: 32px; height: 32px; margin-right: 12px; display: inline-block; vertical-align: middle; }
-.token-logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #1e2026; }
-.chain-badge { position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; border-radius: 50%; background: #0b0e11; border: 1px solid #000; z-index: 10; }
+/* --- 3. MARKET VIEW CONTAINER --- */
+#alpha-market-view {
+    width: 100%;
+    min-height: 100vh;
+    background: var(--bg-dark);
+    display: none; /* Mặc định ẩn, JS sẽ bật */
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
 
-/* Ẩn hiện mượt mà */
-.fade-out { opacity: 0 !important; pointer-events: none; }
-#alpha-market-view, #view-dashboard { transition: opacity 0.2s ease-in-out; opacity: 1; }
+#view-dashboard {
+    transition: opacity 0.2s ease-in-out;
+}
+
+.fade-out {
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+.alpha-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* --- 4. HEADER CÔNG CỤ (Search & Time) --- */
+.alpha-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.search-group {
+    position: relative;
+    width: 320px;
+}
+
+#alpha-search {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    color: #fff;
+    padding: 10px 10px 10px 40px;
+    border-radius: 4px;
+    font-family: var(--font-main);
+}
+#alpha-search:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 10px rgba(0,240,255,0.2);
+    outline: none;
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.time-badge {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: var(--font-num);
+    background: var(--bg-card);
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border-dim);
+}
+
+/* --- 5. DATA TABLE (Bảng dữ liệu) --- */
+.table-responsive {
+    overflow-x: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 6px;
+    min-height: 400px;
+}
+
+.alpha-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--text-primary);
+}
+
+.alpha-table th {
+    background: #1e2329;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--border-dim);
+    border-right: 1px solid var(--border-dim);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    text-transform: uppercase;
+}
+
+.h-top th {
+    border-bottom: none;
+    text-align: center;
+    border-top: none;
+}
+
+.h-sub th {
+    border-top: 1px solid var(--border-dim);
+    font-size: 10px;
+    cursor: pointer;
+}
+.h-sub th:hover {
+    color: var(--brand);
+    background: #252b33;
+}
+
+.alpha-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-dim);
+    border-right: 1px solid #252b33;
+    background: var(--bg-card);
+    vertical-align: middle;
+    font-family: var(--font-num);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.alpha-table tr:hover td {
+    background: #23282E;
+}
+
+/* --- 6. LOGO LỒNG NHAU (Nested Icons) --- */
+.token-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-wrapper {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    margin-right: 4px;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.token-logo {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #1e2026;
+    border: 1px solid #333;
+}
+
+.chain-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0b0e11;
+    border: 1.5px solid #000;
+    z-index: 10;
+    object-fit: cover;
+}
+
+/* --- 7. BADGES & COLORS --- */
+.smart-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 4px;
+    margin-right: 4px;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.badge-spot { background: var(--accent); color: #000; }
+.badge-delisted { background: #cf304a; color: #fff; }
+.badge-alpha { 
+    color: var(--brand); 
+    border: 1px solid rgba(0, 240, 255, 0.3); 
+    background: rgba(0, 240, 255, 0.1); 
+}
+.badge-pro { 
+    background: var(--brand); 
+    color: #000; 
+    font-size: 9px; 
+    padding: 2px 5px; 
+    border-radius: 3px; 
+    font-weight: 800; 
+}
+
+/* Hiệu ứng Glow cho hàng VIP */
+.glow-row td {
+    background: rgba(240, 185, 11, 0.03) !important;
+}
+.glow-row .token-logo {
+    box-shadow: 0 0 10px rgba(255, 184, 0, 0.5);
+    border-color: #ffb800;
+}
+
+/* Màu chữ tiện ích */
+.text-brand { color: var(--brand) !important; }
+.text-neon { color: var(--neon-green) !important; text-shadow: 0 0 8px rgba(0, 255, 136, 0.3); font-weight: 700; }
+.text-dim { color: #5E6673 !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-white-bold { color: #fff; font-weight: 700; }
+.text-green { color: #0ecb81 !important; }
+.text-red { color: #f6465d !important; }
+
+/* Các tiện ích nhỏ */
+.symbol-row { cursor: pointer; display: flex; align-items: center; }
+.symbol-row:hover .symbol-text { color: var(--brand); text-decoration: underline; }
+.copy-icon { opacity: 0; transition: opacity 0.2s; margin-left: 5px; color: var(--text-secondary); }
+.symbol-row:hover .copy-icon { opacity: 1; }
+.badge-row { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
