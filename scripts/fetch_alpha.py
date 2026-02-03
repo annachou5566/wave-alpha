@@ -18,7 +18,7 @@ API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
 # Chỉ quét chi tiết Top N token volume to nhất
-TOP_TOKEN_LIMIT = 60 
+TOP_TOKEN_LIMIT = 10 
 
 # Scraper dự phòng (dùng khi không có Proxy)
 scraper = cloudscraper.create_scraper(

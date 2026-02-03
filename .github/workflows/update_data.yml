@@ -34,8 +34,7 @@ jobs:
       env: 
         BINANCE_INTERNAL_AGG_API: ${{ secrets.BINANCE_INTERNAL_AGG_API }}
         BINANCE_INTERNAL_KLINES_API: ${{ secrets.BINANCE_INTERNAL_KLINES_API }}
-        # Nếu bạn đã thêm Proxy vào Secret thì uncomment dòng dưới, không thì thôi
-        # PROXY_WORKER_URL: ${{ secrets.PROXY_WORKER_URL }}
+        PROXY_WORKER_URL: ${{ secrets.PROXY_WORKER_URL }}
       run: |
         python scripts/fetch_alpha.py
 
