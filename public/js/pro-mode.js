@@ -207,74 +207,90 @@ function renderTable() {
         const tr = document.createElement('tr');
         const now = Date.now();
         
-        // 1. Xử lý Ngày Listing (Chuyển timestamp thành MM/DD/YYYY)
-        let dateHtml = '';
-        if (t.listing_time) {
-            const dateObj = new Date(t.listing_time);
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const year = dateObj.getFullYear();
-            
-            // Format: MM/DD/YYYY
-            const dateStr = `${day}/${month}/${year}`;
-            
-            dateHtml = `<span class="listing-date"><i class="far fa-clock"></i> ${dateStr}</span>`;
-        }
-
-        // 2. Xử lý Badge (Kết hợp Spot/Delist + Multiplier + TGE + Airdrop)
-        let badgesHtml = '';
+        // --- 1. LOGIC HÀNH TRÌNH (CỘT 2) ---
+        let startBadges = [];
         
-        // Badge Trạng thái
-        if (t.offline === true) {
-            if (t.listingCex === true) badgesHtml += '<span class="smart-badge badge-spot">SPOT</span>';
-            else badgesHtml += '<span class="smart-badge badge-delisted">DELISTED</span>';
+        // Điểm xuất phát: TGE hoặc Airdrop
+        if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
+        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIRDROP</span>');
+        
+        // Nếu không có cả 2 thì mặc định là TGE (cho các token thường)
+        if (startBadges.length === 0 && !t.offline) {
+             // Có thể để trống hoặc thêm logic khác tùy bạn
         }
-
-        // Badge Sự kiện (TGE / Airdrop) -> Thêm vào đây
-        if (t.onlineTge === true) badgesHtml += '<span class="smart-badge badge-tge">TGE</span>';
-        if (t.onlineAirdrop === true) badgesHtml += '<span class="smart-badge badge-airdrop">AIRDROP</span>';
-
-        // Badge Hệ số nhân (xN) - Chỉ hiện nếu x2 trở lên và còn hạn
-        if (t.listing_time && t.mul_point) {
-            const expiryTime = t.listing_time + 2592000000; 
-            const diffDays = Math.ceil((expiryTime - now) / 86400000);
+        
+        let journeyHtml = startBadges.join(' ');
+        
+        // Điểm kết thúc: SPOT hoặc DELISTED (Chỉ hiện khi offline = true)
+        if (t.offline) {
+            let endBadge = '';
+            if (t.listingCex) endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
+            else endBadge = '<span class="smart-badge badge-delisted">DELISTED</span>';
             
-            if (diffDays > 0 && t.mul_point > 1) {
-                const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
-                badgesHtml += `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
+            // Ghép chuỗi: [START] -> [END]
+            if (journeyHtml) {
+                journeyHtml += ` <span class="status-arrow">➔</span> ${endBadge}`;
+            } else {
+                journeyHtml = endBadge; // Trường hợp dữ liệu cũ quá không có TGE
             }
         }
 
+        // Ngày tháng (Lấy ListingTime làm chuẩn)
+        let dateHtml = '';
+        if (t.listing_time) {
+            const d = new Date(t.listing_time);
+            // Format: MM/DD/YYYY
+            const dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+            dateHtml = `<div class="journey-date"><i class="far fa-clock"></i> ${dateStr}</div>`;
+        }
+
+
+        // --- 2. LOGIC ĐỊNH DANH (CỘT 1) ---
+        
+        // Badge hệ số nhân (Chỉ hiện ở Cột 1 và chỉ khi đang chạy giải)
+        let mulBadgeHtml = '';
+        if (!t.offline && t.listing_time && t.mul_point > 1) {
+            const expiryTime = t.listing_time + 2592000000;
+            const diffDays = Math.ceil((expiryTime - now) / 86400000);
+            if (diffDays > 0) {
+                const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
+                mulBadgeHtml = `<span class="smart-badge ${badgeClass}" style="margin-left:5px;">x${t.mul_point} ${diffDays}d</span>`;
+            }
+        }
+
+        // Contract rút gọn
+        const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
-        const isPinned = pinnedTokens.includes(t.symbol);
-        const starClass = isPinned ? 'fas fa-star text-brand' : 'far fa-star text-secondary';
-        const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
-        const chartHtml = getSparklineSVG(t.chart);
 
-        /* --- PHẦN HTML HIỂN THỊ --- */
+        // --- 3. RENDER HTML ---
         tr.innerHTML = `
             <td class="text-center">
-                <i class="${starClass} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
+                <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
             </td>
             
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="${tokenImg}" class="token-logo" onerror="this.onerror=null;this.src='assets/tokens/default.png'">
+                        <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
                         ${chainBadgeHtml}
                     </div>
-                    <div class="token-meta" style="width: 100%;">
-                        <div class="symbol-row" style="margin-bottom: 3px;">
-                            <span class="symbol-text">${t.symbol}</span>
-                            <span style="margin-left: 8px; display:inline-flex; gap:3px;">${badgesHtml}</span>
-                        </div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:11px;">
-                                ${shortContract} <i class="fas fa-copy" style="margin-left:2px;"></i>
+                    
+                    <div class="token-meta-container">
+                        <div class="meta-col-1">
+                            <div class="symbol-row">
+                                <span class="symbol-text">${t.symbol}</span>
+                                ${mulBadgeHtml}
                             </div>
-                            
+                            <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:10px; margin-top:2px;">
+                                ${shortContract} <i class="fas fa-copy"></i>
+                            </div>
+                        </div>
+
+                        <div class="meta-col-2">
+                            <div style="margin-bottom: 2px;">
+                                ${journeyHtml}
+                            </div>
                             ${dateHtml}
                         </div>
                     </div>
@@ -288,7 +304,7 @@ function renderTable() {
                 </div>
             </td>
             
-            <td class="chart-cell">${chartHtml}</td>
+            <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_onchain)}</td>

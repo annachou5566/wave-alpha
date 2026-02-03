@@ -436,27 +436,57 @@ body {
     transition: all 0.3s;
 }
 
-/* --- BADGE TGE & AIRDROP --- */
+/* --- CẤU TRÚC 2 CỘT TOKEN --- */
+.token-meta-container {
+    display: flex;
+    width: 100%;
+    align-items: center;
+}
+
+.meta-col-1 {
+    width: 50%; /* Chia đôi 50-50 hoặc chỉnh tùy ý */
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-right: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.meta-col-2 {
+    width: 50%;
+    padding-left: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* --- BADGE & ICON MỚI --- */
+.status-arrow {
+    color: #707a8a; /* Màu mũi tên xám nhẹ */
+    font-size: 10px;
+    margin: 0 4px;
+    vertical-align: middle;
+}
+
 .badge-tge {
-    background: #6f42c1; /* Màu tím */
+    background: #6f42c1; /* Tím */
     color: #fff;
     border: 1px solid rgba(111, 66, 193, 0.4);
 }
 
 .badge-airdrop {
-    background: #0dcaf0; /* Màu xanh cyan */
+    background: #0dcaf0; /* Xanh Cyan */
     color: #000;
-    font-weight: 700;
-    border: 1px solid rgba(13, 202, 240, 0.4);
+    font-weight: 800;
 }
 
-/* Style cho ngày Listing */
-.listing-date {
+/* Style ngày tháng cột 2 */
+.journey-date {
     font-size: 10px;
-    color: #5E6673; /* Màu xám dim */
-    margin-left: auto; /* Đẩy sang phải nếu dùng flex */
-    font-family: var(--font-num);
+    color: #848E9C;
+    margin-top: 3px;
     display: flex;
     align-items: center;
     gap: 4px;
+    font-family: var(--font-num);
 }
