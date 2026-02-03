@@ -37,43 +37,37 @@ ACTIVE_SPOT_SYMBOLS = set()
 OLD_DATA_MAP = {}
 
 # --- 2. HÀM GỌI API THÔNG MINH (PROXY -> DIRECT) ---
-def fetch_smart(target_url, retries=3):
-    """
-    Chiến thuật: Ưu tiên Proxy -> Nếu lỗi thì Switch sang Direct ngay lập tức.
-    """
+def fetch_smart(target_url, retries=4): # Tăng retry lên 4
     use_proxy = True if PROXY_WORKER_URL and "workers.dev" in PROXY_WORKER_URL else False
     
     for i in range(retries):
-        # [PHA 1] THỬ GỌI QUA PROXY
+        # [PHA 1] GỌI QUA PROXY
         if use_proxy:
             try:
-                # FIX QUAN TRỌNG: Dùng params để requests tự mã hóa URL (tránh lỗi & ?)
+                # Random param để tránh cache cứng của Cloudflare nếu request trước bị lỗi
+                random_ts = int(time.time() * 1000)
                 res = requests.get(
                     PROXY_WORKER_URL, 
-                    params={"url": target_url}, 
+                    params={"url": target_url, "_t": random_ts}, 
                     timeout=30
                 )
                 if res.status_code == 200:
                     return res.json()
                 elif res.status_code == 403:
-                    print(f"⚠️ Proxy 403 (Bị chặn). Chuyển sang Direct...")
+                    print(f"⚠️ Proxy 403 (Lần {i+1})...", end=" ")
+                    # Nếu bị chặn, ngủ tăng dần: 5s, 10s, 15s
+                    time.sleep(5 * (i + 1)) 
             except Exception as e:
-                print(f"⚠️ Proxy Error: {e}")
+                print(f"⚠️ Lỗi Proxy: {e}")
+                time.sleep(2)
 
-        # [PHA 2] GỌI TRỰC TIẾP (DIRECT) - BACKUP PLAN
-        # Nếu Proxy thất bại (hoặc không dùng), chạy cái này
+        # [PHA 2] GỌI TRỰC TIẾP (Nếu Proxy thua)
         try:
             res = scraper.get(target_url, headers=HEADERS, timeout=15)
             if res.status_code == 200:
                 return res.json()
-            elif res.status_code == 403:
-                print(f"⛔ Direct cũng bị chặn (403).")
-        except Exception as e:
-            pass
+        except: pass
         
-        # Nếu cả 2 đều tạch, nghỉ chút rồi thử lại
-        time.sleep(random.uniform(1, 3))
-            
     return None
 
 # --- CÁC HÀM BỔ TRỢ ---
