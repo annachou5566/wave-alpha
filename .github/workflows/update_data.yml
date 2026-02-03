@@ -21,12 +21,12 @@ jobs:
       with:
         python-version: '3.9'
 
+    # [NÂNG CẤP] Cài đặt từ file requirements.txt cho chuẩn
     - name: Install dependencies
       run: |
-        pip install cloudscraper python-dotenv requests
+        pip install -r requirements.txt
 
-    # QUAN TRỌNG: Kéo code mới về TRƯỚC khi chạy script
-    # Để đảm bảo không bị xung đột với file json sắp tạo ra
+    # Kéo code mới về để tránh conflict
     - name: Pull latest changes
       run: git pull origin main --rebase || echo "Already up to date"
 
@@ -34,6 +34,8 @@ jobs:
       env: 
         BINANCE_INTERNAL_AGG_API: ${{ secrets.BINANCE_INTERNAL_AGG_API }}
         BINANCE_INTERNAL_KLINES_API: ${{ secrets.BINANCE_INTERNAL_KLINES_API }}
+        # Nếu bạn đã thêm Proxy vào Secret thì uncomment dòng dưới, không thì thôi
+        # PROXY_WORKER_URL: ${{ secrets.PROXY_WORKER_URL }}
       run: |
         python scripts/fetch_alpha.py
 
@@ -42,6 +44,6 @@ jobs:
         git config --global user.name "AlphaBot"
         git config --global user.email "bot@wave-alpha.com"
         git add public/data/market-data.json
-        # Kiểm tra xem có gì thay đổi không rồi mới commit
+        # Chỉ commit khi có sự thay đổi
         git diff-index --quiet HEAD || git commit -m "🤖 Update Market Data: $(date)"
         git push

@@ -11,7 +11,7 @@ import cloudscraper # Dự phòng nếu cần direct
 load_dotenv()
 
 
-PROXY_WORKER_URL = "https://binance-proxy.annachou60.workers.dev" 
+PROXY_WORKER_URL = os.getenv("PROXY_WORKER_URL")
 
 API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
