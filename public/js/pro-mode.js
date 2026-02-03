@@ -176,7 +176,7 @@ function injectLayout() {
                             <th rowspan="2" class="text-center" style="width:40px">#</th>
                             <th rowspan="2" style="min-width:200px">TOKEN INFO</th>
                             <th rowspan="2" class="text-end">PRICE</th>
-                            <th rowspan="2" class="text-center">CHART (7D)</th>
+                            <th rowspan="2" class="text-center">CHART (20D)</th>
                             <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
                             <th colspan="3" class="text-center">MARKET STATS (24h)</th>
                         </tr>
