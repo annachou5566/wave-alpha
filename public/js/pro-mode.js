@@ -492,42 +492,61 @@ window.toggleFilter = (filterType) => {
     renderTable(); // Vẽ lại bảng
 };
 
-// --- HÀM VẼ BIỂU ĐỒ MINI (AREA GRADIENT STYLE) ---
+// --- HÀM VẼ BIỂU ĐỒ MINI (REAL VOLUME + PRICE LINE) ---
 function getSparklineSVG(data) {
+    // Kiểm tra dữ liệu đầu vào có chuẩn format mới không
     if (!data || !Array.isArray(data) || data.length < 2) return '';
+    
+    // Nếu dữ liệu cũ (chưa chạy python mới) thì return rỗng để tránh lỗi
+    if (typeof data[0] !== 'object') return '';
 
-    const width = 100; // Tăng chiều rộng chút cho đẹp
-    const height = 35;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min || 1;
+    const width = 120;
+    const height = 40;
+    
+    // Tách mảng giá và volume riêng để tính min/max
+    const prices = data.map(d => d.p);
+    const volumes = data.map(d => d.v);
 
-    // Màu sắc: Xanh (Tăng) / Đỏ (Giảm)
-    const isUp = data[data.length - 1] >= data[0];
+    const minP = Math.min(...prices);
+    const maxP = Math.max(...prices);
+    const rangeP = maxP - minP || 1;
+
+    const maxV = Math.max(...volumes) || 1; // Volume lớn nhất để làm trần
+
+    // Màu sắc: Giá cuối > Giá đầu ? Xanh : Đỏ
+    const isUp = prices[prices.length - 1] >= prices[0];
     const color = isUp ? '#0ecb81' : '#f6465d'; 
-    const id = 'grad-' + Math.random().toString(36).substr(2, 9); // ID ngẫu nhiên cho gradient
-
-    // 1. Tạo đường line (Stroke)
-    let points = data.map((val, i) => {
+    
+    // 1. VẼ ĐƯỜNG GIÁ (LINE CHART) - Nằm lớp trên
+    let points = data.map((d, i) => {
         const x = (i / (data.length - 1)) * width;
-        const y = height - ((val - min) / range) * (height - 4) - 2; // Padding 2px
+        // Chừa 15px bên dưới cho Volume
+        const y = (height - 15) - ((d.p - minP) / rangeP) * (height - 20) - 5; 
         return `${x},${y}`;
     }).join(' ');
 
-    // 2. Tạo vùng phủ màu (Fill Area) - Khép kín vòng xuống đáy
-    // Bắt đầu từ đáy trái (0,height) -> Đi theo các điểm -> Xuống đáy phải (width,height)
-    const fillPoints = `0,${height} ${points} ${width},${height}`;
+    // 2. VẼ CỘT VOLUME THẬT (BAR CHART) - Nằm lớp dưới
+    let bars = '';
+    const barWidth = (width / (data.length - 1)) * 0.6; 
+
+    data.forEach((d, i) => {
+        // Chiều cao cột = (Volume hiện tại / Volume lớn nhất) * Chiều cao tối đa cho phép (14px)
+        let barHeight = (d.v / maxV) * 14;
+        
+        // Đảm bảo cột thấp nhất cũng có 2px để nhìn thấy
+        if (barHeight < 2) barHeight = 2;
+
+        const x = (i / (data.length - 1)) * width; // Canh giữa theo điểm neo của line
+        const y = height - barHeight; // Vẽ từ đáy lên
+        
+        bars += `<rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.3" rx="1" />`;
+    });
 
     return `
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="${id}" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="${color}" stop-opacity="0.3" />
-                    <stop offset="100%" stop-color="${color}" stop-opacity="0.05" />
-                </linearGradient>
-            </defs>
-            <polygon points="${fillPoints}" fill="url(#${id})" stroke="none" />
-            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="mini-chart" xmlns="http://www.w3.org/2000/svg">
+            ${bars}
+            
+            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
     `;
 }

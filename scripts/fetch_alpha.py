@@ -104,10 +104,15 @@ def fetch_daily_utc_stats(chain_id, contract_addr):
 
 def get_sparkline_data(chain_id, contract_addr):
     # Chart lấy từ Aggregate
-    url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=7&tokenAddress={contract_addr}&dataType=aggregate"
+    url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=20&tokenAddress={contract_addr}&dataType=aggregate"
     res = fetch_with_retry(url, retries=2)
     if res and res.get("data") and res["data"].get("klineInfos"):
-        return [safe_float(k[4]) for k in res["data"]["klineInfos"]]
+        # TRẢ VỀ CẤU TRÚC MỚI: { "p": Price, "v": Volume }
+        # k[4] là Giá, k[5] là Volume
+        return [
+            {"p": safe_float(k[4]), "v": safe_float(k[5])} 
+            for k in res["data"]["klineInfos"]
+        ]
     return []
 
 # --- 3. WORKER THÔNG MINH ---
