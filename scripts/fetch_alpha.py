@@ -6,14 +6,18 @@ from datetime import datetime
 import concurrent.futures
 from dotenv import load_dotenv
 
-# --- 1. CẤU HÌNH ---
+# --- 1. CẤU HÌNH & BẢO MẬT ---
 load_dotenv()
 
+# Lấy API nội bộ từ biến môi trường (Tuyệt đối không hardcode)
 API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 
+# API Công khai (Public) để kiểm tra chéo - An toàn, không cần key
+API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
+
 if not API_AGG_TICKER or not API_AGG_KLINES:
-    print("❌ LỖI: Thiếu API trong .env")
+    print("❌ LỖI: Thiếu API Binance trong file .env")
     exit()
 
 HEADERS = {
@@ -26,38 +30,59 @@ HEADERS = {
 OUTPUT_FILE = "public/data/market-data.json"
 os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 
-# SỐ LUỒNG (Giữ 5 để ổn định)
-MAX_WORKERS = 5
+MAX_WORKERS = 5 # Giữ 5 luồng để ổn định, không bị rate limit
 
-CHAIN_MAP = {
-    "BSC": 56, "BNB": 56, "ETH": 1, "Ethereum": 1, "POLYGON": 137, "Matic": 137,
-    "Arbitrum": 42161, "ARB": 42161, "Optimism": 10, "OP": 10, "Base": 8453,
-    "Avalanche": 43114, "SOL": 501
-}
+# Biến toàn cục để lưu cache và danh sách Spot thực tế
+ACTIVE_SPOT_SYMBOLS = set()
+OLD_DATA_MAP = {} # Lưu dữ liệu cũ để tái sử dụng
 
-# --- 2. HÀM BỔ TRỢ ---
+# --- 2. CÁC HÀM BỔ TRỢ (UTILITIES) ---
+
 def safe_float(v):
     try: return float(v) if v else 0.0
     except: return 0.0
 
+def load_old_data():
+    """
+    Đọc dữ liệu từ file JSON cũ để làm Cache.
+    Giúp tránh gọi lại API cho các token đã 'chốt sổ' (Spot/Delisted).
+    """
+    if os.path.exists(OUTPUT_FILE):
+        try:
+            with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # Tạo Map: { "ALPHA_123": { ...token_data... } }
+                return {t['id']: t for t in data.get('tokens', [])}
+        except: pass
+    return {}
+
+def get_active_spot_symbols():
+    """
+    Gọi API Public Spot để lấy danh sách 'Sự Thật'.
+    Dùng để sửa lỗi khi API Alpha báo sai trạng thái (VD: FOGO).
+    """
+    print("🌍 Đang lấy danh sách Spot Trading thực tế (Public API)...")
+    try:
+        res = requests.get(API_PUBLIC_SPOT, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            symbols = set()
+            for s in data.get("symbols", []):
+                if s.get("status") == "TRADING":
+                    symbols.add(s.get("baseAsset")) 
+            print(f"✅ Đã tìm thấy {len(symbols)} token đang giao dịch Spot.")
+            return symbols
+    except Exception as e:
+        print(f"⚠️ Không gọi được API Spot (Sẽ dùng dữ liệu gốc): {e}")
+    return set()
+
 def get_usd_from_kline(kline_array):
-    """
-    FIX LỖI: Dựa trên log debug, cả Aggregate và Limit đều có thể trả về mảng 7 phần tử.
-    Ở mảng 7 phần tử, Index 5 chính là Volume USD.
-    """
     if not kline_array or not isinstance(kline_array, list): return 0.0
-    
     length = len(kline_array)
     try:
-        # Trường hợp chuẩn cũ (Mảng dài 8 hoặc 12) -> Index 7 là USD
-        if length >= 8: 
-            return safe_float(kline_array[7])
-        
-        # Trường hợp hiện tại (Mảng dài 7) -> Index 5 là USD
-        # (Áp dụng cho cả Limit và Aggregate)
-        elif length >= 6: 
-            return safe_float(kline_array[5])
-            
+        # Index 5 là Volume USD (cho cả Limit và Aggregate hiện tại)
+        if length >= 6: return safe_float(kline_array[5])
+        elif length >= 8: return safe_float(kline_array[7])
     except: pass
     return 0.0
 
@@ -68,7 +93,7 @@ def fetch_with_retry(url, retries=3):
             if res.status_code == 200:
                 return res.json()
             elif res.status_code == 429:
-                time.sleep(2)
+                time.sleep(2) # Bị chặn nhẹ thì nghỉ chút
         except:
             time.sleep(0.5)
     return None
@@ -77,13 +102,13 @@ def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total = 0.0
     d_limit = 0.0
     
-    # 1. Gọi TOTAL
+    # DataType = aggregate
     url_total = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=1&tokenAddress={contract_addr}&dataType=aggregate"
     res_total = fetch_with_retry(url_total)
     if res_total and res_total.get("data") and res_total["data"].get("klineInfos"):
         d_total = get_usd_from_kline(res_total["data"]["klineInfos"][0])
 
-    # 2. Gọi LIMIT
+    # DataType = limit
     url_limit = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=1&tokenAddress={contract_addr}&dataType=limit"
     res_limit = fetch_with_retry(url_limit)
     if res_limit and res_limit.get("data") and res_limit["data"].get("klineInfos"):
@@ -99,43 +124,80 @@ def get_sparkline_data(chain_id, contract_addr):
         chart = [safe_float(k[4]) for k in res["data"]["klineInfos"]]
     return chart
 
-# --- 3. WORKER ---
-# --- 3. WORKER ---
-def process_token_securely(item):
+# --- 3. WORKER (LÕI XỬ LÝ) ---
+def process_token_smart(item):
     """
-    Hàm xử lý từng token. Đã cập nhật logic lấy trường 'offline', 'listingCex',
-    'onlineTge' và 'onlineAirdrop' từ dữ liệu mẫu thực tế.
+    Hàm xử lý thông minh:
+    1. Check Cache cũ -> Nếu đã Spot/Delisted thì bỏ qua gọi API nặng.
+    2. Check Cross-Check -> Sửa lỗi trạng thái.
+    3. Chỉ gọi API Klines cho token cần thiết.
     """
     aid = item.get("alphaId")
     if not aid: return None
 
-    # Lấy các chỉ số cơ bản
+    # Lấy thông tin cơ bản từ API Tổng (API Nhẹ)
     vol_24h = safe_float(item.get("volume24h"))
-    contract = item.get("contractAddress")
+    price = safe_float(item.get("price"))
+    change_24h = safe_float(item.get("percentChange24h"))
+    tx_count = safe_float(item.get("count24h"))
+    liquidity = safe_float(item.get("liquidity"))
+    market_cap = safe_float(item.get("marketCap"))
     
-    # Lấy Chain ID trực tiếp từ API (Thông minh hơn)
+    contract = item.get("contractAddress")
     chain_id = item.get("chainId") 
     chain_name = item.get("chainName", "")
+    symbol = item.get("symbol")
 
-    # Lấy trạng thái Status
+    # --- LOGIC XÁC ĐỊNH TRẠNG THÁI (STATUS) ---
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
     
     status = "ALPHA"
     if is_offline is True:
-        if is_listing_cex is True: status = "SPOT"
-        else: status = "DELISTED"
+        if is_listing_cex is True:
+            status = "SPOT"
+        else:
+            # CROSS-CHECK: Nếu Alpha bảo Delisted nhưng Spot có -> Sửa thành SPOT
+            if symbol in ACTIVE_SPOT_SYMBOLS:
+                status = "SPOT"
+                is_listing_cex = True 
+            else:
+                status = "DELISTED"
 
+    # --- LOGIC CACHING (QUAN TRỌNG) ---
+    # Kiểm tra xem token này đã có trong file cũ chưa
+    old_data = OLD_DATA_MAP.get(aid)
+    
     daily_total = 0.0
     daily_limit = 0.0
     daily_onchain = 0.0
     chart_data = []
+    
+    # QUYẾT ĐỊNH: CÓ GỌI API CHI TIẾT HAY KHÔNG?
+    should_fetch_details = False
+    
+    if status == "ALPHA":
+        # Nếu đang chạy giải -> Luôn phải cập nhật mới
+        should_fetch_details = True
+    else:
+        # Nếu đã SPOT hoặc DELISTED
+        if old_data and old_data.get("status") == status:
+            # Trạng thái không đổi -> Dùng lại dữ liệu cũ (Chart, Volume giải)
+            # Chỉ cập nhật Giá & Vol 24h từ API Nhẹ
+            daily_total = safe_float(old_data["volume"].get("daily_total"))
+            daily_limit = safe_float(old_data["volume"].get("daily_limit"))
+            daily_onchain = safe_float(old_data["volume"].get("daily_onchain"))
+            chart_data = old_data.get("chart", [])
+            should_fetch_details = False # Tiết kiệm API
+        else:
+            # Trạng thái mới đổi (VD: Mới chuyển từ Alpha sang Spot) -> Gọi 1 lần để chốt
+            should_fetch_details = True
 
-    # Chỉ quét dữ liệu chi tiết nếu là Token ALPHA (Đang chạy) và có Volume
-    if status == "ALPHA" and vol_24h > 0 and contract and chain_id:
+    # THỰC THI GỌI API (NẾU CẦN)
+    if should_fetch_details and vol_24h > 0 and contract and chain_id:
         daily_total, daily_limit = fetch_daily_utc_stats(chain_id, contract)
         
-        # Logic sửa lỗi dữ liệu (Fallback)
+        # Fallback sửa lỗi dữ liệu 0
         if daily_total == 0 and daily_limit > 0: daily_total = daily_limit
         if daily_total < daily_limit: daily_total = daily_limit
         
@@ -144,42 +206,55 @@ def process_token_securely(item):
 
     return {
         "id": aid,
-        "symbol": item.get("symbol"),
+        "symbol": symbol,
         "name": item.get("name"),
         "icon": item.get("iconUrl"),
         "chain": chain_name,
         "chain_icon": item.get("chainIconUrl"),
         "contract": contract,
         
-        # --- CÁC TRƯỜNG QUAN TRỌNG CHO WEB ---
+        # --- TRẠNG THÁI & SỰ KIỆN ---
         "offline": is_offline,
         "listingCex": is_listing_cex,
         "status": status,
         "onlineTge": item.get("onlineTge", False),
         "onlineAirdrop": item.get("onlineAirdrop", False),
-        # -------------------------------------
+        # ----------------------------
         
         "mul_point": safe_float(item.get("mulPoint")),
         "listing_time": item.get("listingTime", 0),
-        "price": safe_float(item.get("price")),
-        "change_24h": safe_float(item.get("percentChange24h")),
-        "liquidity": safe_float(item.get("liquidity")),
-        "market_cap": safe_float(item.get("marketCap")),
-        "tx_count": safe_float(item.get("count24h")),
+        
+        # Dữ liệu cập nhật realtime từ API Nhẹ
+        "price": price,
+        "change_24h": change_24h,
+        "liquidity": liquidity,
+        "market_cap": market_cap,
+        "tx_count": tx_count,
+        
         "volume": {
             "rolling_24h": vol_24h,
-            "daily_total": daily_total,
+            "daily_total": daily_total,   # Có thể lấy từ Cache hoặc API mới
             "daily_limit": daily_limit,
             "daily_onchain": daily_onchain
         },
-        "chart": chart_data
+        "chart": chart_data # Có thể lấy từ Cache hoặc API mới
     }
 
 # --- 4. MAIN ---
 def fetch_data():
-    start_time = time.time()
-    print("🔒 [SECURE MODE] Đang quét dữ liệu (Đã Fix lỗi Index)...")
+    global ACTIVE_SPOT_SYMBOLS, OLD_DATA_MAP
     
+    start_time = time.time()
+    print("🔒 [SECURE MODE] Bắt đầu quét dữ liệu thông minh...")
+    
+    # BƯỚC 1: Load dữ liệu cũ để Cache
+    OLD_DATA_MAP = load_old_data()
+    print(f"📂 Đã tải {len(OLD_DATA_MAP)} token từ cache cũ.")
+
+    # BƯỚC 2: Lấy danh sách Spot thực tế (Cross-Check)
+    ACTIVE_SPOT_SYMBOLS = get_active_spot_symbols()
+    
+    # BƯỚC 3: Gọi API Tổng (API Nhẹ)
     try:
         raw_res = fetch_with_retry(API_AGG_TICKER)
         raw_data = raw_res.get("data", [])
@@ -188,23 +263,28 @@ def fetch_data():
         return
 
     tokens = []
+    # Chỉ xử lý token có volume > 0 để nhẹ gánh
     active_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
     inactive_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) == 0]
     
-    print(f"📋 Tổng: {len(raw_data)}. Active: {len(active_tokens)}")
+    print(f"📋 Tổng API trả về: {len(raw_data)}. Active cần xử lý: {len(active_tokens)}")
     
+    # BƯỚC 4: Chạy đa luồng thông minh
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        results = list(executor.map(process_token_securely, active_tokens))
+        results = list(executor.map(process_token_smart, active_tokens))
 
     for t in results:
         if t: tokens.append(t)
     
+    # Xử lý token rác (inactive)
     for t in inactive_tokens:
-        basic = process_token_securely(t)
+        basic = process_token_smart(t)
         if basic: tokens.append(basic)
 
+    # Sắp xếp theo Volume giải đấu
     final_sorted = sorted(tokens, key=lambda x: x["volume"]["daily_total"], reverse=True)
 
+    # Lưu file
     data = {
         "last_updated": datetime.now().strftime("%H:%M %d/%m"),
         "tokens": final_sorted
@@ -214,13 +294,11 @@ def fetch_data():
         json.dump(data, f, ensure_ascii=False, indent=2)
         
     elapsed = time.time() - start_time
-    print(f"✅ HOÀN TẤT! Thời gian: {elapsed:.2f}s")
+    print(f"✅ HOÀN TẤT! Tổng thời gian: {elapsed:.2f}s")
     
-    # DEBUG KIỂM TRA LẠI OWL
-    for t in final_sorted:
-        if t["symbol"] == "OWL":
-            print(f"🔎 DEBUG OWL FINAL: Total={t['volume']['daily_total']:,.0f} | Limit={t['volume']['daily_limit']:,.0f} | OnChain={t['volume']['daily_onchain']:,.0f}")
-            break
+    # DEBUG: Kiểm tra thử 1 con Spot xem có bị gọi lại không
+    spot_count = sum(1 for t in final_sorted if t["status"] == "SPOT")
+    print(f"📊 Thống kê: {spot_count} Token đang là SPOT.")
 
 if __name__ == "__main__":
     fetch_data()
