@@ -736,4 +736,34 @@ body {
     }
 }
 
+/* --- FIXED COLUMNS (MOBILE SCROLL) --- */
+
+/* Cột 1: Ngôi sao (Star) */
+.col-fix-1 {
+    position: sticky !important;
+    left: 0;
+    z-index: 20;
+    background-color: #161a1e; /* Màu nền trùng màu bảng để che chữ trôi qua */
+    width: 40px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Cột 2: Token Info (Logo + Tên) */
+.col-fix-2 {
+    position: sticky !important;
+    left: 40px; /* Cách lề trái 40px (nhường chỗ cho ngôi sao) */
+    z-index: 20;
+    background-color: #161a1e;
+    min-width: 160px; /* Đảm bảo đủ rộng */
+    max-width: 160px;
+    border-right: 2px solid #2b3139; /* Đường kẻ ngăn cách rõ ràng */
+    box-shadow: 2px 0 5px rgba(0,0,0,0.5); /* Bóng đổ để tạo cảm giác lớp trên */
+}
+
+/* Fix lỗi nền khi hover chuột vào hàng */
+.alpha-table tbody tr:hover .col-fix-1,
+.alpha-table tbody tr:hover .col-fix-2 {
+    background-color: #1e2329; /* Màu sáng hơn chút khi hover */
+}
+
 .summary-grid { display: none !important; }

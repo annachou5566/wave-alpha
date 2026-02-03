@@ -171,10 +171,15 @@ function injectLayout() {
 
             <div class="table-responsive">
                 <table class="alpha-table">
-                    <thead>
+                    
+<thead>
                         <tr class="h-top">
-                            <th rowspan="2" class="text-center" style="width:40px">#</th>
-                            <th rowspan="2" style="min-width:200px">TOKEN INFO</th>
+                            <th rowspan="2" class="text-center col-fix-1">#</th>
+                            
+                            <th rowspan="2" class="col-fix-2">TOKEN</th>
+                            
+                            <th rowspan="2" style="min-width:120px; padding-left:15px">STATUS</th>
+                            
                             <th rowspan="2" class="text-end">PRICE</th>
                             <th rowspan="2" class="text-center">CHART (20D)</th>
                             <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
@@ -189,6 +194,7 @@ function injectLayout() {
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
                         </tr>
                     </thead>
+
                     <tbody id="market-table-body"></tbody>
                 </table>
             </div>
@@ -356,33 +362,35 @@ function renderTable() {
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
 
+        
         tr.innerHTML = `
-            <td class="text-center">
+            <td class="text-center col-fix-1">
                 <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
             </td>
-            <td>
-                <div class="token-cell">
+
+            <td class="col-fix-2">
+                <div class="token-cell" style="justify-content: flex-start;">
                     <div class="logo-wrapper">
                         <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
                         ${chainBadgeHtml}
                     </div>
-                    <div class="token-meta-container">
-                        <div class="meta-col-1">
-                            <div class="symbol-row">
-                                <span class="symbol-text">${t.symbol}</span>
-                                ${mulBadgeHtml}
-                            </div>
-                            <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:10px; margin-top:2px;">
-                                ${shortContract} <i class="fas fa-copy"></i>
-                            </div>
+                    <div class="token-meta-container" style="display:block; width:auto; border:none; padding:0;">
+                         <div class="symbol-row">
+                            <span class="symbol-text">${t.symbol}</span>
+                            ${mulBadgeHtml}
                         </div>
-                        <div class="meta-col-2">
-                            <div style="margin-bottom: 2px;">${journeyHtml}</div>
-                            ${dateHtml}
+                        <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:10px; margin-top:2px;">
+                            ${shortContract} <i class="fas fa-copy"></i>
                         </div>
                     </div>
                 </div>
             </td>
+
+            <td style="padding-left:15px; vertical-align: middle;">
+                <div style="margin-bottom: 4px;">${journeyHtml}</div>
+                ${dateHtml}
+            </td>
+
             <td class="text-end">
                 <div class="text-white-bold">$${formatPrice(t.price)}</div>
                 <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
