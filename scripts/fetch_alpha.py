@@ -1,7 +1,7 @@
 import json
 import os
 import time
-import random
+import urllib.parse
 from datetime import datetime
 from dotenv import load_dotenv
 import requests 
@@ -15,8 +15,8 @@ API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
-# Test ít thôi để soi lỗi cho nhanh
-TOP_TOKEN_LIMIT = 3 
+# Điều chỉnh giới hạn quét VIP
+TOP_TOKEN_LIMIT = 60 
 
 scraper = cloudscraper.create_scraper(
     browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
@@ -35,62 +35,59 @@ os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 ACTIVE_SPOT_SYMBOLS = set()
 OLD_DATA_MAP = {}
 
-# --- 2. HÀM GỌI API (DEBUG MODE) ---
-def fetch_smart(target_url, retries=2):
+# --- 2. HÀM GỌI API (RENDER & ENCODING OPTIMIZED) ---
+def fetch_smart(target_url, retries=3):
     is_render = "onrender.com" in (PROXY_WORKER_URL or "")
     
-    # [CHECK QUAN TRỌNG] Kiểm tra xem URL có bị Null không
-    if "None" in target_url:
-        print(f"❌ LỖI: URL chứa 'None'. Kiểm tra lại Secret API_AGG_KLINES!")
+    if not target_url or "None" in target_url:
+        print(f"❌ LỖI: URL mục tiêu không hợp lệ!")
         return None
 
     for i in range(retries):
         if PROXY_WORKER_URL:
             try:
-                # In ra URL đang gọi để kiểm tra
-                print(f"   👉 Requesting: {target_url[:60]}...", end=" ")
+                # FIX: Mã hóa URL đích để tránh lỗi 000002 illegal parameter trên Render/Express
+                encoded_target = urllib.parse.quote(target_url, safe='')
+                proxy_final_url = f"{PROXY_WORKER_URL}?url={encoded_target}"
                 
-                current_timeout = 60 if (is_render and i==0) else 30
+                # Render Free cần thời gian tỉnh giấc lần đầu (60s), các lần sau 30s
+                current_timeout = 60 if (is_render and i == 0) else 30
                 
-                res = requests.get(
-                    PROXY_WORKER_URL, 
-                    params={"url": target_url}, 
-                    timeout=current_timeout 
-                )
+                res = requests.get(proxy_final_url, timeout=current_timeout)
                 
                 if res.status_code == 200:
                     data = res.json()
-                    # [DEBUG] NẾU DATA RỖNG HOẶC CÓ LỖI, IN RA NGAY
-                    if not data or (isinstance(data, dict) and (not data.get("data") or data.get("code") != "000000")):
-                        print(f"\n   ⚠️ RESPONSE LẠ: {str(data)[:200]}") # In 200 ký tự đầu xem là gì
-                    else:
-                        print("✅ OK")
-                    return data
+                    # Kiểm tra mã phản hồi nội bộ của Binance
+                    if data and isinstance(data, dict):
+                        if data.get("code") == "000000":
+                            return data
+                        else:
+                            print(f"\n   ⚠️ BINANCE ERROR: {data.get('code')} - {data.get('message')}")
                 
                 elif res.status_code == 403:
-                    print("⛔ 403 (Binance Block)")
+                    print("⛔ 403 (Binance Block Proxy)")
                 elif res.status_code == 502:
-                    print("💤 Render 502...")
+                    print("💤 Render 502 (Khởi động)...")
                     time.sleep(5)
                 else:
                     print(f"⚠️ Status: {res.status_code}")
-                    print(f"   Content: {res.text[:100]}") # In nội dung lỗi
                     
             except Exception as e:
-                print(f"❌ Err: {str(e)[:50]}")
+                print(f"❌ Proxy Err: {str(e)[:50]}")
         
-        # Backup Direct...
+        # Backup Direct (Dùng cloudscraper)
         try:
             res = scraper.get(target_url, headers=HEADERS, timeout=15)
             if res.status_code == 200:
-                return res.json()
+                data = res.json()
+                if data.get("code") == "000000":
+                    return data
         except: pass
         
-        time.sleep(1)
+        time.sleep(2) # Nghỉ giữa các lần retry
             
     return None
 
-# --- GIỮ NGUYÊN CÁC HÀM KHÁC ---
 def safe_float(v):
     try: return float(v) if v else 0.0
     except: return 0.0
@@ -113,43 +110,50 @@ def get_active_spot_symbols():
     except: pass
     return set()
 
-# --- 3. LOGIC ---
+# --- 3. LOGIC DATA (USING DYNAMIC CHAIN_ID) ---
 def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total, d_limit, d_market = 0.0, 0.0, 0.0
     
-    # Kiểm tra biến môi trường
     if not API_AGG_KLINES:
         print("❌ CRITICAL: Thiếu Secret BINANCE_INTERNAL_KLINES_API")
-        return 0,0,0
+        return 0, 0, 0
 
-    base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=5&tokenAddress={contract_addr}"
+    # FIX: Binance bắt buộc contract address phải viết THƯỜNG
+    clean_addr = str(contract_addr).lower()
     
-    # 1. LIMIT
+    # URL chuẩn (agg-klines có s)
+    base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=5&tokenAddress={clean_addr}"
+    
+    # 1. LIMIT (Orderbook)
     res_limit = fetch_smart(f"{base_url}&dataType=limit")
     if res_limit and res_limit.get("data"):
-        k = res_limit["data"]["klineInfos"]
+        k = res_limit["data"].get("klineInfos", [])
         if k: d_limit = safe_float(k[-1][5])
 
-    # 2. MARKET
+    # 2. MARKET (On-chain)
     res_market = fetch_smart(f"{base_url}&dataType=market")
     if res_market and res_market.get("data"):
-        k = res_market["data"]["klineInfos"]
+        k = res_market["data"].get("klineInfos", [])
         if k: d_market = safe_float(k[-1][5])
 
-    # 3. TOTAL
+    # 3. AGGREGATE (Total)
     res_total = fetch_smart(f"{base_url}&dataType=aggregate")
     if res_total and res_total.get("data"):
-        k = res_total["data"]["klineInfos"]
+        k = res_total["data"].get("klineInfos", [])
         if k: d_total = safe_float(k[-1][5])
 
-    if d_total < (d_limit + d_market): d_total = d_limit + d_market
+    # Logic kiểm tra tính hợp lệ của Total
+    if d_total < (d_limit + d_market):
+        d_total = d_limit + d_market
+        
     return d_total, d_limit, d_market
 
 def get_sparkline_data(chain_id, contract_addr):
     if not API_AGG_KLINES: return []
-    url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=20&tokenAddress={contract_addr}&dataType=aggregate"
+    clean_addr = str(contract_addr).lower()
+    url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit=24&tokenAddress={clean_addr}&dataType=aggregate"
     res = fetch_smart(url)
-    if res and res.get("data") and res.get("data", {}).get("klineInfos"):
+    if res and res.get("data") and res["data"].get("klineInfos"):
         return [{"p": safe_float(k[4]), "v": safe_float(k[5])} for k in res["data"]["klineInfos"]]
     return []
 
@@ -162,7 +166,7 @@ def process_token_smart(item, is_vip=False):
     vol_24h = safe_float(item.get("volume24h"))
     symbol = item.get("symbol")
     contract = item.get("contractAddress")
-    chain_id = item.get("chainId")
+    chain_id = item.get("chainId") # Lấy ChainID động từ API tổng
     
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
@@ -173,36 +177,53 @@ def process_token_smart(item, is_vip=False):
     daily_total, daily_limit, daily_onchain = 0.0, 0.0, 0.0
     chart_data = []
 
+    # Kiểm tra Cache
     old = OLD_DATA_MAP.get(aid)
     if old and not should_fetch:
         if old.get("volume"):
             daily_limit = safe_float(old["volume"].get("daily_limit"))
             daily_onchain = safe_float(old["volume"].get("daily_onchain"))
-            if safe_float(old["volume"].get("daily_total")) > 0:
-                daily_total = safe_float(old["volume"].get("daily_total"))
+            daily_total = safe_float(old["volume"].get("daily_total"))
             chart_data = old.get("chart", [])
 
+    # Lấy dữ liệu mới cho VIP
     if should_fetch and vol_24h > 0 and contract and chain_id:
-        print(f"\n📡 {symbol}...", end=" ")
+        print(f"📡 Processing {symbol}...", end=" ", flush=True)
         d_t, d_l, d_m = fetch_daily_utc_stats(chain_id, contract)
         daily_limit, daily_onchain = d_l, d_m
         daily_total = d_t if d_t >= (d_l + d_m) else (d_l + d_m)
         chart_data = get_sparkline_data(chain_id, contract)
-        print(f"-> Total: {daily_total:.0f}") # In kết quả ngay
+        print(f"OK (Total: {daily_total:,.0f})")
     
-    if daily_total == 0: daily_total = vol_24h
+    if daily_total <= 0: 
+        daily_total = vol_24h
 
     return {
-        "id": aid, "symbol": symbol, "name": item.get("name"), "icon": item.get("iconUrl"),
-        "chain": item.get("chainName", ""), "chain_icon": item.get("chainIconUrl"), "contract": contract,
-        "offline": is_offline, "listingCex": is_listing_cex, "status": status,
-        "onlineTge": item.get("onlineTge", False), "onlineAirdrop": item.get("onlineAirdrop", False),
-        "mul_point": safe_float(item.get("mulPoint")), "listing_time": item.get("listingTime", 0),
-        "tx_count": safe_float(item.get("count24h")), "price": safe_float(item.get("price")),
-        "change_24h": safe_float(item.get("percentChange24h")), "liquidity": safe_float(item.get("liquidity")),
+        "id": aid,
+        "symbol": symbol,
+        "name": item.get("name"),
+        "icon": item.get("iconUrl"),
+        "chain": item.get("chainName", ""),
+        "chain_icon": item.get("chainIconUrl"),
+        "contract": contract,
+        "offline": is_offline,
+        "listingCex": is_listing_cex,
+        "status": status,
+        "onlineTge": item.get("onlineTge", False),
+        "onlineAirdrop": item.get("onlineAirdrop", False),
+        "mul_point": safe_float(item.get("mulPoint")),
+        "listing_time": item.get("listingTime", 0),
+        "tx_count": safe_float(item.get("count24h")),
+        "price": safe_float(item.get("price")),
+        "change_24h": safe_float(item.get("percentChange24h")),
+        "liquidity": safe_float(item.get("liquidity")),
         "market_cap": safe_float(item.get("marketCap")),
-        "volume": { "rolling_24h": vol_24h, "daily_total": daily_total, 
-                   "daily_limit": daily_limit, "daily_onchain": daily_onchain },
+        "volume": {
+            "rolling_24h": vol_24h,
+            "daily_total": daily_total,
+            "daily_limit": daily_limit,
+            "daily_onchain": daily_onchain
+        },
         "chart": chart_data
     }
 
@@ -210,38 +231,61 @@ def fetch_data():
     global ACTIVE_SPOT_SYMBOLS, OLD_DATA_MAP
     start = time.time()
     
-    print(f"🛡️ [DEBUG MODE] Proxy: {PROXY_WORKER_URL[:20]}...", flush=True)
+    print(f"🛡️ [MODE: RENDER PROXY] Target: {PROXY_WORKER_URL[:25]}...")
 
     if not API_AGG_TICKER:
-        print("❌ Lỗi: Thiếu API Env")
+        print("❌ Lỗi: Thiếu API_AGG_TICKER trong Env")
         return
 
     OLD_DATA_MAP = load_old_data()
     ACTIVE_SPOT_SYMBOLS = get_active_spot_symbols()
     
-    print("⏳ Đang lấy List...", end=" ")
+    print("⏳ Đang lấy danh sách Token tổng...", end=" ", flush=True)
     raw_res = fetch_smart(API_AGG_TICKER)
     if not raw_res:
-        print("\n❌ THẤT BẠI: Render không phản hồi.")
+        print("\n❌ THẤT BẠI: Không nhận được dữ liệu từ API tổng.")
         return
+    
     raw_data = raw_res.get("data", [])
     print(f"Xong! ({len(raw_data)} tokens)")
 
+    # Sắp xếp theo Volume
     all_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
     all_tokens.sort(key=lambda x: safe_float(x.get("volume24h")), reverse=True)
     
-    # Test 3 token đầu thôi
     vip = all_tokens[:TOP_TOKEN_LIMIT]
-    
-    res = []
-    print(f"💎 Soi kỹ {len(vip)} VIP...")
+    normal = all_tokens[TOP_TOKEN_LIMIT:]
+    trash = [t for t in raw_data if safe_float(t.get("volume24h")) == 0]
+
+    results = []
+
+    print(f"💎 Xử lý {len(vip)} Token VIP (Fetch chi tiết)...")
     for t in vip:
-        r = process_token_smart(t, True)
-        if r: res.append(r)
+        r = process_token_smart(t, is_vip=True)
+        if r: results.append(r)
         
-    # Bỏ qua phần normal để test cho nhanh
+    print(f"⚡ Xử lý nhanh {len(normal)} Token thường...")
+    for t in normal:
+        r = process_token_smart(t, is_vip=False)
+        if r: results.append(r)
+        
+    for t in trash:
+        r = process_token_smart(t, is_vip=False)
+        if r: results.append(r)
+
+    # Sắp xếp lại danh sách cuối cùng theo volume total
+    results.sort(key=lambda x: x["volume"]["daily_total"], reverse=True)
+
+    final_output = {
+        "last_updated": datetime.now().strftime("%H:%M %d/%m"),
+        "total_tokens": len(results),
+        "tokens": results
+    }
     
-    print(f"\n✅ HOÀN TẤT! {time.time()-start:.1f}s")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(final_output, f, ensure_ascii=False, indent=2)
+        
+    print(f"✅ HOÀN TẤT! Thời gian: {time.time()-start:.1f}s")
 
 if __name__ == "__main__":
     fetch_data()
