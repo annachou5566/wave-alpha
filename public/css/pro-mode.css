@@ -629,4 +629,105 @@ body {
     }
 }
 
+/* --- NEW TOOLBAR (NO ICONS - CAPSULE STYLE) --- */
+.alpha-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    background: transparent;
+    padding: 0;
+}
+
+.search-group {
+    flex: 1; /* Ô search tự co giãn */
+    max-width: 300px;
+    position: relative;
+}
+
+.search-group input {
+    width: 100%;
+    background: #161a1e;
+    border: 1px solid #2b3139;
+    border-radius: 4px;
+    padding: 8px 12px 8px 32px; /* Chừa chỗ cho icon kính lúp nhỏ xíu */
+    color: #eaecef;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.search-group input:focus {
+    border-color: var(--brand);
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.2);
+}
+
+.search-icon-small {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #5e6673;
+    font-size: 12px;
+}
+
+/* FILTER GROUP (CAPSULE BUTTONS) */
+.filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.filter-btn {
+    background: #2b3139;
+    border: none;
+    color: #848e9c;
+    padding: 6px 12px;
+    border-radius: 12px; /* Bo tròn kiểu viên thuốc */
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+
+.filter-btn:hover {
+    color: #eaecef;
+    background: #39404a;
+}
+
+/* ACTIVE STATES */
+.filter-btn.active-all { background: #eaecef; color: #0b0e11; }
+.filter-btn.active-alpha { background: var(--brand); color: #0b0e11; box-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
+.filter-btn.active-spot { background: var(--accent); color: #0b0e11; box-shadow: 0 0 8px rgba(240, 185, 11, 0.4); }
+.filter-btn.active-delist { background: #474D57; color: #eaecef; border: 1px solid #5e6673; }
+
+/* POINTS TOGGLE */
+.points-btn {
+    margin-left: 8px; /* Cách ra một chút */
+    border: 1px solid #2b3139;
+    background: transparent;
+}
+.points-btn.active-points {
+    background: #8B5CF6; /* Tím */
+    color: #fff;
+    border-color: #8B5CF6;
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+    .alpha-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-group { max-width: 100%; }
+    .filter-group {
+        overflow-x: auto;
+        padding-bottom: 4px;
+        white-space: nowrap; /* Cuộn ngang nếu nút nhiều */
+    }
+}
+
 .summary-grid { display: none !important; }

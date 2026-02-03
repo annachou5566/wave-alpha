@@ -3,7 +3,8 @@ let allTokens = [];
 let displayCount = 50; 
 let pinnedTokens = JSON.parse(localStorage.getItem('alpha_pins')) || [];
 let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
-let currentFilter = 'ALL'; // Các giá trị: 'ALL', 'ALPHA', 'SPOT', 'DELISTED'
+let currentFilter = 'ALL';
+let filterPoints = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Meta bypass
@@ -131,27 +132,22 @@ function renderMarketHUD(stats) {
 
 
 function injectLayout() {
-    // Cleanup cũ
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
 
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // 1. Tạo thanh Tab
+    // 1. Tab Navigation
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
-        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">
-            <i class="fas fa-layer-group"></i> ALPHA MARKET
-        </button>
-        <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">
-            <i class="fas fa-trophy"></i> COMPETITION
-        </button>
+        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
+        <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
 
-    // 2. Tạo Market View MỚI (Đã xóa 4 thẻ cũ, giữ lại Header & Table)
+    // 2. Market View (Với Toolbar Mới)
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
     marketView.style.display = 'none'; 
@@ -159,10 +155,18 @@ function injectLayout() {
         <div class="alpha-container" style="padding-top: 20px;">
             
             <div class="alpha-header">
-                <div class="time-badge" id="last-updated">Connecting...</div>
                 <div class="search-group">
-                    <i class="fas fa-search search-icon"></i>
-                    <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+                    <i class="fas fa-search search-icon-small"></i>
+                    <input type="text" id="alpha-search" placeholder="Search Token..." autocomplete="off">
+                </div>
+                
+                <div class="filter-group">
+                    <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
+                    <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
+                    <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
+                    <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
+                    
+                    <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
                 </div>
             </div>
 
@@ -290,9 +294,17 @@ function renderTable() {
         const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
         if (!matchSearch) return false;
         
+        // Lọc theo Trạng thái
         const status = getTokenStatus(t);
-        if (currentFilter === 'ALL') return true;
-        return status === currentFilter; 
+        if (currentFilter !== 'ALL' && status !== currentFilter) return false;
+
+        // Lọc theo Points (NẾU ĐANG BẬT)
+        if (filterPoints) {
+            // Chỉ lấy token có mul_point > 1
+            if ((t.mul_point || 1) <= 1) return false;
+        }
+
+        return true; 
     });
 
     list.sort((a, b) => {
@@ -510,3 +522,33 @@ function getSparklineSVG(data) {
         </svg>
     `;
 }
+
+// --- LOGIC FILTER MỚI ---
+window.setFilter = function(status) {
+    currentFilter = status;
+    
+    // Reset classes
+    ['all', 'alpha', 'spot', 'delist'].forEach(k => {
+        document.getElementById(`btn-f-${k}`)?.classList.remove(`active-${k}`);
+    });
+
+    // Add active class
+    if (status === 'ALL') document.getElementById('btn-f-all').classList.add('active-all');
+    if (status === 'ALPHA') document.getElementById('btn-f-alpha').classList.add('active-alpha');
+    if (status === 'SPOT') document.getElementById('btn-f-spot').classList.add('active-spot');
+    if (status === 'DELISTED') document.getElementById('btn-f-delist').classList.add('active-delist');
+
+    renderTable();
+};
+
+window.togglePoints = function() {
+    filterPoints = !filterPoints;
+    const btn = document.getElementById('btn-f-points');
+    
+    if (filterPoints) {
+        btn.classList.add('active-points');
+    } else {
+        btn.classList.remove('active-points');
+    }
+    renderTable();
+};
