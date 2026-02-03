@@ -33,6 +33,104 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
+// --- HÀM VẼ DASHBOARD (MARKET HUD) ---
+function renderMarketHUD(stats) {
+    // Tìm nơi để chèn HUD
+    const container = document.getElementById('alpha-market-view');
+    if (!container) return;
+
+    // Kiểm tra xem đã có HUD chưa
+    let hud = document.getElementById('market-hud');
+    if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'market-hud';
+        hud.className = 'market-hud-container';
+        
+        // Chèn HUD vào ngay sau thẻ mở đầu container
+        // (Trước Header Search)
+        const header = container.querySelector('.alpha-header');
+        if (header) {
+            container.insertBefore(hud, header);
+        } else {
+            container.prepend(hud);
+        }
+    }
+
+    // Tính toán phần trăm
+    const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
+    const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
+    const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
+
+    const limitPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyLimit / stats.alphaDailyTotal) * 100 : 0;
+    const chainPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyChain / stats.alphaDailyTotal) * 100 : 0;
+
+    const totalBreadth = stats.gainers + stats.losers;
+    const gainPct = totalBreadth > 0 ? (stats.gainers / totalBreadth) * 100 : 50;
+
+    // Render HTML
+    hud.innerHTML = `
+        <div class="hud-module">
+            <div class="hud-title">TOKEN LIFECYCLE (ALL TIME)</div>
+            <div class="hud-main-value">${stats.totalScan} <span style="font-size:12px; color:#5E6673">TOKENS</span></div>
+            <div class="hud-sub-label">Win Rate: <span class="text-gold">${pctSpot.toFixed(1)}%</span> (Spot/Total)</div>
+            
+            <div class="hud-stats-row">
+                <div class="hud-stat-item"><span class="hud-dot bg-active"></span> Active: ${stats.countActive}</div>
+                <div class="hud-stat-item"><span class="hud-dot bg-spot"></span> Spot: ${stats.countSpot}</div>
+                <div class="hud-stat-item"><span class="hud-dot bg-delist"></span> Dead: ${stats.countDelisted}</div>
+            </div>
+            
+            <div class="hud-progress-bar">
+                <div class="bar-segment bar-active" style="width: ${pctActive}%"></div>
+                <div class="bar-segment bar-spot" style="width: ${pctSpot}%"></div>
+                <div class="bar-segment bar-delist" style="width: ${pctDelist}%"></div>
+            </div>
+        </div>
+
+        <div class="hud-module border-left-dim">
+            <div class="hud-title">DAILY VOL STRUCTURE (UTC 0:00)</div>
+            <div class="hud-main-value text-neon">$${formatNum(stats.alphaDailyTotal)}</div>
+            <div class="hud-sub-label">Active Tokens Only (Limit + On-Chain)</div>
+
+            <div class="hud-stats-row">
+                <div class="hud-stat-item text-purple">Limit: $${formatNum(stats.alphaDailyLimit)} (${Math.round(limitPct)}%)</div>
+                <div class="hud-stat-item text-orange">Chain: $${formatNum(stats.alphaDailyChain)} (${Math.round(chainPct)}%)</div>
+            </div>
+
+            <div class="hud-progress-bar">
+                <div class="bar-segment bar-limit" style="width: ${limitPct}%"></div>
+                <div class="bar-segment bar-chain" style="width: ${chainPct}%"></div>
+            </div>
+        </div>
+
+        <div class="hud-module border-left-dim">
+            <div class="hud-title">MARKET SENTIMENT (24H)</div>
+            
+            <div class="hud-flex-between">
+                <div>
+                    <div class="hud-label-small">Alpha Market Cap</div>
+                    <div class="hud-value-medium">$${formatNum(stats.alphaMarketCap)}</div>
+                </div>
+                <div class="text-end">
+                    <div class="hud-label-small">Rolling 24H Vol</div>
+                    <div class="hud-value-medium text-white">$${formatNum(stats.alphaRolling24h)}</div>
+                </div>
+            </div>
+
+            <div class="hud-stats-row space-between" style="justify-content: space-between; margin-top: 8px;">
+                <span class="text-green">▲ ${stats.gainers} Gainers</span>
+                <span class="text-red">▼ ${stats.losers} Losers</span>
+            </div>
+
+            <div class="hud-progress-bar">
+                <div class="bar-segment bar-green" style="width: ${gainPct}%"></div>
+                <div class="bar-segment bar-red" style="width: ${100 - gainPct}%"></div>
+            </div>
+        </div>
+    `;
+}
+
+
 function injectLayout() {
     // Cleanup cũ
     document.getElementById('alpha-tab-nav')?.remove();
@@ -54,32 +152,13 @@ function injectLayout() {
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
 
-    // 2. Tạo Market View (Gồm Summary Cards + Header Search + Table)
+    // 2. Tạo Market View MỚI (Đã xóa 4 thẻ cũ, giữ lại Header & Table)
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
     marketView.style.display = 'none'; 
     marketView.innerHTML = `
         <div class="alpha-container" style="padding-top: 20px;">
             
-            <div class="summary-grid">
-                <div class="summary-card" id="card-alpha-vol" onclick="window.toggleFilter('ALPHA')">
-                    <div class="card-title">ALPHA VOL (24H)</div>
-                    <div class="card-value val-neon" id="sum-vol">Connecting...</div>
-                </div>
-                <div class="summary-card" id="card-active" onclick="window.toggleFilter('ALPHA')">
-                    <div class="card-title">ACTIVE TOKENS</div>
-                    <div class="card-value val-white" id="sum-active">0</div>
-                </div>
-                <div class="summary-card" id="card-spot" onclick="window.toggleFilter('SPOT')">
-                    <div class="card-title">LISTED SPOT</div>
-                    <div class="card-value val-spot" id="sum-spot">0</div>
-                </div>
-                <div class="summary-card" id="card-delist" onclick="window.toggleFilter('DELISTED')">
-                    <div class="card-title">DELISTED</div>
-                    <div class="card-value val-delist" id="sum-delisted">0</div>
-                </div>
-            </div>
-
             <div class="alpha-header">
                 <div class="time-badge" id="last-updated">Connecting...</div>
                 <div class="search-group">
@@ -177,20 +256,54 @@ function renderTable() {
     if (!tbody) return;
     tbody.innerHTML = '';
     
-    // 1. Lọc theo Search & Status Filter
+    // --- 1. TÍNH TOÁN DỮ LIỆU HUD (BIG DATA) ---
+    let stats = {
+        totalScan: allTokens.length,
+        countActive: 0, countSpot: 0, countDelisted: 0,
+        alphaDailyTotal: 0, alphaDailyLimit: 0, alphaDailyChain: 0,
+        alphaRolling24h: 0, alphaMarketCap: 0,
+        gainers: 0, losers: 0
+    };
+
+    allTokens.forEach(t => {
+        const status = getTokenStatus(t);
+        
+        // Phân loại đếm số lượng
+        if (status === 'SPOT') stats.countSpot++;
+        else if (status === 'DELISTED') stats.countDelisted++;
+        else {
+            // Đây là ALPHA (ACTIVE)
+            stats.countActive++;
+
+            // CHỈ CỘNG VOLUME/CAP NẾU LÀ ALPHA
+            stats.alphaDailyTotal += (t.volume?.daily_total || 0);
+            stats.alphaDailyLimit += (t.volume?.daily_limit || 0);
+            stats.alphaDailyChain += (t.volume?.daily_onchain || 0);
+            stats.alphaRolling24h += (t.volume?.rolling_24h || 0);
+            stats.alphaMarketCap += (t.market_cap || 0);
+
+            // Sentiment (Chỉ tính Alpha)
+            if ((t.change_24h || 0) >= 0) stats.gainers++;
+            else stats.losers++;
+        }
+    });
+
+    // VẼ HUD
+    renderMarketHUD(stats);
+
+    // --- 2. LỌC & SẮP XẾP BẢNG (LOGIC CŨ) ---
     let list = allTokens.filter(t => {
-        // Lọc Search
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
         const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
         if (!matchSearch) return false;
-
-        // Lọc theo Status (Click vào thẻ Card)
+        
+        // Vì đã bỏ thẻ Filter cũ, mặc định hiển thị ALL hoặc tùy logic bạn muốn
+        // Nếu muốn giữ logic filter cũ:
         const status = getTokenStatus(t);
         if (currentFilter === 'ALL') return true;
         return status === currentFilter; 
     });
 
-    // 2. Sắp xếp (Ưu tiên Pin -> Sort Config)
     list.sort((a, b) => {
         const pinA = pinnedTokens.includes(a.symbol);
         const pinB = pinnedTokens.includes(b.symbol);
@@ -202,52 +315,30 @@ function renderTable() {
         return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
     });
 
-    // 3. Render
+    // --- 3. RENDER BẢNG (LOGIC CŨ GIỮ NGUYÊN) ---
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         const now = Date.now();
         
-        // --- 1. LOGIC HÀNH TRÌNH (CỘT 2) ---
+        // Logic Hành trình
         let startBadges = [];
-        
-        // Điểm xuất phát: TGE hoặc Airdrop
         if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
         if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIRDROP</span>');
-        
-        // Nếu không có cả 2 thì mặc định là TGE (cho các token thường)
-        if (startBadges.length === 0 && !t.offline) {
-             // Có thể để trống hoặc thêm logic khác tùy bạn
-        }
-        
         let journeyHtml = startBadges.join(' ');
         
-        // Điểm kết thúc: SPOT hoặc DELISTED (Chỉ hiện khi offline = true)
         if (t.offline) {
-            let endBadge = '';
-            if (t.listingCex) endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
-            else endBadge = '<span class="smart-badge badge-delisted">DELISTED</span>';
-            
-            // Ghép chuỗi: [START] -> [END]
-            if (journeyHtml) {
-                journeyHtml += ` <span class="status-arrow">➔</span> ${endBadge}`;
-            } else {
-                journeyHtml = endBadge; // Trường hợp dữ liệu cũ quá không có TGE
-            }
+            let endBadge = t.listingCex ? '<span class="smart-badge badge-spot">SPOT</span>' : '<span class="smart-badge badge-delisted">DELISTED</span>';
+            journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         }
 
-        // Ngày tháng (Lấy ListingTime làm chuẩn)
+        // Logic Ngày tháng
         let dateHtml = '';
         if (t.listing_time) {
             const d = new Date(t.listing_time);
-            // Format: MM/DD/YYYY
-            const dateStr = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-            dateHtml = `<div class="journey-date"><i class="far fa-clock"></i> ${dateStr}</div>`;
+            dateHtml = `<div class="journey-date"><i class="far fa-clock"></i> ${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}</div>`;
         }
 
-
-        // --- 2. LOGIC ĐỊNH DANH (CỘT 1) ---
-        
-        // Badge hệ số nhân (Chỉ hiện ở Cột 1 và chỉ khi đang chạy giải)
+        // Logic Badge xPoint
         let mulBadgeHtml = '';
         if (!t.offline && t.listing_time && t.mul_point > 1) {
             const expiryTime = t.listing_time + 2592000000;
@@ -258,24 +349,20 @@ function renderTable() {
             }
         }
 
-        // Contract rút gọn
         const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
 
-        // --- 3. RENDER HTML ---
         tr.innerHTML = `
             <td class="text-center">
                 <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
             </td>
-            
             <td>
                 <div class="token-cell">
                     <div class="logo-wrapper">
                         <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
                         ${chainBadgeHtml}
                     </div>
-                    
                     <div class="token-meta-container">
                         <div class="meta-col-1">
                             <div class="symbol-row">
@@ -286,24 +373,19 @@ function renderTable() {
                                 ${shortContract} <i class="fas fa-copy"></i>
                             </div>
                         </div>
-
                         <div class="meta-col-2">
-                            <div style="margin-bottom: 2px;">
-                                ${journeyHtml}
-                            </div>
+                            <div style="margin-bottom: 2px;">${journeyHtml}</div>
                             ${dateHtml}
                         </div>
                     </div>
                 </div>
             </td>
-            
             <td class="text-end">
                 <div class="text-white-bold">$${formatPrice(t.price)}</div>
                 <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
                     ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}%
                 </div>
             </td>
-            
             <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
             <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_limit)}</td>

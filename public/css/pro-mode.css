@@ -490,3 +490,141 @@ body {
     gap: 4px;
     font-family: var(--font-num);
 }
+
+/* 1. Ẩn grid cũ đi (đề phòng JS chưa cập nhật kịp) */
+.summary-grid { display: none !important; }
+
+/* 2. Container chính của Dashboard mới */
+.market-hud-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* Chia 3 cột */
+    background: rgba(18, 22, 28, 0.6); /* Nền kính tối */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 20px;
+    gap: 24px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.hud-module {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    min-height: 120px;
+}
+
+/* Đường kẻ mờ ngăn cách các cột */
+.border-left-dim {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    padding-left: 24px;
+}
+
+/* Typography chuyên nghiệp */
+.hud-title {
+    font-family: var(--font-main);
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #848E9C;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.hud-main-value {
+    font-family: var(--font-num);
+    font-size: 28px;
+    font-weight: 700;
+    color: #EAECEF;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.hud-sub-label {
+    font-size: 11px;
+    color: #5E6673;
+    margin-bottom: auto; /* Đẩy nội dung dưới xuống đáy */
+}
+
+/* Các hàng thông số nhỏ */
+.hud-stats-row {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #B7BDC6;
+    margin-bottom: 8px;
+    align-items: center;
+    font-family: var(--font-num);
+    font-weight: 600;
+}
+
+.hud-stat-item {
+    display: flex;
+    align-items: center;
+}
+
+.hud-flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.hud-label-small {
+    font-size: 10px;
+    color: #848E9C;
+    text-transform: uppercase;
+}
+
+.hud-value-medium {
+    font-family: var(--font-num);
+    font-size: 18px;
+    font-weight: 700;
+    color: #EAECEF;
+}
+
+/* --- THANH PROGRESS BAR --- */
+.hud-progress-bar {
+    height: 6px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    display: flex;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.bar-segment { height: 100%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* MÀU SẮC CHỈ BÁO */
+.bg-active, .bar-active { background-color: var(--brand); box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+.bg-spot, .bar-spot { background-color: var(--accent); }
+.bg-delist, .bar-delist { background-color: #474D57; }
+
+.bar-limit { background-color: #8B5CF6; }  /* Purple (Limit) */
+.bar-chain { background-color: #F97316; }  /* Orange (On-chain) */
+.bar-green { background-color: var(--neon-green); }
+.bar-red { background-color: #F6465D; }
+
+.text-neon { color: var(--brand); text-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.text-purple { color: #A78BFA; }
+.text-orange { color: #FB923C; }
+.text-gold { color: var(--accent); }
+
+/* Dots */
+.hud-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; display: inline-block; }
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 992px) {
+    .market-hud-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .border-left-dim {
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-left: 0;
+        padding-top: 20px;
+    }
+}
