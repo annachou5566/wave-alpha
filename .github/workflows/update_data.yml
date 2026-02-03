@@ -2,8 +2,8 @@ name: Update Alpha Market Data
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # Chạy tự động mỗi 15 phút
-  workflow_dispatch: # Cho phép bấm nút chạy tay để test
+    - cron: '*/15 * * * *' # Chạy mỗi 15 phút
+  workflow_dispatch: # Nút chạy tay
 
 permissions:
   contents: write
@@ -25,9 +25,13 @@ jobs:
       run: |
         pip install requests python-dotenv
 
+    # QUAN TRỌNG: Kéo code mới về TRƯỚC khi chạy script
+    # Để đảm bảo không bị xung đột với file json sắp tạo ra
+    - name: Pull latest changes
+      run: git pull origin main --rebase || echo "Already up to date"
+
     - name: Run Fetch Script
       env: 
-        # ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT: Bơm Secret vào môi trường chạy
         BINANCE_INTERNAL_AGG_API: ${{ secrets.BINANCE_INTERNAL_AGG_API }}
         BINANCE_INTERNAL_KLINES_API: ${{ secrets.BINANCE_INTERNAL_KLINES_API }}
       run: |
@@ -37,9 +41,7 @@ jobs:
       run: |
         git config --global user.name "AlphaBot"
         git config --global user.email "bot@wave-alpha.com"
-        # Kéo code mới nhất về trước để tránh xung đột (Conflict)
-        git pull --rebase origin main || echo "No changes to pull"
         git add public/data/market-data.json
-        # Chỉ commit nếu có sự thay đổi
-        git commit -m "🤖 Update Market Data: $(date)" || exit 0
+        # Kiểm tra xem có gì thay đổi không rồi mới commit
+        git diff-index --quiet HEAD || git commit -m "🤖 Update Market Data: $(date)"
         git push
