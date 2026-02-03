@@ -14,7 +14,6 @@ API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
 if not API_AGG_TICKER or not API_AGG_KLINES:
-    # Nếu chạy local mà không có .env thì cảnh báo, trên Github thì đã có Secret
     print("⚠️ Cảnh báo: Kiểm tra lại biến môi trường API.")
 
 HEADERS = {
@@ -100,11 +99,12 @@ def get_sparkline_data(chain_id, contract_addr):
         return [safe_float(k[4]) for k in res["data"]["klineInfos"]]
     return []
 
-# --- 3. WORKER THÔNG MINH (SELF-HEALING) ---
+# --- 3. WORKER THÔNG MINH (LOGIC CHUẨN) ---
 def process_token_smart(item):
     aid = item.get("alphaId")
     if not aid: return None
 
+    # Lấy dữ liệu cơ bản từ API Tổng (Nhẹ)
     vol_24h = safe_float(item.get("volume24h"))
     price = safe_float(item.get("price"))
     change_24h = safe_float(item.get("percentChange24h"))
@@ -120,17 +120,29 @@ def process_token_smart(item):
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
     
-    # Logic Status
+    # --- PHÂN LOẠI TRẠNG THÁI (STATUS LOGIC) ---
     status = "ALPHA"
+    
     if is_offline is True:
-        if is_listing_cex is True: status = "SPOT"
+        # Trường hợp 1: Đã List CEX (Theo API nội bộ) -> SPOT
+        if is_listing_cex is True:
+            status = "SPOT"
         else:
+            # Trường hợp 2: Check Public Spot (Cross-Check) -> SPOT
             if symbol in ACTIVE_SPOT_SYMBOLS:
                 status = "SPOT"
-                is_listing_cex = True 
-            else: status = "DELISTED"
+                is_listing_cex = True # Sửa lại cờ cho đúng thực tế
+            
+            # Trường hợp 3: Check "Còn thở" (Volume > 0) -> Vẫn là ALPHA
+            elif vol_24h > 0:
+                status = "ALPHA"
+                is_offline = False # Ép lại thành False để Web hiện như đang chạy
+            
+            # Trường hợp 4: Chết hẳn -> DELISTED
+            else:
+                status = "DELISTED"
 
-    # --- LOGIC CACHING TỰ SỬA LỖI ---
+    # --- LOGIC CACHING (TỰ SỬA LỖI) ---
     old_data = OLD_DATA_MAP.get(aid)
     
     daily_total = 0.0
@@ -140,15 +152,15 @@ def process_token_smart(item):
     
     should_fetch_details = False
     
+    # Nếu là ALPHA (hoặc được hồi sinh thành ALPHA) -> Phải tải chi tiết
     if status == "ALPHA":
         should_fetch_details = True
     else:
-        # Nếu đã SPOT/DELISTED -> Kiểm tra Cache
+        # Nếu đã SPOT/DELISTED -> Kiểm tra Cache xem dùng được không
         if old_data and old_data.get("status") == status:
             cached_total = safe_float(old_data["volume"].get("daily_total"))
             
-            # QUAN TRỌNG: Chỉ dùng Cache nếu nó có dữ liệu Volume > 0
-            # Nếu Cache = 0 -> Có thể file cũ bị lỗi -> Buộc phải Fetch lại
+            # Chỉ dùng Cache nếu Cache có dữ liệu tốt (>0)
             if cached_total > 0:
                 daily_total = cached_total
                 daily_limit = safe_float(old_data["volume"].get("daily_limit"))
@@ -156,14 +168,18 @@ def process_token_smart(item):
                 chart_data = old_data.get("chart", [])
                 should_fetch_details = False 
             else:
-                should_fetch_details = True # Cache rỗng, tải lại đi!
+                should_fetch_details = True # Cache lỗi -> Tải lại
         else:
-            should_fetch_details = True
+            should_fetch_details = True # Trạng thái đổi -> Tải lại
 
+    # Gọi API Chi tiết (Klines) nếu cần
     if should_fetch_details and vol_24h > 0 and contract and chain_id:
         daily_total, daily_limit = fetch_daily_utc_stats(chain_id, contract)
+        
+        # Fix lỗi dữ liệu = 0
         if daily_total == 0 and daily_limit > 0: daily_total = daily_limit
         if daily_total < daily_limit: daily_total = daily_limit
+        
         daily_onchain = daily_total - daily_limit
         chart_data = get_sparkline_data(chain_id, contract)
 
@@ -175,7 +191,7 @@ def process_token_smart(item):
         "chain": chain_name,
         "chain_icon": item.get("chainIconUrl"),
         "contract": contract,
-        "offline": is_offline,
+        "offline": is_offline, # Đã được cập nhật nếu hồi sinh
         "listingCex": is_listing_cex,
         "status": status,
         "onlineTge": item.get("onlineTge", False),
