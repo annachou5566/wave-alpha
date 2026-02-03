@@ -33,35 +33,29 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
-// --- HÀM VẼ DASHBOARD (MARKET HUD) - ĐÃ FIX LỖI ---
+// --- HÀM VẼ DASHBOARD (MARKET HUD) - ĐÃ SỬA TEXT & LOGIC ---
 function renderMarketHUD(stats) {
-    // 1. Tìm vùng hiển thị chính
     const view = document.getElementById('alpha-market-view');
     if (!view) return;
 
-    // 2. QUAN TRỌNG: Tìm đúng cái hộp chứa nội dung (alpha-container)
-    // Vì header nằm trong hộp này, nên ta phải chèn HUD vào hộp này mới đúng luật
     const container = view.querySelector('.alpha-container'); 
     if (!container) return;
 
-    // 3. Kiểm tra xem đã có HUD chưa, chưa có thì tạo mới
     let hud = document.getElementById('market-hud');
     if (!hud) {
         hud = document.createElement('div');
         hud.id = 'market-hud';
         hud.className = 'market-hud-container';
         
-        // 4. Chèn HUD vào ngay trước thanh Header Search
         const header = container.querySelector('.alpha-header');
         if (header) {
-            // Bây giờ header đúng là con ruột của container -> Chèn OK không lỗi
             container.insertBefore(hud, header); 
         } else {
             container.prepend(hud);
         }
     }
 
-    // 5. Tính toán phần trăm hiển thị (Giữ nguyên logic cũ)
+    // Tính toán phần trăm
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
@@ -72,17 +66,17 @@ function renderMarketHUD(stats) {
     const totalBreadth = stats.gainers + stats.losers;
     const gainPct = totalBreadth > 0 ? (stats.gainers / totalBreadth) * 100 : 50;
 
-    // 6. Render nội dung HTML
+    // Render HTML (Đã sửa Win Rate -> Spot Rate, Dead -> Delisted)
     hud.innerHTML = `
         <div class="hud-module">
             <div class="hud-title">TOKEN LIFECYCLE (ALL TIME)</div>
             <div class="hud-main-value">${stats.totalScan} <span style="font-size:12px; color:#5E6673">TOKENS</span></div>
-            <div class="hud-sub-label">Win Rate: <span class="text-gold">${pctSpot.toFixed(1)}%</span> (Spot/Total)</div>
+            <div class="hud-sub-label">Spot Rate: <span class="text-gold">${pctSpot.toFixed(1)}%</span> (Spot/Total)</div>
             
             <div class="hud-stats-row">
                 <div class="hud-stat-item"><span class="hud-dot bg-active"></span> Active: ${stats.countActive}</div>
                 <div class="hud-stat-item"><span class="hud-dot bg-spot"></span> Spot: ${stats.countSpot}</div>
-                <div class="hud-stat-item"><span class="hud-dot bg-delist"></span> Dead: ${stats.countDelisted}</div>
+                <div class="hud-stat-item"><span class="hud-dot bg-delist"></span> Delisted: ${stats.countDelisted}</div>
             </div>
             
             <div class="hud-progress-bar">
@@ -273,37 +267,29 @@ function renderTable() {
     allTokens.forEach(t => {
         const status = getTokenStatus(t);
         
-        // Phân loại đếm số lượng
         if (status === 'SPOT') stats.countSpot++;
         else if (status === 'DELISTED') stats.countDelisted++;
         else {
-            // Đây là ALPHA (ACTIVE)
             stats.countActive++;
-
-            // CHỈ CỘNG VOLUME/CAP NẾU LÀ ALPHA
             stats.alphaDailyTotal += (t.volume?.daily_total || 0);
             stats.alphaDailyLimit += (t.volume?.daily_limit || 0);
             stats.alphaDailyChain += (t.volume?.daily_onchain || 0);
             stats.alphaRolling24h += (t.volume?.rolling_24h || 0);
             stats.alphaMarketCap += (t.market_cap || 0);
 
-            // Sentiment (Chỉ tính Alpha)
             if ((t.change_24h || 0) >= 0) stats.gainers++;
             else stats.losers++;
         }
     });
 
-    // VẼ HUD
     renderMarketHUD(stats);
 
-    // --- 2. LỌC & SẮP XẾP BẢNG (LOGIC CŨ) ---
+    // --- 2. LỌC & SẮP XẾP BẢNG ---
     let list = allTokens.filter(t => {
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
         const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
         if (!matchSearch) return false;
         
-        // Vì đã bỏ thẻ Filter cũ, mặc định hiển thị ALL hoặc tùy logic bạn muốn
-        // Nếu muốn giữ logic filter cũ:
         const status = getTokenStatus(t);
         if (currentFilter === 'ALL') return true;
         return status === currentFilter; 
@@ -320,12 +306,11 @@ function renderTable() {
         return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
     });
 
-    // --- 3. RENDER BẢNG (LOGIC CŨ GIỮ NGUYÊN) ---
+    // --- 3. RENDER BẢNG ---
     list.slice(0, displayCount).forEach((t, i) => {
         const tr = document.createElement('tr');
         const now = Date.now();
         
-        // Logic Hành trình
         let startBadges = [];
         if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
         if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIRDROP</span>');
@@ -336,14 +321,15 @@ function renderTable() {
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         }
 
-        // Logic Ngày tháng
+        // --- SỬA NGÀY THÁNG Ở ĐÂY ---
         let dateHtml = '';
         if (t.listing_time) {
             const d = new Date(t.listing_time);
-            dateHtml = `<div class="journey-date"><i class="far fa-clock"></i> ${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}</div>`;
+            // Định dạng: Ngày / Tháng / Năm
+            const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            dateHtml = `<div class="journey-date"><i class="far fa-clock"></i> ${dateStr}</div>`;
         }
 
-        // Logic Badge xPoint
         let mulBadgeHtml = '';
         if (!t.offline && t.listing_time && t.mul_point > 1) {
             const expiryTime = t.listing_time + 2592000000;
