@@ -77,28 +77,51 @@ def fetch_with_retry(url, retries=3):
     return None
 
 # --- HÀM GỌI API CHI TIẾT (CHUẨN DEBUG) ---
+# --- TÌM HÀM NÀY VÀ THAY THẾ NÓ ---
 def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total = 0.0
     d_limit = 0.0
-    d_market = 0.0 # On-Chain
+    d_market = 0.0 
     
-    # 1. Gọi Limit (Index 5)
-    url_limit = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=1&tokenAddress={contract_addr}&dataType=limit"
-    res_limit = fetch_with_retry(url_limit)
-    if res_limit and res_limit.get("data") and res_limit["data"].get("klineInfos"):
-        d_limit = get_usd_from_kline(res_limit["data"]["klineInfos"][0])
+    # Lấy 5 cây nến để có khoảng rộng mà so sánh ngày
+    base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=5&tokenAddress={contract_addr}"
     
-    # 2. Gọi Market (Index 5) - ĐÂY LÀ ON-CHAIN
-    url_market = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=1&tokenAddress={contract_addr}&dataType=market"
-    res_market = fetch_with_retry(url_market)
-    if res_market and res_market.get("data") and res_market["data"].get("klineInfos"):
-        d_market = get_usd_from_kline(res_market["data"]["klineInfos"][0])
+    # 1. GỌI LIMIT TRƯỚC -> LẤY MỐC THỜI GIAN
+    limit_infos = []
+    res_limit = fetch_with_retry(f"{base_url}&dataType=limit")
+    if res_limit and res_limit.get("data"):
+        limit_infos = res_limit["data"].get("klineInfos", [])
+    
+    # Nếu không có dữ liệu Limit thì coi như chưa có gì
+    if not limit_infos: return 0.0, 0.0, 0.0
 
-    # 3. Gọi Aggregate (Index 5) - Tổng
-    url_total = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=1&tokenAddress={contract_addr}&dataType=aggregate"
-    res_total = fetch_with_retry(url_total)
-    if res_total and res_total.get("data") and res_total["data"].get("klineInfos"):
-        d_total = get_usd_from_kline(res_total["data"]["klineInfos"][0])
+    # Lấy cây nến Limit MỚI NHẤT làm chuẩn
+    latest_limit = limit_infos[-1]
+    target_ts = latest_limit[0]     # Timestamp mục tiêu (ví dụ: ngày 03/02)
+    d_limit = safe_float(latest_limit[5]) # Volume Limit (Index 5)
+
+    # 2. GỌI MARKET (ON-CHAIN) -> TÌM ĐÚNG TIMESTAMP ĐÓ
+    res_market = fetch_with_retry(f"{base_url}&dataType=market")
+    if res_market and res_market.get("data"):
+        m_infos = res_market["data"].get("klineInfos", [])
+        # Duyệt vòng lặp để tìm cây nến có cùng ngày với Limit
+        for k in m_infos:
+            if k[0] == target_ts:
+                d_market = safe_float(k[5])
+                break # Tìm thấy thì dừng ngay
+
+    # 3. GỌI AGGREGATE (TOTAL) -> TÌM ĐÚNG TIMESTAMP ĐÓ
+    res_total = fetch_with_retry(f"{base_url}&dataType=aggregate")
+    if res_total and res_total.get("data"):
+        t_infos = res_total["data"].get("klineInfos", [])
+        for k in t_infos:
+            if k[0] == target_ts:
+                d_total = safe_float(k[5])
+                break
+
+    # Logic dự phòng: Nếu Total API bị lỗi (nhỏ hơn thành phần), tự cộng lại
+    if d_total < (d_limit + d_market):
+        d_total = d_limit + d_market
 
     return d_total, d_limit, d_market
 
@@ -119,61 +142,81 @@ def process_token_smart(item):
     aid = item.get("alphaId")
     if not aid: return None
 
-    # --- GIỮ NGUYÊN TOÀN BỘ BIẾN CỦA BẠN ---
+    # --- KHAI BÁO BIẾN (GIỮ NGUYÊN) ---
     vol_24h = safe_float(item.get("volume24h"))
     price = safe_float(item.get("price"))
     change_24h = safe_float(item.get("percentChange24h"))
     tx_count = safe_float(item.get("count24h"))
     liquidity = safe_float(item.get("liquidity"))
     market_cap = safe_float(item.get("marketCap"))
-    
     contract = item.get("contractAddress")
-    chain_id = item.get("chainId") 
+    chain_id = item.get("chainId")
     chain_name = item.get("chainName", "")
     symbol = item.get("symbol")
 
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
     is_cex_off_display = item.get("cexOffDisplay", False)
+
+    # --- LOGIC STATUS (ĐÃ SỬA LẠI CHỖ NÀY) ---
+    # Logic cũ: Check Spot trước -> Sai.
+    # Logic mới: Check Offline trước. 
     
-    # --- 1. SỬA LOGIC STATUS (ĐẢM BẢO CHÍNH XÁC THEO OFFLINE) ---
     status = "ALPHA"
-    
+
     if is_offline:
-        # Khi đã offline mới xét xem là Spot hay Delisted
+        # Chỉ khi API báo Offline thì mới xét xem là Spot hay Delisted
         if is_listing_cex is True or symbol in ACTIVE_SPOT_SYMBOLS:
             status = "SPOT"
-            is_listing_cex = True # Đồng bộ cờ listingCex
+            is_listing_cex = True # Đồng bộ cờ
         else:
             status = "DELISTED"
     else:
-        # Nếu chưa Offline (offline=False) -> CHẮC CHẮN LÀ ALPHA (Fix lỗi KOGE)
+        # Nếu offline = False -> Nó vẫn đang hiện diện trên Alpha -> LÀ ALPHA
+        # (Kể cả symbol có trong ACTIVE_SPOT_SYMBOLS cũng bỏ qua)
         status = "ALPHA"
 
-    # --- 2. SỬA LOGIC LẤY DỮ LIỆU (QUÉT FULL CHI TIẾT) ---
+    # --- LOGIC CACHING (GIỮ NGUYÊN CODE CỦA BẠN) ---
+    old_data = OLD_DATA_MAP.get(aid)
     daily_total = 0.0
     daily_limit = 0.0
     daily_onchain = 0.0
     chart_data = []
     
-    # Chỉ quét khi có Volume và thông tin Contract
-    if vol_24h > 0 and contract and chain_id:
-        # Gọi 3 API chi tiết (Limit, Market, Agg) để lấy Volume chuẩn
+    should_fetch_details = False
+    
+    if status == "ALPHA":
+        should_fetch_details = True
+    else:
+        if old_data and old_data.get("status") == status:
+            cached_total = safe_float(old_data["volume"].get("daily_total"))
+            if cached_total > 0:
+                daily_total = cached_total
+                daily_limit = safe_float(old_data["volume"].get("daily_limit"))
+                daily_onchain = safe_float(old_data["volume"].get("daily_onchain"))
+                chart_data = old_data.get("chart", [])
+                should_fetch_details = False
+            else:
+                should_fetch_details = True
+        else:
+            should_fetch_details = True
+
+    if should_fetch_details and vol_24h > 0 and contract and chain_id:
+        # Gọi 3 API
         d_total, d_limit, d_market = fetch_daily_utc_stats(chain_id, contract)
         
+        # Gán trực tiếp
         daily_limit = d_limit
-        daily_onchain = d_market 
+        daily_onchain = d_market
         
-        # Tính tổng Volume chuẩn xác
+        # Tính tổng chuẩn
         if d_total > 0 and d_total >= (d_limit + d_market):
             daily_total = d_total
         else:
             daily_total = d_limit + d_market
             
-        # Gọi hàm lấy Chart mới (bao gồm cả giá 'p' và volume 'v')
         chart_data = get_sparkline_data(chain_id, contract)
 
-    # --- GIỮ NGUYÊN CẤU TRÚC RETURN CỦA BẠN ---
     return {
         "id": aid,
         "symbol": symbol,
@@ -182,7 +225,7 @@ def process_token_smart(item):
         "chain": chain_name,
         "chain_icon": item.get("chainIconUrl"),
         "contract": contract,
-        "offline": is_offline, 
+        "offline": is_offline,
         "listingCex": is_listing_cex,
         "status": status,
         "onlineTge": item.get("onlineTge", False),
