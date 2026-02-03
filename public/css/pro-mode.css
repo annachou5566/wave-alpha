@@ -765,4 +765,32 @@ body {
     background-color: #1e2329; /* Màu sáng hơn chút khi hover */
 }
 
+/* --- FINAL PRO COLOR PALETTE (NEUTRAL STYLE) --- */
+
+/* 1. TEXT PRIMARY: Dùng cho TẤT CẢ các chỉ số tiền tệ ($) */
+/* Giúp Limit, On-chain, Total, Liquidity sáng đều như nhau */
+.text-primary-val {
+    color: #EAECEF !important;
+    font-family: var(--font-num);
+    font-weight: 600; /* Đậm vừa phải, dễ đọc */
+    font-size: 14px;
+}
+
+/* 2. TEXT SECONDARY: Dùng cho các số đếm (như Transaction Count) */
+.text-secondary-val {
+    color: #848E9C !important;
+    font-family: var(--font-num);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* 3. SUB-HEADER: Làm dịu màu tiêu đề phụ */
+.h-sub th {
+    color: #5E6673 !important;
+    font-weight: 600;
+    font-size: 11px !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
 .summary-grid { display: none !important; }

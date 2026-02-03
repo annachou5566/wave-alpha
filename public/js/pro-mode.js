@@ -367,7 +367,6 @@ function renderTable() {
             <td class="text-center col-fix-1">
                 <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
             </td>
-
             <td class="col-fix-2">
                 <div class="token-cell" style="justify-content: flex-start;">
                     <div class="logo-wrapper">
@@ -385,25 +384,31 @@ function renderTable() {
                     </div>
                 </div>
             </td>
-
             <td style="padding-left:15px; vertical-align: middle;">
                 <div style="margin-bottom: 4px;">${journeyHtml}</div>
                 ${dateHtml}
             </td>
 
             <td class="text-end">
-                <div class="text-white-bold">$${formatPrice(t.price)}</div>
-                <div style="font-size:11px; font-weight:700" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+                <div class="text-primary-val">$${formatPrice(t.price)}</div>
+                <div style="font-size:11px; font-weight:700; margin-top:2px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
                     ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}%
                 </div>
             </td>
+
             <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
-            <td class="text-end font-num text-white-bold">$${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end font-num text-neon border-right-dim">$${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end font-num text-dim">$${formatNum(t.volume.daily_onchain)}</td>
-            <td class="text-end font-num text-white">$${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end font-num text-secondary">${formatInt(t.tx_count)}</td>
-            <td class="text-end font-num text-brand">$${formatNum(t.liquidity)}</td>
+
+            <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_total)}</td>
+            
+            <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_limit)}</td>
+            
+            <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_onchain)}</td>
+            
+            <td class="text-end font-num text-primary-val">$${formatNum(t.volume.rolling_24h)}</td>
+            
+            <td class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
+            
+            <td class="text-end font-num text-primary-val">$${formatNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
     });
