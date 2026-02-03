@@ -15,8 +15,8 @@ API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
-# Điều chỉnh giới hạn quét VIP
-TOP_TOKEN_LIMIT = 20
+# Điều chỉnh giới hạn quét VIP (Deep Fetch)
+TOP_TOKEN_LIMIT = 60 
 
 scraper = cloudscraper.create_scraper(
     browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
@@ -57,7 +57,6 @@ def fetch_smart(target_url, retries=3):
                 
                 if res.status_code == 200:
                     data = res.json()
-                    # Kiểm tra mã phản hồi nội bộ của Binance
                     if data and isinstance(data, dict):
                         if data.get("code") == "000000":
                             return data
@@ -84,7 +83,7 @@ def fetch_smart(target_url, retries=3):
                     return data
         except: pass
         
-        time.sleep(2) # Nghỉ giữa các lần retry
+        time.sleep(2)
             
     return None
 
@@ -110,12 +109,12 @@ def get_active_spot_symbols():
     except: pass
     return set()
 
-# --- 3. LOGIC DATA (USING DYNAMIC CHAIN_ID) ---
+# --- 3. LOGIC DATA (FIX SOLANA & KLINE) ---
 def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total, d_limit, d_market = 0.0, 0.0, 0.0
     if not API_AGG_KLINES: return 0, 0, 0
 
-    
+    # FIX: Solana (CT_501) dùng ví Case-sensitive, các chain khác dùng Lowercase
     clean_addr = str(contract_addr)
     if chain_id != "CT_501":
         clean_addr = clean_addr.lower()
@@ -134,6 +133,19 @@ def fetch_daily_utc_stats(chain_id, contract_addr):
         d_total = d_limit + d_market
     return d_total, d_limit, d_market
 
+def get_sparkline_data(chain_id, contract_addr):
+    if not API_AGG_KLINES: return []
+    clean_addr = str(contract_addr)
+    if chain_id != "CT_501":
+        clean_addr = clean_addr.lower()
+
+    url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit=24&tokenAddress={clean_addr}&dataType=aggregate"
+    res = fetch_smart(url)
+    if res and res.get("data") and res["data"].get("klineInfos"):
+        return [{"p": safe_float(k[4]), "v": safe_float(k[5])} for k in res["data"]["klineInfos"]]
+    return []
+
+# --- 4. MAIN PROCESSOR ---
 def process_token_smart(item, is_vip=False):
     aid = item.get("alphaId")
     if not aid: return None
@@ -143,26 +155,25 @@ def process_token_smart(item, is_vip=False):
     contract = item.get("contractAddress")
     chain_id = item.get("chainId")
     
-    # --- LOGIC PHÂN LOẠI TRẠNG THÁI ---
+    # 1. PHÂN LOẠI TRẠNG THÁI
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
     
     status = "ALPHA"
     if is_offline:
-        # Nếu đã list Spot hoặc Cex, hoặc có trong danh sách Trading của Binance
         if is_listing_cex or symbol in ACTIVE_SPOT_SYMBOLS:
             status = "SPOT"
         else:
             status = "DELISTED"
 
-    # --- QUYẾT ĐỊNH CÓ FETCH CHI TIẾT HAY KHÔNG ---
-    # Chỉ fetch nếu: status là ALPHA + là VIP + chưa bị Offline
+    # 2. LOGIC FETCH CHI TIẾT
+    # Chỉ fetch nếu: status là ALPHA + là VIP + không bị Offline
     should_fetch_detail = (is_vip and status == "ALPHA" and not is_offline)
 
     daily_total, daily_limit, daily_onchain = 0.0, 0.0, 0.0
     chart_data = []
 
-    # Thử lấy từ Cache cũ nếu không cần fetch mới
+    # Ưu tiên lấy từ Cache nếu không cần fetch mới
     old = OLD_DATA_MAP.get(aid)
     if old and not should_fetch_detail:
         if old.get("volume"):
@@ -171,7 +182,7 @@ def process_token_smart(item, is_vip=False):
             daily_total = safe_float(old["volume"].get("daily_total"))
             chart_data = old.get("chart", [])
 
-    # Gọi API chi tiết cho các con hàng thực sự cần thiết (ALPHA VIP)
+    # Thực hiện Deep Fetch cho hàng ALPHA VIP
     if should_fetch_detail and vol_24h > 0 and contract and chain_id:
         print(f"📡 Deep Processing {symbol} ({chain_id})...", end=" ", flush=True)
         d_t, d_l, d_m = fetch_daily_utc_stats(chain_id, contract)
@@ -180,7 +191,7 @@ def process_token_smart(item, is_vip=False):
         chart_data = get_sparkline_data(chain_id, contract)
         print(f"OK (Total: {daily_total:,.0f})")
     
-    # Fallback cho các trường hợp không fetch hoặc fetch lỗi
+    # Fallback cho SPOT/DELISTED hoặc lỗi fetch
     if daily_total <= 0: 
         daily_total = vol_24h
 
@@ -235,7 +246,7 @@ def fetch_data():
     raw_data = raw_res.get("data", [])
     print(f"Xong! ({len(raw_data)} tokens)")
 
-    # Sắp xếp theo Volume
+    # Sắp xếp theo Volume 24h
     all_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
     all_tokens.sort(key=lambda x: safe_float(x.get("volume24h")), reverse=True)
     
@@ -259,7 +270,7 @@ def fetch_data():
         r = process_token_smart(t, is_vip=False)
         if r: results.append(r)
 
-    # Sắp xếp lại danh sách cuối cùng theo volume total
+    # Sắp xếp danh sách cuối cùng theo volume total thực tế
     results.sort(key=lambda x: x["volume"]["daily_total"], reverse=True)
 
     final_output = {
