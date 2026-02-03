@@ -155,18 +155,17 @@ function injectLayout() {
         <div class="alpha-container" style="padding-top: 20px;">
             
             <div class="alpha-header">
-                <div class="search-group">
-                    <i class="fas fa-search search-icon-small"></i>
-                    <input type="text" id="alpha-search" placeholder="Search Token..." autocomplete="off">
-                </div>
-                
                 <div class="filter-group">
                     <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
                     <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
                     <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
                     <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
-                    
                     <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
+                </div>
+
+                <div class="search-group">
+                    <i class="fas fa-search search-icon-small"></i>
+                    <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                 </div>
             </div>
 
@@ -195,6 +194,7 @@ function injectLayout() {
             </div>
         </div>
     `;
+    
     tabNav.insertAdjacentElement('afterend', marketView);
 }
 
@@ -492,33 +492,42 @@ window.toggleFilter = (filterType) => {
     renderTable(); // Vẽ lại bảng
 };
 
-// --- HÀM VẼ BIỂU ĐỒ MINI (SPARKLINE SVG) ---
+// --- HÀM VẼ BIỂU ĐỒ MINI (AREA GRADIENT STYLE) ---
 function getSparklineSVG(data) {
-    // Nếu không có dữ liệu hoặc dữ liệu ít hơn 2 điểm -> Không vẽ
     if (!data || !Array.isArray(data) || data.length < 2) return '';
 
-    const width = 80;  // Chiều rộng biểu đồ
-    const height = 30; // Chiều cao biểu đồ
+    const width = 100; // Tăng chiều rộng chút cho đẹp
+    const height = 35;
     const min = Math.min(...data);
     const max = Math.max(...data);
-    const range = max - min || 1; // Tránh chia cho 0
+    const range = max - min || 1;
 
-    // Logic màu sắc: Giá cuối > Giá đầu = Xanh, ngược lại = Đỏ
+    // Màu sắc: Xanh (Tăng) / Đỏ (Giảm)
     const isUp = data[data.length - 1] >= data[0];
     const color = isUp ? '#0ecb81' : '#f6465d'; 
+    const id = 'grad-' + Math.random().toString(36).substr(2, 9); // ID ngẫu nhiên cho gradient
 
-    // Tạo đường dẫn SVG (Path Command)
-    // Công thức: M x1 y1 L x2 y2 ...
-    let pathD = data.map((val, i) => {
+    // 1. Tạo đường line (Stroke)
+    let points = data.map((val, i) => {
         const x = (i / (data.length - 1)) * width;
-        // SVG toạ độ y=0 là ở trên cùng, nên phải đảo ngược lại (height - val)
-        const y = height - ((val - min) / range) * height; 
-        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+        const y = height - ((val - min) / range) * (height - 4) - 2; // Padding 2px
+        return `${x},${y}`;
     }).join(' ');
 
+    // 2. Tạo vùng phủ màu (Fill Area) - Khép kín vòng xuống đáy
+    // Bắt đầu từ đáy trái (0,height) -> Đi theo các điểm -> Xuống đáy phải (width,height)
+    const fillPoints = `0,${height} ${points} ${width},${height}`;
+
     return `
-        <svg width="${width}" height="${height}" class="mini-chart">
-            <path d="${pathD}" stroke="${color}" class="chart-path" />
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="${id}" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="${color}" stop-opacity="0.3" />
+                    <stop offset="100%" stop-color="${color}" stop-opacity="0.05" />
+                </linearGradient>
+            </defs>
+            <polygon points="${fillPoints}" fill="url(#${id})" stroke="none" />
+            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
     `;
 }
