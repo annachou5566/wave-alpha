@@ -16,7 +16,7 @@ API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
 # Điều chỉnh giới hạn quét VIP
-TOP_TOKEN_LIMIT = 60 
+TOP_TOKEN_LIMIT = 20
 
 scraper = cloudscraper.create_scraper(
     browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
@@ -113,88 +113,74 @@ def get_active_spot_symbols():
 # --- 3. LOGIC DATA (USING DYNAMIC CHAIN_ID) ---
 def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total, d_limit, d_market = 0.0, 0.0, 0.0
-    
-    if not API_AGG_KLINES:
-        print("❌ CRITICAL: Thiếu Secret BINANCE_INTERNAL_KLINES_API")
-        return 0, 0, 0
+    if not API_AGG_KLINES: return 0, 0, 0
 
-    # FIX: Binance bắt buộc contract address phải viết THƯỜNG
-    clean_addr = str(contract_addr).lower()
     
-    # URL chuẩn (agg-klines có s)
+    clean_addr = str(contract_addr)
+    if chain_id != "CT_501":
+        clean_addr = clean_addr.lower()
+    
     base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=5&tokenAddress={clean_addr}"
     
-    # 1. LIMIT (Orderbook)
-    res_limit = fetch_smart(f"{base_url}&dataType=limit")
-    if res_limit and res_limit.get("data"):
-        k = res_limit["data"].get("klineInfos", [])
-        if k: d_limit = safe_float(k[-1][5])
-
-    # 2. MARKET (On-chain)
-    res_market = fetch_smart(f"{base_url}&dataType=market")
-    if res_market and res_market.get("data"):
-        k = res_market["data"].get("klineInfos", [])
-        if k: d_market = safe_float(k[-1][5])
-
-    # 3. AGGREGATE (Total)
-    res_total = fetch_smart(f"{base_url}&dataType=aggregate")
-    if res_total and res_total.get("data"):
-        k = res_total["data"].get("klineInfos", [])
-        if k: d_total = safe_float(k[-1][5])
-
-    # Logic kiểm tra tính hợp lệ của Total
+    for dtype in ["limit", "market", "aggregate"]:
+        res = fetch_smart(f"{base_url}&dataType={dtype}")
+        if res and res.get("data") and res["data"].get("klineInfos"):
+            val = safe_float(res["data"]["klineInfos"][-1][5])
+            if dtype == "limit": d_limit = val
+            elif dtype == "market": d_market = val
+            elif dtype == "aggregate": d_total = val
+                
     if d_total < (d_limit + d_market):
         d_total = d_limit + d_market
-        
     return d_total, d_limit, d_market
 
-def get_sparkline_data(chain_id, contract_addr):
-    if not API_AGG_KLINES: return []
-    clean_addr = str(contract_addr).lower()
-    url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit=24&tokenAddress={clean_addr}&dataType=aggregate"
-    res = fetch_smart(url)
-    if res and res.get("data") and res["data"].get("klineInfos"):
-        return [{"p": safe_float(k[4]), "v": safe_float(k[5])} for k in res["data"]["klineInfos"]]
-    return []
-
-# --- 4. MAIN ---
 def process_token_smart(item, is_vip=False):
-    should_fetch = is_vip
     aid = item.get("alphaId")
     if not aid: return None
 
     vol_24h = safe_float(item.get("volume24h"))
     symbol = item.get("symbol")
     contract = item.get("contractAddress")
-    chain_id = item.get("chainId") # Lấy ChainID động từ API tổng
+    chain_id = item.get("chainId")
     
+    # --- LOGIC PHÂN LOẠI TRẠNG THÁI ---
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
+    
     status = "ALPHA"
     if is_offline:
-        status = "SPOT" if (is_listing_cex or symbol in ACTIVE_SPOT_SYMBOLS) else "DELISTED"
+        # Nếu đã list Spot hoặc Cex, hoặc có trong danh sách Trading của Binance
+        if is_listing_cex or symbol in ACTIVE_SPOT_SYMBOLS:
+            status = "SPOT"
+        else:
+            status = "DELISTED"
+
+    # --- QUYẾT ĐỊNH CÓ FETCH CHI TIẾT HAY KHÔNG ---
+    # Chỉ fetch nếu: status là ALPHA + là VIP + chưa bị Offline
+    should_fetch_detail = (is_vip and status == "ALPHA" and not is_offline)
 
     daily_total, daily_limit, daily_onchain = 0.0, 0.0, 0.0
     chart_data = []
 
-    # Kiểm tra Cache
+    # Thử lấy từ Cache cũ nếu không cần fetch mới
     old = OLD_DATA_MAP.get(aid)
-    if old and not should_fetch:
+    if old and not should_fetch_detail:
         if old.get("volume"):
             daily_limit = safe_float(old["volume"].get("daily_limit"))
             daily_onchain = safe_float(old["volume"].get("daily_onchain"))
             daily_total = safe_float(old["volume"].get("daily_total"))
             chart_data = old.get("chart", [])
 
-    # Lấy dữ liệu mới cho VIP
-    if should_fetch and vol_24h > 0 and contract and chain_id:
-        print(f"📡 Processing {symbol}...", end=" ", flush=True)
+    # Gọi API chi tiết cho các con hàng thực sự cần thiết (ALPHA VIP)
+    if should_fetch_detail and vol_24h > 0 and contract and chain_id:
+        print(f"📡 Deep Processing {symbol} ({chain_id})...", end=" ", flush=True)
         d_t, d_l, d_m = fetch_daily_utc_stats(chain_id, contract)
         daily_limit, daily_onchain = d_l, d_m
         daily_total = d_t if d_t >= (d_l + d_m) else (d_l + d_m)
         chart_data = get_sparkline_data(chain_id, contract)
         print(f"OK (Total: {daily_total:,.0f})")
     
+    # Fallback cho các trường hợp không fetch hoặc fetch lỗi
     if daily_total <= 0: 
         daily_total = vol_24h
 
