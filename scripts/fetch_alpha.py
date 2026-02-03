@@ -115,11 +115,11 @@ def get_sparkline_data(chain_id, contract_addr):
         ]
     return []
 
-# --- 3. WORKER THÔNG MINH ---
 def process_token_smart(item):
     aid = item.get("alphaId")
     if not aid: return None
 
+    # --- GIỮ NGUYÊN TOÀN BỘ BIẾN CỦA BẠN ---
     vol_24h = safe_float(item.get("volume24h"))
     price = safe_float(item.get("price"))
     change_24h = safe_float(item.get("percentChange24h"))
@@ -136,68 +136,44 @@ def process_token_smart(item):
     is_listing_cex = item.get("listingCex", False)
     is_cex_off_display = item.get("cexOffDisplay", False)
     
-    # --- LOGIC STATUS ---
+    # --- 1. SỬA LOGIC STATUS (ĐẢM BẢO CHÍNH XÁC THEO OFFLINE) ---
     status = "ALPHA"
-    is_spot_confirmed = False
     
-    if is_listing_cex is True: is_spot_confirmed = True
-    elif symbol in ACTIVE_SPOT_SYMBOLS:
-        is_spot_confirmed = True
-        is_listing_cex = True
-
-    if is_spot_confirmed:
-        status = "SPOT"
-    else:
-        if is_cex_off_display is False:
-            status = "ALPHA"
-            is_offline = False 
+    if is_offline:
+        # Khi đã offline mới xét xem là Spot hay Delisted
+        if is_listing_cex is True or symbol in ACTIVE_SPOT_SYMBOLS:
+            status = "SPOT"
+            is_listing_cex = True # Đồng bộ cờ listingCex
         else:
             status = "DELISTED"
+    else:
+        # Nếu chưa Offline (offline=False) -> CHẮC CHẮN LÀ ALPHA (Fix lỗi KOGE)
+        status = "ALPHA"
 
-    # --- LOGIC CACHING ---
-    old_data = OLD_DATA_MAP.get(aid)
-    
+    # --- 2. SỬA LOGIC LẤY DỮ LIỆU (QUÉT FULL CHI TIẾT) ---
     daily_total = 0.0
     daily_limit = 0.0
     daily_onchain = 0.0
     chart_data = []
     
-    should_fetch_details = False
-    
-    if status == "ALPHA":
-        should_fetch_details = True
-    else:
-        if old_data and old_data.get("status") == status:
-            cached_total = safe_float(old_data["volume"].get("daily_total"))
-            if cached_total > 0:
-                daily_total = cached_total
-                daily_limit = safe_float(old_data["volume"].get("daily_limit"))
-                daily_onchain = safe_float(old_data["volume"].get("daily_onchain"))
-                chart_data = old_data.get("chart", [])
-                should_fetch_details = False 
-            else:
-                should_fetch_details = True
-        else:
-            should_fetch_details = True
-
-    if should_fetch_details and vol_24h > 0 and contract and chain_id:
-        # Gọi 3 API
+    # Chỉ quét khi có Volume và thông tin Contract
+    if vol_24h > 0 and contract and chain_id:
+        # Gọi 3 API chi tiết (Limit, Market, Agg) để lấy Volume chuẩn
         d_total, d_limit, d_market = fetch_daily_utc_stats(chain_id, contract)
         
-        # Gán trực tiếp (Vì debug đã chứng minh market là on-chain chuẩn)
         daily_limit = d_limit
         daily_onchain = d_market 
         
-        # Tính tổng chuẩn
-        # Nếu Aggregate chuẩn thì dùng nó
+        # Tính tổng Volume chuẩn xác
         if d_total > 0 and d_total >= (d_limit + d_market):
             daily_total = d_total
         else:
-            # Nếu Aggregate lỗi hoặc nhỏ hơn thành phần -> Tự cộng
             daily_total = d_limit + d_market
             
+        # Gọi hàm lấy Chart mới (bao gồm cả giá 'p' và volume 'v')
         chart_data = get_sparkline_data(chain_id, contract)
 
+    # --- GIỮ NGUYÊN CẤU TRÚC RETURN CỦA BẠN ---
     return {
         "id": aid,
         "symbol": symbol,
