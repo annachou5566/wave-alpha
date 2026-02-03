@@ -1,10 +1,11 @@
-import requests
 import json
 import os
 import time
+import random # Thêm cái này để tạo delay ngẫu nhiên
 from datetime import datetime
 import concurrent.futures
 from dotenv import load_dotenv
+import cloudscraper # Thay requests bằng cái này
 
 # --- 1. CẤU HÌNH & BẢO MẬT ---
 load_dotenv()
@@ -13,13 +14,26 @@ API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
-if not API_AGG_TICKER or not API_AGG_KLINES:
-    print("⚠️ Cảnh báo: Kiểm tra lại biến môi trường API.")
+# --- [UPGRADE 1] TẠO TRÌNH DUYỆT GIẢ LẬP (SESSION) ---
+# Dùng chung 1 scraper cho toàn bộ chương trình để giữ kết nối (Keep-Alive)
+scraper = cloudscraper.create_scraper(
+    browser={
+        'browser': 'chrome',
+        'platform': 'windows',
+        'desktop': True
+    }
+)
 
+if not API_AGG_TICKER or not API_AGG_KLINES:
+    print("⚠️ Cảnh báo: Thiếu biến môi trường API (Kiểm tra lại Secrets/ENV).")
+
+# Header xịn hơn
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
     "Referer": "https://www.binance.com/en/alpha",
     "Origin": "https://www.binance.com",
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
     "client-type": "web"
 }
 
@@ -47,7 +61,8 @@ def load_old_data():
 def get_active_spot_symbols():
     print("🌍 Đang lấy danh sách Spot Trading thực tế...")
     try:
-        res = requests.get(API_PUBLIC_SPOT, timeout=10)
+        # [UPGRADE] Dùng scraper thay vì requests
+        res = scraper.get(API_PUBLIC_SPOT, timeout=10)
         if res.status_code == 200:
             data = res.json()
             symbols = set()
@@ -55,94 +70,91 @@ def get_active_spot_symbols():
                 if s.get("status") == "TRADING":
                     symbols.add(s.get("baseAsset")) 
             return symbols
-    except: pass
+    except Exception as e:
+        print(f"⚠️ Lỗi lấy Spot symbols: {e}")
     return set()
 
-def get_usd_from_kline(kline_array):
-    if not kline_array or not isinstance(kline_array, list): return 0.0
-    length = len(kline_array)
-    try:
-        # THEO KẾT QUẢ DEBUG: Index 5 CHÍNH LÀ VOLUME USD
-        if length >= 6: return safe_float(kline_array[5])
-    except: pass
-    return 0.0
-
 def fetch_with_retry(url, retries=3):
+    # [UPGRADE] Logic Retry thông minh hơn
     for i in range(retries):
         try:
-            res = requests.get(url, headers=HEADERS, timeout=5)
-            if res.status_code == 200: return res.json()
-            elif res.status_code == 429: time.sleep(2)
-        except: time.sleep(0.5)
+            res = scraper.get(url, headers=HEADERS, timeout=10) # Tăng timeout lên 10s
+            
+            if res.status_code == 200: 
+                return res.json()
+            elif res.status_code == 429: 
+                print(f"Rate Limit! Ngủ {i+2}s...")
+                time.sleep(i + 2)
+            elif res.status_code == 403:
+                print(f"⛔ Bị chặn (403) tại {url[:50]}...")
+                return None
+        except Exception as e:
+            time.sleep(0.5)
     return None
 
-# --- HÀM GỌI API CHI TIẾT (CHUẨN DEBUG) ---
-# --- TÌM HÀM NÀY VÀ THAY THẾ NÓ ---
+# --- 3. CÁC HÀM LOGIC CHÍNH ---
 def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total = 0.0
     d_limit = 0.0
     d_market = 0.0 
     
-    # Lấy 5 cây nến để có khoảng rộng mà so sánh ngày
     base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=5&tokenAddress={contract_addr}"
     
-    # 1. GỌI LIMIT TRƯỚC -> LẤY MỐC THỜI GIAN
+    # 1. LIMIT
     limit_infos = []
     res_limit = fetch_with_retry(f"{base_url}&dataType=limit")
     if res_limit and res_limit.get("data"):
         limit_infos = res_limit["data"].get("klineInfos", [])
     
-    # Nếu không có dữ liệu Limit thì coi như chưa có gì
     if not limit_infos: return 0.0, 0.0, 0.0
 
-    # Lấy cây nến Limit MỚI NHẤT làm chuẩn
     latest_limit = limit_infos[-1]
-    target_ts = latest_limit[0]     # Timestamp mục tiêu (ví dụ: ngày 03/02)
-    d_limit = safe_float(latest_limit[5]) # Volume Limit (Index 5)
+    target_ts = latest_limit[0]
+    
+    # Check index bounds để tránh crash
+    if len(latest_limit) > 5:
+        d_limit = safe_float(latest_limit[5]) 
 
-    # 2. GỌI MARKET (ON-CHAIN) -> TÌM ĐÚNG TIMESTAMP ĐÓ
+    # 2. MARKET (ON-CHAIN)
     res_market = fetch_with_retry(f"{base_url}&dataType=market")
     if res_market and res_market.get("data"):
         m_infos = res_market["data"].get("klineInfos", [])
-        # Duyệt vòng lặp để tìm cây nến có cùng ngày với Limit
         for k in m_infos:
-            if k[0] == target_ts:
+            if k[0] == target_ts and len(k) > 5:
                 d_market = safe_float(k[5])
-                break # Tìm thấy thì dừng ngay
+                break 
 
-    # 3. GỌI AGGREGATE (TOTAL) -> TÌM ĐÚNG TIMESTAMP ĐÓ
+    # 3. AGGREGATE
     res_total = fetch_with_retry(f"{base_url}&dataType=aggregate")
     if res_total and res_total.get("data"):
         t_infos = res_total["data"].get("klineInfos", [])
         for k in t_infos:
-            if k[0] == target_ts:
+            if k[0] == target_ts and len(k) > 5:
                 d_total = safe_float(k[5])
                 break
 
-    # Logic dự phòng: Nếu Total API bị lỗi (nhỏ hơn thành phần), tự cộng lại
     if d_total < (d_limit + d_market):
         d_total = d_limit + d_market
 
     return d_total, d_limit, d_market
 
 def get_sparkline_data(chain_id, contract_addr):
-    # Chart lấy từ Aggregate
     url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=20&tokenAddress={contract_addr}&dataType=aggregate"
     res = fetch_with_retry(url, retries=2)
     if res and res.get("data") and res["data"].get("klineInfos"):
-        # TRẢ VỀ CẤU TRÚC MỚI: { "p": Price, "v": Volume }
-        # k[4] là Giá, k[5] là Volume
         return [
             {"p": safe_float(k[4]), "v": safe_float(k[5])} 
-            for k in res["data"]["klineInfos"]
+            for k in res["data"]["klineInfos"] if len(k) > 5
         ]
     return []
 
 def process_token_smart(item):
+    # [UPGRADE] Random delay nhỏ để tránh 5 luồng request cùng milisecond
+    time.sleep(random.uniform(0.1, 0.5))
+    
     aid = item.get("alphaId")
     if not aid: return None
 
-    # --- KHAI BÁO BIẾN (GIỮ NGUYÊN) ---
     vol_24h = safe_float(item.get("volume24h"))
     price = safe_float(item.get("price"))
     change_24h = safe_float(item.get("percentChange24h"))
@@ -156,27 +168,18 @@ def process_token_smart(item):
 
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
-    is_cex_off_display = item.get("cexOffDisplay", False)
-
-    # --- LOGIC STATUS (ĐÃ SỬA LẠI CHỖ NÀY) ---
-    # Logic cũ: Check Spot trước -> Sai.
-    # Logic mới: Check Offline trước. 
     
     status = "ALPHA"
-
     if is_offline:
-        # Chỉ khi API báo Offline thì mới xét xem là Spot hay Delisted
         if is_listing_cex is True or symbol in ACTIVE_SPOT_SYMBOLS:
             status = "SPOT"
-            is_listing_cex = True # Đồng bộ cờ
+            is_listing_cex = True
         else:
             status = "DELISTED"
     else:
-        # Nếu offline = False -> Nó vẫn đang hiện diện trên Alpha -> LÀ ALPHA
-        # (Kể cả symbol có trong ACTIVE_SPOT_SYMBOLS cũng bỏ qua)
         status = "ALPHA"
 
-    # --- LOGIC CACHING (GIỮ NGUYÊN CODE CỦA BẠN) ---
+    # --- LOGIC CACHING GIỮ NGUYÊN ---
     old_data = OLD_DATA_MAP.get(aid)
     daily_total = 0.0
     daily_limit = 0.0
@@ -188,6 +191,7 @@ def process_token_smart(item):
     if status == "ALPHA":
         should_fetch_details = True
     else:
+        # Nếu là SPOT/DELISTED, tận dụng cache cũ nếu có
         if old_data and old_data.get("status") == status:
             cached_total = safe_float(old_data["volume"].get("daily_total"))
             if cached_total > 0:
@@ -201,20 +205,15 @@ def process_token_smart(item):
         else:
             should_fetch_details = True
 
+    # Chỉ fetch chi tiết nếu volume > 0 để tiết kiệm request
     if should_fetch_details and vol_24h > 0 and contract and chain_id:
-        # Gọi 3 API
         d_total, d_limit, d_market = fetch_daily_utc_stats(chain_id, contract)
-        
-        # Gán trực tiếp
         daily_limit = d_limit
         daily_onchain = d_market
-        
-        # Tính tổng chuẩn
         if d_total > 0 and d_total >= (d_limit + d_market):
             daily_total = d_total
         else:
             daily_total = d_limit + d_market
-            
         chart_data = get_sparkline_data(chain_id, contract)
 
     return {
@@ -251,19 +250,30 @@ def fetch_data():
     global ACTIVE_SPOT_SYMBOLS, OLD_DATA_MAP
     
     start_time = time.time()
-    print("🔒 [SECURE MODE] Bắt đầu quét dữ liệu...")
+    print("🔒 [CLOUD-SCRAPER] Bắt đầu quét dữ liệu Alpha...")
     
     OLD_DATA_MAP = load_old_data()
     ACTIVE_SPOT_SYMBOLS = get_active_spot_symbols()
     
+    if not API_AGG_TICKER:
+        print("❌ Lỗi: Chưa cấu hình BINANCE_INTERNAL_AGG_API")
+        return
+
     try:
         raw_res = fetch_with_retry(API_AGG_TICKER)
+        if not raw_res:
+            print("❌ Không lấy được danh sách Token ban đầu!")
+            return
         raw_data = raw_res.get("data", [])
-    except: return
+    except Exception as e:
+        print(f"❌ Exception main fetch: {e}")
+        return
 
     active_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
     inactive_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) == 0]
     
+    print(f"⚡ Tìm thấy {len(active_tokens)} token hoạt động. Bắt đầu xử lý đa luồng...")
+
     tokens = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         results = list(executor.map(process_token_smart, active_tokens))
@@ -271,6 +281,7 @@ def fetch_data():
     for t in results:
         if t: tokens.append(t)
     
+    # Xử lý token rác (không cần luồng, chạy nhanh)
     for t in inactive_tokens:
         basic = process_token_smart(t)
         if basic: tokens.append(basic)
@@ -279,13 +290,14 @@ def fetch_data():
 
     data = {
         "last_updated": datetime.now().strftime("%H:%M %d/%m"),
+        "total_tokens": len(tokens),
         "tokens": final_sorted
     }
     
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
         
-    print(f"✅ HOÀN TẤT! Thời gian: {time.time() - start_time:.2f}s")
+    print(f"✅ HOÀN TẤT! Thời gian: {time.time() - start_time:.2f}s | Token: {len(tokens)}")
 
 if __name__ == "__main__":
     fetch_data()

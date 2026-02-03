@@ -23,7 +23,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install requests python-dotenv
+        pip install cloudscraper python-dotenv requests
 
     # QUAN TRỌNG: Kéo code mới về TRƯỚC khi chạy script
     # Để đảm bảo không bị xung đột với file json sắp tạo ra
