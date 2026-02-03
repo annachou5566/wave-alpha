@@ -628,3 +628,5 @@ body {
         padding-top: 20px;
     }
 }
+
+.summary-grid { display: none !important; }

@@ -33,30 +33,35 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
-// --- HÀM VẼ DASHBOARD (MARKET HUD) ---
+// --- HÀM VẼ DASHBOARD (MARKET HUD) - ĐÃ FIX LỖI ---
 function renderMarketHUD(stats) {
-    // Tìm nơi để chèn HUD
-    const container = document.getElementById('alpha-market-view');
+    // 1. Tìm vùng hiển thị chính
+    const view = document.getElementById('alpha-market-view');
+    if (!view) return;
+
+    // 2. QUAN TRỌNG: Tìm đúng cái hộp chứa nội dung (alpha-container)
+    // Vì header nằm trong hộp này, nên ta phải chèn HUD vào hộp này mới đúng luật
+    const container = view.querySelector('.alpha-container'); 
     if (!container) return;
 
-    // Kiểm tra xem đã có HUD chưa
+    // 3. Kiểm tra xem đã có HUD chưa, chưa có thì tạo mới
     let hud = document.getElementById('market-hud');
     if (!hud) {
         hud = document.createElement('div');
         hud.id = 'market-hud';
         hud.className = 'market-hud-container';
         
-        // Chèn HUD vào ngay sau thẻ mở đầu container
-        // (Trước Header Search)
+        // 4. Chèn HUD vào ngay trước thanh Header Search
         const header = container.querySelector('.alpha-header');
         if (header) {
-            container.insertBefore(hud, header);
+            // Bây giờ header đúng là con ruột của container -> Chèn OK không lỗi
+            container.insertBefore(hud, header); 
         } else {
             container.prepend(hud);
         }
     }
 
-    // Tính toán phần trăm
+    // 5. Tính toán phần trăm hiển thị (Giữ nguyên logic cũ)
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
@@ -67,7 +72,7 @@ function renderMarketHUD(stats) {
     const totalBreadth = stats.gainers + stats.losers;
     const gainPct = totalBreadth > 0 ? (stats.gainers / totalBreadth) * 100 : 50;
 
-    // Render HTML
+    // 6. Render nội dung HTML
     hud.innerHTML = `
         <div class="hud-module">
             <div class="hud-title">TOKEN LIFECYCLE (ALL TIME)</div>
