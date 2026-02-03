@@ -110,13 +110,18 @@ def get_active_spot_symbols():
     return set()
 
 # --- 3. LOGIC DATA (FIX SOLANA & KLINE) ---
+# --- Cập nhật logic xử lý địa chỉ ví cho nhiều Chain ---
+
 def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total, d_limit, d_market = 0.0, 0.0, 0.0
     if not API_AGG_KLINES: return 0, 0, 0
 
-    # FIX: Solana (CT_501) dùng ví Case-sensitive, các chain khác dùng Lowercase
+    # Danh sách các Chain KHÔNG ĐƯỢC lowercase địa chỉ ví
+    # CT_501: Solana, CT_784: Sui
+    no_lower_chains = ["CT_501", "CT_784"]
+    
     clean_addr = str(contract_addr)
-    if chain_id != "CT_501":
+    if chain_id not in no_lower_chains:
         clean_addr = clean_addr.lower()
     
     base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=5&tokenAddress={clean_addr}"
@@ -135,8 +140,10 @@ def fetch_daily_utc_stats(chain_id, contract_addr):
 
 def get_sparkline_data(chain_id, contract_addr):
     if not API_AGG_KLINES: return []
+    
+    no_lower_chains = ["CT_501", "CT_784"]
     clean_addr = str(contract_addr)
-    if chain_id != "CT_501":
+    if chain_id not in no_lower_chains:
         clean_addr = clean_addr.lower()
 
     url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit=24&tokenAddress={clean_addr}&dataType=aggregate"
