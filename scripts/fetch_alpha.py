@@ -60,6 +60,8 @@ KEY_MAP = {
     "daily_limit": "dl", "daily_onchain": "do",
     "chart": "ch", "listing_time": "lt", "tx_count": "tx",
     "offline": "off", "listingCex": "cex"
+    "onlineTge": "tge",
+    "onlineAirdrop": "air"
 }
 
 def minify_token_data(token):
@@ -79,6 +81,8 @@ def minify_token_data(token):
     minified[KEY_MAP["listing_time"]] = token.get("listing_time")
     minified[KEY_MAP["offline"]] = 1 if token.get("offline") else 0
     minified[KEY_MAP["listingCex"]] = 1 if token.get("listingCex") else 0
+    minified[KEY_MAP["onlineTge"]] = 1 if token.get("onlineTge") else 0
+    minified[KEY_MAP["onlineAirdrop"]] = 1 if token.get("onlineAirdrop") else 0
 
     vol = token.get("volume", {})
     minified[KEY_MAP["volume"]] = {

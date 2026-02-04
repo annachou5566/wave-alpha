@@ -641,6 +641,8 @@ const KEY_MAP_REVERSE = {
   "dl": "daily_limit", "do": "daily_onchain",
   "ch": "chart", "lt": "listing_time", "tx": "tx_count",
   "off": "offline", "cex": "listingCex"
+  "tge": "onlineTge",
+  "air": "onlineAirdrop"
 };
 
 // Hàm dịch dữ liệu: Biến 'p' thành 'price', 'v' thành 'volume'...
