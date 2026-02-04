@@ -57,12 +57,16 @@ def fetch_smart(target_url, retries=3):
                 
                 if res.status_code == 200:
                     data = res.json()
+                    # Kiểm tra mã phản hồi nội bộ của Binance
                     if data and isinstance(data, dict):
-                        if data.get("code") == "000000":
-                            return data
-                        else:
-                            print(f"\n   ⚠️ BINANCE ERROR: {data.get('code')} - {data.get('message')}")
-                
+                        # API Public Spot không có field "code", chỉ API nội bộ mới có
+                        if "symbols" in data: return data 
+                        if data.get("code") == "000000": return data
+                        
+                        # Log lỗi nếu không phải format mong muốn
+                        if "code" in data:
+                             print(f"\n   ⚠️ BINANCE ERROR: {data.get('code')} - {data.get('message')}")
+
                 elif res.status_code == 403:
                     print("⛔ 403 (Binance Block Proxy)")
                 elif res.status_code == 502:
@@ -79,8 +83,8 @@ def fetch_smart(target_url, retries=3):
             res = scraper.get(target_url, headers=HEADERS, timeout=15)
             if res.status_code == 200:
                 data = res.json()
-                if data.get("code") == "000000":
-                    return data
+                if "symbols" in data: return data
+                if data.get("code") == "000000": return data
         except: pass
         
         time.sleep(2)
@@ -101,17 +105,26 @@ def load_old_data():
     return {}
 
 def get_active_spot_symbols():
+    # CẢI TIẾN: Dùng fetch_smart để tránh bị chặn IP Mỹ khi chạy GitHub Actions
     try:
-        res = scraper.get(API_PUBLIC_SPOT, timeout=10)
-        if res.status_code == 200:
-            data = res.json()
-            return {s["baseAsset"] for s in data.get("symbols", []) if s["status"] == "TRADING"}
-    except: pass
+        print("⏳ Đang lấy danh sách Spot Market...", end=" ", flush=True)
+        data = fetch_smart(API_PUBLIC_SPOT)
+        if data and "symbols" in data:
+            count = 0
+            res = set()
+            for s in data["symbols"]:
+                if s["status"] == "TRADING":
+                    res.add(s["baseAsset"])
+                    count += 1
+            print(f"OK ({count} symbols)")
+            return res
+    except Exception as e: 
+        print(f"❌ Lỗi lấy Spot: {e}")
+    
+    print("⚠️ Không lấy được danh sách Spot (Dùng backup rỗng)")
     return set()
 
 # --- 3. LOGIC DATA (FIX SOLANA & KLINE) ---
-# --- Cập nhật logic xử lý địa chỉ ví cho nhiều Chain ---
-
 def fetch_daily_utc_stats(chain_id, contract_addr):
     d_total, d_limit, d_market = 0.0, 0.0, 0.0
     if not API_AGG_KLINES: return 0, 0, 0
@@ -198,6 +211,10 @@ def process_token_smart(item, is_vip=False):
         chart_data = get_sparkline_data(chain_id, contract)
         print(f"OK (Total: {daily_total:,.0f})")
     
+    # Cải tiến: Thêm Log nếu là VIP nhưng bị Skip do Spot/Delisted (Để debug)
+    elif is_vip and not should_fetch_detail:
+         print(f"⏩ Skipping {symbol} (Reason: {status})")
+
     # Fallback cho SPOT/DELISTED hoặc lỗi fetch
     if daily_total <= 0: 
         daily_total = vol_24h
@@ -242,6 +259,7 @@ def fetch_data():
         return
 
     OLD_DATA_MAP = load_old_data()
+    # Lấy danh sách Spot qua Proxy để đảm bảo không bị chặn
     ACTIVE_SPOT_SYMBOLS = get_active_spot_symbols()
     
     print("⏳ Đang lấy danh sách Token tổng...", end=" ", flush=True)
