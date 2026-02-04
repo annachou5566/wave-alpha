@@ -246,11 +246,9 @@ def fetch_data():
     target_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
     target_tokens.sort(key=lambda x: safe_float(x.get("volume24h")), reverse=True)
     
-    # LẤY TOP TOKEN ĐỂ TEST
-    test_tokens = target_tokens[:TOP_TOKEN_LIMIT]
     
     results = []
-    print(f"🚀 Processing {len(test_tokens)} Tokens (Sequential Mode)...")
+    print(f"🚀 Processing {len(target_tokens)} Tokens (Full List)...")
     
     for t in test_tokens:
         r = process_single_token(t)
