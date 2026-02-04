@@ -2,7 +2,7 @@ name: Update Alpha Market Data
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # Chạy mỗi 15 phút
+    - cron: '*/30 * * * *' # Chạy mỗi 30 phút
   workflow_dispatch: # Nút chạy tay
 
 permissions:
@@ -21,32 +21,42 @@ jobs:
       with:
         python-version: '3.9'
 
-    # [NÂNG CẤP] Cài đặt từ file requirements.txt cho chuẩn
+    # Cài đặt thư viện (bao gồm cả boto3 cho R2)
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
 
-    # Kéo code mới về để tránh conflict
+    # Kéo code mới nhất về trước khi chạy để tránh conflict file hệ thống
     - name: Pull latest changes
       run: git pull origin main --rebase || echo "Already up to date"
 
+    # Chạy Script (Đã thêm biến môi trường cho R2)
     - name: Run Fetch Script
       env: 
         BINANCE_INTERNAL_AGG_API: ${{ secrets.BINANCE_INTERNAL_AGG_API }}
         BINANCE_INTERNAL_KLINES_API: ${{ secrets.BINANCE_INTERNAL_KLINES_API }}
         PROXY_WORKER_URL: ${{ secrets.PROXY_WORKER_URL }}
+        # --- CẤU HÌNH R2 (QUAN TRỌNG CHO CODE MỚI) ---
+        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+        R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
       run: |
         python scripts/fetch_alpha.py
 
-   - name: Commit and Push Data
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          
-          
-          git pull origin main --rebase --strategy-option=theirs
-          # --------------------------------------
-          
-          git add public/data/
-          git commit -m "🤖 Update Market Data: $(date)" || echo "No changes to commit"
-          git push origin main
+    # Bước đẩy dữ liệu (Đã sửa lỗi xung đột)
+    # Lưu ý: Nếu code Python đã upload lên R2 rồi thì bước này có thể báo "No changes", kệ nó.
+    - name: Commit and Push Data
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        
+        # --- KHẮC PHỤC LỖI REJECTED ---
+        # Tải code mới nhất về và gộp (rebase) trước khi đẩy lên
+        git pull origin main --rebase --strategy-option=theirs
+        # ------------------------------
+        
+        git add public/data/
+        # Chỉ commit nếu có thay đổi
+        git commit -m "🤖 Update Market Data: $(date)" || echo "No changes to commit"
+        git push origin main
