@@ -226,9 +226,7 @@ function renderTableRows(tbody) {
     });
 }
 
-// =========================================================================
-// HÀM 3: VẼ DASHBOARD (HUD) - ĐÃ CẬP NHẬT THEO YÊU CẦU MỚI
-// =========================================================================
+// --- HÀM VẼ DASHBOARD (MARKET HUD) - UPDATE TOOLTIP & BAR HEIGHT ---
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view) return;
@@ -244,14 +242,38 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // Tính toán tỷ lệ phần trăm
+    // --- 1. TẠO TOOLTIP ELEMENT (Nếu chưa có) ---
+    let tooltip = document.getElementById('hud-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'hud-tooltip';
+        // Style trực tiếp cho Tooltip Pro
+        tooltip.style.cssText = `
+            position: fixed; 
+            display: none; 
+            z-index: 10000; 
+            background: rgba(16, 20, 24, 0.95); 
+            border: 1px solid #2b3139; 
+            border-left: 2px solid #00F0FF;
+            padding: 10px; 
+            border-radius: 4px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            pointer-events: none; 
+            font-family: 'Rajdhani', sans-serif;
+            min-width: 150px;
+            backdrop-filter: blur(5px);
+        `;
+        document.body.appendChild(tooltip);
+    }
+
+    // Tính toán tỷ lệ
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
     const limitPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyLimit / stats.alphaDailyTotal) * 100 : 0;
     const chainPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyChain / stats.alphaDailyTotal) * 100 : 0;
 
-    // Helper: Vẽ thanh Sentiment (Histogram)
+    // Helper Sentiment
     const drawSentBar = (count, label, colorClass) => {
         let h = (count / stats.distribution.maxCount) * 40;
         if (count > 0 && h < 4) h = 4;
@@ -263,9 +285,9 @@ function renderMarketHUD(stats) {
     };
     const d = stats.distribution;
 
-    // Helper: Vẽ Chart Top 10 (Đối Xứng) - ĐÃ THÊM TÊN TOKEN VÀ SỰ KIỆN CLICK
+    // --- [SỬA ĐỔI CHÍNH] HELPER VẼ CHART (CAO HƠN + TOOLTIP XỊN) ---
     const drawMirroredChart = () => {
-        if (stats.topVolTokens.length === 0) return '<div style="height:80px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
+        if (stats.topVolTokens.length === 0) return '<div style="height:90px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
         
         let maxVal = 0;
         stats.topVolTokens.forEach(t => {
@@ -277,30 +299,46 @@ function renderMarketHUD(stats) {
         let svgContent = '';
         
         stats.topVolTokens.forEach((t, i) => {
-            const hLimit = (t.volume.daily_limit / maxVal) * 25; // Max height 25
-            const hChain = (t.volume.daily_onchain / maxVal) * 25;
+            // TĂNG CHIỀU CAO: Nhân với 35 thay vì 25 để cột cao hơn
+            const hLimit = (t.volume.daily_limit / maxVal) * 35; 
+            const hChain = (t.volume.daily_onchain / maxVal) * 35;
+            
             const x = i * barWidth;
-            const barW = barWidth - 2; // Gap rộng hơn chút để thoáng
+            const barW = barWidth - 2; // Gap
 
-            // Nội dung Alert khi click
-            const alertMsg = `TOKEN: ${t.symbol}\\nDaily Total: $${formatNum(t.volume.daily_total)}\\n------------------\\n🟡 Limit: $${formatNum(t.volume.daily_limit)}\\n🔵 Chain: $${formatNum(t.volume.daily_onchain)}`;
+            // Cắt tên token nếu dài quá 5 ký tự (ví dụ: MGOESPORTS -> MGOES..)
+            let displayName = t.symbol;
+            if (displayName.length > 5) displayName = displayName.substring(0, 5) + '..';
+
+            // Dữ liệu cho Tooltip (Lưu vào dataset của thẻ group)
+            const tooltipData = JSON.stringify({
+                symbol: t.symbol,
+                total: formatNum(t.volume.daily_total),
+                limit: formatNum(t.volume.daily_limit),
+                chain: formatNum(t.volume.daily_onchain)
+            });
 
             svgContent += `
-                <g class="chart-bar-group" onclick="alert('${alertMsg}')">
-                    <title>${t.symbol} - Click for details</title>
-                    <rect x="${x + 1}%" y="${35 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
+                <g class="chart-bar-group" 
+                   onmouseenter='showTooltip(event, ${tooltipData})' 
+                   onmousemove='moveTooltip(event)' 
+                   onmouseleave='hideTooltip()'>
                     
-                    <rect x="${x + 1}%" y="35" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
+                    <rect x="${x}%" y="0" width="${barWidth}%" height="100" fill="transparent"></rect>
+
+                    <rect x="${x + 1}%" y="${45 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
                     
-                    <text x="${x + (barWidth/2)}%" y="75" text-anchor="middle" fill="#848e9c" font-size="3" font-family="Arial" font-weight="bold">${t.symbol}</text>
+                    <rect x="${x + 1}%" y="45" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
+                    
+                    <text x="${x + (barWidth/2)}%" y="92" text-anchor="middle" fill="#848e9c" font-size="3.5" font-family="Arial" font-weight="bold">${displayName}</text>
                 </g>
             `;
         });
 
-        // Tăng chiều cao SVG lên 80 để chứa tên token bên dưới
+        // Tăng chiều cao SVG lên 100
         return `
-            <svg width="100%" height="80" viewBox="0 0 100 80" preserveAspectRatio="none" style="overflow:visible;">
-                <line x1="0" y1="35" x2="100" y2="35" stroke="#2b3139" stroke-width="0.5" />
+            <svg width="100%" height="100" viewBox="0 0 100 100" preserveAspectRatio="none" style="overflow:visible;">
+                <line x1="0" y1="45" x2="100" y2="45" stroke="#2b3139" stroke-width="0.5" />
                 ${svgContent}
             </svg>
         `;
@@ -310,19 +348,16 @@ function renderMarketHUD(stats) {
     hud.innerHTML = `
         <div class="hud-module">
             <div class="hud-title">ALPHA LIFECYCLE (ALL TIME)</div>
-            
             <div style="display:flex; align-items:flex-end; margin-bottom:12px;">
                 <div style="font-size:24px; font-weight:bold; color:#eaecef; font-family:'Rajdhani'; line-height:1;">
                     ${stats.totalScan} <span style="font-size:12px; color:#5E6673; font-weight:normal">TOTAL TOKENS</span>
                 </div>
             </div>
-            
             <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; font-family:'Rajdhani'; font-weight:700; font-size:11px;">
                 <div style="width:${pctActive}%; background:#0ecb81; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countActive} Active</div>
                 <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countSpot} Spot</div>
                 <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countDelisted} Delist</div>
             </div>
-            
             <div style="margin-top:8px; font-size:10px; color:#5E6673; text-align:center;">Live Project Tracking Status</div>
         </div>
 
@@ -363,7 +398,6 @@ function renderMarketHUD(stats) {
                 ${drawSentBar(d.down_6_8, '6-8%', 'bar-red')}
                 ${drawSentBar(d.down_8, '>8%', 'bar-red')}
             </div>
-            
             <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
                 <div style="color: #0ecb81; font-weight: 700; font-family: var(--font-num); font-size: 16px;"><i class="fas fa-arrow-up" style="font-size:12px; transform: rotate(45deg);"></i> ${stats.gainers}</div>
                 <div style="color: #f6465d; font-weight: 700; font-family: var(--font-num); font-size: 16px;">${stats.losers} <i class="fas fa-arrow-down" style="font-size:12px; transform: rotate(45deg);"></i></div>
@@ -388,6 +422,41 @@ function renderMarketHUD(stats) {
         document.head.appendChild(style);
     }
 }
+
+// --- CÁC HÀM XỬ LÝ TOOLTIP (RÊ CHUỘT) ---
+window.showTooltip = function(e, data) {
+    const t = document.getElementById('hud-tooltip');
+    if(t) {
+        t.style.display = 'block';
+        t.innerHTML = `
+            <div style="color:#fff; font-size:14px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:4px;">${data.symbol}</div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
+                <span style="color:#848e9c">Daily Total:</span> <span style="color:#fff">$${data.total}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
+                <span style="color:#F0B90B">Limit Vol:</span> <span style="color:#F0B90B">$${data.limit}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px;">
+                <span style="color:#00F0FF">On-Chain:</span> <span style="color:#00F0FF">$${data.chain}</span>
+            </div>
+        `;
+        moveTooltip(e);
+    }
+};
+
+window.moveTooltip = function(e) {
+    const t = document.getElementById('hud-tooltip');
+    if(t) {
+        // Hiện tooltip bên phải chuột một chút
+        t.style.left = (e.clientX + 15) + 'px';
+        t.style.top = (e.clientY + 15) + 'px';
+    }
+};
+
+window.hideTooltip = function() {
+    const t = document.getElementById('hud-tooltip');
+    if(t) t.style.display = 'none';
+};
 
 
 
