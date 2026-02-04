@@ -226,7 +226,7 @@ function renderTableRows(tbody) {
     });
 }
 
-// --- HÀM VẼ DASHBOARD (MARKET HUD) - UPDATE TOOLTIP & BAR HEIGHT ---
+// --- HÀM VẼ DASHBOARD (MARKET HUD) - ĐÃ FIX CHỮ MÉO & BỎ KHUNG ---
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view) return;
@@ -242,26 +242,17 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // --- 1. TẠO TOOLTIP ELEMENT (Nếu chưa có) ---
+    // 1. TẠO TOOLTIP (Nếu chưa có)
     let tooltip = document.getElementById('hud-tooltip');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'hud-tooltip';
-        // Style trực tiếp cho Tooltip Pro
         tooltip.style.cssText = `
-            position: fixed; 
-            display: none; 
-            z-index: 10000; 
-            background: rgba(16, 20, 24, 0.95); 
-            border: 1px solid #2b3139; 
-            border-left: 2px solid #00F0FF;
-            padding: 10px; 
-            border-radius: 4px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            pointer-events: none; 
-            font-family: 'Rajdhani', sans-serif;
-            min-width: 150px;
-            backdrop-filter: blur(5px);
+            position: fixed; display: none; z-index: 10000; 
+            background: rgba(16, 20, 24, 0.95); border: 1px solid #2b3139; 
+            border-left: 2px solid #00F0FF; padding: 10px; border-radius: 4px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: none; 
+            font-family: 'Rajdhani', sans-serif; min-width: 150px; backdrop-filter: blur(5px);
         `;
         document.body.appendChild(tooltip);
     }
@@ -285,9 +276,9 @@ function renderMarketHUD(stats) {
     };
     const d = stats.distribution;
 
-    // --- [SỬA ĐỔI CHÍNH] HELPER VẼ CHART (CAO HƠN + TOOLTIP XỊN) ---
+    // --- [SỬA LẠI] HELPER VẼ CHART (DÙNG HTML LABEL + SVG BAR) ---
     const drawMirroredChart = () => {
-        if (stats.topVolTokens.length === 0) return '<div style="height:90px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
+        if (stats.topVolTokens.length === 0) return '<div style="height:100px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
         
         let maxVal = 0;
         stats.topVolTokens.forEach(t => {
@@ -295,22 +286,24 @@ function renderMarketHUD(stats) {
         });
         if (maxVal === 0) maxVal = 1;
 
-        const barWidth = 100 / 10; 
+        const barCount = 10;
+        const barWidth = 100 / barCount; // 10% mỗi cột
         let svgContent = '';
+        let labelsHtml = ''; // Chuỗi HTML chứa tên token
         
         stats.topVolTokens.forEach((t, i) => {
-            // TĂNG CHIỀU CAO: Nhân với 35 thay vì 25 để cột cao hơn
             const hLimit = (t.volume.daily_limit / maxVal) * 35; 
             const hChain = (t.volume.daily_onchain / maxVal) * 35;
             
             const x = i * barWidth;
-            const barW = barWidth - 2; // Gap
+            // [CHỈNH KHOẢNG CÁCH]: barW gần bằng barWidth (10) để sát nhau
+            // Để 9.5 có nghĩa là khoảng hở (gap) chỉ 0.5% (rất nhỏ)
+            const barW = 9.5; 
 
-            // Cắt tên token nếu dài quá 5 ký tự (ví dụ: MGOESPORTS -> MGOES..)
+            // Cắt tên nếu quá dài
             let displayName = t.symbol;
-            if (displayName.length > 5) displayName = displayName.substring(0, 5) + '..';
+            if (displayName.length > 6) displayName = displayName.substring(0, 6) + '..';
 
-            // Dữ liệu cho Tooltip (Lưu vào dataset của thẻ group)
             const tooltipData = JSON.stringify({
                 symbol: t.symbol,
                 total: formatNum(t.volume.daily_total),
@@ -318,29 +311,40 @@ function renderMarketHUD(stats) {
                 chain: formatNum(t.volume.daily_onchain)
             });
 
+            // 1. Vẽ Cột (SVG)
             svgContent += `
                 <g class="chart-bar-group" 
                    onmouseenter='showTooltip(event, ${tooltipData})' 
                    onmousemove='moveTooltip(event)' 
                    onmouseleave='hideTooltip()'>
-                    
                     <rect x="${x}%" y="0" width="${barWidth}%" height="100" fill="transparent"></rect>
-
-                    <rect x="${x + 1}%" y="${45 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
-                    
-                    <rect x="${x + 1}%" y="45" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
-                    
-                    <text x="${x + (barWidth/2)}%" y="92" text-anchor="middle" fill="#848e9c" font-size="3.5" font-family="Arial" font-weight="bold">${displayName}</text>
+                    <rect x="${x + 0.25}%" y="${45 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
+                    <rect x="${x + 0.25}%" y="45" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
                 </g>
+            `;
+
+            // 2. Vẽ Tên (HTML) - Để bên dưới, canh giữa cột
+            // Dùng sự kiện hover y hệt như cột để rê vào tên cũng hiện tooltip
+            labelsHtml += `
+                <div style="width:${barWidth}%; text-align:center; font-size:10px; color:#848e9c; font-weight:700; cursor:default; overflow:hidden; text-overflow:ellipsis;"
+                     onmouseenter='showTooltip(event, ${tooltipData})' 
+                     onmousemove='moveTooltip(event)' 
+                     onmouseleave='hideTooltip()'>
+                    ${displayName}
+                </div>
             `;
         });
 
-        // Tăng chiều cao SVG lên 100
         return `
-            <svg width="100%" height="100" viewBox="0 0 100 100" preserveAspectRatio="none" style="overflow:visible;">
-                <line x1="0" y1="45" x2="100" y2="45" stroke="#2b3139" stroke-width="0.5" />
-                ${svgContent}
-            </svg>
+            <div style="width:100%; display:flex; flex-direction:column;">
+                <svg width="100%" height="90" viewBox="0 0 100 90" preserveAspectRatio="none" style="overflow:visible;">
+                    <line x1="0" y1="45" x2="100" y2="45" stroke="#2b3139" stroke-width="0.5" />
+                    ${svgContent}
+                </svg>
+                <div style="display:flex; width:100%; margin-top:2px;">
+                    ${labelsHtml}
+                </div>
+            </div>
         `;
     };
 
@@ -363,17 +367,15 @@ function renderMarketHUD(stats) {
 
         <div class="hud-module border-left-dim">
             <div class="hud-title">DAILY VOL STRUCTURE (UTC 0:00)</div>
-            
             <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
                 <div class="text-neon" style="font-size:24px; font-weight:bold; font-family:'Rajdhani';">$${formatNum(stats.alphaDailyTotal)}</div>
                 <div style="font-size:11px; color:#848e9c;">(Active Market Total)</div>
             </div>
-
             <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-family:'Rajdhani'; font-weight:600;">
                 <div style="color:#F0B90B;">LIMIT: $${formatNum(stats.alphaDailyLimit)} (${Math.round(limitPct)}%)</div>
                 <div style="color:#00F0FF;">CHAIN: $${formatNum(stats.alphaDailyChain)} (${Math.round(chainPct)}%)</div>
             </div>
-
+            
             <div style="flex-grow:1; display:flex; align-items:center;">
                 ${drawMirroredChart()}
             </div>
@@ -384,7 +386,6 @@ function renderMarketHUD(stats) {
                 24H PRICE & VOL
                 <span style="color:#5E6673; font-size:10px;">Roll Vol: <span style="color:#eaecef">$${formatNum(stats.alphaRolling24h)}</span></span>
             </div>
-
             <div style="flex-grow:1; display:flex; align-items:flex-end; gap:3px; padding-bottom:5px;">
                 ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
                 ${drawSentBar(d.up_2_4, '2-4%', 'bar-green-mid')}
@@ -405,13 +406,15 @@ function renderMarketHUD(stats) {
         </div>
     `;
 
-    // Inject CSS bổ sung
+    // --- CẬP NHẬT CSS: BỎ STROKE (VIỀN) KHI HOVER ---
     if (!document.getElementById('chart-hover-style')) {
         const style = document.createElement('style');
         style.id = 'chart-hover-style';
         style.innerHTML = `
             .chart-bar-group rect { transition: opacity 0.2s; cursor: pointer; }
-            .chart-bar-group:hover rect { opacity: 1 !important; stroke: #fff; stroke-width: 0.5px; }
+            /* CHỈNH SỬA Ở ĐÂY: Chỉ đổi opacity, KHÔNG thêm stroke */
+            .chart-bar-group:hover rect { opacity: 1 !important; filter: brightness(1.2); }
+            
             .bar-green { background: #0ecb81; opacity: 1; }
             .bar-green-mid { background: #0ecb81; opacity: 0.7; }
             .bar-green-dim { background: #0ecb81; opacity: 0.4; }
@@ -422,41 +425,6 @@ function renderMarketHUD(stats) {
         document.head.appendChild(style);
     }
 }
-
-// --- CÁC HÀM XỬ LÝ TOOLTIP (RÊ CHUỘT) ---
-window.showTooltip = function(e, data) {
-    const t = document.getElementById('hud-tooltip');
-    if(t) {
-        t.style.display = 'block';
-        t.innerHTML = `
-            <div style="color:#fff; font-size:14px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:4px;">${data.symbol}</div>
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
-                <span style="color:#848e9c">Daily Total:</span> <span style="color:#fff">$${data.total}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
-                <span style="color:#F0B90B">Limit Vol:</span> <span style="color:#F0B90B">$${data.limit}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:12px;">
-                <span style="color:#00F0FF">On-Chain:</span> <span style="color:#00F0FF">$${data.chain}</span>
-            </div>
-        `;
-        moveTooltip(e);
-    }
-};
-
-window.moveTooltip = function(e) {
-    const t = document.getElementById('hud-tooltip');
-    if(t) {
-        // Hiện tooltip bên phải chuột một chút
-        t.style.left = (e.clientX + 15) + 'px';
-        t.style.top = (e.clientY + 15) + 'px';
-    }
-};
-
-window.hideTooltip = function() {
-    const t = document.getElementById('hud-tooltip');
-    if(t) t.style.display = 'none';
-};
 
 
 
