@@ -38,11 +38,15 @@ jobs:
       run: |
         python scripts/fetch_alpha.py
 
-    - name: Commit and Push Data
-      run: |
-        git config --global user.name "AlphaBot"
-        git config --global user.email "bot@wave-alpha.com"
-        git add public/data/market-data.json
-        # Chỉ commit khi có sự thay đổi
-        git diff-index --quiet HEAD || git commit -m "🤖 Update Market Data: $(date)"
-        git push
+   - name: Commit and Push Data
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          
+          git pull origin main --rebase --strategy-option=theirs
+          # --------------------------------------
+          
+          git add public/data/
+          git commit -m "🤖 Update Market Data: $(date)" || echo "No changes to commit"
+          git push origin main
