@@ -34,7 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
-// --- HÀM 1: TÍNH TOÁN SỐ LIỆU TỔNG QUÁT ---
+// =========================================================================
+// HÀM 1: TÍNH TOÁN SỐ LIỆU TỔNG QUÁT & CHUẨN BỊ DỮ LIỆU
+// =========================================================================
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
@@ -77,7 +79,7 @@ function renderTable() {
                 tempVolList.push(t);
             }
 
-            // Sentiment
+            // Sentiment (Phân phối giá 24h)
             const chg = t.change_24h || 0;
             if (chg >= 0) stats.gainers++; else stats.losers++;
 
@@ -98,7 +100,7 @@ function renderTable() {
         }
     });
 
-    // Lấy Top 10 Token Volume lớn nhất để VẼ BIỂU ĐỒ (Nhưng số liệu tổng bên trên vẫn là của ALL)
+    // Lấy Top 10 Token Volume lớn nhất để VẼ BIỂU ĐỒ
     tempVolList.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
     stats.topVolTokens = tempVolList.slice(0, 10); 
 
@@ -109,14 +111,16 @@ function renderTable() {
         d.down_0_2, d.down_2_4, d.down_4_6, d.down_6_8, d.down_8, 1
     );
 
-    // VẼ HUD
+    // VẼ HUD (Dashboard)
     renderMarketHUD(stats);
 
-    // RENDER BẢNG (Đã bổ sung đầy đủ code bên dưới)
+    // RENDER CÁC DÒNG BẢNG CHI TIẾT
     renderTableRows(tbody); 
 }
 
-// --- HÀM 2: RENDER CÁC DÒNG TRONG BẢNG (ĐÃ BỔ SUNG ĐẦY ĐỦ) ---
+// =========================================================================
+// HÀM 2: RENDER TỪNG DÒNG TOKEN VÀO BẢNG
+// =========================================================================
 function renderTableRows(tbody) {
     // 1. Lọc dữ liệu
     let list = allTokens.filter(t => {
@@ -147,7 +151,7 @@ function renderTableRows(tbody) {
         const tr = document.createElement('tr');
         const now = Date.now();
         
-        // --- LOGIC BADGE CHUẨN ---
+        // Logic Badge Trạng thái
         const status = getTokenStatus(t);
         let startBadges = [];
         if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
@@ -222,7 +226,9 @@ function renderTableRows(tbody) {
     });
 }
 
-// --- HÀM 3: VẼ DASHBOARD (MARKET HUD) ---
+// =========================================================================
+// HÀM 3: VẼ DASHBOARD (HUD) - ĐÃ CẬP NHẬT THEO YÊU CẦU MỚI
+// =========================================================================
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view) return;
@@ -238,14 +244,14 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // Tính toán tỷ lệ
+    // Tính toán tỷ lệ phần trăm
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
     const limitPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyLimit / stats.alphaDailyTotal) * 100 : 0;
     const chainPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyChain / stats.alphaDailyTotal) * 100 : 0;
 
-    // Helper Sentiment
+    // Helper: Vẽ thanh Sentiment (Histogram)
     const drawSentBar = (count, label, colorClass) => {
         let h = (count / stats.distribution.maxCount) * 40;
         if (count > 0 && h < 4) h = 4;
@@ -257,9 +263,9 @@ function renderMarketHUD(stats) {
     };
     const d = stats.distribution;
 
-    // Helper Chart (Top 10)
+    // Helper: Vẽ Chart Top 10 (Đối Xứng) - ĐÃ THÊM TÊN TOKEN VÀ SỰ KIỆN CLICK
     const drawMirroredChart = () => {
-        if (stats.topVolTokens.length === 0) return '<div style="height:60px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
+        if (stats.topVolTokens.length === 0) return '<div style="height:80px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
         
         let maxVal = 0;
         stats.topVolTokens.forEach(t => {
@@ -271,31 +277,36 @@ function renderMarketHUD(stats) {
         let svgContent = '';
         
         stats.topVolTokens.forEach((t, i) => {
-            const hLimit = (t.volume.daily_limit / maxVal) * 25; 
+            const hLimit = (t.volume.daily_limit / maxVal) * 25; // Max height 25
             const hChain = (t.volume.daily_onchain / maxVal) * 25;
             const x = i * barWidth;
-            const barW = barWidth - 1; 
+            const barW = barWidth - 2; // Gap rộng hơn chút để thoáng
 
-            const tooltip = `${t.symbol} &#10;Limit: $${formatNum(t.volume.daily_limit)} &#10;Chain: $${formatNum(t.volume.daily_onchain)}`;
+            // Nội dung Alert khi click
+            const alertMsg = `TOKEN: ${t.symbol}\\nDaily Total: $${formatNum(t.volume.daily_total)}\\n------------------\\n🟡 Limit: $${formatNum(t.volume.daily_limit)}\\n🔵 Chain: $${formatNum(t.volume.daily_onchain)}`;
 
             svgContent += `
-                <g class="chart-bar-group">
-                    <title>${tooltip}</title>
-                    <rect x="${x + 0.5}%" y="${30 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
-                    <rect x="${x + 0.5}%" y="30" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
+                <g class="chart-bar-group" onclick="alert('${alertMsg}')">
+                    <title>${t.symbol} - Click for details</title>
+                    <rect x="${x + 1}%" y="${35 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
+                    
+                    <rect x="${x + 1}%" y="35" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
+                    
+                    <text x="${x + (barWidth/2)}%" y="75" text-anchor="middle" fill="#848e9c" font-size="3" font-family="Arial" font-weight="bold">${t.symbol}</text>
                 </g>
             `;
         });
 
+        // Tăng chiều cao SVG lên 80 để chứa tên token bên dưới
         return `
-            <svg width="100%" height="60" viewBox="0 0 100 60" preserveAspectRatio="none" style="overflow:visible;">
-                <line x1="0" y1="30" x2="100" y2="30" stroke="#2b3139" stroke-width="0.5" />
+            <svg width="100%" height="80" viewBox="0 0 100 80" preserveAspectRatio="none" style="overflow:visible;">
+                <line x1="0" y1="35" x2="100" y2="35" stroke="#2b3139" stroke-width="0.5" />
                 ${svgContent}
             </svg>
         `;
     };
 
-    // RENDER HUD HTML
+    // RENDER HTML CHÍNH
     hud.innerHTML = `
         <div class="hud-module">
             <div class="hud-title">ALPHA LIFECYCLE (ALL TIME)</div>
@@ -316,14 +327,11 @@ function renderMarketHUD(stats) {
         </div>
 
         <div class="hud-module border-left-dim">
-            <div class="hud-title" style="display:flex; justify-content:space-between;">
-                DAILY VOL STRUCTURE (UTC 0:00)
-                <span style="color:#5E6673; font-size:10px;">Roll 24h: $${formatNum(stats.alphaRolling24h)}</span>
-            </div>
+            <div class="hud-title">DAILY VOL STRUCTURE (UTC 0:00)</div>
             
             <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
                 <div class="text-neon" style="font-size:24px; font-weight:bold; font-family:'Rajdhani';">$${formatNum(stats.alphaDailyTotal)}</div>
-                <div style="font-size:11px; color:#848e9c;">(Active Tokens Only)</div>
+                <div style="font-size:11px; color:#848e9c;">(Active Market Total)</div>
             </div>
 
             <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-family:'Rajdhani'; font-weight:600;">
@@ -337,7 +345,11 @@ function renderMarketHUD(stats) {
         </div>
 
         <div class="hud-module border-left-dim">
-            <div class="hud-title">24H PRICE DISTRIBUTION</div>
+            <div class="hud-title" style="display:flex; justify-content:space-between;">
+                24H PRICE & VOL
+                <span style="color:#5E6673; font-size:10px;">Roll Vol: <span style="color:#eaecef">$${formatNum(stats.alphaRolling24h)}</span></span>
+            </div>
+
             <div style="flex-grow:1; display:flex; align-items:flex-end; gap:3px; padding-bottom:5px;">
                 ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
                 ${drawSentBar(d.up_2_4, '2-4%', 'bar-green-mid')}
@@ -351,6 +363,7 @@ function renderMarketHUD(stats) {
                 ${drawSentBar(d.down_6_8, '6-8%', 'bar-red')}
                 ${drawSentBar(d.down_8, '>8%', 'bar-red')}
             </div>
+            
             <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
                 <div style="color: #0ecb81; font-weight: 700; font-family: var(--font-num); font-size: 16px;"><i class="fas fa-arrow-up" style="font-size:12px; transform: rotate(45deg);"></i> ${stats.gainers}</div>
                 <div style="color: #f6465d; font-weight: 700; font-family: var(--font-num); font-size: 16px;">${stats.losers} <i class="fas fa-arrow-down" style="font-size:12px; transform: rotate(45deg);"></i></div>
@@ -358,7 +371,7 @@ function renderMarketHUD(stats) {
         </div>
     `;
 
-    // CSS style (giữ nguyên)
+    // Inject CSS bổ sung
     if (!document.getElementById('chart-hover-style')) {
         const style = document.createElement('style');
         style.id = 'chart-hover-style';
