@@ -288,7 +288,7 @@ def fetch_data():
     results = []
     print(f"🚀 Processing {len(target_tokens)} Tokens (R2 Storage Mode)...")
     
-    for t in target_tokens[:5]:
+    for t in target_tokens:
         r = process_single_token(t)
         if r: results.append(r)
 
