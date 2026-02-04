@@ -226,7 +226,9 @@ function renderTableRows(tbody) {
     });
 }
 
-// --- HÀM VẼ DASHBOARD (MARKET HUD) - ĐÃ FIX CHỮ MÉO & BỎ KHUNG ---
+// =========================================================================
+// HÀM VẼ DASHBOARD (HUD) - ĐÃ FIX LỖI TOOLTIP & BỎ KHUNG VIỀN
+// =========================================================================
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view) return;
@@ -242,29 +244,36 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // 1. TẠO TOOLTIP (Nếu chưa có)
+    // 1. TẠO TOOLTIP ELEMENT (Nếu chưa có)
     let tooltip = document.getElementById('hud-tooltip');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'hud-tooltip';
+        // Style Kính mờ - Neon Border - Bóng đổ
         tooltip.style.cssText = `
-            position: fixed; display: none; z-index: 10000; 
-            background: rgba(16, 20, 24, 0.95); border: 1px solid #2b3139; 
-            border-left: 2px solid #00F0FF; padding: 10px; border-radius: 4px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: none; 
-            font-family: 'Rajdhani', sans-serif; min-width: 150px; backdrop-filter: blur(5px);
+            position: fixed; display: none; z-index: 99999; 
+            background: rgba(11, 14, 17, 0.95); 
+            border: 1px solid #2b3139; 
+            border-left: 3px solid #00F0FF; 
+            padding: 12px; border-radius: 4px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6); 
+            pointer-events: none; 
+            font-family: 'Rajdhani', sans-serif; 
+            min-width: 160px; 
+            backdrop-filter: blur(10px);
+            transform: translate(15px, 15px); /* Cách chuột ra một chút */
         `;
         document.body.appendChild(tooltip);
     }
 
-    // Tính toán tỷ lệ
+    // Tính toán các tỷ lệ
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
     const limitPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyLimit / stats.alphaDailyTotal) * 100 : 0;
     const chainPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyChain / stats.alphaDailyTotal) * 100 : 0;
 
-    // Helper Sentiment
+    // Helper: Vẽ thanh Sentiment (Histogram)
     const drawSentBar = (count, label, colorClass) => {
         let h = (count / stats.distribution.maxCount) * 40;
         if (count > 0 && h < 4) h = 4;
@@ -276,7 +285,7 @@ function renderMarketHUD(stats) {
     };
     const d = stats.distribution;
 
-    // --- [SỬA LẠI] HELPER VẼ CHART (DÙNG HTML LABEL + SVG BAR) ---
+    // --- [LOGIC MỚI] VẼ CHART VỚI DATA-ATTRIBUTES ---
     const drawMirroredChart = () => {
         if (stats.topVolTokens.length === 0) return '<div style="height:100px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
         
@@ -287,49 +296,55 @@ function renderMarketHUD(stats) {
         if (maxVal === 0) maxVal = 1;
 
         const barCount = 10;
-        const barWidth = 100 / barCount; // 10% mỗi cột
+        const barWidth = 100 / barCount; 
         let svgContent = '';
-        let labelsHtml = ''; // Chuỗi HTML chứa tên token
+        let labelsHtml = ''; 
         
         stats.topVolTokens.forEach((t, i) => {
             const hLimit = (t.volume.daily_limit / maxVal) * 35; 
             const hChain = (t.volume.daily_onchain / maxVal) * 35;
-            
             const x = i * barWidth;
-            // [CHỈNH KHOẢNG CÁCH]: barW gần bằng barWidth (10) để sát nhau
-            // Để 9.5 có nghĩa là khoảng hở (gap) chỉ 0.5% (rất nhỏ)
-            const barW = 9.5; 
+            
+            // Chỉnh cột sát nhau: barW gần bằng 100/10 = 10. Để 9.6 là hở rất bé (0.4%)
+            const barW = 9.6; 
+            const offset = (barWidth - barW) / 2; // Căn giữa
 
-            // Cắt tên nếu quá dài
+            // Tên hiển thị (Cắt ngắn)
             let displayName = t.symbol;
             if (displayName.length > 6) displayName = displayName.substring(0, 6) + '..';
 
-            const tooltipData = JSON.stringify({
-                symbol: t.symbol,
-                total: formatNum(t.volume.daily_total),
-                limit: formatNum(t.volume.daily_limit),
-                chain: formatNum(t.volume.daily_onchain)
-            });
+            // --- QUAN TRỌNG: LƯU DỮ LIỆU VÀO DATA-XXX ---
+            // Cách này an toàn tuyệt đối, không bị lỗi cú pháp
+            const dataAttrs = `
+                data-symbol="${t.symbol}"
+                data-total="${formatNum(t.volume.daily_total)}"
+                data-limit="${formatNum(t.volume.daily_limit)}"
+                data-chain="${formatNum(t.volume.daily_onchain)}"
+            `;
 
-            // 1. Vẽ Cột (SVG)
+            // 1. Vẽ Cột SVG
             svgContent += `
                 <g class="chart-bar-group" 
-                   onmouseenter='showTooltip(event, ${tooltipData})' 
-                   onmousemove='moveTooltip(event)' 
-                   onmouseleave='hideTooltip()'>
+                   ${dataAttrs}
+                   onmouseenter="window.showTooltip(event, this)" 
+                   onmousemove="window.moveTooltip(event)" 
+                   onmouseleave="window.hideTooltip()">
+                    
                     <rect x="${x}%" y="0" width="${barWidth}%" height="100" fill="transparent"></rect>
-                    <rect x="${x + 0.25}%" y="${45 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
-                    <rect x="${x + 0.25}%" y="45" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
+
+                    <rect x="${x + offset}%" y="${45 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
+                    
+                    <rect x="${x + offset}%" y="45" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
                 </g>
             `;
 
-            // 2. Vẽ Tên (HTML) - Để bên dưới, canh giữa cột
-            // Dùng sự kiện hover y hệt như cột để rê vào tên cũng hiện tooltip
+            // 2. Vẽ Tên Token bên dưới (HTML)
             labelsHtml += `
-                <div style="width:${barWidth}%; text-align:center; font-size:10px; color:#848e9c; font-weight:700; cursor:default; overflow:hidden; text-overflow:ellipsis;"
-                     onmouseenter='showTooltip(event, ${tooltipData})' 
-                     onmousemove='moveTooltip(event)' 
-                     onmouseleave='hideTooltip()'>
+                <div style="width:${barWidth}%; text-align:center; font-size:10px; color:#848e9c; font-weight:700; cursor:pointer; overflow:hidden; text-overflow:ellipsis; padding-top:4px;"
+                     ${dataAttrs}
+                     onmouseenter="window.showTooltip(event, this)" 
+                     onmousemove="window.moveTooltip(event)" 
+                     onmouseleave="window.hideTooltip()">
                     ${displayName}
                 </div>
             `;
@@ -341,7 +356,7 @@ function renderMarketHUD(stats) {
                     <line x1="0" y1="45" x2="100" y2="45" stroke="#2b3139" stroke-width="0.5" />
                     ${svgContent}
                 </svg>
-                <div style="display:flex; width:100%; margin-top:2px;">
+                <div style="display:flex; width:100%; height:20px;">
                     ${labelsHtml}
                 </div>
             </div>
@@ -406,15 +421,17 @@ function renderMarketHUD(stats) {
         </div>
     `;
 
-    // --- CẬP NHẬT CSS: BỎ STROKE (VIỀN) KHI HOVER ---
+    // --- CẬP NHẬT CSS: XÓA VIỀN, CHỈ SÁNG MÀU LÊN ---
     if (!document.getElementById('chart-hover-style')) {
         const style = document.createElement('style');
         style.id = 'chart-hover-style';
         style.innerHTML = `
-            .chart-bar-group rect { transition: opacity 0.2s; cursor: pointer; }
-            /* CHỈNH SỬA Ở ĐÂY: Chỉ đổi opacity, KHÔNG thêm stroke */
-            .chart-bar-group:hover rect { opacity: 1 !important; filter: brightness(1.2); }
-            
+            .chart-bar-group rect { transition: all 0.2s; cursor: pointer; }
+            /* Hiệu ứng Hover: Sáng hơn, không có viền (stroke) */
+            .chart-bar-group:hover rect { opacity: 1 !important; filter: brightness(1.3); }
+            /* Hover vào tên thì chữ sáng lên */
+            .chart-bar-group:hover + div, div:hover { color: #fff !important; }
+
             .bar-green { background: #0ecb81; opacity: 1; }
             .bar-green-mid { background: #0ecb81; opacity: 0.7; }
             .bar-green-dim { background: #0ecb81; opacity: 0.4; }
@@ -425,6 +442,50 @@ function renderMarketHUD(stats) {
         document.head.appendChild(style);
     }
 }
+
+// =========================================================================
+// CÁC HÀM XỬ LÝ TOOLTIP (GẮN GLOBAL WINDOW ĐỂ GỌI MỌI NƠI)
+// =========================================================================
+window.showTooltip = function(e, el) {
+    const t = document.getElementById('hud-tooltip');
+    if(t && el.dataset.symbol) {
+        // Lấy dữ liệu từ data-attributes (An toàn 100%)
+        const { symbol, total, limit, chain } = el.dataset;
+
+        t.style.display = 'block';
+        t.innerHTML = `
+            <div style="color:#fff; font-size:16px; font-weight:bold; margin-bottom:6px; border-bottom:1px solid #333; padding-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                ${symbol}
+                <span style="font-size:10px; background:#2b3139; padding:2px 4px; border-radius:3px; color:#848e9c">VOL RANK</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; color:#eaecef;">
+                <span>Daily Vol:</span> <span style="font-weight:bold;">$${total}</span>
+            </div>
+            <div style="height:1px; background:#333; margin:4px 0;"></div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;">
+                <span style="color:#F0B90B">● Limit:</span> <span style="color:#F0B90B; font-weight:bold;">$${limit}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px;">
+                <span style="color:#00F0FF">● On-Chain:</span> <span style="color:#00F0FF; font-weight:bold;">$${chain}</span>
+            </div>
+        `;
+        window.moveTooltip(e);
+    }
+};
+
+window.moveTooltip = function(e) {
+    const t = document.getElementById('hud-tooltip');
+    if(t) {
+        // Tooltip đi theo chuột
+        t.style.left = (e.clientX) + 'px';
+        t.style.top = (e.clientY) + 'px';
+    }
+};
+
+window.hideTooltip = function() {
+    const t = document.getElementById('hud-tooltip');
+    if(t) t.style.display = 'none';
+};
 
 
 
