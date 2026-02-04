@@ -1,7 +1,9 @@
 export async function onRequest(context) {
   const { request, env } = context; // Lấy biến môi trường (env) để gọi R2
   const url = new URL(request.url);
-
+// Khi nào muốn bật lại bảo mật, hãy comment dòng dưới đây (thêm // vào đầu)
+  return context.next(); 
+  
   // Chỉ xử lý file market-data.json (File chính)
   if (url.pathname.includes('market-data.json')) {
     
