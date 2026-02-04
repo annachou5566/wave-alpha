@@ -4594,7 +4594,16 @@ function openEditModal(id) {
     document.getElementById('c-symbol').value = c.name;
     document.getElementById('c-chain').value = c.chain;
     document.getElementById('c-price').value = c.cachedPrice;
-    document.getElementById('c-logo').value = c.logo;
+    
+let logoInput = document.getElementById('c-logo');
+    if (logoInput) {
+        logoInput.type = "text";       // Chuyển từ hidden thành text để bạn nhìn thấy
+        logoInput.readOnly = false;    // Đảm bảo không bị khóa
+        logoInput.style.display = "block"; // Hiện lên rõ ràng
+        logoInput.placeholder = "Xóa trắng ô này để dùng ảnh tự động";
+        logoInput.className = "form-control mb-2"; // Thêm style cho đẹp (nếu cần)
+    }
+
     let imgPreview = document.getElementById('c-logo-preview');
     if(c.logo) { imgPreview.src = c.logo; imgPreview.style.display = 'block'; }
     else { imgPreview.style.display = 'none'; }
