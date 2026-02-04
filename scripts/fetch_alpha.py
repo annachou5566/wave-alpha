@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import requests 
 import cloudscraper 
 
+
 load_dotenv()
 
 PROXY_WORKER_URL = os.getenv("PROXY_WORKER_URL")
@@ -14,23 +15,27 @@ API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
-
-scraper = cloudscraper.create_scraper(
-    browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
-)
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    "Referer": "https://www.binance.com/en/alpha",
-    "Origin": "https://www.binance.com",
-    "Accept": "application/json"
-}
-
 OUTPUT_FILE = "public/data/market-data.json"
 os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 
 ACTIVE_SPOT_SYMBOLS = set()
 OLD_DATA_MAP = {}
+
+
+
+
+session = cloudscraper.create_scraper(
+    browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
+)
+
+
+session.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Referer": "https://www.binance.com/en/alpha",
+    "Origin": "https://www.binance.com",
+    "Accept": "application/json"
+})
+
 
 def fetch_smart(target_url, retries=3):
     is_render = "onrender.com" in (PROXY_WORKER_URL or "")
@@ -43,24 +48,37 @@ def fetch_smart(target_url, retries=3):
             try:
                 encoded_target = urllib.parse.quote(target_url, safe='')
                 proxy_final_url = f"{PROXY_WORKER_URL}?url={encoded_target}"
+                
+
                 current_timeout = 60 if (is_render and i == 0) else 30
-                res = requests.get(proxy_final_url, timeout=current_timeout)
+                
+
+                res = session.get(proxy_final_url, timeout=current_timeout)
+                
                 if res.status_code == 200:
                     data = res.json()
                     if isinstance(data, dict):
                         if "symbols" in data: return data 
                         if data.get("code") == "000000": return data
                 elif res.status_code == 502:
+                    print("⚠️ Render 502 (Đang khởi động lại)...")
                     time.sleep(3)
-            except: pass
+            except Exception as e:
+
+                if i == retries - 1: print(f"❌ Proxy Err: {e}")
+                pass
         
+
         try:
-            res = scraper.get(target_url, headers=HEADERS, timeout=15)
+            res = session.get(target_url, timeout=15)
             if res.status_code == 200:
                 data = res.json()
                 if "symbols" in data: return data
                 if data.get("code") == "000000": return data
-        except: pass
+        except Exception as e:
+            if i == retries - 1: print(f"❌ Direct Err: {e}")
+            pass
+        
         time.sleep(1)
     return None
 
@@ -85,8 +103,10 @@ def get_active_spot_symbols():
             res = {s["baseAsset"] for s in data["symbols"] if s["status"] == "TRADING"}
             print(f"OK ({len(res)})")
             return res
-    except: pass
+    except Exception as e:
+        print(f"❌ Spot Check Failed: {e}")
     return set()
+
 
 def fetch_details_optimized(chain_id, contract_addr):
     if not API_AGG_KLINES: return 0, 0, 0, []
@@ -96,30 +116,45 @@ def fetch_details_optimized(chain_id, contract_addr):
     if chain_id not in no_lower_chains:
         clean_addr = clean_addr.lower()
     
-    base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=5&tokenAddress={clean_addr}"
+
+
+
+    base_url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1d&limit=30&tokenAddress={clean_addr}"
     
     d_total, d_limit = 0.0, 0.0
     chart_data = []
 
-    res_limit = fetch_smart(f"{base_url}&dataType=limit")
-    if res_limit and res_limit.get("data") and res_limit["data"].get("klineInfos"):
-        k = res_limit["data"]["klineInfos"]
-        d_limit = safe_float(k[-1][5])
 
-    res_agg = fetch_smart(f"{base_url}&dataType=aggregate")
-    if res_agg and res_agg.get("data") and res_agg["data"].get("klineInfos"):
-        k = res_agg["data"]["klineInfos"]
-        d_total = safe_float(k[-1][5])
+    try:
+        res_limit = fetch_smart(f"{base_url}&dataType=limit")
+        if res_limit and res_limit.get("data") and res_limit["data"].get("klineInfos"):
+            k_infos = res_limit["data"]["klineInfos"]
+
+            if k_infos: d_limit = safe_float(k_infos[-1][5])
+    except Exception as e:
+        print(f"   Err Limit: {e}")
+
+
+    try:
+        res_agg = fetch_smart(f"{base_url}&dataType=aggregate")
+        if res_agg and res_agg.get("data") and res_agg["data"].get("klineInfos"):
+            k_infos = res_agg["data"]["klineInfos"]
+            if k_infos:
+
+                d_total = safe_float(k_infos[-1][5])
+                
+
+
+                chart_data = [{"p": safe_float(k[4]), "v": safe_float(k[5])} for k in k_infos]
+    except Exception as e:
+        print(f"   Err Agg: {e}")
+
 
     d_market = d_total - d_limit
     if d_market < 0: d_market = 0 
 
-    url_chart = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit=24&tokenAddress={clean_addr}&dataType=aggregate"
-    res_chart = fetch_smart(url_chart)
-    if res_chart and res_chart.get("data") and res_chart["data"].get("klineInfos"):
-        chart_data = [{"p": safe_float(k[4]), "v": safe_float(k[5])} for k in res_chart["data"]["klineInfos"]]
-
     return d_total, d_limit, d_market, chart_data
+
 
 def process_single_token(item):
     aid = item.get("alphaId")
@@ -165,17 +200,19 @@ def process_single_token(item):
             if need_limit_check:
                 if daily_limit > 0:
                     status = "ALPHA"
-                    print("✅ ALIVE (Limit>0)")
+                    print("✅ ALIVE")
                 else:
                     status = "DELISTED"
-                    print("❌ DEAD (Limit=0)")
+                    print("❌ DEAD")
             else:
                 print("OK")
             
+
             if daily_total <= 0: daily_total = vol_rolling
             
-        except:
-            print("⚠️ Err")
+        except Exception as e:
+
+            print(f"⚠️ Err: {e}")
             if old: 
                 daily_total = safe_float(old["volume"]["daily_total"])
                 daily_limit = safe_float(old["volume"]["daily_limit"])
@@ -188,6 +225,7 @@ def process_single_token(item):
                 daily_total = vol_rolling
                 if need_limit_check: status = "DELISTED"
     else:
+
         if old:
             daily_total = safe_float(old["volume"]["daily_total"])
             chart_data = old.get("chart", [])
@@ -195,7 +233,6 @@ def process_single_token(item):
         
         if status == "PRE_DELISTED": status = "DELISTED"
 
-    # --- RETURN ĐẦY ĐỦ CÁC TRƯỜNG DỮ LIỆU ---
     return {
         "id": aid,
         "symbol": symbol,
@@ -237,19 +274,23 @@ def fetch_data():
     ACTIVE_SPOT_SYMBOLS = get_active_spot_symbols()
     
     print("⏳ Getting Token List...", end=" ", flush=True)
-    raw_res = fetch_smart(API_AGG_TICKER)
+    try:
+        raw_res = fetch_smart(API_AGG_TICKER)
+    except Exception as e:
+        print(f"\n❌ Lỗi Fetch List: {e}")
+        return
+
     if not raw_res: return
     
     raw_data = raw_res.get("data", [])
     print(f"Done! ({len(raw_data)})")
 
- 
+
     target_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
     target_tokens.sort(key=lambda x: safe_float(x.get("volume24h")), reverse=True)
     
     results = []
-  
-    print(f"🚀 Processing {len(target_tokens)} Tokens (Full List)...")
+    print(f"🚀 Processing {len(target_tokens)} Tokens (Sequential & Optimized)...")
     
     for t in target_tokens:
         r = process_single_token(t)
