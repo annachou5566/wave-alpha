@@ -3483,26 +3483,28 @@ function updateTerminalData(id) {
     // 1. Header Info
     document.getElementById('pt-symbol').innerText = c.name;
     
-    // --- [SỬA LẠI] ẢNH ĐỒNG NHẤT VỚI ALPHA MARKET CHO MỤC PREDICT ---
-    let logoEl = document.getElementById('pt-logo');
-    
-    let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-    let cleanSymbol = rawName.split('(')[0].trim(); // BẮT BUỘC GIỮ DÒNG NÀY
+    // --- [FIX FINAL] LOGIC ẢNH ĐỒNG BỘ VỚI ALPHA MARKET ---
+let logoEl = document.getElementById('pt-logo');
 
-    // 1. Lấy thông tin từ bộ nhớ cache đã đồng bộ từ Alpha Market
-    let alphaInfo = alphaMarketCache[cleanSymbol] || {};
+let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
+let cleanSymbol = rawName.split('(')[0].trim(); // Lấy Symbol chuẩn (VD: BTC)
 
-    // 2. Thiết lập logic ưu tiên: Logo nhập tay trong Admin -> Logo từ Alpha Market -> Ảnh mặc định
-    let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
-    let defaultImgPath = `./assets/tokens/default.png`;
+// 1. Lấy thông tin từ file json của Alpha Market (đã sync ở đầu file)
+let alphaInfo = alphaMarketCache[cleanSymbol] || {};
 
-    // 3. Gán ảnh và xử lý lỗi tải ảnh
-    logoEl.src = localImgPath;
-    logoEl.onerror = function() { 
-        this.onerror = null; // Chặn lặp vô hạn nếu ảnh mặc định cũng lỗi
-        this.src = defaultImgPath; 
-    };
-    // --------------------------------------------------------------
+// 2. Logic ưu tiên: 
+// - Nếu Admin đã nhập link ảnh riêng (c.logo) thì dùng nó.
+// - Nếu không nhập, lấy tự động từ Alpha Market (alphaInfo.icon).
+// - Cuối cùng mới dùng ảnh default.
+let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
+
+// 3. Gán ảnh và xử lý lỗi
+logoEl.src = localImgPath;
+logoEl.onerror = function() { 
+    this.onerror = null; // Chặn lặp vô hạn
+    this.src = './assets/tokens/default.png'; 
+};
+
     
     
     // 2. Control Panel Data
@@ -4683,23 +4685,11 @@ function saveComp() {
 
 
     async function fetchTokenInfo(q) {
-        if(!q) return;
-        try {
-            let r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${q}`);
-            let d = await r.json();
-            if(d.pairs && d.pairs.length) {
-                let p = d.pairs[0];
-                document.getElementById('c-symbol').value = p.baseToken.symbol;
-                document.getElementById('c-price').value = p.priceUsd;
-                document.getElementById('c-chain').value = p.chainId;
-
-                let logoUrl = p.info?.imageUrl || `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`;
-                document.getElementById('c-logo').value = logoUrl;
-                let img = document.getElementById('c-logo-preview');
-                img.src = logoUrl; img.style.display = 'block';
-            }
-        } catch(e){}
-    }
+    // Đã xóa bỏ DexScreener theo yêu cầu.
+    // Không làm gì cả để tránh tự động điền link rác.
+    console.log("DexScreener fetch disabled.");
+    return;
+}
 
         // ============================================================
     // [FIX TIME] RENDER STATS - KHÔNG BỎ SÓT TOKEN CÒN HẠN TRONG NGÀY
