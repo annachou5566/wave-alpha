@@ -282,7 +282,7 @@ def fetch_data():
     raw_data = raw_res.get("data", [])
     print(f"Done ({len(raw_data)})")
 
-    target_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
+    target_tokens = raw_data
     target_tokens.sort(key=lambda x: safe_float(x.get("volume24h")), reverse=True)
     
     results = []
