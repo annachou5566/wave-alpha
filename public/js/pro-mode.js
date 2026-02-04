@@ -47,17 +47,14 @@ function renderTable() {
         alphaDailyTotal: 0, alphaDailyLimit: 0, alphaDailyChain: 0,
         alphaRolling24h: 0, 
         gainers: 0, losers: 0,
-        // Dữ liệu cho biểu đồ phân phối (Sentiment)
         distribution: {
             up_8: 0, up_6_8: 0, up_4_6: 0, up_2_4: 0, up_0_2: 0,
             down_0_2: 0, down_2_4: 0, down_4_6: 0, down_6_8: 0, down_8: 0,
             maxCount: 0 
         },
-        // Dữ liệu cho biểu đồ Volume (Top 30)
         topVolTokens: [] 
     };
 
-    // Danh sách tạm để sort lấy Top 30
     let tempVolList = [];
 
     allTokens.forEach(t => {
@@ -68,19 +65,18 @@ function renderTable() {
         else if (status === 'DELISTED') stats.countDelisted++;
         else {
             stats.countActive++;
-            // Chỉ cộng dồn Volume của các token Active/Spot
             const v = t.volume || {};
             stats.alphaDailyTotal += (v.daily_total || 0);
             stats.alphaDailyLimit += (v.daily_limit || 0);
             stats.alphaDailyChain += (v.daily_onchain || 0);
             stats.alphaRolling24h += (v.rolling_24h || 0);
             
-            // Đẩy vào danh sách tạm để tí nữa tìm Top 30 vẽ biểu đồ
+            // Lấy dữ liệu Volume để tính Top
             if ((v.daily_total || 0) > 0) {
                 tempVolList.push(t);
             }
 
-            // Phân loại Tăng/Giảm (Sentiment)
+            // Sentiment
             const chg = t.change_24h || 0;
             if (chg >= 0) stats.gainers++; else stats.losers++;
 
@@ -101,9 +97,9 @@ function renderTable() {
         }
     });
 
-    // Lấy Top 30 Token có Daily Vol lớn nhất để vẽ biểu đồ
+    // --- [SỬA ĐỔI] CHỈ LẤY TOP 10 TOKEN VOLUME LỚN NHẤT ---
     tempVolList.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
-    stats.topVolTokens = tempVolList.slice(0, 30);
+    stats.topVolTokens = tempVolList.slice(0, 10); 
 
     // Tìm maxCount cho biểu đồ Sentiment
     const d = stats.distribution;
@@ -112,93 +108,14 @@ function renderTable() {
         d.down_0_2, d.down_2_4, d.down_4_6, d.down_6_8, d.down_8, 1
     );
 
-    // VẼ HUD (Giao diện 3 cột)
+    // VẼ HUD
     renderMarketHUD(stats);
 
-    // --- PHẦN RENDER BẢNG BÊN DƯỚI (GIỮ NGUYÊN) ---
-    // (Logic lọc và render hàng bảng không thay đổi, giữ nguyên code cũ của bạn ở đây)
+    // RENDER BẢNG (Giữ nguyên logic render dòng)
     renderTableRows(tbody); 
 }
 
-// Hàm phụ tách ra để code gọn hơn (Bạn copy đoạn render tr trong code cũ vào đây)
-function renderTableRows(tbody) {
-     let list = allTokens.filter(t => {
-        const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
-        const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
-        if (!matchSearch) return false;
-        
-        const status = getTokenStatus(t);
-        if (currentFilter !== 'ALL' && status !== currentFilter) return false;
-        if (filterPoints && (t.mul_point || 1) <= 1) return false;
-        return true; 
-    });
-
-    list.sort((a, b) => {
-        const pinA = pinnedTokens.includes(a.symbol);
-        const pinB = pinnedTokens.includes(b.symbol);
-        if (pinA && !pinB) return -1;
-        if (!pinA && pinB) return 1;
-
-        const valA = getVal(a, sortConfig.key);
-        const valB = getVal(b, sortConfig.key);
-        return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
-    });
-
-    list.slice(0, displayCount).forEach((t, i) => {
-        // ... (COPY NGUYÊN VĂN ĐOẠN TẠO <tr> TỪ CODE CŨ CỦA BẠN VÀO ĐÂY) ...
-        // Lưu ý: Nhớ dùng logic badge mới (status === 'SPOT'...)
-        // Để cho gọn tôi không paste lại đoạn dài dòng đó, bạn giữ nguyên nhé.
-        const tr = document.createElement('tr');
-        
-        // --- LOGIC BADGE CHUẨN ---
-        const status = getTokenStatus(t);
-        let startBadges = [];
-        if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
-        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIRDROP</span>');
-        let journeyHtml = startBadges.join(' ');
-        
-        if (status === 'SPOT') {
-            let endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
-            journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
-        } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
-            let endBadge = '<span class="smart-badge badge-delisted">DELISTED</span>';
-            journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
-        }
-
-        // ... Các phần khác của dòng tr (Logo, Price, Chart...) giữ nguyên ...
-        // (Nếu bạn cần tôi viết lại cả đoạn này thì bảo nhé, nhưng tôi nghĩ bạn copy được)
-        
-        // SAMPLE CODE RENDER DÒNG ĐỂ BẠN DỄ HÌNH DUNG:
-        const tokenImg = t.icon || 'assets/tokens/default.png';
-        const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge">` : '';
-        const shortContract = t.contract ? `${t.contract.substring(0, 6)}...` : '';
-        
-        tr.innerHTML = `
-            <td class="text-center col-fix-1"><i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i></td>
-            <td class="col-fix-2">
-                <div class="token-cell">
-                    <div class="logo-wrapper"><img src="${tokenImg}" class="token-logo">${chainBadgeHtml}</div>
-                    <div class="token-meta-container">
-                         <div class="symbol-row"><span class="symbol-text">${t.symbol}</span></div>
-                         <div class="contract-row" onclick="window.pluginCopy('${t.contract}')">${shortContract} <i class="fas fa-copy"></i></div>
-                    </div>
-                </div>
-            </td>
-            <td style="padding-left:15px;">${journeyHtml}</td>
-            <td class="text-end text-primary-val">$${formatPrice(t.price)} <div class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}" style="font-size:11px;">${t.change_24h}%</div></td>
-            <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
-            <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end font-num text-accent">$${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end font-num text-brand">$${formatNum(t.volume.daily_onchain)}</td>
-            <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
-            <td class="text-end font-num text-primary-val">$${formatNum(t.liquidity)}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// --- HÀM 2: VẼ DASHBOARD (MARKET HUD) - GIAO DIỆN 3 CỘT PRO ---
+// --- HÀM 2: VẼ DASHBOARD (MARKET HUD) ---
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view) return;
@@ -233,33 +150,33 @@ function renderMarketHUD(stats) {
     };
     const d = stats.distribution;
 
-    // Helper vẽ Mirrored Chart (Biểu đồ Đối Xứng Limit/Chain)
+    // --- [SỬA ĐỔI] HELPER VẼ TOP 10 CHART (CÂN ĐỐI HƠN) ---
     const drawMirroredChart = () => {
         if (stats.topVolTokens.length === 0) return '<div style="height:60px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
         
-        // Tìm giá trị max để scale (lấy max của limit hoặc chain lẻ để cột không bị lùn quá)
         let maxVal = 0;
         stats.topVolTokens.forEach(t => {
             maxVal = Math.max(maxVal, t.volume.daily_limit, t.volume.daily_onchain);
         });
         if (maxVal === 0) maxVal = 1;
 
-        const barWidth = 100 / 30; // Chia đều cho 30 cột
+        // Vẽ 10 cột, mỗi cột rộng 10% (trừ đi gap)
+        const barWidth = 100 / 10; 
         let svgContent = '';
         
         stats.topVolTokens.forEach((t, i) => {
-            const hLimit = (t.volume.daily_limit / maxVal) * 25; // Max cao 25px
+            const hLimit = (t.volume.daily_limit / maxVal) * 25; 
             const hChain = (t.volume.daily_onchain / maxVal) * 25;
             const x = i * barWidth;
-            
-            // Tooltip khi hover
+            const barW = barWidth - 1; // Tạo khoảng hở 1% giữa các cột
+
             const tooltip = `${t.symbol} &#10;Limit: $${formatNum(t.volume.daily_limit)} &#10;Chain: $${formatNum(t.volume.daily_onchain)}`;
 
             svgContent += `
                 <g class="chart-bar-group">
                     <title>${tooltip}</title>
-                    <rect x="${x}%" y="${30 - hLimit}" width="${barWidth - 0.5}%" height="${hLimit}" fill="#F0B90B" opacity="0.9"></rect>
-                    <rect x="${x}%" y="30" width="${barWidth - 0.5}%" height="${hChain}" fill="#00F0FF" opacity="0.9"></rect>
+                    <rect x="${x + 0.5}%" y="${30 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
+                    <rect x="${x + 0.5}%" y="30" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
                 </g>
             `;
         });
@@ -276,36 +193,42 @@ function renderMarketHUD(stats) {
     hud.innerHTML = `
         <div class="hud-module">
             <div class="hud-title">ALPHA LIFECYCLE (ALL TIME)</div>
-            <div style="font-size:14px; color:#848e9c; margin-bottom:4px;">TOTAL SCAN</div>
-            <div style="font-size:24px; font-weight:bold; color:#eaecef; font-family:'Rajdhani'; line-height:1;">
-                ${stats.totalScan} <span style="font-size:12px; color:#5E6673; font-weight:normal">TOKENS</span>
+            
+            <div style="display:flex; align-items:flex-end; margin-bottom:12px;">
+                <div style="font-size:24px; font-weight:bold; color:#eaecef; font-family:'Rajdhani'; line-height:1;">
+                    ${stats.totalScan} <span style="font-size:12px; color:#5E6673; font-weight:normal">TOTAL TOKENS</span>
+                </div>
             </div>
             
-            <div class="hud-progress-bar" style="margin-top:15px; margin-bottom:15px; height:6px;">
-                <div class="bar-segment" style="width: ${pctActive}%; background-color:#0ecb81;"></div>
-                <div class="bar-segment" style="width: ${pctSpot}%; background-color:#F0B90B;"></div>
-                <div class="bar-segment" style="width: ${pctDelist}%; background-color:#f6465d;"></div>
+            <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; font-family:'Rajdhani'; font-weight:700; font-size:11px;">
+                <div style="width:${pctActive}%; background:#0ecb81; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
+                    ${stats.countActive} Active
+                </div>
+                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
+                    ${stats.countSpot} Spot
+                </div>
+                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
+                    ${stats.countDelisted} Delist
+                </div>
             </div>
-
-            <div style="display:flex; justify-content:space-between; font-size:11px; color:#848e9c;">
-                <div style="text-align:left;"><span style="color:#0ecb81; font-weight:bold;">${stats.countActive}</span> Active</div>
-                <div style="text-align:center;"><span style="color:#F0B90B; font-weight:bold;">${stats.countSpot}</span> Spot</div>
-                <div style="text-align:right;"><span style="color:#f6465d; font-weight:bold;">${stats.countDelisted}</span> Delisted</div>
+            
+            <div style="margin-top:8px; font-size:10px; color:#5E6673; text-align:center;">
+                Live Project Tracking Status
             </div>
         </div>
 
         <div class="hud-module border-left-dim">
             <div class="hud-title" style="display:flex; justify-content:space-between;">
                 DAILY VOL STRUCTURE (UTC 0:00)
-                <span style="color:#5E6673; font-size:10px;">Rolling 24h: $${formatNum(stats.alphaRolling24h)}</span>
+                <span style="color:#5E6673; font-size:10px;">Roll 24h: $${formatNum(stats.alphaRolling24h)}</span>
             </div>
             
-            <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:12px;">
+            <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
                 <div class="text-neon" style="font-size:24px; font-weight:bold; font-family:'Rajdhani';">$${formatNum(stats.alphaDailyTotal)}</div>
-                <div style="font-size:11px; color:#848e9c;">(Active Only)</div>
+                <div style="font-size:11px; color:#848e9c;">(Top 10 Volume)</div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:8px; font-family:'Rajdhani'; font-weight:600;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-family:'Rajdhani'; font-weight:600;">
                 <div style="color:#F0B90B;">LIMIT: $${formatNum(stats.alphaDailyLimit)} (${Math.round(limitPct)}%)</div>
                 <div style="color:#00F0FF;">CHAIN: $${formatNum(stats.alphaDailyChain)} (${Math.round(chainPct)}%)</div>
             </div>
@@ -318,7 +241,7 @@ function renderMarketHUD(stats) {
         <div class="hud-module border-left-dim">
             <div class="hud-title">24H PRICE DISTRIBUTION</div>
             <div style="flex-grow:1; display:flex; align-items:flex-end; gap:3px; padding-bottom:5px;">
-                 ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
+                ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
                 ${drawSentBar(d.up_2_4, '2-4%', 'bar-green-mid')}
                 ${drawSentBar(d.up_4_6, '4-6%', 'bar-green')}
                 ${drawSentBar(d.up_6_8, '6-8%', 'bar-green')}
@@ -344,7 +267,7 @@ function renderMarketHUD(stats) {
         </div>
     `;
 
-    // Inject CSS nội bộ cho Chart Bar Hover
+    // CSS style (giữ nguyên)
     if (!document.getElementById('chart-hover-style')) {
         const style = document.createElement('style');
         style.id = 'chart-hover-style';
