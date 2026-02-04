@@ -2427,12 +2427,11 @@ let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 // ... (giữ nguyên dòng estHtml cũ) ...
 let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
-// --- [SỬA LẠI] LOGIC LẤY ẢNH THÔNG MINH (CẮT BỎ P1, P2...) ---
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
 let cleanSymbol = rawName.split('(')[0].trim();
-let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
-let defaultImgPath = `./assets/tokens/default.png`; 
-// -----------------------------------------------------------
+// FIX: Ưu tiên lấy link logo từ DB (c.logo) hoặc API (c.icon), nếu không có mới dùng default
+let localImgPath = c.logo || c.icon || c.ic || './assets/tokens/default.png';
+
 
 // HTML
 fullHtml += `
@@ -2833,7 +2832,7 @@ function renderMarketHealthTable(dataInput) {
             
             // Token Info
             let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
-            let localImgPath = `./assets/tokens/${(c.name||'UNKNOWN').toUpperCase().split('(')[0].trim()}.png`;
+            let localImgPath = c.logo || c.icon || c.ic || './assets/tokens/default.png';
             let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;"><img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;"><div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
 
             // Time Logic
@@ -3425,10 +3424,11 @@ function updateTerminalData(id) {
     let logoEl = document.getElementById('pt-logo');
     
     let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-    let cleanSymbol = rawName.split('(')[0].trim(); // Cắt bỏ (P1), (P2)...
-    
-    let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
-    let defaultImgPath = `./assets/tokens/default.png`;
+let cleanSymbol = rawName.split('(')[0].trim(); 
+
+// FIX: Ưu tiên link online
+let localImgPath = c.logo || c.icon || c.ic || './assets/tokens/default.png';
+let defaultImgPath = `./assets/tokens/default.png`;
 
     logoEl.src = localImgPath;
     logoEl.onerror = function() { this.src = defaultImgPath; };
@@ -3739,7 +3739,7 @@ async function submitPredictionFromModal() {
         let cleanSymbol = rawName.split('(')[0].trim();
         
         // 2. Tạo đường dẫn ảnh Local
-        let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
+        let localImgPath = c.logo || c.icon || c.ic || './assets/tokens/default.png';
         
         // 3. Gán ảnh
         imgEl.crossOrigin = "anonymous"; // Giữ nguyên để html2canvas hoạt động
