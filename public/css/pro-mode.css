@@ -831,33 +831,28 @@ body {
 }
 
 
-/* --- [FIX] Z-INDEX HIERARCHY (SỬA LỖI POPUP BỊ CHE) --- */
+/* --- [FIX] Z-INDEX HIERARCHY (CHUẨN HÓA LỚP HIỂN THỊ) --- */
 
-/* 1. Navbar: Nằm trên nội dung web nhưng dưới Popup */
+/* 1. Menu: Cao hơn nội dung web nhưng THẤP HƠN lớp đen mờ */
 .navbar {
     position: sticky !important;
     top: 0;
-    z-index: 100 !important; /* Giảm xuống 100 là đủ an toàn */
+    z-index: 100 !important; /* Quan trọng: Phải nhỏ hơn 1040 */
 }
 
-/* 2. Alpha Market Content: Phải nằm thấp nhất */
+/* 2. Nội dung Alpha: Nằm dưới cùng */
 #alpha-market-view, 
 .alpha-container {
     position: relative;
-    z-index: 1 !important; /* Luôn nằm dưới cùng */
+    z-index: 1 !important;
 }
 
-/* 3. Modal Backdrop (Lớp đen mờ): Phải cao hơn Navbar và Alpha */
+/* 3. Lớp đen mờ (Backdrop): Mặc định là 1040 */
 .modal-backdrop {
-    z-index: 1040 !important; /* Bootstrap mặc định */
+    z-index: 1040 !important;
 }
 
-/* 4. Modal Content (Bảng Đăng nhập): Phải là VUA (Cao nhất) */
+/* 4. Bảng Đăng nhập (Modal): Cao nhất */
 .modal {
-    z-index: 1055 !important; /* Cao hơn tất cả mọi thứ */
-}
-
-/* Fix thêm cho trường hợp Dropdown menu bị che */
-.dropdown-menu {
-    z-index: 1060 !important;
+    z-index: 1055 !important;
 }

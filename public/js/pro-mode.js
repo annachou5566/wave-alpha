@@ -7,7 +7,7 @@ let currentFilter = 'ALL';
 let filterPoints = false;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Meta bypass
+    // 1. Meta bypass (Giữ nguyên)
     if (!document.querySelector('meta[name="referrer"]')) {
         const meta = document.createElement('meta');
         meta.name = "referrer";
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(meta);
     }
 
-    // 2. Inject CSS
+    // 2. Inject CSS (Giữ nguyên)
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -23,7 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
-    // 3. Xây dựng giao diện (Dựa trên Navbar có sẵn)
+    // --- [FIX LỖI MÀN HÌNH ĐEN/POPUP BỊ CHE] ---
+    // Tìm tất cả các bảng Modal (Login, v.v...) và đưa ra ngoài Body
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        document.body.appendChild(modal);
+    }); 
+   
     injectLayout();
 
     // 4. Init logic
