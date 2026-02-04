@@ -4641,6 +4641,8 @@ let logoInput = document.getElementById('c-logo');
     // --- 2. ADMIN SAVE: LƯU Y NGUYÊN (KHÔNG CONVERT) ---
 function saveComp() {
     let id = document.getElementById('c-db-id').value;
+    
+    // 1. Lấy dữ liệu gốc (để không bị mất các trường ẩn như Volume, Chart...)
     let c = id ? compList.find(x => x.db_id == id) : {};
 
     let tokensArr = [];
@@ -4649,7 +4651,11 @@ function saveComp() {
         tokensArr = tokenInput.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s !== '');
     }
 
-    let obj = {
+    // 2. TẠO OBJECT MỚI DỰA TRÊN CÁI CŨ (QUAN TRỌNG: COPY LẠI ...c)
+    let obj = { 
+        ...c, // <--- DÒNG NÀY CỨU DỮ LIỆU CỦA BẠN (Copy hết cái cũ sang)
+        
+        // Sau đó mới ghi đè các thông tin từ Form Admin
         db_id: id ? parseInt(id) : null,
         name: document.getElementById('c-symbol').value.toUpperCase(),
         contract: document.getElementById('c-contract').value,
@@ -4659,9 +4665,8 @@ function saveComp() {
         rewardQty: document.getElementById('c-rewardQty').value,
         topWinners: document.getElementById('c-winners').value,
         
-        // LƯU THẲNG GIÁ TRỊ NHẬP VÀO
         start: document.getElementById('c-start').value,
-        startTime: document.getElementById('c-start-time').value, // <--- THÊM DÒNG NÀY
+        startTime: document.getElementById('c-start-time').value,
         end: document.getElementById('c-end').value,
         endTime: document.getElementById('c-end-time').value,
         listingTime: document.getElementById('c-listing').value,
@@ -4669,11 +4674,14 @@ function saveComp() {
         alphaType: document.getElementById('c-alphaType').value,
         ruleType: document.getElementById('c-rule').value,
         inputTokens: tokensArr,
+        
+        // Đảm bảo các mảng con không bị null
         history: c.history || [],
         predictions: c.predictions || [],
         comments: c.comments || []
     };
 
+    // 3. Lưu lên Cloud
     saveToCloud(obj);
     bootstrap.Modal.getInstance(document.getElementById('compModal')).hide();
 }
