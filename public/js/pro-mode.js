@@ -465,36 +465,50 @@ function getTokenStatus(t) {
     return 'ALPHA'; // Active
 }
 
-// Tính toán số liệu tổng hợp
 function updateSummary() {
-    let totalVol = 0;
-    let countAlpha = 0;
-    let countSpot = 0;
-    let countDelisted = 0;
+    let total = allTokens.length;
+    let spot = 0;
+    let delisted = 0;
+    let alpha = 0;
 
     allTokens.forEach(t => {
-        const status = getTokenStatus(t);
-        if (status === 'ALPHA') {
-            countAlpha++;
-            // CHỈ CỘNG VOL CỦA TOKEN ALPHA (Yêu cầu logic mới)
-            totalVol += (t.volume?.rolling_24h || 0); 
-        } else if (status === 'SPOT') {
-            countSpot++;
-        } else if (status === 'DELISTED') {
-            countDelisted++;
+        // Lấy trạng thái (đảm bảo viết hoa 100% để so sánh chuẩn)
+        const s = (t.status || '').toUpperCase();
+
+        if (s === 'SPOT') {
+            spot++;
+        } else if (s === 'DELISTED' || s === 'PRE_DELISTED') {
+            delisted++;
+        } else {
+            alpha++; // Còn lại là ALPHA (Active)
         }
     });
 
-    // Cập nhật giao diện
-    const elVol = document.getElementById('sum-vol');
-    const elActive = document.getElementById('sum-active');
-    const elSpot = document.getElementById('sum-spot');
-    const elDelist = document.getElementById('sum-delisted');
+    // --- Cập nhật lên giao diện HTML ---
+    
+    // 1. Cập nhật số lượng Text
+    const elTotal = document.getElementById('stat-total-tokens');
+    const elActive = document.getElementById('stat-active-tokens');
+    const elSpot = document.getElementById('stat-spot-tokens');
+    const elDelist = document.getElementById('stat-delisted-tokens');
 
-    if(elVol) elVol.innerText = '$' + formatNum(totalVol);
-    if(elActive) elActive.innerText = countAlpha;
-    if(elSpot) elSpot.innerText = countSpot;
-    if(elDelist) elDelist.innerText = countDelisted;
+    if (elTotal) elTotal.innerText = total;
+    if (elActive) elActive.innerText = alpha;
+    if (elSpot) elSpot.innerText = spot;
+    if (elDelist) elDelist.innerText = delisted;
+
+    // 2. Tính Spot Rate (Tỷ lệ Spot / Tổng)
+    const elRate = document.getElementById('stat-spot-rate');
+    if (elRate) {
+        // Chỉ tính trên tập (Spot + Delisted + Alpha) hoặc Total tuỳ logic bạn
+        // Ở đây tính: Spot / Total
+        const rate = total > 0 ? ((spot / total) * 100).toFixed(1) : "0.0";
+        elRate.innerText = `${rate}%`;
+        
+        // Đổi màu nếu tỷ lệ cao
+        if (parseFloat(rate) > 10) elRate.style.color = '#00ff88'; // Xanh
+        else elRate.style.color = '#eaecef'; // Trắng
+    }
 }
 
 // Xử lý khi click vào thẻ Filter
