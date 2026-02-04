@@ -2831,7 +2831,7 @@ function renderMarketHealthTable(dataInput) {
             
             // Token Info
             let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
-            let localImgPath = `./assets/tokens/${(c.name||'UNKNOWN').toUpperCase().split('(')[0].trim()}.png`;
+            let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
             let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;"><img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;"><div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
 
             // Time Logic
@@ -3423,10 +3423,8 @@ function updateTerminalData(id) {
     let logoEl = document.getElementById('pt-logo');
     
     let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-    let cleanSymbol = rawName.split('(')[0].trim(); // Cắt bỏ (P1), (P2)...
-    
-    let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
-    let defaultImgPath = `./assets/tokens/default.png`;
+let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
+let defaultImgPath = `./assets/tokens/default.png`;
 
     logoEl.src = localImgPath;
     logoEl.onerror = function() { this.src = defaultImgPath; };
@@ -3732,12 +3730,8 @@ async function submitPredictionFromModal() {
         // --- [ĐÃ SỬA] LOGIC ẢNH LOCAL CHO SHARE CARD ---
         let imgEl = document.getElementById('sc-token-img');
         
-        // 1. Làm sạch tên (VD: "STAR (P1)" -> "STAR")
         let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-        let cleanSymbol = rawName.split('(')[0].trim();
-        
-        // 2. Tạo đường dẫn ảnh Local
-        let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
+let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
         
         // 3. Gán ảnh
         imgEl.crossOrigin = "anonymous"; // Giữ nguyên để html2canvas hoạt động
