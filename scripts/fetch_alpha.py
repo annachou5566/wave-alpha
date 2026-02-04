@@ -15,8 +15,6 @@ API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
 
-TOP_TOKEN_LIMIT = 5
-
 scraper = cloudscraper.create_scraper(
     browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
 )
