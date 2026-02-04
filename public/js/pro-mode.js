@@ -250,14 +250,29 @@ window.pluginCopy = (txt) => {
 async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
 async function fetchMarketData() {
     try {
+        // Gọi file JSON từ R2 (qua Middleware)
         const res = await fetch(DATA_URL + '?t=' + Date.now());
-        const data = await res.json();
-        allTokens = data.tokens || [];
+        const json = await res.json();
+        
+        // --- [SỬA ĐOẠN NÀY] ---
+        // Code cũ: allTokens = data.tokens || [];
+        // Code mới: Lấy mảng 'data' từ R2 và giải mã từng token
+        const rawList = json.data || json.tokens || []; 
+        allTokens = rawList.map(item => unminifyToken(item));
+        
         updateSummary();
         renderTable();
+
+        // Cập nhật giờ (Lấy từ meta.u nếu có)
         const timeLbl = document.getElementById('last-updated');
-        if(timeLbl) timeLbl.innerText = 'Updated: ' + (data.last_updated || new Date().toLocaleTimeString());
-    } catch (e) { console.error("Data error:", e); }
+        if(timeLbl) {
+            const timeStr = json.meta ? json.meta.u : (json.last_updated || new Date().toLocaleTimeString());
+            timeLbl.innerText = 'Updated: ' + timeStr;
+        }
+
+    } catch (e) { 
+        console.error("Data error:", e); 
+    }
 }
 
 function renderTable() {
@@ -593,3 +608,37 @@ window.togglePoints = function() {
     }
     renderTable();
 };
+
+// --- [BỔ SUNG] CẤU HÌNH GIẢI MÃ DỮ LIỆU TỪ R2 ---
+// Bảng này dùng để dịch ngược lại các từ viết tắt từ Python
+const KEY_MAP_REVERSE = {
+  "i": "id", "s": "symbol", "n": "name", "ic": "icon",
+  "cn": "chain", "ci": "chain_icon", "ct": "contract",
+  "st": "status", "p": "price", "c": "change_24h",
+  "mc": "market_cap", "l": "liquidity", "v": "volume",
+  "r24": "rolling_24h", "dt": "daily_total",
+  "dl": "daily_limit", "do": "daily_onchain",
+  "ch": "chart", "lt": "listing_time", "tx": "tx_count",
+  "off": "offline", "cex": "listingCex"
+};
+
+// Hàm dịch dữ liệu: Biến 'p' thành 'price', 'v' thành 'volume'...
+function unminifyToken(minifiedItem) {
+  const fullItem = {};
+  for (const [shortKey, value] of Object.entries(minifiedItem)) {
+    const fullKey = KEY_MAP_REVERSE[shortKey];
+    
+    // Xử lý riêng trường Volume vì nó lồng bên trong
+    if (fullKey === "volume" && typeof value === 'object') {
+      fullItem[fullKey] = {};
+      for (const [vKey, vVal] of Object.entries(value)) {
+        fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
+      }
+    } 
+    // Các trường khác copy bình thường
+    else if (fullKey) {
+      fullItem[fullKey] = value;
+    }
+  }
+  return fullItem;
+}
