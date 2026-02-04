@@ -2427,12 +2427,10 @@ let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 // ... (giữ nguyên dòng estHtml cũ) ...
 let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
-// --- [SỬA LẠI] LOGIC LẤY ẢNH THÔNG MINH (CẮT BỎ P1, P2...) ---
+
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
 let cleanSymbol = rawName.split('(')[0].trim();
-let localImgPath = `./assets/tokens/${cleanSymbol}.png`;
-let defaultImgPath = `./assets/tokens/default.png`; 
-// -----------------------------------------------------------
+let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
 
 // HTML
 fullHtml += `
