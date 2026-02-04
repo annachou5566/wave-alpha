@@ -349,10 +349,19 @@ function renderTable() {
         if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIRDROP</span>');
         let journeyHtml = startBadges.join(' ');
         
-        if (t.offline) {
-            let endBadge = t.listingCex ? '<span class="smart-badge badge-spot">SPOT</span>' : '<span class="smart-badge badge-delisted">DELISTED</span>';
+        // --- [SỬA LẠI ĐOẠN NÀY] ---
+        // Lấy trạng thái chuẩn (ALPHA / SPOT / DELISTED)
+        const status = getTokenStatus(t);
+
+        if (status === 'SPOT') {
+            let endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
+            journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
+        } 
+        else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
+            let endBadge = '<span class="smart-badge badge-delisted">DELISTED</span>';
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         }
+        
 
         // --- SỬA NGÀY THÁNG Ở ĐÂY ---
         let dateHtml = '';
