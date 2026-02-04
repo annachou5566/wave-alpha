@@ -119,10 +119,10 @@ function renderTable() {
 }
 
 // =========================================================================
-// HÀM 2: RENDER TỪNG DÒNG TOKEN VÀO BẢNG
+// HÀM 2: RENDER CÁC DÒNG TRONG BẢNG (LOGIC SORT THÔNG MINH)
 // =========================================================================
 function renderTableRows(tbody) {
-    // 1. Lọc dữ liệu
+    // 1. Lọc dữ liệu (Filter)
     let list = allTokens.filter(t => {
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
         const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
@@ -134,13 +134,33 @@ function renderTableRows(tbody) {
         return true; 
     });
 
-    // 2. Sắp xếp
+    // 2. SẮP XẾP (SORT) - LOGIC MỚI
     list.sort((a, b) => {
+        // Ưu tiên 1: Token được GHIM (Pin) luôn nằm trên cùng
         const pinA = pinnedTokens.includes(a.symbol);
         const pinB = pinnedTokens.includes(b.symbol);
         if (pinA && !pinB) return -1;
         if (!pinA && pinB) return 1;
 
+        // Ưu tiên 2: LOGIC THÔNG MINH
+        // Chỉ áp dụng khi đang sắp xếp theo Volume (Mặc định) và chiều Giảm dần (Desc)
+        if (sortConfig.key === 'volume.daily_total' && sortConfig.dir === 'desc') {
+            const statusA = getTokenStatus(a);
+            const statusB = getTokenStatus(b);
+            
+            // Định nghĩa: Token Active là token KHÔNG PHẢI Spot và KHÔNG PHẢI Delisted
+            const isActiveA = (statusA !== 'SPOT' && statusA !== 'DELISTED' && statusA !== 'PRE_DELISTED');
+            const isActiveB = (statusB !== 'SPOT' && statusB !== 'DELISTED' && statusB !== 'PRE_DELISTED');
+
+            // Nếu A là Active mà B là Spot/Delist -> A lên trước (-1)
+            if (isActiveA && !isActiveB) return -1;
+            // Nếu A là Spot/Delist mà B là Active -> B lên trước (1)
+            if (!isActiveA && isActiveB) return 1;
+            
+            // Nếu cả 2 cùng hạng (cùng Active hoặc cùng Spot) -> Xuống dưới so sánh Volume như thường
+        }
+
+        // Ưu tiên 3: Sắp xếp theo giá trị (Volume, Price...)
         const valA = getVal(a, sortConfig.key);
         const valB = getVal(b, sortConfig.key);
         return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
@@ -169,7 +189,7 @@ function renderTableRows(tbody) {
         // Logic Badge xN (Mul Point)
         let mulBadgeHtml = '';
         if (!t.offline && t.listing_time && t.mul_point > 1) {
-            const expiryTime = t.listing_time + 2592000000; // 30 ngày
+            const expiryTime = t.listing_time + 2592000000; 
             const diffDays = Math.ceil((expiryTime - now) / 86400000);
             if (diffDays > 0) {
                 const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
@@ -177,12 +197,11 @@ function renderTableRows(tbody) {
             }
         }
 
-        // Hình ảnh & Contract
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
         const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
 
-        // Template HTML của dòng
+        // Template HTML (Đã bỏ các style border cũ)
         tr.innerHTML = `
             <td class="text-center col-fix-1">
                 <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
