@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import requests 
 import cloudscraper 
 
-# --- 1. CẤU HÌNH ---
 load_dotenv()
 
 PROXY_WORKER_URL = os.getenv("PROXY_WORKER_URL")
@@ -15,9 +14,8 @@ API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
-# ⚠️ CHẾ ĐỘ TEST: Chỉ lấy 5 token đầu tiên
-# Sau khi test xong, bạn đổi thành 1000 hoặc xóa dòng giới hạn đi
-TOP_TOKEN_LIMIT = 5 
+
+TOP_TOKEN_LIMIT = 5
 
 scraper = cloudscraper.create_scraper(
     browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
@@ -36,7 +34,6 @@ os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 ACTIVE_SPOT_SYMBOLS = set()
 OLD_DATA_MAP = {}
 
-# --- 2. HÀM GỌI API ---
 def fetch_smart(target_url, retries=3):
     is_render = "onrender.com" in (PROXY_WORKER_URL or "")
     
@@ -93,7 +90,6 @@ def get_active_spot_symbols():
     except: pass
     return set()
 
-# --- 3. LOGIC DATA (LIMIT CHECK & SOLANA FIX) ---
 def fetch_details_optimized(chain_id, contract_addr):
     if not API_AGG_KLINES: return 0, 0, 0, []
 
@@ -107,13 +103,11 @@ def fetch_details_optimized(chain_id, contract_addr):
     d_total, d_limit = 0.0, 0.0
     chart_data = []
 
-    # Gọi Limit (Quan trọng nhất để cứu token offline)
     res_limit = fetch_smart(f"{base_url}&dataType=limit")
     if res_limit and res_limit.get("data") and res_limit["data"].get("klineInfos"):
         k = res_limit["data"]["klineInfos"]
         d_limit = safe_float(k[-1][5])
 
-    # Gọi Aggregate (Tổng)
     res_agg = fetch_smart(f"{base_url}&dataType=aggregate")
     if res_agg and res_agg.get("data") and res_agg["data"].get("klineInfos"):
         k = res_agg["data"]["klineInfos"]
@@ -122,7 +116,6 @@ def fetch_details_optimized(chain_id, contract_addr):
     d_market = d_total - d_limit
     if d_market < 0: d_market = 0 
 
-    # Gọi Chart
     url_chart = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit=24&tokenAddress={clean_addr}&dataType=aggregate"
     res_chart = fetch_smart(url_chart)
     if res_chart and res_chart.get("data") and res_chart["data"].get("klineInfos"):
@@ -130,7 +123,6 @@ def fetch_details_optimized(chain_id, contract_addr):
 
     return d_total, d_limit, d_market, chart_data
 
-# --- 4. XỬ LÝ 1 TOKEN ---
 def process_single_token(item):
     aid = item.get("alphaId")
     if not aid: return None
@@ -205,17 +197,26 @@ def process_single_token(item):
         
         if status == "PRE_DELISTED": status = "DELISTED"
 
+    # --- RETURN ĐẦY ĐỦ CÁC TRƯỜNG DỮ LIỆU ---
     return {
         "id": aid,
         "symbol": symbol,
         "name": item.get("name"),
         "icon": item.get("iconUrl"),
         "chain": item.get("chainName", ""),
+        "chain_icon": item.get("chainIconUrl"),
         "contract": contract,
-        "status": status,
         "offline": is_offline,
+        "listingCex": is_listing_cex,
+        "status": status,
+        "onlineTge": item.get("onlineTge", False),
+        "onlineAirdrop": item.get("onlineAirdrop", False),
+        "mul_point": safe_float(item.get("mulPoint")),
+        "listing_time": item.get("listingTime", 0),
+        "tx_count": safe_float(item.get("count24h")),
         "price": safe_float(item.get("price")),
         "change_24h": safe_float(item.get("percentChange24h")),
+        "liquidity": safe_float(item.get("liquidity")),
         "market_cap": safe_float(item.get("marketCap")),
         "volume": {
             "rolling_24h": vol_rolling,
@@ -226,7 +227,6 @@ def process_single_token(item):
         "chart": chart_data
     }
 
-# --- 5. MAIN ---
 def fetch_data():
     global ACTIVE_SPOT_SYMBOLS, OLD_DATA_MAP
     start = time.time()
@@ -248,11 +248,11 @@ def fetch_data():
     target_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
     target_tokens.sort(key=lambda x: safe_float(x.get("volume24h")), reverse=True)
     
-    # --- TEST MODE: CHỈ LẤY 5 TOKEN ĐẦU ---
+    # LẤY TOP TOKEN ĐỂ TEST
     test_tokens = target_tokens[:TOP_TOKEN_LIMIT]
     
     results = []
-    print(f"🚀 [TEST MODE] Processing {len(test_tokens)} Tokens (Sequential)...")
+    print(f"🚀 Processing {len(test_tokens)} Tokens (Sequential Mode)...")
     
     for t in test_tokens:
         r = process_single_token(t)
@@ -269,7 +269,7 @@ def fetch_data():
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(final_output, f, ensure_ascii=False, indent=2)
         
-    print(f"\n✅ TEST DONE! Time: {time.time()-start:.1f}s")
+    print(f"\n✅ DONE! Total Time: {time.time()-start:.1f}s")
 
 if __name__ == "__main__":
     fetch_data()
