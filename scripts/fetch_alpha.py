@@ -59,7 +59,7 @@ KEY_MAP = {
     "rolling_24h": "r24", "daily_total": "dt",
     "daily_limit": "dl", "daily_onchain": "do",
     "chart": "ch", "listing_time": "lt", "tx_count": "tx",
-    "offline": "off", "listingCex": "cex"
+    "offline": "off", "listingCex": "cex",
     "onlineTge": "tge",
     "onlineAirdrop": "air"
 }
