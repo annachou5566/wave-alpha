@@ -455,14 +455,21 @@ function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] :
 function setupEvents() { document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable()); window.addEventListener('scroll', () => { if (document.getElementById('alpha-market-view')?.style.display === 'block') { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) { if (displayCount < allTokens.length) { displayCount += 50; renderTable(); } } } }); }
 
 
-// Helper: Xác định trạng thái Token
+// [SỬA LẠI] Helper: Xác định trạng thái Token
 function getTokenStatus(t) {
-    // Offline = True mới xét tiếp
-    if (t.offline === true) {
-        if (t.listingCex === true) return 'SPOT';
-        return 'DELISTED'; // listingCex = false
+    // Ưu tiên 1: Lấy trực tiếp trạng thái từ Python gửi về (Đã chuẩn hóa)
+    if (t.status) {
+        return t.status.toUpperCase();
     }
-    return 'ALPHA'; // Active
+
+    // Fallback (Phòng hờ): Nếu không có status thì mới check thủ công
+    // Lưu ý: Dùng t.offline (truthy) thay vì t.offline === true
+    if (t.offline) {
+        if (t.listingCex) return 'SPOT';
+        return 'DELISTED';
+    }
+    
+    return 'ALPHA'; // Mặc định là Active
 }
 
 function updateSummary() {
