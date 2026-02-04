@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.10'
 
     # Cài đặt thư viện (bao gồm cả boto3 cho R2)
     - name: Install dependencies
