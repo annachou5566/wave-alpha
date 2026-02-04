@@ -997,6 +997,43 @@ function applyLanguage() {
     /* ========================================= */
 
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
+
+// --- [MỚI] BIẾN LƯU CACHE TỪ ALPHA MARKET ---
+let alphaMarketCache = {}; 
+
+// --- [MỚI] HÀM ĐỒNG BỘ DATA TỪ FILE JSON ---
+async function syncAlphaData() {
+    try {
+        // Gọi file market-data.json trong thư mục public/data
+        const res = await fetch('public/data/market-data.json?t=' + Date.now());
+        const json = await res.json();
+        
+        // Mapping dữ liệu: s=Symbol, ic=Icon, ci=Chain Icon
+        // Code bên Alpha Market dùng 'data' hoặc 'tokens'
+        const rawList = json.data || json.tokens || [];
+        
+        rawList.forEach(item => {
+            if(item.s) {
+                let sym = item.s.toUpperCase().trim();
+                alphaMarketCache[sym] = {
+                    icon: item.ic || item.icon || '',
+                    chain_icon: item.ci || item.chain_icon || ''
+                };
+            }
+        });
+        
+        console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
+        
+        // Tải xong thì vẽ lại giao diện ngay
+        if(typeof renderGrid === 'function') renderGrid();
+        if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
+        
+    } catch (e) {
+        console.error("Sync Alpha Error:", e);
+    }
+}
+
+
     let siteConfig = { x:'', tele:'', yt:'', affiliate: {} };
     let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [{id:'acc1', name:'Main', color:'#00F0FF'}, {id:'acc2', name:'Clone', color:'#FFD700'}];
     let currentUser = null;
@@ -1115,6 +1152,7 @@ data.forEach(miniRow => {
 
 function init() {
     checkLegal();
+    syncAlphaData();
     
     // --- 1. ƯU TIÊN HIỆN CACHE ---
     const cachedData = localStorage.getItem('wave_comp_list');
@@ -2429,9 +2467,18 @@ let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-brea
 
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
 let cleanSymbol = rawName.split('(')[0].trim(); // KHÔNG ĐƯỢC XÓA DÒNG NÀY
-// Logic lấy ảnh: Ưu tiên API -> Default
-let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
+
+// --- LOGIC MỚI: LẤY TỪ ALPHA CACHE ---
+let alphaInfo = alphaMarketCache[cleanSymbol] || {};
+
+// Ưu tiên: Logo Admin nhập -> Logo bên Alpha -> Mặc định
+let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
+
+// Lấy Chain Icon (Logo mạng)
+let chainImg = alphaInfo.chain_icon || '';
+let chainBadgeHtml = chainImg ? `<img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'" style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
 let defaultImgPath = `./assets/tokens/default.png`;
+// -------------------------------------
 
 // HTML
 fullHtml += `
@@ -2441,10 +2488,14 @@ fullHtml += `
             ${rocketBadgeHtml}
             <div class="token-info-wrapper">
                 ${dragHandleHtml}
-                <img src="${localImgPath}" 
-                     onerror="this.onerror=null; this.src='${defaultImgPath}';" 
-                     class="token-logo" 
-                     onclick="event.stopPropagation(); window.open('https://www.binance.com/en/alpha/${c.chain}/${c.contract}', '_blank')">
+                
+                <div class="logo-wrapper" style="position:relative; display:inline-block;">
+    <img src="${localImgPath}" 
+         onerror="this.onerror=null; this.src='${defaultImgPath}';" 
+         class="token-logo" 
+         onclick="event.stopPropagation(); window.open('https://www.binance.com/en/alpha/${c.chain}/${c.contract}', '_blank')">
+    ${chainBadgeHtml}
+</div>
                 
                 <div class="token-text">
 
@@ -2832,8 +2883,20 @@ function renderMarketHealthTable(dataInput) {
             
             // Token Info
             let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
-            let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
-            let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;"><img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;"><div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
+
+// --- LOGIC MỚI ---
+let cleanSym = c.name ? c.name.split('(')[0].trim().toUpperCase() : 'UNKNOWN';
+let alphaData = alphaMarketCache[cleanSym] || {};
+let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
+let chainBadge = alphaData.chain_icon ? `<img src="${alphaData.chain_icon}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
+
+// Sửa lại tokenHtml có thêm wrapper cho chain badge
+let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;">
+    <div style="position:relative; display:inline-block;">
+        <img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;">
+        ${chainBadge}
+    </div>
+    <div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
 
             // Time Logic
             let sTime = c.startTime || "00:00:00"; if(sTime.length===5) sTime+=":00";
@@ -3420,17 +3483,27 @@ function updateTerminalData(id) {
     // 1. Header Info
     document.getElementById('pt-symbol').innerText = c.name;
     
-    // --- [SỬA LẠI] ẢNH LOCAL CHO MỤC PREDICT ---
+    // --- [SỬA LẠI] ẢNH ĐỒNG NHẤT VỚI ALPHA MARKET CHO MỤC PREDICT ---
     let logoEl = document.getElementById('pt-logo');
     
     let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-let cleanSymbol = rawName.split('(')[0].trim(); // BẮT BUỘC GIỮ DÒNG NÀY
-let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
-let defaultImgPath = `./assets/tokens/default.png`;
+    let cleanSymbol = rawName.split('(')[0].trim(); // BẮT BUỘC GIỮ DÒNG NÀY
 
+    // 1. Lấy thông tin từ bộ nhớ cache đã đồng bộ từ Alpha Market
+    let alphaInfo = alphaMarketCache[cleanSymbol] || {};
+
+    // 2. Thiết lập logic ưu tiên: Logo nhập tay trong Admin -> Logo từ Alpha Market -> Ảnh mặc định
+    let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
+    let defaultImgPath = `./assets/tokens/default.png`;
+
+    // 3. Gán ảnh và xử lý lỗi tải ảnh
     logoEl.src = localImgPath;
-    logoEl.onerror = function() { this.src = defaultImgPath; };
-    // -------------------------------------------
+    logoEl.onerror = function() { 
+        this.onerror = null; // Chặn lặp vô hạn nếu ảnh mặc định cũng lỗi
+        this.src = defaultImgPath; 
+    };
+    // --------------------------------------------------------------
+    
     
     // 2. Control Panel Data
     let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length-1].target : 0;
@@ -3733,8 +3806,9 @@ async function submitPredictionFromModal() {
         let imgEl = document.getElementById('sc-token-img');
         
         let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-let cleanSymbol = rawName.split('(')[0].trim(); // BẮT BUỘC GIỮ DÒNG NÀY
-let localImgPath = c.icon || c.logo || c.ic || './assets/tokens/default.png';
+let cleanSym = rawName.split('(')[0].trim();
+let alphaData = alphaMarketCache[cleanSym] || {};
+let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
         
         // 3. Gán ảnh
         imgEl.crossOrigin = "anonymous"; // Giữ nguyên để html2canvas hoạt động
