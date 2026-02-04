@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
-// --- HÀM 1: TÍNH TOÁN SỐ LIỆU & RENDER BẢNG ---
+// --- HÀM 1: TÍNH TOÁN SỐ LIỆU TỔNG QUÁT ---
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
@@ -64,6 +64,7 @@ function renderTable() {
         if (status === 'SPOT') stats.countSpot++;
         else if (status === 'DELISTED') stats.countDelisted++;
         else {
+            // Chỉ cộng Volume của các token ACTIVE vào Tổng số liệu
             stats.countActive++;
             const v = t.volume || {};
             stats.alphaDailyTotal += (v.daily_total || 0);
@@ -71,7 +72,7 @@ function renderTable() {
             stats.alphaDailyChain += (v.daily_onchain || 0);
             stats.alphaRolling24h += (v.rolling_24h || 0);
             
-            // Lấy dữ liệu Volume để tính Top
+            // Lấy danh sách để tìm Top 10 vẽ biểu đồ
             if ((v.daily_total || 0) > 0) {
                 tempVolList.push(t);
             }
@@ -97,7 +98,7 @@ function renderTable() {
         }
     });
 
-    // --- [SỬA ĐỔI] CHỈ LẤY TOP 10 TOKEN VOLUME LỚN NHẤT ---
+    // Lấy Top 10 Token Volume lớn nhất để VẼ BIỂU ĐỒ (Nhưng số liệu tổng bên trên vẫn là của ALL)
     tempVolList.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
     stats.topVolTokens = tempVolList.slice(0, 10); 
 
@@ -111,11 +112,117 @@ function renderTable() {
     // VẼ HUD
     renderMarketHUD(stats);
 
-    // RENDER BẢNG (Giữ nguyên logic render dòng)
+    // RENDER BẢNG (Đã bổ sung đầy đủ code bên dưới)
     renderTableRows(tbody); 
 }
 
-// --- HÀM 2: VẼ DASHBOARD (MARKET HUD) ---
+// --- HÀM 2: RENDER CÁC DÒNG TRONG BẢNG (ĐÃ BỔ SUNG ĐẦY ĐỦ) ---
+function renderTableRows(tbody) {
+    // 1. Lọc dữ liệu
+    let list = allTokens.filter(t => {
+        const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
+        const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
+        if (!matchSearch) return false;
+        
+        const status = getTokenStatus(t);
+        if (currentFilter !== 'ALL' && status !== currentFilter) return false;
+        if (filterPoints && (t.mul_point || 1) <= 1) return false;
+        return true; 
+    });
+
+    // 2. Sắp xếp
+    list.sort((a, b) => {
+        const pinA = pinnedTokens.includes(a.symbol);
+        const pinB = pinnedTokens.includes(b.symbol);
+        if (pinA && !pinB) return -1;
+        if (!pinA && pinB) return 1;
+
+        const valA = getVal(a, sortConfig.key);
+        const valB = getVal(b, sortConfig.key);
+        return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
+    });
+
+    // 3. Render HTML từng dòng
+    list.slice(0, displayCount).forEach((t) => {
+        const tr = document.createElement('tr');
+        const now = Date.now();
+        
+        // --- LOGIC BADGE CHUẨN ---
+        const status = getTokenStatus(t);
+        let startBadges = [];
+        if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
+        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIRDROP</span>');
+        let journeyHtml = startBadges.join(' ');
+        
+        if (status === 'SPOT') {
+            let endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
+            journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
+        } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
+            let endBadge = '<span class="smart-badge badge-delisted">DELISTED</span>';
+            journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
+        }
+
+        // Logic Badge xN (Mul Point)
+        let mulBadgeHtml = '';
+        if (!t.offline && t.listing_time && t.mul_point > 1) {
+            const expiryTime = t.listing_time + 2592000000; // 30 ngày
+            const diffDays = Math.ceil((expiryTime - now) / 86400000);
+            if (diffDays > 0) {
+                const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
+                mulBadgeHtml = `<span class="smart-badge ${badgeClass}" style="margin-left:5px;">x${t.mul_point} ${diffDays}d</span>`;
+            }
+        }
+
+        // Hình ảnh & Contract
+        const tokenImg = t.icon || 'assets/tokens/default.png';
+        const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
+        const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
+
+        // Template HTML của dòng
+        tr.innerHTML = `
+            <td class="text-center col-fix-1">
+                <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
+            </td>
+            <td class="col-fix-2">
+                <div class="token-cell" style="justify-content: flex-start;">
+                    <div class="logo-wrapper">
+                        <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
+                        ${chainBadgeHtml}
+                    </div>
+                    <div class="token-meta-container" style="display:block; width:auto; border:none; padding:0;">
+                         <div class="symbol-row">
+                            <span class="symbol-text">${t.symbol}</span>
+                            ${mulBadgeHtml}
+                        </div>
+                        <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:10px; margin-top:2px;">
+                            ${shortContract} <i class="fas fa-copy"></i>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td style="padding-left:15px; vertical-align: middle;">
+                <div style="margin-bottom: 4px;">${journeyHtml}</div>
+                ${t.listing_time ? `<div class="journey-date"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''}
+            </td>
+            <td class="text-end">
+                <div class="text-primary-val">$${formatPrice(t.price)}</div>
+                <div style="font-size:11px; font-weight:700; margin-top:2px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+                    ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}%
+                </div>
+            </td>
+            <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
+            <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_total)}</td>
+            <td class="text-end font-num text-accent">$${formatNum(t.volume.daily_limit)}</td>
+            <td class="text-end font-num text-brand">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.rolling_24h)}</td>
+            <td class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
+            <td class="text-end font-num text-primary-val">$${formatNum(t.liquidity)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// --- HÀM 3: VẼ DASHBOARD (MARKET HUD) ---
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view) return;
@@ -138,7 +245,7 @@ function renderMarketHUD(stats) {
     const limitPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyLimit / stats.alphaDailyTotal) * 100 : 0;
     const chainPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyChain / stats.alphaDailyTotal) * 100 : 0;
 
-    // Helper vẽ Histogram Sentiment (Giữ nguyên)
+    // Helper Sentiment
     const drawSentBar = (count, label, colorClass) => {
         let h = (count / stats.distribution.maxCount) * 40;
         if (count > 0 && h < 4) h = 4;
@@ -150,7 +257,7 @@ function renderMarketHUD(stats) {
     };
     const d = stats.distribution;
 
-    // --- [SỬA ĐỔI] HELPER VẼ TOP 10 CHART (CÂN ĐỐI HƠN) ---
+    // Helper Chart (Top 10)
     const drawMirroredChart = () => {
         if (stats.topVolTokens.length === 0) return '<div style="height:60px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
         
@@ -160,7 +267,6 @@ function renderMarketHUD(stats) {
         });
         if (maxVal === 0) maxVal = 1;
 
-        // Vẽ 10 cột, mỗi cột rộng 10% (trừ đi gap)
         const barWidth = 100 / 10; 
         let svgContent = '';
         
@@ -168,7 +274,7 @@ function renderMarketHUD(stats) {
             const hLimit = (t.volume.daily_limit / maxVal) * 25; 
             const hChain = (t.volume.daily_onchain / maxVal) * 25;
             const x = i * barWidth;
-            const barW = barWidth - 1; // Tạo khoảng hở 1% giữa các cột
+            const barW = barWidth - 1; 
 
             const tooltip = `${t.symbol} &#10;Limit: $${formatNum(t.volume.daily_limit)} &#10;Chain: $${formatNum(t.volume.daily_onchain)}`;
 
@@ -189,7 +295,7 @@ function renderMarketHUD(stats) {
         `;
     };
 
-    // RENDER HTML CHÍNH
+    // RENDER HUD HTML
     hud.innerHTML = `
         <div class="hud-module">
             <div class="hud-title">ALPHA LIFECYCLE (ALL TIME)</div>
@@ -201,20 +307,12 @@ function renderMarketHUD(stats) {
             </div>
             
             <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; font-family:'Rajdhani'; font-weight:700; font-size:11px;">
-                <div style="width:${pctActive}%; background:#0ecb81; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
-                    ${stats.countActive} Active
-                </div>
-                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
-                    ${stats.countSpot} Spot
-                </div>
-                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
-                    ${stats.countDelisted} Delist
-                </div>
+                <div style="width:${pctActive}%; background:#0ecb81; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countActive} Active</div>
+                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countSpot} Spot</div>
+                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countDelisted} Delist</div>
             </div>
             
-            <div style="margin-top:8px; font-size:10px; color:#5E6673; text-align:center;">
-                Live Project Tracking Status
-            </div>
+            <div style="margin-top:8px; font-size:10px; color:#5E6673; text-align:center;">Live Project Tracking Status</div>
         </div>
 
         <div class="hud-module border-left-dim">
@@ -225,7 +323,7 @@ function renderMarketHUD(stats) {
             
             <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
                 <div class="text-neon" style="font-size:24px; font-weight:bold; font-family:'Rajdhani';">$${formatNum(stats.alphaDailyTotal)}</div>
-                <div style="font-size:11px; color:#848e9c;">(Top 10 Volume)</div>
+                <div style="font-size:11px; color:#848e9c;">(Active Tokens Only)</div>
             </div>
 
             <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-family:'Rajdhani'; font-weight:600;">
@@ -246,23 +344,16 @@ function renderMarketHUD(stats) {
                 ${drawSentBar(d.up_4_6, '4-6%', 'bar-green')}
                 ${drawSentBar(d.up_6_8, '6-8%', 'bar-green')}
                 ${drawSentBar(d.up_8, '>8%', 'bar-green')}
-                
                 <div style="width:10px;"></div>
-
                 ${drawSentBar(d.down_0_2, '0-2%', 'bar-red-dim')}
                 ${drawSentBar(d.down_2_4, '2-4%', 'bar-red-mid')}
                 ${drawSentBar(d.down_4_6, '4-6%', 'bar-red')}
                 ${drawSentBar(d.down_6_8, '6-8%', 'bar-red')}
                 ${drawSentBar(d.down_8, '>8%', 'bar-red')}
             </div>
-            
             <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
-                <div style="color: #0ecb81; font-weight: 700; font-family: var(--font-num); font-size: 16px;">
-                    <i class="fas fa-arrow-up" style="font-size:12px; transform: rotate(45deg);"></i> ${stats.gainers}
-                </div>
-                <div style="color: #f6465d; font-weight: 700; font-family: var(--font-num); font-size: 16px;">
-                    ${stats.losers} <i class="fas fa-arrow-down" style="font-size:12px; transform: rotate(45deg);"></i>
-                </div>
+                <div style="color: #0ecb81; font-weight: 700; font-family: var(--font-num); font-size: 16px;"><i class="fas fa-arrow-up" style="font-size:12px; transform: rotate(45deg);"></i> ${stats.gainers}</div>
+                <div style="color: #f6465d; font-weight: 700; font-family: var(--font-num); font-size: 16px;">${stats.losers} <i class="fas fa-arrow-down" style="font-size:12px; transform: rotate(45deg);"></i></div>
             </div>
         </div>
     `;
