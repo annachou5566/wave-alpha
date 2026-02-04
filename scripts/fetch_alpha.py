@@ -6,9 +6,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 import requests 
 import cloudscraper 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
+# --- 1. CẤU HÌNH ---
 load_dotenv()
 
 PROXY_WORKER_URL = os.getenv("PROXY_WORKER_URL")
@@ -16,10 +15,9 @@ API_AGG_TICKER = os.getenv("BINANCE_INTERNAL_AGG_API")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 API_PUBLIC_SPOT = "https://api.binance.com/api/v3/exchangeInfo"
 
-
-
-
-MAX_WORKERS = 5 
+# ⚠️ CHẾ ĐỘ TEST: Chỉ lấy 5 token đầu tiên
+# Sau khi test xong, bạn đổi thành 1000 hoặc xóa dòng giới hạn đi
+TOP_TOKEN_LIMIT = 5 
 
 scraper = cloudscraper.create_scraper(
     browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True}
@@ -38,57 +36,37 @@ os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 ACTIVE_SPOT_SYMBOLS = set()
 OLD_DATA_MAP = {}
 
-
+# --- 2. HÀM GỌI API ---
 def fetch_smart(target_url, retries=3):
-    """
-    Hàm gọi API thông minh:
-    - Tự động mã hóa URL để tránh lỗi ký tự đặc biệt qua Proxy.
-    - Tự động Retry nếu Render đang ngủ hoặc Binance chặn nhẹ.
-    """
     is_render = "onrender.com" in (PROXY_WORKER_URL or "")
     
     if not target_url or "None" in target_url:
-        print(f"❌ LỖI: URL mục tiêu không hợp lệ!")
         return None
 
     for i in range(retries):
-
         if PROXY_WORKER_URL:
             try:
-
                 encoded_target = urllib.parse.quote(target_url, safe='')
                 proxy_final_url = f"{PROXY_WORKER_URL}?url={encoded_target}"
-                
-
-                current_timeout = 50 if (is_render and i == 0) else 20
-                
+                current_timeout = 60 if (is_render and i == 0) else 30
                 res = requests.get(proxy_final_url, timeout=current_timeout)
-                
                 if res.status_code == 200:
                     data = res.json()
-
                     if isinstance(data, dict):
-                        if "symbols" in data: return data
+                        if "symbols" in data: return data 
                         if data.get("code") == "000000": return data
-                        
-                elif res.status_code == 403:
-
-                    pass 
                 elif res.status_code == 502:
                     time.sleep(3)
             except: pass
         
-
         try:
-            res = scraper.get(target_url, headers=HEADERS, timeout=10)
+            res = scraper.get(target_url, headers=HEADERS, timeout=15)
             if res.status_code == 200:
                 data = res.json()
                 if "symbols" in data: return data
                 if data.get("code") == "000000": return data
         except: pass
-        
         time.sleep(1)
-            
     return None
 
 def safe_float(v):
@@ -105,31 +83,19 @@ def load_old_data():
     return {}
 
 def get_active_spot_symbols():
-
     try:
-        print("⏳ Đang lấy danh sách Spot Market...", end=" ", flush=True)
+        print("⏳ Check Spot Market...", end=" ", flush=True)
         data = fetch_smart(API_PUBLIC_SPOT)
         if data and "symbols" in data:
             res = {s["baseAsset"] for s in data["symbols"] if s["status"] == "TRADING"}
-            print(f"OK ({len(res)} symbols)")
+            print(f"OK ({len(res)})")
             return res
-    except Exception as e: 
-        print(f"❌ Lỗi lấy Spot: {e}")
-    
-    print("⚠️ Không lấy được danh sách Spot (Dùng backup rỗng)")
+    except: pass
     return set()
 
-
+# --- 3. LOGIC DATA (LIMIT CHECK & SOLANA FIX) ---
 def fetch_details_optimized(chain_id, contract_addr):
-    """
-    Chiến thuật lấy dữ liệu Tiết kiệm & Chính xác:
-    1. Gọi Aggregate (Tổng).
-    2. Gọi Limit (QUAN TRỌNG ĐỂ CHECK SỐNG/CHẾT).
-    3. Market (On-chain) = Tổng - Limit.
-    4. Chart 1H (Để vẽ biểu đồ).
-    """
     if not API_AGG_KLINES: return 0, 0, 0, []
-
 
     no_lower_chains = ["CT_501", "CT_784"]
     clean_addr = str(contract_addr)
@@ -141,23 +107,22 @@ def fetch_details_optimized(chain_id, contract_addr):
     d_total, d_limit = 0.0, 0.0
     chart_data = []
 
-
+    # Gọi Limit (Quan trọng nhất để cứu token offline)
     res_limit = fetch_smart(f"{base_url}&dataType=limit")
     if res_limit and res_limit.get("data") and res_limit["data"].get("klineInfos"):
         k = res_limit["data"]["klineInfos"]
         d_limit = safe_float(k[-1][5])
 
-
+    # Gọi Aggregate (Tổng)
     res_agg = fetch_smart(f"{base_url}&dataType=aggregate")
     if res_agg and res_agg.get("data") and res_agg["data"].get("klineInfos"):
         k = res_agg["data"]["klineInfos"]
         d_total = safe_float(k[-1][5])
 
-
     d_market = d_total - d_limit
     if d_market < 0: d_market = 0 
 
-
+    # Gọi Chart
     url_chart = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit=24&tokenAddress={clean_addr}&dataType=aggregate"
     res_chart = fetch_smart(url_chart)
     if res_chart and res_chart.get("data") and res_chart["data"].get("klineInfos"):
@@ -165,11 +130,10 @@ def fetch_details_optimized(chain_id, contract_addr):
 
     return d_total, d_limit, d_market, chart_data
 
-
+# --- 4. XỬ LÝ 1 TOKEN ---
 def process_single_token(item):
     aid = item.get("alphaId")
     if not aid: return None
-
 
     vol_rolling = safe_float(item.get("volume24h"))
     symbol = item.get("symbol")
@@ -179,25 +143,17 @@ def process_single_token(item):
     is_offline = item.get("offline", False)
     is_listing_cex = item.get("listingCex", False)
     
-
     status = "ALPHA"
-    need_limit_check = False
+    need_limit_check = False 
 
     if is_offline:
         if is_listing_cex or symbol in ACTIVE_SPOT_SYMBOLS:
             status = "SPOT"
         else:
-
-
             status = "PRE_DELISTED"
             need_limit_check = True
 
-
-
-
-
     should_fetch = False
-    
     if vol_rolling > 0:
         if status == "ALPHA" or status == "PRE_DELISTED":
             should_fetch = True
@@ -207,8 +163,8 @@ def process_single_token(item):
     old = OLD_DATA_MAP.get(aid)
     
     if should_fetch:
+        print(f"📡 {symbol}...", end=" ", flush=True)
         try:
-
             d_t, d_l, d_m, chart = fetch_details_optimized(chain_id, contract)
             
             daily_total = d_t
@@ -216,43 +172,37 @@ def process_single_token(item):
             daily_onchain = d_m
             chart_data = chart
             
-
             if need_limit_check:
-
                 if daily_limit > 0:
                     status = "ALPHA"
+                    print("✅ ALIVE (Limit>0)")
                 else:
-
                     status = "DELISTED"
+                    print("❌ DEAD (Limit=0)")
+            else:
+                print("OK")
             
-
             if daily_total <= 0: daily_total = vol_rolling
             
-        except Exception as e:
-
+        except:
+            print("⚠️ Err")
             if old: 
                 daily_total = safe_float(old["volume"]["daily_total"])
                 daily_limit = safe_float(old["volume"]["daily_limit"])
                 daily_onchain = safe_float(old["volume"]["daily_onchain"])
                 chart_data = old.get("chart", [])
-                
-
                 if need_limit_check:
                     if daily_limit > 0: status = "ALPHA"
                     else: status = "DELISTED"
             else: 
-
                 daily_total = vol_rolling
                 if need_limit_check: status = "DELISTED"
     else:
-
-
         if old:
             daily_total = safe_float(old["volume"]["daily_total"])
             chart_data = old.get("chart", [])
         else: daily_total = vol_rolling
         
-
         if status == "PRE_DELISTED": status = "DELISTED"
 
     return {
@@ -276,56 +226,37 @@ def process_single_token(item):
         "chart": chart_data
     }
 
-
+# --- 5. MAIN ---
 def fetch_data():
     global ACTIVE_SPOT_SYMBOLS, OLD_DATA_MAP
     start = time.time()
     
-    print(f"🛡️ [MODE: PARALLEL WORKERS] Max Workers: {MAX_WORKERS}")
     if not API_AGG_TICKER: 
-        print("❌ LỖI: Thiếu biến môi trường API_AGG_TICKER")
+        print("❌ Thiếu Env")
         return
 
     OLD_DATA_MAP = load_old_data()
     ACTIVE_SPOT_SYMBOLS = get_active_spot_symbols()
     
-    print("⏳ Đang lấy danh sách Token tổng...", end=" ", flush=True)
+    print("⏳ Getting Token List...", end=" ", flush=True)
     raw_res = fetch_smart(API_AGG_TICKER)
-    if not raw_res:
-        print("\n❌ THẤT BẠI: Không kết nối được API tổng.")
-        return
+    if not raw_res: return
     
     raw_data = raw_res.get("data", [])
-    print(f"Xong! ({len(raw_data)} tokens)")
-
-
+    print(f"Done! ({len(raw_data)})")
 
     target_tokens = [t for t in raw_data if safe_float(t.get("volume24h")) > 0]
+    target_tokens.sort(key=lambda x: safe_float(x.get("volume24h")), reverse=True)
+    
+    # --- TEST MODE: CHỈ LẤY 5 TOKEN ĐẦU ---
+    test_tokens = target_tokens[:TOP_TOKEN_LIMIT]
     
     results = []
-    print(f"🚀 Bắt đầu quét đa luồng {len(target_tokens)} Tokens...")
+    print(f"🚀 [TEST MODE] Processing {len(test_tokens)} Tokens (Sequential)...")
     
-
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-
-        future_to_token = {executor.submit(process_single_token, t): t for t in target_tokens}
-        
-        completed_count = 0
-        total_tasks = len(target_tokens)
-        
-        for future in as_completed(future_to_token):
-            token = future_to_token[future]
-            try:
-                data = future.result()
-                if data: results.append(data)
-            except Exception as e:
-                print(f"❌ Lỗi xử lý {token.get('symbol')}: {e}")
-            
-            completed_count += 1
-
-            if completed_count % 50 == 0:
-                print(f"   ...Đã xong {completed_count}/{total_tasks} ({time.time()-start:.0f}s)")
-
+    for t in test_tokens:
+        r = process_single_token(t)
+        if r: results.append(r)
 
     results.sort(key=lambda x: x["volume"]["daily_total"], reverse=True)
 
@@ -338,7 +269,7 @@ def fetch_data():
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(final_output, f, ensure_ascii=False, indent=2)
         
-    print(f"✅ HOÀN TẤT TOÀN BỘ! Tổng thời gian: {time.time()-start:.1f}s")
+    print(f"\n✅ TEST DONE! Time: {time.time()-start:.1f}s")
 
 if __name__ == "__main__":
     fetch_data()
