@@ -50,7 +50,7 @@ session.headers.update({
     "Accept": "application/json"
 })
 
-# --- MAPPING LÀM RỐI DỮ LIỆU (OBFUSCATION) ---
+# --- MAPPING LÀM RỐI DỮ LIỆU (ĐẦY ĐỦ 100%) ---
 KEY_MAP = {
     "id": "i", "symbol": "s", "name": "n", "icon": "ic",
     "chain": "cn", "chain_icon": "ci", "contract": "ct",
@@ -61,29 +61,43 @@ KEY_MAP = {
     "chart": "ch", "listing_time": "lt", "tx_count": "tx",
     "offline": "off", "listingCex": "cex",
     "onlineTge": "tge",
-    "onlineAirdrop": "air"
+    "onlineAirdrop": "air",
+    # [MỚI] Thêm Mul Point
+    "mul_point": "mp"
 }
 
 def minify_token_data(token):
     minified = {}
+    # 1. Các trường cơ bản
     minified[KEY_MAP["id"]] = token.get("id")
     minified[KEY_MAP["symbol"]] = token.get("symbol")
     minified[KEY_MAP["name"]] = token.get("name")
     minified[KEY_MAP["icon"]] = token.get("icon")
-    minified[KEY_MAP["chain"]] = token.get("chain")
+    
+    # 2. Các trường Chain (Mạng lưới) - ĐÃ BỔ SUNG ĐẦY ĐỦ
+    minified[KEY_MAP["chain"]] = token.get("chain")           # Tên mạng
+    minified[KEY_MAP["chain_icon"]] = token.get("chain_icon") # Logo mạng (Cái bạn đang tìm)
     minified[KEY_MAP["contract"]] = token.get("contract")
+
+    # 3. Trạng thái & Giá
     minified[KEY_MAP["status"]] = token.get("status")
     minified[KEY_MAP["price"]] = token.get("price")
     minified[KEY_MAP["change_24h"]] = token.get("change_24h")
+    minified[KEY_MAP["mul_point"]] = token.get("mul_point")   # [MỚI] Điểm nhân
+
+    # 4. Số liệu tài chính (Ép kiểu int cho gọn nếu số lớn)
     minified[KEY_MAP["market_cap"]] = int(token.get("market_cap", 0))
     minified[KEY_MAP["liquidity"]] = int(token.get("liquidity", 0))
     minified[KEY_MAP["tx_count"]] = int(token.get("tx_count", 0))
+    
+    # 5. Thông tin Listing / Offline
     minified[KEY_MAP["listing_time"]] = token.get("listing_time")
     minified[KEY_MAP["offline"]] = 1 if token.get("offline") else 0
     minified[KEY_MAP["listingCex"]] = 1 if token.get("listingCex") else 0
     minified[KEY_MAP["onlineTge"]] = 1 if token.get("onlineTge") else 0
     minified[KEY_MAP["onlineAirdrop"]] = 1 if token.get("onlineAirdrop") else 0
 
+    # 6. Volume (Giữ nguyên cấu trúc object con)
     vol = token.get("volume", {})
     minified[KEY_MAP["volume"]] = {
         KEY_MAP["rolling_24h"]: int(vol.get("rolling_24h", 0)),
@@ -91,7 +105,10 @@ def minify_token_data(token):
         KEY_MAP["daily_limit"]: int(vol.get("daily_limit", 0)),
         KEY_MAP["daily_onchain"]: int(vol.get("daily_onchain", 0))
     }
+    
+    # 7. Biểu đồ
     minified[KEY_MAP["chart"]] = token.get("chart", [])
+    
     return minified
 
 # --- HÀM GỌI API ---

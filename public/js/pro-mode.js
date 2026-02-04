@@ -630,19 +630,18 @@ window.togglePoints = function() {
     renderTable();
 };
 
-// --- [BỔ SUNG] CẤU HÌNH GIẢI MÃ DỮ LIỆU TỪ R2 ---
-// Bảng này dùng để dịch ngược lại các từ viết tắt từ Python
+// --- CẬP NHẬT BẢNG DỊCH MÃ ĐẦY ĐỦ ---
 const KEY_MAP_REVERSE = {
   "i": "id", "s": "symbol", "n": "name", "ic": "icon",
-  "cn": "chain", "ci": "chain_icon", "ct": "contract",
-  "st": "status", "p": "price", "c": "change_24h",
+  "cn": "chain", "ci": "chain_icon", // Đã có chain_icon
+  "ct": "contract",
+  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", // Đã có mul_point
   "mc": "market_cap", "l": "liquidity", "v": "volume",
   "r24": "rolling_24h", "dt": "daily_total",
   "dl": "daily_limit", "do": "daily_onchain",
   "ch": "chart", "lt": "listing_time", "tx": "tx_count",
   "off": "offline", "cex": "listingCex",
-  "tge": "onlineTge",
-  "air": "onlineAirdrop"
+  "tge": "onlineTge", "air": "onlineAirdrop"
 };
 
 // Hàm dịch dữ liệu: Biến 'p' thành 'price', 'v' thành 'volume'...
