@@ -513,12 +513,14 @@ window.hideTooltip = function() {
 };
 
 
+/* ==========================================================================
+   INJECT LAYOUT: KHÔI PHỤC BẢNG & NÚT LỌC (FULL CODE)
+   ========================================================================== */
 function injectLayout() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // 1. Tạo thanh Tab (Giữ nguyên logic cũ)
-    // Kiểm tra nếu chưa có thì mới tạo để tránh trùng lặp
+    // 1. TẠO THANH TAB (NẾU CHƯA CÓ)
     let tabNav = document.getElementById('alpha-tab-nav');
     if (!tabNav) {
         tabNav = document.createElement('div');
@@ -530,16 +532,18 @@ function injectLayout() {
         navbar.insertAdjacentElement('afterend', tabNav);
     }
 
-    // 2. Market View (Giữ nguyên)
+    // 2. TẠO MARKET VIEW (KHÔI PHỤC ĐẦY ĐỦ HEADER & FILTERS)
     let marketView = document.getElementById('alpha-market-view');
     if (!marketView) {
         marketView = document.createElement('div');
         marketView.id = 'alpha-market-view';
         marketView.style.display = 'none';
-        // ... (Giữ nguyên nội dung bên trong của bạn) ...
+        
+        // --- ĐOẠN HTML QUAN TRỌNG ĐÃ BỊ THIẾU TRƯỚC ĐÓ ---
         marketView.innerHTML = `
-            <div class="alpha-container"> <div class="alpha-header">
-                    <div class="filter-group">
+            <div class="alpha-container">
+                <div class="alpha-header">
+                     <div class="filter-group">
                         <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
                         <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
                         <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
@@ -551,8 +555,28 @@ function injectLayout() {
                         <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                     </div>
                 </div>
+
                 <div class="table-responsive">
                     <table class="alpha-table">
+                        <thead>
+                            <tr class="h-top">
+                                <th rowspan="2">#</th>
+                                <th rowspan="2">TOKEN INFO</th>
+                                <th rowspan="2">PRICE</th>
+                                <th colspan="3" class="th-group-vol">DAILY VOLUME (UTC)</th>
+                                <th colspan="3" class="th-group-stats">MARKET STATS (24h)</th>
+                                <th rowspan="2">CHART (7D)</th>
+                            </tr>
+                            <tr class="h-sub">
+                                <th class="sortable" id="sort-daily-total" onclick="sortTable('daily_total')">TOTAL <i class="fas fa-sort"></i></th>
+                                <th class="sortable" id="sort-daily-limit" onclick="sortTable('daily_limit')">LIMIT <i class="fas fa-sort"></i></th>
+                                <th class="sortable" id="sort-daily-onchain" onclick="sortTable('daily_onchain')">ON-CHAIN <i class="fas fa-sort"></i></th>
+                                
+                                <th class="sortable" id="sort-rolling" onclick="sortTable('rolling_24h')">VOL 24H <i class="fas fa-sort"></i></th>
+                                <th class="sortable" id="sort-tx" onclick="sortTable('tx_count')">TXs <i class="fas fa-sort"></i></th>
+                                <th class="sortable" id="sort-liq" onclick="sortTable('liquidity')">LIQ <i class="fas fa-sort"></i></th>
+                            </tr>
+                        </thead>
                         <tbody id="market-table-body"></tbody>
                     </table>
                 </div>
@@ -561,31 +585,31 @@ function injectLayout() {
         tabNav.insertAdjacentElement('afterend', marketView);
     }
 
-    // --- [MỚI] THÊM LOGIC SMART SCROLL NGAY TẠI ĐÂY ---
+    // --- 3. LOGIC SMART SCROLL (GIỮ NGUYÊN NHƯ ĐÃ CHỐT) ---
     let lastScrollY = window.scrollY;
     
-    // Gỡ bỏ sự kiện cũ nếu có để tránh trùng lặp
-    window.removeEventListener('scroll', handleSmartScroll);
+    // Gỡ bỏ sự kiện cũ
+    window.removeEventListener('scroll', window._smartScroll);
     
-    function handleSmartScroll() {
+    window._smartScroll = function() {
         const currentScrollY = window.scrollY;
         const nav = document.getElementById('alpha-tab-nav');
         
-        if (nav) {
-            // Nếu cuộn xuống quá 50px -> Ẩn
-            if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                nav.classList.add('nav-hidden');
-            } 
-            // Nếu cuộn lên -> Hiện
-            else {
-                nav.classList.remove('nav-hidden');
-            }
-        }
-        lastScrollY = currentScrollY;
-    }
+        if (!nav) return;
 
-    // Gắn sự kiện cuộn (passive để mượt hơn trên mobile)
-    window.addEventListener('scroll', handleSmartScroll, { passive: true });
+        // Nếu cuộn xuống quá 20px -> Ẩn thanh Tab
+        if (currentScrollY > lastScrollY && currentScrollY > 20) {
+            nav.classList.add('nav-hidden');
+        } 
+        // Nếu cuộn lên -> Hiện lại
+        else if (currentScrollY < lastScrollY) {
+            nav.classList.remove('nav-hidden');
+        }
+        
+        lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', window._smartScroll, { passive: true });
 }
 
 
