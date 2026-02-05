@@ -7,7 +7,7 @@ let currentFilter = 'ALL';
 let filterPoints = false;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Meta bypass (Giữ nguyên)
+    
     if (!document.querySelector('meta[name="referrer"]')) {
         const meta = document.createElement('meta');
         meta.name = "referrer";
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(meta);
     }
 
-    // 2. Inject CSS (Giữ nguyên)
+    
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
-    // --- [FIX LỖI MÀN HÌNH ĐEN/POPUP BỊ CHE] ---
-    // Tìm tất cả các bảng Modal (Login, v.v...) và đưa ra ngoài Body
+    
+    
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         document.body.appendChild(modal);
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
    
     injectLayout();
 
-    // 4. Init logic
+    
     if (localStorage.getItem('wave_alpha_role') === 'admin') {
         window.pluginSwitchTab('alpha', true);
     }
@@ -40,15 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
 });
 
-// =========================================================================
-// HÀM 1: TÍNH TOÁN SỐ LIỆU TỔNG QUÁT & CHUẨN BỊ DỮ LIỆU
-// =========================================================================
+
+
+
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. KHỞI TẠO BIẾN THỐNG KÊ
+    
     let stats = {
         totalScan: allTokens.length,
         countActive: 0,
@@ -60,7 +60,7 @@ function renderTable() {
         alphaRolling24h: 0,
         gainers: 0,
         losers: 0,
-        // QUAN TRỌNG: Mảng này chứa tên token cho Tooltip
+        
         distribList: {
             up_0_2: [], up_2_4: [], up_4_6: [], up_6_8: [], up_8: [],
             down_0_2: [], down_2_4: [], down_4_6: [], down_6_8: [], down_8: []
@@ -74,15 +74,15 @@ function renderTable() {
     allTokens.forEach(t => {
         const status = getTokenStatus(t);
 
-        // Phân loại Trạng thái
+        
         if (status === 'SPOT') {
             stats.countSpot++;
         } else if (status === 'DELISTED') {
             stats.countDelisted++;
         } else {
-            // --- BẮT ĐẦU XỬ LÝ TOKEN ACTIVE (ELSE) ---
             
-            // Chỉ cộng Volume của các token ACTIVE vào Tổng số liệu
+            
+            
             stats.countActive++;
             const v = t.volume || {};
             stats.alphaDailyTotal += (v.daily_total || 0);
@@ -90,19 +90,19 @@ function renderTable() {
             stats.alphaDailyChain += (v.daily_onchain || 0);
             stats.alphaRolling24h += (v.rolling_24h || 0);
 
-            // Lấy danh sách để tìm Top 10 vẽ biểu đồ
+            
             if ((v.daily_total || 0) > 0) {
                 tempVolList.push(t);
             }
 
-            // Sentiment (Phân phối giá 24h)
+            
             const chg = t.change_24h || 0;
             if (chg >= 0) stats.gainers++;
             else stats.losers++;
             
             const abs = Math.abs(chg);
 
-            // Push Symbol vào mảng tương ứng
+            
             if (chg >= 0) {
                 if (abs >= 8) stats.distribList.up_8.push(t.symbol);
                 else if (abs >= 6) stats.distribList.up_6_8.push(t.symbol);
@@ -117,33 +117,33 @@ function renderTable() {
                 else stats.distribList.down_0_2.push(t.symbol);
             }
             
-            // --- KẾT THÚC XỬ LÝ TOKEN ACTIVE ---
+            
         } 
     }); 
 
-    // Lấy Top 10 Token Volume lớn nhất để VẼ BIỂU ĐỒ
+    
     tempVolList.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
     stats.topVolTokens = tempVolList.slice(0, 10);
 
-    // Tìm maxCount cho biểu đồ Sentiment
+    
     const d = stats.distribList;
     stats.maxDistribCount = Math.max(
         d.up_8.length, d.up_6_8.length, d.up_4_6.length, d.up_2_4.length, d.up_0_2.length,
         d.down_0_2.length, d.down_2_4.length, d.down_4_6.length, d.down_6_8.length, d.down_8.length, 1
     );
 
-    // VẼ HUD (Dashboard)
+    
     renderMarketHUD(stats);
 
-    // RENDER CÁC DÒNG BẢNG CHI TIẾT
+    
     renderTableRows(tbody);
 }
 
-// =========================================================================
-// HÀM 2: RENDER CÁC DÒNG TRONG BẢNG (LOGIC SORT THÔNG MINH)
-// =========================================================================
+
+
+
 function renderTableRows(tbody) {
-    // 1. Lọc dữ liệu (Filter)
+    
     let list = allTokens.filter(t => {
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
         const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
@@ -155,73 +155,73 @@ function renderTableRows(tbody) {
         return true; 
     });
 
-    // 2. SẮP XẾP (SORT) - LOGIC MỚI
+    
     list.sort((a, b) => {
-        // Ưu tiên 1: Token được GHIM (Pin) luôn nằm trên cùng
+        
         const pinA = pinnedTokens.includes(a.symbol);
         const pinB = pinnedTokens.includes(b.symbol);
         if (pinA && !pinB) return -1;
         if (!pinA && pinB) return 1;
 
-        // Ưu tiên 2: LOGIC THÔNG MINH
-        // Chỉ áp dụng khi đang sắp xếp theo Volume (Mặc định) và chiều Giảm dần (Desc)
+        
+        
         if (sortConfig.key === 'volume.daily_total' && sortConfig.dir === 'desc') {
             const statusA = getTokenStatus(a);
             const statusB = getTokenStatus(b);
             
-            // Định nghĩa: Token Active là token KHÔNG PHẢI Spot và KHÔNG PHẢI Delisted
+            
             const isActiveA = (statusA !== 'SPOT' && statusA !== 'DELISTED' && statusA !== 'PRE_DELISTED');
             const isActiveB = (statusB !== 'SPOT' && statusB !== 'DELISTED' && statusB !== 'PRE_DELISTED');
 
-            // Nếu A là Active mà B là Spot/Delist -> A lên trước (-1)
+            
             if (isActiveA && !isActiveB) return -1;
-            // Nếu A là Spot/Delist mà B là Active -> B lên trước (1)
+            
             if (!isActiveA && isActiveB) return 1;
             
-            // Nếu cả 2 cùng hạng (cùng Active hoặc cùng Spot) -> Xuống dưới so sánh Volume như thường
+            
         }
 
-        // Ưu tiên 3: Sắp xếp theo giá trị (Volume, Price...)
+        
         const valA = getVal(a, sortConfig.key);
         const valB = getVal(b, sortConfig.key);
         return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
     });
 
-    // 3. Render HTML (CÓ TỐI ƯU PADDING)
+    
     list.slice(0, displayCount).forEach((t) => {
         const tr = document.createElement('tr');
         const now = Date.now();
         
-        // Logic Badge
+        
         const status = getTokenStatus(t);
         let startBadges = [];
         if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
-        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIR</span>'); // Viết tắt AIRDROP -> AIR cho gọn
+        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIR</span>'); 
         let journeyHtml = startBadges.join(' ');
         
         if (status === 'SPOT') {
             let endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
-            let endBadge = '<span class="smart-badge badge-delisted">DELIST</span>'; // Viết tắt DELISTED -> DELIST
+            let endBadge = '<span class="smart-badge badge-delisted">DELIST</span>'; 
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         }
 
-        // Logic xPoint
+        
         let mulBadgeHtml = '';
         if (!t.offline && t.listing_time && t.mul_point > 1) {
             const expiryTime = t.listing_time + 2592000000; 
             const diffDays = Math.ceil((expiryTime - now) / 86400000);
             if (diffDays > 0) {
                 const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
-                // Bỏ margin-left cứng, dùng class để CSS xử lý
+                
                 mulBadgeHtml = `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
             }
         }
 
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
-        const shortContract = t.contract ? `${t.contract.substring(0, 4)}...${t.contract.substring(t.contract.length - 4)}` : ''; // Rút gọn contract hơn nữa (4 ký tự đầu)
+        const shortContract = t.contract ? `${t.contract.substring(0, 4)}...${t.contract.substring(t.contract.length - 4)}` : ''; 
 
         tr.innerHTML = `
             <td class="text-center col-fix-1">
@@ -271,9 +271,9 @@ function renderTableRows(tbody) {
     });
 }
 
-// =========================================================================
-// HÀM VẼ DASHBOARD (HUD) - V4 FINAL POLISH
-// =========================================================================
+
+
+
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view || !view.querySelector('.alpha-container')) return;
@@ -287,7 +287,7 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // --- 1. DATA PREP ---
+    
     let updateTime = "Waiting...";
     const timeEl = document.getElementById('last-updated');
     if (timeEl && timeEl.innerText.includes('Updated:')) {
@@ -296,7 +296,7 @@ function renderMarketHUD(stats) {
         updateTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Rolling Top 10
+    
     let activeTokens = allTokens.filter(t => {
         const s = getTokenStatus(t);
         return s !== 'SPOT' && s !== 'DELISTED' && s !== 'PRE_DELISTED';
@@ -305,12 +305,12 @@ function renderMarketHUD(stats) {
     const top10Rolling = activeTokens.slice(0, 10);
     const maxVolRolling = top10Rolling[0] ? (top10Rolling[0].volume.rolling_24h || 1) : 1;
     
-    // Dominance
+    
     const volTop10Sum = top10Rolling.reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
     const totalRolling = stats.alphaRolling24h || 1;
     const domPct = (volTop10Sum / totalRolling) * 100;
 
-    // Daily Top 10
+    
     let dailyTokens = [...stats.topVolTokens].sort((a, b) => (b.volume.daily_total || 0) - (a.volume.daily_total || 0));
     const top10Daily = dailyTokens.slice(0, 10);
     const maxVolDaily = top10Daily[0] ? (top10Daily[0].volume.daily_total || 1) : 1;
@@ -321,9 +321,9 @@ function renderMarketHUD(stats) {
         return num;
     };
 
-    // --- RENDER HELPERS ---
+    
 
-    // 1. Helper Vẽ Row (Rolling & Daily) - Style "Số dính Bar"
+    
     const renderRow = (t, idx, type) => {
         if (!t) return '';
         
@@ -331,14 +331,14 @@ function renderMarketHUD(stats) {
         let volDisplay = 0;
         let pctWidth = 0;
         
-        // Tooltip Data Attributes
+        
         const dataAttrs = `
             data-symbol="${t.symbol}"
             data-total="${formatNum(t.volume.daily_total)}"
             data-limit="${formatNum(t.volume.daily_limit)}"
             data-chain="${formatNum(t.volume.daily_onchain)}"
         `;
-        // Chỉ hiện tooltip chi tiết cho Daily (hoặc cả 2 nếu muốn)
+        
         const tooltipEvents = `
             onmouseenter="window.showTooltip(event, this)" 
             onmousemove="window.moveTooltip(event)" 
@@ -348,7 +348,7 @@ function renderMarketHUD(stats) {
         if (type === 'ROLLING') {
             volDisplay = t.volume.rolling_24h || 0;
             pctWidth = (volDisplay / maxVolRolling) * 100;
-            // Màu Cyan (#00F0FF)
+            
             barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#00F0FF;"></div>`;
         } else {
             volDisplay = t.volume.daily_total || 0;
@@ -358,7 +358,7 @@ function renderMarketHUD(stats) {
             const pLimit = volDisplay > 0 ? (vLimit / volDisplay) * 100 : 0;
             const pChain = volDisplay > 0 ? (vChain / volDisplay) * 100 : 0;
             
-            // Màu Vàng (Limit) + Tím (Chain)
+            
             barHtml = `
                 <div style="width:100%; height:100%; display:flex; border-radius: 0 3px 3px 0; overflow:hidden;">
                     <div style="width:${pLimit}%; height:100%; background:#F0B90B;"></div>
@@ -381,13 +381,13 @@ function renderMarketHUD(stats) {
         `;
     };
 
-    // 2. Helper Vẽ Price Bar (Click hiện List)
+    
     const d = stats.distribList;
     const drawSentBar = (listTokens, label, colorClass) => {
         const count = listTokens.length;
-        let h = (count / stats.maxDistribCount) * 100; // 100% height container
+        let h = (count / stats.maxDistribCount) * 100; 
         if (count > 0 && h < 5) h = 5;
-        const tokensStr = listTokens.join(', '); // Chuỗi token cho tooltip
+        const tokensStr = listTokens.join(', '); 
         
         return `
             <div class="distrib-bar-item" 
@@ -400,9 +400,9 @@ function renderMarketHUD(stats) {
         `;
     };
 
-    // --- RENDER HTML ---
     
-    // Tỷ lệ Lifecycle
+    
+    
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
@@ -506,13 +506,13 @@ function renderMarketHUD(stats) {
     `;
 }
 
-// =========================================================================
-// CÁC HÀM XỬ LÝ TOOLTIP (GẮN GLOBAL WINDOW ĐỂ GỌI MỌI NƠI)
-// =========================================================================
+
+
+
 window.showTooltip = function(e, el) {
     const t = document.getElementById('hud-tooltip');
     if(t && el.dataset.symbol) {
-        // Lấy dữ liệu từ data-attributes (An toàn 100%)
+        
         const { symbol, total, limit, chain } = el.dataset;
 
         t.style.display = 'block';
@@ -539,7 +539,7 @@ window.showTooltip = function(e, el) {
 window.moveTooltip = function(e) {
     const t = document.getElementById('hud-tooltip');
     if(t) {
-        // Tooltip đi theo chuột
+        
         t.style.left = (e.clientX) + 'px';
         t.style.top = (e.clientY) + 'px';
     }
@@ -551,9 +551,9 @@ window.hideTooltip = function() {
 };
 
 
-// =========================================================================
-// HÀM INJECT LAYOUT: HEADER 11 CỘT (THÊM STATUS)
-// =========================================================================
+
+
+
 function injectLayout() {
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
@@ -561,7 +561,7 @@ function injectLayout() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // 1. Tab Navigation
+    
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
@@ -570,7 +570,7 @@ function injectLayout() {
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
 
-    // 2. Market View
+    
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
     marketView.style.display = 'none'; 
@@ -624,7 +624,7 @@ function injectLayout() {
     
     tabNav.insertAdjacentElement('afterend', marketView);
 
-    // 3. Smart Scroll Logic (Giữ nguyên)
+    
     let lastScrollY = window.scrollY;
     window.removeEventListener('scroll', window._smartScroll);
     window._smartScroll = function() {
@@ -643,10 +643,10 @@ function injectLayout() {
 
 
 
-// --- LOGIC CHUYỂN TAB ---
+
 window.pluginSwitchTab = (tab, instant = false) => {
     const alphaView = document.getElementById('alpha-market-view');
-    const compView = document.getElementById('view-dashboard'); // View cũ có sẵn của bạn
+    const compView = document.getElementById('view-dashboard'); 
     
     const btnA = document.getElementById('btn-tab-alpha');
     const btnC = document.getElementById('btn-tab-competition');
@@ -655,20 +655,20 @@ window.pluginSwitchTab = (tab, instant = false) => {
         btnA?.classList.add('active');
         btnC?.classList.remove('active');
         
-        // Ẩn Competition, Hiện Alpha
+        
         if(compView) compView.style.display = 'none';
         if(alphaView) alphaView.style.display = 'block';
     } else {
         btnC?.classList.add('active');
         btnA?.classList.remove('active');
 
-        // Ẩn Alpha, Hiện Competition
+        
         if(alphaView) alphaView.style.display = 'none';
         if(compView) compView.style.display = 'block';
     }
 };
 
-// ... COPY LẠI CÁC HÀM CŨ (sort, copy, fetchMarketData, renderTable, format...) ...
+
 window.pluginSort = (key) => {
     if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
     else { sortConfig.key = key; sortConfig.dir = 'desc'; }
@@ -688,28 +688,28 @@ window.pluginCopy = (txt) => {
 
 async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
 
-// Biến toàn cục lưu thời gian cập nhật
+
 let lastDataUpdateTime = "Waiting...";
 
 async function fetchMarketData() {
     try {
-        // Gọi dữ liệu từ file JSON trên R2 kèm tham số chống cache
+        
         const res = await fetch(DATA_URL + '?t=' + Date.now());
         const json = await res.json();
         
-        // Giải mã danh sách token
+        
         const rawList = json.data || json.tokens || []; 
         allTokens = rawList.map(item => unminifyToken(item));
 
-        // 1. Lấy chuỗi thời gian thô từ JSON (meta.u hoặc last_updated)
+        
         let rawTime = json.meta ? json.meta.u : (json.last_updated || "");
         
         if (rawTime) {
-            // Chuyển đổi định dạng YYYY-MM-DD HH:mm:ss sang đối tượng Date
-            // Thay khoảng trắng bằng 'T' để hỗ trợ tốt trên mọi trình duyệt (đặc biệt là máy tính bảng)
+            
+            
             const d = new Date(rawTime.replace(' ', 'T')); 
             
-            // Định dạng thủ công thành HH:mm DD/MM/YYYY
+            
             const hours = String(d.getHours()).padStart(2, '0');
             const mins = String(d.getMinutes()).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
@@ -718,7 +718,7 @@ async function fetchMarketData() {
 
             lastDataUpdateTime = `${hours}:${mins} ${day}/${month}/${year}`;
         } else {
-            // Nếu không có dữ liệu thời gian trong file, lấy giờ hiện tại của hệ thống
+            
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
             const mins = String(now.getMinutes()).padStart(2, '0');
@@ -729,11 +729,11 @@ async function fetchMarketData() {
             lastDataUpdateTime = `${hours}:${mins} ${day}/${month}/${year}`;
         }
 
-        // 2. Cập nhật các thành phần giao diện khác
+        
         updateSummary();
         renderTable();
 
-        // 3. Cập nhật nhãn thời gian trên Header Alpha Market
+        
         const timeLbl = document.getElementById('last-updated');
         if(timeLbl) {
             timeLbl.innerText = 'Updated: ' + lastDataUpdateTime;
@@ -745,17 +745,17 @@ async function fetchMarketData() {
 }
 
 
-/* --- CODE MỚI HOÀN TOÀN --- */
+
 window.togglePin = (symbol) => {
-    // Nếu đang Pin thì bỏ Pin, chưa Pin thì thêm vào
+    
     if (pinnedTokens.includes(symbol)) {
         pinnedTokens = pinnedTokens.filter(s => s !== symbol);
     } else {
         pinnedTokens.push(symbol);
     }
-    // Lưu vào bộ nhớ máy
+    
     localStorage.setItem('alpha_pins', JSON.stringify(pinnedTokens));
-    // Vẽ lại bảng ngay lập tức
+    
     renderTable();
 };
 
@@ -771,21 +771,21 @@ function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] :
 function setupEvents() { document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable()); window.addEventListener('scroll', () => { if (document.getElementById('alpha-market-view')?.style.display === 'block') { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) { if (displayCount < allTokens.length) { displayCount += 50; renderTable(); } } } }); }
 
 
-// [SỬA LẠI] Helper: Xác định trạng thái Token
+
 function getTokenStatus(t) {
-    // Ưu tiên 1: Lấy trực tiếp trạng thái từ Python gửi về (Đã chuẩn hóa)
+    
     if (t.status) {
         return t.status.toUpperCase();
     }
 
-    // Fallback (Phòng hờ): Nếu không có status thì mới check thủ công
-    // Lưu ý: Dùng t.offline (truthy) thay vì t.offline === true
+    
+    
     if (t.offline) {
         if (t.listingCex) return 'SPOT';
         return 'DELISTED';
     }
     
-    return 'ALPHA'; // Mặc định là Active
+    return 'ALPHA'; 
 }
 
 function updateSummary() {
@@ -795,7 +795,7 @@ function updateSummary() {
     let alpha = 0;
 
     allTokens.forEach(t => {
-        // Lấy trạng thái (đảm bảo viết hoa 100% để so sánh chuẩn)
+        
         const s = (t.status || '').toUpperCase();
 
         if (s === 'SPOT') {
@@ -803,13 +803,13 @@ function updateSummary() {
         } else if (s === 'DELISTED' || s === 'PRE_DELISTED') {
             delisted++;
         } else {
-            alpha++; // Còn lại là ALPHA (Active)
+            alpha++; 
         }
     });
 
-    // --- Cập nhật lên giao diện HTML ---
     
-    // 1. Cập nhật số lượng Text
+    
+    
     const elTotal = document.getElementById('stat-total-tokens');
     const elActive = document.getElementById('stat-active-tokens');
     const elSpot = document.getElementById('stat-spot-tokens');
@@ -820,30 +820,30 @@ function updateSummary() {
     if (elSpot) elSpot.innerText = spot;
     if (elDelist) elDelist.innerText = delisted;
 
-    // 2. Tính Spot Rate (Tỷ lệ Spot / Tổng)
+    
     const elRate = document.getElementById('stat-spot-rate');
     if (elRate) {
-        // Chỉ tính trên tập (Spot + Delisted + Alpha) hoặc Total tuỳ logic bạn
-        // Ở đây tính: Spot / Total
+        
+        
         const rate = total > 0 ? ((spot / total) * 100).toFixed(1) : "0.0";
         elRate.innerText = `${rate}%`;
         
-        // Đổi màu nếu tỷ lệ cao
-        if (parseFloat(rate) > 10) elRate.style.color = '#00ff88'; // Xanh
-        else elRate.style.color = '#eaecef'; // Trắng
+        
+        if (parseFloat(rate) > 10) elRate.style.color = '#00ff88'; 
+        else elRate.style.color = '#eaecef'; 
     }
 }
 
-// Xử lý khi click vào thẻ Filter
+
 window.toggleFilter = (filterType) => {
-    // Nếu bấm lại thẻ đang chọn -> Hủy filter (về ALL)
+    
     if (currentFilter === filterType) {
         currentFilter = 'ALL';
     } else {
         currentFilter = filterType;
     }
     
-    // Highlight thẻ đang chọn
+    
     document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
     if (currentFilter === 'ALPHA') {
         document.getElementById('card-alpha-vol')?.classList.add('active-filter');
@@ -854,21 +854,21 @@ window.toggleFilter = (filterType) => {
         document.getElementById('card-delist')?.classList.add('active-filter');
     }
 
-    renderTable(); // Vẽ lại bảng
+    renderTable(); 
 };
 
-// --- HÀM VẼ BIỂU ĐỒ MINI (REAL VOLUME + PRICE LINE) ---
+
 function getSparklineSVG(data) {
-    // Kiểm tra dữ liệu đầu vào có chuẩn format mới không
+    
     if (!data || !Array.isArray(data) || data.length < 2) return '';
     
-    // Nếu dữ liệu cũ (chưa chạy python mới) thì return rỗng để tránh lỗi
+    
     if (typeof data[0] !== 'object') return '';
 
     const width = 120;
     const height = 40;
     
-    // Tách mảng giá và volume riêng để tính min/max
+    
     const prices = data.map(d => d.p);
     const volumes = data.map(d => d.v);
 
@@ -876,39 +876,39 @@ function getSparklineSVG(data) {
     const maxP = Math.max(...prices);
     const rangeP = maxP - minP || 1;
 
-    const maxV = Math.max(...volumes) || 1; // Volume lớn nhất để làm trần
+    const maxV = Math.max(...volumes) || 1; 
 
-    // Màu sắc: Giá cuối > Giá đầu ? Xanh : Đỏ
+    
     const isUp = prices[prices.length - 1] >= prices[0];
     const color = isUp ? '#0ecb81' : '#f6465d'; 
     
-    // 1. VẼ ĐƯỜNG GIÁ (LINE CHART) - Nằm lớp trên
+    
     let points = data.map((d, i) => {
         const x = (i / (data.length - 1)) * width;
-        // Chừa 15px bên dưới cho Volume
+        
         const y = (height - 15) - ((d.p - minP) / rangeP) * (height - 20) - 5; 
         return `${x},${y}`;
     }).join(' ');
 
-    // 2. VẼ CỘT VOLUME THẬT (BAR CHART) - Nằm lớp dưới
+    
     let bars = '';
     const barWidth = (width / (data.length - 1)) * 0.6; 
 
     data.forEach((d, i) => {
-        // Chiều cao cột = (Volume hiện tại / Volume lớn nhất) * Chiều cao tối đa cho phép (14px)
+        
         let barHeight = (d.v / maxV) * 14;
         
-        // Đảm bảo cột thấp nhất cũng có 2px để nhìn thấy
+        
         if (barHeight < 2) barHeight = 2;
 
-        const x = (i / (data.length - 1)) * width; // Canh giữa theo điểm neo của line
-        const y = height - barHeight; // Vẽ từ đáy lên
+        const x = (i / (data.length - 1)) * width; 
+        const y = height - barHeight; 
         
         bars += `<rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.3" rx="1" />`;
     });
 
     return `
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="mini-chart" xmlns="http://www.w3.org/2000/svg">
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="mini-chart" xmlns="http:
             ${bars}
             
             <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -916,16 +916,16 @@ function getSparklineSVG(data) {
     `;
 }
 
-// --- LOGIC FILTER MỚI ---
+
 window.setFilter = function(status) {
     currentFilter = status;
     
-    // Reset classes
+    
     ['all', 'alpha', 'spot', 'delist'].forEach(k => {
         document.getElementById(`btn-f-${k}`)?.classList.remove(`active-${k}`);
     });
 
-    // Add active class
+    
     if (status === 'ALL') document.getElementById('btn-f-all').classList.add('active-all');
     if (status === 'ALPHA') document.getElementById('btn-f-alpha').classList.add('active-alpha');
     if (status === 'SPOT') document.getElementById('btn-f-spot').classList.add('active-spot');
@@ -946,12 +946,12 @@ window.togglePoints = function() {
     renderTable();
 };
 
-// --- CẬP NHẬT BẢNG DỊCH MÃ ĐẦY ĐỦ ---
+
 const KEY_MAP_REVERSE = {
   "i": "id", "s": "symbol", "n": "name", "ic": "icon",
-  "cn": "chain", "ci": "chain_icon", // Đã có chain_icon
+  "cn": "chain", "ci": "chain_icon", 
   "ct": "contract",
-  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", // Đã có mul_point
+  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", 
   "mc": "market_cap", "l": "liquidity", "v": "volume",
   "r24": "rolling_24h", "dt": "daily_total",
   "dl": "daily_limit", "do": "daily_onchain",
@@ -960,20 +960,20 @@ const KEY_MAP_REVERSE = {
   "tge": "onlineTge", "air": "onlineAirdrop"
 };
 
-// Hàm dịch dữ liệu: Biến 'p' thành 'price', 'v' thành 'volume'...
+
 function unminifyToken(minifiedItem) {
   const fullItem = {};
   for (const [shortKey, value] of Object.entries(minifiedItem)) {
     const fullKey = KEY_MAP_REVERSE[shortKey];
     
-    // Xử lý riêng trường Volume vì nó lồng bên trong
+    
     if (fullKey === "volume" && typeof value === 'object') {
       fullItem[fullKey] = {};
       for (const [vKey, vVal] of Object.entries(value)) {
         fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
       }
     } 
-    // Các trường khác copy bình thường
+    
     else if (fullKey) {
       fullItem[fullKey] = value;
     }
@@ -981,12 +981,12 @@ function unminifyToken(minifiedItem) {
   return fullItem;
 }
 
-// Thêm/Thay thế ở cuối file JS
+
 window.showListTooltip = function(e, label, tokensStr) {
     const t = document.getElementById('hud-tooltip');
     if (!t) return;
     
-    // Ngăn nổi bọt sự kiện nếu click
+    
     if(e.type === 'click') e.stopPropagation();
 
     if (!tokensStr) tokensStr = "No tokens";
@@ -994,7 +994,7 @@ window.showListTooltip = function(e, label, tokensStr) {
     if (displayStr.length > 150) displayStr = displayStr.substring(0, 150) + "...";
 
     t.style.display = 'block';
-    // Style riêng cho List tooltip
+    
     t.innerHTML = `
         <div style="color:#00F0FF; font-size:11px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">
             PRICE RANGE: ${label}
@@ -1004,11 +1004,11 @@ window.showListTooltip = function(e, label, tokensStr) {
         </div>
     `;
     
-    // Định vị tooltip ngay tại chuột
+    
     const x = e.clientX;
     const y = e.clientY;
     
-    // Xử lý chống tràn màn hình (nếu cần)
+    
     t.style.left = (x + 10) + 'px';
     t.style.top = (y + 10) + 'px';
 };
