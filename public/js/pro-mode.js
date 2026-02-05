@@ -683,31 +683,52 @@ window.pluginCopy = (txt) => {
 
 async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
 
-// Thêm một biến để lưu thời gian cập nhật dữ liệu từ file
+// Biến toàn cục lưu thời gian cập nhật
 let lastDataUpdateTime = "Waiting...";
 
 async function fetchMarketData() {
     try {
+        // Gọi dữ liệu từ file JSON trên R2 kèm tham số chống cache
         const res = await fetch(DATA_URL + '?t=' + Date.now());
         const json = await res.json();
         
+        // Giải mã danh sách token
         const rawList = json.data || json.tokens || []; 
         allTokens = rawList.map(item => unminifyToken(item));
 
-        // Lấy thời gian cập nhật từ json.meta.u (nếu có) hoặc json.last_updated
-        // Đây chính là thời điểm dữ liệu được ghi vào file trên R2
-        if (json.meta && json.meta.u) {
-            lastDataUpdateTime = json.meta.u;
-        } else if (json.last_updated) {
-            lastDataUpdateTime = json.last_updated;
+        // 1. Lấy chuỗi thời gian thô từ JSON (meta.u hoặc last_updated)
+        let rawTime = json.meta ? json.meta.u : (json.last_updated || "");
+        
+        if (rawTime) {
+            // Chuyển đổi định dạng YYYY-MM-DD HH:mm:ss sang đối tượng Date
+            // Thay khoảng trắng bằng 'T' để hỗ trợ tốt trên mọi trình duyệt (đặc biệt là máy tính bảng)
+            const d = new Date(rawTime.replace(' ', 'T')); 
+            
+            // Định dạng thủ công thành HH:mm DD/MM/YYYY
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+
+            lastDataUpdateTime = `${hours}:${mins} ${day}/${month}/${year}`;
         } else {
-            lastDataUpdateTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            // Nếu không có dữ liệu thời gian trong file, lấy giờ hiện tại của hệ thống
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const mins = String(now.getMinutes()).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            
+            lastDataUpdateTime = `${hours}:${mins} ${day}/${month}/${year}`;
         }
 
+        // 2. Cập nhật các thành phần giao diện khác
         updateSummary();
         renderTable();
 
-        // Cập nhật lên label tổng (nếu có)
+        // 3. Cập nhật nhãn thời gian trên Header Alpha Market
         const timeLbl = document.getElementById('last-updated');
         if(timeLbl) {
             timeLbl.innerText = 'Updated: ' + lastDataUpdateTime;
@@ -717,7 +738,6 @@ async function fetchMarketData() {
         console.error("Data error:", e); 
     }
 }
-
 
 
 /* --- CODE MỚI HOÀN TOÀN --- */
