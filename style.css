@@ -579,14 +579,33 @@
    START: MARKET HEALTH V50 (GIAO DIỆN & BADGE) 
    ============================================= */
 
-/* 1. KHUNG GIAO DIỆN (MỚI) */
-.health-panel {
-    background: #111418;
-    border: 1px solid #2a2e35;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+/* --- FILE: style.css (Thêm vào cuối file) --- */
+
+/* FIX LỖI LAYOUT: Ép khung tự co lại khi danh sách ít đi */
+.health-panel, 
+#view-list-container,
+#view-grid-container,
+#appGrid {
+    height: auto !important;       /* Chiều cao tự động */
+    min-height: 0 !important;      /* Bỏ chiều cao tối thiểu */
+    flex: none !important;         /* Không cho flexbox kéo giãn */
+    overflow: visible !important;  /* Hiển thị trọn vẹn */
+}
+
+/* Đảm bảo bảng bên trong cũng gọn lại */
+.table-responsive {
+    height: auto !important;
+    margin-bottom: 0 !important;
+}
+
+/* Kéo Footer lên sát nội dung nếu trang ngắn */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+.app-footer {
+    margin-top: auto; /* Footer luôn nằm đáy, nhưng nội dung trên sẽ co lại */
 }
 
 .health-header {

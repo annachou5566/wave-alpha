@@ -5257,13 +5257,22 @@ function initCalendar() {
     container.innerHTML = html;
 }
 
+/* --- FILE: script.js --- */
+
 function filterByDate(dateStr) {
-    // 1. Nếu bấm "View All" (Hủy lọc)
+    // [LOGIC MỚI] TÍNH NĂNG TOGGLE (BẬT/TẮT)
+    // Nếu ngày bấm vào (dateStr) trùng với ngày đang chọn (currentFilterDate)
+    // Thì gán dateStr = null để kích hoạt chế độ "Hủy lọc" (Show All)
+    if (dateStr && currentFilterDate === dateStr) {
+        dateStr = null;
+    }
+
+    // 1. Nếu dateStr là null (Hủy lọc)
     if (!dateStr) {
         currentFilterDate = null;
         document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
         
-        // Vẽ lại toàn bộ theo tab hiện tại
+        // Vẽ lại toàn bộ theo tab hiện tại (Running/History)
         switchGlobalTab(appData.currentTab);
         return;
     }
@@ -5274,14 +5283,14 @@ function filterByDate(dateStr) {
     let box = document.getElementById(`dbox-${dateStr}`);
     if(box) box.classList.add('active');
 
-    // --- [LOGIC MỚI: TỰ ĐỘNG CHUYỂN TAB THÔNG MINH] ---
+    // --- [LOGIC TỰ ĐỘNG CHUYỂN TAB THÔNG MINH] ---
     let today = new Date().toISOString().split('T')[0];
     // Nếu ngày chọn >= Hôm nay -> Tự nhảy sang Running. Ngược lại -> History.
     let targetTab = (dateStr >= today) ? 'running' : 'history';
 
     if (appData.currentTab !== targetTab) {
         switchGlobalTab(targetTab); 
-            }
+    }
     // --------------------------------------------------
 
     // 3. Lọc dữ liệu
