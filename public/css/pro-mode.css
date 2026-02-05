@@ -32,16 +32,16 @@ body {
 }
 
 /* ==========================================================================
-   THANH ĐIỀU HƯỚNG TAB (ALPHA / COMPETITION) - FINAL VERSION
+   SMART TAB NAVIGATION (CYBER STYLE - FIX CHE NỘI DUNG)
    ========================================================================== */
 
-/* 1. KHUNG THANH TAB (GIỮ NGUYÊN STYLE CYBER BẠN THÍCH) */
+/* 1. THANH TAB (TRÔI NỔI ĐỂ ẨN HIỆN) */
 #alpha-tab-nav {
-    position: fixed !important; /* Ghim cứng để luôn nhìn thấy */
-    top: 76px;                  /* Nằm ngay dưới Navbar chính */
+    position: fixed !important; /* Ghim để trôi nổi */
+    top: 76px;                  /* Nằm dưới Navbar */
     left: 0;
     width: 100%;
-    z-index: 990;               /* Nằm trên nội dung nhưng dưới Modal */
+    z-index: 990;
     
     background: #0b0e11;        /* Nền đen Cyber */
     border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -50,15 +50,32 @@ body {
     display: flex;
     justify-content: center;
     padding: 12px 0;
-    transition: all 0.3s ease;
+    
+    /* Hiệu ứng trượt mượt mà khi ẩn/hiện */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 2. STYLE NÚT BẤM (GIỮ NGUYÊN DESKTOP) */
+/* Class này được JS thêm vào khi cuộn xuống để ẨN tab */
+#alpha-tab-nav.nav-hidden {
+    transform: translateY(-120%); /* Trượt lên trên */
+}
+
+/* 2. [QUAN TRỌNG] ĐẨY NỘI DUNG XUỐNG ĐỂ KHÔNG BỊ CHE */
+/* Chúng ta cộng: Navbar(76px) + Tab(60px) + Khoảng hở(14px) = 150px */
+
+.alpha-container,           /* Tab Alpha Market */
+#competition-view,          /* Tab Competition */
+#view-dashboard,            /* Container chính */
+.view-section {             /* Các section con */
+    padding-top: 150px !important; 
+}
+
+/* 3. STYLE NÚT BẤM (GIỮ NGUYÊN) */
 .tab-btn {
     background: transparent;
     border: none;
     color: #6c757d;
-    font-family: 'Rajdhani', sans-serif; /* Hardcode font để tránh lỗi var */
+    font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
     font-size: 16px;
     padding: 8px 25px;
@@ -80,47 +97,31 @@ body {
 
 .tab-btn.active {
     color: #000;
-    background: #00F0FF; /* Màu Brand */
+    background: #00F0FF;
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
-/* 3. [QUAN TRỌNG] ĐẨY NỘI DUNG XUỐNG ĐỂ KHÔNG BỊ CHE */
-
-/* Áp dụng cho tab Competition (Chỗ chữ TOURNAMENT...) */
-#view-dashboard {
-    padding-top: 140px !important; /* 76px Navbar + 64px Tab + Khoảng thở */
-}
-
-/* Áp dụng cho tab Alpha Market */
-.alpha-container {
-    padding-top: 140px !important; 
-}
-
-
-/* ==========================================================================
-   MOBILE TWEAK (CHỈNH RIÊNG CHO ĐIỆN THOẠI)
-   ========================================================================== */
+/* 4. MOBILE TWEAK (CHỈNH RIÊNG CHO ĐIỆN THOẠI) */
 @media (max-width: 768px) {
-    
-    /* 1. Điều chỉnh vị trí thanh Tab trên Mobile */
     #alpha-tab-nav {
-        top: 60px;      /* Navbar mobile thường thấp hơn */
-        padding: 8px 0; /* Thu gọn chiều cao thanh tab */
+        top: 60px;      /* Navbar mobile thấp hơn */
+        padding: 8px 0;
     }
 
-    /* 2. Thu nhỏ nút bấm cho gọn gàng (Theo ý bạn) */
+    /* Thu nhỏ nút bấm theo ý bạn */
     .tab-btn {
-        font-size: 13px;       /* Chữ nhỏ lại */
-        padding: 6px 12px;     /* Nút ngắn lại */
-        margin: 0 5px;         /* Khoảng cách gần hơn */
+        font-size: 13px;
+        padding: 6px 12px;
+        margin: 0 5px;
         letter-spacing: 0.5px;
-        width: auto;
     }
 
-    /* 3. Điều chỉnh khoảng cách nội dung trên Mobile */
-    #view-dashboard, 
-    .alpha-container {
-        padding-top: 120px !important; /* Mobile nhỏ hơn nên chỉ cần đẩy xuống 120px */
+    /* Mobile nội dung cần ít khoảng trống hơn chút */
+    .alpha-container,
+    #competition-view,
+    #view-dashboard,
+    .view-section {
+        padding-top: 120px !important;
     }
 }
 
