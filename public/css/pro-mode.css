@@ -71,14 +71,18 @@ body {
     padding-top: 60px;
 }
 
-/* Tinh chỉnh riêng cho Mobile để cân đối hơn */
+/* Mobile Tweak: Gọn gàng hơn */
 @media (max-width: 768px) {
     #alpha-tab-nav {
-        top: 60px; /* Navbar trên mobile thường thấp hơn */
+        top: 60px; 
         padding: 8px 0;
+        background: rgba(11, 14, 17, 0.95); /* Đậm hơn chút trên mobile để dễ đọc */
     }
-    .alpha-container {
-        padding-top: 55px !important;
+    .tab-btn {
+        font-size: 13px;
+        padding: 6px 16px;
+        margin: 0 4px;
+        letter-spacing: 1px;
     }
 }
 
