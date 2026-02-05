@@ -479,8 +479,7 @@ function renderMarketHUD(stats) {
             </div>
         </div>
 
-        /* --- TÌM ĐOẠN MODULE 3 TRONG renderMarketHUD VÀ SỬA --- */
-
+        
         <div class="hud-module border-left-dim">
             <div class="hud-title" style="display:flex; align-items:center;">
                 DAILY VOL (UTC +0) 
