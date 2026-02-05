@@ -6347,28 +6347,28 @@ function handleVote(tokenId, type, btnElement) {
 }
 
 
-// --- LOGIC ẨN/HIỆN TAB ALPHA KHI CUỘN (Smart Scroll) ---
-document.addEventListener('DOMContentLoaded', function() {
-    let lastScrollTop = 0;
+// --- SMART SCROLL LOGIC (FIXED GLOBAL) ---
+document.addEventListener("DOMContentLoaded", function() {
+    let lastScrollY = window.scrollY;
     const tabNav = document.getElementById('alpha-tab-nav');
-    const scrollThreshold = 50; // Cuộn quá 50px mới bắt đầu xử lý
-
-    window.addEventListener('scroll', function() {
-        let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-
-        // Bỏ qua lỗi cuộn âm trên Safari mobile
-        if (scrollTop <= 0) return;
-
-        // Chỉ chạy nếu thanh Tab tồn tại
-        if (tabNav) {
-            if (scrollTop > lastScrollTop && scrollTop > scrollThreshold) {
-                // Đang CUỘN XUỐNG -> Ẩn Tab
-                tabNav.classList.add('nav-hidden');
-            } else {
-                // Đang CUỘN LÊN -> Hiện Tab
-                tabNav.classList.remove('nav-hidden');
+    
+    // Kiểm tra nếu tìm thấy thanh Tab thì mới chạy
+    if (tabNav) {
+        window.addEventListener("scroll", () => {
+            const currentScrollY = window.scrollY;
+            
+            // 1. Nếu cuộn xuống VÀ đã cuộn được hơn 50px (để tránh nhạy quá)
+            if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                tabNav.classList.add("tab-hidden"); // Thêm class để ẩn
+            } 
+            // 2. Nếu cuộn lên
+            else {
+                tabNav.classList.remove("tab-hidden"); // Xóa class để hiện lại
             }
-        }
-        lastScrollTop = scrollTop;
-    }, { passive: true }); // Tối ưu hiệu năng cuộn
+
+            lastScrollY = currentScrollY;
+        }, { passive: true }); // Tối ưu hiệu suất cuộn
+    } else {
+        console.warn("Smart Scroll: Không tìm thấy #alpha-tab-nav");
+    }
 });

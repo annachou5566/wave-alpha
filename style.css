@@ -120,8 +120,8 @@
         }
         #card-backdrop.show { display: block; opacity: 1; }
 
-                    
-            /* UPDATE 1: ĐỔ BÓNG CHUYÊN NGHIỆP (DEEP SHADOW) */
+        /* UPDATE 1: ĐỔ BÓNG CHUYÊN NGHIỆP (DEEP SHADOW) */
+        .tour-card.active-card {
             /* Bóng đen sâu tạo độ nổi + Viền sáng cực nhẹ (0.2) tạo nét tinh tế */
             box-shadow: 
                 0 25px 50px -12px rgba(0, 0, 0, 1), 
@@ -2590,29 +2590,44 @@ margin-top: 2px;
     color: #000;
 }
 
-/* --- SỬA THANH TAB ALPHA MARKET (Smart Scroll) --- */
+/* --- FIX LỖI CHE TIÊU ĐỀ & SMART SCROLL --- */
+
+/* 1. Định hình lại thanh Tab ghim cố định */
 #alpha-tab-nav {
-    /* Đảm bảo thanh tab dính ở trên cùng nhưng dưới Navbar */
-    position: sticky;
-    top: 76px; /* Chiều cao của Navbar (khoảng 76px) */
-    z-index: 990; /* Thấp hơn Navbar (1000) để trượt xuống dưới */
+    position: fixed !important; /* Ghim cứng vào màn hình */
+    top: 76px !important;       /* Nằm ngay dưới Navbar */
+    left: 0;
+    width: 100%;
+    z-index: 990;               /* Nằm đè lên nội dung */
     
-    /* Giao diện nền */
-    background: #0b0e11; /* Màu nền trùng body để không bị trong suốt */
+    background: #0b0e11 !important; /* Màu nền trùng màu web để che chữ bên dưới */
     border-bottom: 1px solid #333;
     padding: 10px 0;
-    margin-bottom: 15px;
-    gap: 10px;
+    margin: 0 !important;
+    gap: 15px;
     justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* Đổ bóng để tách biệt */
     
     /* Hiệu ứng trượt mượt mà */
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    transition: transform 0.3s ease-in-out;
 }
 
-/* Class này sẽ được JS thêm vào khi cuộn xuống */
-#alpha-tab-nav.nav-hidden {
-    /* Đẩy thanh Tab chạy ngược lên trên, chui vào sau Navbar */
-    transform: translateY(-150%); 
-    opacity: 0;
-    pointer-events: none; /* Không cho bấm nhầm khi ẩn */
+/* 2. Class dùng để ẩn thanh Tab khi cuộn xuống */
+#alpha-tab-nav.tab-hidden {
+    transform: translateY(-200%); /* Trượt hẳn lên trên trời */
+}
+
+/* 3. TẠO KHOẢNG TRỐNG CHO NỘI DUNG (QUAN TRỌNG) */
+/* Đẩy toàn bộ nội dung web xuống 60px để không bị thanh Tab che mất tiêu đề lúc mới vào */
+#alpha-market-view, 
+#view-dashboard, 
+.terminal-layout {
+    padding-top: 60px !important;
+}
+
+/* Mobile tweak: Đảm bảo không bị vỡ trên điện thoại */
+@media (max-width: 768px) {
+    #alpha-tab-nav {
+        top: 60px !important; /* Navbar mobile thường nhỏ hơn chút */
+    }
 }
