@@ -1148,17 +1148,19 @@ body {
 .bg-red-4 { background: rgba(246, 70, 93, 0.8); }
 .bg-red-5 { background: #f6465d; box-shadow: 0 0 5px rgba(246, 70, 93, 0.4); }
 
-/* 2. Container chính của biểu đồ */
+/* --- CẬP NHẬT GIAO DIỆN 24H PRICE ACTION (KHÍT NHAU + CĂN GIỮA) --- */
+
+/* Container chính: Bỏ gap để 2 phe dính liền */
 .distrib-container {
     display: flex;
     align-items: flex-end;
-    height: 80px; /* Chiều cao cố định */
-    gap: 10px;    /* Khoảng cách giữa 2 phe */
+    height: 80px; 
+    gap: 0; /* KHÍT LẠI */
     margin-top: 10px;
     width: 100%;
 }
 
-/* 3. Phân chia 2 phe (Mua/Bán) */
+/* Phân chia 2 phe */
 .distrib-side {
     flex: 1; 
     display: flex;
@@ -1166,36 +1168,39 @@ body {
     height: 100%;
 }
 
+/* Phe Đỏ: BỎ Border, BỎ Padding */
 .distrib-side.red { 
     justify-content: flex-end; 
     gap: 2px; 
-    border-right: 1px solid rgba(255,255,255,0.1); 
-    padding-right: 5px;
+    border-right: none; /* BỎ GẠCH GIỮA */
+    padding-right: 1px; /* Khoảng hở siêu nhỏ giữa đỏ/xanh */
 }
 
+/* Phe Xanh: BỎ Padding */
 .distrib-side.green { 
     justify-content: flex-start; 
     gap: 2px; 
-    padding-left: 5px;
+    padding-left: 1px; /* Khoảng hở siêu nhỏ giữa đỏ/xanh */
 }
 
-/* 4. Cột biểu đồ (Quan trọng: flex: 1 để tự chia đều) */
+/* Cột biểu đồ */
 .distrib-bar-item {
     flex: 1; 
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
+    align-items: center; /* QUAN TRỌNG: CĂN GIỮA SỐ LƯỢNG TOKEN */
     position: relative;
     cursor: pointer;
     height: 100%;
-    min-width: 4px; /* Đảm bảo cột không bị mất khi màn hình nhỏ */
+    min-width: 4px;
 }
 .distrib-bar-item:hover {
     filter: brightness(1.3);
     transform: scaleY(1.05);
 }
 
-/* 5. Hàng Nhãn Số Liệu (Labels) - Mới */
+/* Hàng Nhãn Số Liệu (Labels) */
 .distrib-label-row {
     display: flex;
     width: 100%;
@@ -1209,21 +1214,21 @@ body {
     display: flex;
 }
 
+/* Căn chỉnh nhãn khớp với cột bên trên */
 .distrib-label-side.red {
     justify-content: flex-end;
-    padding-right: 5px;
+    padding-right: 1px;
     gap: 2px;
 }
 
 .distrib-label-side.green {
     justify-content: flex-start;
-    padding-left: 5px;
+    padding-left: 1px;
     gap: 2px;
 }
 
-/* Style cho từng số (Theo yêu cầu của bạn) */
 .distrib-label {
-    flex: 1; /* Căn chỉnh thẳng hàng với cột ở trên */
+    flex: 1;
     text-align: center;
     font-size: 9px;
     color: #5E6673; 

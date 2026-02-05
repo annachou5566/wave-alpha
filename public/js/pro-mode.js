@@ -389,7 +389,7 @@ function renderMarketHUD(stats) {
                  onclick="window.showListTooltip(event, '${label}', '${tokensStr}')"
                  onmouseenter="window.showListTooltip(event, '${label}', '${tokensStr}')"
                  onmouseleave="window.hideTooltip()">
-                 ${count > 0 ? `<div style="font-size:8px; font-weight:bold; color:#fff; margin-bottom:2px;">${count}</div>` : ''}
+                 ${count > 0 ? `<div style="font-size:8px; font-weight:bold; color:#fff; margin-bottom:2px; text-align:center; width:100%">${count}</div>` : ''}
                  <div style="width:100%; height:${h}%; border-radius:1px;" class="${colorClass}"></div>
             </div>
         `;
@@ -404,9 +404,10 @@ function renderMarketHUD(stats) {
 
     hud.innerHTML = `
         
-    
+    /* --- TÌM ĐOẠN MODULE 1 TRONG renderMarketHUD VÀ THAY THẾ --- */
+
         <div class="hud-module">
-            <div class="hud-title">MARKET LIFECYCLE</div>
+            <div class="hud-title">MARKET LIFECYCLE <span style="color:#fff; margin-left:5px">(${stats.totalScan})</span></div>
             
             <div class="lifecycle-labels" style="margin-top:6px;">
                 <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81;">${stats.countActive} ACT</div>
@@ -446,18 +447,18 @@ function renderMarketHUD(stats) {
             
             <div class="distrib-label-row">
                 <div class="distrib-label-side red">
-                    <div class="distrib-label">>8</div>
-                    <div class="distrib-label">6</div>
-                    <div class="distrib-label">4</div>
-                    <div class="distrib-label">2</div>
-                    <div class="distrib-label">0%</div>
+                    <div class="distrib-label">>8%</div>
+                    <div class="distrib-label">6-8%</div>
+                    <div class="distrib-label">4-6%</div>
+                    <div class="distrib-label">2-4%</div>
+                    <div class="distrib-label">0-2%</div>
                 </div>
                 <div class="distrib-label-side green">
-                    <div class="distrib-label">0%</div>
-                    <div class="distrib-label">2</div>
-                    <div class="distrib-label">4</div>
-                    <div class="distrib-label">6</div>
-                    <div class="distrib-label">>8</div>
+                    <div class="distrib-label">0-2%</div>
+                    <div class="distrib-label">2-4%</div>
+                    <div class="distrib-label">4-6%</div>
+                    <div class="distrib-label">6-8%</div>
+                    <div class="distrib-label">>8%</div>
                 </div>
             </div>
         </div>
