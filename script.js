@@ -6347,28 +6347,4 @@ function handleVote(tokenId, type, btnElement) {
 }
 
 
-// --- SMART SCROLL LOGIC (FIXED GLOBAL) ---
-document.addEventListener("DOMContentLoaded", function() {
-    let lastScrollY = window.scrollY;
-    const tabNav = document.getElementById('alpha-tab-nav');
-    
-    // Kiểm tra nếu tìm thấy thanh Tab thì mới chạy
-    if (tabNav) {
-        window.addEventListener("scroll", () => {
-            const currentScrollY = window.scrollY;
-            
-            // 1. Nếu cuộn xuống VÀ đã cuộn được hơn 50px (để tránh nhạy quá)
-            if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                tabNav.classList.add("tab-hidden"); // Thêm class để ẩn
-            } 
-            // 2. Nếu cuộn lên
-            else {
-                tabNav.classList.remove("tab-hidden"); // Xóa class để hiện lại
-            }
 
-            lastScrollY = currentScrollY;
-        }, { passive: true }); // Tối ưu hiệu suất cuộn
-    } else {
-        console.warn("Smart Scroll: Không tìm thấy #alpha-tab-nav");
-    }
-});

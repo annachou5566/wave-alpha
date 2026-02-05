@@ -33,11 +33,15 @@ body {
 
 /* --- 2. TAB NAVIGATION (Thanh Tab Alpha/Competition) --- */
 /* Nằm ngay dưới Navbar */
+/* --- SỬA LOGIC THANH TAB (Dòng 27 - public/css/pro-mode.css) --- */
 #alpha-tab-nav {
-    position: sticky !important;
-    top: 76px; /* Chiều cao Navbar */
-    z-index: 990; /* Thấp hơn Navbar */
+    /* Đổi từ sticky sang fixed để kiểm soát vị trí tốt hơn */
+    position: fixed !important; 
+    top: 76px; /* Nằm ngay dưới Navbar */
+    left: 0;
     width: 100%;
+    z-index: 990; /* Thấp hơn Navbar (1000) */
+    
     background: #0b0e11;
     border-bottom: 1px solid var(--border-dim);
     display: flex;
@@ -45,6 +49,21 @@ body {
     padding: 10px 0;
     margin-bottom: 0;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    
+    /* QUAN TRỌNG: Hiệu ứng trượt */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+}
+
+/* Class dùng để ẩn thanh Tab khi cuộn xuống */
+#alpha-tab-nav.nav-hidden {
+    transform: translateY(-150%); /* Trượt lên trên, chui ra sau Navbar */
+    opacity: 0;
+    pointer-events: none; /* Không cho bấm nhầm khi ẩn */
+}
+
+/* Đẩy nội dung xuống để không bị thanh Tab che mất lúc mới vào */
+.alpha-container {
+    padding-top: 80px !important; /* Tăng khoảng trống bên trên */
 }
 
 .tab-btn {

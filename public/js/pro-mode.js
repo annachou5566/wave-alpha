@@ -513,80 +513,82 @@ window.hideTooltip = function() {
 };
 
 
-
-
 function injectLayout() {
-    document.getElementById('alpha-tab-nav')?.remove();
-    document.getElementById('alpha-market-view')?.remove();
-
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // 1. Tab Navigation
-    const tabNav = document.createElement('div');
-    tabNav.id = 'alpha-tab-nav';
-    tabNav.innerHTML = `
-        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
-        <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
-    `;
-    navbar.insertAdjacentElement('afterend', tabNav);
+    // 1. Tạo thanh Tab (Giữ nguyên logic cũ)
+    // Kiểm tra nếu chưa có thì mới tạo để tránh trùng lặp
+    let tabNav = document.getElementById('alpha-tab-nav');
+    if (!tabNav) {
+        tabNav = document.createElement('div');
+        tabNav.id = 'alpha-tab-nav';
+        tabNav.innerHTML = `
+            <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
+            <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
+        `;
+        navbar.insertAdjacentElement('afterend', tabNav);
+    }
 
-    // 2. Market View (Với Toolbar Mới)
-    const marketView = document.createElement('div');
-    marketView.id = 'alpha-market-view';
-    marketView.style.display = 'none'; 
-    marketView.innerHTML = `
-        <div class="alpha-container" style="padding-top: 20px;">
-            
-            <div class="alpha-header">
-                <div class="filter-group">
-                    <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
-                    <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
-                    <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
-                    <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
-                    <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
+    // 2. Market View (Giữ nguyên)
+    let marketView = document.getElementById('alpha-market-view');
+    if (!marketView) {
+        marketView = document.createElement('div');
+        marketView.id = 'alpha-market-view';
+        marketView.style.display = 'none';
+        // ... (Giữ nguyên nội dung bên trong của bạn) ...
+        marketView.innerHTML = `
+            <div class="alpha-container"> <div class="alpha-header">
+                    <div class="filter-group">
+                        <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
+                        <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
+                        <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
+                        <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
+                        <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
+                    </div>
+                    <div class="search-group">
+                        <i class="fas fa-search search-icon-small"></i>
+                        <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+                    </div>
                 </div>
-
-                <div class="search-group">
-                    <i class="fas fa-search search-icon-small"></i>
-                    <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+                <div class="table-responsive">
+                    <table class="alpha-table">
+                        <tbody id="market-table-body"></tbody>
+                    </table>
                 </div>
             </div>
+        `;
+        tabNav.insertAdjacentElement('afterend', marketView);
+    }
 
-            <div class="table-responsive">
-                <table class="alpha-table">
-                    
-<thead>
-                        <tr class="h-top">
-                            <th rowspan="2" class="text-center col-fix-1">#</th>
-                            
-                            <th rowspan="2" class="col-fix-2">TOKEN</th>
-                            
-                            <th rowspan="2" style="min-width:120px; padding-left:15px">STATUS</th>
-                            
-                            <th rowspan="2" class="text-end">PRICE</th>
-                            <th rowspan="2" class="text-center">CHART (20D)</th>
-                            <th colspan="3" class="text-center group-col">DAILY VOLUME (UTC)</th>
-                            <th colspan="3" class="text-center">MARKET STATS (24h)</th>
-                        </tr>
-                        <tr class="h-sub">
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="market-table-body"></tbody>
-                </table>
-            </div>
-        </div>
-    `;
+    // --- [MỚI] THÊM LOGIC SMART SCROLL NGAY TẠI ĐÂY ---
+    let lastScrollY = window.scrollY;
     
-    tabNav.insertAdjacentElement('afterend', marketView);
+    // Gỡ bỏ sự kiện cũ nếu có để tránh trùng lặp
+    window.removeEventListener('scroll', handleSmartScroll);
+    
+    function handleSmartScroll() {
+        const currentScrollY = window.scrollY;
+        const nav = document.getElementById('alpha-tab-nav');
+        
+        if (nav) {
+            // Nếu cuộn xuống quá 50px -> Ẩn
+            if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                nav.classList.add('nav-hidden');
+            } 
+            // Nếu cuộn lên -> Hiện
+            else {
+                nav.classList.remove('nav-hidden');
+            }
+        }
+        lastScrollY = currentScrollY;
+    }
+
+    // Gắn sự kiện cuộn (passive để mượt hơn trên mobile)
+    window.addEventListener('scroll', handleSmartScroll, { passive: true });
 }
+
+
 
 // --- LOGIC CHUYỂN TAB ---
 window.pluginSwitchTab = (tab, instant = false) => {
