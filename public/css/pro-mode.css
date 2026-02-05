@@ -32,16 +32,16 @@ body {
 }
 
 /* ==========================================================================
-   SMART TAB NAVIGATION (CYBER STYLE - FIX GAP & HIDING)
+   GIAO DIỆN TAB NAVIGATION (FIX LỖI CHE LOGO & NỘI DUNG)
    ========================================================================== */
 
-/* 1. THANH TAB (TRÔI NỔI ĐỂ ẨN HIỆN) */
+/* --- 1. THANH TAB (NẰM GIỮA LOGO VÀ NỘI DUNG) --- */
 #alpha-tab-nav {
-    position: fixed !important; /* Bắt buộc fixed để trôi nổi */
-    top: 76px;                  /* Nằm ngay dưới Navbar PC */
+    position: fixed !important; /* Ghim vị trí */
+    top: 76px;                  /* Bắt đầu ngay bên dưới Header (Desktop) */
     left: 0;
     width: 100%;
-    z-index: 990;
+    z-index: 990;               /* Thấp hơn Header (1000) để khi trượt lên thì chui xuống dưới */
     
     background: #0b0e11;        /* Nền đen Cyber */
     border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -49,29 +49,29 @@ body {
     
     display: flex;
     justify-content: center;
-    padding: 10px 0; /* Giảm padding một chút cho gọn */
+    padding: 12px 0;
     
-    /* Hiệu ứng trượt mượt mà khi ẩn/hiện */
+    /* Hiệu ứng trượt mượt mà */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Class này được JS thêm vào khi cuộn xuống để ẨN tab */
+/* Khi cuộn xuống: Trượt lên trên để ẩn đi */
 #alpha-tab-nav.nav-hidden {
-    /* Trượt lên trên -150% chiều cao của chính nó để biến mất hoàn toàn */
-    transform: translateY(-150%); 
+    transform: translateY(-150%); /* Trượt hẳn lên trên, chui vào sau Header */
 }
 
-/* 2. [QUAN TRỌNG] ĐẨY NỘI DUNG XUỐNG VỪA KHÍT (KHÔNG CHE - KHÔNG HỞ) */
-/* Công thức: Navbar (76px) + Tab (55px) + Khoảng hở nhỏ (4px) = 135px */
-
-.alpha-container,           
-#competition-view,          
-#view-dashboard,            
-.view-section {             
-    padding-top: 135px !important; /* Vừa đủ để chữ TOURNAMENT hiện ra đẹp */
+/* --- 2. NỘI DUNG (ĐẨY XUỐNG ĐỂ KHÔNG BỊ THANH TAB CHE) --- */
+/* Áp dụng cho TOÀN BỘ các trang con (Alpha Market & Competition) */
+.alpha-container,
+#competition-view,
+#view-dashboard,
+.view-section,
+.terminal-layout {
+    /* Navbar(76) + Tab(60) + Khoảng thở = 160px */
+    padding-top: 160px !important; 
 }
 
-/* 3. STYLE NÚT BẤM (GIỮ NGUYÊN ĐẸP NHƯ CŨ) */
+/* --- 3. STYLE NÚT BẤM (GIỮ NGUYÊN ĐẸP NHƯ CŨ) --- */
 .tab-btn {
     background: transparent;
     border: none;
@@ -102,14 +102,15 @@ body {
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
-/* 4. MOBILE TWEAK (CÂN CHỈNH RIÊNG CHO ĐIỆN THOẠI) */
+/* --- 4. TỐI ƯU CHO ĐIỆN THOẠI (QUAN TRỌNG) --- */
 @media (max-width: 768px) {
+    /* Điều chỉnh vị trí Thanh Tab khớp với Header Mobile */
     #alpha-tab-nav {
-        top: 60px;      /* Navbar mobile thấp hơn (60px) */
+        top: 60px;      /* Header Mobile thường nhỏ hơn (khoảng 60px) */
         padding: 8px 0;
     }
 
-    /* Thu nhỏ nút bấm theo ý bạn */
+    /* Thu nhỏ nút bấm cho gọn gàng (Theo ý bạn) */
     .tab-btn {
         font-size: 13px;
         padding: 6px 12px;
@@ -117,12 +118,14 @@ body {
         letter-spacing: 0.5px;
     }
 
-    /* Mobile cần ít khoảng trống hơn: Navbar(60) + Tab(45) = 105px */
+    /* Đẩy nội dung trên Mobile xuống vừa đủ */
+    /* Header(60) + Tab(50) + Khoảng thở = 130px */
     .alpha-container,
     #competition-view,
     #view-dashboard,
-    .view-section {
-        padding-top: 105px !important; /* Khoảng cách chuẩn cho mobile */
+    .view-section,
+    .terminal-layout {
+        padding-top: 130px !important;
     }
 }
 
