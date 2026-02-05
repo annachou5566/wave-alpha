@@ -903,3 +903,26 @@ function unminifyToken(minifiedItem) {
   }
   return fullItem;
 }
+
+window.showListTooltip = function(e, label, tokensStr) {
+    const t = document.getElementById('hud-tooltip');
+    if (!t) return;
+    
+    // Nếu danh sách rỗng
+    if (!tokensStr) tokensStr = "No tokens";
+    
+    // Cắt bớt nếu quá dài (chỉ hiện 50 ký tự đầu rồi ...)
+    let displayStr = tokensStr;
+    if (displayStr.length > 100) displayStr = displayStr.substring(0, 100) + "...";
+
+    t.style.display = 'block';
+    t.innerHTML = `
+        <div style="color:#fff; font-size:12px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333;">
+            RANGE: ${label}
+        </div>
+        <div style="color:#eaecef; font-size:11px; line-height:1.4;">
+            ${displayStr}
+        </div>
+    `;
+    window.moveTooltip(e);
+};
