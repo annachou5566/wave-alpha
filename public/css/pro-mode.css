@@ -960,3 +960,38 @@ body {
     text-align: right; 
     font-size: 10px;
 }
+
+/* --- CẬP NHẬT STYLE CHO DAILY VOL NGANG (MỚI) --- */
+.daily-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 11px;
+    height: 14px; /* Mỏng hơn xíu để chứa được nhiều dòng */
+}
+
+.daily-bar-container {
+    flex: 1;
+    display: flex;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    margin: 0 8px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+/* Màu Vàng cho Limit */
+.bar-limit-fill { background: #F0B90B; height: 100%; }
+/* Màu Tím cho On-chain (Mới) */
+.bar-chain-fill { background: #9945FF; height: 100%; }
+
+/* Số liệu Lifecycle nằm trên */
+.lifecycle-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-family: var(--font-num);
+}
