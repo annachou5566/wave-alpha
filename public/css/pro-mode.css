@@ -1292,85 +1292,63 @@ body {
 }
 
 /* --- FILE: public/css/pro-mode.css --- */
-/* THÊM VÀO CUỐI FILE */
 
-/* === COMPACT MODE CHO MOBILE (Giao diện siêu gọn) === */
+/* === 1. FIX MOBILE: GIAO DIỆN SIÊU GỌN & CHỐNG KHE HỞ === */
 @media (max-width: 768px) {
-    /* 1. Thu nhỏ toàn bộ chữ và padding trong bảng */
+    /* Thu nhỏ chữ toàn bộ bảng */
     .alpha-table th, 
     .alpha-table td {
-        font-size: 11px !important;    /* Chữ nhỏ gọn */
-        padding: 6px 4px !important;   /* Giảm padding tối đa */
-        white-space: nowrap;           /* Không cho xuống dòng để tiết kiệm chiều cao */
+        font-size: 11px !important;
+        padding: 6px 4px !important;
+        white-space: nowrap;
     }
 
-    /* 2. Cột Rank (#) thu nhỏ lại */
+    /* Cột 1: Rank (#) */
     .col-fix-1 {
         width: 25px !important; 
         font-size: 10px !important;
-        padding-left: 2px !important;
-        padding-right: 2px !important;
+        padding: 0 !important;
+        text-align: center !important;
+        z-index: 21 !important; /* Luôn nằm trên cùng */
+        background-color: #161a1e !important; /* Nền đặc che nội dung trôi */
+        border-right: 1px solid rgba(255,255,255,0.05); /* Viền mờ */
     }
 
-    /* 3. Cột Token Info (Logo + Tên) thu nhỏ cực mạnh */
+    /* Cột 2: Token Info (Logo + Tên) */
     .col-fix-2 {
-        left: 25px !important;        /* Phải khớp với width của col-fix-1 */
-        width: 100px !important;      /* Bóp từ 160px xuống 100px */
+        /* [FIX QUAN TRỌNG] Left 24px thay vì 25px để chồng lên cột 1 (1px) -> Mất khe hở */
+        left: 24px !important;        
+        width: 100px !important;
         max-width: 100px !important;
         min-width: 100px !important;
-        padding-right: 2px !important;
+        z-index: 20 !important; /* Nằm dưới cột 1 nhưng trên nội dung khác */
+        background-color: #161a1e !important; /* Nền đặc quan trọng */
+        border-right: 2px solid #2b3139 !important; /* Viền phải dày để ngăn cách rõ */
+        box-shadow: 2px 0 5px rgba(0,0,0,0.5); /* Tạo bóng đổ nhẹ để tách biệt phần trôi */
     }
 
-    /* 4. Logo Token bé xíu */
-    .token-logo {
-        width: 20px !important;
-        height: 20px !important;
-    }
-    .logo-wrapper {
-        width: 20px !important;
-        height: 20px !important;
-        margin-right: 4px !important;
-    }
-    .chain-badge {
-        width: 10px !important;
-        height: 10px !important;
-        bottom: -1px !important;
-        right: -1px !important;
-    }
-
-    /* 5. Tên Token và Contract */
-    .symbol-text {
-        font-size: 12px !important; /* Tên vẫn phải đọc được */
-    }
-    .contract-row {
-        font-size: 8px !important;  /* Contract siêu nhỏ */
-    }
-
-    /* 6. Các Badge (xPoint, Spot...) thu nhỏ */
-    .smart-badge {
-        font-size: 8px !important;
-        padding: 1px 3px !important;
-        border-radius: 2px !important;
-    }
-
-    /* 7. Khoảng cách trong ô Token */
-    .token-cell {
-        gap: 4px !important;
-    }
-
-    /* 8. Header Bảng: Giảm chiều cao */
-    .h-top th, .h-sub th {
-        height: 30px !important;
-        padding: 4px !important;
-    }
+    /* Các tinh chỉnh nhỏ (Logo, Badge...) giữ nguyên như cũ */
+    .token-logo { width: 20px !important; height: 20px !important; }
+    .logo-wrapper { width: 20px !important; height: 20px !important; margin-right: 4px !important; }
+    .chain-badge { width: 10px !important; height: 10px !important; bottom: -1px !important; right: -1px !important; }
+    .symbol-text { font-size: 12px !important; }
+    .contract-row { font-size: 8px !important; }
+    .smart-badge { font-size: 8px !important; padding: 1px 3px !important; border-radius: 2px !important; }
+    .token-cell { gap: 4px !important; }
     
-    /* 9. Tinh chỉnh ô Search cho gọn */
-    .alpha-header {
-        flex-direction: column;
-        gap: 8px;
-    }
-    .search-group input {
-        padding: 6px 10px 6px 30px;
-        font-size: 12px;
+    /* Chỉnh Header bảng */
+    .h-top th, .h-sub th { height: 30px !important; padding: 4px !important; }
+    
+    /* Header tìm kiếm */
+    .alpha-header { flex-direction: column; gap: 8px; }
+}
+
+/* === 2. FIX DESKTOP: CỘT STATUS GỌN GÀNG === */
+@media (min-width: 769px) {
+    /* Ép cột Status (class mới col-status) gọn lại */
+    .col-status {
+        width: 80px !important;      /* Chiều rộng cố định, không co giãn */
+        text-align: right !important; /* Căn phải để dính vào cột Price */
+        padding-right: 20px !important; /* Cách cột Price một chút cho thoáng */
     }
 }
