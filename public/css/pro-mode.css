@@ -1204,9 +1204,9 @@ body {
 .distrib-label-row {
     display: flex;
     width: 100%;
-    margin-top: 6px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-top: 4px;
+    margin-top: 2px;
+    border-bottom: 2px solid rgba(255,255,255,0.05);
+    padding-top: 2px;
 }
 
 .distrib-label-side {
