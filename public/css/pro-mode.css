@@ -32,13 +32,13 @@ body {
 }
 
 /* ==========================================================================
-   SMART TAB NAVIGATION (CYBER STYLE - FIX CHE NỘI DUNG)
+   SMART TAB NAVIGATION (CYBER STYLE - FIX GAP & HIDING)
    ========================================================================== */
 
 /* 1. THANH TAB (TRÔI NỔI ĐỂ ẨN HIỆN) */
 #alpha-tab-nav {
-    position: fixed !important; /* Ghim để trôi nổi */
-    top: 76px;                  /* Nằm dưới Navbar */
+    position: fixed !important; /* Bắt buộc fixed để trôi nổi */
+    top: 76px;                  /* Nằm ngay dưới Navbar PC */
     left: 0;
     width: 100%;
     z-index: 990;
@@ -49,7 +49,7 @@ body {
     
     display: flex;
     justify-content: center;
-    padding: 12px 0;
+    padding: 10px 0; /* Giảm padding một chút cho gọn */
     
     /* Hiệu ứng trượt mượt mà khi ẩn/hiện */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -57,20 +57,21 @@ body {
 
 /* Class này được JS thêm vào khi cuộn xuống để ẨN tab */
 #alpha-tab-nav.nav-hidden {
-    transform: translateY(-120%); /* Trượt lên trên */
+    /* Trượt lên trên -150% chiều cao của chính nó để biến mất hoàn toàn */
+    transform: translateY(-150%); 
 }
 
-/* 2. [QUAN TRỌNG] ĐẨY NỘI DUNG XUỐNG ĐỂ KHÔNG BỊ CHE */
-/* Chúng ta cộng: Navbar(76px) + Tab(60px) + Khoảng hở(14px) = 150px */
+/* 2. [QUAN TRỌNG] ĐẨY NỘI DUNG XUỐNG VỪA KHÍT (KHÔNG CHE - KHÔNG HỞ) */
+/* Công thức: Navbar (76px) + Tab (55px) + Khoảng hở nhỏ (4px) = 135px */
 
-.alpha-container,           /* Tab Alpha Market */
-#competition-view,          /* Tab Competition */
-#view-dashboard,            /* Container chính */
-.view-section {             /* Các section con */
-    padding-top: 120px !important; 
+.alpha-container,           
+#competition-view,          
+#view-dashboard,            
+.view-section {             
+    padding-top: 135px !important; /* Vừa đủ để chữ TOURNAMENT hiện ra đẹp */
 }
 
-/* 3. STYLE NÚT BẤM (GIỮ NGUYÊN) */
+/* 3. STYLE NÚT BẤM (GIỮ NGUYÊN ĐẸP NHƯ CŨ) */
 .tab-btn {
     background: transparent;
     border: none;
@@ -101,10 +102,10 @@ body {
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
-/* 4. MOBILE TWEAK (CHỈNH RIÊNG CHO ĐIỆN THOẠI) */
+/* 4. MOBILE TWEAK (CÂN CHỈNH RIÊNG CHO ĐIỆN THOẠI) */
 @media (max-width: 768px) {
     #alpha-tab-nav {
-        top: 60px;      /* Navbar mobile thấp hơn */
+        top: 60px;      /* Navbar mobile thấp hơn (60px) */
         padding: 8px 0;
     }
 
@@ -116,12 +117,12 @@ body {
         letter-spacing: 0.5px;
     }
 
-    /* Mobile nội dung cần ít khoảng trống hơn chút */
+    /* Mobile cần ít khoảng trống hơn: Navbar(60) + Tab(45) = 105px */
     .alpha-container,
     #competition-view,
     #view-dashboard,
     .view-section {
-        padding-top: 120px !important;
+        padding-top: 105px !important; /* Khoảng cách chuẩn cho mobile */
     }
 }
 
