@@ -1131,3 +1131,87 @@ body {
     font-weight: normal;
     letter-spacing: 0.5px;
 }
+
+/* --- CSS V4: FINAL PERFECT UI --- */
+
+/* 1. Price Distribution: Layout Đối xứng (Mirrored) */
+.distrib-container {
+    display: flex;
+    align-items: flex-end;
+    height: 50px; /* Tăng chiều cao cho thoáng */
+    gap: 4px;     /* Khoảng cách giữa phe Mua/Bán */
+    margin-top: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.distrib-side {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+}
+
+.distrib-side.red { justify-content: flex-end; gap: 2px; }   /* Đỏ dồn về phải */
+.distrib-side.green { justify-content: flex-start; gap: 2px; } /* Xanh dồn về trái */
+
+.distrib-bar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.distrib-bar-item:hover { filter: brightness(1.4); transform: scaleY(1.05); }
+
+/* Header chứa Tổng số Tăng/Giảm */
+.distrib-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-num);
+    font-weight: 700;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* 2. Volume List Row: Layout "Số dính Bar" */
+.hud-list-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+    height: 18px;
+    gap: 8px;
+}
+
+.hud-list-idx { width: 20px; color: #5E6673; font-size: 9px; font-weight: 700; }
+.hud-list-name { width: 55px; flex-shrink: 0; font-weight: 700; color: #eaecef; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Container chứa Bar + Số liệu */
+.hud-bar-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    height: 100%;
+}
+
+/* Thanh Bar: Vuông đầu, bo đuôi */
+.hud-bar-fill {
+    height: 8px; /* Dày hơn xíu */
+    border-radius: 0 3px 3px 0; /* Vuông đầu trái, bo nhẹ đầu phải */
+    min-width: 2px;
+    transition: width 0.5s ease;
+}
+
+/* Số liệu: Nằm ngay sau thanh Bar */
+.hud-list-val {
+    margin-left: 6px; /* Cách đuôi thanh bar 6px */
+    font-family: var(--font-num);
+    color: #eaecef;
+    font-weight: 600;
+    font-size: 11px;
+    white-space: nowrap; /* Không xuống dòng */
+}
