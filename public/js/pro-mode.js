@@ -517,12 +517,12 @@ function injectLayout() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // 1. Tạo thanh Tab (Nếu chưa có)
+    // 1. Tạo thanh Tab (Giữ nguyên logic cũ)
+    // Kiểm tra nếu chưa có thì mới tạo để tránh trùng lặp
     let tabNav = document.getElementById('alpha-tab-nav');
     if (!tabNav) {
         tabNav = document.createElement('div');
         tabNav.id = 'alpha-tab-nav';
-        // Code HTML nút bấm giữ nguyên
         tabNav.innerHTML = `
             <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
             <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
@@ -530,19 +530,16 @@ function injectLayout() {
         navbar.insertAdjacentElement('afterend', tabNav);
     }
 
-    // 2. Market View (Giữ nguyên logic cũ của bạn)
+    // 2. Market View (Giữ nguyên)
     let marketView = document.getElementById('alpha-market-view');
     if (!marketView) {
-        // ... (Giữ nguyên phần tạo marketView cũ) ...
         marketView = document.createElement('div');
         marketView.id = 'alpha-market-view';
         marketView.style.display = 'none';
-        
-        // Render nội dung Market...
+        // ... (Giữ nguyên nội dung bên trong của bạn) ...
         marketView.innerHTML = `
-            <div class="alpha-container">
-                <div class="alpha-header">
-                     <div class="filter-group">
+            <div class="alpha-container"> <div class="alpha-header">
+                    <div class="filter-group">
                         <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
                         <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
                         <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
@@ -564,7 +561,31 @@ function injectLayout() {
         tabNav.insertAdjacentElement('afterend', marketView);
     }
 
-    // QUAN TRỌNG: ĐÃ XÓA ĐOẠN CODE "handleSmartScroll" GÂY LỖI Ở ĐÂY
+    // --- [MỚI] THÊM LOGIC SMART SCROLL NGAY TẠI ĐÂY ---
+    let lastScrollY = window.scrollY;
+    
+    // Gỡ bỏ sự kiện cũ nếu có để tránh trùng lặp
+    window.removeEventListener('scroll', handleSmartScroll);
+    
+    function handleSmartScroll() {
+        const currentScrollY = window.scrollY;
+        const nav = document.getElementById('alpha-tab-nav');
+        
+        if (nav) {
+            // Nếu cuộn xuống quá 50px -> Ẩn
+            if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                nav.classList.add('nav-hidden');
+            } 
+            // Nếu cuộn lên -> Hiện
+            else {
+                nav.classList.remove('nav-hidden');
+            }
+        }
+        lastScrollY = currentScrollY;
+    }
+
+    // Gắn sự kiện cuộn (passive để mượt hơn trên mobile)
+    window.addEventListener('scroll', handleSmartScroll, { passive: true });
 }
 
 
