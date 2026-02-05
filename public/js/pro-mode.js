@@ -187,46 +187,47 @@ function renderTableRows(tbody) {
         return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
     });
 
-    // 3. Render HTML từng dòng
+    // 3. Render HTML (CÓ TỐI ƯU PADDING)
     list.slice(0, displayCount).forEach((t) => {
         const tr = document.createElement('tr');
         const now = Date.now();
         
-        // Logic Badge Trạng thái
+        // Logic Badge
         const status = getTokenStatus(t);
         let startBadges = [];
         if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
-        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIRDROP</span>');
+        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIR</span>'); // Viết tắt AIRDROP -> AIR cho gọn
         let journeyHtml = startBadges.join(' ');
         
         if (status === 'SPOT') {
             let endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
-            let endBadge = '<span class="smart-badge badge-delisted">DELISTED</span>';
+            let endBadge = '<span class="smart-badge badge-delisted">DELIST</span>'; // Viết tắt DELISTED -> DELIST
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         }
 
-        // Logic Badge xN (Mul Point)
+        // Logic xPoint
         let mulBadgeHtml = '';
         if (!t.offline && t.listing_time && t.mul_point > 1) {
             const expiryTime = t.listing_time + 2592000000; 
             const diffDays = Math.ceil((expiryTime - now) / 86400000);
             if (diffDays > 0) {
                 const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
-                mulBadgeHtml = `<span class="smart-badge ${badgeClass}" style="margin-left:5px;">x${t.mul_point} ${diffDays}d</span>`;
+                // Bỏ margin-left cứng, dùng class để CSS xử lý
+                mulBadgeHtml = `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
             }
         }
 
         const tokenImg = t.icon || 'assets/tokens/default.png';
         const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
-        const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.substring(t.contract.length - 4)}` : '';
+        const shortContract = t.contract ? `${t.contract.substring(0, 4)}...${t.contract.substring(t.contract.length - 4)}` : ''; // Rút gọn contract hơn nữa (4 ký tự đầu)
 
-        // Template HTML (Đã bỏ các style border cũ)
         tr.innerHTML = `
             <td class="text-center col-fix-1">
                 <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
             </td>
+            
             <td class="col-fix-2">
                 <div class="token-cell" style="justify-content: flex-start;">
                     <div class="logo-wrapper">
@@ -234,27 +235,31 @@ function renderTableRows(tbody) {
                         ${chainBadgeHtml}
                     </div>
                     <div class="token-meta-container" style="display:block; width:auto; border:none; padding:0;">
-                         <div class="symbol-row">
+                         <div class="symbol-row" style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
                             <span class="symbol-text">${t.symbol}</span>
                             ${mulBadgeHtml}
                         </div>
-                        <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; font-size:10px; margin-top:2px;">
-                            ${shortContract} <i class="fas fa-copy"></i>
+                        <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; margin-top:1px;">
+                            ${shortContract}
                         </div>
                     </div>
                 </div>
             </td>
-            <td style="padding-left:15px; vertical-align: middle;">
-                <div style="margin-bottom: 4px;">${journeyHtml}</div>
-                ${t.listing_time ? `<div class="journey-date"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''}
-            </td>
+
+            <td style="vertical-align: middle;">
+                <div style="margin-bottom: 2px; white-space:nowrap;">${journeyHtml}</div>
+                ${t.listing_time ? `<div class="journey-date" style="font-size:9px"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB').substring(0,5)}</div>` : ''} 
+                </td>
+
             <td class="text-end">
                 <div class="text-primary-val">$${formatPrice(t.price)}</div>
-                <div style="font-size:11px; font-weight:700; margin-top:2px" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
-                    ${t.change_24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change_24h)}%
+                <div style="font-size:10px; font-weight:700;" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
+                    ${t.change_24h >= 0 ? '▲' : '▼'}${Math.abs(t.change_24h)}%
                 </div>
             </td>
+
             <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
+            
             <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_total)}</td>
             <td class="text-end font-num text-accent">$${formatNum(t.volume.daily_limit)}</td>
             <td class="text-end font-num text-brand">$${formatNum(t.volume.daily_onchain)}</td>
