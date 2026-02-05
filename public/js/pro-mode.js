@@ -442,12 +442,22 @@ function renderMarketHUD(stats) {
                 </div>
             </div>
             
-            <div class="distrib-legend">
-                <span>Heavy Dump</span>
-                <span>Stable</span>
-                <span>Moon</span>
+           <div class="distrib-labels">
+                <div class="distrib-label-side red">
+                    <div class="distrib-label-item">>8</div>
+                    <div class="distrib-label-item">6</div>
+                    <div class="distrib-label-item">4</div>
+                    <div class="distrib-label-item">2</div>
+                    <div class="distrib-label-item">0%</div>
+                </div>
+                <div class="distrib-label-side green">
+                    <div class="distrib-label-item">0%</div>
+                    <div class="distrib-label-item">2</div>
+                    <div class="distrib-label-item">4</div>
+                    <div class="distrib-label-item">6</div>
+                    <div class="distrib-label-item">>8</div>
+                </div>
             </div>
-        </div>
 
         <div class="hud-module border-left-dim">
             <div class="hud-title">ROLLING VOL 24H</div>

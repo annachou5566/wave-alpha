@@ -1049,12 +1049,41 @@ body {
     background: rgba(255,255,255,0.05); /* Highlight cột khi hover */
     cursor: pointer;
 }
-.distrib-label {
-    font-size: 9px; /* Tăng size (Cũ là 8px scale 0.85) */
-    color: #5E6673; 
-    margin-top: 4px; 
-    white-space: nowrap;
-    font-weight: 600;
+
+.distrib-labels {
+    display: flex;
+    width: 100%;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.05); /* Đường kẻ mờ ngăn cách */
+}
+
+.distrib-label-side {
+    flex: 1; /* Chia đôi 50-50 */
+    display: flex;
+}
+
+/* Căn lề y chang như phần distrib-side của cột */
+.distrib-label-side.red { 
+    justify-content: flex-end; 
+    padding-right: 5px; 
+    gap: 2px; /* Khớp gap với cột */
+}
+
+.distrib-label-side.green { 
+    justify-content: flex-start; 
+    padding-left: 5px; 
+    gap: 2px; /* Khớp gap với cột */
+}
+
+/* Từng ô chữ số */
+.distrib-label-item {
+    flex: 1 1 0px; /* QUAN TRỌNG: Ép độ rộng bằng nhau như cột */
+    text-align: center;
+    font-size: 9px;
+    color: #5E6673;
+    font-family: var(--font-num);
+    font-weight: 700;
 }
 
 /* 2. Price Distribution: Màu sắc chi tiết cho 5 cấp độ */
