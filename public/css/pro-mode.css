@@ -1348,10 +1348,11 @@ body {
 
     /* 6. Các Badge (xPoint, Spot...) thu nhỏ */
     .smart-badge {
-        font-size: 8px !important;
-        padding: 1px 3px !important;
-        border-radius: 2px !important;
-    }
+    font-size: 10px !important; /* Tăng lên 10px cho dễ đọc */
+    padding: 2px 4px !important; /* Tăng padding xíu cho thoáng */
+    font-weight: 700 !important; /* Thêm độ đậm cho rõ */
+    border-radius: 2px !important;
+}
 
     /* 7. Khoảng cách trong ô Token */
     .token-cell {

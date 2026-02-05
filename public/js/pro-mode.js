@@ -248,7 +248,7 @@ function renderTableRows(tbody) {
 
             <td style="vertical-align: middle;">
                 <div style="margin-bottom: 2px; white-space:nowrap;">${journeyHtml}</div>
-                ${t.listing_time ? `<div class="journey-date" style="font-size:9px"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB').substring(0,5)}</div>` : ''} 
+                ${t.listing_time ? `<div class="journey-date" style="font-size:9px"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''} 
                 </td>
 
             <td class="text-end">
@@ -261,11 +261,11 @@ function renderTableRows(tbody) {
             <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
             
             <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_total)}</td>
-            <td class="text-end font-num text-accent">$${formatNum(t.volume.daily_limit)}</td>
-            <td class="text-end font-num text-brand">$${formatNum(t.volume.daily_onchain)}</td>
-            <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.rolling_24h)}</td>
-            <td class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
-            <td class="text-end font-num text-primary-val">$${formatNum(t.liquidity)}</td>
+<td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_limit)}</td>
+<td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_onchain)}</td>
+<td class="text-end font-num text-primary-val">$${formatNum(t.volume.rolling_24h)}</td>
+<td class="text-end font-num text-primary-val">${formatInt(t.tx_count)}</td>
+<td class="text-end font-num text-primary-val">$${formatNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
     });
