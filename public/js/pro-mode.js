@@ -254,7 +254,7 @@ function renderTableRows(tbody) {
 }
 
 // =========================================================================
-// HÀM VẼ DASHBOARD (HUD) - PHIÊN BẢN FINAL (FIXED)
+// HÀM VẼ DASHBOARD (HUD) - PHIÊN BẢN V3 (FIX UI/UX)
 // =========================================================================
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
@@ -270,7 +270,18 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // --- DATA PREP ---
+    // --- 1. LẤY GIỜ UPDATE ---
+    // Thử lấy từ thẻ HTML có sẵn hoặc tạo giờ mới
+    let updateTime = "Waiting...";
+    const timeEl = document.getElementById('last-updated');
+    if (timeEl && timeEl.innerText.includes('Updated:')) {
+        updateTime = timeEl.innerText.replace('Updated: ', '').trim();
+    } else {
+        const now = new Date();
+        updateTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // --- 2. DATA PREP ---
     // [Rolling]
     let activeTokens = allTokens.filter(t => {
         const s = getTokenStatus(t);
@@ -296,89 +307,88 @@ function renderMarketHUD(stats) {
         return num;
     };
 
-    // --- RENDER HELPERS ---
+    // --- RENDER HELPERS (ĐỒNG BỘ STYLE) ---
 
-    // 1. Helper vẽ Daily Row (Có Tooltip & Layout mới)
-    const renderDailyRow = (t, idx) => {
+    // 1. Render Row: Dùng chung class 'hud-list-row' để căn thẳng hàng
+    const renderRow = (t, idx, type) => {
         if (!t) return '';
-        const vTotal = t.volume.daily_total || 0;
-        const vLimit = t.volume.daily_limit || 0;
-        const vChain = t.volume.daily_onchain || 0;
         
-        const totalWidthPct = (vTotal / maxVolDaily) * 100;
-        const pLimit = vTotal > 0 ? (vLimit / vTotal) * 100 : 0;
-        const pChain = vTotal > 0 ? (vChain / vTotal) * 100 : 0;
+        let barContent = '';
+        let volDisplay = 0;
+        
+        if (type === 'ROLLING') {
+            const vol = t.volume.rolling_24h || 0;
+            const pct = (vol / maxVolRolling) * 100;
+            // Rolling: 1 thanh màu Cyan (Mặc định class flow-bar-fill cũ hoặc style trực tiếp)
+            barContent = `<div style="width:${pct}%; height:100%; background:#00F0FF; border-radius:2px;"></div>`;
+            volDisplay = vol;
+        } else {
+            // Daily: 2 thanh Limit/Chain
+            const vTotal = t.volume.daily_total || 0;
+            const vLimit = t.volume.daily_limit || 0;
+            const vChain = t.volume.daily_onchain || 0;
+            const totalWidthPct = (vTotal / maxVolDaily) * 100;
+            const pLimit = vTotal > 0 ? (vLimit / vTotal) * 100 : 0;
+            const pChain = vTotal > 0 ? (vChain / vTotal) * 100 : 0;
 
-        // Dữ liệu để hiện Tooltip (Tận dụng lại hàm showTooltip cũ)
+            barContent = `
+                <div style="width:${totalWidthPct}%; display:flex; height:100%">
+                    <div style="width:${pLimit}%; height:100%; background:#F0B90B;"></div>
+                    <div style="width:${pChain}%; height:100%; background:#9945FF;"></div>
+                </div>
+            `;
+            volDisplay = vTotal;
+        }
+
+        // Data attributes cho Tooltip (chỉ cần thiết cho Daily, nhưng gắn cả 2 cũng không sao)
         const dataAttrs = `
             data-symbol="${t.symbol}"
-            data-total="${formatNum(vTotal)}"
-            data-limit="${formatNum(vLimit)}"
-            data-chain="${formatNum(vChain)}"
+            data-total="${formatNum(t.volume.daily_total)}"
+            data-limit="${formatNum(t.volume.daily_limit)}"
+            data-chain="${formatNum(t.volume.daily_onchain)}"
         `;
+        
+        // Sự kiện chuột: Chỉ Daily mới cần hiện tooltip chi tiết Limit/Chain
+        const mouseEvents = type === 'DAILY' ? 
+            `onmouseenter="window.showTooltip(event, this)" onmousemove="window.moveTooltip(event)" onmouseleave="window.hideTooltip()"` : '';
 
         return `
-            <div class="daily-row" 
-                 ${dataAttrs}
-                 onmouseenter="window.showTooltip(event, this)" 
-                 onmousemove="window.moveTooltip(event)" 
-                 onmouseleave="window.hideTooltip()">
-                 
-                <div class="flow-idx">#${idx}</div>
-                <div class="flow-name">${t.symbol}</div>
+            <div class="hud-list-row" ${dataAttrs} ${mouseEvents}>
+                <div class="hud-list-idx">#${idx}</div>
+                <div class="hud-list-name" title="${t.symbol}">${t.symbol}</div>
                 
-                <div class="daily-bar-container" style="width:${totalWidthPct}% !important;">
-                     <div class="bar-limit-fill" style="width:${pLimit}%"></div>
-                     <div class="bar-chain-fill" style="width:${pChain}%"></div>
+                <div class="hud-bar-container">
+                    ${barContent}
                 </div>
 
-                <div class="flow-val">$${formatNumK(vTotal)}</div> 
+                <div class="hud-list-val">$${formatNumK(volDisplay)}</div> 
             </div>
         `;
     };
 
-    // 2. Helper vẽ Price Bar (Màu sắc & Tooltip danh sách)
+    // 2. Price Bar Helper (Thêm sự kiện Click)
     const d = stats.distribList;
     const drawSentBar = (listTokens, label, colorClass) => {
         const count = listTokens.length;
-        let h = (count / stats.maxDistribCount) * 40; // 40px max height
+        let h = (count / stats.maxDistribCount) * 40; 
         if (count > 0 && h < 4) h = 4;
         
-        // Chuyển mảng token thành chuỗi để hiện tooltip
         const tokensStr = listTokens.join(', ');
 
         return `<div class="distrib-bar-item" 
+                    onclick="window.showListTooltip(event, '${label}', '${tokensStr}')"
                     onmouseenter="window.showListTooltip(event, '${label}', '${tokensStr}')"
                     onmouseleave="window.hideTooltip()">
             <div style="font-size:9px; color:${count>0?'#fff':'#444'}; margin-bottom:1px; font-weight:700;">${count>0?count:''}</div>
             <div style="width:80%; height:${h}px; border-radius:1px;" class="${colorClass}"></div>
-            <div style="font-size:8px; color:#5E6673; margin-top:4px; transform:scale(0.85); white-space:nowrap;">${label}</div>
+            <div class="distrib-label">${label}</div>
         </div>`;
-    };
-
-    const renderRollingRow = (t, idx) => {
-        if (!t) return '';
-        const vol = t.volume.rolling_24h || 0;
-        const pct = (vol / maxVolRolling) * 100;
-        return `
-            <div class="flow-row">
-                <div class="flow-idx">#${idx}</div>
-                <div class="flow-name">${t.symbol}</div>
-                <div class="flow-bar-bg"><div class="flow-bar-fill" style="width:${pct}%"></div></div>
-                <div class="flow-val">$${formatNumK(vol)}</div> 
-            </div>
-        `;
     };
 
     // Tỷ lệ Lifecycle
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
-
-    // Tính % Limit / Chain cho Legend (Daily Vol)
-    const pctLimitDaily = stats.alphaDailyTotal > 0 ? (stats.alphaDailyLimit / stats.alphaDailyTotal * 100).toFixed(0) : 0;
-    const pctChainDaily = stats.alphaDailyTotal > 0 ? (stats.alphaDailyChain / stats.alphaDailyTotal * 100).toFixed(0) : 0;
-
 
     // --- HTML RENDER ---
     hud.innerHTML = `
@@ -390,9 +400,9 @@ function renderMarketHUD(stats) {
             </div>
 
             <div class="lifecycle-labels">
-                <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81; text-align:left;">${stats.countActive} ACT</div>
-                <div class="lifecycle-label-item" style="width:${pctSpot}%; color:#F0B90B; text-align:center;">${stats.countSpot} SPOT</div>
-                <div class="lifecycle-label-item" style="width:${pctDelist}%; color:#f6465d; text-align:right;">${stats.countDelisted} DEAD</div>
+                <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81;">${stats.countActive} ACT</div>
+                <div class="lifecycle-label-item" style="width:${pctSpot}%; color:#F0B90B;">${stats.countSpot} SPOT</div>
+                <div class="lifecycle-label-item" style="width:${pctDelist}%; color:#f6465d;">${stats.countDelisted} DEAD</div>
             </div>
 
             <div style="display:flex; width:100%; height:6px; background:#1e2329; border-radius:3px; overflow:hidden; margin-bottom:20px;">
@@ -404,14 +414,14 @@ function renderMarketHUD(stats) {
             <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:15px; flex-grow:1; display:flex; flex-direction:column;">
                 <div class="hud-title" style="margin-bottom:10px;">24H PRICE DISTRIB.</div>
                 
-                <div style="flex-grow:1; display:flex; align-items:flex-end; gap:2px;">
+                <div class="distrib-bar-group">
                     ${drawSentBar(d.up_0_2, '0-2%', 'bg-green-1')}
                     ${drawSentBar(d.up_2_4, '2-4%', 'bg-green-2')}
                     ${drawSentBar(d.up_4_6, '4-6%', 'bg-green-3')}
                     ${drawSentBar(d.up_6_8, '6-8%', 'bg-green-4')}
                     ${drawSentBar(d.up_8, '>8%', 'bg-green-5')}
                     
-                    <div style="width:4px;"></div>
+                    <div style="width:2px;"></div>
                     
                     ${drawSentBar(d.down_0_2, '0-2%', 'bg-red-1')}
                     ${drawSentBar(d.down_2_4, '2-4%', 'bg-red-2')}
@@ -423,7 +433,7 @@ function renderMarketHUD(stats) {
         </div>
 
         <div class="hud-module border-left-dim">
-            <div class="hud-title" style="color:#00F0FF">ROLLING VOL 24H</div>
+            <div class="hud-title">ROLLING VOL 24H</div>
             <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
                 $${formatNum(stats.alphaRolling24h)}
             </div>
@@ -436,23 +446,25 @@ function renderMarketHUD(stats) {
             </div>
 
             <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:flex-start; overflow:hidden;">
-                ${top10Rolling.map((t, i) => renderRollingRow(t, i+1)).join('')}
+                ${top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join('')}
             </div>
         </div>
 
         <div class="hud-module border-left-dim">
-            <div class="hud-title">DAILY VOL (UTC 0:00)</div>
+            <div class="hud-title" style="display:flex; align-items:center;">
+                DAILY VOL (UTC +0) <span class="update-badge">${updateTime}</span>
+            </div>
             <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
                 $${formatNum(stats.alphaDailyTotal)}
             </div>
             
             <div style="display:flex; gap:10px; margin-bottom:10px; font-size:10px; font-weight:700;">
-                <div style="color:#F0B90B;">● LIMIT: $${formatNumK(stats.alphaDailyLimit)} (${pctLimitDaily}%)</div>
-                <div style="color:#9945FF;">● CHAIN: $${formatNumK(stats.alphaDailyChain)} (${pctChainDaily}%)</div>
+                <div style="color:#F0B90B;">● LIMIT: $${formatNumK(stats.alphaDailyLimit)}</div>
+                <div style="color:#9945FF;">● CHAIN: $${formatNumK(stats.alphaDailyChain)}</div>
             </div>
 
             <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:flex-start; overflow:hidden;">
-                ${top10Daily.map((t, i) => renderDailyRow(t, i+1)).join('')}
+                ${top10Daily.map((t, i) => renderRow(t, i+1, 'DAILY')).join('')}
             </div>
         </div>
     `;
