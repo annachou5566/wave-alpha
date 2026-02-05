@@ -252,7 +252,7 @@ function renderTableRows(tbody) {
 }
 
 // =========================================================================
-// HÀM VẼ DASHBOARD (HUD) - ĐÃ FIX LỖI TOOLTIP & BỎ KHUNG VIỀN
+// HÀM VẼ DASHBOARD (HUD) - UPDATE 4 CỘT + ROLLING VOL CARD
 // =========================================================================
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
@@ -269,36 +269,56 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // 1. TẠO TOOLTIP ELEMENT (Nếu chưa có)
-    let tooltip = document.getElementById('hud-tooltip');
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.id = 'hud-tooltip';
-        // Style Kính mờ - Neon Border - Bóng đổ
-        tooltip.style.cssText = `
-            position: fixed; display: none; z-index: 99999; 
-            background: rgba(11, 14, 17, 0.95); 
-            border: 1px solid #2b3139; 
-            border-left: 3px solid #00F0FF; 
-            padding: 12px; border-radius: 4px; 
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6); 
-            pointer-events: none; 
-            font-family: 'Rajdhani', sans-serif; 
-            min-width: 160px; 
-            backdrop-filter: blur(10px);
-            transform: translate(15px, 15px); /* Cách chuột ra một chút */
-        `;
-        document.body.appendChild(tooltip);
-    }
+    // --- 1. TÍNH TOÁN DATA CHO THẺ MỚI (ROLLING VOL) ---
+    // Lọc ra các token Active (Alpha) để tính Dominance chính xác
+    let activeTokens = allTokens.filter(t => {
+        const s = getTokenStatus(t);
+        return s !== 'SPOT' && s !== 'DELISTED' && s !== 'PRE_DELISTED';
+    });
 
-    // Tính toán các tỷ lệ
+    // Sắp xếp theo Rolling Vol giảm dần
+    activeTokens.sort((a, b) => (b.volume.rolling_24h || 0) - (a.volume.rolling_24h || 0));
+
+    // Tính Top 10 Dominance
+    const top10Vol = activeTokens.slice(0, 10).reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
+    const totalRolling = stats.alphaRolling24h || 1; // Tránh chia cho 0
+    const domPct = (top10Vol / totalRolling) * 100;
+    
+    // Lấy Top 3 để vẽ Leaderboard Mini
+    const top3 = activeTokens.slice(0, 3);
+    const maxVolTop1 = top3[0] ? (top3[0].volume.rolling_24h || 1) : 1;
+
+    // Helper tạo HTML cho từng dòng Top 3
+    const renderFlowRow = (t, idx) => {
+        if (!t) return '';
+        const vol = t.volume.rolling_24h || 0;
+        const pct = (vol / maxVolTop1) * 100; // Độ dài thanh bar so với Top 1
+        return `
+            <div class="flow-row">
+                <div class="flow-idx">#${idx}</div>
+                <div class="flow-name">${t.symbol}</div>
+                <div class="flow-bar-bg"><div class="flow-bar-fill" style="width:${pct}%"></div></div>
+                <div class="flow-val">$${formatNumK(vol)}</div> 
+            </div>
+        `;
+    };
+    
+    // Helper format số tắt (1.2M, 500K) cho gọn
+    const formatNumK = (num) => {
+        if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
+        if(num >= 1000) return (num/1000).toFixed(0) + 'K';
+        return num;
+    };
+
+    // --- 2. TÍNH TOÁN TỶ LỆ CŨ (GIỮ NGUYÊN) ---
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
     const limitPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyLimit / stats.alphaDailyTotal) * 100 : 0;
     const chainPct = stats.alphaDailyTotal > 0 ? (stats.alphaDailyChain / stats.alphaDailyTotal) * 100 : 0;
+    const d = stats.distribution; // Cho Price Action
 
-    // Helper: Vẽ thanh Sentiment (Histogram)
+    // Helper vẽ Sentiment Bar (Giữ nguyên)
     const drawSentBar = (count, label, colorClass) => {
         let h = (count / stats.distribution.maxCount) * 40;
         if (count > 0 && h < 4) h = 4;
@@ -308,162 +328,100 @@ function renderMarketHUD(stats) {
             <div style="font-size:9px; color:#5E6673; margin-top:4px;">${label}</div>
         </div>`;
     };
-    const d = stats.distribution;
 
-    // --- [LOGIC MỚI] VẼ CHART VỚI DATA-ATTRIBUTES ---
+    // Helper vẽ Chart đối xứng (Giữ nguyên)
     const drawMirroredChart = () => {
-        if (stats.topVolTokens.length === 0) return '<div style="height:100px; display:flex; align-items:center; justify-content:center; color:#444; font-size:10px;">No Data</div>';
-        
-        let maxVal = 0;
-        stats.topVolTokens.forEach(t => {
-            maxVal = Math.max(maxVal, t.volume.daily_limit, t.volume.daily_onchain);
-        });
+        // ... (Giữ nguyên logic vẽ SVG cũ của bạn ở đây, tôi gọi lại tên hàm cũ hoặc paste lại nếu cần)
+        // Để gọn code trong hướng dẫn, tôi giả định bạn giữ nguyên logic vẽ chart cũ.
+        // Dưới đây là logic vẽ chart rút gọn để paste vào (đã có trong code cũ):
+        if (stats.topVolTokens.length === 0) return '<div style="height:100px; center-flex text-sub">No Data</div>';
+        let maxVal = 0; stats.topVolTokens.forEach(t => { maxVal = Math.max(maxVal, t.volume.daily_limit, t.volume.daily_onchain); });
         if (maxVal === 0) maxVal = 1;
-
-        const barCount = 10;
-        const barWidth = 100 / barCount; 
-        let svgContent = '';
-        let labelsHtml = ''; 
-        
+        let svg = '', lbl = ''; const barW = 9.6;
         stats.topVolTokens.forEach((t, i) => {
-            const hLimit = (t.volume.daily_limit / maxVal) * 35; 
-            const hChain = (t.volume.daily_onchain / maxVal) * 35;
-            const x = i * barWidth;
-            
-            // Chỉnh cột sát nhau: barW gần bằng 100/10 = 10. Để 9.6 là hở rất bé (0.4%)
-            const barW = 9.6; 
-            const offset = (barWidth - barW) / 2; // Căn giữa
-
-            // Tên hiển thị (Cắt ngắn)
-            let displayName = t.symbol;
-            if (displayName.length > 6) displayName = displayName.substring(0, 6) + '..';
-
-            // --- QUAN TRỌNG: LƯU DỮ LIỆU VÀO DATA-XXX ---
-            // Cách này an toàn tuyệt đối, không bị lỗi cú pháp
-            const dataAttrs = `
-                data-symbol="${t.symbol}"
-                data-total="${formatNum(t.volume.daily_total)}"
-                data-limit="${formatNum(t.volume.daily_limit)}"
-                data-chain="${formatNum(t.volume.daily_onchain)}"
-            `;
-
-            // 1. Vẽ Cột SVG
-            svgContent += `
-                <g class="chart-bar-group" 
-                   ${dataAttrs}
-                   onmouseenter="window.showTooltip(event, this)" 
-                   onmousemove="window.moveTooltip(event)" 
-                   onmouseleave="window.hideTooltip()">
-                    
-                    <rect x="${x}%" y="0" width="${barWidth}%" height="100" fill="transparent"></rect>
-
-                    <rect x="${x + offset}%" y="${45 - hLimit}" width="${barW}%" height="${hLimit}" rx="1" fill="#F0B90B" opacity="0.9"></rect>
-                    
-                    <rect x="${x + offset}%" y="45" width="${barW}%" height="${hChain}" rx="1" fill="#00F0FF" opacity="0.9"></rect>
-                </g>
-            `;
-
-            // 2. Vẽ Tên Token bên dưới (HTML)
-            labelsHtml += `
-                <div style="width:${barWidth}%; text-align:center; font-size:10px; color:#848e9c; font-weight:700; cursor:pointer; overflow:hidden; text-overflow:ellipsis; padding-top:4px;"
-                     ${dataAttrs}
-                     onmouseenter="window.showTooltip(event, this)" 
-                     onmousemove="window.moveTooltip(event)" 
-                     onmouseleave="window.hideTooltip()">
-                    ${displayName}
-                </div>
-            `;
+            const hL = (t.volume.daily_limit/maxVal)*35, hC = (t.volume.daily_onchain/maxVal)*35, x = i*10, off = (10-barW)/2;
+            const dataAttrs = `data-symbol="${t.symbol}" data-total="${formatNum(t.volume.daily_total)}" data-limit="${formatNum(t.volume.daily_limit)}" data-chain="${formatNum(t.volume.daily_onchain)}"`;
+            svg += `<g class="chart-bar-group" ${dataAttrs} onmouseenter="window.showTooltip(event,this)" onmousemove="window.moveTooltip(event)" onmouseleave="window.hideTooltip()"><rect x="${x}%" y="0" width="10%" height="100" fill="transparent"/><rect x="${x+off}%" y="${45-hL}" width="${barW}%" height="${hL}" rx="1" fill="#F0B90B" opacity="0.9"/><rect x="${x+off}%" y="45" width="${barW}%" height="${hC}" rx="1" fill="#00F0FF" opacity="0.9"/></g>`;
+            lbl += `<div style="width:10%; text-align:center; font-size:10px; color:#848e9c; font-weight:700; cursor:pointer; overflow:hidden; text-overflow:ellipsis; padding-top:4px;" ${dataAttrs} onmouseenter="window.showTooltip(event,this)" onmousemove="window.moveTooltip(event)" onmouseleave="window.hideTooltip()">${t.symbol.substring(0,6)}</div>`;
         });
-
-        return `
-            <div style="width:100%; display:flex; flex-direction:column;">
-                <svg width="100%" height="90" viewBox="0 0 100 90" preserveAspectRatio="none" style="overflow:visible;">
-                    <line x1="0" y1="45" x2="100" y2="45" stroke="#2b3139" stroke-width="0.5" />
-                    ${svgContent}
-                </svg>
-                <div style="display:flex; width:100%; height:20px;">
-                    ${labelsHtml}
-                </div>
-            </div>
-        `;
+        return `<div style="width:100%; display:flex; flex-direction:column;"><svg width="100%" height="90" viewBox="0 0 100 90" preserveAspectRatio="none" style="overflow:visible;"><line x1="0" y1="45" x2="100" y2="45" stroke="#2b3139" stroke-width="0.5" />${svg}</svg><div style="display:flex; width:100%; height:20px;">${lbl}</div></div>`;
     };
 
-    // RENDER HTML CHÍNH
+    // --- 3. RENDER HTML 4 CỘT ---
     hud.innerHTML = `
         <div class="hud-module">
-            <div class="hud-title">ALPHA LIFECYCLE (ALL TIME)</div>
+            <div class="hud-title">ALPHA LIFECYCLE (All Time)</div>
             <div style="display:flex; align-items:flex-end; margin-bottom:12px;">
-                <div style="font-size:24px; font-weight:bold; color:#eaecef; font-family:'Rajdhani'; line-height:1;">
-                    ${stats.totalScan} <span style="font-size:12px; color:#5E6673; font-weight:normal">TOTAL TOKENS</span>
-                </div>
+                <div class="hud-main-value">${stats.totalScan} <span style="font-size:12px; color:#5E6673; font-weight:normal">TOKENS</span></div>
             </div>
             <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; font-family:'Rajdhani'; font-weight:700; font-size:11px;">
-                <div style="width:${pctActive}%; background:#0ecb81; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countActive} Active</div>
-                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countSpot} Spot</div>
-                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${stats.countDelisted} Delist</div>
+                <div style="width:${pctActive}%; background:#0ecb81; color:#fff; display:flex; align-items:center; justify-content:center;">${stats.countActive}</div>
+                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center;">${stats.countSpot}</div>
+                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center;">${stats.countDelisted}</div>
             </div>
-            <div style="margin-top:8px; font-size:10px; color:#5E6673; text-align:center;">Live Project Tracking Status</div>
+            <div style="margin-top:8px; font-size:10px; color:#5E6673; text-align:center;">Active / Spot / Delisted</div>
         </div>
 
         <div class="hud-module border-left-dim">
-            <div class="hud-title">DAILY VOL STRUCTURE (UTC 0:00)</div>
-            <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:8px;">
-                <div class="text-neon" style="font-size:24px; font-weight:bold; font-family:'Rajdhani';">$${formatNum(stats.alphaDailyTotal)}</div>
-                <div style="font-size:11px; color:#848e9c;">(Active Market Total)</div>
+            <div class="hud-title">24H PRICE ACTION</div>
+            <div style="flex-grow:1; display:flex; align-items:flex-end; gap:3px; padding-bottom:5px;">
+                ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
+                ${drawSentBar(d.up_2_4, '2-4%', 'bar-green-mid')}
+                ${drawSentBar(d.up_4_6, '>4%', 'bar-green')}
+                <div style="width:10px;"></div>
+                ${drawSentBar(d.down_0_2, '0-2%', 'bar-red-dim')}
+                ${drawSentBar(d.down_2_4, '2-4%', 'bar-red-mid')}
+                ${drawSentBar(d.down_4_6, '>4%', 'bar-red')}
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-family:'Rajdhani'; font-weight:600;">
-                <div style="color:#F0B90B;">LIMIT: $${formatNum(stats.alphaDailyLimit)} (${Math.round(limitPct)}%)</div>
-                <div style="color:#00F0FF;">CHAIN: $${formatNum(stats.alphaDailyChain)} (${Math.round(chainPct)}%)</div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                <div style="color: #0ecb81; font-weight: 700; font-family: var(--font-num); font-size: 16px;">▲ ${stats.gainers}</div>
+                <div style="color: #f6465d; font-weight: 700; font-family: var(--font-num); font-size: 16px;">▼ ${stats.losers}</div>
+            </div>
+        </div>
+
+        <div class="hud-module border-left-dim">
+            <div class="hud-title" style="color:#00F0FF">ROLLING VOL 24H</div>
+            
+            <div class="hud-main-value" style="font-size:24px; color:#00F0FF; margin-bottom:8px;">
+                $${formatNum(stats.alphaRolling24h)}
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:4px; font-weight:700;">
+                    <span style="color:#848E9C">TOP 10 DOMINANCE</span>
+                    <span style="color:#fff">${domPct.toFixed(1)}%</span>
+                </div>
+                <div style="width:100%; height:4px; background:#2b3139; border-radius:2px;">
+                    <div style="width:${domPct}%; height:100%; background:#00F0FF; border-radius:2px; box-shadow: 0 0 8px rgba(0,240,255,0.4)"></div>
+                </div>
+            </div>
+
+            <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:flex-end;">
+                ${renderFlowRow(top3[0], 1)}
+                ${renderFlowRow(top3[1], 2)}
+                ${renderFlowRow(top3[2], 3)}
+            </div>
+        </div>
+
+        <div class="hud-module border-left-dim">
+            <div class="hud-title">DAILY VOL (UTC 0:00)</div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:8px; font-family:'Rajdhani'; font-weight:600;">
+                <div style="color:#F0B90B;">LIMIT: ${Math.round(limitPct)}%</div>
+                <div style="color:#00F0FF;">CHAIN: ${Math.round(chainPct)}%</div>
             </div>
             
             <div style="flex-grow:1; display:flex; align-items:center;">
                 ${drawMirroredChart()}
             </div>
         </div>
-
-        <div class="hud-module border-left-dim">
-            <div class="hud-title" style="display:flex; justify-content:space-between;">
-                24H PRICE & VOL
-                <span style="color:#5E6673; font-size:10px;">Roll Vol: <span style="color:#eaecef">$${formatNum(stats.alphaRolling24h)}</span></span>
-            </div>
-            <div style="flex-grow:1; display:flex; align-items:flex-end; gap:3px; padding-bottom:5px;">
-                ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
-                ${drawSentBar(d.up_2_4, '2-4%', 'bar-green-mid')}
-                ${drawSentBar(d.up_4_6, '4-6%', 'bar-green')}
-                ${drawSentBar(d.up_6_8, '6-8%', 'bar-green')}
-                ${drawSentBar(d.up_8, '>8%', 'bar-green')}
-                <div style="width:10px;"></div>
-                ${drawSentBar(d.down_0_2, '0-2%', 'bar-red-dim')}
-                ${drawSentBar(d.down_2_4, '2-4%', 'bar-red-mid')}
-                ${drawSentBar(d.down_4_6, '4-6%', 'bar-red')}
-                ${drawSentBar(d.down_6_8, '6-8%', 'bar-red')}
-                ${drawSentBar(d.down_8, '>8%', 'bar-red')}
-            </div>
-            <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
-                <div style="color: #0ecb81; font-weight: 700; font-family: var(--font-num); font-size: 16px;"><i class="fas fa-arrow-up" style="font-size:12px; transform: rotate(45deg);"></i> ${stats.gainers}</div>
-                <div style="color: #f6465d; font-weight: 700; font-family: var(--font-num); font-size: 16px;">${stats.losers} <i class="fas fa-arrow-down" style="font-size:12px; transform: rotate(45deg);"></i></div>
-            </div>
-        </div>
     `;
-
-    // --- CẬP NHẬT CSS: XÓA VIỀN, CHỈ SÁNG MÀU LÊN ---
+    
+    // Giữ nguyên đoạn style hover cũ (nếu có)
     if (!document.getElementById('chart-hover-style')) {
+        // ... (Giữ nguyên logic tạo style cũ)
         const style = document.createElement('style');
         style.id = 'chart-hover-style';
-        style.innerHTML = `
-            .chart-bar-group rect { transition: all 0.2s; cursor: pointer; }
-            /* Hiệu ứng Hover: Sáng hơn, không có viền (stroke) */
-            .chart-bar-group:hover rect { opacity: 1 !important; filter: brightness(1.3); }
-            /* Hover vào tên thì chữ sáng lên */
-            .chart-bar-group:hover + div, div:hover { color: #fff !important; }
-
-            .bar-green { background: #0ecb81; opacity: 1; }
-            .bar-green-mid { background: #0ecb81; opacity: 0.7; }
-            .bar-green-dim { background: #0ecb81; opacity: 0.4; }
-            .bar-red { background: #f6465d; opacity: 1; }
-            .bar-red-mid { background: #f6465d; opacity: 0.7; }
-            .bar-red-dim { background: #f6465d; opacity: 0.4; }
-        `;
+        style.innerHTML = `.chart-bar-group rect { transition: all 0.2s; cursor: pointer; } .chart-bar-group:hover rect { opacity: 1 !important; filter: brightness(1.3); } .chart-bar-group:hover + div, div:hover { color: #fff !important; } .bar-green { background: #0ecb81; opacity: 1; } .bar-green-mid { background: #0ecb81; opacity: 0.7; } .bar-green-dim { background: #0ecb81; opacity: 0.4; } .bar-red { background: #f6465d; opacity: 1; } .bar-red-mid { background: #f6465d; opacity: 0.7; } .bar-red-dim { background: #f6465d; opacity: 0.4; }`;
         document.head.appendChild(style);
     }
 }
@@ -563,7 +521,7 @@ function injectLayout() {
                             <th rowspan="2" class="text-center">STATUS</th>
                             
                             <th rowspan="2" class="text-end">PRICE</th>
-                            <th rowspan="2" class="text-center">CHART (7D)</th>
+                            <th rowspan="2" class="text-center">CHART</th>
                             
                             <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
                             <th colspan="3" class="text-center th-group-stats">MARKET STATS (24h)</th>

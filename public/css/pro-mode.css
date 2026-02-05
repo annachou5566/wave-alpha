@@ -553,11 +553,11 @@ body {
 /* 1. Ẩn grid cũ đi (đề phòng JS chưa cập nhật kịp) */
 .summary-grid { display: none !important; }
 
-/* 2. Container chính của Dashboard mới */
+/* --- SỬA ĐOẠN NÀY --- */
 .market-hud-container {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* Chia 3 cột */
-    background: rgba(18, 22, 28, 0.6); /* Nền kính tối */
+    grid-template-columns: repeat(4, 1fr); /* MỚI: Chia 4 cột đều nhau */
+    background: rgba(18, 22, 28, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     padding: 20px;
@@ -677,14 +677,12 @@ body {
 /* RESPONSIVE MOBILE */
 @media (max-width: 992px) {
     .market-hud-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 20px;
     }
     .border-left-dim {
         border-left: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
         padding-left: 0;
-        padding-top: 20px;
     }
 }
 
@@ -909,4 +907,56 @@ body {
 /* 4. Bảng Đăng nhập (Modal): Cao nhất */
 .modal {
     z-index: 1055 !important;
+}
+
+/* --- THÊM MỚI XUỐNG CUỐI FILE --- */
+
+/* Style cho Mini Leaderboard (Thẻ Rolling) */
+.flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 11px;
+    height: 16px;
+}
+
+.flow-idx {
+    width: 15px;
+    color: #5E6673;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.flow-name { 
+    width: 45px; 
+    font-weight: 700; 
+    color: #eaecef; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.flow-bar-bg { 
+    flex: 1; 
+    height: 4px; 
+    background: rgba(255,255,255,0.05); 
+    margin: 0 8px; 
+    border-radius: 2px; 
+    overflow: hidden;
+}
+
+.flow-bar-fill { 
+    height: 100%; 
+    background: var(--brand); 
+    border-radius: 2px; 
+    min-width: 2px;
+}
+
+.flow-val { 
+    font-family: var(--font-num); 
+    color: #848E9C; 
+    width: 40px; 
+    text-align: right; 
+    font-size: 10px;
 }
