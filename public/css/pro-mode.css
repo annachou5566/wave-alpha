@@ -31,92 +31,85 @@ body {
     transition: all 0.3s ease;
 }
 
-/* --- 2. TAB NAVIGATION (GIAO DIỆN PRO MODE - STABLE) --- */
+/* --- 2. TAB NAVIGATION (Thanh Tab Alpha/Competition) --- */
+/* Nằm ngay dưới Navbar */
+/* --- TỐI ƯU GIAO DIỆN SMART TAB --- */
 #alpha-tab-nav {
-    /* Dùng Sticky: Tự động nằm dưới Navbar, KHÔNG bao giờ che nội dung */
-    position: sticky !important; 
-    top: 75px; /* Dính ngay dưới Navbar chính */
-    z-index: 990;
-    
+    position: fixed !important;
+    /* Navbar của bạn cao khoảng 70-76px, ta đặt ngay dưới đó */
+    top: 70px; 
+    left: 0;
     width: 100%;
-    /* Hiệu ứng kính mờ (Glassmorphism) chuẩn Pro */
-    background: rgba(11, 14, 17, 0.85); 
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    
-    /* Viền dưới neon mờ nhẹ để tách biệt */
-    border-bottom: 1px solid rgba(0, 240, 255, 0.1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    
+    z-index: 990;
+    background: #0b0e11;
+    border-bottom: 1px solid var(--border-dim);
     display: flex;
     justify-content: center;
-    padding: 10px 0;
-    margin-bottom: 0;
-    
-    /* Hiệu ứng chuyển động mượt mà */
-    transition: all 0.3s ease;
+    padding: 12px 0;
+    /* Hiệu ứng trượt mượt mà */
+    transition: transform 0.3s ease-in-out, opacity 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
-/* --- TRẢ LẠI PADDING CHUẨN (Không cần đẩy lung tung nữa) --- */
-/* Vì dùng Sticky, nó tự chiếm chỗ trong layout nên không lo che chữ */
-.alpha-container,
-#competition-view,
+/* Khi ẩn: đẩy lên trên và làm mờ */
+#alpha-tab-nav.nav-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* QUAN TRỌNG: Tạo khoảng trống để không che tiêu đề */
+/* Áp dụng cho container của Alpha Market */
+.alpha-container {
+    /* Đẩy nội dung xuống một khoảng bằng chiều cao thanh Tab + đệm */
+    padding-top: 65px !important; 
+}
+
+/* Áp dụng cho cả trang Competition để không bị che */
+#competition-view, 
 .view-section {
-    padding-top: 20px !important; 
+    padding-top: 60px;
 }
 
-/* --- NÚT TAB (Tút lại cho ngầu) --- */
-.tab-btn {
-    background: transparent;
-    border: 1px solid transparent; /* Chuẩn bị sẵn border */
-    color: #8b9bb4; /* Màu chữ xám xanh hiện đại */
-    font-family: var(--font-num); /* Font số cho cứng cáp */
-    font-weight: 600;
-    font-size: 14px;
-    padding: 8px 24px;
-    margin: 0 8px;
-    border-radius: 4px; /* Bo góc nhẹ */
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    display: flex;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Hiệu ứng Hover: Sáng lên nhẹ */
-.tab-btn:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.1);
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-}
-
-/* TRẠNG THÁI ACTIVE: Neon Brand */
-.tab-btn.active {
-    color: #000; /* Chữ đen trên nền sáng -> Tương phản cao */
-    background: var(--brand); /* Màu xanh neon chủ đạo */
-    border-color: var(--brand);
-    font-weight: 800;
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); /* Đổ bóng neon */
-    transform: translateY(-1px); /* Nhấc nhẹ nút lên */
-}
-
-/* Mobile Tweak: Gọn gàng hơn */
+/* Tinh chỉnh riêng cho Mobile để cân đối hơn */
 @media (max-width: 768px) {
     #alpha-tab-nav {
-        top: 60px; /* Navbar mobile thấp hơn */
+        top: 60px; /* Navbar trên mobile thường thấp hơn */
         padding: 8px 0;
-        background: rgba(11, 14, 17, 0.95); /* Đậm hơn chút trên mobile để dễ đọc */
     }
-    .tab-btn {
-        font-size: 13px;
-        padding: 6px 16px;
-        margin: 0 4px;
-        letter-spacing: 1px;
+    .alpha-container {
+        padding-top: 55px !important;
     }
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    font-family: var(--font-num);
+    font-weight: 700;
+    font-size: 16px;
+    padding: 8px 25px;
+    margin: 0 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+}
+
+.tab-btn.active {
+    color: #000;
+    background: var(--brand);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
 /* --- 3. MARKET VIEW CONTAINER (KHẮC PHỤC LỖI MÀN HÌNH ĐEN) --- */
