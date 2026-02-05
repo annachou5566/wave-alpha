@@ -31,69 +31,57 @@ body {
     transition: all 0.3s ease;
 }
 
-/* --- 2. TAB NAVIGATION (Thanh Tab Alpha/Competition) --- */
-/* Nằm ngay dưới Navbar */
-/* --- TỐI ƯU GIAO DIỆN SMART TAB --- */
+/* --- 2. TAB NAVIGATION (STYLE CYBER GỐC - KHÔNG SỬA GIAO DIỆN) --- */
 #alpha-tab-nav {
     position: fixed !important;
-    /* Navbar của bạn cao khoảng 70-76px, ta đặt ngay dưới đó */
     top: 70px; 
     left: 0;
     width: 100%;
     z-index: 990;
-    background: #0b0e11;
+    background: #0b0e11; /* Giữ nền đen đặc cyber */
     border-bottom: 1px solid var(--border-dim);
     display: flex;
     justify-content: center;
     padding: 12px 0;
-    /* Hiệu ứng trượt mượt mà */
     transition: transform 0.3s ease-in-out, opacity 0.2s;
     box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
-/* Khi ẩn: đẩy lên trên và làm mờ */
+/* Khi ẩn: đẩy lên trên */
 #alpha-tab-nav.nav-hidden {
     transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
 }
 
-/* QUAN TRỌNG: Tạo khoảng trống để không che tiêu đề */
-/* Áp dụng cho container của Alpha Market */
+/* Khoảng trống cho nội dung */
 .alpha-container {
-    /* Đẩy nội dung xuống một khoảng bằng chiều cao thanh Tab + đệm */
     padding-top: 65px !important; 
 }
 
-/* Áp dụng cho cả trang Competition để không bị che */
 #competition-view, 
 .view-section {
     padding-top: 60px;
 }
 
-/* Tinh chỉnh riêng cho Mobile để cân đối hơn */
-@media (max-width: 768px) {
-    /* 1. Thanh chứa tab gọn lại */
-    #alpha-tab-nav {
-        top: 60px; /* Navbar mobile thường thấp hơn */
-        padding: 8px 0; /* Thu hẹp khoảng cách trên dưới */
-    }
-
-    /* 2. Đẩy nội dung xuống vừa đủ (khớp với top 60px) */
-    .alpha-container, 
-    #competition-view, 
-    .view-section {
-        padding-top: 55px !important;
-    }
-
-    /* 3. [MỚI] THU NHỎ NÚT BẤM TAB (Đây là phần bạn cần) */
-    .tab-btn {
-        font-size: 13px;       /* Chữ nhỏ lại (gốc 16px) */
-        padding: 6px 16px;     /* Nút ngắn lại (gốc 8px 25px) */
-        margin: 0 4px;         /* Khoảng cách giữa 2 nút gần hơn */
-        letter-spacing: 0.5px; /* Giãn chữ ít hơn */
-        width: auto;           /* Để nút tự co giãn theo nội dung */
-    }
+/* --- BUTTON STYLE (STYLE CŨ BẠN THÍCH) --- */
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    font-family: var(--font-num);
+    font-weight: 700;
+    font-size: 16px;
+    padding: 8px 25px;
+    margin: 0 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .tab-btn:hover {
@@ -106,6 +94,27 @@ body {
     background: var(--brand);
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
+
+/* --- [CHỈ SỬA CHỖ NÀY] MOBILE TWEAK --- */
+@media (max-width: 768px) {
+    #alpha-tab-nav {
+        top: 60px; 
+        padding: 8px 0; /* Thu hẹp thanh chứa */
+    }
+    
+    .alpha-container {
+        padding-top: 55px !important;
+    }
+
+    /* ĐÂY LÀ ĐOẠN LÀM GỌN NÚT TRÊN ĐIỆN THOẠI */
+    .tab-btn {
+        font-size: 13px;       /* Chữ nhỏ lại (gốc 16px) */
+        padding: 6px 12px;     /* Nút ngắn lại (gốc 8px 25px) */
+        margin: 0 4px;         /* Khoảng cách 2 nút sát nhau hơn */
+        letter-spacing: 0.5px; /* Giãn chữ ít hơn */
+    }
+}
+
 
 /* --- 3. MARKET VIEW CONTAINER (KHẮC PHỤC LỖI MÀN HÌNH ĐEN) --- */
 #alpha-market-view {
@@ -352,6 +361,14 @@ body {
     color: #fff;
 }
 
+.badge-pro { 
+    background: var(--brand); 
+    color: #000; 
+    font-size: 9px; 
+    padding: 2px 5px; 
+    border-radius: 3px; 
+    font-weight: 800; 
+}
 
 /* Hiệu ứng Glow cho hàng VIP */
 .glow-row td {
