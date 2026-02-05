@@ -246,10 +246,10 @@ function renderTableRows(tbody) {
                 </div>
             </td>
 
-            <td class="mobile-hidden col-status" style="vertical-align: middle;">
-    <div style="margin-bottom: 2px; white-space:nowrap;">${journeyHtml}</div>
-    ${t.listing_time ? `<div class="journey-date" style="font-size:9px"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB').substring(0,5)}</div>` : ''} 
-</td>
+            <td style="vertical-align: middle;">
+                <div style="margin-bottom: 2px; white-space:nowrap;">${journeyHtml}</div>
+                ${t.listing_time ? `<div class="journey-date" style="font-size:9px"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB').substring(0,5)}</div>` : ''} 
+                </td>
 
             <td class="text-end">
                 <div class="text-primary-val">$${formatPrice(t.price)}</div>
@@ -598,7 +598,7 @@ function injectLayout() {
                             <th rowspan="2" class="text-center col-fix-1">#</th>
                             <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
                             
-                            <th rowspan="2" class="text-center mobile-hidden col-status">STATUS</th>
+                            <th rowspan="2" class="text-center">STATUS</th>
                             
                             <th rowspan="2" class="text-end">PRICE</th>
                             <th rowspan="2" class="text-center">CHART</th>
