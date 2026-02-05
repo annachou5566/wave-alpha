@@ -70,7 +70,7 @@ body {
 .view-section,
 .terminal-layout {
     /* Navbar(76) + Tab(60) + Khoảng thở = 160px */
-    padding-top: 160px !important; 
+    padding-top: 130px !important; 
 }
 
 /* --- 3. STYLE NÚT BẤM (GIỮ NGUYÊN ĐẸP NHƯ CŨ) --- */
@@ -127,7 +127,7 @@ body {
     #view-dashboard,
     .view-section,
     .terminal-layout {
-        padding-top: 130px !important;
+        padding-top: 110px !important;
     }
 }
 
