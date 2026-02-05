@@ -1133,6 +1133,26 @@ body {
 }
 
 
+/* 2. Volume List Row: Layout "Số dính Bar" */
+.hud-list-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+    height: 18px;
+    gap: 8px;
+}
+
+.hud-list-idx { width: 20px; color: #5E6673; font-size: 9px; font-weight: 700; }
+.hud-list-name { width: 55px; flex-shrink: 0; font-weight: 700; color: #eaecef; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Container chứa Bar + Số liệu */
+.hud-bar-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center; /* Căn giữa theo chiều dọc */
+    height: 100%;
+}
 
 /* Số liệu: Nằm ngay sau thanh Bar */
 .hud-list-val {
