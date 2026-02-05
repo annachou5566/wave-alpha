@@ -31,74 +31,53 @@ body {
     transition: all 0.3s ease;
 }
 
-/* --- 2. TAB NAVIGATION (Thanh Tab Alpha/Competition) --- */
-/* Nằm ngay dưới Navbar */
-/* --- TỐI ƯU GIAO DIỆN SMART TAB --- */
+/* --- SỬA THANH TAB: DÙNG STICKY ĐỂ KHÔNG CHE NAVBAR --- */
 #alpha-tab-nav {
-    position: fixed !important;
-    /* Navbar của bạn cao khoảng 70-76px, ta đặt ngay dưới đó */
-    top: 70px; 
-    left: 0;
-    width: 100%;
+    /* Quay lại dùng sticky: Tự động nằm dưới Navbar, không bao giờ đè lên */
+    position: sticky !important; 
+    top: 75px; /* Vị trí dính khi cuộn (bằng chiều cao Navbar) */
     z-index: 990;
+    
+    width: 100%;
     background: #0b0e11;
     border-bottom: 1px solid var(--border-dim);
     display: flex;
     justify-content: center;
-    padding: 12px 0;
-    /* Hiệu ứng trượt mượt mà */
-    transition: transform 0.3s ease-in-out, opacity 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    padding: 10px 0;
+    margin-bottom: 0;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    
+    /* Hiệu ứng trượt khi ẩn */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Khi ẩn: đẩy lên trên và làm mờ */
+/* Khi cuộn xuống -> Trượt lên để ẩn đi */
 #alpha-tab-nav.nav-hidden {
-    transform: translateY(-100%);
-    opacity: 0;
+    transform: translateY(-110%); /* Trượt lên trên, chui vào sau Navbar */
     pointer-events: none;
 }
 
-/* QUAN TRỌNG: Tạo khoảng trống để không che tiêu đề */
-/* Áp dụng cho container của Alpha Market */
-.alpha-container {
-    /* Đẩy nội dung xuống một khoảng bằng chiều cao thanh Tab + đệm */
-    padding-top: 65px !important; 
-}
-
-/* Áp dụng cho cả trang Competition để không bị che */
-#competition-view, 
+/* --- TRẢ LẠI PADDING CHUẨN (KHÔNG CẦN ĐẨY NỮA) --- */
+/* Vì dùng Sticky nên nó tự đẩy nội dung xuống rồi, không cần padding to */
+.alpha-container,
+#competition-view,
 .view-section {
-    padding-top: 60px;
+    padding-top: 20px !important; /* Padding chuẩn, đẹp */
 }
 
-/* Tinh chỉnh riêng cho Mobile để cân đối hơn */
+/* --- MOBILE TWEAK --- */
 @media (max-width: 768px) {
     #alpha-tab-nav {
-        top: 60px; /* Navbar trên mobile thường thấp hơn */
-        padding: 8px 0;
+        top: 60px; /* Navbar mobile thường thấp hơn chút */
+        padding: 8px 0; /* Thu gọn thanh tab trên mobile */
     }
-    .alpha-container {
-        padding-top: 55px !important;
+    
+    /* Chỉnh lại nút Tab trên mobile cho gọn */
+    .tab-btn {
+        font-size: 14px; /* Chữ nhỏ hơn xíu */
+        padding: 6px 15px;
+        margin: 0 5px;
     }
-}
-
-.tab-btn {
-    background: transparent;
-    border: none;
-    color: #6c757d;
-    font-family: var(--font-num);
-    font-weight: 700;
-    font-size: 16px;
-    padding: 8px 25px;
-    margin: 0 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .tab-btn:hover {
