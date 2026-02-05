@@ -956,24 +956,33 @@ body {
     font-size: 10px;
 }
 
-/* --- CẬP NHẬT STYLE CHO DAILY VOL NGANG (MỚI) --- */
+/* 1. Daily Vol Row: Chỉnh lại cho cân đối */
 .daily-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     margin-bottom: 6px;
     font-size: 11px;
-    height: 14px; /* Mỏng hơn xíu để chứa được nhiều dòng */
+    height: 16px;
+    gap: 8px; /* Khoảng cách giữa các phần tử */
 }
 
+/* Tên Token: Cố định độ rộng để thẳng hàng */
+.daily-row .flow-name {
+    width: 60px;
+    flex-shrink: 0;
+    font-weight: 700;
+    color: #eaecef;
+}
+
+/* Thanh Bar: Tự động giãn hết cỡ (flex: 1) thay vì set cứng 80px */
 .daily-bar-container {
-    flex: 1;
+    flex: 1; /* Quan trọng: Để thanh dài ra */
     display: flex;
-    height: 4px;
+    height: 6px; /* Dày lên chút cho dễ nhìn */
     background: rgba(255,255,255,0.05);
-    margin: 0 8px;
     border-radius: 2px;
     overflow: hidden;
+    min-width: 50px; /* Đảm bảo không bị co quá nhỏ */
 }
 
 /* Màu Vàng cho Limit */
@@ -1027,4 +1036,27 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
+}
+
+/* 2. Price Distribution: Màu sắc chi tiết cho 5 cấp độ */
+/* XANH (Tăng) */
+.bg-green-1 { background: rgba(14, 203, 129, 0.2); } /* 0-2% */
+.bg-green-2 { background: rgba(14, 203, 129, 0.4); } /* 2-4% */
+.bg-green-3 { background: rgba(14, 203, 129, 0.6); } /* 4-6% */
+.bg-green-4 { background: rgba(14, 203, 129, 0.8); } /* 6-8% */
+.bg-green-5 { background: #0ecb81; box-shadow: 0 0 5px rgba(14, 203, 129, 0.4); } /* >8% */
+
+/* ĐỎ (Giảm) */
+.bg-red-1 { background: rgba(246, 70, 93, 0.2); }
+.bg-red-2 { background: rgba(246, 70, 93, 0.4); }
+.bg-red-3 { background: rgba(246, 70, 93, 0.6); }
+.bg-red-4 { background: rgba(246, 70, 93, 0.8); }
+.bg-red-5 { background: #f6465d; box-shadow: 0 0 5px rgba(246, 70, 93, 0.4); }
+
+/* Hover vào cột phân phối */
+.distrib-bar-item:hover {
+    filter: brightness(1.3);
+    cursor: pointer;
+    transform: translateY(-2px);
+    transition: all 0.2s;
 }
