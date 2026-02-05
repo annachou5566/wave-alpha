@@ -2736,6 +2736,15 @@ function renderMarketHealthTable(dataInput) {
 
     // --- 1. LẤY DỮ LIỆU ĐÚNG TAB ---
     let projectsToRender = dataInput; 
+    
+    // --- [FIX BẮT ĐẦU] ---
+    // Nếu hàm được gọi tự động (dataInput là null/undefined) VÀ đang có bộ lọc ngày
+    // Thì ưu tiên lấy danh sách theo ngày đang chọn
+    if (!projectsToRender && typeof currentFilterDate !== 'undefined' && currentFilterDate) {
+        projectsToRender = compList.filter(c => c.end === currentFilterDate);
+    }
+    // --- [FIX KẾT THÚC] ---
+
     if (!projectsToRender) {
         if (typeof appData !== 'undefined') {
             // [FIX QUAN TRỌNG] Thêm điều kiện 'history'
