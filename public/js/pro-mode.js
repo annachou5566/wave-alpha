@@ -403,47 +403,8 @@ function renderMarketHUD(stats) {
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
 
     hud.innerHTML = `
-        <div class="hud-module">
-            <div class="hud-title">MARKET LIFECYCLE</div>
-            
-            <div class="lifecycle-labels" style="margin-top:6px;">
-                <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81;">${stats.countActive} ACT</div>
-                <div class="lifecycle-label-item" style="width:${pctSpot}%; color:#F0B90B;">${stats.countSpot} SPOT</div>
-                <div class="lifecycle-label-item" style="width:${pctDelist}%; color:#f6465d;">${stats.countDelisted} DEAD</div>
-            </div>
-            <div style="display:flex; width:100%; height:6px; background:#1e2329; border-radius:3px; overflow:hidden; margin-bottom:12px;">
-                <div style="width:${pctActive}%; background:#0ecb81;"></div>
-                <div style="width:${pctSpot}%; background:#F0B90B;"></div>
-                <div style="width:${pctDelist}%; background:#f6465d;"></div>
-            </div>
-
-            <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:2px;">
-                24H PRICE ACTION
-            </div>
-            <div class="distrib-header" style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:4px;">
-                <div style="color:#f6465d">▼ ${stats.losers} LOSERS</div>
-                <div style="color:#0ecb81">${stats.gainers} GAINERS ▲</div>
-            </div>
-
-            <div class="distrib-container">
-                <div class="distrib-side red">
-                    ${drawSentBar(d.down_8, '>8%', 'bg-red-5')}
-                    ${drawSentBar(d.down_6_8, '6-8%', 'bg-red-4')}
-                    ${drawSentBar(d.down_4_6, '4-6%', 'bg-red-3')}
-                    ${drawSentBar(d.down_2_4, '2-4%', 'bg-red-2')}
-                    ${drawSentBar(d.down_0_2, '0-2%', 'bg-red-1')}
-                </div>
-                <div class="distrib-side green">
-                    ${drawSentBar(d.up_0_2, '0-2%', 'bg-green-1')}
-                    ${drawSentBar(d.up_2_4, '2-4%', 'bg-green-2')}
-                    ${drawSentBar(d.up_4_6, '4-6%', 'bg-green-3')}
-                    ${drawSentBar(d.up_6_8, '6-8%', 'bg-green-4')}
-                    ${drawSentBar(d.up_8, '>8%', 'bg-green-5')}
-                </div>
-            </div>
-            
-           /* --- TÌM ĐOẠN MODULE 1 TRONG JS (Đầu biến hud.innerHTML) VÀ THAY THẾ --- */
-
+        
+    
         <div class="hud-module">
             <div class="hud-title">MARKET LIFECYCLE</div>
             
