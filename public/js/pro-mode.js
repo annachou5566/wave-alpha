@@ -47,34 +47,41 @@ function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
-    
+
     // 1. KHỞI TẠO BIẾN THỐNG KÊ
-   
-    // 1. KHỞI TẠO STATS (Cần mảng distribList để hiện Tooltip)
     let stats = {
         totalScan: allTokens.length,
-        countActive: 0, countSpot: 0, countDelisted: 0,
-        alphaDailyTotal: 0, alphaDailyLimit: 0, alphaDailyChain: 0,
-        alphaRolling24h: 0, 
-        gainers: 0, losers: 0,
+        countActive: 0,
+        countSpot: 0,
+        countDelisted: 0,
+        alphaDailyTotal: 0,
+        alphaDailyLimit: 0,
+        alphaDailyChain: 0,
+        alphaRolling24h: 0,
+        gainers: 0,
+        losers: 0,
         // QUAN TRỌNG: Mảng này chứa tên token cho Tooltip
         distribList: {
             up_0_2: [], up_2_4: [], up_4_6: [], up_6_8: [], up_8: [],
             down_0_2: [], down_2_4: [], down_4_6: [], down_6_8: [], down_8: []
         },
-        maxDistribCount: 0, 
-        topVolTokens: [] 
+        maxDistribCount: 0,
+        topVolTokens: []
     };
 
     let tempVolList = [];
 
     allTokens.forEach(t => {
         const status = getTokenStatus(t);
-        
+
         // Phân loại Trạng thái
-        if (status === 'SPOT') stats.countSpot++;
-        else if (status === 'DELISTED') stats.countDelisted++;
-        else {
+        if (status === 'SPOT') {
+            stats.countSpot++;
+        } else if (status === 'DELISTED') {
+            stats.countDelisted++;
+        } else {
+            // --- BẮT ĐẦU XỬ LÝ TOKEN ACTIVE (ELSE) ---
+            
             // Chỉ cộng Volume của các token ACTIVE vào Tổng số liệu
             stats.countActive++;
             const v = t.volume || {};
@@ -82,7 +89,7 @@ function renderTable() {
             stats.alphaDailyLimit += (v.daily_limit || 0);
             stats.alphaDailyChain += (v.daily_onchain || 0);
             stats.alphaRolling24h += (v.rolling_24h || 0);
-            
+
             // Lấy danh sách để tìm Top 10 vẽ biểu đồ
             if ((v.daily_total || 0) > 0) {
                 tempVolList.push(t);
@@ -90,28 +97,33 @@ function renderTable() {
 
             // Sentiment (Phân phối giá 24h)
             const chg = t.change_24h || 0;
-        if (chg >= 0) stats.gainers++; else stats.losers++;
-        const abs = Math.abs(chg);
-        
-        // Push Symbol vào mảng tương ứng
-        if (chg >= 0) {
-            if (abs >= 8) stats.distribList.up_8.push(t.symbol);
-            else if (abs >= 6) stats.distribList.up_6_8.push(t.symbol);
-            else if (abs >= 4) stats.distribList.up_4_6.push(t.symbol);
-            else if (abs >= 2) stats.distribList.up_2_4.push(t.symbol);
-            else stats.distribList.up_0_2.push(t.symbol);
-        } else {
-            if (abs >= 8) stats.distribList.down_8.push(t.symbol);
-            else if (abs >= 6) stats.distribList.down_6_8.push(t.symbol);
-            else if (abs >= 4) stats.distribList.down_4_6.push(t.symbol);
-            else if (abs >= 2) stats.distribList.down_2_4.push(t.symbol);
-            else stats.distribList.down_0_2.push(t.symbol);
-        }
-    });
+            if (chg >= 0) stats.gainers++;
+            else stats.losers++;
+            
+            const abs = Math.abs(chg);
+
+            // Push Symbol vào mảng tương ứng
+            if (chg >= 0) {
+                if (abs >= 8) stats.distribList.up_8.push(t.symbol);
+                else if (abs >= 6) stats.distribList.up_6_8.push(t.symbol);
+                else if (abs >= 4) stats.distribList.up_4_6.push(t.symbol);
+                else if (abs >= 2) stats.distribList.up_2_4.push(t.symbol);
+                else stats.distribList.up_0_2.push(t.symbol);
+            } else {
+                if (abs >= 8) stats.distribList.down_8.push(t.symbol);
+                else if (abs >= 6) stats.distribList.down_6_8.push(t.symbol);
+                else if (abs >= 4) stats.distribList.down_4_6.push(t.symbol);
+                else if (abs >= 2) stats.distribList.down_2_4.push(t.symbol);
+                else stats.distribList.down_0_2.push(t.symbol);
+            }
+            
+            // --- KẾT THÚC XỬ LÝ TOKEN ACTIVE ---
+        } 
+    }); 
 
     // Lấy Top 10 Token Volume lớn nhất để VẼ BIỂU ĐỒ
     tempVolList.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
-    stats.topVolTokens = tempVolList.slice(0, 10); 
+    stats.topVolTokens = tempVolList.slice(0, 10);
 
     // Tìm maxCount cho biểu đồ Sentiment
     const d = stats.distribList;
@@ -124,7 +136,7 @@ function renderTable() {
     renderMarketHUD(stats);
 
     // RENDER CÁC DÒNG BẢNG CHI TIẾT
-    renderTableRows(tbody); 
+    renderTableRows(tbody);
 }
 
 // =========================================================================
@@ -917,25 +929,34 @@ function unminifyToken(minifiedItem) {
   return fullItem;
 }
 
+// Thêm/Thay thế ở cuối file JS
 window.showListTooltip = function(e, label, tokensStr) {
     const t = document.getElementById('hud-tooltip');
     if (!t) return;
     
-    // Nếu danh sách rỗng
+    // Ngăn nổi bọt sự kiện nếu click
+    if(e.type === 'click') e.stopPropagation();
+
     if (!tokensStr) tokensStr = "No tokens";
-    
-    // Cắt bớt nếu quá dài (chỉ hiện 50 ký tự đầu rồi ...)
     let displayStr = tokensStr;
-    if (displayStr.length > 100) displayStr = displayStr.substring(0, 100) + "...";
+    if (displayStr.length > 150) displayStr = displayStr.substring(0, 150) + "...";
 
     t.style.display = 'block';
+    // Style riêng cho List tooltip
     t.innerHTML = `
-        <div style="color:#fff; font-size:12px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333;">
-            RANGE: ${label}
+        <div style="color:#00F0FF; font-size:11px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">
+            PRICE RANGE: ${label}
         </div>
-        <div style="color:#eaecef; font-size:11px; line-height:1.4;">
+        <div style="color:#eaecef; font-size:10px; line-height:1.4; word-wrap:break-word;">
             ${displayStr}
         </div>
     `;
-    window.moveTooltip(e);
+    
+    // Định vị tooltip ngay tại chuột
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // Xử lý chống tràn màn hình (nếu cần)
+    t.style.left = (x + 10) + 'px';
+    t.style.top = (y + 10) + 'px';
 };
