@@ -402,11 +402,13 @@ function renderMarketHUD(stats) {
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
 
+    // --- TÌM ĐOẠN NÀY TRONG renderMarketHUD VÀ THAY THẾ ---
+
     hud.innerHTML = `
         <div class="hud-module">
-            <div class="hud-title">MARKET OVERVIEW</div>
+            <div class="hud-title">MARKET LIFECYCLE</div>
             
-            <div class="lifecycle-labels" style="margin-top:10px;">
+            <div class="lifecycle-labels" style="margin-top:6px;">
                 <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81;">${stats.countActive} ACT</div>
                 <div class="lifecycle-label-item" style="width:${pctSpot}%; color:#F0B90B;">${stats.countSpot} SPOT</div>
                 <div class="lifecycle-label-item" style="width:${pctDelist}%; color:#f6465d;">${stats.countDelisted} DEAD</div>
@@ -415,6 +417,10 @@ function renderMarketHUD(stats) {
                 <div style="width:${pctActive}%; background:#0ecb81;"></div>
                 <div style="width:${pctSpot}%; background:#F0B90B;"></div>
                 <div style="width:${pctDelist}%; background:#f6465d;"></div>
+            </div>
+
+            <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:5px;">
+                24H PRICE ACTION
             </div>
 
             <div class="distrib-header">
@@ -438,12 +444,15 @@ function renderMarketHUD(stats) {
                     ${drawSentBar(d.up_8, '>8%', 'bg-green-5')}
                 </div>
             </div>
-             <div style="display:flex; justify-content:space-between; font-size:8px; color:#5E6673; margin-top:-2px;">
-                <span>Heavy Drop</span>
-                <span>Stable</span>
-                <span>Moon</span>
+             <div style="display:flex; justify-content:space-between; font-size:9px; color:#5E6673; margin-top:4px; font-weight:700;">
+                <span>DUMP</span>
+                <span>SIDEWAY</span>
+                <span>PUMP</span>
             </div>
         </div>
+
+        <div class="hud-module border-left-dim">
+           
 
         <div class="hud-module border-left-dim">
             <div class="hud-title">ROLLING VOL 24H</div>
