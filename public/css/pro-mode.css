@@ -33,37 +33,53 @@ body {
 
 /* --- 2. TAB NAVIGATION (Thanh Tab Alpha/Competition) --- */
 /* Nằm ngay dưới Navbar */
-/* --- SỬA LOGIC THANH TAB (Dòng 27 - public/css/pro-mode.css) --- */
+/* --- TỐI ƯU GIAO DIỆN SMART TAB --- */
 #alpha-tab-nav {
-    /* Đổi từ sticky sang fixed để kiểm soát vị trí tốt hơn */
-    position: fixed !important; 
-    top: 76px; /* Nằm ngay dưới Navbar */
+    position: fixed !important;
+    /* Navbar của bạn cao khoảng 70-76px, ta đặt ngay dưới đó */
+    top: 70px; 
     left: 0;
     width: 100%;
-    z-index: 990; /* Thấp hơn Navbar (1000) */
-    
+    z-index: 990;
     background: #0b0e11;
     border-bottom: 1px solid var(--border-dim);
     display: flex;
     justify-content: center;
-    padding: 10px 0;
-    margin-bottom: 0;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    
-    /* QUAN TRỌNG: Hiệu ứng trượt */
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    padding: 12px 0;
+    /* Hiệu ứng trượt mượt mà */
+    transition: transform 0.3s ease-in-out, opacity 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
-/* Class dùng để ẩn thanh Tab khi cuộn xuống */
+/* Khi ẩn: đẩy lên trên và làm mờ */
 #alpha-tab-nav.nav-hidden {
-    transform: translateY(-150%); /* Trượt lên trên, chui ra sau Navbar */
+    transform: translateY(-100%);
     opacity: 0;
-    pointer-events: none; /* Không cho bấm nhầm khi ẩn */
+    pointer-events: none;
 }
 
-/* Đẩy nội dung xuống để không bị thanh Tab che mất lúc mới vào */
+/* QUAN TRỌNG: Tạo khoảng trống để không che tiêu đề */
+/* Áp dụng cho container của Alpha Market */
 .alpha-container {
-    padding-top: 80px !important; /* Tăng khoảng trống bên trên */
+    /* Đẩy nội dung xuống một khoảng bằng chiều cao thanh Tab + đệm */
+    padding-top: 65px !important; 
+}
+
+/* Áp dụng cho cả trang Competition để không bị che */
+#competition-view, 
+.view-section {
+    padding-top: 60px;
+}
+
+/* Tinh chỉnh riêng cho Mobile để cân đối hơn */
+@media (max-width: 768px) {
+    #alpha-tab-nav {
+        top: 60px; /* Navbar trên mobile thường thấp hơn */
+        padding: 8px 0;
+    }
+    .alpha-container {
+        padding-top: 55px !important;
+    }
 }
 
 .tab-btn {
