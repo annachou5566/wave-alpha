@@ -1116,7 +1116,7 @@ body {
 /* Thanh Bar: Vuông đầu, bo đuôi */
 .hud-bar-fill {
     height: 8px; /* Dày hơn xíu */
-    border-radius: 0 3px 3px 0; /* Vuông đầu trái, bo nhẹ đầu phải */
+    border-radius: 0 1px 1px 0; /* Vuông đầu trái, bo nhẹ đầu phải */
     min-width: 2px;
     transition: width 0.5s ease;
 }
@@ -1204,9 +1204,9 @@ body {
 .distrib-label-row {
     display: flex;
     width: 100%;
-    margin-top: 0px;
+    margin-top: -5px; 
     border-bottom: 2px solid rgba(255,255,255,0.05);
-    padding-top: 2px;
+    padding-top: 0px;
 }
 
 .distrib-label-side {
@@ -1232,9 +1232,11 @@ body {
     text-align: center;
     font-size: 9px;
     color: #5E6673; 
+    line-height: 1; 
     margin-top: 0px; 
     white-space: nowrap;
     font-weight: 600;
+    padding-top: 0px;
 }
 
 
