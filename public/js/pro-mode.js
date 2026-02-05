@@ -404,20 +404,23 @@ function renderMarketHUD(stats) {
 
     hud.innerHTML = `
         <div class="hud-module">
-            <div class="hud-title">MARKET OVERVIEW</div>
+            <div class="hud-title">MARKET LIFECYCLE</div>
             
-            <div class="lifecycle-labels" style="margin-top:10px;">
+            <div class="lifecycle-labels" style="margin-top:6px;">
                 <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81;">${stats.countActive} ACT</div>
                 <div class="lifecycle-label-item" style="width:${pctSpot}%; color:#F0B90B;">${stats.countSpot} SPOT</div>
                 <div class="lifecycle-label-item" style="width:${pctDelist}%; color:#f6465d;">${stats.countDelisted} DEAD</div>
             </div>
-            <div style="display:flex; width:100%; height:6px; background:#1e2329; border-radius:3px; overflow:hidden; margin-bottom:15px;">
+            <div style="display:flex; width:100%; height:6px; background:#1e2329; border-radius:3px; overflow:hidden; margin-bottom:12px;">
                 <div style="width:${pctActive}%; background:#0ecb81;"></div>
                 <div style="width:${pctSpot}%; background:#F0B90B;"></div>
                 <div style="width:${pctDelist}%; background:#f6465d;"></div>
             </div>
 
-            <div class="distrib-header">
+            <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:2px;">
+                24H PRICE ACTION
+            </div>
+            <div class="distrib-header" style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:4px;">
                 <div style="color:#f6465d">▼ ${stats.losers} LOSERS</div>
                 <div style="color:#0ecb81">${stats.gainers} GAINERS ▲</div>
             </div>
@@ -438,8 +441,9 @@ function renderMarketHUD(stats) {
                     ${drawSentBar(d.up_8, '>8%', 'bg-green-5')}
                 </div>
             </div>
-             <div style="display:flex; justify-content:space-between; font-size:8px; color:#5E6673; margin-top:-2px;">
-                <span>Heavy Drop</span>
+            
+            <div class="distrib-legend">
+                <span>Heavy Dump</span>
                 <span>Stable</span>
                 <span>Moon</span>
             </div>
