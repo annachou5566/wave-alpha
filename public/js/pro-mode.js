@@ -404,9 +404,7 @@ function renderMarketHUD(stats) {
 
     hud.innerHTML = `
         
-    /* --- TÌM ĐOẠN MODULE 1 TRONG renderMarketHUD VÀ THAY THẾ --- */
-
-        <div class="hud-module">
+            <div class="hud-module">
             <div class="hud-title">MARKET LIFECYCLE <span style="color:#fff; margin-left:5px">(${stats.totalScan})</span></div>
             
             <div class="lifecycle-labels" style="margin-top:6px;">
