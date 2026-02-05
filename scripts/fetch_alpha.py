@@ -230,6 +230,17 @@ def process_single_token(item):
             status = "PRE_DELISTED"
             need_limit_check = True
 
+    # --- [MỚI] LOGIC CACHE: CHẶN TOKEN ĐÃ CHẾT TỪ LẦN TRƯỚC ---
+    # Mục đích: Nếu lịch sử (OLD_DATA_MAP) ghi nhận là DELISTED thì bỏ qua luôn.
+    # Lưu ý: OLD_DATA_MAP dùng key đã minify (ví dụ: KEY_MAP["status"] = "st")
+    if OLD_DATA_MAP and aid in OLD_DATA_MAP:
+        old_item = OLD_DATA_MAP[aid]
+        # Kiểm tra trạng thái cũ
+        if old_item.get(KEY_MAP["status"]) == "DELISTED":
+            status = "DELISTED"
+            need_limit_check = False  # Tắt cờ check limit để không chui vào should_fetch
+    # -----------------------------------------------------------
+
     should_fetch = False
     if vol_rolling > 0 and (status == "ALPHA" or status == "PRE_DELISTED"):
         should_fetch = True
@@ -263,6 +274,12 @@ def process_single_token(item):
     else:
         daily_total = vol_rolling
         if status == "PRE_DELISTED": status = "DELISTED"
+        
+        # [MỚI] Tái sử dụng Chart cũ nếu có (để không bị mất biểu đồ khi skip fetch)
+        if status == "DELISTED" and OLD_DATA_MAP and aid in OLD_DATA_MAP:
+            old_item = OLD_DATA_MAP[aid]
+            if old_item.get(KEY_MAP["chart"]):
+                chart_data = old_item.get(KEY_MAP["chart"])
 
     return {
         "id": aid, "symbol": symbol, "name": item.get("name"),
