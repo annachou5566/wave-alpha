@@ -352,14 +352,6 @@ body {
     color: #fff;
 }
 
-.badge-pro { 
-    background: var(--brand); 
-    color: #000; 
-    font-size: 9px; 
-    padding: 2px 5px; 
-    border-radius: 3px; 
-    font-weight: 800; 
-}
 
 /* Hiệu ứng Glow cho hàng VIP */
 .glow-row td {
