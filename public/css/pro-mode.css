@@ -1204,7 +1204,7 @@ body {
 .distrib-label-row {
     display: flex;
     width: 100%;
-    margin-top: 2px;
+    margin-top: 0px;
     border-bottom: 2px solid rgba(255,255,255,0.05);
     padding-top: 2px;
 }
@@ -1232,7 +1232,59 @@ body {
     text-align: center;
     font-size: 9px;
     color: #5E6673; 
-    margin-top: 4px; 
+    margin-top: 0px; 
     white-space: nowrap;
     font-weight: 600;
+}
+
+
+/* --- MAINTENANCE SCREEN STYLES (NEW) --- */
+
+/* 1. Icon xoay vòng vòng đủ màu */
+.maintenance-spinner {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px auto; /* Căn giữa */
+    border-radius: 50%;
+    border: 4px solid transparent;
+    
+    /* 4 cạnh 4 màu khác nhau */
+    border-top-color: #00F0FF;   /* Brand Cyan */
+    border-right-color: #F0B90B; /* Gold */
+    border-bottom-color: #f6465d; /* Red */
+    border-left-color: #0ecb81;   /* Green */
+    
+    /* Hiệu ứng xoay */
+    animation: spin-colorful 1s linear infinite;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+@keyframes spin-colorful {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 2. Tiêu đề to rõ, font số hóa */
+.maintenance-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    color: #fff;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+/* 3. Nội dung mô tả */
+.maintenance-desc {
+    color: #848e9c;
+    font-size: 14px;
+    line-height: 1.6;
+    font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+/* Style cho link Telegram nếu cần nổi bật hơn */
+.maintenance-desc a:hover {
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    text-decoration: underline !important;
 }
