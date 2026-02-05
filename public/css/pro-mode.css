@@ -71,38 +71,29 @@ body {
     padding-top: 60px;
 }
 
-/* Mobile Tweak: Gọn gàng hơn */
+/* Tinh chỉnh riêng cho Mobile để cân đối hơn */
 @media (max-width: 768px) {
+    /* 1. Thanh chứa tab gọn lại */
     #alpha-tab-nav {
-        top: 60px; 
-        padding: 8px 0;
-        background: rgba(11, 14, 17, 0.95); /* Đậm hơn chút trên mobile để dễ đọc */
+        top: 60px; /* Navbar mobile thường thấp hơn */
+        padding: 8px 0; /* Thu hẹp khoảng cách trên dưới */
     }
-    .tab-btn {
-        font-size: 13px;
-        padding: 6px 16px;
-        margin: 0 4px;
-        letter-spacing: 1px;
-    }
-}
 
-.tab-btn {
-    background: transparent;
-    border: none;
-    color: #6c757d;
-    font-family: var(--font-num);
-    font-weight: 700;
-    font-size: 16px;
-    padding: 8px 25px;
-    margin: 0 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    /* 2. Đẩy nội dung xuống vừa đủ (khớp với top 60px) */
+    .alpha-container, 
+    #competition-view, 
+    .view-section {
+        padding-top: 55px !important;
+    }
+
+    /* 3. [MỚI] THU NHỎ NÚT BẤM TAB (Đây là phần bạn cần) */
+    .tab-btn {
+        font-size: 13px;       /* Chữ nhỏ lại (gốc 16px) */
+        padding: 6px 16px;     /* Nút ngắn lại (gốc 8px 25px) */
+        margin: 0 4px;         /* Khoảng cách giữa 2 nút gần hơn */
+        letter-spacing: 0.5px; /* Giãn chữ ít hơn */
+        width: auto;           /* Để nút tự co giãn theo nội dung */
+    }
 }
 
 .tab-btn:hover {
