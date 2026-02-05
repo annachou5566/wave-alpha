@@ -1,31 +1,31 @@
     
     
     
-    /* ================= SETUP ================= */
-    const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
+    
+    const SUPABASE_URL = 'https:
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
-    // --- DANH SÁCH ADMIN (Thêm bao nhiêu email tùy thích) ---
+    
 const ADMIN_EMAILS = [ 
     "annachou60@gmail.com", 
     "wavealphachannel@gmail.com",  
     ];
 const PREDICT_FEE = 100;
 
-// --- CẤU HÌNH TELEGRAM (BẢO MẬT - SECURE MODE) ---
+
 const TELE_BOT_CONFIG = {
-    // Tự động tìm Token trong bộ nhớ trình duyệt (không lộ trên code)
+    
     get token() {
         return localStorage.getItem('WAVE_TELE_TOKEN'); 
     },
-    // ID Group của bạn (Công khai được)
-    chatId: '-1003355713341' // <--- THAY ID GROUP CỦA BẠN VÀO ĐÂY
+    
+    chatId: '-1003355713341' 
 };
 
-// 1. Hàm hỗ trợ nhập Token (Chạy 1 lần là nhớ mãi trên máy này)
+
 function requireBotToken() {
     let currentToken = TELE_BOT_CONFIG.token;
     if (!currentToken) {
-        // Hiện bảng hỏi Token
+        
         let input = prompt("⚠️ CHƯA CÓ TOKEN BOT!\n\nVui lòng dán Token BotFather vào đây (Chỉ cần làm 1 lần trên máy này):");
         if (input && input.trim() !== "") {
             localStorage.setItem('WAVE_TELE_TOKEN', input.trim());
@@ -39,15 +39,15 @@ function requireBotToken() {
     return true;
 }
 
-// --- HÀM GỬI ẢNH TELEGRAM (FINAL UPDATE: ĐỒNG BỘ LOGIC T+1 VỚI BOT) ---
+
 async function sendTelePhoto(comp, newTarget) {
     
-    // 1. Kiểm tra Token
+    
     if (!requireBotToken()) return;
     const token = TELE_BOT_CONFIG.token;
     const chatId = TELE_BOT_CONFIG.chatId;
 
-    // 2. Tìm thẻ bài
+    
     const cardWrapper = document.querySelector(`.card-wrapper[data-id="${comp.db_id}"]`);
     if (!cardWrapper) {
         showToast("Error: Card element not found!", "error");
@@ -55,23 +55,23 @@ async function sendTelePhoto(comp, newTarget) {
     }
     const cardElement = cardWrapper.querySelector('.tour-card');
 
-    // --- HELPER: LÀM SẠCH SỐ (Chống lỗi NaN do dấu phẩy) ---
+    
     const cleanNum = (val) => {
         if (!val) return 0;
         return parseFloat(val.toString().replace(/,/g, '').trim()) || 0;
     };
 
-    // 3. CHUẨN BỊ SỐ LIỆU (Tính toán trước khi chụp)
-    // Ưu tiên lấy giá từ Market Analysis (mới nhất)
+    
+    
     let currentPrice = (comp.market_analysis && comp.market_analysis.price) ? comp.market_analysis.price : (comp.cachedPrice || 0);
     
-    // Format Giá
+    
     let priceStr = "---";
     if (currentPrice > 0) {
         priceStr = '$' + currentPrice.toLocaleString('en-US', { maximumFractionDigits: 4 });
     }
 
-    // Format Reward
+    
     let qty = cleanNum(comp.rewardQty);
     let rewardVal = qty * currentPrice;
     let rewardHtml = fmtNum(qty); 
@@ -80,19 +80,19 @@ async function sendTelePhoto(comp, newTarget) {
         rewardHtml += ` <span style="color:#0ECB81; font-size:0.8em; font-weight:bold;">${valStr}</span>`;
     }
 
-    // 4. CAN THIỆP DOM (Tiêm dữ liệu vào thẻ để chụp)
+    
     let statsGrid = cardElement.querySelector('.card-stats-grid');
     let oldRewardHTML = "", oldPriceHTML = "";
     let priceEl, rewardEl;
 
     if (statsGrid) {
-        // Ô Reward
+        
         rewardEl = statsGrid.children[1].querySelector('.stat-val');
         if (rewardEl) {
             oldRewardHTML = rewardEl.innerHTML;
             rewardEl.innerHTML = rewardHtml; 
         }
-        // Ô Price
+        
         priceEl = statsGrid.children[2].querySelector('.stat-val');
         if (priceEl) {
             oldPriceHTML = priceEl.innerHTML;
@@ -101,12 +101,12 @@ async function sendTelePhoto(comp, newTarget) {
         }
     }
 
-    // 5. BẬT CHẾ ĐỘ CHỤP
+    
     cardElement.classList.add('snapshot-mode');
     showToast("📸 Snapping...", "info");
 
     try {
-        // 6. CHỤP ẢNH
+        
         const canvas = await html2canvas(cardElement, {
             scale: 2,
             useCORS: true,
@@ -124,19 +124,19 @@ async function sendTelePhoto(comp, newTarget) {
 
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 
-        // --- TÍNH TOÁN CAPTION & LOGIC CHANGE (QUAN TRỌNG) ---
+        
         let rewardMsg = rewardVal > 0 ? `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rewardVal)}` : '---';
         
         let changeText = "";
-        let currVal = cleanNum(newTarget); // Giá trị vừa nhập (đang là phần tử cuối)
+        let currVal = cleanNum(newTarget); 
 
-        // Clone mảng history và sắp xếp lại theo ngày cho chắc chắn
+        
         let history = comp.history ? [...comp.history] : [];
         history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // Logic: Vì hàm saveAdminTargetOnly đã push dữ liệu mới vào history rồi
-        // Nên history.length - 1 chính là số vừa nhập (T)
-        // history.length - 2 chính là số cũ (T-1)
+        
+        
+        
         if (history.length >= 2) {
             let prevVal = cleanNum(history[history.length - 2].target);
             let diff = currVal - prevVal;
@@ -161,7 +161,7 @@ async function sendTelePhoto(comp, newTarget) {
 👇 <b>Tap to Open Wave Alpha Mini App</b>
         `.trim();
 
-        // 7. GỬI API
+        
         const formData = new FormData();
         formData.append('chat_id', chatId);
         formData.append('photo', blob, 'update.png');
@@ -169,11 +169,11 @@ async function sendTelePhoto(comp, newTarget) {
         formData.append('parse_mode', 'HTML');
         
         const replyMarkup = {
-            inline_keyboard: [[{ text: "🚀 Open Wave Alpha Mini App", url: "https://t.me/WaveAlphaSignal_bot/miniapp" }]]
+            inline_keyboard: [[{ text: "🚀 Open Wave Alpha Mini App", url: "https:
         };
         formData.append('reply_markup', JSON.stringify(replyMarkup));
 
-        const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        const response = await fetch(`https:
             method: 'POST',
             body: formData
         });
@@ -190,7 +190,7 @@ async function sendTelePhoto(comp, newTarget) {
         console.error("Tele Photo Error:", e);
         showToast("❌ Failed: " + e.message, "error");
     } finally {
-        // 8. DỌN DẸP
+        
         cardElement.classList.remove('snapshot-mode');
         if (rewardEl && oldRewardHTML) rewardEl.innerHTML = oldRewardHTML;
         if (priceEl && oldPriceHTML) {
@@ -201,11 +201,11 @@ async function sendTelePhoto(comp, newTarget) {
 }
 
 
-// --- [MỚI] BIẾN LƯU TRỮ LỊCH SỬ KHỚP LỆNH CHO TỪNG TOKEN ---
-// Dùng để tính trung bình 10s cho nhiều token cùng lúc
+
+
 let tokenVolHistory = {}; 
-const SAFETY_WINDOW = 10; // Tính trung bình 10 mẫu gần nhất
-/* --- BỘ TỪ ĐIỂN FULL (ĐÃ CẬP NHẬT TÊN & SLOGAN MỚI) --- */
+const SAFETY_WINDOW = 10; 
+
 let currentLang = localStorage.getItem('wave_lang') || 'en';
 
 
@@ -214,13 +214,13 @@ function formatCompact(num) {
     return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
 }
 
-/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FINAL FIX: DISCLAIMER CHUẨN + LOGIC 30 PHÚT) --- */
+
 const translations = {
     /* ==========================================================
        1. ENGLISH (EN)
        ========================================================== */
     en: {
-        // ... Các key cũ giữ nguyên ...
+        
         nav_sys_time: "SYSTEM TIME",
         nav_guide: "GUIDE",
         nav_login: "Login",
@@ -266,8 +266,8 @@ const translations = {
         tip_speed_match: "Match Vol & Execution Speed",
         tip_ord_spr: "Avg Order Value & Spread %",
 
-        // --- MODEL TOOLTIPS (UPDATED) ---
-        // 1. Header Hover (Methodology) - THÊM DÒNG 30 PHÚT
+        
+        
         tip_pred_header_title: "MODEL METHODOLOGY",
         tip_pred_header_body: `
             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
@@ -288,12 +288,12 @@ const translations = {
                 </div>
             </div>`,
 
-        // 2. Cell Hover (Active State)
+        
         tip_model_title: "MODEL PROJECTION",
         tip_model_active: "Target is projected based on historical volatility, real-time momentum, and liquidity depth.",
         tip_vote_guide: "Sentiment? Vote <b class='text-brand'>Agree</b>, <b class='text-danger'>Lower</b> or <b class='text-success'>Higher</b>.",
 
-        // 3. Cell Hover (Waiting State)
+        
         tip_model_wait_title: "DATA ACCUMULATION",
         tip_model_wait_body: "Model requires comprehensive session data. Projection activates <span style='color:#ffd700'>16 hours</span> before close.",
 
@@ -418,7 +418,7 @@ const translations = {
         tip_speed_match: "Tốc độ khớp & Volume khớp lệnh",
         tip_ord_spr: "Giá trị trung bình lệnh & Chênh lệch giá",
 
-        // --- MODEL TOOLTIPS (UPDATED) ---
+        
         tip_pred_header_title: "PHƯƠNG PHÁP TÍNH",
         tip_pred_header_body: `
             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
@@ -566,7 +566,7 @@ const translations = {
         tip_speed_match: "撮合量 & 执行速度",
         tip_ord_spr: "平均订单价值 & 价差 %",
 
-        // --- MODEL TOOLTIPS (UPDATED) ---
+        
         tip_pred_header_title: "模型方法论",
         tip_pred_header_body: `
             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
@@ -714,7 +714,7 @@ const translations = {
         tip_speed_match: "매칭 볼륨 & 체결 속도",
         tip_ord_spr: "평균 주문 가치 & 스프레드 %",
 
-        // --- MODEL TOOLTIPS (UPDATED) ---
+        
         tip_pred_header_title: "모델 방법론",
         tip_pred_header_body: `
             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
@@ -814,52 +814,52 @@ const translations = {
     }
 };
 
-/* --- HÀM KHỞI TẠO TOOLTIP (PHIÊN BẢN CHUẨN: HOVER ĐỂ XEM, CLICK RA NGOÀI ĐỂ TẮT) --- */
-let globalTooltipInstances = []; // Biến lưu danh sách tooltip để quản lý tắt mở
+
+let globalTooltipInstances = []; 
 
 function initSmartTooltips() {
     try {
-        // 1. Dọn dẹp rác cũ
+        
         document.querySelectorAll('.tooltip').forEach(t => t.remove());
-        globalTooltipInstances = []; // Reset danh sách
+        globalTooltipInstances = []; 
 
-        // 2. Xóa sự kiện click global cũ (tránh bị double sự kiện khi reload)
+        
         document.removeEventListener('click', handleGlobalClick);
         document.addEventListener('click', handleGlobalClick);
 
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
 
         tooltipTriggerList.map(function (el) {
-            // Hủy instance cũ nếu có
+            
             const oldInstance = bootstrap.Tooltip.getInstance(el);
             if (oldInstance) oldInstance.dispose();
 
-            // 3. Cấu hình: 'hover' (cho chuột) VÀ 'click' (cho cảm ứng/chuột click)
+            
             let t = new bootstrap.Tooltip(el, {
                 trigger: 'hover click', 
                 html: true,
                 animation: true,
                 delay: { "show": 50, "hide": 50 },
-                // Giữ tooltip hiển thị khi rê chuột vào chính cái tooltip đó (để copy text)
+                
                 interactive: true 
             });
 
             globalTooltipInstances.push(t);
 
-            // 4. Xử lý xung đột khi click vào icon
+            
             el.addEventListener('click', function (e) {
-                // Ngăn sự kiện này lan ra document (để không kích hoạt hàm tắt ngay lập tức)
+                
                 e.stopPropagation();
                 
-                // Nếu là cột AI Target thì hiện luôn
+                
                 if(el.classList.contains('col-ai-target')) {
                     t.show();
                 }
             });
             
-            // Xử lý khi rê chuột ra (chỉ dành cho Desktop)
+            
             el.addEventListener('mouseleave', function() {
-                // Trên mobile không có mouseleave thực sự nên nó sẽ ko tắt ngay, đúng ý bạn
+                
                 t.hide(); 
             });
 
@@ -871,33 +871,33 @@ function initSmartTooltips() {
     }
 }
 
-// --- HÀM XỬ LÝ CLICK RA NGOÀI (TAP OUTSIDE TO CLOSE) ---
+
 function handleGlobalClick(e) {
-    // Nếu cái được click KHÔNG PHẢI là một tooltip hoặc icon tooltip
+    
     if (!e.target.closest('.tooltip') && !e.target.closest('[data-bs-toggle="tooltip"]')) {
-        // Tắt tất cả các tooltip đang mở
+        
         globalTooltipInstances.forEach(t => t.hide());
     }
 }
 
-/* ================= HÀM ĐỔI NGÔN NGỮ (ĐÃ FIX LỖI MARKET) ================= */
+
 function changeLanguage(lang) {
-    // 1. Cập nhật biến ngôn ngữ
+    
     currentLang = lang;
     localStorage.setItem('wave_lang', lang);
 
-    // 2. Đổi text trên nút chọn ngôn ngữ (nếu có)
+    
     let langBtn = document.getElementById('cur-lang-text');
     if(langBtn) langBtn.innerText = lang.toUpperCase();
 
-    // 3. Dịch các text tĩnh (Menu, Tiêu đề...)
+    
     applyLanguage();
 
-    // 4. Vẽ lại các thẻ bài (Card Grid)
+    
     renderGrid();
 
-    // --- [FIX QUAN TRỌNG] ---
-    // 5. Bắt buộc vẽ lại bảng Market Health ngay lập tức
+    
+    
     if(typeof renderMarketHealthTable === 'function') {
         renderMarketHealthTable(); 
     }
@@ -906,27 +906,27 @@ function changeLanguage(lang) {
 function applyLanguage() {
     const t = translations[currentLang];
     
-    // 1. Dịch text thông thường
+    
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (t[key]) {
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 el.placeholder = t[key];
             } else {
-                el.innerHTML = t[key]; // Dùng innerHTML để giữ icon nếu có
+                el.innerHTML = t[key]; 
             }
         }
     });
 
-    // 2. Dịch nội dung Tooltip
+    
     document.querySelectorAll('[data-i18n-tooltip]').forEach(el => {
         const key = el.getAttribute('data-i18n-tooltip');
         if (t[key]) {
-            // Cập nhật title gốc
+            
             el.setAttribute('title', t[key]);
             el.setAttribute('data-bs-original-title', t[key]);
             
-            // Cập nhật nội dung Tooltip nếu nó đang hiển thị
+            
             const tooltipInstance = bootstrap.Tooltip.getInstance(el);
             if (tooltipInstance) {
                 tooltipInstance.setContent({ '.tooltip-inner': t[key] });
@@ -934,7 +934,7 @@ function applyLanguage() {
         }
     });
 
-    // 3. Dịch bộ lọc sắp xếp (nếu có)
+    
     let sortSel = document.getElementById('sortFilter');
     if(sortSel) {
         sortSel.options[0].text = t.sort_newest;
@@ -945,7 +945,7 @@ function applyLanguage() {
 }
 
 
-    // V45 UX: CUSTOM TOAST SYSTEM
+    
     function showToast(msg, type='info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -956,7 +956,7 @@ function applyLanguage() {
         toast.innerHTML = `<i class="fas ${icon} fa-lg"></i><div style="flex:1; font-size:0.9rem; font-weight:600; font-family:var(--font-main)">${msg}</div>`;
 
         container.appendChild(toast);
-        // Play gentle sound
+        
         if(type === 'error') playSfx('hover');
         else playSfx('click');
 
@@ -966,10 +966,10 @@ function applyLanguage() {
         }, 4000);
     }
 
-    // Override native alert for better UX (Optional, but safe)
+    
     window.alert = function(msg) { showToast(msg, 'info'); };
 
-    // SFX ENGINE (V45)
+    
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSfx(type) {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -989,27 +989,27 @@ function applyLanguage() {
             osc.start(); osc.stop(audioCtx.currentTime + 0.05);
         }
     }
-    // Attach SFX to common elements
+    
     document.querySelectorAll('button, .tour-card, .arsenal-card, .nav-link').forEach(el => {
         el.addEventListener('mouseenter', () => playSfx('hover'));
         el.addEventListener('click', () => playSfx('click'));
     });
-    /* ========================================= */
+    
 
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
 
-// --- [MỚI] BIẾN LƯU CACHE TỪ ALPHA MARKET ---
+
 let alphaMarketCache = {}; 
 
-// --- [MỚI] HÀM ĐỒNG BỘ DATA TỪ FILE JSON ---
+
 async function syncAlphaData() {
     try {
-        // Gọi file market-data.json trong thư mục public/data
+        
         const res = await fetch('public/data/market-data.json?t=' + Date.now());
         const json = await res.json();
         
-        // Mapping dữ liệu: s=Symbol, ic=Icon, ci=Chain Icon
-        // Code bên Alpha Market dùng 'data' hoặc 'tokens'
+        
+        
         const rawList = json.data || json.tokens || [];
         
         rawList.forEach(item => {
@@ -1024,7 +1024,7 @@ async function syncAlphaData() {
         
         console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
         
-        // Tải xong thì vẽ lại giao diện ngay
+        
         if(typeof renderGrid === 'function') renderGrid();
         if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
         
@@ -1071,41 +1071,41 @@ async function syncAlphaData() {
         });
     }
 
-// --- [SỬA LỖI] BIẾN CỜ CHỐNG ĐƠ & AUTO-WAKEUP ---
+
     let isSyncing = false; 
     let lastWakeupTime = 0;
 
-   // --- [BẢN CẬP NHẬT FIX TOTAL VOL] ---
+   
 async function quickSyncData() {
     if (isSyncing || !supabase) return; 
     isSyncing = true;
 
     try {
-        // Gọi hàm RPC mới (đã bao gồm Total Accumulated Vol)
+        
         const { data, error } = await supabase.rpc('get_minimal_market_data');
         
         if (!error && data && data.length > 0) {
             let hasChanges = false;
 
-            // --- SỬA LỖI 1: CHẶN REALTIME GHI ĐÈ VOL CỦA GIẢI ĐÃ END ---
+            
 data.forEach(miniRow => {
     let localItem = compList.find(c => c.db_id === miniRow.id);
     if (localItem) {
-        // Kiểm tra xem giải đã kết thúc chưa
+        
         let isEnded = false;
         if (localItem.end) {
-            // Logic so sánh ngày đơn giản: Nếu ngày kết thúc nhỏ hơn hôm nay -> Ended
+            
             let todayStr = new Date().toISOString().split('T')[0];
             if (localItem.end < todayStr) isEnded = true;
         }
 
-        // --- CẬP NHẬT AI PREDICTION (Luôn cập nhật) ---
+        
         if (miniRow.ai_prediction) {
             localItem.ai_prediction = miniRow.ai_prediction;
             hasChanges = true;
         }
 
-        // --- 1. Cập nhật Daily Volume (FIX: Hứng dữ liệu LIMIT) ---
+        
         if (!isEnded && miniRow.limit_daily_volume !== undefined) {
             if (localItem.limit_daily_volume !== miniRow.limit_daily_volume) {
                 localItem.limit_daily_volume = miniRow.limit_daily_volume;
@@ -1113,7 +1113,7 @@ data.forEach(miniRow => {
             }
         }
 
-        // --- 2. Cập nhật Total Accumulated (FIX: Hứng dữ liệu LIMIT TÍCH LŨY) ---
+        
         if (!isEnded && miniRow.limit_accumulated_volume !== undefined) {
             if (localItem.limit_accumulated_volume !== miniRow.limit_accumulated_volume) {
                 localItem.limit_accumulated_volume = miniRow.limit_accumulated_volume;
@@ -1121,13 +1121,13 @@ data.forEach(miniRow => {
             }
         }
 
-        // 3. Cập nhật Market Analysis
+        
         if (JSON.stringify(localItem.market_analysis) !== JSON.stringify(miniRow.market_analysis)) {
             localItem.market_analysis = miniRow.market_analysis;
             hasChanges = true;
         }
 
-        // 4. Cập nhật Tx Count
+        
         if (!isEnded && localItem.daily_tx_count !== miniRow.daily_tx_count) {
             localItem.daily_tx_count = miniRow.daily_tx_count;
             hasChanges = true;
@@ -1136,7 +1136,7 @@ data.forEach(miniRow => {
 });
 
             if (hasChanges) {
-                updateGridValuesOnly(); // Vẽ lại thẻ bài
+                updateGridValuesOnly(); 
                 if (typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
                 renderStats();
                 console.log("⚡ Data synced (Full Vol)");
@@ -1146,7 +1146,7 @@ data.forEach(miniRow => {
         console.error("Sync Error:", e); 
     } finally {
         isSyncing = false; 
-        //setTimeout(quickSyncData, 60000); 
+        
     }
 }
 
@@ -1154,14 +1154,14 @@ function init() {
     checkLegal();
     syncAlphaData();
     
-    // --- 1. ƯU TIÊN HIỆN CACHE ---
+    
     const cachedData = localStorage.getItem('wave_comp_list');
     let hasCache = false;
 
     if (cachedData) {
         try {
             compList = JSON.parse(cachedData);
-            appData.running = compList; // [MỚI] Đồng bộ vào appData
+            appData.running = compList; 
             
             renderGrid();
             renderStats();
@@ -1171,14 +1171,14 @@ function init() {
         } catch (e) { console.error(e); }
     }
 
-    // --- 2. GỌI DỮ LIỆU MỚI (SỬA Ở ĐÂY) ---
-    // Thay vì loadFromCloud, ta gọi initMarketRadar
+    
+    
     initMarketRadar().then(() => {
-        // Tải xong mới bắt đầu kích hoạt vòng lặp cập nhật thông minh
+        
         if (typeof quickSyncData === 'function') quickSyncData();
     });
 
-    // 3. Đồng hồ hệ thống
+    
     setInterval(updateClock, 1000);
 
     applyLanguage();
@@ -1186,7 +1186,7 @@ function init() {
         document.getElementById('cur-lang-text').innerText = currentLang.toUpperCase();
     }
 
-    // --- 4. ĐĂNG KÝ REALTIME (ĐÃ FIX HỨNG TOTAL VOL) ---
+    
     console.log("📡 Đang khởi tạo kết nối Realtime...");
 
     /*if (typeof supabase !== 'undefined') {
@@ -1197,36 +1197,36 @@ function init() {
                 const newData = payload.new;
                 if (!newData) return;
                 
-                // 1. Cập nhật ngay vào bộ nhớ trình duyệt
+                
                 let localItem = compList.find(c => c.db_id === newData.id);
                 if (localItem) {
                     let newContent = newData.data || newData.Data;
                     if (newContent) {
-                        // --- [DÁN ĐOẠN NÀY VÀO] HỨNG DỮ LIỆU AI TỪ REALTIME ---
+                        
         if (newContent.ai_prediction) {
             localItem.ai_prediction = newContent.ai_prediction;
         }
-                        // --- [FIX QUAN TRỌNG] HỨNG BIẾN TOTAL TÍCH LŨY ---
+                        
                         if (newContent.total_accumulated_volume) {
                             localItem.total_accumulated_volume = newContent.total_accumulated_volume;
                         }
-                        // -------------------------------------------------
+                        
 
-                        // Cập nhật Volume Daily
+                        
                         if (newContent.real_alpha_volume) localItem.real_alpha_volume = newContent.real_alpha_volume;
                         
-                        // Cập nhật các thông số khác
+                        
                         if (newContent.market_analysis) localItem.market_analysis = newContent.market_analysis;
                         if (newContent.daily_tx_count) localItem.daily_tx_count = newContent.daily_tx_count;
                         if (newContent.real_vol_history) localItem.real_vol_history = newContent.real_vol_history;
                     }
                 }
 
-                // 2. VẼ LẠI GIAO DIỆN (Gọi hàm tổng hợp)
+                
                 if (typeof updateSingleCardUI === 'function') {
                     updateSingleCardUI(newData);
                 } else {
-                    // Fallback
+                    
                     updateGridValuesOnly();
                     if (typeof updateHealthTableRealtime === 'function') updateHealthTableRealtime();
                     renderStats();
@@ -1237,7 +1237,7 @@ function init() {
             });
     }*/
 
-    // Modal hướng dẫn
+    
     if (!localStorage.getItem('wave_guide_seen')) {
         setTimeout(() => {
             const guideEl = document.getElementById('guideModal');
@@ -1248,12 +1248,12 @@ function init() {
 }
 
 
-    // --- HÀM checkAndAutoRefresh (KHÔNG CẦN DÙNG NỮA - ĐỂ TRỐNG) ---
+    
     function checkAndAutoRefresh() {
-        // Đã thay thế bằng QuickSync và Realtime
+        
     }
 
-    // --- GIỮ NGUYÊN 2 HÀM NÀY ---
+    
     function checkLegal() {
         if (!localStorage.getItem('wave_legal_accepted')) document.getElementById('legalModal').style.display = 'flex';
     }
@@ -1262,17 +1262,17 @@ function init() {
         document.getElementById('legalModal').style.display = 'none';
     }
 
-    // --- [FIX V62] FETCH PROFILE & SYNC WALLET SETTINGS ---
+    
 async function fetchUserProfile() {
     if(!currentUser) return;
     
-    // 1. Lấy dữ liệu từ Cloud
+    
     const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
     
     if(data) {
         userProfile = data;
         
-        // Hiển thị tên & số dư
+        
         document.getElementById('userNameDisplay').innerText = data.nickname || currentUser.email.split('@')[0];
         let bal = data.balance_usdt !== null ? data.balance_usdt : 0;
         document.getElementById('user-balance').innerText = fmtNum(bal);
@@ -1280,23 +1280,23 @@ async function fetchUserProfile() {
 
         checkDailyBonus();
 
-        // 2. LẤY DỮ LIỆU TRACKER
+        
         userProfile.tracker_data = data.tracker_data || {};
 
-        // --- [FIX QUAN TRỌNG] ĐỒNG BỘ CẤU HÌNH VÍ TỪ CLOUD ---
-        // Chúng ta quy ước key 'meta_wallets' trong tracker_data sẽ chứa cấu hình ví
+        
+        
         if (userProfile.tracker_data && userProfile.tracker_data.meta_wallets) {
-            // Nếu trên Cloud có cấu hình ví -> Tải về máy dùng ngay
+            
             accSettings = userProfile.tracker_data.meta_wallets;
-            // Lưu đè vào LocalStorage để đồng bộ
+            
             localStorage.setItem('wave_settings', JSON.stringify(accSettings));
         } else {
-            // Nếu trên Cloud chưa có (User mới) -> Lấy từ LocalStorage hiện tại đẩy lên Cloud lần đầu
-            // Để giữ lại các ví user đang dùng
+            
+            
             updateCloudWallets(); 
         }
 
-        // 3. Avatar
+        
         if(data.avatar_url) {
             document.getElementById('nav-avatar').src = data.avatar_url;
             document.getElementById('nav-avatar').style.display = 'block';
@@ -1304,12 +1304,12 @@ async function fetchUserProfile() {
             document.getElementById('nav-avatar').style.display = 'none';
         }
 
-        // 4. Vẽ lại giao diện với cấu hình ví chuẩn của User đó
+        
         renderGrid();
     }
 }
 
-    // V45 RETENTION: DAILY BONUS LOGIC
+    
     async function checkDailyBonus() {
         if(!currentUser || !userProfile) return;
         const today = new Date().toISOString().split('T')[0];
@@ -1320,14 +1320,14 @@ async function fetchUserProfile() {
             const bonus = 100;
             const newBal = (userProfile.balance_usdt || 0) + bonus;
 
-            // Optimistic UI Update
+            
             userProfile.balance_usdt = newBal;
             document.getElementById('user-balance').innerText = fmtNum(newBal);
 
             showToast(`🎉 Daily Login Bonus: +${bonus} USDT!`, 'success');
             localStorage.setItem(lastClaimKey, today);
 
-            // Sync to DB silently
+            
             await supabase.from('profiles').update({ balance_usdt: newBal }).eq('id', currentUser.id);
         }
     }
@@ -1350,7 +1350,7 @@ async function fetchUserProfile() {
         new bootstrap.Modal(document.getElementById('profileModal')).show();
     }
 
-    // V45 UPGRADE: Real Storage Upload
+    
     async function handleFileUpload(input) {
         if(!input.files || input.files.length === 0) return;
         if(!currentUser) return showToast("Please Login", "error");
@@ -1402,7 +1402,7 @@ async function fetchUserProfile() {
         }
     }
 
-    // --- HÀM UPLOAD ẢNH CHUNG (Dùng cho cả Brand & Project) ---
+    
     async function uploadImage(input, previewId, valueId) {
         if (!input.files || input.files.length === 0) return;
         let previewEl = document.getElementById(previewId);
@@ -1467,9 +1467,9 @@ async function fetchUserProfile() {
     async function handleLogout() { 
     await supabase.auth.signOut(); 
     
-    // --- [FIX] XÓA SẠCH DỮ LIỆU CỤC BỘ KHI LOGOUT ---
-    localStorage.removeItem('wave_settings'); // Xóa cấu hình ví
-    // Có thể xóa thêm các key khác nếu muốn sạch hơn
+    
+    localStorage.removeItem('wave_settings'); 
+    
     
     window.location.reload(); 
 }
@@ -1487,39 +1487,39 @@ let appData = {
     running: [],        
     history: [],        
     isDataReady: false, 
-    currentTab: 'running', // Mặc định là Running
-    currentView: 'list',   // Mặc định là List (Radar)
-    gridTab: 'running'     // Để tương thích code cũ
+    currentTab: 'running', 
+    currentView: 'list',   
+    gridTab: 'running'     
 };
 
 function switchViewMode(mode) {
     appData.currentView = mode;
 
-    // Đổi màu nút
+    
     const btnList = document.getElementById('btn-view-list');
     const btnGrid = document.getElementById('btn-view-grid');
 
     if (mode === 'list') {
-        // Active nút Radar
+        
         btnList.className = 'btn btn-sm btn-primary fw-bold';
         btnGrid.className = 'btn btn-sm btn-outline-secondary fw-bold text-sub border-0';
         
-        // Hiện Bảng, Ẩn Thẻ
+        
         document.getElementById('view-list-container').classList.remove('d-none');
         document.getElementById('view-grid-container').classList.add('d-none');
         
-        // Vẽ lại bảng (Dùng code cũ của bạn)
+        
         if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); 
     } else {
-        // Active nút Board
+        
         btnGrid.className = 'btn btn-sm btn-primary fw-bold';
         btnList.className = 'btn btn-sm btn-outline-secondary fw-bold text-sub border-0';
 
-        // Hiện Thẻ, Ẩn Bảng
+        
         document.getElementById('view-grid-container').classList.remove('d-none');
         document.getElementById('view-list-container').classList.add('d-none');
 
-        // Vẽ lại thẻ (Dùng code cũ của bạn)
+        
         if(typeof renderGrid === 'function') renderGrid(); 
     }
 }
@@ -1527,19 +1527,19 @@ function switchViewMode(mode) {
 
 function switchGlobalTab(tabName) {
     appData.currentTab = tabName;
-    appData.gridTab = tabName; // Đồng bộ tab cho Grid
+    appData.gridTab = tabName; 
     localStorage.setItem('wave_active_tab', tabName);
     
-    // Đổi màu nút tab
+    
     document.querySelectorAll('.radar-tab').forEach(el => {
         if(el.id === `tab-${tabName}`) el.classList.add('active');
         else el.classList.remove('active');
     });
 
-    // 1. Vẽ lại bảng Radar
+    
     if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
     
-    // 2. [FIX] LUÔN VẼ LẠI GRID (Kể cả khi đang ẩn) để chuẩn bị DOM cho tính năng "Jump to Card"
+    
     if(typeof renderGrid === 'function') renderGrid(); 
 }
 
@@ -1547,22 +1547,22 @@ function switchGlobalTab(tabName) {
 async function initMarketRadar() {
     console.log("🚀 System Starting...");
     
-    // 1. Khôi phục Tab từ bộ nhớ
+    
     let savedTab = localStorage.getItem('wave_active_tab') || 'running';
     appData.currentTab = savedTab;
 
-    // 2. Active UI cho Tab đó
+    
     document.querySelectorAll('.radar-tab').forEach(el => el.classList.remove('active'));
     let tabEl = document.getElementById(`tab-${savedTab}`);
     if(tabEl) tabEl.classList.add('active');
 
-    // 3. Tải dữ liệu (SỬA LẠI CHỖ NÀY: Gọi đúng tên hàm mới)
-    // Xóa hết mấy cái if/else cũ đi, chỉ để lại dòng này:
+    
+    
     await loadFromCloud(); 
     
-    // 4. Auto refresh (Chạy ngầm) - Dùng QuickSync (RPC) thay vì Fetch Full Data
+    
     setInterval(() => {
-        // Chỉ chạy cái này (Nhẹ)
+        
         if (typeof quickSyncData === 'function') {
             quickSyncData(); 
         }
@@ -1571,17 +1571,17 @@ async function initMarketRadar() {
 } 
 
     
-// 3. HÀM CHUYỂN TAB (FIX: LƯU TRẠNG THÁI)
+
 function switchRadarTab(type) {
     appData.currentTab = type;
-    localStorage.setItem('wave_active_tab', type); // <--- LƯU VÀO BỘ NHỚ
+    localStorage.setItem('wave_active_tab', type); 
 
-    // UI
+    
     document.querySelectorAll('.radar-tab').forEach(el => el.classList.remove('active'));
     let activeTab = document.getElementById(`tab-${type}`);
     if(activeTab) activeTab.classList.add('active');
 
-    // Render
+    
     if (type === 'running') {
         renderMarketHealthTable(appData.running); 
     } else {
@@ -1589,18 +1589,18 @@ function switchRadarTab(type) {
     }
 }
 
-// --- [MỚI] HÀM CHUYỂN TAB CHO TRACKING BOARD (CARD GRID) ---
+
 function switchGridTab(tabName) {
-    // 1. Cập nhật trạng thái
+    
     appData.gridTab = tabName;
 
-    // 2. Cập nhật giao diện nút bấm (Active Class)
-    // Giả sử bạn đặt ID nút là 'gtab-running' và 'gtab-history'
+    
+    
     document.querySelectorAll('.grid-tab-btn').forEach(el => el.classList.remove('active'));
     const btn = document.getElementById(`gtab-${tabName}`);
     if(btn) btn.classList.add('active');
 
-    // 3. Vẽ lại lưới thẻ bài
+    
     renderGrid();
 }
 
@@ -1609,7 +1609,7 @@ function switchGridTab(tabName) {
    4. HÀM GỌI API (ĐÃ SỬA LỖI FLASH NHẢY TAB TRONG CATCH BLOCK)
    ========================================================== */
 async function loadFromCloud(isSilent = false) {
-    // Chỉ hiện loading nếu không phải chạy ngầm (silent)
+    
     if(!isSilent && !appData.isDataReady && document.getElementById('loading-overlay')) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
@@ -1644,7 +1644,7 @@ async function loadFromCloud(isSilent = false) {
                         item.db_id = row.id; 
                         item.id = item.db_id;
                         
-                        // --- A. PHÂN LOẠI RUNNING / HISTORY ---
+                        
                         let isRunning = true;
                         if (item.end) {
                             if (item.end < todayStr) isRunning = false;
@@ -1656,9 +1656,9 @@ async function loadFromCloud(isSilent = false) {
                             }
                         }
 
-                        // --- B. XỬ LÝ SỐ LIỆU ---
+                        
                         if (!isRunning) {
-                            // HISTORY TAB
+                            
                             let sqlList = row.tournament_history || [];
 
                                 if (sqlList.length > 0) {
@@ -1669,7 +1669,7 @@ async function loadFromCloud(isSilent = false) {
                             } else {
                                 item.real_vol_history = [];
                             }
-                            // ---------------------------------------------------------
+                            
 
                             let endRecord = sqlList.find(h => h.date === item.end);
                             
@@ -1696,7 +1696,7 @@ async function loadFromCloud(isSilent = false) {
                             }
                         } 
                         else {
-                            // RUNNING TAB
+                            
                             if (!item.real_vol_history) item.real_vol_history = [];
                             if (row.tournament_history) {
                                 let sorted = row.tournament_history.sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -1731,7 +1731,7 @@ async function loadFromCloud(isSilent = false) {
             });
         }
 
-        // 2. Cập nhật dữ liệu
+        
         appData.running = tempRunning.sort((a,b) => {
             if(!a.end) return 1; if(!b.end) return -1;
             return new Date(a.end) - new Date(b.end);
@@ -1743,12 +1743,12 @@ async function loadFromCloud(isSilent = false) {
         compList = tempAll;
         localStorage.setItem('wave_comp_list', JSON.stringify(compList));
 
-        // 3. Render UI & Stats
+        
         renderGrid(); 
         renderStats();
         initCalendar();
         
-        // Render đúng tab hiện tại
+        
         let currentActiveTab = localStorage.getItem('wave_active_tab') || 'running';
         appData.currentTab = currentActiveTab; 
         
@@ -1761,18 +1761,18 @@ async function loadFromCloud(isSilent = false) {
     } catch (err) {
         console.error("Lỗi Fetch (Đã xử lý fallback):", err);
         
-        // --- [FIX QUAN TRỌNG: FALLBACK THÔNG MINH KHI LỖI] ---
+        
         const cached = localStorage.getItem('wave_comp_list');
         if(cached) { 
             let allItems = JSON.parse(cached);
             compList = allItems;
 
-            // Phân loại lại từ Cache để không bị lẫn lộn
+            
             const todayStr = new Date().toISOString().split('T')[0];
             appData.running = allItems.filter(c => !c.end || c.end >= todayStr);
             appData.history = allItems.filter(c => c.end && c.end < todayStr);
 
-            // Chỉ vẽ lại đúng Tab đang mở
+            
             let currentActiveTab = localStorage.getItem('wave_active_tab') || 'running';
             if (currentActiveTab === 'running') {
                 renderMarketHealthTable(appData.running);
@@ -1788,21 +1788,21 @@ async function loadFromCloud(isSilent = false) {
     }
 }
 
-        // --- CẬP NHẬT: PHÂN CHIA 2 HÀNG (CEX & DEX/WEB3) ---
-        // --- BƯỚC 4: HÀM HIỂN THỊ DANH SÁCH ĐỘNG (ĐỌC TỪ CONFIG) ---
+        
+        
     function renderArsenal() {
         const container = document.getElementById('arsenal-grid');
         if(!container) return;
 
-        // 1. Reset container
+        
         container.className = '';
         container.innerHTML = '';
 
-        // 2. LẤY DỮ LIỆU TỪ CẤU HÌNH ĐÃ LƯU (Quan trọng!)
-        // Nếu chưa có dữ liệu thì dùng mảng rỗng
+        
+        
         let exchanges = siteConfig.arsenal_items || [];
 
-        // 3. Nếu danh sách trống và là Admin -> Hiện nút nhắc nhở thêm sàn
+        
         if(exchanges.length === 0) {
             if(document.body.classList.contains('is-admin')) {
                 container.innerHTML = `<div class="col-12 text-center text-sub border border-dashed border-secondary p-3 rounded" onclick="openConfigModal()" style="cursor:pointer; font-size:0.8rem">Admin: Click to Add Trading Platforms</div>`;
@@ -1810,19 +1810,19 @@ async function loadFromCloud(isSilent = false) {
             return;
         }
 
-        // 4. Phân loại CEX và DEX
+        
         const listCEX = exchanges.filter(e => e.type === 'EXCHANGE');
         const listDEX = exchanges.filter(e => e.type !== 'EXCHANGE');
 
-        // Hàm hỗ trợ vẽ thẻ
+        
         const generateCards = (list) => {
             let html = '';
             list.forEach(ex => {
-                // Chỉ hiện nếu có Link Ref
+                
                 if(ex.link) {
-                    // Dùng logo mặc định nếu user chưa up logo
-                    // (Tạo ảnh placeholder bằng chữ cái đầu của tên sàn)
-                    let logoUrl = ex.logo || 'https://placehold.co/50x50/333/999?text=' + ex.name.charAt(0).toUpperCase();
+                    
+                    
+                    let logoUrl = ex.logo || 'https:
 
                     html += `
                     <div class="arsenal-card" onclick="trackAffiliateClick('${ex.name}'); window.open('${ex.link}', '_blank'); playSfx('click')">
@@ -1837,17 +1837,17 @@ async function loadFromCloud(isSilent = false) {
             return html;
         };
 
-        // 5. Render ra HTML
+        
         let cexHtml = generateCards(listCEX);
         let dexHtml = generateCards(listDEX);
 
-        // Hiển thị nhóm CEX
+        
         if (cexHtml) {
             container.innerHTML += `<div class="text-sub small fw-bold mb-2 ps-1 text-uppercase" style="letter-spacing:1px; font-size:0.7rem"><i class="fas fa-building me-2"></i> CENTRALIZED EXCHANGES (CEX)</div>`;
             container.innerHTML += `<div class="arsenal-grid mb-4">${cexHtml}</div>`;
         }
 
-        // Hiển thị nhóm DEX/WEB3
+        
         if (dexHtml) {
             container.innerHTML += `<div class="text-sub small fw-bold mb-2 ps-1 text-uppercase" style="letter-spacing:1px; font-size:0.7rem"><i class="fas fa-wallet me-2"></i> DECENTRALIZED & WEB3</div>`;
             container.innerHTML += `<div class="arsenal-grid mb-2">${dexHtml}</div>`;
@@ -1855,10 +1855,10 @@ async function loadFromCloud(isSilent = false) {
     }
 
 
-    // New Tracking Function
+    
     function trackAffiliateClick(exchangeId) {
         console.log("Tracking Click:", exchangeId);
-        // Gửi sự kiện lên GA4 (nếu đã config)
+        
         if(typeof gtag === 'function') {
             gtag('event', 'click_affiliate', {
                 'event_category': 'monetization',
@@ -1867,17 +1867,17 @@ async function loadFromCloud(isSilent = false) {
         }
     }
 
-        // --- CẬP NHẬT: TỰ ĐỘNG SỬA LINK NẾU THIẾU HTTPS ---
+        
     function renderFooter() {
         const c = document.getElementById('footer-socials-container');
         c.innerHTML = '';
 
-        // Hàm nhỏ giúp kiểm tra và thêm https:// nếu thiếu
+        
         const fixUrl = (url) => {
             if (!url) return '';
-            // Nếu chưa có http hoặc https thì tự thêm vào
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                return 'https://' + url;
+            
+            if (!url.startsWith('http:
+                return 'https:
             }
             return url;
         };
@@ -1886,7 +1886,7 @@ async function loadFromCloud(isSilent = false) {
         if(siteConfig.tele) c.innerHTML += `<a href="${fixUrl(siteConfig.tele)}" target="_blank" class="social-btn"><i class="fab fa-telegram-plane"></i></a>`;
         if(siteConfig.yt) c.innerHTML += `<a href="${fixUrl(siteConfig.yt)}" target="_blank" class="social-btn"><i class="fab fa-youtube"></i></a>`;
 
-        // Render Brand Logo (Giữ nguyên phần logo)
+        
         const brandImg = document.getElementById('nav-brand-img');
         const brandText = document.getElementById('nav-brand-text');
         if(brandText) brandText.style.display = 'block';
@@ -1900,23 +1900,23 @@ async function loadFromCloud(isSilent = false) {
 
 
     function openConfigModal() {
-    // 1. Load Socials & Logo
+    
     document.getElementById('cfg-x').value = siteConfig.x || '';
     document.getElementById('cfg-tele').value = siteConfig.tele || '';
     document.getElementById('cfg-yt').value = siteConfig.yt || '';
     document.getElementById('cfg-logo-url').value = siteConfig.brandLogo || '';
     
-    // 2. [FIX] Load 3 Link Ref Chính
+    
     document.getElementById('cfg-ref-binance').value = siteConfig.ref_binance || '';
     document.getElementById('cfg-ref-web3').value = siteConfig.ref_web3 || '';
     document.getElementById('cfg-ref-dex').value = siteConfig.ref_dex || '';
 
-    // Preview Logo
+    
     let img = document.getElementById('cfg-logo-preview');
     if(siteConfig.brandLogo) { img.src = siteConfig.brandLogo; img.style.display = 'block'; }
     else { img.style.display = 'none'; }
 
-    // 3. Load Danh Sách Động (Arsenal)
+    
     let arsenalList = siteConfig.arsenal_items || [];
     renderArsenalInputs(arsenalList);
 
@@ -1925,7 +1925,7 @@ async function loadFromCloud(isSilent = false) {
 
 
 async function saveGlobalConfig() {
-    // 1. Quét dữ liệu từ danh sách động (Arsenal)
+    
     let arsenalItems = [];
     document.querySelectorAll('.arsenal-item-row').forEach(row => {
         arsenalItems.push({
@@ -1936,23 +1936,23 @@ async function saveGlobalConfig() {
         });
     });
 
-    // 2. Tạo object Config mới (BAO GỒM CẢ 3 LINK FIX MỚI)
+    
     const newData = {
         x: document.getElementById('cfg-x').value.trim(),
         tele: document.getElementById('cfg-tele').value.trim(),
         yt: document.getElementById('cfg-yt').value.trim(),
         brandLogo: document.getElementById('cfg-logo-url').value.trim(),
 
-        // [FIX] Lưu 3 Link Ref Chính
+        
         ref_binance: document.getElementById('cfg-ref-binance').value.trim(),
         ref_web3: document.getElementById('cfg-ref-web3').value.trim(),
         ref_dex: document.getElementById('cfg-ref-dex').value.trim(),
 
-        // Lưu mảng danh sách sàn phụ
+        
         arsenal_items: arsenalItems
     };
 
-    // 3. Gửi lên Server
+    
     let btn = document.querySelector('button[onclick="saveGlobalConfig()"]');
     let oldText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...'; btn.disabled = true;
@@ -1965,7 +1965,7 @@ async function saveGlobalConfig() {
 
         bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
         
-        // Tải lại dữ liệu ngay lập tức để thấy thay đổi
+        
         await loadFromCloud(false);
         showToast("Configuration saved successfully!", "success");
 
@@ -1981,11 +1981,11 @@ async function saveGlobalConfig() {
 
     
 
-        /* --- [V46] SMART REFRESH SYSTEM (Anti-Spam) --- */
+        
     let lastRefreshTime = 0;
-    const REFRESH_COOLDOWN = 10000; // 10 giây
+    const REFRESH_COOLDOWN = 10000; 
 
-    // --- [FIXED FINAL] SMART REFRESH: KHÔNG BAO GIỜ GỌI RELOAD KHI ĐANG CHẠY NGẦM ---
+    
 async function handleSmartRefresh(isSilent = false) {
     const now = Date.now();
     if (!isSilent) {
@@ -2004,8 +2004,8 @@ async function handleSmartRefresh(isSilent = false) {
 
     try {
 
- // const { data, error } = await supabase.functions.invoke('refresh-volume'); 
-// Thay bằng dòng dưới để chỉ tải lại dữ liệu nhẹ nhàng từ DB
+ 
+
 const { data, error } = { data: { success: true }, error: null }; 
 await loadFromCloud(false);
         
@@ -2013,51 +2013,51 @@ await loadFromCloud(false);
 
         if (data && data.success) {
             if (data.updatedItems && Array.isArray(data.updatedItems)) {
-                // Cập nhật dữ liệu vào biến bộ nhớ
+                
                 data.updatedItems.forEach(newItem => {
                     let localItem = compList.find(c => c.db_id === newItem.id);
                     if (localItem) {
                         if(newItem.data.real_alpha_volume) localItem.real_alpha_volume = newItem.data.real_alpha_volume;
-                        if(newItem.data.daily_tx_count) localItem.daily_tx_count = newItem.data.daily_tx_count; // Cập nhật Tx
+                        if(newItem.data.daily_tx_count) localItem.daily_tx_count = newItem.data.daily_tx_count; 
                         if(newItem.data.real_vol_history) localItem.real_vol_history = newItem.data.real_vol_history;
                         if(newItem.data.last_updated_ts) localItem.last_updated_ts = newItem.data.last_updated_ts;
                         if(newItem.data.market_analysis) localItem.market_analysis = newItem.data.market_analysis;
                     }
                 });
 
-                // CHỈ CẬP NHẬT SỐ - KHÔNG VẼ LẠI GIAO DIỆN CHÍNH
+                
                 updateGridValuesOnly();      
                 renderMarketHealthTable();   
                 renderStats();               
                 
                 if (!isSilent) showToast(`Market Data Updated!`, "success");
             } else {
-                // Nếu server trả về success nhưng không có data thay đổi
-                // Nếu là Silent Mode -> TUYỆT ĐỐI KHÔNG RELOAD -> GIỮ ĐỒNG HỒ ĐỨNG IM
+                
+                
                 if (!isSilent) await loadFromCloud(false); 
             }
         }
     } catch (e) {
         console.error(e);
-        // Nếu lỗi khi chạy ngầm -> IM LẶNG LUÔN (Không reload, không thông báo)
+        
         if (!isSilent) showToast("Sync Error: " + e.message, "error");
     } finally {
         if(icon) icon.classList.remove('fa-spin');
     }
 }
 
-    // --- HÀM FIX: CẬP NHẬT GIÁ (PHIÊN BẢN MỚI: KHÔNG GỌI DEXSCREENER) ---
-// Hàm này cần tồn tại để loadFromCloud không bị báo lỗi ReferenceError
+    
+
 function updateAllPrices() {
     console.log("⚠️ Đã chặn DexScreener.");
     
-    // Chỉ vẽ lại giao diện để đảm bảo thống nhất dữ liệu
+    
     renderGrid();
     renderStats();
 }
 
 
-            /* --- HÀM VẼ BIỂU ĐỒ V49 (REVERT: TOTAL VOL + MIN TARGET) --- */
+            
     let volHistChart = null;
 
     function openVolHistory(dbId) {
@@ -2067,7 +2067,7 @@ function updateAllPrices() {
         document.getElementById('vh-title').innerText = c.name + " ANALYTICS";
         document.getElementById('vh-subtitle').innerText = "Correlation: Total Vol vs Min Target";
 
-        // 1. LẤY DỮ LIỆU
+        
         let realHistory = c.real_vol_history || [];
         let minHistory = c.history || [];
 
@@ -2088,43 +2088,43 @@ function updateAllPrices() {
 
         let sortedDates = Array.from(allDates).sort((a,b) => new Date(a) - new Date(b));
 
-        // --- LỌC BỎ NGÀY SAU KHI KẾT THÚC ---
+        
         if (c.end) {
             sortedDates = sortedDates.filter(d => d <= c.end);
         }
 
 
-        // Lấy 10 ngày gần nhất
+        
         let recentDates = sortedDates.slice(-10);
 
         let labels = [];
         let dataReal = [];
         let dataMin = [];
         
-        // Lấy ngày hiện tại (YYYY-MM-DD) để so sánh
+        
         let todayStr = new Date().toISOString().split('T')[0];
 
         recentDates.forEach(date => {
             let parts = date.split('-');
             labels.push(`${parts[2]}/${parts[1]}`);
 
-            // 1. XỬ LÝ TOTAL VOL (CỘT) - VẼ BÌNH THƯỜNG
+            
             let rItem = realHistory.find(x => x.date === date);
             let rVal = rItem ? rItem.vol : 0;
             
-            // Nếu là hôm nay mà chưa có trong history thì lấy số Real-time
+            
             if (!rItem && date === todayStr && isRunning) {
                 rVal = c.real_alpha_volume || 0;
             }
             dataReal.push(rVal);
 
-            // 2. XỬ LÝ MIN TARGET (ĐƯỜNG) - CẮT NẾU LÀ HÔM NAY
+            
             let mItem = minHistory.find(x => x.date === date);
             let mVal = mItem ? parseFloat(mItem.target) : 0;
 
-            // LOGIC MỚI: 
-            // Nếu là ngày hôm nay (date === todayStr) VÀ Giá trị = 0 (Binance chưa cập nhật)
-            // Thì đẩy vào 'null'. ChartJS sẽ tự động ngắt nét vẽ tại điểm này.
+            
+            
+            
             if (date === todayStr && mVal === 0) {
                 dataMin.push(null); 
             } else {
@@ -2132,13 +2132,13 @@ function updateAllPrices() {
             }
         });
 
-        // 3. VẼ CHART
+        
         new bootstrap.Modal(document.getElementById('volHistoryModal')).show();
 
         const ctx = document.getElementById('volHistoryChart').getContext('2d');
         if (volHistChart) volHistChart.destroy();
 
-        // Màu Gradient Cyberpunk
+        
         let gradient = ctx.createLinearGradient(0, 0, 0, 400);
         gradient.addColorStop(0, 'rgba(0, 240, 255, 0.6)');
         gradient.addColorStop(1, 'rgba(0, 240, 255, 0.05)');
@@ -2164,7 +2164,7 @@ function updateAllPrices() {
                         label: 'Min Target',
                         data: dataMin,
                         type: 'line',
-                        borderColor: '#F0B90B', // Vàng
+                        borderColor: '#F0B90B', 
                         backgroundColor: '#F0B90B',
                         borderWidth: 2,
                         pointRadius: 4,
@@ -2211,37 +2211,37 @@ function updateAllPrices() {
 
 
 
-    // --- [V59 FINAL] RENDER GRID: UTC TIME STANDARD ---
+    
 function renderGrid(customData = null) {
 const SHOW_PREDICT_BTN = false;
     if (document.querySelector('.tour-card.active-card')) {
-            updateGridValuesOnly(); // Chỉ update số (Vol, Price...)
-            if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); // Update bảng Health
-            return; // DỪNG HÀM NGAY LẬP TỨC
+            updateGridValuesOnly(); 
+            if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); 
+            return; 
         }
 
     const grid = document.getElementById('appGrid');
     if(!grid) return;
     
-    // --- [SỬA ĐOẠN NÀY] ---
+    
     let listToRender = customData;
 
-    // [FIX LOGIC] Nếu hệ thống tự refresh (customData = null) NHƯNG đang lọc theo ngày
-    // Thì phải lấy lại danh sách của ngày đó, chứ không nhảy về Tab mặc định
+    
+    
     if (!listToRender && typeof currentFilterDate !== 'undefined' && currentFilterDate) {
         listToRender = compList.filter(c => c.end === currentFilterDate);
     }
 
-    // Nếu vẫn chưa có list (tức là không có customData và cũng không lọc ngày) -> Lấy theo Tab
+    
     if (!listToRender) {
         if (appData.gridTab === 'history') {
             listToRender = appData.history;
         } else {
-            // Mặc định là Running
+            
             listToRender = appData.running;
         }
     }
-    // ----------------------
+    
 
     listToRender.sort((a,b) => {
         let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
@@ -2263,50 +2263,50 @@ let fullHtml = '';
 
     listToRender.forEach(c => {
         try {
-            // --- [FIX UPCOMING] LOGIC TRẠNG THÁI 3 GIAI ĐOẠN ---
-            // 1. Xác định thời điểm BẮT ĐẦU (UTC)
-            // Nếu chưa nhập giờ bắt đầu, mặc định là 00:00:00
+            
+            
+            
             let sTimeStr = c.startTime || "00:00:00";
-            if(sTimeStr.length === 5) sTimeStr += ":00"; // Thêm giây nếu thiếu
+            if(sTimeStr.length === 5) sTimeStr += ":00"; 
             let startDateTime = new Date(c.start + 'T' + sTimeStr + 'Z');
 
-            // 2. Xác định thời điểm KẾT THÚC (UTC)
+            
             let eTimeStr = c.endTime || "23:59:59";
             if(eTimeStr.length === 5) eTimeStr += ":00";
             let endDateTime = new Date(c.end + 'T' + eTimeStr + 'Z');
 
-            // 3. Phân loại trạng thái (Upcoming / Running / Ended)
-            let status = 'running'; // Mặc định
+            
+            let status = 'running'; 
             
             if (now < startDateTime) {
-                status = 'upcoming'; // Chưa đến giờ
+                status = 'upcoming'; 
             } else if (now > endDateTime) {
-                status = 'ended';    // Đã qua giờ
+                status = 'ended';    
             }
 
-            // 4. Tạo class CSS cho thẻ bài
+            
             let cardClass = 'tour-card';
             if (status === 'ended') cardClass += ' ended-card';
-            if (status === 'upcoming') cardClass += ' upcoming-card'; // Thêm class này để sau này CSS nếu cần
+            if (status === 'upcoming') cardClass += ' upcoming-card'; 
 
-            // --- XỬ LÝ ĐỒNG HỒ ĐẾM NGƯỢC (BÊN TRÁI) ---
+            
             let tourTimerHtml = '';
             
             if (status === 'upcoming') {
-                // Đếm ngược đến giờ BẮT ĐẦU
+                
                 let diff = startDateTime - now;
                 let d = Math.floor(diff / 86400000);
                 let h = Math.floor((diff % 86400000) / 3600000);
                 let m = Math.floor((diff % 3600000) / 60000);
                 
-                // Nếu > 0 ngày thì hiện ngày + giờ, ngược lại hiện giờ + phút
+                
                 let tText = d > 0 ? `Starts in ${d}d ${h}h` : `Starts in ${h}h ${m}m`;
                 
-                // Màu vàng cam cho trạng thái sắp diễn ra
+                
                 tourTimerHtml = `<div class="tour-end-timer" style="color:#FFD700"><i class="fas fa-hourglass-start" style="font-size:0.6rem"></i> ${tText}</div>`;
             
             } else if (status === 'running') {
-                // Đếm ngược đến giờ KẾT THÚC (Logic cũ)
+                
                 let diff = endDateTime - now;
                 let d = Math.floor(diff / 86400000);
                 let h = Math.floor((diff % 86400000) / 3600000);
@@ -2320,11 +2320,11 @@ let fullHtml = '';
                 let tColor = (diff < 86400000) ? '#F6465D' : '#999'; 
                 tourTimerHtml = `<div class="tour-end-timer" style="color:${tColor}"><i class="far fa-clock" style="font-size:0.6rem"></i> ${tText}</div>`;
             } else {
-                // Đã kết thúc
+                
                 tourTimerHtml = `<div class="tour-end-timer" style="color:#999"><i class="fas fa-check-circle" style="font-size:0.6rem"></i> Ended</div>`;
             }
 
-            // --- XỬ LÝ NHÃN TRẠNG THÁI (Góc trên thẻ bài) ---
+            
             let statusBadgeHtml = '';
             if (status === 'upcoming') {
                 statusBadgeHtml = `<div class="token-status anim-breathe" style="color:#FFD700; border-color:#FFD700">UPCOMING</div>`;
@@ -2335,24 +2335,24 @@ let fullHtml = '';
             }
 
 
-            // --- [NEW] TẠO LINK BOT ---
-        // Thay 'WaveAlphaBot' bằng username bot thật của bạn (không có @)
-        // Ví dụ: https://t.me/WaveAlphaBot?start=check_BTC
-        const botLink = `https://t.me/WaveAlphaSignal_bot?start=check_${c.name}`;
+            
+        
+        
+        const botLink = `https:
             
 
-            // --- 2. ĐỒNG HỒ KHUYẾN MÃI X4/X2 (BÊN PHẢI) ---
+            
             let promoTimerHtml = '';
             let isListingExpired = false;
 
             if (c.listingTime && c.alphaType !== 'none') {
-                // Listing Time trong DB thường lưu dạng "YYYY-MM-DDTHH:mm" (Local input)
-                // Ta cũng nên thêm 'Z' nếu muốn chuẩn UTC, hoặc để tự nhiên nếu muốn tính theo giờ máy admin.
-                // Tốt nhất là chuẩn hóa UTC luôn:
-                let listingDate = new Date(c.listingTime + 'Z'); 
-                // Nếu input datetime-local không có giây, + 'Z' vẫn chạy tốt.
                 
-                // Fallback nếu ngày bị lỗi (do input cũ không đúng chuẩn)
+                
+                
+                let listingDate = new Date(c.listingTime + 'Z'); 
+                
+                
+                
                 if(isNaN(listingDate.getTime())) listingDate = new Date(c.listingTime);
 
                 let expiryDate = new Date(listingDate.getTime() + (30 * 24 * 60 * 60 * 1000)); 
@@ -2369,7 +2369,7 @@ let fullHtml = '';
             
             if (status === 'ended') isListingExpired = true;
 
-            // TAGS & RULES
+            
             let tagHtml = '';
             if (!isListingExpired) {
                 if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
@@ -2382,24 +2382,24 @@ let fullHtml = '';
             if ((c.inputTokens||[]).length > 0) tagHtml = `<div class="tag-x2" style="background:#9945FF; color:#fff; border:none; box-shadow:0 0 5px #9945FF">ECOSYSTEM</div>`;
             if (c.alphaType === 'x4' && !isListingExpired && !(c.inputTokens||[]).length && status === 'running') cardClass += ' highlight-x4';
 
-            // --- LOGIC HIỂN THỊ TAG (ĐÃ SỬA THÀNH ALL VOL) ---
+            
             let ruleHtml = '';
 
             if (c.ruleType === 'trade_x4') {
-                // Trường hợp x4 (Màu tím)
+                
                 ruleHtml = `<div class="rule-pill rp-x4"><i class="fas fa-bolt text-gold" style="font-size:0.55rem"></i> ALL VOL <span class="x4-box">x4</span></div>`;
             } 
             else if (c.ruleType === 'trade_all') {
-                // Trường hợp All Vol thường (Màu xanh dương - MỚI)
-                // Dùng icon fa-exchange-alt biểu tượng cho 2 chiều mua/bán
+                
+                
                 ruleHtml = `<div class="rule-pill rp-all"><i class="fas fa-exchange-alt" style="font-size:0.55rem"></i> ALL VOL</div>`;
             } 
             else {
-                // Mặc định là Only Buy (Màu xanh lá)
+                
                 ruleHtml = `<div class="rule-pill rp-buy"><i class="fas fa-arrow-up" style="font-size:0.55rem"></i> ONLY BUY</div>`;
             }
 
-            // Giữ nguyên logic làm mờ khi giải kết thúc
+            
             if(status === 'ended') ruleHtml = ruleHtml.replace('rule-pill', 'rule-pill opacity-50 grayscale');
 
             
@@ -2410,51 +2410,51 @@ let fullHtml = '';
             let rocketBadgeHtml = isPerfect ? `<div class="rocket-badge"><i class="fas fa-rocket"></i> GEM</div>` : "";
             if(isPerfect) cardClass += " card-perfect";
 
-            // Các chỉ số
-            // Nếu chưa bắt đầu (upcoming) thì Vol = 0, ngược lại lấy Vol thật
+            
+            
 
-// [FIX] Ưu tiên hiển thị TOTAL LIMIT VOLUME (USD)
+
 let realVol = (status === 'upcoming') ? 0 : (c.limit_accumulated_volume || c.total_accumulated_volume || 0);
 
-// Nếu dùng Limit (USD) thì thêm chữ 'Limit' hoặc '$' cho rõ
+
 let prefix = (c.limit_accumulated_volume > 0) ? '$' : ''; 
 let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
             
             let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
-            // --- [FIX FINAL] LOGIC LẤY TARGET CHUẨN (CHỐT SỔ NGÀY CUỐI) ---
+            
             let target = 0;
             let rawHist = c.history || [];
 
-            // 1. Sắp xếp lịch sử theo ngày (Mới nhất lên đầu để dễ tìm)
-            // Copy ra mảng mới để không ảnh hưởng dữ liệu gốc
+            
+            
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
 
             if (status === 'ended' && c.end) {
-                // A. GIẢI ĐÃ KẾT THÚC:
-                // Tìm chính xác record của ngày kết thúc (Ví dụ: NIGHT End 25/12 -> Tìm record 25/12)
+                
+                
                 let endRecord = sortedHist.find(h => h.date === c.end);
                 
                 if (endRecord && parseFloat(endRecord.target) > 0) {
-                    target = parseFloat(endRecord.target); // Lấy đúng số 338,588
+                    target = parseFloat(endRecord.target); 
                 } else {
-                    // Fallback: Nếu ngày End chưa có số liệu, tìm ngày gần nhất trong quá khứ có số > 0
-                    // (Để tránh hiện số 0 hoặc NaN khi admin chưa kịp nhập ngày cuối)
+                    
+                    
                     let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
                     if (validItem) {
                         target = parseFloat(validItem.target);
                     }
                 }
             } else {
-                // B. GIẢI ĐANG CHẠY:
-                // Luôn lấy target của ngày mới nhất đang có
+                
+                
                 if (sortedHist.length > 0) {
                     target = parseFloat(sortedHist[0].target);
                 }
             }
             
-            // Chống lỗi hiển thị
+            
             if (isNaN(target)) target = 0;
-            // -----------------------------------------------------------
+            
             
 let usePrice = (c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0;
 
@@ -2462,25 +2462,25 @@ let priceStr = (usePrice > 0) ? '$' + usePrice.toLocaleString('en-US', { maximum
 let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 
            
-// ... (giữ nguyên dòng estHtml cũ) ...
+
 let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-let cleanSymbol = rawName.split('(')[0].trim(); // KHÔNG ĐƯỢC XÓA DÒNG NÀY
+let cleanSymbol = rawName.split('(')[0].trim(); 
 
-// --- LOGIC MỚI: LẤY TỪ ALPHA CACHE ---
+
 let alphaInfo = alphaMarketCache[cleanSymbol] || {};
 
-// Ưu tiên: Logo Admin nhập -> Logo bên Alpha -> Mặc định
+
 let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
 
-// Lấy Chain Icon (Logo mạng)
+
 let chainImg = alphaInfo.chain_icon || '';
 let chainBadgeHtml = chainImg ? `<img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'" style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
 let defaultImgPath = `./assets/tokens/default.png`;
-// -------------------------------------
 
-// HTML
+
+
 fullHtml += `
 <div class="col-md-6 col-lg-4 col-xl-3 card-wrapper" ${dragAttr} data-id="${c.db_id}">
     <div class="${cardClass}" onclick="playSfx('click'); toggleCardHighlight(this)">
@@ -2493,7 +2493,7 @@ fullHtml += `
     <img src="${localImgPath}" 
          onerror="this.onerror=null; this.src='${defaultImgPath}';" 
          class="token-logo" 
-         onclick="event.stopPropagation(); window.open('https://www.binance.com/en/alpha/${c.chain}/${c.contract}', '_blank')">
+         onclick="event.stopPropagation(); window.open('https:
     ${chainBadgeHtml}
 </div>
                 
@@ -2572,17 +2572,17 @@ ${SHOW_PREDICT_BTN ? `
     grid.innerHTML = fullHtml;
     listToRender.forEach(c => { renderCardMiniChart(c); });
     
-    // --- GỌI HÀM TOOLTIP MỚI Ở ĐÂY ---
+    
     initSmartTooltips();
 }
 
 
 
 
-// --- [FIX V65] UPDATE GRID VALUES (REALTIME VOL & PRICE) ---
+
 function updateGridValuesOnly() {
     try {
-        // 1. Cập nhật bảng Market Health (Nếu đang mở)
+        
         if (typeof updateHealthTableRealtime === 'function') {
             updateHealthTableRealtime();
         }
@@ -2591,12 +2591,12 @@ function updateGridValuesOnly() {
         let topToken = null;
         let totalEstPool = 0;
 
-        // 2. Duyệt qua từng Token để cập nhật thẻ bài
+        
         compList.forEach(c => {
-            // Logic tính toán Pool tổng
+            
             let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59') + 'Z');
             
-            // Lấy giá mới nhất (Ưu tiên từ Market Analysis nếu có)
+            
             let currentPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
             if (currentPrice > 0) c.cachedPrice = currentPrice;
 
@@ -2611,21 +2611,21 @@ function updateGridValuesOnly() {
                 }
             }
 
-            // --- TÌM THẺ BÀI CỦA TOKEN NÀY ---
+            
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             
             if (cardWrapper) {
-                // A. [FIX] CẬP NHẬT VOL (REALTIME)
-                // Tìm phần tử hiển thị Vol
+                
+                
 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
 
 if (volEl) {
-    // [FIX FINAL] CHỈ DÙNG LIMIT. Nếu = 0 (do kết thúc), tìm lại trong lịch sử Limit
+    
     let rv = c.limit_daily_volume || 0;
     
-    // Logic chống lỗi = 0 khi giải đã End
+    
     if (rv === 0 && c.limit_vol_history && c.limit_vol_history.length > 0) {
-        // Lấy phần tử cuối cùng trong lịch sử (ngày gần nhất)
+        
         let last = c.limit_vol_history[c.limit_vol_history.length - 1];
         if (last) rv = parseFloat(last.vol);
     }
@@ -2640,7 +2640,7 @@ if (volEl) {
     }
 }
 
-                // B. CẬP NHẬT GIÁ (PRICE)
+                
                 const priceEl = cardWrapper.querySelector('.live-price-val');
                 if (priceEl && currentPrice > 0) {
                     let pStr = currentPrice < 1 
@@ -2649,12 +2649,12 @@ if (volEl) {
                     
                     if(priceEl.innerText !== pStr) {
                         priceEl.innerText = pStr;
-                        priceEl.classList.add('text-brand'); // Màu xanh neon
+                        priceEl.classList.add('text-brand'); 
                         setTimeout(() => priceEl.classList.remove('text-brand'), 500);
                     }
                 }
 
-                // C. CẬP NHẬT GIÁ TRỊ ƯỚC TÍNH (REWARD VALUE)
+                
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
                     let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
@@ -2666,7 +2666,7 @@ if (volEl) {
             }
         });
 
-        // 3. Cập nhật thanh thống kê (Header Stats)
+        
         const poolEl = document.getElementById('stat-pool');
         if (poolEl) poolEl.innerText = fmt(totalEstPool);
 
@@ -2680,7 +2680,7 @@ if (volEl) {
             if(topImgEl && topToken.logo) { topImgEl.src = topToken.logo; topImgEl.style.display = 'block'; }
         }
 
-        // 4. Cập nhật số liệu trên Lịch
+        
         if (typeof initCalendar === 'function') initCalendar();
 
     } catch (e) {
@@ -2688,14 +2688,14 @@ if (volEl) {
     }
 }
         
-// --- TRẠNG THÁI SẮP XẾP (Mặc định: Reward giảm dần) ---
+
 let mhSort = { col: 'reward', dir: 'desc' };
 
 /* ==========================================================
    FIX 1: HÀM SORT NHẬN DIỆN ĐÚNG TAB HIỆN TẠI (ĐÃ SỬA LỖI BIẾN)
    ========================================================== */
 window.toggleHealthSort = function(col) {
-    // 1. Cập nhật trạng thái sắp xếp (Tăng/Giảm)
+    
     if (mhSort.col === col) {
         mhSort.dir = mhSort.dir === 'desc' ? 'asc' : 'desc';
     } else {
@@ -2703,23 +2703,23 @@ window.toggleHealthSort = function(col) {
         mhSort.dir = 'desc';
     }
 
-    // 2. [FIX] Xác định đang ở Tab nào để lấy đúng dữ liệu
-    let currentData = []; // Khởi tạo biến chứa dữ liệu
+    
+    let currentData = []; 
 
     if (typeof appData !== 'undefined') {
-        // Kiểm tra cả 'ended' VÀ 'history'
+        
         if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
-            currentData = appData.history; // <--- SỬA: Gán vào currentData
+            currentData = appData.history; 
         } else {
-            currentData = appData.running; // <--- SỬA: Gán vào currentData
+            currentData = appData.running; 
         }
     }
 
-    // 3. Render lại với dữ liệu đúng
+    
     renderMarketHealthTable(currentData); 
 }
 
-// --- HÀM COPY CONTRACT ---
+
 function copyContract(addr) {
     navigator.clipboard.writeText(addr).then(() => {
         if(typeof showToast === 'function') showToast("Copied: " + addr, "success");
@@ -2734,44 +2734,44 @@ function renderMarketHealthTable(dataInput) {
     const tbody = document.getElementById('healthTableBody');
     if (!table || !tbody) return;
 
-    // --- 1. LẤY DỮ LIỆU ĐÚNG TAB ---
+    
     let projectsToRender = dataInput; 
     
-    // --- [FIX BẮT ĐẦU] ---
-    // Nếu hàm được gọi tự động (dataInput là null/undefined) VÀ đang có bộ lọc ngày
-    // Thì ưu tiên lấy danh sách theo ngày đang chọn
+    
+    
+    
     if (!projectsToRender && typeof currentFilterDate !== 'undefined' && currentFilterDate) {
         projectsToRender = compList.filter(c => c.end === currentFilterDate);
     }
-    // --- [FIX KẾT THÚC] ---
+    
 
     if (!projectsToRender) {
         if (typeof appData !== 'undefined') {
-            // [FIX QUAN TRỌNG] Thêm điều kiện 'history'
+            
             if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
                 projectsToRender = appData.history;
             } else {
                 projectsToRender = appData.running;
             }
         } else {
-            // Fallback cũ
+            
             projectsToRender = typeof compList !== 'undefined' ? compList : [];
         }
     }
 
-    // Biến kiểm tra History
+    
     let isHistoryTab = (typeof appData !== 'undefined' && (appData.currentTab === 'ended' || appData.currentTab === 'history')) || 
                        (localStorage.getItem('wave_active_tab') === 'ended' || localStorage.getItem('wave_active_tab') === 'history');
 
     const lang = (typeof currentLang !== 'undefined') ? currentLang : 'en';
     const t = (typeof translations !== 'undefined' && translations[lang]) ? translations[lang] : translations['en'];
 
-    // Update Title
+    
     const healthTitleEl = document.querySelector('[data-i18n="health_title"]');
     if(healthTitleEl) healthTitleEl.innerText = t.health_title;
 
-    // --- 2. RENDER HEADER (ĐÃ KHÔI PHỤC) ---
-    // Cấu hình cột
+    
+    
     let cols = [
         { key: 'token',       label: 'TOKEN',       align: 'text-center' },
         { key: 'duration',    label: 'TIME',        align: 'text-center', tooltip: 'tip_time' },
@@ -2790,7 +2790,7 @@ function renderMarketHealthTable(dataInput) {
     cols.push({ key: 'min_vol', label: 'MIN VOL', align: 'text-center', tooltip: 'tip_min_vol' });
     cols.push({ key: 'target', label: 'PREDICTION', align: 'text-center px-2', tooltip: 'tip_pred_header_body', title_key: 'tip_pred_header_title' });
 
-    // Vẽ Header
+    
     let thead = table.querySelector('thead');
     if (!thead) { thead = document.createElement('thead'); table.prepend(thead); }
     
@@ -2819,7 +2819,7 @@ function renderMarketHealthTable(dataInput) {
     theadHtml += '</tr>';
     thead.innerHTML = theadHtml;
 
-    // --- 3. SORT DATA ---
+    
     if (typeof mhSort !== 'undefined' && projectsToRender.length > 0) {
         if (isHistoryTab && mhSort.col === 'reward') {
             mhSort.col = 'duration';
@@ -2858,14 +2858,14 @@ function renderMarketHealthTable(dataInput) {
         });
     }
 
-    // --- 4. RENDER BODY (TỐI ƯU HIỆU NĂNG) ---
-    // Khởi tạo chuỗi HTML rỗng
+    
+    
     let html = '';
 
     if(projectsToRender.length === 0) {
         html = `<tr><td colspan="${cols.length}" class="text-center py-4 text-sub opacity-50">No Data Available</td></tr>`;
     } else {
-        // Helper functions
+        
         const fmtNoDec = (num) => !num ? '$0' : '$' + Math.round(num).toLocaleString('en-US');
         const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
         const formatDateShort = (dateStr) => { if(!dateStr) return '--'; return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
@@ -2875,31 +2875,31 @@ function renderMarketHealthTable(dataInput) {
         const dayBeforeDate = new Date(); dayBeforeDate.setDate(dayBeforeDate.getDate() - 2);
         const dayBeforeStr = dayBeforeDate.toISOString().split('T')[0];
 
-        // VÒNG LẶP CHÍNH
+        
         projectsToRender.forEach(c => {
             if (isHistoryTab && c.name && c.name.toUpperCase().includes('ARB')) return;
             let ma = c.market_analysis || {};
             
-            // Badge
+            
             let badgeHtml = '';
             if (c.listingTime) {
                 let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (30*86400000) - now)/86400000);
                 if (d >= 0) {
-                    let iconUrl = (c.alphaType === 'x4') ? 'https://i.ibb.co/hRS0Z6wf/1000003428.png' : 'https://i.ibb.co/ZyqMBQp/1000003438.png';
+                    let iconUrl = (c.alphaType === 'x4') ? 'https:
                     badgeHtml = `<span class="promo-badge-inline"><img src="${iconUrl}" class="promo-icon-inline"> ${d}d</span>`;
                 }
             }
             
-            // Token Info
+            
             let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
 
-// --- LOGIC MỚI ---
+
 let cleanSym = c.name ? c.name.split('(')[0].trim().toUpperCase() : 'UNKNOWN';
 let alphaData = alphaMarketCache[cleanSym] || {};
 let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
 let chainBadge = alphaData.chain_icon ? `<img src="${alphaData.chain_icon}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
 
-// Sửa lại tokenHtml có thêm wrapper cho chain badge
+
 let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;">
     <div style="position:relative; display:inline-block;">
         <img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;">
@@ -2907,7 +2907,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
     </div>
     <div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
 
-            // Time Logic
+            
             let sTime = c.startTime || "00:00:00"; if(sTime.length===5) sTime+=":00";
             let startDt = new Date(c.start + 'T' + sTime + 'Z');
             let eTime = c.endTime || "23:59:59"; if(eTime.length===5) eTime+=":00";
@@ -2933,46 +2933,46 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
             }
             let durationHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary ${timeColor}" style="font-size:0.8rem; font-weight:bold">${countStr}</span><span class="cell-secondary">${c.start ? formatDateShort(c.start) + ' - ' + formatDateShort(c.end) : '--'}</span></div>`;
 
-            // Win Pool & Price
+            
             let winPoolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">${c.topWinners ? c.topWinners.replace(/\(p\d+\)/gi, '').trim() : '--'}</span><span class="cell-secondary">${(parseFloat(c.rewardQty)||0).toLocaleString()} ${c.name}</span></div>`;
             let price = ma.price || c.cachedPrice || 0;
             let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary">$${price.toLocaleString()}</span></div>`;
 
-            // Rule
+            
             let rt = c.ruleType || 'buy_only'; 
             let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
 
-           // Vol
+           
             let dailyVolHtml = '', campVolHtml = '';
             
             if (isUpcoming) {
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span><span class="cell-secondary text-gold" style="font-size:0.6rem; font-weight:bold">UPCOMING</span></div>`;
                 campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
             } else {
-                // --- [FIX LOGIC] LẤY DAILY VOL CHUẨN ---
-                // 1. Mặc định lấy biến daily (nếu giải đang chạy và chưa qua ngày)
+                
+                
                 let todayVol = parseFloat(c.limit_daily_volume || 0);
 
-                // 2. Chống lỗi = 0 (Khi giải End hoặc qua ngày mới mà server chưa reset)
-                // Tìm lại trong lịch sử Limit để lấy con số gần nhất
+                
+                
                 let lh = c.limit_vol_history || [];
                 
                 if (todayVol === 0 && lh.length > 0) {
-                    // Nếu là History Tab -> Lấy ngày kết thúc giải
-                    // Nếu là Running -> Lấy ngày hiện tại (UTC)
+                    
+                    
                     let checkDate = (isHistoryTab && c.end) ? c.end : new Date().toISOString().split('T')[0];
                     
                     let found = lh.find(x => x.date === checkDate);
                     if (found) {
                         todayVol = parseFloat(found.vol);
                     } else {
-                        // Fallback: Lấy ngày mới nhất có dữ liệu (tránh trường hợp lệch múi giờ)
+                        
                         let last = lh[lh.length - 1];
                         if (last) todayVol = parseFloat(last.vol);
                     }
                 }
 
-                // 3. Xử lý dòng phụ (Prev/Yest)
+                
                 let subDailyVol = '--';
                 let compareDateStr = yestStr; 
 
@@ -2984,7 +2984,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
 
                 let prevItem = lh.find(x => x.date === compareDateStr);
                 
-                // Fallback tìm ngày áp chót
+                
                 if (!prevItem && isHistoryTab && lh.length >= 2) {
                     let sorted = [...lh].sort((a,b) => new Date(a.date) - new Date(b.date));
                     prevItem = sorted[sorted.length - 2];
@@ -2997,17 +2997,17 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
 
                 dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
                 
-                // --- [FIX LOGIC] TOTAL VOL ---
+                
                 let currentTotal = parseFloat(c.limit_accumulated_volume || 0);
                 
-                // Nếu Total vẫn bằng 0 (lỗi data), thử cộng dồn từ lịch sử
+                
                 if (currentTotal === 0 && lh.length > 0) {
                      currentTotal = lh.reduce((acc, curr) => acc + parseFloat(curr.vol), 0);
                 }
 
                 let estLine = '';
                 
-                // Logic Dự phóng (Forecast) - Chỉ hiện khi đang chạy
+                
                 if (!isEnded && !isHistoryTab) {
                     let tPart = (c.endTime || "23:59:59").trim();
                     if(tPart.length === 5) tPart += ":00";
@@ -3027,7 +3027,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
                 </div>`;
             }
 
-            // Extra Cols
+            
             let extraCols = '';
             if (!isHistoryTab) {
                 let matchSpdHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.realTimeVol)||0).toLocaleString()}</span><span class="cell-secondary">${(parseFloat(ma.velocity)||0) > 0 ? ((parseFloat(ma.velocity)||0)/60).toFixed(1)+' ops' : '0 ops'}</span></div>`;
@@ -3035,7 +3035,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
                 extraCols = `<td class="text-center">${matchSpdHtml}</td><td class="text-center font-num">${ordSprHtml}</td>`;
             }
 
-            // Target Logic
+            
             let h = c.history || [];
             let curTarget = 0, diff = 0, hasData = false;
             
@@ -3043,36 +3043,36 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
             let prev = null;
 
             if (isHistoryTab) {
-                // === PHẦN SỬA: LOGIC CHO HISTORY (FIX T+1) ===
                 
-                // 1. Ưu tiên tìm đúng ngày kết thúc (c.end)
+                
+                
                 latest = h.find(x => x.date === c.end);
 
-                // 2. Nếu không tìm thấy (do vừa End chưa có số), lấy record MỚI NHẤT có target > 0
+                
                 if (!latest && h.length > 0) {
-                    // Sắp xếp ngày giảm dần (Mới -> Cũ)
+                    
                     let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    // Tìm cái đầu tiên có số liệu
+                    
                     latest = sorted.find(x => parseFloat(x.target) > 0);
                 }
 
-                // 3. Tìm ngày trước đó (dựa trên ngày của latest tìm được)
+                
                 if (latest) {
                     let d = new Date(latest.date);
                     d.setDate(d.getDate() - 1);
-                    let prevDateStr = d.toISOString().split('T')[0]; // Tính ngày hôm trước
+                    let prevDateStr = d.toISOString().split('T')[0]; 
                     prev = h.find(x => x.date === prevDateStr);
                 }
 
             } else {
-                // === PHẦN GIỮ NGUYÊN: LOGIC CHO RUNNING (Y HỆT CODE CŨ) ===
+                
                 let targetDateStr = yestStr;
                 let prevTargetDateStr = dayBeforeStr;
                 
                 latest = h.find(x => x.date === targetDateStr);
                 prev = h.find(x => x.date === prevTargetDateStr);
 
-                // Fallback cũ của bạn cho Running
+                
                 if (!latest && h.length > 0) {
                     let todayStr = now.toISOString().split('T')[0];
                     let validHist = h.filter(x => x.date !== todayStr && x.target > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -3083,7 +3083,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
                 }
             }
 
-            // Tính toán hiển thị (Giữ nguyên)
+            
             if (latest) { curTarget = parseFloat(latest.target); if (prev) { diff = curTarget - parseFloat(prev.target); hasData = true; } }
 
             let diffHtml = `<span class="cell-secondary opacity-50">${t.txt_no_data || '--'}</span>`;
@@ -3097,7 +3097,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
 
             let aiTargetHtml = (typeof calculateAiTarget === 'function') ? calculateAiTarget(c, isHistoryTab) : '<td class="text-center">--</td>';
             
-            // --- NỐI CHUỖI HTML ---
+            
             html += `<tr style="cursor:pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="jumpToCard('${c.db_id}')">
                 <td class="text-center">${tokenHtml}</td>
                 <td class="text-center">${durationHtml}</td>
@@ -3113,10 +3113,10 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
         });
     }
 
-    // --- GÁN HTML VÀO DOM 1 LẦN ---
+    
     tbody.innerHTML = html;
     
-    // Init Tooltip
+    
     try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); }); } catch(e) {}
 }
 
@@ -3128,17 +3128,17 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
 function calculateAiTarget(c, isHistory = false) {
     if (!c) return '<td></td>';
 
-    // 1. Ẩn ARB
+    
     if (c.name && c.name.toUpperCase().includes('ARB')) {
         return '<td class="text-center"><span style="opacity:0.3; font-size:0.8rem">--</span></td>';
     }
 
-    // 2. LẤY DỮ LIỆU
+    
     let prediction = c.ai_prediction || {};
     let target = parseFloat(prediction.target || 0);
     let delta = parseFloat(prediction.delta || 0);
 
-    // 3. XỬ LÝ THỜI GIAN
+    
     let now = new Date();
     let todayStr = now.toLocaleDateString('en-CA'); 
     let isFinalDay = (c.end === todayStr);
@@ -3155,7 +3155,7 @@ function calculateAiTarget(c, isHistory = false) {
         }
     }
 
-    // 4. TẠO HTML
+    
     let contentHtml = '';
     let isDisabled = false;
     let tipTitle = "";
@@ -3166,15 +3166,15 @@ function calculateAiTarget(c, isHistory = false) {
         tipTitle = "AI PREDICTION";
         tipBody = isHistory ? "Final AI result recorded." : "Forecast active.";
 
-        // Delta (Chênh lệch)
+        
         let deltaHtml = '';
         if (delta !== 0) {
             let sign = delta > 0 ? '+' : '';
-            // DƯƠNG: Dùng màu xanh Discord (#00FF99)
-            // ÂM: Dùng màu đỏ (#ff6b6b)
+            
+            
             let color = delta > 0 ? '#00FF99' : '#ff6b6b'; 
             
-            // Tăng margin-top lên 4px để tách dòng
+            
             deltaHtml = `<div style="font-size:0.75em; color:${color}; margin-top:4px; font-weight:600;">(${sign}${delta.toLocaleString('en-US')})</div>`;
         }
 
@@ -3185,7 +3185,7 @@ function calculateAiTarget(c, isHistory = false) {
     </div>`;
 
     } else {
-        // --- LOGIC KHI CHƯA CÓ SỐ LIỆU ---
+        
         isDisabled = true;
         
         if (isHistory) {
@@ -3219,7 +3219,7 @@ function calculateAiTarget(c, isHistory = false) {
         }
     }
 
-    // 5. VIÊN THUỐC (PILL) UI
+    
     let dbId = c.db_id || c.id || 'uid';
     let stats = (prediction && prediction.stats) ? prediction.stats : {};
     let seed = (typeof dbId === 'string') ? dbId.charCodeAt(0) : 70;
@@ -3287,42 +3287,42 @@ function calculateAiTarget(c, isHistory = false) {
 function submitVote(id, type) {
     if(event) event.stopPropagation();
 
-    // --- [FIX START] CHECK LOGIN FIRST ---
+    
     if (!currentUser) {
         showToast("Please login to vote!", "error");
-        openLoginModal(); // Automatically open the login modal
-        return; // STOP HERE! Do not run the UI animation below
+        openLoginModal(); 
+        return; 
     }
 
-    // 1. OPTIMISTIC UPDATE: Cập nhật giao diện NGAY LẬP TỨC
-    // Tắt hết active cũ trong ô này
+    
+    
     const cell = document.getElementById(`cell-${id}`);
     if(cell) {
         cell.querySelectorAll('.seg-micro').forEach(el => el.classList.remove('active'));
     }
 
-    // Bật active cho cái vừa chọn & Hiệu ứng Check
+    
     let segId = (type === 'low') ? `seg-low-${id}` : (type === 'high') ? `seg-high-${id}` : `seg-match-${id}`;
     let activeSeg = document.getElementById(segId);
     
-    // Xử lý Popup logic
+    
     if (type === 'match') {
-        // Nếu là Agree: Hiển thị check ngay
+        
         if(activeSeg) {
             activeSeg.classList.add('active');
             activeSeg.classList.add('showing-check');
             setTimeout(() => activeSeg.classList.remove('showing-check'), 1500);
         }
-        // Đóng popup nếu đang mở
+        
         let popup = document.getElementById(`popup-${id}`);
         if(popup) popup.classList.remove('show');
         
     } else {
-        // Nếu là Low/High: Vẫn highlight nút, nhưng hiện Popup để nhập số (tuỳ chọn)
+        
         if(activeSeg) activeSeg.classList.add('active');
         
-        // Hiện popup input
-        document.querySelectorAll('.popup-micro').forEach(p => p.classList.remove('show')); // Đóng cái khác
+        
+        document.querySelectorAll('.popup-micro').forEach(p => p.classList.remove('show')); 
         let popup = document.getElementById(`popup-${id}`);
         if(popup) {
             popup.classList.add('show');
@@ -3333,10 +3333,10 @@ function submitVote(id, type) {
         }
     }
 
-    // 2. LƯU LOCAL STORAGE (Giữ trạng thái khi F5)
+    
     localStorage.setItem(`vote_${id}`, type);
 
-    // 3. GỌI API BACKEND (Chạy ngầm - Fire & Forget)
+    
     callVoteBackend(id, type, null);
 }
 
@@ -3347,17 +3347,17 @@ function saveMicVote(id) {
     let inp = document.getElementById(`inp-${id}`);
     let val = inp ? inp.value : null;
     
-    // Lấy loại vote hiện tại từ storage (vì popup mở ra sau khi bấm nút)
+    
     let type = localStorage.getItem(`vote_${id}`) || 'low'; 
     
-    // Gọi API update giá trị ước tính
+    
     callVoteBackend(id, type, val);
     
-    // Đóng popup
+    
     let popup = document.getElementById(`popup-${id}`);
     if(popup) popup.classList.remove('show');
     
-    // Kích hoạt lại hiệu ứng check để báo thành công
+    
     let segId = (type === 'low') ? `seg-low-${id}` : `seg-high-${id}`;
     let seg = document.getElementById(segId);
     if(seg) {
@@ -3370,21 +3370,21 @@ function saveMicVote(id) {
    HÀM KẾT NỐI BACKEND (GỌI TRỰC TIẾP TABLE SUPABASE)
    ========================================================== */
 async function callVoteBackend(tournamentId, voteType, estVal) {
-    // 1. Kiểm tra User
+    
     if (!currentUser) return console.warn("Vote skipped: No user logged in");
 
     try {
-        // 2. Gọi trực tiếp vào bảng 'prediction_votes'
+        
         const { data, error } = await supabase
             .from('prediction_votes')
             .upsert({
                 user_id: currentUser.id,
                 tournament_id: parseInt(tournamentId),
-                vote_type: voteType, // <--- QUAN TRỌNG: Tên cột phải khớp DB
+                vote_type: voteType, 
                 estimated_value: estVal ? parseFloat(estVal) : null,
                 updated_at: new Date().toISOString()
             }, { 
-                onConflict: 'user_id, tournament_id'  // Đảm bảo không trùng lặp
+                onConflict: 'user_id, tournament_id'  
             });
 
         if (error) throw error;
@@ -3392,14 +3392,14 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
 
     } catch (e) {
         console.error("❌ Vote Sync Error:", e.message);
-        // Nếu lỗi do chưa có quyền (RLS), thông báo nhẹ
+        
         if(e.code === '42501') console.warn("RLS Policy chặn ghi dữ liệu.");
     }
 }
 
              
 
-    /* --- CÁC HÀM XỬ LÝ DRAG & DROP --- */
+    
     let draggedItem = null;
     function allowDrop(ev) { ev.preventDefault(); }
 
@@ -3419,12 +3419,12 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
             let dragIdx = [...container.children].indexOf(draggedItem);
             let dropIdx = [...container.children].indexOf(targetItem);
             if (dragIdx < dropIdx) targetItem.after(draggedItem); else targetItem.before(draggedItem);
-    showToast("Position changed! Click SAVE POSITION to save.", "info"); // Đã sửa dòng này
+    showToast("Position changed! Click SAVE POSITION to save.", "info"); 
 }
     }
 
     async function saveCustomOrder() {
-    // Sửa confirm
+    
     if(!confirm("Save current position?")) return;
 
     let btns = document.querySelectorAll('.btn-save-pos');
@@ -3461,12 +3461,12 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
             }).eq('id', item.db_id);
         }
 
-        showToast("Position saved successfully!", "success"); // Đã sửa
+        showToast("Position saved successfully!", "success"); 
         await loadFromCloud(false);
 
     } catch (e) {
         console.error(e);
-        showToast("Error saving: " + e.message, "error"); // Đã sửa
+        showToast("Error saving: " + e.message, "error"); 
     } finally {
         btns.forEach(btn => {
             btn.innerHTML = btn.dataset.oldText || '<i class="fas fa-save me-1"></i> SAVE POSITION';
@@ -3484,70 +3484,70 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
     function switchTab(t) { document.querySelectorAll('.p-tab').forEach(el=>el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); ['chart','activity','chat'].forEach(x => document.getElementById(`content-${x}`).style.display = x===t ? (x==='chat'?'flex':'block') : 'none'); }
 
         
-       // --- [FIXED] UPDATE DATA FOR NEW COCKPIT UI ---
-// --- [FIXED] UPDATE DATA & BUTTON STATE (ĐỒNG BỘ GIỜ UTC) ---
+       
+
 function updateTerminalData(id) {
     let c = compList.find(x => x.db_id == id); if(!c) return;
     
-    // 1. Header Info
+    
     document.getElementById('pt-symbol').innerText = c.name;
     
-    // --- [FIX FINAL] LOGIC ẢNH ĐỒNG BỘ VỚI ALPHA MARKET ---
+    
 let logoEl = document.getElementById('pt-logo');
 
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-let cleanSymbol = rawName.split('(')[0].trim(); // Lấy Symbol chuẩn (VD: BTC)
+let cleanSymbol = rawName.split('(')[0].trim(); 
 
-// 1. Lấy thông tin từ file json của Alpha Market (đã sync ở đầu file)
+
 let alphaInfo = alphaMarketCache[cleanSymbol] || {};
 
-// 2. Logic ưu tiên: 
-// - Nếu Admin đã nhập link ảnh riêng (c.logo) thì dùng nó.
-// - Nếu không nhập, lấy tự động từ Alpha Market (alphaInfo.icon).
-// - Cuối cùng mới dùng ảnh default.
+
+
+
+
 let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
 
-// 3. Gán ảnh và xử lý lỗi
+
 logoEl.src = localImgPath;
 logoEl.onerror = function() { 
-    this.onerror = null; // Chặn lặp vô hạn
+    this.onerror = null; 
     this.src = './assets/tokens/default.png'; 
 };
 
     
     
-    // 2. Control Panel Data
+    
     let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length-1].target : 0;
     document.getElementById('pt-min-vol').innerText = fmtNum(curMin);
     
     let totalPool = (c.predictions?.length || 0) * PREDICT_FEE;
     document.getElementById('pt-pool').innerText = fmt(totalPool);
 
-    // 3. LOGIC TIME REMAINING & BUTTON STATE (QUAN TRỌNG)
+    
     let isEnded = false;
     if(c.end) {
-        // [FIX] Thêm 'Z' để tính theo giờ UTC chuẩn (Khớp với openInputModal)
+        
         let endString = c.end + 'T' + (c.endTime || '23:59:59') + 'Z';
         let endTime = new Date(endString).getTime();
         
-        // Chỉ khi nào thời gian hiện tại VƯỢT QUÁ giờ kết thúc thì mới khóa
+        
         if(Date.now() > endTime) isEnded = true;
     }
 
-    // 4. Update Nút PREDICT
+    
     let btn = document.getElementById('btn-predict-action');
     if(isEnded) {
         btn.innerHTML = '<span>MARKET CLOSED</span> <i class="fas fa-lock"></i>';
-        btn.classList.add('btn-ended'); // Thêm class xám màu nếu cần
-        btn.disabled = true; // Khóa nút
+        btn.classList.add('btn-ended'); 
+        btn.disabled = true; 
     } else {
         btn.innerHTML = '<span>ENTER PREDICTION</span> <i class="fas fa-bolt"></i>';
         btn.classList.remove('btn-ended');
-        btn.disabled = false; // Mở khóa nút
-        btn.onclick = openInputModal; // Gán lại sự kiện click
+        btn.disabled = false; 
+        btn.onclick = openInputModal; 
     }
 
-    // 5. Change Indicator (Giữ nguyên)
+    
     let changeHtml = '';
     if (c.history && c.history.length >= 2) {
         let todayVal = parseFloat(c.history[c.history.length - 1].target);
@@ -3560,7 +3560,7 @@ logoEl.onerror = function() {
     }
     document.getElementById('pt-vol-change').innerHTML = changeHtml;
 
-    // 6. Vẽ Chart (Giữ nguyên)
+    
     if(!marketChart) {
         let ctx = document.getElementById('marketChart').getContext('2d');
         let labels=[], data=[];
@@ -3597,26 +3597,26 @@ logoEl.onerror = function() {
         marketChart.update();
     }
 
-    // 7. Leaderboard & Chat (Giữ nguyên logic cũ nhưng trỏ ID mới)
-    // --- ĐOẠN CODE DÙNG CHUNG CHO CẢ 2 VỊ TRÍ (Paste đè vào đoạn số 4 và số 7) ---
+    
+    
     let lb = document.getElementById('pt-leaderboard');
         if (lb) { 
             lb.innerHTML = ''; 
             
-            // LOGIC SẮP XẾP MỚI: Ưu tiên >= Min, sau đó xếp người gần Min nhất lên đầu
+            
             let preds = (c.predictions || []).sort((a, b) => {
                 let aValid = a.guess >= curMin;
                 let bValid = b.guess >= curMin;
 
-                // 1. Ai hợp lệ (>= Min) cho lên trên, ai trượt cho xuống dưới
+                
                 if (aValid && !bValid) return -1;
                 if (!aValid && bValid) return 1;
 
-                // 2. Nếu cùng hợp lệ: Ai nhỏ hơn (gần Min hơn) thì xếp trên
+                
                 if (aValid && bValid) {
                     return a.guess - b.guess;
                 } 
-                // 3. Nếu cùng trượt: Ai lớn hơn (gần Min hơn) thì xếp trên (để vớt vát)
+                
                 else {
                     return b.guess - a.guess;
                 }
@@ -3625,25 +3625,25 @@ logoEl.onerror = function() {
             if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
 
             preds.forEach((p, i) => {
-                // Kiểm tra lại lần nữa để tô màu
+                
                 let isValid = p.guess >= curMin;
                 
-                // Top 1,2,3 màu Vàng/Bạc/Đồng. Còn lại màu xám. Người thua cuộc màu tối hơn.
+                
                 let rankColor = isValid 
                     ? (i===0?'#FFD700':(i===1?'#C0C0C0':(i===2?'#CD7F32':'#666'))) 
                     : '#333'; 
 
-                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; // Hiện dấu X nếu loại
+                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; 
 
                 let badgeHtml = `<span class="rank-badge" style="background:${rankColor}; color:${isValid && i<3 ? '#000' : '#fff'}; border:1px solid #444">${rankText}</span>`;
                 
                 let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0, 1).toUpperCase()}</div>`;
                 
-                // Highlight chính mình
+                
                 let myName = document.getElementById('modal-p-name')?.value || '';
                 let highlightClass = (p.name === myName) ? 'anim-breathe' : '';
                 
-                // Làm mờ dòng bị loại (Opacity 0.4)
+                
                 let rowStyle = isValid ? '' : 'opacity: 0.4; filter: grayscale(1);';
 
                 lb.innerHTML += `
@@ -3674,33 +3674,33 @@ logoEl.onerror = function() {
 }
 
     function openInputModal() {
-    // [SAFETY 1] Kiểm tra xem đã chọn giải đấu chưa
+    
     if (!currentPolyId) return showToast("System Error: No Tournament Selected", "error");
 
     let c = compList.find(x => x.db_id == currentPolyId);
     
-    // [SAFETY 2] Quan trọng: Nếu không tìm thấy dữ liệu giải -> Báo lỗi chứ không để Crash
+    
     if (!c) {
         console.error("Data missing for ID: " + currentPolyId);
         return showToast("Data not ready. Please reload page!", "error");
     }
 
-    // --- LOGIC KHÓA CỔNG (Theo giờ chuẩn UTC) ---
+    
     if(c.end) {
-        // Thêm 'Z' để máy hiểu là giờ UTC
+        
         let endString = c.end + 'T' + (c.endTime || '23:59:59') + 'Z';
         let endTime = new Date(endString).getTime();
         
-        // Chỉ chặn nếu giờ hiện tại ĐÃ VƯỢT QUÁ giờ kết thúc
+        
         if(Date.now() > endTime) {
             return showToast("⛔ Tournament has ENDED! Prediction closed.", "error");
         }
     }
-    // ---------------------------------------------
+    
 
     if(!currentUser) { showToast("Please login to predict!", "error"); return; }
     
-    // CHECK BALANCE
+    
     if((userProfile.balance_usdt || 0) < PREDICT_FEE) {
         return showToast(`Insufficient Balance! You need ${PREDICT_FEE} USDT.`, "error");
     }
@@ -3722,7 +3722,7 @@ async function submitPredictionFromModal() {
     let nameInput = document.getElementById('modal-p-name');
     let guessInput = document.getElementById('modal-p-guess');
     
-    // Validate dữ liệu đầu vào
+    
     let name = nameInput.value.trim();
     let guess = parseFloat(guessInput.value);
 
@@ -3730,14 +3730,14 @@ async function submitPredictionFromModal() {
     if(!name) return showToast("Nickname required", "error");
     if(isNaN(guess) || guess < 0) return showToast("Invalid Prediction Volume", "error");
 
-    // Hiệu ứng nút bấm
+    
     let btn = document.querySelector('#inputModal .btn-action');
     let oldText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> PROCESSING...';
     btn.disabled = true;
 
     try {
-        // Gọi RPC Supabase
+        
         const { data, error } = await supabase.rpc('submit_prediction_action', {
             p_tourn_id: parseInt(currentPolyId),
             p_guess: guess,
@@ -3748,7 +3748,7 @@ async function submitPredictionFromModal() {
         if (error) throw error;
         if (data && data.status === 'error') throw new Error(data.message);
 
-        // Update số dư ngay lập tức
+        
         if(data && data.new_balance !== undefined) {
             userProfile.balance_usdt = data.new_balance;
             document.getElementById('user-balance').innerText = fmtNum(data.new_balance);
@@ -3757,17 +3757,17 @@ async function submitPredictionFromModal() {
         showToast(`🚀 ENTRY CONFIRMED! (-${PREDICT_FEE} USDT)`, "success");
         playSfx('click');
         
-        // Đóng Modal
+        
         bootstrap.Modal.getInstance(document.getElementById('inputModal')).hide();
 
-        // --- CẬP NHẬT GIAO DIỆN (MƯỢT MÀ) ---
-        // 1. Cập nhật lại thanh thống kê Pool bên ngoài
+        
+        
         renderStats();
 
-        // 2. Gọi hàm Reload An Toàn (Đã sửa ở trên)
+        
         if(currentPolyId) await silentReload(currentPolyId);
 
-        // 3. Hiện bảng khoe thành tích (Share Card)
+        
         setTimeout(() => { 
              generateShareCard(guess);
         }, 800);
@@ -3777,7 +3777,7 @@ async function submitPredictionFromModal() {
         showToast("Error: " + e.message, "error");
         playSfx('hover');
     } finally {
-        // Trả lại trạng thái nút bấm
+        
         if(btn) {
             btn.innerHTML = oldText;
             btn.disabled = false;
@@ -3786,34 +3786,34 @@ async function submitPredictionFromModal() {
 }
 
 
-    // V45 VIRAL LOOP: GENERATE SHARE CARD
+    
     function generateShareCard(userGuess = null) {
         let c = compList.find(x => x.db_id == currentPolyId);
         if(!c) return;
 
-        // 1. Fill Token Data
+        
         document.getElementById('sc-token-name').innerText = c.name;
 
-        // 2. Fill User Data (V45 Update)
+        
         let uName = userProfile?.nickname || "Trader";
-        // Sử dụng UI Avatars nếu user chưa có ảnh (fallback đẹp)
-        let uAvatar = userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${uName}&background=random&color=fff&size=128`;
+        
+        let uAvatar = userProfile?.avatar_url || `https:
 
         document.getElementById('sc-user-name').innerText = uName;
 
-        // Handle Avatar Image (CORS Safe)
+        
         let uaEl = document.getElementById('sc-user-avatar');
         uaEl.crossOrigin = "anonymous";
         uaEl.src = uAvatar + (uAvatar.includes('?')?'&':'?') + 't=' + new Date().getTime();
-        uaEl.onerror = function(){ this.src = 'https://placehold.co/50/333/fff?text=' + uName.charAt(0); }; // Fail-safe
+        uaEl.onerror = function(){ this.src = 'https:
 
-        // Date Format
+        
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
         const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         document.getElementById('sc-date-display').innerText = `${dateStr} | ${timeStr}`;
 
-        // --- [ĐÃ SỬA] LOGIC ẢNH LOCAL CHO SHARE CARD ---
+        
         let imgEl = document.getElementById('sc-token-img');
         
         let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
@@ -3821,45 +3821,45 @@ let cleanSym = rawName.split('(')[0].trim();
 let alphaData = alphaMarketCache[cleanSym] || {};
 let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
         
-        // 3. Gán ảnh
-        imgEl.crossOrigin = "anonymous"; // Giữ nguyên để html2canvas hoạt động
+        
+        imgEl.crossOrigin = "anonymous"; 
         imgEl.src = localImgPath;
         
-        // 4. Xử lý lỗi (Ẩn đi nếu không tìm thấy ảnh)
+        
         imgEl.onerror = function() { 
             this.style.display = 'none'; 
         };
         imgEl.onload = function() {
             this.style.display = 'block';
         };
-        // -------------------------------------------
+        
 
         let curMin = (c.history && c.history.length>0) ? c.history[c.history.length-1].target : 0;
         document.getElementById('sc-min-vol').innerText = fmtNum(curMin);
 
-        // If userGuess passed, use it. Else try to find from user predictions
+        
         if(!userGuess && currentUser && c.predictions) {
             let myP = c.predictions.find(p => p.user_id === currentUser.id);
             if(myP) userGuess = myP.guess;
         }
         document.getElementById('sc-my-guess').innerText = userGuess ? fmtNum(userGuess) : '---';
 
-        // 2. Generate QR Code
+        
         let qrBox = document.getElementById('sc-qr-target');
         qrBox.innerHTML = '';
         let link = siteConfig.affiliate?.binance || window.location.href;
         new QRCode(qrBox, { text: link, width: 50, height: 50 });
 
-        // 3. Show Modal
+        
         new bootstrap.Modal(document.getElementById('shareCardModal')).show();
     }
 
-    // --- V45 NEW: SMART SOCIAL SHARE WITH IMAGE ---
+    
     async function shareImageSmart(platform) {
         const element = document.getElementById('share-card-container');
         let c = compList.find(x => x.db_id == currentPolyId);
         let guess = document.getElementById('sc-my-guess').innerText;
-        let webUrl = "https://wave-alpha.pages.dev";
+        let webUrl = "https:
 
         let text = "";
         if (platform === 'x') {
@@ -3871,14 +3871,14 @@ let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/defaul
         try {
             showToast("Generating image...", "info");
 
-            // 1. Capture Image
+            
             const canvas = await html2canvas(element, {
                 backgroundColor: '#161a1e', scale: 2, useCORS: true, allowTaint: true, logging: false
             });
             const blob = await new Promise(resolve => canvas.toBlob(resolve));
             const file = new File([blob], "WaveAlpha-Prediction.png", { type: "image/png" });
 
-            // 2. Try Native Share (Mobile - Best Experience)
+            
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
                     title: 'Wave Alpha Prediction',
@@ -3887,8 +3887,8 @@ let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/defaul
                 });
                 showToast("Shared successfully!", "success");
             } else {
-                // 3. Fallback: Download + Open Link (Desktop)
-                // Browser cannot auto-attach image to X/Tele web, so we download it for user
+                
+                
                 const link = document.createElement('a');
                 link.download = 'WaveAlpha-Prediction.png';
                 link.href = canvas.toDataURL('image/png');
@@ -3900,9 +3900,9 @@ let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/defaul
                     let shareUrl = "";
                     if (platform === 'x') {
                         let hashtags = `WaveAlpha,Crypto,${c.name}`;
-                        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+                        shareUrl = `https:
                     } else {
-                        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(webUrl)}&text=${encodeURIComponent(text)}`;
+                        shareUrl = `https:
                     }
                     window.open(shareUrl, '_blank');
                 }, 1000);
@@ -3914,19 +3914,19 @@ let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/defaul
         }
     }
 
-    // Map old functions to new Smart Logic
+    
     function shareToX() { shareImageSmart('x'); }
     function shareToTele() { shareImageSmart('tele'); }
 
     function downloadShareCard() {
         let element = document.getElementById('share-card-container');
 
-        // FIX: Cấu hình html2canvas chuẩn để bắt được ảnh và style
+        
         html2canvas(element, {
-            backgroundColor: '#161a1e', // Đặt màu nền cứng để tránh trong suốt/mất chữ
-            scale: 2, // Tăng độ nét
-            useCORS: true, // Quan trọng: Cho phép tải ảnh từ domain khác
-            allowTaint: true, // Cho phép "vấy bẩn" canvas (giúp render ảnh khó tính)
+            backgroundColor: '#161a1e', 
+            scale: 2, 
+            useCORS: true, 
+            allowTaint: true, 
             logging: false
         }).then(canvas => {
             let link = document.createElement('a');
@@ -3964,20 +3964,20 @@ let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/defaul
         document.getElementById('chat-msg').value = '';
     }
 
-    // --- HÀM LƯU DỮ LIỆU LÊN MÂY (CÓ BẮT LỖI CHẶT CHẼ) ---
+    
 async function saveToCloud(compObj) {
-    // 1. Tạo bản sao dữ liệu sạch
+    
     let cloudObj = { ...compObj };
     
-    // Xóa các biến tạm không cần lưu
+    
     delete cloudObj.myProgress; 
     delete cloudObj.db_id; 
     delete cloudObj.id; 
     delete cloudObj.cachedPrice;
     
-    // (Tùy chọn) Xóa predictions/comments nếu bạn không muốn ghi đè user data
-    // delete cloudObj.predictions; 
-    // delete cloudObj.comments;
+    
+    
+    
 
     const payload = { 
         name: cloudObj.name, 
@@ -3985,42 +3985,42 @@ async function saveToCloud(compObj) {
         data: cloudObj 
     };
 
-    console.log("Saving payload:", payload); // Debug: Xem dữ liệu gửi đi
+    console.log("Saving payload:", payload); 
 
     let result;
     
-    // 2. Thực hiện lệnh Save
+    
     if (compObj.db_id) {
-        // Update
+        
         result = await supabase
             .from('tournaments')
             .update(payload)
             .eq('id', parseInt(compObj.db_id))
-            .select(); // <--- BẮT BUỘC CÓ .select() để kiểm tra kết quả
+            .select(); 
     } else {
-        // Insert
+        
         result = await supabase
             .from('tournaments')
             .insert([payload])
             .select();
     }
 
-    // 3. KIỂM TRA LỖI RLS (QUAN TRỌNG)
+    
         if (result.error) throw result.error;
     
     if (!result.data || result.data.length === 0) {
         console.error("Save failed (RLS Blocked). Result:", result);
-        // Sửa thông báo lỗi này sang tiếng Anh
+        
         throw new Error("ADMIN PERMISSION ERROR! Database refused to save. Check RLS Policies.");
     }
 
     console.log("Save Success:", result.data);
 
-    // 4. Tải lại dữ liệu để đồng bộ
+    
     await loadFromCloud(false);
 }
 
-    // --- MODAL UPDATES (TRACKING & HISTORY) ---
+    
     function openUpdateModal(dbId) {
         let c=compList.find(x=>x.db_id==dbId); if(!c)return;
         document.getElementById('u-db-id').value=dbId; document.getElementById('u-symbol-display').innerText=c.name;
@@ -4046,7 +4046,7 @@ async function saveToCloud(compObj) {
         if(min > 0) { el.innerText = (gap>=0 ? '+' : '') + fmtNum(gap); el.className = `font-num fw-bold small ${gap>=0?'text-green':'text-red'}`; } else { el.innerText = '---'; }
     }
 
-    // V43 UPGRADE: USE TRACKER_DATA FROM CLOUD
+    
     function loadDateData(d) {
         let id=document.getElementById('u-db-id').value; let c=compList.find(x=>x.id==id);
         let min=0;
@@ -4057,7 +4057,7 @@ async function saveToCloud(compObj) {
 
         accSettings.forEach(acc=>{ document.getElementById(`u-vol-${acc.id}`).value=''; document.getElementById(`u-cost-${acc.id}`).value=''; calcRowGap(acc.id); });
 
-        // GET DATA FROM USER PROFILE INSTEAD OF LOCAL C.MYPROGRESS
+        
         let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[id]) ? userProfile.tracker_data[id] : [];
 
         if(myProgress){
@@ -4089,7 +4089,7 @@ async function saveToCloud(compObj) {
         let labels=[], minData=[], dates=new Set();
         if(c.history) c.history.forEach(x => dates.add(x.date));
 
-        // GET DATA FROM USER PROFILE
+        
         let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
         if(myProgress) myProgress.forEach(x => dates.add(x.date));
 
@@ -4160,10 +4160,10 @@ async function saveToCloud(compObj) {
         });
     }
 
-    // --- [NEW] HÀM VẼ LỊCH SỬ (AUTO-FILL LOGIC) ---
-// --- [FINAL V2] HÀM VẼ LỊCH SỬ (FIX LỖI MẤT NGÀY CUỐI) ---
+    
+
 function renderHistoryList(c) {
-    // 1. Vẽ tiêu đề bảng
+    
     let headerHtml = `<th class="text-sub small">Date</th><th class="text-gold small">Target</th>`;
     accSettings.forEach(acc => { headerHtml += `<th class="small text-center" style="color:${acc.color}">${acc.name}</th>`; });
     headerHtml += `<th class="text-end small">Action</th>`;
@@ -4172,68 +4172,68 @@ function renderHistoryList(c) {
     const l = document.getElementById('historyList');
     l.innerHTML = '';
 
-    // 2. Lấy dữ liệu
+    
     let adminHistory = c.history || [];
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
 
-    // 3. Xác định Start Date & End Date (Dạng Chuỗi YYYY-MM-DD)
+    
     let startDateStr = c.start;
-    // Nếu không có ngày bắt đầu thì tìm ngày cũ nhất
+    
     if (!startDateStr) {
         let allDates = [...adminHistory.map(h=>h.date), ...myProgress.map(p=>p.date)];
         if(allDates.length > 0) startDateStr = allDates.sort()[0];
         else startDateStr = new Date().toISOString().split('T')[0];
     }
 
-    // Lấy ngày hôm nay (Local Time) chuẩn dạng YYYY-MM-DD
+    
     let now = new Date();
     let todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
 
-    // --- [LOGIC QUAN TRỌNG: CHỐT NGÀY DỪNG (CUT-OFF)] ---
-    // Mặc định chạy đến hôm nay
+    
+    
     let limitStr = todayStr;
 
-    // Nếu giải có ngày kết thúc (End Date)
+    
     if (c.end) {
-        // So sánh chuỗi: Nếu "2025-12-12" < "2025-12-18" (Đã qua ngày kết thúc)
-        // Thì chốt sổ tại ngày kết thúc "2025-12-12"
+        
+        
         if (c.end < todayStr) {
             limitStr = c.end;
         }
     }
 
-    // 4. CHẠY VÒNG LẶP (DÙNG DATE OBJECT ĐỂ TĂNG NGÀY)
+    
     let timelineData = [];
     let lastKnownTarget = 0;
     let lastKnownVols = {}; 
     accSettings.forEach(acc => lastKnownVols[acc.id] = 0);
 
-    // Bắt đầu từ ngày start
+    
     let loopDate = new Date(startDateStr);
-    // Xử lý múi giờ: Set giờ về 12:00 trưa để tránh việc +/- giờ làm nhảy ngày
+    
     loopDate.setHours(12,0,0,0); 
 
-    // VÒNG LẶP: Chừng nào ngày đang xét (loopStr) <= ngày giới hạn (limitStr) thì còn chạy
+    
     while (true) {
         let dStr = loopDate.toISOString().split('T')[0];
         
-        // Nếu ngày đang chạy lớn hơn ngày giới hạn -> DỪNG NGAY
+        
         if (dStr > limitStr) break;
 
-        // A. Admin Target (Kế thừa từ ngày trước nếu thiếu)
+        
         let realAdminData = adminHistory.find(h => h.date === dStr);
         if (realAdminData) lastKnownTarget = parseFloat(realAdminData.target);
 
-        // B. User Volume (Kế thừa từ ngày trước nếu thiếu)
+        
         let realUserData = myProgress.find(p => p.date === dStr);
         let currentDayVols = {};
         
         accSettings.forEach(acc => {
             if (realUserData && realUserData.accsDetail && realUserData.accsDetail[acc.id]) {
                 let v = parseFloat(realUserData.accsDetail[acc.id].vol);
-                lastKnownVols[acc.id] = v; // Cập nhật số mới
+                lastKnownVols[acc.id] = v; 
             }
-            currentDayVols[acc.id] = lastKnownVols[acc.id]; // Dùng số (mới hoặc cũ)
+            currentDayVols[acc.id] = lastKnownVols[acc.id]; 
         });
 
         let isAutoFill = !realUserData; 
@@ -4245,13 +4245,13 @@ function renderHistoryList(c) {
             isAuto: isAutoFill
         });
 
-        // Tăng 1 ngày
+        
         loopDate.setDate(loopDate.getDate() + 1);
     }
 
-    // 5. VẼ RA BẢNG (Đảo ngược để ngày mới nhất lên đầu)
+    
     timelineData.reverse().forEach(item => {
-        let dateDisplay = item.date.substring(5); // MM-DD
+        let dateDisplay = item.date.substring(5); 
         let targetDisplay = fmtNum(item.target);
         
         let accCells = '';
@@ -4261,7 +4261,7 @@ function renderHistoryList(c) {
             accCells += `<td class="text-center font-num ${cls}">${vol > 0 ? fmtNum(vol) : '-'}</td>`;
         });
 
-        // Chỉ hiện nút Xóa cho ngày có dữ liệu thực
+        
         let deleteBtn = item.isAuto 
             ? `<i class="fas fa-trash text-secondary opacity-25" style="cursor:not-allowed" title="Auto-filled"></i>` 
             : `<i class="fas fa-trash text-danger cursor-pointer" onclick="deleteHistory('${item.date}')" title="Delete"></i>`;
@@ -4283,10 +4283,10 @@ function renderHistoryList(c) {
         let id = document.getElementById('u-db-id').value;
         let c = compList.find(x => x.id == id);
 
-        // V43: DELETE FROM CLOUD TRACKER DATA
+        
         if(userProfile.tracker_data && userProfile.tracker_data[id]) {
             userProfile.tracker_data[id] = userProfile.tracker_data[id].filter(p => p.date !== date);
-            // Save to Cloud immediately
+            
             await supabase.from('profiles').update({ tracker_data: userProfile.tracker_data }).eq('id', currentUser.id);
         }
 
@@ -4307,7 +4307,7 @@ function renderHistoryList(c) {
         }
     }
 
-// --- HÀM MỚI: CHỈ CẬP NHẬT MIN VOLUME & GỬI TELEGRAM (ADMIN ONLY) ---
+
 async function saveAdminTargetOnly() {
     if (!document.body.classList.contains('is-admin')) return;
     
@@ -4327,22 +4327,22 @@ async function saveAdminTargetOnly() {
         let minValStr = minInput.value.replace(/,/g, '');
         let t = parseFloat(minValStr);
 
-        // 1. Cập nhật dữ liệu Admin vào biến cục bộ
+        
         if (!Array.isArray(c.history)) c.history = [];
-        c.history = c.history.filter(h => h.date !== date); // Xóa cũ nếu trùng ngày
+        c.history = c.history.filter(h => h.date !== date); 
         c.history.push({ date: date, target: t });
         c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // 2. Lưu lên Server
+        
         await saveToCloud(c);
 
-        // 3. Gửi Telegram
+        
         let newMinVol = new Intl.NumberFormat('en-US').format(t);
-        //await sendTelePhoto(c, newMinVol);
+        
 
         showToast("✅ Target Updated & Alert Sent!", "success");
         
-        // Vẽ lại biểu đồ để thấy thay đổi ngay
+        
         renderTrackerChart(c);
         renderHistoryList(c);
         renderGrid();
@@ -4355,29 +4355,29 @@ async function saveAdminTargetOnly() {
     }
 }
 
-  // --- HÀM LƯU TIẾN ĐỘ CÁ NHÂN (Đã sửa lỗi cú pháp) ---
+  
 async function saveUpdate() {
-    // 1. Kiểm tra đăng nhập
+    
     if (!currentUser) return showToast("Please login first!", "error");
 
-    // 2. Xử lý giao diện nút bấm (Loading)
+    
     let btn = document.getElementById('btn-save-progress');
     let orgText = btn.innerText;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
     btn.disabled = true;
 
     try {
-        // 3. Lấy dữ liệu ID và Ngày từ giao diện
+        
         let rawId = document.getElementById('u-db-id').value;
         let dbId = parseInt(rawId);
         
-        // Tìm giải đấu tương ứng để lát nữa vẽ lại biểu đồ
+        
         let c = compList.find(x => x.db_id === dbId);
         if (!c) throw new Error("Tournament not found");
 
         let date = document.getElementById('u-date').value;
 
-        // 4. Thu thập dữ liệu từ các ô nhập liệu (Volume & Cost)
+        
         let my = {};
         if (typeof accSettings !== 'undefined' && Array.isArray(accSettings)) {
             accSettings.forEach(acc => {
@@ -4391,21 +4391,21 @@ async function saveUpdate() {
             });
         }
 
-        // 5. Chuẩn bị dữ liệu để lưu vào Profile
+        
         if (!userProfile.tracker_data) userProfile.tracker_data = {};
         if (!userProfile.tracker_data[dbId]) userProfile.tracker_data[dbId] = [];
 
-        // Xóa dữ liệu cũ của ngày đang chọn (để ghi đè mới)
+        
         userProfile.tracker_data[dbId] = userProfile.tracker_data[dbId].filter(p => p.date !== date);
 
-        // Chỉ thêm vào danh sách nếu người dùng có nhập dữ liệu (> 0)
+        
         let hasData = Object.values(my).some(x => x.vol > 0 || x.cost > 0);
         if (hasData) {
             userProfile.tracker_data[dbId].push({ date: date, accsDetail: my });
         }
 
-        // 6. Gửi lên Server (Supabase)
-        // Lệnh await này nằm TRONG hàm async và TRONG khối try -> Chạy đúng
+        
+        
         const { error } = await supabase
             .from('profiles')
             .update({ tracker_data: userProfile.tracker_data })
@@ -4413,29 +4413,29 @@ async function saveUpdate() {
 
         if (error) throw error;
 
-        // 7. Thông báo thành công
+        
         showToast("Personal Data saved successfully!", "success");
 
-        // Đổi màu nút để báo hiệu thành công
+        
         btn.innerHTML = '<i class="fas fa-check"></i> SAVED!';
         btn.style.background = "#0ECB81";
         btn.style.color = "#000";
 
-        // Sau 1 giây thì reset nút và vẽ lại biểu đồ
+        
         setTimeout(() => {
             btn.innerText = orgText;
             btn.style.background = "";
             btn.style.color = "";
             btn.disabled = false;
 
-            // Cập nhật lại giao diện ngay lập tức
+            
             if (typeof renderTrackerChart === 'function') renderTrackerChart(c);
             if (typeof renderHistoryList === 'function') renderHistoryList(c);
             if (typeof renderGrid === 'function') renderGrid();
         }, 1000);
 
     } catch (e) {
-        // Xử lý lỗi nếu có
+        
         console.error("Save Error:", e);
         showToast("Error: " + (e.message || e), "error");
         
@@ -4447,7 +4447,7 @@ async function saveUpdate() {
     }
 }
 
-    // ADMIN: AUTOMATED SETTLE REWARDS (V45 SECURITY UPGRADE)
+    
     async function settleTournament() {
         if(!confirm("CONFIRM: End tournament and distribute rewards automatically (Server-side)?")) return;
 
@@ -4455,7 +4455,7 @@ async function saveUpdate() {
 
         document.getElementById('loading-overlay').style.display = 'flex';
 
-        // CALL RPC FUNCTION INSTEAD OF JS LOGIC
+        
         const { data, error } = await supabase.rpc('settle_tournament', { tourn_id: parseInt(currentPolyId) });
 
         document.getElementById('loading-overlay').style.display = 'none';
@@ -4472,11 +4472,11 @@ async function saveUpdate() {
         }
     }
 
-    // --- HÀM ĐỒNG BỘ DỮ LIỆU CŨ LÊN MÂY (MIGRATION TOOL) ---
+    
     async function syncLocalToCloud() {
-    if(!currentUser) return showToast("Please login first!", "error"); // Đã sửa
+    if(!currentUser) return showToast("Please login first!", "error"); 
 
-    // Đã sửa confirm
+    
     if(!confirm("This action will OVERWRITE Cloud data with local data. Are you sure?")) return;
 
     let migrationData = {};
@@ -4494,7 +4494,7 @@ async function saveUpdate() {
         }
     }
 
-    if(count === 0) return showToast("No local data found on this device!", "error"); // Đã sửa
+    if(count === 0) return showToast("No local data found on this device!", "error"); 
 
     let btn = document.querySelector('button[onclick="syncLocalToCloud()"]');
     let oldText = btn.innerHTML;
@@ -4505,16 +4505,16 @@ async function saveUpdate() {
     btn.innerHTML = oldText; btn.disabled = false;
 
     if(error) {
-        showToast("Error: " + error.message, "error"); // Đã sửa
+        showToast("Error: " + error.message, "error"); 
     } else {
-        showToast(`Success! Migrated ${count} tournaments to Cloud.`, "success"); // Đã sửa
+        showToast(`Success! Migrated ${count} tournaments to Cloud.`, "success"); 
         if(userProfile) userProfile.tracker_data = migrationData;
         renderGrid();
         bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
     }
 }
 
-    // Standard Utils
+    
         function openSettingsModal() {
         let list = document.getElementById('settingsList');
         list.innerHTML = '';
@@ -4529,19 +4529,19 @@ async function saveUpdate() {
         new bootstrap.Modal(document.getElementById('settingsModal')).show();
     }
 
-    // --- CẬP NHẬT CÁC HÀM QUẢN LÝ VÍ (CÓ GỌI SYNC CLOUD) ---
+    
 
 function updateAccName(i, val) { 
     accSettings[i].name = val; 
     localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-    updateCloudWallets(); // <--- Thêm dòng này
+    updateCloudWallets(); 
     renderGrid(); 
 }
 
 function updateAccColor(i, val) { 
     accSettings[i].color = val; 
     localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-    updateCloudWallets(); // <--- Thêm dòng này
+    updateCloudWallets(); 
     renderGrid(); 
 }
 
@@ -4552,7 +4552,7 @@ function addNewAccount() {
         color: document.getElementById('newAccColor').value
     }); 
     localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-    updateCloudWallets(); // <--- Thêm dòng này
+    updateCloudWallets(); 
     openSettingsModal(); 
     renderGrid(); 
 }
@@ -4561,21 +4561,21 @@ function delAcc(i) {
     if(confirm("Delete?")) { 
         accSettings.splice(i, 1); 
         localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-        updateCloudWallets(); // <--- Thêm dòng này
+        updateCloudWallets(); 
         openSettingsModal(); 
         renderGrid(); 
     } 
 }
-        /* --- CÁC HÀM QUẢN LÝ ADMIN (ĐÃ FIX LOGIC CAMPAIGN & PRICE) --- */
+        
 
-    // 1. Mở Modal tạo mới
+    
     function openCreateModal() {
         document.getElementById('c-db-id').value = '';
 
-        // Reset các ô nhập liệu
+        
         document.getElementById('c-contract').value = '';
         document.getElementById('c-symbol').value = '';
-        document.getElementById('c-chain').value = ''; // VD: arbitrum
+        document.getElementById('c-chain').value = ''; 
         document.getElementById('c-price').value = '';
         document.getElementById('c-logo').value = '';
         document.getElementById('c-logo-preview').style.display = 'none';
@@ -4583,17 +4583,17 @@ function delAcc(i) {
         document.getElementById('c-rewardQty').value = '';
         document.getElementById('c-winners').value = '';
 
-        // Reset ô nhập Token Campaign
+        
         let tokenInput = document.getElementById('c-inputTokens');
         if(tokenInput) tokenInput.value = '';
 
-        // Ẩn nút xóa
+        
         document.getElementById('btnDeleteComp').style.display = 'none';
 
         new bootstrap.Modal(document.getElementById('compModal')).show();
     }
 
-    // --- 1. ADMIN EDIT: LẤY DỮ LIỆU THÔ TỪ DB HIỆN LÊN (KHÔNG CONVERT) ---
+    
 function openEditModal(id) {
     let c = compList.find(x => x.db_id == id);
     if(!c) return;
@@ -4606,11 +4606,11 @@ function openEditModal(id) {
     
 let logoInput = document.getElementById('c-logo');
     if (logoInput) {
-        logoInput.type = "text";       // Chuyển từ hidden thành text để bạn nhìn thấy
-        logoInput.readOnly = false;    // Đảm bảo không bị khóa
-        logoInput.style.display = "block"; // Hiện lên rõ ràng
+        logoInput.type = "text";       
+        logoInput.readOnly = false;    
+        logoInput.style.display = "block"; 
         logoInput.placeholder = "Xóa trắng ô này để dùng ảnh tự động";
-        logoInput.className = "form-control mb-2"; // Thêm style cho đẹp (nếu cần)
+        logoInput.className = "form-control mb-2"; 
     }
 
     let imgPreview = document.getElementById('c-logo-preview');
@@ -4622,13 +4622,13 @@ let logoInput = document.getElementById('c-logo');
     document.getElementById('c-alphaType').value = c.alphaType;
     document.getElementById('c-rule').value = c.ruleType;
 
-    // --- NGÀY GIỜ: HIỂN THỊ Y NGUYÊN (ADMIN TỰ HIỂU LÀ UTC) ---
+    
     document.getElementById('c-start').value = c.start;
-    document.getElementById('c-start-time').value = c.startTime || "00:00"; // <--- THÊM DÒNG NÀY
+    document.getElementById('c-start-time').value = c.startTime || "00:00"; 
     document.getElementById('c-end').value = c.end;
     document.getElementById('c-end-time').value = c.endTime;
     
-    // Listing Time (DB lưu "YYYY-MM-DDTHH:mm", Input cũng dùng định dạng đó -> Khớp)
+    
     document.getElementById('c-listing').value = c.listingTime || '';
 
     let tokenInput = document.getElementById('c-inputTokens');
@@ -4642,16 +4642,16 @@ let logoInput = document.getElementById('c-logo');
     new bootstrap.Modal(document.getElementById('compModal')).show();
 }
 
-            // 3. Logic bật tắt ô nhập giờ Listing
+            
     function toggleListingTime() {
         document.getElementById('c-listing').disabled = document.getElementById('c-alphaType').value === 'none';
     }
 
-    // --- 2. ADMIN SAVE: LƯU Y NGUYÊN (KHÔNG CONVERT) ---
+    
 function saveComp() {
     let id = document.getElementById('c-db-id').value;
     
-    // 1. Lấy dữ liệu gốc (để không bị mất các trường ẩn như Volume, Chart...)
+    
     let c = id ? compList.find(x => x.db_id == id) : {};
 
     let tokensArr = [];
@@ -4660,11 +4660,11 @@ function saveComp() {
         tokensArr = tokenInput.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s !== '');
     }
 
-    // 2. TẠO OBJECT MỚI DỰA TRÊN CÁI CŨ (QUAN TRỌNG: COPY LẠI ...c)
+    
     let obj = { 
-        ...c, // <--- DÒNG NÀY CỨU DỮ LIỆU CỦA BẠN (Copy hết cái cũ sang)
+        ...c, 
         
-        // Sau đó mới ghi đè các thông tin từ Form Admin
+        
         db_id: id ? parseInt(id) : null,
         name: document.getElementById('c-symbol').value.toUpperCase(),
         contract: document.getElementById('c-contract').value,
@@ -4684,18 +4684,18 @@ function saveComp() {
         ruleType: document.getElementById('c-rule').value,
         inputTokens: tokensArr,
         
-        // Đảm bảo các mảng con không bị null
+        
         history: c.history || [],
         predictions: c.predictions || [],
         comments: c.comments || []
     };
 
-    // 3. Lưu lên Cloud
+    
     saveToCloud(obj);
     bootstrap.Modal.getInstance(document.getElementById('compModal')).hide();
 }
 
-    // 5. Xóa giải đấu
+    
     function deleteComp() {
         if(confirm('Delete this tournament?')) {
             deleteFromCloud(document.getElementById('c-db-id').value);
@@ -4703,7 +4703,7 @@ function saveComp() {
         }
     }
 
-    // 6. Hàm gọi Server xóa
+    
     async function deleteFromCloud(id) {
         await supabase.from('tournaments').delete().eq('id', id);
         loadFromCloud();
@@ -4711,15 +4711,15 @@ function saveComp() {
 
 
     async function fetchTokenInfo(q) {
-    // Đã xóa bỏ DexScreener theo yêu cầu.
-    // Không làm gì cả để tránh tự động điền link rác.
+    
+    
     console.log("DexScreener fetch disabled.");
     return;
 }
 
-        // ============================================================
-    // [FIX TIME] RENDER STATS - KHÔNG BỎ SÓT TOKEN CÒN HẠN TRONG NGÀY
-    // ============================================================
+        
+    
+    
     function renderStats() {
         const now = new Date();
         let activeCount = 0;
@@ -4733,51 +4733,51 @@ function saveComp() {
         }).format(num);
 
         compList.forEach(c => {
-            // --- 1. XỬ LÝ THỜI GIAN (QUAN TRỌNG) ---
+            
             let endDateTime;
 
-            // Trường hợp A: Có trường end_time đầy đủ (ví dụ: "2025-12-25T11:00:00")
+            
             if (c.end_time) {
                 let t = c.end_time;
-                if (!t.endsWith("Z")) t += "Z"; // Ép về UTC
+                if (!t.endsWith("Z")) t += "Z"; 
                 endDateTime = new Date(t);
             } 
-            // Trường hợp B: Dữ liệu tách riêng Ngày (c.end) và Giờ (c.endTime)
+            
             else if (c.end) {
-                // Nếu có giờ thì dùng giờ đó (endTime), nếu không có thì cho sống đến hết ngày (23:59:59)
+                
                 let timePart = c.endTime || "23:59:59"; 
                 
-                // Ghép thành chuỗi chuẩn UTC: YYYY-MM-DD + T + HH:mm:ss + Z
+                
                 let fullTimeStr = `${c.end}T${timePart}`;
                 if (!fullTimeStr.endsWith("Z")) fullTimeStr += "Z";
                 
                 endDateTime = new Date(fullTimeStr);
             } 
             else {
-                // Nếu không có ngày kết thúc -> Mặc định là token vĩnh viễn (Active)
+                
                 endDateTime = new Date("2099-12-31T23:59:59Z");
             }
 
-            // --- 2. KIỂM TRA: CÒN HẠN KHÔNG? ---
-            // So sánh thời điểm hiện tại với hạn chót (tính từng giây)
+            
+            
             if (now.getTime() < endDateTime.getTime()) {
                 activeCount++;
 
-                // Tính toán tiền thưởng
+                
                 let qty = parseFloat(c.reward_qty || c.rewardQty || 0);
                 
-                // --- FIX: Ưu tiên Market Analysis ---
+                
 let price = 0;
 if (c.market_analysis && c.market_analysis.price) {
     price = parseFloat(c.market_analysis.price);
 } else if (c.data && c.data.price) {
-    price = parseFloat(c.data.price); // Fallback dữ liệu cũ
+    price = parseFloat(c.data.price); 
 }
 
                 let currentVal = qty * price;
                 totalEstValue += currentVal;
 
-                // Tìm Top 1
+                
                 if (currentVal > maxRewardVal) {
                     maxRewardVal = currentVal;
                     topToken = c;
@@ -4785,19 +4785,19 @@ if (c.market_analysis && c.market_analysis.price) {
             }
         });
 
-        // ========================================================
-        // CẬP NHẬT GIAO DIỆN
-        // ========================================================
         
-        // 1. Số giải đang chạy
+        
+        
+        
+        
         const elActive = document.getElementById('stat-active');
         if (elActive) elActive.innerText = activeCount;
 
-        // 2. Tổng giá trị Pool
+        
         const elPool = document.getElementById('stat-pool');
         if (elPool) elPool.innerText = fmt(totalEstValue);
 
-        // 3. Highest Reward
+        
         const elTopSym = document.getElementById('stat-top-symbol');
         const elTopVal = document.getElementById('stat-top-val');
         const elTopImg = document.getElementById('stat-top-img');
@@ -4815,7 +4815,7 @@ if (c.market_analysis && c.market_analysis.price) {
                 }
             }
         } else {
-            // Không có giải nào
+            
             if (elTopSym) elTopSym.innerText = "---";
             if (elTopVal) elTopVal.innerText = "$0";
             if (elTopImg) elTopImg.style.display = 'none';
@@ -4823,13 +4823,13 @@ if (c.market_analysis && c.market_analysis.price) {
     }
 
 
-        // --- [V61 FINAL] SYSTEM CLOCK: STANDARD UTC+0 ---
+        
 function updateClock() {
     const now = new Date();
 
-    // 1. HIỂN THỊ GIỜ HỆ THỐNG (LUÔN LÀ UTC)
+    
     if(document.getElementById('sysClock')) {
-        // Lấy ngày giờ theo chuẩn UTC
+        
         let dateStr = now.toLocaleDateString('en-GB', { 
             day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' 
         });
@@ -4840,7 +4840,7 @@ function updateClock() {
         document.getElementById('sysClock').innerText = `${dateStr} ${timeStr}`;
         document.getElementById('sysClock').style.fontSize = "1rem"; 
 
-        // Luôn ghi chú là UTC để user không nhầm lẫn
+        
         let labelEl = document.querySelector('[data-i18n="sys_time"]');
         if(labelEl) {
             let baseText = translations[currentLang].sys_time;
@@ -4850,11 +4850,11 @@ function updateClock() {
         }
     }
 
-    // 2. Cập nhật các bộ đếm ngược (X4 Timer - Dùng chuẩn UTC)
+    
     document.querySelectorAll('.x4-timer-val').forEach(el => {
-        const listDateStr = el.dataset.list; // Chuỗi ngày giờ từ DB (UTC)
+        const listDateStr = el.dataset.list; 
         if(listDateStr) {
-            // Thêm 'Z' để báo là UTC
+            
             let endTimeStr = listDateStr.includes('T') ? listDateStr : listDateStr + 'T00:00:00';
             const endTime = new Date(endTimeStr + 'Z').getTime() + (30*24*60*60*1000);
             const dist = endTime - now.getTime();
@@ -4867,12 +4867,12 @@ function updateClock() {
         }
     });
 
-    // 3. Smart Timer (Nếu có dùng ở đâu đó)
+    
     document.querySelectorAll('.smart-timer').forEach(el => {
         let endDateStr = el.dataset.end;
         let endTimeStr = el.dataset.time;
         if(!endDateStr) return;
-        // Thêm 'Z' vào cuối để tính theo UTC
+        
         let endDateTime = new Date(endDateStr + 'T' + endTimeStr + 'Z'); 
         let diff = endDateTime - now;
         
@@ -4883,7 +4883,7 @@ function updateClock() {
             return; 
         }
 
-        // Logic hiển thị
+        
         let todayUTC = new Date().toISOString().split('T')[0];
         if (endDateStr === todayUTC) {
             let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -4899,12 +4899,12 @@ function updateClock() {
         }
     });
 
-    // 4. Đồng hồ trang chi tiết (View Predict) - Dùng chuẩn UTC
+    
     if (currentPolyId && document.getElementById('view-predict').style.display === 'block') {
         let c = compList.find(x => x.db_id == currentPolyId);
         let timerEl = document.getElementById('pt-time');
         if (c && c.end && timerEl) {
-            // Thêm 'Z' chuẩn UTC
+            
             let endTime = new Date(c.end + 'T' + (c.endTime || '23:59:59') + 'Z').getTime(); 
             let dist = endTime - now.getTime();
             if (dist < 0) {
@@ -4925,13 +4925,13 @@ function updateClock() {
 /* ============================================================
    V47: SILENT RELOAD (CẬP NHẬT MƯỢT MÀ KHÔNG NHÁY MÀN HÌNH)
    ============================================================ */
-// --- [FIXED] HÀM CẬP NHẬT NGẦM AN TOÀN (SAFE RELOAD) ---
+
 async function silentReload(id) {
-    // 1. Âm thầm lấy dữ liệu mới
+    
     const { data: predsData, error } = await supabase.from('predictions').select('*').eq('tournament_id', id);
     if (error) return console.error(error);
 
-    // 2. Cập nhật dữ liệu vào bộ nhớ
+    
     let c = compList.find(x => x.db_id == id);
     if (c && predsData) {
         c.predictions = predsData.map(p => ({
@@ -4939,20 +4939,20 @@ async function silentReload(id) {
             guess: parseFloat(p.guess), time: new Date(p.created_at).getTime()
         }));
 
-        // 3. Cập nhật Pool & Min Vol (Chỉ update nếu tìm thấy ID trên màn hình)
+        
         let pool = (c.predictions.length || 0) * PREDICT_FEE;
         let poolEl = document.getElementById('pt-pool');
         if(poolEl) poolEl.innerText = fmt(pool);
 
         let curMin = (c.history && c.history.length > 0) ? c.history[c.history.length - 1].target : 0;
 
-        // 4. Cập nhật Bảng Xếp Hạng (Leaderboard) - QUAN TRỌNG: CÓ KIỂM TRA TỒN TẠI
-        // --- ĐOẠN CODE DÙNG CHUNG CHO CẢ 2 VỊ TRÍ (Paste đè vào đoạn số 4 và số 7) ---
+        
+        
         let lb = document.getElementById('pt-leaderboard');
         if (lb) { 
             lb.innerHTML = ''; 
             
-            // --- LOGIC XẾP HẠNG MỚI (Đồng bộ với hàm trên) ---
+            
             let preds = (c.predictions || []).sort((a, b) => {
                 let aValid = a.guess >= curMin;
                 let bValid = b.guess >= curMin;
@@ -4971,25 +4971,25 @@ async function silentReload(id) {
             if(preds.length === 0) lb.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-sub opacity-50">No Data</td></tr>';
 
             preds.forEach((p, i) => {
-                // Kiểm tra lại lần nữa để tô màu
+                
                 let isValid = p.guess >= curMin;
                 
-                // Top 1,2,3 màu Vàng/Bạc/Đồng. Còn lại màu xám. Người thua cuộc màu tối hơn.
+                
                 let rankColor = isValid 
                     ? (i===0?'#FFD700':(i===1?'#C0C0C0':(i===2?'#CD7F32':'#666'))) 
                     : '#333'; 
 
-                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; // Hiện dấu X nếu loại
+                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; 
 
                 let badgeHtml = `<span class="rank-badge" style="background:${rankColor}; color:${isValid && i<3 ? '#000' : '#fff'}; border:1px solid #444">${rankText}</span>`;
                 
                 let avatarHtml = p.avatar ? `<img src="${p.avatar}" class="list-avatar">` : `<div class="list-avatar-placeholder">${p.name.substring(0, 1).toUpperCase()}</div>`;
                 
-                // Highlight chính mình
+                
                 let myName = document.getElementById('modal-p-name')?.value || '';
                 let highlightClass = (p.name === myName) ? 'anim-breathe' : '';
                 
-                // Làm mờ dòng bị loại (Opacity 0.4)
+                
                 let rowStyle = isValid ? '' : 'opacity: 0.4; filter: grayscale(1);';
 
                 lb.innerHTML += `
@@ -5008,28 +5008,28 @@ async function silentReload(id) {
             });
         }
         
-        // 5. [FIX] Bỏ qua cập nhật 'content-activity' vì giao diện mới không dùng nữa
-        // (Hoặc nếu bạn muốn dùng lại sau này, hãy thêm if(actDiv) như dưới đây)
+        
+        
         let actDiv = document.getElementById('content-activity');
         if (actDiv) {
             actDiv.innerHTML = '';
-            // Logic cũ nếu cần...
+            
         }
     }
 }
 
     init();
-    // --- BACKUP & RESTORE LOGIC (ENGLISH) ---
+    
 function backupData() {
     let data = {};
-    // Get all Wave Alpha related data
+    
     for (let i = 0; i < localStorage.length; i++) {
         let key = localStorage.key(i);
         if (key.startsWith('wave_')) {
             data[key] = localStorage.getItem(key);
         }
     }
-    // Create download file
+    
     let blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
     let a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -5039,7 +5039,7 @@ function backupData() {
     a.click();
     document.body.removeChild(a);
 
-    // Notification in English
+    
     alert("Backup file downloaded successfully!");
 }
 
@@ -5060,13 +5060,13 @@ function restoreData(input) {
         }
     };
     reader.readAsText(file);
-    input.value = ''; // Reset input
+    input.value = ''; 
 }
-// ----------------------------------------
 
-    /* ================= ARSENAL DYNAMIC CONFIG LOGIC ================= */
 
-    // 1. Hàm vẽ lại danh sách Input trong Modal từ dữ liệu đã lưu
+    
+
+    
     function renderArsenalInputs(items = []) {
         const container = document.getElementById('cfg-arsenal-list');
         container.innerHTML = '';
@@ -5076,15 +5076,15 @@ function restoreData(input) {
         });
     }
 
-    // 2. Hàm thêm một dòng nhập liệu mới (hoặc vẽ dòng cũ)
+    
     function addArsenalItem(data = null, index = null) {
         const container = document.getElementById('cfg-arsenal-list');
-        const uniqueId = Date.now() + Math.random().toString(36).substr(2, 9); // Tạo ID ngẫu nhiên
+        const uniqueId = Date.now() + Math.random().toString(36).substr(2, 9); 
 
         const name = data ? data.name : '';
         const link = data ? data.link : '';
         const logo = data ? data.logo : '';
-        const type = data ? data.type : 'EXCHANGE'; // Mặc định là CEX
+        const type = data ? data.type : 'EXCHANGE'; 
 
         const html = `
         <div class="p-3 rounded border border-secondary border-opacity-25 bg-dark arsenal-item-row" data-id="${uniqueId}">
@@ -5098,7 +5098,7 @@ function restoreData(input) {
             </div>
 
             <div class="d-flex gap-2 mb-2 align-items-center">
-                <input type="text" class="form-control form-control-sm inp-link" placeholder="Link Ref (https://...)" value="${link}">
+                <input type="text" class="form-control form-control-sm inp-link" placeholder="Link Ref (https:
 
                 <div class="position-relative btn btn-sm btn-outline-secondary" style="width:35px; overflow:hidden;" title="Logo">
                     <i class="fas fa-camera"></i>
@@ -5120,7 +5120,7 @@ function restoreData(input) {
         container.insertAdjacentHTML('beforeend', html);
     }
 
-    // 3. Hàm di chuyển vị trí (Lên/Xuống)
+    
     function moveItem(btn, direction) {
         const row = btn.closest('.arsenal-item-row');
         const container = document.getElementById('cfg-arsenal-list');
@@ -5131,45 +5131,45 @@ function restoreData(input) {
         }
     }
 
-// --- [MỚI - ĐÃ FIX] HÀM TÍNH TOÁN TRUNG BÌNH 10S (Rolling Average) ---
+
 function calculateSafeAvg(id, currentTotalVol) {
-    // 1. Nếu chưa có dữ liệu lịch sử (Lần chạy đầu tiên)
+    
     if (!tokenVolHistory[id]) {
         tokenVolHistory[id] = {
             history: [],
-            lastVol: currentTotalVol, // Ghi nhớ mốc 48 Triệu $
+            lastVol: currentTotalVol, 
             lastTime: Date.now()
         };
-        return 0; // TRẢ VỀ 0 NGAY LẬP TỨC để tránh hiện số 48 Triệu ra màn hình
+        return 0; 
     }
 
     let tracker = tokenVolHistory[id];
 
-    // 2. Tính chênh lệch (Delta) so với lần trước
-    // Ví dụ: 48,005,000 - 48,000,000 = 5,000
+    
+    
     let delta = currentTotalVol - tracker.lastVol;
 
-    // Cập nhật mốc mới
+    
     tracker.lastVol = currentTotalVol;
 
-    // --- BỘ LỌC NHIỄU QUAN TRỌNG ---
-    // Nếu delta < 0 (Sàn reset ngày mới) hoặc delta quá lớn vô lý (> 10% tổng vol 1 lúc)
-    // Thì coi như bằng 0 để không làm hỏng biểu đồ
+    
+    
+    
     if (delta < 0 || delta > (currentTotalVol * 0.1)) {
         delta = 0;
     }
 
-    // 3. Đẩy vào mảng lịch sử (Rolling Window)
+    
     tracker.history.push(delta);
     
-    // Chỉ giữ lại đúng 10 mẫu gần nhất (10 giây)
+    
     if (tracker.history.length > SAFETY_WINDOW) {
-        tracker.history.shift(); // Xóa mẫu cũ nhất
+        tracker.history.shift(); 
     }
 
-    // 4. TÍNH TRUNG BÌNH CỘNG (AVERAGE)
-    // Tổng 10 lần / 10 = Trung bình mỗi giây
-    // Ví dụ: Tổng 10s là 50k -> Trung bình là 5k/s
+    
+    
+    
     if (tracker.history.length === 0) return 0;
     let totalInWindow = tracker.history.reduce((a, b) => a + b, 0);
     let avg = totalInWindow / tracker.history.length;
@@ -5177,7 +5177,7 @@ function calculateSafeAvg(id, currentTotalVol) {
     return avg;
 }
 
-// --- LOGIC LỊCH: DEADLINE RADAR (CÓ TỔNG TIỀN) ---
+
 let currentFilterDate = null;
 
 function initCalendar() {
@@ -5185,26 +5185,26 @@ function initCalendar() {
     if (!container) return;
     container.innerHTML = ''; 
 
-    // 1. Thống kê: Số lượng giải & Tổng giá trị theo ngày
+    
     let dateStats = {}; 
 
     compList.forEach(c => {
         if(c.end) {
             if(!dateStats[c.end]) dateStats[c.end] = { count: 0, totalVal: 0 };
             
-            // Tăng biến đếm số lượng
+            
             dateStats[c.end].count++;
 
-            // Tính tiền: Qty * Giá (Ưu tiên giá mới nhất, nếu không có thì lấy giá cache)
+            
             let qty = parseFloat(c.rewardQty) || 0;
             let price = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
             
-            // Cộng dồn vào tổng ngày đó (Tính cả giải đang chạy và đã kết thúc trong ngày)
+            
             dateStats[c.end].totalVal += (qty * price);
         }
     });
 
-    // 2. Vẽ 15 ngày
+    
     const today = new Date();
     let html = '';
 
@@ -5212,23 +5212,23 @@ function initCalendar() {
         let d = new Date();
         d.setDate(today.getDate() + i);
 
-        // Format YYYY-MM-DD để so sánh
+        
         let year = d.getFullYear();
         let month = String(d.getMonth() + 1).padStart(2, '0');
         let day = String(d.getDate()).padStart(2, '0');
         let dateStr = `${year}-${month}-${day}`;
 
-        // Hiển thị: THỨ (T2...) & NGÀY (16...)
+        
         let dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
         let dayNum = d.getDate();
 
-        // Lấy dữ liệu thống kê của ngày này
+        
         let stat = dateStats[dateStr] || { count: 0, totalVal: 0 };
         
-        // HTML Badge số lượng (Nếu có giải thì hiện chấm vàng)
+        
         let badgeHtml = stat.count > 0 ? `<div class="date-dot">${stat.count}</div>` : '';
         
-        // HTML Số tiền (Format: 1.5k, 2M...)
+        
         let moneyHtml = '';
         if (stat.totalVal > 0) {
             let val = stat.totalVal;
@@ -5239,7 +5239,7 @@ function initCalendar() {
             
             moneyHtml = `<div class="d-val">${txt}</div>`;
         } else {
-            // Để trống 1 dòng ẩn (visibility:hidden) để các ô cao bằng nhau
+            
             moneyHtml = `<div class="d-val" style="visibility:hidden">-</div>`;
         }
 
@@ -5257,97 +5257,97 @@ function initCalendar() {
     container.innerHTML = html;
 }
 
-/* --- FILE: script.js --- */
+
 
 function filterByDate(dateStr) {
-    // [LOGIC MỚI] TÍNH NĂNG TOGGLE (BẬT/TẮT)
-    // Nếu ngày bấm vào (dateStr) trùng với ngày đang chọn (currentFilterDate)
-    // Thì gán dateStr = null để kích hoạt chế độ "Hủy lọc" (Show All)
+    
+    
+    
     if (dateStr && currentFilterDate === dateStr) {
         dateStr = null;
     }
 
-    // 1. Nếu dateStr là null (Hủy lọc)
+    
     if (!dateStr) {
         currentFilterDate = null;
         document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
         
-        // Vẽ lại toàn bộ theo tab hiện tại (Running/History)
+        
         switchGlobalTab(appData.currentTab);
         return;
     }
 
-    // 2. Active ô ngày vừa chọn trên lịch
+    
     currentFilterDate = dateStr;
     document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
     let box = document.getElementById(`dbox-${dateStr}`);
     if(box) box.classList.add('active');
 
-    // --- [LOGIC TỰ ĐỘNG CHUYỂN TAB THÔNG MINH] ---
+    
     let today = new Date().toISOString().split('T')[0];
-    // Nếu ngày chọn >= Hôm nay -> Tự nhảy sang Running. Ngược lại -> History.
+    
     let targetTab = (dateStr >= today) ? 'running' : 'history';
 
     if (appData.currentTab !== targetTab) {
         switchGlobalTab(targetTab); 
     }
-    // --------------------------------------------------
+    
 
-    // 3. Lọc dữ liệu
+    
     let filteredList = compList.filter(c => c.end === dateStr);
 
-    // 4. Vẽ lại giao diện
+    
     renderMarketHealthTable(filteredList);
     if (appData.currentView === 'grid') {
         renderGrid(filteredList);
     }
 }
 
-// 3. Kích hoạt ngay lập tức
+
 initCalendar();
-// --- HÀM CHUYỂN TAB CHO GIAO DIỆN COCKPIT MỚI ---
-// --- HÀM CHUYỂN TAB MỚI (ĐÃ FIX LỖI HIỂN THỊ) ---
+
+
 function switchCpTab(tabName) {
-    // 1. Cập nhật trạng thái nút bấm (Màu sắc)
+    
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-btn-${tabName}`).classList.add('active');
 
-    // 2. Lấy 2 khung nội dung
+    
     const lbBox = document.getElementById('cp-content-leaderboard');
     const chatBox = document.getElementById('cp-content-chat');
 
-    // 3. Xử lý ẩn hiện (Dùng class mới định nghĩa ở CSS)
+    
     if (tabName === 'leaderboard') {
-        // Hiện Leaderboard, Ẩn Chat
+        
         lbBox.classList.remove('hide-force');
         chatBox.classList.remove('chat-visible');
-        chatBox.classList.add('d-none'); // Đảm bảo ẩn hẳn
+        chatBox.classList.add('d-none'); 
     } else {
-        // Ẩn Leaderboard, Hiện Chat
-        lbBox.classList.add('hide-force');
-        chatBox.classList.remove('d-none'); // Gỡ bỏ class ẩn của Bootstrap
-        chatBox.classList.add('chat-visible'); // Kích hoạt Flex để hiện khung chat
         
-        // Auto scroll xuống cuối khung chat
+        lbBox.classList.add('hide-force');
+        chatBox.classList.remove('d-none'); 
+        chatBox.classList.add('chat-visible'); 
+        
+        
         let feed = document.getElementById('chat-feed');
         if(feed) feed.scrollTop = feed.scrollHeight;
     }
 }
 
-// --- CẬP NHẬT LẠI HÀM openPredictionView (Để tương thích với giao diện mới) ---
-// Bạn Tìm hàm openPredictionView cũ và thay thế bằng hàm này:
+
+
 
 async function openPredictionView(id) {
     currentPolyId = id;
     document.getElementById('loading-overlay').style.display = 'flex';
 
-    // 1. Fetch Data
+    
     const { data: predsData, error } = await supabase.from('predictions').select('*').eq('tournament_id', id);
     document.getElementById('loading-overlay').style.display = 'none';
 
     if (error) { showToast("Error loading data", "error"); return; }
 
-    // 2. Map Data
+    
     let c = compList.find(x => x.db_id == id);
     if(c) {
         c.predictions = predsData.map(p => ({
@@ -5356,44 +5356,44 @@ async function openPredictionView(id) {
         }));
     }
 
-    // 3. Switch View
-    // Lưu ý: Giao diện mới dùng z-index đè lên, nên ta chỉ cần show div view-predict
+    
+    
     document.getElementById('view-predict').style.display = 'block';
     
-    // 4. Update Data to UI
+    
     updateTerminalData(id);
 }
 
-// --- CẬP NHẬT LOGIC NÚT BACK (QUAN TRỌNG) ---
+
 function switchView(view) {
-    // 1. Ẩn tất cả trước
+    
     document.getElementById('view-dashboard').style.display = 'none';
     document.getElementById('view-predict').style.display = 'none';
 
-    // 2. Hiện cái cần thiết
+    
     if (view === 'dashboard') {
         document.getElementById('view-dashboard').style.display = 'block';
-        // Reset ID để tránh lỗi vẽ lại
+        
         currentPolyId = null;
         renderGrid();
     } 
     else if (view === 'predict') {
-        // Giao diện Cockpit mới dùng display: block thay vì flex
+        
         document.getElementById('view-predict').style.display = 'block';
     }
 }
 
-// --- [FIX] CẬP NHẬT HÀM VẼ CHART (HỖ TRỢ THẺ CLONE) ---
+
 function renderCardMiniChart(c, customCanvasId = null) {
-    // Nếu có customCanvasId (từ thẻ clone) thì dùng, không thì dùng ID mặc định
+    
     const targetId = customCanvasId || `miniChart-${c.db_id}`;
     const ctxElement = document.getElementById(targetId);
     
-    if (!ctxElement) return; // Không tìm thấy thẻ canvas thì thoát
+    if (!ctxElement) return; 
 
     let now = new Date();
 
-    // 1. TÍNH TOÁN DATA & THỜI GIAN (Giữ nguyên logic cũ)
+    
     let tournamentEndTime = null;
     let isEnded = false;
     if (c.end) {
@@ -5425,7 +5425,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
 
    let adminHistory = c.history || [];
     
-    // [FIX FINAL] CHỈ DÙNG LIMIT HISTORY
+    
     let realHistory = c.limit_vol_history || [];
     
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
@@ -5443,17 +5443,17 @@ function renderCardMiniChart(c, customCanvasId = null) {
         if(c.start && dStr < c.start) continue;
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-        // [FIX] Lấy dữ liệu từ Limit History
+        
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
         if (rItem) rVal = parseFloat(rItem.vol);
         else if (dStr === todayStr) {
-            // Nếu là hôm nay: Lấy Limit Daily
+            
             rVal = parseFloat(c.limit_daily_volume || 0);
         }
         limitVolData.push(rVal);
 
-        // Forecast
+        
         let projVal = 0;
         if (dStr === todayStr && !isEnded && secondsRemaining > 0) {
             let stableSpeed = 0;
@@ -5464,7 +5464,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
         }
         projectedData.push(projVal);
 
-        // Target
+        
         let tVal = 0;
         let hItem = adminHistory.find(h => h.date === dStr);
         if(hItem) tVal = parseFloat(hItem.target);
@@ -5492,7 +5492,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
         }
     }
 
-    // 2. CHECK & UPDATE
+    
     let existingChart = Chart.getChart(targetId);
     if (existingChart) {
         existingChart.data.labels = labels;
@@ -5508,8 +5508,8 @@ function renderCardMiniChart(c, customCanvasId = null) {
         return; 
     }
 
-    // 3. DRAW NEW CHART
-    const ctx = ctxElement.getContext('2d'); // Lấy context từ element đã tìm được
+    
+    const ctx = ctxElement.getContext('2d'); 
     let chartDatasets = [
         {
             type: 'bar', label: 'Current', 
@@ -5607,22 +5607,22 @@ function renderCardMiniChart(c, customCanvasId = null) {
 }
 
     
-    // --- HÀM PHỤ: CẬP NHẬT THÔNG SỐ GRID BÊN DƯỚI BIỂU ĐỒ ---
+    
 function updateGridInfo(c, targetData, accDatasets) {
     let accGridEl = document.getElementById(`accGrid-${c.db_id}`);
     
-    // Tìm giá trị Target mới nhất (bỏ qua null)
+    
     let lastTargetData = targetData.filter(v => v !== null);
     let lastTarget = lastTargetData.length > 0 ? lastTargetData[lastTargetData.length - 1] : 0;
 
     if(accGridEl) {
         let gridHtml = '';
         accSettings.forEach(acc => {
-            // Tìm giá trị User mới nhất (bỏ qua null)
+            
             let validUser = accDatasets[acc.id].filter(v => v !== null);
             let lastUserVal = validUser.length > 0 ? validUser[validUser.length - 1] : 0;
             
-            // Tính khoảng cách Gap
+            
             let gap = lastUserVal - lastTarget;
             let gapColor = gap >= 0 ? 'text-green' : 'text-red';
             let gapIcon = gap >= 0 ? 'fa-caret-up' : 'fa-caret-down';
@@ -5640,24 +5640,24 @@ function updateGridInfo(c, targetData, accDatasets) {
     }
 }
 
-// Helper: Chuyển HEX sang RGBA
+
 function hexToRgba(hex, alpha) {
     let r = parseInt(hex.slice(1, 3), 16),
         g = parseInt(hex.slice(3, 5), 16),
         b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${alpha})`;
 }
-// --- [NEW] HÀM ĐỒNG BỘ VÍ LÊN CLOUD ---
+
 async function updateCloudWallets() {
     if (!currentUser || !userProfile) return;
 
-    // Đảm bảo tracker_data tồn tại
+    
     if (!userProfile.tracker_data) userProfile.tracker_data = {};
 
-    // Gán cấu hình hiện tại vào key 'meta_wallets'
+    
     userProfile.tracker_data.meta_wallets = accSettings;
 
-    // Lưu lên Supabase (Âm thầm)
+    
     await supabase.from('profiles').update({ 
         tracker_data: userProfile.tracker_data 
     }).eq('id', currentUser.id);
@@ -5665,50 +5665,50 @@ async function updateCloudWallets() {
     console.log("✅ Wallets config synced to Cloud");
 }
 
-// --- [NEW] REALTIME CHART LOOP (TỰ ĐỘNG CẬP NHẬT CHART MỖI 5 GIÂY) ---
+
 setInterval(() => {
-    // Chỉ cập nhật khi User đang xem tab Dashboard (để tiết kiệm pin)
+    
     if (document.hidden) return; 
 
-    // Lặp qua tất cả các giải đấu đang có
+    
     compList.forEach(c => {
-        // Chỉ vẽ lại nếu thẻ đang hiển thị trên màn hình (có canvas)
+        
         let canvas = document.getElementById(`miniChart-${c.db_id}`);
         if (canvas) {
-            // Gọi lại hàm vẽ (Nó sẽ tự tính lại thời gian secondsRemaining)
+            
             renderCardMiniChart(c);
         }
     });
-}, 5000); // 5000ms = 5 giây
+}, 5000); 
 
-/* === BẮT ĐẦU ĐOẠN CODE FIX LỖI === */
+
 document.addEventListener('click', function(e) {
-    // Kiểm tra xem người dùng có bấm vào nút Predict (hoặc icon bên trong nó) không
+    
     if (e.target.closest('.btn-predict')) {
         
-        // 1. Tìm thẻ cha (.card-item) đang chứa cái nút này
+        
         const currentCard = e.target.closest('.card-item');
         
-        // 2. Tắt chế độ phóng to của thẻ bài
+        
         if (currentCard) {
-            // Xóa các class thường dùng để phóng to (active, expanded, open...)
-            // Code này sẽ thử xóa hết các tên thông dụng, trúng cái nào thì ăn cái đó
+            
+            
             currentCard.classList.remove('active');
             currentCard.classList.remove('expanded');
             currentCard.classList.remove('show');
             currentCard.classList.remove('open');
 
-            // Reset style nếu bạn dùng style inline (đề phòng)
+            
             currentCard.style.zIndex = ''; 
             currentCard.style.position = '';
         }
     }
 });
-/* === KẾT THÚC ĐOẠN CODE FIX LỖI === */
 
-// --- FEEDBACK LOGIC (ENGLISH) ---
+
+
 function openFeedbackModal() {
-    // Auto-fill name if logged in
+    
     if(typeof userProfile !== 'undefined' && userProfile && userProfile.nickname) {
         document.getElementById('fb-name').value = userProfile.nickname;
     }
@@ -5751,14 +5751,14 @@ async function sendFeedbackToDb() {
     }
 }
 
-// --- TELEGRAM SYSTEM CONFIG (English) ---
+
 
 const TELE_CONFIG = {
     get token() { return localStorage.getItem('WAVE_TELE_TOKEN'); },
-    chatId: '-1003355713341' // <-- ĐIỀN CHANNEL ID CỦA BẠN VÀO ĐÂY
+    chatId: '-1003355713341' 
 };
 
-// 1. Logic Admin Panel Toggle
+
 window.addEventListener('load', () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('mode') === 'admin') {
@@ -5772,7 +5772,7 @@ function closeAdmin() {
     window.history.replaceState({}, document.title, "/");
 }
 
-// 2. Logic Save Token
+
 window.saveTokenFromUI = function() {
     const inputToken = document.getElementById('bot-token-input').value.trim();
     if (!inputToken) return alert("❌ Token is empty!");
@@ -5793,16 +5793,16 @@ function checkTokenStatus() {
     }
 }
 
-// 3. Logic Send Message (English Content)
+
 window.sendReportFromUI = async function() {
     if (!TELE_CONFIG.token) return alert("⚠️ Token missing! Please save token first.");
 
     let name = document.getElementById('report-name').value;
     let vol = document.getElementById('report-vol').value;
     let time = document.getElementById('report-time').value;
-    let date = new Date().toLocaleDateString('en-GB'); // Định dạng ngày quốc tế DD/MM/YYYY
+    let date = new Date().toLocaleDateString('en-GB'); 
 
-    // Nội dung tin nhắn Tiếng Anh
+    
     let msg = `
 <b>🔔 VOLUME UPDATE (${date})</b>
 
@@ -5812,10 +5812,10 @@ window.sendReportFromUI = async function() {
 
 ⚠️ <i>Alert: High volatility detected. Check your position!</i>
 
-👉 <a href="https://t.me/WaveAlphaSignal_bot/miniapp">Open Wave Alpha Terminal</a>
+👉 <a href="https:
     `;
 
-    const url = `https://api.telegram.org/bot${TELE_CONFIG.token}/sendMessage`;
+    const url = `https:
     try {
         const res = await fetch(url, {
             method: 'POST',
@@ -5836,28 +5836,28 @@ window.sendReportFromUI = async function() {
 }
 
 
-    // --- TELEGRAM MINI APP INTEGRATION ---
+    
     document.addEventListener('DOMContentLoaded', function() {
         const tg = window.Telegram.WebApp;
         
-        // 1. Báo cho Telegram biết App đã sẵn sàng (để mở rộng full màn hình)
+        
         tg.ready();
         tg.expand(); 
 
-        // 2. Tự động lấy User ID từ Telegram điền vào form Login (Optional)
-        // Nếu user mở từ Telegram, ta có thể biết họ là ai ngay
+        
+        
         const user = tg.initDataUnsafe?.user;
         if (user) {
             console.log("User from Tele:", user);
-            // Bạn có thể dùng logic này để auto-login hoặc điền tên vào ô dự đoán
-            // Ví dụ:
+            
+            
             if(document.getElementById('modal-p-name')) {
                 document.getElementById('modal-p-name').value = user.username || user.first_name;
             }
         }
 
-        // 3. Chỉnh màu Header (Chỉ chạy nếu phiên bản >= 6.1)
-// Kiểm tra xem hàm có tồn tại và phiên bản có hỗ trợ không để tránh lỗi console
+        
+
 if (tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
     tg.setHeaderColor('#161a1e');
 } else {
@@ -5865,23 +5865,23 @@ if (tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) {
 }
     });
 
-// ==========================================
-// DATA BACKUP & RESTORE SYSTEM
-// ==========================================
 
-// 1. Export Data (Download)
+
+
+
+
 function downloadBackup() {
     try {
-        // Collect data
+        
         const backupData = {
             app: "WaveAlpha",
             version: "2.0",
             timestamp: new Date().toISOString(),
-            settings: typeof accSettings !== 'undefined' ? accSettings : [], // Wallet list
-            profile: typeof userProfile !== 'undefined' ? userProfile : null // User profile
+            settings: typeof accSettings !== 'undefined' ? accSettings : [], 
+            profile: typeof userProfile !== 'undefined' ? userProfile : null 
         };
 
-        // Create file
+        
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
         const a = document.createElement('a');
         const dateStr = new Date().toISOString().split('T')[0];
@@ -5892,7 +5892,7 @@ function downloadBackup() {
         a.click();
         a.remove();
 
-        // Notification
+        
         if(typeof showToast === 'function') {
             showToast("✅ Backup file downloaded successfully!", "success");
         } else {
@@ -5904,14 +5904,14 @@ function downloadBackup() {
     }
 }
 
-// 2. Trigger Import
+
 function triggerRestore() {
     const msg = "⚠️ WARNING: IMPORTING DATA\n\nThis will OVERWRITE your current local data with the backup file.\nAre you sure you want to continue?";
     if(!confirm(msg)) return;
     document.getElementById('restoreFile').click();
 }
 
-// 3. Handle File Import
+
 function handleRestore(input) {
     const file = input.files[0];
     if (!file) return;
@@ -5921,34 +5921,34 @@ function handleRestore(input) {
         try {
             const data = JSON.parse(e.target.result);
 
-            // Validation
+            
             if (!data.app || data.app !== "WaveAlpha" || !data.settings) {
                 alert("❌ Invalid file! Please select a valid Wave Alpha backup file.");
                 return;
             }
 
-            // --- RESTORE PROCESS ---
             
-            // 1. Update Global Variable
+            
+            
             if (typeof accSettings !== 'undefined') {
                 accSettings = data.settings;
             }
 
-            // 2. Save to LocalStorage
+            
             localStorage.setItem('wave_settings', JSON.stringify(data.settings));
             
-            // Optional: Restore Profile if exists
+            
             if (data.profile) {
                 localStorage.setItem('wave_profile', JSON.stringify(data.profile));
             }
 
-            // 3. Sync to Cloud (Crucial Step)
-            // This replaces the old "Sync Old Data" button
+            
+            
             if (typeof updateCloudWallets === 'function') {
                 if(typeof showToast === 'function') showToast("⏳ Syncing to server...", "info");
-                await updateCloudWallets(); // Push restored data to new Supabase
+                await updateCloudWallets(); 
             } else if (typeof syncDataToCloud === 'function') {
-                 // Fallback if function name is different
+                 
                  await syncDataToCloud();
             }
 
@@ -5961,31 +5961,31 @@ function handleRestore(input) {
         }
     };
     reader.readAsText(file);
-    input.value = ''; // Reset input
+    input.value = ''; 
 }
 
-// --- [ĐÃ SỬA TOÀN DIỆN] HÀM CẬP NHẬT GIAO DIỆN ĐỒNG BỘ ---
-function updateSingleCardUI(rawRow) {
-    // Thay vì chỉ cập nhật lẻ tẻ 1 thẻ (gây lỗi sót dữ liệu Daily Volume),
-    // hàm này sẽ kích hoạt làm mới TOÀN BỘ giao diện để đảm bảo sự đồng nhất.
 
-    // 1. Cập nhật số liệu trên các Thẻ bài (Card Grid)
-    // Hàm này bên trong đã bao gồm lệnh vẽ lại bảng Market Health (Daily Volume)
+function updateSingleCardUI(rawRow) {
+    
+    
+
+    
+    
     if (typeof updateGridValuesOnly === 'function') {
         updateGridValuesOnly();
     }
 
-    // 2. Cập nhật bảng Market Health (Dự phòng để chắc chắn Daily Volume luôn mới)
+    
     if (typeof renderMarketHealthTable === 'function' && document.getElementById('healthTableBody')) {
         renderMarketHealthTable();
     }
     
-    // 3. Cập nhật thanh Thống kê trên cùng (Total Pool, Active Pools)
+    
     if (typeof renderStats === 'function') {
         renderStats();
     }
 
-    // 4. (Tính năng thêm) Nếu đang mở chi tiết Token này (Cockpit) -> Cập nhật luôn
+    
     if (rawRow && typeof currentPolyId !== 'undefined' && currentPolyId && rawRow.id === parseInt(currentPolyId)) {
         if (typeof updateTerminalData === 'function') {
             updateTerminalData(currentPolyId);
@@ -5994,12 +5994,12 @@ function updateSingleCardUI(rawRow) {
 }
 
 
-    // --- HÀM GỬI BÁO CÁO TỔNG HỢP (ĐÃ SỬA LỖI ĐỌC DATA) ---
+    
     async function broadcastDailyReport() {
-        // 1. Hỏi xác nhận trước khi gửi
+        
         if(!confirm("⚠️ XÁC NHẬN:\nTổng hợp dữ liệu ngày HÔM QUA và gửi lên Telegram?")) return;
         
-        // 2. Hiển thị trạng thái đang xử lý
+        
         showToast("⏳ Đang kết nối Server...", "info");
         const btn = document.getElementById('btn-broadcast');
         if(btn) { 
@@ -6008,38 +6008,38 @@ function updateSingleCardUI(rawRow) {
         }
     
         try {
-            // 3. Gọi Function trên Supabase
+            
             const { data, error } = await supabase.functions.invoke('daily-report');
             
-            // 4. Kiểm tra lỗi kết nối (Mạng, Sai tên function, Thiếu Key)
+            
             if (error) {
                 console.error("Supabase Error:", error);
                 alert("❌ LỖI KẾT NỐI SERVER:\n" + JSON.stringify(error, null, 2));
                 throw error;
             }
     
-            // 5. XỬ LÝ DỮ LIỆU (QUAN TRỌNG: Tránh lỗi Server trả về Text)
+            
             let finalData = data;
             
-            // Nếu Server trả về chuỗi văn bản (thường là thông báo lỗi HTML hoặc Text)
+            
             if (typeof data === 'string') {
                 console.log("Server trả về Text:", data);
                 try {
-                    // Cố gắng chuyển nó thành JSON
+                    
                     finalData = JSON.parse(data);
                 } catch (parseError) {
-                    // Nếu không chuyển được, nghĩa là Server báo lỗi nặng -> Hiện Alert để đọc
+                    
                     alert("⚠️ SERVER BÁO LỖI (TEXT):\n" + data);
                     throw new Error("Server trả về dữ liệu không hợp lệ (Non-JSON).");
                 }
             }
     
-            // 6. Kiểm tra kết quả logic
+            
             if (finalData && finalData.success) {
                 showToast(`✅ Đã gửi báo cáo (${finalData.count} tokens)!`, "success");
                 alert(`✅ GỬI THÀNH CÔNG!\nĐã báo cáo ${finalData.count} token lên Telegram.`);
             } else {
-                // Lấy thông báo lỗi từ server
+                
                 const msg = finalData ? (finalData.message || finalData.error) : "Dữ liệu rỗng";
                 showToast("⚠️ SERVER TỪ CHỐI: " + msg, "error");
             }
@@ -6048,7 +6048,7 @@ function updateSingleCardUI(rawRow) {
             console.error(e);
             showToast("❌ Lỗi: " + e.message, "error");
         } finally {
-            // 7. Mở lại nút bấm
+            
             if(btn) { 
                 btn.disabled = false; 
                 btn.innerHTML = '<i class="fas fa-bullhorn me-2"></i> GỬI BÁO CÁO TỔNG HỢP'; 
@@ -6056,22 +6056,22 @@ function updateSingleCardUI(rawRow) {
         }
     }
 
-// --- [NEW] HÀM HIỂN THỊ BANNER & HUB MỚI (FIX LỖI) ---
+
 function renderCustomHub() {
-    // 1. Xử lý Banner Slide
+    
     const inner = document.querySelector('.carousel-inner');
     const indicators = document.querySelector('.carousel-indicators');
     
-    // Kiểm tra xem có dữ liệu banner trong config không
+    
     if (inner && siteConfig.banners && Array.isArray(siteConfig.banners) && siteConfig.banners.length > 0) {
         inner.innerHTML = ''; 
         indicators.innerHTML = '';
         
         siteConfig.banners.forEach((b, i) => {
-            if(!b.img) return; // Bỏ qua nếu không có ảnh
+            if(!b.img) return; 
             const active = i === 0 ? 'active' : '';
             
-            // Tạo ảnh
+            
             inner.innerHTML += `
                 <div class="carousel-item ${active}" data-bs-interval="4000">
                     <a href="${b.link||'#'}" target="_blank">
@@ -6079,61 +6079,61 @@ function renderCustomHub() {
                     </a>
                 </div>`;
                 
-            // Tạo nút chấm tròn
+            
             indicators.innerHTML += `
                 <button type="button" data-bs-target="#eventCarousel" data-bs-slide-to="${i}" class="${active}"></button>`;
         });
         const carousel = document.getElementById('eventCarousel');
         if(carousel) carousel.style.display = 'block';
     } else {
-        // Nếu không có banner nào -> Ẩn khung slide đi
+        
         const carousel = document.getElementById('eventCarousel');
         if(carousel) carousel.style.display = 'none';
     }
 
-    // 2. Cập nhật Link 3 Sàn (Binance, Web3, Dex)
+    
     if(siteConfig.ref_binance && document.getElementById('ui-ref-binance')) document.getElementById('ui-ref-binance').href = siteConfig.ref_binance;
     if(siteConfig.ref_web3 && document.getElementById('ui-ref-web3')) document.getElementById('ui-ref-web3').href = siteConfig.ref_web3;
     if(siteConfig.ref_dex && document.getElementById('ui-ref-dex')) document.getElementById('ui-ref-dex').href = siteConfig.ref_dex;
 }
-   /* --- LOGIC ĐỒNG NHẤT: ĐEM THẺ RA GIỮA MÀN HÌNH (BORROW STRATEGY) --- */
-let activeCardPlaceholder = null; // Biến lưu vị trí cũ
+   
+let activeCardPlaceholder = null; 
 
 function toggleCardHighlight(el) {
-    // Nếu có thẻ đang mở thì đóng trước
+    
     if (document.querySelector('.tour-card.active-card')) {
         closeActiveCard();
     }
 
-    // 1. Tạo "cọc tiêu" giữ chỗ cũ (để tí nữa trả thẻ về đúng chỗ)
+    
     activeCardPlaceholder = document.createElement('div');
     activeCardPlaceholder.className = 'tour-card-placeholder';
-    activeCardPlaceholder.style.display = 'none'; // Chỉ giữ chỗ trong DOM
+    activeCardPlaceholder.style.display = 'none'; 
     el.parentNode.insertBefore(activeCardPlaceholder, el);
 
-    // 2. Di chuyển thẻ ra Body (Để nó nổi lên trên cùng, thoát khỏi Grid ẩn)
+    
     document.body.appendChild(el);
 
-    // 3. Thêm class Active (CSS sẽ làm nó hiện ra giữa màn hình)
-    // Dùng requestAnimationFrame để hiệu ứng mượt hơn
+    
+    
     requestAnimationFrame(() => {
         el.classList.add('active-card');
         
-        // [QUAN TRỌNG] Vẽ lại Chart ngay lập tức để không bị mất hình
+        
         let canvas = el.querySelector('canvas');
         if (canvas) {
-            // Lấy ID chart từ wrapper cũ hoặc ID canvas
+            
             let dbId = canvas.id.split('-')[1];
             let c = compList.find(x => x.db_id == dbId);
             if(c) renderCardMiniChart(c); 
         }
     });
 
-    // 4. Hiện màn hình đen (Backdrop)
+    
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
         backdrop.style.display = 'block';
-        backdrop.onclick = closeActiveCard; // Click ra ngoài thì tắt
+        backdrop.onclick = closeActiveCard; 
         setTimeout(() => backdrop.classList.add('show'), 10);
     }
     document.body.classList.add('has-active-card');
@@ -6143,20 +6143,20 @@ function closeActiveCard() {
     const activeEl = document.querySelector('.tour-card.active-card');
     if (!activeEl) return;
 
-    // 1. Bỏ class Active
+    
     activeEl.classList.remove('active-card');
 
-    // 2. Trả thẻ về chỗ cũ (Dựa vào cọc tiêu)
+    
     if (activeCardPlaceholder && activeCardPlaceholder.parentNode) {
         activeCardPlaceholder.parentNode.insertBefore(activeEl, activeCardPlaceholder);
         activeCardPlaceholder.remove();
     } else {
-        // Fallback: Nếu mất cọc tiêu thì xóa thẻ luôn (tránh lỗi)
+        
         activeEl.remove(); 
     }
     activeCardPlaceholder = null;
 
-    // 3. Ẩn màn hình đen
+    
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
         backdrop.classList.remove('show');
@@ -6166,45 +6166,45 @@ function closeActiveCard() {
 }
 
 function jumpToCard(dbId) {
-    // 1. Tìm wrapper chứa thẻ trong Grid
+    
     const wrapper = document.querySelector(`.card-wrapper[data-id="${dbId}"]`);
     
     if (wrapper) {
         const card = wrapper.querySelector('.tour-card');
-        // 2. Dù đang ở tab nào, cứ gọi hàm toggleCardHighlight
-        // Hàm này sẽ tự động lôi thẻ ra body và hiện lên -> Đảm bảo đồng nhất 100%
+        
+        
         if (card) toggleCardHighlight(card);
     }
 }
 
-// --- [FIX FINAL] HÀM HIỂN THỊ POPUP (ĐÃ XÓA XUNG ĐỘT SỰ KIỆN) ---
+
 function openCardOverlay(originalCard) {
-    // 1. Đóng cái cũ trước nếu có
+    
     closeActiveCard();
 
-    // 2. Clone thẻ bài
+    
     const clone = originalCard.cloneNode(true);
     
-    // --- [QUAN TRỌNG NHẤT] XÓA SỰ KIỆN CLICK CŨ ---
-    // Loại bỏ onclick="toggleCardHighlight..." để tránh bị dính
+    
+    
     clone.removeAttribute('onclick'); 
     clone.onclick = null; 
 
-    // 3. Thêm class định vị
-    clone.classList.remove('active-card'); // Reset trạng thái
+    
+    clone.classList.remove('active-card'); 
     clone.classList.add('overlay-clone');
     
-    // 4. Thêm nút Đóng (X) thủ công vào thẻ clone
+    
     const closeBtn = document.createElement('div');
     closeBtn.className = 'btn-close-overlay';
     closeBtn.innerHTML = '<i class="fas fa-times"></i>';
     closeBtn.onclick = function(e) {
-        e.stopPropagation(); // Chặn lan truyền
-        closeActiveCard();   // Gọi lệnh đóng ngay
+        e.stopPropagation(); 
+        closeActiveCard();   
     };
     clone.appendChild(closeBtn);
 
-    // 5. Xử lý lại Chart cho thẻ Clone (Vẽ lại ID mới)
+    
     let cardWrapper = originalCard.closest('.card-wrapper');
     let dbId = cardWrapper ? cardWrapper.getAttribute('data-id') : null;
 
@@ -6215,7 +6215,7 @@ function openCardOverlay(originalCard) {
             cloneCanvas.id = newCanvasId;
             cloneCanvas.style.display = 'block';
             
-            // Vẽ lại chart sau 50ms
+            
             setTimeout(() => {
                 let c = compList.find(x => x.db_id == dbId);
                 if (c) renderCardMiniChart(c, newCanvasId);
@@ -6223,18 +6223,18 @@ function openCardOverlay(originalCard) {
         }
     }
 
-    // 6. Ngăn click vào thẻ clone làm đóng thẻ (Chỉ đóng khi bấm nút X hoặc bấm ra ngoài)
+    
     clone.addEventListener('click', function(e) {
         e.stopPropagation(); 
     });
 
-    // 7. Thêm vào Body & Hiện Backdrop
+    
     document.body.appendChild(clone);
 
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
         backdrop.style.display = 'block';
-        // Gán sự kiện: Click vào vùng đen -> Đóng thẻ
+        
         backdrop.onclick = function() {
             closeActiveCard();
         };
@@ -6245,22 +6245,22 @@ function openCardOverlay(originalCard) {
 
 
 
-// --- [BƯỚC 2] DÁN VÀO CUỐI FILE SCRIPT.JS ---
+
 function updateHealthTableRealtime() {
-    // Nếu bảng chưa mở thì thoát
+    
     if (!document.getElementById('healthTableBody')) return;
 
     compList.forEach(c => {
         let dbId = c.db_id || c.id;
 
-        // 1. CẬP NHẬT DAILY VOL (Đang chạy tốt)
-        // 1. CẬP NHẬT DAILY VOL (FIX)
-    // 1. CẬP NHẬT DAILY VOL (FIX: CHỈ LIMIT)
+        
+        
+    
         let dailyEl = document.getElementById(`vol-${dbId}`);
         if(dailyEl) {
              let dailyVal = parseFloat(c.limit_daily_volume || 0);
              
-             // Chống lỗi = 0 khi End
+             
              if (dailyVal === 0 && c.limit_vol_history && c.limit_vol_history.length > 0) {
                  let last = c.limit_vol_history[c.limit_vol_history.length-1];
                  if(last) dailyVal = parseFloat(last.vol);
@@ -6274,18 +6274,18 @@ function updateHealthTableRealtime() {
              }
         }
 
-        // 2. CẬP NHẬT TOTAL VOL (FIX: CHỈ LIMIT)
+        
         let totalVal = parseFloat(c.limit_accumulated_volume || 0);
-        // (Bỏ luôn phần fallback tính toán tay, tin tưởng tuyệt đối vào backend)
+        
 
-        // Tìm đúng cái ID mh-total-... để điền số
+        
         let totalEl = document.getElementById(`mh-total-${dbId}`);
         if (totalEl) {
             let newTotalText = '$' + parseInt(totalVal).toLocaleString('en-US');
             
             if (totalEl.innerText !== newTotalText) {
                 totalEl.innerText = newTotalText;
-                // Hiệu ứng nháy xanh báo hiệu
+                
                 totalEl.style.transition = 'none';
                 totalEl.style.color = '#00F0FF';
                 totalEl.style.textShadow = '0 0 10px #00F0FF';
@@ -6302,65 +6302,65 @@ function updateHealthTableRealtime() {
 
 
 
-// --- SMART REFRESH: Chỉ tải lại khi người dùng quay lại Tab ---
+
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
         console.log("👀 User is back! Checking for updates...");
         
-        // Kiểm tra xem dữ liệu có quá cũ không (ví dụ > 5 phút chưa cập nhật)
-        // Nếu muốn chắc ăn thì gọi luôn quickSyncData()
+        
+        
         quickSyncData(); 
         
-        // Kiểm tra lại kết nối Realtime xem có bị đứt không
+        
         const status = supabase.channel('public:tournaments').state;
         if (status !== 'joined' && status !== 'joining') {
             console.log("Reconnecting Realtime...");
             supabase.removeAllChannels();
-            init(); // Gọi lại hàm khởi tạo để kết nối lại
+            init(); 
         }
     }
 });
 
-/* --- FILE: script.js (Dán xuống cuối file) --- */
 
-/* HÀM XỬ LÝ VOTE (Dùng LocalStorage để test) */
+
+
 function handleVote(tokenId, type, btnElement) {
-    // 1. Chặn sự kiện click lan ra ngoài (để không bị nhảy vào trang chi tiết)
+    
     event.stopPropagation();
 
-    // 2. Tìm dòng chứa nút bấm để xử lý UI
+    
     let wrapper = btnElement.closest('.sentiment-wrapper');
     let btnUp = wrapper.querySelector('button:first-child');
     let btnDown = wrapper.querySelector('button:last-child');
     let barFill = wrapper.querySelector('.sentiment-fill-up');
 
-    // 3. Xử lý Logic Toggle (Bấm lại nút đang chọn thì hủy vote)
+    
     let currentVote = localStorage.getItem(`vote_${tokenId}`);
     
-    // Reset UI trước
+    
     btnUp.classList.remove('active-up');
     btnDown.classList.remove('active-down');
 
     if (currentVote === type) {
-        // Nếu bấm lại nút cũ -> Hủy vote (Remove)
+        
         localStorage.removeItem(`vote_${tokenId}`);
-        // Trả thanh bar về trung bình
+        
         barFill.style.width = '50%';
     } else {
-        // Nếu bấm nút mới -> Lưu vote mới
+        
         localStorage.setItem(`vote_${tokenId}`, type);
         
-        // Cập nhật UI nút
+        
         if (type === 'up') {
             btnUp.classList.add('active-up');
-            barFill.style.width = '75%'; // Giả lập tăng
+            barFill.style.width = '75%'; 
         } else {
             btnDown.classList.add('active-down');
-            barFill.style.width = '25%'; // Giả lập giảm
+            barFill.style.width = '25%'; 
         }
     }
     
-    // (Sau này ta sẽ gọi API Supabase ở đây để lưu thật)
+    
     console.log(`User voted ${type} for token ${tokenId}`);
 }
 
