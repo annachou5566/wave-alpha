@@ -349,7 +349,7 @@ function renderMarketHUD(stats) {
             volDisplay = t.volume.rolling_24h || 0;
             pctWidth = (volDisplay / maxVolRolling) * 100;
             
-            barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#00F0FF;"></div>`;
+            barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#5E6673;"></div>`;
         } else {
             volDisplay = t.volume.daily_total || 0;
             pctWidth = (volDisplay / maxVolDaily) * 100;
