@@ -556,12 +556,12 @@ body {
 /* --- SỬA ĐOẠN NÀY --- */
 .market-hud-container {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* MỚI: Chia 4 cột đều nhau */
+    grid-template-columns: repeat(3, 1fr); /* ĐỔI TỪ 4 VỀ 3 CỘT */
     background: rgba(18, 22, 28, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     padding: 20px;
-    gap: 24px;
+    gap: 20px;
     backdrop-filter: blur(10px);
     margin-bottom: 24px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -674,15 +674,10 @@ body {
 /* Dots */
 .hud-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; display: inline-block; }
 
-/* RESPONSIVE MOBILE */
+/* Mobile: Chuyển về 1 cột cho dễ nhìn với thẻ gộp */
 @media (max-width: 992px) {
     .market-hud-container {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-    .border-left-dim {
-        border-left: none;
-        padding-left: 0;
+        grid-template-columns: 1fr; 
     }
 }
 
@@ -994,4 +989,42 @@ body {
     font-weight: 700;
     margin-bottom: 6px;
     font-family: var(--font-num);
+}
+
+/* --- CẬP NHẬT MỚI (FIX LỖI HIỂN THỊ) --- */
+
+/* Fix tên Daily Vol bị chèn: Tăng độ rộng tên, giảm độ rộng Bar */
+.daily-row .flow-name {
+    width: 70px; /* Tăng từ 45px lên 70px */
+    flex-shrink: 0; /* Không cho phép co lại */
+    margin-right: 10px;
+}
+.daily-bar-container {
+    width: 80px; /* Cố định chiều rộng tối đa của thanh bar */
+    flex: none; /* Không co giãn lung tung */
+}
+
+/* Style cho phần Label của Lifecycle (Căn theo % thanh màu) */
+.lifecycle-labels {
+    display: flex;
+    width: 100%;
+    margin-bottom: 4px;
+}
+.lifecycle-label-item {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-num);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 2px;
+}
+
+/* Style cho thanh Price Distribution (Căn đều 10 cột) */
+.distrib-bar-item {
+    flex: 1; /* Chia đều không gian */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
 }

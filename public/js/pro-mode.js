@@ -252,7 +252,7 @@ function renderTableRows(tbody) {
 }
 
 // =========================================================================
-// HÀM VẼ DASHBOARD (HUD) - PHIÊN BẢN 4 CỘT (FINAL)
+// HÀM VẼ DASHBOARD (HUD) - PHIÊN BẢN 3 CỘT (MERGED CARD)
 // =========================================================================
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
@@ -269,43 +269,38 @@ function renderMarketHUD(stats) {
         container.insertBefore(hud, container.firstChild);
     }
 
-    // --- 1. LOGIC TÍNH TOÁN DATA ---
+    // --- 1. TÍNH TOÁN DATA ---
     
-    // [ROLLING VOL] Lấy Top 10 Token Active
+    // [ROLLING VOL]
     let activeTokens = allTokens.filter(t => {
         const s = getTokenStatus(t);
         return s !== 'SPOT' && s !== 'DELISTED' && s !== 'PRE_DELISTED';
     });
     activeTokens.sort((a, b) => (b.volume.rolling_24h || 0) - (a.volume.rolling_24h || 0));
-    
-    // Lấy Top 10 để vẽ Leaderboard dài
     const top10Rolling = activeTokens.slice(0, 10);
     const maxVolRolling = top10Rolling[0] ? (top10Rolling[0].volume.rolling_24h || 1) : 1;
 
-    // Tính Dominance
+    // Dominance
     const volTop10Sum = top10Rolling.reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
     const totalRolling = stats.alphaRolling24h || 1;
     const domPct = (volTop10Sum / totalRolling) * 100;
 
-    // [DAILY VOL] Top 10 Token có Vol Daily lớn nhất (Đã sort sẵn trong stats.topVolTokens ở renderTable)
-    // Nhưng ta cần sort lại một chút để chắc chắn
+    // [DAILY VOL]
     let dailyTokens = [...stats.topVolTokens].sort((a, b) => (b.volume.daily_total || 0) - (a.volume.daily_total || 0));
     const top10Daily = dailyTokens.slice(0, 10);
     const maxVolDaily = top10Daily[0] ? (top10Daily[0].volume.daily_total || 1) : 1;
 
-    // Helper format số K/M
+    // Helpers
     const formatNumK = (num) => {
         if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
         if(num >= 1000) return (num/1000).toFixed(0) + 'K';
         return num;
     };
 
-    // Helper vẽ dòng Rolling Vol (1 thanh màu duy nhất)
     const renderRollingRow = (t, idx) => {
         if (!t) return '';
         const vol = t.volume.rolling_24h || 0;
         const pct = (vol / maxVolRolling) * 100;
-        // Màu mặc định (var(--brand) là Cyan)
         return `
             <div class="flow-row">
                 <div class="flow-idx">#${idx}</div>
@@ -316,117 +311,106 @@ function renderMarketHUD(stats) {
         `;
     };
 
-    // Helper vẽ dòng Daily Vol (2 thanh Limit + Chain xếp chồng)
+    // [FIX] Daily Row: Cấu trúc flex chặt chẽ hơn để không vỡ layout
     const renderDailyRow = (t, idx) => {
         if (!t) return '';
         const vTotal = t.volume.daily_total || 0;
         const vLimit = t.volume.daily_limit || 0;
         const vChain = t.volume.daily_onchain || 0;
         
-        // Tính % chiều dài thanh bar dựa trên Total so với Top 1
+        // Chiều dài thanh bar (tối đa 100% của container 80px)
         const totalWidthPct = (vTotal / maxVolDaily) * 100;
-        
-        // Trong thanh bar đó, chia tỷ lệ Limit/Chain
-        // Ví dụ: Thanh dài 80px. Limit chiếm 40%, Chain chiếm 60% của 80px đó.
         const pLimit = vTotal > 0 ? (vLimit / vTotal) * 100 : 0;
         const pChain = vTotal > 0 ? (vChain / vTotal) * 100 : 0;
 
         return `
             <div class="daily-row">
                 <div class="flow-idx">#${idx}</div>
-                <div class="flow-name">${t.symbol}</div>
-                <div class="daily-bar-container" style="width:${totalWidthPct}% !important; flex:none; width: 60px;"> 
-                    <div style="width:100%; display:flex; height:100%">
+                <div class="flow-name" title="${t.symbol}">${t.symbol}</div>
+                
+                <div class="daily-bar-container">
+                    <div style="width:${totalWidthPct}%; display:flex; height:100%">
                          <div class="bar-limit-fill" style="width:${pLimit}%"></div>
                          <div class="bar-chain-fill" style="width:${pChain}%"></div>
                     </div>
                 </div>
+
                 <div style="flex:1"></div>
                 <div class="flow-val" style="color:#eaecef">$${formatNumK(vTotal)}</div> 
             </div>
         `;
     };
 
-    // Helper vẽ Price Action (5 Cột)
+    // [FIX] Price Bar: Dùng flex:1 thay vì width cứng
     const d = stats.distribution;
     const drawSentBar = (count, label, colorClass) => {
         let h = (count / stats.distribution.maxCount) * 40;
         if (count > 0 && h < 4) h = 4;
-        return `<div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; width:100%;">
+        return `<div class="distrib-bar-item">
             <div style="font-size:9px; color:${count>0?'#fff':'#444'}; margin-bottom:1px; font-weight:700;">${count>0?count:''}</div>
             <div style="width:80%; height:${h}px; border-radius:1px;" class="${colorClass}"></div>
-            <div style="font-size:8px; color:#5E6673; margin-top:4px; transform:scale(0.9); white-space:nowrap;">${label}</div>
+            <div style="font-size:8px; color:#5E6673; margin-top:4px; transform:scale(0.85); white-space:nowrap;">${label}</div>
         </div>`;
     };
 
-    // Tỷ lệ cho Lifecycle
+    // Tỷ lệ Lifecycle
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
 
-    // --- 2. RENDER HTML ---
+    // --- 2. RENDER HTML (3 CỘT) ---
     hud.innerHTML = `
         <div class="hud-module">
-            <div class="hud-title">ALPHA LIFECYCLE (ALL TIME)</div>
+            <div class="hud-title">MARKET OVERVIEW</div>
             
-            <div class="hud-main-value" style="margin-bottom:15px;">
-                ${stats.totalScan} <span style="font-size:12px; color:#5E6673; font-weight:normal">TOKENS</span>
+            <div class="hud-main-value" style="font-size:20px; margin-bottom:12px;">
+                ${stats.totalScan} <span style="font-size:12px; color:#5E6673; font-weight:normal">TOTAL ALPHA</span>
             </div>
 
-            <div class="lifecycle-stats">
-                <span style="color:#0ecb81">${stats.countActive} ALPHA</span>
-                <span style="color:#F0B90B">${stats.countSpot} SPOT</span>
-                <span style="color:#f6465d">${stats.countDelisted} DELISTED</span>
+            <div class="lifecycle-labels">
+                <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81; text-align:left;">${stats.countActive} ACT</div>
+                <div class="lifecycle-label-item" style="width:${pctSpot}%; color:#F0B90B; text-align:center;">${stats.countSpot} SPOT</div>
+                <div class="lifecycle-label-item" style="width:${pctDelist}%; color:#f6465d; text-align:right;">${stats.countDelisted} DEAD</div>
             </div>
 
-            <div style="display:flex; width:100%; height:6px; background:#1e2329; border-radius:3px; overflow:hidden;">
+            <div style="display:flex; width:100%; height:6px; background:#1e2329; border-radius:3px; overflow:hidden; margin-bottom:20px;">
                 <div style="width:${pctActive}%; background:#0ecb81;"></div>
                 <div style="width:${pctSpot}%; background:#F0B90B;"></div>
                 <div style="width:${pctDelist}%; background:#f6465d;"></div>
             </div>
-            
-            <div style="margin-top:auto; font-size:10px; color:#5E6673; text-align:center; padding-top:10px;">
-                Real-time Tracking Status
-            </div>
-        </div>
 
-        <div class="hud-module border-left-dim">
-            <div class="hud-title">24H PRICE DISTRIB.</div>
-            
-            <div style="flex-grow:1; display:flex; align-items:flex-end; gap:2px; padding-bottom:5px;">
-                ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
-                ${drawSentBar(d.up_2_4, '2-4%', 'bar-green-mid')}
-                ${drawSentBar(d.up_4_6, '4-6%', 'bar-green')}
-                ${drawSentBar(d.up_6_8, '6-8%', 'bar-green')}
-                ${drawSentBar(d.up_8, '>8%', 'bar-green')}
+            <div style="border-top:1px solid rgba(255,255,255,0.05); padding-top:15px; flex-grow:1; display:flex; flex-direction:column;">
+                <div class="hud-title" style="margin-bottom:10px;">24H PRICE DISTRIB.</div>
                 
-                <div style="width:4px;"></div> ${drawSentBar(d.down_0_2, '0-2%', 'bar-red-dim')}
-                ${drawSentBar(d.down_2_4, '2-4%', 'bar-red-mid')}
-                ${drawSentBar(d.down_4_6, '4-6%', 'bar-red')}
-                ${drawSentBar(d.down_6_8, '6-8%', 'bar-red')}
-                ${drawSentBar(d.down_8, '>8%', 'bar-red')}
-            </div>
-
-            <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
-                <div style="color: #0ecb81; font-weight: 700; font-family: var(--font-num); font-size: 14px;">▲ ${stats.gainers}</div>
-                <div style="color: #f6465d; font-weight: 700; font-family: var(--font-num); font-size: 14px;">▼ ${stats.losers}</div>
+                <div style="flex-grow:1; display:flex; align-items:flex-end; gap:2px;">
+                    ${drawSentBar(d.up_0_2, '0-2%', 'bar-green-dim')}
+                    ${drawSentBar(d.up_2_4, '2-4%', 'bar-green-mid')}
+                    ${drawSentBar(d.up_4_6, '4-6%', 'bar-green')}
+                    ${drawSentBar(d.up_6_8, '6-8%', 'bar-green')}
+                    ${drawSentBar(d.up_8, '>8%', 'bar-green')}
+                    
+                    <div style="width:4px;"></div>
+                    
+                    ${drawSentBar(d.down_0_2, '0-2%', 'bar-red-dim')}
+                    ${drawSentBar(d.down_2_4, '2-4%', 'bar-red-mid')}
+                    ${drawSentBar(d.down_4_6, '4-6%', 'bar-red')}
+                    ${drawSentBar(d.down_6_8, '6-8%', 'bar-red')}
+                    ${drawSentBar(d.down_8, '>8%', 'bar-red')}
+                </div>
             </div>
         </div>
 
         <div class="hud-module border-left-dim">
-            <div class="hud-title">ROLLING VOL 24H</div>
-            
+            <div class="hud-title" style="color:#00F0FF">ROLLING VOL 24H</div>
             <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
                 $${formatNum(stats.alphaRolling24h)}
             </div>
-
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
                 <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
                     <div style="width:${domPct}%; height:100%; background:#eaecef; border-radius:2px;"></div>
                 </div>
-                <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span style="color:#fff">${domPct.toFixed(0)}%</span></div>
+                <div style="font-size:9px; color:#848E9C; white-space:nowrap;">DOMINANCE: <span style="color:#fff">${domPct.toFixed(0)}%</span></div>
             </div>
-
             <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:flex-start; overflow:hidden;">
                 ${top10Rolling.map((t, i) => renderRollingRow(t, i+1)).join('')}
             </div>
@@ -434,16 +418,13 @@ function renderMarketHUD(stats) {
 
         <div class="hud-module border-left-dim">
             <div class="hud-title">DAILY VOL (UTC 0:00)</div>
-            
             <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
                 $${formatNum(stats.alphaDailyTotal)}
             </div>
-
             <div style="display:flex; gap:10px; margin-bottom:10px; font-size:10px; font-weight:700;">
                 <div style="color:#F0B90B;">● LIMIT: $${formatNumK(stats.alphaDailyLimit)}</div>
                 <div style="color:#9945FF;">● CHAIN: $${formatNumK(stats.alphaDailyChain)}</div>
             </div>
-
             <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:flex-start; overflow:hidden;">
                 ${top10Daily.map((t, i) => renderDailyRow(t, i+1)).join('')}
             </div>
