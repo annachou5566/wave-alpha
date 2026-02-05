@@ -1,4 +1,4 @@
-/* public/css/pro-mode.css - FINAL CLEAN VERSION */
+
 
 :root {
     --bg-dark: #0b0e11;
@@ -13,37 +13,35 @@
     --font-num: 'Rajdhani', sans-serif;
 }
 
-/* --- 1. GLOBAL LAYOUT & SCROLLING --- */
+
 body {
     background-color: var(--bg-dark);
     color: var(--text-primary);
     overflow-x: hidden;
 }
 
-/* Navbar có sẵn -> Ghim lên đầu (Layer 1050 để dưới Popup Login) */
+
 .navbar {
     position: sticky !important;
     top: 0;
-    z-index: 1000 !important; /* Bootstrap Modal thường là 1055 */
+    z-index: 1000 !important;
     background: rgba(22, 26, 30, 0.95) !important;
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     transition: all 0.3s ease;
 }
 
-/* ==========================================================================
-   GIAO DIỆN TAB NAVIGATION (FIX LỖI CHE LOGO & NỘI DUNG)
-   ========================================================================== */
 
-/* --- 1. THANH TAB (NẰM GIỮA LOGO VÀ NỘI DUNG) --- */
+
+
 #alpha-tab-nav {
-    position: fixed !important; /* Ghim vị trí */
-    top: 76px;                  /* Bắt đầu ngay bên dưới Header (Desktop) */
+    position: fixed !important;
+    top: 76px;                 
     left: 0;
     width: 100%;
-    z-index: 990;               /* Thấp hơn Header (1000) để khi trượt lên thì chui xuống dưới */
+    z-index: 990;              
     
-    background: #0b0e11;        /* Nền đen Cyber */
+    background: #0b0e11;       
     border-bottom: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     
@@ -51,29 +49,29 @@ body {
     justify-content: center;
     padding: 12px 0;
     
-    /* Hiệu ứng trượt mượt mà */
+   
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Khi ẩn: đẩy lên trên */
+
 #alpha-tab-nav.nav-hidden {
     transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
 }
 
-/* --- 2. NỘI DUNG (ĐẨY XUỐNG ĐỂ KHÔNG BỊ THANH TAB CHE) --- */
-/* Áp dụng cho TOÀN BỘ các trang con (Alpha Market & Competition) */
+
+
 .alpha-container,
 #competition-view,
 #view-dashboard,
 .view-section,
 .terminal-layout {
-    /* Navbar(76) + Tab(60) + Khoảng thở = 160px */
+   
     padding-top: 100px !important; 
 }
 
-/* --- 3. STYLE NÚT BẤM (GIỮ NGUYÊN ĐẸP NHƯ CŨ) --- */
+
 .tab-btn {
     background: transparent;
     border: none;
@@ -104,15 +102,15 @@ body {
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
 }
 
-/* --- 4. TỐI ƯU CHO ĐIỆN THOẠI (QUAN TRỌNG) --- */
+
 @media (max-width: 768px) {
-    /* Điều chỉnh vị trí Thanh Tab khớp với Header Mobile */
+   
     #alpha-tab-nav {
-        top: 60px;      /* Header Mobile thường nhỏ hơn (khoảng 60px) */
+        top: 60px;     
         padding: 8px 0;
     }
 
-    /* Thu nhỏ nút bấm cho gọn gàng (Theo ý bạn) */
+   
     .tab-btn {
         font-size: 13px;
         padding: 6px 12px;
@@ -120,8 +118,8 @@ body {
         letter-spacing: 0.5px;
     }
 
-    /* Đẩy nội dung trên Mobile xuống vừa đủ */
-    /* Header(60) + Tab(50) + Khoảng thở = 130px */
+   
+   
     .alpha-container,
     #competition-view,
     #view-dashboard,
@@ -131,16 +129,16 @@ body {
     }
 }
 
-/* --- 3. MARKET VIEW CONTAINER (KHẮC PHỤC LỖI MÀN HÌNH ĐEN) --- */
+
 #alpha-market-view {
-    /* Quan trọng: Dùng relative và z-index thấp để KHÔNG che Modal */
+   
     position: relative; 
     z-index: 1; 
     
     width: 100%;
     min-height: 100vh;
     background: var(--bg-dark);
-    display: none; /* JS sẽ bật nó lên */
+    display: none;
     opacity: 1;
     transition: opacity 0.2s ease-in-out;
     padding-bottom: 50px;
@@ -161,10 +159,10 @@ body {
     padding: 20px;
 }
 
-/* --- 4. HEADER CÔNG CỤ (Search & Time) --- */
+
 .alpha-header {
     display: flex;
-    justify-content: space-between; /* Đẩy 2 khối ra 2 đầu */
+    justify-content: space-between;
     align-items: center;
     gap: 16px;
     margin-bottom: 16px;
@@ -212,7 +210,7 @@ body {
     border: 1px solid var(--border-dim);
 }
 
-/* --- 5. DATA TABLE (Bảng dữ liệu) --- */
+
 .table-responsive {
     overflow-x: auto;
     background: var(--bg-card);
@@ -228,29 +226,29 @@ body {
     color: var(--text-primary);
 }
 
-/* TỐI ƯU TIÊU ĐỀ BẢNG */
+
 .alpha-table th {
     background: #1e2329;
     color: var(--text-secondary);
-    font-family: var(--font-main); /* Chuyển sang font chính */
-    font-size: 10px; /* Nhỏ lại cho chuyên nghiệp */
+    font-family: var(--font-main);
+    font-size: 10px;
     font-weight: 800;
     padding: 12px 12px;
-    letter-spacing: 1px; /* Khoảng cách chữ rộng ra */
+    letter-spacing: 1px;
     text-transform: uppercase;
-    border-bottom: 2px solid var(--border-dim); /* Viền đậm hơn chút */
+    border-bottom: 2px solid var(--border-dim);
 }
 
-/* TỐI ƯU DỮ LIỆU TRONG BẢNG */
+
 .alpha-table td {
     padding: 12px;
-    font-family: var(--font-num); /* Mặc định cho số */
+    font-family: var(--font-num);
     font-size: 14px;
     font-weight: 600;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03); /* Viền mờ hơn */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-/* RIÊNG PHẦN SYMBOL THÌ DÙNG FONT CHỮ */
+
 .symbol-text {
     font-family: var(--font-main);
     font-weight: 700;
@@ -297,13 +295,13 @@ body {
     cursor: default;
 }
 
-/* Dải màu bên trái khi hover */
+
 .alpha-table tr:hover td:first-child {
     border-left: 3px solid var(--brand);
-    padding-left: 9px; /* Trừ đi 3px border để không bị lệch */
+    padding-left: 9px;
 }
 
-/* --- 6. LOGO LỒNG NHAU (Nested Icons) --- */
+
 .token-cell {
     display: flex;
     align-items: center;
@@ -342,9 +340,9 @@ body {
     object-fit: cover;
 }
 
-/* --- 7. BADGES & COLORS --- */
+
 .smart-badge {
-    border-radius: 20px; /* Bo tròn hoàn toàn */
+    border-radius: 20px;
     padding: 2px 8px;
     font-size: 9px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -358,14 +356,14 @@ body {
     background: rgba(0, 240, 255, 0.1); 
 }
 
-/* Badge màu vàng dành riêng cho BSC */
+
 .badge-bsc {
-    color: #F0B90B; /* Màu vàng Binance */
+    color: #F0B90B;
     border: 1px solid rgba(240, 185, 11, 0.3);
     background: rgba(240, 185, 11, 0.1);
 }
 
-/* Icon ngôi sao (Pin) */
+
 .star-icon {
     cursor: pointer;
     font-size: 14px;
@@ -385,7 +383,7 @@ body {
     font-weight: 800; 
 }
 
-/* Hiệu ứng Glow cho hàng VIP */
+
 .glow-row td {
     background: rgba(240, 185, 11, 0.03) !important;
 }
@@ -394,7 +392,7 @@ body {
     border-color: #ffb800;
 }
 
-/* Màu chữ tiện ích */
+
 .text-brand { color: var(--brand) !important; }
 .text-neon { color: var(--neon-green) !important; text-shadow: 0 0 8px rgba(0, 255, 136, 0.3); font-weight: 700; }
 .text-dim { color: #5E6673 !important; }
@@ -407,7 +405,7 @@ body {
 .text-green { color: #0ecb81 !important; }
 .text-red { color: #f6465d !important; }
 
-/* Các tiện ích nhỏ */
+
 .symbol-row { cursor: pointer; display: flex; align-items: center; }
 .symbol-row:hover .symbol-text { color: var(--brand); text-decoration: underline; }
 .copy-icon { opacity: 0; transition: opacity 0.2s; margin-left: 5px; color: var(--text-secondary); }
@@ -415,10 +413,10 @@ body {
 .badge-row { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
 
 
-/* --- SUMMARY CARDS (KHU VỰC TỔNG QUAN) --- */
+
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* Chia 4 cột đều nhau */
+    grid-template-columns: repeat(4, 1fr);
     gap: 15px;
     margin-bottom: 20px;
 }
@@ -443,7 +441,7 @@ body {
     transform: translateY(-2px);
 }
 
-/* Trạng thái đang chọn (Filter Active) */
+
 .summary-card.active-filter {
     background: rgba(0, 240, 255, 0.15);
     border-color: var(--brand);
@@ -466,15 +464,15 @@ body {
     color: #fff;
 }
 
-/* Màu sắc riêng cho từng thẻ */
+
 .val-neon { color: var(--neon-green) !important; text-shadow: 0 0 10px rgba(0, 255, 136, 0.4); }
 .val-white { color: #fff !important; }
 .val-spot { color: var(--accent) !important; }
 .val-delist { color: #cf304a !important; }
 
-/* --- MINI CHART (SPARKLINE) --- */
+
 .chart-cell {
-    width: 110px; /* Rộng hơn chút để chứa chart mới */
+    width: 110px;
     padding: 2px !important;
     text-align: center;
     vertical-align: middle;
@@ -486,7 +484,7 @@ body {
     filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
 }
 
-/* Đường vẽ biểu đồ */
+
 .chart-path {
     fill: none;
     stroke-width: 2;
@@ -495,7 +493,7 @@ body {
     transition: all 0.3s;
 }
 
-/* --- CẤU TRÚC 2 CỘT TOKEN --- */
+
 .token-meta-container {
     display: flex;
     width: 100%;
@@ -503,7 +501,7 @@ body {
 }
 
 .meta-col-1 {
-    width: 50%; /* Chia đôi 50-50 hoặc chỉnh tùy ý */
+    width: 50%;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     padding-right: 8px;
     display: flex;
@@ -519,27 +517,27 @@ body {
     justify-content: center;
 }
 
-/* --- BADGE & ICON MỚI --- */
+
 .status-arrow {
-    color: #707a8a; /* Màu mũi tên xám nhẹ */
+    color: #707a8a;
     font-size: 10px;
     margin: 0 4px;
     vertical-align: middle;
 }
 
 .badge-tge {
-    background: #6f42c1; /* Tím */
+    background: #6f42c1;
     color: #fff;
     border: 1px solid rgba(111, 66, 193, 0.4);
 }
 
 .badge-airdrop {
-    background: #0dcaf0; /* Xanh Cyan */
+    background: #0dcaf0;
     color: #000;
     font-weight: 800;
 }
 
-/* Style ngày tháng cột 2 */
+
 .journey-date {
     font-size: 10px;
     color: #848E9C;
@@ -550,13 +548,13 @@ body {
     font-family: var(--font-num);
 }
 
-/* 1. Ẩn grid cũ đi (đề phòng JS chưa cập nhật kịp) */
+
 .summary-grid { display: none !important; }
 
-/* --- SỬA ĐOẠN NÀY --- */
+
 .market-hud-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* ĐỔI TỪ 4 VỀ 3 CỘT */
+    grid-template-columns: repeat(3, 1fr);
     background: rgba(18, 22, 28, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
@@ -575,13 +573,13 @@ body {
     min-height: 120px;
 }
 
-/* Đường kẻ mờ ngăn cách các cột */
+
 .border-left-dim {
     border-left: 1px solid rgba(255, 255, 255, 0.08);
     padding-left: 24px;
 }
 
-/* Typography chuyên nghiệp */
+
 .hud-title {
     font-family: var(--font-main);
     font-size: 11px;
@@ -604,10 +602,10 @@ body {
 .hud-sub-label {
     font-size: 11px;
     color: #5E6673;
-    margin-bottom: auto; /* Đẩy nội dung dưới xuống đáy */
+    margin-bottom: auto;
 }
 
-/* Các hàng thông số nhỏ */
+
 .hud-stats-row {
     display: flex;
     gap: 15px;
@@ -643,7 +641,7 @@ body {
     color: #EAECEF;
 }
 
-/* --- THANH PROGRESS BAR --- */
+
 .hud-progress-bar {
     height: 6px;
     width: 100%;
@@ -656,13 +654,13 @@ body {
 
 .bar-segment { height: 100%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
 
-/* MÀU SẮC CHỈ BÁO */
+
 .bg-active, .bar-active { background-color: var(--brand); box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
 .bg-spot, .bar-spot { background-color: var(--accent); }
 .bg-delist, .bar-delist { background-color: #474D57; }
 
-.bar-limit { background-color: #8B5CF6; }  /* Purple (Limit) */
-.bar-chain { background-color: #F97316; }  /* Orange (On-chain) */
+.bar-limit { background-color: #8B5CF6; } 
+.bar-chain { background-color: #F97316; } 
 .bar-green { background-color: var(--neon-green); }
 .bar-red { background-color: #F6465D; }
 
@@ -671,17 +669,17 @@ body {
 .text-orange { color: #FB923C; }
 .text-gold { color: var(--accent); }
 
-/* Dots */
+
 .hud-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; display: inline-block; }
 
-/* Mobile: Chuyển về 1 cột cho dễ nhìn với thẻ gộp */
+
 @media (max-width: 992px) {
     .market-hud-container {
         grid-template-columns: 1fr; 
     }
 }
 
-/* --- NEW TOOLBAR (NO ICONS - CAPSULE STYLE) --- */
+
 .alpha-header {
     display: flex;
     justify-content: space-between;
@@ -693,7 +691,7 @@ body {
 }
 
 .search-group {
-    flex: 1; /* Ô search tự co giãn */
+    flex: 1;
     max-width: 300px;
     position: relative;
 }
@@ -703,7 +701,7 @@ body {
     background: #161a1e;
     border: 1px solid #2b3139;
     border-radius: 4px;
-    padding: 8px 12px 8px 32px; /* Chừa chỗ cho icon kính lúp nhỏ xíu */
+    padding: 8px 12px 8px 32px;
     color: #eaecef;
     font-size: 13px;
     transition: all 0.2s;
@@ -724,12 +722,12 @@ body {
     font-size: 12px;
 }
 
-/* FILTER GROUP (CAPSULE BUTTONS) */
+
 .filter-group {
     display: flex;
     gap: 8px;
     align-items: center;
-    flex-wrap: wrap; /* Cho phép xuống dòng nếu màn hình bé */
+    flex-wrap: wrap;
 }
 
 .filter-btn {
@@ -737,7 +735,7 @@ body {
     border: none;
     color: #848e9c;
     padding: 6px 12px;
-    border-radius: 12px; /* Bo tròn kiểu viên thuốc */
+    border-radius: 12px;
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
@@ -750,26 +748,26 @@ body {
     background: #39404a;
 }
 
-/* ACTIVE STATES */
+
 .filter-btn.active-all { background: #eaecef; color: #0b0e11; }
 .filter-btn.active-alpha { background: var(--brand); color: #0b0e11; box-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
 .filter-btn.active-spot { background: var(--accent); color: #0b0e11; box-shadow: 0 0 8px rgba(240, 185, 11, 0.4); }
 .filter-btn.active-delist { background: #474D57; color: #eaecef; border: 1px solid #5e6673; }
 
-/* POINTS TOGGLE */
+
 .points-btn {
-    margin-left: 8px; /* Cách ra một chút */
+    margin-left: 8px;
     border: 1px solid #2b3139;
     background: transparent;
 }
 .points-btn.active-points {
-    background: #8B5CF6; /* Tím */
+    background: #8B5CF6;
     color: #fff;
     border-color: #8B5CF6;
     box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
-/* MOBILE RESPONSIVE */
+
 @media (max-width: 768px) {
     .alpha-header {
         flex-direction: column;
@@ -779,23 +777,23 @@ body {
     .filter-group {
         overflow-x: auto;
         padding-bottom: 4px;
-        white-space: nowrap; /* Cuộn ngang nếu nút nhiều */
+        white-space: nowrap;
     }
 }
 
-/* --- FIXED COLUMNS (MOBILE SCROLL) --- */
 
-/* Cột 1: Ngôi sao (Star) */
+
+
 .col-fix-1 {
     position: sticky !important;
     left: 0;
     z-index: 20;
-    background-color: #161a1e; /* Màu nền trùng màu bảng để che chữ trôi qua */
+    background-color: #161a1e;
     width: 40px;
     border-right: 1px solid rgba(255,255,255,0.05);
 }
 
-/* Cột 2: Token Info (Logo + Tên) */
+
 .col-fix-2 {
     position: sticky !important;
     left: 40px; 
@@ -806,24 +804,24 @@ body {
     border-right: 2px solid #2b3139;
     }
 
-/* Fix lỗi nền khi hover chuột vào hàng */
+
 .alpha-table tbody tr:hover .col-fix-1,
 .alpha-table tbody tr:hover .col-fix-2 {
-    background-color: #1e2329; /* Màu sáng hơn chút khi hover */
+    background-color: #1e2329;
 }
 
-/* --- FINAL PRO COLOR PALETTE (NEUTRAL STYLE) --- */
 
-/* 1. TEXT PRIMARY: Dùng cho TẤT CẢ các chỉ số tiền tệ ($) */
-/* Giúp Limit, On-chain, Total, Liquidity sáng đều như nhau */
+
+
+
 .text-primary-val {
     color: #EAECEF !important;
     font-family: var(--font-num);
-    font-weight: 600; /* Đậm vừa phải, dễ đọc */
+    font-weight: 600;
     font-size: 14px;
 }
 
-/* 2. TEXT SECONDARY: Dùng cho các số đếm (như Transaction Count) */
+
 .text-secondary-val {
     color: #848E9C !important;
     font-family: var(--font-num);
@@ -831,7 +829,7 @@ body {
     font-size: 14px;
 }
 
-/* 3. SUB-HEADER: Làm dịu màu tiêu đề phụ */
+
 .h-sub th {
     color: #5E6673 !important;
     font-weight: 600;
@@ -842,35 +840,35 @@ body {
 
 .summary-grid { display: none !important; }
 
-/* --- [NEW] CLEAN TABLE STYLE (BẢNG SẠCH KHÔNG VIỀN) --- */
+
 .alpha-table td, 
 .alpha-table th {
     border: none !important; 
-    /* Giữ lại 1 đường kẻ ngang siêu mờ dưới chân để phân cách hàng */
+   
     border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important; 
 }
 
-/* Bỏ màu nền sọc xen kẽ (nếu có) để bảng trong suốt */
+
 .alpha-table tbody tr:nth-of-type(odd) {
     background-color: transparent !important;
 }
 
-/* Hiệu ứng hover vào hàng: Sáng nhẹ lên */
+
 .alpha-table tbody tr:hover td {
     background: rgba(255, 255, 255, 0.02) !important;
 }
 
-/* --- [NEW] CHART HOVER EFFECTS (HIỆU ỨNG BIỂU ĐỒ) --- */
-/* (Đưa CSS từ JS sang đây cho gọn) */
+
+
 .chart-bar-group rect { 
     transition: all 0.2s; 
     cursor: pointer; 
 }
 .chart-bar-group:hover rect { 
     opacity: 1 !important; 
-    filter: brightness(1.3); /* Sáng lên khi hover */
+    filter: brightness(1.3);
 }
-/* Khi hover vào cột, tên token bên dưới cũng sáng lên */
+
 .chart-bar-group:hover + div, 
 .token-label:hover { 
     color: #fff !important; 
@@ -878,35 +876,35 @@ body {
 }
 
 
-/* --- [FIX] Z-INDEX HIERARCHY (CHUẨN HÓA LỚP HIỂN THỊ) --- */
 
-/* 1. Menu: Cao hơn nội dung web nhưng THẤP HƠN lớp đen mờ */
+
+
 .navbar {
     position: sticky !important;
     top: 0;
-    z-index: 100 !important; /* Quan trọng: Phải nhỏ hơn 1040 */
+    z-index: 100 !important;
 }
 
-/* 2. Nội dung Alpha: Nằm dưới cùng */
+
 #alpha-market-view, 
 .alpha-container {
     position: relative;
     z-index: 1 !important;
 }
 
-/* 3. Lớp đen mờ (Backdrop): Mặc định là 1040 */
+
 .modal-backdrop {
     z-index: 1040 !important;
 }
 
-/* 4. Bảng Đăng nhập (Modal): Cao nhất */
+
 .modal {
     z-index: 1055 !important;
 }
 
-/* --- THÊM MỚI XUỐNG CUỐI FILE --- */
 
-/* Style cho Mini Leaderboard (Thẻ Rolling) */
+
+
 .flow-row {
     display: flex;
     align-items: center;
@@ -956,17 +954,17 @@ body {
     font-size: 10px;
 }
 
-/* 1. Daily Vol Row: Chỉnh lại cho cân đối */
+
 .daily-row {
     display: flex;
     align-items: center;
     margin-bottom: 6px;
     font-size: 11px;
     height: 16px;
-    gap: 8px; /* Khoảng cách giữa các phần tử */
+    gap: 8px;
 }
 
-/* Tên Token: Cố định độ rộng để thẳng hàng */
+
 .daily-row .flow-name {
     width: 60px;
     flex-shrink: 0;
@@ -974,23 +972,23 @@ body {
     color: #eaecef;
 }
 
-/* Thanh Bar: Tự động giãn hết cỡ (flex: 1) thay vì set cứng 80px */
+
 .daily-bar-container {
-    flex: 1; /* Quan trọng: Để thanh dài ra */
+    flex: 1;
     display: flex;
-    height: 6px; /* Dày lên chút cho dễ nhìn */
+    height: 6px;
     background: rgba(255,255,255,0.05);
     border-radius: 2px;
     overflow: hidden;
-    min-width: 50px; /* Đảm bảo không bị co quá nhỏ */
+    min-width: 50px;
 }
 
-/* Màu Vàng cho Limit */
+
 .bar-limit-fill { background: #F0B90B; height: 100%; }
-/* Màu Tím cho On-chain (Mới) */
+
 .bar-chain-fill { background: #9945FF; height: 100%; }
 
-/* Số liệu Lifecycle nằm trên */
+
 .lifecycle-stats {
     display: flex;
     justify-content: space-between;
@@ -1000,20 +998,20 @@ body {
     font-family: var(--font-num);
 }
 
-/* --- CẬP NHẬT MỚI (FIX LỖI HIỂN THỊ) --- */
 
-/* Fix tên Daily Vol bị chèn: Tăng độ rộng tên, giảm độ rộng Bar */
+
+
 .daily-row .flow-name {
-    width: 70px; /* Tăng từ 45px lên 70px */
-    flex-shrink: 0; /* Không cho phép co lại */
+    width: 70px;
+    flex-shrink: 0;
     margin-right: 10px;
 }
 .daily-bar-container {
-    width: 80px; /* Cố định chiều rộng tối đa của thanh bar */
-    flex: none; /* Không co giãn lung tung */
+    width: 80px;
+    flex: none;
 }
 
-/* Style cho phần Label của Lifecycle (Căn theo % thanh màu) */
+
 .lifecycle-labels {
     display: flex;
     width: 100%;
@@ -1025,19 +1023,19 @@ body {
     font-family: var(--font-num);
     white-space: nowrap;
     overflow: hidden;
-    text-align: center !important; /* CĂN GIỮA */
+    text-align: center !important;
 }
 
 
 
 
-/* 3. Cấu trúc Row chung cho Rolling & Daily (Fix lỗi đè chữ) */
+
 .hud-list-row {
     display: flex;
     align-items: center;
     margin-bottom: 6px;
     font-size: 11px;
-    height: 18px; /* Tăng chiều cao xíu cho thoáng */
+    height: 18px;
     gap: 8px;
 }
 
@@ -1058,7 +1056,7 @@ body {
     text-overflow: ellipsis;
 }
 
-/* Container chứa thanh Bar: Tự co giãn nhưng không đè số */
+
 .hud-bar-container {
     flex: 1; 
     display: flex;
@@ -1066,10 +1064,10 @@ body {
     background: rgba(255,255,255,0.05);
     border-radius: 2px;
     overflow: hidden;
-    margin-right: 8px; /* Khoảng cách an toàn với số tiền */
+    margin-right: 8px;
 }
 
-/* Số tiền: Cố định độ rộng, canh phải */
+
 .hud-list-val {
     width: 60px;
     text-align: right;
@@ -1078,7 +1076,7 @@ body {
     font-weight: 600;
 }
 
-/* Giờ Update */
+
 .update-badge {
     background: rgba(255, 255, 255, 0.1);
     padding: 2px 6px;
@@ -1092,7 +1090,7 @@ body {
 }
 
 
-/* 2. Volume List Row: Layout "Số dính Bar" */
+
 .hud-list-row {
     display: flex;
     align-items: center;
@@ -1105,62 +1103,62 @@ body {
 .hud-list-idx { width: 20px; color: #5E6673; font-size: 9px; font-weight: 700; }
 .hud-list-name { width: 55px; flex-shrink: 0; font-weight: 700; color: #eaecef; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-/* Container chứa Bar + Số liệu */
+
 .hud-bar-wrapper {
     flex: 1;
     display: flex;
-    align-items: center; /* Căn giữa theo chiều dọc */
+    align-items: center;
     height: 100%;
 }
 
-/* Thanh Bar: Vuông đầu, bo đuôi */
+
 .hud-bar-fill {
-    height: 8px; /* Dày hơn xíu */
-    border-radius: 0 1px 1px 0; /* Vuông đầu trái, bo nhẹ đầu phải */
+    height: 8px;
+    border-radius: 0 1px 1px 0;
     min-width: 2px;
     transition: width 0.5s ease;
 }
 
-/* Số liệu: Nằm ngay sau thanh Bar */
+
 .hud-list-val {
-    margin-left: 6px; /* Cách đuôi thanh bar 6px */
+    margin-left: 6px;
     font-family: var(--font-num);
     color: #eaecef;
     font-weight: 600;
     font-size: 11px;
-    white-space: nowrap; /* Không xuống dòng */
+    white-space: nowrap;
 }
 
-/* --- CẬP NHẬT GIAO DIỆN MARKET OVERVIEW (THEO PHƯƠNG ÁN CHỐT MỚI) --- */
 
-/* 1. Price Distribution: Màu sắc chi tiết cho 5 cấp độ */
-/* XANH (Tăng) */
-.bg-green-1 { background: rgba(14, 203, 129, 0.2); } /* 0-2% */
-.bg-green-2 { background: rgba(14, 203, 129, 0.4); } /* 2-4% */
-.bg-green-3 { background: rgba(14, 203, 129, 0.6); } /* 4-6% */
-.bg-green-4 { background: rgba(14, 203, 129, 0.8); } /* 6-8% */
-.bg-green-5 { background: #0ecb81; box-shadow: 0 0 5px rgba(14, 203, 129, 0.4); } /* >8% */
 
-/* ĐỎ (Giảm) */
+
+
+.bg-green-1 { background: rgba(14, 203, 129, 0.2); }
+.bg-green-2 { background: rgba(14, 203, 129, 0.4); }
+.bg-green-3 { background: rgba(14, 203, 129, 0.6); }
+.bg-green-4 { background: rgba(14, 203, 129, 0.8); }
+.bg-green-5 { background: #0ecb81; box-shadow: 0 0 5px rgba(14, 203, 129, 0.4); }
+
+
 .bg-red-1 { background: rgba(246, 70, 93, 0.2); }
 .bg-red-2 { background: rgba(246, 70, 93, 0.4); }
 .bg-red-3 { background: rgba(246, 70, 93, 0.6); }
 .bg-red-4 { background: rgba(246, 70, 93, 0.8); }
 .bg-red-5 { background: #f6465d; box-shadow: 0 0 5px rgba(246, 70, 93, 0.4); }
 
-/* --- CẬP NHẬT GIAO DIỆN 24H PRICE ACTION (KHÍT NHAU + CĂN GIỮA) --- */
 
-/* Container chính: Bỏ gap để 2 phe dính liền */
+
+
 .distrib-container {
     display: flex;
     align-items: flex-end;
     height: 80px; 
-    gap: 0; /* KHÍT LẠI */
+    gap: 0;
     margin-top: 10px;
     width: 100%;
 }
 
-/* Phân chia 2 phe */
+
 .distrib-side {
     flex: 1; 
     display: flex;
@@ -1168,28 +1166,28 @@ body {
     height: 100%;
 }
 
-/* Phe Đỏ: BỎ Border, BỎ Padding */
+
 .distrib-side.red { 
     justify-content: flex-end; 
     gap: 2px; 
-    border-right: none; /* BỎ GẠCH GIỮA */
-    padding-right: 1px; /* Khoảng hở siêu nhỏ giữa đỏ/xanh */
+    border-right: none;
+    padding-right: 1px;
 }
 
-/* Phe Xanh: BỎ Padding */
+
 .distrib-side.green { 
     justify-content: flex-start; 
     gap: 2px; 
-    padding-left: 1px; /* Khoảng hở siêu nhỏ giữa đỏ/xanh */
+    padding-left: 1px;
 }
 
-/* Cột biểu đồ */
+
 .distrib-bar-item {
     flex: 1; 
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    align-items: center; /* QUAN TRỌNG: CĂN GIỮA SỐ LƯỢNG TOKEN */
+    align-items: center;
     position: relative;
     cursor: pointer;
     height: 100%;
@@ -1200,7 +1198,7 @@ body {
     transform: scaleY(1.05);
 }
 
-/* Hàng Nhãn Số Liệu (Labels) */
+
 .distrib-label-row {
     display: flex;
     width: 100%;
@@ -1214,7 +1212,7 @@ body {
     display: flex;
 }
 
-/* Căn chỉnh nhãn khớp với cột bên trên */
+
 .distrib-label-side.red {
     justify-content: flex-end;
     padding-right: 1px;
@@ -1240,23 +1238,23 @@ body {
 }
 
 
-/* --- MAINTENANCE SCREEN STYLES (NEW) --- */
 
-/* 1. Icon xoay vòng vòng đủ màu */
+
+
 .maintenance-spinner {
     width: 60px;
     height: 60px;
-    margin: 0 auto 20px auto; /* Căn giữa */
+    margin: 0 auto 20px auto;
     border-radius: 50%;
     border: 4px solid transparent;
     
-    /* 4 cạnh 4 màu khác nhau */
-    border-top-color: #00F0FF;   /* Brand Cyan */
-    border-right-color: #F0B90B; /* Gold */
-    border-bottom-color: #f6465d; /* Red */
-    border-left-color: #0ecb81;   /* Green */
+   
+    border-top-color: #00F0FF;  
+    border-right-color: #F0B90B;
+    border-bottom-color: #f6465d;
+    border-left-color: #0ecb81;  
     
-    /* Hiệu ứng xoay */
+   
     animation: spin-colorful 1s linear infinite;
     box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
 }
@@ -1266,7 +1264,7 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* 2. Tiêu đề to rõ, font số hóa */
+
 .maintenance-title {
     font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
@@ -1277,7 +1275,7 @@ body {
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
-/* 3. Nội dung mô tả */
+
 .maintenance-desc {
     color: #848e9c;
     font-size: 14px;
@@ -1285,26 +1283,26 @@ body {
     font-family: 'Be Vietnam Pro', sans-serif;
 }
 
-/* Style cho link Telegram nếu cần nổi bật hơn */
+
 .maintenance-desc a:hover {
     text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
     text-decoration: underline !important;
 }
 
-/* --- FILE: public/css/pro-mode.css --- */
-/* THÊM VÀO CUỐI FILE */
 
-/* === COMPACT MODE CHO MOBILE (Giao diện siêu gọn) === */
+
+
+
 @media (max-width: 768px) {
-    /* 1. Thu nhỏ toàn bộ chữ và padding trong bảng */
+   
     .alpha-table th, 
     .alpha-table td {
-        font-size: 11px !important;    /* Chữ nhỏ gọn */
-        padding: 6px 4px !important;   /* Giảm padding tối đa */
-        white-space: nowrap;           /* Không cho xuống dòng để tiết kiệm chiều cao */
+        font-size: 11px !important;   
+        padding: 6px 4px !important;  
+        white-space: nowrap;          
     }
 
-    /* 2. Cột Rank (#) thu nhỏ lại */
+   
     .col-fix-1 {
         width: 25px !important; 
         font-size: 10px !important;
@@ -1312,16 +1310,16 @@ body {
         padding-right: 2px !important;
     }
 
-    /* 3. Cột Token Info (Logo + Tên) thu nhỏ cực mạnh */
+   
     .col-fix-2 {
-        left: 25px !important;        /* Phải khớp với width của col-fix-1 */
-        width: 100px !important;      /* Bóp từ 160px xuống 100px */
+        left: 25px !important;       
+        width: 100px !important;     
         max-width: 100px !important;
         min-width: 100px !important;
         padding-right: 2px !important;
     }
 
-    /* 4. Logo Token bé xíu */
+   
     .token-logo {
         width: 20px !important;
         height: 20px !important;
@@ -1338,34 +1336,34 @@ body {
         right: -1px !important;
     }
 
-    /* 5. Tên Token và Contract */
+   
     .symbol-text {
-        font-size: 12px !important; /* Tên vẫn phải đọc được */
+        font-size: 12px !important;
     }
     .contract-row {
-        font-size: 8px !important;  /* Contract siêu nhỏ */
+        font-size: 8px !important; 
     }
 
-    /* 6. Các Badge (xPoint, Spot...) thu nhỏ */
+   
     .smart-badge {
-    font-size: 10px !important; /* Tăng lên 10px cho dễ đọc */
-    padding: 2px 4px !important; /* Tăng padding xíu cho thoáng */
-    font-weight: 700 !important; /* Thêm độ đậm cho rõ */
+    font-size: 10px !important;
+    padding: 2px 4px !important;
+    font-weight: 700 !important;
     border-radius: 2px !important;
 }
 
-    /* 7. Khoảng cách trong ô Token */
+   
     .token-cell {
         gap: 4px !important;
     }
 
-    /* 8. Header Bảng: Giảm chiều cao */
+   
     .h-top th, .h-sub th {
         height: 30px !important;
         padding: 4px !important;
     }
     
-    /* 9. Tinh chỉnh ô Search cho gọn */
+   
     .alpha-header {
         flex-direction: column;
         gap: 8px;
