@@ -6345,3 +6345,30 @@ function handleVote(tokenId, type, btnElement) {
     // (Sau này ta sẽ gọi API Supabase ở đây để lưu thật)
     console.log(`User voted ${type} for token ${tokenId}`);
 }
+
+
+// --- LOGIC ẨN/HIỆN TAB ALPHA KHI CUỘN (Smart Scroll) ---
+document.addEventListener('DOMContentLoaded', function() {
+    let lastScrollTop = 0;
+    const tabNav = document.getElementById('alpha-tab-nav');
+    const scrollThreshold = 50; // Cuộn quá 50px mới bắt đầu xử lý
+
+    window.addEventListener('scroll', function() {
+        let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Bỏ qua lỗi cuộn âm trên Safari mobile
+        if (scrollTop <= 0) return;
+
+        // Chỉ chạy nếu thanh Tab tồn tại
+        if (tabNav) {
+            if (scrollTop > lastScrollTop && scrollTop > scrollThreshold) {
+                // Đang CUỘN XUỐNG -> Ẩn Tab
+                tabNav.classList.add('nav-hidden');
+            } else {
+                // Đang CUỘN LÊN -> Hiện Tab
+                tabNav.classList.remove('nav-hidden');
+            }
+        }
+        lastScrollTop = scrollTop;
+    }, { passive: true }); // Tối ưu hiệu năng cuộn
+});
