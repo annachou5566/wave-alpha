@@ -553,14 +553,10 @@ body {
 /* 1. Ẩn grid cũ đi (đề phòng JS chưa cập nhật kịp) */
 .summary-grid { display: none !important; }
 
-/* =========================================================================
-   DASHBOARD / HUD (CLEAN VERSION - 3 COLUMNS)
-   ========================================================================= */
-
-/* 1. LAYOUT CHÍNH (3 CỘT) */
+/* --- SỬA ĐOẠN NÀY --- */
 .market-hud-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 Cột đều nhau */
+    grid-template-columns: repeat(3, 1fr); /* ĐỔI TỪ 4 VỀ 3 CỘT */
     background: rgba(18, 22, 28, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
@@ -574,16 +570,18 @@ body {
 .hud-module {
     display: flex;
     flex-direction: column;
-    min-height: 140px; /* Đảm bảo chiều cao đồng nhất */
+    justify-content: space-between;
+    position: relative;
+    min-height: 120px;
 }
 
-/* Đường kẻ mờ ngăn cách (chỉ dùng nếu cần, hiện tại grid gap đã lo việc này) */
+/* Đường kẻ mờ ngăn cách các cột */
 .border-left-dim {
-    border-left: 1px solid rgba(255, 255, 255, 0.05);
-    padding-left: 20px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    padding-left: 24px;
 }
 
-/* Tiêu đề Module */
+/* Typography chuyên nghiệp */
 .hud-title {
     font-family: var(--font-main);
     font-size: 11px;
@@ -594,32 +592,428 @@ body {
     font-weight: 700;
 }
 
-/* Số liệu chính (Hero Number) */
 .hud-main-value {
     font-family: var(--font-num);
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 700;
     color: #EAECEF;
-    line-height: 1.1;
-    margin-bottom: 5px;
+    line-height: 1.2;
+    margin-bottom: 4px;
 }
 
-/* Mobile: Chuyển về 1 cột dọc */
+.hud-sub-label {
+    font-size: 11px;
+    color: #5E6673;
+    margin-bottom: auto; /* Đẩy nội dung dưới xuống đáy */
+}
+
+/* Các hàng thông số nhỏ */
+.hud-stats-row {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #B7BDC6;
+    margin-bottom: 8px;
+    align-items: center;
+    font-family: var(--font-num);
+    font-weight: 600;
+}
+
+.hud-stat-item {
+    display: flex;
+    align-items: center;
+}
+
+.hud-flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.hud-label-small {
+    font-size: 10px;
+    color: #848E9C;
+    text-transform: uppercase;
+}
+
+.hud-value-medium {
+    font-family: var(--font-num);
+    font-size: 18px;
+    font-weight: 700;
+    color: #EAECEF;
+}
+
+/* --- THANH PROGRESS BAR --- */
+.hud-progress-bar {
+    height: 6px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    display: flex;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.bar-segment { height: 100%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* MÀU SẮC CHỈ BÁO */
+.bg-active, .bar-active { background-color: var(--brand); box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+.bg-spot, .bar-spot { background-color: var(--accent); }
+.bg-delist, .bar-delist { background-color: #474D57; }
+
+.bar-limit { background-color: #8B5CF6; }  /* Purple (Limit) */
+.bar-chain { background-color: #F97316; }  /* Orange (On-chain) */
+.bar-green { background-color: var(--neon-green); }
+.bar-red { background-color: #F6465D; }
+
+.text-neon { color: var(--brand); text-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.text-purple { color: #A78BFA; }
+.text-orange { color: #FB923C; }
+.text-gold { color: var(--accent); }
+
+/* Dots */
+.hud-dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; display: inline-block; }
+
+/* Mobile: Chuyển về 1 cột cho dễ nhìn với thẻ gộp */
 @media (max-width: 992px) {
     .market-hud-container {
-        grid-template-columns: 1fr;
-    }
-    .border-left-dim {
-        border-left: none;
-        padding-left: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        padding-top: 20px;
+        grid-template-columns: 1fr; 
     }
 }
 
-/* --- MODULE 1: MARKET OVERVIEW (LIFECYCLE + PRICE) --- */
+/* --- NEW TOOLBAR (NO ICONS - CAPSULE STYLE) --- */
+.alpha-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    background: transparent;
+    padding: 0;
+}
 
-/* Lifecycle Labels (Active/Spot/Dead) */
+.search-group {
+    flex: 1; /* Ô search tự co giãn */
+    max-width: 300px;
+    position: relative;
+}
+
+.search-group input {
+    width: 100%;
+    background: #161a1e;
+    border: 1px solid #2b3139;
+    border-radius: 4px;
+    padding: 8px 12px 8px 32px; /* Chừa chỗ cho icon kính lúp nhỏ xíu */
+    color: #eaecef;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.search-group input:focus {
+    border-color: var(--brand);
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.2);
+}
+
+.search-icon-small {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #5e6673;
+    font-size: 12px;
+}
+
+/* FILTER GROUP (CAPSULE BUTTONS) */
+.filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap; /* Cho phép xuống dòng nếu màn hình bé */
+}
+
+.filter-btn {
+    background: #2b3139;
+    border: none;
+    color: #848e9c;
+    padding: 6px 12px;
+    border-radius: 12px; /* Bo tròn kiểu viên thuốc */
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+
+.filter-btn:hover {
+    color: #eaecef;
+    background: #39404a;
+}
+
+/* ACTIVE STATES */
+.filter-btn.active-all { background: #eaecef; color: #0b0e11; }
+.filter-btn.active-alpha { background: var(--brand); color: #0b0e11; box-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
+.filter-btn.active-spot { background: var(--accent); color: #0b0e11; box-shadow: 0 0 8px rgba(240, 185, 11, 0.4); }
+.filter-btn.active-delist { background: #474D57; color: #eaecef; border: 1px solid #5e6673; }
+
+/* POINTS TOGGLE */
+.points-btn {
+    margin-left: 8px; /* Cách ra một chút */
+    border: 1px solid #2b3139;
+    background: transparent;
+}
+.points-btn.active-points {
+    background: #8B5CF6; /* Tím */
+    color: #fff;
+    border-color: #8B5CF6;
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+    .alpha-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-group { max-width: 100%; }
+    .filter-group {
+        overflow-x: auto;
+        padding-bottom: 4px;
+        white-space: nowrap; /* Cuộn ngang nếu nút nhiều */
+    }
+}
+
+/* --- FIXED COLUMNS (MOBILE SCROLL) --- */
+
+/* Cột 1: Ngôi sao (Star) */
+.col-fix-1 {
+    position: sticky !important;
+    left: 0;
+    z-index: 20;
+    background-color: #161a1e; /* Màu nền trùng màu bảng để che chữ trôi qua */
+    width: 40px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Cột 2: Token Info (Logo + Tên) */
+.col-fix-2 {
+    position: sticky !important;
+    left: 40px; 
+    z-index: 20;
+    background-color: #161a1e;
+    min-width: 160px; 
+    max-width: 160px;
+    border-right: 2px solid #2b3139;
+    }
+
+/* Fix lỗi nền khi hover chuột vào hàng */
+.alpha-table tbody tr:hover .col-fix-1,
+.alpha-table tbody tr:hover .col-fix-2 {
+    background-color: #1e2329; /* Màu sáng hơn chút khi hover */
+}
+
+/* --- FINAL PRO COLOR PALETTE (NEUTRAL STYLE) --- */
+
+/* 1. TEXT PRIMARY: Dùng cho TẤT CẢ các chỉ số tiền tệ ($) */
+/* Giúp Limit, On-chain, Total, Liquidity sáng đều như nhau */
+.text-primary-val {
+    color: #EAECEF !important;
+    font-family: var(--font-num);
+    font-weight: 600; /* Đậm vừa phải, dễ đọc */
+    font-size: 14px;
+}
+
+/* 2. TEXT SECONDARY: Dùng cho các số đếm (như Transaction Count) */
+.text-secondary-val {
+    color: #848E9C !important;
+    font-family: var(--font-num);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+/* 3. SUB-HEADER: Làm dịu màu tiêu đề phụ */
+.h-sub th {
+    color: #5E6673 !important;
+    font-weight: 600;
+    font-size: 11px !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.summary-grid { display: none !important; }
+
+/* --- [NEW] CLEAN TABLE STYLE (BẢNG SẠCH KHÔNG VIỀN) --- */
+.alpha-table td, 
+.alpha-table th {
+    border: none !important; 
+    /* Giữ lại 1 đường kẻ ngang siêu mờ dưới chân để phân cách hàng */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important; 
+}
+
+/* Bỏ màu nền sọc xen kẽ (nếu có) để bảng trong suốt */
+.alpha-table tbody tr:nth-of-type(odd) {
+    background-color: transparent !important;
+}
+
+/* Hiệu ứng hover vào hàng: Sáng nhẹ lên */
+.alpha-table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* --- [NEW] CHART HOVER EFFECTS (HIỆU ỨNG BIỂU ĐỒ) --- */
+/* (Đưa CSS từ JS sang đây cho gọn) */
+.chart-bar-group rect { 
+    transition: all 0.2s; 
+    cursor: pointer; 
+}
+.chart-bar-group:hover rect { 
+    opacity: 1 !important; 
+    filter: brightness(1.3); /* Sáng lên khi hover */
+}
+/* Khi hover vào cột, tên token bên dưới cũng sáng lên */
+.chart-bar-group:hover + div, 
+.token-label:hover { 
+    color: #fff !important; 
+    text-shadow: 0 0 5px rgba(255,255,255,0.5);
+}
+
+
+/* --- [FIX] Z-INDEX HIERARCHY (CHUẨN HÓA LỚP HIỂN THỊ) --- */
+
+/* 1. Menu: Cao hơn nội dung web nhưng THẤP HƠN lớp đen mờ */
+.navbar {
+    position: sticky !important;
+    top: 0;
+    z-index: 100 !important; /* Quan trọng: Phải nhỏ hơn 1040 */
+}
+
+/* 2. Nội dung Alpha: Nằm dưới cùng */
+#alpha-market-view, 
+.alpha-container {
+    position: relative;
+    z-index: 1 !important;
+}
+
+/* 3. Lớp đen mờ (Backdrop): Mặc định là 1040 */
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+/* 4. Bảng Đăng nhập (Modal): Cao nhất */
+.modal {
+    z-index: 1055 !important;
+}
+
+/* --- THÊM MỚI XUỐNG CUỐI FILE --- */
+
+/* Style cho Mini Leaderboard (Thẻ Rolling) */
+.flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 11px;
+    height: 16px;
+}
+
+.flow-idx {
+    width: 15px;
+    color: #5E6673;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.flow-name { 
+    width: 45px; 
+    font-weight: 700; 
+    color: #eaecef; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.flow-bar-bg { 
+    flex: 1; 
+    height: 4px; 
+    background: rgba(255,255,255,0.05); 
+    margin: 0 8px; 
+    border-radius: 2px; 
+    overflow: hidden;
+}
+
+.flow-bar-fill { 
+    height: 100%; 
+    background: var(--brand); 
+    border-radius: 2px; 
+    min-width: 2px;
+}
+
+.flow-val { 
+    font-family: var(--font-num); 
+    color: #848E9C; 
+    width: 40px; 
+    text-align: right; 
+    font-size: 10px;
+}
+
+/* 1. Daily Vol Row: Chỉnh lại cho cân đối */
+.daily-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+    height: 16px;
+    gap: 8px; /* Khoảng cách giữa các phần tử */
+}
+
+/* Tên Token: Cố định độ rộng để thẳng hàng */
+.daily-row .flow-name {
+    width: 60px;
+    flex-shrink: 0;
+    font-weight: 700;
+    color: #eaecef;
+}
+
+/* Thanh Bar: Tự động giãn hết cỡ (flex: 1) thay vì set cứng 80px */
+.daily-bar-container {
+    flex: 1; /* Quan trọng: Để thanh dài ra */
+    display: flex;
+    height: 6px; /* Dày lên chút cho dễ nhìn */
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 50px; /* Đảm bảo không bị co quá nhỏ */
+}
+
+/* Màu Vàng cho Limit */
+.bar-limit-fill { background: #F0B90B; height: 100%; }
+/* Màu Tím cho On-chain (Mới) */
+.bar-chain-fill { background: #9945FF; height: 100%; }
+
+/* Số liệu Lifecycle nằm trên */
+.lifecycle-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-family: var(--font-num);
+}
+
+/* --- CẬP NHẬT MỚI (FIX LỖI HIỂN THỊ) --- */
+
+/* Fix tên Daily Vol bị chèn: Tăng độ rộng tên, giảm độ rộng Bar */
+.daily-row .flow-name {
+    width: 70px; /* Tăng từ 45px lên 70px */
+    flex-shrink: 0; /* Không cho phép co lại */
+    margin-right: 10px;
+}
+.daily-bar-container {
+    width: 80px; /* Cố định chiều rộng tối đa của thanh bar */
+    flex: none; /* Không co giãn lung tung */
+}
+
+/* Style cho phần Label của Lifecycle (Căn theo % thanh màu) */
 .lifecycle-labels {
     display: flex;
     width: 100%;
@@ -631,85 +1025,101 @@ body {
     font-family: var(--font-num);
     white-space: nowrap;
     overflow: hidden;
-    text-align: center;
+    text-align: center !important; /* CĂN GIỮA */
 }
 
-/* Price Distrib Header (Losers/Gainers) */
-.distrib-header {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--font-num);
-    font-weight: 700;
-    font-size: 12px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-}
 
-/* Biểu đồ phân phối đối xứng (Mirrored Chart) */
-.distrib-container {
-    display: flex;
-    align-items: flex-end;
-    height: 60px; /* Chiều cao khu vực biểu đồ */
-    gap: 4px;     
-    padding-bottom: 5px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+/* 2. Price Distribution: Khít lại và chữ to hơn */
+.distrib-bar-group {
+    flex-grow: 1; 
+    display: flex; 
+    align-items: flex-end; 
+    gap: 1px; /* Khít lại (Cũ là 2px) */
 }
-
-.distrib-side {
-    flex: 1;
-    display: flex;
-    align-items: flex-end;
-    height: 100%;
-}
-.distrib-side.red { justify-content: flex-end; gap: 2px; }
-.distrib-side.green { justify-content: flex-start; gap: 2px; }
 
 .distrib-bar-item {
     flex: 1;
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: flex-end;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s;
-    min-height: 4px;
+    position: relative; /* Để xử lý tooltip */
 }
-.distrib-bar-item:hover { filter: brightness(1.4); transform: scaleY(1.05); }
+.distrib-bar-item:hover {
+    background: rgba(255,255,255,0.05); /* Highlight cột khi hover */
+    cursor: pointer;
+}
+.distrib-label {
+    font-size: 9px; /* Tăng size (Cũ là 8px scale 0.85) */
+    color: #5E6673; 
+    margin-top: 4px; 
+    white-space: nowrap;
+    font-weight: 600;
+}
 
-/* --- MODULE 2 & 3: ROLLING & DAILY VOL LIST --- */
+/* 2. Price Distribution: Màu sắc chi tiết cho 5 cấp độ */
+/* XANH (Tăng) */
+.bg-green-1 { background: rgba(14, 203, 129, 0.2); } /* 0-2% */
+.bg-green-2 { background: rgba(14, 203, 129, 0.4); } /* 2-4% */
+.bg-green-3 { background: rgba(14, 203, 129, 0.6); } /* 4-6% */
+.bg-green-4 { background: rgba(14, 203, 129, 0.8); } /* 6-8% */
+.bg-green-5 { background: #0ecb81; box-shadow: 0 0 5px rgba(14, 203, 129, 0.4); } /* >8% */
 
+/* ĐỎ (Giảm) */
+.bg-red-1 { background: rgba(246, 70, 93, 0.2); }
+.bg-red-2 { background: rgba(246, 70, 93, 0.4); }
+.bg-red-3 { background: rgba(246, 70, 93, 0.6); }
+.bg-red-4 { background: rgba(246, 70, 93, 0.8); }
+.bg-red-5 { background: #f6465d; box-shadow: 0 0 5px rgba(246, 70, 93, 0.4); }
+
+/* 3. Cấu trúc Row chung cho Rolling & Daily (Fix lỗi đè chữ) */
 .hud-list-row {
     display: flex;
     align-items: center;
-    margin-bottom: 8px; /* Tăng khoảng cách dòng */
+    margin-bottom: 6px;
     font-size: 11px;
-    height: 20px; /* Tăng chiều cao dòng để chứa thanh bar to */
+    height: 18px; /* Tăng chiều cao xíu cho thoáng */
     gap: 8px;
-    cursor: pointer;
 }
 
-.hud-list-row:hover .hud-list-name { color: var(--brand); }
+.hud-list-idx {
+    width: 20px;
+    color: #5E6673;
+    font-size: 9px;
+    font-weight: 700;
+}
 
-.hud-list-idx { width: 20px; color: #5E6673; font-size: 10px; font-weight: 700; }
-.hud-list-name { width: 55px; flex-shrink: 0; font-weight: 700; color: #eaecef; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.hud-list-val { width: 60px; text-align: right; font-family: var(--font-num); color: #eaecef; font-weight: 600; font-size: 11px; }
+.hud-list-name {
+    width: 60px;
+    flex-shrink: 0;
+    font-weight: 700;
+    color: #eaecef;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-/* Wrapper chứa thanh Bar */
-.hud-bar-wrapper {
-    flex: 1;
+/* Container chứa thanh Bar: Tự co giãn nhưng không đè số */
+.hud-bar-container {
+    flex: 1; 
     display: flex;
-    align-items: center;
-    height: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-right: 8px; /* Khoảng cách an toàn với số tiền */
 }
 
-/* Thanh Bar (Vuông đầu, bo đuôi, Mập hơn) */
-.hud-bar-fill {
-    height: 100%; /* Ăn theo chiều cao cha set trong JS */
-    border-radius: 0 4px 4px 0; /* Bo góc nhẹ */
-    min-width: 2px;
+/* Số tiền: Cố định độ rộng, canh phải */
+.hud-list-val {
+    width: 60px;
+    text-align: right;
+    font-family: var(--font-num);
+    color: #eaecef;
+    font-weight: 600;
 }
 
-/* Badge update time */
+/* Giờ Update */
 .update-badge {
     background: rgba(255, 255, 255, 0.1);
     padding: 2px 6px;
@@ -717,18 +1127,19 @@ body {
     font-size: 10px;
     color: #00F0FF;
     font-family: var(--font-num);
-    margin-left: auto;
+    margin-left: 8px;
+    font-weight: normal;
+    letter-spacing: 0.5px;
 }
 
-/* Các màu Price Action */
-.bg-green-1 { background: rgba(14, 203, 129, 0.2); }
-.bg-green-2 { background: rgba(14, 203, 129, 0.4); }
-.bg-green-3 { background: rgba(14, 203, 129, 0.6); }
-.bg-green-4 { background: rgba(14, 203, 129, 0.8); }
-.bg-green-5 { background: #0ecb81; box-shadow: 0 0 5px rgba(14, 203, 129, 0.4); }
 
-.bg-red-1 { background: rgba(246, 70, 93, 0.2); }
-.bg-red-2 { background: rgba(246, 70, 93, 0.4); }
-.bg-red-3 { background: rgba(246, 70, 93, 0.6); }
-.bg-red-4 { background: rgba(246, 70, 93, 0.8); }
-.bg-red-5 { background: #f6465d; box-shadow: 0 0 5px rgba(246, 70, 93, 0.4); }
+
+/* Số liệu: Nằm ngay sau thanh Bar */
+.hud-list-val {
+    margin-left: 6px; /* Cách đuôi thanh bar 6px */
+    font-family: var(--font-num);
+    color: #eaecef;
+    font-weight: 600;
+    font-size: 11px;
+    white-space: nowrap; /* Không xuống dòng */
+}

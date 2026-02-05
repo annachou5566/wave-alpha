@@ -368,7 +368,7 @@ function renderMarketHUD(stats) {
                 <div class="hud-list-name" title="${t.symbol}">${t.symbol}</div>
                 
                 <div class="hud-bar-wrapper">
-                    <div style="width:${pctWidth}%; height:12px;"> ${barHtml}
+                    <div style="width:${pctWidth}%; height:15px;"> ${barHtml}
                     </div>
                     <div class="hud-list-val">$${formatNumK(volDisplay)}</div>
                 </div>
