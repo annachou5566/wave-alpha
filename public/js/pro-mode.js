@@ -513,32 +513,30 @@ window.hideTooltip = function() {
 };
 
 
+// =========================================================================
+// HÀM INJECT LAYOUT: HEADER 11 CỘT (THÊM STATUS)
+// =========================================================================
 function injectLayout() {
+    document.getElementById('alpha-tab-nav')?.remove();
+    document.getElementById('alpha-market-view')?.remove();
+
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
 
-    // 1. Khôi phục Thanh Tab (Đảm bảo ID chuẩn)
-    let tabNav = document.getElementById('alpha-tab-nav');
-    if (!tabNav) {
-        tabNav = document.createElement('div');
-        tabNav.id = 'alpha-tab-nav';
-        tabNav.innerHTML = `
-            <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
-            <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
-        `;
-        navbar.insertAdjacentElement('afterend', tabNav);
-    }
+    // 1. Tab Navigation
+    const tabNav = document.createElement('div');
+    tabNav.id = 'alpha-tab-nav';
+    tabNav.innerHTML = `
+        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
+        <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
+    `;
+    navbar.insertAdjacentElement('afterend', tabNav);
 
-    // 2. Khôi phục Market View (Bao gồm Filter và Bảng chuẩn)
-    let marketView = document.getElementById('alpha-market-view');
-    if (!marketView) {
-        marketView = document.createElement('div');
-        marketView.id = 'alpha-market-view';
-        marketView.style.display = 'none';
-        tabNav.insertAdjacentElement('afterend', marketView);
-    }
-
-    // Cập nhật nội dung bên trong để đảm bảo luôn có Filter và Header đúng
+    // 2. Market View
+    const marketView = document.createElement('div');
+    marketView.id = 'alpha-market-view';
+    marketView.style.display = 'none'; 
+    
     marketView.innerHTML = `
         <div class="alpha-container">
             <div class="alpha-header">
@@ -559,21 +557,25 @@ function injectLayout() {
                 <table class="alpha-table">
                     <thead>
                         <tr class="h-top">
-                            <th rowspan="2">#</th>
-                            <th rowspan="2">TOKEN INFO</th>
-                            <th rowspan="2">PRICE</th>
-                            <th colspan="3" class="th-group-vol">DAILY VOLUME (UTC)</th>
-                            <th colspan="3" class="th-group-stats">MARKET STATS (24h)</th>
-                            <th rowspan="2">CHART (7D)</th>
+                            <th rowspan="2" class="text-center col-fix-1">#</th>
+                            <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
+                            
+                            <th rowspan="2" class="text-center">STATUS</th>
+                            
+                            <th rowspan="2" class="text-end">PRICE</th>
+                            <th rowspan="2" class="text-center">CHART (7D)</th>
+                            
+                            <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
+                            <th colspan="3" class="text-center th-group-stats">MARKET STATS (24h)</th>
                         </tr>
                         <tr class="h-sub">
-                            <th class="sortable" id="sort-daily-total" onclick="sortTable('daily_total')">TOTAL <i class="fas fa-sort"></i></th>
-                            <th class="sortable" id="sort-daily-limit" onclick="sortTable('daily_limit')">LIMIT <i class="fas fa-sort"></i></th>
-                            <th class="sortable" id="sort-daily-onchain" onclick="sortTable('daily_onchain')">ON-CHAIN <i class="fas fa-sort"></i></th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
                             
-                            <th class="sortable" id="sort-rolling" onclick="sortTable('rolling_24h')">VOL 24H <i class="fas fa-sort"></i></th>
-                            <th class="sortable" id="sort-tx" onclick="sortTable('tx_count')">TXs <i class="fas fa-sort"></i></th>
-                            <th class="sortable" id="sort-liq" onclick="sortTable('liquidity')">LIQ <i class="fas fa-sort"></i></th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
                         </tr>
                     </thead>
                     <tbody id="market-table-body"></tbody>
@@ -581,17 +583,18 @@ function injectLayout() {
             </div>
         </div>
     `;
+    
+    tabNav.insertAdjacentElement('afterend', marketView);
 
-    // 3. LOGIC SMART SCROLL (ẨN KHI CUỘN XUỐNG - HIỆN KHI CUỘN LÊN)
+    // 3. Smart Scroll Logic (Giữ nguyên)
     let lastScrollY = window.scrollY;
     window.removeEventListener('scroll', window._smartScroll);
     window._smartScroll = function() {
         const currentScrollY = window.scrollY;
         const nav = document.getElementById('alpha-tab-nav');
         if (!nav) return;
-
         if (currentScrollY > lastScrollY && currentScrollY > 20) {
-            nav.classList.add('nav-hidden'); // CSS của bạn sẽ xử lý ẩn hoàn toàn
+            nav.classList.add('nav-hidden');
         } else if (currentScrollY < lastScrollY) {
             nav.classList.remove('nav-hidden');
         }
