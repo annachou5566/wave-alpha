@@ -479,9 +479,12 @@ function renderMarketHUD(stats) {
             </div>
         </div>
 
+        /* --- TÌM ĐOẠN MODULE 3 TRONG renderMarketHUD VÀ SỬA --- */
+
         <div class="hud-module border-left-dim">
             <div class="hud-title" style="display:flex; align-items:center;">
-                DAILY VOL (UTC +0) <span class="update-badge">${updateTime}</span>
+                DAILY VOL (UTC +0) 
+                <span class="update-badge">${lastDataUpdateTime}</span>
             </div>
             <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
                 $${formatNum(stats.alphaDailyTotal)}
@@ -680,26 +683,35 @@ window.pluginCopy = (txt) => {
 };
 
 async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
+
+// Thêm một biến để lưu thời gian cập nhật dữ liệu từ file
+let lastDataUpdateTime = "Waiting...";
+
 async function fetchMarketData() {
     try {
-        // Gọi file JSON từ R2 (qua Middleware)
         const res = await fetch(DATA_URL + '?t=' + Date.now());
         const json = await res.json();
         
-        // --- [SỬA ĐOẠN NÀY] ---
-        // Code cũ: allTokens = data.tokens || [];
-        // Code mới: Lấy mảng 'data' từ R2 và giải mã từng token
         const rawList = json.data || json.tokens || []; 
         allTokens = rawList.map(item => unminifyToken(item));
-        
+
+        // Lấy thời gian cập nhật từ json.meta.u (nếu có) hoặc json.last_updated
+        // Đây chính là thời điểm dữ liệu được ghi vào file trên R2
+        if (json.meta && json.meta.u) {
+            lastDataUpdateTime = json.meta.u;
+        } else if (json.last_updated) {
+            lastDataUpdateTime = json.last_updated;
+        } else {
+            lastDataUpdateTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        }
+
         updateSummary();
         renderTable();
 
-        // Cập nhật giờ (Lấy từ meta.u nếu có)
+        // Cập nhật lên label tổng (nếu có)
         const timeLbl = document.getElementById('last-updated');
         if(timeLbl) {
-            const timeStr = json.meta ? json.meta.u : (json.last_updated || new Date().toLocaleTimeString());
-            timeLbl.innerText = 'Updated: ' + timeStr;
+            timeLbl.innerText = 'Updated: ' + lastDataUpdateTime;
         }
 
     } catch (e) { 
