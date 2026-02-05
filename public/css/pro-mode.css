@@ -55,9 +55,11 @@ body {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Khi cuộn xuống: Trượt lên trên để ẩn đi */
+/* Khi ẩn: đẩy lên trên */
 #alpha-tab-nav.nav-hidden {
-    transform: translateY(-150%); /* Trượt hẳn lên trên, chui vào sau Header */
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* --- 2. NỘI DUNG (ĐẨY XUỐNG ĐỂ KHÔNG BỊ THANH TAB CHE) --- */
