@@ -1513,22 +1513,26 @@ body {
     color: #fff;
 }
 
+
 @media (max-width: 768px) {
-    
+    /* 1. Đưa toàn bộ nền bảng và ô về màu đen */
+    .alpha-table, 
+    .alpha-table th, 
+    .alpha-table td {
+        background-color: #000000 !important;
+        color: #eaecef !important; /* Đảm bảo chữ vẫn sáng màu để đọc được */
+        padding: 12px 6px !important;
+        font-size: 12px !important;
+        text-align: center !important;
+        border: none !important;
+        border-bottom: 1px solid #2b3139 !important; /* Giữ đường kẻ mờ giữa các hàng */
+    }
+
     .alpha-table {
         min-width: 900px;
     }
 
-    
-    .alpha-table th, 
-    .alpha-table td {
-        padding: 12px 6px !important;
-        font-size: 12px !important;
-        text-align: center !important;
-        border: none !important; 
-    }
-
-    
+    /* 2. Chỉnh các cột cố định sang màu đen tuyệt đối */
     .col-fix-1 {
         width: 40px !important;        
         min-width: 40px !important;
@@ -1538,49 +1542,43 @@ body {
         z-index: 25;
     }
 
-   
     .col-fix-2 {
         left: 40px !important;         
         width: 130px !important;
         min-width: 130px !important;
         background-color: #000000 !important;
         z-index: 24;
-        
-        
         text-align: left !important;
         padding-left: 10px !important;
-        
-        
         box-shadow: none !important; 
     }
 
-    
+    /* 3. Header của các cột cố định cũng phải màu đen */
     .alpha-table thead th.col-fix-1,
     .alpha-table thead th.col-fix-2 {
-        background: #000000 !important;
+        background-color: #000000 !important;
         z-index: 30;
     }
-.alpha-table tbody tr:hover td.col-fix-1,
-.alpha-table tbody tr:hover td.col-fix-2 {
-    background: #000000 !important;
-}
-    
+
+    /* 4. Tắt hiệu ứng đổi màu khi di chuột (hover) để giữ màu đen tuyệt đối */
+    .alpha-table tbody tr:hover td,
+    .alpha-table tbody tr:hover td.col-fix-1,
+    .alpha-table tbody tr:hover td.col-fix-2 {
+        background-color: #000000 !important;
+    }
+
+    /* Các thành phần bổ trợ khác giữ nguyên */
     .token-cell {
         justify-content: flex-start !important;
         gap: 8px;
     }
-
     .symbol-text {
         font-size: 13px !important;
     }
-
-    
     .token-logo {
         width: 24px !important;
         height: 24px !important;
     }
-
-    
     .smart-badge {
         font-size: 9px !important;
         padding: 2px 5px !important;
