@@ -311,6 +311,10 @@ function renderMarketHUD(stats) {
     const top10Daily = dailyTokens.slice(0, 10);
     const maxVolDaily = top10Daily[0] ? (top10Daily[0].volume.daily_total || 1) : 1;
 
+    const volDailyTop10Sum = top10Daily.reduce((sum, t) => sum + (t.volume.daily_total || 0), 0);
+    const totalDaily = stats.alphaDailyTotal || 1;
+    const dailyDomPct = (volDailyTop10Sum / totalDaily) * 100;
+
     const formatNumK = (num) => {
         if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
         if(num >= 1000) return (num/1000).toFixed(0) + 'K';
@@ -422,10 +426,16 @@ function renderMarketHUD(stats) {
                 <span style="font-size:11px; color:#5E6673; font-weight:600; font-family:var(--font-main);">Listings</span>
             </div>
             
-            <div style="display:flex; width:100%; height:8px; background:#1e2329; border-radius:4px; overflow:hidden; margin-bottom:12px; margin-top:5px;">
-                <div style="width:${pctActive}%; background:#0ecb81;" title="Live"></div>
-                <div style="width:${pctSpot}%; background:#F0B90B;" title="Spot"></div>
-                <div style="width:${pctDelist}%; background:#f6465d;" title="Dead"></div>
+            <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; margin-bottom:12px; margin-top:5px; font-family:var(--font-num); font-weight:700; font-size:11px; letter-spacing:0.5px;">
+                <div style="width:${pctActive}%; background:#0ecb81; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
+                    ${pctActive > 5 ? `${stats.countActive} LIVE` : ''} 
+                </div>
+                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">
+                    ${pctSpot > 5 ? `${stats.countSpot} SPOT` : ''}
+                </div>
+                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">
+                    ${pctDelist > 5 ? `${stats.countDelisted} DEAD` : ''}
+                </div>
             </div>
 
             <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:2px;">
@@ -504,7 +514,13 @@ function renderMarketHUD(stats) {
             <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
                 $${formatNum(stats.alphaDailyTotal)}
             </div>
-            <div style="display:flex; gap:10px; margin-bottom:10px; font-size:10px; font-weight:700;">
+             <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
+                    <div style="width:${dailyDomPct}%; height:100%; background:#eaecef; border-radius:2px;"></div>
+                </div>
+                <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span style="color:#fff">${dailyDomPct.toFixed(0)}%</span></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:10px; font-size:10px; font-weight:700; margin-top:-5px;">
                 <div style="color:#F0B90B;">● LIMIT: $${formatNumK(stats.alphaDailyLimit)}</div>
                 <div style="color:#9945FF;">● CHAIN: $${formatNumK(stats.alphaDailyChain)}</div>
             </div>
