@@ -33,9 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     injectLayout();
 
     
-    if (localStorage.getItem('wave_alpha_role') === 'admin') {
-        window.pluginSwitchTab('alpha', true);
-    }
+    window.pluginSwitchTab('alpha', true);
+    
     initMarket();
     setupEvents();
 });
