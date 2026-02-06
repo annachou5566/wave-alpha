@@ -859,59 +859,52 @@ window.toggleFilter = (filterType) => {
 
 
 function getSparklineSVG(data) {
-    
     if (!data || !Array.isArray(data) || data.length < 2) return '';
-    
-    
-    if (typeof data[0] !== 'object') return '';
 
-    const width = 120;
-    const height = 40;
+    const width = 100; 
+    const height = 30; 
     
-    
-    const prices = data.map(d => d.p);
-    const volumes = data.map(d => d.v);
+    let prices, volumes, maxV = 1;
+
+    if (typeof data[0] === 'object') {
+        prices = data.map(d => d.p);
+        volumes = data.map(d => d.v);
+        maxV = Math.max(...volumes) || 1;
+    } else {
+        prices = data;
+        volumes = [];
+    }
 
     const minP = Math.min(...prices);
     const maxP = Math.max(...prices);
     const rangeP = maxP - minP || 1;
 
-    const maxV = Math.max(...volumes) || 1; 
-
-    
     const isUp = prices[prices.length - 1] >= prices[0];
     const color = isUp ? '#0ecb81' : '#f6465d'; 
     
-    
-    let points = data.map((d, i) => {
-        const x = (i / (data.length - 1)) * width;
-        
-        const y = (height - 15) - ((d.p - minP) / rangeP) * (height - 20) - 5; 
+    let points = prices.map((p, i) => {
+        const x = (i / (prices.length - 1)) * width;
+        const bottomPadding = volumes.length > 0 ? 8 : 0; 
+        const y = (height - bottomPadding) - ((p - minP) / rangeP) * (height - bottomPadding - 4) - 2; 
         return `${x},${y}`;
     }).join(' ');
 
-    
     let bars = '';
-    const barWidth = (width / (data.length - 1)) * 0.6; 
-
-    data.forEach((d, i) => {
-        
-        let barHeight = (d.v / maxV) * 14;
-        
-        
-        if (barHeight < 2) barHeight = 2;
-
-        const x = (i / (data.length - 1)) * width; 
-        const y = height - barHeight; 
-        
-        bars += `<rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.3" rx="1" />`;
-    });
+    if (volumes.length > 0) {
+        const barWidth = (width / (data.length - 1)) * 0.6; 
+        volumes.forEach((v, i) => {
+            let barHeight = (v / maxV) * 8;
+            if (barHeight < 1 && v > 0) barHeight = 1;
+            const x = (i / (data.length - 1)) * width;
+            const y = height - barHeight;
+            bars += `<rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.3" />`;
+        });
+    }
 
     return `
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="mini-chart" xmlns="http:
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="mini-chart" style="overflow:visible; display:block;">
             ${bars}
-            
-            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
     `;
 }
