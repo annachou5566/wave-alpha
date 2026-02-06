@@ -1446,7 +1446,7 @@ body {
     font-size: 15px;
     letter-spacing: -0.3px;
     color: #fff;
-    margin-left: 8px;
+    margin-left: 0px;
 }
 
 
@@ -1465,13 +1465,13 @@ body {
 
 .badge-airdrop {
     color: #ffffff;
-    border: 1px solid #ffffff;
+    border: 1px solid #ffffffa7;
     background: #00838f;
 }
 
 .badge-tge {
     color: #ffffff;
-    border: 1px solid #ffffff;
+    border: 1px solid #ffffffa7;
     background: #7b1fa2;
 }
 
