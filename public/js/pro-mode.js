@@ -410,17 +410,26 @@ function renderMarketHUD(stats) {
     hud.innerHTML = `
         
             <div class="hud-module">
-            <div class="hud-title">MARKET LIFECYCLE <span style="color:#fff; margin-left:5px">(${stats.totalScan})</span></div>
+            <div class="hud-title" style="margin-bottom:0px">MARKET LIFECYCLE</div>
             
-            <div class="lifecycle-labels" style="margin-top:6px;">
-                <div class="lifecycle-label-item" style="width:${pctActive}%; color:#0ecb81;">${stats.countActive} ACT</div>
-                <div class="lifecycle-label-item" style="width:${pctSpot}%; color:#F0B90B;">${stats.countSpot} SPOT</div>
-                <div class="lifecycle-label-item" style="width:${pctDelist}%; color:#f6465d;">${stats.countDelisted} DEAD</div>
+            <div style="font-family:var(--font-num); font-size:20px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:baseline; gap:4px;">
+                ${stats.totalScan} 
+                <span style="font-size:11px; color:#5E6673; font-weight:600; font-family:var(--font-main);">Listings</span>
             </div>
-            <div style="display:flex; width:100%; height:6px; background:#1e2329; border-radius:3px; overflow:hidden; margin-bottom:15px;">
-                <div style="width:${pctActive}%; background:#0ecb81;"></div>
-                <div style="width:${pctSpot}%; background:#F0B90B;"></div>
-                <div style="width:${pctDelist}%; background:#f6465d;"></div>
+            
+            <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; margin-bottom:15px; margin-top:10px; font-family:var(--font-num); font-weight:700; font-size:11px; letter-spacing:0.5px;">
+                
+                <div style="width:${pctActive}%; background:#0ecb81; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
+                    ${pctActive > 5 ? `${stats.countActive} LIVE` : ''} 
+                </div>
+
+                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">
+                    ${pctSpot > 5 ? `${stats.countSpot} SPOT` : ''}
+                </div>
+
+                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">
+                    ${pctDelist > 5 ? `${stats.countDelisted} DEAD` : ''}
+                </div>
             </div>
 
             <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:2px;">
