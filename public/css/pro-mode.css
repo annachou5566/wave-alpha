@@ -1285,7 +1285,7 @@ body {
 }
 
 .alpha-table th {
-    background: #2b3139;
+    background: #2a3039;
     color: #848e9c;
     font-family: var(--font-main);
     font-size: 11px;
@@ -1299,7 +1299,7 @@ body {
 }
 
 .alpha-table td {
-    background: #2b3139;
+    background: #2a3039;
     padding: 16px 10px;
     font-family: var(--font-num);
     font-size: 14px;
@@ -1514,23 +1514,23 @@ body {
 }
 
 @media (max-width: 768px) {
-    /* Đảm bảo bảng đủ rộng để trượt */
+    
     .alpha-table {
         min-width: 900px;
     }
 
-    /* Thiết lập chung cho ô trên mobile */
+    
     .alpha-table th, 
     .alpha-table td {
         padding: 12px 6px !important;
         font-size: 12px !important;
         text-align: center !important;
-        border: none !important; /* Xóa viền để tránh hở */
+        border: none !important; 
     }
 
-    /* Cột 1: Rank (#) - Cố định trái */
+    
     .col-fix-1 {
-        width: 40px !important;        /* Tăng lên 40px cho tròn số */
+        width: 40px !important;        
         min-width: 40px !important;
         left: 0 !important;
         background-color: #1e2329 !important;
@@ -1538,30 +1538,30 @@ body {
         z-index: 25;
     }
 
-    /* Cột 2: Token - Cố định sát Cột 1 */
+   
     .col-fix-2 {
-        left: 40px !important;         /* Phải trùng khớp với width của col-fix-1 */
+        left: 40px !important;         
         width: 130px !important;
         min-width: 130px !important;
         background-color: #1e2329 !important;
         z-index: 24;
         
-        /* Căn trái nội dung */
+        
         text-align: left !important;
         padding-left: 10px !important;
         
-        /* Xóa bóng đổ nếu có để liền mạch */
+        
         box-shadow: none !important; 
     }
 
-    /* Đảm bảo Header cũng dính liền */
+    
     .alpha-table thead th.col-fix-1,
     .alpha-table thead th.col-fix-2 {
         background: #1e2329 !important;
         z-index: 30;
     }
 
-    /* Căn trái tên Token */
+    
     .token-cell {
         justify-content: flex-start !important;
         gap: 8px;
@@ -1571,13 +1571,13 @@ body {
         font-size: 13px !important;
     }
 
-    /* Giữ Logo nhỏ gọn */
+    
     .token-logo {
         width: 24px !important;
         height: 24px !important;
     }
 
-    /* Badge nhỏ cho mobile */
+    
     .smart-badge {
         font-size: 9px !important;
         padding: 2px 5px !important;
