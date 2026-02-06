@@ -1285,7 +1285,7 @@ body {
 }
 
 .alpha-table th {
-    background: #1d2128;
+    background: #212429;
     color: #848e9c;
     font-family: var(--font-main);
     font-size: 11px;
@@ -1299,7 +1299,7 @@ body {
 }
 
 .alpha-table td {
-    background: #1d2128;
+    background: #212429;
     padding: 16px 10px;
     font-family: var(--font-num);
     font-size: 14px;
