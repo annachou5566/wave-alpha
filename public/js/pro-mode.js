@@ -33,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     injectLayout();
 
     
-    window.pluginSwitchTab('alpha', true);
+    const savedTab = localStorage.getItem('wave_main_tab') || 'alpha'; // Mặc định là alpha nếu chưa có lịch sử
+    window.pluginSwitchTab(savedTab, true);
     
     initMarket();
     setupEvents();
@@ -653,6 +654,7 @@ function injectLayout() {
 
 
 window.pluginSwitchTab = (tab, instant = false) => {
+    localStorage.setItem('wave_main_tab', tab);
     const alphaView = document.getElementById('alpha-market-view');
     const compView = document.getElementById('view-dashboard'); 
     
