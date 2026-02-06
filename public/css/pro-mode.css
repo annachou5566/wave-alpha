@@ -1450,40 +1450,59 @@ body {
     margin-left: 8px;
 }
 
+/* --- BADGE STYLES (Clean & Color Coded) --- */
 .smart-badge {
+    display: inline-block;
     border-radius: 4px;
     padding: 3px 10px;
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05);
-    color: #c0c0c0;
     letter-spacing: 0.5px;
+    
+    /* Mặc định cho status thường: Viền trắng nhẹ */
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.03);
+    color: #cbd5e1;
 }
 
+/* AIR: Vàng Binance */
+.badge-airdrop {
+    color: #F0B90B;
+    border: 1px solid rgba(240, 185, 11, 0.3);
+    background: rgba(240, 185, 11, 0.1);
+}
+
+/* TGE: Tím Sáng Đẹp */
+.badge-tge {
+    color: #d946ef; 
+    border: 1px solid rgba(217, 70, 239, 0.3);
+    background: rgba(217, 70, 239, 0.1);
+}
+
+/* Các trạng thái khác */
 .badge-spot { 
-    background: rgba(0, 255, 180, 0.08); 
-    border: 1px solid rgba(0, 255, 180, 0.2);
-    color: #00ffb4; 
+    background: rgba(0, 255, 180, 0.1); 
+    border: 1px solid rgba(0, 255, 180, 0.3);
+    color: #00ffb4;
 }
 
 .badge-delisted { 
-    background: rgba(207, 48, 74, 0.08); 
-    border: 1px solid rgba(207, 48, 74, 0.2);
-    color: #ff4d6a; 
+    background: rgba(207, 48, 74, 0.1); 
+    border: 1px solid rgba(207, 48, 74, 0.3);
+    color: #ff4d6a;
 }
 
 .badge-alpha { 
     color: #00f0ff; 
-    border: 1px solid rgba(0, 240, 255, 0.2); 
-    background: rgba(0, 240, 255, 0.08); 
+    border: 1px solid rgba(0, 240, 255, 0.3); 
+    background: rgba(0, 240, 255, 0.1); 
 }
 
 .badge-bsc {
     color: #F0B90B;
-    border: 1px solid rgba(240, 185, 11, 0.2);
-    background: rgba(240, 185, 11, 0.08);
+    border: 1px solid rgba(240, 185, 11, 0.3);
+    background: rgba(240, 185, 11, 0.1);
 }
 
 .star-icon {
