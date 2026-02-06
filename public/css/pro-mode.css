@@ -1459,21 +1459,21 @@ body {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05);
-    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: #2b3139;
+    color: #f1f5f9;
 }
 
 .badge-airdrop {
-    color: #00f0ff;
-    border: 1px solid rgba(0, 240, 255, 0.3);
-    background: rgba(0, 240, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid #00f0ff;
+    background: #00838f;
 }
 
 .badge-tge {
-    color: #d946ef;
-    border: 1px solid rgba(217, 70, 239, 0.3);
-    background: rgba(217, 70, 239, 0.1);
+    color: #ffffff;
+    border: 1px solid #d946ef;
+    background: #7b1fa2;
 }
 
 
