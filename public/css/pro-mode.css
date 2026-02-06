@@ -219,174 +219,6 @@ body {
     min-height: 400px;
 }
 
-.alpha-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 6px;
-    color: var(--text-primary);
-    margin-top: 10px;
-}
-
-.alpha-table th {
-    background: #2b3139;
-    color: #848e9c;
-    font-family: var(--font-main);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 15px 10px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    border: none;
-    vertical-align: middle;
-    text-align: center;
-}
-
-.alpha-table td {
-    background: #1e2329;
-    padding: 16px 10px;
-    font-family: var(--font-num);
-    font-size: 14px;
-    font-weight: 600;
-    color: #eaecef;
-    border: none;
-    vertical-align: middle;
-    text-align: center;
-    transition: all 0.2s ease;
-}
-
-.alpha-table td:first-child {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-}
-
-.alpha-table td:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-}
-
-.h-top th {
-    border: none;
-    text-align: center;
-}
-
-.h-sub th {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    cursor: pointer;
-}
-
-.h-sub th:hover {
-    color: var(--brand);
-    background: #363c4e;
-}
-
-.alpha-table tr {
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.alpha-table tbody tr:hover td {
-    background: #2b3139 !important;
-}
-
-.alpha-table tbody tr:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-.col-fix-1 {
-    position: sticky !important;
-    left: 0;
-    z-index: 20;
-    width: 60px;
-    background-color: #161a1e !important;
-    color: #f0b90b;
-    font-size: 16px;
-    font-weight: bold;
-    border-right: 1px solid rgba(255,255,255,0.02);
-}
-
-.col-fix-2 {
-    position: sticky !important;
-    left: 60px;
-    z-index: 20;
-    width: 200px;
-    min-width: 200px;
-    background-color: #161a1e !important;
-    text-align: left !important;
-    padding-left: 15px !important;
-    border-right: 1px solid rgba(0,0,0,0.2);
-    box-shadow: 4px 0 8px -2px rgba(0,0,0,0.3);
-}
-
-.alpha-table thead th.col-fix-1,
-.alpha-table thead th.col-fix-2 {
-    z-index: 30;
-    background: #2b3139 !important;
-}
-
-.alpha-table td:nth-child(2) {
-    text-align: left !important;
-}
-
-.alpha-table td:nth-child(3), 
-.alpha-table th:nth-child(3) {
-    text-align: left !important;
-    padding-left: 20px !important;
-    min-width: 140px;
-}
-
-.alpha-table td:nth-child(5) {
-    padding: 5px;
-    min-width: 140px;
-}
-
-.token-cell {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.logo-wrapper {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    margin-right: 4px;
-    display: inline-block;
-    vertical-align: middle;
-    flex-shrink: 0;
-}
-
-.token-logo {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #1e2026;
-    border: 1px solid #333;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.chain-badge {
-    position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #0b0e11;
-    border: 1.5px solid #000;
-    z-index: 10;
-    object-fit: cover;
-}
-
-.symbol-text {
-    font-family: var(--font-main);
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: -0.3px;
-    color: #fff;
-    margin-left: 8px;
-}
-
 
 .text-brand { color: var(--brand) !important; }
 .text-neon { color: var(--neon-green) !important; text-shadow: 0 0 8px rgba(0, 255, 136, 0.3); font-weight: 700; }
@@ -1303,7 +1135,7 @@ body {
     padding: 16px 10px;
     font-family: var(--font-num);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 800;
     color: #eaecef;
     border: none;
     vertical-align: middle;
@@ -1515,24 +1347,24 @@ body {
 
 
 @media (max-width: 768px) {
-    /* 1. Đưa toàn bộ nền bảng và ô về màu đen */
+   
     .alpha-table, 
     .alpha-table th, 
     .alpha-table td {
         background-color: #000000 !important;
-        color: #eaecef !important; /* Đảm bảo chữ vẫn sáng màu để đọc được */
+        color: #eaecef !important; 
         padding: 12px 6px !important;
         font-size: 12px !important;
         text-align: center !important;
         border: none !important;
-        border-bottom: 1px solid #2b3139 !important; /* Giữ đường kẻ mờ giữa các hàng */
+        border-bottom: 1px solid #2b3139 !important; 
     }
 
     .alpha-table {
         min-width: 900px;
     }
 
-    /* 2. Chỉnh các cột cố định sang màu đen tuyệt đối */
+    
     .col-fix-1 {
         width: 40px !important;        
         min-width: 40px !important;
@@ -1553,21 +1385,21 @@ body {
         box-shadow: none !important; 
     }
 
-    /* 3. Header của các cột cố định cũng phải màu đen */
+   
     .alpha-table thead th.col-fix-1,
     .alpha-table thead th.col-fix-2 {
         background-color: #000000 !important;
         z-index: 30;
     }
 
-    /* 4. Tắt hiệu ứng đổi màu khi di chuột (hover) để giữ màu đen tuyệt đối */
+    
     .alpha-table tbody tr:hover td,
     .alpha-table tbody tr:hover td.col-fix-1,
     .alpha-table tbody tr:hover td.col-fix-2 {
         background-color: #000000 !important;
     }
 
-    /* Các thành phần bổ trợ khác giữ nguyên */
+    
     .token-cell {
         justify-content: flex-start !important;
         gap: 8px;
