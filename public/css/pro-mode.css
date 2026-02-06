@@ -216,28 +216,15 @@ body {
     min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed;
 }
 
 .alpha-table th, 
 .alpha-table td {
-    padding: 14px 20px;
+    padding: 14px 12px;
     white-space: nowrap;
     vertical-align: middle;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    text-align: right;
-}
-
-.alpha-table th {
-    background: #1e2329;
-    color: var(--text-secondary);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    text-align: center;
 }
 
 .col-fix-1 {
@@ -245,11 +232,9 @@ body {
     left: 0;
     z-index: 21;
     width: 50px;
-    min-width: 50px;
     background-color: var(--bg-card);
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     text-align: center !important;
-    padding: 14px 0 !important;
 }
 
 .col-fix-2 {
@@ -257,43 +242,51 @@ body {
     left: 50px;
     z-index: 21;
     width: 220px;
-    min-width: 220px;
     background-color: var(--bg-card);
     border-right: 2px solid #2b3139;
     text-align: left !important;
 }
 
-.alpha-table thead th.col-fix-1,
-.alpha-table thead th.col-fix-2 {
-    z-index: 30;
-    background-color: #1e2329;
-}
-
-.alpha-table tbody tr:hover td {
-    background-color: rgba(255, 255, 255, 0.03);
-}
-
-.alpha-table tbody tr:hover .col-fix-1,
-.alpha-table tbody tr:hover .col-fix-2 {
-    background-color: #1e2026;
-}
-
 .alpha-table th:nth-child(3),
 .alpha-table td:nth-child(3) {
     text-align: left !important;
-    min-width: 150px;
+    width: 140px;
+    padding-left: 30px !important;
+}
+
+.alpha-table th:nth-child(4),
+.alpha-table td:nth-child(4) {
+    text-align: right !important;
+    width: 120px;
 }
 
 .alpha-table th:nth-child(5),
 .alpha-table td:nth-child(5) {
-    padding: 5px 10px;
-    min-width: 120px;
+    width: 160px;
+    min-width: 160px !important;
     text-align: center !important;
+    padding: 5px !important;
 }
 
-.alpha-table td:nth-child(n+6),
-.alpha-table th:nth-child(n+6) {
+.alpha-table th:nth-child(n+6),
+.alpha-table td:nth-child(n+6) {
     text-align: right !important;
+    width: 110px;
+}
+
+.alpha-table thead th {
+    background: #1e2329;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.alpha-table tbody tr:hover td {
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 
@@ -1285,6 +1278,10 @@ body {
 }
 
 @media (max-width: 768px) {
+    .alpha-table {
+        table-layout: auto;
+    }
+
     .alpha-table th, 
     .alpha-table td {
         font-size: 11px !important;   
@@ -1305,6 +1302,18 @@ body {
         max-width: 100px !important;
         min-width: 100px !important;
         padding-right: 2px !important;
+    }
+
+    .alpha-table th:nth-child(3),
+    .alpha-table td:nth-child(3) {
+        width: 90px !important;
+        padding-left: 8px !important;
+    }
+
+    .alpha-table th:nth-child(5),
+    .alpha-table td:nth-child(5) {
+        width: 100px !important;
+        min-width: 100px !important;
     }
 
     .token-logo {
@@ -1345,16 +1354,4 @@ body {
         height: 30px !important;
         padding: 4px !important;
     }
-    
-    .alpha-header {
-        flex-direction: column;
-        gap: 8px;
-    }
-    .search-group input {
-        padding: 6px 10px 6px 30px;
-        font-size: 12px;
-    }
 }
-
-
-
