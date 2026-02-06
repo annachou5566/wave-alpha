@@ -1533,7 +1533,7 @@ body {
         width: 40px !important;        
         min-width: 40px !important;
         left: 0 !important;
-        background-color: #101216 !important;
+        background-color: #000000 !important;
         border-radius: 8px 0 0 8px !important;
         z-index: 25;
     }
@@ -1543,7 +1543,7 @@ body {
         left: 40px !important;         
         width: 130px !important;
         min-width: 130px !important;
-        background-color: #101216 !important;
+        background-color: #000000 !important;
         z-index: 24;
         
         
@@ -1557,10 +1557,13 @@ body {
     
     .alpha-table thead th.col-fix-1,
     .alpha-table thead th.col-fix-2 {
-        background: #101216 !important;
+        background: #000000 !important;
         z-index: 30;
     }
-
+.alpha-table tbody tr:hover td.col-fix-1,
+.alpha-table tbody tr:hover td.col-fix-2 {
+    background: #000000 !important;
+}
     
     .token-cell {
         justify-content: flex-start !important;
