@@ -220,13 +220,14 @@ body {
 
 .alpha-table th, 
 .alpha-table td {
-    padding: 12px 15px;
+    padding: 12px 10px;
     white-space: nowrap;
     vertical-align: middle;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     text-align: right;
 }
 
+/* Cột 1: Star (Ghim) */
 .col-fix-1 {
     position: sticky !important;
     left: 0;
@@ -239,6 +240,7 @@ body {
     padding: 12px 0 !important;
 }
 
+/* Cột 2: Token (Ghim) */
 .col-fix-2 {
     position: sticky !important;
     left: 50px;
@@ -250,29 +252,49 @@ body {
     text-align: left !important;
 }
 
+/* Cột 3: Status - Cách xa Token 35px, Canh trái */
 .alpha-table th:nth-child(3),
 .alpha-table td:nth-child(3) {
     text-align: left !important;
     width: 130px;
     padding-left: 35px !important;
-    padding-right: 5px !important;
 }
 
+/* Cột 4: Price - Kéo gần về phía Status */
 .alpha-table th:nth-child(4),
 .alpha-table td:nth-child(4) {
+    width: 100px;
     text-align: right !important;
-    width: 110px;
-    padding-left: 5px !important;
 }
 
+/* Cột 5: Chart - Giữ cố định 160px để không mất hình */
 .alpha-table th:nth-child(5),
 .alpha-table td:nth-child(5) {
     width: 160px;
     min-width: 160px !important;
     text-align: center !important;
-    padding: 5px 10px !important;
+    padding: 5px !important;
 }
 
+/* Các cột số liệu (6,7,8,9,11): Set 100px cho gọn */
+.alpha-table th:nth-child(n+6),
+.alpha-table td:nth-child(n+6) {
+    width: 100px;
+    min-width: 100px;
+}
+
+/* RIÊNG Cột 10: TXs - Bóp nhỏ 60px để sát vào VOL 24H */
+.alpha-table td:nth-child(10) {
+    width: 60px !important;
+    min-width: 60px !important;
+}
+/* Header của TXs nằm ở dòng 2 nên cần chỉnh riêng */
+.h-sub th:nth-child(5) {
+    width: 60px !important;
+    min-width: 60px !important;
+}
+
+/* Header Styles */
 .alpha-table th {
     background: #1e2329;
     color: var(--text-secondary);
@@ -1358,5 +1380,12 @@ body {
     .search-group input {
         padding: 6px 10px 6px 30px;
         font-size: 12px;
+    }
+    
+    /* Fix riêng cho mobile để chart không mất */
+    .alpha-table th:nth-child(5),
+    .alpha-table td:nth-child(5) {
+        width: 100px !important;
+        min-width: 100px !important;
     }
 }
