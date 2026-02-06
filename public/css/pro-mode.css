@@ -211,29 +211,20 @@ body {
 }
 
 
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 20px;
-    border: 1px solid var(--border-dim);
-    border-radius: 6px;
-    background: var(--bg-card);
-}
-
 .alpha-table {
-    width: 100%;
-    min-width: 1200px;
+    width: max-content;
+    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
 }
 
 .alpha-table th, 
 .alpha-table td {
-    padding: 14px 16px;
+    padding: 14px 20px;
     white-space: nowrap;
     vertical-align: middle;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: right;
 }
 
 .alpha-table th {
@@ -246,6 +237,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 20;
+    text-align: center;
 }
 
 .col-fix-1 {
@@ -256,7 +248,8 @@ body {
     min-width: 50px;
     background-color: var(--bg-card);
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    text-align: center;
+    text-align: center !important;
+    padding: 14px 0 !important;
 }
 
 .col-fix-2 {
@@ -267,6 +260,7 @@ body {
     min-width: 220px;
     background-color: var(--bg-card);
     border-right: 2px solid #2b3139;
+    text-align: left !important;
 }
 
 .alpha-table thead th.col-fix-1,
@@ -284,16 +278,22 @@ body {
     background-color: #1e2026;
 }
 
-.alpha-table th:nth-child(n+3), 
-.alpha-table td:nth-child(n+3) {
-    text-align: right;
-    min-width: 100px;
+.alpha-table th:nth-child(3),
+.alpha-table td:nth-child(3) {
+    text-align: left !important;
+    min-width: 150px;
 }
 
-.alpha-table th:nth-child(5), 
+.alpha-table th:nth-child(5),
 .alpha-table td:nth-child(5) {
-    min-width: 140px;
-    padding: 5px;
+    padding: 5px 10px;
+    min-width: 120px;
+    text-align: center !important;
+}
+
+.alpha-table td:nth-child(n+6),
+.alpha-table th:nth-child(n+6) {
+    text-align: right !important;
 }
 
 
@@ -1284,12 +1284,7 @@ body {
     text-decoration: underline !important;
 }
 
-
-
-
-
 @media (max-width: 768px) {
-   
     .alpha-table th, 
     .alpha-table td {
         font-size: 11px !important;   
@@ -1297,7 +1292,6 @@ body {
         white-space: nowrap;          
     }
 
-   
     .col-fix-1 {
         width: 25px !important; 
         font-size: 10px !important;
@@ -1305,7 +1299,6 @@ body {
         padding-right: 2px !important;
     }
 
-   
     .col-fix-2 {
         left: 25px !important;       
         width: 100px !important;     
@@ -1314,7 +1307,6 @@ body {
         padding-right: 2px !important;
     }
 
-   
     .token-logo {
         width: 20px !important;
         height: 20px !important;
@@ -1331,7 +1323,6 @@ body {
         right: -1px !important;
     }
 
-   
     .symbol-text {
         font-size: 12px !important;
     }
@@ -1339,26 +1330,22 @@ body {
         font-size: 8px !important; 
     }
 
-   
     .smart-badge {
-    font-size: 10px !important;
-    padding: 2px 4px !important;
-    font-weight: 700 !important;
-    border-radius: 2px !important;
-}
+        font-size: 10px !important;
+        padding: 2px 4px !important;
+        font-weight: 700 !important;
+        border-radius: 2px !important;
+    }
 
-   
     .token-cell {
         gap: 4px !important;
     }
 
-   
     .h-top th, .h-sub th {
         height: 30px !important;
         padding: 4px !important;
     }
     
-   
     .alpha-header {
         flex-direction: column;
         gap: 8px;
@@ -1368,3 +1355,6 @@ body {
         font-size: 12px;
     }
 }
+
+
+
