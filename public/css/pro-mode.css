@@ -536,28 +536,14 @@ body {
 
 
 .market-hud-container {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     background: transparent;
     border: none;
     padding: 0;
     gap: 15px;
     margin-bottom: 24px;
     box-shadow: none;
-}
-
-.hud-grid-main {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    width: 100%;
-}
-
-.hud-grid-movers {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    width: 100%;
 }
 
 .hud-card {
@@ -597,10 +583,20 @@ body {
     margin-bottom: 4px;
 }
 
+.trend-grid-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+    background: rgba(0,0,0,0.2);
+    padding: 8px;
+    border-radius: 6px;
+}
+
 .trend-col {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
 .trend-item {
@@ -608,42 +604,51 @@ body {
     align-items: center;
     justify-content: space-between;
     background: rgba(255, 255, 255, 0.03);
-    padding: 8px 10px;
-    border-radius: 4px;
-    font-size: 12px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 10px;
 }
 
 .trend-symbol {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
     font-weight: 700;
     color: #eaecef;
+    max-width: 60px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .trend-symbol img {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.trend-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.1;
 }
 
 .trend-price {
     font-family: var(--font-num);
     color: #848E9C;
-    font-size: 11px;
+    font-size: 9px;
 }
 
 .trend-chg {
     font-family: var(--font-num);
     font-weight: 700;
+    font-size: 10px;
 }
 
 @media (max-width: 992px) {
-    .hud-grid-main {
-        grid-template-columns: 1fr;
-    }
-    
-    .hud-grid-movers {
+    .market-hud-container {
         grid-template-columns: 1fr;
     }
     
