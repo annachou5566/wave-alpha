@@ -520,18 +520,6 @@ body {
     vertical-align: middle;
 }
 
-.badge-tge {
-    background: #6f42c1;
-    color: #fff;
-    border: 1px solid rgba(111, 66, 193, 0.4);
-}
-
-.badge-airdrop {
-    background: #0dcaf0;
-    color: #000;
-    font-weight: 800;
-}
-
 
 .journey-date {
     font-size: 10px;
