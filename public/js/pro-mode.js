@@ -441,11 +441,7 @@ function renderMarketHUD(stats) {
             <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:2px;">
                 24H PRICE ACTION
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700; margin-bottom:8px; font-family:var(--font-num);">
-                <div style="color:#f6465d">▼ ${stats.losers} LOSERS</div>
-                <div style="color:#0ecb81">${stats.gainers} GAINERS ▲</div>
-            </div>
-
+            
             <div class="trend-grid-inner">
                 <div class="trend-col">
                     ${topLosers.map(t => renderTrendItem(t, 'lose')).join('')}
@@ -453,6 +449,11 @@ function renderMarketHUD(stats) {
                 <div class="trend-col">
                     ${topGainers.map(t => renderTrendItem(t, 'gain')).join('')}
                 </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700; margin-bottom:8px; font-family:var(--font-num);">
+                <div style="color:#f6465d">▼ ${stats.losers} LOSERS</div>
+                <div style="color:#0ecb81">${stats.gainers} GAINERS ▲</div>
             </div>
 
             <div class="distrib-container">
@@ -501,7 +502,10 @@ function renderMarketHUD(stats) {
                 </div>
                 <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span style="color:#fff">${domPct.toFixed(0)}%</span></div>
             </div>
-            <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:flex-start; overflow:hidden;">
+            
+            <div class="hud-sub-stat-row spacer"></div>
+
+            <div class="hud-list-container">
                 ${top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join('')}
             </div>
         </div>
@@ -520,11 +524,13 @@ function renderMarketHUD(stats) {
                 </div>
                 <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span style="color:#fff">${dailyDomPct.toFixed(0)}%</span></div>
             </div>
-            <div style="display:flex; gap:10px; margin-bottom:10px; font-size:10px; font-weight:700; margin-top:-5px;">
+            
+            <div class="hud-sub-stat-row">
                 <div style="color:#F0B90B;">● LIMIT: $${formatNumK(stats.alphaDailyLimit)}</div>
                 <div style="color:#9945FF;">● CHAIN: $${formatNumK(stats.alphaDailyChain)}</div>
             </div>
-            <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:flex-start; overflow:hidden;">
+
+            <div class="hud-list-container">
                 ${top10Daily.map((t, i) => renderRow(t, i+1, 'DAILY')).join('')}
             </div>
         </div>

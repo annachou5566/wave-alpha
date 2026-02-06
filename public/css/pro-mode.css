@@ -535,6 +535,8 @@ body {
 .summary-grid { display: none !important; }
 
 
+
+
 .market-hud-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -572,6 +574,9 @@ body {
     letter-spacing: 0.8px;
     margin-bottom: 8px;
     font-weight: 700;
+    height: 15px;
+    display: flex;
+    align-items: center;
 }
 
 .hud-main-value {
@@ -581,13 +586,46 @@ body {
     color: #EAECEF;
     line-height: 1.1;
     margin-bottom: 4px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+}
+
+.hud-sub-stat-row {
+    display: flex;
+    gap: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    height: 14px;
+    margin-bottom: 10px;
+    margin-top: -5px;
+    align-items: center;
+}
+
+.hud-sub-stat-row.spacer {
+}
+
+.hud-list-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.hud-list-row {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    height: 22px;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
 }
 
 .trend-grid-inner {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     background: rgba(0,0,0,0.2);
     padding: 8px;
     border-radius: 6px;
@@ -656,7 +694,15 @@ body {
     .hud-card {
         min-height: auto;
     }
+    
+    .hud-sub-stat-row.spacer {
+        display: none;
+    }
 }
+
+
+
+
 
 
 .alpha-header {
