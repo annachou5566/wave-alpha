@@ -1299,7 +1299,7 @@ body {
 }
 
 .alpha-table td {
-    background: #1d2128;
+    background: #000000;
     padding: 16px 10px;
     font-family: var(--font-num);
     font-size: 14px;
@@ -1379,7 +1379,7 @@ body {
 .alpha-table thead th.col-fix-1,
 .alpha-table thead th.col-fix-2 {
     z-index: 30;
-    background: #1e2329 !important;
+    background: #000000 !important;
     text-align: center !important;
 }
 
@@ -1390,7 +1390,7 @@ body {
 
 .alpha-table tbody tr:hover td.col-fix-1,
 .alpha-table tbody tr:hover td.col-fix-2 {
-    background: #2b3139 !important;
+    background: #000000 !important;
 }
 
 .alpha-table td:nth-child(3), 
