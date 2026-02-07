@@ -1,10 +1,13 @@
 const DATA_URL = 'public/data/market-data.json';
 let allTokens = [];
-let displayCount = 50; 
+let currentPage = 1;
+let rowsPerPage = 20;
 let pinnedTokens = JSON.parse(localStorage.getItem('alpha_pins')) || [];
-let sortConfig = { key: 'volume.daily_total', dir: 'desc' };
+let sortConfig = { key: null, dir: null };
+
 let currentFilter = 'ALL';
 let filterPoints = false;
+
 
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -140,135 +143,153 @@ function renderTable() {
 }
 
 
-
-
 function renderTableRows(tbody) {
-    
     let list = allTokens.filter(t => {
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
         const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
         if (!matchSearch) return false;
-        
+        if (currentFilter === 'FAV') {
+             return pinnedTokens.includes(t.symbol);
+        }
         const status = getTokenStatus(t);
         if (currentFilter !== 'ALL' && status !== currentFilter) return false;
         if (filterPoints && (t.mul_point || 1) <= 1) return false;
-        return true; 
+        return true;
     });
 
-    
     list.sort((a, b) => {
-        
         const pinA = pinnedTokens.includes(a.symbol);
         const pinB = pinnedTokens.includes(b.symbol);
         if (pinA && !pinB) return -1;
         if (!pinA && pinB) return 1;
 
-        
-        
-        if (sortConfig.key === 'volume.daily_total' && sortConfig.dir === 'desc') {
-            const statusA = getTokenStatus(a);
-            const statusB = getTokenStatus(b);
-            
-            
-            const isActiveA = (statusA !== 'SPOT' && statusA !== 'DELISTED' && statusA !== 'PRE_DELISTED');
-            const isActiveB = (statusB !== 'SPOT' && statusB !== 'DELISTED' && statusB !== 'PRE_DELISTED');
+        const statusA = getTokenStatus(a);
+        const statusB = getTokenStatus(b);
+        const isBottomA = (statusA === 'SPOT' || statusA === 'DELISTED' || statusA === 'PRE_DELISTED');
+        const isBottomB = (statusB === 'SPOT' || statusB === 'DELISTED' || statusB === 'PRE_DELISTED');
 
-            
-            if (isActiveA && !isActiveB) return -1;
-            
-            if (!isActiveA && isActiveB) return 1;
-            
-            
+        if (!isBottomA && isBottomB) return -1;
+        if (isBottomA && !isBottomB) return 1;
+
+        if (sortConfig.key && sortConfig.dir) {
+            let key = sortConfig.key;
+            if (key === 'price') key = 'change_24h'; 
+
+            const valA = getVal(a, key);
+            const valB = getVal(b, key);
+            return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
         }
 
-        
-        const valA = getVal(a, sortConfig.key);
-        const valB = getVal(b, sortConfig.key);
-        return sortConfig.dir === 'desc' ? valB - valA : valA - valB;
+        return 0;
     });
 
-    
-    list.slice(0, displayCount).forEach((t) => {
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages || 1;
+    if (currentPage < 1) currentPage = 1;
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = Math.min(startIndex + rowsPerPage, totalItems);
+    const pageList = list.slice(startIndex, endIndex);
+
+    if(document.getElementById('page-start')) document.getElementById('page-start').innerText = totalItems > 0 ? startIndex + 1 : 0;
+    if(document.getElementById('page-end')) document.getElementById('page-end').innerText = endIndex;
+    if(document.getElementById('total-tokens')) document.getElementById('total-tokens').innerText = totalItems;
+    if(document.getElementById('page-num')) document.getElementById('page-num').innerText = `Page ${currentPage} / ${totalPages || 1}`;
+    document.getElementById('btn-prev').disabled = currentPage === 1;
+    document.getElementById('btn-next').disabled = currentPage >= totalPages;
+
+    pageList.forEach((t, index) => {
         const tr = document.createElement('tr');
-        const now = Date.now();
-        
-        
+        const realIndex = startIndex + index + 1;
         const status = getTokenStatus(t);
         let startBadges = [];
         if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
-        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIR</span>'); 
+        if (t.onlineAirdrop) startBadges.push('<span class="smart-badge badge-airdrop">AIR</span>');
         let journeyHtml = startBadges.join(' ');
-        
         if (status === 'SPOT') {
             let endBadge = '<span class="smart-badge badge-spot">SPOT</span>';
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
-            let endBadge = '<span class="smart-badge badge-delisted">DELIST</span>'; 
+            let endBadge = '<span class="smart-badge badge-delisted">DELIST</span>';
             journeyHtml = journeyHtml ? `${journeyHtml} <span class="status-arrow">➔</span> ${endBadge}` : endBadge;
         }
-
-        
+        const now = Date.now();
         let mulBadgeHtml = '';
         if (!t.offline && t.listing_time && t.mul_point > 1) {
-            const expiryTime = t.listing_time + 2592000000; 
+            const expiryTime = t.listing_time + 2592000000;
             const diffDays = Math.ceil((expiryTime - now) / 86400000);
             if (diffDays > 0) {
                 const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
-                
                 mulBadgeHtml = `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
             }
         }
-
-        const tokenImg = t.icon || 'assets/tokens/default.png';
-        const chainBadgeHtml = t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge" onerror="this.style.display='none'">` : '';
-        const shortContract = t.contract ? `${t.contract.substring(0, 4)}...${t.contract.substring(t.contract.length - 4)}` : ''; 
-
+        const maxVolPage = Math.max(...pageList.map(i => i.volume.daily_total || 0)) || 1;
+        const volPct = ((t.volume.daily_total || 0) / maxVolPage) * 100;
+        const isUp = t.change_24h >= 0;
+        const absChg = Math.abs(t.change_24h);
+        let opacityStart = 0.15;
+        let opacityEnd = 0.02;
+        if (absChg >= 20) { opacityStart = 0.5; opacityEnd = 0.1; }
+        else if (absChg >= 10) { opacityStart = 0.3; opacityEnd = 0.05; }
+        const rgb = isUp ? '34, 171, 148' : '246, 70, 93';
+        const cellStyle = `background: linear-gradient(90deg, rgba(${rgb}, ${opacityStart}) 0%, rgba(${rgb}, ${opacityEnd}) 100%) !important;`;
+        const textColorClass = isUp ? 'text-green' : 'text-red';
+        const sign = isUp ? '+' : '';
+        
         tr.innerHTML = `
             <td class="text-center col-fix-1">
                 <i class="${pinnedTokens.includes(t.symbol) ? 'fas fa-star text-brand' : 'far fa-star text-secondary'} star-icon" onclick="window.togglePin('${t.symbol}')"></i>
+                <div style="font-size:9px; color:#555; margin-top:4px;">${realIndex}</div>
             </td>
-            
             <td class="col-fix-2">
-                <div class="token-cell" style="justify-content: flex-start;">
+                <div class="token-cell">
                     <div class="logo-wrapper">
-                        <img src="${tokenImg}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
-                        ${chainBadgeHtml}
+                        <img src="${t.icon || 'assets/tokens/default.png'}" class="token-logo" onerror="this.src='assets/tokens/default.png'">
+                        ${t.chain_icon ? `<img src="${t.chain_icon}" class="chain-badge">` : ''}
                     </div>
-                    <div class="token-meta-container" style="display:block; width:auto; border:none; padding:0;">
-                         <div class="symbol-row" style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+                    <div class="token-meta-container" style="display:block;">
+                         <div class="symbol-row">
                             <span class="symbol-text">${t.symbol}</span>
                             ${mulBadgeHtml}
                         </div>
-                        <div class="contract-row" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; opacity:0.6; margin-top:1px;">
-                            ${shortContract}
+                        <div class="contract-row text-secondary" onclick="window.pluginCopy('${t.contract}')" style="cursor:pointer; font-size:11px;">
+                            ${t.name || t.contract?.substring(0,6)}
                         </div>
                     </div>
                 </div>
             </td>
-
-            <td style="vertical-align: middle;">
-                <div style="margin-bottom: 2px; white-space:nowrap;">${journeyHtml}</div>
-                ${t.listing_time ? `<div class="journey-date" style="font-size:9px"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''} 
-                </td>
-
-            <td class="text-end">
-                <div class="text-primary-val">$${formatPrice(t.price)}</div>
-                <div style="font-size:10px; font-weight:700;" class="${t.change_24h >= 0 ? 'text-green' : 'text-red'}">
-                    ${t.change_24h >= 0 ? '▲' : '▼'}${Math.abs(t.change_24h)}%
+            <td class="text-center status-col">
+                <div class="status-badge-wrapper">${journeyHtml}</div>
+                ${t.listing_time ? `<div class="journey-date-center"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''}
+            </td>
+            <td class="text-center" style="${cellStyle}">
+                <div class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
+                <div class="${textColorClass}" style="font-size:11px; font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                    ${sign}${t.change_24h}%
                 </div>
             </td>
-
-            <td class="chart-cell">${getSparklineSVG(t.chart)}</td>
-            
-            <td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_total)}</td>
-<td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_limit)}</td>
-<td class="text-end font-num text-primary-val">$${formatNum(t.volume.daily_onchain)}</td>
-<td class="text-end font-num text-primary-val">$${formatNum(t.volume.rolling_24h)}</td>
-<td class="text-end font-num text-primary-val">${formatInt(t.tx_count)}</td>
-<td class="text-end font-num text-primary-val">$${formatNum(t.liquidity)}</td>
+            <td class="chart-cell" style="padding: 5px 10px; overflow: hidden; max-width: 100px; width: 100px;">
+                ${getSparklineSVG(t.chart)}
+            </td>
+            <td class="text-end font-num">
+                <div class="vol-cell-group">
+                    <span class="text-primary-val">$${formatNum(t.volume.daily_total)}</span>
+                    <div class="vol-bar-bg"><div class="vol-bar-fill" style="width:${volPct}%"></div></div>
+                </div>
+            </td>
+            <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_limit)}</td>
+            <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end font-num text-secondary-val">
+                 $${formatNum(t.volume.rolling_24h)}
+            </td>
+            <td class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
+            <td class="text-end font-num text-secondary-val">$${formatNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
     });
+    if (pageList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-secondary">No data found matching filters.</td></tr>';
+    }
 }
 
 
@@ -582,17 +603,11 @@ window.hideTooltip = function() {
 };
 
 
-
-
-
 function injectLayout() {
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
-
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
-
-    
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
@@ -600,12 +615,9 @@ function injectLayout() {
         <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
-
-    
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
-    marketView.style.display = 'none'; 
-    
+    marketView.style.display = 'none';
     marketView.innerHTML = `
         <div class="alpha-container">
             <div class="alpha-header">
@@ -614,6 +626,7 @@ function injectLayout() {
                     <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
                     <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
                     <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
+                    <button class="filter-btn" id="btn-f-fav" onclick="setFilter('FAV')">★ Favorites</button>
                     <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
                 </div>
                 <div class="search-group">
@@ -621,19 +634,15 @@ function injectLayout() {
                     <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                 </div>
             </div>
-
             <div class="table-responsive">
                 <table class="alpha-table">
                     <thead>
                         <tr class="h-top">
                             <th rowspan="2" class="text-center col-fix-1">#</th>
                             <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
-                            
                             <th rowspan="2" class="text-center">STATUS</th>
-                            
-                            <th rowspan="2" class="text-end">PRICE</th>
+                            <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort('price')">PRICE (24h%)</th>
                             <th rowspan="2" class="text-center">CHART</th>
-                            
                             <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
                             <th colspan="3" class="text-center th-group-stats">MARKET STATS (24h)</th>
                         </tr>
@@ -641,7 +650,6 @@ function injectLayout() {
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                            
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
@@ -650,12 +658,25 @@ function injectLayout() {
                     <tbody id="market-table-body"></tbody>
                 </table>
             </div>
+            <div class="pagination-container">
+                <div class="page-info">
+                    Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
+                </div>
+                <div class="page-controls">
+                    Rows: 
+                    <select id="rows-per-page" class="rows-selector" onchange="changeRowsPerPage()">
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <button class="page-btn" id="btn-prev" onclick="prevPage()">&lt;</button>
+                    <span id="page-num" style="margin:0 10px; font-weight:bold;">Page 1</span>
+                    <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
+                </div>
+            </div>
         </div>
     `;
-    
     tabNav.insertAdjacentElement('afterend', marketView);
-
-    
     let lastScrollY = window.scrollY;
     window.removeEventListener('scroll', window._smartScroll);
     window._smartScroll = function() {
@@ -701,9 +722,20 @@ window.pluginSwitchTab = (tab, instant = false) => {
 };
 
 
-window.pluginSort = (key) => {
-    if (sortConfig.key === key) sortConfig.dir = sortConfig.dir === 'desc' ? 'asc' : 'desc';
-    else { sortConfig.key = key; sortConfig.dir = 'desc'; }
+window.pluginSort = function(key) {
+    if (sortConfig.key === key) {
+        if (sortConfig.dir === 'desc') {
+            sortConfig.dir = 'asc';
+        } else if (sortConfig.dir === 'asc') {
+            sortConfig.key = null;
+            sortConfig.dir = null;
+        } else {
+            sortConfig.dir = 'desc';
+        }
+    } else {
+        sortConfig.key = key;
+        sortConfig.dir = 'desc';
+    }
     renderTable();
 };
 
@@ -944,20 +976,25 @@ function getSparklineSVG(data) {
 
 window.setFilter = function(status) {
     currentFilter = status;
-    
-    
-    ['all', 'alpha', 'spot', 'delist'].forEach(k => {
+    currentPage = 1;
+    ['all', 'alpha', 'spot', 'delist', 'fav'].forEach(k => {
         document.getElementById(`btn-f-${k}`)?.classList.remove(`active-${k}`);
+        document.getElementById(`btn-f-${k}`)?.classList.remove('active');
     });
-
-    
     if (status === 'ALL') document.getElementById('btn-f-all').classList.add('active-all');
-    if (status === 'ALPHA') document.getElementById('btn-f-alpha').classList.add('active-alpha');
-    if (status === 'SPOT') document.getElementById('btn-f-spot').classList.add('active-spot');
-    if (status === 'DELISTED') document.getElementById('btn-f-delist').classList.add('active-delist');
-
+    else if (status === 'ALPHA') document.getElementById('btn-f-alpha').classList.add('active-alpha');
+    else if (status === 'SPOT') document.getElementById('btn-f-spot').classList.add('active-spot');
+    else if (status === 'DELISTED') document.getElementById('btn-f-delist').classList.add('active-delist');
+    else if (status === 'FAV') {
+        const btn = document.getElementById('btn-f-fav');
+        if(btn) {
+             btn.classList.add('active');
+             btn.style.color = '#F0B90B';
+        }
+    }
     renderTable();
 };
+
 
 window.togglePoints = function() {
     filterPoints = !filterPoints;
@@ -1036,4 +1073,23 @@ window.showListTooltip = function(e, label, tokensStr) {
     
     t.style.left = (x + 10) + 'px';
     t.style.top = (y + 10) + 'px';
+};
+
+window.prevPage = function() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+    }
+};
+window.nextPage = function() {
+    currentPage++;
+    renderTable();
+};
+window.changeRowsPerPage = function() {
+    const select = document.getElementById('rows-per-page');
+    if (select) {
+        rowsPerPage = parseInt(select.value);
+        currentPage = 1;
+        renderTable();
+    }
 };
