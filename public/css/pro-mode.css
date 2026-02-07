@@ -1071,12 +1071,12 @@ body {
 
 .col-fix-1 {
     left: 0;
-    width: 40px;
+    width: 35px;
     text-align: center !important;
 }
 
 .col-fix-2 {
-    left: 40px;
+    left: 35px;
     width: 180px;
     border-right: 1px solid rgba(255,255,255,0.05);
     
