@@ -1071,15 +1071,14 @@ body {
 
 .col-fix-1 {
     left: 0;
-    width: 40px;
+    width: 35px;
     text-align: center !important;
 }
 
 .col-fix-2 {
-    left: 40px;
+    left: 35px;
     width: 180px;
     border-right: 1px solid rgba(255,255,255,0.05);
-    
     box-shadow: 4px 0 8px -4px rgba(0,0,0,0.5); 
 }
 
@@ -1225,40 +1224,52 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 0;
-    border-top: 1px solid var(--border-dim);
-    margin-top: 0;
+    padding: 15px 10px;
     background: var(--bg-card);
-    font-family: var(--font-main);
+    border-top: 1px solid var(--border-dim);
+    flex-wrap: wrap; /* Tự động xuống dòng trên điện thoại */
+    gap: 10px;
+}
+
+.footer-left, .footer-center, .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 12px;
     color: var(--text-secondary);
 }
 
-.page-controls {
-    display: flex;
-    gap: 5px;
+#rows-per-page {
+    background: var(--bg-dark);
+    border: 1px solid var(--border-dim);
+    color: var(--text-primary);
+    padding: 3px 8px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
 }
 
 .page-btn {
-    background: transparent;
+    background: var(--bg-dark);
     border: 1px solid var(--border-dim);
-    color: var(--text-secondary);
-    padding: 4px 10px;
+    color: var(--text-primary);
+    width: 30px;
+    height: 30px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
+    font-weight: bold;
 }
 
 .page-btn:hover {
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
+    background: var(--border-dim);
 }
 
-.page-btn.active {
-    background: var(--border-dim);
-    color: var(--brand);
-    border-color: var(--brand);
-    font-weight: bold;
+
+@media (max-width: 600px) {
+    .pagination-container {
+        justify-content: center;
+        flex-direction: column;
+    }
 }
 
 .rows-selector {

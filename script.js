@@ -1,4 +1,4 @@
-    
+let currentFilterDate = 'all'; 
     
     
     /* ================= SETUP ================= */
@@ -5178,7 +5178,7 @@ function calculateSafeAvg(id, currentTotalVol) {
 }
 
 
-let currentFilterDate = null;
+
 
 function initCalendar() {
     const container = document.getElementById('calendar-wrapper');

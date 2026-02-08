@@ -659,21 +659,25 @@ function injectLayout() {
                 </table>
             </div>
             <div class="pagination-container">
-                <div class="page-info">
-                    Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
-                </div>
-                <div class="page-controls">
-                    Rows: 
-                    <select id="rows-per-page" class="rows-selector" onchange="changeRowsPerPage()">
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <button class="page-btn" id="btn-prev" onclick="prevPage()">&lt;</button>
-                    <span id="page-num" style="margin:0 10px; font-weight:bold;">Page 1</span>
-                    <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
-                </div>
-            </div>
+    <div class="footer-left">
+        Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
+    </div>
+    
+    <div class="footer-center">
+        Rows: 
+        <select id="rows-per-page" onchange="window.changeRows(this.value)">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+    </div>
+
+    <div class="footer-right">
+        <button id="btn-prev" class="page-btn" onclick="window.prevPage()">&lt;</button>
+        <span id="page-num">Page 1 / 1</span>
+        <button id="btn-next" class="page-btn" onclick="window.nextPage()">&gt;</button>
+    </div>
+</div>
         </div>
     `;
     tabNav.insertAdjacentElement('afterend', marketView);
@@ -832,7 +836,7 @@ function formatNum(n) {
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
-function setupEvents() { document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable()); window.addEventListener('scroll', () => { if (document.getElementById('alpha-market-view')?.style.display === 'block') { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) { if (displayCount < allTokens.length) { displayCount += 50; renderTable(); } } } }); }
+
 
 
 
@@ -1093,3 +1097,10 @@ window.changeRowsPerPage = function() {
         renderTable();
     }
 };
+
+window.changeRows = function(val) {
+    rowsPerPage = parseInt(val);
+    currentPage = 1;
+    renderTable();
+};
+
