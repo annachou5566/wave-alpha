@@ -67,7 +67,7 @@ def safe_float(v):
     try: return float(v) if v else 0.0
     except: return 0.0
 
-# --- [MỚI] LẤY MAP TOKEN TỪ BINANCE (Giống code Deno) ---
+# --- LẤY MAP TOKEN TỪ BINANCE ---
 def get_binance_token_map():
     print("⏳ Đang lấy danh sách Master Token từ Binance...", end=" ")
     url = "https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list"
@@ -78,11 +78,8 @@ def get_binance_token_map():
     
     if data and data.get("success") and isinstance(data.get("data"), list):
         for item in data["data"]:
-            # Map theo Contract
             ct = item.get("contractAddress")
             if ct: map_by_contract[ct.lower().strip()] = item
-            
-            # Map theo Symbol
             sym = item.get("symbol")
             if sym: map_by_symbol[sym.upper().strip()] = item
             
@@ -98,7 +95,6 @@ def get_active_tournaments():
         print("⚠️ Thiếu cấu hình Supabase!")
         return []
     
-    # 1. Lấy Map từ Binance trước để tra cứu ChainID
     contract_map, symbol_map = get_binance_token_map()
     if not contract_map: return []
 
@@ -116,9 +112,8 @@ def get_active_tournaments():
         data = res.json()
         active_list = []
         
-        # Lookback 3 ngày
-        now = datetime.now()
-        lookback_date = (now - timedelta(days=3)).strftime("%Y-%m-%d")
+        # [QUAN TRỌNG] Chỉ lấy ngày hôm nay, KHÔNG lùi ngày nữa
+        today_str = datetime.now().strftime("%Y-%m-%d")
 
         for item in data:
             name = item.get("name", "Unknown").upper().strip()
@@ -128,29 +123,28 @@ def get_active_tournaments():
             contract = item.get("contract") or meta.get("contractAddress")
             end_date = meta.get("end")
 
-            # Lọc ngày: Chưa kết thúc HOẶC kết thúc trong 3 ngày nay
-            if not end_date or end_date >= lookback_date:
-                
-                # --- TRA CỨU CHAIN ID TỪ MAP BINANCE ---
+            # [QUAN TRỌNG] Lọc chặt chẽ: end_date >= Hôm nay
+            is_active = False
+            if not end_date: 
+                is_active = True # Không có ngày kết thúc -> Luôn chạy
+            elif end_date >= today_str:
+                is_active = True # Chưa đến ngày kết thúc
+            
+            if is_active:
                 token_info = None
                 if contract:
                     token_info = contract_map.get(contract.lower().strip())
-                
-                if not token_info: # Fallback tìm theo tên
+                if not token_info: 
                     token_info = symbol_map.get(name)
 
                 if token_info and token_info.get("chainId"):
                     active_list.append({
                         "symbol": name,
-                        "contract": token_info.get("contractAddress").lower(), # Lấy contract chuẩn từ Binance
+                        "contract": token_info.get("contractAddress").lower(),
                         "chainId": token_info.get("chainId"),
                         "alphaId": token_info.get("alphaId"),
                         "quoteAsset": token_info.get("quoteAsset") or meta.get("quoteAsset", "USDT")
                     })
-                else:
-                    # Nếu vẫn không tìm thấy thì chịu thua
-                    # print(f"⚠️ {name}: Không tìm thấy thông tin trên Binance")
-                    pass
             
         return active_list
 
