@@ -38,7 +38,8 @@ def get_r2_client():
 session = cloudscraper.create_scraper()
 session.headers.update({
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    "Referer": "https://www.binance.com/en/alpha"
+    "Referer": "https://www.binance.com/en/alpha",
+    "Origin": "https://www.binance.com"
 })
 
 def fetch_smart(target_url, retries=3):
@@ -66,12 +67,41 @@ def safe_float(v):
     try: return float(v) if v else 0.0
     except: return 0.0
 
-# --- HÀM LẤY GIẢI ĐẤU (ĐÃ FIX DEBUG) ---
+# --- [MỚI] LẤY MAP TOKEN TỪ BINANCE (Giống code Deno) ---
+def get_binance_token_map():
+    print("⏳ Đang lấy danh sách Master Token từ Binance...", end=" ")
+    url = "https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list"
+    data = fetch_smart(url)
+    
+    map_by_contract = {}
+    map_by_symbol = {}
+    
+    if data and data.get("success") and isinstance(data.get("data"), list):
+        for item in data["data"]:
+            # Map theo Contract
+            ct = item.get("contractAddress")
+            if ct: map_by_contract[ct.lower().strip()] = item
+            
+            # Map theo Symbol
+            sym = item.get("symbol")
+            if sym: map_by_symbol[sym.upper().strip()] = item
+            
+        print(f"OK ({len(map_by_contract)} tokens)")
+        return map_by_contract, map_by_symbol
+    else:
+        print("❌ Lỗi API Binance List")
+        return {}, {}
+
+# --- LẤY GIẢI ĐẤU ---
 def get_active_tournaments():
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("⚠️ Thiếu cấu hình Supabase!")
         return []
     
+    # 1. Lấy Map từ Binance trước để tra cứu ChainID
+    contract_map, symbol_map = get_binance_token_map()
+    if not contract_map: return []
+
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -79,66 +109,53 @@ def get_active_tournaments():
     }
 
     try:
-        # Lấy TOÀN BỘ giải đấu, không lọc ID
         url = f"{SUPABASE_URL}/rest/v1/tournaments?select=id,name,contract,data"
         res = requests.get(url, headers=headers, timeout=10)
-        
-        if res.status_code != 200:
-            print(f"❌ Supabase Error: {res.status_code} - {res.text}")
-            return []
+        if res.status_code != 200: return []
         
         data = res.json()
         active_list = []
         
-        # Tính ngày Lookback (Lùi lại 3 ngày để lấy cả giải vừa xong)
+        # Lookback 3 ngày
         now = datetime.now()
         lookback_date = (now - timedelta(days=3)).strftime("%Y-%m-%d")
-        print(f"📅 Debug Date: Today={now.strftime('%Y-%m-%d')}, Lookback={lookback_date}")
 
         for item in data:
-            name = item.get("name", "Unknown")
-            # Bỏ qua dòng mẫu ARB hoặc dòng lỗi
+            name = item.get("name", "Unknown").upper().strip()
             if name == "ARB" or item.get("id") == -1: continue
 
-            meta = item.get("data")
-            if not meta: meta = {} # Handle null data
-
-            # Logic tìm Contract Address
-            contract = item.get("contract") # Cột bên ngoài
-            if not contract: contract = meta.get("contractAddress") # Cột bên trong JSON
-            
-            # Logic tìm ngày kết thúc
+            meta = item.get("data") or {}
+            contract = item.get("contract") or meta.get("contractAddress")
             end_date = meta.get("end")
-            
-            # Debug in ra để soi
-            # print(f"   - Check {name}: End={end_date} | Contract={contract}")
 
-            # Điều kiện lọc:
-            # 1. Có Contract
-            # 2. Chưa kết thúc HOẶC (Đã kết thúc nhưng vẫn trong khoảng Lookback 3 ngày)
-            if contract:
-                if not end_date or end_date >= lookback_date:
-                    chain_id = meta.get("chainId")
-                    if chain_id:
-                        active_list.append({
-                            "symbol": name,
-                            "contract": contract.lower().strip(),
-                            "chainId": chain_id,
-                            "alphaId": meta.get("alphaId"),
-                            "quoteAsset": meta.get("quoteAsset", "USDT")
-                        })
-                    else:
-                        print(f"⚠️ {name}: Thiếu chainId")
+            # Lọc ngày: Chưa kết thúc HOẶC kết thúc trong 3 ngày nay
+            if not end_date or end_date >= lookback_date:
+                
+                # --- TRA CỨU CHAIN ID TỪ MAP BINANCE ---
+                token_info = None
+                if contract:
+                    token_info = contract_map.get(contract.lower().strip())
+                
+                if not token_info: # Fallback tìm theo tên
+                    token_info = symbol_map.get(name)
+
+                if token_info and token_info.get("chainId"):
+                    active_list.append({
+                        "symbol": name,
+                        "contract": token_info.get("contractAddress").lower(), # Lấy contract chuẩn từ Binance
+                        "chainId": token_info.get("chainId"),
+                        "alphaId": token_info.get("alphaId"),
+                        "quoteAsset": token_info.get("quoteAsset") or meta.get("quoteAsset", "USDT")
+                    })
                 else:
-                    # print(f"⏭️ {name}: Đã kết thúc từ {end_date} (Skip)")
+                    # Nếu vẫn không tìm thấy thì chịu thua
+                    # print(f"⚠️ {name}: Không tìm thấy thông tin trên Binance")
                     pass
-            else:
-                print(f"⚠️ {name}: Thiếu Contract Address")
-
+            
         return active_list
 
     except Exception as e:
-        print(f"❌ Exception in get_active_tournaments: {e}")
+        print(f"❌ Exception: {e}")
         return []
 
 def fetch_limit_history(token_info):
@@ -148,7 +165,6 @@ def fetch_limit_history(token_info):
     chain_id = token_info.get("chainId")
     quote_asset = token_info.get("quoteAsset")
     
-    # Base/Solana -> USDC
     c_id_str = str(chain_id).lower()
     if c_id_str == "8453" or "base" in c_id_str or "sol" in c_id_str: quote_asset = "USDC"
     
@@ -190,17 +206,16 @@ def main():
     r2 = get_r2_client()
     if not r2: return
 
-    print("⏳ Đang lấy danh sách giải đấu từ Supabase...", end=" ")
+    print("🚀 Bắt đầu...", end=" ")
     target_tokens = get_active_tournaments()
     print(f"OK ({len(target_tokens)} giải active)")
     
     if not target_tokens:
-        print("❌ Vẫn không thấy giải nào. Hãy kiểm tra lại DB Supabase.")
+        print("❌ Không có dữ liệu.")
         return
 
     history_data = {}
-    print(f"🚀 Scanning {len(target_tokens)} active tournaments...")
-
+    
     for t in target_tokens:
         print(f"📊 {t['symbol']}...", end=" ", flush=True)
         points = fetch_limit_history(t)
