@@ -1,4 +1,4 @@
-const COMPETITION_API_URL = 'https://pub-b5bcec7574b5419ebe14e936ed967b4c.r2.dev/history/competition-history.json';
+const COMPETITION_API_URL = '/data/competition-history.json';
 
 if (typeof Chart !== 'undefined') {
     Chart.defaults.font.family = "'Rajdhani', sans-serif";
