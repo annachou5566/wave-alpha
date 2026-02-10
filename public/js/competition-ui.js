@@ -13,6 +13,37 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
+let alphaMarketCache = {}; 
+
+async function syncAlphaData() {
+    try {
+        // Lấy dữ liệu từ file market-data (API tổng đã qua xử lý)
+        const res = await fetch('/data/market-data.json?t=' + Date.now());
+        const json = await res.json();
+        const rawList = json.data || [];
+        
+        rawList.forEach(item => {
+            if(item.s) {
+                // i = id, s = symbol, ic = icon, ci = chain_icon
+                let sym = item.s.toUpperCase().trim();
+                alphaMarketCache[sym] = {
+                    icon: item.ic || '',
+                    chain_icon: item.ci || ''
+                };
+            }
+        });
+        console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
+        
+        // Sau khi có ảnh, nếu radar đang chạy thì vẽ lại để cập nhật logo
+        if(window.competitionRadar) window.competitionRadar.renderCards();
+        
+    } catch (e) { console.error("Sync Error:", e); }
+}
+
+// Chạy hàm đồng bộ ngay khi load trang
+syncAlphaData();
+
+
 class CompetitionRadar {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -23,7 +54,7 @@ class CompetitionRadar {
     async init() {
         if (!this.container) return;
         this.container.classList.add('radar-wrapper-container');
-        
+        await syncAlphaData();
         await this.fetchData();
         if (this.data && this.data.data) {
             this.renderCards();
@@ -103,6 +134,10 @@ class CompetitionRadar {
         const threshold = globalPeak * 0.7; 
         for (let i = 0; i < 24; i++) { if (Math.max(historyVol[i], todayVol[i]) >= threshold) hotZones[i] = true; }
         
+        const sym = (raw.s || raw.name || "").toUpperCase().trim();
+const alphaInfo = alphaMarketCache[sym] || {};
+const iconSrc = alphaInfo.icon || `assets/tokens/${sym}.png`;
+const chainIconSrc = alphaInfo.chain_icon || null;
         const cleanKey = contract.toLowerCase().trim();
         const cachedItem = this.realtimeCache[cleanKey] || {};
         const analysis = cachedItem.market_analysis || raw.market_analysis || {};
@@ -168,7 +203,8 @@ class CompetitionRadar {
             liveAvgTicket, matchSpeedUSD, spreadVal, 
             txPerSecond: txPerSecond.toFixed(2), 
             riskScore, hotZones, globalPeak,
-            algoLimit, isLowTxs 
+            algoLimit, isLowTxs,
+            iconSrc, chainIconSrc
         };
     }
 
@@ -304,9 +340,13 @@ class CompetitionRadar {
                 <div class="radar-head" style="padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2b3139; background: #1c2127;">
                     
                     <div class="d-flex align-items-center" style="flex: 1; min-width: 0; margin-right: 10px;">
-                        <img src="assets/tokens/${stats.symbol}.png" onerror="this.src='assets/tokens/default.png'" style="width:20px; height:20px; border-radius:50%; margin-right:8px; border: 1px solid #333; flex-shrink: 0;">
-                        <span style="font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stats.symbol}</span>
-                    </div>
+    <div style="position: relative; display: inline-block; margin-right: 10px; width: 24px; height: 24px; flex-shrink: 0;">
+        <img src="${stats.iconSrc}" onerror="this.src='assets/tokens/default.png'" style="width: 100%; height: 100%; border-radius: 50%; border: 1px solid #333;">
+        ${stats.chainIconSrc ? `<img src="${stats.chainIconSrc}" style="position: absolute; bottom: -2px; right: -4px; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #161a1e; background: #fff;">` : ''}
+    </div>
+    
+    <span style="font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stats.symbol}</span>
+</div>
 
                     <div class="text-end">
                         <div style="font-size: 0.5rem; color: #888; font-weight: 700; text-transform:uppercase; margin-bottom:-2px;">ALGO LIMIT</div>
