@@ -1,4 +1,4 @@
-const DATA_URL = 'public/data/market-data.json';
+const COMPETITION_API_URL = 'https://pub-b5bcec7574b5419ebe14e936ed967b4c.r2.dev/history/market-data.json';
 let allTokens = [];
 let currentPage = 1;
 let rowsPerPage = 20;
