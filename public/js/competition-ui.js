@@ -35,7 +35,9 @@ async function syncAlphaData() {
         console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
         
         // Sau khi có ảnh, nếu radar đang chạy thì vẽ lại để cập nhật logo
-        if(window.competitionRadar) window.competitionRadar.renderCards();
+        if(window.competitionRadar && typeof window.competitionRadar.renderCards === 'function') {
+            window.competitionRadar.renderCards();
+        }
         
     } catch (e) { console.error("Sync Error:", e); }
 }
@@ -54,7 +56,10 @@ class CompetitionRadar {
     async init() {
         if (!this.container) return;
         this.container.classList.add('radar-wrapper-container');
-        await syncAlphaData();
+        
+        // Đảm bảo lấy xong kho ảnh từ Market Pro trước khi làm bất cứ việc gì khác
+        await syncAlphaData(); 
+        
         await this.fetchData();
         if (this.data && this.data.data) {
             this.renderCards();
