@@ -286,40 +286,129 @@
             </div>
         </div>
 
-        <div class="d-flex flex-column align-items-center justify-content-center mb-3 sticky-top pt-2 pb-2" style="background: rgba(22, 26, 30, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 999;">
-    
-    <div class="d-flex bg-dark rounded p-1 border border-secondary border-opacity-25 mb-2 shadow-sm">
-        <button class="btn btn-sm btn-primary fw-bold" id="btn-view-list" onclick="switchViewMode('list')" style="min-width: 120px; text-transform: uppercase; letter-spacing: 1px;">
-            <i class="fas fa-table me-2"></i> RADAR
-        </button>
-        <button class="btn btn-sm btn-outline-secondary fw-bold text-sub border-0" id="btn-view-grid" onclick="switchViewMode('grid')" style="min-width: 120px; text-transform: uppercase; letter-spacing: 1px;">
-            <i class="fas fa-th-large me-2"></i> BOARD
-        </button>
-    </div>
-
-    <div class="radar-tabs-wrapper d-flex p-1 rounded" style="background: rgba(255,255,255,0.03); transform: scale(0.9);">
-        <div class="radar-tab active small-tab" id="tab-running" onclick="switchGlobalTab('running')" style="cursor:pointer; padding: 4px 20px; font-weight: 600; font-size: 0.8rem;">
-            RUNNING
-        </div>
-        <div class="radar-tab small-tab" id="tab-history" onclick="switchGlobalTab('history')" style="cursor:pointer; padding: 4px 20px; font-weight: 600; font-size: 0.8rem;">
-            HISTORY
-        </div>
-    </div>
+        
 
 </div>
 <div class="timeline-wrapper mb-4">
     <div class="timeline-scroll" id="calendar-wrapper"></div>
 </div>
 
-<div id="view-grid-container" class="d-none">
-    <div id="appGrid" class="row g-3"></div>
+<div class="container mt-4 mb-2">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-1">
+        
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center justify-content-center rounded-2" 
+                 style="width: 42px; height: 42px; background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);">
+                <i class="fas fa-satellite-dish text-brand" style="font-size: 1.2rem;"></i>
+            </div>
+
+            <div>
+                <h6 class="mb-0 fw-bold text-white font-num d-flex align-items-center" style="font-size: 1.1rem; letter-spacing: 1px; line-height: 1.2;">
+                    ALGO <span style="color: #00F0FF; margin-left: 5px;">RADAR</span>
+                    
+                    <i class="fas fa-question-circle ms-2" 
+                       onclick="new bootstrap.Modal(document.getElementById('radarGuideModal')).show()" 
+                       style="color: #00F0FF; cursor: pointer; font-size: 1rem; opacity: 0.8;" 
+                       title="Xem chiến thuật giao dịch">
+                    </i>
+                </h6>
+                <div class="text-sub" style="font-size: 0.7rem; font-weight: 500; opacity: 0.8;">
+                    Real-time Momentum Scanner
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3 px-3 py-2 rounded bg-dark border border-secondary border-opacity-25" 
+             style="background: #111 !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+            
+            <div class="d-flex align-items-center gap-2">
+                <span style="width: 8px; height: 8px; background: #ffffff; border-radius: 2px; box-shadow: 0 0 6px rgba(255,255,255,0.5);"></span>
+                <span class="fw-bold text-white" style="font-size: 0.65rem; letter-spacing: 0.5px;">NOW</span>
+            </div>
+
+            <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.15);"></div>
+
+            <div class="d-flex align-items-center gap-2">
+                <span style="width: 8px; height: 8px; background: #F0B90B; border-radius: 2px; box-shadow: 0 0 6px rgba(240, 185, 11, 0.4);"></span>
+                <span class="fw-bold font-num" style="color: #F0B90B; font-size: 0.65rem; letter-spacing: 0.5px;">HIGH VOL</span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="competition-radar-area" class="row g-3 mt-2"></div>
 </div>
 
-<div id="view-list-container">
+<div class="container mb-3 mt-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 gap-3" 
+         style="background: linear-gradient(180deg, #1c2127 0%, #161a1e 100%); border: 1px solid #2b3139; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+        
+        <div class="d-flex align-items-center me-auto">
+            <div style="width: 4px; height: 36px; background: #00F0FF; margin-right: 15px; border-radius: 2px; box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);"></div>
+            <div>
+                <h5 class="mb-0 text-white" style="font-family:'Rajdhani'; font-weight:800; font-size:1.3rem; letter-spacing:1px; line-height: 1;">
+                    TOURNAMENT BOARD
+                </h5>
+                <div class="text-sub small" style="font-size: 0.75rem; margin-top:3px; opacity:0.7">
+                    Live Data Tracking
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-flex bg-black rounded-pill p-1 border border-secondary border-opacity-25" style="background: #0b0e11;">
+                <button id="tab-running" class="btn btn-sm rounded-pill fw-bold px-3 py-1 radar-tab" onclick="switchGlobalTab('running')" style="font-size: 0.75rem;">
+                    <i class="fas fa-circle text-success me-1" style="font-size: 6px; vertical-align: middle;"></i> RUNNING
+                </button>
+                <button id="tab-history" class="btn btn-sm rounded-pill fw-bold px-3 py-1 text-sub radar-tab" onclick="switchGlobalTab('history')" style="font-size: 0.75rem;">
+                    <i class="fas fa-history me-1"></i> HISTORY
+                </button>
+            </div>
+
+            <div style="width:1px; height:24px; background:#333;"></div>
+
+            <div class="d-flex bg-black rounded p-1 border border-secondary border-opacity-25">
+                
+                <button id="btn-view-list" 
+                        class="btn btn-sm btn-primary fw-bold px-2 py-1 rounded" 
+                        onclick="switchViewMode('list')" 
+                        title="Table View">
+                    <i class="fas fa-list"></i>
+                </button>
+
+                <button id="btn-view-grid" 
+                        class="btn btn-sm text-sub fw-bold px-2 py-1 rounded" 
+                        onclick="switchViewMode('grid')" 
+                        title="Card View"
+                        style="background:transparent; border:none;">
+                    <i class="fas fa-th-large"></i>
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="view-grid-container" class="container" style="display: none;">
+    <div id="appGrid" class="row g-3 mt-2"></div>
+</div>
+
+<div id="view-list-container" class="container">
     <div class="health-panel">
         <div class="table-responsive">
-            <table class="table table-dark health-table mb-0">
-                <tbody id="healthTableBody"></tbody>
+            <table class="table table-dark health-table mb-0 table-hover align-middle">
+                <thead>
+                    <tr class="text-sub small text-uppercase" style="font-size: 0.75rem;">
+                        <th style="padding-left:15px">Project / Token</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-end">Total Vol</th>
+                        <th class="text-end">Min Target</th>
+                        <th class="text-end" style="padding-right:15px">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="healthTableBody">
+                    </tbody>
             </table>
         </div>
     </div>
@@ -1078,8 +1167,57 @@
     </div>
 </div>
 
+<div class="modal fade" id="radarGuideModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #161a1e; border: 1px solid #2b3139; color: #fff; border-radius: 8px;">
+            <div class="modal-header" style="border-bottom: 1px solid #2b3139; padding: 12px 20px;">
+                <h5 class="modal-title" style="font-family: 'Inter', sans-serif; font-weight: 700; color: #00F0FF; font-size: 1.1rem;">
+                    ALGO-RADAR STRATEGY
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="font-family: 'Inter', sans-serif; padding: 20px; line-height: 1.6; font-size: 0.9rem;">
+                
+                <div class="mb-3">
+                    <b style="color: #F0B90B; text-transform: uppercase;">1. Thời điểm (Timing):</b>
+                    <p class="mb-0 text-secondary">Ưu tiên giao dịch tại <b>Hot Zones</b> (Giờ có số vàng trên biểu đồ) – nơi thanh khoản nhiều và tốc độ khớp lệnh (Match Speed) trong ngày cao nhất của token.</p>
+                </div>
+
+                <div class="mb-3">
+                    <b style="color: #F0B90B; text-transform: uppercase;">2. Khối lượng (Sizing):</b>
+                    <p class="mb-1 text-secondary">Đi lệnh <b>< Algo Limit</b> để khớp lệnh ổn định. Nếu đi lệnh lớn hơn giới hạn đề xuất:</p>
+                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 4px; border-left: 3px solid #00F0FF;">
+                        • Bắt buộc theo dõi <b>Chart Giây</b>.<br>
+                        • Chỉ vào lệnh khi giá <b>Đi ngang (SW)</b> hoặc <b>Đang tăng</b>.<br>
+                        • <b>Dừng ngay</b> nếu khung giây xuất hiện đà giảm giá.<br>
+                        -> Điều trên áp dụng cho mọi trường hợp dù lệnh lớn hay nhỏ.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <b style="color: #F0B90B; text-transform: uppercase;">3. Hạn chế (Avoid):</b>
+                    <p class="mb-0 text-secondary">Không trade các Token báo <b>DEAD</b> (Limit < $10) hoặc thời gian nào có thông báo <b>Spread Đỏ</b> để tránh hao hụt vốn do chênh lệch giá mua/bán quá lớn.</p>
+                </div>
+
+                <div style="border-top: 1px solid #2b3139; margin: 20px 0 15px 0;"></div>
+
+                <div style="background: rgba(246, 70, 93, 0.05); padding: 12px; border-radius: 4px; border: 1px solid rgba(246, 70, 93, 0.2);">
+                    <b style="color: #F6465D; font-size: 0.8rem; text-transform: uppercase; display: block; margin-bottom: 4px;">Miễn trừ trách nhiệm:</b>
+                    <p style="font-size: 0.8rem; color: #848e9c; margin-bottom: 0; text-align: justify;">
+                        Dữ liệu hệ thống chỉ mang tính chất tham khảo kỹ thuật dựa trên thanh khoản thực tế, không phải lời khuyên đầu tư. Người dùng tự chịu trách nhiệm hoàn toàn với mọi quyết định và rủi ro giao dịch của mình.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script src="public/js/pro-mode.js?v=999"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="public/js/competition-ui.js"></script>
 
 
 </body>

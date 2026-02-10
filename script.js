@@ -1,7 +1,6 @@
-let currentFilterDate = 'all'; 
     
     
-    /* ================= SETUP ================= */
+    
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
 
@@ -18,8 +17,9 @@ const TELE_BOT_CONFIG = {
         return localStorage.getItem('WAVE_TELE_TOKEN'); 
     },
 
-    chatId: '-1003355713341' // <--- THAY ID GROUP CỦA BẠN VÀO ĐÂY
+    chatId: '-1003355713341' 
 };
+
 
 
 function requireBotToken() {
@@ -128,7 +128,7 @@ async function sendTelePhoto(comp, newTarget) {
         let rewardMsg = rewardVal > 0 ? `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rewardVal)}` : '---';
         
         let changeText = "";
-        let currVal = cleanNum(newTarget); // Giá trị vừa nhập (đang là phần tử cuối)
+        let currVal = cleanNum(newTarget); 
 
 
         let history = comp.history ? [...comp.history] : [];
@@ -204,8 +204,9 @@ async function sendTelePhoto(comp, newTarget) {
 
 
 let tokenVolHistory = {}; 
-const SAFETY_WINDOW = 10; // Tính trung bình 10 mẫu gần nhất
-/* --- BỘ TỪ ĐIỂN FULL (ĐÃ CẬP NHẬT TÊN & SLOGAN MỚI) --- */
+const SAFETY_WINDOW = 10; 
+let currentFilterDate = null;
+
 let currentLang = localStorage.getItem('wave_lang') || 'en';
 
 
@@ -214,7 +215,7 @@ function formatCompact(num) {
     return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
 }
 
-/* --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (FINAL FIX: DISCLAIMER CHUẨN + LOGIC 30 PHÚT) --- */
+
 const translations = {
     /* ==========================================================
        1. ENGLISH (EN)
@@ -814,14 +815,14 @@ const translations = {
     }
 };
 
-/* --- HÀM KHỞI TẠO TOOLTIP (PHIÊN BẢN CHUẨN: HOVER ĐỂ XEM, CLICK RA NGOÀI ĐỂ TẮT) --- */
-let globalTooltipInstances = []; // Biến lưu danh sách tooltip để quản lý tắt mở
+
+let globalTooltipInstances = []; 
 
 function initSmartTooltips() {
     try {
 
         document.querySelectorAll('.tooltip').forEach(t => t.remove());
-        globalTooltipInstances = []; // Reset danh sách
+        globalTooltipInstances = []; 
 
 
         document.removeEventListener('click', handleGlobalClick);
@@ -880,7 +881,7 @@ function handleGlobalClick(e) {
     }
 }
 
-/* ================= HÀM ĐỔI NGÔN NGỮ (ĐÃ FIX LỖI MARKET) ================= */
+
 function changeLanguage(lang) {
 
     currentLang = lang;
@@ -913,7 +914,7 @@ function applyLanguage() {
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 el.placeholder = t[key];
             } else {
-                el.innerHTML = t[key]; // Dùng innerHTML để giữ icon nếu có
+                el.innerHTML = t[key]; 
             }
         }
     });
@@ -994,7 +995,7 @@ function applyLanguage() {
         el.addEventListener('mouseenter', () => playSfx('hover'));
         el.addEventListener('click', () => playSfx('click'));
     });
-    /* ========================================= */
+    
 
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
 
@@ -1136,7 +1137,7 @@ data.forEach(miniRow => {
 });
 
             if (hasChanges) {
-                updateGridValuesOnly(); // Vẽ lại thẻ bài
+                updateGridValuesOnly(); 
                 if (typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
                 renderStats();
                 console.log("⚡ Data synced (Full Vol)");
@@ -1161,7 +1162,7 @@ function init() {
     if (cachedData) {
         try {
             compList = JSON.parse(cachedData);
-            appData.running = compList; // [MỚI] Đồng bộ vào appData
+            appData.running = compList; 
             
             renderGrid();
             renderStats();
@@ -1468,7 +1469,7 @@ async function fetchUserProfile() {
     await supabase.auth.signOut(); 
     
 
-    localStorage.removeItem('wave_settings'); // Xóa cấu hình ví
+    localStorage.removeItem('wave_settings'); 
 
     
     window.location.reload(); 
@@ -1487,61 +1488,15 @@ let appData = {
     running: [],        
     history: [],        
     isDataReady: false, 
-    currentTab: 'running', // Mặc định là Running
-    currentView: 'list',   // Mặc định là List (Radar)
-    gridTab: 'running'     // Để tương thích code cũ
+    currentTab: 'running', 
+    currentView: 'list',   
+    gridTab: 'running'     
 };
 
-function switchViewMode(mode) {
-    appData.currentView = mode;
 
 
-    const btnList = document.getElementById('btn-view-list');
-    const btnGrid = document.getElementById('btn-view-grid');
-
-    if (mode === 'list') {
-
-        btnList.className = 'btn btn-sm btn-primary fw-bold';
-        btnGrid.className = 'btn btn-sm btn-outline-secondary fw-bold text-sub border-0';
-        
-
-        document.getElementById('view-list-container').classList.remove('d-none');
-        document.getElementById('view-grid-container').classList.add('d-none');
-        
-
-        if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); 
-    } else {
-
-        btnGrid.className = 'btn btn-sm btn-primary fw-bold';
-        btnList.className = 'btn btn-sm btn-outline-secondary fw-bold text-sub border-0';
 
 
-        document.getElementById('view-grid-container').classList.remove('d-none');
-        document.getElementById('view-list-container').classList.add('d-none');
-
-
-        if(typeof renderGrid === 'function') renderGrid(); 
-    }
-}
-
-
-function switchGlobalTab(tabName) {
-    appData.currentTab = tabName;
-    appData.gridTab = tabName; // Đồng bộ tab cho Grid
-    localStorage.setItem('wave_active_tab', tabName);
-    
-
-    document.querySelectorAll('.radar-tab').forEach(el => {
-        if(el.id === `tab-${tabName}`) el.classList.add('active');
-        else el.classList.remove('active');
-    });
-
-
-    if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
-    
-
-    if(typeof renderGrid === 'function') renderGrid(); 
-}
 
 
 async function initMarketRadar() {
@@ -1574,7 +1529,7 @@ async function initMarketRadar() {
 
 function switchRadarTab(type) {
     appData.currentTab = type;
-    localStorage.setItem('wave_active_tab', type); // <--- LƯU VÀO BỘ NHỚ
+    localStorage.setItem('wave_active_tab', type); 
 
 
     document.querySelectorAll('.radar-tab').forEach(el => el.classList.remove('active'));
@@ -1747,7 +1702,9 @@ async function loadFromCloud(isSilent = false) {
         renderGrid(); 
         renderStats();
         initCalendar();
-        
+        if (window.competitionRadar) {
+            window.competitionRadar.updateRealtimeStats(compList);
+        }
 
         let currentActiveTab = localStorage.getItem('wave_active_tab') || 'running';
         appData.currentTab = currentActiveTab; 
@@ -1981,9 +1938,9 @@ async function saveGlobalConfig() {
 
     
 
-        /* --- [V46] SMART REFRESH SYSTEM (Anti-Spam) --- */
+        
     let lastRefreshTime = 0;
-    const REFRESH_COOLDOWN = 10000; // 10 giây
+    const REFRESH_COOLDOWN = 10000; 
 
 
 async function handleSmartRefresh(isSilent = false) {
@@ -2018,7 +1975,7 @@ await loadFromCloud(false);
                     let localItem = compList.find(c => c.db_id === newItem.id);
                     if (localItem) {
                         if(newItem.data.real_alpha_volume) localItem.real_alpha_volume = newItem.data.real_alpha_volume;
-                        if(newItem.data.daily_tx_count) localItem.daily_tx_count = newItem.data.daily_tx_count; // Cập nhật Tx
+                        if(newItem.data.daily_tx_count) localItem.daily_tx_count = newItem.data.daily_tx_count; 
                         if(newItem.data.real_vol_history) localItem.real_vol_history = newItem.data.real_vol_history;
                         if(newItem.data.last_updated_ts) localItem.last_updated_ts = newItem.data.last_updated_ts;
                         if(newItem.data.market_analysis) localItem.market_analysis = newItem.data.market_analysis;
@@ -2057,7 +2014,7 @@ function updateAllPrices() {
 }
 
 
-            /* --- HÀM VẼ BIỂU ĐỒ V49 (REVERT: TOTAL VOL + MIN TARGET) --- */
+            
     let volHistChart = null;
 
     function openVolHistory(dbId) {
@@ -2164,7 +2121,7 @@ function updateAllPrices() {
                         label: 'Min Target',
                         data: dataMin,
                         type: 'line',
-                        borderColor: '#F0B90B', // Vàng
+                        borderColor: '#F0B90B', 
                         backgroundColor: '#F0B90B',
                         borderWidth: 2,
                         pointRadius: 4,
@@ -2215,9 +2172,9 @@ function updateAllPrices() {
 function renderGrid(customData = null) {
 const SHOW_PREDICT_BTN = false;
     if (document.querySelector('.tour-card.active-card')) {
-            updateGridValuesOnly(); // Chỉ update số (Vol, Price...)
-            if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); // Update bảng Health
-            return; // DỪNG HÀM NGAY LẬP TỨC
+            updateGridValuesOnly(); 
+            if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); 
+            return; 
         }
 
     const grid = document.getElementById('appGrid');
@@ -2267,7 +2224,7 @@ let fullHtml = '';
 
 
             let sTimeStr = c.startTime || "00:00:00";
-            if(sTimeStr.length === 5) sTimeStr += ":00"; // Thêm giây nếu thiếu
+            if(sTimeStr.length === 5) sTimeStr += ":00"; 
             let startDateTime = new Date(c.start + 'T' + sTimeStr + 'Z');
 
 
@@ -2276,18 +2233,18 @@ let fullHtml = '';
             let endDateTime = new Date(c.end + 'T' + eTimeStr + 'Z');
 
 
-            let status = 'running'; // Mặc định
+            let status = 'running'; 
             
             if (now < startDateTime) {
-                status = 'upcoming'; // Chưa đến giờ
+                status = 'upcoming'; 
             } else if (now > endDateTime) {
-                status = 'ended';    // Đã qua giờ
+                status = 'ended';    
             }
 
 
             let cardClass = 'tour-card';
             if (status === 'ended') cardClass += ' ended-card';
-            if (status === 'upcoming') cardClass += ' upcoming-card'; // Thêm class này để sau này CSS nếu cần
+            if (status === 'upcoming') cardClass += ' upcoming-card'; 
 
 
             let tourTimerHtml = '';
@@ -2435,7 +2392,7 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
                 let endRecord = sortedHist.find(h => h.date === c.end);
                 
                 if (endRecord && parseFloat(endRecord.target) > 0) {
-                    target = parseFloat(endRecord.target); // Lấy đúng số 338,588
+                    target = parseFloat(endRecord.target); 
                 } else {
 
 
@@ -2466,7 +2423,7 @@ let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-let cleanSymbol = rawName.split('(')[0].trim(); // KHÔNG ĐƯỢC XÓA DÒNG NÀY
+let cleanSymbol = rawName.split('(')[0].trim(); 
 
 
 let alphaInfo = alphaMarketCache[cleanSymbol] || {};
@@ -2583,6 +2540,13 @@ ${SHOW_PREDICT_BTN ? `
 function updateGridValuesOnly() {
     try {
 
+
+        
+        if (window.competitionRadar && typeof window.competitionRadar.updateRealtimeStats === 'function') {
+            
+            window.competitionRadar.updateRealtimeStats(compList);
+        }
+
         if (typeof updateHealthTableRealtime === 'function') {
             updateHealthTableRealtime();
         }
@@ -2649,7 +2613,7 @@ if (volEl) {
                     
                     if(priceEl.innerText !== pStr) {
                         priceEl.innerText = pStr;
-                        priceEl.classList.add('text-brand'); // Màu xanh neon
+                        priceEl.classList.add('text-brand'); 
                         setTimeout(() => priceEl.classList.remove('text-brand'), 500);
                     }
                 }
@@ -2704,14 +2668,14 @@ window.toggleHealthSort = function(col) {
     }
 
 
-    let currentData = []; // Khởi tạo biến chứa dữ liệu
+    let currentData = []; 
 
     if (typeof appData !== 'undefined') {
 
         if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
-            currentData = appData.history; // <--- SỬA: Gán vào currentData
+            currentData = appData.history; 
         } else {
-            currentData = appData.running; // <--- SỬA: Gán vào currentData
+            currentData = appData.running; 
         }
     }
 
@@ -3060,7 +3024,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
                 if (latest) {
                     let d = new Date(latest.date);
                     d.setDate(d.getDate() - 1);
-                    let prevDateStr = d.toISOString().split('T')[0]; // Tính ngày hôm trước
+                    let prevDateStr = d.toISOString().split('T')[0]; 
                     prev = h.find(x => x.date === prevDateStr);
                 }
 
@@ -3290,8 +3254,8 @@ function submitVote(id, type) {
 
     if (!currentUser) {
         showToast("Please login to vote!", "error");
-        openLoginModal(); // Automatically open the login modal
-        return; // STOP HERE! Do not run the UI animation below
+        openLoginModal(); 
+        return; 
     }
 
 
@@ -3322,7 +3286,7 @@ function submitVote(id, type) {
         if(activeSeg) activeSeg.classList.add('active');
         
 
-        document.querySelectorAll('.popup-micro').forEach(p => p.classList.remove('show')); // Đóng cái khác
+        document.querySelectorAll('.popup-micro').forEach(p => p.classList.remove('show')); 
         let popup = document.getElementById(`popup-${id}`);
         if(popup) {
             popup.classList.add('show');
@@ -3380,11 +3344,11 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
             .upsert({
                 user_id: currentUser.id,
                 tournament_id: parseInt(tournamentId),
-                vote_type: voteType, // <--- QUAN TRỌNG: Tên cột phải khớp DB
+                vote_type: voteType, 
                 estimated_value: estVal ? parseFloat(estVal) : null,
                 updated_at: new Date().toISOString()
             }, { 
-                onConflict: 'user_id, tournament_id'  // Đảm bảo không trùng lặp
+                onConflict: 'user_id, tournament_id'  
             });
 
         if (error) throw error;
@@ -3399,7 +3363,7 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
 
              
 
-    /* --- CÁC HÀM XỬ LÝ DRAG & DROP --- */
+    
     let draggedItem = null;
     function allowDrop(ev) { ev.preventDefault(); }
 
@@ -3419,7 +3383,7 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
             let dragIdx = [...container.children].indexOf(draggedItem);
             let dropIdx = [...container.children].indexOf(targetItem);
             if (dragIdx < dropIdx) targetItem.after(draggedItem); else targetItem.before(draggedItem);
-    showToast("Position changed! Click SAVE POSITION to save.", "info"); // Đã sửa dòng này
+    showToast("Position changed! Click SAVE POSITION to save.", "info"); 
 }
     }
 
@@ -3461,12 +3425,12 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
             }).eq('id', item.db_id);
         }
 
-        showToast("Position saved successfully!", "success"); // Đã sửa
+        showToast("Position saved successfully!", "success"); 
         await loadFromCloud(false);
 
     } catch (e) {
         console.error(e);
-        showToast("Error saving: " + e.message, "error"); // Đã sửa
+        showToast("Error saving: " + e.message, "error"); 
     } finally {
         btns.forEach(btn => {
             btn.innerHTML = btn.dataset.oldText || '<i class="fas fa-save me-1"></i> SAVE POSITION';
@@ -3496,7 +3460,7 @@ function updateTerminalData(id) {
 let logoEl = document.getElementById('pt-logo');
 
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-let cleanSymbol = rawName.split('(')[0].trim(); // Lấy Symbol chuẩn (VD: BTC)
+let cleanSymbol = rawName.split('(')[0].trim(); 
 
 
 let alphaInfo = alphaMarketCache[cleanSymbol] || {};
@@ -3510,7 +3474,7 @@ let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/defaul
 
 logoEl.src = localImgPath;
 logoEl.onerror = function() { 
-    this.onerror = null; // Chặn lặp vô hạn
+    this.onerror = null; 
     this.src = './assets/tokens/default.png'; 
 };
 
@@ -3538,13 +3502,13 @@ logoEl.onerror = function() {
     let btn = document.getElementById('btn-predict-action');
     if(isEnded) {
         btn.innerHTML = '<span>MARKET CLOSED</span> <i class="fas fa-lock"></i>';
-        btn.classList.add('btn-ended'); // Thêm class xám màu nếu cần
-        btn.disabled = true; // Khóa nút
+        btn.classList.add('btn-ended'); 
+        btn.disabled = true; 
     } else {
         btn.innerHTML = '<span>ENTER PREDICTION</span> <i class="fas fa-bolt"></i>';
         btn.classList.remove('btn-ended');
-        btn.disabled = false; // Mở khóa nút
-        btn.onclick = openInputModal; // Gán lại sự kiện click
+        btn.disabled = false; 
+        btn.onclick = openInputModal; 
     }
 
 
@@ -3633,7 +3597,7 @@ logoEl.onerror = function() {
                     ? (i===0?'#FFD700':(i===1?'#C0C0C0':(i===2?'#CD7F32':'#666'))) 
                     : '#333'; 
 
-                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; // Hiện dấu X nếu loại
+                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; 
 
                 let badgeHtml = `<span class="rank-badge" style="background:${rankColor}; color:${isValid && i<3 ? '#000' : '#fff'}; border:1px solid #444">${rankText}</span>`;
                 
@@ -3805,7 +3769,7 @@ async function submitPredictionFromModal() {
         let uaEl = document.getElementById('sc-user-avatar');
         uaEl.crossOrigin = "anonymous";
         uaEl.src = uAvatar + (uAvatar.includes('?')?'&':'?') + 't=' + new Date().getTime();
-        uaEl.onerror = function(){ this.src = 'https://placehold.co/50/333/fff?text=' + uName.charAt(0); }; // Fail-safe
+        uaEl.onerror = function(){ this.src = 'https://placehold.co/50/333/fff?text=' + uName.charAt(0); }; 
 
 
         const now = new Date();
@@ -3822,7 +3786,7 @@ let alphaData = alphaMarketCache[cleanSym] || {};
 let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
         
 
-        imgEl.crossOrigin = "anonymous"; // Giữ nguyên để html2canvas hoạt động
+        imgEl.crossOrigin = "anonymous"; 
         imgEl.src = localImgPath;
         
 
@@ -3923,10 +3887,10 @@ let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/defaul
 
 
         html2canvas(element, {
-            backgroundColor: '#161a1e', // Đặt màu nền cứng để tránh trong suốt/mất chữ
-            scale: 2, // Tăng độ nét
-            useCORS: true, // Quan trọng: Cho phép tải ảnh từ domain khác
-            allowTaint: true, // Cho phép "vấy bẩn" canvas (giúp render ảnh khó tính)
+            backgroundColor: '#161a1e', 
+            scale: 2, 
+            useCORS: true, 
+            allowTaint: true, 
             logging: false
         }).then(canvas => {
             let link = document.createElement('a');
@@ -3985,7 +3949,7 @@ async function saveToCloud(compObj) {
         data: cloudObj 
     };
 
-    console.log("Saving payload:", payload); // Debug: Xem dữ liệu gửi đi
+    console.log("Saving payload:", payload); 
 
     let result;
     
@@ -3996,7 +3960,7 @@ async function saveToCloud(compObj) {
             .from('tournaments')
             .update(payload)
             .eq('id', parseInt(compObj.db_id))
-            .select(); // <--- BẮT BUỘC CÓ .select() để kiểm tra kết quả
+            .select(); 
     } else {
 
         result = await supabase
@@ -4231,9 +4195,9 @@ function renderHistoryList(c) {
         accSettings.forEach(acc => {
             if (realUserData && realUserData.accsDetail && realUserData.accsDetail[acc.id]) {
                 let v = parseFloat(realUserData.accsDetail[acc.id].vol);
-                lastKnownVols[acc.id] = v; // Cập nhật số mới
+                lastKnownVols[acc.id] = v; 
             }
-            currentDayVols[acc.id] = lastKnownVols[acc.id]; // Dùng số (mới hoặc cũ)
+            currentDayVols[acc.id] = lastKnownVols[acc.id]; 
         });
 
         let isAutoFill = !realUserData; 
@@ -4251,7 +4215,7 @@ function renderHistoryList(c) {
 
 
     timelineData.reverse().forEach(item => {
-        let dateDisplay = item.date.substring(5); // MM-DD
+        let dateDisplay = item.date.substring(5); 
         let targetDisplay = fmtNum(item.target);
         
         let accCells = '';
@@ -4329,7 +4293,7 @@ async function saveAdminTargetOnly() {
 
 
         if (!Array.isArray(c.history)) c.history = [];
-        c.history = c.history.filter(h => h.date !== date); // Xóa cũ nếu trùng ngày
+        c.history = c.history.filter(h => h.date !== date); 
         c.history.push({ date: date, target: t });
         c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -4474,7 +4438,7 @@ async function saveUpdate() {
 
 
     async function syncLocalToCloud() {
-    if(!currentUser) return showToast("Please login first!", "error"); // Đã sửa
+    if(!currentUser) return showToast("Please login first!", "error"); 
 
 
     if(!confirm("This action will OVERWRITE Cloud data with local data. Are you sure?")) return;
@@ -4494,7 +4458,7 @@ async function saveUpdate() {
         }
     }
 
-    if(count === 0) return showToast("No local data found on this device!", "error"); // Đã sửa
+    if(count === 0) return showToast("No local data found on this device!", "error"); 
 
     let btn = document.querySelector('button[onclick="syncLocalToCloud()"]');
     let oldText = btn.innerHTML;
@@ -4505,9 +4469,9 @@ async function saveUpdate() {
     btn.innerHTML = oldText; btn.disabled = false;
 
     if(error) {
-        showToast("Error: " + error.message, "error"); // Đã sửa
+        showToast("Error: " + error.message, "error"); 
     } else {
-        showToast(`Success! Migrated ${count} tournaments to Cloud.`, "success"); // Đã sửa
+        showToast(`Success! Migrated ${count} tournaments to Cloud.`, "success"); 
         if(userProfile) userProfile.tracker_data = migrationData;
         renderGrid();
         bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
@@ -4534,14 +4498,14 @@ async function saveUpdate() {
 function updateAccName(i, val) { 
     accSettings[i].name = val; 
     localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-    updateCloudWallets(); // <--- Thêm dòng này
+    updateCloudWallets(); 
     renderGrid(); 
 }
 
 function updateAccColor(i, val) { 
     accSettings[i].color = val; 
     localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-    updateCloudWallets(); // <--- Thêm dòng này
+    updateCloudWallets(); 
     renderGrid(); 
 }
 
@@ -4552,7 +4516,7 @@ function addNewAccount() {
         color: document.getElementById('newAccColor').value
     }); 
     localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-    updateCloudWallets(); // <--- Thêm dòng này
+    updateCloudWallets(); 
     openSettingsModal(); 
     renderGrid(); 
 }
@@ -4561,12 +4525,12 @@ function delAcc(i) {
     if(confirm("Delete?")) { 
         accSettings.splice(i, 1); 
         localStorage.setItem('wave_settings', JSON.stringify(accSettings)); 
-        updateCloudWallets(); // <--- Thêm dòng này
+        updateCloudWallets(); 
         openSettingsModal(); 
         renderGrid(); 
     } 
 }
-        /* --- CÁC HÀM QUẢN LÝ ADMIN (ĐÃ FIX LOGIC CAMPAIGN & PRICE) --- */
+        
 
 
     function openCreateModal() {
@@ -4575,7 +4539,7 @@ function delAcc(i) {
 
         document.getElementById('c-contract').value = '';
         document.getElementById('c-symbol').value = '';
-        document.getElementById('c-chain').value = ''; // VD: arbitrum
+        document.getElementById('c-chain').value = ''; 
         document.getElementById('c-price').value = '';
         document.getElementById('c-logo').value = '';
         document.getElementById('c-logo-preview').style.display = 'none';
@@ -4606,11 +4570,11 @@ function openEditModal(id) {
     
 let logoInput = document.getElementById('c-logo');
     if (logoInput) {
-        logoInput.type = "text";       // Chuyển từ hidden thành text để bạn nhìn thấy
-        logoInput.readOnly = false;    // Đảm bảo không bị khóa
-        logoInput.style.display = "block"; // Hiện lên rõ ràng
+        logoInput.type = "text";       
+        logoInput.readOnly = false;    
+        logoInput.style.display = "block"; 
         logoInput.placeholder = "Xóa trắng ô này để dùng ảnh tự động";
-        logoInput.className = "form-control mb-2"; // Thêm style cho đẹp (nếu cần)
+        logoInput.className = "form-control mb-2"; 
     }
 
     let imgPreview = document.getElementById('c-logo-preview');
@@ -4624,7 +4588,7 @@ let logoInput = document.getElementById('c-logo');
 
 
     document.getElementById('c-start').value = c.start;
-    document.getElementById('c-start-time').value = c.startTime || "00:00"; // <--- THÊM DÒNG NÀY
+    document.getElementById('c-start-time').value = c.startTime || "00:00"; 
     document.getElementById('c-end').value = c.end;
     document.getElementById('c-end-time').value = c.endTime;
     
@@ -4662,7 +4626,7 @@ function saveComp() {
 
 
     let obj = { 
-        ...c, // <--- DÒNG NÀY CỨU DỮ LIỆU CỦA BẠN (Copy hết cái cũ sang)
+        ...c, 
         
 
         db_id: id ? parseInt(id) : null,
@@ -4739,7 +4703,7 @@ function saveComp() {
 
             if (c.end_time) {
                 let t = c.end_time;
-                if (!t.endsWith("Z")) t += "Z"; // Ép về UTC
+                if (!t.endsWith("Z")) t += "Z"; 
                 endDateTime = new Date(t);
             } 
 
@@ -4771,7 +4735,7 @@ let price = 0;
 if (c.market_analysis && c.market_analysis.price) {
     price = parseFloat(c.market_analysis.price);
 } else if (c.data && c.data.price) {
-    price = parseFloat(c.data.price); // Fallback dữ liệu cũ
+    price = parseFloat(c.data.price); 
 }
 
                 let currentVal = qty * price;
@@ -4852,7 +4816,7 @@ function updateClock() {
 
 
     document.querySelectorAll('.x4-timer-val').forEach(el => {
-        const listDateStr = el.dataset.list; // Chuỗi ngày giờ từ DB (UTC)
+        const listDateStr = el.dataset.list; 
         if(listDateStr) {
 
             let endTimeStr = listDateStr.includes('T') ? listDateStr : listDateStr + 'T00:00:00';
@@ -4979,7 +4943,7 @@ async function silentReload(id) {
                     ? (i===0?'#FFD700':(i===1?'#C0C0C0':(i===2?'#CD7F32':'#666'))) 
                     : '#333'; 
 
-                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; // Hiện dấu X nếu loại
+                let rankText = isValid ? `#${i + 1}` : '<i class="fas fa-times"></i>'; 
 
                 let badgeHtml = `<span class="rank-badge" style="background:${rankColor}; color:${isValid && i<3 ? '#000' : '#fff'}; border:1px solid #444">${rankText}</span>`;
                 
@@ -5060,11 +5024,11 @@ function restoreData(input) {
         }
     };
     reader.readAsText(file);
-    input.value = ''; // Reset input
+    input.value = ''; 
 }
 
 
-    /* ================= ARSENAL DYNAMIC CONFIG LOGIC ================= */
+    
 
 
     function renderArsenalInputs(items = []) {
@@ -5079,12 +5043,12 @@ function restoreData(input) {
 
     function addArsenalItem(data = null, index = null) {
         const container = document.getElementById('cfg-arsenal-list');
-        const uniqueId = Date.now() + Math.random().toString(36).substr(2, 9); // Tạo ID ngẫu nhiên
+        const uniqueId = Date.now() + Math.random().toString(36).substr(2, 9); 
 
         const name = data ? data.name : '';
         const link = data ? data.link : '';
         const logo = data ? data.logo : '';
-        const type = data ? data.type : 'EXCHANGE'; // Mặc định là CEX
+        const type = data ? data.type : 'EXCHANGE'; 
 
         const html = `
         <div class="p-3 rounded border border-secondary border-opacity-25 bg-dark arsenal-item-row" data-id="${uniqueId}">
@@ -5137,10 +5101,10 @@ function calculateSafeAvg(id, currentTotalVol) {
     if (!tokenVolHistory[id]) {
         tokenVolHistory[id] = {
             history: [],
-            lastVol: currentTotalVol, // Ghi nhớ mốc 48 Triệu $
+            lastVol: currentTotalVol, 
             lastTime: Date.now()
         };
-        return 0; // TRẢ VỀ 0 NGAY LẬP TỨC để tránh hiện số 48 Triệu ra màn hình
+        return 0; 
     }
 
     let tracker = tokenVolHistory[id];
@@ -5164,7 +5128,7 @@ function calculateSafeAvg(id, currentTotalVol) {
     
 
     if (tracker.history.length > SAFETY_WINDOW) {
-        tracker.history.shift(); // Xóa mẫu cũ nhất
+        tracker.history.shift(); 
     }
 
 
@@ -5257,50 +5221,139 @@ function initCalendar() {
     container.innerHTML = html;
 }
 
-/* --- FILE: script.js --- */
+
+
+
+
+
+
+
+function refreshAllViews() {
+    
+    let today = new Date().toISOString().split('T')[0];
+    let sourceList = compList || []; 
+
+    let listToRender = sourceList.filter(c => {
+        let isRunning = c.end >= today;
+        return (appData.currentTab === 'running') ? isRunning : !isRunning;
+    });
+
+    
+    if (currentFilterDate) {
+        listToRender = listToRender.filter(c => c.end === currentFilterDate);
+    }
+
+    
+    
+    if (typeof renderGrid === 'function') {
+        renderGrid(listToRender);
+    }
+
+    
+    if (typeof renderMarketHealthTable === 'function') {
+        renderMarketHealthTable(listToRender);
+    }
+
+    
+    if (window.competitionRadar && typeof window.competitionRadar.filterRadar === 'function') {
+        if (!currentFilterDate) {
+            window.competitionRadar.filterRadar(null); 
+        } else {
+            
+            let allowedContracts = listToRender
+                .map(c => c.contract ? c.contract.toLowerCase().trim() : null)
+                .filter(c => c);
+            window.competitionRadar.filterRadar(allowedContracts);
+        }
+    }
+}
+
+
+function switchGlobalTab(tabName) {
+    appData.currentTab = tabName;
+    localStorage.setItem('wave_active_tab', tabName);
+
+    const btnRun = document.getElementById('tab-running');
+    const btnHis = document.getElementById('tab-history');
+
+    
+    [btnRun, btnHis].forEach(btn => {
+        if(btn) {
+            btn.classList.remove('active', 'text-white'); 
+            btn.style.setProperty('background', 'transparent', 'important');
+            btn.style.setProperty('color', '#848e9c', 'important'); 
+        }
+    });
+
+    
+    const activeBtn = (tabName === 'running') ? btnRun : btnHis;
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.setProperty('color', '#00F0FF', 'important'); 
+        activeBtn.style.setProperty('font-weight', '800', 'important');
+    }
+
+    
+    if(typeof refreshAllViews === 'function') refreshAllViews();
+}
+
+
+function switchViewMode(mode) {
+    appData.currentView = mode;
+    localStorage.setItem('userViewMode', mode);
+
+    
+    const elGrid = document.getElementById('view-grid-container');
+    const elList = document.getElementById('view-list-container');
+    
+    const btnGrid = document.getElementById('btn-view-grid');
+    const btnList = document.getElementById('btn-view-list');
+
+    if (mode === 'grid') {
+        if(elGrid) elGrid.style.display = 'block';
+        if(elList) elList.style.display = 'none';
+        
+        
+        if(btnGrid) { btnGrid.className = 'btn btn-sm btn-primary fw-bold px-2 py-1 rounded'; btnGrid.style.background = ''; }
+        if(btnList) { btnList.className = 'btn btn-sm text-sub fw-bold px-2 py-1 rounded'; btnList.style.background = 'transparent'; }
+    } else {
+        if(elGrid) elGrid.style.display = 'none';
+        if(elList) elList.style.display = 'block';
+
+        
+        if(btnList) { btnList.className = 'btn btn-sm btn-primary fw-bold px-2 py-1 rounded'; btnList.style.background = ''; }
+        if(btnGrid) { btnGrid.className = 'btn btn-sm text-sub fw-bold px-2 py-1 rounded'; btnGrid.style.background = 'transparent'; }
+    }
+
+    
+    refreshAllViews();
+}
+
 
 function filterByDate(dateStr) {
-
-
-
-    if (dateStr && currentFilterDate === dateStr) {
-        dateStr = null;
-    }
-
-
-    if (!dateStr) {
-        currentFilterDate = null;
-        document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
-        
-
-        switchGlobalTab(appData.currentTab);
-        return;
-    }
-
-
+    
+    if (dateStr && currentFilterDate === dateStr) dateStr = null;
+    
     currentFilterDate = dateStr;
+
+    
     document.querySelectorAll('.date-box').forEach(el => el.classList.remove('active'));
-    let box = document.getElementById(`dbox-${dateStr}`);
-    if(box) box.classList.add('active');
-
-
-    let today = new Date().toISOString().split('T')[0];
-
-    let targetTab = (dateStr >= today) ? 'running' : 'history';
-
-    if (appData.currentTab !== targetTab) {
-        switchGlobalTab(targetTab); 
+    if (dateStr) {
+        let box = document.getElementById(`dbox-${dateStr}`);
+        if(box) box.classList.add('active');
+        
+        
+        let today = new Date().toISOString().split('T')[0];
+        let targetTab = (dateStr >= today) ? 'running' : 'history';
+        if (appData.currentTab !== targetTab) {
+            
+            appData.currentTab = targetTab;
+            
+        }
     }
 
-
-
-    let filteredList = compList.filter(c => c.end === dateStr);
-
-
-    renderMarketHealthTable(filteredList);
-    if (appData.currentView === 'grid') {
-        renderGrid(filteredList);
-    }
+    
+    refreshAllViews();
 }
 
 
@@ -5321,12 +5374,12 @@ function switchCpTab(tabName) {
 
         lbBox.classList.remove('hide-force');
         chatBox.classList.remove('chat-visible');
-        chatBox.classList.add('d-none'); // Đảm bảo ẩn hẳn
+        chatBox.classList.add('d-none'); 
     } else {
 
         lbBox.classList.add('hide-force');
-        chatBox.classList.remove('d-none'); // Gỡ bỏ class ẩn của Bootstrap
-        chatBox.classList.add('chat-visible'); // Kích hoạt Flex để hiện khung chat
+        chatBox.classList.remove('d-none'); 
+        chatBox.classList.add('chat-visible'); 
         
 
         let feed = document.getElementById('chat-feed');
@@ -5389,7 +5442,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
     const targetId = customCanvasId || `miniChart-${c.db_id}`;
     const ctxElement = document.getElementById(targetId);
     
-    if (!ctxElement) return; // Không tìm thấy thẻ canvas thì thoát
+    if (!ctxElement) return; 
 
     let now = new Date();
 
@@ -5509,7 +5562,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
     }
 
 
-    const ctx = ctxElement.getContext('2d'); // Lấy context từ element đã tìm được
+    const ctx = ctxElement.getContext('2d'); 
     let chartDatasets = [
         {
             type: 'bar', label: 'Current', 
@@ -5679,9 +5732,9 @@ setInterval(() => {
             renderCardMiniChart(c);
         }
     });
-}, 5000); // 5000ms = 5 giây
+}, 5000); 
 
-/* === BẮT ĐẦU ĐOẠN CODE FIX LỖI === */
+
 document.addEventListener('click', function(e) {
 
     if (e.target.closest('.btn-predict')) {
@@ -5704,7 +5757,7 @@ document.addEventListener('click', function(e) {
         }
     }
 });
-/* === KẾT THÚC ĐOẠN CODE FIX LỖI === */
+
 
 
 function openFeedbackModal() {
@@ -5755,7 +5808,7 @@ async function sendFeedbackToDb() {
 
 const TELE_CONFIG = {
     get token() { return localStorage.getItem('WAVE_TELE_TOKEN'); },
-    chatId: '-1003355713341' // <-- ĐIỀN CHANNEL ID CỦA BẠN VÀO ĐÂY
+    chatId: '-1003355713341' 
 };
 
 
@@ -5800,7 +5853,7 @@ window.sendReportFromUI = async function() {
     let name = document.getElementById('report-name').value;
     let vol = document.getElementById('report-vol').value;
     let time = document.getElementById('report-time').value;
-    let date = new Date().toLocaleDateString('en-GB'); // Định dạng ngày quốc tế DD/MM/YYYY
+    let date = new Date().toLocaleDateString('en-GB'); 
 
 
     let msg = `
@@ -5877,8 +5930,8 @@ function downloadBackup() {
             app: "WaveAlpha",
             version: "2.0",
             timestamp: new Date().toISOString(),
-            settings: typeof accSettings !== 'undefined' ? accSettings : [], // Wallet list
-            profile: typeof userProfile !== 'undefined' ? userProfile : null // User profile
+            settings: typeof accSettings !== 'undefined' ? accSettings : [], 
+            profile: typeof userProfile !== 'undefined' ? userProfile : null 
         };
 
 
@@ -5946,7 +5999,7 @@ function handleRestore(input) {
 
             if (typeof updateCloudWallets === 'function') {
                 if(typeof showToast === 'function') showToast("⏳ Syncing to server...", "info");
-                await updateCloudWallets(); // Push restored data to new Supabase
+                await updateCloudWallets(); 
             } else if (typeof syncDataToCloud === 'function') {
 
                  await syncDataToCloud();
@@ -5961,7 +6014,7 @@ function handleRestore(input) {
         }
     };
     reader.readAsText(file);
-    input.value = ''; // Reset input
+    input.value = ''; 
 }
 
 
@@ -6068,7 +6121,7 @@ function renderCustomHub() {
         indicators.innerHTML = '';
         
         siteConfig.banners.forEach((b, i) => {
-            if(!b.img) return; // Bỏ qua nếu không có ảnh
+            if(!b.img) return; 
             const active = i === 0 ? 'active' : '';
             
 
@@ -6096,8 +6149,8 @@ function renderCustomHub() {
     if(siteConfig.ref_web3 && document.getElementById('ui-ref-web3')) document.getElementById('ui-ref-web3').href = siteConfig.ref_web3;
     if(siteConfig.ref_dex && document.getElementById('ui-ref-dex')) document.getElementById('ui-ref-dex').href = siteConfig.ref_dex;
 }
-   /* --- LOGIC ĐỒNG NHẤT: ĐEM THẺ RA GIỮA MÀN HÌNH (BORROW STRATEGY) --- */
-let activeCardPlaceholder = null; // Biến lưu vị trí cũ
+   
+let activeCardPlaceholder = null; 
 
 function toggleCardHighlight(el) {
 
@@ -6108,7 +6161,7 @@ function toggleCardHighlight(el) {
 
     activeCardPlaceholder = document.createElement('div');
     activeCardPlaceholder.className = 'tour-card-placeholder';
-    activeCardPlaceholder.style.display = 'none'; // Chỉ giữ chỗ trong DOM
+    activeCardPlaceholder.style.display = 'none'; 
     el.parentNode.insertBefore(activeCardPlaceholder, el);
 
 
@@ -6133,7 +6186,7 @@ function toggleCardHighlight(el) {
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
         backdrop.style.display = 'block';
-        backdrop.onclick = closeActiveCard; // Click ra ngoài thì tắt
+        backdrop.onclick = closeActiveCard; 
         setTimeout(() => backdrop.classList.add('show'), 10);
     }
     document.body.classList.add('has-active-card');
@@ -6191,7 +6244,7 @@ function openCardOverlay(originalCard) {
     clone.onclick = null; 
 
 
-    clone.classList.remove('active-card'); // Reset trạng thái
+    clone.classList.remove('active-card'); 
     clone.classList.add('overlay-clone');
     
 
@@ -6199,8 +6252,8 @@ function openCardOverlay(originalCard) {
     closeBtn.className = 'btn-close-overlay';
     closeBtn.innerHTML = '<i class="fas fa-times"></i>';
     closeBtn.onclick = function(e) {
-        e.stopPropagation(); // Chặn lan truyền
-        closeActiveCard();   // Gọi lệnh đóng ngay
+        e.stopPropagation(); 
+        closeActiveCard();   
     };
     clone.appendChild(closeBtn);
 
@@ -6316,14 +6369,14 @@ document.addEventListener("visibilitychange", () => {
         if (status !== 'joined' && status !== 'joining') {
             console.log("Reconnecting Realtime...");
             supabase.removeAllChannels();
-            init(); // Gọi lại hàm khởi tạo để kết nối lại
+            init(); 
         }
     }
 });
 
-/* --- FILE: script.js (Dán xuống cuối file) --- */
 
-/* HÀM XỬ LÝ VOTE (Dùng LocalStorage để test) */
+
+
 function handleVote(tokenId, type, btnElement) {
 
     event.stopPropagation();
@@ -6353,10 +6406,10 @@ function handleVote(tokenId, type, btnElement) {
 
         if (type === 'up') {
             btnUp.classList.add('active-up');
-            barFill.style.width = '75%'; // Giả lập tăng
+            barFill.style.width = '75%'; 
         } else {
             btnDown.classList.add('active-down');
-            barFill.style.width = '25%'; // Giả lập giảm
+            barFill.style.width = '25%'; 
         }
     }
     

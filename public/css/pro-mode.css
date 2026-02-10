@@ -1234,7 +1234,7 @@ body {
     padding: 15px 10px;
     background: var(--bg-card);
     border-top: 1px solid var(--border-dim);
-    flex-wrap: wrap; /* Tự động xuống dòng trên điện thoại */
+    flex-wrap: wrap; 
     gap: 10px;
 }
 

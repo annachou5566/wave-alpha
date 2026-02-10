@@ -2,7 +2,7 @@ name: Update Competition Charts
 
 on:
   schedule:
-    - cron: '15,45 * * * *' # Chạy phút 15 và 45
+    - cron: '3,7 * * * *'
   workflow_dispatch:
 
 permissions:

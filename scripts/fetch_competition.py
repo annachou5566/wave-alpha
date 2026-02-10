@@ -12,17 +12,13 @@ import requests
 # --- 1. CẤU HÌNH ---
 load_dotenv()
 
-# Cấu hình R2
 R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID")
 R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY")
 R2_ENDPOINT_URL = os.getenv("R2_ENDPOINT_URL")
 R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME")
 
-# Cấu hình Supabase (Để lấy danh sách giải đấu)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # Hoặc Anon Key đều được
-
-# Proxy & API
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 PROXY_WORKER_URL = os.getenv("PROXY_WORKER_URL")
 API_AGG_KLINES = os.getenv("BINANCE_INTERNAL_KLINES_API")
 
@@ -42,15 +38,12 @@ def get_r2_client():
 session = cloudscraper.create_scraper()
 session.headers.update({
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    "Referer": "https://www.binance.com/en/alpha",
-    "Origin": "https://www.binance.com"
+    "Referer": "https://www.binance.com/en/alpha"
 })
 
-# --- HÀM PROXY (Bypass chặn IP) ---
 def fetch_smart(target_url, retries=3):
     is_render = "onrender.com" in (PROXY_WORKER_URL or "")
     if not target_url: return None
-
     for i in range(retries):
         if PROXY_WORKER_URL:
             try:
@@ -62,7 +55,6 @@ def fetch_smart(target_url, retries=3):
                     data = res.json()
                     if isinstance(data, dict): return data
             except: pass
-        
         try:
             res = session.get(target_url, timeout=15)
             if res.status_code == 200: return res.json()
@@ -74,194 +66,162 @@ def safe_float(v):
     try: return float(v) if v else 0.0
     except: return 0.0
 
-# --- LẤY DANH SÁCH GIẢI ĐẤU TỪ SUPABASE ---
+# --- HÀM LẤY GIẢI ĐẤU (ĐÃ FIX DEBUG) ---
 def get_active_tournaments():
     if not SUPABASE_URL or not SUPABASE_KEY:
-        print("⚠️ Thiếu cấu hình Supabase! Không thể lấy danh sách giải đấu.")
+        print("⚠️ Thiếu cấu hình Supabase!")
         return []
-
-    print("⏳ Đang lấy danh sách giải đấu từ Supabase...", end=" ")
     
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json"
     }
-    
-    # Logic: Lấy các giải đấu chưa kết thúc (end_time >= hôm nay HOẶC null)
-    # Ta lấy dư ra một chút để chắc chắn không sót
+
     try:
-        # API Rest của Supabase: /rest/v1/tournaments?select=name,contract,data
-        # Lọc đơn giản: Lấy hết về rồi filter bằng Python cho an toàn và dễ debug
-        url = f"{SUPABASE_URL}/rest/v1/tournaments?select=id,name,contract,data&id=neq.-1"
-        
+        # Lấy TOÀN BỘ giải đấu, không lọc ID
+        url = f"{SUPABASE_URL}/rest/v1/tournaments?select=id,name,contract,data"
         res = requests.get(url, headers=headers, timeout=10)
+        
         if res.status_code != 200:
-            print(f"Lỗi Supabase: {res.status_code}")
+            print(f"❌ Supabase Error: {res.status_code} - {res.text}")
             return []
-            
+        
         data = res.json()
         active_list = []
         
+        # Tính ngày Lookback (Lùi lại 3 ngày để lấy cả giải vừa xong)
         now = datetime.now()
-        today_str = now.strftime("%Y-%m-%d")
-        
+        lookback_date = (now - timedelta(days=3)).strftime("%Y-%m-%d")
+        print(f"📅 Debug Date: Today={now.strftime('%Y-%m-%d')}, Lookback={lookback_date}")
+
         for item in data:
-            meta = item.get("data", {}) or {}
+            name = item.get("name", "Unknown")
+            # Bỏ qua dòng mẫu ARB hoặc dòng lỗi
+            if name == "ARB" or item.get("id") == -1: continue
+
+            meta = item.get("data")
+            if not meta: meta = {} # Handle null data
+
+            # Logic tìm Contract Address
+            contract = item.get("contract") # Cột bên ngoài
+            if not contract: contract = meta.get("contractAddress") # Cột bên trong JSON
+            
+            # Logic tìm ngày kết thúc
             end_date = meta.get("end")
             
-            # Nếu không có ngày kết thúc HOẶC ngày kết thúc >= hôm nay -> Lấy
-            if not end_date or end_date >= today_str:
-                contract = item.get("contract")
-                # Ưu tiên lấy contract trong data (vì đôi khi cột contract bên ngoài null)
-                if not contract and meta.get("contractAddress"):
-                    contract = meta.get("contractAddress")
-                
-                # Cần thêm AlphaID để gọi API Limit (nếu có)
-                alpha_id = None
-                if meta.get("alphaId"): alpha_id = meta.get("alphaId")
-                
-                # Cần ChainID
-                chain_id = meta.get("chainId")
+            # Debug in ra để soi
+            # print(f"   - Check {name}: End={end_date} | Contract={contract}")
 
-                if contract and chain_id:
-                    active_list.append({
-                        "symbol": item.get("name"),
-                        "contract": contract.lower().strip(),
-                        "chainId": chain_id,
-                        "alphaId": alpha_id,
-                        "quoteAsset": meta.get("quoteAsset", "USDT") # Mặc định USDT
-                    })
-        
-        print(f"OK ({len(active_list)} giải đang chạy)")
+            # Điều kiện lọc:
+            # 1. Có Contract
+            # 2. Chưa kết thúc HOẶC (Đã kết thúc nhưng vẫn trong khoảng Lookback 3 ngày)
+            if contract:
+                if not end_date or end_date >= lookback_date:
+                    chain_id = meta.get("chainId")
+                    if chain_id:
+                        active_list.append({
+                            "symbol": name,
+                            "contract": contract.lower().strip(),
+                            "chainId": chain_id,
+                            "alphaId": meta.get("alphaId"),
+                            "quoteAsset": meta.get("quoteAsset", "USDT")
+                        })
+                    else:
+                        print(f"⚠️ {name}: Thiếu chainId")
+                else:
+                    # print(f"⏭️ {name}: Đã kết thúc từ {end_date} (Skip)")
+                    pass
+            else:
+                print(f"⚠️ {name}: Thiếu Contract Address")
+
         return active_list
 
     except Exception as e:
-        print(f"Lỗi exception: {e}")
+        print(f"❌ Exception in get_active_tournaments: {e}")
         return []
 
-# --- LẤY LỊCH SỬ LIMIT (7 NGÀY) ---
 def fetch_limit_history(token_info):
     if not API_AGG_KLINES: return []
-    
     alpha_id = token_info.get("alphaId")
     contract = token_info.get("contract")
     chain_id = token_info.get("chainId")
     quote_asset = token_info.get("quoteAsset")
-
-    # Xử lý logic chọn USDT/USDC y hệt code Deno
+    
+    # Base/Solana -> USDC
     c_id_str = str(chain_id).lower()
-    # Nếu là Base hoặc Solana -> Dùng USDC
-    if c_id_str == "8453" or "base" in c_id_str or "sol" in c_id_str:
-        quote_asset = "USDC"
+    if c_id_str == "8453" or "base" in c_id_str or "sol" in c_id_str: quote_asset = "USDC"
     
-    # 7 ngày = 168 giờ
-    limit_hours = 168 
-    
-    # Ưu tiên gọi API Limit theo Symbol (alphaId) nếu có -> Chuẩn hơn
-    # Nếu không có alphaId thì mới fallback về contract (nhưng limit thường cần symbol)
+    limit_hours = 168 # 7 ngày
     url = ""
     if alpha_id:
-        # API Limit chuẩn: public/alpha-trade/klines?symbol=...
-        # Lưu ý: API này dùng Symbol (VD: 12345USDT)
-        base_url = "https://www.binance.com/bapi/defi/v1/public/alpha-trade/klines"
-        url = f"{base_url}?symbol={alpha_id}{quote_asset}&interval=1h&limit={limit_hours}"
+        url = f"https://www.binance.com/bapi/defi/v1/public/alpha-trade/klines?symbol={alpha_id}{quote_asset}&interval=1h&limit={limit_hours}"
     else:
-        # Fallback: Dùng API Agg Klines nhưng set dataType=limit (ít chính xác hơn chút)
         url = f"{API_AGG_KLINES}?chainId={chain_id}&interval=1h&limit={limit_hours}&tokenAddress={contract}&dataType=limit"
 
     data = fetch_smart(url)
     chart_points = []
-    
-    # Xử lý dữ liệu trả về
-    # Format Binance: [Time, Open, High, Low, Close, Volume, ..., QuoteVol(7), Count(8), ...]
     k_infos = []
+    
     if data and data.get("data"):
-        if isinstance(data["data"], list): # API alpha-trade trả về list trực tiếp
-             k_infos = data["data"]
-        elif data["data"].get("klineInfos"): # API agg-klines trả về object con
-             k_infos = data["data"]["klineInfos"]
+        if isinstance(data["data"], list): k_infos = data["data"]
+        elif data["data"].get("klineInfos"): k_infos = data["data"]["klineInfos"]
 
     for k in k_infos:
         try:
             ts = int(k[0])
-            high = safe_float(k[2])
-            low = safe_float(k[3])
-            # Index 7 là Quote Volume (Volume tính bằng tiền USD) -> Cái này mới quan trọng cho Limit
+            high, low = safe_float(k[2]), safe_float(k[3])
             limit_vol_usd = safe_float(k[7]) 
             tx_count = int(k[8]) if len(k) > 8 else 0
             
-            # Tính Risk Spread (Biến động trong cây nến đó)
             risk = 0
             if low > 0:
                 spread_pct = ((high - low) / low) * 100
-                if spread_pct > 5: risk = 2      # Biến động > 5% -> Spread to
-                elif spread_pct > 2: risk = 1    # Trung bình
+                if spread_pct > 5: risk = 2
+                elif spread_pct > 2: risk = 1
             
-            # [Time, LimitVol($), TxCount, RiskScore]
-            chart_points.append([ts, int(limit_vol_usd), tx_count, risk])
+            if limit_vol_usd > 0 or tx_count > 0:
+                chart_points.append([ts, int(limit_vol_usd), tx_count, risk])
         except: continue
-            
     return chart_points
 
 def main():
-    start_time = time.time()
+    start = time.time()
     r2 = get_r2_client()
     if not r2: return
 
-    # 1. Lấy danh sách Token ĐANG CÓ GIẢI ĐẤU (Từ Supabase)
+    print("⏳ Đang lấy danh sách giải đấu từ Supabase...", end=" ")
     target_tokens = get_active_tournaments()
+    print(f"OK ({len(target_tokens)} giải active)")
     
     if not target_tokens:
-        print("❌ Không tìm thấy giải đấu nào đang chạy.")
+        print("❌ Vẫn không thấy giải nào. Hãy kiểm tra lại DB Supabase.")
         return
 
     history_data = {}
+    print(f"🚀 Scanning {len(target_tokens)} active tournaments...")
 
-    # 2. Quét từng token
-    print(f"🚀 Bắt đầu quét {len(target_tokens)} token (Chế độ: LIMIT Only, 7 Ngày)...")
-    
     for t in target_tokens:
-        symbol = t.get("symbol")
-        contract = t.get("contract")
-        
-        print(f"📊 {symbol}...", end=" ", flush=True)
+        print(f"📊 {t['symbol']}...", end=" ", flush=True)
         points = fetch_limit_history(t)
-        
         if points:
-            # Lưu key là contract lowercase để Frontend dễ map
-            history_data[contract] = {
-                "s": symbol,
-                "q": t.get("quoteAsset"), # Để frontend biết là USDT hay USDC
-                "h": points 
-            }
+            history_data[t["contract"]] = { "s": t["symbol"], "q": t["quoteAsset"], "h": points }
             print(f"OK ({len(points)}h)")
         else:
             print("No Data")
-        
-        time.sleep(0.5) 
+        time.sleep(0.5)
 
-    # 3. Upload lên R2
-    final_json = {
-        "updated_at": int(time.time() * 1000),
-        "note": "Hourly Limit Volume (7 Days)",
-        "data": history_data
-    }
+    final_json = { "updated_at": int(time.time() * 1000), "note": "7 Days Limit", "data": history_data }
     
-    print("☁️ Uploading competition-history.json...")
     try:
         r2.put_object(
-            Bucket=R2_BUCKET_NAME,
-            Key='competition-history.json', 
+            Bucket=R2_BUCKET_NAME, Key='competition-history.json',
             Body=json.dumps(final_json, separators=(',', ':')).encode('utf-8'),
-            ContentType='application/json',
-            CacheControl='max-age=1800' 
+            ContentType='application/json', CacheControl='max-age=1800'
         )
-        print("✅ Success!")
-    except Exception as e:
-        print(f"❌ Upload Error: {e}")
-
-    print(f"🏁 DONE in {time.time() - start_time:.1f}s")
+        print("✅ competition-history.json uploaded!")
+    except Exception as e: print(f"❌ Upload Error: {e}")
+    print(f"🏁 Done: {time.time()-start:.1f}s")
 
 if __name__ == "__main__":
     main()
