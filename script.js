@@ -1000,85 +1000,39 @@ function applyLanguage() {
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
 
 
-
-const KEY_MAP_REVERSE = {
-    "i": "id", "s": "symbol", "n": "name", "ic": "icon",
-    "cn": "chain", "ci": "chain_icon", 
-    "ct": "contract",
-    "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", 
-    "mc": "market_cap", "l": "liquidity", "v": "volume",
-    "r24": "rolling_24h", "dt": "daily_total",
-    "dl": "daily_limit", "do": "daily_onchain",
-    "ch": "chart", "lt": "listing_time", "tx": "tx_count",
-    "off": "offline", "cex": "listingCex",
-    "tge": "onlineTge", "air": "onlineAirdrop"
-  };
-  
-  function unminifyToken(minifiedItem) {
-    const fullItem = {};
-    for (const [shortKey, value] of Object.entries(minifiedItem)) {
-      const fullKey = KEY_MAP_REVERSE[shortKey];
-      if (fullKey === "volume" && typeof value === 'object') {
-        fullItem[fullKey] = {};
-        for (const [vKey, vVal] of Object.entries(value)) {
-          fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
-        }
-      } else if (fullKey) {
-        fullItem[fullKey] = value;
-      }
-    }
-    return fullItem;
-  }
- 
-// --- [SỬA LẠI] HÀM ĐỒNG BỘ DỮ LIỆU TỪ R2 ---
 let alphaMarketCache = {}; 
+
 
 async function syncAlphaData() {
     try {
-        console.log("☁️ Đang tải dữ liệu gốc từ R2...");
-        
-        // 1. Gọi trực tiếp file JSON chứa toàn bộ hàng trăm token
-        // Lưu ý: Đường dẫn này phải khớp với nơi bạn lưu file trên server
-        // Nếu file nằm ở root, dùng '/data/market-data.json'
-        // Nếu chạy local có thể cần 'public/data/market-data.json'
-        const DATA_URL = 'public/data/market-data.json'; 
-        
-        const res = await fetch(DATA_URL + '?t=' + Date.now());
-        if (!res.ok) throw new Error("Không thể tải file dữ liệu");
-        
+
+        const res = await fetch('public/data/market-data.json?t=' + Date.now());
         const json = await res.json();
+        
+
+
         const rawList = json.data || json.tokens || [];
         
-        // 2. Duyệt qua TOÀN BỘ danh sách và giải mã
-        rawList.forEach(minifiedItem => {
-            // Dùng hàm unminify để bung ra dữ liệu đầy đủ (icon, chain_icon, contract...)
-            const fullItem = unminifyToken(minifiedItem);
-            
-            if (fullItem.symbol) {
-                let sym = fullItem.symbol.toUpperCase().trim();
-                
-                // 3. Lưu vào Cache để dùng chung
+        rawList.forEach(item => {
+            if(item.s) {
+                let sym = item.s.toUpperCase().trim();
                 alphaMarketCache[sym] = {
-                    icon: fullItem.icon || '',
-                    chain_icon: fullItem.chain_icon || '',
-                    contract: fullItem.contract || '',
-                    price: fullItem.price || 0,
-                    // Lưu thêm các thông tin khác nếu cần
+                    icon: item.ic || item.icon || '',
+                    chain_icon: item.ci || item.chain_icon || ''
                 };
             }
         });
         
-        console.log(`✅ Đã đồng bộ ${Object.keys(alphaMarketCache).length} token từ kho dữ liệu.`);
+        console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
         
-        // Cập nhật lại giao diện sau khi có dữ liệu mới
+
         if(typeof renderGrid === 'function') renderGrid();
         if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
         
     } catch (e) {
-        console.error("❌ Lỗi Sync Alpha Data:", e);
+        console.error("Sync Alpha Error:", e);
     }
 }
-
 
 
     let siteConfig = { x:'', tele:'', yt:'', affiliate: {} };
