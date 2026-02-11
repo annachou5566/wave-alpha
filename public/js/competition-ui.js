@@ -312,7 +312,7 @@ class CompetitionRadar {
         // -----------------------
 
         return `
-        <div class="col-6 col-md-4 col-lg-3" id="${cardId}">
+        <div class="col-12 col-md-4 col-lg-3" id="${cardId}">
             <div class="radar-card" style="background: #161a1e; border: 1px solid #2b3139; border-radius: 6px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
                 
                 <div class="radar-head" style="padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2b3139; background: #1c2127;">
