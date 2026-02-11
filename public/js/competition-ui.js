@@ -162,6 +162,8 @@ class CompetitionRadar {
     
         return {
             symbol: raw.s || raw.name, contract, 
+            l: raw.l,
+            cl: raw.cl,
             matchSpeedHistory, historyVol, todayVol, todayRisk,
             projected, currentHour, 
             dailyVolUTC,
@@ -297,6 +299,18 @@ class CompetitionRadar {
             limitColor = '#F0B90B'; 
         }
 
+        // --- XỬ LÝ ẢNH (MỚI) ---
+        // 1. Ảnh Token: Nếu có link API (stats.l) thì dùng, không thì tìm file local viết hoa
+        const tokenImgSrc = (stats.l && stats.l.startsWith('http')) 
+            ? stats.l 
+            : `assets/tokens/${stats.symbol.toUpperCase()}.png`;
+
+        // 2. Ảnh Chain: Nếu có link API (stats.cl) thì tạo thẻ img nhỏ
+        const chainImgHtml = (stats.cl && stats.cl.startsWith('http'))
+            ? `<img src="${stats.cl}" style="width:12px; height:12px; border-radius:50%; position: absolute; bottom: -2px; right: -2px; border: 1px solid #1c2127; background: #000; z-index: 2;">`
+            : '';
+        // -----------------------
+
         return `
         <div class="col-6 col-md-4 col-lg-3" id="${cardId}">
             <div class="radar-card" style="background: #161a1e; border: 1px solid #2b3139; border-radius: 6px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
@@ -304,7 +318,14 @@ class CompetitionRadar {
                 <div class="radar-head" style="padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2b3139; background: #1c2127;">
                     
                     <div class="d-flex align-items-center" style="flex: 1; min-width: 0; margin-right: 10px;">
-                        <img src="assets/tokens/${stats.symbol}.png" onerror="this.src='assets/tokens/default.png'" style="width:20px; height:20px; border-radius:50%; margin-right:8px; border: 1px solid #333; flex-shrink: 0;">
+                        
+                        <div style="position: relative; width: 20px; height: 20px; margin-right: 8px; flex-shrink: 0;">
+                            <img src="${tokenImgSrc}" 
+                                 onerror="this.onerror=null; this.src='assets/tokens/default.png'" 
+                                 style="width:100%; height:100%; border-radius:50%; border: 1px solid #333; display: block;">
+                            ${chainImgHtml}
+                        </div>
+
                         <span style="font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stats.symbol}</span>
                     </div>
 
