@@ -1000,37 +1000,36 @@ function applyLanguage() {
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
 
 
-// --- [THÊM MỚI] BỘ GIẢI MÃ DỮ LIỆU TỪ R2 (Copy từ Alpha Market) ---
+
 const KEY_MAP_REVERSE = {
-  "i": "id", "s": "symbol", "n": "name", "ic": "icon",
-  "cn": "chain", "ci": "chain_icon", 
-  "ct": "contract",
-  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", 
-  "mc": "market_cap", "l": "liquidity", "v": "volume",
-  "r24": "rolling_24h", "dt": "daily_total",
-  "dl": "daily_limit", "do": "daily_onchain",
-  "ch": "chart", "lt": "listing_time", "tx": "tx_count",
-  "off": "offline", "cex": "listingCex",
-  "tge": "onlineTge", "air": "onlineAirdrop"
-};
-
-function unminifyToken(minifiedItem) {
-  const fullItem = {};
-  for (const [shortKey, value] of Object.entries(minifiedItem)) {
-    const fullKey = KEY_MAP_REVERSE[shortKey];
-    if (fullKey === "volume" && typeof value === 'object') {
-      fullItem[fullKey] = {};
-      for (const [vKey, vVal] of Object.entries(value)) {
-        fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
+    "i": "id", "s": "symbol", "n": "name", "ic": "icon",
+    "cn": "chain", "ci": "chain_icon", 
+    "ct": "contract",
+    "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", 
+    "mc": "market_cap", "l": "liquidity", "v": "volume",
+    "r24": "rolling_24h", "dt": "daily_total",
+    "dl": "daily_limit", "do": "daily_onchain",
+    "ch": "chart", "lt": "listing_time", "tx": "tx_count",
+    "off": "offline", "cex": "listingCex",
+    "tge": "onlineTge", "air": "onlineAirdrop"
+  };
+  
+  function unminifyToken(minifiedItem) {
+    const fullItem = {};
+    for (const [shortKey, value] of Object.entries(minifiedItem)) {
+      const fullKey = KEY_MAP_REVERSE[shortKey];
+      if (fullKey === "volume" && typeof value === 'object') {
+        fullItem[fullKey] = {};
+        for (const [vKey, vVal] of Object.entries(value)) {
+          fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
+        }
+      } else if (fullKey) {
+        fullItem[fullKey] = value;
       }
-    } else if (fullKey) {
-      fullItem[fullKey] = value;
     }
+    return fullItem;
   }
-  return fullItem;
-}
-// ------------------------------------------------------------------
-
+ 
 // --- [SỬA LẠI] HÀM ĐỒNG BỘ DỮ LIỆU TỪ R2 ---
 let alphaMarketCache = {}; 
 
@@ -1079,6 +1078,7 @@ async function syncAlphaData() {
         console.error("❌ Lỗi Sync Alpha Data:", e);
     }
 }
+
 
 
     let siteConfig = { x:'', tele:'', yt:'', affiliate: {} };
@@ -2468,16 +2468,19 @@ let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 
 let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
-
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
-let cleanSymbol = rawName.split('(')[0].trim();
+let cleanSymbol = rawName.split('(')[0].trim(); 
+
+
 let alphaInfo = alphaMarketCache[cleanSymbol] || {};
 
-let localImgPath = alphaInfo.icon || c.logo || c.icon;
-let chainImg = alphaInfo.chain_icon || '';
 
+let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
+
+
+let chainImg = alphaInfo.chain_icon || '';
 let chainBadgeHtml = chainImg ? `<img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'" style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
-let defaultImgPath = `https://placehold.co/32/2a2a2a/fff?text=${cleanSymbol.charAt(0)}`;
+let defaultImgPath = `./assets/tokens/default.png`;
 
 
 
