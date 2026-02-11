@@ -2422,19 +2422,14 @@ let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 
 let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
 
+
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
 let cleanSymbol = rawName.split('(')[0].trim(); 
-
-
-let alphaInfo = alphaMarketCache[cleanSymbol] || {};
-
-
-let localImgPath = c.logo || c.icon || alphaInfo.icon || './assets/tokens/default.png';
-
-
+et alphaInfo = alphaMarketCache[cleanSymbol] || {};
+let localImgPath = alphaInfo.icon || c.logo || c.icon; 
 let chainImg = alphaInfo.chain_icon || '';
 let chainBadgeHtml = chainImg ? `<img src="${chainImg}" class="chain-badge" onerror="this.style.display='none'" style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
-let defaultImgPath = `./assets/tokens/default.png`;
+let defaultImgPath = `https://placehold.co/32/2a2a2a/fff?text=${cleanSymbol.charAt(0)}`;
 
 
 
