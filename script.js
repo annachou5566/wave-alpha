@@ -2699,28 +2699,37 @@ function renderMarketHealthTable(dataInput) {
     if (!table || !tbody) return;
 
 
-    let projectsToRender = dataInput; 
     
+    let sourceList = dataInput || (typeof compList !== 'undefined' ? compList : []);
+    
+  
+    let currentTab = 'running';
+    if (typeof appData !== 'undefined') currentTab = appData.currentTab;
+    else currentTab = localStorage.getItem('wave_active_tab') || 'running';
 
-
-
-    if (!projectsToRender && typeof currentFilterDate !== 'undefined' && currentFilterDate) {
-        projectsToRender = compList.filter(c => c.end === currentFilterDate);
-    }
-
-
-    if (!projectsToRender) {
-        if (typeof appData !== 'undefined') {
-
-            if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
-                projectsToRender = appData.history;
-            } else {
-                projectsToRender = appData.running;
-            }
-        } else {
-
-            projectsToRender = typeof compList !== 'undefined' ? compList : [];
+   
+    const nowMs = Date.now();
+    
+    let projectsToRender = sourceList.filter(item => {
+        let isEnded = false;
+        
+        
+        if (item.end_at) {
+            isEnded = nowMs > new Date(item.end_at).getTime();
+        } 
+        
+        else if (item.end) {
+            isEnded = nowMs > (new Date(item.end).getTime() + 86400000);
         }
+
+       
+        if (currentTab === 'running') return !isEnded;
+        return isEnded;
+    });
+
+    
+    if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
+        projectsToRender = projectsToRender.filter(c => c.end === currentFilterDate);
     }
 
 
@@ -5270,31 +5279,45 @@ function refreshAllViews() {
 
 
 function switchGlobalTab(tabName) {
-    appData.currentTab = tabName;
+    // 1. Cập nhật biến toàn cục và lưu vào LocalStorage để nhớ tab khi F5
+    if (typeof appData !== 'undefined') {
+        appData.currentTab = tabName;
+    }
     localStorage.setItem('wave_active_tab', tabName);
 
+    // 2. Lấy 2 nút bấm từ DOM
     const btnRun = document.getElementById('tab-running');
     const btnHis = document.getElementById('tab-history');
 
-    
+    // 3. Reset giao diện cho cả 2 nút (Về trạng thái inactive - màu xám, nền trong suốt)
     [btnRun, btnHis].forEach(btn => {
-        if(btn) {
-            btn.classList.remove('active', 'text-white'); 
+        if (btn) {
+            btn.classList.remove('active');
+            // Dùng setProperty important để đè style của Bootstrap/CSS gốc
             btn.style.setProperty('background', 'transparent', 'important');
             btn.style.setProperty('color', '#848e9c', 'important'); 
+            btn.style.setProperty('font-weight', '600', 'important');
+            btn.style.boxShadow = 'none';
         }
     });
 
-    
+    // 4. Active nút được chọn (Màu Cyan, đậm hơn)
     const activeBtn = (tabName === 'running') ? btnRun : btnHis;
     if (activeBtn) {
         activeBtn.classList.add('active');
+        
+        // Màu chữ Cyan neon
         activeBtn.style.setProperty('color', '#00F0FF', 'important'); 
         activeBtn.style.setProperty('font-weight', '800', 'important');
+        
+        // Thêm nền nhẹ để rõ ràng hơn (nếu bạn muốn giữ trong suốt hoàn toàn thì xóa dòng dưới)
+        activeBtn.style.setProperty('background', 'rgba(0, 240, 255, 0.1)', 'important');
     }
 
-    
-    if(typeof refreshAllViews === 'function') refreshAllViews();
+    // 5. Quan trọng: Gọi hàm refresh để lọc lại bảng dữ liệu (Running/History)
+    if (typeof refreshAllViews === 'function') {
+        refreshAllViews();
+    }
 }
 
 
