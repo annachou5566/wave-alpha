@@ -758,7 +758,19 @@ let lastDataUpdateTime = "Waiting...";
 async function fetchMarketData() {
     try {
         
-        const res = await fetch(DATA_URL + '?t=' + Date.now());
+        const res = await fetch(DATA_URL + '?t=' + Date.now(), {
+            method: 'GET',
+            headers: {
+                'X-Wave-Source': 'web-client' 
+            }
+        });
+
+        
+        if (!res.ok) {
+            console.error("Fetch error or Access Denied:", res.status);
+            return; 
+        }
+
         const json = await res.json();
         
         
