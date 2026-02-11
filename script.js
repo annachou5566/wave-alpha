@@ -1000,10 +1000,11 @@ function applyLanguage() {
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
 
 
-
+// --- [BƯỚC 1] KHAI BÁO CẤU HÌNH & BỘ GIẢI MÃ ---
+const DATA_URL = 'data/market-data.json'; // Đã sửa lại đường dẫn chuẩn
 
 let alphaMarketCache = {}; 
-// --- [BƯỚC 1] BỘ GIẢI MÃ DỮ LIỆU JSON TỪ KHO R2 ---
+
 const KEY_MAP_REVERSE = {
   "i": "id", "s": "symbol", "n": "name", "ic": "icon",
   "cn": "chain", "ci": "chain_icon", 
@@ -1037,19 +1038,28 @@ function unminifyToken(minifiedItem) {
 // --- [BƯỚC 2] HÀM ĐỒNG BỘ DỮ LIỆU MỚI ---
 async function syncAlphaData() {
     try {
-        // Gọi file json gốc (chứa toàn bộ danh sách token)
-        const res = await fetch('public/data/market-data.json?t=' + Date.now());
-        const json = await res.json();
+        console.log(`☁️ Đang tải dữ liệu từ: ${DATA_URL}`);
+
+        // [SỬA QUAN TRỌNG] Dùng biến DATA_URL thay vì gõ tay đường dẫn sai
+        const res = await fetch(DATA_URL + '?t=' + Date.now());
         
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        
+        const json = await res.json();
         const rawList = json.data || json.tokens || [];
         
+        if (rawList.length === 0) {
+            console.warn("⚠️ File dữ liệu rỗng!");
+            return;
+        }
+
         // Dùng unminifyToken để giải mã từng dòng
         rawList.forEach(item => {
-            const fullItem = unminifyToken(item); // Giải mã (s -> symbol, ic -> icon)
+            const fullItem = unminifyToken(item); 
             
             if(fullItem.symbol) {
                 let sym = fullItem.symbol.toUpperCase().trim();
-                // Lưu vào cache để dùng chung
+                // Lưu vào cache
                 alphaMarketCache[sym] = {
                     icon: fullItem.icon || '',
                     chain_icon: fullItem.chain_icon || ''
@@ -1057,13 +1067,14 @@ async function syncAlphaData() {
             }
         });
         
-        console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
+        console.log(`✅ Đã đồng bộ ${Object.keys(alphaMarketCache).length} icons.`);
         
+        // Cập nhật giao diện ngay
         if(typeof renderGrid === 'function') renderGrid();
         if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
         
     } catch (e) {
-        console.error("Sync Alpha Error:", e);
+        console.error("❌ Sync Alpha Error:", e);
     }
 }
 
