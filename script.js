@@ -1000,32 +1000,65 @@ function applyLanguage() {
     let marketChart = null, trackerChart = null, currentPolyId = null, compList = [];
 
 
+
+
 let alphaMarketCache = {}; 
+// --- [BƯỚC 1] BỘ GIẢI MÃ DỮ LIỆU JSON TỪ KHO R2 ---
+const KEY_MAP_REVERSE = {
+  "i": "id", "s": "symbol", "n": "name", "ic": "icon",
+  "cn": "chain", "ci": "chain_icon", 
+  "ct": "contract",
+  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", 
+  "mc": "market_cap", "l": "liquidity", "v": "volume",
+  "r24": "rolling_24h", "dt": "daily_total",
+  "dl": "daily_limit", "do": "daily_onchain",
+  "ch": "chart", "lt": "listing_time", "tx": "tx_count",
+  "off": "offline", "cex": "listingCex",
+  "tge": "onlineTge", "air": "onlineAirdrop"
+};
 
+function unminifyToken(minifiedItem) {
+  const fullItem = {};
+  for (const [shortKey, value] of Object.entries(minifiedItem)) {
+    const fullKey = KEY_MAP_REVERSE[shortKey];
+    if (fullKey === "volume" && typeof value === 'object') {
+      fullItem[fullKey] = {};
+      for (const [vKey, vVal] of Object.entries(value)) {
+        fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
+      }
+    } else if (fullKey) {
+      fullItem[fullKey] = value;
+    }
+  }
+  return fullItem;
+}
+// ----------------------------------------------------
 
+// --- [BƯỚC 2] HÀM ĐỒNG BỘ DỮ LIỆU MỚI ---
 async function syncAlphaData() {
     try {
-
+        // Gọi file json gốc (chứa toàn bộ danh sách token)
         const res = await fetch('public/data/market-data.json?t=' + Date.now());
         const json = await res.json();
         
-
-
         const rawList = json.data || json.tokens || [];
         
+        // Dùng unminifyToken để giải mã từng dòng
         rawList.forEach(item => {
-            if(item.s) {
-                let sym = item.s.toUpperCase().trim();
+            const fullItem = unminifyToken(item); // Giải mã (s -> symbol, ic -> icon)
+            
+            if(fullItem.symbol) {
+                let sym = fullItem.symbol.toUpperCase().trim();
+                // Lưu vào cache để dùng chung
                 alphaMarketCache[sym] = {
-                    icon: item.ic || item.icon || '',
-                    chain_icon: item.ci || item.chain_icon || ''
+                    icon: fullItem.icon || '',
+                    chain_icon: fullItem.chain_icon || ''
                 };
             }
         });
         
         console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
         
-
         if(typeof renderGrid === 'function') renderGrid();
         if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
         
@@ -1033,7 +1066,6 @@ async function syncAlphaData() {
         console.error("Sync Alpha Error:", e);
     }
 }
-
 
     let siteConfig = { x:'', tele:'', yt:'', affiliate: {} };
     let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [{id:'acc1', name:'Main', color:'#00F0FF'}, {id:'acc2', name:'Clone', color:'#FFD700'}];
