@@ -119,13 +119,17 @@ def get_active_tournaments():
             if contract:
                 if not end_date or end_date >= lookback_date:
                     chain_id = meta.get("chainId")
+                    logo_url = meta.get("iconUrl", "")
+                    chain_icon = meta.get("chainIconUrl", "")
                     if chain_id:
                         active_list.append({
                             "symbol": name,
                             "contract": contract.lower().strip(),
                             "chainId": chain_id,
                             "alphaId": meta.get("alphaId"),
-                            "quoteAsset": meta.get("quoteAsset", "USDT")
+                            "quoteAsset": meta.get("quoteAsset", "USDT"),
+                            "logo": logo_url,
+                            "chainLogo": chain_icon 
                         })
                     else:
                         print(f"⚠️ {name}: Thiếu chainId")
@@ -205,7 +209,13 @@ def main():
         print(f"📊 {t['symbol']}...", end=" ", flush=True)
         points = fetch_limit_history(t)
         if points:
-            history_data[t["contract"]] = { "s": t["symbol"], "q": t["quoteAsset"], "h": points }
+            history_data[t["contract"]] = { 
+                "s": t["symbol"], 
+                "q": t["quoteAsset"], 
+                "l": t["logo"],
+                "cl": t["chainLogo"],
+                "h": points 
+            }
             print(f"OK ({len(points)}h)")
         else:
             print("No Data")
@@ -217,7 +227,7 @@ def main():
         r2.put_object(
             Bucket=R2_BUCKET_NAME, Key='competition-history.json',
             Body=json.dumps(final_json, separators=(',', ':')).encode('utf-8'),
-            ContentType='application/json', CacheControl='max-age=1800'
+            ContentType='application/json', CacheControl='no-cache, no-store, must-revalidate'
         )
         print("✅ competition-history.json uploaded!")
     except Exception as e: print(f"❌ Upload Error: {e}")
