@@ -1,4 +1,4 @@
-const COMPETITION_API_URL = '/data/competition-history.json';
+const COMPETITION_API_URL = 'public/data/competition-history.json';
 
 if (typeof Chart !== 'undefined') {
     Chart.defaults.font.family = "'Rajdhani', sans-serif";
@@ -183,6 +183,23 @@ class CompetitionRadar {
         if (!this.data || !this.data.data) return;
 
         let tokens = Object.keys(this.data.data);
+        const nowMs = Date.now();
+        tokens = tokens.filter(key => {
+            const item = this.data.data[key];
+            
+            // Item.e là chuỗi "2026-02-11T11:00:00Z"
+            if (item.e) {
+                // new Date() đọc chữ Z sẽ tự hiểu là UTC
+                const endTimeMs = new Date(item.e).getTime();
+
+                // So sánh chính xác từng mili giây
+                // Nếu hiện tại > giờ kết thúc -> ẨN
+                if (nowMs > endTimeMs) {
+                    return false; 
+                }
+            }
+            return true;
+        });
 
         if (this.currentFilterList && Array.isArray(this.currentFilterList)) {
             tokens = tokens.filter(key => {
