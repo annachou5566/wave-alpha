@@ -107,20 +107,28 @@ def get_active_tournaments():
             contract = item.get("contract") # Cột bên ngoài
             if not contract: contract = meta.get("contractAddress") # Cột bên trong JSON
             
-            # Logic tìm ngày kết thúc
+            # Logic tìm ngày và giờ kết thúc
             end_date = meta.get("end")
+            end_time = meta.get("endTime", "23:59") # Nếu thiếu giờ, mặc định là cuối ngày
             
+            # Ghép thành chuỗi ISO 8601 chuẩn UTC (có chữ Z ở cuối)
+            # Ví dụ kết quả: "2026-02-11T11:00:00Z" -> Giúp JS so sánh chính xác từng giây
+            end_at_iso = None
+            if end_date:
+                end_at_iso = f"{end_date}T{end_time}:00Z"
+
             # Debug in ra để soi
-            # print(f"   - Check {name}: End={end_date} | Contract={contract}")
+            # print(f"   - Check {name}: End={end_at_iso} | Contract={contract}")
 
             # Điều kiện lọc:
             # 1. Có Contract
-            # 2. Chưa kết thúc HOẶC (Đã kết thúc nhưng vẫn trong khoảng Lookback 3 ngày)
+            # 2. Chưa kết thúc HOẶC (Đã kết thúc nhưng vẫn trong khoảng Lookback 3 ngày để lưu History)
             if contract:
                 if not end_date or end_date >= lookback_date:
                     chain_id = meta.get("chainId")
                     logo_url = meta.get("iconUrl", "")
                     chain_icon = meta.get("chainIconUrl", "")
+                    
                     if chain_id:
                         active_list.append({
                             "symbol": name,
@@ -129,7 +137,8 @@ def get_active_tournaments():
                             "alphaId": meta.get("alphaId"),
                             "quoteAsset": meta.get("quoteAsset", "USDT"),
                             "logo": logo_url,
-                            "chainLogo": chain_icon 
+                            "chainLogo": chain_icon,
+                            "end_at": end_at_iso  # <--- QUAN TRỌNG: Truyền mốc thời gian UTC xuống Client
                         })
                     else:
                         print(f"⚠️ {name}: Thiếu chainId")
@@ -214,6 +223,7 @@ def main():
                 "q": t["quoteAsset"], 
                 "l": t["logo"],
                 "cl": t["chainLogo"],
+                "e": t.get("end_at"),
                 "h": points 
             }
             print(f"OK ({len(points)}h)")
