@@ -3021,7 +3021,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
                         estLine = `<div class="cell-secondary" style="
         color: #00F0FF !important;
         opacity: 1 !important;       
-        font-weight: 700;             
+        font-weight: 600;             
         font-size: 0.7rem;            
         margin-top: 1px;             
     ">Est: ${fmtNoDec(estFinal)}</div>`;
