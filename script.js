@@ -1261,6 +1261,25 @@ function init() {
     }
 
 
+
+
+function checkUserAdmin() {
+    
+    if (currentUser && userProfile && userProfile.role === 'admin') {
+        document.body.classList.add('is-admin');
+        console.log("👑 ADMIN ACCESS: Đã bật chế độ Admin!");
+    } else {
+        document.body.classList.remove('is-admin');
+        console.log("👤 USER MODE: Chế độ người dùng thường.");
+    }
+    
+    
+    if (typeof renderGrid === "function") {
+        renderGrid();
+    }
+}
+
+
 async function fetchUserProfile() {
     if(!currentUser) return;
     
