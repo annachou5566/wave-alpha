@@ -757,16 +757,15 @@ let lastDataUpdateTime = "Waiting...";
 
 async function fetchMarketData() {
     try {
-        // [QUAN TRỌNG] Thêm headers để vượt qua bảo mật Middleware
+       
         const res = await fetch(DATA_URL + '?t=' + Date.now(), {
             method: 'GET',
             headers: {
-                'X-Wave-Source': 'web-client' // <-- Mật khẩu để qua cửa Middleware
+                'X-Wave-Source': 'web-client'
             }
         });
-        // --------------------
 
-        // Thêm kiểm tra lỗi để tránh lỗi "Unexpected token <"
+      
         if (!res.ok) {
             console.error("Lỗi tải data:", res.status);
             return;
