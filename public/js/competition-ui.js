@@ -34,9 +34,17 @@ class CompetitionRadar {
 
     async fetchData() {
         try {
-            const res = await fetch(COMPETITION_API_URL + '?t=' + Date.now());
-            if (!res.ok) throw new Error("Err");
+            // [QUAN TRỌNG] Thêm headers
+            const res = await fetch(COMPETITION_API_URL + '?t=' + Date.now(), {
+    method: 'GET',
+    headers: {
+        'X-Wave-Source': 'web-client'
+    }
+});
+
+            if (!res.ok) throw new Error("Err: " + res.status); // Log lỗi chi tiết hơn chút
             this.data = await res.json();
+            
         } catch (e) { console.error(e); }
     }
 
