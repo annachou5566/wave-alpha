@@ -1472,19 +1472,33 @@ async function fetchUserProfile() {
     window.location.reload(); 
 }
     
-function checkUserAdmin() {
-    // In ra để kiểm tra xem lỗi ở đâu
-    console.log("Checking Admin...", userProfile); 
+async function fetchUserProfile() {
+    if (!currentUser) return;
 
-    // Kiểm tra role từ database
-    if (currentUser && userProfile && userProfile.role === 'admin') {
-        document.body.classList.add('is-admin');
-        console.log("👑 ADMIN");
-    } else {
-        document.body.classList.remove('is-admin');
-        console.log("❌ Không phải Admin hoặc chưa đăng nhập.");
+    // Thêm dòng log này để biết đang bắt đầu lấy dữ liệu
+    console.log("🚀 Đang tải profile cho:", currentUser.email);
+
+    let { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+    if (error) {
+        // Nếu lỗi, nó sẽ hiện đỏ lòm trong Console để bạn biết đường sửa
+        console.error("❌ LỖI KHÔNG TẢI ĐƯỢC PROFILE:", error.message);
+        return;
     }
-    renderGrid();
+
+    if (data) {
+        userProfile = data;
+        console.log("✅ Đã tải xong profile. Role hiện tại:", userProfile.role);
+        
+        // Gọi hàm check Admin ngay khi tải xong
+        checkUserAdmin(); 
+    } else {
+        console.warn("⚠️ Không tìm thấy profile nào cho user này!");
+    }
 }
 
 
