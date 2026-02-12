@@ -3018,8 +3018,14 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
 
                     if (diffMs > 0 && speed > 0) {
                         let estFinal = currentTotal + (speed * (diffMs / 1000));
-                        estLine = `<span class="cell-secondary text-info opacity-75" style="font-size:0.65rem; font-weight:500;" title="Estimated Final Volume">Est: ${fmtNoDec(estFinal)}</span>`;
-                    }
+                        estLine = `<div class="cell-secondary" style="
+        color: #00F0FF !important;
+        opacity: 1 !important;       
+        font-weight: 700;             
+        font-size: 0.7rem;            
+        margin-top: 1px;             
+    ">Est: ${fmtNoDec(estFinal)}</div>`;
+}
                 }
                 
                 campVolHtml = `<div class="cell-stack justify-content-center">
