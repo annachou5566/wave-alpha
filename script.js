@@ -1471,12 +1471,18 @@ async function fetchUserProfile() {
     
     window.location.reload(); 
 }
-    function checkUserAdmin() {
-   if (currentUser && userProfile && userProfile.role === 'admin') {
+    
+function checkUserAdmin() {
+    // In ra để kiểm tra xem lỗi ở đâu
+    console.log("Checking Admin...", userProfile); 
+
+    // Kiểm tra role từ database
+    if (currentUser && userProfile && userProfile.role === 'admin') {
         document.body.classList.add('is-admin');
-        console.log("👑 Admin Access Granted");
+        console.log("👑 ADMIN");
     } else {
         document.body.classList.remove('is-admin');
+        console.log("❌ Không phải Admin hoặc chưa đăng nhập.");
     }
     renderGrid();
 }
