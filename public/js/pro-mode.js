@@ -759,16 +759,17 @@ async function fetchMarketData() {
     try {
         // [QUAN TRỌNG] Thêm headers để vượt qua bảo mật Middleware
         const res = await fetch(DATA_URL + '?t=' + Date.now(), {
-    method: 'GET',
-    headers: {
-        'X-Wave-Source': 'web-client'
-    }
-});
+            method: 'GET',
+            headers: {
+                'X-Wave-Source': 'web-client' // <-- Mật khẩu để qua cửa Middleware
+            }
+        });
+        // --------------------
 
-        // Kiểm tra nếu bị chặn (403) hoặc lỗi khác
+        // Thêm kiểm tra lỗi để tránh lỗi "Unexpected token <"
         if (!res.ok) {
-            console.error("Fetch error or Access Denied:", res.status);
-            return; 
+            console.error("Lỗi tải data:", res.status);
+            return;
         }
 
         const json = await res.json();
