@@ -757,8 +757,20 @@ let lastDataUpdateTime = "Waiting...";
 
 async function fetchMarketData() {
     try {
-        
-        const res = await fetch(DATA_URL + '?t=' + Date.now());
+        // [QUAN TRỌNG] Thêm headers để vượt qua bảo mật Middleware
+        const res = await fetch(DATA_URL + '?t=' + Date.now(), {
+    method: 'GET',
+    headers: {
+        'X-Wave-Source': 'web-client'
+    }
+});
+
+        // Kiểm tra nếu bị chặn (403) hoặc lỗi khác
+        if (!res.ok) {
+            console.error("Fetch error or Access Denied:", res.status);
+            return; 
+        }
+
         const json = await res.json();
         
         
