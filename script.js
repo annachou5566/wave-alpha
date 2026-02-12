@@ -4,10 +4,7 @@
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
 
-const ADMIN_EMAILS = [ 
-    "annachou60@gmail.com", 
-    "wavealphachannel@gmail.com",  
-    ];
+
 const PREDICT_FEE = 100;
 
 
@@ -1475,14 +1472,16 @@ async function fetchUserProfile() {
     window.location.reload(); 
 }
     function checkUserAdmin() {
-        if(currentUser && ADMIN_EMAILS.includes(currentUser.email)) document.body.classList.add('is-admin');
-        else document.body.classList.remove('is-admin');
-        renderGrid();
+   if (currentUser && userProfile && userProfile.role === 'admin') {
+        document.body.classList.add('is-admin');
+        console.log("👑 Admin Access Granted");
+    } else {
+        document.body.classList.remove('is-admin');
     }
+    renderGrid();
+}
 
-    /* ==========================================================
-   [BƯỚC 3 FIX FINAL v3] LOGIC TẢI DATA: RUNNING (JSON) vs ENDED (SQL)
-   ========================================================== */
+
 
 let appData = {
     running: [],        
