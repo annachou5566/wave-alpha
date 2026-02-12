@@ -4,7 +4,6 @@
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
 
-
 const PREDICT_FEE = 100;
 
 
@@ -1261,68 +1260,72 @@ function init() {
     }
 
 
-
-
-function checkUserAdmin() {
-    
-    if (currentUser && userProfile && userProfile.role === 'admin') {
-        document.body.classList.add('is-admin');
-        console.log("👑 ADMIN ACCESS: Đã bật chế độ Admin!");
-    } else {
-        document.body.classList.remove('is-admin');
-        console.log("👤 USER MODE: Chế độ người dùng thường.");
-    }
-    
-    
-    if (typeof renderGrid === "function") {
-        renderGrid();
-    }
-}
-
-
 async function fetchUserProfile() {
-    if(!currentUser) return;
+    const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
     
+    if (sessionError || !sessionData.user) {
+        return;
+    }
 
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-    
-    if(data) {
+    const uid = sessionData.user.id;
+
+    let { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', uid)
+        .maybeSingle();
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    if (data) {
         userProfile = data;
-        
+        currentUser = sessionData.user;
 
-        document.getElementById('userNameDisplay').innerText = data.nickname || currentUser.email.split('@')[0];
+        const userBtn = document.querySelector('.user-email'); 
+        if (userBtn) {
+            userBtn.textContent = data.nickname || data.email; 
+        }
+
+        const userNameDisplay = document.getElementById('userNameDisplay');
+        if (userNameDisplay) {
+            userNameDisplay.innerText = data.nickname || currentUser.email.split('@')[0];
+        }
+
         let bal = data.balance_usdt !== null ? data.balance_usdt : 0;
-        document.getElementById('user-balance').innerText = fmtNum(bal);
+        const userBalance = document.getElementById('user-balance');
+        if (userBalance) {
+            userBalance.innerText = fmtNum(bal);
+        }
         userProfile.balance_usdt = bal;
 
-        checkDailyBonus();
+        const navAvatar = document.getElementById('nav-avatar');
+        if (navAvatar) {
+            if (data.avatar_url) {
+                navAvatar.src = data.avatar_url;
+                navAvatar.style.display = 'block';
+            } else {
+                navAvatar.style.display = 'none';
+            }
+        }
 
+        checkUserAdmin();
+        checkDailyBonus();
 
         userProfile.tracker_data = data.tracker_data || {};
 
-
-
         if (userProfile.tracker_data && userProfile.tracker_data.meta_wallets) {
-
             accSettings = userProfile.tracker_data.meta_wallets;
-
             localStorage.setItem('wave_settings', JSON.stringify(accSettings));
         } else {
-
-
             updateCloudWallets(); 
         }
 
-
-        if(data.avatar_url) {
-            document.getElementById('nav-avatar').src = data.avatar_url;
-            document.getElementById('nav-avatar').style.display = 'block';
-        } else {
-            document.getElementById('nav-avatar').style.display = 'none';
+        if (typeof renderGrid === 'function') {
+            renderGrid();
         }
-
-
-        renderGrid();
     }
 }
 
@@ -1490,50 +1493,20 @@ async function fetchUserProfile() {
     
     window.location.reload(); 
 }
-    
-async function fetchUserProfile() {
-    // 1. Lấy user trực tiếp từ session hiện tại (đảm bảo chính xác 100%)
-    const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
-    
-    if (sessionError || !sessionData.user) {
-        console.log("🚫 Chưa có session đăng nhập, bỏ qua tải profile.");
-        return;
-    }
 
-    const uid = sessionData.user.id;
-    console.log("🔍 Đang tìm profile trong DB cho ID:", uid);
 
-    // 2. Dùng maybeSingle() thay vì single() để tránh báo lỗi đỏ nếu chưa có data
-    let { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', uid)
-        .maybeSingle();
-
-    // 3. Xử lý kết quả
-    if (error) {
-        console.error("❌ Lỗi Truy Vấn Database:", error.message);
-        // Mẹo: Nếu lỗi là "new row violates row-level security policy", nghĩa là RLS vẫn chặn
-        return;
-    }
-
-    if (data) {
-        // Gán dữ liệu vào biến toàn cục
-        userProfile = data;
-        currentUser = sessionData.user; // Cập nhật luôn currentUser cho chắc
-
-        console.log("✅ TẢI THÀNH CÔNG:", data.nickname, "| Role:", data.role);
-
-        // 4. Cập nhật giao diện NGAY LẬP TỨC tại đây (để không bị hiện chữ User)
-        const userBtn = document.querySelector('.user-email'); 
-        if (userBtn) {
-            userBtn.textContent = data.nickname || data.email; // Ưu tiên hiện Nickname
-        }
-        
-        // Kích hoạt Admin
-        checkUserAdmin();
+function checkUserAdmin() {
+   
+    if (currentUser && userProfile && userProfile.role === 'admin') {
+        document.body.classList.add('is-admin');
+        console.log("👑 ADMIN ACCESS: Đã bật chế độ Admin!");
     } else {
-        console.warn("⚠️ Tìm thấy ID user nhưng không có dòng nào trong bảng profiles!");
+        document.body.classList.remove('is-admin');
+        console.log("👤 USER MODE: Chế độ người dùng thường.");
+    }
+    
+     if (typeof renderGrid === "function") {
+        renderGrid();
     }
 }
 
