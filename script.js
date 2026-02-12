@@ -1473,31 +1473,48 @@ async function fetchUserProfile() {
 }
     
 async function fetchUserProfile() {
-    if (!currentUser) return;
+    // 1. Lấy user trực tiếp từ session hiện tại (đảm bảo chính xác 100%)
+    const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
+    
+    if (sessionError || !sessionData.user) {
+        console.log("🚫 Chưa có session đăng nhập, bỏ qua tải profile.");
+        return;
+    }
 
-    // Thêm dòng log này để biết đang bắt đầu lấy dữ liệu
-    console.log("🚀 Đang tải profile cho:", currentUser.email);
+    const uid = sessionData.user.id;
+    console.log("🔍 Đang tìm profile trong DB cho ID:", uid);
 
+    // 2. Dùng maybeSingle() thay vì single() để tránh báo lỗi đỏ nếu chưa có data
     let { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', currentUser.id)
-        .single();
+        .eq('id', uid)
+        .maybeSingle();
 
+    // 3. Xử lý kết quả
     if (error) {
-        // Nếu lỗi, nó sẽ hiện đỏ lòm trong Console để bạn biết đường sửa
-        console.error("❌ LỖI KHÔNG TẢI ĐƯỢC PROFILE:", error.message);
+        console.error("❌ Lỗi Truy Vấn Database:", error.message);
+        // Mẹo: Nếu lỗi là "new row violates row-level security policy", nghĩa là RLS vẫn chặn
         return;
     }
 
     if (data) {
+        // Gán dữ liệu vào biến toàn cục
         userProfile = data;
-        console.log("✅ Đã tải xong profile. Role hiện tại:", userProfile.role);
+        currentUser = sessionData.user; // Cập nhật luôn currentUser cho chắc
+
+        console.log("✅ TẢI THÀNH CÔNG:", data.nickname, "| Role:", data.role);
+
+        // 4. Cập nhật giao diện NGAY LẬP TỨC tại đây (để không bị hiện chữ User)
+        const userBtn = document.querySelector('.user-email'); 
+        if (userBtn) {
+            userBtn.textContent = data.nickname || data.email; // Ưu tiên hiện Nickname
+        }
         
-        // Gọi hàm check Admin ngay khi tải xong
-        checkUserAdmin(); 
+        // Kích hoạt Admin
+        checkUserAdmin();
     } else {
-        console.warn("⚠️ Không tìm thấy profile nào cho user này!");
+        console.warn("⚠️ Tìm thấy ID user nhưng không có dòng nào trong bảng profiles!");
     }
 }
 
