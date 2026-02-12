@@ -37,7 +37,7 @@ class CompetitionRadar {
             const res = await fetch(COMPETITION_API_URL + '?t=' + Date.now(), {
                 method: 'GET',
                 headers: {
-                    'X-Wave-Source': 'web-client' // <-- Phải có dòng này
+                    'X-Wave-Source': 'web-client' 
                 }
             });
             
@@ -193,14 +193,12 @@ class CompetitionRadar {
         tokens = tokens.filter(key => {
             const item = this.data.data[key];
             
-            // Item.e là chuỗi "2026-02-11T11:00:00Z"
+            
             if (item.e) {
-                // new Date() đọc chữ Z sẽ tự hiểu là UTC
+                
                 const endTimeMs = new Date(item.e).getTime();
 
-                // So sánh chính xác từng mili giây
-                // Nếu hiện tại > giờ kết thúc -> ẨN
-                if (nowMs > endTimeMs) {
+             if (nowMs > endTimeMs) {
                     return false; 
                 }
             }
@@ -322,17 +320,16 @@ class CompetitionRadar {
             limitColor = '#F0B90B'; 
         }
 
-        // --- XỬ LÝ ẢNH (MỚI) ---
-        // 1. Ảnh Token: Nếu có link API (stats.l) thì dùng, không thì tìm file local viết hoa
+    
         const tokenImgSrc = (stats.l && stats.l.startsWith('http')) 
             ? stats.l 
             : `assets/tokens/${stats.symbol.toUpperCase()}.png`;
 
-        // 2. Ảnh Chain: Nếu có link API (stats.cl) thì tạo thẻ img nhỏ
+      
         const chainImgHtml = (stats.cl && stats.cl.startsWith('http'))
             ? `<img src="${stats.cl}" style="width:12px; height:12px; border-radius:50%; position: absolute; bottom: -2px; right: -2px; border: 1px solid #1c2127; background: #000; z-index: 2;">`
             : '';
-        // -----------------------
+      
 
         return `
         <div class="col-12 col-md-4 col-lg-3" id="${cardId}">
