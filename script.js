@@ -6632,67 +6632,52 @@ function applyLayer2Data(serverData) {
 }
 
 // ==========================================
-// 🛰️ RADAR MONITOR - GIÁ CHI TIẾT 10 SỐ LẺ
+// 🛰️ RADAR MONITOR V3 - MÁY NỘI SOI LỖI
 // ==========================================
+let lastFetchStatus = "Đang chờ...";
+let lastFetchTime = "---";
+
+// Ghi đè hàm fetch để bắt sóng cuộc gọi tới Render
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+    const res = await originalFetch(...args);
+    if (args[0] && typeof args[0] === 'string' && args[0].includes('api/prices')) {
+        lastFetchStatus = res.status + " " + res.statusText;
+        lastFetchTime = new Date().toLocaleTimeString();
+    }
+    return res;
+};
+
 setInterval(() => {
-    // 1. Tạo thanh Monitor nếu chưa có
     if (!document.getElementById('radar-monitor')) {
         const header = document.createElement('div');
         header.id = 'radar-monitor';
-        header.style.cssText = `
-            width: 100%; 
-            background: #0b1217; 
-            border: 2px solid #00F0FF; 
-            margin-bottom: 15px; 
-            padding: 15px; 
-            border-radius: 12px;
-            color: #fff;
-            font-family: 'Space Mono', monospace;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
-        `;
-        // Chèn nó vào ngay dưới logo hoặc trên lưới token
+        header.style.cssText = "width: 100%; background: #0b1217; border: 2px solid #ff0000; margin-bottom: 15px; padding: 15px; border-radius: 12px; color: #fff; font-family: monospace; display: flex; justify-content: space-between;";
         const container = document.querySelector('.container') || document.body;
         container.prepend(header);
     }
 
     const monitor = document.getElementById('radar-monitor');
-    
-    // 2. Lấy dữ liệu 2 con token đầu tiên để so sánh
     const t1 = (window.compList && window.compList.length > 0) ? window.compList[0] : null;
-    const t2 = (window.compList && window.compList.length > 1) ? window.compList[1] : null;
 
     if (t1) {
-        const now = new Date().toLocaleTimeString();
+        // Kiểm tra xem giá trên Web có phải là giá mới (đầu 0.007...) hay không
+        const webPrice = t1.cachedPrice.toString();
+        const isMatched = webPrice.startsWith("0.0077"); 
         
-        // Hiển thị giá với 10 số lẻ để thấy nó nhảy liên tục
-        const p1 = Number(t1.cachedPrice).toFixed(10);
-        const p2 = t2 ? Number(t2.cachedPrice).toFixed(10) : '---';
+        monitor.style.borderColor = isMatched ? "#0ECB81" : "#ff0000";
 
         monitor.innerHTML = `
-            <div style="flex: 1;">
-                <span style="color:#00F0FF; font-size:10px;">🔴 LIVE SYNC: ${now}</span><br/>
-                <span style="font-size:16px; font-weight:bold;">${t1.name}: </span>
-                <span style="font-size:18px; color:#FFFF00; letter-spacing:1px;">$${p1}</span>
+            <div style="flex: 1.5;">
+                <span style="color:#FFD700; font-weight:bold;">📡 SERVER STATUS: ${lastFetchStatus}</span><br/>
+                <span style="font-size:11px;">Cập nhật lúc: ${lastFetchTime}</span><br/>
+                <span style="font-size:18px; font-weight:bold;">${t1.name}: $${Number(t1.cachedPrice).toFixed(10)}</span>
             </div>
-            <div style="flex: 1; text-align: right; border-left: 1px solid #333; padding-left: 20px;">
-                <span style="color:#aaa; font-size:10px;">DATA SOURCE: BINANCE LAYER 2</span><br/>
-                <span style="font-size:14px;">${t2 ? t2.name : 'Next'}: </span>
-                <span style="font-size:14px; color:#0ECB81;">$${p2}</span>
+            <div style="flex: 1; text-align: right; font-size: 11px; border-left: 1px solid #333; padding-left:10px;">
+                <b style="color:${isMatched ? '#0ECB81' : '#ff4444'}">${isMatched ? '✅ ĐÃ NHẬN GIÁ MỚI' : '❌ ĐANG HIỆN GIÁ CŨ'}</b><br/>
+                <span>ID: ${t1.alphaId}</span><br/>
+                <span>Số Token: ${window.compList.length}</span>
             </div>
         `;
-        
-        // Hiệu ứng "nhịp tim": Cứ mỗi 3s khi nhận data mới từ Render, viền sẽ sáng xanh lên
-        if (Math.floor(Date.now() / 1000) % 3 === 0) {
-            monitor.style.boxShadow = "0 0 30px rgba(14, 203, 129, 0.5)";
-            monitor.style.borderColor = "#0ECB81";
-        } else {
-            monitor.style.boxShadow = "0 0 10px rgba(0, 240, 255, 0.1)";
-            monitor.style.borderColor = "#00F0FF";
-        }
-    } else {
-        monitor.innerHTML = "📡 ĐANG KẾT NỐI VỚI SERVER RENDER...";
     }
-}, 500); // Cập nhật hiển thị mỗi 0.5s để mượt mà
+}, 1000);
