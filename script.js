@@ -6630,39 +6630,51 @@ function applyLayer2Data(serverData) {
     }
 }
 
-// --- TOOL DEBUG CHO MÁY TÍNH BẢNG (Dán cuối file script.js) ---
-// Tự động hiện một bảng thông báo trạng thái kết nối
+// --- CÔNG CỤ SOI GIÁ (DEBUG PANEL V2) ---
+// Dán vào cuối file script.js
 setInterval(() => {
-    // Chỉ tạo bảng 1 lần
+    // Tạo bảng nếu chưa có
     if (!document.getElementById('debug-panel')) {
         const div = document.createElement('div');
         div.id = 'debug-panel';
-        div.style.cssText = "position:fixed; bottom:10px; right:10px; width:250px; background:rgba(0,0,0,0.9); color:#00F0FF; border:1px solid #00F0FF; padding:10px; font-size:11px; z-index:9999; font-family:monospace; pointer-events:none;";
+        div.style.cssText = "position:fixed; bottom:10px; right:10px; width:280px; background:rgba(0,0,0,0.9); color:#00F0FF; border:1px solid #00F0FF; padding:10px; font-size:12px; z-index:9999; font-family:monospace; pointer-events:none;";
         document.body.appendChild(div);
     }
 
     const panel = document.getElementById('debug-panel');
     
-    // Kiểm tra xem biến compList có dữ liệu chưa
-    const totalTokens = (window.compList || []).length;
+    // Lấy token đầu tiên để soi (thường là ARTX hoặc GORILLA)
+    const token = (window.compList && window.compList.length > 0) ? window.compList[0] : null;
     
-    // Kiểm tra mẫu thử (Token đầu tiên)
-    let samplePrice = "Chưa có";
-    let sampleName = "None";
-    
-    if (totalTokens > 0) {
-        sampleName = window.compList[0].name; // Ví dụ: GORILLA
-        samplePrice = window.compList[0].cachedPrice || "Chờ...";
+    if (token) {
+        // Lấy giờ hiện tại để biết web đang sống
+        const now = new Date().toLocaleTimeString();
+        
+        // Lấy giá thô (chưa làm tròn)
+        const rawPrice = token.cachedPrice; 
+        
+        // Lấy trạng thái màu
+        const color = token.liveColor || 'Chưa có';
+        const status = token.liveStatus || 'NORMAL';
+
+        panel.innerHTML = `
+            <b>📡 LIVE MONITOR (3s/tick)</b><br/>
+            --------------------------<br/>
+            • Time: <span style="color:white">${now}</span><br/>
+            • Token: <b>${token.name}</b><br/>
+            • ID: ${token.alphaId}<br/>
+            --------------------------<br/>
+            • GIÁ GỐC: <b style="color:#FFFF00; font-size:14px">${rawPrice}</b><br/>
+            <i>(Nhìn kỹ số cuối cùng sẽ thấy nhảy)</i><br/>
+            --------------------------<br/>
+            • Trạng thái: ${status}<br/>
+            • Màu Server: <span style="color:${color}">■ ${color}</span>
+        `;
+        
+        // Hiệu ứng nhấp nháy viền bảng mỗi khi có dữ liệu
+        panel.style.borderColor = (new Date().getSeconds() % 2 === 0) ? '#0ECB81' : '#00F0FF';
+    } else {
+        panel.innerHTML = "⏳ Đang đợi danh sách token...";
     }
 
-    panel.innerHTML = `
-        <b>⚡ SYSTEM STATUS</b><br/>
-        ------------------<br/>
-        • Tokens trên Web: ${totalTokens}<br/>
-        • Sample (${sampleName}): <b style="color:white">${samplePrice}</b><br/>
-        • API URL: ${typeof REALTIME_API_URL !== 'undefined' ? 'OK' : 'MISSING'}<br/>
-        • API KEY: ${typeof REALTIME_API_KEY !== 'undefined' ? 'OK' : 'MISSING'}<br/>
-        ------------------<br/>
-        <i>(Bảng này chỉ để test, xóa code cuối file để ẩn đi)</i>
-    `;
-}, 1000);
+}, 100);
