@@ -1003,14 +1003,13 @@ let alphaMarketCache = {};
 
 async function syncAlphaData() {
     try {
-
+        // Lưu ý: Nếu chạy trên web mà lỗi 404, hãy thử sửa đường dẫn thành '/data/market-data.json' (bỏ chữ public)
         const res = await fetch('public/data/market-data.json?t=' + Date.now());
         const json = await res.json();
         
-
-
         const rawList = json.data || json.tokens || [];
-       // --- [QUAN TRỌNG] THÊM ĐOẠN NÀY ĐỂ TẠO DANH SÁCH TOKEN ---
+        
+        // --- [QUAN TRỌNG] THÊM ĐOẠN NÀY ĐỂ TẠO DANH SÁCH TOKEN ---
         window.compList = rawList.map(item => ({
             // Lấy ID chuẩn để lát nữa khớp với Realtime (QUAN TRỌNG NHẤT)
             alphaId: (item.alphaId || item.id || item.i || '').toString(), 
@@ -1026,6 +1025,9 @@ async function syncAlphaData() {
             icon: item.ic || item.icon || '',
             chain_icon: item.ci || item.chain_icon || ''
         }));
+        // ----------------------------------------------------------
+
+        // Đoạn code cũ của bạn (Giữ lại để tương thích với các phần khác)
         rawList.forEach(item => {
             if(item.s) {
                 let sym = item.s.toUpperCase().trim();
@@ -1036,12 +1038,17 @@ async function syncAlphaData() {
             }
         });
         
-        console.log("✅ Alpha Images Synced:", Object.keys(alphaMarketCache).length);
+        console.log(`✅ Đã nạp thành công ${window.compList.length} token vào Web.`);
         
-
+        // Vẽ giao diện
         if(typeof renderGrid === 'function') renderGrid();
         if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
         
+        // --- KÍCH HOẠT REALTIME NGAY SAU KHI CÓ DATA ---
+        if (window.compList.length > 0 && typeof startRealtimeSync === 'function') {
+            startRealtimeSync();
+        }
+
     } catch (e) {
         console.error("Sync Alpha Error:", e);
     }
