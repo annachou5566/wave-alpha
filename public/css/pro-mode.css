@@ -40,24 +40,25 @@ body {
 }
 
 
-
-
 #alpha-tab-nav {
-    position: fixed !important;
-    top: 76px;                 
-    left: 0;
-    width: 100%;
-    z-index: 990;              
+    position: absolute !important;
+    top: 76px;
+    left: 15px !important;
+    width: auto !important; 
+    z-index: 990;
+
     
-    background: #0b0e11;       
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    
+    background: #131722 !important; 
+    border: 1px solid rgba(255, 255, 255, 0.1) !important; 
+    border-radius: 8px !important; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important; 
+
     display: flex;
-    justify-content: center;
-    padding: 12px 0;
+    justify-content: flex-start !important;
     
-   
+    padding: 4px !important;
+    gap: 5px !important; 
+
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -76,20 +77,20 @@ body {
 .view-section,
 .terminal-layout {
    
-    padding-top: 100px !important; 
+    padding-top: 70px !important; 
 }
 
 
 .tab-btn {
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     color: #6c757d;
     font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
-    font-size: 16px;
-    padding: 8px 25px;
-    margin: 0 10px;
-    border-radius: 4px;
+    font-size: 12px !important;
+    padding: 4px 12px !important;
+    margin: 0 !important;
+    border-radius: 4px !important;
     cursor: pointer;
     transition: all 0.2s;
     text-transform: uppercase;
