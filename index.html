@@ -121,11 +121,11 @@
     <div class="container">
         <div class="d-flex align-items-center gap-4">
             <a onclick="playSfx('click'); switchView('dashboard')" class="brand-logo d-flex align-items-center gap-2" style="text-decoration:none">
-                <img id="nav-brand-img" src="" style="height:50px; display:none; border-radius:4px;">
+                <img id="nav-brand-img" src="https://pub-78b1d1c3a4f64da39a75efb9b66ccf65.r2.dev/logo-wave-alpha.png" style="height:35px; display:block !important; border-radius:4px;">
                 <div id="nav-brand-text">WAVE<span>ALPHA</span></div>
             </a>
             <div class="d-none d-md-block ps-4 border-start border-secondary border-opacity-25">
-                <span class="text-sub" id="sys-time-lbl" data-i18n="nav_sys_time">SYSTEM TIME</span>
+                <span class="text-sub" id="sys-time-lbl" data-i18n="nav_sys_time">TIME (UTC)</span>
                 <div id="sysClock" class="font-num fw-bold text-brand" style="line-height:1; font-size: 1.2rem;">--:--:--</div>
             </div>
         </div>
@@ -356,15 +356,15 @@
             </div>
         </div>
 
-        <div class="d-flex align-items-center gap-3">
-            <div class="d-flex bg-black rounded-pill p-1 border border-secondary border-opacity-25" style="background: #0b0e11;">
-                <button id="tab-running" class="btn btn-sm rounded-pill fw-bold px-3 py-1 radar-tab" onclick="switchGlobalTab('running')" style="font-size: 0.75rem;">
-                    <i class="fas fa-circle text-success me-1" style="font-size: 6px; vertical-align: middle;"></i> RUNNING
-                </button>
-                <button id="tab-history" class="btn btn-sm rounded-pill fw-bold px-3 py-1 text-sub radar-tab" onclick="switchGlobalTab('history')" style="font-size: 0.75rem;">
-                    <i class="fas fa-history me-1"></i> HISTORY
-                </button>
-            </div>
+        <div class="comp-tab-container">
+            <button id="tab-running" class="radar-tab active" onclick="switchGlobalTab('running')">
+                <i class="fas fa-circle me-1" style="font-size: 6px; vertical-align: middle;"></i> RUNNING
+            </button>
+            
+            <button id="tab-history" class="radar-tab" onclick="switchGlobalTab('history')">
+                <i class="fas fa-history me-1"></i> HISTORY
+            </button>
+        </div>
 
             <div style="width:1px; height:24px; background:#333;"></div>
 
