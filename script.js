@@ -6535,7 +6535,7 @@ async function fetchLayer2Data() {
     if (document.hidden) return;
 
     try {
-        const res = await fetch(REALTIME_API_URL, {
+        const res = await fetch(`${REALTIME_API_URL}?t=${Date.now()}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
