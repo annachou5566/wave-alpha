@@ -6525,10 +6525,9 @@ function startRealtimeSync() {
 }
 
 async function fetchLayer2Data() {
-    if (document.hidden) return; // Không tải khi ẩn tab
+    if (document.hidden) return; 
 
     try {
-        // MẸO: Thêm timestamp vào URL để trình duyệt không bao giờ cache dữ liệu này
         const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
         
         const res = await fetch(antiCacheUrl, {
@@ -6536,52 +6535,43 @@ async function fetchLayer2Data() {
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': REALTIME_API_KEY,
-                'Cache-Control': 'no-cache', // Ép thêm một lớp bảo vệ nữa
+                'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache'
             }
         });
 
-        if (res.status === 403) {
-            console.error("⛔ Lỗi Key!");
-            return;
-        }
-
         const json = await res.json();
         
-        // KIỂM TRA THỜI GIAN SERVER TRẢ VỀ
         if (json.success && json.data) {
-            // console.log("Dữ liệu mới nhận lúc:", json.last_sync);
+            // DÒNG NÀY QUAN TRỌNG: Mở console hoặc nhìn Radar Monitor để thấy
+            // console.log("Dữ liệu thô từ Render:", json.data); 
+            
+            // Gọi hàm dán giá (Phải dùng bản khớp theo Tên Symbol)
             applyLayer2Data(json.data);
         }
     } catch (e) {
-        console.error("Lỗi Layer 2:", e);
+        console.error("Lỗi kết nối Render:", e);
     }
-}
-
-function applyLayer2Data(serverData) {
+}function applyLayer2Data(serverData) {
     if (!window.compList || window.compList.length === 0) return;
 
-    // Chuyển dữ liệu server thành mảng để dễ tìm kiếm
     const serverItems = Object.values(serverData);
 
     compList.forEach(c => {
         const nameOnWeb = (c.name || "").toUpperCase().trim();
         
-        // 🔍 Tìm con token có Tên trùng với Web (ví dụ: "ARTX")
+        // 🔍 Tìm theo Tên (Symbol) vì ID đang bị lệch giữa R2 và Binance
         const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === nameOnWeb));
 
         if (liveItem) {
-            // Ép cập nhật giá mới vào bộ nhớ web
+            // Dán giá 0.29 vào bộ nhớ Web
             c.cachedPrice = liveItem.p;
-            
-            // Cập nhật thêm các thuộc tính màu sắc để nhìn cho đẹp
             c.liveStatus = liveItem.st || 'NORMAL';
             c.liveColor = liveItem.cl || '#0ECB81';
-            c.liveBg = liveItem.sb || 'rgba(14, 203, 129, 0.1)';
         }
     });
 
-    // 🚀 Lệnh "ép" trình duyệt phải vẽ lại con số trên màn hình
+    // 🚀 ĐẨY GIÁ RA MÀN HÌNH
     if (typeof updateGridValuesOnly === 'function') {
         updateGridValuesOnly();
     }
