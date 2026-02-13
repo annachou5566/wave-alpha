@@ -6558,72 +6558,53 @@ async function fetchLayer2Data() {
     }
 }
 
+// --- THAY THẾ TOÀN BỘ HÀM CŨ BẰNG ĐOẠN NÀY ---
 function applyLayer2Data(serverData) {
-    let hasChanges = false;
-    
-    // Kiểm tra danh sách token trên web
     if (!window.compList || window.compList.length === 0) return;
 
+    let hasChanges = false;
+    
+    // Chuyển dữ liệu server thành một danh sách để dễ tìm kiếm
+    const serverItems = Object.values(serverData);
+
     compList.forEach(c => {
-        let liveItem = null;
-
-        // --- LOGIC KHỚP LỆNH MỚI (Dựa trên kết quả Debug) ---
-        // Server trả về Key là "1", "42"...
-        // Frontend đang giữ ID là "ALPHA_1", "ALPHA_42"...
-        // => Cần cắt bỏ chữ "ALPHA_" để lấy số.
+        // Lấy tên token trên Web (ví dụ: "ARTX")
+        const webName = (c.name || "").toUpperCase().trim();
         
-        if (c.alphaId) {
-            // Cách 1: Xóa chữ "ALPHA_" và tìm theo số
-            let idNum = c.alphaId.replace("ALPHA_", ""); // "ALPHA_42" -> "42"
-            
-            if (serverData[idNum]) {
-                liveItem = serverData[idNum];
-            }
-        }
+        // 🔍 TÌM KIẾM THEO TÊN: Lục trong dữ liệu Server xem con nào tên là "ARTX"
+        const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === webName));
 
-        // Cách 2: Nếu không có AlphaID, thử tìm theo Tên (Phòng hờ)
-        if (!liveItem && c.name) {
-             // Tìm "mò" trong toàn bộ dữ liệu server
-             // (Code này chạy hơi chậm xíu nhưng an toàn)
-             for (let key in serverData) {
-                 // Nếu server có trả về trường symbol/name thì so sánh
-                 // Nhưng theo log bạn gửi thì server chỉ trả về {p, st, cl...} nên cách 1 là chủ yếu.
-             }
-        }
-
-        // --- NẾU TÌM THẤY DỮ LIỆU ---
         if (liveItem) {
-            // 1. Cập nhật Giá
             let oldPrice = c.cachedPrice;
+            
+            // 1. Cập nhật giá mới nhất
             c.cachedPrice = liveItem.p;
             
             if (!c.market_analysis) c.market_analysis = {};
             c.market_analysis.price = liveItem.p;
 
-            // 2. Cập nhật Màu & Trạng thái (Quan trọng để hiển thị đẹp)
-            c.liveStatus = liveItem.st; // NORMAL, DUMPING...
-            c.liveColor = liveItem.cl;  // #0ECB81...
-            c.liveBg = liveItem.sb;     
+            // 2. Cập nhật màu sắc và trạng thái (Pump/Dump/Slippage)
+            c.liveStatus = liveItem.st || 'NORMAL';
+            c.liveColor = liveItem.cl || '#0ECB81';
+            c.liveBg = liveItem.sb || 'rgba(14, 203, 129, 0.1)';
 
-            // 3. Đánh dấu để vẽ lại giao diện
-            // Vẽ lại nếu giá thay đổi HOẶC trạng thái đang là DUMPING (cần nhấp nháy)
-            if (oldPrice !== liveItem.p || c.liveStatus === 'DUMPING' || c.liveStatus === 'SLIPPAGE') {
+            // 3. Nếu giá có thay đổi thì đánh dấu để vẽ lại màn hình
+            if (oldPrice !== liveItem.p) {
                 hasChanges = true;
             }
         }
     });
 
-    // --- VẼ LẠI GIAO DIỆN ---
+    // --- VẼ LẠI GIAO DIỆN KHI CÓ GIÁ MỚI ---
     if (hasChanges) {
-        // Cập nhật các ô giá trên lưới
+        // Cập nhật giá trên các thẻ Token
         if (typeof updateGridValuesOnly === 'function') {
             updateGridValuesOnly();
         }
 
-        // Cập nhật bảng Market Health (Nếu đang mở Pro Mode)
+        // Cập nhật bảng Pro Mode (nếu đang mở)
         if (typeof renderMarketHealthTable === 'function') {
             const healthTable = document.getElementById('market-health-table');
-            // Chỉ vẽ lại nếu bảng đang hiện trên màn hình (để đỡ lag máy tính bảng)
             if (healthTable && healthTable.offsetParent !== null) {
                 renderMarketHealthTable();
             }
