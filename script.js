@@ -6552,24 +6552,27 @@ async function fetchLayer2Data() {
 
 function applyLayer2Data(serverData) {
     let hasChanges = false;
+    let matchCount = 0; // Đếm số lượng khớp
 
-    // Kiểm tra nếu compList chưa có dữ liệu thì không làm gì cả
-    if (!window.compList || window.compList.length === 0) return;
+    // In ra thử 1 key đầu tiên của Server để xem mặt mũi nó thế nào
+    if (Math.random() < 0.05) { // Chỉ in thỉnh thoảng cho đỡ spam
+        console.log("🔥 Server Keys mẫu:", Object.keys(serverData).slice(0, 3));
+    }
 
     compList.forEach(c => {
         let keysToTry = [];
         
-        // Ưu tiên 1: Ghép chuẩn ID + Quote (VD: ALPHA_175USDT)
+        // 1. Tạo Key thử nghiệm
         if (c.alphaId) {
             let quote = c.quoteAsset || 'USDT';
-            keysToTry.push(c.alphaId + quote);
+            keysToTry.push(c.alphaId + quote);      // VD: ALPHA_175USDT
+            keysToTry.push(c.alphaId);              // VD: ALPHA_175
         }
-        
-        // Ưu tiên 2: Tìm theo Symbol viết hoa (VD: GORILLA)
         if (c.name) {
-             keysToTry.push(c.name.toUpperCase().trim());
+             keysToTry.push(c.name.toUpperCase().trim()); // VD: GORILLA
         }
 
+        // 2. Tìm trong dữ liệu Server
         let liveItem = null;
         for (let k of keysToTry) {
             if (serverData[k]) {
@@ -6578,12 +6581,20 @@ function applyLayer2Data(serverData) {
             }
         }
 
+        // 3. Nếu tìm thấy
         if (liveItem) {
+            matchCount++;
+            
+            // LOGIC CŨ GIỮ NGUYÊN
             c.cachedPrice = liveItem.p;
             if (!c.market_analysis) c.market_analysis = {};
-            c.market_analysis.price = liveItem.p;
+            
+            // Kiểm tra xem giá có thực sự thay đổi không
+            if (c.market_analysis.price !== liveItem.p) {
+                // console.log(`Price Update ${c.name}: ${c.market_analysis.price} -> ${liveItem.p}`);
+                c.market_analysis.price = liveItem.p;
+            }
 
-            // Lưu trạng thái để vẽ màu
             c.liveStatus = liveItem.st; 
             c.liveColor = liveItem.cl;  
             c.liveBg = liveItem.sb;     
@@ -6592,16 +6603,16 @@ function applyLayer2Data(serverData) {
         }
     });
 
-    if (hasChanges) {
-        // Cập nhật giao diện chính
+    // BÁO CÁO KẾT QUẢ
+    if (matchCount === 0) {
+        console.warn("⚠️ KHÔNG KHỚP ĐƯỢC TOKEN NÀO! Kiểm tra lại logic ghép Key.");
+        console.log("Frontend Key ví dụ:", compList[0]?.alphaId, compList[0]?.name);
+    } else if (hasChanges) {
+        // console.log(`✅ Đã cập nhật giá cho ${matchCount} tokens.`);
         if (typeof updateGridValuesOnly === 'function') {
             updateGridValuesOnly();
         }
-
-        // Cập nhật Market Health Table (Nếu đang mở Pro Mode)
-        // Đây là chỗ giúp bảng Health chạy lại
         if (typeof renderMarketHealthTable === 'function') {
-            // Chỉ render lại nếu người dùng đang nhìn thấy bảng đó để đỡ lag
             const healthTable = document.getElementById('market-health-table');
             if (healthTable && healthTable.offsetParent !== null) {
                 renderMarketHealthTable();
