@@ -2601,9 +2601,6 @@ margin-top: 2px;
     color: #000;
 }
 
-/* ============================================================
-   ALGO-LIMIT RADAR (PRO-TRADER EDITION)
-   ============================================================ */
 
 
 .radar-card {
@@ -2769,21 +2766,57 @@ margin-top: 2px;
 }
 
 
-#tab-running, #tab-history {
-    color: #848e9c;
-}
-#tab-running:hover, #tab-history:hover {
-    color: #fff;
+
+
+.comp-tab-container {
+    background: #131722 !important;     
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;                  
+    padding: 3px;                    
+    display: inline-flex;             
+    gap: 4px;                         
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 
-#tab-running, #tab-history, 
-#tab-running.active, #tab-history.active {
-    text-decoration: none !important;
-    border: none !important;
-    border-bottom: none !important; 
-    background: transparent !important; 
-    box-shadow: none !important;
-    outline: none !important;
+.radar-tab {
+    background: transparent;
+    border: 1px solid transparent;       
+    color: #848E9C;                   
+    padding: 5px 20px;                   
+    font-family: 'Rajdhani', sans-serif;  
+    font-weight: 700;
+    font-size: 11px !important;          
+    border-radius: 4px;              
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.radar-tab:hover {
+    color: #EAECEF;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+
+.radar-tab.active {
+    background: rgba(0, 240, 255, 0.15) !important; 
+    color: #00F0FF !important;            
+    border-color: rgba(0, 240, 255, 0.3) !important; 
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.15); 
+}
+
+
+.radar-tab.active .fa-circle {
+    color: #00F0FF !important;
+    text-shadow: 0 0 5px #00F0FF;
+}
+.radar-tab:not(.active) .fa-circle {
+    color: #2fb344 !important; 
 }
 
