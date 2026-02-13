@@ -1010,7 +1010,22 @@ async function syncAlphaData() {
 
 
         const rawList = json.data || json.tokens || [];
-        
+       // --- [QUAN TRỌNG] THÊM ĐOẠN NÀY ĐỂ TẠO DANH SÁCH TOKEN ---
+        window.compList = rawList.map(item => ({
+            // Lấy ID chuẩn để lát nữa khớp với Realtime (QUAN TRỌNG NHẤT)
+            alphaId: (item.alphaId || item.id || item.i || '').toString(), 
+            
+            // Lấy tên
+            name: item.s || item.symbol || item.name || 'UNKNOWN',
+            quoteAsset: item.q || item.quoteAsset || 'USDT',
+            
+            // Giá ban đầu (trước khi Realtime chạy)
+            cachedPrice: item.p || item.price || 0,
+            
+            // Icon
+            icon: item.ic || item.icon || '',
+            chain_icon: item.ci || item.chain_icon || ''
+        }));
         rawList.forEach(item => {
             if(item.s) {
                 let sym = item.s.toUpperCase().trim();
