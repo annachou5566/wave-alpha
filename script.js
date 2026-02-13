@@ -6504,7 +6504,7 @@ function handleVote(tokenId, type, btnElement) {
 
 
 // ==========================================
-// KẾT NỐI REALTIME LAYER 2 (NODE.JS)
+// KẾT NỐI REALTIME LAYER 2 (NODE.JS) - BẢN FIX LỖI
 // ==========================================
 let layer2Interval = null;
 
@@ -6517,7 +6517,13 @@ function startRealtimeSync() {
 }
 
 async function fetchLayer2Data() {
-    // Tiết kiệm tài nguyên: Không gọi nếu tab đang ẩn
+    // 1. Kiểm tra biến cấu hình có tồn tại không
+    if (typeof REALTIME_API_URL === 'undefined' || typeof REALTIME_API_KEY === 'undefined') {
+        console.error("⛔ Lỗi: Chưa khai báo REALTIME_API_URL hoặc REALTIME_API_KEY ở đầu file!");
+        return;
+    }
+
+    // 2. Không chạy nếu tab đang ẩn
     if (document.hidden) return;
 
     try {
@@ -6525,12 +6531,12 @@ async function fetchLayer2Data() {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': REALTIME_API_KEY // <--- Gửi chìa khóa ở đây
+                'x-api-key': REALTIME_API_KEY // <--- Dùng đúng tên biến đã khai báo ở đầu file
             }
         });
 
         if (res.status === 403) {
-            console.error("⛔ Sai API Key! Vui lòng kiểm tra lại code Frontend.");
+            console.error("⛔ Sai API Key! Vui lòng kiểm tra lại Key trên Render và trong file script.js");
             return;
         }
 
@@ -6544,30 +6550,25 @@ async function fetchLayer2Data() {
 }
 
 function applyLayer2Data(serverData) {
-    // serverData: { "ALPHA_175USDT": { p: 0.007, st: 'DUMPING', ... } }
-    
     let hasChanges = false;
 
-    // Duyệt qua danh sách token đang hiển thị trên web
+    // Kiểm tra nếu compList chưa có dữ liệu thì không làm gì cả
+    if (!window.compList || window.compList.length === 0) return;
+
     compList.forEach(c => {
-        // Tạo key để tìm trong dữ liệu Server trả về
-        // Logic ghép: ID (ALPHA_xxx) + Symbol (USDT/USDC)
-        // Nếu c.alphaId thiếu, dùng c.contract hoặc c.name để đoán
-        
         let keysToTry = [];
         
-        // Ưu tiên 1: Ghép chuẩn (ALPHA_175 + USDT)
+        // Ưu tiên 1: Ghép chuẩn ID + Quote (VD: ALPHA_175USDT)
         if (c.alphaId) {
             let quote = c.quoteAsset || 'USDT';
             keysToTry.push(c.alphaId + quote);
         }
         
-        // Ưu tiên 2: Tìm theo Symbol viết hoa (ví dụ: GORILLA) - Dành cho token chưa có AlphaID
+        // Ưu tiên 2: Tìm theo Symbol viết hoa (VD: GORILLA)
         if (c.name) {
              keysToTry.push(c.name.toUpperCase().trim());
         }
 
-        // Thử tìm trong serverData
         let liveItem = null;
         for (let k of keysToTry) {
             if (serverData[k]) {
@@ -6576,27 +6577,34 @@ function applyLayer2Data(serverData) {
             }
         }
 
-        // Nếu tìm thấy dữ liệu mới
         if (liveItem) {
-            // Cập nhật giá
             c.cachedPrice = liveItem.p;
             if (!c.market_analysis) c.market_analysis = {};
             c.market_analysis.price = liveItem.p;
 
-            // Cập nhật màu sắc & trạng thái (Để vẽ hiệu ứng)
-            c.liveStatus = liveItem.st; // PRIME, DUMPING, SLIPPAGE...
-            c.liveColor = liveItem.cl;  // Màu chữ (#0ECB81...)
-            c.liveBg = liveItem.sb;     // Màu nền
-
-            // Cập nhật Volume 24h (Tùy chọn, nếu muốn số nhảy liên tục)
-            // if (liveItem.v > 0) c.real_alpha_volume = liveItem.v;
+            // Lưu trạng thái để vẽ màu
+            c.liveStatus = liveItem.st; 
+            c.liveColor = liveItem.cl;  
+            c.liveBg = liveItem.sb;     
 
             hasChanges = true;
         }
     });
 
-    // Chỉ vẽ lại nếu có dữ liệu mới
     if (hasChanges) {
-        updateGridValuesOnly();
+        // Cập nhật giao diện chính
+        if (typeof updateGridValuesOnly === 'function') {
+            updateGridValuesOnly();
+        }
+
+        // Cập nhật Market Health Table (Nếu đang mở Pro Mode)
+        // Đây là chỗ giúp bảng Health chạy lại
+        if (typeof renderMarketHealthTable === 'function') {
+            // Chỉ render lại nếu người dùng đang nhìn thấy bảng đó để đỡ lag
+            const healthTable = document.getElementById('market-health-table');
+            if (healthTable && healthTable.offsetParent !== null) {
+                renderMarketHealthTable();
+            }
+        }
     }
 }
