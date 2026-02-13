@@ -22,13 +22,13 @@ function requireBotToken() {
     let currentToken = TELE_BOT_CONFIG.token;
     if (!currentToken) {
 
-        let input = prompt("⚠️ CHƯA CÓ TOKEN BOT!\n\nVui lòng dán Token BotFather vào đây:");
+        let input = prompt("⚠️ CHƯA CÓ TOKEN BOT!\n\nVui lòng dán Token BotFather vào đây (Chỉ cần làm 1 lần trên máy này):");
         if (input && input.trim() !== "") {
             localStorage.setItem('WAVE_TELE_TOKEN', input.trim());
-            alert("✅ Đã lưu Token vào máy!");
+            alert("✅ Đã lưu Token vào máy! Từ giờ bạn có thể cập nhật thoải mái.");
             return true;
         } else {
-            alert("❌ Chưa nhập Token nên không thể gửi tin nhắn Telegram.");
+            alert("❌ Bạn chưa nhập Token nên không thể gửi tin nhắn Telegram.");
             return false;
         }
     }
@@ -218,7 +218,7 @@ const translations = {
        ========================================================== */
     en: {
 
-        nav_sys_time: "SYSTEM TIME",
+        nav_sys_time: "TIME (UTC)",
         nav_guide: "GUIDE",
         nav_login: "Login",
         nav_logout: "Logout",
@@ -370,7 +370,7 @@ const translations = {
        2. TIẾNG VIỆT (VI)
        ========================================================== */
     vi: {
-        nav_sys_time: "GIỜ HỆ THỐNG",
+        nav_sys_time: "GIỜ (UTC)",
         nav_guide: "HƯỚNG DẪN",
         nav_login: "Đăng nhập",
         nav_logout: "Đăng xuất",
@@ -518,7 +518,7 @@ const translations = {
        3. TIẾNG TRUNG (ZH)
        ========================================================== */
     zh: {
-        nav_sys_time: "系统时间",
+        nav_sys_time: "TIME (UTC)",
         nav_guide: "指南",
         nav_login: "登录",
         nav_logout: "登出",
@@ -666,7 +666,7 @@ const translations = {
        4. TIẾNG HÀN (KO)
        ========================================================== */
     ko: {
-        nav_sys_time: "시스템 시간",
+        nav_sys_time: "TIME (UTC)",
         nav_guide: "가이드",
         nav_login: "로그인",
         nav_logout: "로그아웃",
@@ -1875,13 +1875,10 @@ async function loadFromCloud(isSilent = false) {
         const brandImg = document.getElementById('nav-brand-img');
         const brandText = document.getElementById('nav-brand-text');
         if(brandText) brandText.style.display = 'block';
-        if(siteConfig.brandLogo) {
-            brandImg.src = siteConfig.brandLogo;
-            brandImg.style.display = 'block';
-        } else {
-            brandImg.style.display = 'none';
+        brandImg.src = "https://pub-78b1d1c3a4f64da39a75efb9b66ccf65.r2.dev/logo-wave-alpha.png";
+brandImg.style.display = 'block';
         }
-    }
+    
 
 
     function openConfigModal() {
@@ -1926,7 +1923,7 @@ async function saveGlobalConfig() {
         x: document.getElementById('cfg-x').value.trim(),
         tele: document.getElementById('cfg-tele').value.trim(),
         yt: document.getElementById('cfg-yt').value.trim(),
-        brandLogo: document.getElementById('cfg-logo-url').value.trim(),
+        
 
 
         ref_binance: document.getElementById('cfg-ref-binance').value.trim(),
@@ -3019,11 +3016,11 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
                     if (diffMs > 0 && speed > 0) {
                         let estFinal = currentTotal + (speed * (diffMs / 1000));
                         estLine = `<div class="cell-secondary" style="
-        color: #00F0FF !important;
-        opacity: 1 !important;       
-        font-weight: 600;             
-        font-size: 0.7rem;            
-        margin-top: 1px;             
+        color: #00F0FF !important;    /* Màu Cyan chuẩn */
+        opacity: 1 !important;        /* Hiển thị rõ 100% */
+        font-weight: 600;             /* Đậm vừa phải cho dễ đọc */
+        font-size: 0.7rem;            /* Kích thước vừa vặn */
+        margin-top: 1px;              /* Tách nhẹ khỏi số tổng */
     ">Est: ${fmtNoDec(estFinal)}</div>`;
 }
                 }
@@ -6473,6 +6470,3 @@ function handleVote(tokenId, type, btnElement) {
 
     console.log(`User voted ${type} for token ${tokenId}`);
 }
-
-
-
