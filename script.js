@@ -6525,35 +6525,36 @@ function startRealtimeSync() {
 }
 
 async function fetchLayer2Data() {
-    // 1. Kiểm tra biến cấu hình có tồn tại không
-    if (typeof REALTIME_API_URL === 'undefined' || typeof REALTIME_API_KEY === 'undefined') {
-        console.error("⛔ Lỗi: Chưa khai báo REALTIME_API_URL hoặc REALTIME_API_KEY ở đầu file!");
-        return;
-    }
-
-    // 2. Không chạy nếu tab đang ẩn
-    if (document.hidden) return;
+    if (document.hidden) return; // Không tải khi ẩn tab
 
     try {
-        const res = await fetch(`${REALTIME_API_URL}?t=${Date.now()}`, {
+        // MẸO: Thêm timestamp vào URL để trình duyệt không bao giờ cache dữ liệu này
+        const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
+        
+        const res = await fetch(antiCacheUrl, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': REALTIME_API_KEY // <--- Dùng đúng tên biến đã khai báo ở đầu file
+                'x-api-key': REALTIME_API_KEY,
+                'Cache-Control': 'no-cache', // Ép thêm một lớp bảo vệ nữa
+                'Pragma': 'no-cache'
             }
         });
 
         if (res.status === 403) {
-            console.error("⛔ Sai API Key! Vui lòng kiểm tra lại Key trên Render và trong file script.js");
+            console.error("⛔ Lỗi Key!");
             return;
         }
 
         const json = await res.json();
+        
+        // KIỂM TRA THỜI GIAN SERVER TRẢ VỀ
         if (json.success && json.data) {
+            // console.log("Dữ liệu mới nhận lúc:", json.last_sync);
             applyLayer2Data(json.data);
         }
     } catch (e) {
-        console.error("Lỗi kết nối Layer 2:", e);
+        console.error("Lỗi Layer 2:", e);
     }
 }
 
