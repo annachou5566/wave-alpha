@@ -6622,3 +6622,40 @@ function applyLayer2Data(serverData) {
         }
     }
 }
+
+// --- TOOL DEBUG CHO MÁY TÍNH BẢNG (Dán cuối file script.js) ---
+// Tự động hiện một bảng thông báo trạng thái kết nối
+setInterval(() => {
+    // Chỉ tạo bảng 1 lần
+    if (!document.getElementById('debug-panel')) {
+        const div = document.createElement('div');
+        div.id = 'debug-panel';
+        div.style.cssText = "position:fixed; bottom:10px; right:10px; width:250px; background:rgba(0,0,0,0.9); color:#00F0FF; border:1px solid #00F0FF; padding:10px; font-size:11px; z-index:9999; font-family:monospace; pointer-events:none;";
+        document.body.appendChild(div);
+    }
+
+    const panel = document.getElementById('debug-panel');
+    
+    // Kiểm tra xem biến compList có dữ liệu chưa
+    const totalTokens = (window.compList || []).length;
+    
+    // Kiểm tra mẫu thử (Token đầu tiên)
+    let samplePrice = "Chưa có";
+    let sampleName = "None";
+    
+    if (totalTokens > 0) {
+        sampleName = window.compList[0].name; // Ví dụ: GORILLA
+        samplePrice = window.compList[0].cachedPrice || "Chờ...";
+    }
+
+    panel.innerHTML = `
+        <b>⚡ SYSTEM STATUS</b><br/>
+        ------------------<br/>
+        • Tokens trên Web: ${totalTokens}<br/>
+        • Sample (${sampleName}): <b style="color:white">${samplePrice}</b><br/>
+        • API URL: ${typeof REALTIME_API_URL !== 'undefined' ? 'OK' : 'MISSING'}<br/>
+        • API KEY: ${typeof REALTIME_API_KEY !== 'undefined' ? 'OK' : 'MISSING'}<br/>
+        ------------------<br/>
+        <i>(Bảng này chỉ để test, xóa code cuối file để ẩn đi)</i>
+    `;
+}, 1000);
