@@ -3,7 +3,8 @@
     
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
-
+    const REALTIME_API_URL = 'https://alpha-realtime.onrender.com/api/prices';
+    const REALTIME_API_KEY = 'WaveAlpha_S3cur3_P@ssw0rd_5566';
 const PREDICT_FEE = 100;
 
 
@@ -1150,7 +1151,7 @@ data.forEach(miniRow => {
 function init() {
     checkLegal();
     syncAlphaData();
-    
+    startRealtimeSync();
 
     const cachedData = localStorage.getItem('wave_comp_list');
     let hasCache = false;
@@ -2631,17 +2632,47 @@ if (volEl) {
 
 
                 const priceEl = cardWrapper.querySelector('.live-price-val');
-                if (priceEl && currentPrice > 0) {
-                    let pStr = currentPrice < 1 
-                        ? '$' + currentPrice.toLocaleString('en-US', { maximumFractionDigits: 6 }) 
-                        : '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    
-                    if(priceEl.innerText !== pStr) {
-                        priceEl.innerText = pStr;
-                        priceEl.classList.add('text-brand'); 
-                        setTimeout(() => priceEl.classList.remove('text-brand'), 500);
-                    }
-                }
+
+if (priceEl && currentPrice > 0) {
+    // 1. Format giá tiền (Logic cũ: < $1 lấy 6 số lẻ, > $1 lấy 2 số lẻ)
+    let pStr = currentPrice < 1 
+        ? '$' + currentPrice.toLocaleString('en-US', { maximumFractionDigits: 6 }) 
+        : '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    // 2. Cập nhật UI nếu Giá thay đổi HOẶC Trạng thái thay đổi (để cập nhật màu)
+    if (priceEl.innerText !== pStr || c.liveStatus) {
+        priceEl.innerText = pStr;
+
+        // --- LOGIC MỚI: MÀU SẮC TỪ SERVER LAYER 2 ---
+        if (c.liveColor) {
+            // Áp dụng màu trực tiếp từ Server (Xanh/Đỏ/Cyan...)
+            priceEl.style.color = c.liveColor;
+            priceEl.style.transition = 'color 0.2s ease, text-shadow 0.2s ease'; // Hiệu ứng mượt
+
+            // Nếu Server báo biến động mạnh (DUMP hoặc SLIPPAGE) -> Thêm hiệu ứng phát sáng
+            if (c.liveStatus === 'DUMPING' || c.liveStatus === 'SLIPPAGE') {
+                priceEl.style.textShadow = `0 0 8px ${c.liveColor}`; // Phát sáng
+                priceEl.style.fontWeight = '800'; // Đậm hơn
+            } else {
+                // Trạng thái bình thường (PRIME, PUMPING, NORMAL)
+                priceEl.style.textShadow = 'none';
+                priceEl.style.fontWeight = '700';
+            }
+        } 
+        // --- LOGIC CŨ (BACKUP): FLASH MÀU BRAND ---
+        else {
+            // Nếu chưa kết nối được Server Node.js, dùng lại hiệu ứng cũ
+            priceEl.style.color = ''; // Xóa style inline để nhận class CSS
+            priceEl.style.textShadow = 'none';
+            
+            priceEl.classList.remove('text-brand'); // Reset để kích hoạt lại animation
+            void priceEl.offsetWidth; // Trigger reflow
+            priceEl.classList.add('text-brand');
+            
+            setTimeout(() => priceEl.classList.remove('text-brand'), 500);
+        }
+    }
+}
 
 
                 const estEl = cardWrapper.querySelector('.live-est-val');
@@ -6469,4 +6500,103 @@ function handleVote(tokenId, type, btnElement) {
     
 
     console.log(`User voted ${type} for token ${tokenId}`);
+}
+
+
+// ==========================================
+// KẾT NỐI REALTIME LAYER 2 (NODE.JS)
+// ==========================================
+let layer2Interval = null;
+
+function startRealtimeSync() {
+    console.log("🚀 Kích hoạt Realtime Node.js (Layer 2)...");
+    if (layer2Interval) clearInterval(layer2Interval);
+
+    fetchLayer2Data(); // Gọi ngay lần đầu
+    layer2Interval = setInterval(fetchLayer2Data, 3000); // Lặp lại mỗi 3s
+}
+
+async function fetchLayer2Data() {
+    // Tiết kiệm tài nguyên: Không gọi nếu tab đang ẩn
+    if (document.hidden) return;
+
+    try {
+        const res = await fetch(REALTIME_API_URL, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': REALTIME_API_KEY // <--- Gửi chìa khóa ở đây
+            }
+        });
+
+        if (res.status === 403) {
+            console.error("⛔ Sai API Key! Vui lòng kiểm tra lại code Frontend.");
+            return;
+        }
+
+        const json = await res.json();
+        if (json.success && json.data) {
+            applyLayer2Data(json.data);
+        }
+    } catch (e) {
+        console.error("Lỗi kết nối Layer 2:", e);
+    }
+}
+
+function applyLayer2Data(serverData) {
+    // serverData: { "ALPHA_175USDT": { p: 0.007, st: 'DUMPING', ... } }
+    
+    let hasChanges = false;
+
+    // Duyệt qua danh sách token đang hiển thị trên web
+    compList.forEach(c => {
+        // Tạo key để tìm trong dữ liệu Server trả về
+        // Logic ghép: ID (ALPHA_xxx) + Symbol (USDT/USDC)
+        // Nếu c.alphaId thiếu, dùng c.contract hoặc c.name để đoán
+        
+        let keysToTry = [];
+        
+        // Ưu tiên 1: Ghép chuẩn (ALPHA_175 + USDT)
+        if (c.alphaId) {
+            let quote = c.quoteAsset || 'USDT';
+            keysToTry.push(c.alphaId + quote);
+        }
+        
+        // Ưu tiên 2: Tìm theo Symbol viết hoa (ví dụ: GORILLA) - Dành cho token chưa có AlphaID
+        if (c.name) {
+             keysToTry.push(c.name.toUpperCase().trim());
+        }
+
+        // Thử tìm trong serverData
+        let liveItem = null;
+        for (let k of keysToTry) {
+            if (serverData[k]) {
+                liveItem = serverData[k];
+                break;
+            }
+        }
+
+        // Nếu tìm thấy dữ liệu mới
+        if (liveItem) {
+            // Cập nhật giá
+            c.cachedPrice = liveItem.p;
+            if (!c.market_analysis) c.market_analysis = {};
+            c.market_analysis.price = liveItem.p;
+
+            // Cập nhật màu sắc & trạng thái (Để vẽ hiệu ứng)
+            c.liveStatus = liveItem.st; // PRIME, DUMPING, SLIPPAGE...
+            c.liveColor = liveItem.cl;  // Màu chữ (#0ECB81...)
+            c.liveBg = liveItem.sb;     // Màu nền
+
+            // Cập nhật Volume 24h (Tùy chọn, nếu muốn số nhảy liên tục)
+            // if (liveItem.v > 0) c.real_alpha_volume = liveItem.v;
+
+            hasChanges = true;
+        }
+    });
+
+    // Chỉ vẽ lại nếu có dữ liệu mới
+    if (hasChanges) {
+        updateGridValuesOnly();
+    }
 }
