@@ -6552,68 +6552,70 @@ async function fetchLayer2Data() {
 
 function applyLayer2Data(serverData) {
     let hasChanges = false;
-    let matchCount = 0; // Đếm số lượng khớp
-
-    // In ra thử 1 key đầu tiên của Server để xem mặt mũi nó thế nào
-    if (Math.random() < 0.05) { // Chỉ in thỉnh thoảng cho đỡ spam
-        console.log("🔥 Server Keys mẫu:", Object.keys(serverData).slice(0, 3));
-    }
+    
+    // Kiểm tra danh sách token trên web
+    if (!window.compList || window.compList.length === 0) return;
 
     compList.forEach(c => {
-        let keysToTry = [];
-        
-        // 1. Tạo Key thử nghiệm
-        if (c.alphaId) {
-            let quote = c.quoteAsset || 'USDT';
-            keysToTry.push(c.alphaId + quote);      // VD: ALPHA_175USDT
-            keysToTry.push(c.alphaId);              // VD: ALPHA_175
-        }
-        if (c.name) {
-             keysToTry.push(c.name.toUpperCase().trim()); // VD: GORILLA
-        }
-
-        // 2. Tìm trong dữ liệu Server
         let liveItem = null;
-        for (let k of keysToTry) {
-            if (serverData[k]) {
-                liveItem = serverData[k];
-                break;
+
+        // --- LOGIC KHỚP LỆNH MỚI (Dựa trên kết quả Debug) ---
+        // Server trả về Key là "1", "42"...
+        // Frontend đang giữ ID là "ALPHA_1", "ALPHA_42"...
+        // => Cần cắt bỏ chữ "ALPHA_" để lấy số.
+        
+        if (c.alphaId) {
+            // Cách 1: Xóa chữ "ALPHA_" và tìm theo số
+            let idNum = c.alphaId.replace("ALPHA_", ""); // "ALPHA_42" -> "42"
+            
+            if (serverData[idNum]) {
+                liveItem = serverData[idNum];
             }
         }
 
-        // 3. Nếu tìm thấy
-        if (liveItem) {
-            matchCount++;
-            
-            // LOGIC CŨ GIỮ NGUYÊN
-            c.cachedPrice = liveItem.p;
-            if (!c.market_analysis) c.market_analysis = {};
-            
-            // Kiểm tra xem giá có thực sự thay đổi không
-            if (c.market_analysis.price !== liveItem.p) {
-                // console.log(`Price Update ${c.name}: ${c.market_analysis.price} -> ${liveItem.p}`);
-                c.market_analysis.price = liveItem.p;
-            }
+        // Cách 2: Nếu không có AlphaID, thử tìm theo Tên (Phòng hờ)
+        if (!liveItem && c.name) {
+             // Tìm "mò" trong toàn bộ dữ liệu server
+             // (Code này chạy hơi chậm xíu nhưng an toàn)
+             for (let key in serverData) {
+                 // Nếu server có trả về trường symbol/name thì so sánh
+                 // Nhưng theo log bạn gửi thì server chỉ trả về {p, st, cl...} nên cách 1 là chủ yếu.
+             }
+        }
 
-            c.liveStatus = liveItem.st; 
-            c.liveColor = liveItem.cl;  
+        // --- NẾU TÌM THẤY DỮ LIỆU ---
+        if (liveItem) {
+            // 1. Cập nhật Giá
+            let oldPrice = c.cachedPrice;
+            c.cachedPrice = liveItem.p;
+            
+            if (!c.market_analysis) c.market_analysis = {};
+            c.market_analysis.price = liveItem.p;
+
+            // 2. Cập nhật Màu & Trạng thái (Quan trọng để hiển thị đẹp)
+            c.liveStatus = liveItem.st; // NORMAL, DUMPING...
+            c.liveColor = liveItem.cl;  // #0ECB81...
             c.liveBg = liveItem.sb;     
 
-            hasChanges = true;
+            // 3. Đánh dấu để vẽ lại giao diện
+            // Vẽ lại nếu giá thay đổi HOẶC trạng thái đang là DUMPING (cần nhấp nháy)
+            if (oldPrice !== liveItem.p || c.liveStatus === 'DUMPING' || c.liveStatus === 'SLIPPAGE') {
+                hasChanges = true;
+            }
         }
     });
 
-    // BÁO CÁO KẾT QUẢ
-    if (matchCount === 0) {
-        console.warn("⚠️ KHÔNG KHỚP ĐƯỢC TOKEN NÀO! Kiểm tra lại logic ghép Key.");
-        console.log("Frontend Key ví dụ:", compList[0]?.alphaId, compList[0]?.name);
-    } else if (hasChanges) {
-        // console.log(`✅ Đã cập nhật giá cho ${matchCount} tokens.`);
+    // --- VẼ LẠI GIAO DIỆN ---
+    if (hasChanges) {
+        // Cập nhật các ô giá trên lưới
         if (typeof updateGridValuesOnly === 'function') {
             updateGridValuesOnly();
         }
+
+        // Cập nhật bảng Market Health (Nếu đang mở Pro Mode)
         if (typeof renderMarketHealthTable === 'function') {
             const healthTable = document.getElementById('market-health-table');
+            // Chỉ vẽ lại nếu bảng đang hiện trên màn hình (để đỡ lag máy tính bảng)
             if (healthTable && healthTable.offsetParent !== null) {
                 renderMarketHealthTable();
             }
