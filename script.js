@@ -6511,17 +6511,15 @@ function handleVote(tokenId, type, btnElement) {
 }
 
 
-// ==========================================
-// KẾT NỐI REALTIME LAYER 2 (NODE.JS) - BẢN FIX LỖI
-// ==========================================
+
 
 
 function startRealtimeSync() {
-    console.log("🚀 Kích hoạt Realtime Node.js (Layer 2)...");
     if (layer2Interval) clearInterval(layer2Interval);
+    
 
-    fetchLayer2Data(); // Gọi ngay lần đầu
-    layer2Interval = setInterval(fetchLayer2Data, 3000); // Lặp lại mỗi 3s
+    fetchLayer2Data(); 
+    layer2Interval = setInterval(fetchLayer2Data, 3000);
 }
 
 async function fetchLayer2Data() {
@@ -6529,101 +6527,47 @@ async function fetchLayer2Data() {
 
     try {
         const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
-        
         const res = await fetch(antiCacheUrl, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': REALTIME_API_KEY,
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
+                'x-api-key': REALTIME_API_KEY
             }
         });
 
         const json = await res.json();
-        
         if (json.success && json.data) {
-            // DÒNG NÀY QUAN TRỌNG: Mở console hoặc nhìn Radar Monitor để thấy
-            // console.log("Dữ liệu thô từ Render:", json.data); 
-            
-            // Gọi hàm dán giá (Phải dùng bản khớp theo Tên Symbol)
             applyLayer2Data(json.data);
         }
     } catch (e) {
-        console.error("Lỗi kết nối Render:", e);
+        
     }
-}function applyLayer2Data(serverData) {
+}
+
+function applyLayer2Data(serverData) {
     if (!window.compList || window.compList.length === 0) return;
 
     const serverItems = Object.values(serverData);
+    let hasChanges = false;
 
     compList.forEach(c => {
-        const nameOnWeb = (c.name || "").toUpperCase().trim();
+        const webName = (c.name || "").toUpperCase().trim();
         
-        // 🔍 Tìm theo Tên (Symbol) vì ID đang bị lệch giữa R2 và Binance
-        const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === nameOnWeb));
+        
+        const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === webName));
 
         if (liveItem) {
-            // Dán giá 0.29 vào bộ nhớ Web
             c.cachedPrice = liveItem.p;
             c.liveStatus = liveItem.st || 'NORMAL';
             c.liveColor = liveItem.cl || '#0ECB81';
+            hasChanges = true;
         }
     });
 
-    // 🚀 ĐẨY GIÁ RA MÀN HÌNH
-    if (typeof updateGridValuesOnly === 'function') {
+
+    if (hasChanges && typeof updateGridValuesOnly === 'function') {
         updateGridValuesOnly();
     }
 }
 
-// ==========================================
-// 🛰️ RADAR MONITOR V3 - MÁY NỘI SOI LỖI
-// ==========================================
-let lastFetchStatus = "Đang chờ...";
-let lastFetchTime = "---";
-
-// Ghi đè hàm fetch để bắt sóng cuộc gọi tới Render
-const originalFetch = window.fetch;
-window.fetch = async (...args) => {
-    const res = await originalFetch(...args);
-    if (args[0] && typeof args[0] === 'string' && args[0].includes('api/prices')) {
-        lastFetchStatus = res.status + " " + res.statusText;
-        lastFetchTime = new Date().toLocaleTimeString();
-    }
-    return res;
-};
-
-setInterval(() => {
-    if (!document.getElementById('radar-monitor')) {
-        const header = document.createElement('div');
-        header.id = 'radar-monitor';
-        header.style.cssText = "width: 100%; background: #0b1217; border: 2px solid #ff0000; margin-bottom: 15px; padding: 15px; border-radius: 12px; color: #fff; font-family: monospace; display: flex; justify-content: space-between;";
-        const container = document.querySelector('.container') || document.body;
-        container.prepend(header);
-    }
-
-    const monitor = document.getElementById('radar-monitor');
-    const t1 = (window.compList && window.compList.length > 0) ? window.compList[0] : null;
-
-    if (t1) {
-        // Kiểm tra xem giá trên Web có phải là giá mới (đầu 0.007...) hay không
-        const webPrice = t1.cachedPrice.toString();
-        const isMatched = webPrice.startsWith("0.0077"); 
-        
-        monitor.style.borderColor = isMatched ? "#0ECB81" : "#ff0000";
-
-        monitor.innerHTML = `
-            <div style="flex: 1.5;">
-                <span style="color:#FFD700; font-weight:bold;">📡 SERVER STATUS: ${lastFetchStatus}</span><br/>
-                <span style="font-size:11px;">Cập nhật lúc: ${lastFetchTime}</span><br/>
-                <span style="font-size:18px; font-weight:bold;">${t1.name}: $${Number(t1.cachedPrice).toFixed(10)}</span>
-            </div>
-            <div style="flex: 1; text-align: right; font-size: 11px; border-left: 1px solid #333; padding-left:10px;">
-                <b style="color:${isMatched ? '#0ECB81' : '#ff4444'}">${isMatched ? '✅ ĐÃ NHẬN GIÁ MỚI' : '❌ ĐANG HIỆN GIÁ CŨ'}</b><br/>
-                <span>ID: ${t1.alphaId}</span><br/>
-                <span>Số Token: ${window.compList.length}</span>
-            </div>
-        `;
-    }
-}, 1000);
+document.addEventListener('DOMContentLoaded', startRealtimeSync);
