@@ -1003,54 +1003,39 @@ let alphaMarketCache = {};
 
 async function syncAlphaData() {
     try {
-        // Lưu ý: Nếu chạy trên web mà lỗi 404, hãy thử sửa đường dẫn thành '/data/market-data.json' (bỏ chữ public)
-        const res = await fetch('public/data/market-data.json?t=' + Date.now());
-        const json = await res.json();
+        console.log("🔄 Đang xin danh sách Token từ Server Layer 2...");
         
-        const rawList = json.data || json.tokens || [];
-        
-        // --- [QUAN TRỌNG] THÊM ĐOẠN NÀY ĐỂ TẠO DANH SÁCH TOKEN ---
-        window.compList = rawList.map(item => ({
-            // Lấy ID chuẩn để lát nữa khớp với Realtime (QUAN TRỌNG NHẤT)
-            alphaId: (item.alphaId || item.id || item.i || '').toString(), 
-            
-            // Lấy tên
-            name: item.s || item.symbol || item.name || 'UNKNOWN',
-            quoteAsset: item.q || item.quoteAsset || 'USDT',
-            
-            // Giá ban đầu (trước khi Realtime chạy)
-            cachedPrice: item.p || item.price || 0,
-            
-            // Icon
-            icon: item.ic || item.icon || '',
-            chain_icon: item.ci || item.chain_icon || ''
-        }));
-        // ----------------------------------------------------------
-
-        // Đoạn code cũ của bạn (Giữ lại để tương thích với các phần khác)
-        rawList.forEach(item => {
-            if(item.s) {
-                let sym = item.s.toUpperCase().trim();
-                alphaMarketCache[sym] = {
-                    icon: item.ic || item.icon || '',
-                    chain_icon: item.ci || item.chain_icon || ''
-                };
+        // Gọi vào API mới vừa tạo trên Node.js
+        const res = await fetch('https://alpha-realtime.onrender.com/api/tokens', {
+            headers: {
+                'x-api-key': 'WaveAlpha_S3cur3_P@ssw0rd_5566' 
             }
         });
-        
-        console.log(`✅ Đã nạp thành công ${window.compList.length} token vào Web.`);
-        
+
+        if (!res.ok) throw new Error("Server từ chối hoặc lỗi R2");
+
+        const json = await res.json();
+        const rawList = json.data || [];
+
+        // NẠP DỮ LIỆU
+        window.compList = rawList.map(item => ({
+            alphaId: (item.alphaId || item.id || item.i || '').toString().replace("ALPHA_", ""),
+            name: item.s || item.symbol || item.name || 'UNKNOWN',
+            cachedPrice: item.p || item.price || 0,
+            icon: item.ic || item.icon || ''
+        }));
+
+        console.log(`✅ Đã nạp thành công: ${window.compList.length} Token`);
+
         // Vẽ giao diện
         if(typeof renderGrid === 'function') renderGrid();
         if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
-        
-        // --- KÍCH HOẠT REALTIME NGAY SAU KHI CÓ DATA ---
-        if (window.compList.length > 0 && typeof startRealtimeSync === 'function') {
-            startRealtimeSync();
-        }
+
+        // Bật Realtime
+        if (typeof startRealtimeSync === 'function') startRealtimeSync();
 
     } catch (e) {
-        console.error("Sync Alpha Error:", e);
+        console.error("❌ Lỗi tải danh sách Token:", e);
     }
 }
 
