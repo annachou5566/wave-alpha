@@ -6558,57 +6558,32 @@ async function fetchLayer2Data() {
     }
 }
 
-// --- THAY THẾ TOÀN BỘ HÀM CŨ BẰNG ĐOẠN NÀY ---
 function applyLayer2Data(serverData) {
     if (!window.compList || window.compList.length === 0) return;
 
-    let hasChanges = false;
-    
-    // Chuyển dữ liệu server thành một danh sách để dễ tìm kiếm
+    // Chuyển dữ liệu server thành mảng để dễ tìm kiếm
     const serverItems = Object.values(serverData);
 
     compList.forEach(c => {
-        // Lấy tên token trên Web (ví dụ: "ARTX")
-        const webName = (c.name || "").toUpperCase().trim();
+        const nameOnWeb = (c.name || "").toUpperCase().trim();
         
-        // 🔍 TÌM KIẾM THEO TÊN: Lục trong dữ liệu Server xem con nào tên là "ARTX"
-        const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === webName));
+        // 🔍 Tìm con token có Tên trùng với Web (ví dụ: "ARTX")
+        const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === nameOnWeb));
 
         if (liveItem) {
-            let oldPrice = c.cachedPrice;
-            
-            // 1. Cập nhật giá mới nhất
+            // Ép cập nhật giá mới vào bộ nhớ web
             c.cachedPrice = liveItem.p;
             
-            if (!c.market_analysis) c.market_analysis = {};
-            c.market_analysis.price = liveItem.p;
-
-            // 2. Cập nhật màu sắc và trạng thái (Pump/Dump/Slippage)
+            // Cập nhật thêm các thuộc tính màu sắc để nhìn cho đẹp
             c.liveStatus = liveItem.st || 'NORMAL';
             c.liveColor = liveItem.cl || '#0ECB81';
             c.liveBg = liveItem.sb || 'rgba(14, 203, 129, 0.1)';
-
-            // 3. Nếu giá có thay đổi thì đánh dấu để vẽ lại màn hình
-            if (oldPrice !== liveItem.p) {
-                hasChanges = true;
-            }
         }
     });
 
-    // --- VẼ LẠI GIAO DIỆN KHI CÓ GIÁ MỚI ---
-    if (hasChanges) {
-        // Cập nhật giá trên các thẻ Token
-        if (typeof updateGridValuesOnly === 'function') {
-            updateGridValuesOnly();
-        }
-
-        // Cập nhật bảng Pro Mode (nếu đang mở)
-        if (typeof renderMarketHealthTable === 'function') {
-            const healthTable = document.getElementById('market-health-table');
-            if (healthTable && healthTable.offsetParent !== null) {
-                renderMarketHealthTable();
-            }
-        }
+    // 🚀 Lệnh "ép" trình duyệt phải vẽ lại con số trên màn hình
+    if (typeof updateGridValuesOnly === 'function') {
+        updateGridValuesOnly();
     }
 }
 
