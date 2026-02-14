@@ -2602,7 +2602,7 @@ function updateGridValuesOnly() {
                 if (currentPrice >= 1) {
                     pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 } else if (currentPrice >= 0.01) {
-                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
                 } else {
                     pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
                 }
@@ -2931,7 +2931,7 @@ if (price > 0) {
     if (price >= 1) {
         pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     } else if (price >= 0.01) {
-        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
     } else {
         pStr = '$' + parseFloat(price.toFixed(8)).toString();
     }
@@ -3023,11 +3023,11 @@ let priceValHtml = `<div class="cell-stack justify-content-center">
                     if (diffMs > 0 && speed > 0) {
                         let estFinal = currentTotal + (speed * (diffMs / 1000));
                         estLine = `<div class="cell-secondary" style="
-        color: #00F0FF !important;    /* Màu Cyan chuẩn */
-        opacity: 1 !important;        /* Hiển thị rõ 100% */
-        font-weight: 600;             /* Đậm vừa phải cho dễ đọc */
-        font-size: 0.7rem;            /* Kích thước vừa vặn */
-        margin-top: 1px;              /* Tách nhẹ khỏi số tổng */
+        color: #00F0FF !important;    
+        opacity: 1 !important;      
+        font-weight: 600;            
+        font-size: 0.7rem;        
+        margin-top: 1px;            
     ">Est: ${fmtNoDec(estFinal)}</div>`;
 }
                 }
