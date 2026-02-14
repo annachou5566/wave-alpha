@@ -2573,11 +2573,7 @@ ${SHOW_PREDICT_BTN ? `
 
 function updateGridValuesOnly() {
     try {
-
-
-        
         if (window.competitionRadar && typeof window.competitionRadar.updateRealtimeStats === 'function') {
-            
             window.competitionRadar.updateRealtimeStats(compList);
         }
 
@@ -2589,11 +2585,8 @@ function updateGridValuesOnly() {
         let topToken = null;
         let totalEstPool = 0;
 
-
         compList.forEach(c => {
-
             let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59') + 'Z');
-            
 
             let currentPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
             if (currentPrice > 0) c.cachedPrice = currentPrice;
@@ -2609,79 +2602,41 @@ function updateGridValuesOnly() {
                 }
             }
 
-
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             
             if (cardWrapper) {
+                const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
 
+                if (volEl) {
+                    let rv = c.limit_daily_volume || 0;
+                    if (rv === 0 && c.limit_vol_history && c.limit_vol_history.length > 0) {
+                        let last = c.limit_vol_history[c.limit_vol_history.length - 1];
+                        if (last) rv = parseFloat(last.vol);
+                    }
+                    
+                    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
+                    
+                    if(volEl.innerText !== rvStr) {
+                        volEl.innerText = rvStr;
+                        volEl.style.color = '#fff';
+                        volEl.style.textShadow = '0 0 5px #fff';
+                        setTimeout(() => { volEl.style.color = ''; volEl.style.textShadow = ''; }, 300);
+                    }
+                }
 
-const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
+                const priceEl = cardWrapper.querySelector('.live-price-val') || cardWrapper.querySelector('.price');
 
-if (volEl) {
-
-    let rv = c.limit_daily_volume || 0;
-    
-
-    if (rv === 0 && c.limit_vol_history && c.limit_vol_history.length > 0) {
-
-        let last = c.limit_vol_history[c.limit_vol_history.length - 1];
-        if (last) rv = parseFloat(last.vol);
-    }
-    
-    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-    
-    if(volEl.innerText !== rvStr) {
-        volEl.innerText = rvStr;
-        volEl.style.color = '#fff';
-        volEl.style.textShadow = '0 0 5px #fff';
-        setTimeout(() => { volEl.style.color = ''; volEl.style.textShadow = ''; }, 300);
-    }
-}
-
-
-                const priceEl = cardWrapper.querySelector('.live-price-val');
-
-if (priceEl && currentPrice > 0) {
-    // 1. Format giá tiền (Logic cũ: < $1 lấy 6 số lẻ, > $1 lấy 2 số lẻ)
-    let pStr = currentPrice < 1 
-        ? '$' + currentPrice.toLocaleString('en-US', { maximumFractionDigits: 6 }) 
-        : '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    
-    // 2. Cập nhật UI nếu Giá thay đổi HOẶC Trạng thái thay đổi (để cập nhật màu)
-    if (priceEl.innerText !== pStr || c.liveStatus) {
-        priceEl.innerText = pStr;
-
-        // --- LOGIC MỚI: MÀU SẮC TỪ SERVER LAYER 2 ---
-        if (c.liveColor) {
-            // Áp dụng màu trực tiếp từ Server (Xanh/Đỏ/Cyan...)
-            priceEl.style.color = c.liveColor;
-            priceEl.style.transition = 'color 0.2s ease, text-shadow 0.2s ease'; // Hiệu ứng mượt
-
-            // Nếu Server báo biến động mạnh (DUMP hoặc SLIPPAGE) -> Thêm hiệu ứng phát sáng
-            if (c.liveStatus === 'DUMPING' || c.liveStatus === 'SLIPPAGE') {
-                priceEl.style.textShadow = `0 0 8px ${c.liveColor}`; // Phát sáng
-                priceEl.style.fontWeight = '800'; // Đậm hơn
-            } else {
-                // Trạng thái bình thường (PRIME, PUMPING, NORMAL)
-                priceEl.style.textShadow = 'none';
-                priceEl.style.fontWeight = '700';
-            }
-        } 
-        // --- LOGIC CŨ (BACKUP): FLASH MÀU BRAND ---
-        else {
-            // Nếu chưa kết nối được Server Node.js, dùng lại hiệu ứng cũ
-            priceEl.style.color = ''; // Xóa style inline để nhận class CSS
-            priceEl.style.textShadow = 'none';
-            
-            priceEl.classList.remove('text-brand'); // Reset để kích hoạt lại animation
-            void priceEl.offsetWidth; // Trigger reflow
-            priceEl.classList.add('text-brand');
-            
-            setTimeout(() => priceEl.classList.remove('text-brand'), 500);
-        }
-    }
-}
-
+                if (priceEl && currentPrice > 0) {
+                    let pStr = '$' + currentPrice.toFixed(10); 
+                    
+                    if (priceEl.innerText !== pStr) {
+                        priceEl.innerText = pStr;
+                        priceEl.style.color = '#FF00FF'; 
+                        priceEl.style.textShadow = '0 0 10px #FF00FF';
+                        priceEl.style.fontWeight = 'bold';
+                        priceEl.style.fontFamily = 'monospace'; 
+                    }
+                }
 
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
@@ -2693,7 +2648,6 @@ if (priceEl && currentPrice > 0) {
                 }
             }
         });
-
 
         const poolEl = document.getElementById('stat-pool');
         if (poolEl) poolEl.innerText = fmt(totalEstPool);
@@ -2708,11 +2662,10 @@ if (priceEl && currentPrice > 0) {
             if(topImgEl && topToken.logo) { topImgEl.src = topToken.logo; topImgEl.style.display = 'block'; }
         }
 
-
         if (typeof initCalendar === 'function') initCalendar();
 
     } catch (e) {
-        console.error("Lỗi cập nhật số liệu Realtime:", e);
+        console.error(e);
     }
 }
         
