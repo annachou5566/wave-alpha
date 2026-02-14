@@ -2571,28 +2571,25 @@ ${SHOW_PREDICT_BTN ? `
 
 function updateGridValuesOnly() {
     try {
-        // Cập nhật Radar/Health Table (Giữ nguyên)
-        if (window.competitionRadar && typeof window.competitionRadar.updateRealtimeStats === 'function') window.competitionRadar.updateRealtimeStats(compList);
-        if (typeof updateHealthTableRealtime === 'function') updateHealthTableRealtime();
+        if (window.competitionRadar && typeof window.competitionRadar.updateRealtimeStats === 'function') {
+            window.competitionRadar.updateRealtimeStats(compList);
+        }
+        if (typeof updateHealthTableRealtime === 'function') {
+            updateHealthTableRealtime();
+        }
 
-        let maxRewardVal = 0; let topToken = null; let totalEstPool = 0;
+        let maxRewardVal = 0;
+        let topToken = null;
+        let totalEstPool = 0;
 
         compList.forEach(c => {
-            // --- LOGIC TÍNH TOÁN ---
-            let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59') + 'Z');
-
-            // 🔴 [FIX QUAN TRỌNG] ƯU TIÊN GIÁ REALTIME (CACHEDPRICE) TRƯỚC
-            // Logic cũ bị sai vì nó ưu tiên market_analysis (giá tĩnh)
             let currentPrice = parseFloat(c.cachedPrice) || 0;
-
-            // Nếu chưa có giá Realtime thì mới tìm giá từ Database (market_analysis) làm dự phòng
             if (currentPrice === 0 && c.market_analysis && c.market_analysis.price) {
                 currentPrice = parseFloat(c.market_analysis.price);
             }
-            
-            // Cập nhật ngược lại để đồng bộ
             if (currentPrice > 0) c.cachedPrice = currentPrice;
-            
+
+            let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59') + 'Z');
             let qty = parseFloat(c.rewardQty) || 0;
             let currentTotalVal = qty * currentPrice;
 
@@ -2601,38 +2598,31 @@ function updateGridValuesOnly() {
                 if (currentTotalVal > maxRewardVal) { maxRewardVal = currentTotalVal; topToken = c; }
             }
 
-            // =========================================================
-            // 🎯 CẬP NHẬT GIAO DIỆN (TÌM CẢ LIST VÀ GRID)
-            // =========================================================
-
-            // 1. TÌM TẤT CẢ CÁC Ô GIÁ CỦA TOKEN NÀY TRÊN MÀN HÌNH
-            const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
-
-            if (allPriceElements.length > 0 && currentPrice > 0) {
-                // [TEST MODE] HIỆN 10 SỐ LẺ
-                let pStr = '$' + currentPrice.toFixed(10);
-                
-                allPriceElements.forEach(el => {
-                    // Chỉ cập nhật DOM nếu text thực sự thay đổi (giúp đỡ lag)
-                    if (el.innerText !== pStr) {
-                         el.innerText = pStr;
-                    }
-                    
-                    // --- HIỆU ỨNG TEST: MÀU TÍM ---
-                    // Luôn set lại màu để đảm bảo đè được CSS cũ
-                    el.style.color = '#FF00FF'; 
-                    el.style.fontWeight = 'bold';
-                    el.style.fontFamily = 'monospace';
-
-                    // --- HIỆU ỨNG "NHỊP TIM" ---
-                    // Nháy nhẹ opacity để báo hiệu dữ liệu đang update (kể cả khi giá trùng nhau)
-                    el.style.transition = 'opacity 0.2s';
-                    el.style.opacity = '0.5';
-                    setTimeout(() => { el.style.opacity = '1'; }, 200);
-                });
+            let pStr = '---';
+            if (currentPrice > 0) {
+                if (currentPrice >= 1) {
+                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else if (currentPrice >= 0.01) {
+                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+                } else {
+                    pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
+                }
             }
 
-            // 2. CẬP NHẬT VOLUME (Giữ nguyên logic cũ)
+            const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
+
+            allPriceElements.forEach(el => {
+                if (el.innerText !== pStr) {
+                    el.innerText = pStr;
+                }
+
+                el.style.color = '';
+                el.style.textShadow = '';
+                el.style.fontFamily = '';
+                el.style.fontWeight = '';
+                el.style.opacity = '1';
+            });
+
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             if (cardWrapper) {
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
@@ -2645,28 +2635,37 @@ function updateGridValuesOnly() {
                     let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
                     if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
                 }
-                
-                // Cập nhật Est Value
+
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
                     let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
                     let estTotal = estQty * currentPrice;
-                    if (estTotal > 0) estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
+                    if (estTotal > 0) {
+                        estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
+                    }
                 }
             }
         });
 
-        // Cập nhật Pool & Top Token (Giữ nguyên)
         const poolEl = document.getElementById('stat-pool');
         if (poolEl) poolEl.innerText = fmt(totalEstPool);
+
         if (topToken) {
             const topSymbolEl = document.getElementById('stat-top-symbol');
             const topValEl = document.getElementById('stat-top-val');
+            const topImgEl = document.getElementById('stat-top-img');
+            
             if(topSymbolEl) topSymbolEl.innerText = topToken.name;
             if(topValEl) topValEl.innerText = fmt(maxRewardVal);
+            if(topImgEl && topToken.logo) { 
+                topImgEl.src = topToken.logo; 
+                topImgEl.style.display = 'block'; 
+            }
         }
 
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error("Lỗi cập nhật UI:", e);
+    }
 }
         
 
