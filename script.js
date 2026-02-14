@@ -2578,9 +2578,19 @@ function updateGridValuesOnly() {
         let maxRewardVal = 0; let topToken = null; let totalEstPool = 0;
 
         compList.forEach(c => {
-            // --- LOGIC TÍNH TOÁN (Giữ nguyên) ---
+            // --- LOGIC TÍNH TOÁN ---
             let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59') + 'Z');
-            let currentPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
+
+            // 🔴 [FIX QUAN TRỌNG] ƯU TIÊN GIÁ REALTIME (CACHEDPRICE) TRƯỚC
+            // Logic cũ bị sai vì nó ưu tiên market_analysis (giá tĩnh)
+            let currentPrice = parseFloat(c.cachedPrice) || 0;
+
+            // Nếu chưa có giá Realtime thì mới tìm giá từ Database (market_analysis) làm dự phòng
+            if (currentPrice === 0 && c.market_analysis && c.market_analysis.price) {
+                currentPrice = parseFloat(c.market_analysis.price);
+            }
+            
+            // Cập nhật ngược lại để đồng bộ
             if (currentPrice > 0) c.cachedPrice = currentPrice;
             
             let qty = parseFloat(c.rewardQty) || 0;
@@ -2592,34 +2602,37 @@ function updateGridValuesOnly() {
             }
 
             // =========================================================
-            // 🎯 CẬP NHẬT GIAO DIỆN (ĐÃ SỬA ĐỂ TÌM CẢ LIST VÀ GRID)
+            // 🎯 CẬP NHẬT GIAO DIỆN (TÌM CẢ LIST VÀ GRID)
             // =========================================================
 
             // 1. TÌM TẤT CẢ CÁC Ô GIÁ CỦA TOKEN NÀY TRÊN MÀN HÌNH
-            // (Bất kể nó nằm trong Card, List, hay Modal - miễn là có class live-price-val và data-id)
             const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
 
             if (allPriceElements.length > 0 && currentPrice > 0) {
-                // Format giá dài (10 số lẻ) để test
+                // [TEST MODE] HIỆN 10 SỐ LẺ
                 let pStr = '$' + currentPrice.toFixed(10);
                 
                 allPriceElements.forEach(el => {
-                    // Cập nhật nội dung
-                    el.innerText = pStr;
+                    // Chỉ cập nhật DOM nếu text thực sự thay đổi (giúp đỡ lag)
+                    if (el.innerText !== pStr) {
+                         el.innerText = pStr;
+                    }
                     
                     // --- HIỆU ỨNG TEST: MÀU TÍM ---
+                    // Luôn set lại màu để đảm bảo đè được CSS cũ
                     el.style.color = '#FF00FF'; 
                     el.style.fontWeight = 'bold';
                     el.style.fontFamily = 'monospace';
 
-                    // --- HIỆU ỨNG "NHỊP TIM": CHỚP TẮT ĐỂ BIẾT 3S/LẦN ĐANG CHẠY ---
-                    // Mỗi lần hàm này chạy (3s), nó sẽ mờ đi một chút rồi sáng lại
+                    // --- HIỆU ỨNG "NHỊP TIM" ---
+                    // Nháy nhẹ opacity để báo hiệu dữ liệu đang update (kể cả khi giá trùng nhau)
+                    el.style.transition = 'opacity 0.2s';
                     el.style.opacity = '0.5';
                     setTimeout(() => { el.style.opacity = '1'; }, 200);
                 });
             }
 
-            // 2. CẬP NHẬT VOLUME (Chỉ tìm trong Card Wrapper như cũ cho an toàn)
+            // 2. CẬP NHẬT VOLUME (Giữ nguyên logic cũ)
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             if (cardWrapper) {
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
