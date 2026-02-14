@@ -2569,104 +2569,91 @@ ${SHOW_PREDICT_BTN ? `
 
 
 
-
-
 function updateGridValuesOnly() {
     try {
-        if (window.competitionRadar && typeof window.competitionRadar.updateRealtimeStats === 'function') {
-            window.competitionRadar.updateRealtimeStats(compList);
-        }
+        // Cập nhật Radar/Health Table (Giữ nguyên)
+        if (window.competitionRadar && typeof window.competitionRadar.updateRealtimeStats === 'function') window.competitionRadar.updateRealtimeStats(compList);
+        if (typeof updateHealthTableRealtime === 'function') updateHealthTableRealtime();
 
-        if (typeof updateHealthTableRealtime === 'function') {
-            updateHealthTableRealtime();
-        }
-
-        let maxRewardVal = 0;
-        let topToken = null;
-        let totalEstPool = 0;
+        let maxRewardVal = 0; let topToken = null; let totalEstPool = 0;
 
         compList.forEach(c => {
+            // --- LOGIC TÍNH TOÁN (Giữ nguyên) ---
             let isRunning = !c.end || new Date() < new Date(c.end + 'T' + (c.endTime || '23:59') + 'Z');
-
             let currentPrice = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
             if (currentPrice > 0) c.cachedPrice = currentPrice;
-
+            
             let qty = parseFloat(c.rewardQty) || 0;
             let currentTotalVal = qty * currentPrice;
 
             if (isRunning) {
                 totalEstPool += currentTotalVal;
-                if (currentTotalVal > maxRewardVal) {
-                    maxRewardVal = currentTotalVal;
-                    topToken = c;
-                }
+                if (currentTotalVal > maxRewardVal) { maxRewardVal = currentTotalVal; topToken = c; }
             }
 
+            // =========================================================
+            // 🎯 CẬP NHẬT GIAO DIỆN (ĐÃ SỬA ĐỂ TÌM CẢ LIST VÀ GRID)
+            // =========================================================
+
+            // 1. TÌM TẤT CẢ CÁC Ô GIÁ CỦA TOKEN NÀY TRÊN MÀN HÌNH
+            // (Bất kể nó nằm trong Card, List, hay Modal - miễn là có class live-price-val và data-id)
+            const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
+
+            if (allPriceElements.length > 0 && currentPrice > 0) {
+                // Format giá dài (10 số lẻ) để test
+                let pStr = '$' + currentPrice.toFixed(10);
+                
+                allPriceElements.forEach(el => {
+                    // Cập nhật nội dung
+                    el.innerText = pStr;
+                    
+                    // --- HIỆU ỨNG TEST: MÀU TÍM ---
+                    el.style.color = '#FF00FF'; 
+                    el.style.fontWeight = 'bold';
+                    el.style.fontFamily = 'monospace';
+
+                    // --- HIỆU ỨNG "NHỊP TIM": CHỚP TẮT ĐỂ BIẾT 3S/LẦN ĐANG CHẠY ---
+                    // Mỗi lần hàm này chạy (3s), nó sẽ mờ đi một chút rồi sáng lại
+                    el.style.opacity = '0.5';
+                    setTimeout(() => { el.style.opacity = '1'; }, 200);
+                });
+            }
+
+            // 2. CẬP NHẬT VOLUME (Chỉ tìm trong Card Wrapper như cũ cho an toàn)
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
-            
             if (cardWrapper) {
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
-
                 if (volEl) {
                     let rv = c.limit_daily_volume || 0;
                     if (rv === 0 && c.limit_vol_history && c.limit_vol_history.length > 0) {
                         let last = c.limit_vol_history[c.limit_vol_history.length - 1];
                         if (last) rv = parseFloat(last.vol);
                     }
-                    
                     let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                    
-                    if(volEl.innerText !== rvStr) {
-                        volEl.innerText = rvStr;
-                        volEl.style.color = '#fff';
-                        volEl.style.textShadow = '0 0 5px #fff';
-                        setTimeout(() => { volEl.style.color = ''; volEl.style.textShadow = ''; }, 300);
-                    }
+                    if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
                 }
-
-                const priceEl = cardWrapper.querySelector('.live-price-val') || cardWrapper.querySelector('.price');
-
-                if (priceEl && currentPrice > 0) {
-                    let pStr = '$' + currentPrice.toFixed(10); 
-                    
-                    if (priceEl.innerText !== pStr) {
-                        priceEl.innerText = pStr;
-                        priceEl.style.color = '#FF00FF'; 
-                        priceEl.style.textShadow = '0 0 10px #FF00FF';
-                        priceEl.style.fontWeight = 'bold';
-                        priceEl.style.fontFamily = 'monospace'; 
-                    }
-                }
-
+                
+                // Cập nhật Est Value
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
                     let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
                     let estTotal = estQty * currentPrice;
-                    if (estTotal > 0) {
-                        estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
-                    }
+                    if (estTotal > 0) estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
                 }
             }
         });
 
+        // Cập nhật Pool & Top Token (Giữ nguyên)
         const poolEl = document.getElementById('stat-pool');
         if (poolEl) poolEl.innerText = fmt(totalEstPool);
-
         if (topToken) {
             const topSymbolEl = document.getElementById('stat-top-symbol');
             const topValEl = document.getElementById('stat-top-val');
-            const topImgEl = document.getElementById('stat-top-img');
-            
             if(topSymbolEl) topSymbolEl.innerText = topToken.name;
             if(topValEl) topValEl.innerText = fmt(maxRewardVal);
-            if(topImgEl && topToken.logo) { topImgEl.src = topToken.logo; topImgEl.style.display = 'block'; }
         }
 
-        if (typeof initCalendar === 'function') initCalendar();
-
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
 }
         
 
