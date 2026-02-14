@@ -2568,7 +2568,6 @@ ${SHOW_PREDICT_BTN ? `
 }
 
 
-
 function updateGridValuesOnly() {
     try {
         if (window.competitionRadar && typeof window.competitionRadar.updateRealtimeStats === 'function') {
@@ -2599,24 +2598,16 @@ function updateGridValuesOnly() {
             }
 
             let pStr = '---';
-
             if (currentPrice > 0) {
-
                 if (currentPrice >= 1) {
-
                     pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
                 } else if (currentPrice >= 0.01) {
-
                     pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-
                 } else {
-
                     pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
-
                 }
-
             }
+
             const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
 
             allPriceElements.forEach(el => {
@@ -2936,24 +2927,15 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
 let price = parseFloat(c.cachedPrice) || parseFloat(ma.price) || 0;
 
 let pStr = '---';
-
-            if (currentPrice > 0) {
-
-                if (currentPrice >= 1) {
-
-                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-                } else if (currentPrice >= 0.01) {
-
-                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
-
-                } else {
-
-                    pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
-
-                }
-
-            }
+if (price > 0) {
+    if (price >= 1) {
+        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else if (price >= 0.01) {
+        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    } else {
+        pStr = '$' + parseFloat(price.toFixed(8)).toString();
+    }
+}
 
 let priceValHtml = `<div class="cell-stack justify-content-center">
     <span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span>
