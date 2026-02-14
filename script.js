@@ -2924,8 +2924,25 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
 
 
             let winPoolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">${c.topWinners ? c.topWinners.replace(/\(p\d+\)/gi, '').trim() : '--'}</span><span class="cell-secondary">${(parseFloat(c.rewardQty)||0).toLocaleString()} ${c.name}</span></div>`;
-            let price = ma.price || c.cachedPrice || 0;
-            let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary">$${price.toLocaleString()}</span></div>`;
+            
+let price = parseFloat(c.cachedPrice) || parseFloat(ma.price) || 0;
+
+let pStr = '---';
+if (price > 0) {
+    if (price >= 1) {
+        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else if (price >= 0.01) {
+        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    } else {
+        pStr = '$' + parseFloat(price.toFixed(8)).toString();
+    }
+}
+
+let priceValHtml = `<div class="cell-stack justify-content-center">
+    <span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span>
+    <span class="cell-secondary live-price-val" data-id="${c.db_id}">${pStr}</span>
+</div>`;
+
 
 
             let rt = c.ruleType || 'buy_only'; 
@@ -3115,11 +3132,7 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
     try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); }); } catch(e) {}
 }
 
-/* ==========================================================
-   FIX UI: 
-   1. TÁCH DÒNG DELTA (MARGIN-TOP)
-   2. ĐỔI MÀU DELTA SANG BLUE ĐỂ KHÁC BIỆT VỚI MIN VOL
-   ========================================================== */
+
 function calculateAiTarget(c, isHistory = false) {
     if (!c) return '<td></td>';
 
