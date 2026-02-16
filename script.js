@@ -255,46 +255,75 @@ const translations = {
         col_ord_spr: "ORD / SPR",
         col_target: "PREDICTION",
 
-        tip_time: "Start - End Date & Countdown",
-        tip_win_pool: "Top Winners & Pool Size",
-        tip_price_val: "Est. Total Value & Token Price",
-        tip_rule: "Trading Rule: Buy Only or Buy + Sell",
-        tip_min_vol: "Minimum volume required to qualify for rewards (Rank Cut-off). Updated T+1.",
-        tip_daily_vol: "Real-time Vol (Sub: Yesterday)",
-        tip_camp_vol: "Total cumulative volume from the start of the tournament until now.",
-        tip_speed_match: "Match Vol & Execution Speed",
-        tip_ord_spr: "Avg Order Value & Spread %",
+        tip_time: "Tournament countdown. Shows Start and Market Close dates.",
 
+        tip_win_pool: "Number of winners (Rank) and expected total prize pool value.",
 
+        tip_price_val: "Total prize pool value in USD and real-time Token price.",
 
-        tip_pred_header_title: "MODEL METHODOLOGY",
+        tip_rule: "Trading Rules: Buy Only or Buy + Sell.<br><i style='color:#ffd700'>Sub-line: Volume from Limit orders is privileged with a 4x multiplier (x4).</i>",
+
+        tip_min_vol: "Minimum trading volume required to qualify for the reward list.",
+
+        tip_pred_header_title: "CALCULATION METHODOLOGY",
+
         tip_pred_header_body: `
+
             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
+
                 <b>Data Basis:</b>
+
             </div>
+
             <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
-                <li><b>Formula:</b> Aggregates previous session's Min Vol and real-time transaction Velocity.</li>
-                <li><b>Range:</b> Model activates from <b style="color:#00F0FF">05:00 UTC</b> on the final day.</li>
-                <li><b>Update:</b> Model automatically recalculates every 30 minutes.</li>
-                <li><b>Adjustment:</b> Applies variable coefficients based on participant count and market depth.</li>
+
+                <li><b>Formula:</b> Combines previous Min Vol and 24h Trading Velocity.</li>
+
+                <li><b>Activation:</b> Model starts at <b style="color:#00F0FF">00:00 UTC</b> on the final day.</li>
+
+                <li><b>Frequency:</b> Auto-recalculated and updated every 30 minutes.</li>
+
+                <li><b>Variables:</b> Adjusted based on participant count and market depth (Order Book).</li>
+
             </ul>
+
             <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+
                 <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+
                     ⚠ DISCLAIMER:
+
                 </div>
+
                 <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
-                    Figures are for reference only and <b>do not constitute financial advice</b>. You are solely responsible for your trading decisions.
+
+                    Figures are for reference only and <b>not financial advice</b>. You are solely responsible for your trading decisions.
+
                 </div>
+
             </div>`,
 
+        tip_model_title: "PROJECTION MODEL",
 
-        tip_model_title: "MODEL PROJECTION",
-        tip_model_active: "Target is projected based on historical volatility, real-time momentum, and liquidity depth.",
-        tip_vote_guide: "Sentiment? Vote <b class='text-brand'>Agree</b>, <b class='text-danger'>Lower</b> or <b class='text-success'>Higher</b>.",
+        tip_model_active: "Target projected based on historical volatility and current growth momentum.",
 
+        tip_vote_guide: "Sentiment? <b class='text-brand'>Agree</b>, <b class='text-danger'>Lower</b>, or <b class='text-success'>Higher</b>.",
 
         tip_model_wait_title: "DATA ACCUMULATION",
-        tip_model_wait_body: "Model requires comprehensive session data. Projection activates <span style='color:#ffd700'>16 hours</span> before close.",
+
+        tip_model_wait_body: "The system is gathering session data for accuracy. Projections activate <span style='color:#ffd700'>16 hours</span> before market close.",
+
+        tip_daily_vol: "Total trading volume recorded today (00:00 to 23:59 UTC).",
+
+        tip_camp_vol: "Total cumulative volume from start to present.<br><i style='color:#00FFFF'>Projected final volume based on real-time estimation algorithms.</i>",
+
+        tip_col_limit: "<b>Limit Only (Off-chain):</b> Volume from Limit orders matched off-chain on the Binance order book.<br><i>Note: Data from users directly placing orders via the Binance Limit order book.</i>",
+
+        tip_col_onchain: "<b>On-Chain Only:</b> Volume from direct transactions on the network (Blockchain).<br><i>Mechanism: Binance routes Instant orders on-chain for execution. Includes external wallet transactions.</i>",
+
+        tip_col_total: "<b>Aggregated (On-Chain + Limit):</b> Total valid volume recorded from both On-chain sources and Limit order books.",
+
+
 
         txt_ended: "Ended",
         txt_yest: "Yest",
@@ -407,42 +436,78 @@ const translations = {
         col_ord_spr: "LỆNH / SPR",
         col_target: "DỰ ĐOÁN",
 
-        tip_time: "Ngày bắt đầu - Kết thúc & Đếm ngược",
-        tip_win_pool: "Số người thắng & Tổng giải",
-        tip_price_val: "Tổng giá trị ước tính & Giá Token",
-        tip_rule: "Luật giao dịch: Chỉ Mua hoặc Mua + Bán",
-        tip_min_vol: "Khối lượng tối thiểu để lọt Top nhận thưởng (Vol chốt sổ). Cập nhật T+1.",
-        tip_daily_vol: "Vol thực tế (Dòng dưới: Hôm qua)",
-        tip_camp_vol: "Tổng khối lượng tích lũy tính từ khi bắt đầu giải cho đến hiện nay.",
-        tip_speed_match: "Tốc độ khớp & Volume khớp lệnh",
-        tip_ord_spr: "Giá trị trung bình lệnh & Chênh lệch giá",
+         
+         tip_time: "Đếm ngược thời gian kết thúc giải đấu. Hiển thị ngày Bắt đầu và ngày Chốt sổ.",
 
-
-        tip_pred_header_title: "PHƯƠNG PHÁP TÍNH",
-        tip_pred_header_body: `
-            <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
-                <b>Cơ sở Dữ liệu:</b>
-            </div>
-            <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
-                <li><b>Công thức:</b> Tổng hợp Min Vol phiên trước và Tốc độ giao dịch thực (Velocity).</li>
-                <li><b>Phạm vi:</b> Mô hình kích hoạt từ <b style="color:#00F0FF">05:00 UTC</b> ngày cuối cùng.</li>
-                <li><b>Cập nhật:</b> Mô hình tự động tính toán lại sau mỗi 30 phút.</li>
-                <li><b>Điều chỉnh:</b> Áp dụng hệ số biến thiên dựa trên số người tham gia và độ sâu thị trường.</li>
-            </ul>
-            <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
-                <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
-                    ⚠ MIỄN TRỪ TRÁCH NHIỆM:
-                </div>
-                <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
-                    Số liệu chỉ mang tính tham khảo và <b>không phải lời khuyên tài chính</b>. Bạn hoàn toàn chịu trách nhiệm về quyết định giao dịch của mình.
-                </div>
-            </div>`,
-
-        tip_model_title: "MÔ HÌNH DỰ ĐOÁN",
-        tip_model_active: "Mục tiêu dựa trên biến động lịch sử và đà tăng trưởng thực tế.",
-        tip_vote_guide: "Quan điểm? <b class='text-brand'>Đồng ý</b>, <b class='text-danger'>Thấp hơn</b> hay <b class='text-success'>Cao hơn</b>.",
-        tip_model_wait_title: "ĐANG THU THẬP DỮ LIỆU",
-        tip_model_wait_body: "Mô hình cần dữ liệu phiên đầy đủ. Dự đoán kích hoạt <span style='color:#ffd700'>16 giờ</span> trước khi đóng phiên.",
+         tip_win_pool: "Số lượng suất nhận thưởng (Rank) và tổng giá trị giải thưởng dự kiến của Pool.",
+ 
+         tip_price_val: "Tổng giá trị giải thưởng quy đổi sang USD và giá thị trường (Real-time) của Token.",
+ 
+         tip_rule: "Luật giao dịch: Chỉ tính lệnh Mua (Buy Only) hoặc tính cả hai chiều (Buy + Sell).<br><i style='color:#ffd700'>Dòng phụ: Volume phát sinh từ lệnh Limit được ưu tiên nhân 4 (x4) khối lượng thực tế.</i>",
+ 
+         tip_min_vol: "Khối lượng giao dịch tối thiểu cần đạt để đủ điều kiện lọt Top nhận thưởng.",
+ 
+           
+         tip_pred_header_title: "PHƯƠNG PHÁP TÍNH TOÁN",
+ 
+         tip_pred_header_body: `
+ 
+             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
+ 
+                 <b>Cơ sở Dữ liệu:</b>
+ 
+             </div>
+ 
+             <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
+ 
+                 <li><b>Công thức:</b> Tổng hợp Min Vol phiên trước và Tốc độ giao dịch thực tế (Velocity) trong 24h.</li>
+ 
+                 <li><b>Kích hoạt:</b> Mô hình bắt đầu chạy từ <b style="color:#00F0FF">00:00 UTC</b> ngày cuối cùng.</li>
+ 
+                 <li><b>Tần suất:</b> Tự động tái cấu trúc và cập nhật dữ liệu sau mỗi 30 phút.</li>
+ 
+                 <li><b>Biến số:</b> Điều chỉnh linh hoạt dựa trên lượng người tham gia và độ sâu thanh khoản (Order Book).</li>
+ 
+             </ul>
+ 
+             <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+ 
+                 <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+ 
+                     ⚠ MIỄN TRỪ TRÁCH NHIỆM:
+ 
+                 </div>
+ 
+                 <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
+ 
+                     Số liệu chỉ mang tính tham khảo và <b>không phải lời khuyên tài chính</b>. Bạn hoàn toàn chịu trách nhiệm về quyết định giao dịch của mình.
+ 
+                 </div>
+ 
+             </div>`,
+ 
+         tip_model_title: "MÔ HÌNH DỰ BÁO",
+ 
+         tip_model_active: "Mục tiêu dự kiến dựa trên biến động lịch sử và quán tính tăng trưởng hiện tại.",
+ 
+         tip_vote_guide: "Quan điểm? <b class='text-brand'>Đồng ý</b>, <b class='text-danger'>Thấp hơn</b> hay <b class='text-success'>Cao hơn</b>.",
+ 
+         tip_model_wait_title: "GIAI ĐOẠN TÍCH LŨY DỮ LIỆU",
+ 
+         tip_model_wait_body: "Hệ thống đang thu thập dữ liệu phiên để đảm bảo độ chính xác. Dự đoán kích hoạt <span style='color:#ffd700'>16 giờ</span> trước khi đóng phiên.",
+ 
+         
+         tip_daily_vol: "Tổng khối lượng giao dịch ghi nhận trong ngày (Tính từ 00:00 đến 23:59 UTC).",
+ 
+         tip_camp_vol: "Tổng khối lượng tích lũy từ khi bắt đầu giải đến hiện tại.<br><i style='color:#00FFFF'>Dự báo tổng Volume cuối giải dựa trên thuật toán ước lượng thời gian thực.</i>",
+ 
+         tip_col_limit: "<b>Chỉ tính Limit (Off-chain):</b> Khối lượng từ các lệnh chờ (Limit Order) được khớp ngoài chuỗi trên sổ lệnh Binance.<br><i>Giải thích: Dữ liệu từ các lệnh người dùng trực tiếp đặt thông qua sổ lệnh Limit trên sàn Binance.</i>",
+ 
+         tip_col_onchain: "<b>Chỉ tính On-Chain:</b> Khối lượng từ các giao dịch trực tiếp trên mạng lưới (Blockchain).<br><i>Cơ chế: Hệ thống Binance đẩy lệnh Tức thì (Instant Order) lên On-chain để khớp lệnh. Bao gồm cả giao dịch từ ví ngoài.</i>",
+ 
+         tip_col_total: "<b>Tổng hợp (On-Chain + Limit):</b> Toàn bộ khối lượng giao dịch hợp lệ từ cả hai nguồn On-chain (lệnh tức thì/ví ngoài) và sổ lệnh Limit (lệnh chờ).",
+ 
+     
 
         txt_ended: "Kết thúc",
         txt_yest: "H.Qua",
@@ -555,42 +620,76 @@ const translations = {
         col_ord_spr: "均单 / 价差",
         col_target: "模型预测",
 
-        tip_time: "开始 - 结束日期 & 倒计时",
-        tip_win_pool: "获奖人数 & 奖池大小",
-        tip_price_val: "预估总价值 & 代币价格",
-        tip_rule: "交易规则：仅买入 或 全部量",
-        tip_min_vol: "获得奖励所需的最低交易量 (排名截止)。T+1 更新。",
-        tip_daily_vol: "实时量 (下方：昨日)",
-        tip_camp_vol: "从比赛开始到现在的累计总交易量。",
-        tip_speed_match: "撮合量 & 执行速度",
-        tip_ord_spr: "平均订单价值 & 价差 %",
+        
+        tip_time: "锦标赛倒计时。显示开始和结束日期。",
 
+        tip_win_pool: "获奖名额（排名）及预计奖池总价值。",
 
-        tip_pred_header_title: "模型方法论",
+        tip_price_val: "折算为美元的奖池总价值及代币实时市场价格。",
+
+        tip_rule: "交易规则：仅买入或买入+卖出。<br><i style='color:#ffd700'>下行：限价单 (Limit) 交易量享有 4 倍权重 (x4)。</i>",
+
+        tip_min_vol: "获得奖励所需的最低交易量门槛。",
+
+        tip_pred_header_title: "计算方法论",
+
         tip_pred_header_body: `
+
             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
+
                 <b>数据基础：</b>
+
             </div>
+
             <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
-                <li><b>公式：</b> 综合上一时段的最小成交量和实时交易速度。</li>
-                <li><b>范围：</b> 模型在最后一天的 <b style="color:#00F0FF">05:00 UTC</b> 激活。</li>
-                <li><b>更新：</b> 模型每 30 分钟自动重新计算一次。</li>
-                <li><b>调整：</b> 根据参与人数和市场深度应用可变系数。</li>
+
+                <li><b>公式：</b> 综合前期最低成交量与 24 小时交易速率 (Velocity)。</li>
+
+                <li><b>激活：</b> 模型于最后一天 <b style="color:#00F0FF">00:00 UTC</b> 激活。</li>
+
+                <li><b>频率：</b> 每 30 分钟自动重新计算并更新数据。</li>
+
+                <li><b>变量：</b> 根据参与人数和市场深度（订单簿）灵活调整。</li>
+
             </ul>
+
             <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+
                 <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+
                     ⚠ 免责声明：
+
                 </div>
+
                 <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
-                    数据仅供参考，<b>不构成财务建议</b>。您需对自己的交易决定全权负责。
+
+                    数据仅供参考，<b>不构成财务建议</b>。您需对交易决策承担全部责任。
+
                 </div>
+
             </div>`,
 
-        tip_model_title: "模型预测",
-        tip_model_active: "目标量基于历史波动率、实时动量和流动性深度计算得出。仅供参考。",
-        tip_vote_guide: "您的观点？投票 <b class='text-brand'>赞同</b>，<b class='text-danger'>看低</b> 或 <b class='text-success'>看高</b>。",
-        tip_model_wait_title: "数据积累中",
-        tip_model_wait_body: "模型需要完整的数据谱。预测将在结束前 <span style='color:#ffd700'>16小时</span> 激活，以确保最高准确性。",
+        tip_model_title: "预测模型",
+
+        tip_model_active: "基于历史波动率和当前增长动能的预估目标。",
+
+        tip_vote_guide: "观点？ <b class='text-brand'>赞同</b>, <b class='text-danger'>看低</b> 或 <b class='text-success'>看高</b>。",
+
+        tip_model_wait_title: "数据积累阶段",
+
+        tip_model_wait_body: "系统正在收集赛段数据以确保准确性。预测将在结束前 <span style='color:#ffd700'>16 小时</span> 激活。",
+
+        tip_daily_vol: "今日总成交量（UTC 00:00 至 23:59）。",
+
+        tip_camp_vol: "自开赛以来的累计总成交量。<br><i style='color:#00FFFF'>基于实时估算算法的最终成交量预测。</i>",
+
+        tip_col_limit: "<b>仅限价 (Off-chain):</b> 交易量源自币安订单簿上的脱链限价单。<br><i>说明：用户通过币安限价订单簿直接下单的数据。</i>",
+
+        tip_col_onchain: "<b>仅链上:</b> 来自区块链网络直接交易的成交量。<br><i>机制：币安将即时订单传送到链上执行。包括外部钱包交易。</i>",
+
+        tip_col_total: "<b>综合 (链上 + 限价):</b> 整合了来自链上和限价单的所有有效成交量。",
+
+
 
         txt_ended: "已结束",
         txt_yest: "昨",
@@ -703,42 +802,74 @@ const translations = {
         col_ord_spr: "평균 / 스프레드",
         col_target: "예측 모델",
 
-        tip_time: "시작 - 종료 날짜 & 카운트다운",
-        tip_win_pool: "최고 당첨자 & 풀 크기",
-        tip_price_val: "총 추정 가치 & 토큰 가격",
-        tip_rule: "거래 규칙: 매수 전용 또는 전체",
-        tip_min_vol: "보상을 받기 위한 최소 거래량 (커트라인). T+1 업데이트.",
-        tip_daily_vol: "실시간 볼륨 (하단: 어제)",
-        tip_camp_vol: "대회 시작부터 현재까지의 누적 총 거래량.",
-        tip_speed_match: "매칭 볼륨 & 체결 속도",
-        tip_ord_spr: "평균 주문 가치 & 스프레드 %",
+        
+        tip_time: "토너먼트 종료 카운트다운. 시작일 및 마감일 표시.",
 
+        tip_win_pool: "보상 당첨 인원(순위) 및 총 상금 풀 예상 가치.",
 
-        tip_pred_header_title: "모델 방법론",
+        tip_price_val: "USD 환산 총 상금 및 토큰 실시간 가격.",
+
+        tip_rule: "거래 규칙: 매수 전용 또는 매수+매도.<br><i style='color:#ffd700'>하단: 지정가(Limit) 주문을 통한 거래량은 4배(x4) 가중치가 적용됩니다.</i>",
+
+        tip_min_vol: "보상 지급 대상이 되기 위한 최소 거래량.",
+
+        tip_pred_header_title: "산출 방법론",
+
         tip_pred_header_body: `
+
             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
-                <b>데이터 기준:</b>
+
+                <b>데이터 근거:</b>
+
             </div>
+
             <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
-                <li><b>공식:</b> 이전 세션의 최소 거래량과 실시간 거래 속도를 집계합니다.</li>
-                <li><b>범위:</b> 모델은 마지막 날 <b style="color:#00F0FF">05:00 UTC</b>부터 활성화됩니다.</li>
-                <li><b>업데이트:</b> 모델은 30분마다 자동으로 다시 계산됩니다.</li>
-                <li><b>조정:</b> 참여자 수와 시장 깊이에 따라 가변 계수를 적용합니다.</li>
+
+                <li><b>공식:</b> 이전 최소 거래량과 24시간 거래 속도(Velocity)를 결합.</li>
+
+                <li><b>활성화:</b> 마지막 날 <b style="color:#00F0FF">00:00 UTC</b>부터 모델 활성화.</li>
+
+                <li><b>주기:</b> 30분마다 자동 재계산 및 데이터 업데이트.</li>
+
+                <li><b>변수:</b> 참여자 수 및 시장 깊이(오더북)에 따라 유동적 조정.</li>
+
             </ul>
+
             <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+
                 <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+
                     ⚠ 면책 조항:
+
                 </div>
+
                 <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
-                    수치는 참고용이며 <b>재정적 조언이 아닙니다</b>. 거래 결정에 대한 책임은 전적으로 본인에게 있습니다.
+
+                    수치는 참고용일 뿐이며 <b>재정적 조언이 아닙니다</b>. 모든 거래 결정은 본인의 책임입니다.
+
                 </div>
+
             </div>`,
 
-        tip_model_title: "모델 예측",
-        tip_model_active: "목표 거래량은 과거 변동성과 실시간 시장 모멘텀을 기반으로 산출됩니다 (투자 조언 아님).",
-        tip_vote_guide: "당신의 관점은? <b class='text-brand'>동의</b>, <b class='text-danger'>낮음</b> 또는 <b class='text-success'>높음</b> 투표.",
-        tip_model_wait_title: "데이터 수집 중",
-        tip_model_wait_body: "모델은 포괄적인 데이터가 필요합니다. 정확성을 위해 종료 <span style='color:#ffd700'>16시간 전</span>에 예측이 활성화됩니다.",
+        tip_model_title: "예측 모델",
+
+        tip_model_active: "과거 변동성 및 현재 성장 모멘텀 기반 예상 목표.",
+
+        tip_vote_guide: "의견은? <b class='text-brand'>동의</b>, <b class='text-danger'>낮음</b> 또는 <b class='text-success'>높음</b>.",
+
+        tip_model_wait_title: "데이터 축적 단계",
+
+        tip_model_wait_body: "시스템이 정확성을 위해 세션 데이터를 수집 중입니다. 종료 <span style='color:#ffd700'>16시간 전</span>부터 예측이 활성화됩니다.",
+
+        tip_daily_vol: "오늘 총 거래량 (UTC 00:00 ~ 23:59).",
+
+        tip_camp_vol: "시작부터 현재까지의 누적 거래량.<br><i style='color:#00FFFF'>실시간 알고리즘 기반 최종 누적 거래량 예상치.</i>",
+
+        tip_col_limit: "<b>지정가 전용 (Off-chain):</b> 바이낸스 오더북에서 체결된 오프체인 지정가 주문 거래량.<br><i>설명: 사용자가 바이낸스 지정가 오더북을 통해 직접 넣은 주문 데이터.</i>",
+
+        tip_col_onchain: "<b>온체인 전용:</b> 네트워크상의 직접 거래량.<br><i>메커니즘: 바이낸스는 즉시 주문을 온체인으로 전송하여 처리합니다. 외부 지갑 거래 포함.</i>",
+
+        tip_col_total: "<b>종합 (온체인 + 지정가):</b> 온체인 및 지정가 오더북에서 기록된 모든 유효 거래량 합계.",
 
         txt_ended: "종료됨",
         txt_yest: "어제",
@@ -816,58 +947,36 @@ const translations = {
 
 let globalTooltipInstances = []; 
 
-function initSmartTooltips() {
-    try {
-
-        document.querySelectorAll('.tooltip').forEach(t => t.remove());
-        globalTooltipInstances = []; 
-
-
-        document.removeEventListener('click', handleGlobalClick);
-        document.addEventListener('click', handleGlobalClick);
-
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-
-        tooltipTriggerList.map(function (el) {
-
-            const oldInstance = bootstrap.Tooltip.getInstance(el);
-            if (oldInstance) oldInstance.dispose();
-
-
-            let t = new bootstrap.Tooltip(el, {
-                trigger: 'hover click', 
-                html: true,
-                animation: true,
-                delay: { "show": 50, "hide": 50 },
-
-                interactive: true 
-            });
-
-            globalTooltipInstances.push(t);
-
-
-            el.addEventListener('click', function (e) {
-
-                e.stopPropagation();
-                
-
-                if(el.classList.contains('col-ai-target')) {
-                    t.show();
-                }
-            });
-            
-
-            el.addEventListener('mouseleave', function() {
-
-                t.hide(); 
-            });
-
-            return t;
-        });
-
-    } catch (e) {
-        console.log("Tooltip error:", e);
+// Thay thế hàm initSmartTooltips cũ bằng hàm này
+function initBinanceTooltips() {
+    // Hủy các instance cũ nếu có để tránh rò rỉ bộ nhớ khi render lại
+    if (window.currentTooltips) {
+        window.currentTooltips.forEach(t => t.destroy());
     }
+
+    window.currentTooltips = tippy('.tippy-header', {
+        // --- Giao diện ---
+        theme: 'binance', // Tên theme ta sẽ định nghĩa ở CSS
+        animation: 'scale',
+        arrow: true,
+        allowHTML: true, // Cho phép HTML trong tooltip
+        
+        // --- Logic tương tác (QUAN TRỌNG) ---
+        // trigger: 'mouseenter focus', // PC: Rê chuột là hiện
+        
+        // Touch: 'hold' nghĩa là giữ 500ms mới hiện. Tap nhanh thì bỏ qua.
+        touch: ['hold', 500], 
+        
+        // Delay: Hiện sau 50ms, ẩn ngay lập tức
+        delay: [50, 0],
+        
+        // Ẩn ngay khi click (để nhường chỗ cho sự kiện Sort)
+        hideOnClick: true,
+        
+        // Tối ưu vị trí
+        placement: 'top',
+        appendTo: document.body,
+    });
 }
 
 
@@ -940,7 +1049,7 @@ function applyLanguage() {
         sortSel.options[1].text = t.sort_ending;
         sortSel.options[2].text = t.sort_reward;
     }
-    initSmartTooltips();
+    initBinanceTooltips();
 }
 
 
@@ -2564,7 +2673,7 @@ ${SHOW_PREDICT_BTN ? `
     listToRender.forEach(c => { renderCardMiniChart(c); });
     
 
-    initSmartTooltips();
+    initBinanceTooltips();
 }
 
 
@@ -2708,45 +2817,31 @@ function copyContract(addr) {
 /* ==========================================================
    2. RENDER MARKET HEALTH (BẢN FULL: CÓ HEADER + TỐI ƯU BODY)
    ========================================================== */
-function renderMarketHealthTable(dataInput) {
+   function renderMarketHealthTable(dataInput) {
     const table = document.querySelector('.health-table');
     const tbody = document.getElementById('healthTableBody');
     if (!table || !tbody) return;
 
-
-    
     let sourceList = dataInput || (typeof compList !== 'undefined' ? compList : []);
     
-  
     let currentTab = 'running';
     if (typeof appData !== 'undefined') currentTab = appData.currentTab;
     else currentTab = localStorage.getItem('wave_active_tab') || 'running';
-
    
     const nowMs = Date.now();
     
+    // --- 1. LOGIC LỌC (GIỮ NGUYÊN CODE CŨ) ---
     let projectsToRender = sourceList.filter(item => {
         let isEnded = false;
-        
-        
-        if (item.end_at) {
-            isEnded = nowMs > new Date(item.end_at).getTime();
-        } 
-        
-        else if (item.end) {
-            isEnded = nowMs > (new Date(item.end).getTime() + 86400000);
-        }
-
-       
+        if (item.end_at) { isEnded = nowMs > new Date(item.end_at).getTime(); } 
+        else if (item.end) { isEnded = nowMs > (new Date(item.end).getTime() + 86400000); }
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
 
-    
     if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
         projectsToRender = projectsToRender.filter(c => c.end === currentFilterDate);
     }
-
 
     let isHistoryTab = (typeof appData !== 'undefined' && (appData.currentTab === 'ended' || appData.currentTab === 'history')) || 
                        (localStorage.getItem('wave_active_tab') === 'ended' || localStorage.getItem('wave_active_tab') === 'history');
@@ -2754,106 +2849,161 @@ function renderMarketHealthTable(dataInput) {
     const lang = (typeof currentLang !== 'undefined') ? currentLang : 'en';
     const t = (typeof translations !== 'undefined' && translations[lang]) ? translations[lang] : translations['en'];
 
-
     const healthTitleEl = document.querySelector('[data-i18n="health_title"]');
     if(healthTitleEl) healthTitleEl.innerText = t.health_title;
 
-
-
-    let cols = [
-        { key: 'token',       label: 'TOKEN',       align: 'text-center' },
-        { key: 'duration',    label: 'TIME',        align: 'text-center', tooltip: 'tip_time' },
-        { key: 'win_pool',    label: 'WIN / POOL',  align: 'text-center', tooltip: 'tip_win_pool' },
-        { key: 'price_val',   label: 'VAL / PRICE', align: 'text-center', tooltip: 'tip_price_val' },
-        { key: 'rule',        label: 'RULE',        align: 'text-center', tooltip: 'tip_rule' },
-        { key: 'daily_vol',   label: 'DAILY VOL',   align: 'text-center', tooltip: 'tip_daily_vol' },
-        { key: 'camp_vol',    label: 'TOTAL VOL',   align: 'text-center', tooltip: 'tip_camp_vol' }
-    ];
-
-    if (!isHistoryTab) {
-         cols.push({ key: 'speed_match', label: 'SPD / MATCH', align: 'text-center', tooltip: 'tip_speed_match' });
-         cols.push({ key: 'ord_spr',     label: 'ORD / SPR',   align: 'text-center', tooltip: 'tip_ord_spr' });
-    }
-
-    cols.push({ key: 'min_vol', label: 'MIN VOL', align: 'text-center', tooltip: 'tip_min_vol' });
-    cols.push({ key: 'target', label: 'PREDICTION', align: 'text-center px-2', tooltip: 'tip_pred_header_body', title_key: 'tip_pred_header_title' });
-
-
+    // --- SỬA 1: HEADER MỚI (2 TẦNG + SORT CHI TIẾT) ---
     let thead = table.querySelector('thead');
     if (!thead) { thead = document.createElement('thead'); table.prepend(thead); }
     
-    let theadHtml = '<tr>';
-    cols.forEach(c => {
-        let icon = 'fa-sort';
-        let activeClass = '';
-        if (typeof mhSort !== 'undefined' && mhSort && mhSort.col === c.key) {
-            icon = mhSort.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
-            activeClass = 'sort-active';
-        }
-        
-        let labelText = t['col_' + c.key] || c.label;
-        let tipRaw = c.tooltip ? (t[c.tooltip] || '') : '';
-        let labelWithTooltip = labelText;
+    // Helper lấy icon sort
+    const getSortIcon = (k) => (typeof mhSort!=='undefined' && mhSort.col===k) ? (mhSort.dir==='asc'?'fa-sort-up sort-active':'fa-sort-down sort-active') : 'fa-sort sort-icon opacity-25';
+    
+    // Style gọn gàng, chuyên nghiệp
+    const thMain = "cursor:pointer; user-select:none; vertical-align:middle; text-align:center;";
+    const thSub  = "cursor:pointer; user-select:none; text-align:center; font-size:0.7rem; color:#888; padding:6px; border-top:1px solid rgba(255,255,255,0.1); transition:color 0.2s;";
+    const bLeft  = "border-left:1px solid rgba(255,255,255,0.1);";
 
-        if (tipRaw) {
-            let safeTip = tipRaw;
-            let customTitleKey = c.title_key; 
-            let tooltipTitleText = (customTitleKey && t[customTitleKey]) ? t[customTitleKey] : labelText;
-            let tooltipContent = `<div class='cyber-tip-content'><div class='cyber-tip-header'><i class='fas fa-info-circle'></i> ${tooltipTitleText}</div><div class='cyber-tip-body'>${safeTip}</div></div>`;
-            labelWithTooltip = `<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-custom-class="custom-cyber-tooltip" title="${tooltipContent.replace(/"/g, '&quot;')}" style="cursor:help; border-bottom: 1px dashed rgba(255,255,255,0.2);">${labelText}</span>`;
-        }
-        theadHtml += `<th class="${c.align}" onclick="toggleHealthSort('${c.key}')" style="cursor:pointer; user-select:none; vertical-align:middle;">${labelWithTooltip} <i class="fas ${icon} sort-icon ${activeClass}"></i></th>`;
-    });
-    theadHtml += '</tr>';
-    thead.innerHTML = theadHtml;
+    // --- SỬA HEADER: DÙNG BIẾN TỪ ĐIỂN (t.key) ---
+    // Giúp bạn sửa nội dung trong biến translations dễ dàng
 
+    // --- HEADER VỚI TOOLTIP CHUẨN TỪ ĐIỂN ---
+    // --- TÌM ĐOẠN renderMarketHealthTable VÀ THAY THẾ PHẦN THEAD ---
 
+thead.innerHTML = `
+<tr>
+    <th rowspan="2" class="text-center" style="${thMain}" onclick="toggleHealthSort('token')">
+        ${t.col_token} <i class="fas ${getSortIcon('token')}"></i>
+    </th>
+    
+    <th rowspan="2" class="text-center tippy-header" style="${thMain}" onclick="toggleHealthSort('duration')" 
+        data-tippy-content="${t.tip_time}">
+        ${t.col_duration} <i class="fas ${getSortIcon('duration')}"></i>
+    </th>
+
+    <th rowspan="2" class="text-center tippy-header" style="${thMain}" onclick="toggleHealthSort('win_pool')"
+        data-tippy-content="${t.tip_win_pool}">
+        ${t.col_win_pool} <i class="fas ${getSortIcon('win_pool')}"></i>
+    </th>
+
+    <th rowspan="2" class="text-center tippy-header" style="${thMain}" onclick="toggleHealthSort('price_val')"
+        data-tippy-content="${t.tip_price_val}">
+        ${t.col_price_val} <i class="fas ${getSortIcon('price_val')}"></i>
+    </th>
+
+    <th rowspan="2" class="text-center tippy-header" style="${thMain}" onclick="toggleHealthSort('rule')"
+        data-tippy-content="${t.tip_rule}">
+        ${t.col_rule} <i class="fas ${getSortIcon('rule')}"></i>
+    </th>
+    
+    <th colspan="3" class="text-center tippy-header" style="${thMain} ${bLeft}" 
+        data-tippy-content="${t.tip_daily_vol}">
+        ${t.col_daily_vol}
+    </th>
+
+    <th colspan="3" class="text-center tippy-header" style="${thMain} ${bLeft}" 
+        data-tippy-content="${t.tip_camp_vol}">
+        ${t.col_camp_vol}
+    </th>
+
+    <th rowspan="2" class="text-center tippy-header" style="${thMain} ${bLeft}" onclick="toggleHealthSort('min_vol')" 
+        data-tippy-content="${t.tip_min_vol}">
+        ${t.col_min_vol} <i class="fas ${getSortIcon('min_vol')}"></i>
+    </th>
+
+    <th rowspan="2" class="text-center px-2 tippy-header" style="${thMain}" onclick="toggleHealthSort('target')"
+    data-tippy-content="${`<div style='text-align:left;'><b>${t.tip_pred_header_title}</b><br>${t.tip_pred_header_body}</div>`.replace(/"/g, '&quot;')}">
+    ${t.col_target} <i class="fas ${getSortIcon('target')}"></i>
+</th>
+    
+</tr>
+
+<tr>
+    <th style="${thSub} ${bLeft}" class="tippy-header" onclick="toggleHealthSort('d_lim')" 
+        data-tippy-content="${t.tip_col_limit}">
+        Limit <i class="fas ${getSortIcon('d_lim')}"></i>
+    </th>
+    <th style="${thSub}" class="tippy-header" onclick="toggleHealthSort('d_on')" 
+        data-tippy-content="${t.tip_col_onchain}">
+        OnChain <i class="fas ${getSortIcon('d_on')}"></i>
+    </th>
+    <th style="${thSub} color:#ccc;" class="tippy-header" onclick="toggleHealthSort('d_tot')" 
+        data-tippy-content="${t.tip_col_total}">
+        Total <i class="fas ${getSortIcon('d_tot')}"></i>
+    </th>
+    
+    <th style="${thSub} ${bLeft}" class="tippy-header" onclick="toggleHealthSort('a_lim')" 
+        data-tippy-content="${t.tip_col_limit}">
+        Limit <i class="fas ${getSortIcon('a_lim')}"></i>
+    </th>
+    <th style="${thSub}" class="tippy-header" onclick="toggleHealthSort('a_on')" 
+        data-tippy-content="${t.tip_col_onchain}">
+        OnChain <i class="fas ${getSortIcon('a_on')}"></i>
+    </th>
+    <th style="${thSub} color:#ccc;" class="tippy-header" onclick="toggleHealthSort('a_tot')" 
+        data-tippy-content="${t.tip_col_total}">
+        Total <i class="fas ${getSortIcon('a_tot')}"></i>
+    </th>
+</tr>`;
+
+    // --- 3. LOGIC SORT (GIỮ NGUYÊN CODE CŨ + UPDATE KEY CHO CỘT GỘP) ---
+    // --- SỬA 2: LOGIC SORT CÁC CỘT CON ---
     if (typeof mhSort !== 'undefined' && projectsToRender.length > 0) {
-        if (isHistoryTab && mhSort.col === 'reward') {
-            mhSort.col = 'duration';
-            mhSort.dir = 'desc'; 
-        }
+        if (isHistoryTab && mhSort.col === 'reward') { mhSort.col = 'duration'; mhSort.dir = 'desc'; }
+        
         projectsToRender.sort((a, b) => {
             let pA = (a.market_analysis?.price) || (a.cachedPrice || 0);
             let pB = (b.market_analysis?.price) || (b.cachedPrice || 0);
-            const calcCamp = (item) => (item.real_vol_history || []).reduce((acc, i) => acc + parseFloat(i.vol), 0) + (item.real_alpha_volume || 0);
             
+            // Helper lấy giá trị an toàn
+            const getV = (i, k) => parseFloat(i[k] || 0);
+            
+            // Tính OnChain (nếu thiếu thì lấy Total - Limit)
+            const getOnChainD = (i) => (i.onchain_daily_volume !== undefined) ? getV(i,'onchain_daily_volume') : Math.max(0, getV(i,'real_alpha_volume') - getV(i,'limit_daily_volume'));
+            const getOnChainA = (i) => (i.onchain_accumulated_volume !== undefined) ? getV(i,'onchain_accumulated_volume') : Math.max(0, getV(i,'total_accumulated_volume') - getV(i,'limit_accumulated_volume'));
+
+            // Fallback cho Total Acc cũ
+            const getTotAcc = (i) => {
+                let v = getV(i, 'total_accumulated_volume');
+                if(v===0) v = (i.real_vol_history||[]).reduce((sum,x)=>sum+parseFloat(x.vol),0) + getV(i,'real_alpha_volume');
+                return v;
+            };
+
             let valA, valB;
             switch(mhSort.col) {
-                case 'token':       valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); break;
-                case 'daily_vol':   valA = parseFloat(a.real_alpha_volume || 0); valB = parseFloat(b.real_alpha_volume || 0); break;
-                case 'camp_vol':    valA = calcCamp(a); valB = calcCamp(b); break;
-                case 'duration':    
-                    valA = new Date(isHistoryTab ? a.end : a.start).getTime();
-                    valB = new Date(isHistoryTab ? b.end : b.start).getTime();
-                    break;
-                case 'min_vol':      
+                case 'token':     valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); break;
+                // Sort Daily
+                case 'd_lim':     valA = getV(a, 'limit_daily_volume'); valB = getV(b, 'limit_daily_volume'); break;
+                case 'd_on':      valA = getOnChainD(a); valB = getOnChainD(b); break;
+                case 'd_tot': case 'daily_vol': valA = getV(a, 'real_alpha_volume'); valB = getV(b, 'real_alpha_volume'); break;
+                
+                // Sort Total
+                case 'a_lim':     valA = getV(a, 'limit_accumulated_volume'); valB = getV(b, 'limit_accumulated_volume'); break;
+                case 'a_on':      valA = getOnChainA(a); valB = getOnChainA(b); break;
+                case 'a_tot': case 'camp_vol': valA = getTotAcc(a); valB = getTotAcc(b); break;
+
+                case 'duration':  valA = new Date(isHistoryTab ? a.end : a.start).getTime(); valB = new Date(isHistoryTab ? b.end : b.start).getTime(); break;
+                case 'min_vol':   /* Giữ nguyên logic cũ của bạn */ 
                     let getT1 = (item) => {
-                        let h = item.history || [];
-                        if(h.length === 0) return 0;
+                        let h = item.history || []; if(h.length === 0) return 0;
                         let dTarget = isHistoryTab ? item.end : new Date(new Date().setDate(new Date().getDate()-1)).toISOString().split('T')[0];
                         let f = h.find(x=>x.date===dTarget);
                         if(!isHistoryTab && !f) { let v = h.filter(x=>x.date!==new Date().toISOString().split('T')[0]); if(v.length>0) f=v[v.length-1]; }
                         return f ? parseFloat(f.target) : 0;
                     };
-                    valA = getT1(a); valB = getT1(b);
-                    break;
-                default:            valA = (parseFloat(a.rewardQty)||0) * pA; valB = (parseFloat(b.rewardQty)||0) * pB;
+                    valA = getT1(a); valB = getT1(b); break;
+                default: valA = (parseFloat(a.rewardQty)||0) * pA; valB = (parseFloat(b.rewardQty)||0) * pB;
             }
-            if (valA < valB) return mhSort.dir === 'asc' ? -1 : 1;
-            if (valA > valB) return mhSort.dir === 'asc' ? 1 : -1;
-            return 0;
+            return (valA < valB ? -1 : 1) * (mhSort.dir === 'asc' ? 1 : -1);
         });
     }
-
-
 
     let html = '';
 
     if(projectsToRender.length === 0) {
-        html = `<tr><td colspan="${cols.length}" class="text-center py-4 text-sub opacity-50">No Data Available</td></tr>`;
+        html = `<tr><td colspan="12" class="text-center py-4 text-sub opacity-50">No Data Available</td></tr>`;
     } else {
-
+        // --- HELPER ---
         const fmtNoDec = (num) => !num ? '$0' : '$' + Math.round(num).toLocaleString('en-US');
         const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
         const formatDateShort = (dateStr) => { if(!dateStr) return '--'; return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
@@ -2863,12 +3013,11 @@ function renderMarketHealthTable(dataInput) {
         const dayBeforeDate = new Date(); dayBeforeDate.setDate(dayBeforeDate.getDate() - 2);
         const dayBeforeStr = dayBeforeDate.toISOString().split('T')[0];
 
-
         projectsToRender.forEach(c => {
             if (isHistoryTab && c.name && c.name.toUpperCase().includes('ARB')) return;
             let ma = c.market_analysis || {};
             
-
+            // --- CÁC CỘT INFO (GIỮ NGUYÊN CODE GỐC) ---
             let badgeHtml = '';
             if (c.listingTime) {
                 let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (30*86400000) - now)/86400000);
@@ -2877,24 +3026,20 @@ function renderMarketHealthTable(dataInput) {
                     badgeHtml = `<span class="promo-badge-inline"><img src="${iconUrl}" class="promo-icon-inline"> ${d}d</span>`;
                 }
             }
-            
 
             let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
+            
+            let cleanSym = c.name ? c.name.split('(')[0].trim().toUpperCase() : 'UNKNOWN';
+            let alphaData = alphaMarketCache[cleanSym] || {};
+            let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
+            let chainBadge = alphaData.chain_icon ? `<img src="${alphaData.chain_icon}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
 
-
-let cleanSym = c.name ? c.name.split('(')[0].trim().toUpperCase() : 'UNKNOWN';
-let alphaData = alphaMarketCache[cleanSym] || {};
-let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
-let chainBadge = alphaData.chain_icon ? `<img src="${alphaData.chain_icon}" style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#000; border:1px solid #333;">` : '';
-
-
-let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;">
-    <div style="position:relative; display:inline-block;">
-        <img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;">
-        ${chainBadge}
-    </div>
-    <div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
-
+            let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;display:flex;align-items:center;gap:8px;">
+                <div style="position:relative; display:inline-block;">
+                    <img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;">
+                    ${chainBadge}
+                </div>
+                <div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
 
             let sTime = c.startTime || "00:00:00"; if(sTime.length===5) sTime+=":00";
             let startDt = new Date(c.start + 'T' + sTime + 'Z');
@@ -2921,180 +3066,125 @@ let tokenHtml = `<div class="token-cell-wrapper" style="justify-content:center;d
             }
             let durationHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary ${timeColor}" style="font-size:0.8rem; font-weight:bold">${countStr}</span><span class="cell-secondary">${c.start ? formatDateShort(c.start) + ' - ' + formatDateShort(c.end) : '--'}</span></div>`;
 
-
             let winPoolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">${c.topWinners ? c.topWinners.replace(/\(p\d+\)/gi, '').trim() : '--'}</span><span class="cell-secondary">${(parseFloat(c.rewardQty)||0).toLocaleString()} ${c.name}</span></div>`;
             
-let price = parseFloat(c.cachedPrice) || parseFloat(ma.price) || 0;
-
-let pStr = '---';
-if (price > 0) {
-    if (price >= 1) {
-        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    } else if (price >= 0.01) {
-        pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
-    } else {
-        pStr = '$' + parseFloat(price.toFixed(8)).toString();
-    }
-}
-
-let priceValHtml = `<div class="cell-stack justify-content-center">
-    <span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span>
-    <span class="cell-secondary live-price-val" data-id="${c.db_id}">${pStr}</span>
-</div>`;
-
-
+            let price = parseFloat(c.cachedPrice) || parseFloat(ma.price) || 0;
+            let pStr = '---';
+            if (price > 0) {
+                if (price >= 1) { pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } 
+                else if (price >= 0.01) { pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 }); } 
+                else { pStr = '$' + parseFloat(price.toFixed(8)).toString(); }
+            }
+            let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary live-price-val" data-id="${c.db_id}">${pStr}</span></div>`;
 
             let rt = c.ruleType || 'buy_only'; 
             let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
 
-
-            let dailyVolHtml = '', campVolHtml = '';
+            // --- 4. TÍNH TOÁN VOL (LOGIC MỚI - 3 CỘT) ---
             
+            // Daily Vol
+            // --- SỬA 3: HIỂN THỊ 6 CỘT MÀU SẮC CHUYÊN NGHIỆP ---
+            
+            // Tính toán số liệu (Giữ logic fallback của bạn)
+            let dLimit = parseFloat(c.limit_daily_volume || 0);
+            let lh = c.limit_vol_history || [];
+            if (dLimit === 0 && lh.length > 0) { // Fallback history
+                let checkDate = (isHistoryTab && c.end) ? c.end : yestStr; 
+                let found = lh.find(x => x.date === checkDate);
+                if (found) dLimit = parseFloat(found.vol);
+                else if (lh.length > 0) dLimit = parseFloat(lh[lh.length-1].vol);
+            }
+            let dTotal = parseFloat(c.real_alpha_volume || 0);
+            let dOnChain = (c.onchain_daily_volume !== undefined) ? parseFloat(c.onchain_daily_volume) : Math.max(0, dTotal - dLimit);
+            if(c.onchain_daily_volume !== undefined) dTotal = dLimit + dOnChain; // Re-sync
+
+            // Accumulated
+            let aLimit = parseFloat(c.limit_accumulated_volume || 0);
+            if (aLimit === 0 && lh.length > 0) aLimit = lh.reduce((acc,curr)=>acc+parseFloat(curr.vol),0);
+            let aTotal = parseFloat(c.total_accumulated_volume || 0);
+            if (aTotal === 0 && (c.real_vol_history||[]).length>0) aTotal = c.real_vol_history.reduce((acc,i)=>acc+parseFloat(i.vol),0) + dTotal;
+            let aOnChain = (c.onchain_accumulated_volume !== undefined) ? parseFloat(c.onchain_accumulated_volume) : Math.max(0, aTotal - aLimit);
+            if(c.onchain_accumulated_volume !== undefined) aTotal = aLimit + aOnChain;
+
+            // Estimate Logic
+            let showEst = (!isEnded && !isUpcoming && parseFloat(ma.realTimeVol) > 0);
+            let estLimit=aLimit, estOnChain=aOnChain, estTotal=aTotal;
+            if (showEst) {
+                let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
+                let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
+                if (diffMs > 0) {
+                    let added = (parseFloat(ma.realTimeVol)||0) * (diffMs/1000);
+                    let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
+                    estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
+                }
+            }
+
+            // --- Render HTML Cells ---
+            const styBase = "text-center font-num";
+
+            // 1. Style cho Daily Vol (Làm mảnh lại)
+            const styLimDaily = "color:#fff; font-weight:300;"; 
+            const styOcDaily  = "color:#fff; font-weight:300;"; 
+            const styTotDaily = "color:#fff; font-weight:400;";    
+
+            // 2. Style cho Total Vol (Giữ nguyên chuyên nghiệp, đậm nét)
+            const styLimAcc = "color:#fff; font-weight:700;"; 
+            const styOcAcc  = "color:#fff; font-weight:700;";
+            const styTotAcc = "color:#fff; font-weight:bold;";    
+            
+            const bLeft   = "border-left:1px solid rgba(255,255,255,0.05);";
+            // Màu Cyan giúp số dự tính trông như dữ liệu đang "chạy" thời gian thực
+const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px; opacity:0.8;";
+
+            let dailyColsHtml, accColsHtml;
+
             if (isUpcoming) {
-                dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span><span class="cell-secondary text-gold" style="font-size:0.6rem; font-weight:bold">UPCOMING</span></div>`;
-                campVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-sub opacity-50">--</span></div>`;
+                dailyColsHtml = `<td colspan="3" class="text-center text-sub opacity-50" style="${bLeft}">-- UPCOMING --</td>`;
+                accColsHtml   = `<td colspan="3" class="text-center text-sub opacity-50" style="${bLeft}">--</td>`;
             } else {
-
-
-                let todayVol = parseFloat(c.limit_daily_volume || 0);
-
-
-
-                let lh = c.limit_vol_history || [];
-                
-                if (todayVol === 0 && lh.length > 0) {
-
-
-                    let checkDate = (isHistoryTab && c.end) ? c.end : new Date().toISOString().split('T')[0];
-                    
-                    let found = lh.find(x => x.date === checkDate);
-                    if (found) {
-                        todayVol = parseFloat(found.vol);
-                    } else {
-
-                        let last = lh[lh.length - 1];
-                        if (last) todayVol = parseFloat(last.vol);
-                    }
-                }
-
-
-                let subDailyVol = '--';
-                let compareDateStr = yestStr; 
-
-                if (isHistoryTab && c.end) {
-                    let d = new Date(c.end);
-                    d.setDate(d.getDate() - 1);
-                    compareDateStr = d.toISOString().split('T')[0];
-                }
-
-                let prevItem = lh.find(x => x.date === compareDateStr);
-                
-
-                if (!prevItem && isHistoryTab && lh.length >= 2) {
-                    let sorted = [...lh].sort((a,b) => new Date(a.date) - new Date(b.date));
-                    prevItem = sorted[sorted.length - 2];
-                }
-
-                if (prevItem) {
-                    let label = isHistoryTab ? 'Prev' : 'Yest';
-                    subDailyVol = `${label}: ${fmtNoDec(parseFloat(prevItem.vol))}`;
-                }
-
-                dailyVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white" id="vol-${c.db_id}">${fmtNoDec(todayVol)}</span><span class="cell-secondary">${subDailyVol}</span></div>`;
-                
-
-                let currentTotal = parseFloat(c.limit_accumulated_volume || 0);
-                
-
-                if (currentTotal === 0 && lh.length > 0) {
-                     currentTotal = lh.reduce((acc, curr) => acc + parseFloat(curr.vol), 0);
-                }
-
-                let estLine = '';
-                
-
-                if (!isEnded && !isHistoryTab) {
-                    let tPart = (c.endTime || "23:59:59").trim();
-                    if(tPart.length === 5) tPart += ":00";
-                    let endObj = new Date(`${c.end}T${tPart}Z`);
-                    let diffMs = endObj - now;
-                    let speed = parseFloat(ma.realTimeVol) || 0;
-
-                    if (diffMs > 0 && speed > 0) {
-                        let estFinal = currentTotal + (speed * (diffMs / 1000));
-                        estLine = `<div class="cell-secondary" style="
-        color: #00F0FF !important;    
-        opacity: 1 !important;      
-        font-weight: 600;            
-        font-size: 0.7rem;        
-        margin-top: 1px;            
-    ">Est: ${fmtNoDec(estFinal)}</div>`;
-}
-                }
-                
-                campVolHtml = `<div class="cell-stack justify-content-center">
-                    <span id="mh-total-${c.db_id || c.id}" class="cell-primary text-white">${fmtNoDec(currentTotal)}</span>
-                    ${estLine}
-                </div>`;
+                dailyColsHtml = `
+                    <td class="${styBase}" style="${bLeft} ${styLimDaily}">${fmtCompact(dLimit)}</td>
+                    <td class="${styBase}" style="${styOcDaily}">${fmtCompact(dOnChain)}</td>
+                    <td class="${styBase}" style="${styTotDaily}">${fmtCompact(dTotal)}</td>
+                `;
+                accColsHtml = `
+    <td class="${styBase}" style="${bLeft} ${styLimAcc}">
+        ${fmtCompact(aLimit)} ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estLimit)}</span>` : ''}
+    </td>
+    <td class="${styBase}" style="${styOcAcc}">
+        ${fmtCompact(aOnChain)} ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estOnChain)}</span>` : ''}
+    </td>
+    <td class="${styBase}" style="${styTotAcc}">
+        ${fmtCompact(aTotal)} ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estTotal)}</span>` : ''}
+    </td>
+`;
             }
 
-
-            let extraCols = '';
-            if (!isHistoryTab) {
-                let matchSpdHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.realTimeVol)||0).toLocaleString()}</span><span class="cell-secondary">${(parseFloat(ma.velocity)||0) > 0 ? ((parseFloat(ma.velocity)||0)/60).toFixed(1)+' ops' : '0 ops'}</span></div>`;
-                let ordSprHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">$${Math.round(parseFloat(ma.avgTicket)||0).toLocaleString()}</span><span class="cell-secondary ${(parseFloat(ma.spread)||0)>1?'text-red':'text-green'}">${(parseFloat(ma.spread)||0).toFixed(2)}%</span></div>`;
-                extraCols = `<td class="text-center">${matchSpdHtml}</td><td class="text-center font-num">${ordSprHtml}</td>`;
-            }
-
-
+            // --- MIN VOL (GIỮ NGUYÊN CODE CŨ) ---
             let h = c.history || [];
             let curTarget = 0, diff = 0, hasData = false;
-            
-            let latest = null;
-            let prev = null;
+            let latest = null; let prev = null;
 
             if (isHistoryTab) {
-
-                
-
                 latest = h.find(x => x.date === c.end);
-
-
                 if (!latest && h.length > 0) {
-
                     let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
-
                     latest = sorted.find(x => parseFloat(x.target) > 0);
                 }
-
-
                 if (latest) {
-                    let d = new Date(latest.date);
-                    d.setDate(d.getDate() - 1);
+                    let d = new Date(latest.date); d.setDate(d.getDate() - 1);
                     let prevDateStr = d.toISOString().split('T')[0]; 
                     prev = h.find(x => x.date === prevDateStr);
                 }
-
             } else {
-
-                let targetDateStr = yestStr;
-                let prevTargetDateStr = dayBeforeStr;
-                
-                latest = h.find(x => x.date === targetDateStr);
-                prev = h.find(x => x.date === prevTargetDateStr);
-
-
+                latest = h.find(x => x.date === yestStr);
+                prev = h.find(x => x.date === dayBeforeStr);
                 if (!latest && h.length > 0) {
                     let todayStr = now.toISOString().split('T')[0];
                     let validHist = h.filter(x => x.date !== todayStr && x.target > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
-                    if(validHist.length > 0) { 
-                        latest = validHist[validHist.length - 1]; 
-                        if(validHist.length > 1) prev = validHist[validHist.length - 2]; 
-                    }
+                    if(validHist.length > 0) { latest = validHist[validHist.length - 1]; if(validHist.length > 1) prev = validHist[validHist.length - 2]; }
                 }
             }
-
-
             if (latest) { curTarget = parseFloat(latest.target); if (prev) { diff = curTarget - parseFloat(prev.target); hasData = true; } }
 
             let diffHtml = `<span class="cell-secondary opacity-50">${t.txt_no_data || '--'}</span>`;
@@ -3104,31 +3194,31 @@ let priceValHtml = `<div class="cell-stack justify-content-center">
                 let sign = diff >= 0 ? '+' : '';
                 diffHtml = `<span class="${color} cell-secondary" style="font-size:0.7rem; font-weight:bold">${sign}${Math.abs(diff).toLocaleString('en-US')} (${pct}%)</span>`;
             } else if (curTarget > 0) { diffHtml = `<span class="cell-secondary text-brand" style="font-size:0.6rem; font-weight:bold">${t.txt_new || 'NEW'}</span>`; }
-            let minVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-gold">${fmtNoDec(curTarget)}</span>${diffHtml}</div>`;
+            let minVolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-gold">${fmtNoDec(curTarget)}</span></div>`;
 
             let aiTargetHtml = (typeof calculateAiTarget === 'function') ? calculateAiTarget(c, isHistoryTab) : '<td class="text-center">--</td>';
             
-
+            // --- GỘP HTML ---
             html += `<tr style="cursor:pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="jumpToCard('${c.db_id}')">
                 <td class="text-center">${tokenHtml}</td>
                 <td class="text-center">${durationHtml}</td>
                 <td class="text-center">${winPoolHtml}</td>
                 <td class="text-center">${priceValHtml}</td>
                 <td class="text-center">${ruleHtml}</td>
-                <td class="text-center font-num">${dailyVolHtml}</td>
-                <td class="text-center font-num">${campVolHtml}</td>
-                ${extraCols}
+                ${dailyColsHtml}
+                ${accColsHtml}
                 <td class="text-center font-num">${minVolHtml}</td>
                 ${aiTargetHtml}
             </tr>`;
         });
     }
 
-
     tbody.innerHTML = html;
-    
 
-    try { var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); }); } catch(e) {}
+// Gọi hàm khởi tạo Tippy thay vì Bootstrap Tooltip
+if (typeof initBinanceTooltips === 'function') {
+    initBinanceTooltips();
+}
 }
 
 
@@ -3182,7 +3272,7 @@ function calculateAiTarget(c, isHistory = false) {
             let color = delta > 0 ? '#00FF99' : '#ff6b6b'; 
             
 
-            deltaHtml = `<div style="font-size:0.75em; color:${color}; margin-top:4px; font-weight:600;">(${sign}${delta.toLocaleString('en-US')})</div>`;
+           
         }
 
         contentHtml = `
