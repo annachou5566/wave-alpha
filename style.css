@@ -2820,3 +2820,22 @@ margin-top: 2px;
     color: #2fb344 !important; 
 }
 
+
+.tippy-box[data-theme~='binance'] {
+    background-color: #1E2329;
+    color: #EAECEF;
+   
+    font-family: 'Be Vietnam Pro', sans-serif; 
+    font-size: 13px; 
+    font-weight: 400;
+    line-height: 1.5;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 6px 10px;
+    text-align: left; 
+}
+
+.tippy-arrow {
+    color: #1E2329;
+}
