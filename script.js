@@ -3151,7 +3151,7 @@ function calculateAiTarget(c, isHistory = false) {
     let isFinalDay = (c.end === todayStr);
 
     let unlockTime = new Date();
-    unlockTime.setUTCHours(5, 0, 0, 0); 
+    unlockTime.setUTCHours(0, 0, 0, 0); 
     
     let showPrediction = false;
     if (isHistory) {
