@@ -2863,7 +2863,7 @@ function copyContract(addr) {
 
 
 thead.innerHTML = `
-<tr>
+<tr class="h-top">
     <th rowspan="2" class="text-center" style="${thMain}" onclick="toggleHealthSort('token')">
         ${t.col_token} <i class="fas ${getSortIcon('token')}"></i>
     </th>
@@ -2904,17 +2904,27 @@ thead.innerHTML = `
     </th>
 
     <th rowspan="2" class="text-center px-2 tippy-header" style="${thMain}" onclick="toggleHealthSort('target')"
-    data-tippy-content="${`<div style='text-align:left;'><b>${t.tip_pred_header_title}</b><br>${t.tip_pred_header_body}</div>`.replace(/"/g, '&quot;')}">
-    ${t.col_target} <i class="fas ${getSortIcon('target')}"></i>
-</th>
-    
+        data-tippy-content="${`<div style='text-align:left;'><b>${t.tip_pred_header_title}</b><br>${t.tip_pred_header_body}</div>`.replace(/"/g, '&quot;')}">
+        ${t.col_target} <i class="fas ${getSortIcon('target')}"></i>
+    </th>
 </tr>
 
-<tr>
-    <th style="${thSub} ${bLeft}" class="tippy-header" onclick="toggleHealthSort('d_lim')" 
-        data-tippy-content="${t.tip_col_limit}">
+<tr class="h-sub">
+    <th class="tippy-header" onclick="toggleHealthSort('d_lim')" 
+        data-tippy-content="${t.tip_col_limit}"
+        style="
+                cursor: pointer; user-select: none; text-align: center; font-size: 0.7rem; color: #888; padding: 6px; 
+                border-top: 1px solid rgba(255,255,255,0.1); border-left: 1px solid rgba(255,255,255,0.1);
+                
+                position: static !important; 
+                left: auto !important; 
+                z-index: 0 !important; 
+                background-color: transparent !important; /* <--- SỬA THÀNH NHƯ NÀY */
+                box-shadow: none !important;
+            ">
         Limit <i class="fas ${getSortIcon('d_lim')}"></i>
     </th>
+
     <th style="${thSub}" class="tippy-header" onclick="toggleHealthSort('d_on')" 
         data-tippy-content="${t.tip_col_onchain}">
         OnChain <i class="fas ${getSortIcon('d_on')}"></i>
