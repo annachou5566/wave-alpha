@@ -2779,9 +2779,7 @@ function updateGridValuesOnly() {
 
 let mhSort = { col: 'reward', dir: 'desc' };
 
-/* ==========================================================
-   FIX 1: HÀM SORT NHẬN DIỆN ĐÚNG TAB HIỆN TẠI (ĐÃ SỬA LỖI BIẾN)
-   ========================================================== */
+
 window.toggleHealthSort = function(col) {
 
     if (mhSort.col === col) {
@@ -2814,9 +2812,7 @@ function copyContract(addr) {
     });
 }
 
-/* ==========================================================
-   2. RENDER MARKET HEALTH (BẢN FULL: CÓ HEADER + TỐI ƯU BODY)
-   ========================================================== */
+
    function renderMarketHealthTable(dataInput) {
     const table = document.querySelector('.health-table');
     const tbody = document.getElementById('healthTableBody');
@@ -2830,7 +2826,7 @@ function copyContract(addr) {
    
     const nowMs = Date.now();
     
-    // --- 1. LOGIC LỌC (GIỮ NGUYÊN CODE CŨ) ---
+
     let projectsToRender = sourceList.filter(item => {
         let isEnded = false;
         if (item.end_at) { isEnded = nowMs > new Date(item.end_at).getTime(); } 
@@ -2852,23 +2848,19 @@ function copyContract(addr) {
     const healthTitleEl = document.querySelector('[data-i18n="health_title"]');
     if(healthTitleEl) healthTitleEl.innerText = t.health_title;
 
-    // --- SỬA 1: HEADER MỚI (2 TẦNG + SORT CHI TIẾT) ---
+ 
     let thead = table.querySelector('thead');
     if (!thead) { thead = document.createElement('thead'); table.prepend(thead); }
     
-    // Helper lấy icon sort
+
     const getSortIcon = (k) => (typeof mhSort!=='undefined' && mhSort.col===k) ? (mhSort.dir==='asc'?'fa-sort-up sort-active':'fa-sort-down sort-active') : 'fa-sort sort-icon opacity-25';
     
-    // Style gọn gàng, chuyên nghiệp
+    
     const thMain = "cursor:pointer; user-select:none; vertical-align:middle; text-align:center;";
     const thSub  = "cursor:pointer; user-select:none; text-align:center; font-size:0.7rem; color:#888; padding:6px; border-top:1px solid rgba(255,255,255,0.1); transition:color 0.2s;";
     const bLeft  = "border-left:1px solid rgba(255,255,255,0.1);";
 
-    // --- SỬA HEADER: DÙNG BIẾN TỪ ĐIỂN (t.key) ---
-    // Giúp bạn sửa nội dung trong biến translations dễ dàng
 
-    // --- HEADER VỚI TOOLTIP CHUẨN TỪ ĐIỂN ---
-    // --- TÌM ĐOẠN renderMarketHealthTable VÀ THAY THẾ PHẦN THEAD ---
 
 thead.innerHTML = `
 <tr>
@@ -2946,8 +2938,7 @@ thead.innerHTML = `
     </th>
 </tr>`;
 
-    // --- 3. LOGIC SORT (GIỮ NGUYÊN CODE CŨ + UPDATE KEY CHO CỘT GỘP) ---
-    // --- SỬA 2: LOGIC SORT CÁC CỘT CON ---
+
     if (typeof mhSort !== 'undefined' && projectsToRender.length > 0) {
         if (isHistoryTab && mhSort.col === 'reward') { mhSort.col = 'duration'; mhSort.dir = 'desc'; }
         
@@ -2955,14 +2946,14 @@ thead.innerHTML = `
             let pA = (a.market_analysis?.price) || (a.cachedPrice || 0);
             let pB = (b.market_analysis?.price) || (b.cachedPrice || 0);
             
-            // Helper lấy giá trị an toàn
+     
             const getV = (i, k) => parseFloat(i[k] || 0);
             
-            // Tính OnChain (nếu thiếu thì lấy Total - Limit)
+     
             const getOnChainD = (i) => (i.onchain_daily_volume !== undefined) ? getV(i,'onchain_daily_volume') : Math.max(0, getV(i,'real_alpha_volume') - getV(i,'limit_daily_volume'));
             const getOnChainA = (i) => (i.onchain_accumulated_volume !== undefined) ? getV(i,'onchain_accumulated_volume') : Math.max(0, getV(i,'total_accumulated_volume') - getV(i,'limit_accumulated_volume'));
 
-            // Fallback cho Total Acc cũ
+         
             const getTotAcc = (i) => {
                 let v = getV(i, 'total_accumulated_volume');
                 if(v===0) v = (i.real_vol_history||[]).reduce((sum,x)=>sum+parseFloat(x.vol),0) + getV(i,'real_alpha_volume');
@@ -2972,18 +2963,18 @@ thead.innerHTML = `
             let valA, valB;
             switch(mhSort.col) {
                 case 'token':     valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); break;
-                // Sort Daily
+               
                 case 'd_lim':     valA = getV(a, 'limit_daily_volume'); valB = getV(b, 'limit_daily_volume'); break;
                 case 'd_on':      valA = getOnChainD(a); valB = getOnChainD(b); break;
                 case 'd_tot': case 'daily_vol': valA = getV(a, 'real_alpha_volume'); valB = getV(b, 'real_alpha_volume'); break;
                 
-                // Sort Total
+              
                 case 'a_lim':     valA = getV(a, 'limit_accumulated_volume'); valB = getV(b, 'limit_accumulated_volume'); break;
                 case 'a_on':      valA = getOnChainA(a); valB = getOnChainA(b); break;
                 case 'a_tot': case 'camp_vol': valA = getTotAcc(a); valB = getTotAcc(b); break;
 
                 case 'duration':  valA = new Date(isHistoryTab ? a.end : a.start).getTime(); valB = new Date(isHistoryTab ? b.end : b.start).getTime(); break;
-                case 'min_vol':   /* Giữ nguyên logic cũ của bạn */ 
+                case 'min_vol':   
                     let getT1 = (item) => {
                         let h = item.history || []; if(h.length === 0) return 0;
                         let dTarget = isHistoryTab ? item.end : new Date(new Date().setDate(new Date().getDate()-1)).toISOString().split('T')[0];
@@ -3003,7 +2994,7 @@ thead.innerHTML = `
     if(projectsToRender.length === 0) {
         html = `<tr><td colspan="12" class="text-center py-4 text-sub opacity-50">No Data Available</td></tr>`;
     } else {
-        // --- HELPER ---
+       
         const fmtNoDec = (num) => !num ? '$0' : '$' + Math.round(num).toLocaleString('en-US');
         const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
         const formatDateShort = (dateStr) => { if(!dateStr) return '--'; return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
@@ -3017,7 +3008,7 @@ thead.innerHTML = `
             if (isHistoryTab && c.name && c.name.toUpperCase().includes('ARB')) return;
             let ma = c.market_analysis || {};
             
-            // --- CÁC CỘT INFO (GIỮ NGUYÊN CODE GỐC) ---
+           
             let badgeHtml = '';
             if (c.listingTime) {
                 let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (30*86400000) - now)/86400000);
@@ -3080,15 +3071,9 @@ thead.innerHTML = `
             let rt = c.ruleType || 'buy_only'; 
             let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
 
-            // --- 4. TÍNH TOÁN VOL (LOGIC MỚI - 3 CỘT) ---
-            
-            // Daily Vol
-            // --- SỬA 3: HIỂN THỊ 6 CỘT MÀU SẮC CHUYÊN NGHIỆP ---
-            
-            // Tính toán số liệu (Giữ logic fallback của bạn)
             let dLimit = parseFloat(c.limit_daily_volume || 0);
             let lh = c.limit_vol_history || [];
-            if (dLimit === 0 && lh.length > 0) { // Fallback history
+            if (dLimit === 0 && lh.length > 0) { 
                 let checkDate = (isHistoryTab && c.end) ? c.end : yestStr; 
                 let found = lh.find(x => x.date === checkDate);
                 if (found) dLimit = parseFloat(found.vol);
@@ -3098,7 +3083,7 @@ thead.innerHTML = `
             let dOnChain = (c.onchain_daily_volume !== undefined) ? parseFloat(c.onchain_daily_volume) : Math.max(0, dTotal - dLimit);
             if(c.onchain_daily_volume !== undefined) dTotal = dLimit + dOnChain; // Re-sync
 
-            // Accumulated
+            
             let aLimit = parseFloat(c.limit_accumulated_volume || 0);
             if (aLimit === 0 && lh.length > 0) aLimit = lh.reduce((acc,curr)=>acc+parseFloat(curr.vol),0);
             let aTotal = parseFloat(c.total_accumulated_volume || 0);
@@ -3106,7 +3091,7 @@ thead.innerHTML = `
             let aOnChain = (c.onchain_accumulated_volume !== undefined) ? parseFloat(c.onchain_accumulated_volume) : Math.max(0, aTotal - aLimit);
             if(c.onchain_accumulated_volume !== undefined) aTotal = aLimit + aOnChain;
 
-            // Estimate Logic
+           
             let showEst = (!isEnded && !isUpcoming && parseFloat(ma.realTimeVol) > 0);
             let estLimit=aLimit, estOnChain=aOnChain, estTotal=aTotal;
             if (showEst) {
@@ -3119,21 +3104,21 @@ thead.innerHTML = `
                 }
             }
 
-            // --- Render HTML Cells ---
+          
             const styBase = "text-center font-num";
 
-            // 1. Style cho Daily Vol (Làm mảnh lại)
+         
             const styLimDaily = "color:#fff; font-weight:300;"; 
             const styOcDaily  = "color:#fff; font-weight:300;"; 
             const styTotDaily = "color:#fff; font-weight:400;";    
 
-            // 2. Style cho Total Vol (Giữ nguyên chuyên nghiệp, đậm nét)
+            
             const styLimAcc = "color:#fff; font-weight:700;"; 
             const styOcAcc  = "color:#fff; font-weight:700;";
             const styTotAcc = "color:#fff; font-weight:bold;";    
             
             const bLeft   = "border-left:1px solid rgba(255,255,255,0.05);";
-            // Màu Cyan giúp số dự tính trông như dữ liệu đang "chạy" thời gian thực
+           
 const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px; opacity:0.8;";
 
             let dailyColsHtml, accColsHtml;
@@ -3160,7 +3145,7 @@ const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px;
 `;
             }
 
-            // --- MIN VOL (GIỮ NGUYÊN CODE CŨ) ---
+       
             let h = c.history || [];
             let curTarget = 0, diff = 0, hasData = false;
             let latest = null; let prev = null;
@@ -3198,7 +3183,7 @@ const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px;
 
             let aiTargetHtml = (typeof calculateAiTarget === 'function') ? calculateAiTarget(c, isHistoryTab) : '<td class="text-center">--</td>';
             
-            // --- GỘP HTML ---
+       
             html += `<tr style="cursor:pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="jumpToCard('${c.db_id}')">
                 <td class="text-center">${tokenHtml}</td>
                 <td class="text-center">${durationHtml}</td>
@@ -3215,7 +3200,7 @@ const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px;
 
     tbody.innerHTML = html;
 
-// Gọi hàm khởi tạo Tippy thay vì Bootstrap Tooltip
+
 if (typeof initBinanceTooltips === 'function') {
     initBinanceTooltips();
 }
@@ -3378,9 +3363,7 @@ function calculateAiTarget(c, isHistory = false) {
     </td>`;
 }
 
-/* ==========================================================
-   HÀM XỬ LÝ VOTE (OPTIMISTIC UI + API CALL)
-   ========================================================== */
+
 function submitVote(id, type) {
     if(event) event.stopPropagation();
 
@@ -3437,9 +3420,7 @@ function submitVote(id, type) {
     callVoteBackend(id, type, null);
 }
 
-/* ==========================================================
-   HÀM LƯU TỪ POPUP (KHI USER NHẬP SỐ CHO LOW/HIGH)
-   ========================================================== */
+
 function saveMicVote(id) {
     let inp = document.getElementById(`inp-${id}`);
     let val = inp ? inp.value : null;
@@ -3463,9 +3444,7 @@ function saveMicVote(id) {
     }
 }
 
-/* ==========================================================
-   HÀM KẾT NỐI BACKEND (GỌI TRỰC TIẾP TABLE SUPABASE)
-   ========================================================== */
+
 async function callVoteBackend(tournamentId, voteType, estVal) {
 
     if (!currentUser) return console.warn("Vote skipped: No user logged in");
@@ -5019,9 +4998,7 @@ function updateClock() {
 }
 
 
-/* ============================================================
-   V47: SILENT RELOAD (CẬP NHẬT MƯỢT MÀ KHÔNG NHÁY MÀN HÌNH)
-   ============================================================ */
+
 
 async function silentReload(id) {
 
@@ -5403,21 +5380,21 @@ function refreshAllViews() {
 
 
 function switchGlobalTab(tabName) {
-    // 1. Cập nhật biến toàn cục và lưu vào LocalStorage để nhớ tab khi F5
+  
     if (typeof appData !== 'undefined') {
         appData.currentTab = tabName;
     }
     localStorage.setItem('wave_active_tab', tabName);
 
-    // 2. Lấy 2 nút bấm từ DOM
+   
     const btnRun = document.getElementById('tab-running');
     const btnHis = document.getElementById('tab-history');
 
-    // 3. Reset giao diện cho cả 2 nút (Về trạng thái inactive - màu xám, nền trong suốt)
+  
     [btnRun, btnHis].forEach(btn => {
         if (btn) {
             btn.classList.remove('active');
-            // Dùng setProperty important để đè style của Bootstrap/CSS gốc
+            
             btn.style.setProperty('background', 'transparent', 'important');
             btn.style.setProperty('color', '#848e9c', 'important'); 
             btn.style.setProperty('font-weight', '600', 'important');
@@ -5425,20 +5402,20 @@ function switchGlobalTab(tabName) {
         }
     });
 
-    // 4. Active nút được chọn (Màu Cyan, đậm hơn)
+   
     const activeBtn = (tabName === 'running') ? btnRun : btnHis;
     if (activeBtn) {
         activeBtn.classList.add('active');
         
-        // Màu chữ Cyan neon
+        
         activeBtn.style.setProperty('color', '#00F0FF', 'important'); 
         activeBtn.style.setProperty('font-weight', '800', 'important');
         
-        // Thêm nền nhẹ để rõ ràng hơn (nếu bạn muốn giữ trong suốt hoàn toàn thì xóa dòng dưới)
+        
         activeBtn.style.setProperty('background', 'rgba(0, 240, 255, 0.1)', 'important');
     }
 
-    // 5. Quan trọng: Gọi hàm refresh để lọc lại bảng dữ liệu (Running/History)
+    
     if (typeof refreshAllViews === 'function') {
         refreshAllViews();
     }
