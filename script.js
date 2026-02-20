@@ -2455,7 +2455,7 @@ let fullHtml = '';
 
                 if(isNaN(listingDate.getTime())) listingDate = new Date(c.listingTime);
 
-                let expiryDate = new Date(listingDate.getTime() + (30 * 24 * 60 * 60 * 1000)); 
+                let expiryDate = new Date(listingDate.getTime() + (29 * 24 * 60 * 60 * 1000)); 
                 let diff = expiryDate - now;
 
                 if (diff > 0) {
@@ -3021,7 +3021,7 @@ thead.innerHTML = `
            
             let badgeHtml = '';
             if (c.listingTime) {
-                let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (30*86400000) - now)/86400000);
+                let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (29*86400000) - now)/86400000);
                 if (d >= 0) {
                     let iconUrl = (c.alphaType === 'x4') ? 'https://i.ibb.co/hRS0Z6wf/1000003428.png' : 'https://i.ibb.co/ZyqMBQp/1000003438.png';
                     badgeHtml = `<span class="promo-badge-inline"><img src="${iconUrl}" class="promo-icon-inline"> ${d}d</span>`;
@@ -4942,7 +4942,7 @@ function updateClock() {
         if(listDateStr) {
 
             let endTimeStr = listDateStr.includes('T') ? listDateStr : listDateStr + 'T00:00:00';
-            const endTime = new Date(endTimeStr + 'Z').getTime() + (30*24*60*60*1000);
+            const endTime = new Date(endTimeStr + 'Z').getTime() + (29*24*60*60*1000);
             const dist = endTime - now.getTime();
             if(dist < 0) { el.innerText="EXPIRED"; el.style.color='#555'; }
             else {
