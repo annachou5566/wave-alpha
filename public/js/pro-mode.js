@@ -216,8 +216,10 @@ function renderTableRows(tbody) {
         const now = Date.now();
         let mulBadgeHtml = '';
         if (!t.offline && t.listing_time && t.mul_point > 1) {
-            const expiryTime = t.listing_time + 2505600000;
+            let start = new Date(t.listing_time);
+            let expiryTime = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + 29, 23, 59, 59, 999)).getTime();
             const diffDays = Math.ceil((expiryTime - now) / 86400000);
+            
             if (diffDays > 0) {
                 const badgeClass = (t.chain === 'BSC') ? 'badge-bsc' : 'badge-alpha';
                 mulBadgeHtml = `<span class="smart-badge ${badgeClass}">x${t.mul_point} ${diffDays}d</span>`;
