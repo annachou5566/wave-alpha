@@ -6356,14 +6356,10 @@ function closeActiveCard() {
 }
 
 function jumpToCard(dbId) {
-
     const wrapper = document.querySelector(`.card-wrapper[data-id="${dbId}"]`);
-    
     if (wrapper) {
         const card = wrapper.querySelector('.tour-card');
-
-
-        if (card) toggleCardHighlight(card);
+        if (card) openCardOverlay(card); 
     }
 }
 
@@ -6374,15 +6370,10 @@ function openCardOverlay(originalCard) {
 
 
     const clone = originalCard.cloneNode(true);
-    
-
-
-    clone.removeAttribute('onclick'); 
-    clone.onclick = null; 
-
-
-    clone.classList.remove('active-card'); 
-    clone.classList.add('overlay-clone');
+        clone.removeAttribute('onclick'); 
+        clone.onclick = null; 
+        clone.classList.add('active-card'); 
+        clone.classList.add('overlay-clone');
     
 
     const closeBtn = document.createElement('div');
