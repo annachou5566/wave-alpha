@@ -5,6 +5,12 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
     const REALTIME_API_URL = 'https://alpha-realtime.onrender.com/api/market-data';
     const REALTIME_API_KEY = 'WaveAlpha_S3cur3_P@ssw0rd_5566';
+// HÀM FORMAT SỐ BỊ MẤT
+function fmtNum(num) {
+    if (num === null || num === undefined || isNaN(num)) return "0";
+    return parseFloat(num).toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+const fmt = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
 
 let layer2Interval = null;
 const PREDICT_FEE = 100;
@@ -20,12 +26,6 @@ const TELE_BOT_CONFIG = {
 };
 
 
-// HÀM FORMAT SỐ BỊ MẤT
-function fmtNum(num) {
-    if (num === null || num === undefined || isNaN(num)) return "0";
-    return parseFloat(num).toLocaleString('en-US', { maximumFractionDigits: 2 });
-}
-const fmt = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
 
 function requireBotToken() {
     let currentToken = TELE_BOT_CONFIG.token;
@@ -1573,7 +1573,7 @@ async function loadFromCloud(isSilent = false) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
 
-    // --- LẤY CONFIG TỪ SUPABASE (CÁCH LY LỖI NHƯ CŨ) ---
+    // 1. LẤY CONFIG TỪ SUPABASE (Dùng Fetch để không bị lỗi supabase.from)
     try {
         const configRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.-1&select=*`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -1585,11 +1585,9 @@ async function loadFromCloud(isSilent = false) {
             if (typeof renderArsenal === 'function') renderArsenal(); 
             if (typeof renderCustomHub === 'function') renderCustomHub();
         }
-    } catch (configErr) {
-        console.warn("⚠️ Bỏ qua lỗi tải Config:", configErr);
-    }
+    } catch (e) { console.warn("Config Load Error:", e); }
 
-    // --- LẤY DỮ LIỆU TỪ SERVER MỚI (RENDER) ---
+    // 2. LẤY DỮ LIỆU TỪ SERVER RENDER
     try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
         const serverData = await res.json(); 
@@ -1601,18 +1599,15 @@ async function loadFromCloud(isSilent = false) {
         Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
             
-            // CHỮA CHÁY CHO HÀNG LEGACY & GIỮ CẤU TRÚC PHẲNG (Không bọc data)
+            // Fix ID & Contract cho hàng Legacy
             if (!item.db_id) {
                 if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
                 else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
                 else item.db_id = 9999;
             }
             item.id = item.db_id; 
-            
-            // Gán giá trị mặc định nếu rỗng để không bị sập hàm .slice() của Frontend
             item.contract = item.contract || "0x0000000000000000000000000000000000000000"; 
-            item.name = item.name || "Unknown";
-
+            
             let isRunning = true;
             if (item.end) {
                 if (item.end < todayStr) isRunning = false;
@@ -1624,50 +1619,28 @@ async function loadFromCloud(isSilent = false) {
                 }
             }
 
-            // Tái tạo Target
-            if (!isRunning) {
-                item.display_target = item.ai_prediction?.target || 0;
-                if (item.history && item.history.length > 0) {
-                    let sorted = [...item.history].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    let latest = sorted.find(h => parseFloat(h.target) > 0);
-                    if (latest) item.display_target = parseFloat(latest.target);
-                }
-            } else {
-                if (item.history && item.history.length > 0) {
-                    let sorted = [...item.history].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    item.display_target = parseFloat(sorted[0].target) || 0;
-                }
-            }
-
             if (isRunning) tempRunning.push(item);
             else tempHistory.push(item);
             tempAll.push(item);
         });
 
-        // Sắp xếp
-        appData.running = tempRunning.sort((a,b) => {
-            if(!a.end) return 1; if(!b.end) return -1;
-            return new Date(a.end) - new Date(b.end);
-        });
+        appData.running = tempRunning.sort((a,b) => new Date(a.end) - new Date(b.end));
         appData.history = tempHistory.sort((a,b) => new Date(b.end) - new Date(a.end)); 
         
         appData.isDataReady = true;
         compList = tempAll;
         localStorage.setItem('wave_comp_list', JSON.stringify(compList));
 
-        if (typeof renderGrid === 'function') renderGrid(); 
-        if (typeof renderStats === 'function') renderStats();
-        if (typeof initCalendar === 'function') initCalendar();
-        if (window.competitionRadar) window.competitionRadar.updateRealtimeStats(compList);
-
-        let currentActiveTab = localStorage.getItem('wave_active_tab') || 'running';
-        appData.currentTab = currentActiveTab; 
+        renderGrid(); 
+        renderStats();
+        initCalendar();
         
-        if(currentActiveTab === 'running') renderMarketHealthTable(appData.running);
+        let currentTab = localStorage.getItem('wave_active_tab') || 'running';
+        if(currentTab === 'running') renderMarketHealthTable(appData.running);
         else renderMarketHealthTable(appData.history);
 
     } catch (err) {
-        console.error("❌ Lỗi Fetch Data từ Server Mới:", err);
+        console.error("❌ Lỗi tải dữ liệu:", err);
     } finally {
         if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
         if (typeof updateAllPrices === 'function') updateAllPrices();
@@ -2237,6 +2210,7 @@ function renderGrid(customData = null) {
 
             let promoTimerHtml = '';
             let isListingExpired = false;
+            let tagHtml = '';
 
             if (c.listingTime && c.alphaType !== 'none') {
                 let listingDate = new Date(c.listingTime);
@@ -2258,7 +2232,7 @@ function renderGrid(customData = null) {
             if (status === 'ended') isListingExpired = true;
 
 
-            let tagHtml = '';
+         
             if (!isListingExpired) {
                 if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4">X4 BSC</div>`;
                 else if (c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2">X2 OTHER</div>`; }
