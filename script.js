@@ -6330,22 +6330,20 @@ function toggleCardHighlight(el) {
 }
 
 function closeActiveCard() {
+    const cloneEl = document.querySelector('.overlay-clone');
+    if (cloneEl) cloneEl.remove();
+
     const activeEl = document.querySelector('.tour-card.active-card');
-    if (!activeEl) return;
-
-
-    activeEl.classList.remove('active-card');
-
-
-    if (activeCardPlaceholder && activeCardPlaceholder.parentNode) {
-        activeCardPlaceholder.parentNode.insertBefore(activeEl, activeCardPlaceholder);
-        activeCardPlaceholder.remove();
-    } else {
-
-        activeEl.remove(); 
+    if (activeEl) {
+        activeEl.classList.remove('active-card');
+        if (activeCardPlaceholder && activeCardPlaceholder.parentNode) {
+            activeCardPlaceholder.parentNode.insertBefore(activeEl, activeCardPlaceholder);
+            activeCardPlaceholder.remove();
+        } else {
+            if(activeEl.classList.contains('overlay-clone')) activeEl.remove();
+        }
     }
     activeCardPlaceholder = null;
-
 
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
