@@ -3024,7 +3024,7 @@ thead.innerHTML = `
             let ma = c.market_analysis || {};
             
            
-            let badgeHtml = '';
+           let badgeHtml = '';
             if (c.listingTime) {
                 let listingDate = new Date(c.listingTime);
                 if (typeof c.listingTime === 'string' && !c.listingTime.includes('Z') && !c.listingTime.includes('+')) {
@@ -3035,9 +3035,12 @@ thead.innerHTML = `
                 let diffDays = Math.ceil((expiryTime - now.getTime()) / 86400000);
 
                 if (diffDays > 0) {
-                    let iconUrl = (c.alphaType === 'x4') ? 'https://i.ibb.co/hRS0Z6wf/1000003428.png' : 'https://i.ibb.co/ZyqMBQp/1000003438.png';
+                    let badgeClass = (c.alphaType === 'x4') ? 'badge-bsc' : 'badge-alpha';
                     let mulText = c.alphaType === 'x4' ? 'x4' : (c.alphaType === 'x2' ? 'x2' : '');
-                    badgeHtml = `<span class="promo-badge-inline" style="text-transform: lowercase;"><img src="${iconUrl}" class="promo-icon-inline"> ${mulText} ${diffDays}d</span>`;
+                    
+                    if (mulText !== '') {
+                        badgeHtml = `<span class="smart-badge ${badgeClass}" style="text-transform: lowercase; margin-left: 3px; font-family: 'Rajdhani', sans-serif;">${mulText} ${diffDays}d</span>`;
+                    }
                 }
             }
 
