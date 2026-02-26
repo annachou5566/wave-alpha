@@ -961,6 +961,7 @@ let globalTooltipInstances = [];
 
 // Thay thế hàm initSmartTooltips cũ bằng hàm này
 function initBinanceTooltips() {
+    if (typeof tippy === 'undefined') return;
     // Hủy các instance cũ nếu có để tránh rò rỉ bộ nhớ khi render lại
     if (window.currentTooltips) {
         window.currentTooltips.forEach(t => t.destroy());
@@ -1578,6 +1579,21 @@ async function loadFromCloud(isSilent = false) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
 
+    // 1. LẤY CONFIG TỪ SUPABASE (Dùng Fetch để không bị lỗi supabase.from)
+    try {
+        const configRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.-1&select=*`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const configJson = await configRes.json();
+        if (configJson && configJson.length > 0 && configJson[0].data) {
+            siteConfig = configJson[0].data;
+            if (typeof renderFooter === 'function') renderFooter(); 
+            if (typeof renderArsenal === 'function') renderArsenal(); 
+            if (typeof renderCustomHub === 'function') renderCustomHub();
+        }
+    } catch (e) { console.warn("⚠️ Bỏ qua lỗi Config:", e); }
+
+    // 2. LẤY DỮ LIỆU TỪ SERVER RENDER
     try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
         const serverData = await res.json(); 
@@ -1588,6 +1604,13 @@ async function loadFromCloud(isSilent = false) {
 
         Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
+            
+            // QUAN TRỌNG: Ánh xạ alphaId từ Key để Realtime hoạt động
+            if (key.startsWith('ALPHA_')) {
+                item.alphaId = key;
+            }
+
+            // Fix ID & Contract cho hàng Legacy chống sập UI
             if (!item.db_id) {
                 if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
                 else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
@@ -1611,18 +1634,19 @@ async function loadFromCloud(isSilent = false) {
         compList = tempAll;
         localStorage.setItem('wave_comp_list', JSON.stringify(compList));
 
-        renderGrid(); 
-        renderStats();
-        initCalendar();
+        if (typeof renderGrid === 'function') renderGrid(); 
+        if (typeof renderStats === 'function') renderStats();
+        if (typeof initCalendar === 'function') initCalendar();
         
-        if (localStorage.getItem('wave_active_tab') === 'history') renderMarketHealthTable(appData.history);
-        else renderMarketHealthTable(appData.running);
+        let currentTab = localStorage.getItem('wave_active_tab') || 'running';
+        if(currentTab === 'running') renderMarketHealthTable(appData.running);
+        else renderMarketHealthTable(appData.history);
 
     } catch (err) {
-        console.error("❌ Lỗi dữ liệu:", err);
+        console.error("❌ Lỗi tải dữ liệu:", err);
     } finally {
         if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
-        updateAllPrices();
+        if (typeof updateAllPrices === 'function') updateAllPrices();
     }
 }
 
@@ -6318,7 +6342,6 @@ async function fetchLayer2Data() {
 
 function applyLayer2Data(serverData) {
     if (!window.compList || window.compList.length === 0) return;
-
     let hasChanges = false;
 
     compList.forEach(c => {
@@ -6330,11 +6353,11 @@ function applyLayer2Data(serverData) {
             // Cập nhật GIÁ
             c.cachedPrice = liveItem.p;
             
-            // CẬP NHẬT VOLUME (Đây là lý do volume của bạn bị đứng yên)
-            c.limit_daily_volume = liveItem.ldv || 0; // Volume Limit ngày
-            c.limit_accumulated_volume = liveItem.lav || 0; // Volume Limit tích lũy
-            c.real_alpha_volume = liveItem.dv || 0; // Tổng Volume ngày
-            c.total_accumulated_volume = liveItem.av || 0; // Tổng Volume tích lũy
+            // CẬP NHẬT VOLUME (Khắc phục việc volume đứng yên)
+            c.limit_daily_volume = liveItem.ldv || 0;
+            c.limit_accumulated_volume = liveItem.lav || 0;
+            c.real_alpha_volume = liveItem.dv || 0;
+            c.total_accumulated_volume = liveItem.av || 0;
             
             if (liveItem.analysis) {
                 c.market_analysis = liveItem.analysis;
