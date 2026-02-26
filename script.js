@@ -5345,44 +5345,34 @@ function initCalendar() {
 }
 
 
-
-
-
-
-
-
 function refreshAllViews() {
+    let listToRender = [];
     
-    let today = new Date().toISOString().split('T')[0];
-    let sourceList = compList || []; 
+    // Lấy đúng danh sách chuẩn đã phân loại từ hệ thống (tránh lỗi lệch ngày)
+    if (appData.currentTab === 'history' || appData.currentTab === 'ended') {
+        listToRender = appData.history;
+    } else {
+        listToRender = appData.running;
+    }
 
-    let listToRender = sourceList.filter(c => {
-        let isRunning = c.end >= today;
-        return (appData.currentTab === 'running') ? isRunning : !isRunning;
-    });
-
-    
+    // Lọc theo ngày nếu có click trên Calendar
     if (currentFilterDate) {
         listToRender = listToRender.filter(c => c.end === currentFilterDate);
     }
 
-    
-    
+    // Cập nhật cả Grid và Table bằng cùng 1 nguồn dữ liệu
     if (typeof renderGrid === 'function') {
         renderGrid(listToRender);
     }
 
-    
     if (typeof renderMarketHealthTable === 'function') {
         renderMarketHealthTable(listToRender);
     }
 
-    
     if (window.competitionRadar && typeof window.competitionRadar.filterRadar === 'function') {
         if (!currentFilterDate) {
             window.competitionRadar.filterRadar(null); 
         } else {
-            
             let allowedContracts = listToRender
                 .map(c => c.contract ? c.contract.toLowerCase().trim() : null)
                 .filter(c => c);
@@ -6330,8 +6320,7 @@ function toggleCardHighlight(el) {
 }
 
 function closeActiveCard() {
-    const cloneEl = document.querySelector('.overlay-clone');
-    if (cloneEl) cloneEl.remove();
+    document.querySelectorAll('.overlay-clone').forEach(el => el.remove());
 
     const activeEl = document.querySelector('.tour-card.active-card');
     if (activeEl) {
