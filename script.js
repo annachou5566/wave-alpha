@@ -3,7 +3,7 @@
     
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
-    const REALTIME_API_URL = 'https://alpha-realtime.onrender.com/api/prices';
+    const REALTIME_API_URL = 'https://alpha-realtime.onrender.com/api/market-data';
     const REALTIME_API_KEY = 'WaveAlpha_S3cur3_P@ssw0rd_5566';
 let layer2Interval = null;
 const PREDICT_FEE = 100;
@@ -1110,159 +1110,14 @@ function applyLanguage() {
 let alphaMarketCache = {}; 
 
 
+
 async function syncAlphaData() {
-    try {
-        console.log("🔄 Đang xin danh sách Token từ Server Layer 2...");
-        
-        // Gọi vào API mới vừa tạo trên Node.js
-        const res = await fetch('https://alpha-realtime.onrender.com/api/tokens', {
-            headers: {
-                'x-api-key': 'WaveAlpha_S3cur3_P@ssw0rd_5566' 
-            }
-        });
-
-        if (!res.ok) throw new Error("Server từ chối hoặc lỗi R2");
-
-        const json = await res.json();
-        const rawList = json.data || [];
-
-        // NẠP DỮ LIỆU
-        window.compList = rawList.map(item => ({
-            alphaId: (item.alphaId || item.id || item.i || '').toString().replace("ALPHA_", ""),
-            name: item.s || item.symbol || item.name || 'UNKNOWN',
-            cachedPrice: item.p || item.price || 0,
-            icon: item.ic || item.icon || ''
-        }));
-
-        console.log(`✅ Đã nạp thành công: ${window.compList.length} Token`);
-
-        // Vẽ giao diện
-        if(typeof renderGrid === 'function') renderGrid();
-        if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
-
-        // Bật Realtime
-        if (typeof startRealtimeSync === 'function') startRealtimeSync();
-
-    } catch (e) {
-        console.error("❌ Lỗi tải danh sách Token:", e);
-    }
+    console.log("✅ Bỏ qua syncAlphaData, Server mới đã lo liệu.");
 }
 
 
-    let siteConfig = { x:'', tele:'', yt:'', affiliate: {} };
-    let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [{id:'acc1', name:'Main', color:'#00F0FF'}, {id:'acc2', name:'Clone', color:'#FFD700'}];
-    let currentUser = null;
-    let userProfile = null;
-
-    const fmtNum = n => new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(n);
-    const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n).replace('US$', '$').trim();
-    const formatCurrency = (input) => {
-        let val = input.value.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        input.value = val;
-        if(input.id === 'u-min-vol') accSettings.forEach(acc => calcRowGap(acc.id));
-    };
-
-    if (typeof window.supabase !== 'undefined') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (session) {
-                currentUser = session.user;
-                document.getElementById('loginBtn').classList.add('d-none');
-                document.getElementById('userProfile').classList.remove('d-none');
-                document.getElementById('userProfile').classList.add('d-flex');
-
-                fetchUserProfile();
-                checkUserAdmin();
-                bootstrap.Modal.getInstance(document.getElementById('loginModal'))?.hide();
-            } else {
-                currentUser = null;
-                userProfile = null;
-                document.getElementById('loginBtn').classList.remove('d-none');
-                document.getElementById('userProfile').classList.add('d-none');
-                document.getElementById('userProfile').classList.remove('d-flex');
-                document.body.classList.remove('is-admin');
-            }
-        });
-    }
-
-
-    let isSyncing = false; 
-    let lastWakeupTime = 0;
-
-
 async function quickSyncData() {
-    if (isSyncing || !supabase) return; 
-    isSyncing = true;
-
-    try {
-
-        const { data, error } = await supabase.rpc('get_minimal_market_data');
-        
-        if (!error && data && data.length > 0) {
-            let hasChanges = false;
-
-
-data.forEach(miniRow => {
-    let localItem = compList.find(c => c.db_id === miniRow.id);
-    if (localItem) {
-
-        let isEnded = false;
-        if (localItem.end) {
-
-            let todayStr = new Date().toISOString().split('T')[0];
-            if (localItem.end < todayStr) isEnded = true;
-        }
-
-
-        if (miniRow.ai_prediction) {
-            localItem.ai_prediction = miniRow.ai_prediction;
-            hasChanges = true;
-        }
-
-
-        if (!isEnded && miniRow.limit_daily_volume !== undefined) {
-            if (localItem.limit_daily_volume !== miniRow.limit_daily_volume) {
-                localItem.limit_daily_volume = miniRow.limit_daily_volume;
-                hasChanges = true;
-            }
-        }
-
-
-        if (!isEnded && miniRow.limit_accumulated_volume !== undefined) {
-            if (localItem.limit_accumulated_volume !== miniRow.limit_accumulated_volume) {
-                localItem.limit_accumulated_volume = miniRow.limit_accumulated_volume;
-                hasChanges = true;
-            }
-        }
-
-
-        if (JSON.stringify(localItem.market_analysis) !== JSON.stringify(miniRow.market_analysis)) {
-            localItem.market_analysis = miniRow.market_analysis;
-            hasChanges = true;
-        }
-
-
-        if (!isEnded && localItem.daily_tx_count !== miniRow.daily_tx_count) {
-            localItem.daily_tx_count = miniRow.daily_tx_count;
-            hasChanges = true;
-        }
-    }
-});
-
-            if (hasChanges) {
-                updateGridValuesOnly(); 
-                if (typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
-                renderStats();
-                console.log("⚡ Data synced (Full Vol)");
-            }
-        }
-    } catch (e) { 
-        console.error("Sync Error:", e); 
-    } finally {
-        isSyncing = false; 
-
-    }
+    return; 
 }
 
 function init() {
@@ -1706,187 +1561,89 @@ function switchGridTab(tabName) {
 }
 
 
-/* ==========================================================
-   4. HÀM GỌI API (ĐÃ SỬA LỖI FLASH NHẢY TAB TRONG CATCH BLOCK)
-   ========================================================== */
 async function loadFromCloud(isSilent = false) {
-
     if(!isSilent && !appData.isDataReady && document.getElementById('loading-overlay')) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
 
     try {
+        // 1. Tải Config Footer/Admin từ Supabase (Giữ nguyên để không hỏng giao diện Admin)
+        const { data: configData } = await supabase.from('tournaments').select('*').eq('id', -1).single();
+        if (configData && configData.data) {
+            siteConfig = configData.data;
+            renderFooter(); renderArsenal(); renderCustomHub();
+        }
+
+        // 2. Lấy TOÀN BỘ DỮ LIỆU TỪ SERVER MỚI (Thay vì chui vào Supabase)
+        const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
+        const serverData = await res.json(); 
+
+        let tempRunning = [], tempHistory = [], tempAll = [];
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        let query = supabase.from('tournaments')
-    .select(`
-        id, 
-        name, 
-        contract,
-        data, 
-        tournament_history (vol, daily_vol, date, target, price, tx_count)
-    `)
-    .order('id', { ascending: true });
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        let tempRunning = [], tempHistory = [], tempAll = []; 
-
-        if (data && data.length > 0) {
-            data.forEach(row => {
-                if(row.id === -1) {
-                    siteConfig = row.data || { x:'', tele:'', yt:'', affiliate:{} };
-                    renderFooter(); renderArsenal(); renderCustomHub(); 
-                } else {
-                    let item = row.data || row.Data;
-                    if (item) {
-                        item.db_id = row.id; 
-                        item.id = item.db_id;
-                        
-
-                        let isRunning = true;
-                        if (item.end) {
-                            if (item.end < todayStr) isRunning = false;
-                            else if (item.end === todayStr) {
-                                let tPart = (item.endTime || "23:59:59").trim();
-                                if(tPart.length === 5) tPart += ":00";
-                                let endDate = new Date(`${item.end}T${tPart}Z`);
-                                if (now > endDate) isRunning = false;
-                            }
-                        }
-
-
-                        if (!isRunning) {
-
-                            let sqlList = row.tournament_history || [];
-
-                                if (sqlList.length > 0) {
-                                item.real_vol_history = sqlList.map(h => ({
-                                    date: h.date,
-                                    vol: h.daily_vol
-                                })).sort((a,b) => new Date(a.date) - new Date(b.date));
-                            } else {
-                                item.real_vol_history = [];
-                            }
-
-
-                            let endRecord = sqlList.find(h => h.date === item.end);
-                            
-                            if (!endRecord && sqlList.length > 0) {
-                                sqlList.sort((a,b) => new Date(a.date) - new Date(b.date));
-                                endRecord = sqlList[sqlList.length - 1];
-                            }
-
-                            if (endRecord) {
-                                item.real_alpha_volume = endRecord.daily_vol; 
-                                item.total_accumulated_volume = endRecord.vol;
-                                item.cachedPrice = endRecord.price;
-                                item.display_target = parseFloat(endRecord.target || 0);
-                                
-                                let d = new Date(endRecord.date); d.setDate(d.getDate() - 1);
-                                let prevDateStr = d.toISOString().split('T')[0];
-                                let prevRecord = sqlList.find(h => h.date === prevDateStr);
-                                item.display_prev_target = prevRecord ? parseFloat(prevRecord.target || 0) : 0;
-
-                                item.market_analysis = {
-                                    price: endRecord.price, label: 'ENDED', spread: (item.market_analysis?.spread || 0),
-                                    avgTicket: endRecord.daily_vol / (endRecord.tx_count || 1), realTimeVol: 0, velocity: 0
-                                };
-                            }
-                        } 
-                        else {
-
-                            if (!item.real_vol_history) item.real_vol_history = [];
-                            if (row.tournament_history) {
-                                let sorted = row.tournament_history.sort((a,b) => new Date(a.date) - new Date(b.date));
-                                let volMap = new Map(); item.real_vol_history.forEach(v => volMap.set(v.date, v));
-                                sorted.forEach(s => {
-                                    if(volMap.has(s.date)) volMap.get(s.date).vol = s.daily_vol;
-                                    else item.real_vol_history.push({date:s.date, vol:s.daily_vol});
-                                });
-                                item.real_vol_history.sort((a,b) => new Date(a.date) - new Date(b.date));
-
-                                let hToday = sorted.find(h => h.date === todayStr);
-                                if(hToday && hToday.vol > 0) item.total_accumulated_volume = hToday.vol;
-
-                                let d = new Date(); d.setDate(d.getDate()-1);
-                                let t1 = d.toISOString().split('T')[0]; d.setDate(d.getDate()-1);
-                                let t2 = d.toISOString().split('T')[0];
-                                
-                                if(!item.history) item.history = [];
-                                let r1 = item.history.find(h => h.date === t1);
-                                let r2 = item.history.find(h => h.date === t2);
-                                
-                                item.display_target = r1 ? parseFloat(r1.target) : 0;
-                                item.display_prev_target = r2 ? parseFloat(r2.target) : 0;
-                            }
-                        }
-
-                        if (isRunning) tempRunning.push(item);
-                        else tempHistory.push(item);
-                        tempAll.push(item);
-                    }
+        // 3. Chuyển đổi dữ liệu Server cho khớp cấu trúc Frontend
+        Object.values(serverData).forEach(item => {
+            if (!item) return;
+            item.id = item.db_id; // Map ID cho Frontend
+            
+            let isRunning = true;
+            if (item.end) {
+                if (item.end < todayStr) isRunning = false;
+                else if (item.end === todayStr) {
+                    let tPart = (item.endTime || "23:59:59").trim();
+                    if(tPart.length === 5) tPart += ":00";
+                    let endDate = new Date(`${item.end}T${tPart}Z`);
+                    if (now > endDate) isRunning = false;
                 }
-            });
-        }
+            }
 
+            // Tái tạo Target hiển thị trên UI
+            if (!isRunning) {
+                item.display_target = item.ai_prediction?.target || 0;
+                if (item.history && item.history.length > 0) {
+                    let sorted = [...item.history].sort((a,b) => new Date(b.date) - new Date(a.date));
+                    let latest = sorted.find(h => parseFloat(h.target) > 0);
+                    if (latest) item.display_target = parseFloat(latest.target);
+                }
+            } else {
+                if (item.history && item.history.length > 0) {
+                    let sorted = [...item.history].sort((a,b) => new Date(b.date) - new Date(a.date));
+                    item.display_target = parseFloat(sorted[0].target) || 0;
+                }
+            }
 
+            if (isRunning) tempRunning.push(item);
+            else tempHistory.push(item);
+            tempAll.push(item);
+        });
+
+        // 4. Cập nhật mảng hiển thị
         appData.running = tempRunning.sort((a,b) => {
             if(!a.end) return 1; if(!b.end) return -1;
             return new Date(a.end) - new Date(b.end);
         });
-        
         appData.history = tempHistory.sort((a,b) => new Date(b.end) - new Date(a.end)); 
         
         appData.isDataReady = true;
         compList = tempAll;
         localStorage.setItem('wave_comp_list', JSON.stringify(compList));
 
-
         renderGrid(); 
         renderStats();
         initCalendar();
-        if (window.competitionRadar) {
-            window.competitionRadar.updateRealtimeStats(compList);
-        }
+        if (window.competitionRadar) window.competitionRadar.updateRealtimeStats(compList);
 
         let currentActiveTab = localStorage.getItem('wave_active_tab') || 'running';
         appData.currentTab = currentActiveTab; 
         
-        if(currentActiveTab === 'running') {
-            renderMarketHealthTable(appData.running);
-        } else {
-            renderMarketHealthTable(appData.history);
-        }
+        if(currentActiveTab === 'running') renderMarketHealthTable(appData.running);
+        else renderMarketHealthTable(appData.history);
 
     } catch (err) {
-        console.error("Lỗi Fetch (Đã xử lý fallback):", err);
-        
-
-        const cached = localStorage.getItem('wave_comp_list');
-        if(cached) { 
-            let allItems = JSON.parse(cached);
-            compList = allItems;
-
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            appData.running = allItems.filter(c => !c.end || c.end >= todayStr);
-            appData.history = allItems.filter(c => c.end && c.end < todayStr);
-
-
-            let currentActiveTab = localStorage.getItem('wave_active_tab') || 'running';
-            if (currentActiveTab === 'running') {
-                renderMarketHealthTable(appData.running);
-            } else {
-                renderMarketHealthTable(appData.history);
-            }
-        }
+        console.error("❌ Lỗi Fetch Data từ Server Mới:", err);
     } finally {
-        if(!isSilent && document.getElementById('loading-overlay')) {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
+        if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
         updateAllPrices();
     }
 }
@@ -6582,25 +6339,27 @@ async function fetchLayer2Data() {
 function applyLayer2Data(serverData) {
     if (!window.compList || window.compList.length === 0) return;
 
-    const serverItems = Object.values(serverData);
     let hasChanges = false;
 
     compList.forEach(c => {
-        const webName = (c.name || "").split('(')[0].toUpperCase().trim();        
-        
-        const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === webName));
+        let alphaId = c.alphaId;
+        if (!alphaId) return;
+
+        // Lấy data real-time khớp với AlphaId thay vì Symbol
+        const liveItem = serverData[alphaId];
         if (liveItem) {
             c.cachedPrice = liveItem.p;
-            c.liveStatus = liveItem.st || 'NORMAL';
-            c.liveColor = liveItem.cl || '#0ECB81';
+            
+            // Cập nhật Market Analysis Real-time (Speed, Spread)
+            if (liveItem.analysis) {
+                c.market_analysis = liveItem.analysis;
+            }
             hasChanges = true;
         }
     });
-
 
     if (hasChanges && typeof updateGridValuesOnly === 'function') {
         updateGridValuesOnly();
     }
 }
-
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
