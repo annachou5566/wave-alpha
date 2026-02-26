@@ -6586,11 +6586,9 @@ function applyLayer2Data(serverData) {
     let hasChanges = false;
 
     compList.forEach(c => {
-        const webName = (c.name || "").toUpperCase().trim();
-        
+        const webName = (c.name || "").split('(')[0].toUpperCase().trim();        
         
         const liveItem = serverItems.find(item => (item.s && item.s.toUpperCase() === webName));
-
         if (liveItem) {
             c.cachedPrice = liveItem.p;
             c.liveStatus = liveItem.st || 'NORMAL';
