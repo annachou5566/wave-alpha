@@ -8,16 +8,16 @@
 
 let layer2Interval = null;
 const PREDICT_FEE = 100;
-// --- KHAI BÁO BỔ SUNG CÁC BIẾN TOÀN CỤC BỊ THIẾU ---
+// --- KHAI BÁO BỔ SUNG CÁC BIẾN TOÀN CỤC ---
 let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [];
 let siteConfig = {};
 let userProfile = {};
 let currentUser = null;
 
-// --- HÀM ĐỊNH DẠNG SỐ BỊ MẤT ---
+// --- HÀM ĐỊNH DẠNG SỐ (GIÚP KHÔNG BỊ LỖI REFERENCEERROR) ---
 function fmtNum(num) {
     if (num === null || num === undefined || isNaN(num)) return "0";
-    return parseFloat(num).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    return parseFloat(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 const fmt = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
 
@@ -1578,21 +1578,6 @@ async function loadFromCloud(isSilent = false) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
 
-    // 1. LẤY CONFIG TỪ SUPABASE (An toàn với Fetch)
-    try {
-        const configRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.-1&select=*`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        });
-        const configJson = await configRes.json();
-        if (configJson && configJson.length > 0 && configJson[0].data) {
-            siteConfig = configJson[0].data;
-            if (typeof renderFooter === 'function') renderFooter(); 
-            if (typeof renderArsenal === 'function') renderArsenal(); 
-            if (typeof renderCustomHub === 'function') renderCustomHub();
-        }
-    } catch (e) { console.warn("⚠️ Không thể tải Site Config:", e); }
-
-    // 2. LẤY DỮ LIỆU TỪ SERVER RENDER MỚI
     try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
         const serverData = await res.json(); 
@@ -1603,8 +1588,6 @@ async function loadFromCloud(isSilent = false) {
 
         Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
-            
-            // Map ID và gán Contract giả cho giải cũ để chống sập UI
             if (!item.db_id) {
                 if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
                 else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
@@ -1613,44 +1596,33 @@ async function loadFromCloud(isSilent = false) {
             item.id = item.db_id; 
             item.contract = item.contract || "0x0000000000000000000000000000000000000000"; 
             
-            let isRunning = true;
-            if (item.end) {
-                if (item.end < todayStr) isRunning = false;
-                else if (item.end === todayStr) {
-                    let tPart = (item.endTime || "23:59:59").trim();
-                    if(tPart.length === 5) tPart += ":00";
-                    let endDate = new Date(`${item.end}T${tPart}Z`);
-                    if (now > endDate) isRunning = false;
-                }
-            }
+            let isEnded = false;
+            if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
+            else if (item.end) { isEnded = Date.now() > (new Date(item.end).getTime() + 86400000); }
 
-            if (isRunning) tempRunning.push(item);
+            if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
             tempAll.push(item);
         });
 
-        // Cập nhật dữ liệu vào ứng dụng
-        appData.running = tempRunning.sort((a,b) => new Date(a.end) - new Date(b.end));
-        appData.history = tempHistory.sort((a,b) => new Date(b.end) - new Date(a.end)); 
-        
+        appData.running = tempRunning;
+        appData.history = tempHistory;
         appData.isDataReady = true;
         compList = tempAll;
         localStorage.setItem('wave_comp_list', JSON.stringify(compList));
 
-        // Vẽ giao diện
-        if (typeof renderGrid === 'function') renderGrid(); 
-        if (typeof renderStats === 'function') renderStats();
-        if (typeof initCalendar === 'function') initCalendar();
+        renderGrid(); 
+        renderStats();
+        initCalendar();
         
-        let currentTab = localStorage.getItem('wave_active_tab') || 'running';
-        if(currentTab === 'running') renderMarketHealthTable(appData.running);
-        else renderMarketHealthTable(appData.history);
+        if (localStorage.getItem('wave_active_tab') === 'history') renderMarketHealthTable(appData.history);
+        else renderMarketHealthTable(appData.running);
 
     } catch (err) {
         console.error("❌ Lỗi dữ liệu:", err);
     } finally {
         if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
-        if (typeof updateAllPrices === 'function') updateAllPrices();
+        updateAllPrices();
     }
 }
 
@@ -6355,7 +6327,15 @@ function applyLayer2Data(serverData) {
 
         const liveItem = serverData[alphaId];
         if (liveItem) {
+            // Cập nhật GIÁ
             c.cachedPrice = liveItem.p;
+            
+            // CẬP NHẬT VOLUME (Đây là lý do volume của bạn bị đứng yên)
+            c.limit_daily_volume = liveItem.ldv || 0; // Volume Limit ngày
+            c.limit_accumulated_volume = liveItem.lav || 0; // Volume Limit tích lũy
+            c.real_alpha_volume = liveItem.dv || 0; // Tổng Volume ngày
+            c.total_accumulated_volume = liveItem.av || 0; // Tổng Volume tích lũy
+            
             if (liveItem.analysis) {
                 c.market_analysis = liveItem.analysis;
             }
