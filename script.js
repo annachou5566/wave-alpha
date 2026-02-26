@@ -2311,58 +2311,68 @@ function updateAllPrices() {
 
 
 
-
 function renderGrid(customData = null) {
-const SHOW_PREDICT_BTN = false;
-    if (document.querySelector('.tour-card.active-card')) {
+        const SHOW_PREDICT_BTN = false;
+        // 1. Kiểm tra nếu đang mở xem chi tiết (thẻ bài đang active) thì không render lại toàn bộ để tránh lag
+        if (document.querySelector('.tour-card.active-card')) {
             updateGridValuesOnly(); 
-            if(typeof renderMarketHealthTable === 'function') renderMarketHealthTable(); 
             return; 
         }
-
-    const grid = document.getElementById('appGrid');
-    if(!grid) return;
     
-
-    let listToRender = customData;
-
-
-
-    if (!listToRender && typeof currentFilterDate !== 'undefined' && currentFilterDate) {
-        listToRender = compList.filter(c => c.end === currentFilterDate);
+        const grid = document.getElementById('appGrid');
+        if(!grid) return;
+    
+        // 2. Xác định danh sách cần vẽ: ÉP GRID LẤY GIỐNG TABLE
+    let currentTab = appData.currentTab || localStorage.getItem('wave_active_tab') || 'running';
+    let sourceList = (typeof compList !== 'undefined' && compList.length > 0) ? [...compList] : [];
+    
+    // Nếu compList rỗng (chưa load xong) thì mới dùng appData
+    if (sourceList.length === 0) {
+        sourceList = (currentTab === 'history') ? [...appData.history] : [...appData.running];
     }
 
-
-    if (!listToRender) {
-        if (appData.gridTab === 'history') {
-            listToRender = appData.history;
-        } else {
-
-            listToRender = appData.running;
+    const nowMs = Date.now();
+    let listToRender = sourceList.filter(item => {
+        // Logic lọc y hệt bảng Table
+        let isEnded = false;
+        if (item.end_at) { 
+            isEnded = nowMs > new Date(item.end_at).getTime(); 
+        } else if (item.end) { 
+            isEnded = nowMs > (new Date(item.end).getTime() + 86400000); 
         }
-    }
 
-
-    listToRender.sort((a,b) => {
-        let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
-        let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
-        return posA - posB;
+        if (currentTab === 'running') return !isEnded;
+        return isEnded;
     });
 
-    if(listToRender.length === 0) {
-        grid.innerHTML = `<div class="col-12 text-center py-5 opacity-50"><i class="fas fa-calendar-times fa-3x mb-3 text-sub"></i><h5 class="text-sub font-num">NO DATA FOUND</h5><button class="btn btn-sm btn-outline-secondary mt-2 rounded-pill px-4" onclick="filterByDate(null)">Show All</button></div>`;
-        return;
+    // 3. Nếu đang có bộ lọc ngày trên Calendar thì lọc thêm
+    if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
+        listToRender = listToRender.filter(c => c.end === currentFilterDate);
     }
-
-    const isAdmin = document.body.classList.contains('is-admin');
-    document.querySelectorAll('.btn-save-pos').forEach(btn => btn.style.display = isAdmin ? 'block' : 'none');
-
     
-let fullHtml = '';
-    let now = new Date();
-
-    listToRender.forEach(c => {
-        try {
+        // 4. Sắp xếp theo thứ tự ưu tiên (orderIndex)
+        listToRender.sort((a,b) => {
+            let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
+            let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
+            return posA - posB;
+        });
+    
+        // 5. Nếu không có dữ liệu
+        if(listToRender.length === 0) {
+            grid.innerHTML = `<div class="col-12 text-center py-5 opacity-50"><i class="fas fa-calendar-times fa-3x mb-3 text-sub"></i><h5 class="text-sub font-num">NO DATA FOUND</h5><button class="btn btn-sm btn-outline-secondary mt-2 rounded-pill px-4" onclick="filterByDate(null)">Show All</button></div>`;
+            return;
+        }
+    
+        // 6. Xử lý hiển thị Admin
+        const isAdmin = document.body.classList.contains('is-admin');
+        document.querySelectorAll('.btn-save-pos').forEach(btn => btn.style.display = isAdmin ? 'block' : 'none');
+    
+        // 7. Render HTML
+        let fullHtml = '';
+        let now = new Date();
+    
+        listToRender.forEach(c => {
+            try {
 
 
 
