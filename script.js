@@ -1582,57 +1582,63 @@ async function loadFromCloud(isSilent = false) {
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        // 3. Chuyển đổi dữ liệu và BỌC LÓT CHỐNG CRASH
-        Object.entries(serverData).forEach(([key, item]) => {
-            if (!item) return;
+        // 3. TÁI TẠO CẤU TRÚC SUPABASE CŨ ĐỂ KHÔNG CRASH UI
+        Object.entries(serverData).forEach(([key, meta]) => {
+            if (!meta) return;
             
-            // [QUAN TRỌNG] Bơm db_id và contract giả để cứu các giải Legacy
-            if (!item.db_id) {
-                if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
-                else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
-                else item.db_id = 9999;
+            // Xử lý ID
+            let dbId = meta.db_id;
+            if (!dbId) {
+                if (key.startsWith('legacy_')) dbId = parseInt(key.replace('legacy_', ''));
+                else if (key.startsWith('ALPHA_')) dbId = parseInt(key.replace('ALPHA_', ''));
+                else dbId = 9999;
             }
-            item.id = item.db_id; 
-            // Nếu mất contract thì gán số 0 để hàm slice(0,4) không bị Crash làm trắng trang
-            item.contract = item.contract || "0x0000000000000000000000000000000000000000"; 
-            
+
+            // [QUAN TRỌNG NHẤT] Gói data lại thành ROW giống hệt database cũ
+            let row = {
+                id: dbId,
+                name: meta.name || "Unknown",
+                contract: meta.contract || "0x0000000000000000000000000000000000000000",
+                data: meta // Lớp bọc bảo vệ để c.data.xxx hoạt động bình thường
+            };
+
             let isRunning = true;
-            if (item.end) {
-                if (item.end < todayStr) isRunning = false;
-                else if (item.end === todayStr) {
-                    let tPart = (item.endTime || "23:59:59").trim();
+            if (meta.end) {
+                if (meta.end < todayStr) isRunning = false;
+                else if (meta.end === todayStr) {
+                    let tPart = (meta.endTime || "23:59:59").trim();
                     if(tPart.length === 5) tPart += ":00";
-                    let endDate = new Date(`${item.end}T${tPart}Z`);
+                    let endDate = new Date(`${meta.end}T${tPart}Z`);
                     if (now > endDate) isRunning = false;
                 }
             }
 
-            // Tái tạo Target hiển thị trên UI
+            // Tái tạo Target
             if (!isRunning) {
-                item.display_target = item.ai_prediction?.target || 0;
-                if (item.history && item.history.length > 0) {
-                    let sorted = [...item.history].sort((a,b) => new Date(b.date) - new Date(a.date));
+                meta.display_target = meta.ai_prediction?.target || 0;
+                if (meta.history && meta.history.length > 0) {
+                    let sorted = [...meta.history].sort((a,b) => new Date(b.date) - new Date(a.date));
                     let latest = sorted.find(h => parseFloat(h.target) > 0);
-                    if (latest) item.display_target = parseFloat(latest.target);
+                    if (latest) meta.display_target = parseFloat(latest.target);
                 }
             } else {
-                if (item.history && item.history.length > 0) {
-                    let sorted = [...item.history].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    item.display_target = parseFloat(sorted[0].target) || 0;
+                if (meta.history && meta.history.length > 0) {
+                    let sorted = [...meta.history].sort((a,b) => new Date(b.date) - new Date(a.date));
+                    meta.display_target = parseFloat(sorted[0].target) || 0;
                 }
             }
 
-            if (isRunning) tempRunning.push(item);
-            else tempHistory.push(item);
-            tempAll.push(item);
+            if (isRunning) tempRunning.push(row);
+            else tempHistory.push(row);
+            tempAll.push(row);
         });
 
-        // 4. Cập nhật mảng hiển thị
+        // 4. Sắp xếp dựa trên lớp bọc a.data.end thay vì a.end
         appData.running = tempRunning.sort((a,b) => {
-            if(!a.end) return 1; if(!b.end) return -1;
-            return new Date(a.end) - new Date(b.end);
+            if(!a.data.end) return 1; if(!b.data.end) return -1;
+            return new Date(a.data.end) - new Date(b.data.end);
         });
-        appData.history = tempHistory.sort((a,b) => new Date(b.end) - new Date(a.end)); 
+        appData.history = tempHistory.sort((a,b) => new Date(b.data.end) - new Date(a.data.end)); 
         
         appData.isDataReady = true;
         compList = tempAll;
@@ -1653,7 +1659,7 @@ async function loadFromCloud(isSilent = false) {
         console.error("❌ Lỗi Fetch Data từ Server Mới:", err);
     } finally {
         if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
-        updateAllPrices();
+        if (typeof updateAllPrices === 'function') updateAllPrices();
     }
 }
 
@@ -6345,23 +6351,27 @@ async function fetchLayer2Data() {
     }
 }
 
+
 function applyLayer2Data(serverData) {
     if (!window.compList || window.compList.length === 0) return;
 
     let hasChanges = false;
 
     compList.forEach(c => {
-        let alphaId = c.alphaId;
+        let meta = c.data; // Móc vào lớp data để khớp với UI
+        if (!meta) return;
+        
+        let alphaId = meta.alphaId;
         if (!alphaId) return;
 
         // Lấy data real-time khớp với AlphaId thay vì Symbol
         const liveItem = serverData[alphaId];
         if (liveItem) {
-            c.cachedPrice = liveItem.p;
+            meta.cachedPrice = liveItem.p;
             
             // Cập nhật Market Analysis Real-time (Speed, Spread)
             if (liveItem.analysis) {
-                c.market_analysis = liveItem.analysis;
+                meta.market_analysis = liveItem.analysis;
             }
             hasChanges = true;
         }
@@ -6371,4 +6381,5 @@ function applyLayer2Data(serverData) {
         updateGridValuesOnly();
     }
 }
+
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
