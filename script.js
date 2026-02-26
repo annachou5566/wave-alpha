@@ -1566,15 +1566,27 @@ async function loadFromCloud(isSilent = false) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
 
+    // --- BƯỚC 1: LẤY CONFIG TỪ SUPABASE (CÁCH LY LỖI) ---
     try {
-        // 1. Tải Config Footer/Admin từ Supabase 
-        const { data: configData } = await supabase.from('tournaments').select('*').eq('id', -1).single();
-        if (configData && configData.data) {
-            siteConfig = configData.data;
-            renderFooter(); renderArsenal(); renderCustomHub();
+        const configRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.-1&select=*`, {
+            headers: { 
+                'apikey': SUPABASE_KEY, 
+                'Authorization': `Bearer ${SUPABASE_KEY}` 
+            }
+        });
+        const configJson = await configRes.json();
+        if (configJson && configJson.length > 0 && configJson[0].data) {
+            siteConfig = configJson[0].data;
+            if (typeof renderFooter === 'function') renderFooter(); 
+            if (typeof renderArsenal === 'function') renderArsenal(); 
+            if (typeof renderCustomHub === 'function') renderCustomHub();
         }
+    } catch (configErr) {
+        console.warn("⚠️ Bỏ qua lỗi tải Config:", configErr);
+    }
 
-        // 2. Lấy TOÀN BỘ DỮ LIỆU TỪ SERVER MỚI
+    // --- BƯỚC 2: LẤY DỮ LIỆU TỪ SERVER MỚI (RENDER) ---
+    try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
         const serverData = await res.json(); 
 
@@ -1582,7 +1594,7 @@ async function loadFromCloud(isSilent = false) {
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        // 3. TÁI TẠO CẤU TRÚC SUPABASE CŨ ĐỂ KHÔNG CRASH UI
+        // 3. TÁI TẠO CẤU TRÚC ĐỂ KHÔNG CRASH UI
         Object.entries(serverData).forEach(([key, meta]) => {
             if (!meta) return;
             
@@ -1594,12 +1606,12 @@ async function loadFromCloud(isSilent = false) {
                 else dbId = 9999;
             }
 
-            // [QUAN TRỌNG NHẤT] Gói data lại thành ROW giống hệt database cũ
+            // Gói data lại thành ROW giống database cũ
             let row = {
                 id: dbId,
                 name: meta.name || "Unknown",
                 contract: meta.contract || "0x0000000000000000000000000000000000000000",
-                data: meta // Lớp bọc bảo vệ để c.data.xxx hoạt động bình thường
+                data: meta 
             };
 
             let isRunning = true;
@@ -1633,7 +1645,7 @@ async function loadFromCloud(isSilent = false) {
             tempAll.push(row);
         });
 
-        // 4. Sắp xếp dựa trên lớp bọc a.data.end thay vì a.end
+        // 4. Sắp xếp hiển thị
         appData.running = tempRunning.sort((a,b) => {
             if(!a.data.end) return 1; if(!b.data.end) return -1;
             return new Date(a.data.end) - new Date(b.data.end);
@@ -1644,9 +1656,9 @@ async function loadFromCloud(isSilent = false) {
         compList = tempAll;
         localStorage.setItem('wave_comp_list', JSON.stringify(compList));
 
-        renderGrid(); 
-        renderStats();
-        initCalendar();
+        if (typeof renderGrid === 'function') renderGrid(); 
+        if (typeof renderStats === 'function') renderStats();
+        if (typeof initCalendar === 'function') initCalendar();
         if (window.competitionRadar) window.competitionRadar.updateRealtimeStats(compList);
 
         let currentActiveTab = localStorage.getItem('wave_active_tab') || 'running';
