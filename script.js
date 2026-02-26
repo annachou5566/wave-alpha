@@ -5,16 +5,21 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
     const REALTIME_API_URL = 'https://alpha-realtime.onrender.com/api/market-data';
     const REALTIME_API_KEY = 'WaveAlpha_S3cur3_P@ssw0rd_5566';
-// HÀM FORMAT SỐ BỊ MẤT
+
+let layer2Interval = null;
+const PREDICT_FEE = 100;
+// --- KHAI BÁO BỔ SUNG CÁC BIẾN TOÀN CỤC BỊ THIẾU ---
+let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [];
+let siteConfig = {};
+let userProfile = {};
+let currentUser = null;
+
+// --- HÀM ĐỊNH DẠNG SỐ BỊ MẤT ---
 function fmtNum(num) {
     if (num === null || num === undefined || isNaN(num)) return "0";
     return parseFloat(num).toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
 const fmt = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
-
-let layer2Interval = null;
-const PREDICT_FEE = 100;
-
 
 const TELE_BOT_CONFIG = {
 
@@ -1573,7 +1578,7 @@ async function loadFromCloud(isSilent = false) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
 
-    // 1. LẤY CONFIG TỪ SUPABASE (Dùng Fetch để không bị lỗi supabase.from)
+    // 1. LẤY CONFIG TỪ SUPABASE (An toàn với Fetch)
     try {
         const configRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.-1&select=*`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -1585,9 +1590,9 @@ async function loadFromCloud(isSilent = false) {
             if (typeof renderArsenal === 'function') renderArsenal(); 
             if (typeof renderCustomHub === 'function') renderCustomHub();
         }
-    } catch (e) { console.warn("Config Load Error:", e); }
+    } catch (e) { console.warn("⚠️ Không thể tải Site Config:", e); }
 
-    // 2. LẤY DỮ LIỆU TỪ SERVER RENDER
+    // 2. LẤY DỮ LIỆU TỪ SERVER RENDER MỚI
     try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
         const serverData = await res.json(); 
@@ -1599,7 +1604,7 @@ async function loadFromCloud(isSilent = false) {
         Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
             
-            // Fix ID & Contract cho hàng Legacy
+            // Map ID và gán Contract giả cho giải cũ để chống sập UI
             if (!item.db_id) {
                 if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
                 else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
@@ -1624,6 +1629,7 @@ async function loadFromCloud(isSilent = false) {
             tempAll.push(item);
         });
 
+        // Cập nhật dữ liệu vào ứng dụng
         appData.running = tempRunning.sort((a,b) => new Date(a.end) - new Date(b.end));
         appData.history = tempHistory.sort((a,b) => new Date(b.end) - new Date(a.end)); 
         
@@ -1631,16 +1637,17 @@ async function loadFromCloud(isSilent = false) {
         compList = tempAll;
         localStorage.setItem('wave_comp_list', JSON.stringify(compList));
 
-        renderGrid(); 
-        renderStats();
-        initCalendar();
+        // Vẽ giao diện
+        if (typeof renderGrid === 'function') renderGrid(); 
+        if (typeof renderStats === 'function') renderStats();
+        if (typeof initCalendar === 'function') initCalendar();
         
         let currentTab = localStorage.getItem('wave_active_tab') || 'running';
         if(currentTab === 'running') renderMarketHealthTable(appData.running);
         else renderMarketHealthTable(appData.history);
 
     } catch (err) {
-        console.error("❌ Lỗi tải dữ liệu:", err);
+        console.error("❌ Lỗi dữ liệu:", err);
     } finally {
         if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
         if (typeof updateAllPrices === 'function') updateAllPrices();
