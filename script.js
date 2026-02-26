@@ -2446,22 +2446,17 @@ let fullHtml = '';
             let isListingExpired = false;
 
             if (c.listingTime && c.alphaType !== 'none') {
+                let listingDate = new Date(c.listingTime);
+                if (typeof c.listingTime === 'string' && !c.listingTime.includes('Z') && !c.listingTime.includes('+')) {
+                    listingDate = new Date(c.listingTime + 'Z');
+                }
 
+                let expiryTime = new Date(Date.UTC(listingDate.getUTCFullYear(), listingDate.getUTCMonth(), listingDate.getUTCDate() + 29, 23, 59, 59, 999)).getTime();
+                let diffDays = Math.ceil((expiryTime - now.getTime()) / 86400000);
 
-
-                let listingDate = new Date(c.listingTime + 'Z'); 
-
-                
-
-                if(isNaN(listingDate.getTime())) listingDate = new Date(c.listingTime);
-
-                let expiryDate = new Date(listingDate.getTime() + (29 * 24 * 60 * 60 * 1000)); 
-                let diff = expiryDate - now;
-
-                if (diff > 0) {
-                    let d = Math.floor(diff / (1000 * 60 * 60 * 24));
-                    let h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    promoTimerHtml = `<div class="promo-timer" title="Promo expires in"><i class="fas fa-bolt" style="font-size:0.6rem"></i> ${d}d ${h}h</div>`;
+                if (diffDays > 0) {
+                    if (c.alphaType === 'x4') tagHtml = `<div class="tag-x4" style="text-transform: lowercase;">x4 ${diffDays}d</div>`;
+                    else if (c.alphaType === 'x2') { cardClass += ' highlight-x2'; tagHtml = `<div class="tag-x2" style="text-transform: lowercase;">x2 ${diffDays}d</div>`; }
                 } else {
                     isListingExpired = true; 
                 }
@@ -3021,10 +3016,18 @@ thead.innerHTML = `
            
             let badgeHtml = '';
             if (c.listingTime) {
-                let d = Math.floor((new Date(c.listingTime + (c.listingTime.includes('Z')?'':'Z')).getTime() + (29*86400000) - now)/86400000);
-                if (d >= 0) {
+                let listingDate = new Date(c.listingTime);
+                if (typeof c.listingTime === 'string' && !c.listingTime.includes('Z') && !c.listingTime.includes('+')) {
+                    listingDate = new Date(c.listingTime + 'Z');
+                }
+
+                let expiryTime = new Date(Date.UTC(listingDate.getUTCFullYear(), listingDate.getUTCMonth(), listingDate.getUTCDate() + 29, 23, 59, 59, 999)).getTime();
+                let diffDays = Math.ceil((expiryTime - now.getTime()) / 86400000);
+
+                if (diffDays > 0) {
                     let iconUrl = (c.alphaType === 'x4') ? 'https://i.ibb.co/hRS0Z6wf/1000003428.png' : 'https://i.ibb.co/ZyqMBQp/1000003438.png';
-                    badgeHtml = `<span class="promo-badge-inline"><img src="${iconUrl}" class="promo-icon-inline"> ${d}d</span>`;
+                    let mulText = c.alphaType === 'x4' ? 'x4' : (c.alphaType === 'x2' ? 'x2' : '');
+                    badgeHtml = `<span class="promo-badge-inline" style="text-transform: lowercase;"><img src="${iconUrl}" class="promo-icon-inline"> ${mulText} ${diffDays}d</span>`;
                 }
             }
 
