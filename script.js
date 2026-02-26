@@ -1567,14 +1567,14 @@ async function loadFromCloud(isSilent = false) {
     }
 
     try {
-        // 1. Tải Config Footer/Admin từ Supabase (Giữ nguyên để không hỏng giao diện Admin)
+        // 1. Tải Config Footer/Admin từ Supabase 
         const { data: configData } = await supabase.from('tournaments').select('*').eq('id', -1).single();
         if (configData && configData.data) {
             siteConfig = configData.data;
             renderFooter(); renderArsenal(); renderCustomHub();
         }
 
-        // 2. Lấy TOÀN BỘ DỮ LIỆU TỪ SERVER MỚI (Thay vì chui vào Supabase)
+        // 2. Lấy TOÀN BỘ DỮ LIỆU TỪ SERVER MỚI
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
         const serverData = await res.json(); 
 
@@ -1582,10 +1582,19 @@ async function loadFromCloud(isSilent = false) {
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        // 3. Chuyển đổi dữ liệu Server cho khớp cấu trúc Frontend
-        Object.values(serverData).forEach(item => {
+        // 3. Chuyển đổi dữ liệu và BỌC LÓT CHỐNG CRASH
+        Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
-            item.id = item.db_id; // Map ID cho Frontend
+            
+            // [QUAN TRỌNG] Bơm db_id và contract giả để cứu các giải Legacy
+            if (!item.db_id) {
+                if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
+                else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
+                else item.db_id = 9999;
+            }
+            item.id = item.db_id; 
+            // Nếu mất contract thì gán số 0 để hàm slice(0,4) không bị Crash làm trắng trang
+            item.contract = item.contract || "0x0000000000000000000000000000000000000000"; 
             
             let isRunning = true;
             if (item.end) {
