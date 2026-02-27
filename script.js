@@ -2321,8 +2321,7 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
             if (isNaN(target)) target = 0;
 
             
-let usePrice = (c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0;
-
+let usePrice = parseFloat(c.cachedPrice) || ((c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0);
 let priceStr = (usePrice > 0) ? '$' + usePrice.toLocaleString('en-US', { maximumFractionDigits: usePrice < 1 ? 6 : 2 }) : '---';
 let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 
@@ -6331,11 +6330,15 @@ async function fetchLayer2Data() {
         });
 
         const json = await res.json();
-        if (json.success && json.data) {
-            applyLayer2Data(json.data);
+        
+        // SỬA Ở ĐÂY: Server mới trả thẳng object, không có json.success
+        let actualData = json.data ? json.data : json; 
+        
+        if (actualData && Object.keys(actualData).length > 0) {
+            applyLayer2Data(actualData);
         }
     } catch (e) {
-        
+        console.error("Lỗi đồng bộ Realtime:", e);
     }
 }
 
@@ -6345,15 +6348,15 @@ function applyLayer2Data(serverData) {
     let hasChanges = false;
 
     compList.forEach(c => {
+        // Tự động suy ra alphaId nếu biến này bị rỗng
         let alphaId = c.alphaId;
+        if (!alphaId && c.name) alphaId = "ALPHA_" + c.name.split('(')[0].trim();
         if (!alphaId) return;
 
         const liveItem = serverData[alphaId];
         if (liveItem) {
-            // Cập nhật GIÁ
             c.cachedPrice = liveItem.p;
             
-            // CẬP NHẬT VOLUME (Khắc phục việc volume đứng yên)
             c.limit_daily_volume = liveItem.ldv || 0;
             c.limit_accumulated_volume = liveItem.lav || 0;
             c.real_alpha_volume = liveItem.dv || 0;
