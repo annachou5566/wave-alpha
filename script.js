@@ -6251,18 +6251,8 @@ function updateHealthTableRealtime() {
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
         console.log("👀 User is back! Checking for updates...");
-        
-
-
         quickSyncData(); 
-        
-
-        const status = supabase.channel('public:tournaments').state;
-        if (status !== 'joined' && status !== 'joining') {
-            console.log("Reconnecting Realtime...");
-            supabase.removeAllChannels();
-            init(); 
-        }
+        startRealtimeSync(); // Gọi lại luồng Render API thay vì dùng Supabase
     }
 });
 
@@ -6384,8 +6374,13 @@ function applyLayer2Data(serverData) {
         }
     });
 
-    if (hasChanges && typeof updateGridValuesOnly === 'function') {
-        updateGridValuesOnly();
+    if (hasChanges) {
+        if (typeof updateGridValuesOnly === 'function') {
+            updateGridValuesOnly(); // Update cho dạng Thẻ (Grid)
+        }
+        if (typeof renderMarketHealthTable === 'function') {
+            renderMarketHealthTable(); // Update cho dạng Bảng (Table)
+        }
     }
 }
 
