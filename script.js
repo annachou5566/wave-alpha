@@ -1579,7 +1579,6 @@ async function loadFromCloud(isSilent = false) {
         document.getElementById('loading-overlay').style.display = 'flex';
     }
 
-    // 1. LẤY CONFIG TỪ SUPABASE (Dùng Fetch để không bị lỗi supabase.from)
     try {
         const configRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=eq.-1&select=*`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
@@ -1593,7 +1592,6 @@ async function loadFromCloud(isSilent = false) {
         }
     } catch (e) { console.warn("⚠️ Bỏ qua lỗi Config:", e); }
 
-    // 2. LẤY DỮ LIỆU TỪ SERVER RENDER
     try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
         const serverData = await res.json(); 
@@ -1602,26 +1600,28 @@ async function loadFromCloud(isSilent = false) {
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        Object.entries(serverData).forEach(([key, item]) => {
+        // Ép dữ liệu thành Mảng để vòng lặp chạy an toàn
+        let dataList = Array.isArray(serverData) ? serverData : Object.values(serverData);
+
+        dataList.forEach(item => {
             if (!item) return;
             
-            // QUAN TRỌNG: Ánh xạ alphaId từ Key để Realtime hoạt động
-            if (key.startsWith('ALPHA_')) {
-                item.alphaId = key;
-            }
+            // TRÍCH XUẤT CHÍNH XÁC ID ĐỂ REALTIME NHẬN DIỆN
+            item.alphaId = item.alphaId || (item.data && item.data.alphaId);
+            
+            // Lấy Base Volume từ Server để cộng dồn
+            item.base_total_vol = item.base_total_vol || (item.data && item.data.base_total_vol) || 0;
+            item.base_limit_vol = item.base_limit_vol || (item.data && item.data.base_limit_vol) || 0;
 
-            // Fix ID & Contract cho hàng Legacy chống sập UI
-            if (!item.db_id) {
-                if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
-                else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
-                else item.db_id = 9999;
-            }
+            item.db_id = item.db_id || item.id || 9999;
             item.id = item.db_id; 
-            item.contract = item.contract || "0x0000000000000000000000000000000000000000"; 
+            item.contract = item.contract || (item.data && item.data.contract) || "0x0000000000000000000000000000000000000000"; 
             
             let isEnded = false;
+            let endStr = item.end_at || item.end || (item.data && item.data.end);
+            
             if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
-            else if (item.end) { isEnded = Date.now() > (new Date(item.end).getTime() + 86400000); }
+            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
 
             if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
@@ -6348,20 +6348,30 @@ function applyLayer2Data(serverData) {
     let hasChanges = false;
 
     compList.forEach(c => {
-        // Tự động suy ra alphaId nếu biến này bị rỗng
-        let alphaId = c.alphaId;
-        if (!alphaId && c.name) alphaId = "ALPHA_" + c.name.split('(')[0].trim();
+        // Cứu alphaId từ mọi ngóc ngách để đảm bảo không bị rớt token nào
+        let alphaId = c.alphaId || (c.data && c.data.alphaId);
         if (!alphaId) return;
 
         const liveItem = serverData[alphaId];
         if (liveItem) {
+            // 1. Cập nhật Giá ngay lập tức
             c.cachedPrice = liveItem.p;
             
-            c.limit_daily_volume = liveItem.ldv || 0;
-            c.limit_accumulated_volume = liveItem.lav || 0;
-            c.real_alpha_volume = liveItem.dv || 0;
-            c.total_accumulated_volume = liveItem.av || 0;
+            // 2. Lấy Volume Hàng Ngày từ API Render (dt = Total, dl = Limit)
+            if (liveItem.v) {
+                c.limit_daily_volume = liveItem.v.dl || 0;
+                c.real_alpha_volume = liveItem.v.dt || 0;
+            }
             
+            // 3. Tính toán Volume Tích Lũy = Base (Quá khứ) + Daily (Hôm nay)
+            let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
+            let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
+            
+            c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
+            c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
+            
+            // 4. Phân tích thị trường khác
+            c.daily_tx_count = liveItem.tx || 0;
             if (liveItem.analysis) {
                 c.market_analysis = liveItem.analysis;
             }
