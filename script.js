@@ -6339,26 +6339,26 @@ async function fetchLayer2Data() {
 
 
 function applyLayer2Data(serverData) {
-    if (!window.compList || window.compList.length === 0) return;
+    // Đã xóa window. ở đây để trình duyệt đọc đúng biến compList
+    if (!compList || compList.length === 0) return;
+    
     let hasChanges = false;
 
     compList.forEach(c => {
-        // FIX LỖI: Tự động tạo key chuẩn (VD: ALPHA_412) từ db_id nếu alphaId bị thiếu
         let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
-
         const liveItem = serverData[alphaId];
         
         if (liveItem) {
             // 1. Cập nhật Giá ngay lập tức
             c.cachedPrice = liveItem.p;
             
-            // 2. Lấy Volume Hàng Ngày từ API Render (dt = Total, dl = Limit)
+            // 2. Lấy Volume Hàng Ngày từ API
             if (liveItem.v) {
                 c.limit_daily_volume = liveItem.v.dl || 0;
                 c.real_alpha_volume = liveItem.v.dt || 0;
             }
             
-            // 3. Tính toán Volume Tích Lũy = Base (Quá khứ) + Daily (Hôm nay)
+            // 3. Tính toán Volume Tích Lũy
             let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
             let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
             
@@ -6374,14 +6374,9 @@ function applyLayer2Data(serverData) {
         }
     });
 
-    // Nếu có dữ liệu mới, cập nhật lên giao diện
     if (hasChanges) {
-        if (typeof updateGridValuesOnly === 'function') {
-            updateGridValuesOnly(); // Cập nhật dạng Thẻ (Grid)
-        }
-        if (typeof renderMarketHealthTable === 'function') {
-            renderMarketHealthTable(); // Cập nhật dạng Bảng (Table)
-        }
+        if (typeof updateGridValuesOnly === 'function') updateGridValuesOnly();
+        if (typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
     }
 }
 
