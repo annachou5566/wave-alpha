@@ -2901,3 +2901,40 @@ margin-top: 2px;
 .overlay-clone, .tour-card.active-card {
     transition: transform 0.2s ease, opacity 0.2s ease !important;
 }
+
+
+
+
+.card-wrapper {
+    min-height: 460px !important; 
+    display: flex;
+}
+
+.tour-card {
+    height: 100% !important;
+    min-height: 460px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+}
+
+.tour-card .card-list {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.tour-card .mini-chart-wrapper {
+    flex: 1 !important;
+    min-height: 140px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding-bottom: 10px !important;
+}
+
+.tour-card canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 180px !important;
+}
