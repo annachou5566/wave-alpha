@@ -2374,23 +2374,51 @@ margin-top: 2px;
 
 
 .btn-close-overlay {
-    position: absolute;
-    top: -15px;
-    right: -15px;
-    width: 35px;
-    height: 35px;
-    background: #ff4d4d;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    z-index: 10001;
-    font-size: 1.2rem;
-    border: 2px solid #fff;
-    transition: transform 0.2s;
+    display: none !important;
+}
+
+.overlay-close-btn-wrapper {
+    position: fixed;
+    bottom: 30px; 
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10001; /* Nổi lên trên cùng */
+    animation: slideUpFade 0.3s ease-out forwards;
+}
+
+.overlay-close-btn-wrapper button {
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.overlay-close-btn-wrapper button:hover {
+    background: rgba(246, 70, 93, 0.8) !important; /* Đỏ nhạt khi hover */
+    border-color: #F6465D !important;
+    transform: translateY(-2px);
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.overlay-clone {
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10000 !important;
+    width: 90% !important;
+    max-width: 380px !important;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.9) !important;
+    margin: 0 !important;
+    animation: popupScaleFade 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    will-change: transform, opacity;
+}
+
+@keyframes popupScaleFade {
+    from { opacity: 0; transform: translate(-50%, -45%) scale(0.95); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 .btn-close-overlay:hover {
