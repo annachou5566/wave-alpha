@@ -1295,6 +1295,18 @@ async function fetchUserProfile() {
             }
         }
 
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            loginBtn.classList.remove('d-flex');
+            loginBtn.classList.add('d-none');
+        }
+
+        const userProfileDiv = document.getElementById('userProfile');
+        if (userProfileDiv) {
+            userProfileDiv.classList.remove('d-none');
+            userProfileDiv.classList.add('d-flex');
+        }
+
         checkUserAdmin();
         checkDailyBonus();
 
