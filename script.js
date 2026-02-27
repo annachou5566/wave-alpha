@@ -1131,6 +1131,7 @@ async function quickSyncData() {
 }
 
 function init() {
+    fetchUserProfile();
     checkLegal();
     syncAlphaData();
     startRealtimeSync();
