@@ -68,7 +68,7 @@ class CompetitionRadar {
         return '$' + Math.round(num).toLocaleString();
     }
 
-    processToken(contract, raw) {
+   processToken(contract, raw) {
         const history = raw.h || raw.history; 
         if (!history || history.length === 0) return null;
         
@@ -126,7 +126,6 @@ class CompetitionRadar {
             txPerSecond = speedRaw / liveAvgTicket;
         }
         
-        
         if (matchSpeedUSD > 0) matchSpeedHistory[currentHour] = matchSpeedUSD;
     
         let dailyVolUTC = parseFloat(cachedItem.limit_daily_volume || raw.limit_daily_volume || 0);
@@ -145,7 +144,7 @@ class CompetitionRadar {
             }
         }
 
-
+        // --- BẮT ĐẦU ĐOẠN XỬ LÝ REALTIME ---
         let projected = 0;
         const minPassed = now.getMinutes() || 1;
 
@@ -178,6 +177,7 @@ class CompetitionRadar {
             const curVol = todayVol[currentHour] || 0;
             projected = Math.round((curVol / minPassed) * 60);
         }
+        // --- KẾT THÚC XỬ LÝ REALTIME ---
         
         let algoLimit = matchSpeedUSD * 0.15; 
         
@@ -192,21 +192,14 @@ class CompetitionRadar {
         algoLimit = Math.round(algoLimit);
     
         let riskScore = 0;
-    if (spreadVal <= 0.5) {
-        riskScore = 0; 
-    } else if (spreadVal <= 1.5) {
-        riskScore = 1; 
-    } else if (spreadVal <= 3.0) {
-        riskScore = 2; 
-    } else {
-        riskScore = 3; 
-    }
-    
-        let projected = 0;
-        const curVol = todayVol[currentHour] || 0;
-        const minPassed = now.getMinutes() || 1;
-        if (Math.max(historyVol[currentHour], todayVol[currentHour]) > 0) {
-            projected = Math.round((curVol / minPassed) * 60);
+        if (spreadVal <= 0.5) {
+            riskScore = 0; 
+        } else if (spreadVal <= 1.5) {
+            riskScore = 1; 
+        } else if (spreadVal <= 3.0) {
+            riskScore = 2; 
+        } else {
+            riskScore = 3; 
         }
     
         return {
