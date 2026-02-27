@@ -5080,10 +5080,9 @@ function initCalendar() {
 
 
             let qty = parseFloat(c.rewardQty) || 0;
-            let price = (c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0);
-            
+let price = parseFloat((c.market_analysis && c.market_analysis.price) ? c.market_analysis.price : (c.cachedPrice || 0)) || 0;
 
-            dateStats[c.end].totalVal += (qty * price);
+dateStats[c.end].totalVal += (qty * price);
         }
     });
 
