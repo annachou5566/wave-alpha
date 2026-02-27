@@ -6077,88 +6077,10 @@ function renderCustomHub() {
 let activeCardPlaceholder = null; 
 
 function toggleCardHighlight(el) {
-
     if (document.querySelector('.tour-card.active-card')) {
         closeActiveCard();
     }
 
-
-    activeCardPlaceholder = document.createElement('div');
-    activeCardPlaceholder.className = 'tour-card-placeholder';
-    activeCardPlaceholder.style.display = 'none'; 
-    el.parentNode.insertBefore(activeCardPlaceholder, el);
-
-
-    document.body.appendChild(el);
-
-
-
-    requestAnimationFrame(() => {
-        el.classList.add('active-card');
-        
-
-        let canvas = el.querySelector('canvas');
-        if (canvas) {
-
-            let dbId = canvas.id.split('-')[1];
-            let c = compList.find(x => x.db_id == dbId);
-            if(c) renderCardMiniChart(c); 
-        }
-    });
-
-
-    const backdrop = document.getElementById('card-backdrop');
-    if(backdrop) {
-        backdrop.style.display = 'block';
-        backdrop.onclick = closeActiveCard; 
-        setTimeout(() => backdrop.classList.add('show'), 10);
-    }
-    document.body.classList.add('has-active-card');
-}
-
-function closeActiveCard() {
-    const clones = document.querySelectorAll('.overlay-clone');
-    clones.forEach(el => {
-        el.style.animation = 'popupScaleFadeOut 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
-    });
-
-    const closeBtns = document.querySelectorAll('.overlay-close-btn-wrapper');
-    closeBtns.forEach(el => {
-        el.style.opacity = '0';
-        el.style.transition = 'opacity 0.2s ease';
-    });
-
-    const backdrop = document.getElementById('card-backdrop');
-    if(backdrop) {
-        backdrop.classList.remove('show');
-    }
-
-    setTimeout(() => {
-        clones.forEach(el => el.remove());
-        closeBtns.forEach(el => el.remove());
-
-        if(backdrop) {
-            backdrop.style.display = 'none';
-        }
-
-        activeCardPlaceholder = null;
-        document.body.classList.remove('has-active-card');
-    }, 200); 
-}
-
-function jumpToCard(dbId) {
-    const wrapper = document.querySelector(`.card-wrapper[data-id="${dbId}"]`);
-    if (wrapper) {
-        const card = wrapper.querySelector('.tour-card');
-        if (card) openCardOverlay(card); 
-    }
-}
-
-
-function openCardOverlay(originalCard) {
-    closeActiveCard();
-
-    // 1. Tạo nút Close riêng biệt nằm bên ngoài
     const closeBtnWrapper = document.createElement('div');
     closeBtnWrapper.className = 'overlay-close-btn-wrapper';
     closeBtnWrapper.innerHTML = `
@@ -6173,14 +6095,96 @@ function openCardOverlay(originalCard) {
     };
     document.body.appendChild(closeBtnWrapper);
 
-    // 2. Clone thẻ bài một cách mượt mà hơn
+    activeCardPlaceholder = document.createElement('div');
+    activeCardPlaceholder.className = 'tour-card-placeholder';
+    activeCardPlaceholder.style.display = 'none'; 
+    el.parentNode.insertBefore(activeCardPlaceholder, el);
+
+    document.body.appendChild(el);
+
+    requestAnimationFrame(() => {
+        el.classList.add('active-card');
+        let canvas = el.querySelector('canvas');
+        if (canvas) {
+            let dbId = canvas.id.split('-')[1];
+            let c = compList.find(x => x.db_id == dbId);
+            if(c) renderCardMiniChart(c); 
+        }
+    });
+
+    const backdrop = document.getElementById('card-backdrop');
+    if(backdrop) {
+        backdrop.style.display = 'block';
+        backdrop.onclick = closeActiveCard; 
+        setTimeout(() => backdrop.classList.add('show'), 10);
+    }
+    document.body.classList.add('has-active-card');
+}
+
+function closeActiveCard() {
+    document.querySelectorAll('.active-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translate(-50%, -45%) scale(0.95)';
+    });
+    document.querySelectorAll('.overlay-close-btn-wrapper').forEach(el => {
+        el.style.opacity = '0';
+    });
+    
+    const backdrop = document.getElementById('card-backdrop');
+    if(backdrop) backdrop.classList.remove('show');
+
+    setTimeout(() => {
+        document.querySelectorAll('.overlay-clone').forEach(el => el.remove());
+        document.querySelectorAll('.overlay-close-btn-wrapper').forEach(el => el.remove());
+
+        const activeEl = document.querySelector('.tour-card.active-card');
+        if (activeEl) {
+            activeEl.classList.remove('active-card');
+            activeEl.style.opacity = '';
+            activeEl.style.transform = '';
+            if (activeCardPlaceholder && activeCardPlaceholder.parentNode) {
+                activeCardPlaceholder.parentNode.insertBefore(activeEl, activeCardPlaceholder);
+                activeCardPlaceholder.remove();
+            }
+        }
+        activeCardPlaceholder = null;
+
+        if(backdrop) backdrop.style.display = 'none';
+        document.body.classList.remove('has-active-card');
+    }, 200);
+}
+
+function jumpToCard(dbId) {
+    const wrapper = document.querySelector(`.card-wrapper[data-id="${dbId}"]`);
+    if (wrapper) {
+        const card = wrapper.querySelector('.tour-card');
+        if (card) openCardOverlay(card); 
+    }
+}
+
+function openCardOverlay(originalCard) {
+    closeActiveCard();
+
+    const closeBtnWrapper = document.createElement('div');
+    closeBtnWrapper.className = 'overlay-close-btn-wrapper';
+    closeBtnWrapper.innerHTML = `
+        <button class="btn btn-sm text-white d-flex align-items-center gap-2 px-3 py-2 fw-bold" 
+                style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 30px; backdrop-filter: blur(5px);">
+            <i class="fas fa-times"></i> CLOSE
+        </button>
+    `;
+    closeBtnWrapper.onclick = function(e) {
+        e.stopPropagation(); 
+        closeActiveCard();   
+    };
+    document.body.appendChild(closeBtnWrapper);
+
     const clone = originalCard.cloneNode(true);
     clone.removeAttribute('onclick'); 
     clone.onclick = null; 
     clone.classList.add('active-card'); 
     clone.classList.add('overlay-clone');
     
-    // Gỡ bỏ class col-* của bootstrap để thẻ không bị ép kích thước khi pop-up
     clone.className = clone.className.replace(/col-\w+-\d+/g, '').trim();
 
     let cardWrapper = originalCard.closest('.card-wrapper');
@@ -6196,28 +6200,17 @@ function openCardOverlay(originalCard) {
             setTimeout(() => {
                 let c = compList.find(x => x.db_id == dbId);
                 if (c) renderCardMiniChart(c, newCanvasId);
-            }, 50); // Giảm độ trễ render chart
+            }, 50);
         }
     }
 
-    clone.addEventListener('click', function(e) {
-        e.stopPropagation(); 
-    });
-
-    // Thêm thẻ clone vào body nhưng ẩn đi tíc tắc để load xong mới hiện (chống giật)
-    clone.style.opacity = '0';
+    clone.addEventListener('click', function(e) { e.stopPropagation(); });
     document.body.appendChild(clone);
-
-    requestAnimationFrame(() => {
-        clone.style.opacity = '1';
-    });
 
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
         backdrop.style.display = 'block';
-        backdrop.onclick = function() {
-            closeActiveCard();
-        };
+        backdrop.onclick = closeActiveCard;
         setTimeout(() => backdrop.classList.add('show'), 10);
     }
     document.body.classList.add('has-active-card');
