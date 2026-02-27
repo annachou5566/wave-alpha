@@ -27,16 +27,25 @@ const TELE_BOT_CONFIG = {
     chatId: '-1003355713341' 
 };
 
-
+function formatCurrency(input) {
+    let value = input.value.replace(/[^0-9]/g, '');
+    
+    if (value === "") {
+        input.value = "";
+        return;
+    }
+    
+    input.value = parseInt(value, 10).toLocaleString('en-US');
+}
 
 function requireBotToken() {
     let currentToken = TELE_BOT_CONFIG.token;
     if (!currentToken) {
 
-        let input = prompt("⚠️ CHƯA CÓ TOKEN BOT!\n\nVui lòng dán Token BotFather vào đây (Chỉ cần làm 1 lần trên máy này):");
+        let input = prompt("⚠️ CHƯA CÓ TOKEN BOT!\n\nVui lòng dán Token BotFather vào đây");
         if (input && input.trim() !== "") {
             localStorage.setItem('WAVE_TELE_TOKEN', input.trim());
-            alert("✅ Đã lưu Token vào máy! Từ giờ bạn có thể cập nhật thoải mái.");
+            alert("✅ Đã lưu Token vào máy!");
             return true;
         } else {
             alert("❌ Bạn chưa nhập Token nên không thể gửi tin nhắn Telegram.");
