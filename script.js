@@ -6339,7 +6339,6 @@ async function fetchLayer2Data() {
 
 
 function applyLayer2Data(serverData) {
-    // Đã xóa window. ở đây để trình duyệt đọc đúng biến compList
     if (!compList || compList.length === 0) return;
     
     let hasChanges = false;
@@ -6349,28 +6348,39 @@ function applyLayer2Data(serverData) {
         const liveItem = serverData[alphaId];
         
         if (liveItem) {
-            // 1. Cập nhật Giá ngay lập tức
+            // 1. LUÔN CẬP NHẬT GIÁ (Cho cả giải Đang chạy lẫn Lịch sử)
             c.cachedPrice = liveItem.p;
+            hasChanges = true;
+
+            // 2. KHÓA VAN VOLUME CHO GIẢI LỊCH SỬ
+            let isEnded = false;
+            let endStr = c.end_at || c.end || (c.data && c.data.end);
+            if (c.end_at) { isEnded = Date.now() > new Date(c.end_at).getTime(); }
+            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
             
-            // 2. Lấy Volume Hàng Ngày từ API
+            let isFinalized = c.is_finalized || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
+            
+            // NẾU GIẢI ĐÃ KẾT THÚC -> DỪNG LẠI TẠI ĐÂY! (Bảo vệ Volume)
+            if (isEnded || isFinalized) return;
+            
+            // 3. CẬP NHẬT VOLUME (Chỉ dành cho giải ĐANG CHẠY)
             if (liveItem.v) {
                 c.limit_daily_volume = liveItem.v.dl || 0;
                 c.real_alpha_volume = liveItem.v.dt || 0;
             }
             
-            // 3. Tính toán Volume Tích Lũy
+            // Tính Accumulated = Base + Daily
             let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
             let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
             
             c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
             c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
             
-            // 4. Phân tích thị trường khác
+            // Phân tích thị trường
             c.daily_tx_count = liveItem.tx || 0;
             if (liveItem.analysis) {
                 c.market_analysis = liveItem.analysis;
             }
-            hasChanges = true;
         }
     });
 
