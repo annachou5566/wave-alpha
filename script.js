@@ -1600,20 +1600,26 @@ async function loadFromCloud(isSilent = false) {
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        // Ép dữ liệu thành Mảng để vòng lặp chạy an toàn
-        let dataList = Array.isArray(serverData) ? serverData : Object.values(serverData);
-
-        dataList.forEach(item => {
+        // [QUAN TRỌNG] Dùng Object.entries để GIỮ LẠI CHÌA KHÓA (ALPHA_466, ALPHA_483...)
+        Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
             
-            // TRÍCH XUẤT CHÍNH XÁC ID ĐỂ REALTIME NHẬN DIỆN
+            // LƯU CHÌA KHÓA VÀO ALPHA_ID ĐỂ REALTIME SOI CHIẾU
             item.alphaId = item.alphaId || (item.data && item.data.alphaId);
+            if (!item.alphaId && key.startsWith('ALPHA_')) {
+                item.alphaId = key;
+            }
             
             // Lấy Base Volume từ Server để cộng dồn
             item.base_total_vol = item.base_total_vol || (item.data && item.data.base_total_vol) || 0;
             item.base_limit_vol = item.base_limit_vol || (item.data && item.data.base_limit_vol) || 0;
 
-            item.db_id = item.db_id || item.id || 9999;
+            item.db_id = item.db_id || item.id || (item.data && item.data.id);
+            if (!item.db_id) {
+                if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
+                else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
+                else item.db_id = 9999;
+            }
             item.id = item.db_id; 
             item.contract = item.contract || (item.data && item.data.contract) || "0x0000000000000000000000000000000000000000"; 
             
@@ -2498,15 +2504,14 @@ function updateGridValuesOnly() {
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             if (cardWrapper) {
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
-                if (volEl) {
-                    let rv = c.limit_daily_volume || 0;
-                    if (rv === 0 && c.limit_vol_history && c.limit_vol_history.length > 0) {
-                        let last = c.limit_vol_history[c.limit_vol_history.length - 1];
-                        if (last) rv = parseFloat(last.vol);
-                    }
-                    let rvStr = rv > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                    if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
-                }
+            if (volEl) {
+                // Sửa biến này để nó lấy Volume cộng dồn từ Realtime thay vì số 0
+                let rv = c.limit_accumulated_volume || c.total_accumulated_volume || c.real_alpha_volume || 0;
+                
+                let prefix = rv > 0 ? '$' : '';
+                let rvStr = rv > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
+                if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
+            }
 
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
