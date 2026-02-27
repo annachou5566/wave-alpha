@@ -111,18 +111,21 @@ class CompetitionRadar {
         
         const cleanKey = contract.toLowerCase().trim();
         const cachedItem = this.realtimeCache[cleanKey] || {};
+        
         const analysis = cachedItem.market_analysis || raw.market_analysis || {};
         
-    
-        const speedPerMinute = parseFloat(analysis.speed || 0); 
-        const ticketVal = parseFloat(analysis.ticket || 0);     
-        
-       
-        const txPerSecond = speedPerMinute / 60;           
-        const matchSpeedUSD = Math.round(txPerSecond * ticketVal); 
-        
-        const liveAvgTicket = Math.round(ticketVal);      
+        const speedRaw = parseFloat(analysis.speed || 0);   
+        const ticketRaw = parseFloat(analysis.ticket || 0); 
+
+        const matchSpeedUSD = Math.round(speedRaw);
+        const liveAvgTicket = Math.round(ticketRaw);
         const spreadVal = analysis.spread !== undefined ? parseFloat(analysis.spread) : 0;
+   
+        let txPerSecond = 0;
+        if (liveAvgTicket > 0) {
+            txPerSecond = speedRaw / liveAvgTicket;
+        }
+        
         
         if (matchSpeedUSD > 0) matchSpeedHistory[currentHour] = matchSpeedUSD;
     
