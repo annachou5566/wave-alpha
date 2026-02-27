@@ -6118,6 +6118,8 @@ function toggleCardHighlight(el) {
 
 function closeActiveCard() {
     document.querySelectorAll('.overlay-clone').forEach(el => el.remove());
+    
+    document.querySelectorAll('.overlay-close-btn-wrapper').forEach(el => el.remove());
 
     const activeEl = document.querySelector('.tour-card.active-card');
     if (activeEl) {
@@ -6149,26 +6151,32 @@ function jumpToCard(dbId) {
 
 
 function openCardOverlay(originalCard) {
-
     closeActiveCard();
 
-
-    const clone = originalCard.cloneNode(true);
-        clone.removeAttribute('onclick'); 
-        clone.onclick = null; 
-        clone.classList.add('active-card'); 
-        clone.classList.add('overlay-clone');
-    
-
-    const closeBtn = document.createElement('div');
-    closeBtn.className = 'btn-close-overlay';
-    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-    closeBtn.onclick = function(e) {
+    // 1. Tạo nút Close riêng biệt nằm bên ngoài
+    const closeBtnWrapper = document.createElement('div');
+    closeBtnWrapper.className = 'overlay-close-btn-wrapper';
+    closeBtnWrapper.innerHTML = `
+        <button class="btn btn-sm text-white d-flex align-items-center gap-2 px-3 py-2 fw-bold" 
+                style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 30px; backdrop-filter: blur(5px);">
+            <i class="fas fa-times"></i> CLOSE
+        </button>
+    `;
+    closeBtnWrapper.onclick = function(e) {
         e.stopPropagation(); 
         closeActiveCard();   
     };
-    clone.appendChild(closeBtn);
+    document.body.appendChild(closeBtnWrapper);
 
+    // 2. Clone thẻ bài một cách mượt mà hơn
+    const clone = originalCard.cloneNode(true);
+    clone.removeAttribute('onclick'); 
+    clone.onclick = null; 
+    clone.classList.add('active-card'); 
+    clone.classList.add('overlay-clone');
+    
+    // Gỡ bỏ class col-* của bootstrap để thẻ không bị ép kích thước khi pop-up
+    clone.className = clone.className.replace(/col-\w+-\d+/g, '').trim();
 
     let cardWrapper = originalCard.closest('.card-wrapper');
     let dbId = cardWrapper ? cardWrapper.getAttribute('data-id') : null;
@@ -6180,26 +6188,28 @@ function openCardOverlay(originalCard) {
             cloneCanvas.id = newCanvasId;
             cloneCanvas.style.display = 'block';
             
-
             setTimeout(() => {
                 let c = compList.find(x => x.db_id == dbId);
                 if (c) renderCardMiniChart(c, newCanvasId);
-            }, 50);
+            }, 50); // Giảm độ trễ render chart
         }
     }
-
 
     clone.addEventListener('click', function(e) {
         e.stopPropagation(); 
     });
 
-
+    // Thêm thẻ clone vào body nhưng ẩn đi tíc tắc để load xong mới hiện (chống giật)
+    clone.style.opacity = '0';
     document.body.appendChild(clone);
+
+    requestAnimationFrame(() => {
+        clone.style.opacity = '1';
+    });
 
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
         backdrop.style.display = 'block';
-
         backdrop.onclick = function() {
             closeActiveCard();
         };
