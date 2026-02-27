@@ -146,18 +146,33 @@ class CompetitionRadar {
         }
 
 
-        let sumPastHours = 0;
-        for (let i = 0; i < currentHour; i++) {
-            sumPastHours += todayVol[i];
+        let sumSinceUTC0 = 0;
+        let startOfUTC0 = new Date();
+        startOfUTC0.setUTCHours(0, 0, 0, 0);
+        
+        let startOfCurrentHour = new Date();
+        startOfCurrentHour.setMinutes(0, 0, 0, 0); 
+
+        if (history && history.length > 0) {
+            history.forEach(pt => {
+                const ts = pt[0];
+                const vol = pt[1];
+                if (ts >= startOfUTC0.getTime() && ts < startOfCurrentHour.getTime()) {
+                    sumSinceUTC0 += vol;
+                }
+            });
         }
         
-        let rtCurrentHourVol = dailyVolUTC - sumPastHours;
+        let rtCurrentHourVol = dailyVolUTC - sumSinceUTC0;
         
         if (rtCurrentHourVol >= 0) {
             todayVol[currentHour] = rtCurrentHourVol;
             if (rtCurrentHourVol > globalPeak) {
                 globalPeak = rtCurrentHourVol; 
             }
+            
+            let minPassed = now.getMinutes() || 1;
+            projected = Math.round((rtCurrentHourVol / minPassed) * 60);
         }
         
         let algoLimit = matchSpeedUSD * 0.15; 
