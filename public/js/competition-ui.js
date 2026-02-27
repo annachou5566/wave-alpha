@@ -146,17 +146,20 @@ class CompetitionRadar {
         }
 
 
+        let projected = 0;
+        const minPassed = now.getMinutes() || 1;
+
         let sumSinceUTC0 = 0;
-        let startOfUTC0 = new Date();
+        let startOfUTC0 = new Date(now.getTime());
         startOfUTC0.setUTCHours(0, 0, 0, 0);
         
-        let startOfCurrentHour = new Date();
+        let startOfCurrentHour = new Date(now.getTime());
         startOfCurrentHour.setMinutes(0, 0, 0, 0); 
 
         if (history && history.length > 0) {
             history.forEach(pt => {
                 const ts = pt[0];
-                const vol = pt[1];
+                const vol = parseFloat(pt[1] || 0); 
                 if (ts >= startOfUTC0.getTime() && ts < startOfCurrentHour.getTime()) {
                     sumSinceUTC0 += vol;
                 }
@@ -170,9 +173,10 @@ class CompetitionRadar {
             if (rtCurrentHourVol > globalPeak) {
                 globalPeak = rtCurrentHourVol; 
             }
-            
-            let minPassed = now.getMinutes() || 1;
             projected = Math.round((rtCurrentHourVol / minPassed) * 60);
+        } else {
+            const curVol = todayVol[currentHour] || 0;
+            projected = Math.round((curVol / minPassed) * 60);
         }
         
         let algoLimit = matchSpeedUSD * 0.15; 
