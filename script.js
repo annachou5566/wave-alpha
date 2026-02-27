@@ -6117,28 +6117,33 @@ function toggleCardHighlight(el) {
 }
 
 function closeActiveCard() {
-    document.querySelectorAll('.overlay-clone').forEach(el => el.remove());
-    
-    document.querySelectorAll('.overlay-close-btn-wrapper').forEach(el => el.remove());
+    const clones = document.querySelectorAll('.overlay-clone');
+    clones.forEach(el => {
+        el.style.animation = 'popupScaleFadeOut 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+    });
 
-    const activeEl = document.querySelector('.tour-card.active-card');
-    if (activeEl) {
-        activeEl.classList.remove('active-card');
-        if (activeCardPlaceholder && activeCardPlaceholder.parentNode) {
-            activeCardPlaceholder.parentNode.insertBefore(activeEl, activeCardPlaceholder);
-            activeCardPlaceholder.remove();
-        } else {
-            if(activeEl.classList.contains('overlay-clone')) activeEl.remove();
-        }
-    }
-    activeCardPlaceholder = null;
+    const closeBtns = document.querySelectorAll('.overlay-close-btn-wrapper');
+    closeBtns.forEach(el => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.2s ease';
+    });
 
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
         backdrop.classList.remove('show');
-        setTimeout(() => backdrop.style.display = 'none', 300);
     }
-    document.body.classList.remove('has-active-card');
+
+    setTimeout(() => {
+        clones.forEach(el => el.remove());
+        closeBtns.forEach(el => el.remove());
+
+        if(backdrop) {
+            backdrop.style.display = 'none';
+        }
+
+        activeCardPlaceholder = null;
+        document.body.classList.remove('has-active-card');
+    }, 200); 
 }
 
 function jumpToCard(dbId) {
