@@ -2559,6 +2559,8 @@ function updateGridValuesOnly() {
             }
         }
 
+        if (typeof initCalendar === 'function') initCalendar();
+
     } catch (e) {
         console.error("Lỗi cập nhật UI:", e);
     }
