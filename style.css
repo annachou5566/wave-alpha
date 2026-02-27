@@ -2871,3 +2871,33 @@ margin-top: 2px;
     from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     to { opacity: 0; transform: translate(-50%, -45%) scale(0.95); }
 }
+
+.overlay-close-btn-wrapper {
+    position: fixed;
+    bottom: 30px; 
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10001;
+    animation: slideUpFade 0.3s ease-out forwards;
+    transition: opacity 0.2s ease;
+}
+
+.overlay-close-btn-wrapper button {
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.overlay-close-btn-wrapper button:hover {
+    background: rgba(246, 70, 93, 0.8) !important;
+    border-color: #F6465D !important;
+    transform: translateY(-2px);
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.overlay-clone, .tour-card.active-card {
+    transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
