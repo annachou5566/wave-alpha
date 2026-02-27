@@ -113,10 +113,13 @@ class CompetitionRadar {
         const cachedItem = this.realtimeCache[cleanKey] || {};
         const analysis = cachedItem.market_analysis || raw.market_analysis || {};
         
-        const matchSpeedUSD = analysis.realTimeVol ? Math.round(analysis.realTimeVol) : 0;
-        const liveAvgTicket = analysis.avgTicket ? Math.round(analysis.avgTicket) : 0;
-        const spreadVal = analysis.spread !== undefined ? analysis.spread : 0;
-        const txPerSecond = analysis.velocity ? (analysis.velocity / 60) : 0;
+        const speedVal = parseFloat(analysis.speed || 0);
+        const ticketVal = parseFloat(analysis.ticket || 0);
+        
+        const matchSpeedUSD = Math.round(speedVal * ticketVal); // Thanh khoản khớp ($/s)
+        const liveAvgTicket = Math.round(ticketVal);            // Giá trị 1 lệnh
+        const spreadVal = analysis.spread !== undefined ? parseFloat(analysis.spread) : 0;
+        const txPerSecond = speedVal;                           // Tốc độ lệnh
         
         if (matchSpeedUSD > 0) matchSpeedHistory[currentHour] = matchSpeedUSD;
     
