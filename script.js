@@ -6102,15 +6102,23 @@ function toggleCardHighlight(el) {
 
     document.body.appendChild(el);
 
-    requestAnimationFrame(() => {
-        el.classList.add('active-card');
-        let canvas = el.querySelector('canvas');
-        if (canvas) {
-            let dbId = canvas.id.split('-')[1];
-            let c = compList.find(x => x.db_id == dbId);
-            if(c) renderCardMiniChart(c); 
-        }
-    });
+    el.style.transition = 'none';
+    el.style.opacity = '0';
+    el.style.transform = 'translate(-50%, -45%) scale(0.95)';
+    
+    void el.offsetWidth;
+
+    el.classList.add('active-card');
+    el.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+    el.style.opacity = '1';
+    el.style.transform = 'translate(-50%, -50%) scale(1)';
+
+    let canvas = el.querySelector('canvas');
+    if (canvas) {
+        let dbId = canvas.id.split('-')[1];
+        let c = compList.find(x => x.db_id == dbId);
+        if(c) renderCardMiniChart(c); 
+    }
 
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
@@ -6122,35 +6130,56 @@ function toggleCardHighlight(el) {
 }
 
 function closeActiveCard() {
-    document.querySelectorAll('.active-card').forEach(el => {
+    const clonesToRemove = document.querySelectorAll('.overlay-clone');
+    const btnsToRemove = document.querySelectorAll('.overlay-close-btn-wrapper');
+    const activeEl = document.querySelector('.tour-card.active-card:not(.overlay-clone)');
+    const placeholder = activeCardPlaceholder;
+
+    clonesToRemove.forEach(el => {
+        el.style.animation = 'none'; 
+        el.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
         el.style.opacity = '0';
         el.style.transform = 'translate(-50%, -45%) scale(0.95)';
     });
-    document.querySelectorAll('.overlay-close-btn-wrapper').forEach(el => {
+    
+    if (activeEl) {
+        activeEl.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+        activeEl.style.opacity = '0';
+        activeEl.style.transform = 'translate(-50%, -45%) scale(0.95)';
+    }
+    
+    btnsToRemove.forEach(el => {
         el.style.opacity = '0';
     });
     
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) backdrop.classList.remove('show');
 
-    setTimeout(() => {
-        document.querySelectorAll('.overlay-clone').forEach(el => el.remove());
-        document.querySelectorAll('.overlay-close-btn-wrapper').forEach(el => el.remove());
+    activeCardPlaceholder = null;
+    document.body.classList.remove('has-active-card');
 
-        const activeEl = document.querySelector('.tour-card.active-card');
+    setTimeout(() => {
+        clonesToRemove.forEach(el => el.remove());
+        btnsToRemove.forEach(el => el.remove());
+
         if (activeEl) {
+            activeEl.style.transition = 'none';
             activeEl.classList.remove('active-card');
             activeEl.style.opacity = '';
             activeEl.style.transform = '';
-            if (activeCardPlaceholder && activeCardPlaceholder.parentNode) {
-                activeCardPlaceholder.parentNode.insertBefore(activeEl, activeCardPlaceholder);
-                activeCardPlaceholder.remove();
+            
+            if (placeholder && placeholder.parentNode) {
+                placeholder.parentNode.insertBefore(activeEl, placeholder);
+                placeholder.remove();
             }
+            
+            void activeEl.offsetWidth;
+            activeEl.style.transition = ''; 
         }
-        activeCardPlaceholder = null;
 
-        if(backdrop) backdrop.style.display = 'none';
-        document.body.classList.remove('has-active-card');
+        if (!document.querySelector('.tour-card.active-card')) {
+            if(backdrop) backdrop.style.display = 'none';
+        }
     }, 200);
 }
 
@@ -6182,11 +6211,8 @@ function openCardOverlay(originalCard) {
     const clone = originalCard.cloneNode(true);
     clone.removeAttribute('onclick'); 
     clone.onclick = null; 
-    clone.classList.add('active-card'); 
-    clone.classList.add('overlay-clone');
+    clone.classList.add('active-card', 'overlay-clone');
     
-    clone.className = clone.className.replace(/col-\w+-\d+/g, '').trim();
-
     let cardWrapper = originalCard.closest('.card-wrapper');
     let dbId = cardWrapper ? cardWrapper.getAttribute('data-id') : null;
 
@@ -6200,12 +6226,26 @@ function openCardOverlay(originalCard) {
             setTimeout(() => {
                 let c = compList.find(x => x.db_id == dbId);
                 if (c) renderCardMiniChart(c, newCanvasId);
-            }, 50);
+            }, 50); 
         }
     }
 
-    clone.addEventListener('click', function(e) { e.stopPropagation(); });
+    clone.addEventListener('click', function(e) {
+        e.stopPropagation(); 
+    });
+
+    clone.style.animation = 'none';
+    clone.style.transition = 'none';
+    clone.style.opacity = '0';
+    clone.style.transform = 'translate(-50%, -45%) scale(0.95)';
+    
     document.body.appendChild(clone);
+
+    void clone.offsetWidth;
+
+    clone.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+    clone.style.opacity = '1';
+    clone.style.transform = 'translate(-50%, -50%) scale(1)';
 
     const backdrop = document.getElementById('card-backdrop');
     if(backdrop) {
