@@ -160,8 +160,7 @@
         .btn-card-action.predict { margin-bottom: 0 !important; border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
 
        
-        body.has-active-card .tour-card:not(.active-card) { opacity: 0; pointer-events: none; }
-        
+body.has-active-card .tour-card:not(.active-card) { pointer-events: none; }        
        
 .tour-card.ended-card { 
     opacity: 1 !important;      
@@ -2866,4 +2865,9 @@ margin-top: 2px;
 
 .tippy-arrow {
     color: #1E2329;
+}
+
+@keyframes popupScaleFadeOut {
+    from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    to { opacity: 0; transform: translate(-50%, -45%) scale(0.95); }
 }
