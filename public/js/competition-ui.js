@@ -144,7 +144,22 @@ class CompetitionRadar {
                 if (last) dailyVolUTC = parseFloat(last.vol);
             }
         }
-    
+
+
+        let sumPastHours = 0;
+        for (let i = 0; i < currentHour; i++) {
+            sumPastHours += todayVol[i];
+        }
+        
+        let rtCurrentHourVol = dailyVolUTC - sumPastHours;
+        
+        if (rtCurrentHourVol >= 0) {
+            todayVol[currentHour] = rtCurrentHourVol;
+            if (rtCurrentHourVol > globalPeak) {
+                globalPeak = rtCurrentHourVol; 
+            }
+        }
+        
         let algoLimit = matchSpeedUSD * 0.15; 
         
         if (spreadVal <= 0.5) algoLimit *= 1.0;
@@ -289,9 +304,6 @@ class CompetitionRadar {
             if (el && el.innerHTML !== newVal) {
                 el.innerHTML = newVal;
                 if(color) el.style.color = color;
-                el.classList.remove('flash-update');
-                void el.offsetWidth; 
-                el.classList.add('flash-update');
             }
         };
 
