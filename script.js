@@ -6343,11 +6343,11 @@ function applyLayer2Data(serverData) {
     let hasChanges = false;
 
     compList.forEach(c => {
-        // Cứu alphaId từ mọi ngóc ngách để đảm bảo không bị rớt token nào
-        let alphaId = c.alphaId || (c.data && c.data.alphaId);
-        if (!alphaId) return;
+        // FIX LỖI: Tự động tạo key chuẩn (VD: ALPHA_412) từ db_id nếu alphaId bị thiếu
+        let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
 
         const liveItem = serverData[alphaId];
+        
         if (liveItem) {
             // 1. Cập nhật Giá ngay lập tức
             c.cachedPrice = liveItem.p;
@@ -6374,12 +6374,13 @@ function applyLayer2Data(serverData) {
         }
     });
 
+    // Nếu có dữ liệu mới, cập nhật lên giao diện
     if (hasChanges) {
         if (typeof updateGridValuesOnly === 'function') {
-            updateGridValuesOnly(); // Update cho dạng Thẻ (Grid)
+            updateGridValuesOnly(); // Cập nhật dạng Thẻ (Grid)
         }
         if (typeof renderMarketHealthTable === 'function') {
-            renderMarketHealthTable(); // Update cho dạng Bảng (Table)
+            renderMarketHealthTable(); // Cập nhật dạng Bảng (Table)
         }
     }
 }
