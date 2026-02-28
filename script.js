@@ -2501,24 +2501,24 @@ function updateGridValuesOnly() {
                 else pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
             }
 
-            // --- 1. CẬP NHẬT GIÁ (PRICE) KÈM ĐỔI MÀU & TAM GIÁC CHO CẢ GRID VÀ TABLE ---
             const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
             allPriceElements.forEach(el => {
                 let oldPrice = parseFloat(el.getAttribute('data-raw')) || 0;
+                
+                if (oldPrice > 0 && currentPrice !== oldPrice) {
+                    if (currentPrice > oldPrice) {
+                        el.classList.remove('tick-down'); el.classList.add('tick-up');
+                    } else if (currentPrice < oldPrice) {
+                        el.classList.remove('tick-up'); el.classList.add('tick-down');
+                    }
+                }
+                
                 if (el.innerText !== pStr) {
                     el.innerText = pStr;
-                    if (oldPrice > 0 && currentPrice !== oldPrice) {
-                        if (currentPrice > oldPrice) {
-                            el.classList.remove('tick-down'); el.classList.add('tick-up');
-                        } else {
-                            el.classList.remove('tick-up'); el.classList.add('tick-down');
-                        }
-                    }
                 }
                 el.setAttribute('data-raw', currentPrice);
             });
 
-            // --- 2. CẬP NHẬT TỔNG GIÁ TRỊ GIẢI THƯỞNG TRONG BẢNG MARKET TABLE ---
             const tablePoolElements = document.querySelectorAll(`.live-pool-table-val[data-id="${c.db_id}"]`);
             tablePoolElements.forEach(el => {
                 let estQty = parseFloat(el.getAttribute('data-qty')) || qty;
@@ -2528,22 +2528,21 @@ function updateGridValuesOnly() {
                     let compactStr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(estTotal);
                     let oldEstTotal = parseFloat(el.getAttribute('data-raw-est')) || 0;
 
+                    if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
+                        if (estTotal > oldEstTotal) {
+                            el.style.setProperty('color', '#0ECB81', 'important'); 
+                        } else if (estTotal < oldEstTotal) {
+                            el.style.setProperty('color', '#F6465D', 'important'); 
+                        }
+                    }
+
                     if (el.innerText !== compactStr) {
                         el.innerText = compactStr;
-                        
-                        if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
-                            if (estTotal > oldEstTotal) {
-                                el.style.setProperty('color', '#0ECB81', 'important'); 
-                            } else {
-                                el.style.setProperty('color', '#F6465D', 'important'); 
-                            }
-                        }
                     }
                     el.setAttribute('data-raw-est', estTotal);
                 }
             });
 
-            // --- 3. CẬP NHẬT VOLUME & POOL CỦA THẺ BÀI (GRID) ---
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             if (cardWrapper) {
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
@@ -2563,16 +2562,17 @@ function updateGridValuesOnly() {
                         let newEstStr = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
                         let oldEstTotal = parseFloat(estEl.getAttribute('data-raw-est')) || 0;
 
+                        // TÁCH RỜI: Đồng bộ logic cho thẻ bài Grid
+                        if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
+                            if (estTotal > oldEstTotal) {
+                                estEl.style.setProperty('color', '#0ECB81', 'important'); 
+                            } else if (estTotal < oldEstTotal) {
+                                estEl.style.setProperty('color', '#F6465D', 'important'); 
+                            }
+                        }
+
                         if (estEl.innerText !== newEstStr) {
                             estEl.innerText = newEstStr;
-                            
-                            if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
-                                if (estTotal > oldEstTotal) {
-                                    estEl.style.setProperty('color', '#0ECB81', 'important');
-                                } else {
-                                    estEl.style.setProperty('color', '#F6465D', 'important');
-                                }
-                            }
                         }
                         estEl.setAttribute('data-raw-est', estTotal);
                     }
