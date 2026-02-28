@@ -2896,7 +2896,7 @@ thead.innerHTML = `
                 else if (price >= 0.01) { pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 }); } 
                 else { pStr = '$' + parseFloat(price.toFixed(8)).toString(); }
             }
-let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight live-pool-table-val" data-id="${c.db_id}" data-qty="${parseFloat(c.rewardQty)||0}">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary live-price-val" data-id="${c.db_id}">${pStr}</span></div>`;
+let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary live-pool-table-val" data-id="${c.db_id}" data-qty="${parseFloat(c.rewardQty)||0}" style="transition: color 0.1s ease;">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="live-price-val" data-id="${c.db_id}" style="font-family: var(--font-num); font-size: 0.75rem; font-weight: 500; color: #848e9c; transition: color 0.1s ease;">${pStr}</span></div>`;
             let rt = c.ruleType || 'buy_only'; 
             let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
 
