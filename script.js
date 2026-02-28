@@ -2352,8 +2352,7 @@ let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 
            
 
-let estHtml = estVal > 0 ? `<span class="text-green small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'"></span>';
-
+let estHtml = estVal > 0 ? `<span class="text-sub small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}" style="transition: color 0.1s ease;">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'" style="transition: color 0.1s ease;"></span>';
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
 let cleanSymbol = rawName.split('(')[0].trim(); 
 
@@ -2545,7 +2544,24 @@ function updateGridValuesOnly() {
                 if (estEl) {
                     let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
                     let estTotal = estQty * currentPrice;
-                    if (estTotal > 0) estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
+                    
+                    if (estTotal > 0) {
+                        let newEstStr = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
+                        let oldEstTotal = parseFloat(estEl.getAttribute('data-raw-est')) || 0;
+
+                        if (estEl.innerText !== newEstStr) {
+                            estEl.innerText = newEstStr;
+                            
+                            if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
+                                if (estTotal > oldEstTotal) {
+                                    estEl.style.setProperty('color', '#0ECB81', 'important');
+                                } else {
+                                    estEl.style.setProperty('color', '#F6465D', 'important');
+                                }
+                            }
+                        }
+                        estEl.setAttribute('data-raw-est', estTotal);
+                    }
                 }
             }
         });
