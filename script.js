@@ -6298,6 +6298,24 @@ function updateHealthTableRealtime() {
     compList.forEach(c => {
         let dbId = c.db_id || c.id;
 
+        let currentStatus = (c.status || '').toUpperCase();
+        let isEnded = false;
+        let endStr = c.end_at || c.end || (c.data && c.data.end);
+        let endTimeStr = c.endTime || "23:59:59";
+        if(endTimeStr.length === 5) endTimeStr += ":00";
+
+        if (c.end_at) { 
+            isEnded = Date.now() > new Date(c.end_at).getTime(); 
+        } else if (endStr) { 
+            let endDateTime = new Date(endStr + 'T' + endTimeStr + 'Z');
+            isEnded = Date.now() > endDateTime.getTime(); 
+        }
+        
+        let isFinalized = c.is_finalized || currentStatus === 'ENDED' || currentStatus === 'FINALIZED' || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
+
+        if (isEnded || isFinalized) return; 
+        // -------------------------------------------------
+
         let dLimit = parseFloat(c.limit_daily_volume || 0);
         let dTotal = parseFloat(c.real_alpha_volume || 0);
         let dOnChain = Math.max(0, dTotal - dLimit);
@@ -6319,7 +6337,6 @@ function updateHealthTableRealtime() {
             const el = document.getElementById(u.id);
             if (el) {
                 const newStr = fmtCompact(u.val);
-                
                 if (el.innerText !== newStr) {
                     el.innerText = newStr;
                 }
@@ -6428,27 +6445,34 @@ function applyLayer2Data(serverData) {
 
     if (compList && compList.length > 0) {
         compList.forEach(c => {
-
-let currentStatus = (c.status || '').toUpperCase();
-            if (currentStatus === 'ENDED' || currentStatus === 'FINALIZED' || c.is_finalized) {
-                return; 
-            }
-            
             let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
             const liveItem = serverData[alphaId];
             
             if (liveItem) {
+                // 1. LUÔN CHO PHÉP CẬP NHẬT GIÁ (Cho cả History)
                 c.cachedPrice = liveItem.p;
                 hasChanges = true;
                 
+                // 2. TÍNH TOÁN TRẠNG THÁI KẾT THÚC THẬT CHUẨN
+                let currentStatus = (c.status || '').toUpperCase();
                 let isEnded = false;
                 let endStr = c.end_at || c.end || (c.data && c.data.end);
-                if (c.end_at) { isEnded = Date.now() > new Date(c.end_at).getTime(); }
-                else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
-                let isFinalized = c.is_finalized || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
+                let endTimeStr = c.endTime || "23:59:59";
+                if(endTimeStr.length === 5) endTimeStr += ":00";
+
+                if (c.end_at) { 
+                    isEnded = Date.now() > new Date(c.end_at).getTime(); 
+                } else if (endStr) { 
+                    let endDateTime = new Date(endStr + 'T' + endTimeStr + 'Z');
+                    isEnded = Date.now() > endDateTime.getTime(); 
+                }
                 
+                let isFinalized = c.is_finalized || currentStatus === 'ENDED' || currentStatus === 'FINALIZED' || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
+                
+                // --- CHỐT CHẶN: NẾU ĐÃ KẾT THÚC THÌ DỪNG LẠI, KHÔNG CHẠM VÀO VOLUME ---
                 if (isEnded || isFinalized) return;
                 
+                // 3. CẬP NHẬT VOLUME (Chỉ dành cho giải đang chạy)
                 if (liveItem.v) {
                     c.limit_daily_volume = liveItem.v.dl || 0;
                     c.real_alpha_volume = liveItem.v.dt || 0;
@@ -6464,6 +6488,7 @@ let currentStatus = (c.status || '').toUpperCase();
         });
     }
 
+    // Cache cho Alpha Market
     Object.keys(serverData).forEach(key => {
         let liveItem = serverData[key];
         let symbol = liveItem.symbol || key.replace('ALPHA_', ''); 
