@@ -6289,56 +6289,50 @@ function openCardOverlay(originalCard) {
 
 
 function updateHealthTableRealtime() {
-
     if (!document.getElementById('healthTableBody')) return;
+    const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
 
     compList.forEach(c => {
         let dbId = c.db_id || c.id;
 
+        let dLimit = parseFloat(c.limit_daily_volume || 0);
+        let dTotal = parseFloat(c.real_alpha_volume || 0);
+        let dOnChain = Math.max(0, dTotal - dLimit);
 
+        let aLimit = parseFloat(c.limit_accumulated_volume || 0);
+        let aTotal = parseFloat(c.total_accumulated_volume || 0);
+        let aOnChain = Math.max(0, aTotal - aLimit);
 
+        const updates = [
+            { id: `tb-dlim-${dbId}`, val: dLimit },
+            { id: `tb-doc-${dbId}`, val: dOnChain },
+            { id: `tb-dtot-${dbId}`, val: dTotal },
+            { id: `tb-alim-${dbId}`, val: aLimit },
+            { id: `tb-aoc-${dbId}`, val: aOnChain },
+            { id: `tb-atot-${dbId}`, val: aTotal }
+        ];
 
-        let dailyEl = document.getElementById(`vol-${dbId}`);
-        if(dailyEl) {
-             let dailyVal = parseFloat(c.limit_daily_volume || 0);
-             
-
-             if (dailyVal === 0 && c.limit_vol_history && c.limit_vol_history.length > 0) {
-                 let last = c.limit_vol_history[c.limit_vol_history.length-1];
-                 if(last) dailyVal = parseFloat(last.vol);
-             }
-
-             let dailyText = '$' + parseInt(dailyVal).toLocaleString('en-US');
-             if(dailyEl.innerText !== dailyText) {
-                 dailyEl.innerText = dailyText;
-                 dailyEl.style.color = '#fff';
-                 setTimeout(() => dailyEl.style.color = '', 300);
-             }
-        }
-
-
-        let totalVal = parseFloat(c.limit_accumulated_volume || 0);
-
-
-
-        let totalEl = document.getElementById(`mh-total-${dbId}`);
-        if (totalEl) {
-            let newTotalText = '$' + parseInt(totalVal).toLocaleString('en-US');
-            
-            if (totalEl.innerText !== newTotalText) {
-                totalEl.innerText = newTotalText;
-
-                totalEl.style.transition = 'none';
-                totalEl.style.color = '#00F0FF';
-                totalEl.style.textShadow = '0 0 10px #00F0FF';
+        updates.forEach(u => {
+            const el = document.getElementById(u.id);
+            if (el) {
+                const newStr = fmtCompact(u.val);
+                let oldVal = parseFloat(el.getAttribute('data-raw')) || 0;
                 
-                setTimeout(() => { 
-                    totalEl.style.transition = 'color 0.5s ease';
-                    totalEl.style.color = ''; 
-                    totalEl.style.textShadow = ''; 
-                }, 500);
+                if (el.innerText !== newStr) {
+                    el.innerText = newStr;
+                    
+                    if (oldVal > 0 && u.val !== oldVal) {
+                        el.classList.remove('cyber-flash-up', 'cyber-flash-down');
+                        void el.offsetWidth; 
+                        if (u.val > oldVal) el.classList.add('cyber-flash-up');
+                        else el.classList.add('cyber-flash-down');
+                        
+                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 600);
+                    }
+                }
+                el.setAttribute('data-raw', u.val);
             }
-        }
+        });
     });
 }
 
@@ -6349,7 +6343,7 @@ document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
         console.log("👀 User is back! Checking for updates...");
         quickSyncData(); 
-        startRealtimeSync(); // Gọi lại luồng Render API thay vì dùng Supabase
+        startRealtimeSync();
     }
 });
 
