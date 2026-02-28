@@ -201,6 +201,10 @@ function renderTableRows(tbody) {
     pageList.forEach((t, index) => {
         const tr = document.createElement('tr');
         const realIndex = startIndex + index + 1;
+
+        // [QUAN TRỌNG]: Tạo domKey dùng mã số Binance để đồng bộ Realtime
+        let domKey = t.alphaId ? t.alphaId.replace('ALPHA_', '') : (t.symbol || t.id);
+
         const status = getTokenStatus(t);
         let startBadges = [];
         if (t.onlineTge) startBadges.push('<span class="smart-badge badge-tge">TGE</span>');
@@ -266,7 +270,7 @@ function renderTableRows(tbody) {
             </td>
 
             <td class="text-center" style="${cellStyle}">
-                <div id="alpha-price-${t.id}" data-raw="${t.price}" class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
+                <div id="alpha-price-${domKey}" data-raw="${t.price}" class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
                 <div class="${textColorClass}" style="font-size:11px; font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
                     ${sign}${t.change_24h}%
                 </div>
@@ -278,19 +282,19 @@ function renderTableRows(tbody) {
 
             <td class="text-end font-num">
                 <div class="vol-cell-group">
-                    <span id="alpha-vol-tot-${t.id}" class="text-primary-val">$${formatNum(t.volume.daily_total)}</span>
+                    <span id="alpha-vol-tot-${domKey}" class="text-primary-val">$${formatNum(t.volume.daily_total)}</span>
                     <div class="vol-bar-bg"><div class="vol-bar-fill" style="width:${volPct}%"></div></div>
                 </div>
             </td>
 
-            <td id="alpha-vol-lim-${t.id}" class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_limit)}</td>
+            <td id="alpha-vol-lim-${domKey}" class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_limit)}</td>
             
             <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_onchain)}</td>
             <td class="text-end font-num text-secondary-val">
                  $${formatNum(t.volume.rolling_24h)}
             </td>
 
-            <td id="alpha-tx-${t.id}" class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
+            <td id="alpha-tx-${domKey}" class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
             
             <td class="text-end font-num text-secondary-val">$${formatNum(t.liquidity)}</td>
         `;
@@ -1116,13 +1120,17 @@ window.changeRowsPerPage = function() {
 };
 
 window.updateAlphaMarketUI = function(serverData) {
-    let view = document.getElementById('alpha-market-view');
-    if (view && view.style.display === 'none') return;
+    if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
 
     Object.keys(serverData).forEach(key => {
         let liveItem = serverData[key];
         
-        let tokenKey = liveItem.id || key.replace('ALPHA_', ''); 
+        let tokenKey = key.replace('ALPHA_', ''); 
+        if (liveItem.alphaId) {
+            tokenKey = liveItem.alphaId.replace('ALPHA_', '');
+        } else if (!key.startsWith('ALPHA_')) {
+            tokenKey = liveItem.symbol || key;
+        }
         
         let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
         if (priceEl && liveItem.p) {
