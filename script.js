@@ -6478,7 +6478,6 @@ function applyLayer2Data(serverData) {
 
     if (hasChanges) {
         if (typeof updateGridValuesOnly === 'function') updateGridValuesOnly();
-        if (typeof renderMarketHealthTable === 'function') renderMarketHealthTable();
     }
 }
 
