@@ -1213,8 +1213,7 @@ window.updateAlphaMarketUI = function(serverData) {
         if (holdEl && liveItem.h !== undefined) {
             holdEl.innerText = typeof formatInt === 'function' ? formatInt(liveItem.h) : liveItem.h.toLocaleString('en-US');
         }
-    });
-};
+  
         if (!window.alphaMarketCache) window.alphaMarketCache = {};
         if (!window.alphaMarketCache[tokenKey]) window.alphaMarketCache[tokenKey] = {};
         if (liveItem.mc !== undefined) window.alphaMarketCache[tokenKey].mc = liveItem.mc;
