@@ -2411,8 +2411,8 @@ fullHtml += `
                     <div class="card-stats-grid">
                         <div class="stat-cell"><div class="stat-lbl">TOP</div><div class="stat-val text-main">${c.topWinners||'--'}</div></div>
                         <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">REWARD</div><div class="stat-val text-brand">${fmtNum(c.rewardQty)}${estHtml}</div></div>
-                        <div class="stat-cell"><div class="stat-lbl">PRICE</div><div class="stat-val text-brand fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">${priceStr}</div></div>
-                    </div>
+<div class="stat-cell"><div class="stat-lbl">PRICE</div><div class="stat-val fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">${priceStr}</div></div>
+</div>
                     <div class="card-list" style="padding: 10px 15px 0 15px;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="text-sub fw-bold" style="font-size:0.6rem; letter-spacing:1px; text-transform:uppercase;">MY PROGRESS</span>
