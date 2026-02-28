@@ -6471,8 +6471,8 @@ function applyLayer2Data(serverData) {
         alphaMarketCache[symbol].tx_count = liveItem.tx;
     });
 
-    if (typeof updateAlphaMarketUI === 'function') {
-        updateAlphaMarketUI(serverData);
+    if (typeof window.updateAlphaMarketUI === 'function') {
+        window.updateAlphaMarketUI(serverData);
     }
 
     if (hasChanges && typeof updateGridValuesOnly === 'function') {
