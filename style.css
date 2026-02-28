@@ -2941,29 +2941,27 @@ margin-top: 2px;
 
 
 
+
 .live-price-val {
     color: #E0E0E0; 
     transition: color 0.1s ease;
 }
 
+
 .tick-up {
     color: #0ECB81 !important; 
 }
-.tick-up::after {
-    content: " ▲";
+.tick-up::before {
+    content: "▲";
     font-size: 0.75em;
-    margin-left: 2px;
+    margin-right: 2px; 
 }
 
 .tick-down {
     color: #F6465D !important; 
 }
-.tick-down::after {
-    content: " ▼";
+.tick-down::before {
+    content: "▼";
     font-size: 0.75em;
-    margin-left: 2px;
-}
-
-.tick-down {
-    color: #F6465D !important; 
+    margin-right: 2px; 
 }
