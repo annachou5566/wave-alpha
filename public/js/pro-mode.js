@@ -1151,15 +1151,13 @@ window.updateAlphaMarketUI = function(serverData) {
             if (newPrice !== oldPrice) {
                 let isUp = newPrice > oldPrice;
                 let color = isUp ? '#0ECB81' : '#F6465D';
-                let icon = isUp ? '▲' : '▼';
                 
                 priceEl.style.color = color;
-                priceEl.innerHTML = `${icon} $${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
+                priceEl.innerHTML = `$${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
                 priceEl.setAttribute('data-raw', newPrice);
                 
                 setTimeout(() => { 
                     priceEl.style.color = ''; 
-                    priceEl.innerHTML = `$${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
                 }, 1000);
             } else if (!priceEl.getAttribute('data-raw')) {
                 priceEl.setAttribute('data-raw', newPrice);
