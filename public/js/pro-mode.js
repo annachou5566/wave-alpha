@@ -287,21 +287,22 @@ function renderTableRows(tbody) {
 
             <td class="text-end font-num">
                 <div class="vol-cell-group">
-                    <span id="alpha-vol-tot-${domKey}" class="text-primary-val">$${formatNum(t.volume.daily_total)}</span>
+                    <span id="alpha-vol-tot-${domKey}" class="text-primary-val">$${formatCompactNum(t.volume.daily_total)}</span>
                     <div class="vol-bar-bg"><div class="vol-bar-fill" style="width:${volPct}%"></div></div>
                 </div>
             </td>
 
-            <td id="alpha-vol-lim-${domKey}" class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_limit)}</td>
+            <td id="alpha-vol-lim-${domKey}" class="text-end font-num text-secondary-val">$${formatCompactNum(t.volume.daily_limit)}</td>
             
-            <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_onchain)}</td>
+            <td class="text-end font-num text-secondary-val">$${formatCompactNum(t.volume.daily_onchain)}</td>
+            
             <td class="text-end font-num text-secondary-val">
-                 $${formatNum(t.volume.rolling_24h)}
+                 $${formatCompactNum(t.volume.rolling_24h)}
             </td>
 
             <td id="alpha-tx-${domKey}" class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
             
-            <td class="text-end font-num text-secondary-val">$${formatNum(t.liquidity)}</td>
+            <td class="text-end font-num text-secondary-val">$${formatCompactNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -859,6 +860,11 @@ function formatNum(n) {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n);
 }
 
+function formatCompactNum(n) {
+    if (!n) return '0';
+    return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(n);
+}
+
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
@@ -1161,12 +1167,12 @@ window.updateAlphaMarketUI = function(serverData) {
 
         let volTotEl = document.getElementById(`alpha-vol-tot-${tokenKey}`);
         if (volTotEl && liveItem.v && liveItem.v.dt) {
-            volTotEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(liveItem.v.dt);
+            volTotEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dt);
         }
 
         let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
         if (volLimEl && liveItem.v && liveItem.v.dl) {
-            volLimEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(liveItem.v.dl);
+            volLimEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dl);
         }
         
         let txEl = document.getElementById(`alpha-tx-${tokenKey}`);
