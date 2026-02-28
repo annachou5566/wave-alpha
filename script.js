@@ -2506,32 +2506,60 @@ function updateGridValuesOnly() {
                 }
             }
 
+            // --- 1. HIỆU ỨNG NHẢY GIÁ (PRICE) ---
             const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
-
             allPriceElements.forEach(el => {
+                let oldPrice = parseFloat(el.getAttribute('data-raw')) || 0;
+
                 if (el.innerText !== pStr) {
                     el.innerText = pStr;
-                }
+                    
+                    if (oldPrice > 0 && currentPrice !== oldPrice) {
+                        el.classList.remove('cyber-flash-up', 'cyber-flash-down');
+                        void el.offsetWidth; // Force trình duyệt nhận diện thay đổi
 
-                el.style.color = '';
-                el.style.textShadow = '';
-                el.style.fontFamily = '';
-                el.style.fontWeight = '';
-                el.style.opacity = '1';
+                        if (currentPrice > oldPrice) {
+                            el.classList.add('cyber-flash-up');   // Tăng = Đỏ
+                        } else if (currentPrice < oldPrice) {
+                            el.classList.add('cyber-flash-down'); // Giảm = Xanh
+                        }
+
+                        // Xóa class sau khi chạy xong animation
+                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 800);
+                    }
+                }
+                el.setAttribute('data-raw', currentPrice); // Lưu lại giá mới để lần sau so sánh
             });
 
+            // --- 2. HIỆU ỨNG NHẢY VOLUME VÀ REWARD ---
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             if (cardWrapper) {
+                // Cập nhật Volume Realtime
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
-            if (volEl) {
-                // Sửa biến này để nó lấy Volume cộng dồn từ Realtime thay vì số 0
-                let rv = c.limit_accumulated_volume || c.total_accumulated_volume || c.real_alpha_volume || 0;
-                
-                let prefix = rv > 0 ? '$' : '';
-                let rvStr = rv > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
-            }
+                if (volEl) {
+                    let rv = c.limit_accumulated_volume || c.total_accumulated_volume || c.real_alpha_volume || 0;
+                    let prefix = rv > 0 ? '$' : '';
+                    let rvStr = rv > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
+                    
+                    let oldVol = parseFloat(volEl.getAttribute('data-raw')) || 0;
 
+                    if(volEl.innerText !== rvStr) {
+                        volEl.innerText = rvStr;
+
+                        if (oldVol > 0 && rv !== oldVol) {
+                            volEl.classList.remove('cyber-flash-up', 'cyber-flash-down');
+                            void volEl.offsetWidth;
+                            // Volume thường chỉ tăng, nhưng làm chuẩn logic Tăng = Đỏ
+                            if (rv > oldVol) volEl.classList.add('cyber-flash-up');
+                            else volEl.classList.add('cyber-flash-down');
+
+                            setTimeout(() => volEl.classList.remove('cyber-flash-up', 'cyber-flash-down'), 800);
+                        }
+                    }
+                    volEl.setAttribute('data-raw', rv);
+                }
+
+                // Cập nhật Pool Ước tính
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
                     let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
@@ -2543,6 +2571,7 @@ function updateGridValuesOnly() {
             }
         });
 
+        // Cập nhật các thống kê tổng
         const poolEl = document.getElementById('stat-pool');
         if (poolEl) poolEl.innerText = fmt(totalEstPool);
 
