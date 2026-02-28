@@ -2951,9 +2951,9 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
             const styBase = "text-center font-num";
 
          
-            const styLimDaily = "color:#fff; font-weight:300;"; 
-            const styOcDaily  = "color:#fff; font-weight:300;"; 
-            const styTotDaily = "color:#fff; font-weight:400;";    
+            const styLimDaily = "color:#fff; font-weight:200;"; 
+            const styOcDaily  = "color:#fff; font-weight:200;"; 
+            const styTotDaily = "color:#fff; font-weight:300;";    
 
             
             const styLimAcc = "color:#fff; font-weight:700;"; 
