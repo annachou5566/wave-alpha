@@ -291,17 +291,11 @@ class CompetitionRadar {
     updateCardUI(stats) {
         let limitVal = stats.algoLimit;
         let limitColor = '#0ECB81';
-        let limitText = `<$${limitVal.toLocaleString()}`;
+        let limitText = `&lt;$${limitVal.toLocaleString()}`; 
 
         if (limitVal < 10) { limitColor = '#F6465D'; limitText = '💀 DEAD'; } 
         else if (limitVal < 50) { limitColor = '#F6465D'; } 
         else if (limitVal <= 200) { limitColor = '#F0B90B'; }
-
-        const elSafe = document.getElementById(`stat-safe-${stats.contract}`);
-        if (elSafe && elSafe.innerHTML !== limitText) {
-            elSafe.innerHTML = limitText;
-            elSafe.style.color = limitColor;
-        }
 
         const updateDynElNumberOnly = (id, newHtml) => {
             const el = document.getElementById(id);
@@ -310,7 +304,7 @@ class CompetitionRadar {
             }
         };
 
-        const updateDynElWithColor = (id, newHtml, rawVal) => {
+        const updateDynElWithColor = (id, newHtml, rawVal, defaultColor = null) => {
             const el = document.getElementById(id);
             if (el) {
                 let oldVal = parseFloat(el.getAttribute('data-raw')) || 0;
@@ -322,11 +316,15 @@ class CompetitionRadar {
                         } else {
                             el.classList.remove('tick-up'); el.classList.add('tick-down');
                         }
+                    } else if (defaultColor && !el.classList.contains('tick-up') && !el.classList.contains('tick-down')) {
+                        el.style.color = defaultColor;
                     }
                 }
                 el.setAttribute('data-raw', rawVal);
             }
         };
+
+        updateDynElWithColor(`stat-safe-${stats.contract}`, limitText, limitVal, limitColor);
 
         updateDynElNumberOnly(`stat-daily-${stats.contract}`, this.formatKMB(stats.dailyVolUTC));
         
