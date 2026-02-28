@@ -6428,6 +6428,12 @@ function applyLayer2Data(serverData) {
 
     if (compList && compList.length > 0) {
         compList.forEach(c => {
+
+let currentStatus = (c.status || '').toUpperCase();
+            if (currentStatus === 'ENDED' || currentStatus === 'FINALIZED' || c.is_finalized) {
+                return; 
+            }
+            
             let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
             const liveItem = serverData[alphaId];
             
