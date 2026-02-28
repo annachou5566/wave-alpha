@@ -1044,15 +1044,15 @@ const KEY_MAP_REVERSE = {
   "dl": "daily_limit", "do": "daily_onchain",
   "ch": "chart", "lt": "listing_time", "tx": "tx_count",
   "off": "offline", "cex": "listingCex",
-  "tge": "onlineTge", "air": "onlineAirdrop"
+  "tge": "onlineTge", "air": "onlineAirdrop",
+  "aid": "alphaId" 
 };
-
 
 function unminifyToken(minifiedItem) {
   const fullItem = {};
   for (const [shortKey, value] of Object.entries(minifiedItem)) {
-    const fullKey = KEY_MAP_REVERSE[shortKey];
     
+    const fullKey = KEY_MAP_REVERSE[shortKey] || shortKey; 
     
     if (fullKey === "volume" && typeof value === 'object') {
       fullItem[fullKey] = {};
@@ -1060,8 +1060,7 @@ function unminifyToken(minifiedItem) {
         fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
       }
     } 
-    
-    else if (fullKey) {
+    else {
       fullItem[fullKey] = value;
     }
   }
