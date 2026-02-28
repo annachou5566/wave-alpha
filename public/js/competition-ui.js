@@ -289,18 +289,9 @@ class CompetitionRadar {
     }
 
     updateCardUI(stats) {
-        let spreadColor = '#0ECB81'; 
-        let spreadText = stats.spreadVal.toFixed(2) + '%';
-        if (stats.riskScore === 1) spreadColor = '#F0B90B'; 
-        if (stats.riskScore === 2) spreadColor = '#F6465D';
-        
-        let matchColor = stats.matchSpeedUSD >= 1000 ? '#00F0FF' : '#fff'; 
-        let avgColor = stats.liveAvgTicket >= 1000 ? '#FF9F43' : '#fff';
-        
-        
         let limitVal = stats.algoLimit;
         let limitColor = '#0ECB81';
-        let limitText = `&lt;$${limitVal.toLocaleString()}`;
+        let limitText = `<$${limitVal.toLocaleString()}`;
 
         if (limitVal < 10) {
             limitColor = '#F6465D';
@@ -311,118 +302,92 @@ class CompetitionRadar {
             limitColor = '#F0B90B'; 
         }
 
-        const updateEl = (id, newVal, color) => {
+        // Algo Limit riêng biệt vì nó là cảnh báo
+        const elSafe = document.getElementById(`stat-safe-${stats.contract}`);
+        if (elSafe && elSafe.innerHTML !== limitText) {
+            elSafe.innerHTML = limitText;
+            elSafe.style.color = limitColor;
+        }
+
+        // Hàm cập nhật kèm chớp màu chung cho Radar
+        const updateDynEl = (id, newHtml, rawVal) => {
             const el = document.getElementById(id);
-            if (el && el.innerHTML !== newVal) {
-                el.innerHTML = newVal;
-                if(color) el.style.color = color;
+            if (el) {
+                let oldVal = parseFloat(el.getAttribute('data-raw')) || 0;
+                if (el.innerHTML !== newHtml) {
+                    el.innerHTML = newHtml;
+                    if (oldVal > 0 && rawVal !== oldVal) {
+                        el.classList.remove('cyber-flash-up', 'cyber-flash-down');
+                        void el.offsetWidth;
+                        if (rawVal > oldVal) el.classList.add('cyber-flash-up');
+                        else el.classList.add('cyber-flash-down');
+                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 600);
+                    }
+                }
+                el.setAttribute('data-raw', rawVal);
             }
         };
 
-        
-        updateEl(`stat-safe-${stats.contract}`, limitText, limitColor);
-
-        
-        updateEl(`stat-daily-${stats.contract}`, this.formatKMB(stats.dailyVolUTC), '#888');
-
-        updateEl(`stat-avg-${stats.contract}`, this.formatKMB(stats.liveAvgTicket), avgColor);
-        updateEl(`stat-match-${stats.contract}`, this.formatKMB(stats.matchSpeedUSD) + '<span style="font-size:0.7em; color:#666">/s</span>', matchColor);
-        updateEl(`stat-spread-${stats.contract}`, spreadText, spreadColor);
-        updateEl(`stat-speed-${stats.contract}`, stats.txPerSecond + '<span style="font-size:0.7em; color:#666">txs</span>', '#fff');
+        updateDynEl(`stat-daily-${stats.contract}`, this.formatKMB(stats.dailyVolUTC), stats.dailyVolUTC);
+        updateDynEl(`stat-avg-${stats.contract}`, this.formatKMB(stats.liveAvgTicket), stats.liveAvgTicket);
+        updateDynEl(`stat-speed-${stats.contract}`, stats.txPerSecond + '<span style="font-size:0.7em; opacity:0.5">txs</span>', parseFloat(stats.txPerSecond));
+        updateDynEl(`stat-match-${stats.contract}`, this.formatKMB(stats.matchSpeedUSD) + '<span style="font-size:0.7em; opacity:0.5">/s</span>', stats.matchSpeedUSD);
+        updateDynEl(`stat-spread-${stats.contract}`, stats.spreadVal.toFixed(2) + '%', stats.spreadVal);
     }
 
     buildHTML(stats, cardId) {
-        let spreadColor = '#0ECB81'; 
-        let spreadText = stats.spreadVal.toFixed(2) + '%';
-        if (stats.riskScore === 1) spreadColor = '#F0B90B'; 
-        if (stats.riskScore === 2) spreadColor = '#F6465D';
-        
-        let matchColor = stats.matchSpeedUSD >= 1000 ? '#00F0FF' : '#fff';
-        let avgColor = stats.liveAvgTicket >= 1000 ? '#FF9F43' : '#fff';
-
         let limitVal = stats.algoLimit;
         let limitColor = '#0ECB81'; 
         let limitText = `<$${limitVal.toLocaleString()}`; 
 
-        if (limitVal < 10) {
-            limitColor = '#F6465D'; 
-            limitText = '💀 DEAD'; 
-        } else if (limitVal < 50) {
-            limitColor = '#F6465D'; 
-        } else if (limitVal <= 200) {
-            limitColor = '#F0B90B'; 
-        }
+        if (limitVal < 10) { limitColor = '#F6465D'; limitText = '💀 DEAD'; } 
+        else if (limitVal < 50) { limitColor = '#F6465D'; } 
+        else if (limitVal <= 200) { limitColor = '#F0B90B'; }
 
-    
-        const tokenImgSrc = (stats.l && stats.l.startsWith('http')) 
-            ? stats.l 
-            : `assets/tokens/${stats.symbol.toUpperCase()}.png`;
-
+        const tokenImgSrc = (stats.l && stats.l.startsWith('http')) ? stats.l : `assets/tokens/${stats.symbol.toUpperCase()}.png`;
+        const chainImgHtml = (stats.cl && stats.cl.startsWith('http')) ? `<img src="${stats.cl}" style="width:12px; height:12px; border-radius:50%; position: absolute; bottom: -2px; right: -2px; border: 1px solid #1c2127; background: #000; z-index: 2;">` : '';
       
-        const chainImgHtml = (stats.cl && stats.cl.startsWith('http'))
-            ? `<img src="${stats.cl}" style="width:12px; height:12px; border-radius:50%; position: absolute; bottom: -2px; right: -2px; border: 1px solid #1c2127; background: #000; z-index: 2;">`
-            : '';
-      
-
         return `
         <div class="col-12 col-md-4 col-lg-3" id="${cardId}">
             <div class="radar-card" style="background: #161a1e; border: 1px solid #2b3139; border-radius: 6px; overflow: hidden; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-                
                 <div class="radar-head" style="padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2b3139; background: #1c2127;">
-                    
                     <div class="d-flex align-items-center" style="flex: 1; min-width: 0; margin-right: 10px;">
-                        
                         <div style="position: relative; width: 20px; height: 20px; margin-right: 8px; flex-shrink: 0;">
-                            <img src="${tokenImgSrc}" 
-                                 onerror="this.onerror=null; this.src='assets/tokens/default.png'" 
-                                 style="width:100%; height:100%; border-radius:50%; border: 1px solid #333; display: block;">
+                            <img src="${tokenImgSrc}" onerror="this.onerror=null; this.src='assets/tokens/default.png'" style="width:100%; height:100%; border-radius:50%; border: 1px solid #333; display: block;">
                             ${chainImgHtml}
                         </div>
-
                         <span style="font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stats.symbol}</span>
                     </div>
-
                     <div class="text-end">
                         <div style="font-size: 0.5rem; color: #888; font-weight: 700; text-transform:uppercase; margin-bottom:-2px;">ALGO LIMIT</div>
-                        <div id="stat-safe-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 1.1rem; color: ${limitColor}; text-shadow: 0 0 10px rgba(0,0,0,0.5);">
-                            ${limitText}
-                        </div>
+                        <div id="stat-safe-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 1.1rem; color: ${limitColor}; text-shadow: 0 0 10px rgba(0,0,0,0.5);">${limitText}</div>
                     </div>
                 </div>
 
                 <div class="radar-stats-row" style="display: flex; background: rgba(22, 26, 30, 0.5); padding: 6px 0;">
-                    
                     <div style="flex: 1; text-align: center; border-right: 1px solid #2b3139;">
                         <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">AVG</div>
-                        <div id="stat-avg-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1; color: ${avgColor};">${this.formatKMB(stats.liveAvgTicket)}</div>
+                        <div id="stat-avg-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${this.formatKMB(stats.liveAvgTicket)}</div>
                     </div>
-
                     <div style="flex: 1; text-align: center; border-right: 1px solid #2b3139;">
                         <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">SPEED</div>
-                        <div id="stat-speed-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1; color: #fff;">${stats.txPerSecond}<span style="font-size:0.7em; color:#666">txs</span></div>
+                        <div id="stat-speed-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${stats.txPerSecond}<span style="font-size:0.7em; opacity:0.5">txs</span></div>
                     </div>
-
                     <div style="flex: 1; text-align: center; border-right: 1px solid #2b3139;">
                         <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">MATCH</div>
-                        <div id="stat-match-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1; color: ${matchColor};">${this.formatKMB(stats.matchSpeedUSD)}<span style="font-size:0.7em; color:#666">/s</span></div>
+                        <div id="stat-match-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${this.formatKMB(stats.matchSpeedUSD)}<span style="font-size:0.7em; opacity:0.5">/s</span></div>
                     </div>
-
                     <div style="flex: 1; text-align: center;">
                         <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">SPREAD</div>
-                        <div id="stat-spread-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1; color: ${spreadColor};">${spreadText}</div>
+                        <div id="stat-spread-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${stats.spreadVal.toFixed(2)}%</div>
                     </div>
-
                 </div>
 
                 <div class="radar-chart-container" style="position: relative; height: 100px; width: 100%; margin-top: 0px;">
-                    
                     <div style="position: absolute; top: 4px; right: 8px; z-index: 5; pointer-events: none; opacity: 0.8;">
                         <span style="font-size: 0.6rem; color: #555; font-weight: 800; text-transform:uppercase; font-family: 'Rajdhani', sans-serif;">DAILY VOL: </span>
-                        <span id="stat-daily-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.65rem; color: #888;">
-                            ${this.formatKMB(stats.dailyVolUTC)}
-                        </span>
+                        <span id="stat-daily-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.65rem;">${this.formatKMB(stats.dailyVolUTC)}</span>
                     </div>
-
                     <canvas id="chart-${stats.contract}"></canvas>
                 </div>
             </div>
