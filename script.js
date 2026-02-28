@@ -2518,14 +2518,28 @@ function updateGridValuesOnly() {
                 el.setAttribute('data-raw', currentPrice);
             });
 
-            // --- 2. CẬP NHẬT TỔNG GIÁ TRỊ GIẢI THƯỞNG TRONG BẢNG MARKET TABLE (CHỈ NHẢY SỐ) ---
+            // --- 2. CẬP NHẬT TỔNG GIÁ TRỊ GIẢI THƯỞNG TRONG BẢNG MARKET TABLE ---
             const tablePoolElements = document.querySelectorAll(`.live-pool-table-val[data-id="${c.db_id}"]`);
             tablePoolElements.forEach(el => {
                 let estQty = parseFloat(el.getAttribute('data-qty')) || qty;
                 let estTotal = estQty * currentPrice;
+                
                 if (estTotal > 0) {
                     let compactStr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(estTotal);
-                    if (el.innerText !== compactStr) el.innerText = compactStr;
+                    let oldEstTotal = parseFloat(el.getAttribute('data-raw-est')) || 0;
+
+                    if (el.innerText !== compactStr) {
+                        el.innerText = compactStr;
+                        
+                        if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
+                            if (estTotal > oldEstTotal) {
+                                el.style.setProperty('color', '#0ECB81', 'important'); 
+                            } else {
+                                el.style.setProperty('color', '#F6465D', 'important'); 
+                            }
+                        }
+                    }
+                    el.setAttribute('data-raw-est', estTotal);
                 }
             });
 
