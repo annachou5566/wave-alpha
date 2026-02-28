@@ -1107,3 +1107,50 @@ window.changeRowsPerPage = function() {
         renderTable();
     }
 };
+
+function updateAlphaMarketUI(serverData) {
+    if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
+
+    Object.keys(serverData).forEach(key => {
+        let liveItem = serverData[key];
+        let tokenKey = liveItem.symbol || key.replace('ALPHA_', ''); 
+        
+        let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
+        if (priceEl && liveItem.p) {
+            let oldPrice = parseFloat(priceEl.getAttribute('data-raw')) || parseFloat(liveItem.p);
+            let newPrice = parseFloat(liveItem.p);
+            
+            if (newPrice !== oldPrice) {
+                let isUp = newPrice > oldPrice;
+                let color = isUp ? '#0ECB81' : '#F6465D';
+                let icon = isUp ? '▲' : '▼';
+                
+                priceEl.style.color = color;
+                priceEl.innerHTML = `${icon} $${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
+                priceEl.setAttribute('data-raw', newPrice);
+                
+                setTimeout(() => { 
+                    priceEl.style.color = ''; 
+                    priceEl.innerHTML = `$${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
+                }, 1000);
+            } else if (!priceEl.getAttribute('data-raw')) {
+                priceEl.setAttribute('data-raw', newPrice);
+            }
+        }
+
+        let volTotEl = document.getElementById(`alpha-vol-tot-${tokenKey}`);
+        if (volTotEl && liveItem.v && liveItem.v.dt) {
+            volTotEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(liveItem.v.dt);
+        }
+
+        let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
+        if (volLimEl && liveItem.v && liveItem.v.dl) {
+            volLimEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(liveItem.v.dl);
+        }
+        
+        let txEl = document.getElementById(`alpha-tx-${tokenKey}`);
+        if (txEl && liveItem.tx) {
+            txEl.innerText = liveItem.tx.toLocaleString('en-US');
+        }
+    });
+}
