@@ -2940,60 +2940,15 @@ margin-top: 2px;
 }
 
 
-
-
-/* ==========================================================
-   SMOOTH REALTIME PULSE (SLOW-MOTION: TĂNG XANH - GIẢM ĐỎ)
-   ========================================================== */
 .live-price-val, .mb-val, .table-dyn-val, .radar-dyn-val {
-    color: #E0E0E0 !important;
-    border-radius: 4px;
-    padding: 1px 3px; /* Đệm nhẹ để lúc chớp nền nhìn mượt hơn */
-    transition: color 0.5s ease, background-color 0.5s ease;
+    color: #E0E0E0; 
+    transition: color 0.1s ease;
 }
 
-/* Ép ưu tiên animation */
-.cyber-flash-up {
-    animation: smoothPulseUp 1.5s ease-out forwards !important;
-}
-.cyber-flash-down {
-    animation: smoothPulseDown 1.5s ease-out forwards !important;
+.tick-up {
+    color: #0ECB81 !important; 
 }
 
-/* TĂNG = XANH LÁ (Mờ dần từ từ) */
-@keyframes smoothPulseUp {
-    0% { 
-        color: #0ECB81 !important; 
-        background-color: rgba(14, 203, 129, 0.25);
-        text-shadow: 0 0 10px rgba(14, 203, 129, 0.8); 
-    }
-    50% {
-        color: #0ECB81 !important; 
-        background-color: rgba(14, 203, 129, 0.05);
-        text-shadow: 0 0 5px rgba(14, 203, 129, 0.4);
-    }
-    100% { 
-        color: #E0E0E0 !important; 
-        background-color: transparent;
-        text-shadow: none; 
-    }
-}
-
-/* GIẢM = ĐỎ (Mờ dần từ từ) */
-@keyframes smoothPulseDown {
-    0% { 
-        color: #F6465D !important; 
-        background-color: rgba(246, 70, 93, 0.25);
-        text-shadow: 0 0 10px rgba(246, 70, 93, 0.8); 
-    }
-    50% {
-        color: #F6465D !important; 
-        background-color: rgba(246, 70, 93, 0.05);
-        text-shadow: 0 0 5px rgba(246, 70, 93, 0.4);
-    }
-    100% { 
-        color: #E0E0E0 !important; 
-        background-color: transparent;
-        text-shadow: none; 
-    }
+.tick-down {
+    color: #F6465D !important; 
 }
