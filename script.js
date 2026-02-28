@@ -2971,19 +2971,19 @@ const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px;
                 accColsHtml   = `<td colspan="3" class="text-center text-sub opacity-50" style="${bLeft}">--</td>`;
             } else {
                 dailyColsHtml = `
-                    <td class="${styBase}" style="${bLeft}"><span class="table-dyn-val" id="tb-dlim-${c.db_id}">${fmtCompact(dLimit)}</span></td>
-                    <td class="${styBase}"><span class="table-dyn-val" id="tb-doc-${c.db_id}">${fmtCompact(dOnChain)}</span></td>
-                    <td class="${styBase}"><span class="table-dyn-val fw-bold" id="tb-dtot-${c.db_id}">${fmtCompact(dTotal)}</span></td>
+                    <td class="${styBase}" style="${bLeft}"><span class="table-dyn-val" style="font-weight: 200;" id="tb-dlim-${c.db_id}">${fmtCompact(dLimit)}</span></td>
+                    <td class="${styBase}"><span class="table-dyn-val" style="font-weight: 200;" id="tb-doc-${c.db_id}">${fmtCompact(dOnChain)}</span></td>
+                    <td class="${styBase}"><span class="table-dyn-val" style="font-weight: 300; color: #fff;" id="tb-dtot-${c.db_id}">${fmtCompact(dTotal)}</span></td>
                 `;
                 accColsHtml = `
                     <td class="${styBase}" style="${bLeft}">
-                        <span class="table-dyn-val" id="tb-alim-${c.db_id}">${fmtCompact(aLimit)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estLimit)}</span>` : ''}
+                        <span class="table-dyn-val" style="font-weight: 200;" id="tb-alim-${c.db_id}">${fmtCompact(aLimit)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estLimit)}</span>` : ''}
                     </td>
                     <td class="${styBase}">
-                        <span class="table-dyn-val" id="tb-aoc-${c.db_id}">${fmtCompact(aOnChain)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estOnChain)}</span>` : ''}
+                        <span class="table-dyn-val" style="font-weight: 200;" id="tb-aoc-${c.db_id}">${fmtCompact(aOnChain)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estOnChain)}</span>` : ''}
                     </td>
                     <td class="${styBase}">
-                        <span class="table-dyn-val fw-bold" id="tb-atot-${c.db_id}">${fmtCompact(aTotal)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estTotal)}</span>` : ''}
+                        <span class="table-dyn-val" style="font-weight: 300; color: #fff;" id="tb-atot-${c.db_id}">${fmtCompact(aTotal)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estTotal)}</span>` : ''}
                     </td>
                 `;
             }
