@@ -293,23 +293,16 @@ class CompetitionRadar {
         let limitColor = '#0ECB81';
         let limitText = `<$${limitVal.toLocaleString()}`;
 
-        if (limitVal < 10) {
-            limitColor = '#F6465D';
-            limitText = '💀 DEAD';
-        } else if (limitVal < 50) {
-            limitColor = '#F6465D'; 
-        } else if (limitVal <= 200) {
-            limitColor = '#F0B90B'; 
-        }
+        if (limitVal < 10) { limitColor = '#F6465D'; limitText = '💀 DEAD'; } 
+        else if (limitVal < 50) { limitColor = '#F6465D'; } 
+        else if (limitVal <= 200) { limitColor = '#F0B90B'; }
 
-        // Algo Limit riêng biệt vì nó là cảnh báo
         const elSafe = document.getElementById(`stat-safe-${stats.contract}`);
         if (elSafe && elSafe.innerHTML !== limitText) {
             elSafe.innerHTML = limitText;
             elSafe.style.color = limitColor;
         }
 
-        // Hàm cập nhật kèm chớp màu chung cho Radar
         const updateDynEl = (id, newHtml, rawVal) => {
             const el = document.getElementById(id);
             if (el) {
@@ -317,11 +310,11 @@ class CompetitionRadar {
                 if (el.innerHTML !== newHtml) {
                     el.innerHTML = newHtml;
                     if (oldVal > 0 && rawVal !== oldVal) {
-                        el.classList.remove('cyber-flash-up', 'cyber-flash-down');
-                        void el.offsetWidth;
-                        if (rawVal > oldVal) el.classList.add('cyber-flash-up');
-                        else el.classList.add('cyber-flash-down');
-                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 600);
+                        if (rawVal > oldVal) {
+                            el.classList.remove('tick-down'); el.classList.add('tick-up');
+                        } else {
+                            el.classList.remove('tick-up'); el.classList.add('tick-down');
+                        }
                     }
                 }
                 el.setAttribute('data-raw', rawVal);
