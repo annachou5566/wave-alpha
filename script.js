@@ -2426,7 +2426,7 @@ fullHtml += `
                     </div>
                     <div class="market-bar">
                         <div class="mb-item text-start">
-                            <div class="mb-label">Daily Vol <i class="fas fa-info-circle opacity-50" title="Volume Hôm Nay"></i></div>
+                            <div class="mb-label">Total Vol <i class="fas fa-info-circle opacity-50" title="Volume Tích Lũy"></i></div>
                             <div class="mb-val" id="live-vol-${c.db_id}" style="color:${realVolColor}">${realVolDisplay}</div>
                         </div>
                         <div class="mb-item text-end">
