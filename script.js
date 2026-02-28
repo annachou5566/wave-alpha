@@ -2497,81 +2497,60 @@ function updateGridValuesOnly() {
 
             let pStr = '---';
             if (currentPrice > 0) {
-                if (currentPrice >= 1) {
-                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                } else if (currentPrice >= 0.01) {
-                    pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
-                } else {
-                    pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
-                }
+                if (currentPrice >= 1) pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                else if (currentPrice >= 0.01) pStr = '$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+                else pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
             }
 
-            // --- 1. HIỆU ỨNG NHẢY GIÁ (PRICE) ---
+            // Xử lý giữ màu Giá (Price)
             const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
             allPriceElements.forEach(el => {
                 let oldPrice = parseFloat(el.getAttribute('data-raw')) || 0;
-
                 if (el.innerText !== pStr) {
                     el.innerText = pStr;
-                    
                     if (oldPrice > 0 && currentPrice !== oldPrice) {
-                        el.classList.remove('cyber-flash-up', 'cyber-flash-down');
-                        void el.offsetWidth; // Force trình duyệt nhận diện thay đổi
-
                         if (currentPrice > oldPrice) {
-                            el.classList.add('cyber-flash-up');   // Tăng = Đỏ
-                        } else if (currentPrice < oldPrice) {
-                            el.classList.add('cyber-flash-down'); // Giảm = Xanh
+                            el.classList.remove('tick-down'); el.classList.add('tick-up');
+                        } else {
+                            el.classList.remove('tick-up'); el.classList.add('tick-down');
                         }
-
-                        // Xóa class sau khi chạy xong animation
-                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 1500);
                     }
                 }
-                el.setAttribute('data-raw', currentPrice); // Lưu lại giá mới để lần sau so sánh
+                el.setAttribute('data-raw', currentPrice);
             });
 
-            // --- 2. HIỆU ỨNG NHẢY VOLUME VÀ REWARD ---
+            // Xử lý giữ màu Volume
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             if (cardWrapper) {
-                // Cập nhật Volume Realtime
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
                 if (volEl) {
                     let rv = c.limit_accumulated_volume || c.total_accumulated_volume || c.real_alpha_volume || 0;
                     let prefix = rv > 0 ? '$' : '';
                     let rvStr = rv > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                    
                     let oldVol = parseFloat(volEl.getAttribute('data-raw')) || 0;
 
                     if(volEl.innerText !== rvStr) {
                         volEl.innerText = rvStr;
-
                         if (oldVol > 0 && rv !== oldVol) {
-                            volEl.classList.remove('cyber-flash-up', 'cyber-flash-down');
-                            void volEl.offsetWidth;
-                            // Volume thường chỉ tăng, nhưng làm chuẩn logic Tăng = Đỏ
-                            if (rv > oldVol) volEl.classList.add('cyber-flash-up');
-                            else volEl.classList.add('cyber-flash-down');
-
-                            setTimeout(() => volEl.classList.remove('cyber-flash-up', 'cyber-flash-down'), 1500);
+                            if (rv > oldVol) {
+                                volEl.classList.remove('tick-down'); volEl.classList.add('tick-up');
+                            } else {
+                                volEl.classList.remove('tick-up'); volEl.classList.add('tick-down');
+                            }
                         }
                     }
                     volEl.setAttribute('data-raw', rv);
                 }
 
-                // Cập nhật Pool Ước tính
                 const estEl = cardWrapper.querySelector('.live-est-val');
                 if (estEl) {
                     let estQty = parseFloat(estEl.getAttribute('data-qty')) || qty;
                     let estTotal = estQty * currentPrice;
-                    if (estTotal > 0) {
-                        estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
-                    }
+                    if (estTotal > 0) estEl.innerText = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
                 }
             }
         });
 
-        // Cập nhật các thống kê tổng
         const poolEl = document.getElementById('stat-pool');
         if (poolEl) poolEl.innerText = fmt(totalEstPool);
 
@@ -2579,13 +2558,9 @@ function updateGridValuesOnly() {
             const topSymbolEl = document.getElementById('stat-top-symbol');
             const topValEl = document.getElementById('stat-top-val');
             const topImgEl = document.getElementById('stat-top-img');
-            
             if(topSymbolEl) topSymbolEl.innerText = topToken.name;
             if(topValEl) topValEl.innerText = fmt(maxRewardVal);
-            if(topImgEl && topToken.logo) { 
-                topImgEl.src = topToken.logo; 
-                topImgEl.style.display = 'block'; 
-            }
+            if(topImgEl && topToken.logo) { topImgEl.src = topToken.logo; topImgEl.style.display = 'block'; }
         }
 
         if (typeof initCalendar === 'function') initCalendar();
@@ -6320,14 +6295,12 @@ function updateHealthTableRealtime() {
                 
                 if (el.innerText !== newStr) {
                     el.innerText = newStr;
-                    
                     if (oldVal > 0 && u.val !== oldVal) {
-                        el.classList.remove('cyber-flash-up', 'cyber-flash-down');
-                        void el.offsetWidth; 
-                        if (u.val > oldVal) el.classList.add('cyber-flash-up');
-                        else el.classList.add('cyber-flash-down');
-                        
-                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 600);
+                        if (u.val > oldVal) {
+                            el.classList.remove('tick-down'); el.classList.add('tick-up');
+                        } else {
+                            el.classList.remove('tick-up'); el.classList.add('tick-down');
+                        }
                     }
                 }
                 el.setAttribute('data-raw', u.val);
