@@ -303,29 +303,19 @@ class CompetitionRadar {
             elSafe.style.color = limitColor;
         }
 
-        const updateDynEl = (id, newHtml, rawVal) => {
+        // Radar toàn thông số Volume/Speed nên chỉ nhảy số, không chớp màu
+        const updateDynEl = (id, newHtml) => {
             const el = document.getElementById(id);
-            if (el) {
-                let oldVal = parseFloat(el.getAttribute('data-raw')) || 0;
-                if (el.innerHTML !== newHtml) {
-                    el.innerHTML = newHtml;
-                    if (oldVal > 0 && rawVal !== oldVal) {
-                        if (rawVal > oldVal) {
-                            el.classList.remove('tick-down'); el.classList.add('tick-up');
-                        } else {
-                            el.classList.remove('tick-up'); el.classList.add('tick-down');
-                        }
-                    }
-                }
-                el.setAttribute('data-raw', rawVal);
+            if (el && el.innerHTML !== newHtml) {
+                el.innerHTML = newHtml;
             }
         };
 
-        updateDynEl(`stat-daily-${stats.contract}`, this.formatKMB(stats.dailyVolUTC), stats.dailyVolUTC);
-        updateDynEl(`stat-avg-${stats.contract}`, this.formatKMB(stats.liveAvgTicket), stats.liveAvgTicket);
-        updateDynEl(`stat-speed-${stats.contract}`, stats.txPerSecond + '<span style="font-size:0.7em; opacity:0.5">txs</span>', parseFloat(stats.txPerSecond));
-        updateDynEl(`stat-match-${stats.contract}`, this.formatKMB(stats.matchSpeedUSD) + '<span style="font-size:0.7em; opacity:0.5">/s</span>', stats.matchSpeedUSD);
-        updateDynEl(`stat-spread-${stats.contract}`, stats.spreadVal.toFixed(2) + '%', stats.spreadVal);
+        updateDynEl(`stat-daily-${stats.contract}`, this.formatKMB(stats.dailyVolUTC));
+        updateDynEl(`stat-avg-${stats.contract}`, this.formatKMB(stats.liveAvgTicket));
+        updateDynEl(`stat-speed-${stats.contract}`, stats.txPerSecond + '<span style="font-size:0.7em; opacity:0.5">txs</span>');
+        updateDynEl(`stat-match-${stats.contract}`, this.formatKMB(stats.matchSpeedUSD) + '<span style="font-size:0.7em; opacity:0.5">/s</span>');
+        updateDynEl(`stat-spread-${stats.contract}`, stats.spreadVal.toFixed(2) + '%');
     }
 
     buildHTML(stats, cardId) {
