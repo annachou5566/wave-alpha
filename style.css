@@ -2940,6 +2940,7 @@ margin-top: 2px;
 }
 
 
+
 .cyber-flash-up, .cyber-flash-down {
     position: relative;
     display: inline-block;
@@ -2947,32 +2948,40 @@ margin-top: 2px;
 }
 
 .cyber-flash-up {
-    color: #F6465D !important;
+    color: #0ECB81 !important;
     animation: textShiftUp 0.8s ease-out forwards;
 }
 .cyber-flash-up::after {
-    content: ''; position: absolute; top: -2px; left: -4px; right: -4px; bottom: -2px;
-    background: rgba(246, 70, 93, 0.15); border-radius: 4px; z-index: -1;
-    animation: pulseRed 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
-}
-
-.cyber-flash-down {
-    color: #0ECB81 !important;
-    animation: textShiftDown 0.8s ease-out forwards;
-}
-.cyber-flash-down::after {
     content: ''; position: absolute; top: -2px; left: -4px; right: -4px; bottom: -2px;
     background: rgba(14, 203, 129, 0.15); border-radius: 4px; z-index: -1;
     animation: pulseGreen 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
 }
 
+.cyber-flash-down {
+    color: #F6465D !important;
+    animation: textShiftDown 0.8s ease-out forwards;
+}
+.cyber-flash-down::after {
+    content: ''; position: absolute; top: -2px; left: -4px; right: -4px; bottom: -2px;
+    background: rgba(246, 70, 93, 0.15); border-radius: 4px; z-index: -1;
+    animation: pulseRed 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes pulseGreen {
+    0% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px rgba(14, 203, 129, 0.6); }
+    100% { transform: scale(1); opacity: 0; box-shadow: 0 0 0px rgba(14, 203, 129, 0); }
+}
 @keyframes pulseRed {
     0% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px rgba(246, 70, 93, 0.6); }
     100% { transform: scale(1); opacity: 0; box-shadow: 0 0 0px rgba(246, 70, 93, 0); }
 }
-@keyframes pulseGreen {
-    0% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px rgba(14, 203, 129, 0.6); }
-    100% { transform: scale(1); opacity: 0; box-shadow: 0 0 0px rgba(14, 203, 129, 0); }
+@keyframes textShiftUp {
+    0% { transform: translateY(-1px); text-shadow: 0 0 8px #0ECB81; }
+    100% { transform: translateY(0); text-shadow: none; }
+}
+@keyframes textShiftDown {
+    0% { transform: translateY(1px); text-shadow: 0 0 8px #F6465D; }
+    100% { transform: translateY(0); text-shadow: none; }
 }
 @keyframes textShiftUp {
     0% { transform: translateY(-1px); text-shadow: 0 0 8px #F6465D; }
