@@ -264,27 +264,34 @@ function renderTableRows(tbody) {
                 <div class="status-badge-wrapper">${journeyHtml}</div>
                 ${t.listing_time ? `<div class="journey-date-center"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''}
             </td>
+
             <td class="text-center" style="${cellStyle}">
-                <div class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
+                <div id="alpha-price-${t.symbol}" data-raw="${t.price}" class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
                 <div class="${textColorClass}" style="font-size:11px; font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
                     ${sign}${t.change_24h}%
                 </div>
             </td>
+
             <td class="chart-cell" style="padding: 5px 10px; overflow: hidden; max-width: 100px; width: 100px;">
                 ${getSparklineSVG(t.chart)}
             </td>
+
             <td class="text-end font-num">
                 <div class="vol-cell-group">
-                    <span class="text-primary-val">$${formatNum(t.volume.daily_total)}</span>
+                    <span id="alpha-vol-tot-${t.symbol}" class="text-primary-val">$${formatNum(t.volume.daily_total)}</span>
                     <div class="vol-bar-bg"><div class="vol-bar-fill" style="width:${volPct}%"></div></div>
                 </div>
             </td>
-            <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_limit)}</td>
+
+            <td id="alpha-vol-lim-${t.symbol}" class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_limit)}</td>
+            
             <td class="text-end font-num text-secondary-val">$${formatNum(t.volume.daily_onchain)}</td>
             <td class="text-end font-num text-secondary-val">
                  $${formatNum(t.volume.rolling_24h)}
             </td>
-            <td class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
+
+            <td id="alpha-tx-${t.symbol}" class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
+            
             <td class="text-end font-num text-secondary-val">$${formatNum(t.liquidity)}</td>
         `;
         tbody.appendChild(tr);
