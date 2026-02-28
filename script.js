@@ -6422,53 +6422,61 @@ async function fetchLayer2Data() {
 
 
 function applyLayer2Data(serverData) {
-    if (!compList || compList.length === 0) return;
-    
+    if (!serverData || Object.keys(serverData).length === 0) return;
+
     let hasChanges = false;
 
-    compList.forEach(c => {
-        let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
-        const liveItem = serverData[alphaId];
-        
-        if (liveItem) {
-            // 1. LUÔN CẬP NHẬT GIÁ (Cho cả giải Đang chạy lẫn Lịch sử)
-            c.cachedPrice = liveItem.p;
-            hasChanges = true;
+    if (compList && compList.length > 0) {
+        compList.forEach(c => {
+            let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
+            const liveItem = serverData[alphaId];
+            
+            if (liveItem) {
+                c.cachedPrice = liveItem.p;
+                hasChanges = true;
+                
+                let isEnded = false;
+                let endStr = c.end_at || c.end || (c.data && c.data.end);
+                if (c.end_at) { isEnded = Date.now() > new Date(c.end_at).getTime(); }
+                else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
+                let isFinalized = c.is_finalized || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
+                
+                if (isEnded || isFinalized) return;
+                
+                if (liveItem.v) {
+                    c.limit_daily_volume = liveItem.v.dl || 0;
+                    c.real_alpha_volume = liveItem.v.dt || 0;
+                }
+                
+                let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
+                let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
+                c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
+                c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
+                c.daily_tx_count = liveItem.tx || 0;
+                if (liveItem.analysis) c.market_analysis = liveItem.analysis;
+            }
+        });
+    }
 
-            // 2. KHÓA VAN VOLUME CHO GIẢI LỊCH SỬ
-            let isEnded = false;
-            let endStr = c.end_at || c.end || (c.data && c.data.end);
-            if (c.end_at) { isEnded = Date.now() > new Date(c.end_at).getTime(); }
-            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
-            
-            let isFinalized = c.is_finalized || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
-            
-            // NẾU GIẢI ĐÃ KẾT THÚC -> DỪNG LẠI TẠI ĐÂY! (Bảo vệ Volume)
-            if (isEnded || isFinalized) return;
-            
-            // 3. CẬP NHẬT VOLUME (Chỉ dành cho giải ĐANG CHẠY)
-            if (liveItem.v) {
-                c.limit_daily_volume = liveItem.v.dl || 0;
-                c.real_alpha_volume = liveItem.v.dt || 0;
-            }
-            
-            // Tính Accumulated = Base + Daily
-            let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
-            let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
-            
-            c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
-            c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
-            
-            // Phân tích thị trường
-            c.daily_tx_count = liveItem.tx || 0;
-            if (liveItem.analysis) {
-                c.market_analysis = liveItem.analysis;
-            }
+    Object.keys(serverData).forEach(key => {
+        let liveItem = serverData[key];
+        let symbol = liveItem.symbol || key.replace('ALPHA_', ''); 
+        
+        if (!alphaMarketCache[symbol]) alphaMarketCache[symbol] = {};
+        alphaMarketCache[symbol].price = liveItem.p;
+        if(liveItem.v) {
+            alphaMarketCache[symbol].daily_total = liveItem.v.dt;
+            alphaMarketCache[symbol].daily_limit = liveItem.v.dl;
         }
+        alphaMarketCache[symbol].tx_count = liveItem.tx;
     });
 
-    if (hasChanges) {
-        if (typeof updateGridValuesOnly === 'function') updateGridValuesOnly();
+    if (typeof updateAlphaMarketUI === 'function') {
+        updateAlphaMarketUI(serverData);
+    }
+
+    if (hasChanges && typeof updateGridValuesOnly === 'function') {
+        updateGridValuesOnly();
     }
 }
 
