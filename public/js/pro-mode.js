@@ -304,7 +304,7 @@ function renderTableRows(tbody) {
             <td id="alpha-tx-${domKey}" class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
             
             <td id="alpha-liq-${domKey}" class="text-end font-num text-secondary-val">$${formatCompactNum(t.liquidity)}</td>
-            
+            `;
         tbody.appendChild(tr);
     });
     if (pageList.length === 0) {
