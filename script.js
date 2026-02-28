@@ -2525,7 +2525,7 @@ function updateGridValuesOnly() {
                         }
 
                         // Xóa class sau khi chạy xong animation
-                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 800);
+                        setTimeout(() => el.classList.remove('cyber-flash-up', 'cyber-flash-down'), 1500);
                     }
                 }
                 el.setAttribute('data-raw', currentPrice); // Lưu lại giá mới để lần sau so sánh
@@ -2553,7 +2553,7 @@ function updateGridValuesOnly() {
                             if (rv > oldVol) volEl.classList.add('cyber-flash-up');
                             else volEl.classList.add('cyber-flash-down');
 
-                            setTimeout(() => volEl.classList.remove('cyber-flash-up', 'cyber-flash-down'), 800);
+                            setTimeout(() => volEl.classList.remove('cyber-flash-up', 'cyber-flash-down'), 1500);
                         }
                     }
                     volEl.setAttribute('data-raw', rv);
