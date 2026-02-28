@@ -304,6 +304,10 @@ function renderTableRows(tbody) {
             <td id="alpha-tx-${domKey}" class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
             
             <td id="alpha-liq-${domKey}" class="text-end font-num text-secondary-val">$${formatCompactNum(t.liquidity)}</td>
+
+            <td id="alpha-mc-${domKey}" class="text-end font-num text-secondary-val">$${formatCompactNum(t.market_cap)}</td>
+            
+            <td id="alpha-hold-${domKey}" class="text-end font-num text-secondary-val">${formatInt(t.holders)}</td>
             `;
         tbody.appendChild(tr);
     });
@@ -656,7 +660,7 @@ function injectLayout() {
             </div>
             <div class="table-responsive">
                 <table class="alpha-table">
-                    <thead>
+                   <thead>
                         <tr class="h-top">
                             <th rowspan="2" class="text-center col-fix-1">#</th>
                             <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
@@ -664,15 +668,18 @@ function injectLayout() {
                             <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort('price')">PRICE (24h%)</th>
                             <th rowspan="2" class="text-center">CHART</th>
                             <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
-                            <th colspan="3" class="text-center th-group-stats">MARKET STATS (24h)</th>
+                            <th colspan="5" class="text-center th-group-stats">MARKET STATS</th> 
                         </tr>
                         <tr class="h-sub">
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                            
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('market_cap')">MCAP</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('holders')">HOLDERS</th>
                         </tr>
                     </thead>
                     <tbody id="market-table-body"></tbody>
@@ -1057,7 +1064,8 @@ const KEY_MAP_REVERSE = {
   "ch": "chart", "lt": "listing_time", "tx": "tx_count",
   "off": "offline", "cex": "listingCex",
   "tge": "onlineTge", "air": "onlineAirdrop",
-  "aid": "alphaId" 
+  "aid": "alphaId",
+   "h": "holders"
 };
 
 function unminifyToken(minifiedItem) {
@@ -1196,6 +1204,17 @@ window.updateAlphaMarketUI = function(serverData) {
             volLimEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.v.dl) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dl));
         }
 
+        let mcEl = document.getElementById(`alpha-mc-${tokenKey}`);
+        if (mcEl && liveItem.mc !== undefined) {
+            mcEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.mc) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.mc));
+        }
+
+        let holdEl = document.getElementById(`alpha-hold-${tokenKey}`);
+        if (holdEl && liveItem.h !== undefined) {
+            holdEl.innerText = typeof formatInt === 'function' ? formatInt(liveItem.h) : liveItem.h.toLocaleString('en-US');
+        }
+    });
+};
         if (!window.alphaMarketCache) window.alphaMarketCache = {};
         if (!window.alphaMarketCache[tokenKey]) window.alphaMarketCache[tokenKey] = {};
         if (liveItem.mc !== undefined) window.alphaMarketCache[tokenKey].mc = liveItem.mc;
