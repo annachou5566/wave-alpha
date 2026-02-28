@@ -203,7 +203,12 @@ function renderTableRows(tbody) {
         const realIndex = startIndex + index + 1;
 
         // [QUAN TRỌNG]: Tạo domKey dùng mã số Binance để đồng bộ Realtime
-        let domKey = t.alphaId ? t.alphaId.replace('ALPHA_', '') : (t.symbol || t.id);
+        let domKey = t.symbol; 
+        if (t.alphaId) {
+            domKey = String(t.alphaId).replace('ALPHA_', '');
+        } else if (t.id) {
+            domKey = String(t.id).replace('ALPHA_', '');
+        }
 
         const status = getTokenStatus(t);
         let startBadges = [];
