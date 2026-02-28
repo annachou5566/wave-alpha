@@ -6319,19 +6319,10 @@ function updateHealthTableRealtime() {
             const el = document.getElementById(u.id);
             if (el) {
                 const newStr = fmtCompact(u.val);
-                let oldVal = parseFloat(el.getAttribute('data-raw')) || 0;
                 
                 if (el.innerText !== newStr) {
                     el.innerText = newStr;
-                    if (oldVal > 0 && u.val !== oldVal) {
-                        if (u.val > oldVal) {
-                            el.classList.remove('tick-down'); el.classList.add('tick-up');
-                        } else {
-                            el.classList.remove('tick-up'); el.classList.add('tick-down');
-                        }
-                    }
                 }
-                el.setAttribute('data-raw', u.val);
             }
         });
     });
