@@ -274,9 +274,10 @@ function renderTableRows(tbody) {
                 ${t.listing_time ? `<div class="journey-date-center"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''}
             </td>
 
+
             <td class="text-center" style="${cellStyle}">
                 <div id="alpha-price-${domKey}" data-raw="${t.price}" class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
-                <div class="${textColorClass}" style="font-size:11px; font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                <div id="alpha-change-${domKey}" class="${textColorClass}" style="font-size:11px; font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
                     ${sign}${t.change_24h}%
                 </div>
             </td>
@@ -296,14 +297,14 @@ function renderTableRows(tbody) {
             
             <td class="text-end font-num text-secondary-val">$${formatCompactNum(t.volume.daily_onchain)}</td>
             
-            <td class="text-end font-num text-secondary-val">
+            <td id="alpha-vol-r24-${domKey}" class="text-end font-num text-secondary-val">
                  $${formatCompactNum(t.volume.rolling_24h)}
             </td>
 
             <td id="alpha-tx-${domKey}" class="text-end font-num text-secondary-val">${formatInt(t.tx_count)}</td>
             
-            <td class="text-end font-num text-secondary-val">$${formatCompactNum(t.liquidity)}</td>
-        `;
+            <td id="alpha-liq-${domKey}" class="text-end font-num text-secondary-val">$${formatCompactNum(t.liquidity)}</td>
+            
         tbody.appendChild(tr);
     });
     if (pageList.length === 0) {
@@ -1143,7 +1144,7 @@ window.updateAlphaMarketUI = function(serverData) {
         }
         
         let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
-        if (priceEl && liveItem.p) {
+        if (priceEl && liveItem.p !== undefined) {
             let oldPrice = parseFloat(priceEl.getAttribute('data-raw')) || parseFloat(liveItem.p);
             let newPrice = parseFloat(liveItem.p);
             
@@ -1165,19 +1166,41 @@ window.updateAlphaMarketUI = function(serverData) {
             }
         }
 
-        let volTotEl = document.getElementById(`alpha-vol-tot-${tokenKey}`);
-        if (volTotEl && liveItem.v && liveItem.v.dt) {
-            volTotEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dt);
+        let changeEl = document.getElementById(`alpha-change-${tokenKey}`);
+        if (changeEl && liveItem.c !== undefined) {
+            let chg = parseFloat(liveItem.c);
+            let sign = chg >= 0 ? '+' : '';
+            changeEl.innerText = `${sign}${chg.toFixed(2)}%`;
+            changeEl.className = chg >= 0 ? 'text-green' : 'text-red';
         }
 
-        let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
-        if (volLimEl && liveItem.v && liveItem.v.dl) {
-            volLimEl.innerText = '$' + new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dl);
+        let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
+        if (r24El && liveItem.r24 !== undefined) {
+            r24El.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.r24) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.r24));
         }
-        
+
+        let liqEl = document.getElementById(`alpha-liq-${tokenKey}`);
+        if (liqEl && liveItem.l !== undefined) {
+            liqEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.l) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.l));
+        }
+
         let txEl = document.getElementById(`alpha-tx-${tokenKey}`);
-        if (txEl && liveItem.tx) {
-            txEl.innerText = liveItem.tx.toLocaleString('en-US');
+        if (txEl && liveItem.tx !== undefined) {
+            txEl.innerText = typeof formatInt === 'function' ? formatInt(liveItem.tx) : liveItem.tx.toLocaleString('en-US');
         }
+
+        let volTotEl = document.getElementById(`alpha-vol-tot-${tokenKey}`);
+        if (volTotEl && liveItem.v && liveItem.v.dt !== undefined) {
+            volTotEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.v.dt) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dt));
+        }
+        let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
+        if (volLimEl && liveItem.v && liveItem.v.dl !== undefined) {
+            volLimEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.v.dl) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dl));
+        }
+
+        if (!window.alphaMarketCache) window.alphaMarketCache = {};
+        if (!window.alphaMarketCache[tokenKey]) window.alphaMarketCache[tokenKey] = {};
+        if (liveItem.mc !== undefined) window.alphaMarketCache[tokenKey].mc = liveItem.mc;
+        if (liveItem.h !== undefined) window.alphaMarketCache[tokenKey].holders = liveItem.h;
     });
 };
