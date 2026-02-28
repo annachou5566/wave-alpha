@@ -2502,7 +2502,7 @@ function updateGridValuesOnly() {
                 else pStr = '$' + parseFloat(currentPrice.toFixed(8)).toString();
             }
 
-            // Xử lý giữ màu Giá (Price)
+            // --- 1. CẬP NHẬT GIÁ (PRICE) KÈM ĐỔI MÀU & TAM GIÁC CHO CẢ GRID VÀ TABLE ---
             const allPriceElements = document.querySelectorAll(`.live-price-val[data-id="${c.db_id}"]`);
             allPriceElements.forEach(el => {
                 let oldPrice = parseFloat(el.getAttribute('data-raw')) || 0;
@@ -2519,7 +2519,18 @@ function updateGridValuesOnly() {
                 el.setAttribute('data-raw', currentPrice);
             });
 
-            // Xử lý giữ màu Volume
+            // --- 2. CẬP NHẬT TỔNG GIÁ TRỊ GIẢI THƯỞNG TRONG BẢNG MARKET TABLE (CHỈ NHẢY SỐ) ---
+            const tablePoolElements = document.querySelectorAll(`.live-pool-table-val[data-id="${c.db_id}"]`);
+            tablePoolElements.forEach(el => {
+                let estQty = parseFloat(el.getAttribute('data-qty')) || qty;
+                let estTotal = estQty * currentPrice;
+                if (estTotal > 0) {
+                    let compactStr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(estTotal);
+                    if (el.innerText !== compactStr) el.innerText = compactStr;
+                }
+            });
+
+            // --- 3. CẬP NHẬT VOLUME & POOL CỦA THẺ BÀI (GRID) ---
             const cardWrapper = document.querySelector(`.card-wrapper[data-id="${c.db_id}"]`);
             if (cardWrapper) {
                 const volEl = cardWrapper.querySelector('.market-bar .mb-item:first-child .mb-val');
@@ -2527,19 +2538,7 @@ function updateGridValuesOnly() {
                     let rv = c.limit_accumulated_volume || c.total_accumulated_volume || c.real_alpha_volume || 0;
                     let prefix = rv > 0 ? '$' : '';
                     let rvStr = rv > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rv) : '---';
-                    let oldVol = parseFloat(volEl.getAttribute('data-raw')) || 0;
-
-                    if(volEl.innerText !== rvStr) {
-                        volEl.innerText = rvStr;
-                        if (oldVol > 0 && rv !== oldVol) {
-                            if (rv > oldVol) {
-                                volEl.classList.remove('tick-down'); volEl.classList.add('tick-up');
-                            } else {
-                                volEl.classList.remove('tick-up'); volEl.classList.add('tick-down');
-                            }
-                        }
-                    }
-                    volEl.setAttribute('data-raw', rv);
+                    if(volEl.innerText !== rvStr) volEl.innerText = rvStr;
                 }
 
                 const estEl = cardWrapper.querySelector('.live-est-val');
@@ -2881,8 +2880,7 @@ thead.innerHTML = `
                 else if (price >= 0.01) { pStr = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 }); } 
                 else { pStr = '$' + parseFloat(price.toFixed(8)).toString(); }
             }
-            let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary live-price-val" data-id="${c.db_id}">${pStr}</span></div>`;
-
+let priceValHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-highlight live-pool-table-val" data-id="${c.db_id}" data-qty="${parseFloat(c.rewardQty)||0}">${fmtCompact((parseFloat(c.rewardQty)||0) * price)}</span><span class="cell-secondary live-price-val" data-id="${c.db_id}">${pStr}</span></div>`;
             let rt = c.ruleType || 'buy_only'; 
             let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
 
