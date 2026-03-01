@@ -62,11 +62,18 @@ function calculateMarketStats(tokensToCalc) {
 
     tokensToCalc.forEach(t => {
         const status = getTokenStatus(t);
+        
+        // BỘ LỌC CHỨNG KHOÁN (RWA): Dựa vào cờ từ Backend hoặc đuôi chữ "on"
+        const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
+
         if (status === 'SPOT') {
             stats.countSpot++;
         } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
             stats.countDelisted++;
+        } else if (isStock) {
+            // NẾU LÀ CHỨNG KHOÁN -> BỎ QUA HOÀN TOÀN! KHÔNG CỘNG VOL VÀO THẺ BÀI HUD
         } else {
+            // CHỈ CỘNG DỮ LIỆU CỦA TOKEN ALPHA THUẦN TÚY
             stats.countActive++;
             const v = t.volume || {};
             stats.alphaDailyTotal += (v.daily_total || 0);
@@ -1149,6 +1156,7 @@ window.updateAlphaMarketUI = function(serverData) {
             if (liveItem.h !== undefined) targetToken.holders = parseInt(liveItem.h);
             if (liveItem.tx !== undefined) targetToken.tx_count = parseInt(liveItem.tx);
             if (liveItem.l !== undefined) targetToken.liquidity = parseFloat(liveItem.l);
+            if (liveItem.ss !== undefined) targetToken.stockState = liveItem.ss;
             
             if (!targetToken.volume) targetToken.volume = {};
             if (liveItem.r24 !== undefined) targetToken.volume.rolling_24h = parseFloat(liveItem.r24);
