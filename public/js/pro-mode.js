@@ -44,48 +44,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-
-
-function renderTable() {
-    const tbody = document.getElementById('market-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-
-    
+// --- HÀM 1: BỘ NÃO TÍNH TOÁN STATS (CHỈ TÍNH, KHÔNG VẼ) ---
+function calculateMarketStats(tokensToCalc) {
     let stats = {
-        totalScan: allTokens.length,
-        countActive: 0,
-        countSpot: 0,
-        countDelisted: 0,
-        alphaDailyTotal: 0,
-        alphaDailyLimit: 0,
-        alphaDailyChain: 0,
-        alphaRolling24h: 0,
-        gainers: 0,
-        losers: 0,
-        
+        totalScan: tokensToCalc.length,
+        countActive: 0, countSpot: 0, countDelisted: 0,
+        alphaDailyTotal: 0, alphaDailyLimit: 0, alphaDailyChain: 0, alphaRolling24h: 0,
+        gainers: 0, losers: 0,
         distribList: {
             up_0_2: [], up_2_4: [], up_4_6: [], up_6_8: [], up_8: [],
             down_0_2: [], down_2_4: [], down_4_6: [], down_6_8: [], down_8: []
         },
-        maxDistribCount: 0,
-        topVolTokens: []
+        maxDistribCount: 0, topVolTokens: []
     };
 
     let tempVolList = [];
 
-    allTokens.forEach(t => {
+    tokensToCalc.forEach(t => {
         const status = getTokenStatus(t);
-
-        
         if (status === 'SPOT') {
             stats.countSpot++;
-        } else if (status === 'DELISTED') {
+        } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
             stats.countDelisted++;
         } else {
-            
-            
-            
             stats.countActive++;
             const v = t.volume || {};
             stats.alphaDailyTotal += (v.daily_total || 0);
@@ -93,19 +74,12 @@ function renderTable() {
             stats.alphaDailyChain += (v.daily_onchain || 0);
             stats.alphaRolling24h += (v.rolling_24h || 0);
 
-            
-            if ((v.daily_total || 0) > 0) {
-                tempVolList.push(t);
-            }
+            if ((v.daily_total || 0) > 0) tempVolList.push(t);
 
-            
             const chg = t.change_24h || 0;
-            if (chg >= 0) stats.gainers++;
-            else stats.losers++;
+            if (chg >= 0) stats.gainers++; else stats.losers++;
             
             const abs = Math.abs(chg);
-
-            
             if (chg >= 0) {
                 if (abs >= 8) stats.distribList.up_8.push(t.symbol);
                 else if (abs >= 6) stats.distribList.up_6_8.push(t.symbol);
@@ -119,28 +93,33 @@ function renderTable() {
                 else if (abs >= 2) stats.distribList.down_2_4.push(t.symbol);
                 else stats.distribList.down_0_2.push(t.symbol);
             }
-            
-            
         } 
     }); 
 
-    
     tempVolList.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
     stats.topVolTokens = tempVolList.slice(0, 10);
 
-    
     const d = stats.distribList;
     stats.maxDistribCount = Math.max(
         d.up_8.length, d.up_6_8.length, d.up_4_6.length, d.up_2_4.length, d.up_0_2.length,
         d.down_0_2.length, d.down_2_4.length, d.down_4_6.length, d.down_6_8.length, d.down_8.length, 1
     );
 
-    
-    renderMarketHUD(stats);
-
-    
-    renderTableRows(tbody);
+    return stats;
 }
+
+// --- HÀM 2: HÀM VẼ GIAO DIỆN CHÍNH (Đã được làm nhẹ) ---
+function renderTable() {
+    const tbody = document.getElementById('market-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const stats = calculateMarketStats(allTokens);
+    renderMarketHUD(stats); // Vẽ Thẻ Bài
+    renderTableRows(tbody); // Vẽ Bảng
+}
+
+
 
 
 function renderTableRows(tbody) {
@@ -275,7 +254,7 @@ function renderTableRows(tbody) {
             </td>
 
 
-            <td class="text-center" style="${cellStyle}">
+            <td id="alpha-td-price-${domKey}" class="text-center" style="${cellStyle}">
                 <div id="alpha-price-${domKey}" data-raw="${t.price}" class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
                 <div id="alpha-change-${domKey}" class="${textColorClass}" style="font-size:11px; font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
                     ${sign}${t.change_24h}%
@@ -289,7 +268,7 @@ function renderTableRows(tbody) {
             <td class="text-end font-num">
                 <div class="vol-cell-group">
                     <span id="alpha-vol-tot-${domKey}" class="text-primary-val">$${formatCompactNum(t.volume.daily_total)}</span>
-                    <div class="vol-bar-bg"><div class="vol-bar-fill" style="width:${volPct}%"></div></div>
+                    <div class="vol-bar-bg"><div id="alpha-bar-${domKey}" class="vol-bar-fill" style="width:${volPct}%"></div></div>
                 </div>
             </td>
 
@@ -1141,6 +1120,10 @@ window.changeRowsPerPage = function() {
 window.updateAlphaMarketUI = function(serverData) {
     if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
 
+    let hasUpdates = false;
+    // Tìm maxVolDaily trên toàn chợ để vẽ độ dài thanh Volume Bar cho chuẩn
+    let maxVolDaily = Math.max(...allTokens.map(t => t.volume?.daily_total || 0)) || 1;
+
     Object.keys(serverData).forEach(key => {
         let liveItem = serverData[key];
         
@@ -1150,7 +1133,30 @@ window.updateAlphaMarketUI = function(serverData) {
         } else if (!key.startsWith('ALPHA_')) {
             tokenKey = liveItem.symbol || key;
         }
-        
+
+        // --- 1. BƠM MÁU VÀO MẢNG GỐC ALLTOKENS ---
+        let targetToken = allTokens.find(t => 
+            (t.alphaId && t.alphaId.replace('ALPHA_','') === tokenKey) || 
+            (t.id && t.id.replace('ALPHA_','') === tokenKey) ||
+            t.symbol === tokenKey
+        );
+
+        if (targetToken) {
+            hasUpdates = true;
+            if (liveItem.p !== undefined) targetToken.price = parseFloat(liveItem.p);
+            if (liveItem.c !== undefined) targetToken.change_24h = parseFloat(liveItem.c);
+            if (liveItem.mc !== undefined) targetToken.market_cap = parseFloat(liveItem.mc);
+            if (liveItem.h !== undefined) targetToken.holders = parseInt(liveItem.h);
+            if (liveItem.tx !== undefined) targetToken.tx_count = parseInt(liveItem.tx);
+            if (liveItem.l !== undefined) targetToken.liquidity = parseFloat(liveItem.l);
+            
+            if (!targetToken.volume) targetToken.volume = {};
+            if (liveItem.r24 !== undefined) targetToken.volume.rolling_24h = parseFloat(liveItem.r24);
+            if (liveItem.v && liveItem.v.dt !== undefined) targetToken.volume.daily_total = parseFloat(liveItem.v.dt);
+            if (liveItem.v && liveItem.v.dl !== undefined) targetToken.volume.daily_limit = parseFloat(liveItem.v.dl);
+        }
+
+        // --- 2. VÁ TEXT VÀ HIỆU ỨNG TRÊN BẢNG (Không cần xóa vẽ lại DOM) ---
         let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
         if (priceEl && liveItem.p !== undefined) {
             let oldPrice = parseFloat(priceEl.getAttribute('data-raw')) || parseFloat(liveItem.p);
@@ -1163,12 +1169,21 @@ window.updateAlphaMarketUI = function(serverData) {
                 priceEl.style.color = color;
                 priceEl.innerHTML = `$${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
                 priceEl.setAttribute('data-raw', newPrice);
-                
-                setTimeout(() => { 
-                    priceEl.style.color = ''; 
-                }, 1000);
+                setTimeout(() => { priceEl.style.color = ''; }, 1000);
             } else if (!priceEl.getAttribute('data-raw')) {
                 priceEl.setAttribute('data-raw', newPrice);
+            }
+
+            // Realtime Màu Nền Giá (Gradient Background)
+            let tdPriceEl = document.getElementById(`alpha-td-price-${tokenKey}`);
+            if (tdPriceEl && targetToken) {
+                const isUp = targetToken.change_24h >= 0;
+                const absChg = Math.abs(targetToken.change_24h);
+                let opacityStart = 0.15, opacityEnd = 0.02;
+                if (absChg >= 20) { opacityStart = 0.5; opacityEnd = 0.1; }
+                else if (absChg >= 10) { opacityStart = 0.3; opacityEnd = 0.05; }
+                const rgb = isUp ? '34, 171, 148' : '246, 70, 93';
+                tdPriceEl.style.cssText = `background: linear-gradient(90deg, rgba(${rgb}, ${opacityStart}) 0%, rgba(${rgb}, ${opacityEnd}) 100%) !important;`;
             }
         }
 
@@ -1181,42 +1196,40 @@ window.updateAlphaMarketUI = function(serverData) {
         }
 
         let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
-        if (r24El && liveItem.r24 !== undefined) {
-            r24El.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.r24) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.r24));
-        }
+        if (r24El && liveItem.r24 !== undefined) r24El.innerText = '$' + formatCompactNum(liveItem.r24);
 
         let liqEl = document.getElementById(`alpha-liq-${tokenKey}`);
-        if (liqEl && liveItem.l !== undefined) {
-            liqEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.l) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.l));
-        }
+        if (liqEl && liveItem.l !== undefined) liqEl.innerText = '$' + formatCompactNum(liveItem.l);
 
         let txEl = document.getElementById(`alpha-tx-${tokenKey}`);
-        if (txEl && liveItem.tx !== undefined) {
-            txEl.innerText = typeof formatInt === 'function' ? formatInt(liveItem.tx) : liveItem.tx.toLocaleString('en-US');
-        }
+        if (txEl && liveItem.tx !== undefined) txEl.innerText = formatInt(liveItem.tx);
 
         let volTotEl = document.getElementById(`alpha-vol-tot-${tokenKey}`);
-        if (volTotEl && liveItem.v && liveItem.v.dt !== undefined) {
-            volTotEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.v.dt) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dt));
-        }
+        if (volTotEl && liveItem.v && liveItem.v.dt !== undefined) volTotEl.innerText = '$' + formatCompactNum(liveItem.v.dt);
+
         let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
-        if (volLimEl && liveItem.v && liveItem.v.dl !== undefined) {
-            volLimEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.v.dl) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.v.dl));
-        }
+        if (volLimEl && liveItem.v && liveItem.v.dl !== undefined) volLimEl.innerText = '$' + formatCompactNum(liveItem.v.dl);
 
         let mcEl = document.getElementById(`alpha-mc-${tokenKey}`);
-        if (mcEl && liveItem.mc !== undefined) {
-            mcEl.innerText = '$' + (typeof formatCompactNum === 'function' ? formatCompactNum(liveItem.mc) : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(liveItem.mc));
-        }
+        if (mcEl && liveItem.mc !== undefined) mcEl.innerText = '$' + formatCompactNum(liveItem.mc);
 
         let holdEl = document.getElementById(`alpha-hold-${tokenKey}`);
-        if (holdEl && liveItem.h !== undefined) {
-            holdEl.innerText = typeof formatInt === 'function' ? formatInt(liveItem.h) : liveItem.h.toLocaleString('en-US');
+        if (holdEl && liveItem.h !== undefined) holdEl.innerText = formatInt(liveItem.h);
+        
+        // Realtime độ dài thanh Progress Bar của Volume
+        let barEl = document.getElementById(`alpha-bar-${tokenKey}`);
+        if (barEl && targetToken) {
+            let volPct = ((targetToken.volume.daily_total || 0) / maxVolDaily) * 100;
+            if (volPct > 100) volPct = 100;
+            barEl.style.width = `${volPct}%`;
         }
-  
-        if (!window.alphaMarketCache) window.alphaMarketCache = {};
-        if (!window.alphaMarketCache[tokenKey]) window.alphaMarketCache[tokenKey] = {};
-        if (liveItem.mc !== undefined) window.alphaMarketCache[tokenKey].mc = liveItem.mc;
-        if (liveItem.h !== undefined) window.alphaMarketCache[tokenKey].holders = liveItem.h;
     });
+
+    // --- 3. ĐỈNH CAO REALTIME: CHỈ VẼ LẠI THẺ BÀI HUD ---
+    if (hasUpdates) {
+        // Mảng allTokens đã được bơm đầy máu, giờ chỉ cần xuất ra HUD
+        const freshStats = calculateMarketStats(allTokens);
+        renderMarketHUD(freshStats);
+        updateSummary(); // Cập nhật luôn 4 cục thống kê nhỏ (LIVE/SPOT/DEAD)
+    }
 };
