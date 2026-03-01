@@ -407,7 +407,7 @@ class CompetitionRadar {
                 innerCard.style.borderColor = '#2b3139';
             }
         }
-
+}
     buildHTML(stats, cardId) {
         let limitVal = stats.algoLimit;
         let limitColor = '#0ECB81'; 
