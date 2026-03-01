@@ -116,10 +116,11 @@ class CompetitionRadar {
         
         const speedRaw = parseFloat(analysis.speed60s || 0);   
         const ticketRaw = parseFloat(analysis.ticket3s || 0); 
-
         const matchSpeedUSD = Math.round(speedRaw);
         const liveAvgTicket = Math.round(ticketRaw);
         const spreadVal = analysis.spread9s !== undefined ? parseFloat(analysis.spread9s) : 0;
+        const velocityVal = analysis.velocity9s !== undefined ? parseFloat(analysis.velocity9s) : 0;
+        const netFlowVal = analysis.netFlow60s !== undefined ? parseFloat(analysis.netFlow60s) : 0;
    
         let txPerSecond = 0;
         if (liveAvgTicket > 0) {
@@ -210,6 +211,7 @@ class CompetitionRadar {
             projected, currentHour, 
             dailyVolUTC,
             liveAvgTicket, matchSpeedUSD, spreadVal, 
+            velocityVal, netFlowVal,
             txPerSecond: txPerSecond.toFixed(2), 
             riskScore, hotZones, globalPeak,
             algoLimit, isLowTxs 
@@ -325,13 +327,47 @@ class CompetitionRadar {
         };
 
         updateDynElWithColor(`stat-safe-${stats.contract}`, limitText, limitVal, limitColor);
-
         updateDynElNumberOnly(`stat-daily-${stats.contract}`, this.formatKMB(stats.dailyVolUTC));
         
-        updateDynElWithColor(`stat-avg-${stats.contract}`, this.formatKMB(stats.liveAvgTicket), stats.liveAvgTicket);
         updateDynElWithColor(`stat-speed-${stats.contract}`, stats.txPerSecond + '<span style="font-size:0.7em; opacity:0.5">txs</span>', parseFloat(stats.txPerSecond));
         updateDynElWithColor(`stat-match-${stats.contract}`, this.formatKMB(stats.matchSpeedUSD) + '<span style="font-size:0.7em; opacity:0.5">/s</span>', stats.matchSpeedUSD);
         updateDynElWithColor(`stat-spread-${stats.contract}`, stats.spreadVal.toFixed(2) + '%', stats.spreadVal);
+
+       
+        let flowColor = stats.netFlowVal >= 0 ? '#0ECB81' : '#F6465D';
+        let flowSign = stats.netFlowVal >= 0 ? '+' : '';
+        let flowText = `${flowSign}$${this.formatKMB(Math.abs(stats.netFlowVal))}`;
+        updateDynElWithColor(`stat-flow-${stats.contract}`, flowText, stats.netFlowVal, flowColor);
+
+        let trendColor = '#848e9c';
+        let trendText = `${stats.velocityVal.toFixed(2)}%`;
+        if (stats.velocityVal < -0.5) {
+            trendColor = '#F6465D';
+            trendText = `<span style="animation: flashUpdate 1s infinite;">⚠️ DUMP ${stats.velocityVal.toFixed(2)}%</span>`;
+        } else if (stats.velocityVal > 0.5) {
+            trendColor = '#0ECB81';
+            trendText = `🚀 PUMP ${stats.velocityVal.toFixed(2)}%`;
+        }
+        updateDynElWithColor(`stat-trend-${stats.contract}`, trendText, stats.velocityVal, trendColor);
+
+        let whaleIcon = stats.liveAvgTicket > 5000 ? '🐋' : ''; 
+        let ticketColor = stats.liveAvgTicket > 5000 ? '#F0B90B' : null;
+        updateDynElWithColor(`stat-avg-${stats.contract}`, `${whaleIcon} ${this.formatKMB(stats.liveAvgTicket)}`, stats.liveAvgTicket, ticketColor);
+
+        const cardEl = document.getElementById(`card-${stats.contract}`);
+        if (cardEl) {
+            const innerCard = cardEl.querySelector('.radar-card');
+            if (stats.velocityVal <= -0.5) {
+                innerCard.style.boxShadow = '0 0 15px rgba(246, 70, 93, 0.4)';
+                innerCard.style.borderColor = '#F6465D';
+            } else if (stats.velocityVal >= 0.5) {
+                innerCard.style.boxShadow = '0 0 15px rgba(14, 203, 129, 0.2)';
+                innerCard.style.borderColor = '#0ECB81';
+            } else {
+                innerCard.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+                innerCard.style.borderColor = '#2b3139';
+            }
+        }
     }
 
     buildHTML(stats, cardId) {
@@ -379,6 +415,15 @@ class CompetitionRadar {
                     <div style="flex: 1; text-align: center;">
                         <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">SPREAD</div>
                         <div id="stat-spread-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${stats.spreadVal.toFixed(2)}%</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; padding: 4px 10px; background: rgba(0,0,0,0.4); border-bottom: 1px solid #2b3139; font-size: 0.65rem; font-family: 'Rajdhani', sans-serif; font-weight: bold; text-transform: uppercase;">
+                    <div title="Dòng tiền chủ động 60s">
+                        🌊 FLOW: <span id="stat-flow-${stats.contract}" style="font-size: 0.8rem;">---</span>
+                    </div>
+                    <div title="Gia tốc giá 9s">
+                        ⚡ TREND: <span id="stat-trend-${stats.contract}" style="font-size: 0.8rem;">---</span>
                     </div>
                 </div>
 
