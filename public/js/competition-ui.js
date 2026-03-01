@@ -366,14 +366,28 @@ class CompetitionRadar {
         let flowText = `${flowSign}${this.formatKMB(Math.abs(stats.netFlowVal))}`;
         updateDynElWithColor(`stat-flow-${stats.contract}`, flowText, stats.netFlowVal, flowColor);
 
-        let trendColor = '#848e9c';
-        let trendText = `${stats.velocityVal.toFixed(2)}%`;
-        if (stats.velocityVal < -0.5) {
+        let trendColor = stats.trendVal >= 0 ? '#0ECB81' : '#F6465D';
+        let trendSign = stats.trendVal > 0 ? '+' : '';
+        
+        let trendText = `TREND: ${trendSign}${stats.trendVal.toFixed(2)}%`; 
+        
+        if (stats.dropVal <= -0.6) {
             trendColor = '#F6465D';
-            trendText = `<span style="animation: flashUpdate 1s infinite;">⚠️ DUMP ${stats.velocityVal.toFixed(2)}%</span>`;
-        } else if (stats.velocityVal > 0.5) {
-            trendColor = '#0ECB81';
-            trendText = `🚀 PUMP ${stats.velocityVal.toFixed(2)}%`;
+            trendText = `<span style="animation: flashUpdate 0.5s infinite; color: #fff; background: #F6465D; padding: 2px 4px; border-radius: 3px;">⚠️ XẢ HÀNG (${stats.dropVal.toFixed(2)}%)</span>`;
+        }
+
+        updateDynElWithColor(`stat-trend-${stats.contract}`, trendText, stats.trendVal, trendColor);
+
+        const cardEl = document.getElementById(`card-${stats.contract}`);
+        if (cardEl) {
+            const innerCard = cardEl.querySelector('.radar-card');
+            if (stats.dropVal <= -0.6) {
+                innerCard.style.boxShadow = '0 0 15px rgba(246, 70, 93, 0.4)';
+                innerCard.style.borderColor = '#F6465D';
+            } else {
+                innerCard.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+                innerCard.style.borderColor = '#2b3139';
+            }
         }
         updateDynElWithColor(`stat-trend-${stats.contract}`, trendText, stats.velocityVal, trendColor);
 
