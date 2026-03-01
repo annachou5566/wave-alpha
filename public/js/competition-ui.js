@@ -363,7 +363,7 @@ class CompetitionRadar {
        
         let flowColor = stats.netFlowVal >= 0 ? '#0ECB81' : '#F6465D';
         let flowSign = stats.netFlowVal >= 0 ? '+' : '';
-        let flowText = `${flowSign}${formatCompact(Math.abs(netFlow60s))}`;
+        let flowText = `${flowSign}${this.formatKMB(Math.abs(stats.netFlowVal))}`;
         updateDynElWithColor(`stat-flow-${stats.contract}`, flowText, stats.netFlowVal, flowColor);
 
         let trendColor = '#848e9c';
