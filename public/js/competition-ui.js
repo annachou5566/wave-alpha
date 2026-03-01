@@ -373,8 +373,7 @@ class CompetitionRadar {
         let trendColor = stats.trendVal >= 0 ? '#0ECB81' : '#F6465D';
         let trendSign = stats.trendVal > 0 ? '+' : '';
         
-        let trendText = `TREND: ${trendSign}${stats.trendVal.toFixed(2)}%`; 
-        
+        let trendText = `${trendSign}${stats.trendVal.toFixed(2)}%`;        
         // Nếu giá rớt khỏi đỉnh quá 0.6% -> Cảnh báo Xả Hàng!
         if (stats.dropVal <= -0.6) {
             trendColor = '#F6465D';
