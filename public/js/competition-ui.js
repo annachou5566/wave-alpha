@@ -120,7 +120,8 @@ class CompetitionRadar {
                 speed: { val: 0, age: 0 },
                 ticket: { val: 0, age: 0 },
                 spread: { val: 0, age: 0 },
-                velocity: { val: 0, age: 0 },
+                trend: { val: 0, age: 0 }, 
+                drop: { val: 0, age: 0 }, 
                 netFlow: { val: 0, age: 0 }
             };
         }
@@ -140,11 +141,12 @@ class CompetitionRadar {
             return smooth[prop].val;
         };
 
-        const speedRaw = getSmooth('speed', parseFloat(analysis.speed60s || 0), 5); 
-        const ticketRaw = getSmooth('ticket', parseFloat(analysis.ticket3s || 0), 20); 
-        const spreadVal = getSmooth('spread', parseFloat(analysis.spread9s || 0), 5);
-        const velocityVal = getSmooth('velocity', parseFloat(analysis.velocity9s || 0), 3); 
-        const netFlowVal = getSmooth('netFlow', parseFloat(analysis.netFlow60s || 0), 5);
+        const speedRaw = getSmooth('speed', parseFloat(analysis.speed || 0), 5); 
+        const ticketRaw = getSmooth('ticket', parseFloat(analysis.ticket || 0), 20); 
+        const spreadVal = getSmooth('spread', parseFloat(analysis.spread || 0), 5);
+        const trendVal = getSmooth('trend', parseFloat(analysis.trend || 0), 3); 
+        const dropVal = getSmooth('drop', parseFloat(analysis.drop || 0), 3);   
+        const netFlowVal = getSmooth('netFlow', parseFloat(analysis.netFlow || 0), 5);
 
         const matchSpeedUSD = Math.round(speedRaw);
         const liveAvgTicket = Math.round(ticketRaw);
@@ -238,7 +240,7 @@ class CompetitionRadar {
             projected, currentHour, 
             dailyVolUTC,
             liveAvgTicket, matchSpeedUSD, spreadVal, 
-            velocityVal, netFlowVal,
+            trendVal, dropVal, netFlowVal,
             txPerSecond: txPerSecond.toFixed(2), 
             riskScore, hotZones, globalPeak,
             algoLimit, isLowTxs 
@@ -361,55 +363,50 @@ class CompetitionRadar {
         updateDynElWithColor(`stat-spread-${stats.contract}`, stats.spreadVal.toFixed(2) + '%', stats.spreadVal);
 
        
+        // --- HIỂN THỊ DÒNG TIỀN (NET FLOW) ---
         let flowColor = stats.netFlowVal >= 0 ? '#0ECB81' : '#F6465D';
         let flowSign = stats.netFlowVal >= 0 ? '+' : '';
         let flowText = `${flowSign}${this.formatKMB(Math.abs(stats.netFlowVal))}`;
         updateDynElWithColor(`stat-flow-${stats.contract}`, flowText, stats.netFlowVal, flowColor);
 
+        // --- HIỂN THỊ TREND VÀ CẢNH BÁO ĐẢO CHIỀU (DUMP CATCHER) ---
         let trendColor = stats.trendVal >= 0 ? '#0ECB81' : '#F6465D';
         let trendSign = stats.trendVal > 0 ? '+' : '';
         
         let trendText = `TREND: ${trendSign}${stats.trendVal.toFixed(2)}%`; 
         
+        // Nếu giá rớt khỏi đỉnh quá 0.6% -> Cảnh báo Xả Hàng!
         if (stats.dropVal <= -0.6) {
             trendColor = '#F6465D';
             trendText = `<span style="animation: flashUpdate 0.5s infinite; color: #fff; background: #F6465D; padding: 2px 4px; border-radius: 3px;">⚠️ XẢ HÀNG (${stats.dropVal.toFixed(2)}%)</span>`;
         }
-
+        
+        // Chỉ gọi updateDynElWithColor MỘT LẦN duy nhất
         updateDynElWithColor(`stat-trend-${stats.contract}`, trendText, stats.trendVal, trendColor);
 
-        const cardEl = document.getElementById(`card-${stats.contract}`);
-        if (cardEl) {
-            const innerCard = cardEl.querySelector('.radar-card');
-            if (stats.dropVal <= -0.6) {
-                innerCard.style.boxShadow = '0 0 15px rgba(246, 70, 93, 0.4)';
-                innerCard.style.borderColor = '#F6465D';
-            } else {
-                innerCard.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
-                innerCard.style.borderColor = '#2b3139';
-            }
-        }
-        updateDynElWithColor(`stat-trend-${stats.contract}`, trendText, stats.velocityVal, trendColor);
-
+        // --- CÁ MẬP TRACKER ---
         let whaleIcon = stats.liveAvgTicket > 5000 ? '🐋' : ''; 
         let ticketColor = stats.liveAvgTicket > 5000 ? '#F0B90B' : null;
         updateDynElWithColor(`stat-avg-${stats.contract}`, `${whaleIcon} ${this.formatKMB(stats.liveAvgTicket)}`, stats.liveAvgTicket, ticketColor);
 
+        // --- HIỆU ỨNG VIỀN QUANG HỌC ---
         const cardEl = document.getElementById(`card-${stats.contract}`);
         if (cardEl) {
             const innerCard = cardEl.querySelector('.radar-card');
-            if (stats.velocityVal <= -0.5) {
+            if (stats.dropVal <= -0.6) {
+                // Rớt đỉnh -> Nháy viền Đỏ
                 innerCard.style.boxShadow = '0 0 15px rgba(246, 70, 93, 0.4)';
                 innerCard.style.borderColor = '#F6465D';
-            } else if (stats.velocityVal >= 0.5) {
+            } else if (stats.trendVal >= 1.0) {
+                // Trend Xanh mạnh -> Nháy viền Xanh lục
                 innerCard.style.boxShadow = '0 0 15px rgba(14, 203, 129, 0.2)';
                 innerCard.style.borderColor = '#0ECB81';
             } else {
+                // Bình thường -> Tắt viền chớp
                 innerCard.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
                 innerCard.style.borderColor = '#2b3139';
             }
         }
-    }
 
     buildHTML(stats, cardId) {
         let limitVal = stats.algoLimit;
