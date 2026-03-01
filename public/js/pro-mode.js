@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(meta);
     }
 
-    
     if (!document.querySelector('link[href*="pro-mode.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -26,8 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
-    
-    
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         document.body.appendChild(modal);
@@ -35,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
    
     injectLayout();
 
-    
     const savedTab = localStorage.getItem('wave_main_tab') || 'alpha'; 
     window.pluginSwitchTab(savedTab, true);
     
@@ -125,8 +121,6 @@ function renderTable() {
     renderMarketHUD(stats); // Vẽ Thẻ Bài
     renderTableRows(tbody); // Vẽ Bảng
 }
-
-
 
 
 function renderTableRows(tbody) {
@@ -275,7 +269,7 @@ function renderTableRows(tbody) {
             <td class="text-end font-num">
                 <div class="vol-cell-group">
                     <span id="alpha-vol-tot-${domKey}" class="text-primary-val">$${formatCompactNum(t.volume.daily_total)}</span>
-                    <div class="vol-bar-bg"><div id="alpha-bar-${domKey}" class="vol-bar-fill" style="width:${volPct}%"></div></div>
+                    <div class="vol-bar-bg"><div id="alpha-bar-${domKey}" class="vol-bar-fill" style="width:${Math.min(100, volPct)}%"></div></div>
                 </div>
             </td>
 
@@ -301,8 +295,6 @@ function renderTableRows(tbody) {
         tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-secondary">No data found matching filters.</td></tr>';
     }
 }
-
-
 
 
 function renderMarketHUD(stats) {
@@ -336,7 +328,9 @@ function renderMarketHUD(stats) {
     
     const volTop10Sum = top10Rolling.reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
     const totalRolling = stats.alphaRolling24h || 1;
-    const domPct = (volTop10Sum / totalRolling) * 100;
+    // FIX: Khóa % tràn viền cho Rolling 24H
+    let domPct = (volTop10Sum / totalRolling) * 100;
+    domPct = Math.min(100, Math.max(0, domPct));
 
     let dailyTokens = [...stats.topVolTokens].sort((a, b) => (b.volume.daily_total || 0) - (a.volume.daily_total || 0));
     const top10Daily = dailyTokens.slice(0, 10);
@@ -344,7 +338,9 @@ function renderMarketHUD(stats) {
 
     const volDailyTop10Sum = top10Daily.reduce((sum, t) => sum + (t.volume.daily_total || 0), 0);
     const totalDaily = stats.alphaDailyTotal || 1;
-    const dailyDomPct = (volDailyTop10Sum / totalDaily) * 100;
+    // FIX: Khóa % tràn viền cho Daily
+    let dailyDomPct = (volDailyTop10Sum / totalDaily) * 100;
+    dailyDomPct = Math.min(100, Math.max(0, dailyDomPct));
 
     const formatNumK = (num) => {
         if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
@@ -397,10 +393,14 @@ function renderMarketHUD(stats) {
         if (type === 'ROLLING') {
             volDisplay = t.volume.rolling_24h || 0;
             pctWidth = (volDisplay / maxVolRolling) * 100;
+            // FIX: Khóa cứng ở 100% để không bị đâm xuyên màn hình
+            pctWidth = Math.min(100, Math.max(0, pctWidth));
             barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#5E6673;"></div>`;
         } else {
             volDisplay = t.volume.daily_total || 0;
             pctWidth = (volDisplay / maxVolDaily) * 100;
+            // FIX: Khóa cứng ở 100%
+            pctWidth = Math.min(100, Math.max(0, pctWidth));
             const vLimit = t.volume.daily_limit || 0;
             const vChain = t.volume.daily_onchain || 0;
             const pLimit = volDisplay > 0 ? (vLimit / volDisplay) * 100 : 0;
@@ -568,9 +568,6 @@ function renderMarketHUD(stats) {
     `;
 }
 
-
-
-
 window.showTooltip = function(e, el) {
     const t = document.getElementById('hud-tooltip');
     if(t && el.dataset.symbol) {
@@ -601,7 +598,6 @@ window.showTooltip = function(e, el) {
 window.moveTooltip = function(e) {
     const t = document.getElementById('hud-tooltip');
     if(t) {
-        
         t.style.left = (e.clientX) + 'px';
         t.style.top = (e.clientY) + 'px';
     }
@@ -611,7 +607,6 @@ window.hideTooltip = function() {
     const t = document.getElementById('hud-tooltip');
     if(t) t.style.display = 'none';
 };
-
 
 function injectLayout() {
     document.getElementById('alpha-tab-nav')?.remove();
@@ -706,9 +701,6 @@ function injectLayout() {
     window.addEventListener('scroll', window._smartScroll, { passive: true });
 }
 
-
-
-
 window.pluginSwitchTab = (tab, instant = false) => {
     localStorage.setItem('wave_main_tab', tab);
     const alphaView = document.getElementById('alpha-market-view');
@@ -720,20 +712,15 @@ window.pluginSwitchTab = (tab, instant = false) => {
     if (tab === 'alpha') {
         btnA?.classList.add('active');
         btnC?.classList.remove('active');
-        
-        
         if(compView) compView.style.display = 'none';
         if(alphaView) alphaView.style.display = 'block';
     } else {
         btnC?.classList.add('active');
         btnA?.classList.remove('active');
-
-        
         if(alphaView) alphaView.style.display = 'none';
         if(compView) compView.style.display = 'block';
     }
 };
-
 
 window.pluginSort = function(key) {
     if (sortConfig.key === key) {
@@ -765,12 +752,10 @@ window.pluginCopy = (txt) => {
 
 async function initMarket() { await fetchMarketData(); setInterval(fetchMarketData, 60000); }
 
-
 let lastDataUpdateTime = "Waiting...";
 
 async function fetchMarketData() {
     try {
-       
         const res = await fetch(DATA_URL + '?t=' + Date.now(), {
             method: 'GET',
             headers: {
@@ -778,51 +763,38 @@ async function fetchMarketData() {
             }
         });
 
-      
         if (!res.ok) {
             console.error("Lỗi tải data:", res.status);
             return;
         }
 
         const json = await res.json();
-        
-        
         const rawList = json.data || json.tokens || []; 
         allTokens = rawList.map(item => unminifyToken(item));
 
-        
         let rawTime = json.meta ? json.meta.u : (json.last_updated || "");
         
         if (rawTime) {
-            
-            
             const d = new Date(rawTime.replace(' ', 'T')); 
-            
-            
             const hours = String(d.getHours()).padStart(2, '0');
             const mins = String(d.getMinutes()).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const year = d.getFullYear();
-
             lastDataUpdateTime = `${hours}:${mins} ${day}/${month}/${year}`;
         } else {
-            
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
             const mins = String(now.getMinutes()).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const year = now.getFullYear();
-            
             lastDataUpdateTime = `${hours}:${mins} ${day}/${month}/${year}`;
         }
 
-        
         updateSummary();
         renderTable();
 
-        
         const timeLbl = document.getElementById('last-updated');
         if(timeLbl) {
             timeLbl.innerText = 'Updated: ' + lastDataUpdateTime;
@@ -833,21 +805,15 @@ async function fetchMarketData() {
     }
 }
 
-
-
 window.togglePin = (symbol) => {
-    
     if (pinnedTokens.includes(symbol)) {
         pinnedTokens = pinnedTokens.filter(s => s !== symbol);
     } else {
         pinnedTokens.push(symbol);
     }
-    
     localStorage.setItem('alpha_pins', JSON.stringify(pinnedTokens));
-    
     renderTable();
 };
-
 
 function formatNum(n) {
     if (!n) return '0';
@@ -864,21 +830,14 @@ function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
 function setupEvents() { document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable()); window.addEventListener('scroll', () => { if (document.getElementById('alpha-market-view')?.style.display === 'block') { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) { if (displayCount < allTokens.length) { displayCount += 50; renderTable(); } } } }); }
 
-
-
 function getTokenStatus(t) {
-    
     if (t.status) {
         return t.status.toUpperCase();
     }
-
-    
-    
     if (t.offline) {
         if (t.listingCex) return 'SPOT';
         return 'DELISTED';
     }
-    
     return 'ALPHA'; 
 }
 
@@ -889,9 +848,7 @@ function updateSummary() {
     let alpha = 0;
 
     allTokens.forEach(t => {
-        
         const s = (t.status || '').toUpperCase();
-
         if (s === 'SPOT') {
             spot++;
         } else if (s === 'DELISTED' || s === 'PRE_DELISTED') {
@@ -901,9 +858,6 @@ function updateSummary() {
         }
     });
 
-    
-    
-    
     const elTotal = document.getElementById('stat-total-tokens');
     const elActive = document.getElementById('stat-active-tokens');
     const elSpot = document.getElementById('stat-spot-tokens');
@@ -914,29 +868,21 @@ function updateSummary() {
     if (elSpot) elSpot.innerText = spot;
     if (elDelist) elDelist.innerText = delisted;
 
-    
     const elRate = document.getElementById('stat-spot-rate');
     if (elRate) {
-        
-        
         const rate = total > 0 ? ((spot / total) * 100).toFixed(1) : "0.0";
         elRate.innerText = `${rate}%`;
-        
-        
         if (parseFloat(rate) > 10) elRate.style.color = '#00ff88'; 
         else elRate.style.color = '#eaecef'; 
     }
 }
 
-
 window.toggleFilter = (filterType) => {
-    
     if (currentFilter === filterType) {
         currentFilter = 'ALL';
     } else {
         currentFilter = filterType;
     }
-    
     
     document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
     if (currentFilter === 'ALPHA') {
@@ -950,7 +896,6 @@ window.toggleFilter = (filterType) => {
 
     renderTable(); 
 };
-
 
 function getSparklineSVG(data) {
     if (!data || !Array.isArray(data) || data.length < 2) return '';
@@ -1003,7 +948,6 @@ function getSparklineSVG(data) {
     `;
 }
 
-
 window.setFilter = function(status) {
     currentFilter = status;
     currentPage = 1;
@@ -1025,7 +969,6 @@ window.setFilter = function(status) {
     renderTable();
 };
 
-
 window.togglePoints = function() {
     filterPoints = !filterPoints;
     const btn = document.getElementById('btn-f-points');
@@ -1037,7 +980,6 @@ window.togglePoints = function() {
     }
     renderTable();
 };
-
 
 const KEY_MAP_REVERSE = {
   "i": "id", "s": "symbol", "n": "name", "ic": "icon",
@@ -1057,7 +999,6 @@ const KEY_MAP_REVERSE = {
 function unminifyToken(minifiedItem) {
   const fullItem = {};
   for (const [shortKey, value] of Object.entries(minifiedItem)) {
-    
     const fullKey = KEY_MAP_REVERSE[shortKey] || shortKey; 
     
     if (fullKey === "volume" && typeof value === 'object') {
@@ -1073,12 +1014,9 @@ function unminifyToken(minifiedItem) {
   return fullItem;
 }
 
-
 window.showListTooltip = function(e, label, tokensStr) {
     const t = document.getElementById('hud-tooltip');
     if (!t) return;
-    
-    
     if(e.type === 'click') e.stopPropagation();
 
     if (!tokensStr) tokensStr = "No tokens";
@@ -1096,10 +1034,8 @@ window.showListTooltip = function(e, label, tokensStr) {
         </div>
     `;
     
-    
     const x = e.clientX;
     const y = e.clientY;
-    
     
     t.style.left = (x + 10) + 'px';
     t.style.top = (y + 10) + 'px';
@@ -1128,8 +1064,6 @@ window.updateAlphaMarketUI = function(serverData) {
     if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
 
     let hasUpdates = false;
-    // Tìm maxVolDaily trên toàn chợ để vẽ độ dài thanh Volume Bar cho chuẩn
-    // Tìm maxVolDaily nhưng BỎ QUA tụi chứng khoán
     let maxVolDaily = Math.max(...allTokens.map(t => {
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
         return isStock ? 0 : (t.volume?.daily_total || 0);
@@ -1145,7 +1079,6 @@ window.updateAlphaMarketUI = function(serverData) {
             tokenKey = liveItem.symbol || key;
         }
 
-        // --- 1. BƠM MÁU VÀO MẢNG GỐC ALLTOKENS ---
         let targetToken = allTokens.find(t => 
             (t.alphaId && t.alphaId.replace('ALPHA_','') === tokenKey) || 
             (t.id && t.id.replace('ALPHA_','') === tokenKey) ||
@@ -1168,7 +1101,6 @@ window.updateAlphaMarketUI = function(serverData) {
             if (liveItem.v && liveItem.v.dl !== undefined) targetToken.volume.daily_limit = parseFloat(liveItem.v.dl);
         }
 
-        // --- 2. VÁ TEXT VÀ HIỆU ỨNG TRÊN BẢNG (Không cần xóa vẽ lại DOM) ---
         let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
         if (priceEl && liveItem.p !== undefined) {
             let oldPrice = parseFloat(priceEl.getAttribute('data-raw')) || parseFloat(liveItem.p);
@@ -1186,7 +1118,6 @@ window.updateAlphaMarketUI = function(serverData) {
                 priceEl.setAttribute('data-raw', newPrice);
             }
 
-            // Realtime Màu Nền Giá (Gradient Background)
             let tdPriceEl = document.getElementById(`alpha-td-price-${tokenKey}`);
             if (tdPriceEl && targetToken) {
                 const isUp = targetToken.change_24h >= 0;
@@ -1228,20 +1159,17 @@ window.updateAlphaMarketUI = function(serverData) {
         let holdEl = document.getElementById(`alpha-hold-${tokenKey}`);
         if (holdEl && liveItem.h !== undefined) holdEl.innerText = formatInt(liveItem.h);
         
-        // Realtime độ dài thanh Progress Bar của Volume
         let barEl = document.getElementById(`alpha-bar-${tokenKey}`);
         if (barEl && targetToken) {
             let volPct = ((targetToken.volume.daily_total || 0) / maxVolDaily) * 100;
-            if (volPct > 100) volPct = 100;
+            volPct = Math.min(100, Math.max(0, volPct)); // Khóa lại ở 100%
             barEl.style.width = `${volPct}%`;
         }
     });
 
-    // --- 3. ĐỈNH CAO REALTIME: CHỈ VẼ LẠI THẺ BÀI HUD ---
     if (hasUpdates) {
-        // Mảng allTokens đã được bơm đầy máu, giờ chỉ cần xuất ra HUD
         const freshStats = calculateMarketStats(allTokens);
         renderMarketHUD(freshStats);
-        updateSummary(); // Cập nhật luôn 4 cục thống kê nhỏ (LIVE/SPOT/DEAD)
+        updateSummary(); 
     }
 };
