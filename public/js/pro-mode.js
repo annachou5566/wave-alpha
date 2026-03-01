@@ -1245,7 +1245,3 @@ window.updateAlphaMarketUI = function(serverData) {
         updateSummary(); // Cập nhật luôn 4 cục thống kê nhỏ (LIVE/SPOT/DEAD)
     }
 };
-/* Chống tràn cho tất cả các thanh Progress Bar */
-.vol-bar-fill, .progress-bar-fill, [style*="width:"] {
-    max-width: 100% !important;
-}
