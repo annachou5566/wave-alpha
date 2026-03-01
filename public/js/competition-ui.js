@@ -111,16 +111,43 @@ class CompetitionRadar {
         
         const cleanKey = contract.toLowerCase().trim();
         const cachedItem = this.realtimeCache[cleanKey] || {};
-        
         const analysis = cachedItem.market_analysis || raw.market_analysis || {};
+
+ 
+        if (!this.smoothCache) this.smoothCache = {};
+        if (!this.smoothCache[cleanKey]) {
+            this.smoothCache[cleanKey] = {
+                speed: { val: 0, age: 0 },
+                ticket: { val: 0, age: 0 },
+                spread: { val: 0, age: 0 },
+                velocity: { val: 0, age: 0 },
+                netFlow: { val: 0, age: 0 }
+            };
+        }
         
-        const speedRaw = parseFloat(analysis.speed60s || 0);   
-        const ticketRaw = parseFloat(analysis.ticket3s || 0); 
+        const smooth = this.smoothCache[cleanKey];
+        
+        const getSmooth = (prop, newVal, maxAge = 4) => {
+            if (newVal !== 0 && newVal !== undefined && !isNaN(newVal)) {
+                smooth[prop].val = newVal;
+                smooth[prop].age = 0;
+            } else {
+                smooth[prop].age++;
+                if (smooth[prop].age > maxAge) {
+                    smooth[prop].val = 0; 
+                }
+            }
+            return smooth[prop].val;
+        };
+
+        const speedRaw = getSmooth('speed', parseFloat(analysis.speed60s || 0), 5); 
+        const ticketRaw = getSmooth('ticket', parseFloat(analysis.ticket3s || 0), 20); 
+        const spreadVal = getSmooth('spread', parseFloat(analysis.spread9s || 0), 5);
+        const velocityVal = getSmooth('velocity', parseFloat(analysis.velocity9s || 0), 3); 
+        const netFlowVal = getSmooth('netFlow', parseFloat(analysis.netFlow60s || 0), 5);
+
         const matchSpeedUSD = Math.round(speedRaw);
         const liveAvgTicket = Math.round(ticketRaw);
-        const spreadVal = analysis.spread9s !== undefined ? parseFloat(analysis.spread9s) : 0;
-        const velocityVal = analysis.velocity9s !== undefined ? parseFloat(analysis.velocity9s) : 0;
-        const netFlowVal = analysis.netFlow60s !== undefined ? parseFloat(analysis.netFlow60s) : 0;
    
         let txPerSecond = 0;
         if (liveAvgTicket > 0) {
@@ -336,7 +363,7 @@ class CompetitionRadar {
        
         let flowColor = stats.netFlowVal >= 0 ? '#0ECB81' : '#F6465D';
         let flowSign = stats.netFlowVal >= 0 ? '+' : '';
-        let flowText = `${flowSign}$${this.formatKMB(Math.abs(stats.netFlowVal))}`;
+        let flowText = `${flowSign}${formatCompact(Math.abs(netFlow60s))}`;
         updateDynElWithColor(`stat-flow-${stats.contract}`, flowText, stats.netFlowVal, flowColor);
 
         let trendColor = '#848e9c';
