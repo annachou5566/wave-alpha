@@ -114,12 +114,12 @@ class CompetitionRadar {
         
         const analysis = cachedItem.market_analysis || raw.market_analysis || {};
         
-        const speedRaw = parseFloat(analysis.speed || 0);   
-        const ticketRaw = parseFloat(analysis.ticket || 0); 
+        const speedRaw = parseFloat(analysis.speed60s || 0);   
+        const ticketRaw = parseFloat(analysis.ticket3s || 0); 
 
         const matchSpeedUSD = Math.round(speedRaw);
         const liveAvgTicket = Math.round(ticketRaw);
-        const spreadVal = analysis.spread !== undefined ? parseFloat(analysis.spread) : 0;
+        const spreadVal = analysis.spread9s !== undefined ? parseFloat(analysis.spread9s) : 0;
    
         let txPerSecond = 0;
         if (liveAvgTicket > 0) {
