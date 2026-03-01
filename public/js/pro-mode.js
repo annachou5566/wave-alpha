@@ -1129,7 +1129,11 @@ window.updateAlphaMarketUI = function(serverData) {
 
     let hasUpdates = false;
     // Tìm maxVolDaily trên toàn chợ để vẽ độ dài thanh Volume Bar cho chuẩn
-    let maxVolDaily = Math.max(...allTokens.map(t => t.volume?.daily_total || 0)) || 1;
+    // Tìm maxVolDaily nhưng BỎ QUA tụi chứng khoán
+    let maxVolDaily = Math.max(...allTokens.map(t => {
+        const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
+        return isStock ? 0 : (t.volume?.daily_total || 0);
+    })) || 1;
 
     Object.keys(serverData).forEach(key => {
         let liveItem = serverData[key];
@@ -1241,3 +1245,7 @@ window.updateAlphaMarketUI = function(serverData) {
         updateSummary(); // Cập nhật luôn 4 cục thống kê nhỏ (LIVE/SPOT/DEAD)
     }
 };
+/* Chống tràn cho tất cả các thanh Progress Bar */
+.vol-bar-fill, .progress-bar-fill, [style*="width:"] {
+    max-width: 100% !important;
+}
