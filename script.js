@@ -228,7 +228,7 @@ let currentLang = localStorage.getItem('wave_lang') || 'en';
 
 
 function formatCompact(num) {
-    return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
+    return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(num);
 }
 
 
@@ -2525,7 +2525,7 @@ function updateGridValuesOnly() {
                 let estTotal = estQty * currentPrice;
                 
                 if (estTotal > 0) {
-                    let compactStr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(estTotal);
+                    let compactStr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 2 }).format(estTotal);
                     let oldEstTotal = parseFloat(el.getAttribute('data-raw-est')) || 0;
 
                     if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
@@ -2829,7 +2829,7 @@ thead.innerHTML = `
     } else {
        
         const fmtNoDec = (num) => !num ? '$0' : '$' + Math.round(num).toLocaleString('en-US');
-        const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
+        const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 2 }).format(num);
         const formatDateShort = (dateStr) => { if(!dateStr) return '--'; return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
         const now = new Date(); 
         const yestDate = new Date(); yestDate.setDate(yestDate.getDate() - 1);
@@ -6296,7 +6296,7 @@ function openCardOverlay(originalCard) {
 
 function updateHealthTableRealtime() {
     if (!document.getElementById('healthTableBody')) return;
-    const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(num);
+    const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 2 }).format(num);
 
     compList.forEach(c => {
         let dbId = c.db_id || c.id;
