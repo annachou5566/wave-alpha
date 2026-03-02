@@ -5405,7 +5405,8 @@ function renderCardMiniChart(c, customCanvasId = null) {
     let tournamentEndTime = null;
     let isEnded = false;
     if (c.end) {
-        tournamentEndTime = new Date(c.end + 'T' + (c.endTime || '23:59:59') + 'Z');
+        let endStr = c.end.substring(0, 10);
+        tournamentEndTime = new Date(endStr + 'T' + (c.endTime || '23:59:59') + 'Z');
         if (now > tournamentEndTime) isEnded = true;
     }
 
@@ -5423,7 +5424,8 @@ function renderCardMiniChart(c, customCanvasId = null) {
 
     let anchorDate = new Date();
     if (isEnded && c.end) {
-        let parts = c.end.split('-'); 
+        let endStr = c.end.substring(0, 10);
+        let parts = endStr.split('-'); 
         anchorDate = new Date(Date.UTC(parts[0], parts[1]-1, parts[2], 12, 0, 0));
     } else {
         anchorDate.setUTCHours(12, 0, 0, 0);
@@ -5432,8 +5434,6 @@ function renderCardMiniChart(c, customCanvasId = null) {
     let todayStr = now.toISOString().split('T')[0];
 
     let adminHistory = c.history || [];
-    
-    // --- [SỬA LỖI TÊN MẢNG]: Nhận đúng sổ tay lịch sử từ Backend ---
     let realHistory = c.real_vol_history || [];
     
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
@@ -5441,28 +5441,25 @@ function renderCardMiniChart(c, customCanvasId = null) {
     let labels = [];
     let limitVolData = [], projectedData = [], targetData = [];
     let accDatasets = {}; 
-    accSettings.forEach(acc => accDatasets[acc.id] = []);
+    if (typeof accSettings !== 'undefined') accSettings.forEach(acc => accDatasets[acc.id] = []);
 
-    // --- [SỬA LỖI MẤT NGÀY ĐẦU TIÊN]: Cắt bỏ phần giờ, chỉ lấy đúng chuỗi YYYY-MM-DD ---
-    let cleanStart = c.start ? c.start.split('T')[0] : null;
+    let cleanStart = c.start ? c.start.substring(0, 10) : null;
 
     for (let i = 6; i >= 0; i--) {
-        let d = new Date(anchorDate);
-        d.setDate(anchorDate.getDate() - i);
+        let d = new Date(anchorDate.getTime());
+        d.setUTCDate(anchorDate.getUTCDate() - i);
         let dStr = d.toISOString().split('T')[0];
         
-        // So sánh chuẩn xác, không bao giờ bị "nuốt" mất ngày đầu tiên nữa
         if(cleanStart && dStr < cleanStart) continue;
         
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-        // --- [SỬA LỖI ĐỌC DỮ LIỆU]: Lấy đúng con số Total Vol ---
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
         if (rItem) {
-            rVal = parseFloat(rItem.vol || 0); // Ngày cũ: lấy từ lịch sử
+            rVal = parseFloat(rItem.vol || 0); 
         } else if (dStr === todayStr) {
-            rVal = parseFloat(c.real_alpha_volume || 0); // Hôm nay: lấy Realtime
+            rVal = parseFloat(c.real_alpha_volume || 0); 
         }
         limitVolData.push(rVal);
 
@@ -5486,20 +5483,22 @@ function renderCardMiniChart(c, customCanvasId = null) {
         
         if (dStr === todayStr && !isEnded) {
             targetData.push(null); 
-            accSettings.forEach(acc => accDatasets[acc.id].push(null));
+            if (typeof accSettings !== 'undefined') accSettings.forEach(acc => accDatasets[acc.id].push(null));
         } else {
             targetData.push(tVal);
             let pItem = myProgress.find(p => p.date === dStr);
-            accSettings.forEach(acc => {
-                let vVal = 0;
-                if (pItem && pItem.accsDetail && pItem.accsDetail[acc.id]) vVal = parseFloat(pItem.accsDetail[acc.id].vol);
-                else {
-                    let prevP = myProgress.filter(p => p.date < dStr).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
-                    if(prevP && prevP.accsDetail && prevP.accsDetail[acc.id]) vVal = parseFloat(prevP.accsDetail[acc.id].vol);
-                    else vVal = null;
-                }
-                accDatasets[acc.id].push(vVal);
-            });
+            if (typeof accSettings !== 'undefined') {
+                accSettings.forEach(acc => {
+                    let vVal = 0;
+                    if (pItem && pItem.accsDetail && pItem.accsDetail[acc.id]) vVal = parseFloat(pItem.accsDetail[acc.id].vol);
+                    else {
+                        let prevP = myProgress.filter(p => p.date < dStr).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+                        if(prevP && prevP.accsDetail && prevP.accsDetail[acc.id]) vVal = parseFloat(prevP.accsDetail[acc.id].vol);
+                        else vVal = null;
+                    }
+                    accDatasets[acc.id].push(vVal);
+                });
+            }
         }
     }
 
