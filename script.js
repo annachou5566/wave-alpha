@@ -5435,7 +5435,6 @@ function renderCardMiniChart(c, customCanvasId = null) {
 
     let adminHistory = c.history || [];
     let realHistory = c.real_vol_history || [];
-    
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
     
     let labels = [];
@@ -5443,14 +5442,33 @@ function renderCardMiniChart(c, customCanvasId = null) {
     let accDatasets = {}; 
     if (typeof accSettings !== 'undefined') accSettings.forEach(acc => accDatasets[acc.id] = []);
 
-    let cleanStart = c.start ? c.start.substring(0, 10) : null;
+    // 💡 [GIẢI PHÁP MỚI]: TỰ ĐỘNG MỞ RỘNG KHUNG BIỂU ĐỒ 
+    let maxDays = 6; // Mặc định vẽ ít nhất 7 ngày
+    let cleanStart = null;
+    
+    if (c.start) {
+        cleanStart = c.start.substring(0, 10);
+        let startParts = cleanStart.split('-');
+        if (startParts.length === 3) {
+            let startDate = new Date(Date.UTC(startParts[0], startParts[1]-1, startParts[2], 12, 0, 0));
+            // Tính khoảng cách từ lúc bắt đầu đến hôm nay là bao nhiêu ngày
+            let diffDays = Math.floor((anchorDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            // Nếu giải đấu kéo dài HƠN 7 ngày, mở rộng khung chart để chứa đủ!
+            if (diffDays > maxDays) {
+                maxDays = diffDays;
+            }
+        }
+    }
 
-    for (let i = 6; i >= 0; i--) {
+    // Vòng lặp bây giờ sẽ chạy từ maxDays thay vì số 6 cố định
+    for (let i = maxDays; i >= 0; i--) {
         let d = new Date(anchorDate.getTime());
         d.setUTCDate(anchorDate.getUTCDate() - i);
         let dStr = d.toISOString().split('T')[0];
         
-        if(cleanStart && dStr < cleanStart) continue;
+        // Nếu ngày đang xét nhỏ hơn ngày bắt đầu giải thì bỏ qua
+        if (cleanStart && dStr < cleanStart) continue;
         
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
@@ -5501,7 +5519,6 @@ function renderCardMiniChart(c, customCanvasId = null) {
             }
         }
     }
-
 
 
     let existingChart = Chart.getChart(targetId);
