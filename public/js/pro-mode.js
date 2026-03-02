@@ -30,9 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const style = document.createElement('style');
         style.id = 'wave-alpha-custom-styles';
         style.innerHTML = `
-            .rwa-marquee-wrapper { background: #111418; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0; overflow: hidden; white-space: nowrap; position: relative; display: flex; align-items: center; font-family: var(--font-num), sans-serif; font-size: 0.85rem; margin-bottom: 15px; border-radius: 4px; border: 1px solid rgba(240, 185, 11, 0.2);}
+            .rwa-marquee-wrapper { background: #111418; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0; overflow: hidden; white-space: nowrap; position: relative; display: flex; align-items: center; font-family: var(--font-num), sans-serif; font-size: 0.85rem; margin-bottom: 15px; border-radius: 4px; border: 1px solid rgba(240, 185, 11, 0.2); font-variant-numeric: tabular-nums;}
             .rwa-marquee-label { background: #F0B90B; color: #000; font-weight: 800; padding: 3px 12px; border-radius: 4px; margin-left: 10px; margin-right: 15px; z-index: 2; box-shadow: 2px 0 10px rgba(0,0,0,0.8); display:flex; align-items:center; }
-            .rwa-marquee-content { display: inline-block; animation: marquee 80s linear infinite; }
+            .rwa-marquee-content { display: inline-block; animation: marquee 80s linear infinite; will-change: transform; transform: translateZ(0); }
             .rwa-marquee-content:hover { animation-play-state: paused; }
             .rwa-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; padding: 2px 8px; border-radius: 4px; }
             .rwa-item:hover { background: rgba(255,255,255,0.1); }
@@ -339,19 +339,20 @@ function renderMarketHUD(stats) {
     let marqueeContainer = document.getElementById('rwa-marquee-container');
     if (marqueeContainer && rwaTokens.length > 0) {
         if (!document.getElementById('rwa-marquee-wrapper')) {
-            // TẠO LẦN ĐẦU (Dùng data-attributes an toàn tuyệt đối)
+            // TẠO LẦN ĐẦU
             let marqueeItems = rwaTokens.map(t => {
                 let isUp = (t.change_24h || 0) >= 0;
                 let color = isUp ? '#0ecb81' : '#f6465d';
                 let sign = isUp ? '+' : '';
-                // Chống lỗi dấu nháy kép trong tên
                 let safeSym = (t.symbol || '').replace(/"/g, '\\"');
+                // KHÓA CHIỀU DÀI CHUỖI % CỐ ĐỊNH 2 SỐ THẬP PHÂN
+                let cStr = parseFloat(t.change_24h || 0).toFixed(2);
                 
                 return `<div class="rwa-item" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
                     <img src="${t.icon || 'assets/tokens/default.png'}" style="width:18px;height:18px;border-radius:50%; border:1px solid #444;">
                     <span class="text-white fw-bold">${t.symbol}</span>
                     <span data-rwa-p="${safeSym}" style="color:#eaecef">$${formatPrice(t.price)}</span>
-                    <span data-rwa-c="${safeSym}" style="color:${color}">${sign}${t.change_24h}%</span>
+                    <span data-rwa-c="${safeSym}" style="color:${color}">${sign}${cStr}%</span>
                 </div>`;
             }).join('<span class="text-secondary mx-3">|</span>');
 
@@ -363,15 +364,17 @@ function renderMarketHUD(stats) {
                 </div>
             </div>`;
         } else {
-            // CẬP NHẬT TRÁNH LỖI CSS SELECTOR CỦA KÝ TỰ ĐẶC BIỆT
+            // CẬP NHẬT REALTIME TRÁNH GIẬT KHUNG
             rwaTokens.forEach(t => {
                 let isUp = (t.change_24h || 0) >= 0;
                 let safeSym = (t.symbol || '').replace(/"/g, '\\"');
+                // KHÓA CHIỀU DÀI KHI CẬP NHẬT
+                let cStr = parseFloat(t.change_24h || 0).toFixed(2);
                 
                 document.querySelectorAll(`[data-rwa-p="${safeSym}"]`).forEach(el => el.innerText = '$' + formatPrice(t.price));
                 document.querySelectorAll(`[data-rwa-c="${safeSym}"]`).forEach(el => {
                     el.style.color = isUp ? '#0ecb81' : '#f6465d';
-                    el.innerText = (isUp ? '+' : '') + t.change_24h + '%';
+                    el.innerText = (isUp ? '+' : '') + cStr + '%';
                 });
             });
         }
