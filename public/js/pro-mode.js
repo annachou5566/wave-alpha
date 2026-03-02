@@ -275,7 +275,9 @@ function renderTableRows(tbody) {
 
             <td id="alpha-vol-lim-${domKey}" class="text-end font-num text-secondary-val">$${formatCompactNum(t.volume.daily_limit)}</td>
             
-            <td class="text-end font-num text-secondary-val">$${formatCompactNum(t.volume.daily_onchain)}</td>
+            <td id="alpha-vol-chain-${domKey}" class="text-end font-num text-secondary-val">
+                $${formatCompactNum(Math.max(0, (t.volume.daily_total || 0) - (t.volume.daily_limit || 0)))}
+            </td>
             
             <td id="alpha-vol-r24-${domKey}" class="text-end font-num text-secondary-val">
                  $${formatCompactNum(t.volume.rolling_24h)}
@@ -1097,8 +1099,10 @@ window.updateAlphaMarketUI = function(serverData) {
             
             if (!targetToken.volume) targetToken.volume = {};
             if (liveItem.r24 !== undefined) targetToken.volume.rolling_24h = parseFloat(liveItem.r24);
-            if (liveItem.v && liveItem.v.dt !== undefined) targetToken.volume.daily_total = parseFloat(liveItem.v.dt);
-            if (liveItem.v && liveItem.v.dl !== undefined) targetToken.volume.daily_limit = parseFloat(liveItem.v.dl);
+            if (liveItem.v) {
+                if (liveItem.v.dt !== undefined) targetToken.volume.daily_total = parseFloat(liveItem.v.dt);
+                if (liveItem.v.dl !== undefined) targetToken.volume.daily_limit = parseFloat(liveItem.v.dl);
+                targetToken.volume.daily_onchain = Math.max(0, (targetToken.volume.daily_total || 0) - (targetToken.volume.daily_limit || 0));
         }
 
         let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
@@ -1152,7 +1156,8 @@ window.updateAlphaMarketUI = function(serverData) {
 
         let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
         if (volLimEl && liveItem.v && liveItem.v.dl !== undefined) volLimEl.innerText = '$' + formatCompactNum(liveItem.v.dl);
-
+        let volChainEl = document.getElementById(`alpha-vol-chain-${tokenKey}`);
+        if (volChainEl && targetToken) volChainEl.innerText = '$' + formatCompactNum(targetToken.volume.daily_onchain);
         let mcEl = document.getElementById(`alpha-mc-${tokenKey}`);
         if (mcEl && liveItem.mc !== undefined) mcEl.innerText = '$' + formatCompactNum(liveItem.mc);
 
