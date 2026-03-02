@@ -25,6 +25,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
+    // --- BƠM CSS CHO THANH CHẠY RWA VÀ BADGE ---
+    if (!document.getElementById('wave-alpha-custom-styles')) {
+        const style = document.createElement('style');
+        style.id = 'wave-alpha-custom-styles';
+        style.innerHTML = `
+            .rwa-marquee-wrapper { background: #111418; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0; overflow: hidden; white-space: nowrap; position: relative; display: flex; align-items: center; font-family: var(--font-num), sans-serif; font-size: 0.85rem; margin-bottom: 15px; border-radius: 4px; border: 1px solid rgba(240, 185, 11, 0.2);}
+            .rwa-marquee-label { background: #F0B90B; color: #000; font-weight: 800; padding: 3px 12px; border-radius: 4px; margin-left: 10px; margin-right: 15px; z-index: 2; box-shadow: 2px 0 10px rgba(0,0,0,0.8); display:flex; align-items:center; }
+            .rwa-marquee-content { display: inline-block; animation: marquee 30s linear infinite; }
+            .rwa-marquee-content:hover { animation-play-state: paused; }
+            .rwa-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; padding: 2px 8px; border-radius: 4px; }
+            .rwa-item:hover { background: rgba(255,255,255,0.1); }
+            @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+            .active-rwa { background: rgba(240, 185, 11, 0.15) !important; color: #F0B90B !important; border-color: #F0B90B !important; }
+            .excl-rwa-badge { font-size:0.6rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; margin-left:8px; color:#aaa; font-weight:normal; letter-spacing:0; font-family:var(--font-main);}
+        `;
+        document.head.appendChild(style);
+    }
+
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         document.body.appendChild(modal);
@@ -40,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// --- HÀM 1: BỘ NÃO TÍNH TOÁN STATS (CHỈ TÍNH, KHÔNG VẼ) ---
+// --- HÀM 1: BỘ NÃO TÍNH TOÁN STATS ---
 function calculateMarketStats(tokensToCalc) {
     let stats = {
         totalScan: tokensToCalc.length,
@@ -59,7 +77,7 @@ function calculateMarketStats(tokensToCalc) {
     tokensToCalc.forEach(t => {
         const status = getTokenStatus(t);
         
-        // BỘ LỌC CHỨNG KHOÁN (RWA): Dựa vào cờ từ Backend hoặc đuôi chữ "on"
+        // BỘ LỌC CHỨNG KHOÁN (RWA)
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
 
         if (status === 'SPOT') {
@@ -67,9 +85,8 @@ function calculateMarketStats(tokensToCalc) {
         } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
             stats.countDelisted++;
         } else if (isStock) {
-            // NẾU LÀ CHỨNG KHOÁN -> BỎ QUA HOÀN TOÀN! KHÔNG CỘNG VOL VÀO THẺ BÀI HUD
+            // NẾU LÀ CHỨNG KHOÁN -> BỎ QUA KHỎI STATS CHUNG
         } else {
-            // CHỈ CỘNG DỮ LIỆU CỦA TOKEN ALPHA THUẦN TÚY
             stats.countActive++;
             const v = t.volume || {};
             stats.alphaDailyTotal += (v.daily_total || 0);
@@ -111,15 +128,15 @@ function calculateMarketStats(tokensToCalc) {
     return stats;
 }
 
-// --- HÀM 2: HÀM VẼ GIAO DIỆN CHÍNH (Đã được làm nhẹ) ---
+// --- HÀM 2: HÀM VẼ GIAO DIỆN CHÍNH ---
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
 
     const stats = calculateMarketStats(allTokens);
-    renderMarketHUD(stats); // Vẽ Thẻ Bài
-    renderTableRows(tbody); // Vẽ Bảng
+    renderMarketHUD(stats); 
+    renderTableRows(tbody); 
 }
 
 
@@ -128,11 +145,22 @@ function renderTableRows(tbody) {
         const term = document.getElementById('alpha-search')?.value.toLowerCase() || '';
         const matchSearch = (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term));
         if (!matchSearch) return false;
+        
         if (currentFilter === 'FAV') {
              return pinnedTokens.includes(t.symbol);
         }
+
+        const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
+        
+        // Nút lọc riêng cho RWA
+        if (currentFilter === 'RWA') return isStock;
+        
+        // Mặc định ẩn RWA khỏi Alpha/Spot/Delisted trừ khi chọn ALL
+        if (isStock && currentFilter !== 'ALL') return false; 
+
         const status = getTokenStatus(t);
-        if (currentFilter !== 'ALL' && status !== currentFilter) return false;
+        if (currentFilter !== 'ALL' && currentFilter !== 'RWA' && status !== currentFilter) return false;
+        
         if (filterPoints && (t.mul_point || 1) <= 1) return false;
         return true;
     });
@@ -182,7 +210,6 @@ function renderTableRows(tbody) {
         const tr = document.createElement('tr');
         const realIndex = startIndex + index + 1;
 
-        // [QUAN TRỌNG]: Tạo domKey dùng mã số Binance để đồng bộ Realtime
         let domKey = t.symbol; 
         if (t.alphaId) {
             domKey = String(t.alphaId).replace('ALPHA_', '');
@@ -254,7 +281,6 @@ function renderTableRows(tbody) {
                 ${t.listing_time ? `<div class="journey-date-center"><i class="far fa-clock"></i> ${new Date(t.listing_time).toLocaleDateString('en-GB')}</div>` : ''}
             </td>
 
-
             <td id="alpha-td-price-${domKey}" class="text-center" style="${cellStyle}">
                 <div id="alpha-price-${domKey}" data-raw="${t.price}" class="text-primary-val" style="font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">$${formatPrice(t.price)}</div>
                 <div id="alpha-change-${domKey}" class="${textColorClass}" style="font-size:11px; font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
@@ -304,12 +330,40 @@ function renderMarketHUD(stats) {
     if (!view || !view.querySelector('.alpha-container')) return;
     const container = view.querySelector('.alpha-container'); 
     
+    // --- 1. RENDER MARQUEE TICKER CHO RWA ---
+    let rwaTokens = allTokens.filter(t => t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on')));
+    rwaTokens.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
+    
+    let marqueeContainer = document.getElementById('rwa-marquee-container');
+    if (marqueeContainer && rwaTokens.length > 0) {
+        let marqueeItems = rwaTokens.map(t => {
+            let isUp = (t.change_24h || 0) >= 0;
+            let color = isUp ? '#0ecb81' : '#f6465d';
+            let sign = isUp ? '+' : '';
+            return `<div class="rwa-item" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
+                <img src="${t.icon || 'assets/tokens/default.png'}" style="width:18px;height:18px;border-radius:50%; border:1px solid #444;">
+                <span class="text-white fw-bold">${t.symbol}</span>
+                <span style="color:#eaecef">$${formatPrice(t.price)}</span>
+                <span style="color:${color}">${sign}${t.change_24h}%</span>
+            </div>`;
+        }).join('<span class="text-secondary mx-3">|</span>');
+
+        marqueeContainer.innerHTML = `
+        <div class="rwa-marquee-wrapper">
+            <div class="rwa-marquee-label"><i class="fas fa-chart-line me-1"></i> RWA STOCKS</div>
+            <div class="rwa-marquee-content">
+                ${marqueeItems} <span class="text-secondary mx-3">|</span> ${marqueeItems}
+            </div>
+        </div>`;
+    }
+
+    // --- 2. RENDER HUD THƯỜNG ---
     let hud = document.getElementById('market-hud');
     if (!hud) {
         hud = document.createElement('div');
         hud.id = 'market-hud';
         hud.className = 'market-hud-container';
-        container.insertBefore(hud, container.firstChild);
+        marqueeContainer.after(hud);
     }
 
     let updateTime = "Waiting...";
@@ -320,9 +374,11 @@ function renderMarketHUD(stats) {
         updateTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
 
+    // Top 10 đã được lọc sạch RWA từ hàm calculateMarketStats
     let activeTokens = allTokens.filter(t => {
         const s = getTokenStatus(t);
-        return s !== 'SPOT' && s !== 'DELISTED' && s !== 'PRE_DELISTED';
+        const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
+        return s !== 'SPOT' && s !== 'DELISTED' && s !== 'PRE_DELISTED' && !isStock;
     });
     activeTokens.sort((a, b) => (b.volume.rolling_24h || 0) - (a.volume.rolling_24h || 0));
     const top10Rolling = activeTokens.slice(0, 10);
@@ -330,7 +386,6 @@ function renderMarketHUD(stats) {
     
     const volTop10Sum = top10Rolling.reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
     const totalRolling = stats.alphaRolling24h || 1;
-    // FIX: Khóa % tràn viền cho Rolling 24H
     let domPct = (volTop10Sum / totalRolling) * 100;
     domPct = Math.min(100, Math.max(0, domPct));
 
@@ -340,7 +395,6 @@ function renderMarketHUD(stats) {
 
     const volDailyTop10Sum = top10Daily.reduce((sum, t) => sum + (t.volume.daily_total || 0), 0);
     const totalDaily = stats.alphaDailyTotal || 1;
-    // FIX: Khóa % tràn viền cho Daily
     let dailyDomPct = (volDailyTop10Sum / totalDaily) * 100;
     dailyDomPct = Math.min(100, Math.max(0, dailyDomPct));
 
@@ -350,7 +404,7 @@ function renderMarketHUD(stats) {
         return num;
     };
 
-    let validForTrend = allTokens.filter(t => !t.offline && t.price > 0);
+    let validForTrend = allTokens.filter(t => !t.offline && t.price > 0 && !(t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'))));
     let topGainers = [...validForTrend].sort((a, b) => b.change_24h - a.change_24h).slice(0, 3);
     let topLosers = [...validForTrend].sort((a, b) => a.change_24h - b.change_24h).slice(0, 3);
 
@@ -395,13 +449,11 @@ function renderMarketHUD(stats) {
         if (type === 'ROLLING') {
             volDisplay = t.volume.rolling_24h || 0;
             pctWidth = (volDisplay / maxVolRolling) * 100;
-            // FIX: Khóa cứng ở 100% để không bị đâm xuyên màn hình
             pctWidth = Math.min(100, Math.max(0, pctWidth));
             barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#5E6673;"></div>`;
         } else {
             volDisplay = t.volume.daily_total || 0;
             pctWidth = (volDisplay / maxVolDaily) * 100;
-            // FIX: Khóa cứng ở 100%
             pctWidth = Math.min(100, Math.max(0, pctWidth));
             const vLimit = t.volume.daily_limit || 0;
             const vChain = t.volume.daily_onchain || 0;
@@ -455,8 +507,8 @@ function renderMarketHUD(stats) {
             <div class="hud-title" style="margin-bottom:0px">MARKET LIFECYCLE</div>
             
             <div style="font-family:var(--font-num); font-size:20px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:baseline; gap:4px;">
-                ${stats.totalScan} 
-                <span style="font-size:11px; color:#5E6673; font-weight:600; font-family:var(--font-main);">Listings</span>
+                ${stats.countActive + stats.countSpot + stats.countDelisted} 
+                <span style="font-size:11px; color:#5E6673; font-weight:600; font-family:var(--font-main);">Crypto Tokens</span>
             </div>
             
             <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; margin-bottom:12px; margin-top:5px; font-family:var(--font-num); font-weight:700; font-size:11px; letter-spacing:0.5px;">
@@ -525,9 +577,12 @@ function renderMarketHUD(stats) {
         </div>
 
         <div class="hud-card">
-            <div class="hud-title">ROLLING VOL 24H</div>
-            <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
-                $${formatNum(stats.alphaRolling24h)}
+            <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
+                <div>ROLLING VOL 24H <span class="excl-rwa-badge">Excl. RWA</span></div>
+            </div>
+            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
+                <div class="hud-main-value" style="font-size:22px; color:#eaecef;">$${formatNum(stats.alphaRolling24h)}</div>
+                <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
             </div>
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
                 <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
@@ -544,12 +599,13 @@ function renderMarketHUD(stats) {
         </div>
 
         <div class="hud-card">
-            <div class="hud-title" style="display:flex; align-items:center;">
-                DAILY VOL (UTC +0) 
+            <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
+                <div>DAILY VOL (UTC) <span class="excl-rwa-badge">Excl. RWA</span></div>
                 <span class="update-badge">${lastDataUpdateTime}</span>
             </div>
-            <div class="hud-main-value" style="font-size:22px; color:#eaecef; margin-bottom:5px;">
-                $${formatNum(stats.alphaDailyTotal)}
+            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
+                <div class="hud-main-value" style="font-size:22px; color:#eaecef;">$${formatNum(stats.alphaDailyTotal)}</div>
+                <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
             </div>
              <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
                 <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
@@ -622,17 +678,20 @@ function injectLayout() {
         <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
+    
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
     marketView.style.display = 'none';
     marketView.innerHTML = `
         <div class="alpha-container">
+            <div id="rwa-marquee-container"></div>
             <div class="alpha-header">
                  <div class="filter-group">
                     <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
                     <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
                     <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
                     <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
+                    <button class="filter-btn" id="btn-f-rwa" onclick="setFilter('RWA')">RWA Stocks</button>
                     <button class="filter-btn" id="btn-f-fav" onclick="setFilter('FAV')">★ Favorites</button>
                     <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
                 </div>
@@ -953,7 +1012,7 @@ function getSparklineSVG(data) {
 window.setFilter = function(status) {
     currentFilter = status;
     currentPage = 1;
-    ['all', 'alpha', 'spot', 'delist', 'fav'].forEach(k => {
+    ['all', 'alpha', 'spot', 'delist', 'rwa', 'fav'].forEach(k => {
         document.getElementById(`btn-f-${k}`)?.classList.remove(`active-${k}`);
         document.getElementById(`btn-f-${k}`)?.classList.remove('active');
     });
@@ -961,6 +1020,7 @@ window.setFilter = function(status) {
     else if (status === 'ALPHA') document.getElementById('btn-f-alpha').classList.add('active-alpha');
     else if (status === 'SPOT') document.getElementById('btn-f-spot').classList.add('active-spot');
     else if (status === 'DELISTED') document.getElementById('btn-f-delist').classList.add('active-delist');
+    else if (status === 'RWA') document.getElementById('btn-f-rwa').classList.add('active-rwa');
     else if (status === 'FAV') {
         const btn = document.getElementById('btn-f-fav');
         if(btn) {
@@ -1103,8 +1163,9 @@ window.updateAlphaMarketUI = function(serverData) {
                 if (liveItem.v.dt !== undefined) targetToken.volume.daily_total = parseFloat(liveItem.v.dt);
                 if (liveItem.v.dl !== undefined) targetToken.volume.daily_limit = parseFloat(liveItem.v.dl);
                 targetToken.volume.daily_onchain = Math.max(0, (targetToken.volume.daily_total || 0) - (targetToken.volume.daily_limit || 0));
+            }
         }
- }
+
         let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
         if (priceEl && liveItem.p !== undefined) {
             let oldPrice = parseFloat(priceEl.getAttribute('data-raw')) || parseFloat(liveItem.p);
@@ -1156,8 +1217,10 @@ window.updateAlphaMarketUI = function(serverData) {
 
         let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
         if (volLimEl && liveItem.v && liveItem.v.dl !== undefined) volLimEl.innerText = '$' + formatCompactNum(liveItem.v.dl);
+
         let volChainEl = document.getElementById(`alpha-vol-chain-${tokenKey}`);
         if (volChainEl && targetToken) volChainEl.innerText = '$' + formatCompactNum(targetToken.volume.daily_onchain);
+
         let mcEl = document.getElementById(`alpha-mc-${tokenKey}`);
         if (mcEl && liveItem.mc !== undefined) mcEl.innerText = '$' + formatCompactNum(liveItem.mc);
 
@@ -1167,7 +1230,7 @@ window.updateAlphaMarketUI = function(serverData) {
         let barEl = document.getElementById(`alpha-bar-${tokenKey}`);
         if (barEl && targetToken) {
             let volPct = ((targetToken.volume.daily_total || 0) / maxVolDaily) * 100;
-            volPct = Math.min(100, Math.max(0, volPct)); // Khóa lại ở 100%
+            volPct = Math.min(100, Math.max(0, volPct)); 
             barEl.style.width = `${volPct}%`;
         }
     });
