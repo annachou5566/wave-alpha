@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
-    // --- BƠM CSS CHO THANH CHẠY RWA VÀ BADGE ---
+    // --- BƠM CSS CHO RWA VÀ BACKGROUND CHART ---
     if (!document.getElementById('wave-alpha-custom-styles')) {
         const style = document.createElement('style');
         style.id = 'wave-alpha-custom-styles';
@@ -39,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
             @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
             .active-rwa { background: rgba(240, 185, 11, 0.15) !important; color: #F0B90B !important; border-color: #F0B90B !important; }
             .excl-rwa-badge { font-size:0.6rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; margin-left:8px; color:#aaa; font-weight:normal; letter-spacing:0; font-family:var(--font-main);}
+            
+            /* CSS RIÊNG CHO BIỂU ĐỒ CHÌM BACKGROUND */
+            .daily-bg-chart { position: absolute; bottom: 0; right: 0; left: 0; height: 50%; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 10px; opacity: 0.12; pointer-events: none; z-index: 0; border-radius: 0 0 8px 8px;}
+            .daily-bg-bar { flex: 1; margin: 0 3px; border-radius: 3px 3px 0 0; transition: height 0.5s ease; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+            .daily-bg-bar.up { background: #0ecb81; }
+            .daily-bg-bar.down { background: #f6465d; }
+            .daily-bg-bar.today { background: #F0B90B; opacity: 1; border-top: 2px solid #fff; box-shadow: 0 0 15px rgba(240, 185, 11, 0.8); }
         `;
         document.head.appendChild(style);
     }
@@ -58,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// --- HÀM 1: BỘ NÃO TÍNH TOÁN STATS ---
 function calculateMarketStats(tokensToCalc) {
     let stats = {
         totalScan: tokensToCalc.length,
@@ -76,8 +82,6 @@ function calculateMarketStats(tokensToCalc) {
 
     tokensToCalc.forEach(t => {
         const status = getTokenStatus(t);
-        
-        // BỘ LỌC CHỨNG KHOÁN (RWA)
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
 
         if (status === 'SPOT') {
@@ -128,7 +132,6 @@ function calculateMarketStats(tokensToCalc) {
     return stats;
 }
 
-// --- HÀM 2: HÀM VẼ GIAO DIỆN CHÍNH ---
 function renderTable() {
     const tbody = document.getElementById('market-table-body');
     if (!tbody) return;
@@ -138,7 +141,6 @@ function renderTable() {
     renderMarketHUD(stats); 
     renderTableRows(tbody); 
 }
-
 
 function renderTableRows(tbody) {
     let list = allTokens.filter(t => {
@@ -151,11 +153,7 @@ function renderTableRows(tbody) {
         }
 
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
-        
-        // Nút lọc riêng cho RWA
         if (currentFilter === 'RWA') return isStock;
-        
-        // Mặc định ẩn RWA khỏi Alpha/Spot/Delisted trừ khi chọn ALL
         if (isStock && currentFilter !== 'ALL') return false; 
 
         const status = getTokenStatus(t);
@@ -331,7 +329,7 @@ function renderMarketHUD(stats) {
     const container = view.querySelector('.alpha-container'); 
     
     // =======================================================
-    // 1. MARQUEE TICKER CHO RWA (CHỐNG CRASH CLASS NAME)
+    // 1. MARQUEE TICKER CHO RWA 
     // =======================================================
     let rwaTokens = allTokens.filter(t => t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on')));
     rwaTokens.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
@@ -339,13 +337,11 @@ function renderMarketHUD(stats) {
     let marqueeContainer = document.getElementById('rwa-marquee-container');
     if (marqueeContainer && rwaTokens.length > 0) {
         if (!document.getElementById('rwa-marquee-wrapper')) {
-            // TẠO LẦN ĐẦU
             let marqueeItems = rwaTokens.map(t => {
                 let isUp = (t.change_24h || 0) >= 0;
                 let color = isUp ? '#0ecb81' : '#f6465d';
                 let sign = isUp ? '+' : '';
                 let safeSym = (t.symbol || '').replace(/"/g, '\\"');
-                // KHÓA CHIỀU DÀI CHUỖI % CỐ ĐỊNH 2 SỐ THẬP PHÂN
                 let cStr = parseFloat(t.change_24h || 0).toFixed(2);
                 
                 return `<div class="rwa-item" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
@@ -364,11 +360,9 @@ function renderMarketHUD(stats) {
                 </div>
             </div>`;
         } else {
-            // CẬP NHẬT REALTIME TRÁNH GIẬT KHUNG
             rwaTokens.forEach(t => {
                 let isUp = (t.change_24h || 0) >= 0;
                 let safeSym = (t.symbol || '').replace(/"/g, '\\"');
-                // KHÓA CHIỀU DÀI KHI CẬP NHẬT
                 let cStr = parseFloat(t.change_24h || 0).toFixed(2);
                 
                 document.querySelectorAll(`[data-rwa-p="${safeSym}"]`).forEach(el => el.innerText = '$' + formatPrice(t.price));
@@ -381,27 +375,8 @@ function renderMarketHUD(stats) {
     }
 
     // =======================================================
-    // 2. CHUẨN BỊ LOGIC DỮ LIỆU CHUNG (CHỐNG NaN)
+    // 2. CHUẨN BỊ LOGIC DỮ LIỆU CHUNG 
     // =======================================================
-    // --- TÍNH % TĂNG GIẢM SO VỚI HÔM QUA ---
-    let yDaily = window.YESTERDAY_STATS?.daily || 0;
-    let yRolling = window.YESTERDAY_STATS?.rolling || 0;
-
-    let dailyPctHtml = '<span style="color:#848e9c; font-weight:bold;">--</span>';
-    if (yDaily > 0) {
-        let dPct = ((stats.alphaDailyTotal - yDaily) / yDaily) * 100;
-        let dColor = dPct >= 0 ? '#0ecb81' : '#f6465d';
-        let dSign = dPct >= 0 ? '▲ +' : '▼ ';
-        dailyPctHtml = `<span style="color:${dColor}; font-weight:bold;">${dSign}${dPct.toFixed(2)}%</span>`;
-    }
-
-    let rollingPctHtml = '<span style="color:#848e9c; font-weight:bold;">--</span>';
-    if (yRolling > 0) {
-        let rPct = ((stats.alphaRolling24h - yRolling) / yRolling) * 100;
-        let rColor = rPct >= 0 ? '#0ecb81' : '#f6465d';
-        let rSign = rPct >= 0 ? '▲ +' : '▼ ';
-        rollingPctHtml = `<span style="color:${rColor}; font-weight:bold;">${rSign}${rPct.toFixed(2)}%</span>`;
-    }
     const formatNumK = (num) => {
         if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
         if(num >= 1000) return (num/1000).toFixed(0) + 'K';
@@ -421,21 +396,22 @@ function renderMarketHUD(stats) {
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
         return s !== 'SPOT' && s !== 'DELISTED' && s !== 'PRE_DELISTED' && !isStock;
     });
+    
+    // XỬ LÝ DỮ LIỆU THẺ ROLLING
     activeTokens.sort((a, b) => (b.volume.rolling_24h || 0) - (a.volume.rolling_24h || 0));
     const top10Rolling = activeTokens.slice(0, 10);
     const maxVolRolling = top10Rolling[0] ? (top10Rolling[0].volume.rolling_24h || 1) : 1;
     const volTop10Sum = top10Rolling.reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
     const totalRolling = stats.alphaRolling24h || 1;
-    
     let domPct = totalRolling > 0 ? (volTop10Sum / totalRolling) * 100 : 0;
     domPct = Math.min(100, Math.max(0, domPct)) || 0;
 
+    // XỬ LÝ DỮ LIỆU THẺ DAILY
     let dailyTokens = [...stats.topVolTokens].sort((a, b) => (b.volume.daily_total || 0) - (a.volume.daily_total || 0));
     const top10Daily = dailyTokens.slice(0, 10);
     const maxVolDaily = top10Daily[0] ? (top10Daily[0].volume.daily_total || 1) : 1;
     const volDailyTop10Sum = top10Daily.reduce((sum, t) => sum + (t.volume.daily_total || 0), 0);
     const totalDaily = stats.alphaDailyTotal || 1;
-    
     let dailyDomPct = totalDaily > 0 ? (volDailyTop10Sum / totalDaily) * 100 : 0;
     dailyDomPct = Math.min(100, Math.max(0, dailyDomPct)) || 0;
 
@@ -506,8 +482,41 @@ function renderMarketHUD(stats) {
         `;
     };
 
+    // --- TÍNH TOÁN SO SÁNH HÔM QUA VÀ VẼ BACKGROUND CHART ---
+    let volHistory = window.MARKET_VOL_HISTORY || [];
+    let yRolling = volHistory.length > 0 ? (volHistory[volHistory.length - 1].rolling || 0) : 0;
+    
+    // Thẻ Rolling: Tính % Xanh đỏ
+    let rollingPctHtml = '<span style="color:#848e9c; font-weight:bold;">--</span>';
+    if (yRolling > 0) {
+        let rPct = ((stats.alphaRolling24h - yRolling) / yRolling) * 100;
+        let rColor = rPct >= 0 ? '#0ecb81' : '#f6465d';
+        let rSign = rPct >= 0 ? '▲ +' : '▼ ';
+        rollingPctHtml = `<span style="color:${rColor}; font-weight:bold;">${rSign}${rPct.toFixed(2)}%</span>`;
+    }
+
+    // Thẻ Daily: Chữ Tối giản và vẽ Biểu đồ chìm 7 ngày
+    let yDaily = volHistory.length > 0 ? (volHistory[volHistory.length - 1].daily || 0) : 0;
+    let yDailyText = yDaily > 0 ? `Yesterday: $${formatCompactNum(yDaily)}` : '--';
+
+    let chartData = [...volHistory].slice(-6); 
+    chartData.push({ date: 'Today', daily: stats.alphaDailyTotal });
+    let maxDailyChart = Math.max(...chartData.map(d => d.daily || 0), 1);
+    
+    let bgChartHtml = chartData.map((d, i) => {
+        let h = ((d.daily || 0) / maxDailyChart) * 100;
+        if(h < 3 && (d.daily || 0) > 0) h = 3; 
+        
+        let colorClass = 'up';
+        if (i > 0 && (d.daily || 0) < (chartData[i-1].daily || 0)) colorClass = 'down';
+        let isToday = (i === chartData.length - 1) ? 'today' : colorClass;
+        
+        return `<div class="daily-bg-bar ${isToday}" style="height:${h}%"></div>`;
+    }).join('');
+
+
     // =======================================================
-    // 3. TẠO KHUNG HUD CỐ ĐỊNH 1 LẦN DUY NHẤT
+    // 3. TẠO KHUNG HUD CỐ ĐỊNH 1 LẦN DUY NHẤT (Có Z-Index cho Chart chìm)
     // =======================================================
     let hud = document.getElementById('market-hud');
     if (!hud) {
@@ -542,7 +551,7 @@ function renderMarketHUD(stats) {
                 </div>
                 <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
                     <div id="hud-rolling-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
-                    <div id="hud-rolling-pct">--</div>
+                    <div id="hud-rolling-pct" style="font-size:12px; color:#848e9c; font-weight:bold;" title="So với hôm qua">--</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
                     <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
@@ -554,26 +563,30 @@ function renderMarketHUD(stats) {
                 <div id="hud-rolling-list" class="hud-list-container"></div>
             </div>
 
-            <div class="hud-card">
-                <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
-                    <div>DAILY VOL (UTC) <span class="excl-rwa-badge">Excl. RWA</span></div>
-                    <span id="hud-update-time" class="update-badge">Waiting...</span>
-                </div>
-                <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
-                    <div id="hud-daily-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
-                    <div id="hud-daily-pct">--</div>
-                </div>
-                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
-                    <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
-                        <div id="hud-daily-dom-bar" style="width:0%; height:100%; background:#eaecef; border-radius:2px;"></div>
+            <div class="hud-card" style="position:relative; overflow:hidden;">
+                <div id="hud-bg-chart" class="daily-bg-chart"></div>
+                
+                <div style="position:relative; z-index:2;">
+                    <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
+                        <div>DAILY VOL (UTC) <span class="excl-rwa-badge">Excl. RWA</span></div>
+                        <span id="hud-update-time" class="update-badge">Waiting...</span>
                     </div>
-                    <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span id="hud-daily-dom-txt" style="color:#fff">0%</span></div>
+                    <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
+                        <div id="hud-daily-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
+                        <div id="hud-daily-yesterday" style="font-size:12px; color:#848e9c; font-weight:bold;" title="So với hôm qua">--</div>
+                    </div>
+                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                        <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
+                            <div id="hud-daily-dom-bar" style="width:0%; height:100%; background:#eaecef; border-radius:2px;"></div>
+                        </div>
+                        <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span id="hud-daily-dom-txt" style="color:#fff">0%</span></div>
+                    </div>
+                    <div class="hud-sub-stat-row">
+                        <div style="color:#F0B90B;">● LIMIT: $<span id="hud-daily-limit">0</span></div>
+                        <div style="color:#9945FF;">● CHAIN: $<span id="hud-daily-chain">0</span></div>
+                    </div>
+                    <div id="hud-daily-list" class="hud-list-container" style="position:relative; z-index:2;"></div>
                 </div>
-                <div class="hud-sub-stat-row">
-                    <div style="color:#F0B90B;">● LIMIT: $<span id="hud-daily-limit">0</span></div>
-                    <div style="color:#9945FF;">● CHAIN: $<span id="hud-daily-chain">0</span></div>
-                </div>
-                <div id="hud-daily-list" class="hud-list-container"></div>
             </div>
         `;
         
@@ -585,13 +598,12 @@ function renderMarketHUD(stats) {
     }
 
     // =======================================================
-    // 4. TIÊM MÁU VÀO XƯƠNG (CHỈ THAY CON SỐ BÊN TRONG)
+    // 4. TIÊM MÁU VÀO XƯƠNG (CẬP NHẬT REALTIME MƯỢT MÀ)
     // =======================================================
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
 
-    // Hàm set an toàn chống crash nếu Element lỡ bị mất
     const safeSet = (id, html, isText=false) => {
         let el = document.getElementById(id);
         if (el) { if (isText) el.innerText = html; else el.innerHTML = html; }
@@ -625,13 +637,17 @@ function renderMarketHUD(stats) {
         </div>
     `);
 
+    // Gắn chỉ số cho thẻ ROLLING VOL
     safeSet('hud-rolling-total', '$' + formatNum(stats.alphaRolling24h), true);
+    safeSet('hud-rolling-pct', rollingPctHtml, false);
     let rb = document.getElementById('hud-rolling-dom-bar'); if(rb) rb.style.width = domPct + '%';
     safeSet('hud-rolling-dom-txt', domPct.toFixed(0) + '%', true);
     safeSet('hud-rolling-list', top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join(''));
-    safeSet('hud-rolling-pct', rollingPctHtml, false);
-    safeSet('hud-daily-pct', dailyPctHtml, false);
+
+    // Gắn chỉ số cho thẻ DAILY VOL + BACKGROUND CHART
     safeSet('hud-daily-total', '$' + formatNum(stats.alphaDailyTotal), true);
+    safeSet('hud-daily-yesterday', yDailyText, true);
+    safeSet('hud-bg-chart', bgChartHtml, false); // Bơm biểu đồ chìm vào làm nền
     let db = document.getElementById('hud-daily-dom-bar'); if(db) db.style.width = dailyDomPct + '%';
     safeSet('hud-daily-dom-txt', dailyDomPct.toFixed(0) + '%', true);
     safeSet('hud-daily-limit', formatNumK(stats.alphaDailyLimit), true);
@@ -1138,14 +1154,18 @@ window.changeRowsPerPage = function() {
 window.updateAlphaMarketUI = function(serverData) {
     if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
 
+    // HỨNG LỊCH SỬ TỪ SERVER
+    if (serverData['_STATS']) window.MARKET_VOL_HISTORY = serverData['_STATS'];
+
     let hasUpdates = false;
-    if (serverData['_STATS']) window.YESTERDAY_STATS = serverData['_STATS'];
     let maxVolDaily = Math.max(...allTokens.map(t => {
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
         return isStock ? 0 : (t.volume?.daily_total || 0);
     })) || 1;
 
     Object.keys(serverData).forEach(key => {
+        if (key === '_STATS') return;
+        
         let liveItem = serverData[key];
         
         let tokenKey = key.replace('ALPHA_', ''); 
