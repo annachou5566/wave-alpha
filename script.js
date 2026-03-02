@@ -2915,12 +2915,12 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
             let ruleHtml = `<div class="cell-stack align-items-center justify-content-center"><div class="rule-pill ${rt==='buy_only'?'rp-buy':'rp-all'} ${isHistoryTab?'opacity-50 grayscale':''}">${rt==='trade_x4'?t.rule_buy_sell:(rt==='trade_all'?t.rule_buy_sell:t.rule_buy)}</div><span class="cell-secondary" style="${rt==='trade_x4'?'color:#F0B90B;font-weight:700;opacity:1':'opacity:0'};font-size:0.65rem;margin-top:2px;">${rt==='trade_x4'?t.rule_limit_x4:'&nbsp;'}</span></div>`;
 
             let dLimit = parseFloat(c.limit_daily_volume || 0);
-            let lh = c.limit_vol_history || [];
+            let lh = c.real_vol_history || []; 
             if (dLimit === 0 && lh.length > 0) { 
                 let checkDate = (isHistoryTab && c.end) ? c.end : yestStr; 
                 let found = lh.find(x => x.date === checkDate);
-                if (found) dLimit = parseFloat(found.vol);
-                else if (lh.length > 0) dLimit = parseFloat(lh[lh.length-1].vol);
+                if (found) dLimit = parseFloat(found.limitVol || 0); 
+                else if (lh.length > 0) dLimit = parseFloat(lh[lh.length-1].limitVol || 0);
             }
             let dTotal = parseFloat(c.real_alpha_volume || 0);
             let dOnChain = (c.onchain_daily_volume !== undefined) ? parseFloat(c.onchain_daily_volume) : Math.max(0, dTotal - dLimit);
@@ -5435,7 +5435,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
    let adminHistory = c.history || [];
     
 
-    let realHistory = c.limit_vol_history || [];
+    let realHistory = c.real_vol_history || [];
     
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
     
@@ -5455,10 +5455,12 @@ function renderCardMiniChart(c, customCanvasId = null) {
 
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
-        if (rItem) rVal = parseFloat(rItem.vol);
+        
+        if (rItem) {
+            rVal = parseFloat(rItem.vol || 0); 
+        }
         else if (dStr === todayStr) {
-
-            rVal = parseFloat(c.limit_daily_volume || 0);
+            rVal = parseFloat(c.real_alpha_volume || 0);
         }
         limitVolData.push(rVal);
 
