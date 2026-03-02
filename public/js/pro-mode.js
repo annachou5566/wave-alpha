@@ -1104,7 +1104,7 @@ window.updateAlphaMarketUI = function(serverData) {
                 if (liveItem.v.dl !== undefined) targetToken.volume.daily_limit = parseFloat(liveItem.v.dl);
                 targetToken.volume.daily_onchain = Math.max(0, (targetToken.volume.daily_total || 0) - (targetToken.volume.daily_limit || 0));
         }
-
+ }
         let priceEl = document.getElementById(`alpha-price-${tokenKey}`);
         if (priceEl && liveItem.p !== undefined) {
             let oldPrice = parseFloat(priceEl.getAttribute('data-raw')) || parseFloat(liveItem.p);
