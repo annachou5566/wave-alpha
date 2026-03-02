@@ -331,7 +331,7 @@ function renderMarketHUD(stats) {
     const container = view.querySelector('.alpha-container'); 
     
     // =======================================================
-    // 1. MARQUEE TICKER CHO RWA (CHỈ CẬP NHẬT SỐ, KHÔNG RESET)
+    // 1. MARQUEE TICKER CHO RWA (CHỐNG CRASH CLASS NAME)
     // =======================================================
     let rwaTokens = allTokens.filter(t => t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on')));
     rwaTokens.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
@@ -339,16 +339,19 @@ function renderMarketHUD(stats) {
     let marqueeContainer = document.getElementById('rwa-marquee-container');
     if (marqueeContainer && rwaTokens.length > 0) {
         if (!document.getElementById('rwa-marquee-wrapper')) {
-            // TẠO LẦN ĐẦU TIÊN
+            // TẠO LẦN ĐẦU (Dùng data-attributes an toàn tuyệt đối)
             let marqueeItems = rwaTokens.map(t => {
                 let isUp = (t.change_24h || 0) >= 0;
                 let color = isUp ? '#0ecb81' : '#f6465d';
                 let sign = isUp ? '+' : '';
+                // Chống lỗi dấu nháy kép trong tên
+                let safeSym = (t.symbol || '').replace(/"/g, '\\"');
+                
                 return `<div class="rwa-item" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
                     <img src="${t.icon || 'assets/tokens/default.png'}" style="width:18px;height:18px;border-radius:50%; border:1px solid #444;">
                     <span class="text-white fw-bold">${t.symbol}</span>
-                    <span class="rwa-p-${t.symbol}" style="color:#eaecef">$${formatPrice(t.price)}</span>
-                    <span class="rwa-c-${t.symbol}" style="color:${color}">${sign}${t.change_24h}%</span>
+                    <span data-rwa-p="${safeSym}" style="color:#eaecef">$${formatPrice(t.price)}</span>
+                    <span data-rwa-c="${safeSym}" style="color:${color}">${sign}${t.change_24h}%</span>
                 </div>`;
             }).join('<span class="text-secondary mx-3">|</span>');
 
@@ -360,11 +363,13 @@ function renderMarketHUD(stats) {
                 </div>
             </div>`;
         } else {
-            // CHỈ CẬP NHẬT SỐ BẰNG CÁCH GỌI CLASS (GIỮ NGUYÊN HOẠT ẢNH CHẠY CHỮ)
+            // CẬP NHẬT TRÁNH LỖI CSS SELECTOR CỦA KÝ TỰ ĐẶC BIỆT
             rwaTokens.forEach(t => {
                 let isUp = (t.change_24h || 0) >= 0;
-                document.querySelectorAll(`.rwa-p-${t.symbol}`).forEach(el => el.innerText = '$' + formatPrice(t.price));
-                document.querySelectorAll(`.rwa-c-${t.symbol}`).forEach(el => {
+                let safeSym = (t.symbol || '').replace(/"/g, '\\"');
+                
+                document.querySelectorAll(`[data-rwa-p="${safeSym}"]`).forEach(el => el.innerText = '$' + formatPrice(t.price));
+                document.querySelectorAll(`[data-rwa-c="${safeSym}"]`).forEach(el => {
                     el.style.color = isUp ? '#0ecb81' : '#f6465d';
                     el.innerText = (isUp ? '+' : '') + t.change_24h + '%';
                 });
@@ -373,12 +378,12 @@ function renderMarketHUD(stats) {
     }
 
     // =======================================================
-    // 2. CHUẨN BỊ LOGIC DỮ LIỆU CHUNG
+    // 2. CHUẨN BỊ LOGIC DỮ LIỆU CHUNG (CHỐNG NaN)
     // =======================================================
     const formatNumK = (num) => {
         if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
         if(num >= 1000) return (num/1000).toFixed(0) + 'K';
-        return num;
+        return num || 0;
     };
 
     let updateTime = "Waiting...";
@@ -399,14 +404,18 @@ function renderMarketHUD(stats) {
     const maxVolRolling = top10Rolling[0] ? (top10Rolling[0].volume.rolling_24h || 1) : 1;
     const volTop10Sum = top10Rolling.reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
     const totalRolling = stats.alphaRolling24h || 1;
-    let domPct = Math.min(100, Math.max(0, (volTop10Sum / totalRolling) * 100));
+    
+    let domPct = totalRolling > 0 ? (volTop10Sum / totalRolling) * 100 : 0;
+    domPct = Math.min(100, Math.max(0, domPct)) || 0;
 
     let dailyTokens = [...stats.topVolTokens].sort((a, b) => (b.volume.daily_total || 0) - (a.volume.daily_total || 0));
     const top10Daily = dailyTokens.slice(0, 10);
     const maxVolDaily = top10Daily[0] ? (top10Daily[0].volume.daily_total || 1) : 1;
     const volDailyTop10Sum = top10Daily.reduce((sum, t) => sum + (t.volume.daily_total || 0), 0);
     const totalDaily = stats.alphaDailyTotal || 1;
-    let dailyDomPct = Math.min(100, Math.max(0, (volDailyTop10Sum / totalDaily) * 100));
+    
+    let dailyDomPct = totalDaily > 0 ? (volDailyTop10Sum / totalDaily) * 100 : 0;
+    dailyDomPct = Math.min(100, Math.max(0, dailyDomPct)) || 0;
 
     let validForTrend = allTokens.filter(t => !t.offline && t.price > 0 && !(t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'))));
     let topGainers = [...validForTrend].sort((a, b) => b.change_24h - a.change_24h).slice(0, 3);
@@ -435,11 +444,13 @@ function renderMarketHUD(stats) {
 
         if (type === 'ROLLING') {
             volDisplay = t.volume.rolling_24h || 0;
-            pctWidth = Math.min(100, Math.max(0, (volDisplay / maxVolRolling) * 100));
+            pctWidth = maxVolRolling > 0 ? (volDisplay / maxVolRolling) * 100 : 0;
+            pctWidth = Math.min(100, Math.max(0, pctWidth)) || 0;
             barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#5E6673;"></div>`;
         } else {
             volDisplay = t.volume.daily_total || 0;
-            pctWidth = Math.min(100, Math.max(0, (volDisplay / maxVolDaily) * 100));
+            pctWidth = maxVolDaily > 0 ? (volDisplay / maxVolDaily) * 100 : 0;
+            pctWidth = Math.min(100, Math.max(0, pctWidth)) || 0;
             const pLimit = volDisplay > 0 ? ((t.volume.daily_limit || 0) / volDisplay) * 100 : 0;
             const pChain = volDisplay > 0 ? ((t.volume.daily_onchain || 0) / volDisplay) * 100 : 0;
             barHtml = `<div style="width:100%; height:100%; display:flex; border-radius: 0 3px 3px 0; overflow:hidden;">
@@ -462,7 +473,7 @@ function renderMarketHUD(stats) {
     const d = stats.distribList;
     const drawSentBar = (listTokens, label, colorClass) => {
         const count = listTokens.length;
-        let h = (count / stats.maxDistribCount) * 100; 
+        let h = stats.maxDistribCount > 0 ? (count / stats.maxDistribCount) * 100 : 0; 
         if (count > 0 && h < 5) h = 5;
         const tokensStr = listTokens.join(', '); 
         return `
@@ -474,7 +485,7 @@ function renderMarketHUD(stats) {
     };
 
     // =======================================================
-    // 3. TẠO KHUNG HUD HOẶC CẬP NHẬT CHỈ SỐ (PINPOINT UPDATE)
+    // 3. TẠO KHUNG HUD CỐ ĐỊNH 1 LẦN DUY NHẤT
     // =======================================================
     let hud = document.getElementById('market-hud');
     if (!hud) {
@@ -482,7 +493,6 @@ function renderMarketHUD(stats) {
         hud.id = 'market-hud';
         hud.className = 'market-hud-container';
         
-        // TẠO BỘ XƯƠNG CỐ ĐỊNH 1 LẦN DUY NHẤT
         hud.innerHTML = `
             <div class="hud-card">
                 <div class="hud-title" style="margin-bottom:0px">MARKET LIFECYCLE</div>
@@ -544,32 +554,45 @@ function renderMarketHUD(stats) {
                 <div id="hud-daily-list" class="hud-list-container"></div>
             </div>
         `;
-        marqueeContainer.after(hud);
+        
+        if (marqueeContainer) {
+            marqueeContainer.after(hud);
+        } else {
+            container.insertBefore(hud, container.firstChild);
+        }
     }
 
-    // TIÊM MÁU VÀO XƯƠNG (CHỈ THAY ĐỔI CÁC CON SỐ THAY ĐỔI)
+    // =======================================================
+    // 4. TIÊM MÁU VÀO XƯƠNG (CHỈ THAY CON SỐ BÊN TRONG)
+    // =======================================================
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
 
-    document.getElementById('hud-update-time').innerText = updateTime;
-    document.getElementById('hud-total-scan').innerText = (stats.countActive + stats.countSpot + stats.countDelisted);
+    // Hàm set an toàn chống crash nếu Element lỡ bị mất
+    const safeSet = (id, html, isText=false) => {
+        let el = document.getElementById(id);
+        if (el) { if (isText) el.innerText = html; else el.innerHTML = html; }
+    };
+
+    safeSet('hud-update-time', updateTime, true);
+    safeSet('hud-total-scan', (stats.countActive + stats.countSpot + stats.countDelisted), true);
     
-    document.getElementById('hud-lifecycle-bar').innerHTML = `
+    safeSet('hud-lifecycle-bar', `
         <div style="width:${pctActive}%; background:#0ecb81; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${pctActive > 5 ? `${stats.countActive} LIVE` : ''}</div>
         <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">${pctSpot > 5 ? `${stats.countSpot} SPOT` : ''}</div>
         <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">${pctDelist > 5 ? `${stats.countDelisted} DEAD` : ''}</div>
-    `;
+    `);
 
-    document.getElementById('hud-losers-count').innerText = stats.losers;
-    document.getElementById('hud-gainers-count').innerText = stats.gainers;
+    safeSet('hud-losers-count', stats.losers, true);
+    safeSet('hud-gainers-count', stats.gainers, true);
     
-    document.getElementById('hud-trend-grid').innerHTML = `
+    safeSet('hud-trend-grid', `
         <div class="trend-col">${topLosers.map(t => renderTrendItem(t, 'lose')).join('')}</div>
         <div class="trend-col">${topGainers.map(t => renderTrendItem(t, 'gain')).join('')}</div>
-    `;
+    `);
 
-    document.getElementById('hud-distrib-container').innerHTML = `
+    safeSet('hud-distrib-container', `
         <div class="distrib-side red">
             ${drawSentBar(d.down_8, '>8%', 'bg-red-5')} ${drawSentBar(d.down_6_8, '6-8%', 'bg-red-4')}
             ${drawSentBar(d.down_4_6, '4-6%', 'bg-red-3')} ${drawSentBar(d.down_2_4, '2-4%', 'bg-red-2')} ${drawSentBar(d.down_0_2, '0-2%', 'bg-red-1')}
@@ -578,19 +601,19 @@ function renderMarketHUD(stats) {
             ${drawSentBar(d.up_0_2, '0-2%', 'bg-green-1')} ${drawSentBar(d.up_2_4, '2-4%', 'bg-green-2')}
             ${drawSentBar(d.up_4_6, '4-6%', 'bg-green-3')} ${drawSentBar(d.up_6_8, '6-8%', 'bg-green-4')} ${drawSentBar(d.up_8, '>8%', 'bg-green-5')}
         </div>
-    `;
+    `);
 
-    document.getElementById('hud-rolling-total').innerText = '$' + formatNum(stats.alphaRolling24h);
-    document.getElementById('hud-rolling-dom-bar').style.width = domPct + '%';
-    document.getElementById('hud-rolling-dom-txt').innerText = domPct.toFixed(0) + '%';
-    document.getElementById('hud-rolling-list').innerHTML = top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join('');
+    safeSet('hud-rolling-total', '$' + formatNum(stats.alphaRolling24h), true);
+    let rb = document.getElementById('hud-rolling-dom-bar'); if(rb) rb.style.width = domPct + '%';
+    safeSet('hud-rolling-dom-txt', domPct.toFixed(0) + '%', true);
+    safeSet('hud-rolling-list', top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join(''));
 
-    document.getElementById('hud-daily-total').innerText = '$' + formatNum(stats.alphaDailyTotal);
-    document.getElementById('hud-daily-dom-bar').style.width = dailyDomPct + '%';
-    document.getElementById('hud-daily-dom-txt').innerText = dailyDomPct.toFixed(0) + '%';
-    document.getElementById('hud-daily-limit').innerText = formatNumK(stats.alphaDailyLimit);
-    document.getElementById('hud-daily-chain').innerText = formatNumK(stats.alphaDailyChain);
-    document.getElementById('hud-daily-list').innerHTML = top10Daily.map((t, i) => renderRow(t, i+1, 'DAILY')).join('');
+    safeSet('hud-daily-total', '$' + formatNum(stats.alphaDailyTotal), true);
+    let db = document.getElementById('hud-daily-dom-bar'); if(db) db.style.width = dailyDomPct + '%';
+    safeSet('hud-daily-dom-txt', dailyDomPct.toFixed(0) + '%', true);
+    safeSet('hud-daily-limit', formatNumK(stats.alphaDailyLimit), true);
+    safeSet('hud-daily-chain', formatNumK(stats.alphaDailyChain), true);
+    safeSet('hud-daily-list', top10Daily.map((t, i) => renderRow(t, i+1, 'DAILY')).join(''));
 }
 
 window.showTooltip = function(e, el) {
@@ -1207,3 +1230,4 @@ window.updateAlphaMarketUI = function(serverData) {
         renderMarketHUD(freshStats); 
         updateSummary(); 
     }
+};
