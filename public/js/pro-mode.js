@@ -330,41 +330,56 @@ function renderMarketHUD(stats) {
     if (!view || !view.querySelector('.alpha-container')) return;
     const container = view.querySelector('.alpha-container'); 
     
-    // --- 1. RENDER MARQUEE TICKER CHO RWA ---
+    // =======================================================
+    // 1. MARQUEE TICKER CHO RWA (CHỈ CẬP NHẬT SỐ, KHÔNG RESET)
+    // =======================================================
     let rwaTokens = allTokens.filter(t => t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on')));
     rwaTokens.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
     
     let marqueeContainer = document.getElementById('rwa-marquee-container');
-    if (marqueeContainer && rwaTokens.length > 0 && !marqueeContainer.innerHTML.includes('rwa-marquee-wrapper')) {
-        let marqueeItems = rwaTokens.map(t => {
-            let isUp = (t.change_24h || 0) >= 0;
-            let color = isUp ? '#0ecb81' : '#f6465d';
-            let sign = isUp ? '+' : '';
-            return `<div class="rwa-item" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
-                <img src="${t.icon || 'assets/tokens/default.png'}" style="width:18px;height:18px;border-radius:50%; border:1px solid #444;">
-                <span class="text-white fw-bold">${t.symbol}</span>
-                <span style="color:#eaecef">$${formatPrice(t.price)}</span>
-                <span style="color:${color}">${sign}${t.change_24h}%</span>
+    if (marqueeContainer && rwaTokens.length > 0) {
+        if (!document.getElementById('rwa-marquee-wrapper')) {
+            // TẠO LẦN ĐẦU TIÊN
+            let marqueeItems = rwaTokens.map(t => {
+                let isUp = (t.change_24h || 0) >= 0;
+                let color = isUp ? '#0ecb81' : '#f6465d';
+                let sign = isUp ? '+' : '';
+                return `<div class="rwa-item" onclick="window.pluginCopy('${t.contract}')" title="Copy Contract">
+                    <img src="${t.icon || 'assets/tokens/default.png'}" style="width:18px;height:18px;border-radius:50%; border:1px solid #444;">
+                    <span class="text-white fw-bold">${t.symbol}</span>
+                    <span class="rwa-p-${t.symbol}" style="color:#eaecef">$${formatPrice(t.price)}</span>
+                    <span class="rwa-c-${t.symbol}" style="color:${color}">${sign}${t.change_24h}%</span>
+                </div>`;
+            }).join('<span class="text-secondary mx-3">|</span>');
+
+            marqueeContainer.innerHTML = `
+            <div id="rwa-marquee-wrapper" class="rwa-marquee-wrapper">
+                <div class="rwa-marquee-label"><i class="fas fa-chart-line me-1"></i> RWA STOCKS</div>
+                <div class="rwa-marquee-content">
+                    ${marqueeItems} <span class="text-secondary mx-3">|</span> ${marqueeItems}
+                </div>
             </div>`;
-        }).join('<span class="text-secondary mx-3">|</span>');
-
-        marqueeContainer.innerHTML = `
-        <div class="rwa-marquee-wrapper">
-            <div class="rwa-marquee-label"><i class="fas fa-chart-line me-1"></i> RWA STOCKS</div>
-            <div class="rwa-marquee-content">
-                ${marqueeItems} <span class="text-secondary mx-3">|</span> ${marqueeItems}
-            </div>
-        </div>`;
+        } else {
+            // CHỈ CẬP NHẬT SỐ BẰNG CÁCH GỌI CLASS (GIỮ NGUYÊN HOẠT ẢNH CHẠY CHỮ)
+            rwaTokens.forEach(t => {
+                let isUp = (t.change_24h || 0) >= 0;
+                document.querySelectorAll(`.rwa-p-${t.symbol}`).forEach(el => el.innerText = '$' + formatPrice(t.price));
+                document.querySelectorAll(`.rwa-c-${t.symbol}`).forEach(el => {
+                    el.style.color = isUp ? '#0ecb81' : '#f6465d';
+                    el.innerText = (isUp ? '+' : '') + t.change_24h + '%';
+                });
+            });
+        }
     }
 
-    // --- 2. RENDER HUD THƯỜNG ---
-    let hud = document.getElementById('market-hud');
-    if (!hud) {
-        hud = document.createElement('div');
-        hud.id = 'market-hud';
-        hud.className = 'market-hud-container';
-        marqueeContainer.after(hud);
-    }
+    // =======================================================
+    // 2. CHUẨN BỊ LOGIC DỮ LIỆU CHUNG
+    // =======================================================
+    const formatNumK = (num) => {
+        if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
+        if(num >= 1000) return (num/1000).toFixed(0) + 'K';
+        return num;
+    };
 
     let updateTime = "Waiting...";
     const timeEl = document.getElementById('last-updated');
@@ -374,7 +389,6 @@ function renderMarketHUD(stats) {
         updateTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Top 10 đã được lọc sạch RWA từ hàm calculateMarketStats
     let activeTokens = allTokens.filter(t => {
         const s = getTokenStatus(t);
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
@@ -383,26 +397,16 @@ function renderMarketHUD(stats) {
     activeTokens.sort((a, b) => (b.volume.rolling_24h || 0) - (a.volume.rolling_24h || 0));
     const top10Rolling = activeTokens.slice(0, 10);
     const maxVolRolling = top10Rolling[0] ? (top10Rolling[0].volume.rolling_24h || 1) : 1;
-    
     const volTop10Sum = top10Rolling.reduce((sum, t) => sum + (t.volume.rolling_24h || 0), 0);
     const totalRolling = stats.alphaRolling24h || 1;
-    let domPct = (volTop10Sum / totalRolling) * 100;
-    domPct = Math.min(100, Math.max(0, domPct));
+    let domPct = Math.min(100, Math.max(0, (volTop10Sum / totalRolling) * 100));
 
     let dailyTokens = [...stats.topVolTokens].sort((a, b) => (b.volume.daily_total || 0) - (a.volume.daily_total || 0));
     const top10Daily = dailyTokens.slice(0, 10);
     const maxVolDaily = top10Daily[0] ? (top10Daily[0].volume.daily_total || 1) : 1;
-
     const volDailyTop10Sum = top10Daily.reduce((sum, t) => sum + (t.volume.daily_total || 0), 0);
     const totalDaily = stats.alphaDailyTotal || 1;
-    let dailyDomPct = (volDailyTop10Sum / totalDaily) * 100;
-    dailyDomPct = Math.min(100, Math.max(0, dailyDomPct));
-
-    const formatNumK = (num) => {
-        if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
-        if(num >= 1000) return (num/1000).toFixed(0) + 'K';
-        return num;
-    };
+    let dailyDomPct = Math.min(100, Math.max(0, (volDailyTop10Sum / totalDaily) * 100));
 
     let validForTrend = allTokens.filter(t => !t.offline && t.price > 0 && !(t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'))));
     let topGainers = [...validForTrend].sort((a, b) => b.change_24h - a.change_24h).slice(0, 3);
@@ -414,10 +418,7 @@ function renderMarketHUD(stats) {
         const arrow = type === 'gain' ? '▲' : '▼';
         return `
             <div class="trend-item">
-                <div class="trend-symbol">
-                    <img src="${t.icon || 'assets/tokens/default.png'}" onerror="this.src='assets/tokens/default.png'">
-                    <span>${t.symbol}</span>
-                </div>
+                <div class="trend-symbol"><img src="${t.icon || 'assets/tokens/default.png'}" onerror="this.src='assets/tokens/default.png'"><span>${t.symbol}</span></div>
                 <div class="trend-info">
                     <div class="trend-price">$${formatPrice(t.price)}</div>
                     <div class="trend-chg ${colorClass}">${arrow}${Math.abs(t.change_24h)}%</div>
@@ -428,46 +429,24 @@ function renderMarketHUD(stats) {
 
     const renderRow = (t, idx, type) => {
         if (!t) return '';
-        
-        let barHtml = '';
-        let volDisplay = 0;
-        let pctWidth = 0;
-        
-        const dataAttrs = `
-            data-symbol="${t.symbol}"
-            data-total="${formatNum(t.volume.daily_total)}"
-            data-limit="${formatNum(t.volume.daily_limit)}"
-            data-chain="${formatNum(t.volume.daily_onchain)}"
-        `;
-        
-        const tooltipEvents = `
-            onmouseenter="window.showTooltip(event, this)" 
-            onmousemove="window.moveTooltip(event)" 
-            onmouseleave="window.hideTooltip()"
-        `;
+        let barHtml = '', volDisplay = 0, pctWidth = 0;
+        const dataAttrs = `data-symbol="${t.symbol}" data-total="${formatNum(t.volume.daily_total)}" data-limit="${formatNum(t.volume.daily_limit)}" data-chain="${formatNum(t.volume.daily_onchain)}"`;
+        const tooltipEvents = `onmouseenter="window.showTooltip(event, this)" onmousemove="window.moveTooltip(event)" onmouseleave="window.hideTooltip()"`;
 
         if (type === 'ROLLING') {
             volDisplay = t.volume.rolling_24h || 0;
-            pctWidth = (volDisplay / maxVolRolling) * 100;
-            pctWidth = Math.min(100, Math.max(0, pctWidth));
+            pctWidth = Math.min(100, Math.max(0, (volDisplay / maxVolRolling) * 100));
             barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#5E6673;"></div>`;
         } else {
             volDisplay = t.volume.daily_total || 0;
-            pctWidth = (volDisplay / maxVolDaily) * 100;
-            pctWidth = Math.min(100, Math.max(0, pctWidth));
-            const vLimit = t.volume.daily_limit || 0;
-            const vChain = t.volume.daily_onchain || 0;
-            const pLimit = volDisplay > 0 ? (vLimit / volDisplay) * 100 : 0;
-            const pChain = volDisplay > 0 ? (vChain / volDisplay) * 100 : 0;
-            
-            barHtml = `
-                <div style="width:100%; height:100%; display:flex; border-radius: 0 3px 3px 0; overflow:hidden;">
+            pctWidth = Math.min(100, Math.max(0, (volDisplay / maxVolDaily) * 100));
+            const pLimit = volDisplay > 0 ? ((t.volume.daily_limit || 0) / volDisplay) * 100 : 0;
+            const pChain = volDisplay > 0 ? ((t.volume.daily_onchain || 0) / volDisplay) * 100 : 0;
+            barHtml = `<div style="width:100%; height:100%; display:flex; border-radius: 0 3px 3px 0; overflow:hidden;">
                     <div style="width:${pLimit}%; height:100%; background:#F0B90B;"></div>
                     <div style="width:${pChain}%; height:100%; background:#9945FF;"></div>
-                </div>
-            `;
+                </div>`;
         }
-
         return `
             <div class="hud-list-row" ${dataAttrs} ${tooltipEvents} style="cursor:pointer">
                 <div class="hud-list-idx">#${idx}</div>
@@ -486,144 +465,132 @@ function renderMarketHUD(stats) {
         let h = (count / stats.maxDistribCount) * 100; 
         if (count > 0 && h < 5) h = 5;
         const tokensStr = listTokens.join(', '); 
-        
         return `
-            <div class="distrib-bar-item" 
-                 onclick="window.showListTooltip(event, '${label}', '${tokensStr}')"
-                 onmouseenter="window.showListTooltip(event, '${label}', '${tokensStr}')"
-                 onmouseleave="window.hideTooltip()">
+            <div class="distrib-bar-item" onclick="window.showListTooltip(event, '${label}', '${tokensStr}')" onmouseenter="window.showListTooltip(event, '${label}', '${tokensStr}')" onmouseleave="window.hideTooltip()">
                  ${count > 0 ? `<div style="font-size:8px; font-weight:bold; color:#fff; margin-bottom:2px; text-align:center; width:100%">${count}</div>` : ''}
                  <div style="width:100%; height:${h}%; border-radius:1px;" class="${colorClass}"></div>
             </div>
         `;
     };
 
+    // =======================================================
+    // 3. TẠO KHUNG HUD HOẶC CẬP NHẬT CHỈ SỐ (PINPOINT UPDATE)
+    // =======================================================
+    let hud = document.getElementById('market-hud');
+    if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'market-hud';
+        hud.className = 'market-hud-container';
+        
+        // TẠO BỘ XƯƠNG CỐ ĐỊNH 1 LẦN DUY NHẤT
+        hud.innerHTML = `
+            <div class="hud-card">
+                <div class="hud-title" style="margin-bottom:0px">MARKET LIFECYCLE</div>
+                <div style="font-family:var(--font-num); font-size:20px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:baseline; gap:4px;">
+                    <span id="hud-total-scan">0</span> 
+                    <span style="font-size:11px; color:#5E6673; font-weight:600; font-family:var(--font-main);">Crypto Tokens</span>
+                </div>
+                <div id="hud-lifecycle-bar" style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; margin-bottom:12px; margin-top:5px; font-family:var(--font-num); font-weight:700; font-size:11px; letter-spacing:0.5px;"></div>
+                <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:2px;">24H PRICE ACTION</div>
+                <div id="hud-trend-grid" class="trend-grid-inner"></div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700; margin-bottom:8px; font-family:var(--font-num);">
+                    <div style="color:#f6465d">▼ <span id="hud-losers-count">0</span> LOSERS</div>
+                    <div style="color:#0ecb81"><span id="hud-gainers-count">0</span> GAINERS ▲</div>
+                </div>
+                <div id="hud-distrib-container" class="distrib-container"></div>
+                <div class="distrib-label-row">
+                    <div class="distrib-label-side red"><div class="distrib-label">>8%</div><div class="distrib-label">6-8%</div><div class="distrib-label">4-6%</div><div class="distrib-label">2-4%</div><div class="distrib-label">0-2%</div></div>
+                    <div class="distrib-label-side green"><div class="distrib-label">0-2%</div><div class="distrib-label">2-4%</div><div class="distrib-label">4-6%</div><div class="distrib-label">6-8%</div><div class="distrib-label">>8%</div></div>
+                </div>
+            </div>
+
+            <div class="hud-card">
+                <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
+                    <div>ROLLING VOL 24H <span class="excl-rwa-badge">Excl. RWA</span></div>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
+                    <div id="hud-rolling-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
+                    <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                    <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
+                        <div id="hud-rolling-dom-bar" style="width:0%; height:100%; background:#eaecef; border-radius:2px;"></div>
+                    </div>
+                    <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span id="hud-rolling-dom-txt" style="color:#fff">0%</span></div>
+                </div>
+                <div class="hud-sub-stat-row spacer"></div>
+                <div id="hud-rolling-list" class="hud-list-container"></div>
+            </div>
+
+            <div class="hud-card">
+                <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
+                    <div>DAILY VOL (UTC) <span class="excl-rwa-badge">Excl. RWA</span></div>
+                    <span id="hud-update-time" class="update-badge">Waiting...</span>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
+                    <div id="hud-daily-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
+                    <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
+                </div>
+                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+                    <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
+                        <div id="hud-daily-dom-bar" style="width:0%; height:100%; background:#eaecef; border-radius:2px;"></div>
+                    </div>
+                    <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span id="hud-daily-dom-txt" style="color:#fff">0%</span></div>
+                </div>
+                <div class="hud-sub-stat-row">
+                    <div style="color:#F0B90B;">● LIMIT: $<span id="hud-daily-limit">0</span></div>
+                    <div style="color:#9945FF;">● CHAIN: $<span id="hud-daily-chain">0</span></div>
+                </div>
+                <div id="hud-daily-list" class="hud-list-container"></div>
+            </div>
+        `;
+        marqueeContainer.after(hud);
+    }
+
+    // TIÊM MÁU VÀO XƯƠNG (CHỈ THAY ĐỔI CÁC CON SỐ THAY ĐỔI)
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
 
-    hud.innerHTML = `
-        <div class="hud-card">
-            <div class="hud-title" style="margin-bottom:0px">MARKET LIFECYCLE</div>
-            
-            <div style="font-family:var(--font-num); font-size:20px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:baseline; gap:4px;">
-                ${stats.countActive + stats.countSpot + stats.countDelisted} 
-                <span style="font-size:11px; color:#5E6673; font-weight:600; font-family:var(--font-main);">Crypto Tokens</span>
-            </div>
-            
-            <div style="display:flex; width:100%; height:24px; background:#1e2329; border-radius:4px; overflow:hidden; margin-bottom:12px; margin-top:5px; font-family:var(--font-num); font-weight:700; font-size:11px; letter-spacing:0.5px;">
-                <div style="width:${pctActive}%; background:#0ecb81; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">
-                    ${pctActive > 5 ? `${stats.countActive} LIVE` : ''} 
-                </div>
-                <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">
-                    ${pctSpot > 5 ? `${stats.countSpot} SPOT` : ''}
-                </div>
-                <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">
-                    ${pctDelist > 5 ? `${stats.countDelisted} DEAD` : ''}
-                </div>
-            </div>
+    document.getElementById('hud-update-time').innerText = updateTime;
+    document.getElementById('hud-total-scan').innerText = (stats.countActive + stats.countSpot + stats.countDelisted);
+    
+    document.getElementById('hud-lifecycle-bar').innerHTML = `
+        <div style="width:${pctActive}%; background:#0ecb81; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden;">${pctActive > 5 ? `${stats.countActive} LIVE` : ''}</div>
+        <div style="width:${pctSpot}%; background:#F0B90B; color:#000; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">${pctSpot > 5 ? `${stats.countSpot} SPOT` : ''}</div>
+        <div style="width:${pctDelist}%; background:#f6465d; color:#fff; display:flex; align-items:center; justify-content:center; white-space:nowrap; overflow:hidden; border-left:1px solid rgba(0,0,0,0.1);">${pctDelist > 5 ? `${stats.countDelisted} DEAD` : ''}</div>
+    `;
 
-            <div class="hud-title" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-bottom:2px;">
-                24H PRICE ACTION
-            </div>
-            
-            <div class="trend-grid-inner">
-                <div class="trend-col">
-                    ${topLosers.map(t => renderTrendItem(t, 'lose')).join('')}
-                </div>
-                <div class="trend-col">
-                    ${topGainers.map(t => renderTrendItem(t, 'gain')).join('')}
-                </div>
-            </div>
+    document.getElementById('hud-losers-count').innerText = stats.losers;
+    document.getElementById('hud-gainers-count').innerText = stats.gainers;
+    
+    document.getElementById('hud-trend-grid').innerHTML = `
+        <div class="trend-col">${topLosers.map(t => renderTrendItem(t, 'lose')).join('')}</div>
+        <div class="trend-col">${topGainers.map(t => renderTrendItem(t, 'gain')).join('')}</div>
+    `;
 
-            <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700; margin-bottom:8px; font-family:var(--font-num);">
-                <div style="color:#f6465d">▼ ${stats.losers} LOSERS</div>
-                <div style="color:#0ecb81">${stats.gainers} GAINERS ▲</div>
-            </div>
-
-            <div class="distrib-container">
-                <div class="distrib-side red">
-                    ${drawSentBar(d.down_8, '>8%', 'bg-red-5')}
-                    ${drawSentBar(d.down_6_8, '6-8%', 'bg-red-4')}
-                    ${drawSentBar(d.down_4_6, '4-6%', 'bg-red-3')}
-                    ${drawSentBar(d.down_2_4, '2-4%', 'bg-red-2')}
-                    ${drawSentBar(d.down_0_2, '0-2%', 'bg-red-1')}
-                </div>
-                <div class="distrib-side green">
-                    ${drawSentBar(d.up_0_2, '0-2%', 'bg-green-1')}
-                    ${drawSentBar(d.up_2_4, '2-4%', 'bg-green-2')}
-                    ${drawSentBar(d.up_4_6, '4-6%', 'bg-green-3')}
-                    ${drawSentBar(d.up_6_8, '6-8%', 'bg-green-4')}
-                    ${drawSentBar(d.up_8, '>8%', 'bg-green-5')}
-                </div>
-            </div>
-            
-            <div class="distrib-label-row">
-                <div class="distrib-label-side red">
-                    <div class="distrib-label">>8%</div>
-                    <div class="distrib-label">6-8%</div>
-                    <div class="distrib-label">4-6%</div>
-                    <div class="distrib-label">2-4%</div>
-                    <div class="distrib-label">0-2%</div>
-                </div>
-                <div class="distrib-label-side green">
-                    <div class="distrib-label">0-2%</div>
-                    <div class="distrib-label">2-4%</div>
-                    <div class="distrib-label">4-6%</div>
-                    <div class="distrib-label">6-8%</div>
-                    <div class="distrib-label">>8%</div>
-                </div>
-            </div>
+    document.getElementById('hud-distrib-container').innerHTML = `
+        <div class="distrib-side red">
+            ${drawSentBar(d.down_8, '>8%', 'bg-red-5')} ${drawSentBar(d.down_6_8, '6-8%', 'bg-red-4')}
+            ${drawSentBar(d.down_4_6, '4-6%', 'bg-red-3')} ${drawSentBar(d.down_2_4, '2-4%', 'bg-red-2')} ${drawSentBar(d.down_0_2, '0-2%', 'bg-red-1')}
         </div>
-
-        <div class="hud-card">
-            <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
-                <div>ROLLING VOL 24H <span class="excl-rwa-badge">Excl. RWA</span></div>
-            </div>
-            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
-                <div class="hud-main-value" style="font-size:22px; color:#eaecef;">$${formatNum(stats.alphaRolling24h)}</div>
-                <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
-                <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
-                    <div style="width:${domPct}%; height:100%; background:#eaecef; border-radius:2px;"></div>
-                </div>
-                <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span style="color:#fff">${domPct.toFixed(0)}%</span></div>
-            </div>
-            
-            <div class="hud-sub-stat-row spacer"></div>
-
-            <div class="hud-list-container">
-                ${top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join('')}
-            </div>
-        </div>
-
-        <div class="hud-card">
-            <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
-                <div>DAILY VOL (UTC) <span class="excl-rwa-badge">Excl. RWA</span></div>
-                <span class="update-badge">${lastDataUpdateTime}</span>
-            </div>
-            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
-                <div class="hud-main-value" style="font-size:22px; color:#eaecef;">$${formatNum(stats.alphaDailyTotal)}</div>
-                <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
-            </div>
-             <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
-                <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
-                    <div style="width:${dailyDomPct}%; height:100%; background:#eaecef; border-radius:2px;"></div>
-                </div>
-                <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span style="color:#fff">${dailyDomPct.toFixed(0)}%</span></div>
-            </div>
-            
-            <div class="hud-sub-stat-row">
-                <div style="color:#F0B90B;">● LIMIT: $${formatNumK(stats.alphaDailyLimit)}</div>
-                <div style="color:#9945FF;">● CHAIN: $${formatNumK(stats.alphaDailyChain)}</div>
-            </div>
-
-            <div class="hud-list-container">
-                ${top10Daily.map((t, i) => renderRow(t, i+1, 'DAILY')).join('')}
-            </div>
+        <div class="distrib-side green">
+            ${drawSentBar(d.up_0_2, '0-2%', 'bg-green-1')} ${drawSentBar(d.up_2_4, '2-4%', 'bg-green-2')}
+            ${drawSentBar(d.up_4_6, '4-6%', 'bg-green-3')} ${drawSentBar(d.up_6_8, '6-8%', 'bg-green-4')} ${drawSentBar(d.up_8, '>8%', 'bg-green-5')}
         </div>
     `;
+
+    document.getElementById('hud-rolling-total').innerText = '$' + formatNum(stats.alphaRolling24h);
+    document.getElementById('hud-rolling-dom-bar').style.width = domPct + '%';
+    document.getElementById('hud-rolling-dom-txt').innerText = domPct.toFixed(0) + '%';
+    document.getElementById('hud-rolling-list').innerHTML = top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join('');
+
+    document.getElementById('hud-daily-total').innerText = '$' + formatNum(stats.alphaDailyTotal);
+    document.getElementById('hud-daily-dom-bar').style.width = dailyDomPct + '%';
+    document.getElementById('hud-daily-dom-txt').innerText = dailyDomPct.toFixed(0) + '%';
+    document.getElementById('hud-daily-limit').innerText = formatNumK(stats.alphaDailyLimit);
+    document.getElementById('hud-daily-chain').innerText = formatNumK(stats.alphaDailyChain);
+    document.getElementById('hud-daily-list').innerHTML = top10Daily.map((t, i) => renderRow(t, i+1, 'DAILY')).join('');
 }
 
 window.showTooltip = function(e, el) {
@@ -1237,10 +1204,6 @@ window.updateAlphaMarketUI = function(serverData) {
 
     if (hasUpdates) {
         const freshStats = calculateMarketStats(allTokens);
+        renderMarketHUD(freshStats); 
         updateSummary(); 
-        
-        if (!window.lastHudUpdate || Date.now() - window.lastHudUpdate > 15000) {
-            renderMarketHUD(freshStats);
-            window.lastHudUpdate = Date.now();
-        }
     }
