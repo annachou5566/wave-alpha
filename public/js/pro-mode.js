@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         style.innerHTML = `
             .rwa-marquee-wrapper { background: #111418; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0; overflow: hidden; white-space: nowrap; position: relative; display: flex; align-items: center; font-family: var(--font-num), sans-serif; font-size: 0.85rem; margin-bottom: 15px; border-radius: 4px; border: 1px solid rgba(240, 185, 11, 0.2);}
             .rwa-marquee-label { background: #F0B90B; color: #000; font-weight: 800; padding: 3px 12px; border-radius: 4px; margin-left: 10px; margin-right: 15px; z-index: 2; box-shadow: 2px 0 10px rgba(0,0,0,0.8); display:flex; align-items:center; }
-            .rwa-marquee-content { display: inline-block; animation: marquee 30s linear infinite; }
+            .rwa-marquee-content { display: inline-block; animation: marquee 80s linear infinite; }
             .rwa-marquee-content:hover { animation-play-state: paused; }
             .rwa-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; padding: 2px 8px; border-radius: 4px; }
             .rwa-item:hover { background: rgba(255,255,255,0.1); }
@@ -335,7 +335,7 @@ function renderMarketHUD(stats) {
     rwaTokens.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
     
     let marqueeContainer = document.getElementById('rwa-marquee-container');
-    if (marqueeContainer && rwaTokens.length > 0) {
+    if (marqueeContainer && rwaTokens.length > 0 && !marqueeContainer.innerHTML.includes('rwa-marquee-wrapper')) {
         let marqueeItems = rwaTokens.map(t => {
             let isUp = (t.change_24h || 0) >= 0;
             let color = isUp ? '#0ecb81' : '#f6465d';
@@ -1237,7 +1237,10 @@ window.updateAlphaMarketUI = function(serverData) {
 
     if (hasUpdates) {
         const freshStats = calculateMarketStats(allTokens);
-        renderMarketHUD(freshStats);
         updateSummary(); 
+        
+        if (!window.lastHudUpdate || Date.now() - window.lastHudUpdate > 15000) {
+            renderMarketHUD(freshStats);
+            window.lastHudUpdate = Date.now();
+        }
     }
-};
