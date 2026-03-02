@@ -40,12 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
             .active-rwa { background: rgba(240, 185, 11, 0.15) !important; color: #F0B90B !important; border-color: #F0B90B !important; }
             .excl-rwa-badge { font-size:0.6rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; margin-left:8px; color:#aaa; font-weight:normal; letter-spacing:0; font-family:var(--font-main);}
             
-            /* CSS RIÊNG CHO BIỂU ĐỒ CHÌM BACKGROUND */
-            .daily-bg-chart { position: absolute; bottom: 0; right: 0; left: 0; height: 50%; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 10px; opacity: 0.12; pointer-events: none; z-index: 0; border-radius: 0 0 8px 8px;}
-            .daily-bg-bar { flex: 1; margin: 0 3px; border-radius: 3px 3px 0 0; transition: height 0.5s ease; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-            .daily-bg-bar.up { background: #0ecb81; }
-            .daily-bg-bar.down { background: #f6465d; }
-            .daily-bg-bar.today { background: #F0B90B; opacity: 1; border-top: 2px solid #fff; box-shadow: 0 0 15px rgba(240, 185, 11, 0.8); }
+            /* CSS CHO BIỂU ĐỒ 14 NGÀY Ở GIỮA */
+            .daily-mid-chart { display: flex; align-items: flex-end; justify-content: space-between; height: 65px; margin: 15px 0 10px 0; gap: 4px; }
+            .daily-mid-bar { flex: 1; border-radius: 3px 3px 0 0; position: relative; transition: all 0.2s ease; min-width: 8px;}
+            .daily-mid-bar.up { background: linear-gradient(to top, rgba(14,203,129,0.2), rgba(14,203,129,0.9)); border-top: 1px solid #0ecb81; }
+            .daily-mid-bar.down { background: linear-gradient(to top, rgba(246,70,93,0.2), rgba(246,70,93,0.9)); border-top: 1px solid #f6465d; }
+            .daily-mid-bar.today { background: linear-gradient(to top, rgba(240,185,11,0.2), #F0B90B); border-top: 2px solid #fff; box-shadow: 0 -2px 10px rgba(240,185,11,0.4); }
+            .daily-mid-bar:hover { filter: brightness(1.3); cursor: pointer; }
+            
+            /* HOVER TOOLTIP XỊN SÒ */
+            .chart-tooltip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #2b3139; color: #fff; padding: 4px 6px; font-size: 10px; font-family: var(--font-num); border-radius: 4px; white-space: nowrap; pointer-events: none; margin-bottom: 6px; z-index: 10; border: 1px solid #474d57; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+            .chart-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -4px; border-width: 4px; border-style: solid; border-color: #474d57 transparent transparent transparent; }
+            .daily-mid-bar:hover .chart-tooltip { display: block; }
+            
+            /* HIỆU ỨNG NHẤP NHÁY CHO TRẠM TRACKING */
+            @keyframes pulse-dot { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(14,203,129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0); } }
         `;
         document.head.appendChild(style);
     }
@@ -329,7 +338,7 @@ function renderMarketHUD(stats) {
     const container = view.querySelector('.alpha-container'); 
     
     // =======================================================
-    // 1. MARQUEE TICKER CHO RWA 
+    // 1. MARQUEE TICKER CHO RWA (CHỐNG CRASH CLASS NAME)
     // =======================================================
     let rwaTokens = allTokens.filter(t => t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on')));
     rwaTokens.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
@@ -434,6 +443,7 @@ function renderMarketHUD(stats) {
         `;
     };
 
+    // --- THIẾT KẾ TOP 10 NHỎ GỌN (COMPACT LIST) ---
     const renderRow = (t, idx, type) => {
         if (!t) return '';
         let barHtml = '', volDisplay = 0, pctWidth = 0;
@@ -444,25 +454,27 @@ function renderMarketHUD(stats) {
             volDisplay = t.volume.rolling_24h || 0;
             pctWidth = maxVolRolling > 0 ? (volDisplay / maxVolRolling) * 100 : 0;
             pctWidth = Math.min(100, Math.max(0, pctWidth)) || 0;
-            barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#5E6673;"></div>`;
+            barHtml = `<div class="hud-bar-fill" style="width:100%; height:100%; background:#5E6673; border-radius:2px;"></div>`;
         } else {
             volDisplay = t.volume.daily_total || 0;
             pctWidth = maxVolDaily > 0 ? (volDisplay / maxVolDaily) * 100 : 0;
             pctWidth = Math.min(100, Math.max(0, pctWidth)) || 0;
             const pLimit = volDisplay > 0 ? ((t.volume.daily_limit || 0) / volDisplay) * 100 : 0;
             const pChain = volDisplay > 0 ? ((t.volume.daily_onchain || 0) / volDisplay) * 100 : 0;
-            barHtml = `<div style="width:100%; height:100%; display:flex; border-radius: 0 3px 3px 0; overflow:hidden;">
+            barHtml = `<div style="width:100%; height:100%; display:flex; border-radius:2px; overflow:hidden;">
                     <div style="width:${pLimit}%; height:100%; background:#F0B90B;"></div>
                     <div style="width:${pChain}%; height:100%; background:#9945FF;"></div>
                 </div>`;
         }
+        
+        // CSS GỌN GÀNG HƠN: Height 6px cho bar, Padding 3px cho thẻ
         return `
-            <div class="hud-list-row" ${dataAttrs} ${tooltipEvents} style="cursor:pointer">
-                <div class="hud-list-idx">#${idx}</div>
-                <div class="hud-list-name" title="${t.symbol}">${t.symbol}</div>
-                <div class="hud-bar-wrapper">
-                    <div style="width:${pctWidth}%; height:15px;"> ${barHtml}</div>
-                    <div class="hud-list-val">$${formatNumK(volDisplay)}</div>
+            <div class="hud-list-row" ${dataAttrs} ${tooltipEvents} style="cursor:pointer; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.02);">
+                <div class="hud-list-idx" style="font-size: 10px;">#${idx}</div>
+                <div class="hud-list-name" title="${t.symbol}" style="font-size: 11px;">${t.symbol}</div>
+                <div class="hud-bar-wrapper" style="flex:1; display:flex; align-items:center; gap:8px;">
+                    <div style="width:${pctWidth}%; height:6px;"> ${barHtml}</div>
+                    <div class="hud-list-val" style="font-size: 11px; margin-left:auto;">$${formatNumK(volDisplay)}</div>
                 </div>
             </div>
         `;
@@ -482,11 +494,10 @@ function renderMarketHUD(stats) {
         `;
     };
 
-    // --- TÍNH TOÁN SO SÁNH HÔM QUA VÀ VẼ BACKGROUND CHART ---
+    // --- LOGIC BIỂU ĐỒ 14 NGÀY & HOVER TOOLTIP ---
     let volHistory = window.MARKET_VOL_HISTORY || [];
     let yRolling = volHistory.length > 0 ? (volHistory[volHistory.length - 1].rolling || 0) : 0;
     
-    // Thẻ Rolling: Tính % Xanh đỏ
     let rollingPctHtml = '<span style="color:#848e9c; font-weight:bold;">--</span>';
     if (yRolling > 0) {
         let rPct = ((stats.alphaRolling24h - yRolling) / yRolling) * 100;
@@ -495,28 +506,32 @@ function renderMarketHUD(stats) {
         rollingPctHtml = `<span style="color:${rColor}; font-weight:bold;">${rSign}${rPct.toFixed(2)}%</span>`;
     }
 
-    // Thẻ Daily: Chữ Tối giản và vẽ Biểu đồ chìm 7 ngày
     let yDaily = volHistory.length > 0 ? (volHistory[volHistory.length - 1].daily || 0) : 0;
     let yDailyText = yDaily > 0 ? `Yesterday: $${formatCompactNum(yDaily)}` : '--';
 
-    let chartData = [...volHistory].slice(-6); 
-    chartData.push({ date: 'Today', daily: stats.alphaDailyTotal });
+    let chartData = [...volHistory].slice(-13); // Lấy 13 ngày cũ
+    chartData.push({ date: 'Today', daily: stats.alphaDailyTotal }); // Thêm hôm nay là 14 ngày
     let maxDailyChart = Math.max(...chartData.map(d => d.daily || 0), 1);
     
-    let bgChartHtml = chartData.map((d, i) => {
+    let midChartHtml = chartData.map((d, i) => {
         let h = ((d.daily || 0) / maxDailyChart) * 100;
-        if(h < 3 && (d.daily || 0) > 0) h = 3; 
+        if(h < 5 && (d.daily || 0) > 0) h = 5; 
         
         let colorClass = 'up';
         if (i > 0 && (d.daily || 0) < (chartData[i-1].daily || 0)) colorClass = 'down';
         let isToday = (i === chartData.length - 1) ? 'today' : colorClass;
         
-        return `<div class="daily-bg-bar ${isToday}" style="height:${h}%"></div>`;
+        let dateLabel = d.date === 'Today' ? 'Hôm nay' : (d.date ? d.date.substring(5).replace('-','/') : '');
+        let volLabel = '$' + formatCompactNum(d.daily || 0);
+        
+        return `<div class="daily-mid-bar ${isToday}" style="height:${h}%">
+            <div class="chart-tooltip">${dateLabel}: ${volLabel}</div>
+        </div>`;
     }).join('');
 
 
     // =======================================================
-    // 3. TẠO KHUNG HUD CỐ ĐỊNH 1 LẦN DUY NHẤT (Có Z-Index cho Chart chìm)
+    // 3. TẠO KHUNG HUD CỐ ĐỊNH 1 LẦN DUY NHẤT (CẤU TRÚC PHÂN TẦNG VĨ MÔ)
     // =======================================================
     let hud = document.getElementById('market-hud');
     if (!hud) {
@@ -549,44 +564,53 @@ function renderMarketHUD(stats) {
                 <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
                     <div>ROLLING VOL 24H <span class="excl-rwa-badge">Excl. RWA</span></div>
                 </div>
-                <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
+                <div style="display:flex; align-items:baseline; gap:10px;">
                     <div id="hud-rolling-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
                     <div id="hud-rolling-pct" style="font-size:12px; color:#848e9c; font-weight:bold;" title="So với hôm qua">--</div>
                 </div>
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
+
+                <div style="height:65px; margin: 15px 0 10px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 80%); border-radius: 4px; border: 1px dashed rgba(255,255,255,0.05);">
+                    <div style="display:flex; align-items:center; gap:8px; color:#0ecb81; font-size:10px; font-weight:bold; letter-spacing:1px;">
+                        <span style="width:6px; height:6px; background:#0ecb81; border-radius:50%; box-shadow:0 0 8px #0ecb81; animation: pulse-dot 1.5s infinite;"></span>
+                        LIVE TRACKING
+                    </div>
+                    <div style="color:#5E6673; font-size:9px; margin-top:4px;">Rolling 24H Window</div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
                     <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
                         <div id="hud-rolling-dom-bar" style="width:0%; height:100%; background:#eaecef; border-radius:2px;"></div>
                     </div>
                     <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span id="hud-rolling-dom-txt" style="color:#fff">0%</span></div>
                 </div>
-                <div class="hud-sub-stat-row spacer"></div>
+                <div class="hud-sub-stat-row spacer" style="margin-bottom:8px;"></div>
                 <div id="hud-rolling-list" class="hud-list-container"></div>
             </div>
 
-            <div class="hud-card" style="position:relative; overflow:hidden;">
-                <div id="hud-bg-chart" class="daily-bg-chart"></div>
-                
-                <div style="position:relative; z-index:2;">
-                    <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
-                        <div>DAILY VOL (UTC) <span class="excl-rwa-badge">Excl. RWA</span></div>
-                        <span id="hud-update-time" class="update-badge">Waiting...</span>
-                    </div>
-                    <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
-                        <div id="hud-daily-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
-                        <div id="hud-daily-yesterday" style="font-size:12px; color:#848e9c; font-weight:bold;" title="So với hôm qua">--</div>
-                    </div>
-                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
-                        <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
-                            <div id="hud-daily-dom-bar" style="width:0%; height:100%; background:#eaecef; border-radius:2px;"></div>
-                        </div>
-                        <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span id="hud-daily-dom-txt" style="color:#fff">0%</span></div>
-                    </div>
-                    <div class="hud-sub-stat-row">
-                        <div style="color:#F0B90B;">● LIMIT: $<span id="hud-daily-limit">0</span></div>
-                        <div style="color:#9945FF;">● CHAIN: $<span id="hud-daily-chain">0</span></div>
-                    </div>
-                    <div id="hud-daily-list" class="hud-list-container" style="position:relative; z-index:2;"></div>
+            <div class="hud-card">
+                <div class="hud-title" style="display:flex; align-items:center; justify-content:space-between;">
+                    <div>DAILY VOL (UTC) <span class="excl-rwa-badge">Excl. RWA</span></div>
+                    <span id="hud-update-time" class="update-badge">Waiting...</span>
                 </div>
+                <div style="display:flex; align-items:baseline; gap:10px;">
+                    <div id="hud-daily-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
+                    <div id="hud-daily-yesterday" style="font-size:12px; color:#848e9c; font-weight:bold;" title="So với hôm qua">--</div>
+                </div>
+                 
+                <div id="hud-mid-chart" class="daily-mid-chart"></div>
+
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
+                        <div id="hud-daily-dom-bar" style="width:0%; height:100%; background:#eaecef; border-radius:2px;"></div>
+                    </div>
+                    <div style="font-size:9px; color:#848E9C; white-space:nowrap;">TOP 10: <span id="hud-daily-dom-txt" style="color:#fff">0%</span></div>
+                </div>
+                <div class="hud-sub-stat-row" style="margin-bottom:8px; font-size: 9px;">
+                    <div style="color:#F0B90B;">● LIMIT: $<span id="hud-daily-limit">0</span></div>
+                    <div style="color:#9945FF;">● CHAIN: $<span id="hud-daily-chain">0</span></div>
+                </div>
+                
+                <div id="hud-daily-list" class="hud-list-container"></div>
             </div>
         `;
         
@@ -644,10 +668,10 @@ function renderMarketHUD(stats) {
     safeSet('hud-rolling-dom-txt', domPct.toFixed(0) + '%', true);
     safeSet('hud-rolling-list', top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join(''));
 
-    // Gắn chỉ số cho thẻ DAILY VOL + BACKGROUND CHART
+    // Gắn chỉ số cho thẻ DAILY VOL + CHART 14 NGÀY
     safeSet('hud-daily-total', '$' + formatNum(stats.alphaDailyTotal), true);
     safeSet('hud-daily-yesterday', yDailyText, true);
-    safeSet('hud-bg-chart', bgChartHtml, false); // Bơm biểu đồ chìm vào làm nền
+    safeSet('hud-mid-chart', midChartHtml, false); // Bơm biểu đồ 14 ngày vào giữa
     let db = document.getElementById('hud-daily-dom-bar'); if(db) db.style.width = dailyDomPct + '%';
     safeSet('hud-daily-dom-txt', dailyDomPct.toFixed(0) + '%', true);
     safeSet('hud-daily-limit', formatNumK(stats.alphaDailyLimit), true);
