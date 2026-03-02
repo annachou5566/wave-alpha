@@ -383,6 +383,25 @@ function renderMarketHUD(stats) {
     // =======================================================
     // 2. CHUẨN BỊ LOGIC DỮ LIỆU CHUNG (CHỐNG NaN)
     // =======================================================
+    // --- TÍNH % TĂNG GIẢM SO VỚI HÔM QUA ---
+    let yDaily = window.YESTERDAY_STATS?.daily || 0;
+    let yRolling = window.YESTERDAY_STATS?.rolling || 0;
+
+    let dailyPctHtml = '<span style="color:#848e9c; font-weight:bold;">--</span>';
+    if (yDaily > 0) {
+        let dPct = ((stats.alphaDailyTotal - yDaily) / yDaily) * 100;
+        let dColor = dPct >= 0 ? '#0ecb81' : '#f6465d';
+        let dSign = dPct >= 0 ? '▲ +' : '▼ ';
+        dailyPctHtml = `<span style="color:${dColor}; font-weight:bold;">${dSign}${dPct.toFixed(2)}%</span>`;
+    }
+
+    let rollingPctHtml = '<span style="color:#848e9c; font-weight:bold;">--</span>';
+    if (yRolling > 0) {
+        let rPct = ((stats.alphaRolling24h - yRolling) / yRolling) * 100;
+        let rColor = rPct >= 0 ? '#0ecb81' : '#f6465d';
+        let rSign = rPct >= 0 ? '▲ +' : '▼ ';
+        rollingPctHtml = `<span style="color:${rColor}; font-weight:bold;">${rSign}${rPct.toFixed(2)}%</span>`;
+    }
     const formatNumK = (num) => {
         if(num >= 1000000) return (num/1000000).toFixed(1) + 'M';
         if(num >= 1000) return (num/1000).toFixed(0) + 'K';
@@ -523,7 +542,7 @@ function renderMarketHUD(stats) {
                 </div>
                 <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
                     <div id="hud-rolling-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
-                    <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
+                    <div id="hud-rolling-pct">--</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
                     <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
@@ -542,7 +561,7 @@ function renderMarketHUD(stats) {
                 </div>
                 <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:5px;">
                     <div id="hud-daily-total" class="hud-main-value" style="font-size:22px; color:#eaecef;">$0</div>
-                    <div style="font-size:12px; color:#848e9c; font-weight:bold;" title="Chờ update Backend">--</div>
+                    <div id="hud-daily-pct">--</div>
                 </div>
                  <div style="display:flex; align-items:center; gap:6px; margin-bottom:10px;">
                     <div style="flex:1; height:4px; background:#2b3139; border-radius:2px;">
@@ -610,7 +629,8 @@ function renderMarketHUD(stats) {
     let rb = document.getElementById('hud-rolling-dom-bar'); if(rb) rb.style.width = domPct + '%';
     safeSet('hud-rolling-dom-txt', domPct.toFixed(0) + '%', true);
     safeSet('hud-rolling-list', top10Rolling.map((t, i) => renderRow(t, i+1, 'ROLLING')).join(''));
-
+    safeSet('hud-rolling-pct', rollingPctHtml, false);
+    safeSet('hud-daily-pct', dailyPctHtml, false);
     safeSet('hud-daily-total', '$' + formatNum(stats.alphaDailyTotal), true);
     let db = document.getElementById('hud-daily-dom-bar'); if(db) db.style.width = dailyDomPct + '%';
     safeSet('hud-daily-dom-txt', dailyDomPct.toFixed(0) + '%', true);
@@ -1119,6 +1139,7 @@ window.updateAlphaMarketUI = function(serverData) {
     if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
 
     let hasUpdates = false;
+    if (serverData['_STATS']) window.YESTERDAY_STATS = serverData['_STATS'];
     let maxVolDaily = Math.max(...allTokens.map(t => {
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
         return isStock ? 0 : (t.volume?.daily_total || 0);
