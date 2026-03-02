@@ -5402,7 +5402,6 @@ function renderCardMiniChart(c, customCanvasId = null) {
 
     let now = new Date();
 
-
     let tournamentEndTime = null;
     let isEnded = false;
     if (c.end) {
@@ -5432,9 +5431,9 @@ function renderCardMiniChart(c, customCanvasId = null) {
 
     let todayStr = now.toISOString().split('T')[0];
 
-   let adminHistory = c.history || [];
+    let adminHistory = c.history || [];
     
-
+    // --- [SỬA LỖI TÊN MẢNG]: Nhận đúng sổ tay lịch sử từ Backend ---
     let realHistory = c.real_vol_history || [];
     
     let myProgress = (userProfile?.tracker_data && userProfile.tracker_data[c.id]) ? userProfile.tracker_data[c.id] : [];
@@ -5444,26 +5443,28 @@ function renderCardMiniChart(c, customCanvasId = null) {
     let accDatasets = {}; 
     accSettings.forEach(acc => accDatasets[acc.id] = []);
 
+    // --- [SỬA LỖI MẤT NGÀY ĐẦU TIÊN]: Cắt bỏ phần giờ, chỉ lấy đúng chuỗi YYYY-MM-DD ---
+    let cleanStart = c.start ? c.start.split('T')[0] : null;
+
     for (let i = 6; i >= 0; i--) {
         let d = new Date(anchorDate);
         d.setDate(anchorDate.getDate() - i);
         let dStr = d.toISOString().split('T')[0];
         
-        if(c.start && dStr < c.start) continue;
+        // So sánh chuẩn xác, không bao giờ bị "nuốt" mất ngày đầu tiên nữa
+        if(cleanStart && dStr < cleanStart) continue;
+        
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-
+        // --- [SỬA LỖI ĐỌC DỮ LIỆU]: Lấy đúng con số Total Vol ---
         let rVal = 0;
         let rItem = realHistory.find(x => x.date === dStr);
-        
         if (rItem) {
-            rVal = parseFloat(rItem.vol || 0); 
-        }
-        else if (dStr === todayStr) {
-            rVal = parseFloat(c.real_alpha_volume || 0);
+            rVal = parseFloat(rItem.vol || 0); // Ngày cũ: lấy từ lịch sử
+        } else if (dStr === todayStr) {
+            rVal = parseFloat(c.real_alpha_volume || 0); // Hôm nay: lấy Realtime
         }
         limitVolData.push(rVal);
-
 
         let projVal = 0;
         if (dStr === todayStr && !isEnded && secondsRemaining > 0) {
@@ -5474,7 +5475,6 @@ function renderCardMiniChart(c, customCanvasId = null) {
             if (stableSpeed > 0) projVal = stableSpeed * secondsRemaining;
         }
         projectedData.push(projVal);
-
 
         let tVal = 0;
         let hItem = adminHistory.find(h => h.date === dStr);
@@ -5502,6 +5502,7 @@ function renderCardMiniChart(c, customCanvasId = null) {
             });
         }
     }
+
 
 
     let existingChart = Chart.getChart(targetId);
