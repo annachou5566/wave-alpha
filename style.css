@@ -2965,3 +2965,18 @@ margin-top: 2px;
     font-size: 0.75em;
     margin-right: 2px; 
 }
+
+.tippy-header {
+    border-bottom: 1px dashed #848e9c !important;
+    cursor: help !important;
+    display: inline-block;
+}
+
+/* Theme cho Tooltip chuẩn Binance */
+.tippy-box[data-theme~='binance'] {
+    background-color: #1e2329;
+    color: #eaeaea;
+    border: 1px solid #474d57;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    border-radius: 4px;
+}
