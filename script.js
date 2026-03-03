@@ -2247,32 +2247,21 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
 
 
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
-
-            if (status === 'ended' && c.end) {
-
-
-                let endRecord = sortedHist.find(h => h.date === c.end);
-                
-                if (endRecord && parseFloat(endRecord.target) > 0) {
-                    target = parseFloat(endRecord.target); 
-                } else {
-
-
-                    let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
-                    if (validItem) {
-                        target = parseFloat(validItem.target);
-                    }
-                }
-            } else {
-
-
-                if (sortedHist.length > 0) {
-                    target = parseFloat(sortedHist[0].target);
-                }
+            
+            let adminTarget = 0;
+            let validItem = sortedHist.find(h => parseFloat(h.target) > 0);
+            if (validItem) {
+                adminTarget = parseFloat(validItem.target);
             }
             
-
-            if (isNaN(target)) target = 0;
+            let displayTarget = 0;
+            if (status === 'ended' && adminTarget > 0) {
+                displayTarget = adminTarget; 
+            } else if (c.ai_prediction && c.ai_prediction.target > 0) {
+                displayTarget = c.ai_prediction.target; 
+            } else {
+                displayTarget = adminTarget;
+            }
 
             
 let usePrice = parseFloat(c.cachedPrice) || ((c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0);
@@ -2363,7 +2352,7 @@ fullHtml += `
     
     <div class="mb-val text-gold anim-breathe" style="align-items: center; justify-content: flex-end;">
         <span id="grid-target-${c.db_id}" style="font-size: 1.4rem !important; font-weight: 900 !important; color: #ffca28 !important; line-height: 1; display: inline-block; text-shadow: 0 0 15px rgba(240, 185, 11, 0.5);">
-            $${fmtNum((c.ai_prediction && c.ai_prediction.target > 0) ? c.ai_prediction.target : target)}
+            $${fmtNum(displayTarget)}
         </span>
         ${adminEditBtn}
     </div>
@@ -2491,7 +2480,6 @@ function updateGridValuesOnly() {
                         let newEstStr = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
                         let oldEstTotal = parseFloat(estEl.getAttribute('data-raw-est')) || 0;
 
-                        // TÁCH RỜI: Đồng bộ logic cho thẻ bài Grid
                         if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
                             if (estTotal > oldEstTotal) {
                                 estEl.style.setProperty('color', '#0ECB81', 'important'); 
@@ -2507,23 +2495,37 @@ function updateGridValuesOnly() {
                     }
                 }
                 
-                // --- BƠM SỐ AI PREDICTION MỚI VÀO UI MỖI 3 GIÂY ---
-                if (c.ai_prediction && c.ai_prediction.target > 0) {
+                let rawHist = c.history || [];
+                let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
+                let adminTarget = 0;
+                let validItem = sortedHist.find(h => parseFloat(h.target) > 0);
+                if (validItem) adminTarget = parseFloat(validItem.target);
+
+                let isEnded = false;
+                let endStr = c.end_at || c.end || (c.data && c.data.end);
+                let endTimeStr = c.endTime || "23:59:59";
+                if(endTimeStr.length === 5) endTimeStr += ":00";
+                if (c.end_at) { isEnded = Date.now() >= new Date(c.end_at).getTime(); }
+                else if (endStr) { isEnded = Date.now() >= new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); }
+
+                if (isEnded && adminTarget > 0) {
+                    let adminStr = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(adminTarget);
+                    
+                    let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
+                    if (gridTargetEl && gridTargetEl.innerText !== adminStr) gridTargetEl.innerText = adminStr;
+                    
+                    let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
+                    if (tableTargetEl && tableTargetEl.innerText !== adminStr) tableTargetEl.innerText = adminStr;
+                } 
+                else if (c.ai_prediction && c.ai_prediction.target > 0) {
                     let aiStr = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(c.ai_prediction.target);
                     
-                    // Cập nhật ở Thẻ Bài (Grid)
                     let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
-                    if (gridTargetEl && gridTargetEl.innerText !== aiStr) {
-                        gridTargetEl.innerText = aiStr;
-                    }
+                    if (gridTargetEl && gridTargetEl.innerText !== aiStr) gridTargetEl.innerText = aiStr;
                     
-                    // Cập nhật ở Bảng Radar (Table)
                     let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
-                    if (tableTargetEl && tableTargetEl.innerText !== aiStr) {
-                        tableTargetEl.innerText = aiStr;
-                    }
+                    if (tableTargetEl && tableTargetEl.innerText !== aiStr) tableTargetEl.innerText = aiStr;
                 }
-                // ---------------------------------------------------
 
             }
         });
@@ -6411,7 +6413,6 @@ async function fetchLayer2Data() {
 
 function applyLayer2Data(serverData) {
     if (!serverData || Object.keys(serverData).length === 0) return;
-
     let hasChanges = false;
 
     if (compList && compList.length > 0) {
@@ -6420,40 +6421,36 @@ function applyLayer2Data(serverData) {
             const liveItem = serverData[alphaId];
             
             if (liveItem) {
-                // 1. LUÔN CHO PHÉP CẬP NHẬT GIÁ (Cho cả History)
-                c.cachedPrice = liveItem.p;
-                hasChanges = true;
-                
-                // 2. TÍNH TOÁN TRẠNG THÁI KẾT THÚC THẬT CHUẨN
-                let currentStatus = (c.status || '').toUpperCase();
-                let isEnded = false;
+                // --- 1. LUÔN CẬP NHẬT GIÁ REALTIME (Bất kể giải đã đóng hay chưa) ---
+                if (liveItem.p !== undefined) {
+                    c.cachedPrice = liveItem.p;
+                    hasChanges = true;
+                }
+
+                // --- 2. CHỐT CHẶN MILI GIÂY CHO CÁC THÔNG SỐ CÒN LẠI ---
                 let endStr = c.end_at || c.end || (c.data && c.data.end);
                 let endTimeStr = c.endTime || "23:59:59";
                 if(endTimeStr.length === 5) endTimeStr += ":00";
+                let endMs = c.end_at ? new Date(c.end_at).getTime() : new Date(endStr + 'T' + endTimeStr + 'Z').getTime();
 
-                if (c.end_at) { 
-                    isEnded = Date.now() > new Date(c.end_at).getTime(); 
-                } else if (endStr) { 
-                    let endDateTime = new Date(endStr + 'T' + endTimeStr + 'Z');
-                    isEnded = Date.now() > endDateTime.getTime(); 
-                }
-                
-                let isFinalized = c.is_finalized || currentStatus === 'ENDED' || currentStatus === 'FINALIZED' || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
-                
-                // --- CHỐT CHẶN: NẾU ĐÃ KẾT THÚC THÌ DỪNG LẠI, KHÔNG CHẠM VÀO VOLUME ---
-                if (isEnded || isFinalized) return;
-                
-                // 3. CẬP NHẬT VOLUME (Chỉ dành cho giải đang chạy)
+                // NẾU ĐÃ HẾT GIỜ -> TỪ CHỐI CẬP NHẬT VOLUME VÀ MÔ HÌNH DỰ BÁO (Prediction)
+                if (Date.now() >= endMs) return; 
+
+                // --- 3. KHU VỰC CHỈ CẬP NHẬT KHI GIẢI ĐANG CHẠY ---
                 if (liveItem.v) {
                     c.limit_daily_volume = liveItem.v.dl || 0;
                     c.real_alpha_volume = liveItem.v.dt || 0;
                 }
-                let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0); 
+                
+                let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
                 let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
                 c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
                 c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
                 c.daily_tx_count = liveItem.tx || 0;
+                
                 if (liveItem.analysis) c.market_analysis = liveItem.analysis;
+                
+                // Cập nhật Mô hình tự tính toán (Prediction)
                 if (liveItem.ai_prediction) c.ai_prediction = liveItem.ai_prediction;
             }
         });
