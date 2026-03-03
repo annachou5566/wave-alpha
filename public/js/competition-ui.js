@@ -317,6 +317,11 @@ class CompetitionRadar {
                 this.drawChart(stats, visualScale, false); 
             }
         });
+   
+
+        if (typeof initBinanceTooltips === 'function') {
+            initBinanceTooltips();
+        }
     }
 
     updateCardUI(stats) {
@@ -431,7 +436,7 @@ class CompetitionRadar {
                         <span style="font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stats.symbol}</span>
                     </div>
                     <div class="text-end">
-                        <div style="font-size: 0.5rem; color: #888; font-weight: 700; text-transform:uppercase; margin-bottom:-2px;">ALGO LIMIT</div>
+                        <div style="margin-bottom:-2px;">     <span class="tippy-header" data-tippy-content="Ngưỡng an toàn dựa trên tốc độ khớp lệnh Limit." style="font-size: 0.5rem; color: #888; font-weight: 700; text-transform:uppercase;">ALGO LIMIT</span> </div>
                         <div id="stat-safe-${stats.contract}" style="font-family: 'Rajdhani', sans-serif; font-weight: 800; font-size: 1.1rem; color: ${limitColor}; text-shadow: 0 0 10px rgba(0,0,0,0.5);">${limitText}</div>
                     </div>
                 </div>
@@ -466,7 +471,7 @@ class CompetitionRadar {
 
                 <div class="radar-chart-container" style="position: relative; height: 100px; width: 100%; margin-top: 0px;">
                     <div style="position: absolute; top: 4px; right: 8px; z-index: 5; pointer-events: none; opacity: 0.8;">
-                        <span style="font-size: 0.6rem; color: #555; font-weight: 800; text-transform:uppercase; font-family: 'Rajdhani', sans-serif;">DAILY VOL: </span>
+                        <span class="tippy-header" data-tippy-content="Khối lượng giao dịch ghi nhận trong ngày hôm nay tính đến thời điểm hiện tại." style="font-size: 0.6rem; color: #555; font-weight: 800; text-transform:uppercase; font-family: 'Rajdhani', sans-serif; pointer-events: auto;">DAILY VOL: </span>
                         <span id="stat-daily-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.65rem;">${this.formatKMB(stats.dailyVolUTC)}</span>
                     </div>
                     <canvas id="chart-${stats.contract}"></canvas>
