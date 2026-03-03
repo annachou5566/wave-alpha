@@ -280,43 +280,26 @@ const translations = {
 
         tip_min_vol: "Minimum trading volume required to qualify for the reward list.",
 
-        tip_pred_header_title: "CALCULATION METHODOLOGY",
+       tip_pred_header_title: "PROJECTION METHODOLOGY",
 
-        tip_pred_header_body: `
-
-            <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
-
-                <b>Data Basis:</b>
-
-            </div>
-
-            <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
-
-                <li><b>Formula:</b> Combines previous Min Vol and 24h Trading Velocity.</li>
-
-                <li><b>Activation:</b> Model starts at <b style="color:#00F0FF">00:00 UTC</b> on the final day.</li>
-
-                <li><b>Frequency:</b> Auto-recalculated and updated every 30 minutes.</li>
-
-                <li><b>Variables:</b> Adjusted based on participant count and market depth (Order Book).</li>
-
-            </ul>
-
-            <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
-
-                <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
-
-                    ⚠ DISCLAIMER:
-
-                </div>
-
-                <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
-
-                    Figures are for reference only and <b>not financial advice</b>. You are solely responsible for your trading decisions.
-
-                </div>
-
-            </div>`,
+tip_pred_header_body: `
+    <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
+        <b>Technical Framework:</b>
+    </div>
+    <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
+        <li><b>Core Formula:</b> A linear projection model combining the previous session's Minimum Target with real-time trading velocity (Volume/sec).</li>
+        <li><b>Activation Window:</b> The calculation model activates and displays results only on the <b style="color:#00F0FF">Final Day (from 00:00 UTC)</b> for maximum precision.</li>
+        <li><b>1-Hour Smoothing:</b> Targets are recalculated every 3 seconds, but the displayed figure is a <b>60-minute rolling average</b> to filter out market noise and "Pump/Dump" spikes.</li>
+        <li><b>Data Integrity:</b> The model strictly prioritizes <b>Limit Order</b> data from the Binance Order Book, eliminating potential biases from on-chain transaction volumes.</li>
+    </ul>
+    <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+        <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+            ⚠ DISCLAIMER:
+        </div>
+        <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
+            This is a real-time mathematical estimation model. Results are for reference only and <b>do not constitute financial advice</b>.
+        </div>
+    </div>`,
 
         tip_model_title: "PROJECTION MODEL",
 
@@ -463,43 +446,26 @@ const translations = {
          tip_min_vol: "Khối lượng giao dịch tối thiểu cần đạt để đủ điều kiện lọt Top nhận thưởng.",
  
            
-         tip_pred_header_title: "PHƯƠNG PHÁP TÍNH TOÁN",
- 
-         tip_pred_header_body: `
- 
-             <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
- 
-                 <b>Cơ sở Dữ liệu:</b>
- 
-             </div>
- 
-             <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
- 
-                 <li><b>Công thức:</b> Tổng hợp Min Vol phiên trước và Tốc độ giao dịch thực tế (Velocity) trong 24h.</li>
- 
-                 <li><b>Kích hoạt:</b> Mô hình bắt đầu chạy từ <b style="color:#00F0FF">00:00 UTC</b> ngày cuối cùng.</li>
- 
-                 <li><b>Tần suất:</b> Tự động tái cấu trúc và cập nhật dữ liệu sau mỗi 30 phút.</li>
- 
-                 <li><b>Biến số:</b> Điều chỉnh linh hoạt dựa trên lượng người tham gia và độ sâu thanh khoản (Order Book).</li>
- 
-             </ul>
- 
-             <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
- 
-                 <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
- 
-                     ⚠ MIỄN TRỪ TRÁCH NHIỆM:
- 
-                 </div>
- 
-                 <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
- 
-                     Số liệu chỉ mang tính tham khảo và <b>không phải lời khuyên tài chính</b>. Bạn hoàn toàn chịu trách nhiệm về quyết định giao dịch của mình.
- 
-                 </div>
- 
-             </div>`,
+         tip_pred_header_title: "PHƯƠNG PHÁP TÍNH TOÁN DỰ PHÓNG",
+
+tip_pred_header_body: `
+    <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
+        <b>Cơ sở Kỹ thuật:</b>
+    </div>
+    <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
+        <li><b>Công thức:</b> Mô hình sử dụng phương pháp dự phóng tuyến tính, kết hợp Mục tiêu tối thiểu (Min Target) của phiên trước với tốc độ khớp lệnh thực tế (Volume/giây).</li>
+        <li><b>Kích hoạt:</b> Thuật toán chỉ bắt đầu tính toán và hiển thị dữ liệu vào <b style="color:#00F0FF">Ngày cuối cùng (từ 00:00 UTC)</b> của giải đấu để đảm bảo độ chính xác cao nhất.</li>
+        <li><b>Làm mượt 1 giờ:</b> Kết quả được tính lại mỗi 3 giây, nhưng con số hiển thị là <b>Trung bình cộng của 1 giờ gần nhất</b> nhằm triệt tiêu các biến động nhiễu do lệnh "Bơm/Xả" đột biến.</li>
+        <li><b>Dữ liệu nguồn:</b> Mô hình ưu tiên bám sát dữ liệu lệnh <b>Limit</b> trên sổ lệnh Binance (Order Book), loại bỏ các sai số từ giao dịch On-chain.</li>
+    </ul>
+    <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+        <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+            ⚠ MIỄN TRỪ TRÁCH NHIỆM:
+        </div>
+        <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
+            Đây là mô hình ước lượng toán học dựa trên dữ liệu thời gian thực. Kết quả chỉ mang tính tham khảo, <b>không phải lời khuyên tài chính</b>.
+        </div>
+    </div>`,
  
          tip_model_title: "MÔ HÌNH DỰ BÁO",
  
@@ -646,43 +612,26 @@ const translations = {
 
         tip_min_vol: "获得奖励所需的最低交易量门槛。",
 
-        tip_pred_header_title: "计算方法论",
+        tip_pred_header_title: "预测计算模型",
 
-        tip_pred_header_body: `
-
-            <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
-
-                <b>数据基础：</b>
-
-            </div>
-
-            <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
-
-                <li><b>公式：</b> 综合前期最低成交量与 24 小时交易速率 (Velocity)。</li>
-
-                <li><b>激活：</b> 模型于最后一天 <b style="color:#00F0FF">00:00 UTC</b> 激活。</li>
-
-                <li><b>频率：</b> 每 30 分钟自动重新计算并更新数据。</li>
-
-                <li><b>变量：</b> 根据参与人数和市场深度（订单簿）灵活调整。</li>
-
-            </ul>
-
-            <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
-
-                <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
-
-                    ⚠ 免责声明：
-
-                </div>
-
-                <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
-
-                    数据仅供参考，<b>不构成财务建议</b>。您需对交易决策承担全部责任。
-
-                </div>
-
-            </div>`,
+tip_pred_header_body: `
+    <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
+        <b>技术架构：</b>
+    </div>
+    <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
+        <li><b>核心公式：</b> 采用线性预测模型，结合前一赛段的最低目标 (Min Target) 与实时交易速率 (成交量/秒)。</li>
+        <li><b>激活时间：</b> 为确保最高准确度，模型仅在比赛 <b style="color:#00F0FF">最后一天 (UTC 00:00 起)</b> 开启计算并显示预测数据。</li>
+        <li><b>1小时平滑处理：</b> 数据每 3 秒重新计算一次，但显示数值为 <b>最近 60 分钟的滚动平均值</b>，以消除异常波动带来的干扰。</li>
+        <li><b>数据来源：</b> 模型严格优先参考币安订单簿 (Order Book) 的 <b>限价单 (Limit Order)</b> 数据，排除链上交易可能带来的虚假偏差。</li>
+    </ul>
+    <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+        <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+            ⚠ 免责声明：
+        </div>
+        <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
+            此预测为基于实时数据的数学估算模型。结果仅供参考，<b>不构成任何投资建议</b>。
+        </div>
+    </div>`,
 
         tip_model_title: "预测模型",
 
@@ -828,43 +777,26 @@ const translations = {
 
         tip_min_vol: "보상 지급 대상이 되기 위한 최소 거래량.",
 
-        tip_pred_header_title: "산출 방법론",
+        tip_pred_header_title: "예측 계산 모델",
 
-        tip_pred_header_body: `
-
-            <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
-
-                <b>데이터 근거:</b>
-
-            </div>
-
-            <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
-
-                <li><b>공식:</b> 이전 최소 거래량과 24시간 거래 속도(Velocity)를 결합.</li>
-
-                <li><b>활성화:</b> 마지막 날 <b style="color:#00F0FF">00:00 UTC</b>부터 모델 활성화.</li>
-
-                <li><b>주기:</b> 30분마다 자동 재계산 및 데이터 업데이트.</li>
-
-                <li><b>변수:</b> 참여자 수 및 시장 깊이(오더북)에 따라 유동적 조정.</li>
-
-            </ul>
-
-            <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
-
-                <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
-
-                    ⚠ 면책 조항:
-
-                </div>
-
-                <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
-
-                    수치는 참고용일 뿐이며 <b>재정적 조언이 아닙니다</b>. 모든 거래 결정은 본인의 책임입니다.
-
-                </div>
-
-            </div>`,
+tip_pred_header_body: `
+    <div style="margin-bottom:8px; border-bottom:1px dashed #555; padding-bottom:6px; color:#ccc">
+        <b>기술적 프레임워크:</b>
+    </div>
+    <ul style='margin: 0; padding-left: 15px; list-style-type: circle; color:#bbb; line-height: 1.5; margin-bottom: 10px;'>
+        <li><b>핵심 공식:</b> 이전 세션의 최소 목표치(Min Target)와 실시간 거래 속도(Volume/초)를 결합한 선형 예측 모델입니다.</li>
+        <li><b>활성화 시점:</b> 최고 수준의 정밀도를 보장하기 위해 토너먼트 <b>마지막 날(00:00 UTC부터)</b>에만 계산 및 데이터 표시가 활성화됩니다.</li>
+        <li><b>1시간 평활화:</b> 데이터는 3초마다 재계산되지만, 비정상적인 급등락 노이즈를 제거하기 위해 <b>최근 60분간의 이동 평균값</b>을 표시합니다.</li>
+        <li><b>데이터 무결성:</b> 바이낸스 오더북의 <b>지정가 주문(Limit Order)</b> 데이터를 최우선으로 하며, 온체인 거래의 왜곡된 수치는 배제합니다.</li>
+    </ul>
+    <div style="border-top: 1px solid #444; padding-top: 8px; margin-top: 8px;">
+        <div style="color: #F6465D; font-size: 0.85em; line-height: 1.4; font-weight: 500;">
+            ⚠ 면책 조항:
+        </div>
+        <div style="color: #888; font-size: 0.8em; font-style: italic; line-height: 1.3; margin-top: 2px;">
+            본 수치는 실시간 수학적 추정 모델에 기반한 것이며, 참고용일 뿐 <b>재정적 조언이 아닙니다</b>.
+        </div>
+    </div>`,
 
         tip_model_title: "예측 모델",
 
