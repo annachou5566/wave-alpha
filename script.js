@@ -1588,11 +1588,9 @@ async function loadFromCloud(isSilent = false) {
             
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
-            let endTimeStr = item.endTime || (item.data && item.data.endTime) || "23:59:59";
-            if (endTimeStr.length === 5) endTimeStr += ":00";
             
-            if (item.end_at) { isEnded = Date.now() >= new Date(item.end_at).getTime(); }
-            else if (endStr) { isEnded = Date.now() >= new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); }
+            if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
+            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
 
             if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
@@ -2061,13 +2059,11 @@ function renderGrid(customData = null) {
     const nowMs = Date.now();
     let listToRender = sourceList.filter(item => {
         let isEnded = false;
-        let endTimeStr = item.endTime || "23:59:59";
-        if(endTimeStr.length === 5) endTimeStr += ":00";
-
+        let isEnded = false;
         if (item.end_at) { 
-            isEnded = nowMs >= new Date(item.end_at).getTime(); 
+            isEnded = nowMs > new Date(item.end_at).getTime(); 
         } else if (item.end) { 
-            isEnded = nowMs >= new Date(item.end + 'T' + endTimeStr + 'Z').getTime(); 
+            isEnded = nowMs > (new Date(item.end).getTime() + 86400000); 
         }
 
         if (currentTab === 'running') return !isEnded;
@@ -2612,12 +2608,8 @@ function copyContract(addr) {
 
     let projectsToRender = sourceList.filter(item => {
         let isEnded = false;
-        let endTimeStr = item.endTime || "23:59:59";
-        if(endTimeStr.length === 5) endTimeStr += ":00";
-
-        if (item.end_at) { isEnded = nowMs >= new Date(item.end_at).getTime(); } 
-        else if (item.end) { isEnded = nowMs >= new Date(item.end + 'T' + endTimeStr + 'Z').getTime(); }
-        
+        if (item.end_at) { isEnded = nowMs > new Date(item.end_at).getTime(); } 
+        else if (item.end) { isEnded = nowMs > (new Date(item.end).getTime() + 86400000); }
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
