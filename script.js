@@ -6336,15 +6336,15 @@ function updateHealthTableRealtime() {
 
         // --- BƠM REALTIME CHO "EST" ---
         let now = new Date();
-        let todayUTC = now.toISOString().split('T')[0];
-        let isFinalDay = (c.end === todayUTC);
-        let speedVal = parseFloat((c.market_analysis && c.market_analysis.speed) ? c.market_analysis.speed : 0);
-        
-        let estLimit = aLimit, estOnChain = aOnChain, estTotal = aTotal;
-        if (!isEnded && !isFinalized && isFinalDay) {
-            let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
-            let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
-            if (diffMs > 0 && speedVal > 0) {
+        // --- SỬA LOGIC NGÀY CUỐI CHUẨN XÁC ---
+            let diffMs = endDt - now; 
+            let isFinalDay = (diffMs > 0 && diffMs <= 86400000); // Còn <= 24h là ngày cuối
+            let speedVal = parseFloat(ma.speed || 0);
+            
+            let showEst = (!isEnded && !isUpcoming && isFinalDay);
+            let estLimit=aLimit, estOnChain=aOnChain, estTotal=aTotal;
+            
+            if (showEst && speedVal > 0) {
                 let added = speedVal * (diffMs/1000);
                 let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
                 estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
@@ -6365,18 +6365,17 @@ function updateHealthTableRealtime() {
         ];
 
         updates.forEach(u => {
-            const el = document.getElementById(u.id);
-            if (el) {
-                // Nếu là span Est thì nối thêm chữ "Est: " vào
-                const newStr = u.isEst ? `Est: ${fmtCompact(u.val)}` : fmtCompact(u.val);
-                if (el.innerText !== newStr) {
-                    el.innerText = newStr;
-                }
-            }
-        });
-
-
-
+                    const el = document.getElementById(u.id);
+                    if (el) {
+                        // Nếu là span Est thì nối thêm chữ "Est: " vào
+                        const newStr = u.isEst ? `Est: ${fmtCompact(u.val)}` : fmtCompact(u.val);
+                        if (el.innerText !== newStr) {
+                            el.innerText = newStr;
+                        }
+                    }
+                });
+            }); 
+        } 
 
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
