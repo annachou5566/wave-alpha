@@ -1541,26 +1541,33 @@ async function loadFromCloud(isSilent = false) {
     } catch (e) { console.warn("⚠️ Bỏ qua lỗi Config:", e); }
 
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=neq.-1&select=*`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-        });
-        const serverArray = await res.json(); 
+        const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
+        let serverData = await res.json(); 
 
-        let serverData = {};
-        serverArray.forEach(row => {
-            let key = row.data.alphaId || `ALPHA_${row.id}`;
-            serverData[key] = { id: row.id, db_id: row.id, ...row.data };
-        });
+        try {
+            const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=neq.-1&select=id,data`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            const supaData = await supaRes.json();
+            supaData.forEach(row => {
+                let key = row.data.alphaId || `ALPHA_${row.id}`;
+                if (serverData[key]) {
+                    serverData[key].history = row.data.history || serverData[key].history;
+                    serverData[key].end = row.data.end || serverData[key].end;
+                    serverData[key].endTime = row.data.endTime || serverData[key].endTime;
+                } else {
+                    serverData[key] = { id: row.id, db_id: row.id, ...row.data };
+                }
+            });
+        } catch(e) { console.warn("Lỗi lấy data Supabase chớp nhoáng:", e); }
 
         let tempRunning = [], tempHistory = [], tempAll = [];
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
-        // [QUAN TRỌNG] Dùng Object.entries để GIỮ LẠI CHÌA KHÓA (ALPHA_466, ALPHA_483...)
         Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
             
-            // LƯU CHÌA KHÓA VÀO ALPHA_ID ĐỂ REALTIME SOI CHIẾU
             item.alphaId = item.alphaId || (item.data && item.data.alphaId);
             if (!item.alphaId && key.startsWith('ALPHA_')) {
                 item.alphaId = key;
@@ -1582,10 +1589,11 @@ async function loadFromCloud(isSilent = false) {
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
             let endTimeStr = item.endTime || (item.data && item.data.endTime) || "23:59:59";
-            if(endTimeStr.length === 5) endTimeStr += ":00";
+            if (endTimeStr.length === 5) endTimeStr += ":00";
             
             if (item.end_at) { isEnded = Date.now() >= new Date(item.end_at).getTime(); }
             else if (endStr) { isEnded = Date.now() >= new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); }
+            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
 
             if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
@@ -2071,6 +2079,7 @@ function renderGrid(customData = null) {
         listToRender = listToRender.filter(c => c.end === currentFilterDate);
     }
     
+        // 4. Sắp xếp theo thứ tự ưu tiên (orderIndex)
         listToRender.sort((a,b) => {
             let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
             let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
@@ -2613,7 +2622,6 @@ function copyContract(addr) {
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
-
     if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
         projectsToRender = projectsToRender.filter(c => c.end === currentFilterDate);
     }
