@@ -2508,23 +2508,18 @@ function updateGridValuesOnly() {
                 if (c.end_at) { isEnded = Date.now() >= new Date(c.end_at).getTime(); }
                 else if (endStr) { isEnded = Date.now() >= new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); }
 
-                if (isEnded && adminTarget > 0) {
-                    let adminStr = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(adminTarget);
-                    
-                    let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
-                    if (gridTargetEl && gridTargetEl.innerText !== adminStr) gridTargetEl.innerText = adminStr;
-                    
-                    let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
-                    if (tableTargetEl && tableTargetEl.innerText !== adminStr) tableTargetEl.innerText = adminStr;
-                } 
-                else if (c.ai_prediction && c.ai_prediction.target > 0) {
-                    let aiStr = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(c.ai_prediction.target);
-                    
-                    let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
-                    if (gridTargetEl && gridTargetEl.innerText !== aiStr) gridTargetEl.innerText = aiStr;
-                    
-                    let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
-                    if (tableTargetEl && tableTargetEl.innerText !== aiStr) tableTargetEl.innerText = aiStr;
+                let adminStr = adminTarget > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(adminTarget) : '---';
+                let aiStr = (c.ai_prediction && c.ai_prediction.target > 0) ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(c.ai_prediction.target) : '---';
+
+                let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
+                if (gridTargetEl) {
+                    let finalGridVal = (isEnded && adminTarget > 0) ? adminStr : ((c.ai_prediction && c.ai_prediction.target > 0) ? aiStr : adminStr);
+                    if (gridTargetEl.innerText !== finalGridVal) gridTargetEl.innerText = finalGridVal;
+                }
+
+                let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
+                if (tableTargetEl && c.ai_prediction && c.ai_prediction.target > 0) {
+                    if (tableTargetEl.innerText !== aiStr) tableTargetEl.innerText = aiStr;
                 }
 
             }
