@@ -2935,13 +2935,17 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
             if(c.onchain_accumulated_volume !== undefined) aTotal = aLimit + aOnChain;
 
            
-            let showEst = (!isEnded && !isUpcoming && parseFloat(ma.realTimeVol) > 0);
+            let todayUTC = now.toISOString().split('T')[0];
+            let isFinalDay = (c.end === todayUTC);
+            let speedVal = parseFloat(ma.speed || 0);
+            
+            let showEst = (!isEnded && !isUpcoming && isFinalDay && speedVal > 0);
             let estLimit=aLimit, estOnChain=aOnChain, estTotal=aTotal;
             if (showEst) {
                 let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
                 let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
                 if (diffMs > 0) {
-                    let added = (parseFloat(ma.realTimeVol)||0) * (diffMs/1000);
+                    let added = speedVal * (diffMs/1000);
                     let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
                     estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
                 }
