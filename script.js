@@ -1,6 +1,3 @@
-    
-    
-    
     const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
     const REALTIME_API_URL = 'https://alpha-realtime.onrender.com/api/market-data';
@@ -2935,20 +2932,17 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
             if(c.onchain_accumulated_volume !== undefined) aTotal = aLimit + aOnChain;
 
            
-            let todayUTC = now.toISOString().split('T')[0];
-            let isFinalDay = (c.end === todayUTC);
+            let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
+            let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
+            let isFinalDay = (diffMs > 0 && diffMs <= 86400000); // Còn <= 24h là coi như ngày cuối
             let speedVal = parseFloat(ma.speed || 0);
             
             let showEst = (!isEnded && !isUpcoming && isFinalDay);
             let estLimit=aLimit, estOnChain=aOnChain, estTotal=aTotal;
-            if (showEst) {
-                let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
-                let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
-                if (diffMs > 0 && speedVal > 0) {
-                    let added = speedVal * (diffMs/1000);
-                    let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
-                    estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
-                }
+            if (showEst && speedVal > 0) {
+                let added = speedVal * (diffMs/1000);
+                let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
+                estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
             }
 
             const styBase = "text-center font-num";
@@ -6334,21 +6328,19 @@ function updateHealthTableRealtime() {
         let aTotal = parseFloat(c.total_accumulated_volume || 0);
         let aOnChain = Math.max(0, aTotal - aLimit);
 
-        // --- BƠM REALTIME CHO "EST" ---
+
+// --- BƠM REALTIME CHO "EST" ---
         let now = new Date();
-        // --- SỬA LOGIC NGÀY CUỐI CHUẨN XÁC ---
-            let diffMs = endDt - now; 
-            let isFinalDay = (diffMs > 0 && diffMs <= 86400000); // Còn <= 24h là ngày cuối
-            let speedVal = parseFloat(ma.speed || 0);
-            
-            let showEst = (!isEnded && !isUpcoming && isFinalDay);
-            let estLimit=aLimit, estOnChain=aOnChain, estTotal=aTotal;
-            
-            if (showEst && speedVal > 0) {
-                let added = speedVal * (diffMs/1000);
-                let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
-                estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
-            }
+        let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
+        let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
+        let isFinalDay = (diffMs > 0 && diffMs <= 86400000);
+        let speedVal = parseFloat((c.market_analysis && c.market_analysis.speed) ? c.market_analysis.speed : 0);
+        
+        let estLimit = aLimit, estOnChain = aOnChain, estTotal = aTotal;
+        if (!isEnded && !isFinalized && isFinalDay && speedVal > 0) {
+            let added = speedVal * (diffMs/1000);
+            let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
+            estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
         }
 
         const updates = [
@@ -6358,26 +6350,25 @@ function updateHealthTableRealtime() {
             { id: `tb-alim-${dbId}`, val: aLimit },
             { id: `tb-aoc-${dbId}`, val: aOnChain },
             { id: `tb-atot-${dbId}`, val: aTotal },
-            // THÊM 3 DÒNG UPDATE "EST" VÀO ĐÂY
             { id: `est-alim-${dbId}`, val: estLimit, isEst: true },
             { id: `est-aoc-${dbId}`, val: estOnChain, isEst: true },
             { id: `est-atot-${dbId}`, val: estTotal, isEst: true }
         ];
 
         updates.forEach(u => {
-                    const el = document.getElementById(u.id);
-                    if (el) {
-                        // Nếu là span Est thì nối thêm chữ "Est: " vào
-                        const newStr = u.isEst ? `Est: ${fmtCompact(u.val)}` : fmtCompact(u.val);
-                        if (el.innerText !== newStr) {
-                            el.innerText = newStr;
-                        }
-                    }
-                });
-            }); 
-        } 
+            const el = document.getElementById(u.id);
+            if (el) {
+                const newStr = u.isEst ? `Est: ${fmtCompact(u.val)}` : fmtCompact(u.val);
+                if (el.innerText !== newStr) {
+                    el.innerText = newStr;
+                }
+            }
+        });
+    }); 
+} 
 
 document.addEventListener("visibilitychange", () => {
+        
     if (document.visibilityState === "visible") {
         console.log("👀 User is back! Checking for updates...");
         quickSyncData(); 
