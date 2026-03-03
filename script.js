@@ -4519,7 +4519,7 @@ function saveComp() {
     let obj = { 
         ...c, 
         
-
+        alphaId: c.alphaId || ('ALPHA_' + Date.now()),
         db_id: id ? parseInt(id) : null,
         name: document.getElementById('c-symbol').value.toUpperCase(),
         contract: document.getElementById('c-contract').value,
