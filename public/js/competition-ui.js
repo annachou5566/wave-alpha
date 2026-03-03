@@ -443,29 +443,29 @@ class CompetitionRadar {
 
                 <div class="radar-stats-row" style="display: flex; background: rgba(22, 26, 30, 0.5); padding: 6px 0;">
                     <div style="flex: 1; text-align: center; border-right: 1px solid #2b3139;">
-                        <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">AVG</div>
+                        <div style="margin-bottom: 3px;"><span class="tippy-header" data-tippy-content="Giá trị trung bình 1 lệnh ($)." style="font-size: 0.55rem; color: #848e9c; font-weight: 600;">AVG</span></div>
                         <div id="stat-avg-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${this.formatKMB(stats.liveAvgTicket)}</div>
                     </div>
                     <div style="flex: 1; text-align: center; border-right: 1px solid #2b3139;">
-                        <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">SPEED</div>
+                        <div style="margin-bottom: 3px;"><span class="tippy-header" data-tippy-content="Tốc độ khớp lệnh (Lệnh/giây)." style="font-size: 0.55rem; color: #848e9c; font-weight: 600;">SPEED</span></div>
                         <div id="stat-speed-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${stats.txPerSecond}<span style="font-size:0.7em; opacity:0.5">txs</span></div>
                     </div>
                     <div style="flex: 1; text-align: center; border-right: 1px solid #2b3139;">
-                        <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">MATCH</div>
+                        <div style="margin-bottom: 3px;"><span class="tippy-header" data-tippy-content="Thanh khoản trung bình mỗi giây ($)." style="font-size: 0.55rem; color: #848e9c; font-weight: 600;">MATCH</span></div>
                         <div id="stat-match-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${this.formatKMB(stats.matchSpeedUSD)}<span style="font-size:0.7em; opacity:0.5">/s</span></div>
                     </div>
                     <div style="flex: 1; text-align: center;">
-                        <div style="font-size: 0.55rem; color: #848e9c; margin-bottom: 3px; font-weight: 600;">SPREAD</div>
+                        <div style="margin-bottom: 3px;"><span class="tippy-header" data-tippy-content="Chênh lệch giá Mua/Bán (%)." style="font-size: 0.55rem; color: #848e9c; font-weight: 600;">SPREAD</span></div>
                         <div id="stat-spread-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.9rem; line-height: 1;">${stats.spreadVal.toFixed(2)}%</div>
                     </div>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; padding: 4px 10px; background: rgba(0,0,0,0.4); border-bottom: 1px solid #2b3139; font-size: 0.65rem; font-family: 'Rajdhani', sans-serif; font-weight: bold; text-transform: uppercase;">
-                    <div title="Dòng tiền chủ động 60s">
-                        🌊 FLOW: <span id="stat-flow-${stats.contract}" style="font-size: 0.8rem;">---</span>
+                    <div>
+                        🌊 <span class="tippy-header" data-tippy-content="Dòng tiền chủ động 60s">FLOW</span>: <span id="stat-flow-${stats.contract}" style="font-size: 0.8rem;">---</span>
                     </div>
-                    <div title="Gia tốc giá 9s">
-                        ⚡ TREND: <span id="stat-trend-${stats.contract}" style="font-size: 0.8rem;">---</span>
+                    <div>
+                        ⚡ <span class="tippy-header" data-tippy-content="Gia tốc giá 9s">TREND</span>: <span id="stat-trend-${stats.contract}" style="font-size: 0.8rem;">---</span>
                     </div>
                 </div>
 
