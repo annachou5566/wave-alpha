@@ -6498,12 +6498,12 @@ function applyLayer2Data(serverData) {
                     c.real_alpha_volume = liveItem.v.dt || 0;
                 }
                 
-                let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
                 let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
                 c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
                 c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
                 c.daily_tx_count = liveItem.tx || 0;
                 if (liveItem.analysis) c.market_analysis = liveItem.analysis;
+                if (liveItem.ai_prediction) c.ai_prediction = liveItem.ai_prediction;
             }
         });
     }
