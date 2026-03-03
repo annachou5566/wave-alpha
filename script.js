@@ -1542,7 +1542,26 @@ async function loadFromCloud(isSilent = false) {
 
     try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
-        const serverData = await res.json(); 
+        let serverData = await res.json(); 
+
+        try {
+            const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=neq.-1&select=id,data`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            const supaData = await supaRes.json();
+            supaData.forEach(row => {
+                let key = row.data.alphaId || `ALPHA_${row.id}`;
+                if (serverData[key]) {
+                    if (row.data.history) {
+                        serverData[key].history = row.data.history;
+                        if (!serverData[key].data) serverData[key].data = {};
+                        serverData[key].data.history = row.data.history;
+                    }
+                } else {
+                    serverData[key] = { id: row.id, db_id: row.id, ...row.data };
+                }
+            });
+        } catch(e) { console.warn("Lỗi đồng bộ Supabase:", e); }
 
         let tempRunning = [], tempHistory = [], tempAll = [];
         const todayStr = new Date().toISOString().split('T')[0];
