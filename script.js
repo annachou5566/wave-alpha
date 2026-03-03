@@ -1593,7 +1593,6 @@ async function loadFromCloud(isSilent = false) {
             
             if (item.end_at) { isEnded = Date.now() >= new Date(item.end_at).getTime(); }
             else if (endStr) { isEnded = Date.now() >= new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); }
-            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
 
             if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
