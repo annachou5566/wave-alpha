@@ -6516,7 +6516,7 @@ function applyLayer2Data(serverData) {
                     c.limit_daily_volume = liveItem.v.dl || 0;
                     c.real_alpha_volume = liveItem.v.dt || 0;
                 }
-                
+                let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0); 
                 let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
                 c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
                 c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
