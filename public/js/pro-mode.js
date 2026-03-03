@@ -493,7 +493,7 @@ function renderMarketHUD(stats) {
         `;
     };
 
-    // --- FIX CHART: BƠM DỮ LIỆU GIẢ ĐỂ FULL 14 CỘT ---
+// --- CHART REAL 100%: LẤY TỪ BACKEND ---
     let volHistory = window.MARKET_VOL_HISTORY || [];
     let yRolling = volHistory.length > 0 ? (volHistory[volHistory.length - 1].rolling || 0) : 0;
     
@@ -508,20 +508,10 @@ function renderMarketHUD(stats) {
     let yDaily = volHistory.length > 0 ? (volHistory[volHistory.length - 1].daily || 0) : 0;
     let yDailyText = yDaily > 0 ? `Yesterday: $${formatCompactNum(yDaily)}` : '--';
 
-    // Tạo lịch sử ảo nếu Backend chưa đủ 14 ngày
-    let displayHistory = [];
-    if (volHistory.length < 13) {
-        let needed = 13 - volHistory.length;
-        let baseFake = stats.alphaDailyTotal > 0 ? stats.alphaDailyTotal : 20000000;
-        for(let i = needed; i > 0; i--) {
-            let d = new Date(Date.now() - (i + volHistory.length) * 86400000);
-            let fVol = baseFake * (0.5 + Math.random() * 0.7); 
-            displayHistory.push({ date: d.toISOString().split('T')[0], daily: fVol });
-        }
-    }
-    displayHistory = [...displayHistory, ...volHistory];
+    // XÓA FAKE DATA, CHỈ LẤY DATA THẬT
+    let chartData = [...volHistory].slice(-13);
 
-    let chartData = [...displayHistory].slice(-13); 
+    
     chartData.push({ date: 'Today', daily: stats.alphaDailyTotal });
     let maxDailyChart = Math.max(...chartData.map(d => d.daily || 0), 1);
     
