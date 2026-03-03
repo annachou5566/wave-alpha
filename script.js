@@ -2939,34 +2939,21 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
             let isFinalDay = (c.end === todayUTC);
             let speedVal = parseFloat(ma.speed || 0);
             
-            let showEst = (!isEnded && !isUpcoming && isFinalDay && speedVal > 0);
+            let showEst = (!isEnded && !isUpcoming && isFinalDay);
             let estLimit=aLimit, estOnChain=aOnChain, estTotal=aTotal;
             if (showEst) {
                 let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
                 let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
-                if (diffMs > 0) {
+                if (diffMs > 0 && speedVal > 0) {
                     let added = speedVal * (diffMs/1000);
                     let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
                     estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
                 }
             }
 
-          
             const styBase = "text-center font-num";
-
-         
-            const styLimDaily = "color:#fff; font-weight:200;"; 
-            const styOcDaily  = "color:#fff; font-weight:200;"; 
-            const styTotDaily = "color:#fff; font-weight:300;";    
-
-            
-            const styLimAcc = "color:#fff; font-weight:700;"; 
-            const styOcAcc  = "color:#fff; font-weight:700;";
-            const styTotAcc = "color:#fff; font-weight:bold;";    
-            
             const bLeft   = "border-left:1px solid rgba(255,255,255,0.05);";
-           
-const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px; opacity:0.8;";
+            const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px; opacity:0.8;";
 
             let dailyColsHtml, accColsHtml;
 
@@ -2981,13 +2968,13 @@ const subEst = "display:block; font-size:0.75rem; color:#00FFFF; margin-top:1px;
                 `;
                 accColsHtml = `
                     <td class="${styBase}" style="${bLeft}">
-                        <span class="table-dyn-val" style="font-weight: 300;" id="tb-alim-${c.db_id}">${fmtCompact(aLimit)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estLimit)}</span>` : ''}
+                        <span class="table-dyn-val" style="font-weight: 300;" id="tb-alim-${c.db_id}">${fmtCompact(aLimit)}</span> ${showEst ? `<span style="${subEst}" id="est-alim-${c.db_id}">Est: ${fmtCompact(estLimit)}</span>` : ''}
                     </td>
                     <td class="${styBase}">
-                        <span class="table-dyn-val" style="font-weight: 300;" id="tb-aoc-${c.db_id}">${fmtCompact(aOnChain)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estOnChain)}</span>` : ''}
+                        <span class="table-dyn-val" style="font-weight: 300;" id="tb-aoc-${c.db_id}">${fmtCompact(aOnChain)}</span> ${showEst ? `<span style="${subEst}" id="est-aoc-${c.db_id}">Est: ${fmtCompact(estOnChain)}</span>` : ''}
                     </td>
                     <td class="${styBase}">
-                        <span class="table-dyn-val" style="font-weight: 400; color: #fff;" id="tb-atot-${c.db_id}">${fmtCompact(aTotal)}</span> ${showEst ? `<span style="${subEst}">Est: ${fmtCompact(estTotal)}</span>` : ''}
+                        <span class="table-dyn-val" style="font-weight: 400; color: #fff;" id="tb-atot-${c.db_id}">${fmtCompact(aTotal)}</span> ${showEst ? `<span style="${subEst}" id="est-atot-${c.db_id}">Est: ${fmtCompact(estTotal)}</span>` : ''}
                     </td>
                 `;
             }
@@ -6347,26 +6334,46 @@ function updateHealthTableRealtime() {
         let aTotal = parseFloat(c.total_accumulated_volume || 0);
         let aOnChain = Math.max(0, aTotal - aLimit);
 
+        // --- BƠM REALTIME CHO "EST" ---
+        let now = new Date();
+        let todayUTC = now.toISOString().split('T')[0];
+        let isFinalDay = (c.end === todayUTC);
+        let speedVal = parseFloat((c.market_analysis && c.market_analysis.speed) ? c.market_analysis.speed : 0);
+        
+        let estLimit = aLimit, estOnChain = aOnChain, estTotal = aTotal;
+        if (!isEnded && !isFinalized && isFinalDay) {
+            let tPart = (c.endTime || "23:59:59").trim(); if(tPart.length===5) tPart+=":00";
+            let diffMs = new Date(`${c.end}T${tPart}Z`) - now;
+            if (diffMs > 0 && speedVal > 0) {
+                let added = speedVal * (diffMs/1000);
+                let ratio = dTotal>0 ? (dLimit/dTotal) : 0.5;
+                estLimit += added*ratio; estOnChain += added*(1-ratio); estTotal += added;
+            }
+        }
+
         const updates = [
             { id: `tb-dlim-${dbId}`, val: dLimit },
             { id: `tb-doc-${dbId}`, val: dOnChain },
             { id: `tb-dtot-${dbId}`, val: dTotal },
             { id: `tb-alim-${dbId}`, val: aLimit },
             { id: `tb-aoc-${dbId}`, val: aOnChain },
-            { id: `tb-atot-${dbId}`, val: aTotal }
+            { id: `tb-atot-${dbId}`, val: aTotal },
+            // THÊM 3 DÒNG UPDATE "EST" VÀO ĐÂY
+            { id: `est-alim-${dbId}`, val: estLimit, isEst: true },
+            { id: `est-aoc-${dbId}`, val: estOnChain, isEst: true },
+            { id: `est-atot-${dbId}`, val: estTotal, isEst: true }
         ];
 
         updates.forEach(u => {
             const el = document.getElementById(u.id);
             if (el) {
-                const newStr = fmtCompact(u.val);
+                // Nếu là span Est thì nối thêm chữ "Est: " vào
+                const newStr = u.isEst ? `Est: ${fmtCompact(u.val)}` : fmtCompact(u.val);
                 if (el.innerText !== newStr) {
                     el.innerText = newStr;
                 }
             }
         });
-    });
-}
 
 
 
