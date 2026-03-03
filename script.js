@@ -1542,32 +1542,17 @@ async function loadFromCloud(isSilent = false) {
 
     try {
         const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
-        let serverData = await res.json(); 
-
-        try {
-            const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=neq.-1&select=id,data`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-            });
-            const supaData = await supaRes.json();
-            supaData.forEach(row => {
-                let key = row.data.alphaId || `ALPHA_${row.id}`;
-                if (serverData[key]) {
-                    serverData[key].history = row.data.history || serverData[key].history;
-                    serverData[key].end = row.data.end || serverData[key].end;
-                    serverData[key].endTime = row.data.endTime || serverData[key].endTime;
-                } else {
-                    serverData[key] = { id: row.id, db_id: row.id, ...row.data };
-                }
-            });
-        } catch(e) { console.warn("Lỗi lấy data Supabase chớp nhoáng:", e); }
+        const serverData = await res.json(); 
 
         let tempRunning = [], tempHistory = [], tempAll = [];
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
+        // [QUAN TRỌNG] Dùng Object.entries để GIỮ LẠI CHÌA KHÓA (ALPHA_466, ALPHA_483...)
         Object.entries(serverData).forEach(([key, item]) => {
             if (!item) return;
             
+            // LƯU CHÌA KHÓA VÀO ALPHA_ID ĐỂ REALTIME SOI CHIẾU
             item.alphaId = item.alphaId || (item.data && item.data.alphaId);
             if (!item.alphaId && key.startsWith('ALPHA_')) {
                 item.alphaId = key;
@@ -2041,6 +2026,7 @@ function updateAllPrices() {
 
 function renderGrid(customData = null) {
         const SHOW_PREDICT_BTN = false;
+        // 1. Kiểm tra nếu đang mở xem chi tiết (thẻ bài đang active) thì không render lại toàn bộ để tránh lag
         if (document.querySelector('.tour-card.active-card')) {
             updateGridValuesOnly(); 
             return; 
@@ -2049,16 +2035,18 @@ function renderGrid(customData = null) {
         const grid = document.getElementById('appGrid');
         if(!grid) return;
     
+        // 2. Xác định danh sách cần vẽ: ÉP GRID LẤY GIỐNG TABLE
     let currentTab = appData.currentTab || localStorage.getItem('wave_active_tab') || 'running';
     let sourceList = (typeof compList !== 'undefined' && compList.length > 0) ? [...compList] : [];
     
+    // Nếu compList rỗng (chưa load xong) thì mới dùng appData
     if (sourceList.length === 0) {
         sourceList = (currentTab === 'history') ? [...appData.history] : [...appData.running];
     }
 
     const nowMs = Date.now();
     let listToRender = sourceList.filter(item => {
-        let isEnded = false;
+        // Logic lọc y hệt bảng Table
         let isEnded = false;
         if (item.end_at) { 
             isEnded = nowMs > new Date(item.end_at).getTime(); 
@@ -2070,6 +2058,7 @@ function renderGrid(customData = null) {
         return isEnded;
     });
 
+    // 3. Nếu đang có bộ lọc ngày trên Calendar thì lọc thêm
     if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
         listToRender = listToRender.filter(c => c.end === currentFilterDate);
     }
@@ -2258,21 +2247,32 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
 
 
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
-            
-            let adminTarget = 0;
-            let validItem = sortedHist.find(h => parseFloat(h.target) > 0);
-            if (validItem) {
-                adminTarget = parseFloat(validItem.target);
-            }
-            
-            let displayTarget = 0;
-            if (status === 'ended' && adminTarget > 0) {
-                displayTarget = adminTarget; 
-            } else if (c.ai_prediction && c.ai_prediction.target > 0) {
-                displayTarget = c.ai_prediction.target; 
+
+            if (status === 'ended' && c.end) {
+
+
+                let endRecord = sortedHist.find(h => h.date === c.end);
+                
+                if (endRecord && parseFloat(endRecord.target) > 0) {
+                    target = parseFloat(endRecord.target); 
+                } else {
+
+
+                    let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
+                    if (validItem) {
+                        target = parseFloat(validItem.target);
+                    }
+                }
             } else {
-                displayTarget = adminTarget;
+
+
+                if (sortedHist.length > 0) {
+                    target = parseFloat(sortedHist[0].target);
+                }
             }
+            
+
+            if (isNaN(target)) target = 0;
 
             
 let usePrice = parseFloat(c.cachedPrice) || ((c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0);
@@ -2363,7 +2363,7 @@ fullHtml += `
     
     <div class="mb-val text-gold anim-breathe" style="align-items: center; justify-content: flex-end;">
         <span id="grid-target-${c.db_id}" style="font-size: 1.4rem !important; font-weight: 900 !important; color: #ffca28 !important; line-height: 1; display: inline-block; text-shadow: 0 0 15px rgba(240, 185, 11, 0.5);">
-            $${fmtNum(displayTarget)}
+            $${fmtNum((c.ai_prediction && c.ai_prediction.target > 0) ? c.ai_prediction.target : target)}
         </span>
         ${adminEditBtn}
     </div>
@@ -2491,6 +2491,7 @@ function updateGridValuesOnly() {
                         let newEstStr = '~$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estTotal);
                         let oldEstTotal = parseFloat(estEl.getAttribute('data-raw-est')) || 0;
 
+                        // TÁCH RỜI: Đồng bộ logic cho thẻ bài Grid
                         if (oldEstTotal > 0 && estTotal !== oldEstTotal) {
                             if (estTotal > oldEstTotal) {
                                 estEl.style.setProperty('color', '#0ECB81', 'important'); 
@@ -2506,32 +2507,23 @@ function updateGridValuesOnly() {
                     }
                 }
                 
-                let rawHist = c.history || [];
-                let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
-                let adminTarget = 0;
-                let validItem = sortedHist.find(h => parseFloat(h.target) > 0);
-                if (validItem) adminTarget = parseFloat(validItem.target);
-
-                let isEnded = false;
-                let endStr = c.end_at || c.end || (c.data && c.data.end);
-                let endTimeStr = c.endTime || "23:59:59";
-                if(endTimeStr.length === 5) endTimeStr += ":00";
-                if (c.end_at) { isEnded = Date.now() >= new Date(c.end_at).getTime(); }
-                else if (endStr) { isEnded = Date.now() >= new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); }
-
-                let adminStr = adminTarget > 0 ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(adminTarget) : '---';
-                let aiStr = (c.ai_prediction && c.ai_prediction.target > 0) ? '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(c.ai_prediction.target) : '---';
-
-                let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
-                if (gridTargetEl) {
-                    let finalGridVal = (isEnded && adminTarget > 0) ? adminStr : ((c.ai_prediction && c.ai_prediction.target > 0) ? aiStr : adminStr);
-                    if (gridTargetEl.innerText !== finalGridVal) gridTargetEl.innerText = finalGridVal;
+                // --- BƠM SỐ AI PREDICTION MỚI VÀO UI MỖI 3 GIÂY ---
+                if (c.ai_prediction && c.ai_prediction.target > 0) {
+                    let aiStr = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(c.ai_prediction.target);
+                    
+                    // Cập nhật ở Thẻ Bài (Grid)
+                    let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
+                    if (gridTargetEl && gridTargetEl.innerText !== aiStr) {
+                        gridTargetEl.innerText = aiStr;
+                    }
+                    
+                    // Cập nhật ở Bảng Radar (Table)
+                    let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
+                    if (tableTargetEl && tableTargetEl.innerText !== aiStr) {
+                        tableTargetEl.innerText = aiStr;
+                    }
                 }
-
-                let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
-                if (tableTargetEl && c.ai_prediction && c.ai_prediction.target > 0) {
-                    if (tableTargetEl.innerText !== aiStr) tableTargetEl.innerText = aiStr;
-                }
+                // ---------------------------------------------------
 
             }
         });
@@ -2613,6 +2605,7 @@ function copyContract(addr) {
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
+
     if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
         projectsToRender = projectsToRender.filter(c => c.end === currentFilterDate);
     }
@@ -6418,6 +6411,7 @@ async function fetchLayer2Data() {
 
 function applyLayer2Data(serverData) {
     if (!serverData || Object.keys(serverData).length === 0) return;
+
     let hasChanges = false;
 
     if (compList && compList.length > 0) {
@@ -6426,36 +6420,40 @@ function applyLayer2Data(serverData) {
             const liveItem = serverData[alphaId];
             
             if (liveItem) {
-                // --- 1. LUÔN CẬP NHẬT GIÁ REALTIME (Bất kể giải đã đóng hay chưa) ---
-                if (liveItem.p !== undefined) {
-                    c.cachedPrice = liveItem.p;
-                    hasChanges = true;
-                }
-
-                // --- 2. CHỐT CHẶN MILI GIÂY CHO CÁC THÔNG SỐ CÒN LẠI ---
+                // 1. LUÔN CHO PHÉP CẬP NHẬT GIÁ (Cho cả History)
+                c.cachedPrice = liveItem.p;
+                hasChanges = true;
+                
+                // 2. TÍNH TOÁN TRẠNG THÁI KẾT THÚC THẬT CHUẨN
+                let currentStatus = (c.status || '').toUpperCase();
+                let isEnded = false;
                 let endStr = c.end_at || c.end || (c.data && c.data.end);
                 let endTimeStr = c.endTime || "23:59:59";
                 if(endTimeStr.length === 5) endTimeStr += ":00";
-                let endMs = c.end_at ? new Date(c.end_at).getTime() : new Date(endStr + 'T' + endTimeStr + 'Z').getTime();
 
-                // NẾU ĐÃ HẾT GIỜ -> TỪ CHỐI CẬP NHẬT VOLUME VÀ MÔ HÌNH DỰ BÁO (Prediction)
-                if (Date.now() >= endMs) return; 
-
-                // --- 3. KHU VỰC CHỈ CẬP NHẬT KHI GIẢI ĐANG CHẠY ---
+                if (c.end_at) { 
+                    isEnded = Date.now() > new Date(c.end_at).getTime(); 
+                } else if (endStr) { 
+                    let endDateTime = new Date(endStr + 'T' + endTimeStr + 'Z');
+                    isEnded = Date.now() > endDateTime.getTime(); 
+                }
+                
+                let isFinalized = c.is_finalized || currentStatus === 'ENDED' || currentStatus === 'FINALIZED' || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
+                
+                // --- CHỐT CHẶN: NẾU ĐÃ KẾT THÚC THÌ DỪNG LẠI, KHÔNG CHẠM VÀO VOLUME ---
+                if (isEnded || isFinalized) return;
+                
+                // 3. CẬP NHẬT VOLUME (Chỉ dành cho giải đang chạy)
                 if (liveItem.v) {
                     c.limit_daily_volume = liveItem.v.dl || 0;
                     c.real_alpha_volume = liveItem.v.dt || 0;
                 }
-                
-                let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
+                let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0); 
                 let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
                 c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
                 c.limit_accumulated_volume = baseLimit + (c.limit_daily_volume || 0);
                 c.daily_tx_count = liveItem.tx || 0;
-                
                 if (liveItem.analysis) c.market_analysis = liveItem.analysis;
-                
-                // Cập nhật Mô hình tự tính toán (Prediction)
                 if (liveItem.ai_prediction) c.ai_prediction = liveItem.ai_prediction;
             }
         });
