@@ -2430,8 +2430,8 @@ fullHtml += `
     <div class="mb-label" style="justify-content: flex-end; color:#F0B90B">Min Target (Goal)</div>
     
     <div class="mb-val text-gold anim-breathe" style="align-items: center; justify-content: flex-end;">
-        <span style="font-size: 1.4rem !important; font-weight: 900 !important; color: #ffca28 !important; line-height: 1; display: inline-block; text-shadow: 0 0 15px rgba(240, 185, 11, 0.5);">
-            $${fmtNum(target)}
+        <span id="grid-target-${c.db_id}" style="font-size: 1.4rem !important; font-weight: 900 !important; color: #ffca28 !important; line-height: 1; display: inline-block; text-shadow: 0 0 15px rgba(240, 185, 11, 0.5);">
+            $${fmtNum((c.ai_prediction && c.ai_prediction.target > 0) ? c.ai_prediction.target : target)}
         </span>
         ${adminEditBtn}
     </div>
@@ -2574,6 +2574,25 @@ function updateGridValuesOnly() {
                         estEl.setAttribute('data-raw-est', estTotal);
                     }
                 }
+                
+                // --- BƠM SỐ AI PREDICTION MỚI VÀO UI MỖI 3 GIÂY ---
+                if (c.ai_prediction && c.ai_prediction.target > 0) {
+                    let aiStr = '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(c.ai_prediction.target);
+                    
+                    // Cập nhật ở Thẻ Bài (Grid)
+                    let gridTargetEl = document.getElementById(`grid-target-${c.db_id}`);
+                    if (gridTargetEl && gridTargetEl.innerText !== aiStr) {
+                        gridTargetEl.innerText = aiStr;
+                    }
+                    
+                    // Cập nhật ở Bảng Radar (Table)
+                    let tableTargetEl = document.getElementById(`table-target-${c.db_id}`);
+                    if (tableTargetEl && tableTargetEl.innerText !== aiStr) {
+                        tableTargetEl.innerText = aiStr;
+                    }
+                }
+                // ---------------------------------------------------
+
             }
         });
 
@@ -3090,7 +3109,7 @@ function calculateAiTarget(c, isHistory = false) {
 
         contentHtml = `
     <div style="line-height:1.1; display:flex; flex-direction:column; align-items:center;">
-        <span class="text-discord fw-bold" style="font-size:1.1em;">$${Math.round(target).toLocaleString('en-US')}</span>
+        <span class="text-discord fw-bold" style="font-size:1.1em;" id="table-target-${dbId}">$${Math.round(target).toLocaleString('en-US')}</span>
         ${deltaHtml}
     </div>`;
 
