@@ -1541,8 +1541,16 @@ async function loadFromCloud(isSilent = false) {
     } catch (e) { console.warn("⚠️ Bỏ qua lỗi Config:", e); }
 
     try {
-        const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
-        const serverData = await res.json(); 
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/tournaments?id=neq.-1&select=*`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        });
+        const serverArray = await res.json(); 
+
+        let serverData = {};
+        serverArray.forEach(row => {
+            let key = row.data.alphaId || `ALPHA_${row.id}`;
+            serverData[key] = { id: row.id, db_id: row.id, ...row.data };
+        });
 
         let tempRunning = [], tempHistory = [], tempAll = [];
         const todayStr = new Date().toISOString().split('T')[0];
@@ -1573,9 +1581,11 @@ async function loadFromCloud(isSilent = false) {
             
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
+            let endTimeStr = item.endTime || (item.data && item.data.endTime) || "23:59:59";
+            if(endTimeStr.length === 5) endTimeStr += ":00";
             
-            if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
-            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
+            if (item.end_at) { isEnded = Date.now() >= new Date(item.end_at).getTime(); }
+            else if (endStr) { isEnded = Date.now() >= new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); }
 
             if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
@@ -2026,7 +2036,6 @@ function updateAllPrices() {
 
 function renderGrid(customData = null) {
         const SHOW_PREDICT_BTN = false;
-        // 1. Kiểm tra nếu đang mở xem chi tiết (thẻ bài đang active) thì không render lại toàn bộ để tránh lag
         if (document.querySelector('.tour-card.active-card')) {
             updateGridValuesOnly(); 
             return; 
@@ -2035,35 +2044,33 @@ function renderGrid(customData = null) {
         const grid = document.getElementById('appGrid');
         if(!grid) return;
     
-        // 2. Xác định danh sách cần vẽ: ÉP GRID LẤY GIỐNG TABLE
     let currentTab = appData.currentTab || localStorage.getItem('wave_active_tab') || 'running';
     let sourceList = (typeof compList !== 'undefined' && compList.length > 0) ? [...compList] : [];
     
-    // Nếu compList rỗng (chưa load xong) thì mới dùng appData
     if (sourceList.length === 0) {
         sourceList = (currentTab === 'history') ? [...appData.history] : [...appData.running];
     }
 
     const nowMs = Date.now();
     let listToRender = sourceList.filter(item => {
-        // Logic lọc y hệt bảng Table
         let isEnded = false;
+        let endTimeStr = item.endTime || "23:59:59";
+        if(endTimeStr.length === 5) endTimeStr += ":00";
+
         if (item.end_at) { 
-            isEnded = nowMs > new Date(item.end_at).getTime(); 
+            isEnded = nowMs >= new Date(item.end_at).getTime(); 
         } else if (item.end) { 
-            isEnded = nowMs > (new Date(item.end).getTime() + 86400000); 
+            isEnded = nowMs >= new Date(item.end + 'T' + endTimeStr + 'Z').getTime(); 
         }
 
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
 
-    // 3. Nếu đang có bộ lọc ngày trên Calendar thì lọc thêm
     if (typeof currentFilterDate !== 'undefined' && currentFilterDate) {
         listToRender = listToRender.filter(c => c.end === currentFilterDate);
     }
     
-        // 4. Sắp xếp theo thứ tự ưu tiên (orderIndex)
         listToRender.sort((a,b) => {
             let posA = (a.orderIndex !== undefined && a.orderIndex !== null) ? a.orderIndex : 9999;
             let posB = (b.orderIndex !== undefined && b.orderIndex !== null) ? b.orderIndex : 9999;
@@ -2597,8 +2604,12 @@ function copyContract(addr) {
 
     let projectsToRender = sourceList.filter(item => {
         let isEnded = false;
-        if (item.end_at) { isEnded = nowMs > new Date(item.end_at).getTime(); } 
-        else if (item.end) { isEnded = nowMs > (new Date(item.end).getTime() + 86400000); }
+        let endTimeStr = item.endTime || "23:59:59";
+        if(endTimeStr.length === 5) endTimeStr += ":00";
+
+        if (item.end_at) { isEnded = nowMs >= new Date(item.end_at).getTime(); } 
+        else if (item.end) { isEnded = nowMs >= new Date(item.end + 'T' + endTimeStr + 'Z').getTime(); }
+        
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
