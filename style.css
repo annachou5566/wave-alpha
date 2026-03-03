@@ -2967,12 +2967,11 @@ margin-top: 2px;
 }
 
 .tippy-header {
-    border-bottom: 1px dashed #848e9c !important;
+    text-decoration: underline dashed #848e9c 1px !important;
+    text-underline-offset: 4px !important; 
     cursor: help !important;
-    display: inline-block;
 }
 
-/* Theme cho Tooltip chuẩn Binance */
 .tippy-box[data-theme~='binance'] {
     background-color: #1e2329;
     color: #eaeaea;
