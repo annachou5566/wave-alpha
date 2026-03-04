@@ -49,10 +49,25 @@ class CompetitionRadar {
     updateRealtimeStats(externalList) {
         if (!externalList || !Array.isArray(externalList)) return;
 
+        if (!this.data) this.data = { data: {} };
+        if (!this.data.data) this.data.data = {};
+
         externalList.forEach(item => {
             if (item.contract) {
                 const key = item.contract.toLowerCase().trim();
                 this.realtimeCache[key] = item;
+                
+                if (!this.data.data[key]) {
+                    this.data.data[key] = {
+                        s: item.symbol || item.name || "UNKNOWN",
+                        n: item.name || "",
+                        contract: item.contract,
+                        l: item.logo || item.icon || "",
+                        cl: item.chain_icon || item.chainLogo || "",
+                        e: item.end_at || item.end,
+                        h: [] 
+                    };
+                }
             }
         });
 
@@ -69,10 +84,9 @@ class CompetitionRadar {
     }
 
    processToken(contract, raw) {
-        const history = raw.h || raw.history; 
-        if (!history || history.length === 0) return null;
-        
-        const historyVol = new Array(24).fill(0); 
+        const history = raw.h || raw.history || []; 
+               
+        const historyVol = new Array(24).fill(0);
         const todayVol = new Array(24).fill(0); 
         const todayRisk = new Array(24).fill(0); 
         const todayTx = new Array(24).fill(0);
