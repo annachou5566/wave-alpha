@@ -2339,19 +2339,25 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
 
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
 
+            if (c.start) {
+                let startD = c.start.substring(0, 10);
+                sortedHist = sortedHist.filter(h => h.date >= startD);
+            }
+
             if (status === 'ended' && c.end) {
                 let endRecord = sortedHist.find(h => h.date === c.end);
                 if (endRecord && parseFloat(endRecord.target) > 0) {
                     target = parseFloat(endRecord.target); 
                 } else {
-                    let validItem = sortedHist.find(h => h.date <= c.end && h.date >= (c.start || "2000-01-01") && parseFloat(h.target) > 0);
+                    let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
                     if (validItem) target = parseFloat(validItem.target);
                 }
             } else {
-                let validItem = sortedHist.find(h => h.date >= (c.start || "2000-01-01") && parseFloat(h.target) > 0);
-                if (validItem) target = parseFloat(validItem.target);
+                if (sortedHist.length > 0 && parseFloat(sortedHist[0].target) > 0) {
+                    target = parseFloat(sortedHist[0].target);
+                }
             }
-            
+
             if (isNaN(target)) target = 0;
 
             
@@ -3012,6 +3018,13 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
 
        
             let h = c.history || [];
+            
+            // BỘ LỌC THÔNG MINH: Lọc bỏ rác của giải cũ
+            if (c.start) {
+                let startD = c.start.substring(0, 10);
+                h = h.filter(x => x.date >= startD);
+            }
+
             let curTarget = 0, diff = 0, hasData = false;
             let latest = null; let prev = null;
 
@@ -3020,8 +3033,7 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
                 
                 if (!latest && h.length > 0) {
                     let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    // Quét lùi nhưng BẮT BUỘC chặn số liệu của giải cũ (>= c.start)
-                    latest = sorted.find(x => x.date <= c.end && x.date >= (c.start || "2000-01-01") && parseFloat(x.target) > 0);
+                    latest = sorted.find(x => x.date <= c.end && parseFloat(x.target) > 0);
                 }
                 
                 if (latest) {
