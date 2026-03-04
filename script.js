@@ -1639,6 +1639,13 @@ async function loadFromCloud(isSilent = false) {
             item.id = item.db_id; 
             item.contract = item.contract || (item.data && item.data.contract) || "0x0000000000000000000000000000000000000000"; 
             
+            // XÓA DATA LỊCH SỬ CỦA GIẢI CŨ NẾU BỊ CLONE NHẦM
+            let startDateStr = item.start || (item.data && item.data.start);
+            if (startDateStr) {
+                if (item.history) item.history = item.history.filter(h => h.date >= startDateStr);
+                if (item.data && item.data.history) item.data.history = item.data.history.filter(h => h.date >= startDateStr);
+            }
+
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
             let endTimeStr = item.endTime || (item.data && item.data.endTime) || "23:59:59";
@@ -2333,27 +2340,18 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
 
             if (status === 'ended' && c.end) {
-            let endRecord = sortedHist.find(h => h.date === c.end);
-            if (endRecord && parseFloat(endRecord.target) > 0) {
-                target = parseFloat(endRecord.target); 
-            }
-        } else {
-
-
-                    let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
-                    if (validItem) {
-                        target = parseFloat(validItem.target);
-                    }
+                let endRecord = sortedHist.find(h => h.date === c.end);
+                if (endRecord && parseFloat(endRecord.target) > 0) {
+                    target = parseFloat(endRecord.target); 
+                } else {
+                    let validItem = sortedHist.find(h => h.date <= c.end && h.date >= (c.start || "2000-01-01") && parseFloat(h.target) > 0);
+                    if (validItem) target = parseFloat(validItem.target);
                 }
             } else {
-
-
-                if (sortedHist.length > 0) {
-                    target = parseFloat(sortedHist[0].target);
-                }
+                let validItem = sortedHist.find(h => h.date >= (c.start || "2000-01-01") && parseFloat(h.target) > 0);
+                if (validItem) target = parseFloat(validItem.target);
             }
             
-
             if (isNaN(target)) target = 0;
 
             
@@ -3019,6 +3017,12 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
 
             if (isHistoryTab) {
                 latest = h.find(x => x.date === c.end);
+                
+                if (!latest && h.length > 0) {
+                    let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
+                    // Quét lùi nhưng BẮT BUỘC chặn số liệu của giải cũ (>= c.start)
+                    latest = sorted.find(x => x.date <= c.end && x.date >= (c.start || "2000-01-01") && parseFloat(x.target) > 0);
+                }
                 
                 if (latest) {
                     let d = new Date(latest.date); d.setDate(d.getDate() - 1);
