@@ -1641,9 +1641,18 @@ async function loadFromCloud(isSilent = false) {
             
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
+            let endTimeStr = item.endTime || (item.data && item.data.endTime) || "23:59:59";
+            if(endTimeStr.length === 5) endTimeStr += ":00";
             
-            if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
-            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
+            let isFinalized = item.is_finalized || (item.data && item.data.ai_prediction && item.data.ai_prediction.status_label === 'FINALIZED');
+
+            if (isFinalized) {
+                isEnded = true;
+            } else if (item.end_at) { 
+                isEnded = Date.now() > new Date(item.end_at).getTime(); 
+            } else if (endStr) { 
+                isEnded = Date.now() > new Date(endStr + 'T' + endTimeStr + 'Z').getTime(); 
+            }
 
             if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
@@ -2116,10 +2125,17 @@ function renderGrid(customData = null) {
     let listToRender = sourceList.filter(item => {
         // Logic lọc y hệt bảng Table
         let isEnded = false;
-        if (item.end_at) { 
+        let endTimeStr = item.endTime || "23:59:59";
+        if(endTimeStr.length === 5) endTimeStr += ":00";
+        
+        let isFinalized = item.is_finalized || (item.ai_prediction && item.ai_prediction.status_label === 'FINALIZED');
+
+        if (isFinalized) {
+            isEnded = true;
+        } else if (item.end_at) { 
             isEnded = nowMs > new Date(item.end_at).getTime(); 
         } else if (item.end) { 
-            isEnded = nowMs > (new Date(item.end).getTime() + 86400000); 
+            isEnded = nowMs > new Date(item.end + 'T' + endTimeStr + 'Z').getTime(); 
         }
 
         if (currentTab === 'running') return !isEnded;
@@ -2664,8 +2680,18 @@ function copyContract(addr) {
 
     let projectsToRender = sourceList.filter(item => {
         let isEnded = false;
-        if (item.end_at) { isEnded = nowMs > new Date(item.end_at).getTime(); } 
-        else if (item.end) { isEnded = nowMs > (new Date(item.end).getTime() + 86400000); }
+        let endTimeStr = item.endTime || "23:59:59";
+        if(endTimeStr.length === 5) endTimeStr += ":00";
+        
+        let isFinalized = item.is_finalized || (item.ai_prediction && item.ai_prediction.status_label === 'FINALIZED');
+
+        if (isFinalized) {
+            isEnded = true;
+        } else if (item.end_at) { 
+            isEnded = nowMs > new Date(item.end_at).getTime(); 
+        } else if (item.end) { 
+            isEnded = nowMs > new Date(item.end + 'T' + endTimeStr + 'Z').getTime(); 
+        }
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
