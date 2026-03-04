@@ -1639,8 +1639,6 @@ async function loadFromCloud(isSilent = false) {
             item.id = item.db_id; 
             item.contract = item.contract || (item.data && item.data.contract) || "0x0000000000000000000000000000000000000000"; 
             
-            
-
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
             let endTimeStr = item.endTime || (item.data && item.data.endTime) || "23:59:59";
@@ -2334,28 +2332,29 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
 
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
 
-            if (c.start) {
-                let startD = c.start.substring(0, 10);
-                sortedHist = sortedHist.filter(h => h.date >= startD);
-            }
-
             if (status === 'ended' && c.end) {
+
+
                 let endRecord = sortedHist.find(h => h.date === c.end);
+                
                 if (endRecord && parseFloat(endRecord.target) > 0) {
                     target = parseFloat(endRecord.target); 
                 } else {
-                    let validItem = sortedHist.find(h => {
-                        if (h.date > c.end || parseFloat(h.target) <= 0) return false;
-                        let diffDays = (new Date(c.end) - new Date(h.date)) / 86400000;
-                        return diffDays <= 60; 
-                    });
-                    if (validItem) target = parseFloat(validItem.target);
+
+
+                    let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
+                    if (validItem) {
+                        target = parseFloat(validItem.target);
+                    }
                 }
             } else {
-                if (sortedHist.length > 0 && parseFloat(sortedHist[0].target) > 0) {
+
+
+                if (sortedHist.length > 0) {
                     target = parseFloat(sortedHist[0].target);
                 }
             }
+            
 
             if (isNaN(target)) target = 0;
 
@@ -3017,23 +3016,15 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
 
        
             let h = c.history || [];
-            
             let curTarget = 0, diff = 0, hasData = false;
             let latest = null; let prev = null;
 
             if (isHistoryTab) {
                 latest = h.find(x => x.date === c.end);
-                
                 if (!latest && h.length > 0) {
                     let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    // Quét lùi an toàn: Giới hạn lấy số lùi tối đa 60 ngày
-                    latest = sorted.find(x => {
-                        if (x.date > c.end || parseFloat(x.target) <= 0) return false;
-                        let diffDays = (new Date(c.end) - new Date(x.date)) / 86400000;
-                        return diffDays <= 60;
-                    });
+                    latest = sorted.find(x => parseFloat(x.target) > 0);
                 }
-                
                 if (latest) {
                     let d = new Date(latest.date); d.setDate(d.getDate() - 1);
                     let prevDateStr = d.toISOString().split('T')[0]; 
