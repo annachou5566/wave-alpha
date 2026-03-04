@@ -2333,13 +2333,11 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
 
             if (status === 'ended' && c.end) {
-
-
-                let endRecord = sortedHist.find(h => h.date === c.end);
-                
-                if (endRecord && parseFloat(endRecord.target) > 0) {
-                    target = parseFloat(endRecord.target); 
-                } else {
+            let endRecord = sortedHist.find(h => h.date === c.end);
+            if (endRecord && parseFloat(endRecord.target) > 0) {
+                target = parseFloat(endRecord.target); 
+            }
+        } else {
 
 
                     let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
@@ -3021,10 +3019,7 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
 
             if (isHistoryTab) {
                 latest = h.find(x => x.date === c.end);
-                if (!latest && h.length > 0) {
-                    let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    latest = sorted.find(x => parseFloat(x.target) > 0);
-                }
+                
                 if (latest) {
                     let d = new Date(latest.date); d.setDate(d.getDate() - 1);
                     let prevDateStr = d.toISOString().split('T')[0]; 
