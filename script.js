@@ -1639,12 +1639,7 @@ async function loadFromCloud(isSilent = false) {
             item.id = item.db_id; 
             item.contract = item.contract || (item.data && item.data.contract) || "0x0000000000000000000000000000000000000000"; 
             
-            // XÓA DATA LỊCH SỬ CỦA GIẢI CŨ NẾU BỊ CLONE NHẦM
-            let startDateStr = item.start || (item.data && item.data.start);
-            if (startDateStr) {
-                if (item.history) item.history = item.history.filter(h => h.date >= startDateStr);
-                if (item.data && item.data.history) item.data.history = item.data.history.filter(h => h.date >= startDateStr);
-            }
+            
 
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
