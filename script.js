@@ -2312,34 +2312,12 @@ let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { max
             let target = 0;
             let rawHist = c.history || [];
 
-
-
             let sortedHist = [...rawHist].sort((a,b) => new Date(b.date) - new Date(a.date));
-
-            if (status === 'ended' && c.end) {
-
-
-                let endRecord = sortedHist.find(h => h.date === c.end);
-                
-                if (endRecord && parseFloat(endRecord.target) > 0) {
-                    target = parseFloat(endRecord.target); 
-                } else {
-
-
-                    let validItem = sortedHist.find(h => h.date <= c.end && parseFloat(h.target) > 0);
-                    if (validItem) {
-                        target = parseFloat(validItem.target);
-                    }
-                }
-            } else {
-
-
-                if (sortedHist.length > 0) {
-                    target = parseFloat(sortedHist[0].target);
-                }
+            let validItem = sortedHist.find(h => parseFloat(h.target) > 0);
+            if (validItem) {
+                target = parseFloat(validItem.target);
             }
             
-
             if (isNaN(target)) target = 0;
 
             
@@ -2821,10 +2799,9 @@ thead.innerHTML = `
                 case 'duration':  valA = new Date(isHistoryTab ? a.end : a.start).getTime(); valB = new Date(isHistoryTab ? b.end : b.start).getTime(); break;
                 case 'min_vol':   
                     let getT1 = (item) => {
-                        let h = item.history || []; if(h.length === 0) return 0;
-                        let dTarget = isHistoryTab ? item.end : new Date(new Date().setDate(new Date().getDate()-1)).toISOString().split('T')[0];
-                        let f = h.find(x=>x.date===dTarget);
-                        if(!isHistoryTab && !f) { let v = h.filter(x=>x.date!==new Date().toISOString().split('T')[0]); if(v.length>0) f=v[v.length-1]; }
+                        let h = item.history || [];
+                        let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
+                        let f = sorted.find(x => parseFloat(x.target) > 0);
                         return f ? parseFloat(f.target) : 0;
                     };
                     valA = getT1(a); valB = getT1(b); break;
@@ -2993,27 +2970,19 @@ let priceValHtml = `<div class="cell-stack justify-content-center"><span class="
             let curTarget = 0, diff = 0, hasData = false;
             let latest = null; let prev = null;
 
-            if (isHistoryTab) {
-                latest = h.find(x => x.date === c.end);
-                if (!latest && h.length > 0) {
-                    let sorted = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
-                    latest = sorted.find(x => parseFloat(x.target) > 0);
-                }
-                if (latest) {
-                    let d = new Date(latest.date); d.setDate(d.getDate() - 1);
-                    let prevDateStr = d.toISOString().split('T')[0]; 
-                    prev = h.find(x => x.date === prevDateStr);
-                }
-            } else {
-                latest = h.find(x => x.date === yestStr);
-                prev = h.find(x => x.date === dayBeforeStr);
-                if (!latest && h.length > 0) {
-                    let todayStr = now.toISOString().split('T')[0];
-                    let validHist = h.filter(x => x.date !== todayStr && x.target > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
-                    if(validHist.length > 0) { latest = validHist[validHist.length - 1]; if(validHist.length > 1) prev = validHist[validHist.length - 2]; }
+            // Bốc thẳng 2 cấu hình mới nhất từ Supabase (bỏ qua ngày)
+            let sortedHist = [...h].sort((a,b) => new Date(b.date) - new Date(a.date));
+            let validItems = sortedHist.filter(x => parseFloat(x.target) > 0);
+            
+            if (validItems.length > 0) {
+                latest = validItems[0]; // Số lưu mới nhất (Min Vol)
+                curTarget = parseFloat(latest.target);
+                if (validItems.length > 1) {
+                    prev = validItems[1]; // Số liền kề trước đó (để tính % chênh lệch)
+                    diff = curTarget - parseFloat(prev.target);
+                    hasData = true;
                 }
             }
-            if (latest) { curTarget = parseFloat(latest.target); if (prev) { diff = curTarget - parseFloat(prev.target); hasData = true; } }
 
             let diffHtml = `<span class="cell-secondary opacity-50">${t.txt_no_data || '--'}</span>`;
             if (hasData) {
