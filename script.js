@@ -1613,6 +1613,7 @@ async function loadFromCloud(isSilent = false) {
         const serverData = await res.json(); 
 
         let tempRunning = [], tempHistory = [], tempAll = [];
+        let seenDbIds = new Set(); // <-- THÊM BỘ LỌC CHỐNG TRÙNG LẶP
         const todayStr = new Date().toISOString().split('T')[0];
         const now = new Date();
 
@@ -1621,6 +1622,41 @@ async function loadFromCloud(isSilent = false) {
             if (!item) return;
             
             // LƯU CHÌA KHÓA VÀO ALPHA_ID ĐỂ REALTIME SOI CHIẾU
+            item.alphaId = item.alphaId || (item.data && item.data.alphaId);
+            if (!item.alphaId && key.startsWith('ALPHA_')) {
+                item.alphaId = key;
+            }
+            
+            // Lấy Base Volume từ Server để cộng dồn
+            item.base_total_vol = item.base_total_vol || (item.data && item.data.base_total_vol) || 0;
+            item.base_limit_vol = item.base_limit_vol || (item.data && item.data.base_limit_vol) || 0;
+
+            item.db_id = item.db_id || item.id || (item.data && item.data.id);
+            if (!item.db_id) {
+                if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
+                else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
+                else item.db_id = 9999;
+            }
+            item.id = item.db_id; 
+
+            // --- KHẮC PHỤC LỖI DOUBLE LỊCH SỬ ---
+            // Nếu ID giải đấu này đã được xử lý rồi thì bỏ qua (Ngăn server trả về 2 key trùng nhau)
+            if (seenDbIds.has(item.db_id)) return;
+            seenDbIds.add(item.db_id);
+            // ------------------------------------
+
+            item.contract = item.contract || (item.data && item.data.contract) || "0x0000000000000000000000000000000000000000"; 
+            
+            let isEnded = false;
+            let endStr = item.end_at || item.end || (item.data && item.data.end);
+            
+            if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
+            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
+
+            if (!isEnded) tempRunning.push(item);
+            else tempHistory.push(item);
+            tempAll.push(item);
+        });
             item.alphaId = item.alphaId || (item.data && item.data.alphaId);
             if (!item.alphaId && key.startsWith('ALPHA_')) {
                 item.alphaId = key;
