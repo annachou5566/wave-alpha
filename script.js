@@ -1657,34 +1657,6 @@ async function loadFromCloud(isSilent = false) {
             else tempHistory.push(item);
             tempAll.push(item);
         });
-            item.alphaId = item.alphaId || (item.data && item.data.alphaId);
-            if (!item.alphaId && key.startsWith('ALPHA_')) {
-                item.alphaId = key;
-            }
-            
-            // Lấy Base Volume từ Server để cộng dồn
-            item.base_total_vol = item.base_total_vol || (item.data && item.data.base_total_vol) || 0;
-            item.base_limit_vol = item.base_limit_vol || (item.data && item.data.base_limit_vol) || 0;
-
-            item.db_id = item.db_id || item.id || (item.data && item.data.id);
-            if (!item.db_id) {
-                if (key.startsWith('legacy_')) item.db_id = parseInt(key.replace('legacy_', ''));
-                else if (key.startsWith('ALPHA_')) item.db_id = parseInt(key.replace('ALPHA_', ''));
-                else item.db_id = 9999;
-            }
-            item.id = item.db_id; 
-            item.contract = item.contract || (item.data && item.data.contract) || "0x0000000000000000000000000000000000000000"; 
-            
-            let isEnded = false;
-            let endStr = item.end_at || item.end || (item.data && item.data.end);
-            
-            if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
-            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
-
-            if (!isEnded) tempRunning.push(item);
-            else tempHistory.push(item);
-            tempAll.push(item);
-        });
 
         appData.running = tempRunning;
         appData.history = tempHistory;
