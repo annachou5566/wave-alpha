@@ -2998,8 +2998,6 @@ html, body {
     }
     
     .navbar .gap-4 { gap: 0.5rem !important; }
-    
-    /* Ép khoảng cách tổng thể về đúng 8px */
     .navbar .gap-2 { gap: 8px !important; } 
     
     #userProfile .balance-badge {
@@ -3020,15 +3018,19 @@ html, body {
         font-size: 1.2rem !important;
     }
 
-    #userProfile {
+    
+    #userProfile:not(.d-none) {
         display: flex !important;
-        margin-left: 0 !important; 
-        gap: 8px !important; 
+    }
+    
+    #userProfile {
+        margin-left: auto !important; 
+        gap: 8px !important;
     }
 
     #userProfile .profile-btn-area {
         margin: 0 !important;
-        padding: 0 !important; 
+        padding: 0 !important;
         width: 32px !important;
         height: 32px !important;
         display: flex;
@@ -3042,7 +3044,7 @@ html, body {
         height: 32px !important;
         font-size: 0.9rem !important;
         border-radius: 8px !important;
-        margin: 0 !important; 
+        margin: 0 !important;
     }
 
     .profile-btn-area .user-avatar-sm {
@@ -3067,12 +3069,16 @@ html, body {
         width: 32px !important;
         height: 32px !important;
         padding: 0 !important;
-        margin: 0 !important; 
-        display: flex !important;
+        margin: 0 !important;
         align-items: center !important;
         justify-content: center !important;
         font-size: 1.1rem !important;
         color: var(--text-sub) !important;
+    }
+
+    .navbar .dropdown > .btn:not(.d-none), 
+    .navbar #loginBtn:not(.d-none) {
+        display: flex !important;
     }
 
     .navbar .dropdown-toggle::after,
