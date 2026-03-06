@@ -3011,40 +3011,44 @@ html, body {
 }
 
 @media (max-width: 768px) {
-    
+
+    .navbar .d-flex.align-items-center > *:not(#userProfile) {
+        display: none !important;
+    }
+
     .brand-logo {
         font-size: 1.2rem !important;
     }
 
-    .navbar .btn-icon:not([title="Logout"]) {
-        display: none !important;
-    }
-
-    .navbar .nav-link, 
-    #cur-lang-text {
-        display: none !important;
-    }
-
     #userProfile {
+        display: flex !important;
         margin-left: auto !important; 
-        gap: 8px !important;
+        gap: 10px !important;
     }
-    
-    #userProfile button[title="Logout"] {
-        display: flex !important; 
+
+    #userProfile .btn-icon {
+        display: flex !important;
         width: 32px !important;
         height: 32px !important;
-        font-size: 0.85rem !important;
+        font-size: 0.9rem !important;
         border-radius: 8px !important;
     }
-    
+
     .profile-btn-area .user-avatar-sm {
         width: 28px !important;
         height: 28px !important;
         margin-right: 0 !important;
     }
-    
+
     .navbar {
-        padding: 10px 0 !important;
+        padding: 10px 15px !important;
+    }
+
+
+    .tab-btn {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 }
