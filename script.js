@@ -2340,8 +2340,8 @@ let rewardLblStr = "REWARD";
 
 if (c.rewardType === 'tiered' && c.tiers_data && c.tiers_data.length > 0) {
     let tooltipHtml = c.tiers_data.map(t => `Top ${t.rank}: ${fmtNum(t.reward)}`).join('<br>');
-    rewardDisplayStr = `Max ${fmtNum(c.rewardQty)} <i class="fas fa-info-circle ms-1 text-warning tippy-header" data-tippy-content="${tooltipHtml}"></i>`;
-    rewardLblStr = "TIERED REWARD";
+    rewardDisplayStr = `<span class="tippy-header text-warning" data-tippy-content="${tooltipHtml}" style="cursor:help;">Max ${fmtNum(c.rewardQty)}</span>`;
+    rewardLblStr = "TIERED";
 }
                 
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
@@ -2917,7 +2917,7 @@ if (c.rewardType === 'tiered' && c.tiers_data && c.tiers_data.length > 0) {
     tooltipHtml += `</div>`;
     
     winPoolHtml = `<div class="cell-stack justify-content-center">
-                    <span class="cell-primary text-warning fw-bold tippy-header" data-tippy-content="${tooltipHtml}" style="cursor:help; border-bottom:1px dashed #ffc107">Tiered ℹ️</span>
+                    <span class="cell-primary text-warning fw-bold tippy-header" data-tippy-content="${tooltipHtml}" style="cursor:help;">Tiered</span>
                     <span class="cell-secondary">Up to ${(parseFloat(c.rewardQty)||0).toLocaleString()} ${symName}</span>
                    </div>`;
 } else {
