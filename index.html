@@ -1128,16 +1128,17 @@
 <script src="script.js"></script>
 
 
-<div id="alpha-tab-nav" style="display:flex">
-    <button id="btn-tab-market" class="tab-btn active" onclick="...">
-    <i class="fas fa-chart-line"></i>
-    <span>Alpha Market</span>
-</button>
+<div id="alpha-tab-nav" class="d-flex">
+    <button id="btn-tab-market" class="tab-btn active" onclick="switchTab('market')">
+        <i class="fas fa-chart-line" style="font-size: 20px; margin-bottom: 4px; display: block;"></i>
+        <span>Alpha Market</span>
+    </button>
 
-<button id="btn-tab-comp" class="tab-btn" onclick="...">
-    <i class="fas fa-trophy"></i>
-    <span>Competition</span>
-</button>
+    <button id="btn-tab-comp" class="tab-btn" onclick="switchTab('comp')">
+        <i class="fas fa-trophy" style="font-size: 20px; margin-bottom: 4px; display: block;"></i>
+        <span>Competition</span>
+    </button>
+</div>
 
 <div id="alpha-market-view" style="display:block">
     <div class="alpha-container">
