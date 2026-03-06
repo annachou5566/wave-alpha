@@ -3009,3 +3009,42 @@ html, body {
         display: none;
     }
 }
+
+@media (max-width: 768px) {
+    
+    .brand-logo {
+        font-size: 1.2rem !important;
+    }
+
+    .navbar .btn-icon:not([title="Logout"]) {
+        display: none !important;
+    }
+
+    .navbar .nav-link, 
+    #cur-lang-text {
+        display: none !important;
+    }
+
+    #userProfile {
+        margin-left: auto !important; 
+        gap: 8px !important;
+    }
+    
+    #userProfile button[title="Logout"] {
+        display: flex !important; 
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+    }
+    
+    .profile-btn-area .user-avatar-sm {
+        width: 28px !important;
+        height: 28px !important;
+        margin-right: 0 !important;
+    }
+    
+    .navbar {
+        padding: 10px 0 !important;
+    }
+}
