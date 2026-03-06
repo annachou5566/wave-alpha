@@ -962,36 +962,29 @@ const translations = {
 
 let globalTooltipInstances = []; 
 
-// Thay thế hàm initSmartTooltips cũ bằng hàm này
+let lastTooltipOpenTime = 0; 
+
 function initBinanceTooltips() {
     if (typeof tippy === 'undefined') return;
-    // Hủy các instance cũ nếu có để tránh rò rỉ bộ nhớ khi render lại
     if (window.currentTooltips) {
         window.currentTooltips.forEach(t => t.destroy());
     }
 
     window.currentTooltips = tippy('.tippy-header', {
-        // --- Giao diện ---
-        theme: 'binance', // Tên theme ta sẽ định nghĩa ở CSS
+        theme: 'binance',
         animation: 'scale',
         arrow: true,
-        allowHTML: true, // Cho phép HTML trong tooltip
+        allowHTML: true,
         
-        // --- Logic tương tác (QUAN TRỌNG) ---
-        // trigger: 'mouseenter focus', // PC: Rê chuột là hiện
-        
-        // Touch: 'hold' nghĩa là giữ 500ms mới hiện. Tap nhanh thì bỏ qua.
-        touch: ['hold', 500], 
-        
-        // Delay: Hiện sau 50ms, ẩn ngay lập tức
-        delay: [50, 0],
-        
-        // Ẩn ngay khi click (để nhường chỗ cho sự kiện Sort)
+        trigger: 'mouseenter click', 
         hideOnClick: true,
-        
-        // Tối ưu vị trí
+        interactive: true,
         placement: 'top',
         appendTo: document.body,
+        
+        onShow(instance) {
+            lastTooltipOpenTime = Date.now();
+        }
     });
 }
 
@@ -2609,6 +2602,9 @@ let mhSort = { col: 'reward', dir: 'desc' };
 
 
 window.toggleHealthSort = function(col) {
+    // --- CHỐNG LỖI MOBILE ---
+    // Nếu người dùng vừa chạm mở Tooltip trong vòng 400ms đổ lại, thì chặn không cho Sort bảng.
+    if (Date.now() - lastTooltipOpenTime < 400) return;
 
     if (mhSort.col === col) {
         mhSort.dir = mhSort.dir === 'desc' ? 'asc' : 'desc';
@@ -2617,18 +2613,14 @@ window.toggleHealthSort = function(col) {
         mhSort.dir = 'desc';
     }
 
-
     let currentData = []; 
-
     if (typeof appData !== 'undefined') {
-
         if (appData.currentTab === 'ended' || appData.currentTab === 'history') { 
             currentData = appData.history; 
         } else {
             currentData = appData.running; 
         }
     }
-
 
     renderMarketHealthTable(currentData); 
 }
