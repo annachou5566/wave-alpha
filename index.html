@@ -143,20 +143,25 @@
                 </ul>
             </div>
 
-            <button class="btn btn-sm btn-outline-light border-secondary text-brand fw-bold d-flex align-items-center gap-2 me-2" onclick="new bootstrap.Modal(document.getElementById('guideModal')).show()">
+            <button class="btn btn-sm btn-outline-light border-secondary text-brand fw-bold d-none d-md-flex align-items-center gap-2 me-2" onclick="new bootstrap.Modal(document.getElementById('guideModal')).show()">
                 <i class="fas fa-book-open"></i> <span class="d-none d-md-inline" data-i18n="nav_guide">GUIDE</span>
             </button>
 
-            <button class="btn-icon text-gold" onclick="handleSmartRefresh()" title="Smart Sync" style="display:none">
-    <i class="fas fa-sync-alt"></i>
-</button>
-                        <button class="btn-icon" onclick="openSettingsModal()" title="Wallets"><i class="fas fa-wallet"></i></button>
+            <button class="btn-icon text-gold d-none d-md-flex" onclick="handleSmartRefresh()" title="Smart Sync" style="display:none">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            
+            <button class="btn-icon d-none d-md-flex" onclick="openSettingsModal()" title="Wallets">
+                <i class="fas fa-wallet"></i>
+            </button>
 
-            <button class="btn-icon text-brand me-2" onclick="openFeedbackModal()" title="Feedback / Support">
+            <button class="btn-icon text-brand me-2 d-none d-md-flex" onclick="openFeedbackModal()" title="Feedback / Support">
                 <i class="fas fa-comment-dots"></i>
             </button>
-</button>
-<button class="btn-icon" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help"><i class="fas fa-question"></i></button>
+
+            <button class="btn-icon d-none d-md-flex" onclick="new bootstrap.Modal(document.getElementById('helpModal')).show()" title="Help">
+                <i class="fas fa-question"></i>
+            </button>
 
             <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-2 ms-2" onclick="openLoginModal()" id="loginBtn"><i class="fas fa-key"></i> <span class="d-none d-md-inline" data-i18n="nav_login">Login</span></button>
 
