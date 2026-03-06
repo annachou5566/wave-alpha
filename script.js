@@ -2333,9 +2333,17 @@ let usePrice = parseFloat(c.cachedPrice) || ((c.market_analysis && c.market_anal
 let priceStr = (usePrice > 0) ? '$' + usePrice.toLocaleString('en-US', { maximumFractionDigits: usePrice < 1 ? 6 : 2 }) : '---';
 let estVal = (parseFloat(c.rewardQty)||0) * usePrice;
 
-           
-
 let estHtml = estVal > 0 ? `<span class="text-sub small fw-bold ms-1 anim-breathe live-est-val" data-qty="${c.rewardQty}" style="transition: color 0.1s ease;">~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}</span>` : '<span class="live-est-val" data-qty="'+(c.rewardQty||0)+'" style="transition: color 0.1s ease;"></span>';
+
+let rewardDisplayStr = fmtNum(c.rewardQty);
+let rewardLblStr = "REWARD";
+
+if (c.rewardType === 'tiered' && c.tiers_data && c.tiers_data.length > 0) {
+    let tooltipHtml = c.tiers_data.map(t => `Top ${t.rank}: ${fmtNum(t.reward)}`).join('<br>');
+    rewardDisplayStr = `Max ${fmtNum(c.rewardQty)} <i class="fas fa-info-circle ms-1 text-warning tippy-header" data-tippy-content="${tooltipHtml}"></i>`;
+    rewardLblStr = "TIERED REWARD";
+}
+                
 let rawName = c.name ? c.name.toUpperCase().trim() : "UNKNOWN";
 let cleanSymbol = rawName.split('(')[0].trim(); 
 
@@ -2392,7 +2400,7 @@ fullHtml += `
                     </div>
                     <div class="card-stats-grid">
                         <div class="stat-cell"><div class="stat-lbl">TOP</div><div class="stat-val text-main">${c.topWinners||'--'}</div></div>
-                        <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">REWARD</div><div class="stat-val text-brand">${fmtNum(c.rewardQty)}${estHtml}</div></div>
+                        <div class="stat-cell border-start border-end border-secondary border-opacity-25"><div class="stat-lbl">${rewardLblStr}</div><div class="stat-val text-brand" style="font-size:0.9rem">${rewardDisplayStr}${estHtml}</div></div>
 <div class="stat-cell"><div class="stat-lbl">PRICE</div><div class="stat-val fw-bold font-num live-price-val" data-id="${c.db_id}" style="font-size: 1rem; letter-spacing: 0.5px;">${priceStr}</div></div>
 </div>
                     <div class="card-list" style="padding: 10px 15px 0 15px;">
@@ -2898,7 +2906,26 @@ thead.innerHTML = `
             }
             let durationHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary ${timeColor}" style="font-size:0.8rem; font-weight:bold">${countStr}</span><span class="cell-secondary">${c.start ? formatDateShort(c.start) + ' - ' + formatDateShort(c.end) : '--'}</span></div>`;
 
-            let winPoolHtml = `<div class="cell-stack justify-content-center"><span class="cell-primary text-white">${c.topWinners ? c.topWinners.replace(/\(p\d+\)/gi, '').trim() : '--'}</span><span class="cell-secondary">${(parseFloat(c.rewardQty)||0).toLocaleString()} ${c.name}</span></div>`;
+            let symName = c.name ? c.name.split('(')[0].trim().toUpperCase() : 'UNKNOWN';
+let winPoolHtml = '';
+
+if (c.rewardType === 'tiered' && c.tiers_data && c.tiers_data.length > 0) {
+    let tooltipHtml = `<div style='text-align:left; font-family:var(--font-num)'>`;
+    c.tiers_data.forEach(t => {
+        tooltipHtml += `<b>Top ${t.rank}:</b> <span class='text-brand'>${fmtNum(t.reward)}</span><br>`;
+    });
+    tooltipHtml += `</div>`;
+    
+    winPoolHtml = `<div class="cell-stack justify-content-center">
+                    <span class="cell-primary text-warning fw-bold tippy-header" data-tippy-content="${tooltipHtml}" style="cursor:help; border-bottom:1px dashed #ffc107">Tiered ℹ️</span>
+                    <span class="cell-secondary">Up to ${(parseFloat(c.rewardQty)||0).toLocaleString()} ${symName}</span>
+                   </div>`;
+} else {
+    winPoolHtml = `<div class="cell-stack justify-content-center">
+                    <span class="cell-primary text-white">${c.topWinners ? c.topWinners.replace(/\(p\d+\)/gi, '').trim() : '--'}</span>
+                    <span class="cell-secondary">${(parseFloat(c.rewardQty)||0).toLocaleString()} ${symName}</span>
+                   </div>`;
+}
             
             let price = parseFloat(c.cachedPrice) || parseFloat(ma.price) || 0;
             let pStr = '---';
