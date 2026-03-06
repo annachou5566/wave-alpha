@@ -2339,8 +2339,7 @@ let rewardDisplayStr = fmtNum(c.rewardQty);
 let rewardLblStr = "REWARD";
 
 if (c.rewardType === 'tiered' && c.tiers_data && c.tiers_data.length > 0) {
-    let tooltipHtml = c.tiers_data.map(t => `Top ${t.rank}: ${fmtNum(t.reward)}`).join('<br>');
-    rewardDisplayStr = `<span class="tippy-header text-warning" data-tippy-content="${tooltipHtml}" style="cursor:help;">Max ${fmtNum(c.rewardQty)}</span>`;
+    rewardDisplayStr = `<span class="text-warning anim-breathe" onclick="event.stopPropagation(); showTiersModal('${c.db_id}')" style="cursor:pointer; border-bottom:1px dashed #ffc107;">Max ${fmtNum(c.rewardQty)} <i class="fas fa-list-ol ms-1"></i></span>`;
     rewardLblStr = "TIERED";
 }
                 
@@ -2910,14 +2909,8 @@ thead.innerHTML = `
 let winPoolHtml = '';
 
 if (c.rewardType === 'tiered' && c.tiers_data && c.tiers_data.length > 0) {
-    let tooltipHtml = `<div style='text-align:left; font-family:var(--font-num)'>`;
-    c.tiers_data.forEach(t => {
-        tooltipHtml += `<b>Top ${t.rank}:</b> <span class='text-brand'>${fmtNum(t.reward)}</span><br>`;
-    });
-    tooltipHtml += `</div>`;
-    
     winPoolHtml = `<div class="cell-stack justify-content-center">
-                    <span class="cell-primary text-warning fw-bold tippy-header" data-tippy-content="${tooltipHtml}" style="cursor:help;">Tiered</span>
+                    <span class="cell-primary text-warning fw-bold anim-breathe" onclick="event.stopPropagation(); showTiersModal('${c.db_id}')" style="cursor:pointer; border-bottom:1px dashed #ffc107;">Tiered <i class="fas fa-list-ol"></i></span>
                     <span class="cell-secondary">Up to ${(parseFloat(c.rewardQty)||0).toLocaleString()} ${symName}</span>
                    </div>`;
 } else {
@@ -6574,3 +6567,34 @@ function applyLayer2Data(serverData) {
 }
 
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
+
+// Hàm hiển thị bảng Tiered
+function showTiersModal(dbId) {
+    let c = compList.find(x => x.db_id == dbId);
+    if (!c || !c.tiers_data) return;
+
+    let tbody = document.getElementById('tiers-table-body');
+    let html = '';
+
+    // Lấy giá hiện tại của token
+    let usePrice = parseFloat(c.cachedPrice) || ((c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0);
+    let tokenName = c.name ? c.name.split('(')[0].trim() : '';
+
+    c.tiers_data.forEach(t => {
+        // Tính giá trị USD cho từng mốc
+        let estVal = (parseFloat(t.reward) || 0) * usePrice;
+        let estValStr = estVal > 0 ? `~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}` : '---';
+        let rewardStr = `${fmtNum(t.reward)} ${tokenName}`;
+
+        html += `
+            <tr>
+                <td class="text-start ps-3 text-white fw-bold">Top ${t.rank}</td>
+                <td class="text-brand">${rewardStr}</td>
+                <td class="text-success text-end pe-3">${estValStr}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    new bootstrap.Modal(document.getElementById('tiersModal')).show();
+}
