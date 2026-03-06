@@ -114,17 +114,17 @@ body {
 
 @media (max-width: 768px) {
     #alpha-tab-nav {
-        top: 65px !important; 
+        top: 85px !important; 
         left: 50% !important;
-        transform: translateX(-50%); 
-        width: 92% !important; 
+        transform: translateX(-50%);
+        width: 94% !important; 
         border-radius: 8px !important;
         justify-content: center !important;
         padding: 4px !important;
-        background: #161a1e !important;
+        background: #131722 !important;
+        z-index: 990 !important;
     }
 
-    
     #alpha-tab-nav.nav-hidden {
         transform: translate(-50%, -150%) !important;
     }
@@ -132,7 +132,7 @@ body {
     .tab-btn {
         flex: 1; 
         justify-content: center;
-        font-size: 11px !important;
+        font-size: 12px !important;
         padding: 10px 0 !important;
         margin: 0 !important;
     }
@@ -142,7 +142,7 @@ body {
     #view-dashboard,
     .view-section,
     .terminal-layout {
-        padding-top: 115px !important;
+        padding-top: 145px !important; 
     }
 }
 
