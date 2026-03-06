@@ -2988,6 +2988,10 @@ html, body {
 }
 
 @media (max-width: 768px) {
+    .navbar {
+        padding: 10px 15px !important;
+    }
+
     .navbar .container {
         padding-left: 10px;
         padding-right: 10px;
@@ -3001,21 +3005,16 @@ html, body {
     }
 
     .btn-icon {
-        padding: 4px 6px;
+        width: 32px;
+        height: 32px;
         font-size: 0.9rem;
     }
 
     #cur-lang-text {
         display: none;
     }
-}
 
-@media (max-width: 768px) {
-
-    .navbar .d-flex.align-items-center > *:not(#userProfile) {
-        display: none !important;
-    }
-
+    
     .brand-logo {
         font-size: 1.2rem !important;
     }
@@ -3023,7 +3022,7 @@ html, body {
     #userProfile {
         display: flex !important;
         margin-left: auto !important; 
-        gap: 10px !important;
+        gap: 8px !important;
     }
 
     #userProfile .btn-icon {
@@ -3039,11 +3038,6 @@ html, body {
         height: 28px !important;
         margin-right: 0 !important;
     }
-
-    .navbar {
-        padding: 10px 15px !important;
-    }
-
 
     .tab-btn {
         display: flex !important;
