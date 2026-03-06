@@ -4463,12 +4463,17 @@ function delAcc(i) {
     } 
 }
         
-
+function toggleTierInput() {
+    let type = document.getElementById('c-rewardType').value;
+    document.getElementById('c-tiers-container').style.display = type === 'tiered' ? 'block' : 'none';
+}
 
     function openCreateModal() {
         document.getElementById('c-db-id').value = '';
 
-
+document.getElementById('c-rewardType').value = 'equal';
+        document.getElementById('c-tiersData').value = '';
+        toggleTierInput();
         document.getElementById('c-contract').value = '';
         document.getElementById('c-symbol').value = '';
         document.getElementById('c-chain').value = ''; 
@@ -4499,7 +4504,9 @@ function openEditModal(id) {
     document.getElementById('c-symbol').value = c.name;
     document.getElementById('c-chain').value = c.chain;
     document.getElementById('c-price').value = c.cachedPrice;
-    
+    document.getElementById('c-rewardType').value = c.rewardType || 'equal';
+    document.getElementById('c-tiersData').value = c.tiers_data ? JSON.stringify(c.tiers_data, null, 2) : '';
+    toggleTierInput();
 let logoInput = document.getElementById('c-logo');
     if (logoInput) {
         logoInput.type = "text";       
@@ -4546,8 +4553,6 @@ let logoInput = document.getElementById('c-logo');
 
 function saveComp() {
     let id = document.getElementById('c-db-id').value;
-    
-
     let c = id ? compList.find(x => x.db_id == id) : {};
 
     let tokensArr = [];
@@ -4556,11 +4561,22 @@ function saveComp() {
         tokensArr = tokenInput.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s !== '');
     }
 
+    // --- XỬ LÝ TIERS JSON MỚI THÊM ---
+    let rewardType = document.getElementById('c-rewardType').value;
+    let tiersData = null;
+    if (rewardType === 'tiered') {
+        try {
+            let rawTiers = document.getElementById('c-tiersData').value.trim();
+            if (rawTiers) tiersData = JSON.parse(rawTiers);
+        } catch (e) {
+            alert("❌ Lỗi JSON Tiers Data! Vui lòng kiểm tra lại dấu ngoặc, nháy kép.");
+            return; // Dừng việc lưu nếu JSON lỗi
+        }
+    }
+    // ---------------------------------
 
     let obj = { 
         ...c, 
-        
-
         db_id: id ? parseInt(id) : null,
         name: document.getElementById('c-symbol').value.toUpperCase(),
         contract: document.getElementById('c-contract').value,
@@ -4570,6 +4586,9 @@ function saveComp() {
         rewardQty: document.getElementById('c-rewardQty').value,
         topWinners: document.getElementById('c-winners').value,
         
+        rewardType: rewardType,
+        tiers_data: tiersData,
+
         start: document.getElementById('c-start').value,
         startTime: document.getElementById('c-start-time').value,
         end: document.getElementById('c-end').value,
@@ -4580,12 +4599,10 @@ function saveComp() {
         ruleType: document.getElementById('c-rule').value,
         inputTokens: tokensArr,
         
-
         history: c.history || [],
         predictions: c.predictions || [],
         comments: c.comments || []
     };
-
 
     saveToCloud(obj);
     bootstrap.Modal.getInstance(document.getElementById('compModal')).hide();
