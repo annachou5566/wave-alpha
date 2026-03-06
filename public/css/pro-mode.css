@@ -113,28 +113,36 @@ body {
 
 
 @media (max-width: 768px) {
-   
     #alpha-tab-nav {
-        top: 60px;     
-        padding: 8px 0;
+        top: 65px !important; 
+        left: 50% !important;
+        transform: translateX(-50%); 
+        width: 92% !important; 
+        border-radius: 8px !important;
+        justify-content: center !important;
+        padding: 4px !important;
+        background: #161a1e !important;
     }
 
-   
+    
+    #alpha-tab-nav.nav-hidden {
+        transform: translate(-50%, -150%) !important;
+    }
+
     .tab-btn {
-        font-size: 13px;
-        padding: 6px 12px;
-        margin: 0 5px;
-        letter-spacing: 0.5px;
+        flex: 1; 
+        justify-content: center;
+        font-size: 11px !important;
+        padding: 10px 0 !important;
+        margin: 0 !important;
     }
 
-   
-   
     .alpha-container,
     #competition-view,
     #view-dashboard,
     .view-section,
     .terminal-layout {
-        padding-top: 90px !important;
+        padding-top: 115px !important;
     }
 }
 
