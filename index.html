@@ -160,15 +160,16 @@
 
             <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-2 ms-2" onclick="openLoginModal()" id="loginBtn"><i class="fas fa-key"></i> <span class="d-none d-md-inline" data-i18n="nav_login">Login</span></button>
 
-            <div id="userProfile" class="d-none align-items-center ms-2">
-                 <div class="balance-badge" title="Virtual USDT (BSC)">
+            <div id="userProfile" class="d-none align-items-center ms-1">
+                 <div class="balance-badge d-none d-md-flex" title="Virtual USDT (BSC)">
                     <i class="fas fa-coins"></i> <span id="user-balance">0</span> USDT
                 </div>
-                <div class="profile-btn-area" onclick="openProfileModal()">
+                <div class="profile-btn-area ms-0 ms-md-2" onclick="openProfileModal()">
                     <img id="nav-avatar" src="" class="user-avatar-sm" style="display:none">
-                    <span class="text-brand fw-bold small" id="userNameDisplay">User</span>
+                    <span class="text-brand fw-bold small d-none d-md-block" id="userNameDisplay">User</span>
+                    <i class="fas fa-user-circle d-md-none text-brand fs-5"></i>
                 </div>
-                <button class="btn-icon ms-2" style="width:28px;height:28px" onclick="handleLogout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
+                <button class="btn-icon ms-1" style="width:28px;height:28px" onclick="handleLogout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
     </div>
