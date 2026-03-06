@@ -898,16 +898,29 @@
                 </div>
 
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="small text-sub fw-bold mb-1">REWARD QTY</label>
-                        <input type="number" id="c-rewardQty" class="form-control font-num">
+                    <div class="col-md-4">
+                        <label class="small text-sub fw-bold mb-1">REWARD TYPE</label>
+                        <select id="c-rewardType" class="form-select form-select-sm" onchange="toggleTierInput()">
+                            <option value="equal">Chia đều (Equal)</option>
+                            <option value="tiered">Bậc thang (Tiered)</option>
+                        </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="small text-sub fw-bold mb-1">WINNERS</label>
-                        <input type="number" id="c-winners" class="form-control font-num" placeholder="2000">
+                    <div class="col-md-4">
+                        <label class="small text-sub fw-bold mb-1">REWARD QTY (MAX)</label>
+                        <input type="number" id="c-rewardQty" class="form-control form-control-sm font-num" placeholder="Tổng hoặc Max">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small text-sub fw-bold mb-1">WINNERS (TOTAL)</label>
+                        <input type="number" id="c-winners" class="form-control form-control-sm font-num" placeholder="VD: 5000">
                     </div>
                 </div>
 
+                <div class="mb-3" id="c-tiers-container" style="display: none; background: rgba(240, 185, 11, 0.05); padding: 10px; border-radius: 6px; border: 1px dashed rgba(240, 185, 11, 0.4);">
+                    <label class="small text-warning fw-bold mb-1"><i class="fas fa-list-ol me-1"></i> TIERS DATA (JSON)</label>
+                    <textarea id="c-tiersData" class="form-control font-num" rows="6" placeholder='[{"rank": "1", "reward": 25000}, {"rank": "2-10", "reward": 3500}]' style="font-size: 0.8rem; background: #000; color: #0ECB81;"></textarea>
+                    <div class="text-sub mt-1" style="font-size:0.7rem">* Dán mảng JSON chứa các mốc rank và phần thưởng.</div>
+                </div>
+            
                 <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label class="small text-sub fw-bold mb-1">START DATE (UTC)</label>
