@@ -3013,7 +3013,6 @@ html, body {
     #cur-lang-text {
         display: none;
     }
-
     
     .brand-logo {
         font-size: 1.2rem !important;
@@ -3045,16 +3044,32 @@ html, body {
         align-items: center !important;
         justify-content: center !important;
     }
-}
 
-    .navbar .btn-outline-light {
+    .navbar .dropdown > .btn, 
+    .navbar #loginBtn {
         border: none !important;
         background: transparent !important;
-        padding: 4px 8px !important;
-        min-width: auto !important; 
         box-shadow: none !important;
+        min-width: 0 !important; 
+        width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.1rem !important;
+        color: var(--text-sub) !important;
     }
 
-    .navbar .dropdown-toggle::after {
+    .navbar .dropdown-toggle::after,
+    .navbar .dropdown-toggle #cur-lang-text {
         display: none !important; 
     }
+
+    .navbar .dropdown > .btn:hover, 
+    .navbar #loginBtn:hover {
+        color: #fff !important;
+        background: rgba(255,255,255,0.1) !important;
+        border-radius: 8px !important;
+    }
+}
