@@ -485,7 +485,7 @@ class CompetitionRadar {
 
                 <div class="radar-chart-container" style="position: relative; height: 100px; width: 100%; margin-top: 0px;">
                     <div style="position: absolute; top: 4px; left: 8px; z-index: 5; pointer-events: none; opacity: 0.8; text-align: left;">
-                        <span class="tippy-header" data-tippy-content="Khối lượng giao dịch ghi nhận trong ngày hôm nay." style="font-size: 0.6rem; color: #555; font-weight: 800; text-transform:uppercase; font-family: 'Rajdhani', sans-serif; pointer-events: auto;">DAILY VOL: </span>
+                        <span class="tippy-header" data-tippy-content="Khối lượng giao dịch ghi nhận trong ngày hôm nay." style="font-size: 0.6rem; color: #555; font-weight: 800; text-transform:uppercase; font-family: 'Rajdhani', sans-serif; pointer-events: auto;">DAILY VOL (Limit): </span>
                         <span id="stat-daily-${stats.contract}" class="radar-dyn-val" style="font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 0.65rem;">${this.formatKMB(stats.dailyVolUTC)}</span>
                     </div>
                     <canvas id="chart-${stats.contract}"></canvas>
