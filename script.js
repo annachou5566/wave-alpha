@@ -2436,7 +2436,12 @@ fullHtml += `
                     </div>
                    
 
-                      <div class="market-bar border-0 pt-1 pb-3">
+                    
+                    <div style="padding: 10px 15px 0 15px;">
+                        ${volProgressBarHtml}
+                    </div>
+
+                    <div class="market-bar border-0 pt-1 pb-3">
                         <div class="mb-item text-start">
                             <div class="mb-label">Total Vol <i class="fas fa-info-circle opacity-50" title="Tổng Volume Tích Lũy"></i></div>
                             <div class="mb-val" id="live-vol-${c.db_id}" style="color:${realVolColor}; font-size:1.1rem">${realVolDisplay}</div>
@@ -2452,10 +2457,7 @@ fullHtml += `
                         </div>
                     </div>
                     
-                    <div style="padding: 0 15px 15px 15px;">
-                        ${volProgressBarHtml}
-                    </div>
-
+                    
 
 ${SHOW_PREDICT_BTN ? `
                     <div class="card-actions" style="padding: 0; border:none;">
