@@ -963,7 +963,8 @@ const translations = {
 let globalTooltipInstances = []; 
 
 let lastTooltipOpenTime = 0; 
-
+let isHeaderTooltipOpen = false;
+let pendingHealthTableRenderData = null;
 function initBinanceTooltips() {
     if (typeof tippy === 'undefined') return;
     if (window.currentTooltips) {
@@ -984,6 +985,15 @@ function initBinanceTooltips() {
         
         onShow(instance) {
             lastTooltipOpenTime = Date.now();
+            isHeaderTooltipOpen = true;
+        },
+        onHidden() {
+            isHeaderTooltipOpen = false;
+            if (pendingHealthTableRenderData !== null && typeof renderMarketHealthTable === 'function') {
+                const dataToRender = pendingHealthTableRenderData;
+                pendingHealthTableRenderData = null;
+                renderMarketHealthTable(dataToRender);
+            }
         }
     });
 }
@@ -2665,6 +2675,11 @@ function copyContract(addr) {
 
 
    function renderMarketHealthTable(dataInput) {
+       if (isHeaderTooltipOpen) {
+        pendingHealthTableRenderData = dataInput;
+        return;
+    }
+
     const table = document.querySelector('.health-table');
     const tbody = document.getElementById('healthTableBody');
     if (!table || !tbody) return;
