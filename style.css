@@ -3144,3 +3144,22 @@ html, body {
         font-size: 0.7rem;
     }
 }
+
+
+@media (min-width: 769px) {
+    #alpha-tab-nav {
+        top: 100px !important; 
+    }
+
+    .alpha-container,
+    #competition-view,
+    #view-dashboard {
+        padding-top: 45px !important; 
+    }
+}
+
+
+button[onclick*="handleSmartRefresh"], 
+.fa-sync-alt {
+    display: none !important;
+}
