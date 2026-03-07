@@ -3093,3 +3093,54 @@ html, body {
         border-radius: 8px !important;
     }
 }
+
+
+
+.top-announcement-bar {
+    background-color: #0b0e11; 
+    text-align: center;
+    padding: 6px 15px;
+    font-size: 0.75rem;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.03); 
+    position: relative;
+    z-index: 1040;
+}
+
+.top-announcement-bar a {
+    color: #848e9c; 
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.top-announcement-bar .contact-id {
+    color: #EAECEF; 
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.top-announcement-bar .telegram-icon {
+    font-size: 0.85rem;
+    margin-right: 6px;
+    color: #848e9c; 
+    transition: all 0.2s ease;
+}
+
+.top-announcement-bar a:hover {
+    color: #F0B90B;
+}
+
+.top-announcement-bar a:hover .contact-id,
+.top-announcement-bar a:hover .telegram-icon {
+    color: #F0B90B;
+}
+
+@media (max-width: 768px) {
+    .top-announcement-bar {
+        padding: 5px 10px;
+        font-size: 0.7rem;
+    }
+}
