@@ -2435,7 +2435,7 @@ fullHtml += `
                    
 
                     
-                    <div style="padding: 5px 15px 0 15px;">
+                    <div style="padding: 0px 15px 0 15px;">
                         ${volProgressBarHtml}
                     </div>
 
