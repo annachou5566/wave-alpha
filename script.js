@@ -2299,16 +2299,29 @@ function renderGrid(customData = null) {
             if(isPerfect) cardClass += " card-perfect";
 
 
+let aLimit = parseFloat(c.limit_accumulated_volume || 0);
+let aOnchain = parseFloat(c.onchain_accumulated_volume || 0);
+let aTotal = parseFloat(c.total_accumulated_volume || (aLimit + aOnchain));
+let realVol = (status === 'upcoming') ? 0 : aTotal;
 
+if (aTotal === 0 && realVol > 0) aTotal = realVol; 
+let pctLimit = aTotal > 0 ? (aLimit / aTotal) * 100 : 50;
+let pctOnchain = aTotal > 0 ? (aOnchain / aTotal) * 100 : 50;
 
-
-let realVol = (status === 'upcoming') ? 0 : (c.limit_accumulated_volume || c.total_accumulated_volume || 0);
-
-
-let prefix = (c.limit_accumulated_volume > 0) ? '$' : ''; 
+let prefix = (realVol > 0) ? '$' : ''; 
 let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
-            
-            let realVolColor = realVol > 0 ? '#d0aaff' : '#666';
+let realVolColor = realVol > 0 ? '#fff' : '#666';
+
+let volProgressBarHtml = status === 'upcoming' ? '' : `
+    <div class="vol-progress-container mt-1 mb-1" style="height: 6px; background: #222; border-radius: 4px; display: flex; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+        <div style="width: ${pctLimit}%; background: #F0B90B;" title="Limit (CEX): $${fmtNum(aLimit)}"></div>
+        <div style="width: ${pctOnchain}%; background: #9945FF;" title="On-chain (DEX): $${fmtNum(aOnchain)}"></div>
+    </div>
+    <div class="d-flex justify-content-between mb-2" style="font-size: 0.65rem; font-weight: 700;">
+        <span style="color: #F0B90B;">CEX ${pctLimit.toFixed(1)}%</span>
+        <span style="color: #9945FF;">DEX ${pctOnchain.toFixed(1)}%</span>
+    </div>
+`;
 
             let target = 0;
             let rawHist = c.history || [];
@@ -2407,23 +2420,22 @@ fullHtml += `
                         </div>
                         <div class="acc-stats-grid" id="accGrid-${c.db_id}"></div>
                     </div>
-                    <div class="market-bar">
+                    <div class="market-bar pb-0 border-0">
                         <div class="mb-item text-start">
-                            <div class="mb-label">Total Vol <i class="fas fa-info-circle opacity-50" title="Volume Tích Lũy"></i></div>
-                            <div class="mb-val" id="live-vol-${c.db_id}" style="color:${realVolColor}">${realVolDisplay}</div>
+                            <div class="mb-label">Total Vol <i class="fas fa-info-circle opacity-50" title="Tổng Volume Tích Lũy"></i></div>
+                            <div class="mb-val" id="live-vol-${c.db_id}" style="color:${realVolColor}; font-size:1.1rem">${realVolDisplay}</div>
                         </div>
                         <div class="mb-item text-end">
-    <div class="mb-label" style="justify-content: flex-end; color:#F0B90B">Min Target (Goal)</div>
-    
-    <div class="mb-val text-gold anim-breathe" style="align-items: center; justify-content: flex-end;">
-        <span style="font-size: 1.4rem !important; font-weight: 900 !important; color: #ffca28 !important; line-height: 1; display: inline-block; text-shadow: 0 0 15px rgba(240, 185, 11, 0.5);">
-            $${fmtNum(target)}
-        </span>
-        ${adminEditBtn}
-    </div>
-</div>
+                            <div class="mb-label" style="justify-content: flex-end; color:#F0B90B">Min Target (Goal)</div>
+                            <div class="mb-val text-gold anim-breathe" style="align-items: center; justify-content: flex-end;">
+                                <span style="font-size: 1.4rem !important; font-weight: 900 !important; color: #ffca28 !important; line-height: 1; text-shadow: 0 0 15px rgba(240, 185, 11, 0.5);">
+                                    $${fmtNum(target)}
+                                </span>
+                                ${adminEditBtn}
+                            </div>
                         </div>
                     </div>
+                    ${volProgressBarHtml}
 
 
 ${SHOW_PREDICT_BTN ? `
@@ -5449,48 +5461,59 @@ function renderCardMiniChart(c, customCanvasId = null) {
     if (typeof accSettings !== 'undefined') accSettings.forEach(acc => accDatasets[acc.id] = []);
 
     let maxDays = 6; 
-    // 💡 [GIẢI PHÁP MỚI]: QUÉT TỊNH TIẾN TỪ START ĐẾN HÔM NAY (CHÍNH XÁC TUYỆT ĐỐI THEO DATA JSON)
     let cleanStart = null;
     let startDate = new Date(anchorDate.getTime());
-    startDate.setUTCDate(anchorDate.getUTCDate() - 6); // Mặc định vẽ khung tối thiểu 7 ngày
+    startDate.setUTCDate(anchorDate.getUTCDate() - 6); 
 
     if (c.start) {
         cleanStart = c.start.substring(0, 10).trim();
         let startParts = cleanStart.split('-');
         if (startParts.length === 3) {
             let actualStart = new Date(Date.UTC(startParts[0], startParts[1]-1, startParts[2], 12, 0, 0));
-            // Lùi điểm bắt đầu về tận ngày khởi tranh nếu giải dài hơn 7 ngày
             if (actualStart.getTime() < startDate.getTime()) {
                 startDate = actualStart;
             }
         }
     }
 
-    // Tính tổng số ngày cần vẽ từ startDate tới anchorDate
     let totalDays = Math.round((anchorDate.getTime() - startDate.getTime()) / 86400000);
 
-    // Vòng lặp quét TIẾN từ quá khứ đến hiện tại
+    let limitHistory = c.limit_vol_history || [];
+    let onchainHistory = c.onchain_vol_history || [];
+    let onchainVolData = []; 
+
     for (let i = 0; i <= totalDays; i++) {
         let d = new Date(startDate.getTime());
         d.setUTCDate(startDate.getUTCDate() + i);
         let dStr = d.toISOString().split('T')[0];
 
-        // Bỏ qua các ngày nằm trước mốc cleanStart
         if (cleanStart && dStr < cleanStart) continue;
-
         labels.push(d.getUTCDate() + '/' + (d.getUTCMonth()+1));
 
-        // 1. LẤY CHÍNH XÁC VOLUME TỪ DATA GỐC (KHÔNG FAKE)
-        let rVal = 0;
+        let limVal = 0, oncVal = 0, realVal = 0;
+        let lItem = limitHistory.find(x => x.date === dStr);
+        let oItem = onchainHistory.find(x => x.date === dStr);
         let rItem = realHistory.find(x => x.date === dStr);
-        if (rItem) {
-            rVal = parseFloat(rItem.vol || 0); 
-        } else if (dStr === todayStr) {
-            rVal = parseFloat(c.real_alpha_volume || 0); 
-        }
-        limitVolData.push(rVal);
 
-        // 2. TÍNH DỮ LIỆU DỰ BÁO (CHỈ HÔM NAY)
+        if (lItem) limVal = parseFloat(lItem.vol || 0);
+        if (oItem) oncVal = parseFloat(oItem.vol || 0);
+        if (rItem) realVal = parseFloat(rItem.vol || 0);
+
+        if (dStr === todayStr) {
+            limVal = parseFloat(c.limit_daily_volume || 0);
+            oncVal = parseFloat(c.onchain_daily_volume || 0);
+            realVal = parseFloat(c.real_alpha_volume || 0);
+            if (oncVal === 0 && realVal > limVal) oncVal = realVal - limVal;
+        }
+
+        if (!lItem && !oItem && rItem) {
+            limVal = realVal; 
+            oncVal = 0;
+        }
+
+        limitVolData.push(limVal);
+        onchainVolData.push(oncVal);
+
         let projVal = 0;
         if (dStr === todayStr && !isEnded && secondsRemaining > 0) {
             let stableSpeed = 0;
@@ -5536,11 +5559,13 @@ function renderCardMiniChart(c, customCanvasId = null) {
     if (existingChart) {
         existingChart.data.labels = labels;
         existingChart.data.datasets[0].data = limitVolData;
-        existingChart.data.datasets[1].data = projectedData;
-        existingChart.data.datasets[2].data = targetData;
+        existingChart.data.datasets[1].data = onchainVolData;
+        existingChart.data.datasets[2].data = projectedData;
+        existingChart.data.datasets[3].data = targetData;
+        
         accSettings.forEach((acc, index) => {
-            if(existingChart.data.datasets[3 + index]) {
-                existingChart.data.datasets[3 + index].data = accDatasets[acc.id];
+            if(existingChart.data.datasets[4 + index]) {
+                existingChart.data.datasets[4 + index].data = accDatasets[acc.id];
             }
         });
         existingChart.update('none'); 
@@ -5551,16 +5576,17 @@ function renderCardMiniChart(c, customCanvasId = null) {
     const ctx = ctxElement.getContext('2d'); 
     let chartDatasets = [
         {
-            type: 'bar', label: 'Current', 
+            type: 'bar', label: 'Limit (CEX)', 
             data: limitVolData,
-            backgroundColor: (context) => {
-                const ctx = context.chart.ctx;
-                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-                gradient.addColorStop(0, 'rgba(0, 240, 255, 0.9)');
-                gradient.addColorStop(1, 'rgba(0, 240, 255, 0.1)');
-                return gradient;
-            },
-            borderRadius: 4, order: 3, stack: 'volStack', yAxisID: 'y_limit'
+            backgroundColor: '#F0B90B', // Vàng Binance
+            borderRadius: 2, order: 4, stack: 'volStack', yAxisID: 'y_limit'
+        },
+        {
+            type: 'bar', label: 'On-chain (DEX)', 
+            data: onchainVolData,
+            backgroundColor: '#9945FF', // Tím DEX
+            borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 }, 
+            order: 3, stack: 'volStack', yAxisID: 'y_limit'
         },
         {
             type: 'bar', label: 'Forecast (+)', 
@@ -5569,14 +5595,14 @@ function renderCardMiniChart(c, customCanvasId = null) {
             borderColor: 'rgba(255, 255, 255, 0.5)',
             borderWidth: {top: 2, right: 2, left: 2, bottom: 0}, 
             borderDash: [4, 4],
-            borderRadius: 4, order: 3, stack: 'volStack', yAxisID: 'y_limit'
+            borderRadius: 4, order: 2, stack: 'volStack', yAxisID: 'y_limit'
         },
         {
             type: 'line', label: 'Target', data: targetData,
-            borderColor: '#F0B90B', borderWidth: 2, borderDash: [3, 3],
-            pointRadius: 2, pointHoverRadius: 5, pointBackgroundColor: '#000', pointBorderColor: '#F0B90B',
+            borderColor: '#00F0FF', borderWidth: 2, borderDash: [3, 3],
+            pointRadius: 2, pointHoverRadius: 5, pointBackgroundColor: '#000', pointBorderColor: '#00F0FF',
             pointBorderWidth: 2, pointHitRadius: 10, 
-            fill: false, tension: 0.3, order: 2, yAxisID: 'y_user'
+            fill: false, tension: 0.3, order: 1, yAxisID: 'y_user'
         }
     ];
 
