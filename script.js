@@ -2299,27 +2299,41 @@ function renderGrid(customData = null) {
             if(isPerfect) cardClass += " card-perfect";
 
 
+// --- TÍNH TOÁN TỶ TRỌNG CEX / DEX ---
 let aLimit = parseFloat(c.limit_accumulated_volume || 0);
 let aOnchain = parseFloat(c.onchain_accumulated_volume || 0);
-let aTotal = parseFloat(c.total_accumulated_volume || (aLimit + aOnchain));
-let realVol = (status === 'upcoming') ? 0 : aTotal;
 
-if (aTotal === 0 && realVol > 0) aTotal = realVol; 
-let pctLimit = aTotal > 0 ? (aLimit / aTotal) * 100 : 50;
-let pctOnchain = aTotal > 0 ? (aOnchain / aTotal) * 100 : 50;
+// Khắc phục lỗi % > 100: Bắt buộc dùng tổng của 2 biến Limit và Onchain làm chuẩn 100%
+let sumVolForPct = aLimit + aOnchain;
+let pctLimit = sumVolForPct > 0 ? (aLimit / sumVolForPct) * 100 : 50;
+let pctOnchain = sumVolForPct > 0 ? (aOnchain / sumVolForPct) * 100 : 50;
+
+// Tổng thực tế hiển thị
+let aTotal = parseFloat(c.total_accumulated_volume || sumVolForPct);
+let realVol = (status === 'upcoming') ? 0 : aTotal;
 
 let prefix = (realVol > 0) ? '$' : ''; 
 let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
 let realVolColor = realVol > 0 ? '#fff' : '#666';
 
+// Hàm format số gọn (VD: 1.5M, 400K)
+const fmtCompactLocal = (num) => new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(num || 0);
+
+// HTML THANH TIẾN TRÌNH 2 MÀU (THIẾT KẾ MỚI CỰC ĐẸP)
 let volProgressBarHtml = status === 'upcoming' ? '' : `
-    <div class="vol-progress-container mt-1 mb-1" style="height: 6px; background: #222; border-radius: 4px; display: flex; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-        <div style="width: ${pctLimit}%; background: #F0B90B;" title="Limit (CEX): $${fmtNum(aLimit)}"></div>
-        <div style="width: ${pctOnchain}%; background: #9945FF;" title="On-chain (DEX): $${fmtNum(aOnchain)}"></div>
+    <div class="d-flex justify-content-between align-items-end mt-2 mb-1" style="font-family: 'Rajdhani', sans-serif; line-height: 1.2;">
+        <div style="color: #F0B90B; display: flex; flex-direction: column; align-items: flex-start;">
+            <span style="font-size: 0.6rem; opacity: 0.8; letter-spacing: 0.5px; font-weight: 600;">CEX LIMIT</span>
+            <span style="font-size: 0.85rem; font-weight: 700;">${pctLimit.toFixed(1)}% <span style="font-size: 0.75rem; font-weight: 500; opacity: 0.9;">(${prefix}${fmtCompactLocal(aLimit)})</span></span>
+        </div>
+        <div style="color: #9945FF; display: flex; flex-direction: column; align-items: flex-end;">
+            <span style="font-size: 0.6rem; opacity: 0.8; letter-spacing: 0.5px; font-weight: 600;">DEX ON-CHAIN</span>
+            <span style="font-size: 0.85rem; font-weight: 700;"><span style="font-size: 0.75rem; font-weight: 500; opacity: 0.9;">(${prefix}${fmtCompactLocal(aOnchain)})</span> ${pctOnchain.toFixed(1)}%</span>
+        </div>
     </div>
-    <div class="d-flex justify-content-between mb-2" style="font-size: 0.65rem; font-weight: 700;">
-        <span style="color: #F0B90B;">CEX ${pctLimit.toFixed(1)}%</span>
-        <span style="color: #9945FF;">DEX ${pctOnchain.toFixed(1)}%</span>
+    <div class="vol-progress-container mb-3" style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+        <div style="width: ${pctLimit}%; background: linear-gradient(90deg, #F0B90B, #FFD700); transition: width 0.5s ease;" title="Limit (CEX): ${prefix}${fmtNum(aLimit)}"></div>
+        <div style="width: ${pctOnchain}%; background: linear-gradient(90deg, #9945FF, #D0AAFF); transition: width 0.5s ease;" title="On-chain (DEX): ${prefix}${fmtNum(aOnchain)}"></div>
     </div>
 `;
 
