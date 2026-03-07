@@ -2435,7 +2435,7 @@ fullHtml += `
                         <div class="acc-stats-grid" id="accGrid-${c.db_id}"></div>
                     </div>
                    
-`
+
                     <div style="padding: 10px 15px 0 15px;">
                         ${volProgressBarHtml}
                     </div>
