@@ -965,6 +965,8 @@ let globalTooltipInstances = [];
 let lastTooltipOpenTime = 0; 
 let isHeaderTooltipOpen = false;
 let pendingHealthTableRenderData = null;
+let pendingRealtimeServerData = null;
+let pendingHealthRealtimeRefresh = false;
 function initBinanceTooltips() {
     if (typeof tippy === 'undefined') return;
     if (window.currentTooltips) {
@@ -989,10 +991,22 @@ function initBinanceTooltips() {
         },
         onHidden() {
             isHeaderTooltipOpen = false;
+
+            if (pendingRealtimeServerData && typeof applyLayer2Data === 'function') {
+                const queuedRealtimeData = pendingRealtimeServerData;
+                pendingRealtimeServerData = null;
+                applyLayer2Data(queuedRealtimeData, true);
+            }
+
             if (pendingHealthTableRenderData !== null && typeof renderMarketHealthTable === 'function') {
                 const dataToRender = pendingHealthTableRenderData;
                 pendingHealthTableRenderData = null;
                 renderMarketHealthTable(dataToRender);
+            }
+
+            if (pendingHealthRealtimeRefresh && typeof updateHealthTableRealtime === 'function') {
+                pendingHealthRealtimeRefresh = false;
+                updateHealthTableRealtime();
             }
         }
     });
@@ -6382,6 +6396,10 @@ function openCardOverlay(originalCard) {
 
 
 function updateHealthTableRealtime() {
+    if (isHeaderTooltipOpen) {
+        pendingHealthRealtimeRefresh = true;
+        return;
+    }
     if (!document.getElementById('healthTableBody')) return;
     const fmtCompact = (num) => !num ? '$0' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 2 }).format(num);
 
@@ -6544,9 +6562,12 @@ async function fetchLayer2Data() {
 }
 
 
-function applyLayer2Data(serverData) {
+function applyLayer2Data(serverData, forceApply = false) {
     if (!serverData || Object.keys(serverData).length === 0) return;
-
+ if (isHeaderTooltipOpen && !forceApply) {
+        pendingRealtimeServerData = serverData;
+        return;
+    }
     let hasChanges = false;
 
     if (compList && compList.length > 0) {
