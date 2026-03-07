@@ -2436,11 +2436,7 @@ fullHtml += `
                     </div>
                    
 
-                    <div style="padding: 10px 15px 0 15px;">
-                        ${volProgressBarHtml}
-                    </div>
-
-                    <div class="market-bar border-0 pt-1 pb-3">
+                      <div class="market-bar border-0 pt-1 pb-3">
                         <div class="mb-item text-start">
                             <div class="mb-label">Total Vol <i class="fas fa-info-circle opacity-50" title="Tổng Volume Tích Lũy"></i></div>
                             <div class="mb-val" id="live-vol-${c.db_id}" style="color:${realVolColor}; font-size:1.1rem">${realVolDisplay}</div>
