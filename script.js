@@ -2316,12 +2316,14 @@ let prefix = (realVol > 0) ? '$' : '';
 let realVolDisplay = realVol > 0 ? prefix + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(realVol) : '---';
 let realVolColor = realVol > 0 ? '#fff' : '#666';
 
-// Hàm format số gọn (VD: 1.5M, 400K)
 const fmtCompactLocal = (num) => new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(num || 0);
 
-// HTML THANH TIẾN TRÌNH 2 MÀU (THIẾT KẾ MỚI CỰC ĐẸP)
 let volProgressBarHtml = status === 'upcoming' ? '' : `
-    <div class="d-flex justify-content-between align-items-end mt-2 mb-1" style="font-family: 'Rajdhani', sans-serif; line-height: 1.2;">
+    <div class="vol-progress-container mt-1 mb-1" style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+        <div style="width: ${pctLimit}%; background: linear-gradient(90deg, #F0B90B, #FFD700); transition: width 0.5s ease;" title="Limit (CEX): ${prefix}${fmtNum(aLimit)}"></div>
+        <div style="width: ${pctOnchain}%; background: linear-gradient(90deg, #9945FF, #D0AAFF); transition: width 0.5s ease;" title="On-chain (DEX): ${prefix}${fmtNum(aOnchain)}"></div>
+    </div>
+    <div class="d-flex justify-content-between align-items-start mb-2" style="font-family: 'Rajdhani', sans-serif; line-height: 1.2;">
         <div style="color: #F0B90B; display: flex; flex-direction: column; align-items: flex-start;">
             <span style="font-size: 0.6rem; opacity: 0.8; letter-spacing: 0.5px; font-weight: 600;">CEX LIMIT</span>
             <span style="font-size: 0.85rem; font-weight: 700;">${pctLimit.toFixed(1)}% <span style="font-size: 0.75rem; font-weight: 500; opacity: 0.9;">(${prefix}${fmtCompactLocal(aLimit)})</span></span>
@@ -2330,10 +2332,6 @@ let volProgressBarHtml = status === 'upcoming' ? '' : `
             <span style="font-size: 0.6rem; opacity: 0.8; letter-spacing: 0.5px; font-weight: 600;">DEX ON-CHAIN</span>
             <span style="font-size: 0.85rem; font-weight: 700;"><span style="font-size: 0.75rem; font-weight: 500; opacity: 0.9;">(${prefix}${fmtCompactLocal(aOnchain)})</span> ${pctOnchain.toFixed(1)}%</span>
         </div>
-    </div>
-    <div class="vol-progress-container mb-3" style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; display: flex; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-        <div style="width: ${pctLimit}%; background: linear-gradient(90deg, #F0B90B, #FFD700); transition: width 0.5s ease;" title="Limit (CEX): ${prefix}${fmtNum(aLimit)}"></div>
-        <div style="width: ${pctOnchain}%; background: linear-gradient(90deg, #9945FF, #D0AAFF); transition: width 0.5s ease;" title="On-chain (DEX): ${prefix}${fmtNum(aOnchain)}"></div>
     </div>
 `;
 
@@ -2437,7 +2435,7 @@ fullHtml += `
                    
 
                     
-                    <div style="padding: 10px 15px 0 15px;">
+                    <div style="padding: 5px 15px 0 15px;">
                         ${volProgressBarHtml}
                     </div>
 
