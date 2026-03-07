@@ -2449,7 +2449,10 @@ fullHtml += `
                             </div>
                         </div>
                     </div>
-                    ${volProgressBarHtml}
+                    
+                    <div style="padding: 0 15px 15px 15px;">
+                        ${volProgressBarHtml}
+                    </div>
 
 
 ${SHOW_PREDICT_BTN ? `
