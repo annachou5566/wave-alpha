@@ -776,6 +776,7 @@ window.calculateRoi = function() {
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
+    // 1. CHI PHÍ CÀY VOL GIẢI ĐẤU
     const contestMul = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
     const gapTradeSize = gap / contestMul;
     const myTradeSize = myVol / contestMul;
@@ -791,9 +792,10 @@ window.calculateRoi = function() {
     const rewardValueUSD = rewardTokenQty * rawPrice;
     const trueNetRoi = rewardValueUSD - totalCost;
 
+    // 2. LOGIC ALPHA MULTIPLIER (Chuẩn)
     let isAlphaActive = false;
     let alphaMul = 1;
-    let alphaLabel = "Est. Alpha Vol Gain";
+    let alphaLabel = "Total Alpha Vol"; // Mặc định nếu không có
 
     if (selectedRoiToken.listingTime && selectedRoiToken.alphaType && selectedRoiToken.alphaType !== 'none') {
         const now = new Date();
@@ -807,7 +809,8 @@ window.calculateRoi = function() {
             if (now.getTime() <= expiryTime) {
                 isAlphaActive = true;
                 alphaMul = (selectedRoiToken.alphaType === 'x4') ? 4 : (selectedRoiToken.alphaType === 'x2' ? 2 : 1);
-                alphaLabel = `Est. Alpha ${selectedRoiToken.alphaType} Gain`;
+                // SỬA Ở ĐÂY: Đổi chữ "Gain" thành chữ "Vol" cho hợp lý với tổng số
+                alphaLabel = `Total Alpha ${selectedRoiToken.alphaType} Vol`;
             }
         }
     }
@@ -823,8 +826,10 @@ window.calculateRoi = function() {
 
     const alphaVolGap = calculateAlphaVol(gapTradeSize);
     const alphaVolSunk = calculateAlphaVol(myTradeSize);
+    // Tính TỔNG VOLUME ALPHA
     const alphaVolTotal = alphaVolGap + alphaVolSunk;
 
+    // 3. CHI PHÍ CƠ HỘI ĐÃ CHUẨN XÁC
     let baseAlphaCost = 0; 
     let alphaEfficiency = 0; 
     
@@ -833,6 +838,7 @@ window.calculateRoi = function() {
         alphaEfficiency = (totalCost - rewardValueUSD) / (alphaVolTotal / 10000);
     }
 
+    // 4. UPDATE UI - ÉP CHUẨN 'en-US' (MỸ) VÀ 2 SỐ THẬP PHÂN
     const updateText = (id, val, prefix = "") => {
         const el = document.getElementById(id);
         if (el) el.innerText = prefix + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -849,12 +855,13 @@ window.calculateRoi = function() {
     const alphaTagEl = document.getElementById('roi-alpha-tag');
     if (alphaTagEl) alphaTagEl.innerText = alphaLabel;
     
+    // SỬA Ở ĐÂY: Hiện tổng Volume (alphaVolTotal) thay vì gap, và bỏ dấu "+" 
     const alphaGainEl = document.getElementById('roi-res-alpha-gain');
-    if (alphaGainEl) alphaGainEl.innerText = `+$${alphaVolGap.toLocaleString('en-US', {maximumFractionDigits:0})}`;
+    if (alphaGainEl) alphaGainEl.innerText = `$${alphaVolTotal.toLocaleString('en-US', {maximumFractionDigits:0})}`;
     
     const baseEffEl = document.getElementById('roi-res-alpha-base');
     if (baseEffEl) {
-        baseEffEl.innerText = `$${baseAlphaCost.toFixed(3)}`; 
+        baseEffEl.innerText = `$${baseAlphaCost.toFixed(3)}`;
     }
 
     const effEl = document.getElementById('roi-res-alpha-eff');
@@ -872,6 +879,7 @@ window.calculateRoi = function() {
     const priceEl = document.getElementById('roi-token-price');
     if (priceEl) priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
 
+    // 5. BOX LỜI KHUYÊN
     const adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
