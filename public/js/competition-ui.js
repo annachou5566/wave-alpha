@@ -779,47 +779,47 @@ window.calculateRoi = function() {
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
-    // 1. CALCULATE VOL NEEDED
     let multiplier = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
-    let tradeSize = gap / multiplier;
+    let gapTradeSize = gap / multiplier;
+    let myTradeSize = myVol / multiplier;
 
-    // 2. CALCULATE COSTS
     let coeffInput = document.getElementById('roi-cost-coeff');
     let costPer10k = coeffInput ? parseFloat(coeffInput.value || 0) : 2.5;
 
-    let totalCost = 0;
-    if (selectedRoiToken.ruleType === 'buy_only') {
-        totalCost = (tradeSize / 10000) * costPer10k;
-    } else {
-        totalCost = (tradeSize / 10000) * (costPer10k / 2);
-    }
+    let effectiveCostPer10k = (selectedRoiToken.ruleType === 'buy_only') ? costPer10k : (costPer10k / 2);
 
-    // 3. CALCULATE ROI
+    let gapCost = (gapTradeSize / 10000) * effectiveCostPer10k;
+    let sunkCost = (myTradeSize / 10000) * effectiveCostPer10k;
+    let totalCost = gapCost + sunkCost;
+
     let rawPrice = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
     let rewardValueUSD = rewardTokenQty * rawPrice;
-    let netRoi = rewardValueUSD - totalCost;
+    let trueNetRoi = rewardValueUSD - totalCost;
 
     let priceEl = document.getElementById('roi-token-price');
     if (priceEl) {
         priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
     }
 
-    // 4. UPDATE UI
     let resTrade = document.getElementById('roi-res-trade');
-    let resCost = document.getElementById('roi-res-cost');
+    let resSunkCost = document.getElementById('roi-res-sunk-cost');
+    let resGapCost = document.getElementById('roi-res-gap-cost');
+    let resTotalCost = document.getElementById('roi-res-total-cost');
     let resReward = document.getElementById('roi-res-reward');
     let roiEl = document.getElementById('roi-res-net');
     
-    if(resTrade) resTrade.innerText = `$${tradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
-    if(resCost) resCost.innerText = `-$${totalCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+    if(resTrade) resTrade.innerText = `$${gapTradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    if(resSunkCost) resSunkCost.innerText = `-$${sunkCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+    if(resGapCost) resGapCost.innerText = `-$${gapCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+    if(resTotalCost) resTotalCost.innerText = `-$${totalCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
     if(resReward) resReward.innerText = `+$${rewardValueUSD.toLocaleString(undefined, {maximumFractionDigits:2})}`;
     
     if(roiEl) {
-        roiEl.innerText = `${netRoi >= 0 ? '+' : ''}$${netRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-        roiEl.style.color = netRoi >= 0 ? 'var(--roi-green)' : 'var(--roi-red)';
+        roiEl.innerText = `${trueNetRoi >= 0 ? '+' : ''}$${trueNetRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+        roiEl.style.color = trueNetRoi >= 0 ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
-    // 5. ADVICE BOX IN ENGLISH
+    // 5. CẢNH BÁO THÔNG MINH (Dựa trên Total ROI và Sunk Cost)
     let adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
@@ -827,24 +827,32 @@ window.calculateRoi = function() {
             adviceBox.style.backgroundColor = 'transparent';
             adviceBox.style.borderColor = 'var(--roi-border)';
             adviceBox.innerHTML = `<span style="color:var(--roi-text-muted)"><i class="fas fa-info-circle me-1"></i>Waiting for volume input...</span>`;
-        } else if (netRoi >= 0) {
+        } else if (trueNetRoi >= 0) {
             adviceBox.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
             adviceBox.style.borderColor = 'var(--roi-green)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>FAVORABLE R/R!</span> Est. Profit: <b>$${netRoi.toFixed(2)}</b>`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>PROFITABLE!</span> True Net ROI: <b>+$${trueNetRoi.toFixed(2)}</b>. Worth pushing!`;
         } else {
-            adviceBox.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
-            adviceBox.style.borderColor = 'var(--roi-red)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>HIGH RISK:</span> Est. loss from trading costs (<b>-$${Math.abs(netRoi).toFixed(2)}</b>).`;
+            // Trường hợp thú vị: Tổng thì lỗ, nhưng do lỡ phóng lao (Sunk Cost) nên nếu cày tiếp thì vẫn đỡ lỗ hơn là bỏ cuộc.
+            let recovery = rewardValueUSD - gapCost; 
+            if (recovery > 0 && myVol > 0) {
+                adviceBox.style.backgroundColor = 'rgba(240, 185, 11, 0.1)';
+                adviceBox.style.borderColor = 'var(--roi-brand)';
+                adviceBox.innerHTML = `<span style="color:var(--roi-brand)"><i class="fas fa-exclamation-circle me-1"></i>SUNK COST RECOVERY:</span> Overall loss, but finishing the gap earns you <b>+$${recovery.toFixed(2)}</b> vs stopping now!`;
+            } else {
+                adviceBox.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
+                adviceBox.style.borderColor = 'var(--roi-red)';
+                adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>LOSS WARNING:</span> Total costs exceed rewards by <b>$${Math.abs(trueNetRoi).toFixed(2)}</b>.`;
+            }
         }
     }
 };
 
 window.resetRoiDisplay = function() {
-    let ids = ['roi-res-trade', 'roi-res-cost', 'roi-res-reward', 'roi-res-net'];
+    let ids = ['roi-res-trade', 'roi-res-sunk-cost', 'roi-res-gap-cost', 'roi-res-total-cost', 'roi-res-reward', 'roi-res-net'];
     ids.forEach(id => {
         let el = document.getElementById(id);
         if(el) {
-            el.innerText = id === 'roi-res-cost' ? '-$0' : (id === 'roi-res-reward' ? '+$0' : '$0');
+            el.innerText = (id.includes('cost')) ? '-$0' : (id === 'roi-res-reward' ? '+$0' : '$0');
             if(id === 'roi-res-net') el.style.color = 'var(--roi-text-main)';
         }
     });
