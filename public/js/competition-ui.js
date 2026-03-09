@@ -677,12 +677,29 @@ function toggleRoiSidebar() {
     }
 }
 
-// Bắt sự kiện chuyển Tab để hiện/ẩn nút Máy tính (Chỉ hiện ở Competition)
-const originalSwitchTab = window.switchTab;
-window.switchTab = function(tabId) {
-    if (originalSwitchTab) originalSwitchTab(tabId);
-    document.getElementById('btn-roi-trigger').style.display = (tabId === 'comp') ? 'flex' : 'none';
-};
+// Đợi 1 giây để đảm bảo toàn bộ hệ thống (script.js) đã load xong thì mới nạp Máy tính
+setTimeout(() => {
+    // 1. Gắn sự kiện khi bấm nút chuyển tab
+    const originalSwitchTab = window.switchTab;
+    if (originalSwitchTab) {
+        window.switchTab = function(tabId) {
+            originalSwitchTab(tabId); // Gọi lại hàm gốc để nó đổi giao diện bình thường
+            
+            // Xử lý hiện/ẩn nút ROI
+            const roiBtn = document.getElementById('btn-roi-trigger');
+            if (roiBtn) {
+                roiBtn.style.display = (tabId === 'comp') ? 'flex' : 'none';
+            }
+        };
+    }
+
+    // 2. Kích hoạt hiện luôn nút nếu lúc mới F5 web đang đứng sẵn ở tab Competition
+    const btnComp = document.getElementById('btn-tab-comp');
+    const roiBtn = document.getElementById('btn-roi-trigger');
+    if (btnComp && btnComp.classList.contains('active') && roiBtn) {
+        roiBtn.style.display = 'flex';
+    }
+}, 500);
 
 function setRoiStrategy(type) {
     currentRoiStrategy = type;
