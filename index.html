@@ -1353,16 +1353,16 @@
             <div class="roi-card mt-2 mb-0" style="background: rgba(240, 185, 11, 0.05); border-color: rgba(240, 185, 11, 0.2); padding: 8px;">
                 <div class="roi-label mb-1" style="color: var(--roi-brand); font-size: 10px;">Binance Alpha Opportunity</div>
                 <div class="roi-res-row">
-                    <span>Alpha Vol Gain (from Gap)</span>
+                    <span id="roi-alpha-tag">Est. Alpha Vol Gain</span>
                     <span id="roi-res-alpha-gain" class="fw-bold" style="color: var(--roi-brand);">+$0</span>
                 </div>
-                <div class="roi-res-row">
-                    <span>Alpha Cost / $10k Vol</span>
-                    <span id="roi-res-alpha-eff" class="roi-val-neutral">$0</span>
+                <div class="roi-res-row" style="opacity: 0.7;">
+                    <span>Base Cost / $10k Alpha <span style="font-size: 9px;">(No Reward)</span></span>
+                    <span id="roi-res-alpha-base" class="roi-val-neutral">$0</span>
                 </div>
-                <div class="roi-res-row" style="font-size: 10px; color: var(--roi-green);">
-                    <span>Opportunity Savings vs. Normal</span>
-                    <span id="roi-res-alpha-savings" class="fw-bold">+$0</span>
+                <div class="roi-res-row mt-1" style="font-size: 11px;">
+                    <span>Net Cost / $10k Alpha <span style="font-size: 9px;">(With Reward)</span></span>
+                    <span id="roi-res-alpha-eff" class="fw-bold" style="color: var(--roi-green);">$0</span>
                 </div>
             </div>
 
