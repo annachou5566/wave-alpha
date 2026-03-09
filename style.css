@@ -3165,7 +3165,6 @@ button[onclick*="handleSmartRefresh"],
 }
 
 
-/* Biến màu sắc chuẩn Pro UI */
 :root {
     --roi-bg-dark: #0B0E11;
     --roi-bg-card: #181A20;
@@ -3178,7 +3177,6 @@ button[onclick*="handleSmartRefresh"],
     --roi-red: #F6465D;
 }
 
-/* Nút Trigger */
 .roi-btn-pro {
     position: fixed;
     bottom: 20px;
@@ -3200,7 +3198,6 @@ button[onclick*="handleSmartRefresh"],
 }
 .roi-btn-pro:hover { background-color: var(--roi-bg-input); }
 
-/* Sidebar Wrapper */
 .roi-sidebar-pro {
     position: fixed;
     top: 0;
@@ -3219,7 +3216,6 @@ button[onclick*="handleSmartRefresh"],
 }
 .roi-sidebar-pro.show { right: 0; }
 
-/* Header */
 .roi-header-pro {
     display: flex;
     justify-content: space-between;
@@ -3238,14 +3234,12 @@ button[onclick*="handleSmartRefresh"],
 }
 .roi-close-btn:hover { color: var(--roi-text-main); }
 
-/* Body */
 .roi-body-pro {
     padding: 16px;
     overflow-y: auto;
     padding-bottom: 90px;
 }
 
-/* Cards (Sections) */
 .roi-card {
     background-color: var(--roi-bg-card);
     border: 1px solid var(--roi-border);
@@ -3254,7 +3248,6 @@ button[onclick*="handleSmartRefresh"],
     margin-bottom: 12px;
 }
 
-/* Typography */
 .roi-label {
     font-size: 12px;
     font-weight: 600;
@@ -3270,7 +3263,6 @@ button[onclick*="handleSmartRefresh"],
     margin-bottom: 4px;
 }
 
-/* Inputs */
 .roi-input {
     background-color: var(--roi-bg-input);
     border: 1px solid transparent;
@@ -3286,7 +3278,6 @@ button[onclick*="handleSmartRefresh"],
 .roi-input::placeholder { color: #5E6673; }
 select.roi-input { appearance: none; cursor: pointer; }
 
-/* Input Group with Prefix */
 .roi-input-group { margin-bottom: 4px; }
 .roi-input-wrapper {
     position: relative;
@@ -3301,7 +3292,6 @@ select.roi-input { appearance: none; cursor: pointer; }
 }
 .roi-input-wrapper .roi-input { padding-left: 24px; }
 
-/* Operator & Gap Result */
 .roi-operator-icon {
     text-align: center;
     color: var(--roi-text-muted);
@@ -3319,7 +3309,6 @@ select.roi-input { appearance: none; cursor: pointer; }
 }
 .roi-text-highlight { color: var(--roi-brand); font-weight: 600; font-family: monospace; font-size: 14px; }
 
-/* Badges & Fees */
 .roi-badges { display: flex; gap: 4px; }
 .roi-badge {
     background-color: var(--roi-bg-input);
@@ -3345,7 +3334,6 @@ select.roi-input { appearance: none; cursor: pointer; }
     margin-top: 8px;
 }
 
-/* Result Card */
 .roi-result-card {
     background-color: transparent;
     border: 1px solid var(--roi-border);
@@ -3389,6 +3377,15 @@ select.roi-input { appearance: none; cursor: pointer; }
     border-radius: 0 4px 4px 0;
 }
 
-/* Ẩn mũi tên input number */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+@media (max-width: 768px) {
+    .roi-btn-pro {
+        bottom: 85px !important; 
+    }
+    
+    .roi-body-pro {
+        padding-bottom: 130px !important; 
+    }
+}
