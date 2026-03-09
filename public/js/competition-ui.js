@@ -747,7 +747,6 @@ window.roiHandleTokenChange = function() {
         }
     }
 
-    // Default coefficients
     let isBsc = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc');
     let coeffInput = document.getElementById('roi-cost-coeff');
     if (coeffInput) {
@@ -760,7 +759,6 @@ window.roiHandleTokenChange = function() {
 window.calculateRoi = function() {
     if (!selectedRoiToken) return window.resetRoiDisplay();
 
-    // Sync data realtime từ appData
     if (typeof appData !== 'undefined' && appData.running) {
         let freshToken = appData.running.find(c => (c.db_id == selectedRoiToken.db_id || c.alphaId == selectedRoiToken.alphaId));
         if (freshToken) selectedRoiToken = freshToken; 
@@ -782,7 +780,6 @@ window.calculateRoi = function() {
     const gapTradeSize = gap / contestMul;
     const myTradeSize = myVol / contestMul;
     
-    
     const isBuySell = (selectedRoiToken.ruleType === 'buy_and_sell');
     const effectiveCostPer10k = isBuySell ? (costPer10k / 2) : costPer10k;
 
@@ -794,24 +791,32 @@ window.calculateRoi = function() {
     const rewardValueUSD = rewardTokenQty * rawPrice;
     const trueNetRoi = rewardValueUSD - totalCost;
 
-    const now = new Date();
-    let listingDate = new Date(selectedRoiToken.listingTime);
-    if (typeof selectedRoiToken.listingTime === 'string' && !selectedRoiToken.listingTime.includes('Z') && !selectedRoiToken.listingTime.includes('+')) {
-        listingDate = new Date(selectedRoiToken.listingTime + 'Z');
-    }
-    const expiryTime = new Date(Date.UTC(listingDate.getUTCFullYear(), listingDate.getUTCMonth(), listingDate.getUTCDate() + 29, 23, 59, 59, 999)).getTime();
-    
-    const isAlphaActive = (now.getTime() <= expiryTime && selectedRoiToken.alphaType !== 'none');
+    let isAlphaActive = false;
     let alphaMul = 1;
-    if (isAlphaActive) {
-        alphaMul = (selectedRoiToken.alphaType === 'x4') ? 4 : (selectedRoiToken.alphaType === 'x2' ? 2 : 1);
+    let alphaLabel = "Est. Alpha Vol Gain";
+
+    if (selectedRoiToken.listingTime && selectedRoiToken.alphaType && selectedRoiToken.alphaType !== 'none') {
+        const now = new Date();
+        let listingDate = new Date(selectedRoiToken.listingTime);
+        if (typeof selectedRoiToken.listingTime === 'string' && !selectedRoiToken.listingTime.includes('Z') && !selectedRoiToken.listingTime.includes('+')) {
+            listingDate = new Date(selectedRoiToken.listingTime + 'Z');
+        }
+        
+        if (!isNaN(listingDate.getTime())) {
+            const expiryTime = new Date(Date.UTC(listingDate.getUTCFullYear(), listingDate.getUTCMonth(), listingDate.getUTCDate() + 29, 23, 59, 59, 999)).getTime();
+            if (now.getTime() <= expiryTime) {
+                isAlphaActive = true;
+                alphaMul = (selectedRoiToken.alphaType === 'x4') ? 4 : (selectedRoiToken.alphaType === 'x2' ? 2 : 1);
+                alphaLabel = `Est. Alpha ${selectedRoiToken.alphaType} Gain`;
+            }
+        }
     }
 
     const calculateAlphaVol = (tSize) => {
         if (!isAlphaActive) return tSize;
         if (alphaMul === 4) {
             let buyPart = isBuySell ? tSize / 2 : tSize;
-            let sellPart = isBuySell ? tSize / 2 : tSize; 
+            let sellPart = isBuySell ? tSize / 2 : tSize;
             return (buyPart * 4) + (sellPart * 1);
         }
         return tSize * alphaMul; 
@@ -821,43 +826,37 @@ window.calculateRoi = function() {
     const alphaVolSunk = calculateAlphaVol(myTradeSize);
     const alphaVolTotal = alphaVolGap + alphaVolSunk;
 
-   
-    const normalAlphaCost = (alphaVolTotal / 10000) * (costPer10k / 2);
-    const contestNetCost = totalCost - rewardValueUSD;
-    const opportunitySavings = normalAlphaCost - contestNetCost;
-
-    // 3. CHI PHÍ CƠ HỘI (ALPHA SAVINGS - Chuẩn hệ quy chiếu token x4)
-    // Nếu trader cày con token x4 này mà KHÔNG quan tâm đến giải đấu, chi phí thực tế là tổng phí giao dịch
     let baseAlphaCost = 0; 
-    let alphaEfficiency = 0; // Chi phí thực sau khi lấy tiền giải bù vào
+    let alphaEfficiency = 0; 
     
     if (alphaVolTotal > 0) {
         baseAlphaCost = totalCost / (alphaVolTotal / 10000);
         alphaEfficiency = (totalCost - rewardValueUSD) / (alphaVolTotal / 10000);
     }
 
-    // 4. UPDATE UI
     const updateText = (id, val, prefix = "") => {
         const el = document.getElementById(id);
         if (el) el.innerText = prefix + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    document.getElementById('roi-res-trade').innerText = `$${gapTradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    const resTrade = document.getElementById('roi-res-trade');
+    if(resTrade) resTrade.innerText = `$${gapTradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    
     updateText('roi-res-sunk-cost', sunkCost, "-$");
     updateText('roi-res-gap-cost', gapCost, "-$");
     updateText('roi-res-total-cost', totalCost, "-$");
     updateText('roi-res-reward', rewardValueUSD, "+$");
     
-    document.getElementById('roi-alpha-tag').innerText = alphaLabel;
-    updateText('roi-res-alpha-gain', alphaVolFromGap, "+$");
+    const alphaTagEl = document.getElementById('roi-alpha-tag');
+    if (alphaTagEl) alphaTagEl.innerText = alphaLabel;
     
-    // Cập nhật giá gốc (Base Cost)
+    updateText('roi-res-alpha-gain', alphaVolGap, "+$");
+    
     const baseEffEl = document.getElementById('roi-res-alpha-base');
     if (baseEffEl) {
         baseEffEl.innerText = `$${baseAlphaCost.toFixed(3)}`;
     }
 
-    // Cập nhật giá thực tế có giải (Net Cost)
     const effEl = document.getElementById('roi-res-alpha-eff');
     if (effEl) {
         effEl.innerText = `$${alphaEfficiency.toFixed(3)}`;
@@ -871,7 +870,7 @@ window.calculateRoi = function() {
     }
 
     const priceEl = document.getElementById('roi-token-price');
-    if (priceEl) priceEl.innerText = rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4);
+    if (priceEl) priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
 
     const adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
@@ -882,7 +881,7 @@ window.calculateRoi = function() {
             adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>PROFITABLE!</span> True profit: <b>$${trueNetRoi.toFixed(2)}</b> plus highly discounted Alpha Vol.`;
         } else if (gapNet > 0 && myVol > 0) {
             adviceBox.style.borderColor = 'var(--roi-brand)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-brand)"><i class="fas fa-exclamation-circle me-1"></i>RECOVERY MODE:</span> Overall loss, but cày nốt phần Gap sẽ thu hồi được <b>$${gapNet.toFixed(2)}</b> chi phí chìm.`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-brand)"><i class="fas fa-exclamation-circle me-1"></i>RECOVERY MODE:</span> Overall loss, but completing the gap recovers <b>$${gapNet.toFixed(2)}</b> of your sunk cost.`;
         } else {
             adviceBox.style.borderColor = 'var(--roi-red)';
             adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>HIGH RISK:</span> Total costs are too high. Consider Alpha efficiency above.`;
@@ -891,11 +890,15 @@ window.calculateRoi = function() {
 };
 
 window.resetRoiDisplay = function() {
-    let ids = ['roi-res-trade', 'roi-res-sunk-cost', 'roi-res-gap-cost', 'roi-res-total-cost', 'roi-res-reward', 'roi-res-net'];
+    let ids = ['roi-res-trade', 'roi-res-sunk-cost', 'roi-res-gap-cost', 'roi-res-total-cost', 'roi-res-reward', 'roi-res-net', 'roi-res-alpha-gain', 'roi-res-alpha-base', 'roi-res-alpha-eff'];
     ids.forEach(id => {
         let el = document.getElementById(id);
         if(el) {
-            el.innerText = (id.includes('cost')) ? '-$0' : (id === 'roi-res-reward' ? '+$0' : '$0');
+            if (id.includes('cost') && id !== 'roi-res-alpha-base') el.innerText = '-$0';
+            else if (id === 'roi-res-alpha-base' || id === 'roi-res-alpha-eff') el.innerText = '$0';
+            else if (id === 'roi-res-reward' || id === 'roi-res-alpha-gain') el.innerText = '+$0';
+            else el.innerText = '$0';
+            
             if(id === 'roi-res-net') el.style.color = 'var(--roi-text-main)';
         }
     });
