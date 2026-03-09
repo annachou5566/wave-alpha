@@ -760,7 +760,7 @@ window.roiHandleTokenChange = function() {
 window.calculateRoi = function() {
     if (!selectedRoiToken) return window.resetRoiDisplay();
 
-    // Sync data realtime
+    // Sync data realtime từ appData
     if (typeof appData !== 'undefined' && appData.running) {
         let freshToken = appData.running.find(c => (c.db_id == selectedRoiToken.db_id || c.alphaId == selectedRoiToken.alphaId));
         if (freshToken) selectedRoiToken = freshToken; 
@@ -769,8 +769,8 @@ window.calculateRoi = function() {
     const targetVol = parseFloat(document.getElementById('roi-target-vol').value || 0);
     const myVol = parseFloat(document.getElementById('roi-my-vol').value || 0);
     const rewardTokenQty = parseFloat(document.getElementById('roi-tier-select').value || 0);
-    const coeffInput = document.getElementById('roi-cost-coeff');
-    const costPer10k = (coeffInput && coeffInput.value !== "") ? parseFloat(coeffInput.value) : 2.5;
+    const costPer10kInput = document.getElementById('roi-cost-coeff');
+    const costPer10k = (costPer10kInput && costPer10kInput.value !== "") ? parseFloat(costPer10kInput.value) : 2.5;
 
     const gap = Math.max(0, targetVol - myVol);
     const gapDisplay = document.getElementById('roi-gap-display');
@@ -778,72 +778,78 @@ window.calculateRoi = function() {
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
-    // 1. TÍNH TOÁN CHI PHÍ GIẢI ĐẤU (CONTEST)
     const contestMul = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
     const gapTradeSize = gap / contestMul;
     const myTradeSize = myVol / contestMul;
-    const effectiveCostPer10k = (selectedRoiToken.ruleType === 'buy_only') ? costPer10k : (costPer10k / 2);
+    
+    
+    const isBuySell = (selectedRoiToken.ruleType === 'buy_and_sell');
+    const effectiveCostPer10k = isBuySell ? (costPer10k / 2) : costPer10k;
 
     const gapCost = (gapTradeSize / 10000) * effectiveCostPer10k;
     const sunkCost = (myTradeSize / 10000) * effectiveCostPer10k;
     const totalCost = gapCost + sunkCost;
 
-    // 2. TÍNH LỢI NHUẬN TIỀN MẶT
     const rawPrice = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
     const rewardValueUSD = rewardTokenQty * rawPrice;
     const trueNetRoi = rewardValueUSD - totalCost;
 
-    // 3. LOGIC ALPHA VOLUME (Cơ hội cộng thêm)
-    // Kiểm tra thời hạn 30 ngày kể từ listingTime
     const now = new Date();
-    const listDate = new Date(selectedRoiToken.listingTime?.includes('Z') ? selectedRoiToken.listingTime : selectedRoiToken.listingTime + 'Z');
-    const alphaExpiry = new Date(Date.UTC(listDate.getUTCFullYear(), listDate.getUTCMonth(), listDate.getUTCDate() + 29, 23, 59, 59, 999));
+    let listingDate = new Date(selectedRoiToken.listingTime);
+    if (typeof selectedRoiToken.listingTime === 'string' && !selectedRoiToken.listingTime.includes('Z') && !selectedRoiToken.listingTime.includes('+')) {
+        listingDate = new Date(selectedRoiToken.listingTime + 'Z');
+    }
+    const expiryTime = new Date(Date.UTC(listingDate.getUTCFullYear(), listingDate.getUTCMonth(), listingDate.getUTCDate() + 29, 23, 59, 59, 999)).getTime();
     
-    const isAlphaActive = (now <= alphaExpiry && selectedRoiToken.alphaType !== 'none');
+    const isAlphaActive = (now.getTime() <= expiryTime && selectedRoiToken.alphaType !== 'none');
     let alphaMul = 1;
     if (isAlphaActive) {
         alphaMul = (selectedRoiToken.alphaType === 'x4') ? 4 : (selectedRoiToken.alphaType === 'x2' ? 2 : 1);
     }
 
-    // Hàm quy đổi từ Tournament Vol sang Alpha Vol (Buy Only x4 logic)
-    const getAlphaVol = (tVol) => {
-        if (!isAlphaActive) return tVol;
-        // x4 chỉ tính Buy Vol. Buy Only -> 100% buy. Buy+Sell -> 50% buy.
-        let buyVol = (selectedRoiToken.ruleType === 'buy_only') ? tVol : tVol / 2;
-        if (alphaMul === 4) return buyVol * 4; 
-        if (alphaMul === 2) return tVol * 2; // x2 thường tính trên total
-        return tVol;
+    const calculateAlphaVol = (tSize) => {
+        if (!isAlphaActive) return tSize;
+        if (alphaMul === 4) {
+            let buyPart = isBuySell ? tSize / 2 : tSize;
+            let sellPart = isBuySell ? tSize / 2 : tSize; 
+            return (buyPart * 4) + (sellPart * 1);
+        }
+        return tSize * alphaMul; 
     };
 
-    const alphaVolTarget = getAlphaVol(targetVol);
-    const alphaVolCurrent = getAlphaVol(myVol);
-    const alphaVolGain = alphaVolTarget - alphaVolCurrent;
+    const alphaVolGap = calculateAlphaVol(gapTradeSize);
+    const alphaVolSunk = calculateAlphaVol(myTradeSize);
+    const alphaVolTotal = alphaVolGap + alphaVolSunk;
 
-    // 4. CHI PHÍ CƠ HỘI (ALPHA EFFICIENCY)
-    // Công thức: "Mất bao nhiêu USD để mua được 10k Alpha Volume?"
-    // Alpha Cost per 10k = (Tổng chi phí - Thưởng) / (Tổng Alpha Vol / 10,000)
+   
+    const normalAlphaCost = (alphaVolTotal / 10000) * (costPer10k / 2);
+    const contestNetCost = totalCost - rewardValueUSD;
+    const opportunitySavings = normalAlphaCost - contestNetCost;
+
     let alphaEfficiency = 0;
-    if (alphaVolTarget > 0) {
-        alphaEfficiency = (totalCost - rewardValueUSD) / (alphaVolTarget / 10000);
+    if (alphaVolTotal > 0) {
+        alphaEfficiency = (contestNetCost) / (alphaVolTotal / 10000);
     }
 
-    // 5. UPDATE UI
     const updateText = (id, val, prefix = "") => {
         const el = document.getElementById(id);
         if (el) el.innerText = prefix + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    updateText('roi-res-trade', gapTradeSize, "$");
+    const resTrade = document.getElementById('roi-res-trade');
+    if(resTrade) resTrade.innerText = `$${gapTradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    
     updateText('roi-res-sunk-cost', sunkCost, "-$");
     updateText('roi-res-gap-cost', gapCost, "-$");
     updateText('roi-res-total-cost', totalCost, "-$");
     updateText('roi-res-reward', rewardValueUSD, "+$");
-    updateText('roi-res-alpha-gain', alphaVolGain, "+$");
+    updateText('roi-res-alpha-gain', alphaVolGap, "+$");
+    updateText('roi-res-alpha-savings', opportunitySavings, "+$");
     
     const effEl = document.getElementById('roi-res-alpha-eff');
     if (effEl) {
-        effEl.innerText = `$${alphaEfficiency.toFixed(2)}`;
-        effEl.style.color = alphaEfficiency < 2.5 ? 'var(--roi-green)' : 'var(--roi-text-main)';
+        effEl.innerText = `$${alphaEfficiency.toFixed(3)}`;
+        effEl.style.color = alphaEfficiency < (costPer10k / 2) ? 'var(--roi-green)' : 'var(--roi-text-main)';
     }
 
     const roiEl = document.getElementById('roi-res-net');
@@ -852,22 +858,22 @@ window.calculateRoi = function() {
         roiEl.style.color = trueNetRoi >= 0 ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
-    // Box Advice & Sunk Cost Recovery
+    const priceEl = document.getElementById('roi-token-price');
+    if (priceEl) priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
+
     const adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
+        const gapNet = rewardValueUSD - gapCost;
         if (trueNetRoi >= 0) {
             adviceBox.style.borderColor = 'var(--roi-green)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>PROFITABLE!</span> Finish the gap to secure <b>+$${trueNetRoi.toFixed(2)}</b>.`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>PROFITABLE!</span> True profit: <b>$${trueNetRoi.toFixed(2)}</b> plus highly discounted Alpha Vol.`;
+        } else if (gapNet > 0 && myVol > 0) {
+            adviceBox.style.borderColor = 'var(--roi-brand)';
+            adviceBox.innerHTML = `<span style="color:var(--roi-brand)"><i class="fas fa-exclamation-circle me-1"></i>RECOVERY MODE:</span> Overall loss, but cày nốt phần Gap sẽ thu hồi được <b>$${gapNet.toFixed(2)}</b> chi phí chìm.`;
         } else {
-            const recovery = rewardValueUSD - gapCost; 
-            if (recovery > 0 && myVol > 0) {
-                adviceBox.style.borderColor = 'var(--roi-brand)';
-                adviceBox.innerHTML = `<span style="color:var(--roi-brand)"><i class="fas fa-exclamation-circle me-1"></i>RECOVERY MODE:</span> Total loss, but completing the gap saves <b>$${recovery.toFixed(2)}</b> of your sunk cost.`;
-            } else {
-                adviceBox.style.borderColor = 'var(--roi-red)';
-                adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>HIGH RISK:</span> Costs exceed rewards. Better trade outside?`;
-            }
+            adviceBox.style.borderColor = 'var(--roi-red)';
+            adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>HIGH RISK:</span> Total costs are too high. Consider Alpha efficiency above.`;
         }
     }
 };
