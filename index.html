@@ -1326,19 +1326,27 @@
 
         <div class="roi-result-card">
             <div class="roi-res-row">
-                <span>Trade Size Needed</span>
+                <span>Vol to Trade (Gap)</span>
                 <span id="roi-res-trade" class="roi-val-neutral">$0</span>
             </div>
+            <div class="roi-res-row" style="opacity: 0.7;">
+                <span>Sunk Cost (Already Spent)</span>
+                <span id="roi-res-sunk-cost">-$0</span>
+            </div>
             <div class="roi-res-row">
-                <span>Est. Costs (Fees + Slippage)</span>
-                <span id="roi-res-cost" class="roi-val-negative">-$0</span>
+                <span>Est. Cost (Gap Vol)</span>
+                <span id="roi-res-gap-cost" class="roi-val-negative">-$0</span>
+            </div>
+            <div class="roi-res-row roi-border-bottom">
+                <span class="fw-bold">Total Est. Cost</span>
+                <span id="roi-res-total-cost" class="roi-val-negative fw-bold">-$0</span>
             </div>
             <div class="roi-res-row roi-border-bottom">
                 <span>Reward Value (<span id="roi-token-price">0</span>$)</span>
                 <span id="roi-res-reward" class="roi-val-positive">+$0</span>
             </div>
             <div class="roi-res-total">
-                <span>NET ROI</span>
+                <span>TRUE NET ROI</span>
                 <span id="roi-res-net" class="roi-val-total">$0</span>
             </div>
             <div id="roi-advice-box" class="roi-advice" style="display: none;"></div>
