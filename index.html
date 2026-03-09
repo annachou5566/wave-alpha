@@ -1308,15 +1308,19 @@
 
         <div class="roi-card">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="roi-label mb-0">3. Trade Rules</div>
+                <div class="roi-label mb-0">3. Trade Rules & Cost</div>
                 <div class="roi-badges">
                     <span id="roi-rule-badge" class="roi-badge">N/A</span>
                     <span id="roi-multiplier-badge" class="roi-badge-highlight">x1</span>
                 </div>
             </div>
-            <div class="roi-fees-row">
-                <span>Fee: <span id="roi-fee-rate" style="color: #EAECEF;">0%</span></span>
-                <span>Spread: <span id="roi-spread-rate" style="color: #F6465D;">0%</span></span>
+            
+            <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
+                <span class="roi-sub-label mb-0" style="color: #EAECEF;">Hao hụt / 10,000$ Vol <span style="opacity: 0.5">(Buy Only)</span>:</span>
+                <div class="roi-input-wrapper" style="width: 80px;">
+                    <span class="roi-prefix" style="font-size: 12px; left: 8px; color: #F6465D;">$</span>
+                    <input type="number" id="roi-cost-coeff" class="roi-input text-end" style="padding: 4px 8px 4px 20px; font-weight: bold; color: #F6465D;" value="2.5" step="0.1" oninput="calculateRoi()">
+                </div>
             </div>
         </div>
 
