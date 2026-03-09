@@ -727,17 +727,8 @@ window.roiHandleTokenChange = function() {
         tierSelect.appendChild(opt);
         tierSelect.value = rQty;
     }
-
-    // Set thông số phí & spread
-    let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.01 : 0.15;
-    let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? parseFloat(selectedRoiToken.market_analysis.spread) : 0.05;
     
-    let elFee = document.getElementById('roi-fee-rate');
-    let elSpread = document.getElementById('roi-spread-rate');
-    if(elFee) elFee.innerText = `${feeRate}%`;
-    if(elSpread) elSpread.innerText = `${spreadRate.toFixed(2)}%`;
-    
-    // CẬP NHẬT HIỂN THỊ HUY HIỆU
+    // CẬP NHẬT HIỂN THỊ HUY HIỆU LUẬT CHƠI
     let ruleBadge = document.getElementById('roi-rule-badge');
     if(ruleBadge) {
         ruleBadge.innerText = selectedRoiToken.ruleType === 'buy_only' ? 'Buy Only ⚠️' : 'Buy + Sell';
@@ -745,7 +736,6 @@ window.roiHandleTokenChange = function() {
         ruleBadge.style.color = selectedRoiToken.ruleType === 'buy_only' ? 'var(--roi-red)' : 'var(--roi-green)';
     }
 
-    // SỬA: Dùng ruleType === 'trade_x4' thay vì alphaType
     let mulBadge = document.getElementById('roi-multiplier-badge');
     if(mulBadge) {
         if(selectedRoiToken.ruleType === 'trade_x4') {
@@ -756,21 +746,20 @@ window.roiHandleTokenChange = function() {
             mulBadge.className = 'roi-badge';
         }
     }
-    
-    // SỬA: Lấy giá chuẩn từ cachedPrice (Realtime) hoặc market_analysis
-    let priceEl = document.getElementById('roi-token-price');
-    if(priceEl) {
-        let p = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
-        priceEl.innerText = p > 0 ? (p < 0.001 ? p.toFixed(8) : p.toFixed(4)) : '0';
-    }
 
+    // Đặt mặc định hệ số (VD: BSC rẻ hơn lấy 2.5U, mạng khác đắt hơn lấy 3.5U)
+    let isBsc = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc');
+    let coeffInput = document.getElementById('roi-cost-coeff');
+    if (coeffInput) {
+        coeffInput.value = isBsc ? "2.5" : "3.5";
+    }
+    
     window.calculateRoi();
 };
 
 window.calculateRoi = function() {
     if (!selectedRoiToken) return window.resetRoiDisplay();
 
-    // 1. CHÌA KHÓA REALTIME: Luôn móc data tươi nhất từ appData mỗi khi tính toán
     if (typeof appData !== 'undefined' && appData.running) {
         let freshToken = appData.running.find(c => (c.db_id == selectedRoiToken.db_id || c.alphaId == selectedRoiToken.alphaId));
         if (freshToken) selectedRoiToken = freshToken; 
@@ -790,28 +779,34 @@ window.calculateRoi = function() {
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
-    // SỬA: Dùng ruleType === 'trade_x4' để tính multiplier
+    // 1. TÍNH VOL CẦN GIAO DỊCH SAU KHI ĐÃ NHÂN LIMIT X4
     let multiplier = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
     let tradeSize = gap / multiplier;
 
-    let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.0001 : 0.0015;
-    let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? (parseFloat(selectedRoiToken.market_analysis.spread) / 100) : 0;
-    
-    let costPerTrade = feeRate + spreadRate;
-    let loops = selectedRoiToken.ruleType === 'buy_only' ? 2 : 1; 
-    let totalCost = tradeSize * costPerTrade * loops;
+    // 2. TÍNH CHI PHÍ DỰA TRÊN HỆ SỐ THỰC CHIẾN MÀ USER NHẬP
+    let coeffInput = document.getElementById('roi-cost-coeff');
+    let costPer10k = coeffInput ? parseFloat(coeffInput.value || 0) : 2.5;
 
-    // SỬA: Lấy giá chuẩn từ cachedPrice (ưu tiên realtime) hoặc market_analysis
+    let totalCost = 0;
+    if (selectedRoiToken.ruleType === 'buy_only') {
+        // Luật Buy Only: Phải cày 10k Mua + Bán 10k xả hàng = Tốn trọn vẹn phí
+        totalCost = (tradeSize / 10000) * costPer10k;
+    } else {
+        // Luật Buy + Sell: Chỉ cần Mua 5k + Bán 5k là có 10k Vol = Tiết kiệm 1 nửa tiền hao hụt
+        totalCost = (tradeSize / 10000) * (costPer10k / 2);
+    }
+
+    // 3. TÍNH LỢI NHUẬN
     let rawPrice = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
     let rewardValueUSD = rewardTokenQty * rawPrice;
     let netRoi = rewardValueUSD - totalCost;
 
-    // Update Text Giá (nhỡ realtime vừa nhảy lúc đang gõ)
     let priceEl = document.getElementById('roi-token-price');
     if (priceEl) {
         priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
     }
 
+    // 4. HIỂN THỊ LÊN GIAO DIỆN
     let resTrade = document.getElementById('roi-res-trade');
     let resCost = document.getElementById('roi-res-cost');
     let resReward = document.getElementById('roi-res-reward');
@@ -822,11 +817,11 @@ window.calculateRoi = function() {
     if(resReward) resReward.innerText = `+$${rewardValueUSD.toLocaleString(undefined, {maximumFractionDigits:2})}`;
     
     if(roiEl) {
-        roiEl.innerText = `${netRoi > 0 ? '+' : ''}$${netRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-        roiEl.style.color = netRoi > 0 ? 'var(--roi-green)' : 'var(--roi-red)';
+        roiEl.innerText = `${netRoi >= 0 ? '+' : ''}$${netRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+        roiEl.style.color = netRoi >= 0 ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
-    // Box Lời Khuyên
+    // BOX LỜI KHUYÊN
     let adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
@@ -834,14 +829,14 @@ window.calculateRoi = function() {
             adviceBox.style.backgroundColor = 'transparent';
             adviceBox.style.borderColor = 'var(--roi-border)';
             adviceBox.innerHTML = `<span style="color:var(--roi-text-muted)"><i class="fas fa-info-circle me-1"></i>Đang chờ nhập Vol...</span>`;
-        } else if (netRoi > 0) {
+        } else if (netRoi >= 0) {
             adviceBox.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
             adviceBox.style.borderColor = 'var(--roi-green)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>R/R hấp dẫn!</span> Lãi dự kiến: $${netRoi.toFixed(2)}`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>R/R HẤP DẪN!</span> Lãi dự kiến: <b>$${netRoi.toFixed(2)}</b>`;
         } else {
             adviceBox.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
             adviceBox.style.borderColor = 'var(--roi-red)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo:</span> Chi phí cày cao hơn phần thưởng.`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>RỦI RO:</span> Lỗ phí giao dịch (<b>-$${Math.abs(netRoi).toFixed(2)}</b>).`;
         }
     }
 };
