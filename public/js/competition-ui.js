@@ -826,30 +826,42 @@ window.calculateRoi = function() {
     const contestNetCost = totalCost - rewardValueUSD;
     const opportunitySavings = normalAlphaCost - contestNetCost;
 
-    let alphaEfficiency = 0;
+    // 3. CHI PHÍ CƠ HỘI (ALPHA SAVINGS - Chuẩn hệ quy chiếu token x4)
+    // Nếu trader cày con token x4 này mà KHÔNG quan tâm đến giải đấu, chi phí thực tế là tổng phí giao dịch
+    let baseAlphaCost = 0; 
+    let alphaEfficiency = 0; // Chi phí thực sau khi lấy tiền giải bù vào
+    
     if (alphaVolTotal > 0) {
-        alphaEfficiency = (contestNetCost) / (alphaVolTotal / 10000);
+        baseAlphaCost = totalCost / (alphaVolTotal / 10000);
+        alphaEfficiency = (totalCost - rewardValueUSD) / (alphaVolTotal / 10000);
     }
 
+    // 4. UPDATE UI
     const updateText = (id, val, prefix = "") => {
         const el = document.getElementById(id);
         if (el) el.innerText = prefix + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    const resTrade = document.getElementById('roi-res-trade');
-    if(resTrade) resTrade.innerText = `$${gapTradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
-    
+    document.getElementById('roi-res-trade').innerText = `$${gapTradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
     updateText('roi-res-sunk-cost', sunkCost, "-$");
     updateText('roi-res-gap-cost', gapCost, "-$");
     updateText('roi-res-total-cost', totalCost, "-$");
     updateText('roi-res-reward', rewardValueUSD, "+$");
-    updateText('roi-res-alpha-gain', alphaVolGap, "+$");
-    updateText('roi-res-alpha-savings', opportunitySavings, "+$");
     
+    document.getElementById('roi-alpha-tag').innerText = alphaLabel;
+    updateText('roi-res-alpha-gain', alphaVolFromGap, "+$");
+    
+    // Cập nhật giá gốc (Base Cost)
+    const baseEffEl = document.getElementById('roi-res-alpha-base');
+    if (baseEffEl) {
+        baseEffEl.innerText = `$${baseAlphaCost.toFixed(3)}`;
+    }
+
+    // Cập nhật giá thực tế có giải (Net Cost)
     const effEl = document.getElementById('roi-res-alpha-eff');
     if (effEl) {
         effEl.innerText = `$${alphaEfficiency.toFixed(3)}`;
-        effEl.style.color = alphaEfficiency < (costPer10k / 2) ? 'var(--roi-green)' : 'var(--roi-text-main)';
+        effEl.style.color = alphaEfficiency < baseAlphaCost ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
     const roiEl = document.getElementById('roi-res-net');
@@ -859,7 +871,7 @@ window.calculateRoi = function() {
     }
 
     const priceEl = document.getElementById('roi-token-price');
-    if (priceEl) priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
+    if (priceEl) priceEl.innerText = rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4);
 
     const adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
