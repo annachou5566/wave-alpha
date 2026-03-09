@@ -1332,3 +1332,21 @@ body {
     font-size: 11px;
 }
 
+
+
+#btn-roi-trigger {
+    display: flex !important;
+}
+
+#alpha-market-view:not([style*="none"]) ~ #btn-roi-trigger {
+    display: none !important;
+}
+
+.floating-roi-btn {
+    bottom: 170px !important;
+}
+@media (max-width: 768px) {
+    .floating-roi-btn {
+        bottom: 160px !important;
+    }
+}
