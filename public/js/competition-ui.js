@@ -664,7 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // =========================================
-// SMART ROI CALCULATOR LOGIC (BẢN CHỐNG LỖI)
+// SMART ROI CALCULATOR LOGIC (V3 - FIXED TIER & CALCULATION)
 // =========================================
 let currentRoiStrategy = 'limit'; 
 let selectedRoiToken = null;
@@ -693,10 +693,12 @@ window.populateRoiTokens = function() {
     if(!select) return;
     select.innerHTML = '<option value="">-- Select Active Token --</option>';
     if (typeof appData === 'undefined' || !appData.running) return;
+    
     appData.running.forEach(c => {
         let opt = document.createElement('option');
         opt.value = c.db_id || c.alphaId;
-        opt.text = c.name + (c.market_analysis && c.market_analysis.price ? ` ($${c.market_analysis.price.toFixed(4)})` : '');
+        let pStr = (c.market_analysis && c.market_analysis.price) ? ` ($${parseFloat(c.market_analysis.price).toFixed(4)})` : '';
+        opt.text = (c.name || "Unknown") + pStr;
         select.appendChild(opt);
     });
 };
@@ -705,32 +707,37 @@ window.roiHandleTokenChange = function() {
     const tokenId = document.getElementById('roi-token-select').value;
     const tierSelect = document.getElementById('roi-tier-select');
     if(!tierSelect) return;
+    
     tierSelect.innerHTML = '<option value="">-- Select Reward Tier --</option>';
     selectedRoiToken = null;
 
     if (!tokenId) { window.calculateRoi(); return; }
 
     if (typeof appData !== 'undefined' && appData.running) {
-        selectedRoiToken = appData.running.find(c => (c.db_id === tokenId || c.alphaId === tokenId));
+        // CHÌA KHÓA FIX LỖI 1: Dùng == thay vì === để không phân biệt Số hay Chữ
+        selectedRoiToken = appData.running.find(c => (c.db_id == tokenId || c.alphaId == tokenId));
     }
+    
     if (!selectedRoiToken) return;
 
-    if (selectedRoiToken.rewardType === 'tiered' && selectedRoiToken.tiers_data) {
+    // Load Dropdown Tiers
+    if (selectedRoiToken.rewardType === 'tiered' && selectedRoiToken.tiers_data && selectedRoiToken.tiers_data.length > 0) {
         selectedRoiToken.tiers_data.forEach(t => {
             let opt = document.createElement('option');
             opt.value = t.reward;
-            opt.text = `Rank ${t.rank} (Reward: ${t.reward} ${selectedRoiToken.name})`;
+            opt.text = `Top ${t.rank} (Thưởng: ${t.reward} ${selectedRoiToken.name})`;
             tierSelect.appendChild(opt);
         });
     } else {
         let rQty = parseFloat(selectedRoiToken.rewardQty || 0);
         let opt = document.createElement('option');
         opt.value = rQty;
-        opt.text = `Top ${selectedRoiToken.topWinners || 'Win'} (Reward: ${rQty} ${selectedRoiToken.name})`;
+        opt.text = `Top ${selectedRoiToken.topWinners || 'Win'} (Thưởng: ${rQty} ${selectedRoiToken.name})`;
         tierSelect.appendChild(opt);
-        tierSelect.value = rQty;
+        tierSelect.value = rQty; // Tự động select nếu giải không chia Tier
     }
 
+    // Set thông số phí
     let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.01 : 0.15;
     let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? parseFloat(selectedRoiToken.market_analysis.spread) : 0.05;
     
@@ -747,13 +754,15 @@ window.roiHandleTokenChange = function() {
     
     let priceEl = document.getElementById('roi-token-price');
     if(priceEl) {
-        priceEl.innerText = selectedRoiToken.market_analysis?.price?.toFixed(4) || '0';
+        priceEl.innerText = selectedRoiToken.market_analysis?.price ? parseFloat(selectedRoiToken.market_analysis.price).toFixed(4) : '0';
     }
 
+    // Chạy tính toán ngay lập tức
     window.calculateRoi();
 };
 
 window.calculateRoi = function() {
+    // CHÌA KHÓA FIX LỖI 2: Đảm bảo dừng nếu chưa có token, nhưng chạy mượt nếu có
     if (!selectedRoiToken) return window.resetRoiDisplay();
 
     let targetVolEl = document.getElementById('roi-target-vol');
@@ -768,23 +777,29 @@ window.calculateRoi = function() {
     let gapDisplay = document.getElementById('roi-gap-display');
     if(gapDisplay) gapDisplay.innerText = `Gap: $${gap.toLocaleString()}`;
 
+    // Nếu chưa nhập số liệu gì thì reset hiển thị
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
+    // 1. Tính Vol cần trade (x4)
     let multiplier = (currentRoiStrategy === 'limit' && selectedRoiToken.alphaType === 'x4') ? 4 : 1;
     let tradeSize = gap / multiplier;
 
+    // 2. Tính Phí
     let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.0001 : 0.0015;
-    let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? (selectedRoiToken.market_analysis.spread / 100) : 0;
+    let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? (parseFloat(selectedRoiToken.market_analysis.spread) / 100) : 0;
     
     let costPerTrade = feeRate + spreadRate;
     let loops = selectedRoiToken.ruleType === 'buy_only' ? 2 : 1; 
     let totalCost = tradeSize * costPerTrade * loops;
 
-    let price = selectedRoiToken.market_analysis?.price || 0;
+    // 3. Tính Lãi
+    let price = parseFloat(selectedRoiToken.market_analysis?.price || 0);
     let rewardValueUSD = rewardTokenQty * price;
 
+    // 4. Tính Net ROI
     let netRoi = rewardValueUSD - totalCost;
 
+    // Update UI
     let resTrade = document.getElementById('roi-res-trade');
     let resCost = document.getElementById('roi-res-cost');
     let resReward = document.getElementById('roi-res-reward');
@@ -802,10 +817,12 @@ window.calculateRoi = function() {
     let adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
-        if (netRoi > 0) {
-            adviceBox.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Đánh giá vị thế:</span> Chênh lệch phí và giải thưởng đang dương. R/R rất hấp dẫn. Tuy nhiên hãy dự phòng rủi ro sụt giá Token.`;
+        if (gap === 0 && rewardTokenQty > 0) {
+            adviceBox.innerHTML = `<span class="text-info"><i class="fas fa-info-circle me-1"></i>Đang chờ bạn nhập Volume Gap để ước tính phí...</span>`;
+        } else if (netRoi > 0) {
+            adviceBox.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Đánh giá vị thế:</span> Chênh lệch phí và giải thưởng đang dương. R/R hấp dẫn!`;
         } else {
-            adviceBox.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo vị thế:</span> Chi phí giao dịch đang cao hơn giá trị phần thưởng. Cày thêm sẽ bị ÂM. Khuyên bạn nên duy trì hoặc bỏ qua!`;
+            adviceBox.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo vị thế:</span> Chi phí cày ($${totalCost.toFixed(1)}) đang cao hơn phần thưởng. Khuyên bạn nên duy trì hoặc bỏ qua!`;
         }
     }
 };
@@ -821,4 +838,6 @@ window.resetRoiDisplay = function() {
     });
     let adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) adviceBox.style.display = 'none';
+    let gapDisplay = document.getElementById('roi-gap-display');
+    if(gapDisplay) gapDisplay.innerText = `Gap: $0`;
 };
