@@ -776,6 +776,7 @@ window.calculateRoi = function() {
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
+    // 1. CHI PHÍ CÀY VOL GIẢI ĐẤU
     const contestMul = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
     const gapTradeSize = gap / contestMul;
     const myTradeSize = myVol / contestMul;
@@ -791,6 +792,7 @@ window.calculateRoi = function() {
     const rewardValueUSD = rewardTokenQty * rawPrice;
     const trueNetRoi = rewardValueUSD - totalCost;
 
+    // 2. LOGIC ALPHA MULTIPLIER (Chuẩn)
     let isAlphaActive = false;
     let alphaMul = 1;
     let alphaLabel = "Est. Alpha Vol Gain";
@@ -812,28 +814,31 @@ window.calculateRoi = function() {
         }
     }
 
+    // ĐÃ FIX: Chỉ lấy đúng Buy Volume nhân 4, dứt khoát không cọng rác Sell Volume
     const calculateAlphaVol = (tSize) => {
         if (!isAlphaActive) return tSize;
         if (alphaMul === 4) {
             let buyPart = isBuySell ? tSize / 2 : tSize;
-            let sellPart = isBuySell ? tSize / 2 : tSize;
-            return (buyPart * 4) + (sellPart * 1);
+            return buyPart * 4; 
         }
-        return tSize * alphaMul; 
+        return tSize * alphaMul;
     };
 
     const alphaVolGap = calculateAlphaVol(gapTradeSize);
     const alphaVolSunk = calculateAlphaVol(myTradeSize);
     const alphaVolTotal = alphaVolGap + alphaVolSunk;
 
+    // 3. CHI PHÍ CƠ HỘI ĐÃ CHUẨN XÁC
     let baseAlphaCost = 0; 
     let alphaEfficiency = 0; 
     
     if (alphaVolTotal > 0) {
+        // Base Cost giờ sẽ ra chuẩn $0.625 (nếu cost = 2.5) vì Volume Alpha không bị độn ảo nữa
         baseAlphaCost = totalCost / (alphaVolTotal / 10000);
         alphaEfficiency = (totalCost - rewardValueUSD) / (alphaVolTotal / 10000);
     }
 
+    // 4. UPDATE UI
     const updateText = (id, val, prefix = "") => {
         const el = document.getElementById(id);
         if (el) el.innerText = prefix + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -865,13 +870,14 @@ window.calculateRoi = function() {
 
     const roiEl = document.getElementById('roi-res-net');
     if(roiEl) {
-        roiEl.innerText = `${trueNetRoi >= 0 ? '+' : ''}$${trueNetRoi.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        roiEl.innerText = `${trueNetRoi >= 0 ? '+' : ''}$${trueNetRoi.toLocaleString(undefined, {minimumFractionDigits: 3})}`;
         roiEl.style.color = trueNetRoi >= 0 ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
     const priceEl = document.getElementById('roi-token-price');
     if (priceEl) priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
 
+    // 5. BOX LỜI KHUYÊN
     const adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
