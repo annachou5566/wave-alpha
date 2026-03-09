@@ -2359,6 +2359,19 @@ let volProgressBarHtml = status === 'upcoming' ? '' : `
     </div>
 `;
 
+            let inputTokensHtml = '';
+            if (c.inputTokens && c.inputTokens.length > 0) {
+                inputTokensHtml = `
+                <div style="padding: 0 15px 10px 15px;">
+                    <div style="font-size: 0.6rem; color: #848e9c; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">
+                        <i class="fas fa-layer-group text-brand"></i> QUALIFIED TOKENS (${c.inputTokens.length})
+                    </div>
+                    <div class="custom-scrollbar" style="font-size: 0.75rem; color: #00F0FF; background: rgba(0, 240, 255, 0.05); padding: 6px 8px; border-radius: 4px; border: 1px dashed rgba(0, 240, 255, 0.2); max-height: 48px; overflow-y: auto; line-height: 1.4; font-weight: 600;">
+                        ${c.inputTokens.join(', ')}
+                    </div>
+                </div>`;
+            }
+                
             let target = 0;
             let rawHist = c.history || [];
 
@@ -2457,7 +2470,7 @@ fullHtml += `
                         <div class="acc-stats-grid" id="accGrid-${c.db_id}"></div>
                     </div>
                    
-
+                    ${inputTokensHtml}
                     
                     <div style="padding: 0px 15px 0 15px;">
                         ${volProgressBarHtml}
@@ -2920,6 +2933,13 @@ thead.innerHTML = `
 
             let contractHtml = c.contract ? `<div class="token-sub-row"><div class="contract-box" onclick="event.stopPropagation(); copyContract('${c.contract}')"><i class="far fa-copy"></i> ${c.contract.slice(0,4)}...${c.contract.slice(-4)}</div></div>` : '';
             
+            let multiTokenHtml = '';
+            if (c.inputTokens && c.inputTokens.length > 0) {
+                multiTokenHtml = `<div class="token-sub-row" style="margin-top: 4px; font-size: 0.65rem; color: #00F0FF; background: rgba(0, 240, 255, 0.05); border: 1px dashed rgba(0, 240, 255, 0.3); padding: 2px 6px; border-radius: 4px; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help;" title="${c.inputTokens.join(', ')}">
+                    <i class="fas fa-layer-group"></i> ${c.inputTokens.length} Tokens: ${c.inputTokens.join(', ')}
+                </div>`;
+            }
+
             let cleanSym = c.name ? c.name.split('(')[0].trim().toUpperCase() : 'UNKNOWN';
             let alphaData = alphaMarketCache[cleanSym] || {};
             let localImgPath = c.logo || c.icon || alphaData.icon || './assets/tokens/default.png';
@@ -2930,7 +2950,11 @@ thead.innerHTML = `
                     <img src="${localImgPath}" onerror="this.src='./assets/tokens/default.png';" style="width:32px;height:32px;border-radius:50%;border:1px solid #333;flex-shrink:0;">
                     ${chainBadge}
                 </div>
-                <div class="token-info-col" style="text-align:left;"><div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>${contractHtml}</div></div>`;
+                <div class="token-info-col" style="text-align:left;">
+                    <div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>
+                    ${contractHtml}
+                    ${multiTokenHtml}
+                </div></div>`;
 
             let sTime = c.startTime || "00:00:00"; if(sTime.length===5) sTime+=":00";
             let startDt = new Date(c.start + 'T' + sTime + 'Z');
