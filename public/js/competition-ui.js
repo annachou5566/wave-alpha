@@ -768,6 +768,12 @@ window.roiHandleTokenChange = function() {
 window.calculateRoi = function() {
     if (!selectedRoiToken) return window.resetRoiDisplay();
 
+    // 1. CHÌA KHÓA REALTIME: Luôn móc data tươi nhất từ appData mỗi khi tính toán
+    if (typeof appData !== 'undefined' && appData.running) {
+        let freshToken = appData.running.find(c => (c.db_id == selectedRoiToken.db_id || c.alphaId == selectedRoiToken.alphaId));
+        if (freshToken) selectedRoiToken = freshToken; // Update ngay tham chiếu
+    }
+
     let targetVolEl = document.getElementById('roi-target-vol');
     let myVolEl = document.getElementById('roi-my-vol');
     let tierSelectEl = document.getElementById('roi-tier-select');
@@ -778,15 +784,14 @@ window.calculateRoi = function() {
 
     let gap = Math.max(0, targetVol - myVol);
     let gapDisplay = document.getElementById('roi-gap-display');
-    if(gapDisplay) gapDisplay.innerText = `$${gap.toLocaleString()}`; // Đã bỏ chữ "Cần cày thêm" vì UI mới đã có nhãn
+    if(gapDisplay) gapDisplay.innerText = `$${gap.toLocaleString()}`;
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
-    // 1. TÍNH VOL CẦN TRADE 
+    // 2. Tính Phí
     let multiplier = (selectedRoiToken.alphaType === 'x4') ? 4 : 1;
     let tradeSize = gap / multiplier;
 
-    // 2. Tính Phí
     let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.0001 : 0.0015;
     let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? (parseFloat(selectedRoiToken.market_analysis.spread) / 100) : 0;
     
@@ -794,14 +799,18 @@ window.calculateRoi = function() {
     let loops = selectedRoiToken.ruleType === 'buy_only' ? 2 : 1; 
     let totalCost = tradeSize * costPerTrade * loops;
 
-    // 3. Tính Lãi
-    let price = parseFloat(selectedRoiToken.market_analysis?.price || 0);
-    let rewardValueUSD = rewardTokenQty * price;
-
-    // 4. Tính Net ROI
+    // 3. Tính Giá Trị Phần Thưởng (Bắt giá Realtime, fix lỗi hiển thị 0)
+    let rawPrice = parseFloat(selectedRoiToken.market_analysis?.price || 0);
+    let rewardValueUSD = rewardTokenQty * rawPrice;
     let netRoi = rewardValueUSD - totalCost;
 
-    // Update UI
+    // 4. Update thông số ra UI
+    // Fix lỗi làm tròn: Nếu giá nhỏ hơn 0.001, cho hiển thị 8 số thập phân
+    let priceEl = document.getElementById('roi-token-price');
+    if (priceEl) {
+        priceEl.innerText = rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4);
+    }
+
     let resTrade = document.getElementById('roi-res-trade');
     let resCost = document.getElementById('roi-res-cost');
     let resReward = document.getElementById('roi-res-reward');
@@ -813,25 +822,25 @@ window.calculateRoi = function() {
     
     if(roiEl) {
         roiEl.innerText = `${netRoi > 0 ? '+' : ''}$${netRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-        roiEl.style.color = netRoi > 0 ? 'var(--roi-green)' : 'var(--roi-red)'; // Đổi sang màu của UI Pro
+        roiEl.style.color = netRoi > 0 ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
-    // UPDATE LỜI KHUYÊN UI PRO
+    // 5. Box Lời Khuyên
     let adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
         if (gap === 0 && rewardTokenQty > 0) {
             adviceBox.style.backgroundColor = 'transparent';
             adviceBox.style.borderColor = 'var(--roi-border)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-text-muted)"><i class="fas fa-info-circle me-1"></i>Đang chờ bạn nhập Vol để ước tính...</span>`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-text-muted)"><i class="fas fa-info-circle me-1"></i>Đang chờ nhập Vol...</span>`;
         } else if (netRoi > 0) {
             adviceBox.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
             adviceBox.style.borderColor = 'var(--roi-green)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>R/R hấp dẫn!</span> Chênh lệch phí & giải thưởng dương.`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>R/R hấp dẫn!</span> Lãi dự kiến: $${netRoi.toFixed(2)}`;
         } else {
             adviceBox.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
             adviceBox.style.borderColor = 'var(--roi-red)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo:</span> Chi phí ($${totalCost.toFixed(1)}) đang cao hơn phần thưởng.`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo:</span> Chi phí cày cao hơn phần thưởng.`;
         }
     }
 };
