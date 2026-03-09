@@ -669,38 +669,30 @@ document.addEventListener('DOMContentLoaded', () => {
 let currentRoiStrategy = 'limit'; 
 let selectedRoiToken = null;
 
-// Hàm mở/đóng Sidebar Máy tính
 window.toggleRoiSidebar = function() {
     const sidebar = document.getElementById('roi-sidebar');
     if (sidebar) {
         sidebar.classList.toggle('open');
         if (sidebar.classList.contains('open')) {
-            populateRoiTokens();
+            window.populateRoiTokens();
         }
     }
 };
 
-// Hàm đổi chiến lược Limit/Market
 window.setRoiStrategy = function(type) {
     currentRoiStrategy = type;
     document.getElementById('roi-btn-limit').classList.remove('active');
     document.getElementById('roi-btn-market').classList.remove('active');
-    
     let activeBtn = document.getElementById(`roi-btn-${type}`);
     if(activeBtn) activeBtn.classList.add('active');
-    
-    calculateRoi();
+    window.calculateRoi();
 };
 
-// Nạp danh sách Token
 window.populateRoiTokens = function() {
     const select = document.getElementById('roi-token-select');
     if(!select) return;
-    
     select.innerHTML = '<option value="">-- Select Active Token --</option>';
-    
     if (typeof appData === 'undefined' || !appData.running) return;
-    
     appData.running.forEach(c => {
         let opt = document.createElement('option');
         opt.value = c.db_id || c.alphaId;
@@ -709,21 +701,18 @@ window.populateRoiTokens = function() {
     });
 };
 
-// Xử lý khi chọn Token
 window.roiHandleTokenChange = function() {
     const tokenId = document.getElementById('roi-token-select').value;
     const tierSelect = document.getElementById('roi-tier-select');
     if(!tierSelect) return;
-    
     tierSelect.innerHTML = '<option value="">-- Select Reward Tier --</option>';
     selectedRoiToken = null;
 
-    if (!tokenId) { calculateRoi(); return; }
+    if (!tokenId) { window.calculateRoi(); return; }
 
     if (typeof appData !== 'undefined' && appData.running) {
         selectedRoiToken = appData.running.find(c => (c.db_id === tokenId || c.alphaId === tokenId));
     }
-    
     if (!selectedRoiToken) return;
 
     if (selectedRoiToken.rewardType === 'tiered' && selectedRoiToken.tiers_data) {
@@ -745,8 +734,10 @@ window.roiHandleTokenChange = function() {
     let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.01 : 0.15;
     let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? parseFloat(selectedRoiToken.market_analysis.spread) : 0.05;
     
-    document.getElementById('roi-fee-rate').innerText = `${feeRate}%`;
-    document.getElementById('roi-spread-rate').innerText = `${spreadRate.toFixed(2)}%`;
+    let elFee = document.getElementById('roi-fee-rate');
+    let elSpread = document.getElementById('roi-spread-rate');
+    if(elFee) elFee.innerText = `${feeRate}%`;
+    if(elSpread) elSpread.innerText = `${spreadRate.toFixed(2)}%`;
     
     let ruleBadge = document.getElementById('roi-rule-badge');
     if(ruleBadge) {
@@ -759,12 +750,11 @@ window.roiHandleTokenChange = function() {
         priceEl.innerText = selectedRoiToken.market_analysis?.price?.toFixed(4) || '0';
     }
 
-    calculateRoi();
+    window.calculateRoi();
 };
 
-// Tính toán ROI Realtime
 window.calculateRoi = function() {
-    if (!selectedRoiToken) return resetRoiDisplay();
+    if (!selectedRoiToken) return window.resetRoiDisplay();
 
     let targetVolEl = document.getElementById('roi-target-vol');
     let myVolEl = document.getElementById('roi-my-vol');
@@ -778,7 +768,7 @@ window.calculateRoi = function() {
     let gapDisplay = document.getElementById('roi-gap-display');
     if(gapDisplay) gapDisplay.innerText = `Gap: $${gap.toLocaleString()}`;
 
-    if (gap === 0 && rewardTokenQty === 0) return resetRoiDisplay();
+    if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
     let multiplier = (currentRoiStrategy === 'limit' && selectedRoiToken.alphaType === 'x4') ? 4 : 1;
     let tradeSize = gap / multiplier;
@@ -832,18 +822,3 @@ window.resetRoiDisplay = function() {
     let adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) adviceBox.style.display = 'none';
 };
-
-
-
-    // 2. Khi bấm vào tab Competition -> Hiện Máy Tính
-    if (tabCompBtn) {
-        tabCompBtn.addEventListener('click', () => {
-            roiBtn.style.display = 'flex';
-        });
-        
-        // 3. Nếu lúc vừa F5 web mà đang đứng sẵn ở tab Competition rồi -> Hiện luôn
-        if (tabCompBtn.classList.contains('active')) {
-            roiBtn.style.display = 'flex';
-        }
-    }
-});
