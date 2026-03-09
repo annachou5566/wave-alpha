@@ -861,13 +861,30 @@ window.calculateRoi = function() {
     
     const baseEffEl = document.getElementById('roi-res-alpha-base');
     if (baseEffEl) {
-        baseEffEl.innerText = `$${baseAlphaCost.toFixed(3)}`;
+        baseEffEl.innerText = `$${baseAlphaCost.toFixed(3)} / 10k`;
     }
 
     const effEl = document.getElementById('roi-res-alpha-eff');
     if (effEl) {
-        effEl.innerText = `$${alphaEfficiency.toFixed(3)}`;
-        effEl.style.color = alphaEfficiency < baseAlphaCost ? 'var(--roi-green)' : 'var(--roi-red)';
+        if (alphaEfficiency < 0) {
+            // Trường hợp chi phí âm (Được trả thêm tiền)
+            effEl.innerHTML = `FREE (+ $${Math.abs(alphaEfficiency).toFixed(3)} profit)`;
+            effEl.style.color = 'var(--roi-green)';
+        } else if (alphaEfficiency === 0) {
+            // Trường hợp huề vốn phí
+            effEl.innerHTML = `FREE`;
+            effEl.style.color = 'var(--roi-green)';
+        } else {
+            // Trường hợp chi phí rẻ hơn bình thường (Tính ra % tiết kiệm)
+            let savePercent = ((baseAlphaCost - alphaEfficiency) / baseAlphaCost * 100).toFixed(0);
+            if (savePercent > 0) {
+                effEl.innerHTML = `$${alphaEfficiency.toFixed(3)} <span style="font-size:10px; opacity:0.8;">(Save ${savePercent}%)</span>`;
+                effEl.style.color = 'var(--roi-green)';
+            } else {
+                effEl.innerHTML = `$${alphaEfficiency.toFixed(3)}`;
+                effEl.style.color = 'var(--roi-red)';
+            }
+        }
     }
 
     const roiEl = document.getElementById('roi-res-net');
