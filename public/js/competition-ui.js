@@ -664,77 +664,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // =========================================
-// SMART ROI CALCULATOR LOGIC
+// SMART ROI CALCULATOR LOGIC (BẢN CHỐNG LỖI)
 // =========================================
-let currentRoiStrategy = 'limit'; // Default
+let currentRoiStrategy = 'limit'; 
 let selectedRoiToken = null;
 
-function toggleRoiSidebar() {
+// Hàm mở/đóng Sidebar Máy tính
+window.toggleRoiSidebar = function() {
     const sidebar = document.getElementById('roi-sidebar');
-    sidebar.classList.toggle('open');
-    if (sidebar.classList.contains('open')) {
-        populateRoiTokens();
+    if (sidebar) {
+        sidebar.classList.toggle('open');
+        if (sidebar.classList.contains('open')) {
+            populateRoiTokens();
+        }
     }
-}
+};
 
-// Đợi 1 giây để đảm bảo toàn bộ hệ thống (script.js) đã load xong thì mới nạp Máy tính
-setTimeout(() => {
-    // 1. Gắn sự kiện khi bấm nút chuyển tab
-    const originalSwitchTab = window.switchTab;
-    if (originalSwitchTab) {
-        window.switchTab = function(tabId) {
-            originalSwitchTab(tabId); // Gọi lại hàm gốc để nó đổi giao diện bình thường
-            
-            // Xử lý hiện/ẩn nút ROI
-            const roiBtn = document.getElementById('btn-roi-trigger');
-            if (roiBtn) {
-                roiBtn.style.display = (tabId === 'comp') ? 'flex' : 'none';
-            }
-        };
-    }
-
-    // 2. Kích hoạt hiện luôn nút nếu lúc mới F5 web đang đứng sẵn ở tab Competition
-    const btnComp = document.getElementById('btn-tab-comp');
-    const roiBtn = document.getElementById('btn-roi-trigger');
-    if (btnComp && btnComp.classList.contains('active') && roiBtn) {
-        roiBtn.style.display = 'flex';
-    }
-}, 500);
-
-function setRoiStrategy(type) {
+// Hàm đổi chiến lược Limit/Market
+window.setRoiStrategy = function(type) {
     currentRoiStrategy = type;
     document.getElementById('roi-btn-limit').classList.remove('active');
     document.getElementById('roi-btn-market').classList.remove('active');
-    document.getElementById(`roi-btn-${type}`).classList.add('active');
+    
+    let activeBtn = document.getElementById(`roi-btn-${type}`);
+    if(activeBtn) activeBtn.classList.add('active');
+    
     calculateRoi();
-}
+};
 
-function populateRoiTokens() {
+// Nạp danh sách Token
+window.populateRoiTokens = function() {
     const select = document.getElementById('roi-token-select');
+    if(!select) return;
+    
     select.innerHTML = '<option value="">-- Select Active Token --</option>';
     
-    // Lấy danh sách token đang chạy (không phải upcoming/ended)
-    if (!appData || !appData.running) return;
+    if (typeof appData === 'undefined' || !appData.running) return;
+    
     appData.running.forEach(c => {
         let opt = document.createElement('option');
         opt.value = c.db_id || c.alphaId;
         opt.text = c.name + (c.market_analysis && c.market_analysis.price ? ` ($${c.market_analysis.price.toFixed(4)})` : '');
         select.appendChild(opt);
     });
-}
+};
 
-function roiHandleTokenChange() {
+// Xử lý khi chọn Token
+window.roiHandleTokenChange = function() {
     const tokenId = document.getElementById('roi-token-select').value;
     const tierSelect = document.getElementById('roi-tier-select');
+    if(!tierSelect) return;
+    
     tierSelect.innerHTML = '<option value="">-- Select Reward Tier --</option>';
     selectedRoiToken = null;
 
     if (!tokenId) { calculateRoi(); return; }
 
-    selectedRoiToken = appData.running.find(c => (c.db_id === tokenId || c.alphaId === tokenId));
+    if (typeof appData !== 'undefined' && appData.running) {
+        selectedRoiToken = appData.running.find(c => (c.db_id === tokenId || c.alphaId === tokenId));
+    }
+    
     if (!selectedRoiToken) return;
 
-    // Load Tiers Dropdown
     if (selectedRoiToken.rewardType === 'tiered' && selectedRoiToken.tiers_data) {
         selectedRoiToken.tiers_data.forEach(t => {
             let opt = document.createElement('option');
@@ -748,78 +739,125 @@ function roiHandleTokenChange() {
         opt.value = rQty;
         opt.text = `Top ${selectedRoiToken.topWinners || 'Win'} (Reward: ${rQty} ${selectedRoiToken.name})`;
         tierSelect.appendChild(opt);
-        tierSelect.value = rQty; // Auto select if only 1 option
+        tierSelect.value = rQty;
     }
 
-    // Load Strategy Info (Fee & Rule)
     let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.01 : 0.15;
-    let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? parseFloat(selectedRoiToken.market_analysis.spread) : 0.05; // Fallback 0.05%
+    let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? parseFloat(selectedRoiToken.market_analysis.spread) : 0.05;
     
     document.getElementById('roi-fee-rate').innerText = `${feeRate}%`;
     document.getElementById('roi-spread-rate').innerText = `${spreadRate.toFixed(2)}%`;
-    document.getElementById('roi-rule-badge').innerText = selectedRoiToken.ruleType === 'buy_only' ? 'Buy Only ⚠️' : 'Buy + Sell';
-    document.getElementById('roi-rule-badge').className = `badge ${selectedRoiToken.ruleType === 'buy_only' ? 'bg-danger' : 'bg-success'}`;
-    document.getElementById('roi-token-price').innerText = selectedRoiToken.market_analysis?.price?.toFixed(4) || '0';
+    
+    let ruleBadge = document.getElementById('roi-rule-badge');
+    if(ruleBadge) {
+        ruleBadge.innerText = selectedRoiToken.ruleType === 'buy_only' ? 'Buy Only ⚠️' : 'Buy + Sell';
+        ruleBadge.className = `badge ${selectedRoiToken.ruleType === 'buy_only' ? 'bg-danger' : 'bg-success'}`;
+    }
+    
+    let priceEl = document.getElementById('roi-token-price');
+    if(priceEl) {
+        priceEl.innerText = selectedRoiToken.market_analysis?.price?.toFixed(4) || '0';
+    }
 
     calculateRoi();
-}
+};
 
-function calculateRoi() {
+// Tính toán ROI Realtime
+window.calculateRoi = function() {
     if (!selectedRoiToken) return resetRoiDisplay();
 
-    let targetVol = parseFloat(document.getElementById('roi-target-vol').value || 0);
-    let myVol = parseFloat(document.getElementById('roi-my-vol').value || 0);
-    let rewardTokenQty = parseFloat(document.getElementById('roi-tier-select').value || 0);
+    let targetVolEl = document.getElementById('roi-target-vol');
+    let myVolEl = document.getElementById('roi-my-vol');
+    let tierSelectEl = document.getElementById('roi-tier-select');
+    
+    let targetVol = targetVolEl ? parseFloat(targetVolEl.value || 0) : 0;
+    let myVol = myVolEl ? parseFloat(myVolEl.value || 0) : 0;
+    let rewardTokenQty = tierSelectEl ? parseFloat(tierSelectEl.value || 0) : 0;
 
     let gap = Math.max(0, targetVol - myVol);
-    document.getElementById('roi-gap-display').innerText = `Gap: $${gap.toLocaleString()}`;
+    let gapDisplay = document.getElementById('roi-gap-display');
+    if(gapDisplay) gapDisplay.innerText = `Gap: $${gap.toLocaleString()}`;
 
     if (gap === 0 && rewardTokenQty === 0) return resetRoiDisplay();
 
-    // 1. Calculate Required Trade Size
     let multiplier = (currentRoiStrategy === 'limit' && selectedRoiToken.alphaType === 'x4') ? 4 : 1;
     let tradeSize = gap / multiplier;
 
-    // 2. Calculate Costs (Fee + Spread)
-    let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.0001 : 0.0015; // 0.01% = 0.0001
+    let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.0001 : 0.0015;
     let spreadRate = (selectedRoiToken.market_analysis && selectedRoiToken.market_analysis.spread) ? (selectedRoiToken.market_analysis.spread / 100) : 0;
     
     let costPerTrade = feeRate + spreadRate;
-    // Nếu giải Buy_Only, bạn phải Bán để thu hồi vốn => Tốn 2 lần phí (Mua + Bán) để cày 1 Vol
     let loops = selectedRoiToken.ruleType === 'buy_only' ? 2 : 1; 
     let totalCost = tradeSize * costPerTrade * loops;
 
-    // 3. Calculate Reward
     let price = selectedRoiToken.market_analysis?.price || 0;
     let rewardValueUSD = rewardTokenQty * price;
 
-    // 4. Net ROI
     let netRoi = rewardValueUSD - totalCost;
 
-    // Hiển thị UI
-    document.getElementById('roi-res-trade').innerText = `$${tradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
-    document.getElementById('roi-res-cost').innerText = `-$${totalCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-    document.getElementById('roi-res-reward').innerText = `+$${rewardValueUSD.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-    
+    let resTrade = document.getElementById('roi-res-trade');
+    let resCost = document.getElementById('roi-res-cost');
+    let resReward = document.getElementById('roi-res-reward');
     let roiEl = document.getElementById('roi-res-net');
-    roiEl.innerText = `${netRoi > 0 ? '+' : ''}$${netRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-    roiEl.style.color = netRoi > 0 ? '#00F0FF' : '#ff4d4f';
-
-    // Lời khuyên
-    let adviceBox = document.getElementById('roi-advice-box');
-    adviceBox.style.display = 'block';
-    if (netRoi > 0) {
-        adviceBox.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Đánh giá vị thế:</span> Chênh lệch phí và giải thưởng đang dương. R/R rất hấp dẫn. Tuy nhiên hãy dự phòng rủi ro sụt giá Token.`;
-    } else {
-        adviceBox.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo vị thế:</span> Chi phí giao dịch đang cao hơn giá trị phần thưởng. Cày thêm sẽ bị ÂM. Khuyên bạn nên duy trì hoặc bỏ qua!`;
+    
+    if(resTrade) resTrade.innerText = `$${tradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+    if(resCost) resCost.innerText = `-$${totalCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+    if(resReward) resReward.innerText = `+$${rewardValueUSD.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+    
+    if(roiEl) {
+        roiEl.innerText = `${netRoi > 0 ? '+' : ''}$${netRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+        roiEl.style.color = netRoi > 0 ? '#00F0FF' : '#ff4d4f';
     }
-}
 
-function resetRoiDisplay() {
-    document.getElementById('roi-res-trade').innerText = '$0';
-    document.getElementById('roi-res-cost').innerText = '-$0';
-    document.getElementById('roi-res-reward').innerText = '+$0';
-    document.getElementById('roi-res-net').innerText = '$0';
-    document.getElementById('roi-res-net').style.color = '#666';
-    document.getElementById('roi-advice-box').style.display = 'none';
-}
+    let adviceBox = document.getElementById('roi-advice-box');
+    if(adviceBox) {
+        adviceBox.style.display = 'block';
+        if (netRoi > 0) {
+            adviceBox.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Đánh giá vị thế:</span> Chênh lệch phí và giải thưởng đang dương. R/R rất hấp dẫn. Tuy nhiên hãy dự phòng rủi ro sụt giá Token.`;
+        } else {
+            adviceBox.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo vị thế:</span> Chi phí giao dịch đang cao hơn giá trị phần thưởng. Cày thêm sẽ bị ÂM. Khuyên bạn nên duy trì hoặc bỏ qua!`;
+        }
+    }
+};
+
+window.resetRoiDisplay = function() {
+    let ids = ['roi-res-trade', 'roi-res-cost', 'roi-res-reward', 'roi-res-net'];
+    ids.forEach(id => {
+        let el = document.getElementById(id);
+        if(el) {
+            el.innerText = id === 'roi-res-cost' ? '-$0' : (id === 'roi-res-reward' ? '+$0' : '$0');
+            if(id === 'roi-res-net') el.style.color = '#666';
+        }
+    });
+    let adviceBox = document.getElementById('roi-advice-box');
+    if(adviceBox) adviceBox.style.display = 'none';
+};
+
+// Lắng nghe sự kiện click trực tiếp trên 2 Tab để hiển thị / ẩn nút Máy tính
+document.addEventListener('DOMContentLoaded', () => {
+    // Tìm các nút Tab trên giao diện
+    const tabMarketBtn = document.getElementById('btn-tab-market');
+    const tabCompBtn = document.getElementById('btn-tab-comp');
+    const roiBtn = document.getElementById('btn-roi-trigger');
+
+    if (!roiBtn) return; // Nếu chưa dán HTML Máy tính thì bỏ qua
+
+    // 1. Khi bấm vào tab Alpha Market -> Ẩn Máy Tính
+    if (tabMarketBtn) {
+        tabMarketBtn.addEventListener('click', () => {
+            roiBtn.style.display = 'none';
+        });
+    }
+
+    // 2. Khi bấm vào tab Competition -> Hiện Máy Tính
+    if (tabCompBtn) {
+        tabCompBtn.addEventListener('click', () => {
+            roiBtn.style.display = 'flex';
+        });
+        
+        // 3. Nếu lúc vừa F5 web mà đang đứng sẵn ở tab Competition rồi -> Hiện luôn
+        if (tabCompBtn.classList.contains('active')) {
+            roiBtn.style.display = 'flex';
+        }
+    }
+});
