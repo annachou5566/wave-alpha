@@ -737,7 +737,7 @@ window.roiHandleTokenChange = function() {
     if(elFee) elFee.innerText = `${feeRate}%`;
     if(elSpread) elSpread.innerText = `${spreadRate.toFixed(2)}%`;
     
-    // CẬP NHẬT HIỂN THỊ HUY HIỆU (Khớp CSS Pro)
+    // CẬP NHẬT HIỂN THỊ HUY HIỆU
     let ruleBadge = document.getElementById('roi-rule-badge');
     if(ruleBadge) {
         ruleBadge.innerText = selectedRoiToken.ruleType === 'buy_only' ? 'Buy Only ⚠️' : 'Buy + Sell';
@@ -745,10 +745,10 @@ window.roiHandleTokenChange = function() {
         ruleBadge.style.color = selectedRoiToken.ruleType === 'buy_only' ? 'var(--roi-red)' : 'var(--roi-green)';
     }
 
-    // HIỂN THỊ HUY HIỆU x4 HAY x1 TỰ ĐỘNG (Khớp CSS Pro)
+    // SỬA: Dùng ruleType === 'trade_x4' thay vì alphaType
     let mulBadge = document.getElementById('roi-multiplier-badge');
     if(mulBadge) {
-        if(selectedRoiToken.alphaType === 'x4') {
+        if(selectedRoiToken.ruleType === 'trade_x4') {
             mulBadge.innerText = 'Lệnh Limit x4 🚀';
             mulBadge.className = 'roi-badge-highlight'; 
         } else {
@@ -757,9 +757,11 @@ window.roiHandleTokenChange = function() {
         }
     }
     
+    // SỬA: Lấy giá chuẩn từ cachedPrice (Realtime) hoặc market_analysis
     let priceEl = document.getElementById('roi-token-price');
     if(priceEl) {
-        priceEl.innerText = selectedRoiToken.market_analysis?.price ? parseFloat(selectedRoiToken.market_analysis.price).toFixed(4) : '0';
+        let p = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
+        priceEl.innerText = p > 0 ? (p < 0.001 ? p.toFixed(8) : p.toFixed(4)) : '0';
     }
 
     window.calculateRoi();
@@ -771,7 +773,7 @@ window.calculateRoi = function() {
     // 1. CHÌA KHÓA REALTIME: Luôn móc data tươi nhất từ appData mỗi khi tính toán
     if (typeof appData !== 'undefined' && appData.running) {
         let freshToken = appData.running.find(c => (c.db_id == selectedRoiToken.db_id || c.alphaId == selectedRoiToken.alphaId));
-        if (freshToken) selectedRoiToken = freshToken; // Update ngay tham chiếu
+        if (freshToken) selectedRoiToken = freshToken; 
     }
 
     let targetVolEl = document.getElementById('roi-target-vol');
@@ -788,8 +790,8 @@ window.calculateRoi = function() {
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
-    // 2. Tính Phí
-    let multiplier = (selectedRoiToken.alphaType === 'x4') ? 4 : 1;
+    // SỬA: Dùng ruleType === 'trade_x4' để tính multiplier
+    let multiplier = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
     let tradeSize = gap / multiplier;
 
     let feeRate = (selectedRoiToken.chain && selectedRoiToken.chain.toLowerCase() === 'bsc') ? 0.0001 : 0.0015;
@@ -799,16 +801,15 @@ window.calculateRoi = function() {
     let loops = selectedRoiToken.ruleType === 'buy_only' ? 2 : 1; 
     let totalCost = tradeSize * costPerTrade * loops;
 
-    // 3. Tính Giá Trị Phần Thưởng (Bắt giá Realtime, fix lỗi hiển thị 0)
-    let rawPrice = parseFloat(selectedRoiToken.market_analysis?.price || 0);
+    // SỬA: Lấy giá chuẩn từ cachedPrice (ưu tiên realtime) hoặc market_analysis
+    let rawPrice = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
     let rewardValueUSD = rewardTokenQty * rawPrice;
     let netRoi = rewardValueUSD - totalCost;
 
-    // 4. Update thông số ra UI
-    // Fix lỗi làm tròn: Nếu giá nhỏ hơn 0.001, cho hiển thị 8 số thập phân
+    // Update Text Giá (nhỡ realtime vừa nhảy lúc đang gõ)
     let priceEl = document.getElementById('roi-token-price');
     if (priceEl) {
-        priceEl.innerText = rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4);
+        priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
     }
 
     let resTrade = document.getElementById('roi-res-trade');
@@ -825,7 +826,7 @@ window.calculateRoi = function() {
         roiEl.style.color = netRoi > 0 ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
-    // 5. Box Lời Khuyên
+    // Box Lời Khuyên
     let adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
