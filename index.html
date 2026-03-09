@@ -1271,7 +1271,7 @@
             <div class="roi-label">1. Target Asset & Tier</div>
             <div class="d-flex gap-2">
                 <select id="roi-token-select" class="roi-input flex-fill" onchange="roiHandleTokenChange()">
-                    <option value="">-- Token --</option>
+                    <option value="">-- Select Token --</option>
                 </select>
                 <select id="roi-tier-select" class="roi-input flex-fill" onchange="calculateRoi()">
                     <option value="">-- Rank / Tier --</option>
@@ -1280,28 +1280,28 @@
         </div>
 
         <div class="roi-card">
-            <div class="roi-label mb-2">2. Volume Gap (Khối lượng cần cày)</div>
+            <div class="roi-label mb-2">2. Volume Gap</div>
             
             <div class="roi-input-group">
-                <span class="roi-sub-label">Volume mốc Top/Rank muốn đạt:</span>
+                <span class="roi-sub-label">Target Tier Volume:</span>
                 <div class="roi-input-wrapper">
                     <span class="roi-prefix">$</span>
-                    <input type="number" id="roi-target-vol" class="roi-input" placeholder="VD: 50000" oninput="calculateRoi()">
+                    <input type="number" id="roi-target-vol" class="roi-input" placeholder="e.g. 50000" oninput="calculateRoi()">
                 </div>
             </div>
 
             <div class="roi-operator-icon"><i class="fa-solid fa-minus"></i></div>
 
             <div class="roi-input-group">
-                <span class="roi-sub-label">Volume hiện tại của bạn:</span>
+                <span class="roi-sub-label">Your Current Volume:</span>
                 <div class="roi-input-wrapper">
                     <span class="roi-prefix">$</span>
-                    <input type="number" id="roi-my-vol" class="roi-input" placeholder="VD: 12000" oninput="calculateRoi()">
+                    <input type="number" id="roi-my-vol" class="roi-input" placeholder="e.g. 12000" oninput="calculateRoi()">
                 </div>
             </div>
 
             <div class="roi-gap-result">
-                <span class="roi-text-muted">Cần cày thêm:</span>
+                <span class="roi-text-muted">Remaining Gap:</span>
                 <span id="roi-gap-display" class="roi-text-highlight">$0</span>
             </div>
         </div>
@@ -1316,7 +1316,7 @@
             </div>
             
             <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
-                <span class="roi-sub-label mb-0" style="color: #EAECEF;">Hao hụt / 10,000$ Vol <span style="opacity: 0.5">(Buy Only)</span>:</span>
+                <span class="roi-sub-label mb-0" style="color: #EAECEF;">Est. Cost / $10k Vol <span style="opacity: 0.5">(Buy Only)</span>:</span>
                 <div class="roi-input-wrapper" style="width: 80px;">
                     <span class="roi-prefix" style="font-size: 12px; left: 8px; color: #F6465D;">$</span>
                     <input type="number" id="roi-cost-coeff" class="roi-input text-end" style="padding: 4px 8px 4px 20px; font-weight: bold; color: #F6465D;" value="2.5" step="0.1" oninput="calculateRoi()">
@@ -1330,7 +1330,7 @@
                 <span id="roi-res-trade" class="roi-val-neutral">$0</span>
             </div>
             <div class="roi-res-row">
-                <span>Est. Costs (Fee+Spread)</span>
+                <span>Est. Costs (Fees + Slippage)</span>
                 <span id="roi-res-cost" class="roi-val-negative">-$0</span>
             </div>
             <div class="roi-res-row roi-border-bottom">
