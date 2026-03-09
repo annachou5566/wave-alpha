@@ -1255,6 +1255,80 @@
     </div>
 </div>
 
+<button id="btn-roi-trigger" class="floating-roi-btn" onclick="toggleRoiSidebar()" style="display: none;">
+    <i class="fas fa-calculator"></i>
+</button>
+
+<div id="roi-sidebar" class="roi-sidebar">
+    <div class="roi-header">
+        <h5 class="mb-0 text-gold fw-bold"><i class="fas fa-robot me-2"></i>Smart ROI Calculator</h5>
+        <button class="btn-close btn-close-white" onclick="toggleRoiSidebar()"></button>
+    </div>
+    <div class="roi-body">
+        
+        <div class="roi-section">
+            <label class="text-sub small fw-bold mb-1">1. Target Asset</label>
+            <select id="roi-token-select" class="form-select bg-dark text-white border-secondary mb-2" onchange="roiHandleTokenChange()">
+                <option value="">-- Select Active Token --</option>
+            </select>
+            
+            <label class="text-sub small fw-bold mb-1 mt-2">Target Tier / Rank</label>
+            <select id="roi-tier-select" class="form-select bg-dark text-white border-secondary" onchange="calculateRoi()">
+                <option value="">-- Select Reward Tier --</option>
+            </select>
+        </div>
+
+        <div class="roi-section">
+            <label class="text-sub small fw-bold mb-1">2. Volume Gap (USD)</label>
+            <div class="d-flex align-items-center mb-2 gap-2">
+                <input type="number" id="roi-target-vol" class="form-control bg-dark text-white border-secondary text-end" placeholder="Top's Vol..." oninput="calculateRoi()">
+                <span class="text-sub">-</span>
+                <input type="number" id="roi-my-vol" class="form-control bg-dark text-white border-secondary text-end" placeholder="My Vol..." oninput="calculateRoi()">
+            </div>
+            <div class="text-end text-brand small fw-bold" id="roi-gap-display">Gap: $0</div>
+        </div>
+
+        <div class="roi-section">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="text-sub small fw-bold">3. Strategy (Type)</label>
+                <span id="roi-rule-badge" class="badge bg-secondary" style="font-size:0.6rem">Rule: N/A</span>
+            </div>
+            
+            <div class="d-flex bg-dark rounded p-1 border border-secondary mb-2 text-center" style="font-size: 0.8rem;">
+                <div class="flex-fill p-1 rounded roi-strategy-btn active" id="roi-btn-limit" onclick="setRoiStrategy('limit')">Limit (x4)</div>
+                <div class="flex-fill p-1 rounded roi-strategy-btn" id="roi-btn-market" onclick="setRoiStrategy('market')">Market (x1)</div>
+            </div>
+            <div class="text-sub small d-flex justify-content-between" style="font-size: 0.7rem;">
+                <span>Fee: <span id="roi-fee-rate" class="text-white">0%</span></span>
+                <span>Spread: <span id="roi-spread-rate" class="text-danger">0%</span></span>
+            </div>
+        </div>
+
+        <div class="roi-result-box mt-3">
+            <div class="d-flex justify-content-between text-sub small mb-1">
+                <span>🛒 Trade Size Needed:</span>
+                <span id="roi-res-trade" class="text-white fw-bold">$0</span>
+            </div>
+            <div class="d-flex justify-content-between text-sub small mb-1">
+                <span>💸 Est. Costs (Fee+Spread):</span>
+                <span id="roi-res-cost" class="text-danger fw-bold">-$0</span>
+            </div>
+            <div class="d-flex justify-content-between text-sub small mb-2 border-bottom border-secondary pb-2">
+                <span>🎁 Reward Value (<span id="roi-token-price">0</span>$):</span>
+                <span id="roi-res-reward" class="text-success fw-bold">+$0</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <span class="text-white fw-bold">NET ROI:</span>
+                <span id="roi-res-net" class="fs-4 fw-900" style="color:#666;">$0</span>
+            </div>
+            <div id="roi-advice-box" class="mt-2 p-2 rounded" style="font-size:0.7rem; background:rgba(255,255,255,0.05); display:none;">
+                </div>
+        </div>
+
+    </div>
+</div>
+
+                        
 <script src="public/js/pro-mode.js?v=999"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
