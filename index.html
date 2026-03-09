@@ -1279,28 +1279,25 @@
         </div>
 
         <div class="roi-section">
-            <label class="text-sub small fw-bold mb-1">2. Volume Gap (USD)</label>
-            <div class="d-flex align-items-center mb-2 gap-2">
-                <input type="number" id="roi-target-vol" class="form-control bg-dark text-white border-secondary text-end" placeholder="Top's Vol..." oninput="calculateRoi()">
-                <span class="text-sub">-</span>
-                <input type="number" id="roi-my-vol" class="form-control bg-dark text-white border-secondary text-end" placeholder="My Vol..." oninput="calculateRoi()">
+            <label class="text-sub small fw-bold mb-1">2. Volume Gap (Cần cày thêm bao nhiêu?)</label>
+            <div class="d-flex flex-column gap-2 mb-2">
+                <input type="number" id="roi-target-vol" class="form-control bg-dark text-white border-secondary" placeholder="Nhập Vol của Top bạn muốn giành..." oninput="calculateRoi()" style="font-size: 0.85rem;">
+                <input type="number" id="roi-my-vol" class="form-control bg-dark text-white border-secondary" placeholder="Nhập Vol hiện tại của bạn..." oninput="calculateRoi()" style="font-size: 0.85rem;">
             </div>
-            <div class="text-end text-brand small fw-bold" id="roi-gap-display">Gap: $0</div>
+            <div class="text-end text-brand small fw-bold" id="roi-gap-display">Cần cày thêm: $0</div>
         </div>
 
         <div class="roi-section">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <label class="text-sub small fw-bold">3. Strategy (Type)</label>
-                <span id="roi-rule-badge" class="badge bg-secondary" style="font-size:0.6rem">Rule: N/A</span>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="text-sub small fw-bold">3. Trade Rules (Luật tính Vol)</label>
+                <div>
+                    <span id="roi-rule-badge" class="badge bg-secondary" style="font-size:0.6rem">Rule: N/A</span>
+                    <span id="roi-multiplier-badge" class="badge bg-secondary ms-1" style="font-size:0.6rem">x1</span>
+                </div>
             </div>
-            
-            <div class="d-flex bg-dark rounded p-1 border border-secondary mb-2 text-center" style="font-size: 0.8rem;">
-                <div class="flex-fill p-1 rounded roi-strategy-btn active" id="roi-btn-limit" onclick="setRoiStrategy('limit')">Limit (x4)</div>
-                <div class="flex-fill p-1 rounded roi-strategy-btn" id="roi-btn-market" onclick="setRoiStrategy('market')">Market (x1)</div>
-            </div>
-            <div class="text-sub small d-flex justify-content-between" style="font-size: 0.7rem;">
-                <span>Fee: <span id="roi-fee-rate" class="text-white">0%</span></span>
-                <span>Spread: <span id="roi-spread-rate" class="text-danger">0%</span></span>
+            <div class="text-sub small d-flex justify-content-between pt-2 border-top border-secondary" style="font-size: 0.75rem;">
+                <span>Fee (Phí sàn): <span id="roi-fee-rate" class="text-white">0%</span></span>
+                <span>Spread (Trượt giá): <span id="roi-spread-rate" class="text-danger">0%</span></span>
             </div>
         </div>
 
@@ -1322,7 +1319,7 @@
                 <span id="roi-res-net" class="fs-4 fw-900" style="color:#666;">$0</span>
             </div>
             <div id="roi-advice-box" class="mt-2 p-2 rounded" style="font-size:0.7rem; background:rgba(255,255,255,0.05); display:none;">
-                </div>
+            </div>
         </div>
 
     </div>
