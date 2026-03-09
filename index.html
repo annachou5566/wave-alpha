@@ -1326,39 +1326,43 @@
 
         <div class="roi-result-card">
             <div class="roi-res-row">
-                <span>Incremental Gap Vol</span>
+                <span>Incremental Gap Vol (Contest)</span>
                 <span id="roi-res-trade" class="roi-val-neutral">$0</span>
             </div>
-            <div class="roi-res-row">
-                <span>Incremental Cost (Gap)</span>
-                <span id="roi-res-gap-cost" class="roi-val-negative">-$0</span>
-            </div>
-            <div class="roi-res-row border-bottom border-secondary pb-1 mb-1">
-                <span class="text-green fw-bold">Incremental Reward</span>
-                <span id="roi-res-reward" class="roi-val-positive fw-bold">+$0</span>
-            </div>
-
             <div class="roi-res-row" style="opacity: 0.6; font-size: 11px;">
                 <span>Sunk Cost (Already Spent)</span>
                 <span id="roi-res-sunk-cost">-$0</span>
             </div>
             <div class="roi-res-row">
-                <span class="fw-bold">TRUE NET ROI (Final)</span>
+                <span>Est. Cost (Gap Vol)</span>
+                <span id="roi-res-gap-cost" class="roi-val-negative">-$0</span>
+            </div>
+            <div class="roi-res-row roi-border-bottom">
+                <span class="fw-bold">Total Est. Trading Cost</span>
+                <span id="roi-res-total-cost" class="roi-val-negative fw-bold">-$0</span>
+            </div>
+            <div class="roi-res-row roi-border-bottom">
+                <span>Reward Value (<span id="roi-token-price">0</span>$)</span>
+                <span id="roi-res-reward" class="roi-val-positive">+$0</span>
+            </div>
+            <div class="roi-res-total">
+                <span>TRUE NET ROI (Final)</span>
                 <span id="roi-res-net" class="roi-val-total">$0</span>
             </div>
 
             <div class="roi-card mt-2 mb-0" style="background: rgba(240, 185, 11, 0.05); border-color: rgba(240, 185, 11, 0.2); padding: 8px;">
                 <div class="roi-label mb-1" style="color: var(--roi-brand); font-size: 10px;">Binance Alpha Opportunity</div>
                 <div class="roi-res-row">
-                    <span>Est. Alpha Vol Gain</span>
+                    <span>Alpha Vol Gain (from Gap)</span>
                     <span id="roi-res-alpha-gain" class="fw-bold" style="color: var(--roi-brand);">+$0</span>
                 </div>
                 <div class="roi-res-row">
                     <span>Alpha Cost / $10k Vol</span>
                     <span id="roi-res-alpha-eff" class="roi-val-neutral">$0</span>
                 </div>
-                <div class="small text-muted" style="font-size: 9px; margin-top: 4px; line-height: 1.2;">
-                    *Normal Alpha cost: $2.5/10k. Your contest trade is significantly cheaper due to rewards.
+                <div class="roi-res-row" style="font-size: 10px; color: var(--roi-green);">
+                    <span>Opportunity Savings vs. Normal</span>
+                    <span id="roi-res-alpha-savings" class="fw-bold">+$0</span>
                 </div>
             </div>
 
