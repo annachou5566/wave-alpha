@@ -833,21 +833,7 @@ window.resetRoiDisplay = function() {
     if(adviceBox) adviceBox.style.display = 'none';
 };
 
-// Lắng nghe sự kiện click trực tiếp trên 2 Tab để hiển thị / ẩn nút Máy tính
-document.addEventListener('DOMContentLoaded', () => {
-    // Tìm các nút Tab trên giao diện
-    const tabMarketBtn = document.getElementById('btn-tab-market');
-    const tabCompBtn = document.getElementById('btn-tab-comp');
-    const roiBtn = document.getElementById('btn-roi-trigger');
 
-    if (!roiBtn) return; // Nếu chưa dán HTML Máy tính thì bỏ qua
-
-    // 1. Khi bấm vào tab Alpha Market -> Ẩn Máy Tính
-    if (tabMarketBtn) {
-        tabMarketBtn.addEventListener('click', () => {
-            roiBtn.style.display = 'none';
-        });
-    }
 
     // 2. Khi bấm vào tab Competition -> Hiện Máy Tính
     if (tabCompBtn) {
