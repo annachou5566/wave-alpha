@@ -760,88 +760,113 @@ window.roiHandleTokenChange = function() {
 window.calculateRoi = function() {
     if (!selectedRoiToken) return window.resetRoiDisplay();
 
+    // Sync data realtime
     if (typeof appData !== 'undefined' && appData.running) {
         let freshToken = appData.running.find(c => (c.db_id == selectedRoiToken.db_id || c.alphaId == selectedRoiToken.alphaId));
         if (freshToken) selectedRoiToken = freshToken; 
     }
 
-    let targetVolEl = document.getElementById('roi-target-vol');
-    let myVolEl = document.getElementById('roi-my-vol');
-    let tierSelectEl = document.getElementById('roi-tier-select');
-    
-    let targetVol = targetVolEl ? parseFloat(targetVolEl.value || 0) : 0;
-    let myVol = myVolEl ? parseFloat(myVolEl.value || 0) : 0;
-    let rewardTokenQty = tierSelectEl ? parseFloat(tierSelectEl.value || 0) : 0;
+    const targetVol = parseFloat(document.getElementById('roi-target-vol').value || 0);
+    const myVol = parseFloat(document.getElementById('roi-my-vol').value || 0);
+    const rewardTokenQty = parseFloat(document.getElementById('roi-tier-select').value || 0);
+    const coeffInput = document.getElementById('roi-cost-coeff');
+    const costPer10k = (coeffInput && coeffInput.value !== "") ? parseFloat(coeffInput.value) : 2.5;
 
-    let gap = Math.max(0, targetVol - myVol);
-    let gapDisplay = document.getElementById('roi-gap-display');
+    const gap = Math.max(0, targetVol - myVol);
+    const gapDisplay = document.getElementById('roi-gap-display');
     if(gapDisplay) gapDisplay.innerText = `$${gap.toLocaleString()}`;
 
     if (gap === 0 && rewardTokenQty === 0) return window.resetRoiDisplay();
 
-    let multiplier = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
-    let gapTradeSize = gap / multiplier;
-    let myTradeSize = myVol / multiplier;
+    // 1. TÍNH TOÁN CHI PHÍ GIẢI ĐẤU (CONTEST)
+    const contestMul = (selectedRoiToken.ruleType === 'trade_x4') ? 4 : 1;
+    const gapTradeSize = gap / contestMul;
+    const myTradeSize = myVol / contestMul;
+    const effectiveCostPer10k = (selectedRoiToken.ruleType === 'buy_only') ? costPer10k : (costPer10k / 2);
 
-    let coeffInput = document.getElementById('roi-cost-coeff');
-    let costPer10k = coeffInput ? parseFloat(coeffInput.value || 0) : 2.5;
+    const gapCost = (gapTradeSize / 10000) * effectiveCostPer10k;
+    const sunkCost = (myTradeSize / 10000) * effectiveCostPer10k;
+    const totalCost = gapCost + sunkCost;
 
-    let effectiveCostPer10k = (selectedRoiToken.ruleType === 'buy_only') ? costPer10k : (costPer10k / 2);
+    // 2. TÍNH LỢI NHUẬN TIỀN MẶT
+    const rawPrice = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
+    const rewardValueUSD = rewardTokenQty * rawPrice;
+    const trueNetRoi = rewardValueUSD - totalCost;
 
-    let gapCost = (gapTradeSize / 10000) * effectiveCostPer10k;
-    let sunkCost = (myTradeSize / 10000) * effectiveCostPer10k;
-    let totalCost = gapCost + sunkCost;
-
-    let rawPrice = parseFloat(selectedRoiToken.cachedPrice) || parseFloat(selectedRoiToken.market_analysis?.price) || 0;
-    let rewardValueUSD = rewardTokenQty * rawPrice;
-    let trueNetRoi = rewardValueUSD - totalCost;
-
-    let priceEl = document.getElementById('roi-token-price');
-    if (priceEl) {
-        priceEl.innerText = rawPrice > 0 ? (rawPrice < 0.001 ? rawPrice.toFixed(8) : rawPrice.toFixed(4)) : '0';
+    // 3. LOGIC ALPHA VOLUME (Cơ hội cộng thêm)
+    // Kiểm tra thời hạn 30 ngày kể từ listingTime
+    const now = new Date();
+    const listDate = new Date(selectedRoiToken.listingTime?.includes('Z') ? selectedRoiToken.listingTime : selectedRoiToken.listingTime + 'Z');
+    const alphaExpiry = new Date(Date.UTC(listDate.getUTCFullYear(), listDate.getUTCMonth(), listDate.getUTCDate() + 29, 23, 59, 59, 999));
+    
+    const isAlphaActive = (now <= alphaExpiry && selectedRoiToken.alphaType !== 'none');
+    let alphaMul = 1;
+    if (isAlphaActive) {
+        alphaMul = (selectedRoiToken.alphaType === 'x4') ? 4 : (selectedRoiToken.alphaType === 'x2' ? 2 : 1);
     }
 
-    let resTrade = document.getElementById('roi-res-trade');
-    let resSunkCost = document.getElementById('roi-res-sunk-cost');
-    let resGapCost = document.getElementById('roi-res-gap-cost');
-    let resTotalCost = document.getElementById('roi-res-total-cost');
-    let resReward = document.getElementById('roi-res-reward');
-    let roiEl = document.getElementById('roi-res-net');
+    // Hàm quy đổi từ Tournament Vol sang Alpha Vol (Buy Only x4 logic)
+    const getAlphaVol = (tVol) => {
+        if (!isAlphaActive) return tVol;
+        // x4 chỉ tính Buy Vol. Buy Only -> 100% buy. Buy+Sell -> 50% buy.
+        let buyVol = (selectedRoiToken.ruleType === 'buy_only') ? tVol : tVol / 2;
+        if (alphaMul === 4) return buyVol * 4; 
+        if (alphaMul === 2) return tVol * 2; // x2 thường tính trên total
+        return tVol;
+    };
+
+    const alphaVolTarget = getAlphaVol(targetVol);
+    const alphaVolCurrent = getAlphaVol(myVol);
+    const alphaVolGain = alphaVolTarget - alphaVolCurrent;
+
+    // 4. CHI PHÍ CƠ HỘI (ALPHA EFFICIENCY)
+    // Công thức: "Mất bao nhiêu USD để mua được 10k Alpha Volume?"
+    // Alpha Cost per 10k = (Tổng chi phí - Thưởng) / (Tổng Alpha Vol / 10,000)
+    let alphaEfficiency = 0;
+    if (alphaVolTarget > 0) {
+        alphaEfficiency = (totalCost - rewardValueUSD) / (alphaVolTarget / 10000);
+    }
+
+    // 5. UPDATE UI
+    const updateText = (id, val, prefix = "") => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = prefix + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    updateText('roi-res-trade', gapTradeSize, "$");
+    updateText('roi-res-sunk-cost', sunkCost, "-$");
+    updateText('roi-res-gap-cost', gapCost, "-$");
+    updateText('roi-res-total-cost', totalCost, "-$");
+    updateText('roi-res-reward', rewardValueUSD, "+$");
+    updateText('roi-res-alpha-gain', alphaVolGain, "+$");
     
-    if(resTrade) resTrade.innerText = `$${gapTradeSize.toLocaleString(undefined, {maximumFractionDigits:0})}`;
-    if(resSunkCost) resSunkCost.innerText = `-$${sunkCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-    if(resGapCost) resGapCost.innerText = `-$${gapCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-    if(resTotalCost) resTotalCost.innerText = `-$${totalCost.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-    if(resReward) resReward.innerText = `+$${rewardValueUSD.toLocaleString(undefined, {maximumFractionDigits:2})}`;
-    
+    const effEl = document.getElementById('roi-res-alpha-eff');
+    if (effEl) {
+        effEl.innerText = `$${alphaEfficiency.toFixed(2)}`;
+        effEl.style.color = alphaEfficiency < 2.5 ? 'var(--roi-green)' : 'var(--roi-text-main)';
+    }
+
+    const roiEl = document.getElementById('roi-res-net');
     if(roiEl) {
-        roiEl.innerText = `${trueNetRoi >= 0 ? '+' : ''}$${trueNetRoi.toLocaleString(undefined, {maximumFractionDigits:2})}`;
+        roiEl.innerText = `${trueNetRoi >= 0 ? '+' : ''}$${trueNetRoi.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         roiEl.style.color = trueNetRoi >= 0 ? 'var(--roi-green)' : 'var(--roi-red)';
     }
 
-    // 5. CẢNH BÁO THÔNG MINH (Dựa trên Total ROI và Sunk Cost)
-    let adviceBox = document.getElementById('roi-advice-box');
+    // Box Advice & Sunk Cost Recovery
+    const adviceBox = document.getElementById('roi-advice-box');
     if(adviceBox) {
         adviceBox.style.display = 'block';
-        if (gap === 0 && rewardTokenQty > 0) {
-            adviceBox.style.backgroundColor = 'transparent';
-            adviceBox.style.borderColor = 'var(--roi-border)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-text-muted)"><i class="fas fa-info-circle me-1"></i>Waiting for volume input...</span>`;
-        } else if (trueNetRoi >= 0) {
-            adviceBox.style.backgroundColor = 'rgba(14, 203, 129, 0.1)';
+        if (trueNetRoi >= 0) {
             adviceBox.style.borderColor = 'var(--roi-green)';
-            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>PROFITABLE!</span> True Net ROI: <b>+$${trueNetRoi.toFixed(2)}</b>. Worth pushing!`;
+            adviceBox.innerHTML = `<span style="color:var(--roi-green)"><i class="fas fa-check-circle me-1"></i>PROFITABLE!</span> Finish the gap to secure <b>+$${trueNetRoi.toFixed(2)}</b>.`;
         } else {
-            // Trường hợp thú vị: Tổng thì lỗ, nhưng do lỡ phóng lao (Sunk Cost) nên nếu cày tiếp thì vẫn đỡ lỗ hơn là bỏ cuộc.
-            let recovery = rewardValueUSD - gapCost; 
+            const recovery = rewardValueUSD - gapCost; 
             if (recovery > 0 && myVol > 0) {
-                adviceBox.style.backgroundColor = 'rgba(240, 185, 11, 0.1)';
                 adviceBox.style.borderColor = 'var(--roi-brand)';
-                adviceBox.innerHTML = `<span style="color:var(--roi-brand)"><i class="fas fa-exclamation-circle me-1"></i>SUNK COST RECOVERY:</span> Overall loss, but finishing the gap earns you <b>+$${recovery.toFixed(2)}</b> vs stopping now!`;
+                adviceBox.innerHTML = `<span style="color:var(--roi-brand)"><i class="fas fa-exclamation-circle me-1"></i>RECOVERY MODE:</span> Total loss, but completing the gap saves <b>$${recovery.toFixed(2)}</b> of your sunk cost.`;
             } else {
-                adviceBox.style.backgroundColor = 'rgba(246, 70, 93, 0.1)';
                 adviceBox.style.borderColor = 'var(--roi-red)';
-                adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>LOSS WARNING:</span> Total costs exceed rewards by <b>$${Math.abs(trueNetRoi).toFixed(2)}</b>.`;
+                adviceBox.innerHTML = `<span style="color:var(--roi-red)"><i class="fas fa-exclamation-triangle me-1"></i>HIGH RISK:</span> Costs exceed rewards. Better trade outside?`;
             }
         }
     }
