@@ -1255,71 +1255,89 @@
     </div>
 </div>
 
-<button id="btn-roi-trigger" class="floating-roi-btn" onclick="toggleRoiSidebar()" style="display: none;">
-    <i class="fas fa-calculator"></i>
+<button id="btn-roi-trigger" class="roi-btn-pro" onclick="toggleRoiSidebar()">
+    <i class="fa-solid fa-calculator"></i>
 </button>
 
-<div id="roi-sidebar" class="roi-sidebar">
-    <div class="roi-header py-2">
-        <h6 class="mb-0 text-gold fw-bold"><i class="fas fa-robot me-2"></i>Smart ROI Calculator</h6>
-        <button class="btn-close btn-close-white" onclick="toggleRoiSidebar()"></button>
+<div id="roi-sidebar" class="roi-sidebar-pro">
+    <div class="roi-header-pro">
+        <span class="roi-title"><i class="fa-solid fa-chart-pie me-2" style="color: #F0B90B;"></i>ROI Calculator</span>
+        <button class="roi-close-btn" onclick="toggleRoiSidebar()"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="roi-body" style="padding-bottom: 80px;">
+    
+    <div class="roi-body-pro">
         
-        <div class="roi-section p-2 mb-2">
-            <label class="text-sub small fw-bold mb-1" style="font-size: 0.75rem;">1. Target Asset</label>
-            <select id="roi-token-select" class="form-select form-select-sm bg-dark text-white border-secondary mb-1" onchange="roiHandleTokenChange()">
-                <option value="">-- Select Active Token --</option>
-            </select>
-            
-            <label class="text-sub small fw-bold mb-1 mt-1" style="font-size: 0.75rem;">Target Tier / Rank</label>
-            <select id="roi-tier-select" class="form-select form-select-sm bg-dark text-white border-secondary" onchange="calculateRoi()">
-                <option value="">-- Select Reward Tier --</option>
-            </select>
-        </div>
-
-        <div class="roi-section p-2 mb-2">
-            <label class="text-sub small fw-bold mb-1" style="font-size: 0.75rem;">2. Volume Gap (Cần cày thêm?)</label>
-            <div class="d-flex flex-column gap-1 mb-1">
-                <input type="number" id="roi-target-vol" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Nhập Vol Top mục tiêu (VD: 50000)" oninput="calculateRoi()" style="font-size: 0.8rem;">
-                <input type="number" id="roi-my-vol" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Nhập Vol hiện tại của bạn (VD: 10000)" oninput="calculateRoi()" style="font-size: 0.8rem;">
+        <div class="roi-card">
+            <div class="roi-label">1. Target Asset & Tier</div>
+            <div class="d-flex gap-2">
+                <select id="roi-token-select" class="roi-input flex-fill" onchange="roiHandleTokenChange()">
+                    <option value="">-- Token --</option>
+                </select>
+                <select id="roi-tier-select" class="roi-input flex-fill" onchange="calculateRoi()">
+                    <option value="">-- Rank / Tier --</option>
+                </select>
             </div>
-            <div class="text-end text-brand fw-bold" id="roi-gap-display" style="font-size: 0.7rem;">Cần cày thêm: $0</div>
         </div>
 
-        <div class="roi-section p-2 mb-2">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-                <label class="text-sub small fw-bold" style="font-size: 0.75rem;">3. Trade Rules (Luật tính Vol)</label>
-                <div>
-                    <span id="roi-rule-badge" class="badge bg-secondary" style="font-size:0.6rem">Rule: N/A</span>
-                    <span id="roi-multiplier-badge" class="badge bg-secondary ms-1" style="font-size:0.6rem">x1</span>
+        <div class="roi-card">
+            <div class="roi-label mb-2">2. Volume Gap (Khối lượng cần cày)</div>
+            
+            <div class="roi-input-group">
+                <span class="roi-sub-label">Volume mốc Top/Rank muốn đạt:</span>
+                <div class="roi-input-wrapper">
+                    <span class="roi-prefix">$</span>
+                    <input type="number" id="roi-target-vol" class="roi-input" placeholder="VD: 50000" oninput="calculateRoi()">
                 </div>
             </div>
-            <div class="text-sub d-flex justify-content-between pt-1 border-top border-secondary" style="font-size: 0.7rem;">
-                <span>Fee (Phí sàn): <span id="roi-fee-rate" class="text-white">0%</span></span>
-                <span>Spread (Trượt giá): <span id="roi-spread-rate" class="text-danger">0%</span></span>
+
+            <div class="roi-operator-icon"><i class="fa-solid fa-minus"></i></div>
+
+            <div class="roi-input-group">
+                <span class="roi-sub-label">Volume hiện tại của bạn:</span>
+                <div class="roi-input-wrapper">
+                    <span class="roi-prefix">$</span>
+                    <input type="number" id="roi-my-vol" class="roi-input" placeholder="VD: 12000" oninput="calculateRoi()">
+                </div>
+            </div>
+
+            <div class="roi-gap-result">
+                <span class="roi-text-muted">Cần cày thêm:</span>
+                <span id="roi-gap-display" class="roi-text-highlight">$0</span>
             </div>
         </div>
 
-        <div class="roi-result-box mt-2">
-            <div class="d-flex justify-content-between text-sub mb-1" style="font-size: 0.75rem;">
-                <span>🛒 Trade Size Needed:</span>
-                <span id="roi-res-trade" class="text-white fw-bold">$0</span>
+        <div class="roi-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="roi-label mb-0">3. Trade Rules</div>
+                <div class="roi-badges">
+                    <span id="roi-rule-badge" class="roi-badge">N/A</span>
+                    <span id="roi-multiplier-badge" class="roi-badge-highlight">x1</span>
+                </div>
             </div>
-            <div class="d-flex justify-content-between text-sub mb-1" style="font-size: 0.75rem;">
-                <span>💸 Est. Costs (Fee+Spread):</span>
-                <span id="roi-res-cost" class="text-danger fw-bold">-$0</span>
+            <div class="roi-fees-row">
+                <span>Fee: <span id="roi-fee-rate" style="color: #EAECEF;">0%</span></span>
+                <span>Spread: <span id="roi-spread-rate" style="color: #F6465D;">0%</span></span>
             </div>
-            <div class="d-flex justify-content-between text-sub mb-1 border-bottom border-secondary pb-1" style="font-size: 0.75rem;">
-                <span>🎁 Reward Value (<span id="roi-token-price">0</span>$):</span>
-                <span id="roi-res-reward" class="text-success fw-bold">+$0</span>
+        </div>
+
+        <div class="roi-result-card">
+            <div class="roi-res-row">
+                <span>Trade Size Needed</span>
+                <span id="roi-res-trade" class="roi-val-neutral">$0</span>
             </div>
-            <div class="d-flex justify-content-between align-items-center mt-1">
-                <span class="text-white fw-bold" style="font-size: 0.85rem;">NET ROI:</span>
-                <span id="roi-res-net" class="fs-5 fw-900" style="color:#666;">$0</span>
+            <div class="roi-res-row">
+                <span>Est. Costs (Fee+Spread)</span>
+                <span id="roi-res-cost" class="roi-val-negative">-$0</span>
             </div>
-            <div id="roi-advice-box" class="mt-1 p-1 rounded" style="font-size:0.65rem; background:rgba(255,255,255,0.05); display:none;">
+            <div class="roi-res-row roi-border-bottom">
+                <span>Reward Value (<span id="roi-token-price">0</span>$)</span>
+                <span id="roi-res-reward" class="roi-val-positive">+$0</span>
             </div>
+            <div class="roi-res-total">
+                <span>NET ROI</span>
+                <span id="roi-res-net" class="roi-val-total">$0</span>
+            </div>
+            <div id="roi-advice-box" class="roi-advice" style="display: none;"></div>
         </div>
 
     </div>
