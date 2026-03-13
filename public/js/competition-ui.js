@@ -58,13 +58,17 @@ class CompetitionRadar {
                 this.realtimeCache[key] = item;
                 
                 if (!this.data.data[key]) {
+                    let eTimeStr = item.endTime || "23:59:59";
+                    if(eTimeStr.length === 5) eTimeStr += ":00";
+                    let finalEnd = item.end_at || (item.end ? (item.end + 'T' + eTimeStr + 'Z') : undefined);
+                    
                     this.data.data[key] = {
                         s: item.symbol || item.name || "UNKNOWN",
                         n: item.name || "",
                         contract: item.contract,
                         l: item.logo || item.icon || "",
                         cl: item.chain_icon || item.chainLogo || "",
-                        e: item.end_at || item.end,
+                        e: finalEnd,
                         h: [] 
                     };
                 }
