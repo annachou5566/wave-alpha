@@ -1666,9 +1666,14 @@ async function loadFromCloud(isSilent = false) {
             
             let isEnded = false;
             let endStr = item.end_at || item.end || (item.data && item.data.end);
-            
-            if (item.end_at) { isEnded = Date.now() > new Date(item.end_at).getTime(); }
-            else if (endStr) { isEnded = Date.now() > (new Date(endStr).getTime() + 86400000); }
+
+            if (item.end_at) { 
+                isEnded = Date.now() > new Date(item.end_at).getTime(); 
+            } else if (endStr) { 
+                let eTimeStr = item.endTime || (item.data && item.data.endTime) || "23:59:59";
+                if (eTimeStr.length === 5) eTimeStr += ":00";
+                isEnded = Date.now() > new Date(endStr + 'T' + eTimeStr + 'Z').getTime(); 
+            }
 
             if (!isEnded) tempRunning.push(item);
             else tempHistory.push(item);
@@ -2144,7 +2149,9 @@ function renderGrid(customData = null) {
         if (item.end_at) { 
             isEnded = nowMs > new Date(item.end_at).getTime(); 
         } else if (item.end) { 
-            isEnded = nowMs > (new Date(item.end).getTime() + 86400000); 
+            let eTimeStr = item.endTime || "23:59:59";
+            if (eTimeStr.length === 5) eTimeStr += ":00";
+            isEnded = nowMs > new Date(item.end + 'T' + eTimeStr + 'Z').getTime();
         }
 
         if (currentTab === 'running') return !isEnded;
@@ -2723,7 +2730,11 @@ function copyContract(addr) {
     let projectsToRender = sourceList.filter(item => {
         let isEnded = false;
         if (item.end_at) { isEnded = nowMs > new Date(item.end_at).getTime(); } 
-        else if (item.end) { isEnded = nowMs > (new Date(item.end).getTime() + 86400000); }
+        else if (item.end) { 
+            let eTimeStr = item.endTime || "23:59:59";
+            if (eTimeStr.length === 5) eTimeStr += ":00";
+            isEnded = nowMs > new Date(item.end + 'T' + eTimeStr + 'Z').getTime();
+        }
         if (currentTab === 'running') return !isEnded;
         return isEnded;
     });
