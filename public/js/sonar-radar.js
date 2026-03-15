@@ -1,10 +1,12 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V4)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V5 UX OPTIMIZED)
  * ============================================================================
- * Đã Fix: 
- * - Lấy chuẩn dữ liệu Liquidity từ mảng allTokens
- * - Xóa các nút Action vô dụng ở Side Panel để giao diện gọn gàng hơn
+ * Đã Fix UX theo Phương án 1:
+ * - Xóa bỏ hoàn toàn Tooltip HTML lấn cấn.
+ * - Thêm "Minimal HUD Tag" vẽ trực tiếp trên mặt kính Radar bằng Canvas.
+ * - Khung ngắm bắn (Target Lock Crosshair) chuẩn sci-fi khi click chọn.
+ * - Tối ưu hiệu năng: Không còn DOM manipulation khi rê chuột.
  * ============================================================================
  */
 
@@ -30,8 +32,6 @@ class AlphaSonarGalaxy {
         
         this.mouseX = -1;
         this.mouseY = -1;
-        this.clientX = -1;
-        this.clientY = -1;
 
         this.initUI();
         this.resize();
@@ -49,32 +49,19 @@ class AlphaSonarGalaxy {
         return parseFloat(num).toFixed(2);
     }
 
-    // --- KHỞI TẠO UI ---
+    // --- KHỞI TẠO UI (CHỈ CÒN CONTROL BAR VÀ SIDE PANEL) ---
     initUI() {
         if (!document.getElementById('sonar-pro-styles')) {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
-            // Đã dọn dẹp CSS của 2 nút action cũ
             style.innerHTML = `
-                /* TOOLTIP */
-                #sonar-hud-tooltip { position: fixed; top: 0; left: 0; width: 220px; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.05); border-radius: 6px; padding: 12px; pointer-events: none; opacity: 0; z-index: 9999; font-family: 'Rajdhani', sans-serif; backdrop-filter: blur(4px); transition: opacity 0.15s ease-in-out, transform 0.05s linear; }
-                #sonar-hud-tooltip::before { content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid #00f0ff; border-left: 2px solid #00f0ff; }
-                #sonar-hud-tooltip::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid #00f0ff; border-right: 2px solid #00f0ff; }
-                .hud-header { display: flex; align-items: center; border-bottom: 1px dashed rgba(0, 240, 255, 0.3); padding-bottom: 10px; margin-bottom: 10px; }
-                .hud-logo { width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; background: #1a1f2e; border: 1px solid rgba(255, 255, 255, 0.1); object-fit: cover; }
-                .hud-symbol { font-size: 18px; font-weight: 700; line-height: 1; }
-                .hud-status { font-size: 11px; color: #00f0ff; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
-                .hud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
-                .hud-label { color: rgba(255, 255, 255, 0.5); font-weight: 500; }
-                .hud-val { font-weight: 700; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2); }
-                
                 /* CONTROL BAR */
                 #sonar-control-bar { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2); backdrop-filter: blur(5px); }
                 .sonar-btn { background: transparent; border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; transition: all 0.2s; }
                 .sonar-btn:hover, .sonar-btn.active { background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
                 .sonar-btn.pause-btn.paused { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
                 
-                /* NEW SIDE PANEL (TERMINAL STYLE) */
+                /* SIDE PANEL (TERMINAL STYLE) */
                 #sonar-side-panel { position: absolute; top: 15px; right: -360px; width: 320px; height: calc(100% - 30px); background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff; border-top: 1px solid rgba(0, 240, 255, 0.2); border-bottom: 1px solid rgba(0, 240, 255, 0.2); z-index: 10; backdrop-filter: blur(10px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -10px 0 30px rgba(0, 240, 255, 0.1); display: flex; flex-direction: column; overflow-y: auto; }
                 #sonar-side-panel.open { right: 0; }
                 #sonar-side-panel::-webkit-scrollbar { width: 4px; } #sonar-side-panel::-webkit-scrollbar-thumb { background: #00f0ff; }
@@ -102,7 +89,7 @@ class AlphaSonarGalaxy {
                 .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
                 .sp-box-val { font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; }
                 
-                .sp-vol-bar-wrap { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; margin-bottom: 20px;}
+                .sp-vol-bar-wrap { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; margin-bottom: 0;}
                 .sp-vol-head { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px; letter-spacing: 0.5px;}
                 .sp-vol-track { width: 100%; height: 6px; background: #1e2329; border-radius: 3px; display: flex; overflow: hidden; }
                 .sp-vol-limit { height: 100%; background: #F0B90B; box-shadow: 0 0 5px #F0B90B;}
@@ -112,10 +99,6 @@ class AlphaSonarGalaxy {
             `;
             document.head.appendChild(style);
         }
-
-        this.tooltip = document.createElement('div');
-        this.tooltip.id = 'sonar-hud-tooltip';
-        document.body.appendChild(this.tooltip);
 
         this.controlBar = document.createElement('div');
         this.controlBar.id = 'sonar-control-bar';
@@ -154,26 +137,27 @@ class AlphaSonarGalaxy {
     }
 
     bindEvents() {
+        // Chỉ lưu tọa độ chuột nội bộ, không đụng chạm DOM
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left;
             this.mouseY = e.clientY - rect.top;
-            this.clientX = e.clientX;
-            this.clientY = e.clientY;
             this.checkHover();
         });
 
         this.canvas.addEventListener('mouseleave', () => {
             this.hoveredToken = null;
-            if (this.tooltip) this.tooltip.style.opacity = '0';
             this.canvas.style.cursor = 'default';
         });
 
+        // Click Logic
         this.canvas.addEventListener('click', () => {
             if (this.hoveredToken) {
+                // Nếu click vào token mới
                 this.lockedToken = this.hoveredToken;
-                this.openSidePanel(this.lockedToken);
+                this.openSidePanel();
             } else {
+                // Nếu click ra vùng trống (Radar Grid)
                 this.lockedToken = null;
                 this.closeSidePanel();
             }
@@ -199,7 +183,7 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // LOGIC CỐT LÕI (FIX LIQUIDITY 0$)
+    // LOGIC TÍNH TOÁN DỮ LIỆU
     // ==========================================
     recalculate(force = false) {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
@@ -218,12 +202,11 @@ class AlphaSonarGalaxy {
             let realSymbol = '';
             let logoUrl = '';
             
-            // Khai báo các biến chuyên sâu
             let mc = t.mc || 0;
             let holders = t.h || 0;
             let vLimit = t.v.dl || 0;
             let contract = '';
-            let liq = t.l || 0; // Gán tạm liquidity từ realtime
+            let liq = t.l || 0; 
 
             if (typeof allTokens !== 'undefined' && allTokens.length > 0) {
                 let targetToken = allTokens.find(item => 
@@ -239,8 +222,6 @@ class AlphaSonarGalaxy {
                     holders = targetToken.holders || holders;
                     vLimit = (targetToken.volume && targetToken.volume.daily_limit) ? targetToken.volume.daily_limit : vLimit;
                     contract = targetToken.contract || '';
-                    
-                    // FIX: Ưu tiên lấy Liquidity chuẩn xác từ allTokens
                     liq = targetToken.liquidity || liq; 
                 }
             }
@@ -249,7 +230,7 @@ class AlphaSonarGalaxy {
             if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
 
             let vol = t.v.dt || 0;
-            if (!liq) liq = vol || 1000; // Fallback cuối cùng nếu vẫn bằng 0
+            if (!liq) liq = vol || 1000; 
 
             let vChain = Math.max(0, vol - vLimit); 
             
@@ -299,7 +280,7 @@ class AlphaSonarGalaxy {
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
                 existingToken.logo = data.logo; 
-                existingToken.liq = data.liq; // Cập nhật liq mới
+                existingToken.liq = data.liq;
                 existingToken.mc = data.mc;
                 existingToken.holders = data.holders;
                 existingToken.vLimit = data.vLimit;
@@ -326,55 +307,23 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // UI UPDATES
+    // XỬ LÝ SỰ KIỆN (CHỈ LÀM VIỆC VỚI CANVAS)
     // ==========================================
     checkHover() {
         this.hoveredToken = null;
         for (let t of this.tokens) {
             let dx = this.mouseX - t.x;
             let dy = this.mouseY - t.y;
-            if (Math.sqrt(dx*dx + dy*dy) < Math.max(t.size * 2, 12)) {
+            // Vùng bắt chuột rộng hơn một chút để dễ thao tác
+            if (Math.sqrt(dx*dx + dy*dy) < Math.max(t.size * 2, 14)) {
                 this.hoveredToken = t;
                 break;
             }
         }
-        
         this.canvas.style.cursor = this.hoveredToken ? 'crosshair' : 'default';
-
-        if (this.hoveredToken && this.tooltip) {
-            const t = this.hoveredToken;
-            this.tooltip.style.opacity = '1';
-            
-            let tipX = this.clientX + 15;
-            let tipY = this.clientY + 15;
-            let tipW = 220, tipH = 150;
-            if (tipX + tipW > window.innerWidth) tipX = this.clientX - tipW - 15;
-            if (tipY + tipH > window.innerHeight) tipY = this.clientY - tipH - 15;
-
-            this.tooltip.style.transform = `translate(${tipX}px, ${tipY}px)`;
-            
-            let cColor = t.change > 0 ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#F0B90B');
-            let cSign = t.change > 0 ? '+' : '';
-
-            this.tooltip.innerHTML = `
-                <div class="hud-header">
-                    <img class="hud-logo" src="${t.logo}" onerror="this.src='assets/tokens/default.png'">
-                    <div>
-                        <div class="hud-symbol" style="color:${t.color}">$${t.symbol}</div>
-                        <div class="hud-status" style="color:${t.color}">Radar Active</div>
-                    </div>
-                </div>
-                <div class="hud-row"><span class="hud-label">PRICE</span><span class="hud-val" style="color:#fff;">$${t.price.toFixed(4)}</span></div>
-                <div class="hud-row"><span class="hud-label">24H VOL</span><span class="hud-val" style="color:#F0B90B;">$${this.formatCompact(t.vol)}</span></div>
-                <div class="hud-row"><span class="hud-label">MOMENTUM</span><span class="hud-val" style="color:${cColor};">${cSign}${t.change.toFixed(2)}%</span></div>
-            `;
-        } else if (this.tooltip) {
-            this.tooltip.style.opacity = '0';
-        }
     }
 
-    openSidePanel(t) {
-        if (!t) return;
+    openSidePanel() {
         this.sidePanel.classList.add('open');
         this.updateSidePanelData();
     }
@@ -383,7 +332,6 @@ class AlphaSonarGalaxy {
         this.sidePanel.classList.remove('open');
     }
 
-    // --- BƠM DỮ LIỆU HTML CHO SIDE PANEL TERMINAL ---
     updateSidePanelData() {
         if (!this.lockedToken) return;
         const t = this.lockedToken;
@@ -395,13 +343,11 @@ class AlphaSonarGalaxy {
 
         let shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.slice(-4)}` : 'N/A';
         
-        // Tính tỷ lệ Volume
         let totalVol = t.vol || 1;
         let MathLim = Math.max(0, Math.min(100, ((t.vLimit || 0) / totalVol) * 100));
         let pctLimit = isNaN(MathLim) ? 0 : MathLim;
         let pctChain = Math.max(0, 100 - pctLimit);
 
-        // Đã bỏ div .sp-actions
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
             
@@ -462,7 +408,7 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // RENDER ENGINE (CANVAS)
+    // RENDER ENGINE (BỔ SUNG VẼ MINI TAG & CROSSHAIR TRÊN CANVAS)
     // ==========================================
     animate() {
         if (this.width === 0) {
@@ -470,12 +416,13 @@ class AlphaSonarGalaxy {
             return;
         }
 
+        // Xóa frame cũ
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
+        // --- VẼ LƯỚI ---
         this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
         this.ctx.lineWidth = 1;
-        
         for (let i = 1; i <= 4; i++) {
             let currentRadius = (this.maxRadius / 4) * i;
             this.ctx.beginPath();
@@ -492,6 +439,7 @@ class AlphaSonarGalaxy {
         this.ctx.stroke();
         this.ctx.setLineDash([]); 
 
+        // --- VẼ SÓNG ÂM ---
         for (let i = this.ripples.length - 1; i >= 0; i--) {
             let rip = this.ripples[i];
             this.ctx.beginPath();
@@ -512,6 +460,7 @@ class AlphaSonarGalaxy {
         let normalizedSweep = this.angle % (Math.PI * 2);
         if (normalizedSweep < 0) normalizedSweep += Math.PI * 2;
 
+        // --- VẼ TOKEN & HIỆU ỨNG TƯƠNG TÁC ---
         this.tokens.forEach(t => {
             if (!this.isPaused) {
                 t.x += (t.tX - t.x) * 0.05; 
@@ -521,7 +470,6 @@ class AlphaSonarGalaxy {
 
             let tA = Math.atan2(t.y - this.centerY, t.x - this.centerX);
             if (tA < 0) tA += Math.PI * 2;
-            
             let angleDiff = normalizedSweep - tA;
             if (angleDiff < 0) angleDiff += Math.PI * 2;
 
@@ -529,27 +477,43 @@ class AlphaSonarGalaxy {
             let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
             
             let blipBrightness = 0.25; 
-            if (angleDiff < 0.8 && !this.isPaused) {
-                blipBrightness = 1.0 - (angleDiff / 0.8);
-            }
+            if (angleDiff < 0.8 && !this.isPaused) blipBrightness = 1.0 - (angleDiff / 0.8);
             if (isHovered || isLocked) blipBrightness = 1.0;
 
             this.ctx.globalAlpha = Math.max(0.2, blipBrightness);
 
+            // Vẽ Blip
             this.ctx.beginPath();
             this.ctx.arc(t.x, t.y, Math.max(1, t.size), 0, Math.PI * 2);
             this.ctx.fillStyle = (isHovered || isLocked) ? '#fff' : t.color;
-            
             this.ctx.shadowBlur = (isHovered || isLocked) ? t.size * 5 : t.size * (2 + blipBrightness * 4);
             this.ctx.shadowColor = (isHovered || isLocked) ? '#fff' : t.color;
             this.ctx.fill();
+            
+            // Xóa shadow để vẽ các thành phần khác không bị nhòe
+            this.ctx.shadowBlur = 0;
+            this.ctx.globalAlpha = 1.0;
 
+            // 1. VẼ KHUNG NGẮM (CROSSHAIR) NẾU BỊ KHÓA
             if (isLocked) {
-                this.ctx.strokeStyle = '#fff';
-                this.ctx.lineWidth = 1;
-                let s = t.size + 8;
-                this.ctx.strokeRect(t.x - s/2, t.y - s/2, s, s);
+                this.ctx.strokeStyle = '#ff3366'; // Màu đỏ cảnh báo
+                this.ctx.lineWidth = 1.5;
+                let s = t.size + 12; // Kích thước khung
+                let d = s/2;
+                let l = 6; // Chiều dài các nét đứt ở góc
+                
+                this.ctx.beginPath();
+                // Góc trên trái
+                this.ctx.moveTo(t.x - d, t.y - d + l); this.ctx.lineTo(t.x - d, t.y - d); this.ctx.lineTo(t.x - d + l, t.y - d);
+                // Góc trên phải
+                this.ctx.moveTo(t.x + d - l, t.y - d); this.ctx.lineTo(t.x + d, t.y - d); this.ctx.lineTo(t.x + d, t.y - d + l);
+                // Góc dưới phải
+                this.ctx.moveTo(t.x + d, t.y + d - l); this.ctx.lineTo(t.x + d, t.y + d); this.ctx.lineTo(t.x + d - l, t.y + d);
+                // Góc dưới trái
+                this.ctx.moveTo(t.x - d + l, t.y + d); this.ctx.lineTo(t.x - d, t.y + d); this.ctx.lineTo(t.x - d, t.y + d - l);
+                this.ctx.stroke();
             } 
+            // Hiệu ứng tia quét ngang qua
             else if (blipBrightness > 0.6 && !isHovered) {
                 this.ctx.beginPath();
                 this.ctx.arc(t.x, t.y, t.size + 3 + (1 - blipBrightness) * 5, 0, Math.PI * 2);
@@ -558,10 +522,38 @@ class AlphaSonarGalaxy {
                 this.ctx.stroke();
             }
 
-            this.ctx.globalAlpha = 1.0;
-            this.ctx.shadowBlur = 0;
+            // 2. VẼ MINIMAL HUD TAG KHI RÊ CHUỘT (CHỈ HIỆN KHI CHƯA KHÓA)
+            if (isHovered && !isLocked) {
+                let tagText = `[ $${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% ]`;
+                this.ctx.font = 'bold 11px Courier New';
+                let textMetrics = this.ctx.measureText(tagText);
+                let textWidth = textMetrics.width;
+                
+                // Đặt nhãn xéo lên phía trên bên phải của chấm sáng
+                let tagX = t.x + t.size + 8;
+                let tagY = t.y - t.size - 8;
+
+                // Nền đen mờ
+                this.ctx.fillStyle = 'rgba(10, 14, 23, 0.85)';
+                this.ctx.strokeStyle = t.color;
+                this.ctx.lineWidth = 1;
+                this.ctx.fillRect(tagX, tagY - 12, textWidth + 10, 18);
+                this.ctx.strokeRect(tagX, tagY - 12, textWidth + 10, 18);
+
+                // Đường gạch nối từ token tới Tag
+                this.ctx.beginPath();
+                this.ctx.moveTo(t.x + t.size + 2, t.y - t.size - 2);
+                this.ctx.lineTo(tagX, tagY - 4);
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                this.ctx.stroke();
+
+                // Chữ bên trong Tag
+                this.ctx.fillStyle = '#fff';
+                this.ctx.fillText(tagText, tagX + 5, tagY + 1);
+            }
         });
 
+        // --- VẼ TIA QUÉT QUANG HỌC ---
         if (!this.isPaused) {
             this.angle += 0.025;
         }
