@@ -1,57 +1,63 @@
-/**
- * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V20 PERFECT AESTHETICS)
- * ============================================================================
- * ĐÃ FIX THEO YÊU CẦU:
- * 1. Xóa sổ hoàn toàn "Tia radar quét vòng tròn" gây rối mắt. Giao diện tĩnh lặng.
- * 2. Khôi phục lệnh cắt `clip()` -> Mọi Token đều được bo tròn 100% hoàn hảo.
- * 3. Tái cấu trúc "Lực đẩy Từ trường": Token tự động tản ra, không dính chùm.
- * ============================================================================
+* Alpha Sonar Galaxy - Performance Refactor
+ * - Default token cap = 50 (nhẹ khi mở tab)
+ * - Cho phép chọn 10/50/100/200/500
+ * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
+ * - Mesh mode có anti-clump + laser links nhưng giới hạn để tránh lag
  */
 
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) return;
-        
-        // Hủy instance cũ nếu có (Chống Lag)
+
         if (this.canvas.sonarInstance) {
             this.canvas.sonarInstance.destroy();
         }
         this.canvas.sonarInstance = this;
-        this.isRunning = true; 
-        this.isVisible = true; 
 
         this.ctx = this.canvas.getContext('2d');
         this.container = this.canvas.parentElement || document.body;
-        this.container.style.position = 'relative'; 
+        this.container.style.position = 'relative';
         this.container.style.overflow = 'hidden';
 
-        this.tokens = [];
-        this.latestData = null;
-        
+        this.isRunning = true;
+        this.isVisible = true;
         this.isPaused = false;
-        this.filterMode = 'volume'; 
-        this.visualMode = 'mesh'; // 'mesh' or 'orbit'
-        
-        this.lockedToken = null;    
-        this.hoveredToken = null;   
+
+        this.latestData = null;
+        this.tokens = [];
+        this.tokenDict = {};
+        this.lastTokenCount = 0;
+        this.lastCalcTime = 0;
+
+        this.filterMode = 'volume';
+        this.visualMode = 'mesh';
+
+        this.lockedToken = null;
+        this.hoveredToken = null;
         this.mouseX = -1;
         this.mouseY = -1;
 
-        this.lastCalcTime = 0;       
-        this.tokenDict = {};         
-        this.lastTokenCount = 0;     
-        this.connectionDistance = 80;
+        // Performance knobs
+        this.connectionDistance = 82;
         this.connectionDistanceSq = this.connectionDistance * this.connectionDistance;
-        this.orbitLaneSpacing = 18;
+        this.orbitLaneSpacing = 11;
         this.orbitDriftStrength = 0.35;
+        this.minLogoRenderSize = 9;
+        this.meshHardCapDesktop = 220;
+        this.meshHardCapMobile = 120;
+        this.orbitHardCapDesktop = 520;
+        this.orbitHardCapMobile = 280;
+
+        // User configurable cap (default nhẹ)
+        this.tokenCapOptions = [10, 50, 100, 200, 500];
+        this.userTokenCap = 50;
 
         this.initUI();
         this.resize();
         window.addEventListener('resize', () => this.resize());
         this.bindEvents();
-        
+
         if ('IntersectionObserver' in window) {
             this.observer = new IntersectionObserver((entries) => {
                 this.isVisible = entries[0].isIntersecting;
@@ -70,11 +76,11 @@ class AlphaSonarGalaxy {
     safeNum(val, fallback = 0) {
         if (val === undefined || val === null) return fallback;
         const n = parseFloat(val);
-        return isNaN(n) ? fallback : n;
+        return Number.isNaN(n) ? fallback : n;
     }
 
     formatCompact(num) {
-        let n = this.safeNum(num);
+        const n = this.safeNum(num);
         if (n === 0) return '0';
         if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
         if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
@@ -92,49 +98,61 @@ class AlphaSonarGalaxy {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
-                #sonar-control-bar { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2); backdrop-filter: blur(5px); }
-                .sonar-btn { background: transparent; border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; transition: all 0.2s; }
-                .sonar-btn:hover, .sonar-btn.active { background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
-                .sonar-btn.pause-btn.paused { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
-                
-                #sonar-side-panel { position: absolute; top: 0; right: -360px; width: 320px; height: 100%; background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff; z-index: 100; backdrop-filter: blur(10px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -10px 0 30px rgba(0, 240, 255, 0.1); display: flex; flex-direction: column; overflow-y: auto; }
+                #sonar-control-bar {
+                    position: absolute; top: 14px; left: 14px; z-index: 15;
+                    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+                    background: rgba(0,0,0,0.55); border: 1px solid rgba(0,240,255,0.18);
+                    padding: 8px 10px; border-radius: 10px; backdrop-filter: blur(5px);
+                }
+                .sonar-btn {
+                    background: transparent; border: 1px solid rgba(0,240,255,0.35);
+                    color: #00f0ff; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+                    font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700;
+                    text-transform: uppercase;
+                }
+                .sonar-btn.active, .sonar-btn:hover {
+                    background: rgba(0,240,255,0.15);
+                    box-shadow: 0 0 10px rgba(0,240,255,0.2);
+                }
+                .sonar-btn.pause-btn.paused {
+                    color: #ff4775; border-color: rgba(255,71,117,0.6); background: rgba(255,71,117,0.12);
+                }
+                .sonar-cap-wrap {
+                    display: flex; align-items: center; gap: 6px;
+                    border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+                    padding: 3px 6px; color: rgba(255,255,255,0.7);
+                    font: 600 11px 'Rajdhani', sans-serif;
+                }
+                #sonar-token-cap {
+                    background: rgba(9,14,22,0.95); color: #fff; border: 1px solid rgba(0,240,255,0.3);
+                    border-radius: 4px; padding: 2px 4px; font: 700 12px 'Rajdhani', sans-serif;
+                }
+
+                #sonar-side-panel {
+                    position: absolute; top: 0; right: -360px; width: 320px; height: 100%; z-index: 100;
+                    background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff;
+                    backdrop-filter: blur(10px); transition: right 0.25s ease;
+                    padding: 20px; box-sizing: border-box; color: #fff; font-family: 'Rajdhani', sans-serif;
+                    overflow-y: auto;
+                }
                 #sonar-side-panel.open { right: 0; }
-                #sonar-side-panel::-webkit-scrollbar { width: 4px; } #sonar-side-panel::-webkit-scrollbar-thumb { background: #00f0ff; }
-                
-                .sp-close { position: absolute; top: 10px; right: 15px; cursor: pointer; color: #fff; font-size: 24px; opacity: 0.5; transition: 0.2s; padding: 5px;}
-                .sp-close:hover { opacity: 1; color: #ff3366; transform: scale(1.1); }
-                
-                .sp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px; margin-top: 10px;}
-                .sp-head img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(0, 240, 255, 0.5); object-fit: cover; background: #000; }
-                .sp-sym-wrap { display: flex; flex-direction: column; }
-                .sp-title { font-size: 24px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: 1px; }
-                .sp-contract { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; font-family: 'Courier New', monospace; display: flex; align-items: center; gap: 5px; cursor: pointer; }
-                .sp-contract:hover { color: #00f0ff; }
-                
-                .sp-lock-status { font-size: 11px; color: #ff3366; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; margin-bottom: 15px; font-weight: 600;}
-                .blink-dot { width: 8px; height: 8px; background: #ff3366; border-radius: 50%; box-shadow: 0 0 8px #ff3366; animation: blink 1s infinite; }
-                
-                .sp-price-box { display: flex; align-items: flex-end; justify-content: space-between; background: rgba(0, 240, 255, 0.05); padding: 15px; border-radius: 6px; border: 1px solid rgba(0, 240, 255, 0.15); margin-bottom: 15px; }
-                .sp-price-lbl { font-size: 11px; color: #848e9c; letter-spacing: 1px; margin-bottom: 4px;}
-                .sp-price-val { font-size: 28px; font-weight: 800; color: #fff; line-height: 1; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
-                .sp-price-chg { font-size: 16px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
-                
-                .sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-                .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; }
-                .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-                .sp-box-val { font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; }
-                
-                .sp-vol-bar-wrap { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; margin-bottom: 0;}
-                .sp-vol-head { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px; letter-spacing: 0.5px;}
-                .sp-vol-track { width: 100%; height: 6px; background: #1e2329; border-radius: 3px; display: flex; overflow: hidden; }
-                .sp-vol-limit { height: 100%; background: #F0B90B; transition: width 0.3s;}
-                .sp-vol-chain { height: 100%; background: #9945FF; transition: width 0.3s;}
+
+                .sp-close { position: absolute; top: 10px; right: 14px; cursor: pointer; font-size: 24px; opacity: 0.7; }
+                .sp-close:hover { opacity: 1; color: #ff4775; }
+                .sp-head { display: flex; gap: 12px; align-items: center; margin: 18px 0 14px; border-bottom: 1px dashed rgba(255,255,255,0.14); padding-bottom: 12px; }
+                .sp-head img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(0,240,255,0.5); object-fit: cover; }
+                .sp-title { font-size: 24px; font-weight: 800; }
+                .sp-contract { font-size: 11px; color: rgba(255,255,255,0.5); font-family: monospace; cursor: pointer; }
+                .sp-price-box { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 14px; }
+                .sp-price-val { font-size: 28px; font-weight: 800; }
+                .sp-price-chg { font-size: 15px; font-weight: 800; padding: 2px 8px; border-radius: 4px; }
+                .sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+                .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px; }
+                .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.45); margin-bottom: 3px; }
+                .sp-box-val { font-size: 16px; font-weight: 700; font-family: monospace; }
 
                 @media (max-width: 768px) {
-                    #sonar-control-bar { top: 5px; left: 5px; right: 5px; flex-wrap: wrap; justify-content: center; padding: 6px; }
-                    .sonar-btn { font-size: 11px; padding: 4px 8px; flex: 1; text-align: center; }
                     #sonar-side-panel { width: 100%; right: -100%; border-left: none; }
-                    .sp-price-val { font-size: 24px; }
                 }
             `;
             document.head.appendChild(style);
@@ -143,14 +161,19 @@ class AlphaSonarGalaxy {
         this.controlBar = document.createElement('div');
         this.controlBar.id = 'sonar-control-bar';
         this.controlBar.innerHTML = `
-            <button class="sonar-btn active" id="btn-mode-toggle" style="border-color: #9945FF; color: #9945FF;">[ MESH NETWORK ]</button>
+            <button class="sonar-btn active" id="btn-mode-toggle" style="border-color:#9945FF;color:#9945FF;">[ MESH NETWORK ]</button>
             <button class="sonar-btn active" data-filter="volume">TOP VOL</button>
             <button class="sonar-btn" data-filter="liquidity">TOP LIQ</button>
+            <div class="sonar-cap-wrap">TOKENS
+                <select id="sonar-token-cap">
+                    ${this.tokenCapOptions.map(v => `<option value="${v}" ${v === this.userTokenCap ? 'selected' : ''}>${v}</option>`).join('')}
+                </select>
+            </div>
             <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
         `;
         this.container.appendChild(this.controlBar);
 
-        const modeBtn = document.getElementById('btn-mode-toggle');
+        const modeBtn = this.controlBar.querySelector('#btn-mode-toggle');
         modeBtn.addEventListener('click', () => {
             this.visualMode = this.visualMode === 'mesh' ? 'orbit' : 'mesh';
             if (this.visualMode === 'mesh') {
@@ -162,23 +185,29 @@ class AlphaSonarGalaxy {
                 modeBtn.style.borderColor = '#F0B90B';
                 modeBtn.style.color = '#F0B90B';
             }
-            this.recalculate(true); 
+            this.recalculate(true);
         });
 
-        const btns = this.controlBar.querySelectorAll('button[data-filter]');
-        btns.forEach(btn => {
+        const filterBtns = this.controlBar.querySelectorAll('button[data-filter]');
+        filterBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                btns.forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                this.filterMode = e.target.getAttribute('data-filter');
-                this.recalculate(true); 
+                filterBtns.forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                this.filterMode = e.currentTarget.getAttribute('data-filter');
+                this.recalculate(true);
             });
         });
 
-        const pauseBtn = document.getElementById('sonar-pause-btn');
+        const capSelect = this.controlBar.querySelector('#sonar-token-cap');
+        capSelect.addEventListener('change', (e) => {
+            this.userTokenCap = Math.max(10, this.safeNum(e.target.value, 50));
+            this.recalculate(true);
+        });
+
+        const pauseBtn = this.controlBar.querySelector('#sonar-pause-btn');
         pauseBtn.addEventListener('click', () => {
             this.isPaused = !this.isPaused;
-            pauseBtn.classList.toggle('paused');
+            pauseBtn.classList.toggle('paused', this.isPaused);
             pauseBtn.innerText = this.isPaused ? 'RESUME' : 'PAUSE';
         });
 
@@ -196,13 +225,9 @@ class AlphaSonarGalaxy {
         };
 
         this.canvas.addEventListener('mousemove', (e) => updatePointer(e.clientX, e.clientY));
-        
         this.canvas.addEventListener('touchstart', (e) => {
-            if (e.touches && e.touches.length > 0) {
-                updatePointer(e.touches[0].clientX, e.touches[0].clientY);
-            }
+            if (e.touches && e.touches.length > 0) updatePointer(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
-
         this.canvas.addEventListener('mouseleave', () => {
             this.hoveredToken = null;
             this.canvas.style.cursor = 'default';
@@ -220,15 +245,12 @@ class AlphaSonarGalaxy {
     }
 
     resize() {
-        if (this.container.clientHeight < 100) {
-            this.container.style.height = '450px';
-        }
+        if (this.container.clientHeight < 100) this.container.style.height = '450px';
+        const dpr = window.devicePixelRatio || 1;
 
-        const dpr = window.devicePixelRatio || 1; 
-        
         this.width = Math.max(300, this.container.clientWidth || window.innerWidth);
         this.height = Math.max(300, this.container.clientHeight || window.innerHeight);
-        
+
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
         this.canvas.style.width = `${this.width}px`;
@@ -239,201 +261,240 @@ class AlphaSonarGalaxy {
 
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
-        this.maxRadius = Math.max(10, Math.min(this.centerX, this.centerY) - 40);
+        this.maxRadius = Math.max(20, Math.min(this.centerX, this.centerY) - 36);
+
         this.recalculate(true);
     }
 
     updateData(marketData) {
-        if (!marketData || this.isPaused || !this.isVisible) return; 
+        if (!marketData || this.isPaused || !this.isVisible) return;
         this.latestData = marketData;
-        
+
         const now = Date.now();
-        // Cập nhật tọa độ mỗi 500ms
-        if (now - this.lastCalcTime > 500) {
+        if (now - this.lastCalcTime > 400) {
             this.recalculate();
             this.lastCalcTime = now;
         }
     }
 
+    getEffectiveCap() {
+        const isMobile = this.width < 768;
+        const hardCap = this.visualMode === 'orbit'
+            ? (isMobile ? this.orbitHardCapMobile : this.orbitHardCapDesktop)
+            : (isMobile ? this.meshHardCapMobile : this.meshHardCapDesktop);
+        return Math.min(this.userTokenCap, hardCap);
+    }
+
+    rebuildTokenDictIfNeeded() {
+        if (typeof allTokens === 'undefined' || !Array.isArray(allTokens)) return;
+        if (this.lastTokenCount === allTokens.length) return;
+
+        this.tokenDict = {};
+        allTokens.forEach(item => {
+            if (item.alphaId) this.tokenDict[String(item.alphaId).replace('ALPHA_', '')] = item;
+            if (item.id) this.tokenDict[String(item.id).replace('ALPHA_', '')] = item;
+            if (item.symbol) this.tokenDict[item.symbol] = item;
+        });
+        this.lastTokenCount = allTokens.length;
+    }
+
     recalculate() {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
-        
-        if (typeof allTokens !== 'undefined' && Array.isArray(allTokens) && this.lastTokenCount !== allTokens.length) {
-            this.tokenDict = {}; 
-            allTokens.forEach(item => {
-                if (item.alphaId) this.tokenDict[String(item.alphaId).replace('ALPHA_','')] = item;
-                if (item.id) this.tokenDict[String(item.id).replace('ALPHA_','')] = item;
-                if (item.symbol) this.tokenDict[item.symbol] = item;
-            });
-            this.lastTokenCount = allTokens.length;
-        }
 
-        let maxVol = 0; let maxLiq = 0; let maxTx = 0;
-        let dataArray = [];
+        this.rebuildTokenDictIfNeeded();
+
+        let maxVol = 0;
+        let maxLiq = 0;
+        let maxTx = 0;
+        const dataArray = [];
 
         Object.entries(this.latestData).forEach(([key, t]) => {
             if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
-            
-            let tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
-            let targetToken = this.tokenDict[tokenKey];
 
-            let realSymbol = "";
-            let logoUrl = "";
-            let mc = 0, holders = 0, vLimit = 0, contract = '', liq = 0;
+            const tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
+            const tokenMeta = this.tokenDict[tokenKey];
 
-            if (targetToken) {
-                realSymbol = targetToken.symbol || "";
-                logoUrl = targetToken.icon || "";
-                mc = targetToken.market_cap || 0;
-                holders = targetToken.holders || 0;
-                if (targetToken.volume && targetToken.volume.daily_limit !== undefined) vLimit = targetToken.volume.daily_limit;
-                contract = targetToken.contract || '';
-                liq = targetToken.liquidity || 0; 
-            }
+            let symbol = tokenMeta?.symbol || t.symbol || t.s || t.name || tokenKey;
+            let logo = tokenMeta?.icon || `assets/tokens/${String(symbol).toUpperCase()}.png`;
+            const contract = tokenMeta?.contract || '';
 
-            if (!realSymbol) realSymbol = t.symbol || t.s || t.name || tokenKey;
-            if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
+            const vol = this.safeNum(t.v?.dt);
+            const vLimit = this.safeNum(tokenMeta?.volume?.daily_limit, this.safeNum(t.v?.dl));
+            const liq = this.safeNum(tokenMeta?.liquidity, this.safeNum(t.l, vol || 1));
+            const change = this.safeNum(t.c);
+            const tx = this.safeNum(t.tx);
+            const price = this.safeNum(t.p);
+            const mc = this.safeNum(tokenMeta?.market_cap, this.safeNum(t.mc));
+            const holders = this.safeNum(tokenMeta?.holders, this.safeNum(t.h));
+            const vChain = Math.max(0, vol - vLimit);
 
-            let vol = this.safeNum(t.v ? t.v.dt : 0);
-            if (!vLimit) vLimit = this.safeNum(t.v ? t.v.dl : 0);
-            if (!liq) liq = this.safeNum(t.l, vol || 1000);
-            
-            mc = this.safeNum(mc ? mc : t.mc);
-            holders = this.safeNum(holders ? holders : t.h);
-
-            let change = this.safeNum(t.c);
-            let tx = this.safeNum(t.tx);
-            let price = this.safeNum(t.p);
-            
-            let vChain = Math.max(0, vol - vLimit); 
-            
             if (vol > maxVol) maxVol = vol;
             if (liq > maxLiq) maxLiq = liq;
             if (tx > maxTx) maxTx = tx;
 
-            dataArray.push({ 
-                symbol: realSymbol, logo: logoUrl, contract: contract,
-                vol: vol, liq: liq, mc: mc, holders: holders, vLimit: vLimit, vChain: vChain,
-                change: change, tx: tx, price: price 
-            });
+            dataArray.push({ symbol, logo, contract, vol, liq, change, tx, price, mc, holders, vLimit, vChain });
         });
 
-        if (this.filterMode === 'volume') dataArray.sort((a, b) => b.vol - a.vol);
-        else if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
-        
-        let maxDisplay = this.width < 768 ? 30 : 60;
-        dataArray = dataArray.slice(0, maxDisplay);
+        if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
+        else dataArray.sort((a, b) => b.vol - a.vol);
+
+        const effectiveCap = this.getEffectiveCap();
+        const selected = dataArray.slice(0, Math.min(effectiveCap, dataArray.length));
+        const densityScale = selected.length > 300 ? 0.55 : (selected.length > 180 ? 0.75 : 1);
 
         const tokenBySymbol = new Map(this.tokens.map(t => [t.symbol, t]));
 
-        dataArray.forEach(data => {
-            let targetSize = Math.max(10, Math.min(24, 10 + (data.vol / (maxVol || 1)) * 14));
-            let colorHex = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
-            let baseX, baseY;
-            let baseOrbitRadius = 0; let orbitSpeed = 0; let orbitAngle = 0; let driftPhase = 0;
+        selected.forEach((data, idx) => {
+            const sizeBase = 10 + (data.vol / (maxVol || 1)) * 14;
+            const targetSize = Math.max(3.5, Math.min(24, sizeBase * densityScale));
+            const color = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
 
-            // Offset ngẫu nhiên dựa trên tên token để các token có cùng chỉ số không bị dính vào 1 điểm
-            let hashOffset = ((data.symbol.charCodeAt(0) || 0) % 10) / 10 - 0.5;
+            let baseX = this.centerX;
+            let baseY = this.centerY;
+            let baseOrbitRadius = 0;
+            let orbitSpeed = 0;
+            let orbitAngle = 0;
+            let driftPhase = 0;
+
+            const symbolCode = String(data.symbol).split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
 
             if (this.visualMode === 'mesh') {
-                let normChange = Math.max(-20, Math.min(20, data.change)); 
-                let paddingX = 40; let paddingY = 80; 
-                let useableW = this.width - paddingX * 2;
-                let useableH = this.height - paddingY * 2;
-                
-                baseX = paddingX + (useableW / 2) + (normChange / 20) * (useableW / 2) + (hashOffset * 30);
-                let volRatio = Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
-                baseY = paddingY + useableH - (Math.pow(volRatio, 0.4) * useableH) + (hashOffset * 20); 
+                const normChange = Math.max(-20, Math.min(20, data.change));
+                const paddingX = 38;
+                const paddingY = 76;
+                const usableW = Math.max(1, this.width - paddingX * 2);
+                const usableH = Math.max(1, this.height - paddingY * 2);
+
+                const hashOffset = ((symbolCode % 11) / 10) - 0.5;
+                const volRatio = Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
+
+                baseX = paddingX + (usableW / 2) + (normChange / 20) * (usableW / 2) + hashOffset * 24;
+                baseY = paddingY + usableH - (Math.pow(volRatio, 0.4) * usableH) + hashOffset * 16;
             } else {
-                let ratio = this.filterMode === 'liquidity' 
-                            ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1)))
-                            : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
+                const ratio = this.filterMode === 'liquidity'
+                    ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1)))
+                    : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
+
                 baseOrbitRadius = this.maxRadius * (1 - Math.pow(ratio, 0.3));
-                if (baseOrbitRadius < 40) baseOrbitRadius = 40;
+                baseOrbitRadius = Math.max(36, baseOrbitRadius);
 
-                const symbolCode = data.symbol.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-                const laneOffset = ((symbolCode % 7) - 3) * this.orbitLaneSpacing;
+                const laneCount = Math.max(8, Math.floor((this.maxRadius - 36) / this.orbitLaneSpacing));
+                const laneIndex = (idx + symbolCode) % laneCount;
+                const laneRadius = 36 + laneIndex * this.orbitLaneSpacing;
+                baseOrbitRadius = Math.max(36, Math.min(this.maxRadius, baseOrbitRadius * 0.62 + laneRadius * 0.38));
+
                 driftPhase = (symbolCode % 360) * (Math.PI / 180);
-                baseOrbitRadius = Math.max(40, Math.min(this.maxRadius, baseOrbitRadius + laneOffset));
+                const goldenAngle = 2.399963229728653;
+                orbitAngle = ((idx + 1) * goldenAngle + driftPhase) % (Math.PI * 2);
 
-                orbitAngle = Math.random() * Math.PI * 2; 
-                orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006; 
-                if (data.change < 0) orbitSpeed *= -1; 
+                orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006;
+                if (data.change < 0) orbitSpeed *= -1;
 
                 baseX = this.centerX + baseOrbitRadius * Math.cos(orbitAngle);
                 baseY = this.centerY + baseOrbitRadius * Math.sin(orbitAngle);
             }
 
-            let existingToken = tokenBySymbol.get(data.symbol);
-            if (existingToken) {
-                existingToken.baseX = baseX; 
-                existingToken.baseY = baseY;
-                existingToken.targetSize = targetSize;
-                existingToken.color = colorHex;
-                existingToken.price = data.price;
-                existingToken.vol = data.vol;
-                existingToken.change = data.change;
-                existingToken.tx = data.tx;
-                existingToken.liq = data.liq;
-                existingToken.mc = data.mc;
-                existingToken.holders = data.holders;
-                existingToken.vLimit = data.vLimit;
-                existingToken.vChain = data.vChain;
-                
+            const existing = tokenBySymbol.get(data.symbol);
+            if (existing) {
+                existing.baseX = baseX;
+                existing.baseY = baseY;
+                existing.targetSize = targetSize;
+                existing.color = color;
+                existing.price = data.price;
+                existing.vol = data.vol;
+                existing.change = data.change;
+                existing.tx = data.tx;
+                existing.liq = data.liq;
+                existing.mc = data.mc;
+                existing.holders = data.holders;
+                existing.vLimit = data.vLimit;
+                existing.vChain = data.vChain;
+
                 if (this.visualMode === 'orbit') {
-                    if(existingToken.orbitAngle === undefined) existingToken.orbitAngle = orbitAngle;
-                    existingToken.baseOrbitRadius = baseOrbitRadius;
-                    existingToken.orbitSpeed = orbitSpeed;
-                    existingToken.driftPhase = driftPhase;
+                    if (existing.orbitAngle === undefined) existing.orbitAngle = orbitAngle;
+                    existing.baseOrbitRadius = baseOrbitRadius;
+                    existing.orbitSpeed = orbitSpeed;
+                    existing.driftPhase = driftPhase;
                 }
 
-                if (existingToken.logo !== data.logo) {
-                    existingToken.logo = data.logo;
-                    let img = new Image();
-                    img.onerror = function() { if (!this.failed) { this.failed = true; this.src = 'assets/tokens/default.png'; }};
+                if (existing.logo !== data.logo) {
+                    existing.logo = data.logo;
+                    const img = new Image();
+                    img.onerror = function () {
+                        if (!this.failed) {
+                            this.failed = true;
+                            this.src = 'assets/tokens/default.png';
+                        }
+                    };
                     img.src = data.logo;
-                    existingToken.imgObj = img;
+                    existing.imgObj = img;
                 }
-                existingToken.updated = true; 
+
+                existing.updated = true;
             } else {
-                let img = new Image();
-                img.onerror = function() { if (!this.failed) { this.failed = true; this.src = 'assets/tokens/default.png'; }};
+                const img = new Image();
+                img.onerror = function () {
+                    if (!this.failed) {
+                        this.failed = true;
+                        this.src = 'assets/tokens/default.png';
+                    }
+                };
                 img.src = data.logo;
 
                 this.tokens.push({
-                    symbol: data.symbol, logo: data.logo, contract: data.contract,
-                    imgObj: img, 
-                    x: this.centerX, y: this.centerY,
-                    tX: baseX, tY: baseY,
-                    baseX: baseX, baseY: baseY, 
-                    baseOrbitRadius: baseOrbitRadius, currentOrbitRadius: baseOrbitRadius, 
-                    orbitSpeed: orbitSpeed, orbitAngle: orbitAngle, driftPhase: driftPhase,
-                    size: 0, targetSize: targetSize, color: colorHex, 
-                    price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
-                    mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
+                    symbol: data.symbol,
+                    logo: data.logo,
+                    contract: data.contract,
+                    imgObj: img,
+                    x: this.centerX,
+                    y: this.centerY,
+                    tX: baseX,
+                    tY: baseY,
+                    baseX,
+                    baseY,
+                    baseOrbitRadius,
+                    currentOrbitRadius: baseOrbitRadius,
+                    orbitSpeed,
+                    orbitAngle,
+                    driftPhase,
+                    size: 0,
+                    targetSize,
+                    color,
+                    price: data.price,
+                    vol: data.vol,
+                    liq: data.liq,
+                    change: data.change,
+                    tx: data.tx,
+                    mc: data.mc,
+                    holders: data.holders,
+                    vLimit: data.vLimit,
+                    vChain: data.vChain,
+                    lowDetail: false,
                     updated: true
                 });
             }
         });
 
         this.tokens = this.tokens.filter(t => t.updated);
-        this.tokens.forEach(t => t.updated = false); 
+        this.tokens.forEach(t => { t.updated = false; });
 
         this.checkHover();
-        if (this.lockedToken) this.updateSidePanelData(); 
+        if (this.lockedToken) this.updateSidePanelData();
     }
 
     checkHover() {
         this.hoveredToken = null;
-        let bestDistSq = 999999;
-        for (let t of this.tokens) {
-            let dx = this.mouseX - t.x;
-            let dy = this.mouseY - t.y;
-            let distSq = dx*dx + dy*dy;
-            let hitRadius = t.size + 8; 
-            if (distSq < hitRadius*hitRadius && distSq < bestDistSq) {
-                this.hoveredToken = t;
+        let bestDistSq = Number.MAX_SAFE_INTEGER;
+
+        for (let i = 0; i < this.tokens.length; i++) {
+            const t = this.tokens[i];
+            const dx = this.mouseX - t.x;
+            const dy = this.mouseY - t.y;
+            const distSq = dx * dx + dy * dy;
+            const hitRadius = t.size + 8;
+            if (distSq < hitRadius * hitRadius && distSq < bestDistSq) {
                 bestDistSq = distSq;
+                this.hoveredToken = t;
             }
         }
         this.canvas.style.cursor = this.hoveredToken ? 'crosshair' : 'default';
@@ -451,70 +512,69 @@ class AlphaSonarGalaxy {
     updateSidePanelData() {
         if (!this.lockedToken) return;
         const t = this.lockedToken;
-        
-        let isUp = t.change > 0;
-        let cColor = isUp ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#F0B90B');
-        let cSign = isUp ? '+' : '';
-        let cBg = isUp ? 'rgba(14, 203, 129, 0.2)' : (t.change < 0 ? 'rgba(246, 70, 93, 0.2)' : 'rgba(240, 185, 11, 0.2)');
-        let shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.slice(-4)}` : 'N/A';
-        
-        let totalVol = t.vol || 1;
-        let MathLim = Math.max(0, Math.min(100, ((t.vLimit || 0) / totalVol) * 100));
-        let pctLimit = isNaN(MathLim) ? 0 : MathLim;
-        let pctChain = Math.max(0, 100 - pctLimit);
 
-        let existingSymbol = document.getElementById('sp-locked-symbol');
-        if (existingSymbol && existingSymbol.innerText === t.symbol) {
-            document.getElementById('sp-price-val').innerText = `$${t.price < 0.0001 ? t.price.toExponential(2) : t.price.toFixed(4)}`;
-            let chgEl = document.getElementById('sp-price-chg');
-            chgEl.innerText = `${cSign}${t.change.toFixed(2)}%`;
-            chgEl.style.color = cColor; chgEl.style.backgroundColor = cBg;
-            
-            document.getElementById('sp-vol-val').innerText = `$${this.formatCompact(t.vol)}`;
-            document.getElementById('sp-liq-val').innerText = `$${this.formatCompact(t.liq)}`;
-            document.getElementById('sp-mc-val').innerText = `$${this.formatCompact(t.mc)}`;
-            document.getElementById('sp-hold-val').innerText = this.formatCompact(t.holders);
-            
-            document.getElementById('sp-limit-txt').innerText = `CEX: $${this.formatCompact(t.vLimit)} (${pctLimit.toFixed(0)}%)`;
-            document.getElementById('sp-chain-txt').innerText = `ON-CHAIN: $${this.formatCompact(t.vChain)} (${pctChain.toFixed(0)}%)`;
-            document.getElementById('sp-limit-bar').style.width = `${pctLimit}%`;
-            document.getElementById('sp-chain-bar').style.width = `${pctChain}%`;
-            return;
-        }
+        const isUp = t.change > 0;
+        const cColor = isUp ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#F0B90B');
+        const cSign = isUp ? '+' : '';
+        const cBg = isUp ? 'rgba(14,203,129,0.2)' : (t.change < 0 ? 'rgba(246,70,93,0.2)' : 'rgba(240,185,11,0.2)');
+        const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.slice(-4)}` : 'N/A';
 
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
-            <div class="sp-lock-status"><span class="blink-dot"></span> SATELLITE LINK ESTABLISHED</div>
             <div class="sp-head">
                 <img src="${t.logo}" onerror="this.src='assets/tokens/default.png'">
-                <div class="sp-sym-wrap">
-                    <div class="sp-title" id="sp-locked-symbol">${t.symbol}</div>
-                    <div class="sp-contract" onclick="window.pluginCopy && window.pluginCopy('${t.contract}')" title="Copy Contract">
-                        ${shortContract} <i class="far fa-copy"></i>
-                    </div>
+                <div>
+                    <div class="sp-title">${t.symbol}</div>
+                    <div class="sp-contract" onclick="window.pluginCopy && window.pluginCopy('${t.contract}')">${shortContract}</div>
                 </div>
             </div>
             <div class="sp-price-box">
                 <div>
-                    <div class="sp-price-lbl">CURRENT PRICE</div>
-                    <div class="sp-price-val" id="sp-price-val">$${t.price < 0.0001 ? t.price.toExponential(2) : t.price.toFixed(4)}</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.5);">CURRENT PRICE</div>
+                    <div class="sp-price-val">$${t.price < 0.0001 ? t.price.toExponential(2) : t.price.toFixed(4)}</div>
                 </div>
-                <div class="sp-price-chg" id="sp-price-chg" style="color: ${cColor}; background: ${cBg};">${cSign}${t.change.toFixed(2)}%</div>
+                <div class="sp-price-chg" style="color:${cColor};background:${cBg};">${cSign}${t.change.toFixed(2)}%</div>
             </div>
             <div class="sp-grid">
-                <div class="sp-box"><div class="sp-box-lbl">24H VOLUME</div><div class="sp-box-val" id="sp-vol-val" style="color: #F0B90B;">$${this.formatCompact(t.vol)}</div></div>
-                <div class="sp-box"><div class="sp-box-lbl">LIQUIDITY</div><div class="sp-box-val" id="sp-liq-val" style="color: #00f0ff;">$${this.formatCompact(t.liq)}</div></div>
-                <div class="sp-box"><div class="sp-box-lbl">MARKET CAP</div><div class="sp-box-val" id="sp-mc-val" style="color: #fff;">$${this.formatCompact(t.mc)}</div></div>
-                <div class="sp-box"><div class="sp-box-lbl">HOLDERS</div><div class="sp-box-val" id="sp-hold-val" style="color: #eaecef;">${this.formatCompact(t.holders)}</div></div>
-            </div>
-            <div class="sp-vol-bar-wrap" style="margin-bottom: 0;">
-                <div class="sp-vol-head">
-                    <span id="sp-limit-txt" style="color: #F0B90B;">CEX: $${this.formatCompact(t.vLimit)} (${pctLimit.toFixed(0)}%)</span>
-                    <span id="sp-chain-txt" style="color: #9945FF;">ON-CHAIN: $${this.formatCompact(t.vChain)} (${pctChain.toFixed(0)}%)</span>
-                </div>
-                <div class="sp-vol-track"><div id="sp-limit-bar" class="sp-vol-limit" style="width: ${pctLimit}%"></div><div id="sp-chain-bar" class="sp-vol-chain" style="width: ${pctChain}%"></div></div>
+                <div class="sp-box"><div class="sp-box-lbl">24H VOL</div><div class="sp-box-val" style="color:#F0B90B;">$${this.formatCompact(t.vol)}</div></div>
+                <div class="sp-box"><div class="sp-box-lbl">LIQUIDITY</div><div class="sp-box-val" style="color:#00f0ff;">$${this.formatCompact(t.liq)}</div></div>
+                <div class="sp-box"><div class="sp-box-lbl">MARKET CAP</div><div class="sp-box-val">$${this.formatCompact(t.mc)}</div></div>
+                <div class="sp-box"><div class="sp-box-lbl">HOLDERS</div><div class="sp-box-val">${this.formatCompact(t.holders)}</div></div>
             </div>
         `;
+    }
+
+    drawBackdrop() {
+        this.ctx.fillStyle = 'rgba(10, 14, 23, 0.35)';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        this.ctx.font = '600 11px "Courier New", monospace';
+
+        if (this.visualMode === 'orbit') {
+            this.ctx.strokeStyle = 'rgba(0,240,255,0.08)';
+            this.ctx.lineWidth = 1;
+            for (let i = 1; i <= 4; i++) {
+                const r = (this.maxRadius / 4) * i;
+                this.ctx.beginPath();
+                this.ctx.arc(this.centerX, this.centerY, r, 0, Math.PI * 2);
+                this.ctx.stroke();
+            }
+            this.ctx.textAlign = 'center';
+            this.ctx.fillStyle = 'rgba(0,240,255,0.38)';
+            this.ctx.fillText('[ ORBIT: TOP TOKENS ]', this.centerX, this.centerY - 14);
+            this.ctx.textAlign = 'left';
+        } else {
+            this.ctx.strokeStyle = 'rgba(0,240,255,0.08)';
+            this.ctx.setLineDash([4, 4]);
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.centerX, 0); this.ctx.lineTo(this.centerX, this.height);
+            this.ctx.moveTo(0, this.centerY); this.ctx.lineTo(this.width, this.centerY);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+        }
+
+        this.ctx.fillStyle = 'rgba(255,255,255,0.38)';
+        this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, this.height - 12);
     }
 
     animate() {
@@ -522,217 +582,124 @@ class AlphaSonarGalaxy {
         requestAnimationFrame(() => this.animate());
         if (!this.isVisible || this.width === 0) return;
 
-        try {
-            // Nền đen vũ trụ mờ nhẹ (Tạo hiệu ứng bóng trôi)
-            this.ctx.fillStyle = 'rgba(10, 14, 23, 0.3)'; 
-            this.ctx.fillRect(0, 0, this.width, this.height);
+        this.drawBackdrop();
 
-            // --- VẼ CHÚ THÍCH HUD ---
-            this.ctx.font = '600 11px "Courier New", monospace';
-            
-            if (this.visualMode === 'orbit') {
-                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
-                this.ctx.lineWidth = 1;
-                for (let i = 1; i <= 4; i++) {
-                    let currentRadius = (this.maxRadius / 4) * i;
-                    this.ctx.beginPath();
-                    this.ctx.arc(this.centerX, this.centerY, currentRadius, 0, Math.PI * 2);
-                    this.ctx.stroke();
+        if (!this.isPaused) {
+            for (let i = 0; i < this.tokens.length; i++) {
+                const t = this.tokens[i];
+                if (this.visualMode === 'orbit') {
+                    t.orbitAngle += t.orbitSpeed;
+                    t.currentOrbitRadius += (t.baseOrbitRadius - t.currentOrbitRadius) * 0.05;
+                    const drift = Math.sin(t.orbitAngle * 2 + (t.driftPhase || 0)) * this.orbitDriftStrength;
+                    const r = t.currentOrbitRadius + drift;
+                    t.baseX = this.centerX + r * Math.cos(t.orbitAngle);
+                    t.baseY = this.centerY + r * Math.sin(t.orbitAngle);
                 }
-                this.ctx.beginPath();
-                this.ctx.arc(this.centerX, this.centerY, 8, 0, Math.PI * 2);
-                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
-                this.ctx.fill();
-
-                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('[ CORE: MAX LIQ/VOL ]', this.centerX, this.centerY - 15);
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                this.ctx.fillText('[ OUTER: MIN LIQ/VOL ]', this.centerX, this.centerY - this.maxRadius + 15);
-                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.4)';
-                this.ctx.fillText('* ORBIT SPEED = TRANSACTION ACTIVITY *', this.centerX, this.height - 15);
-                this.ctx.textAlign = 'left';
-            } else {
-                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
-                this.ctx.setLineDash([4, 4]);
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.centerX, 0); this.ctx.lineTo(this.centerX, this.height);
-                this.ctx.moveTo(0, this.centerY); this.ctx.lineTo(this.width, this.centerY);
-                this.ctx.stroke();
-                this.ctx.setLineDash([]);
-
-                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.3)'; 
-                this.ctx.textAlign = 'left';
-                this.ctx.fillText('[ HIGH VOL / BEARISH ]', 15, 60);
-                this.ctx.fillText('[ LOW VOL / BEARISH ]', 15, this.height - 20);
-
-                this.ctx.fillStyle = 'rgba(14, 203, 129, 0.3)'; 
-                this.ctx.textAlign = 'right';
-                this.ctx.fillText('[ HIGH VOL / BULLISH ]', this.width - 15, 60);
-                this.ctx.fillText('[ LOW VOL / BULLISH ]', this.width - 15, this.height - 20);
-
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('<<< PRICE DROP', this.centerX / 2, this.centerY - 5);
-                this.ctx.fillText('PRICE SURGE >>>', this.centerX + (this.centerX / 2), this.centerY - 5);
-                this.ctx.textAlign = 'left';
+                t.tX += (t.baseX - t.tX) * 0.05;
+                t.tY += (t.baseY - t.tY) * 0.05;
             }
 
-            // --- THUẬT TOÁN VẬT LÝ VÀ CHỐNG DÍNH CHÙM ---
-            if (!this.isPaused) {
-                // 1. Tính toán đích đến Base
+            // Repulsion + laser links chỉ cho Mesh để tiết kiệm CPU và đúng concept
+            if (this.visualMode === 'mesh') {
+                const pushPadding = 15;
                 for (let i = 0; i < this.tokens.length; i++) {
-                    let t = this.tokens[i];
-                    if (this.visualMode === 'orbit') {
-                        t.orbitAngle += t.orbitSpeed;
-                        t.currentOrbitRadius += (t.baseOrbitRadius - t.currentOrbitRadius) * 0.05;
-                        const drift = Math.sin(t.orbitAngle * 2 + (t.driftPhase || 0)) * this.orbitDriftStrength;
-                        const orbitRadius = t.currentOrbitRadius + drift;
-                        t.baseX = this.centerX + orbitRadius * Math.cos(t.orbitAngle);
-                        t.baseY = this.centerY + orbitRadius * Math.sin(t.orbitAngle);
-                    }
-                    
-                    // Lực đàn hồi kéo token về đích
-                    t.tX += (t.baseX - t.tX) * 0.05;
-                    t.tY += (t.baseY - t.tY) * 0.05;
-                }
+                    const t = this.tokens[i];
+                    for (let j = i + 1; j < this.tokens.length; j++) {
+                        const o = this.tokens[j];
 
-                // 2. Lực đẩy chống dính chỉ áp dụng trong Mesh mode.
-                if (this.visualMode === 'mesh') {
-                    const pushPadding = 15;
-                    for (let i = 0; i < this.tokens.length; i++) {
-                        let t = this.tokens[i];
-                        for (let j = i + 1; j < this.tokens.length; j++) {
-                            let other = this.tokens[j];
-                            
-                            let dx = t.tX - other.tX;
-                            let dy = t.tY - other.tY;
-                            let distSq = dx * dx + dy * dy;
-                            if (distSq === 0) {
-                                dx = 0.01;
-                                dy = 0.01;
-                                distSq = 0.0002;
-                            }
-                            const minDist = t.size + other.size + pushPadding;
-                            const minDistSq = minDist * minDist;
+                        let dx = t.tX - o.tX;
+                        let dy = t.tY - o.tY;
+                        let distSq = dx * dx + dy * dy;
+                        if (distSq === 0) {
+                            dx = 0.01;
+                            dy = 0.01;
+                            distSq = 0.0002;
+                        }
 
-                            if (distSq < minDistSq) {
-                                const dist = Math.sqrt(distSq);
-                                let pushForce = (minDist - dist) * 0.2;
-                                let fX = (dx / dist) * pushForce;
-                                let fY = (dy / dist) * pushForce;
-                                t.tX += fX; t.tY += fY;
-                                other.tX -= fX; other.tY -= fY;
-                            }
+                        const minDist = t.size + o.size + pushPadding;
+                        const minDistSq = minDist * minDist;
+                        if (distSq < minDistSq) {
+                            const dist = Math.sqrt(distSq);
+                            const pushForce = (minDist - dist) * 0.2;
+                            const fx = (dx / dist) * pushForce;
+                            const fy = (dy / dist) * pushForce;
+                            t.tX += fx; t.tY += fy;
+                            o.tX -= fx; o.tY -= fy;
+                        }
 
-                            const rDx = t.x - other.x;
-                            const rDy = t.y - other.y;
-                            const realDistSq = rDx * rDx + rDy * rDy;
-                            if (realDistSq < this.connectionDistanceSq && t.color === other.color) {
-                                const realDist = Math.sqrt(realDistSq);
-                                this.ctx.beginPath();
-                                this.ctx.moveTo(t.x, t.y);
-                                this.ctx.lineTo(other.x, other.y);
-                                this.ctx.strokeStyle = t.color;
-                                this.ctx.globalAlpha = 0.15 * (1 - realDist / this.connectionDistance);
-                                this.ctx.stroke();
-                            }
+                        const rDx = t.x - o.x;
+                        const rDy = t.y - o.y;
+                        const realDistSq = rDx * rDx + rDy * rDy;
+                        if (realDistSq < this.connectionDistanceSq && t.color === o.color) {
+                            const realDist = Math.sqrt(realDistSq);
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(t.x, t.y);
+                            this.ctx.lineTo(o.x, o.y);
+                            this.ctx.strokeStyle = t.color;
+                            this.ctx.globalAlpha = 0.15 * (1 - realDist / this.connectionDistance);
+                            this.ctx.stroke();
+                            this.ctx.globalAlpha = 1;
                         }
                     }
                 }
-
-                for (let i = 0; i < this.tokens.length; i++) {
-                    const t = this.tokens[i];
-                    t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
-                    t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
-                    t.x += (t.tX - t.x) * 0.15; 
-                    t.y += (t.tY - t.y) * 0.15;
-                    t.size += (t.targetSize - t.size) * 0.1;
-                }
             }
 
-            this.ctx.globalAlpha = 1.0;
-
-            // --- VẼ LOGO VỚI LỆNH CLIP() ---
-            this.tokens.forEach(t => {
-                let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
-                let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
-                
-                this.ctx.globalAlpha = (isHovered || isLocked) ? 1.0 : 0.8;
-                let radius = t.size;
-
-                if (t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
-                    this.ctx.save();
-                    this.ctx.beginPath();
-                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                    this.ctx.closePath();
-                    this.ctx.clip(); // Khôi phục Clip để bo tròn 100%
-                    
-                    this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, radius*2, radius*2);
-                    this.ctx.restore();
-                } else {
-                    this.ctx.beginPath();
-                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                    this.ctx.fillStyle = '#1a1f2e';
-                    this.ctx.fill();
-                }
-
-                // Vẽ viền tròn bọc ngoài
-                this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
-                this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
-                this.ctx.stroke();
-                this.ctx.globalAlpha = 1.0;
-            });
-
-            // --- VẼ HUD & CROSSHAIR NỔI LÊN TRÊN ---
-            this.tokens.forEach(t => {
-                let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
-                let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
-                let radius = t.size;
-
-                if (isLocked) {
-                    this.ctx.strokeStyle = '#ff3366'; 
-                    this.ctx.lineWidth = 1.5;
-                    let d = radius + 6; let l = 6; 
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(t.x - d, t.y - d + l); this.ctx.lineTo(t.x - d, t.y - d); this.ctx.lineTo(t.x - d + l, t.y - d);
-                    this.ctx.moveTo(t.x + d - l, t.y - d); this.ctx.lineTo(t.x + d, t.y - d); this.ctx.lineTo(t.x + d, t.y - d + l);
-                    this.ctx.moveTo(t.x + d, t.y + d - l); this.ctx.lineTo(t.x + d, t.y + d); this.ctx.lineTo(t.x + d - l, t.y + d);
-                    this.ctx.moveTo(t.x - d + l, t.y + d); this.ctx.lineTo(t.x - d, t.y + d); this.ctx.lineTo(t.x - d, t.y + d - l);
-                    this.ctx.stroke();
-                } 
-                
-                if (isHovered && !isLocked) {
-                    let tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
-                    this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif'; 
-                    let textWidth = this.ctx.measureText(tagText).width;
-                    
-                    let tagX = t.x + radius + 8;
-                    let tagY = t.y - radius - 8;
-
-                    this.ctx.fillStyle = 'rgba(10, 14, 23, 0.9)';
-                    this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                    this.ctx.lineWidth = 1;
-                    
-                    this.ctx.fillRect(tagX, tagY - 14, textWidth + 8, 20);
-                    this.ctx.strokeRect(tagX, tagY - 14, textWidth + 8, 20);
-
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(t.x + radius + 2, t.y - radius - 2);
-                    this.ctx.lineTo(tagX, tagY - 4);
-                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-                    this.ctx.stroke();
-
-                    this.ctx.fillStyle = '#fff';
-                    this.ctx.fillText(tagText, tagX + 4, tagY + 1);
-                }
-            });
-
-        } catch (e) {
-            console.warn("Radar Render Prevented Crash:", e);
+            for (let i = 0; i < this.tokens.length; i++) {
+                const t = this.tokens[i];
+                t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
+                t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
+                t.x += (t.tX - t.x) * 0.15;
+                t.y += (t.tY - t.y) * 0.15;
+                t.size += (t.targetSize - t.size) * 0.1;
+                t.lowDetail = this.visualMode === 'orbit' && this.tokens.length > 180 && t.size < this.minLogoRenderSize;
+            }
         }
 
+        // Token render
+        for (let i = 0; i < this.tokens.length; i++) {
+            const t = this.tokens[i];
+            const isHovered = this.hoveredToken && this.hoveredToken.symbol === t.symbol;
+            const isLocked = this.lockedToken && this.lockedToken.symbol === t.symbol;
+            const radius = t.size;
+
+            this.ctx.globalAlpha = (isHovered || isLocked) ? 1 : 0.8;
+
+            if (!t.lowDetail && t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                this.ctx.closePath();
+                this.ctx.clip();
+                this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, radius * 2, radius * 2);
+                this.ctx.restore();
+            } else {
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#1a1f2e';
+                this.ctx.fill();
+            }
+
+            this.ctx.beginPath();
+            this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+            this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
+            this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
+            this.ctx.stroke();
+            this.ctx.globalAlpha = 1;
+
+            if (isHovered && !isLocked) {
+                const tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
+                this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
+                const textWidth = this.ctx.measureText(tagText).width;
+                const tagX = t.x + radius + 8;
+                const tagY = t.y - radius - 8;
+
+                this.ctx.fillStyle = 'rgba(10,14,23,0.9)';
+                this.ctx.fillRect(tagX, tagY - 14, textWidth + 8, 20);
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                this.ctx.strokeRect(tagX, tagY - 14, textWidth + 8, 20);
+                this.ctx.fillStyle = '#fff';
+                this.ctx.fillText(tagText, tagX + 4, tagY + 1);
+            }
+        }
     }
 }
