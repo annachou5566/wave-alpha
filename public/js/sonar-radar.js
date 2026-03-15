@@ -54,17 +54,24 @@ class AlphaSonarGalaxy {
         const newTokens = [];
         let maxVol = 0, maxLiq = 0;
 
-        Object.values(this.latestData).forEach(t => {
+        // Vòng 1: Tìm maxVol và maxLiq (dùng Vol làm fallback nếu thiếu Liquidity)
+        Object.entries(this.latestData).forEach(([key, t]) => {
             if (!t.v || t.ss === 1) return;
             if (t.v.dt > maxVol) maxVol = t.v.dt;
-            if (t.l > maxLiq) maxLiq = t.l;
+            
+            let liq = t.l || t.v.dt || 1000; // Fallback nếu API không trả về t.l
+            if (liq > maxLiq) maxLiq = liq;
         });
 
-        Object.values(this.latestData).forEach(t => {
-            if (!t.v || t.ss === 1 || t.l <= 0) return;
+        // Vòng 2: Tạo token array
+        Object.entries(this.latestData).forEach(([key, t]) => {
+            let liq = t.l || t.v.dt || 1000;
+            if (!t.v || t.ss === 1 || liq <= 0) return; // Không còn bị lỗi lọt sáng vì thiếu thanh khoản
             
-            let size = Math.max(2, (t.v.dt / maxVol) * 15); 
-            let liqRatio = Math.max(0.01, t.l / maxLiq);
+            let symbol = t.symbol || key.replace('ALPHA_', '');
+            
+            let size = Math.max(2, (t.v.dt / (maxVol || 1)) * 15); 
+            let liqRatio = Math.max(0.01, liq / (maxLiq || 1));
             let r = this.maxRadius * (1 - Math.pow(liqRatio, 0.2)); 
             if (r < 20) r = 20 + Math.random() * 20;
 
@@ -76,22 +83,23 @@ class AlphaSonarGalaxy {
             let colorHex = c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff');
 
             // NẾU CÓ LỆNH KHỚP (TX TĂNG) -> Tạo sóng Ripple
-            if (oldTxMap[t.symbol] !== undefined && t.tx > oldTxMap[t.symbol]) {
+            if (oldTxMap[symbol] !== undefined && t.tx > oldTxMap[symbol]) {
                 this.ripples.push({ x: posX, y: posY, r: size, alpha: 1, color: colorHex });
             }
 
             newTokens.push({
-                symbol: t.symbol,
+                symbol: symbol,
                 x: posX,
                 y: posY,
                 size: size,
                 color: colorHex,
                 tx: t.tx,
-                price: t.p,
-                vol: t.v.dt,
+                price: t.p || 0,
+                vol: t.v.dt || 0,
                 change: c
             });
         });
+        
         this.tokens = newTokens;
         this.checkHover();
     }
