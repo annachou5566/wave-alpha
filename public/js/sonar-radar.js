@@ -4,7 +4,7 @@ class AlphaSonarGalaxy {
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         this.tokens = [];
-        this.ripples = []; // Chứa hiệu ứng sóng âm (Ping)
+        this.ripples = []; // Hiệu ứng sóng âm khi có giao dịch mới
         this.angle = 0;
         this.latestData = null;
         
@@ -15,7 +15,7 @@ class AlphaSonarGalaxy {
         this.resize();
         window.addEventListener('resize', () => this.resize());
         
-        // Bắt sự kiện rê chuột
+        // Theo dõi chuột để hiển thị Tooltip
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left;
@@ -35,63 +35,80 @@ class AlphaSonarGalaxy {
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
         this.maxRadius = Math.max(10, Math.min(this.centerX, this.centerY) - 20);
-        this.recalculate();
     }
 
     updateData(marketData) {
-    if (!marketData) return;
-    this.latestData = marketData;
-    this.recalculate();
-}
+        if (!marketData) return;
+        this.latestData = marketData;
+        this.recalculate();
+    }
 
-recalculate() {
-    if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
-    
-    const newTokens = [];
-    let maxVol = 0;
-
-    // Tìm maxVol để tính tỷ lệ kích thước
-    Object.entries(this.latestData).forEach(([key, t]) => {
-        if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
-        if (t.v.dt > maxVol) maxVol = t.v.dt;
-    });
-
-    Object.entries(this.latestData).forEach(([key, t]) => {
-        // Chỉ xử lý các token hợp lệ, bỏ qua metadata của server
-        if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
+    recalculate() {
+        if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
         
-        let symbol = t.symbol || key.replace('ALPHA_', '');
-        let liq = t.l || t.v.dt || 1000;
-        
-        // Tính bán kính (r): Token có thanh khoản (liq) càng cao thì càng nằm gần tâm
-        // Dùng 1,000,000 làm mốc chuẩn để chia vùng
-        let liqRatio = Math.min(1, liq / 1000000); 
-        let r = this.maxRadius * (1 - (liqRatio * 0.8)); // Đảm bảo r không bao giờ bằng 0 để không bị tụ hết vào tâm
+        // Lưu lại Tx cũ để phát hiện sóng âm (Ripples)
+        const oldTxMap = {};
+        this.tokens.forEach(t => { oldTxMap[t.symbol] = t.tx; });
 
-        let c = t.c || 0;
-        let mappedAngle = (c / 15) * Math.PI; 
-        
-        newTokens.push({
-            symbol: symbol,
-            x: this.centerX + r * Math.cos(mappedAngle),
-            y: this.centerY - r * Math.sin(mappedAngle),
-            size: Math.max(3, (t.v.dt / (maxVol || 1)) * 15), 
-            color: c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff'),
-            price: t.p || 0,
-            vol: t.v.dt || 0,
-            change: c
+        const newTokens = [];
+        let maxVol = 0;
+        let maxLiq = 0;
+
+        // Vòng 1: Tìm Max để tính tỷ lệ (Bỏ qua metadata rác)
+        Object.entries(this.latestData).forEach(([key, t]) => {
+            if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
+            if (t.v.dt > maxVol) maxVol = t.v.dt;
+            let liq = t.l || t.v.dt || 1000;
+            if (liq > maxLiq) maxLiq = liq;
         });
-    });
 
-    this.tokens = newTokens;
-}
+        // Vòng 2: Chuyển dữ liệu thành tọa độ vẽ
+        Object.entries(this.latestData).forEach(([key, t]) => {
+            if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
+            
+            let symbol = t.symbol || key.replace('ALPHA_', '');
+            let liq = t.l || t.v.dt || 1000;
+            let change = t.c || 0;
+
+            // Bán kính: Thanh khoản cao nằm gần tâm
+            let liqRatio = Math.max(0.01, Math.min(1, liq / (maxLiq || 1000000)));
+            let r = this.maxRadius * (1 - Math.pow(liqRatio, 0.3));
+            if (r < 25) r = 25 + Math.random() * 5;
+
+            // Góc: Tăng nằm bên phải, giảm nằm bên trái
+            let angle = (change / 15) * Math.PI; 
+            
+            let posX = this.centerX + r * Math.cos(angle);
+            let posY = this.centerY - r * Math.sin(angle);
+            let colorHex = change > 0 ? '#00f0ff' : (change < 0 ? '#ff3366' : '#ffffff');
+
+            // Tạo hiệu ứng sóng âm khi có giao dịch (Tx tăng)
+            if (oldTxMap[symbol] !== undefined && (t.tx || 0) > oldTxMap[symbol]) {
+                this.ripples.push({ x: posX, y: posY, r: 5, alpha: 1, color: colorHex });
+            }
+
+            newTokens.push({
+                symbol: symbol,
+                x: posX,
+                y: posY,
+                size: Math.max(3, (t.v.dt / (maxVol || 1)) * 15),
+                color: colorHex,
+                tx: t.tx || 0,
+                price: t.p || 0,
+                vol: t.v.dt || 0,
+                change: change
+            });
+        });
+        
+        this.tokens = newTokens;
+        this.checkHover();
+    }
 
     checkHover() {
         this.hoveredToken = null;
         for (let t of this.tokens) {
             let dx = this.mouseX - t.x;
             let dy = this.mouseY - t.y;
-            // Cho diện tích nhận chuột to hơn đốm sáng một chút (dễ trỏ trúng)
             if (Math.sqrt(dx*dx + dy*dy) < Math.max(t.size, 10)) {
                 this.hoveredToken = t;
                 break;
@@ -106,9 +123,11 @@ recalculate() {
             return;
         }
 
+        // Tạo bóng mờ cho tia quét (Fade effect)
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
+        // Vẽ lưới Radar
         this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
         this.ctx.lineWidth = 1;
         for (let i = 1; i <= 4; i++) {
@@ -117,6 +136,7 @@ recalculate() {
             this.ctx.stroke();
         }
 
+        // Vẽ trục tọa độ
         this.ctx.beginPath();
         this.ctx.moveTo(this.centerX, this.centerY - this.maxRadius);
         this.ctx.lineTo(this.centerX, this.centerY + this.maxRadius);
@@ -124,7 +144,7 @@ recalculate() {
         this.ctx.lineTo(this.centerX + this.maxRadius, this.centerY);
         this.ctx.stroke();
 
-        // Vẽ hiệu ứng Sóng âm (Ripple)
+        // Vẽ hiệu ứng Sóng âm (Ripple) khi nổ Tx
         for (let i = this.ripples.length - 1; i >= 0; i--) {
             let rip = this.ripples[i];
             this.ctx.beginPath();
@@ -134,13 +154,13 @@ recalculate() {
             this.ctx.lineWidth = 1.5;
             this.ctx.stroke();
             
-            rip.r += 0.8; // Tốc độ lan tỏa
-            rip.alpha -= 0.015; // Tốc độ mờ dần
+            rip.r += 0.8; 
+            rip.alpha -= 0.015; 
             if (rip.alpha <= 0) this.ripples.splice(i, 1);
         }
         this.ctx.globalAlpha = 1.0; 
 
-        // Vẽ Token
+        // Vẽ Token (Đốm sáng)
         this.tokens.forEach(t => {
             this.ctx.beginPath();
             this.ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
@@ -149,7 +169,7 @@ recalculate() {
             if (this.hoveredToken && this.hoveredToken.symbol === t.symbol) {
                 this.ctx.shadowBlur = t.size * 4;
                 this.ctx.shadowColor = '#fff';
-                this.ctx.fillStyle = '#fff'; // Bật trắng khi trỏ chuột
+                this.ctx.fillStyle = '#fff';
             } else {
                 this.ctx.shadowBlur = t.size * 2;
                 this.ctx.shadowColor = t.color;
@@ -158,7 +178,7 @@ recalculate() {
         });
         this.ctx.shadowBlur = 0;
 
-        // Tia quét Radar
+        // Tia quét Radar (Tia quay)
         this.angle += 0.02;
         this.ctx.beginPath();
         this.ctx.moveTo(this.centerX, this.centerY);
@@ -167,6 +187,7 @@ recalculate() {
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
 
+        // Hình quạt mờ sau tia quét
         this.ctx.beginPath();
         this.ctx.moveTo(this.centerX, this.centerY);
         this.ctx.arc(this.centerX, this.centerY, this.maxRadius, this.angle - 0.5, this.angle, false);
@@ -177,22 +198,25 @@ recalculate() {
         this.ctx.fillStyle = grad;
         this.ctx.fill();
 
-        // Bảng Tooltip khi Hover
+        // Bảng Tooltip khi Hover (Xử lý chống tràn)
         if (this.hoveredToken) {
             const t = this.hoveredToken;
-            this.ctx.fillStyle = 'rgba(10, 14, 23, 0.9)';
+            this.ctx.fillStyle = 'rgba(10, 14, 23, 0.95)';
             this.ctx.strokeStyle = t.color;
             this.ctx.lineWidth = 1;
             
             let boxW = 140, boxH = 75;
             let boxX = this.mouseX + 15;
             let boxY = this.mouseY + 15;
-            // Chống tràn màn hình
             if (boxX + boxW > this.width) boxX = this.mouseX - boxW - 15;
             if (boxY + boxH > this.height) boxY = this.mouseY - boxH - 15;
 
             this.ctx.beginPath();
-            this.ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+            if (this.ctx.roundRect) {
+                this.ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+            } else {
+                this.ctx.rect(boxX, boxY, boxW, boxH); // Fallback cho trình duyệt cũ
+            }
             this.ctx.fill();
             this.ctx.stroke();
 
