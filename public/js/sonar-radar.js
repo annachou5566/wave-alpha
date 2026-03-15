@@ -45,29 +45,31 @@ class AlphaSonarGalaxy {
     }
 
     recalculate() {
-        if (!this.latestData || this.width === 0) return;
+        // Kiểm tra dữ liệu và chiều rộng màn hình
+        if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
         
-        // Lưu lại Tx cũ để phát hiện Giao dịch mới nổ
         const oldTxMap = {};
         this.tokens.forEach(t => { oldTxMap[t.symbol] = t.tx; });
 
         const newTokens = [];
         let maxVol = 0, maxLiq = 0;
 
-        // Vòng 1: Tìm maxVol và maxLiq (dùng Vol làm fallback nếu thiếu Liquidity)
+        // Vòng 1: Tìm giá trị lớn nhất (Chỉ quét các Token hợp lệ)
         Object.entries(this.latestData).forEach(([key, t]) => {
-            if (!t.v || t.ss === 1) return;
-            if (t.v.dt > maxVol) maxVol = t.v.dt;
+            // Chốt chặn 1: Bỏ qua nếu dữ liệu không phải object hoặc thiếu Volume (.v)
+            if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
             
-            let liq = t.l || t.v.dt || 1000; // Fallback nếu API không trả về t.l
+            if (t.v.dt > maxVol) maxVol = t.v.dt;
+            let liq = t.l || t.v.dt || 1000; 
             if (liq > maxLiq) maxLiq = liq;
         });
 
-        // Vòng 2: Tạo token array
+        // Vòng 2: Tạo danh sách đốm sáng Token
         Object.entries(this.latestData).forEach(([key, t]) => {
-            let liq = t.l || t.v.dt || 1000;
-            if (!t.v || t.ss === 1 || liq <= 0) return; // Không còn bị lỗi lọt sáng vì thiếu thanh khoản
+            // Chốt chặn 2: Kiểm tra Token hợp lệ lần nữa
+            if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
             
+            let liq = t.l || t.v.dt || 1000;
             let symbol = t.symbol || key.replace('ALPHA_', '');
             
             let size = Math.max(2, (t.v.dt / (maxVol || 1)) * 15); 
@@ -82,7 +84,6 @@ class AlphaSonarGalaxy {
             let posY = this.centerY - r * Math.sin(mappedAngle);
             let colorHex = c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff');
 
-            // NẾU CÓ LỆNH KHỚP (TX TĂNG) -> Tạo sóng Ripple
             if (oldTxMap[symbol] !== undefined && t.tx > oldTxMap[symbol]) {
                 this.ripples.push({ x: posX, y: posY, r: size, alpha: 1, color: colorHex });
             }
@@ -93,7 +94,7 @@ class AlphaSonarGalaxy {
                 y: posY,
                 size: size,
                 color: colorHex,
-                tx: t.tx,
+                tx: t.tx || 0,
                 price: t.p || 0,
                 vol: t.v.dt || 0,
                 change: c
