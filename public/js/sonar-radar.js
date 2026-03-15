@@ -4,14 +4,14 @@ class AlphaSonarGalaxy {
         if (!this.canvas) return;
         this.ctx = this.canvas.getContext('2d');
         this.tokens = [];
-        this.angle = 0; // Góc của tia quét radar
+        this.angle = 0;
+        this.latestData = null; // Lưu data để vẽ lại khi đổi Tab
         this.resize();
         window.addEventListener('resize', () => this.resize());
         this.animate();
     }
 
     resize() {
-        // Lấy kích thước của thẻ bọc bên ngoài
         const parent = this.canvas.parentElement;
         this.width = parent.clientWidth || 800;
         this.height = parent.clientHeight || 600;
@@ -19,62 +19,58 @@ class AlphaSonarGalaxy {
         this.canvas.height = this.height;
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
-        this.maxRadius = Math.min(this.centerX, this.centerY) - 20;
+        this.maxRadius = Math.max(10, Math.min(this.centerX, this.centerY) - 20); // Chống số âm
+        this.recalculate(); // Tính lại tọa độ ngay lập tức
     }
 
-    // Hàm nhận dữ liệu GLOBAL_MARKET mỗi 3 giây
     updateData(marketData) {
         if (!marketData) return;
-        const newTokens = [];
-        let maxVol = 0;
-        let maxLiq = 0;
+        this.latestData = marketData;
+        this.recalculate();
+    }
 
-        // Tìm Max để chia tỷ lệ
-        Object.values(marketData).forEach(t => {
-            if (!t.v || t.ss === 1) return; // Bỏ qua nếu không có vol hoặc là RWA
+    recalculate() {
+        if (!this.latestData || this.width === 0) return;
+        const newTokens = [];
+        let maxVol = 0, maxLiq = 0;
+
+        Object.values(this.latestData).forEach(t => {
+            if (!t.v || t.ss === 1) return;
             if (t.v.dt > maxVol) maxVol = t.v.dt;
             if (t.l > maxLiq) maxLiq = t.l;
         });
 
-        // Ánh xạ (Map) dữ liệu vào tọa độ không gian
-        Object.values(marketData).forEach(t => {
+        Object.values(this.latestData).forEach(t => {
             if (!t.v || t.ss === 1 || t.l <= 0) return;
-            
-            // 1. Độ to (Size) dựa vào Daily Vol
             let size = Math.max(1.5, (t.v.dt / maxVol) * 15); 
-
-            // 2. Khoảng cách tâm (Radius): Thanh khoản to (Cá mập) ở giữa, Rác ở ngoài rìa
             let liqRatio = Math.max(0.01, t.l / maxLiq);
-            // Dùng 1 - sqrt để đảo ngược: Liq to -> r nhỏ (gần tâm)
             let r = this.maxRadius * (1 - Math.pow(liqRatio, 0.2)); 
-            if (r < 20) r = 20 + Math.random() * 20; // Tránh dính hẳn vào tâm
+            if (r < 20) r = 20 + Math.random() * 20;
 
-            // 3. Góc (Angle) dựa vào % Change (c)
-            // Xanh (c > 0) nằm nửa trên, Đỏ (c < 0) nằm nửa dưới
             let c = t.c || 0;
-            // Ánh xạ % (-15% đến +15%) thành góc Radar (0 đến 360 độ)
             let mappedAngle = (c / 15) * Math.PI; 
             
             newTokens.push({
                 symbol: t.symbol,
                 x: this.centerX + r * Math.cos(mappedAngle),
-                y: this.centerY - r * Math.sin(mappedAngle), // Trừ vì Y của canvas hướng xuống
+                y: this.centerY - r * Math.sin(mappedAngle),
                 size: size,
                 color: c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff'),
-                tx: t.tx,
-                pingAlpha: 0 // Hiệu ứng lóe sáng
+                tx: t.tx
             });
         });
-
         this.tokens = newTokens;
     }
 
     animate() {
-        // Hiệu ứng "Bóng mờ" (Trail) của tia quét - Nền đen trong suốt
+        if (this.width === 0) { // Nếu đang bị ẩn thì không tốn CPU vẽ
+            requestAnimationFrame(() => this.animate());
+            return;
+        }
+
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // Vẽ các vòng tròn Radar lưới
         this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
         this.ctx.lineWidth = 1;
         for (let i = 1; i <= 4; i++) {
@@ -83,7 +79,6 @@ class AlphaSonarGalaxy {
             this.ctx.stroke();
         }
 
-        // Vẽ trục chữ thập
         this.ctx.beginPath();
         this.ctx.moveTo(this.centerX, this.centerY - this.maxRadius);
         this.ctx.lineTo(this.centerX, this.centerY + this.maxRadius);
@@ -91,7 +86,6 @@ class AlphaSonarGalaxy {
         this.ctx.lineTo(this.centerX + this.maxRadius, this.centerY);
         this.ctx.stroke();
 
-        // Vẽ đốm sáng Token
         this.tokens.forEach(t => {
             this.ctx.beginPath();
             this.ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
@@ -99,21 +93,17 @@ class AlphaSonarGalaxy {
             this.ctx.shadowBlur = t.size * 2;
             this.ctx.shadowColor = t.color;
             this.ctx.fill();
-            this.ctx.shadowBlur = 0; // Reset
         });
+        this.ctx.shadowBlur = 0;
 
-        // Vẽ tia quét xoay (Sweep Line)
-        this.angle += 0.02; // Tốc độ xoay
+        this.angle += 0.02;
         this.ctx.beginPath();
         this.ctx.moveTo(this.centerX, this.centerY);
-        let endX = this.centerX + this.maxRadius * Math.cos(this.angle);
-        let endY = this.centerY + this.maxRadius * Math.sin(this.angle);
-        this.ctx.lineTo(endX, endY);
+        this.ctx.lineTo(this.centerX + this.maxRadius * Math.cos(this.angle), this.centerY + this.maxRadius * Math.sin(this.angle));
         this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
         this.ctx.lineWidth = 2;
         this.ctx.stroke();
 
-        // Vẽ dải sáng Gradient của tia quét
         this.ctx.beginPath();
         this.ctx.moveTo(this.centerX, this.centerY);
         this.ctx.arc(this.centerX, this.centerY, this.maxRadius, this.angle - 0.5, this.angle, false);
