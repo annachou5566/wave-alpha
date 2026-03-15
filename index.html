@@ -421,20 +421,7 @@
     </div>
 </div>
 </div>
-    <div id="view-sonar" style="display: none; padding: 20px; min-height: 90vh;">
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 style="color: #00f0ff; font-weight: bold; margin: 0; letter-spacing: 1px;">
-                <i class="fas fa-radar"></i> ALPHA SONAR GALAXY
-            </h3>
-            <span class="text-sub font-num" style="font-size: 0.9rem;">Real-time 500+ Tokens Flow</span>
-        </div>
-        
-        <div id="sonar-container" style="position: relative; width: 100%; height: 80vh; background-color: #0a0e17; border-radius: 12px; overflow: hidden; border: 1px solid #1f2937; box-shadow: inset 0 0 50px rgba(0, 240, 255, 0.05);">
-            <canvas id="sonar-canvas"></canvas>
-        </div>
-    </div>
-</div>
+    
 <div id="view-predict" style="display:none;">
     <div class="neo-wrapper">
         <div class="grid-overlay"></div>
@@ -1158,14 +1145,19 @@
 
 
 <div id="alpha-tab-nav" class="d-flex">
-    <button id="btn-tab-market" class="tab-btn active" onclick="switchTab('market')">
+    <button id="btn-tab-market" class="tab-btn active" onclick="switchMainTab('market')">
         <i class="fas fa-chart-line" style="font-size: 20px; margin-bottom: 4px; display: block;"></i>
         <span>Alpha Market</span>
     </button>
 
-    <button id="btn-tab-comp" class="tab-btn" onclick="switchTab('comp')">
+    <button id="btn-tab-comp" class="tab-btn" onclick="switchMainTab('comp')">
         <i class="fas fa-trophy" style="font-size: 20px; margin-bottom: 4px; display: block;"></i>
         <span>Competition</span>
+    </button>
+
+    <button id="btn-tab-sonar" class="tab-btn" onclick="switchMainTab('sonar')">
+        <i class="fas fa-satellite-dish" style="font-size: 20px; margin-bottom: 4px; display: block; color: #00f0ff;"></i>
+        <span style="color: #00f0ff;">Sonar Galaxy</span>
     </button>
 </div>
 
@@ -1203,7 +1195,11 @@
         </div>
     </div>
 </div>
-
+<div id="sonar-market-view" style="display:none; padding: 15px;">
+    <div id="sonar-container" style="position: relative; width: 100%; height: 75vh; background-color: #0a0e17; border-radius: 12px; overflow: hidden; border: 1px solid #1f2937; box-shadow: inset 0 0 50px rgba(0, 240, 255, 0.05);">
+        <canvas id="sonar-canvas"></canvas>
+    </div>
+</div>
 <div class="modal fade" id="radarGuideModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="background: #161a1e; border: 1px solid #2b3139; color: #fff; border-radius: 8px;">
