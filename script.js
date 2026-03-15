@@ -8,7 +8,7 @@ let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [];
 let siteConfig = {};
 let userProfile = {};
 let currentUser = null;
-
+let mySonarGalaxy = null;
 function fmtNum(num) {
     if (num === null || num === undefined || isNaN(num)) return "0";
     return parseFloat(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -1158,7 +1158,9 @@ function init() {
     checkLegal();
     syncAlphaData();
     startRealtimeSync();
-
+if (typeof AlphaSonarGalaxy !== 'undefined') {
+        mySonarGalaxy = new AlphaSonarGalaxy('sonar-canvas');
+    }
     const cachedData = localStorage.getItem('wave_comp_list');
     let hasCache = false;
 
@@ -6672,6 +6674,7 @@ function applyLayer2Data(serverData, forceApply = false) {
     if (hasChanges && typeof updateGridValuesOnly === 'function') {
         updateGridValuesOnly();
     }
+    if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) mySonarGalaxy.updateData(serverData);
 }
 
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
