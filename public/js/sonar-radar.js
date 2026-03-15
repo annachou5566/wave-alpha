@@ -1,10 +1,11 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V7 CLEAN UI)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V8 HIGH DPI & CLEAN)
  * ============================================================================
  * Đã Fix: 
- * - Tách lớp vẽ (Z-index layering): HUD Tag và Crosshair luôn nổi lên trên cùng.
- * - Xóa bỏ hiệu ứng Glow bao quanh Logo để hình ảnh sắc nét, không bị lem nhem.
+ * - Chữ siêu nét căng trên mọi màn hình (Tích hợp window.devicePixelRatio)
+ * - Đổi font chữ Hover Tag sang chuẩn dễ đọc (Sans-serif)
+ * - Xóa sạch sẽ các vệt mờ (Glow) Xanh/Đỏ đằng sau Logo.
  * ============================================================================
  */
 
@@ -51,13 +52,11 @@ class AlphaSonarGalaxy {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
-                /* CONTROL BAR */
                 #sonar-control-bar { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2); backdrop-filter: blur(5px); }
                 .sonar-btn { background: transparent; border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; transition: all 0.2s; }
                 .sonar-btn:hover, .sonar-btn.active { background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
                 .sonar-btn.pause-btn.paused { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
                 
-                /* SIDE PANEL (TERMINAL STYLE) */
                 #sonar-side-panel { position: absolute; top: 15px; right: -360px; width: 320px; height: calc(100% - 30px); background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff; border-top: 1px solid rgba(0, 240, 255, 0.2); border-bottom: 1px solid rgba(0, 240, 255, 0.2); z-index: 10; backdrop-filter: blur(10px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -10px 0 30px rgba(0, 240, 255, 0.1); display: flex; flex-direction: column; overflow-y: auto; }
                 #sonar-side-panel.open { right: 0; }
                 #sonar-side-panel::-webkit-scrollbar { width: 4px; } #sonar-side-panel::-webkit-scrollbar-thumb { background: #00f0ff; }
@@ -156,11 +155,25 @@ class AlphaSonarGalaxy {
         });
     }
 
+    // --- CẬP NHẬT RESIZE: KỸ THUẬT HIGH-DPI GIÚP CHỮ NÉT CĂNG ---
     resize() {
+        const dpr = window.devicePixelRatio || 1; // Lấy mật độ điểm ảnh của màn hình
+        
         this.width = this.container.clientWidth || 800;
         this.height = this.container.clientHeight || 600;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        
+        // Scale bộ nhớ thực tế của Canvas lên gấp N lần
+        this.canvas.width = this.width * dpr;
+        this.canvas.height = this.height * dpr;
+        
+        // Ép kích thước hiển thị CSS giữ nguyên
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+
+        // Scale ngữ cảnh vẽ để khớp với tọa độ chuột
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.scale(dpr, dpr);
+
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
         this.maxRadius = Math.max(10, Math.min(this.centerX, this.centerY) - 50);
@@ -253,10 +266,11 @@ class AlphaSonarGalaxy {
             let tX = this.centerX + targetR * Math.cos(targetAngle);
             let tY = this.centerY + targetR * Math.sin(targetAngle);
             let targetSize = Math.max(3, (data.vol / (maxVol || 1)) * 12);
+            // Đã đổi sóng Ripple sang màu Xanh lơ (Radar Ping) để tránh hiểu lầm là Glow Đỏ/Xanh
             let colorHex = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#F0B90B');
 
             if (oldTxMap[data.symbol] !== undefined && data.tx > oldTxMap[data.symbol]) {
-                this.ripples.push({ x: tX, y: tY, r: 5, alpha: 1, color: colorHex });
+                this.ripples.push({ x: tX, y: tY, r: 5, alpha: 1, color: '#00f0ff' }); 
             }
 
             let existingToken = this.tokens.find(t => t.symbol === data.symbol);
@@ -415,7 +429,7 @@ class AlphaSonarGalaxy {
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- VẼ LƯỚI RADAR ---
+        // --- VẼ LƯỚI ---
         this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
         this.ctx.lineWidth = 1;
         for (let i = 1; i <= 4; i++) {
@@ -434,7 +448,7 @@ class AlphaSonarGalaxy {
         this.ctx.stroke();
         this.ctx.setLineDash([]); 
 
-        // --- VẼ SÓNG ÂM ---
+        // --- VẼ SÓNG ÂM (Đổi sang màu Cyan cho gọn gàng, không bị nhầm là Glow) ---
         for (let i = this.ripples.length - 1; i >= 0; i--) {
             let rip = this.ripples[i];
             this.ctx.beginPath();
@@ -456,7 +470,7 @@ class AlphaSonarGalaxy {
         if (normalizedSweep < 0) normalizedSweep += Math.PI * 2;
 
         // ==========================================
-        // VÒNG LẶP 1: CHỈ VẼ TOKEN (CHÌM XUỐNG DƯỚI)
+        // VÒNG 1: VẼ LOGO SẠCH SẼ (KHÔNG GLOW, KHÔNG NỀN LÓA)
         // ==========================================
         this.tokens.forEach(t => {
             if (!this.isPaused) {
@@ -481,22 +495,18 @@ class AlphaSonarGalaxy {
             let radius = imgSize / 2;
 
             this.ctx.globalAlpha = Math.max(0.2, blipBrightness);
+            this.ctx.shadowBlur = 0; // XÓA SẠCH HIỆU ỨNG GLOW NHÒE NHOẸT
 
-            // Bỏ Glow (shadowBlur = 0). Vẽ nền hình tròn bên dưới logo
-            this.ctx.beginPath();
-            this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-            this.ctx.fillStyle = t.color;
-            this.ctx.fill();
-
-            // Cắt viền tròn và vẽ Logo
+            // Cắt viền tròn và vẽ Logo siêu nét
             if (t.imgObj && t.imgObj.complete) {
                 this.ctx.save();
                 this.ctx.beginPath();
                 this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
                 this.ctx.closePath();
                 this.ctx.clip(); 
-                this.ctx.globalAlpha = (isHovered || isLocked) ? 1.0 : Math.max(0.4, blipBrightness);
-                this.ctx.drawImage(t.imgObj, Math.round(t.x - radius), Math.round(t.y - radius), Math.round(imgSize), Math.round(imgSize));
+                
+                // Vẽ ảnh trên toạ độ Canvas siêu phân giải
+                this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, imgSize, imgSize);
                 this.ctx.restore();
             } else {
                 this.ctx.beginPath();
@@ -505,27 +515,18 @@ class AlphaSonarGalaxy {
                 this.ctx.fill();
             }
 
-            // Vẽ viền tròn bao quanh
+            // Vẽ viền nhẹ cho Logo (chỉ sáng lên khi Hover/Lock)
             this.ctx.beginPath();
             this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-            this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
+            this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : 'rgba(255,255,255,0.15)';
             this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
             this.ctx.stroke();
 
             this.ctx.globalAlpha = 1.0;
-
-            // Hiệu ứng Echo sóng dội (Radar dội qua)
-            if (blipBrightness > 0.6 && !isHovered && !isLocked) {
-                this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, radius + 3 + (1 - blipBrightness) * 5, 0, Math.PI * 2);
-                this.ctx.strokeStyle = t.color;
-                this.ctx.lineWidth = 1;
-                this.ctx.stroke();
-            }
         });
 
         // ==========================================
-        // VÒNG LẶP 2: CHỈ VẼ UI (NỔI TRÊN CÙNG)
+        // VÒNG 2: VẼ CHỮ HUD VÀ CROSSHAIR (SIÊU NÉT, NỔI LÊN TRÊN)
         // ==========================================
         this.tokens.forEach(t => {
             let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
@@ -534,7 +535,6 @@ class AlphaSonarGalaxy {
             let imgSize = Math.max(16, t.size * 2.5);
             let radius = imgSize / 2;
 
-            // VẼ CROSSHAIR (TARGET LOCKED)
             if (isLocked) {
                 this.ctx.strokeStyle = '#ff3366'; 
                 this.ctx.lineWidth = 1.5;
@@ -549,38 +549,37 @@ class AlphaSonarGalaxy {
                 this.ctx.stroke();
             } 
             
-            // VẼ MINIMAL HUD TAG KHI RÊ CHUỘT
             if (isHovered && !isLocked) {
-                let tagText = `[ $${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% ]`;
-                this.ctx.font = 'bold 12px "Courier New", monospace';
+                let tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
+                
+                // SỬ DỤNG FONT BÌNH THƯỜNG, RÕ RÀNG, CHỐNG NHÒE
+                this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif'; 
                 let textMetrics = this.ctx.measureText(tagText);
                 let textWidth = textMetrics.width;
                 
-                let tagX = Math.round(t.x + radius + 8);
-                let tagY = Math.round(t.y - radius - 8);
+                let tagX = t.x + radius + 8;
+                let tagY = t.y - radius - 8;
 
                 this.ctx.fillStyle = 'rgba(10, 14, 23, 0.9)';
-                this.ctx.strokeStyle = t.color;
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
                 this.ctx.lineWidth = 1;
                 
-                // Vẽ hộp nền chữ
-                this.ctx.fillRect(tagX, tagY - 14, textWidth + 12, 20);
-                this.ctx.strokeRect(tagX, tagY - 14, textWidth + 12, 20);
+                this.ctx.fillRect(tagX, tagY - 14, textWidth + 8, 20);
+                this.ctx.strokeRect(tagX, tagY - 14, textWidth + 8, 20);
 
-                // Đường gạch chéo nối ra từ Token
                 this.ctx.beginPath();
-                this.ctx.moveTo(Math.round(t.x + radius + 2), Math.round(t.y - radius - 2));
+                this.ctx.moveTo(t.x + radius + 2, t.y - radius - 2);
                 this.ctx.lineTo(tagX, tagY - 4);
                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                 this.ctx.stroke();
 
-                // Vẽ chữ
                 this.ctx.fillStyle = '#fff';
-                this.ctx.fillText(tagText, tagX + 6, tagY + 1);
+                // Vẽ chữ
+                this.ctx.fillText(tagText, tagX + 4, tagY + 1);
             }
         });
 
-        // --- VẼ TIA QUÉT QUANG HỌC ---
+        // --- VẼ TIA QUÉT ---
         if (!this.isPaused) {
             this.angle += 0.025;
         }
