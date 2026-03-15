@@ -1,11 +1,10 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V6 VISUAL OVERHAUL)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V7 CLEAN UI)
  * ============================================================================
  * Đã Fix: 
- * - Chữ siêu nét (Anti-blur) bằng kỹ thuật Pixel-perfect (Math.round)
- * - Hiển thị trực tiếp Logo Token lên mặt Radar
- * - Thêm số Volume tiền tỉ ($) vào thanh CEX/DEX
+ * - Tách lớp vẽ (Z-index layering): HUD Tag và Crosshair luôn nổi lên trên cùng.
+ * - Xóa bỏ hiệu ứng Glow bao quanh Logo để hình ảnh sắc nét, không bị lem nhem.
  * ============================================================================
  */
 
@@ -39,7 +38,6 @@ class AlphaSonarGalaxy {
         this.animate();
     }
 
-    // --- TIỆN ÍCH: FORMAT SỐ LIỆU ---
     formatCompact(num) {
         if (!num) return '0';
         if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
@@ -48,7 +46,6 @@ class AlphaSonarGalaxy {
         return parseFloat(num).toFixed(2);
     }
 
-    // --- KHỞI TẠO UI ---
     initUI() {
         if (!document.getElementById('sonar-pro-styles')) {
             const style = document.createElement('style');
@@ -177,9 +174,6 @@ class AlphaSonarGalaxy {
         }
     }
 
-    // ==========================================
-    // LOGIC TÍNH TOÁN DỮ LIỆU
-    // ==========================================
     recalculate(force = false) {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
         
@@ -275,7 +269,6 @@ class AlphaSonarGalaxy {
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
                 
-                // Cập nhật Logo nếu đổi URL, load Image HTML Element để chuẩn bị vẽ Canvas
                 if (existingToken.logo !== data.logo) {
                     existingToken.logo = data.logo;
                     let img = new Image();
@@ -298,7 +291,7 @@ class AlphaSonarGalaxy {
 
                 this.tokens.push({
                     symbol: data.symbol, logo: data.logo, contract: data.contract,
-                    imgObj: img, // Khởi tạo Image Element
+                    imgObj: img, 
                     x: tX, y: tY, tX: tX, tY: tY,
                     size: 0, targetSize: targetSize, color: colorHex, 
                     price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
@@ -315,15 +308,11 @@ class AlphaSonarGalaxy {
         if (this.lockedToken) this.updateSidePanelData(); 
     }
 
-    // ==========================================
-    // XỬ LÝ SỰ KIỆN CHUỘT
-    // ==========================================
     checkHover() {
         this.hoveredToken = null;
         for (let t of this.tokens) {
             let dx = this.mouseX - t.x;
             let dy = this.mouseY - t.y;
-            // Tăng bán kính hitbox vì Logo sẽ to hơn chấm tròn cũ
             let hitRadius = Math.max(12, t.size + 4); 
             if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
                 this.hoveredToken = t;
@@ -358,7 +347,6 @@ class AlphaSonarGalaxy {
         let pctLimit = isNaN(MathLim) ? 0 : MathLim;
         let pctChain = Math.max(0, 100 - pctLimit);
 
-        // THÊM SỐ LIỆU VOLUME ($) VÀO CẠNH SỐ PHẦN TRĂM (%) NHƯ YÊU CẦU
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
             
@@ -418,20 +406,16 @@ class AlphaSonarGalaxy {
         `;
     }
 
-    // ==========================================
-    // RENDER ENGINE: HIỂN THỊ LOGO SIÊU NÉT (PIXEL-PERFECT)
-    // ==========================================
     animate() {
         if (this.width === 0) {
             requestAnimationFrame(() => this.animate());
             return;
         }
 
-        // Xóa frame cũ
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- VẼ LƯỚI ---
+        // --- VẼ LƯỚI RADAR ---
         this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
         this.ctx.lineWidth = 1;
         for (let i = 1; i <= 4; i++) {
@@ -471,7 +455,9 @@ class AlphaSonarGalaxy {
         let normalizedSweep = this.angle % (Math.PI * 2);
         if (normalizedSweep < 0) normalizedSweep += Math.PI * 2;
 
-        // --- VẼ TOKEN (CẬP NHẬT RENDER BẰNG HÌNH ẢNH LOGO) ---
+        // ==========================================
+        // VÒNG LẶP 1: CHỈ VẼ TOKEN (CHÌM XUỐNG DƯỚI)
+        // ==========================================
         this.tokens.forEach(t => {
             if (!this.isPaused) {
                 t.x += (t.tX - t.x) * 0.05; 
@@ -491,45 +477,35 @@ class AlphaSonarGalaxy {
             if (angleDiff < 0.8 && !this.isPaused) blipBrightness = 1.0 - (angleDiff / 0.8);
             if (isHovered || isLocked) blipBrightness = 1.0;
 
-            // Kích thước của Logo (to hơn chấm sáng ngày xưa)
-            let imgSize = Math.max(16, t.size * 2.5); // Min 16px để nhìn rõ logo
+            let imgSize = Math.max(16, t.size * 2.5);
             let radius = imgSize / 2;
 
             this.ctx.globalAlpha = Math.max(0.2, blipBrightness);
 
-            // Vẽ hiệu ứng hào quang (Glow) dưới đáy Logo
+            // Bỏ Glow (shadowBlur = 0). Vẽ nền hình tròn bên dưới logo
             this.ctx.beginPath();
             this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
             this.ctx.fillStyle = t.color;
-            this.ctx.shadowBlur = (isHovered || isLocked) ? radius * 2 : radius;
-            this.ctx.shadowColor = (isHovered || isLocked) ? '#fff' : t.color;
             this.ctx.fill();
-            
-            // Xóa shadow ngay lập tức để logo & font chữ không bị nhòe lây
-            this.ctx.shadowBlur = 0;
 
-            // VẼ LOGO BỊ CẮT TRÒN (CIRCLE CLIPPING)
+            // Cắt viền tròn và vẽ Logo
             if (t.imgObj && t.imgObj.complete) {
                 this.ctx.save();
                 this.ctx.beginPath();
                 this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
                 this.ctx.closePath();
-                this.ctx.clip(); // Lệnh cắt
-
-                // Vẽ ảnh bên trong vùng cắt tròn
+                this.ctx.clip(); 
                 this.ctx.globalAlpha = (isHovered || isLocked) ? 1.0 : Math.max(0.4, blipBrightness);
-                // Math.round giúp hình ảnh không bị nội suy nhòe (Anti-blur fix)
                 this.ctx.drawImage(t.imgObj, Math.round(t.x - radius), Math.round(t.y - radius), Math.round(imgSize), Math.round(imgSize));
                 this.ctx.restore();
             } else {
-                // Fallback nếu ảnh lỗi tải
                 this.ctx.beginPath();
                 this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
                 this.ctx.fillStyle = '#1a1f2e';
                 this.ctx.fill();
             }
 
-            // Vẽ viền tròn bao quanh Logo
+            // Vẽ viền tròn bao quanh
             this.ctx.beginPath();
             this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
             this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
@@ -538,11 +514,31 @@ class AlphaSonarGalaxy {
 
             this.ctx.globalAlpha = 1.0;
 
-            // 1. VẼ KHUNG NGẮM (CROSSHAIR) NẾU BỊ KHÓA
+            // Hiệu ứng Echo sóng dội (Radar dội qua)
+            if (blipBrightness > 0.6 && !isHovered && !isLocked) {
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius + 3 + (1 - blipBrightness) * 5, 0, Math.PI * 2);
+                this.ctx.strokeStyle = t.color;
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+            }
+        });
+
+        // ==========================================
+        // VÒNG LẶP 2: CHỈ VẼ UI (NỔI TRÊN CÙNG)
+        // ==========================================
+        this.tokens.forEach(t => {
+            let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
+            let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
+            
+            let imgSize = Math.max(16, t.size * 2.5);
+            let radius = imgSize / 2;
+
+            // VẼ CROSSHAIR (TARGET LOCKED)
             if (isLocked) {
                 this.ctx.strokeStyle = '#ff3366'; 
                 this.ctx.lineWidth = 1.5;
-                let d = radius + 6; // Đẩy khung ra xa mép Logo một chút
+                let d = radius + 6; 
                 let l = 6; 
                 
                 this.ctx.beginPath();
@@ -552,25 +548,14 @@ class AlphaSonarGalaxy {
                 this.ctx.moveTo(t.x - d + l, t.y + d); this.ctx.lineTo(t.x - d, t.y + d); this.ctx.lineTo(t.x - d, t.y + d - l);
                 this.ctx.stroke();
             } 
-            // Hiệu ứng tia Radar dội qua
-            else if (blipBrightness > 0.6 && !isHovered) {
-                this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, radius + 3 + (1 - blipBrightness) * 5, 0, Math.PI * 2);
-                this.ctx.strokeStyle = t.color;
-                this.ctx.lineWidth = 1;
-                this.ctx.stroke();
-            }
-
-            // 2. VẼ MINIMAL HUD TAG (PIXEL-PERFECT FIX ĐỂ CHỮ SIÊU NÉT)
+            
+            // VẼ MINIMAL HUD TAG KHI RÊ CHUỘT
             if (isHovered && !isLocked) {
                 let tagText = `[ $${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% ]`;
-                
-                // Khai báo font chữ sắc nét
                 this.ctx.font = 'bold 12px "Courier New", monospace';
                 let textMetrics = this.ctx.measureText(tagText);
                 let textWidth = textMetrics.width;
                 
-                // MATH.ROUND: Vô cùng quan trọng để chống nhòe Sub-pixel Rendering
                 let tagX = Math.round(t.x + radius + 8);
                 let tagY = Math.round(t.y - radius - 8);
 
@@ -582,7 +567,7 @@ class AlphaSonarGalaxy {
                 this.ctx.fillRect(tagX, tagY - 14, textWidth + 12, 20);
                 this.ctx.strokeRect(tagX, tagY - 14, textWidth + 12, 20);
 
-                // Đường gạch chéo
+                // Đường gạch chéo nối ra từ Token
                 this.ctx.beginPath();
                 this.ctx.moveTo(Math.round(t.x + radius + 2), Math.round(t.y - radius - 2));
                 this.ctx.lineTo(tagX, tagY - 4);
