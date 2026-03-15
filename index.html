@@ -186,7 +186,22 @@
         </div>
     </div>
 </nav>
+<div id="alpha-tab-nav" class="d-flex justify-content-center align-items-center mt-3 mb-3 gap-4">
+    <button id="btn-tab-market" class="tab-btn active btn btn-outline-secondary text-white" onclick="switchMainTab('market')">
+        <i class="fas fa-chart-line me-2"></i>
+        <span>Alpha Market</span>
+    </button>
 
+    <button id="btn-tab-comp" class="tab-btn btn btn-outline-secondary text-white" onclick="switchMainTab('comp')">
+        <i class="fas fa-trophy me-2"></i>
+        <span>Competition</span>
+    </button>
+
+    <button id="btn-tab-sonar" class="tab-btn btn btn-outline-secondary text-info" onclick="switchMainTab('sonar')" style="border-color: #00f0ff;">
+        <i class="fas fa-satellite-dish me-2"></i>
+        <span>Sonar Galaxy</span>
+    </button>
+</div>
 
 <div id="view-dashboard" style="display:none">
     <div class="hero-banner">
@@ -1142,22 +1157,7 @@
 <script src="script.js"></script>
 
 
-<div id="alpha-tab-nav" class="d-flex">
-    <button id="btn-tab-market" class="tab-btn active" onclick="switchMainTab('market')">
-        <i class="fas fa-chart-line" style="font-size: 20px; margin-bottom: 4px; display: block;"></i>
-        <span>Alpha Market</span>
-    </button>
 
-    <button id="btn-tab-comp" class="tab-btn" onclick="switchMainTab('comp')">
-        <i class="fas fa-trophy" style="font-size: 20px; margin-bottom: 4px; display: block;"></i>
-        <span>Competition</span>
-    </button>
-
-    <button id="btn-tab-sonar" class="tab-btn" onclick="switchMainTab('sonar')">
-        <i class="fas fa-satellite-dish" style="font-size: 20px; margin-bottom: 4px; display: block; color: #00f0ff;"></i>
-        <span style="color: #00f0ff;">Sonar Galaxy</span>
-    </button>
-</div>
 
 <div id="alpha-market-view" style="display:block">
     <div class="alpha-container">
