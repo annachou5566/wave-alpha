@@ -1,12 +1,11 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V5 UX OPTIMIZED)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V6 VISUAL OVERHAUL)
  * ============================================================================
- * Đã Fix UX theo Phương án 1:
- * - Xóa bỏ hoàn toàn Tooltip HTML lấn cấn.
- * - Thêm "Minimal HUD Tag" vẽ trực tiếp trên mặt kính Radar bằng Canvas.
- * - Khung ngắm bắn (Target Lock Crosshair) chuẩn sci-fi khi click chọn.
- * - Tối ưu hiệu năng: Không còn DOM manipulation khi rê chuột.
+ * Đã Fix: 
+ * - Chữ siêu nét (Anti-blur) bằng kỹ thuật Pixel-perfect (Math.round)
+ * - Hiển thị trực tiếp Logo Token lên mặt Radar
+ * - Thêm số Volume tiền tỉ ($) vào thanh CEX/DEX
  * ============================================================================
  */
 
@@ -49,7 +48,7 @@ class AlphaSonarGalaxy {
         return parseFloat(num).toFixed(2);
     }
 
-    // --- KHỞI TẠO UI (CHỈ CÒN CONTROL BAR VÀ SIDE PANEL) ---
+    // --- KHỞI TẠO UI ---
     initUI() {
         if (!document.getElementById('sonar-pro-styles')) {
             const style = document.createElement('style');
@@ -70,7 +69,7 @@ class AlphaSonarGalaxy {
                 .sp-close:hover { opacity: 1; color: #ff3366; transform: scale(1.1); }
                 
                 .sp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px;}
-                .sp-head img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(0, 240, 255, 0.5); }
+                .sp-head img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(0, 240, 255, 0.5); object-fit: cover; background: #000; }
                 .sp-sym-wrap { display: flex; flex-direction: column; }
                 .sp-title { font-size: 24px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: 1px; }
                 .sp-contract { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; font-family: 'Courier New', monospace; display: flex; align-items: center; gap: 5px; cursor: pointer; }
@@ -137,7 +136,6 @@ class AlphaSonarGalaxy {
     }
 
     bindEvents() {
-        // Chỉ lưu tọa độ chuột nội bộ, không đụng chạm DOM
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left;
@@ -150,14 +148,11 @@ class AlphaSonarGalaxy {
             this.canvas.style.cursor = 'default';
         });
 
-        // Click Logic
         this.canvas.addEventListener('click', () => {
             if (this.hoveredToken) {
-                // Nếu click vào token mới
                 this.lockedToken = this.hoveredToken;
                 this.openSidePanel();
             } else {
-                // Nếu click ra vùng trống (Radar Grid)
                 this.lockedToken = null;
                 this.closeSidePanel();
             }
@@ -279,7 +274,16 @@ class AlphaSonarGalaxy {
                 existingToken.vol = data.vol;
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
-                existingToken.logo = data.logo; 
+                
+                // Cập nhật Logo nếu đổi URL, load Image HTML Element để chuẩn bị vẽ Canvas
+                if (existingToken.logo !== data.logo) {
+                    existingToken.logo = data.logo;
+                    let img = new Image();
+                    img.src = data.logo;
+                    img.onerror = function() { this.src = 'assets/tokens/default.png'; };
+                    existingToken.imgObj = img;
+                }
+
                 existingToken.liq = data.liq;
                 existingToken.mc = data.mc;
                 existingToken.holders = data.holders;
@@ -288,8 +292,13 @@ class AlphaSonarGalaxy {
                 existingToken.contract = data.contract;
                 existingToken.updated = true; 
             } else {
+                let img = new Image();
+                img.src = data.logo;
+                img.onerror = function() { this.src = 'assets/tokens/default.png'; };
+
                 this.tokens.push({
                     symbol: data.symbol, logo: data.logo, contract: data.contract,
+                    imgObj: img, // Khởi tạo Image Element
                     x: tX, y: tY, tX: tX, tY: tY,
                     size: 0, targetSize: targetSize, color: colorHex, 
                     price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
@@ -307,15 +316,16 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // XỬ LÝ SỰ KIỆN (CHỈ LÀM VIỆC VỚI CANVAS)
+    // XỬ LÝ SỰ KIỆN CHUỘT
     // ==========================================
     checkHover() {
         this.hoveredToken = null;
         for (let t of this.tokens) {
             let dx = this.mouseX - t.x;
             let dy = this.mouseY - t.y;
-            // Vùng bắt chuột rộng hơn một chút để dễ thao tác
-            if (Math.sqrt(dx*dx + dy*dy) < Math.max(t.size * 2, 14)) {
+            // Tăng bán kính hitbox vì Logo sẽ to hơn chấm tròn cũ
+            let hitRadius = Math.max(12, t.size + 4); 
+            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
                 this.hoveredToken = t;
                 break;
             }
@@ -348,6 +358,7 @@ class AlphaSonarGalaxy {
         let pctLimit = isNaN(MathLim) ? 0 : MathLim;
         let pctChain = Math.max(0, 100 - pctLimit);
 
+        // THÊM SỐ LIỆU VOLUME ($) VÀO CẠNH SỐ PHẦN TRĂM (%) NHƯ YÊU CẦU
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
             
@@ -396,8 +407,8 @@ class AlphaSonarGalaxy {
 
             <div class="sp-vol-bar-wrap" style="margin-bottom: 0;">
                 <div class="sp-vol-head">
-                    <span style="color: #F0B90B;">CEX LIMIT: ${pctLimit.toFixed(0)}%</span>
-                    <span style="color: #9945FF;">ON-CHAIN: ${pctChain.toFixed(0)}%</span>
+                    <span style="color: #F0B90B;">CEX LIMIT: $${this.formatCompact(t.vLimit)} (${pctLimit.toFixed(0)}%)</span>
+                    <span style="color: #9945FF;">ON-CHAIN: $${this.formatCompact(t.vChain)} (${pctChain.toFixed(0)}%)</span>
                 </div>
                 <div class="sp-vol-track">
                     <div class="sp-vol-limit" style="width: ${pctLimit}%"></div>
@@ -408,7 +419,7 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // RENDER ENGINE (BỔ SUNG VẼ MINI TAG & CROSSHAIR TRÊN CANVAS)
+    // RENDER ENGINE: HIỂN THỊ LOGO SIÊU NÉT (PIXEL-PERFECT)
     // ==========================================
     animate() {
         if (this.width === 0) {
@@ -460,7 +471,7 @@ class AlphaSonarGalaxy {
         let normalizedSweep = this.angle % (Math.PI * 2);
         if (normalizedSweep < 0) normalizedSweep += Math.PI * 2;
 
-        // --- VẼ TOKEN & HIỆU ỨNG TƯƠNG TÁC ---
+        // --- VẼ TOKEN (CẬP NHẬT RENDER BẰNG HÌNH ẢNH LOGO) ---
         this.tokens.forEach(t => {
             if (!this.isPaused) {
                 t.x += (t.tX - t.x) * 0.05; 
@@ -480,76 +491,107 @@ class AlphaSonarGalaxy {
             if (angleDiff < 0.8 && !this.isPaused) blipBrightness = 1.0 - (angleDiff / 0.8);
             if (isHovered || isLocked) blipBrightness = 1.0;
 
+            // Kích thước của Logo (to hơn chấm sáng ngày xưa)
+            let imgSize = Math.max(16, t.size * 2.5); // Min 16px để nhìn rõ logo
+            let radius = imgSize / 2;
+
             this.ctx.globalAlpha = Math.max(0.2, blipBrightness);
 
-            // Vẽ Blip
+            // Vẽ hiệu ứng hào quang (Glow) dưới đáy Logo
             this.ctx.beginPath();
-            this.ctx.arc(t.x, t.y, Math.max(1, t.size), 0, Math.PI * 2);
-            this.ctx.fillStyle = (isHovered || isLocked) ? '#fff' : t.color;
-            this.ctx.shadowBlur = (isHovered || isLocked) ? t.size * 5 : t.size * (2 + blipBrightness * 4);
+            this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = t.color;
+            this.ctx.shadowBlur = (isHovered || isLocked) ? radius * 2 : radius;
             this.ctx.shadowColor = (isHovered || isLocked) ? '#fff' : t.color;
             this.ctx.fill();
             
-            // Xóa shadow để vẽ các thành phần khác không bị nhòe
+            // Xóa shadow ngay lập tức để logo & font chữ không bị nhòe lây
             this.ctx.shadowBlur = 0;
+
+            // VẼ LOGO BỊ CẮT TRÒN (CIRCLE CLIPPING)
+            if (t.imgObj && t.imgObj.complete) {
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                this.ctx.closePath();
+                this.ctx.clip(); // Lệnh cắt
+
+                // Vẽ ảnh bên trong vùng cắt tròn
+                this.ctx.globalAlpha = (isHovered || isLocked) ? 1.0 : Math.max(0.4, blipBrightness);
+                // Math.round giúp hình ảnh không bị nội suy nhòe (Anti-blur fix)
+                this.ctx.drawImage(t.imgObj, Math.round(t.x - radius), Math.round(t.y - radius), Math.round(imgSize), Math.round(imgSize));
+                this.ctx.restore();
+            } else {
+                // Fallback nếu ảnh lỗi tải
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#1a1f2e';
+                this.ctx.fill();
+            }
+
+            // Vẽ viền tròn bao quanh Logo
+            this.ctx.beginPath();
+            this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+            this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
+            this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
+            this.ctx.stroke();
+
             this.ctx.globalAlpha = 1.0;
 
             // 1. VẼ KHUNG NGẮM (CROSSHAIR) NẾU BỊ KHÓA
             if (isLocked) {
-                this.ctx.strokeStyle = '#ff3366'; // Màu đỏ cảnh báo
+                this.ctx.strokeStyle = '#ff3366'; 
                 this.ctx.lineWidth = 1.5;
-                let s = t.size + 12; // Kích thước khung
-                let d = s/2;
-                let l = 6; // Chiều dài các nét đứt ở góc
+                let d = radius + 6; // Đẩy khung ra xa mép Logo một chút
+                let l = 6; 
                 
                 this.ctx.beginPath();
-                // Góc trên trái
                 this.ctx.moveTo(t.x - d, t.y - d + l); this.ctx.lineTo(t.x - d, t.y - d); this.ctx.lineTo(t.x - d + l, t.y - d);
-                // Góc trên phải
                 this.ctx.moveTo(t.x + d - l, t.y - d); this.ctx.lineTo(t.x + d, t.y - d); this.ctx.lineTo(t.x + d, t.y - d + l);
-                // Góc dưới phải
                 this.ctx.moveTo(t.x + d, t.y + d - l); this.ctx.lineTo(t.x + d, t.y + d); this.ctx.lineTo(t.x + d - l, t.y + d);
-                // Góc dưới trái
                 this.ctx.moveTo(t.x - d + l, t.y + d); this.ctx.lineTo(t.x - d, t.y + d); this.ctx.lineTo(t.x - d, t.y + d - l);
                 this.ctx.stroke();
             } 
-            // Hiệu ứng tia quét ngang qua
+            // Hiệu ứng tia Radar dội qua
             else if (blipBrightness > 0.6 && !isHovered) {
                 this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, t.size + 3 + (1 - blipBrightness) * 5, 0, Math.PI * 2);
+                this.ctx.arc(t.x, t.y, radius + 3 + (1 - blipBrightness) * 5, 0, Math.PI * 2);
                 this.ctx.strokeStyle = t.color;
                 this.ctx.lineWidth = 1;
                 this.ctx.stroke();
             }
 
-            // 2. VẼ MINIMAL HUD TAG KHI RÊ CHUỘT (CHỈ HIỆN KHI CHƯA KHÓA)
+            // 2. VẼ MINIMAL HUD TAG (PIXEL-PERFECT FIX ĐỂ CHỮ SIÊU NÉT)
             if (isHovered && !isLocked) {
                 let tagText = `[ $${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% ]`;
-                this.ctx.font = 'bold 11px Courier New';
+                
+                // Khai báo font chữ sắc nét
+                this.ctx.font = 'bold 12px "Courier New", monospace';
                 let textMetrics = this.ctx.measureText(tagText);
                 let textWidth = textMetrics.width;
                 
-                // Đặt nhãn xéo lên phía trên bên phải của chấm sáng
-                let tagX = t.x + t.size + 8;
-                let tagY = t.y - t.size - 8;
+                // MATH.ROUND: Vô cùng quan trọng để chống nhòe Sub-pixel Rendering
+                let tagX = Math.round(t.x + radius + 8);
+                let tagY = Math.round(t.y - radius - 8);
 
-                // Nền đen mờ
-                this.ctx.fillStyle = 'rgba(10, 14, 23, 0.85)';
+                this.ctx.fillStyle = 'rgba(10, 14, 23, 0.9)';
                 this.ctx.strokeStyle = t.color;
                 this.ctx.lineWidth = 1;
-                this.ctx.fillRect(tagX, tagY - 12, textWidth + 10, 18);
-                this.ctx.strokeRect(tagX, tagY - 12, textWidth + 10, 18);
+                
+                // Vẽ hộp nền chữ
+                this.ctx.fillRect(tagX, tagY - 14, textWidth + 12, 20);
+                this.ctx.strokeRect(tagX, tagY - 14, textWidth + 12, 20);
 
-                // Đường gạch nối từ token tới Tag
+                // Đường gạch chéo
                 this.ctx.beginPath();
-                this.ctx.moveTo(t.x + t.size + 2, t.y - t.size - 2);
+                this.ctx.moveTo(Math.round(t.x + radius + 2), Math.round(t.y - radius - 2));
                 this.ctx.lineTo(tagX, tagY - 4);
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                 this.ctx.stroke();
 
-                // Chữ bên trong Tag
+                // Vẽ chữ
                 this.ctx.fillStyle = '#fff';
-                this.ctx.fillText(tagText, tagX + 5, tagY + 1);
+                this.ctx.fillText(tagText, tagX + 6, tagY + 1);
             }
         });
 
