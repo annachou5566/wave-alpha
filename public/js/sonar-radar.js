@@ -39,71 +39,65 @@ class AlphaSonarGalaxy {
     }
 
     updateData(marketData) {
-        if (!marketData) return;
-        this.latestData = marketData;
-        this.recalculate();
+    console.log("=== Sonar: Nhận dữ liệu mới ===", marketData); // Xem dữ liệu có đổ về không
+    if (!marketData) {
+        console.warn("Sonar: Dữ liệu marketData bị rỗng!");
+        return;
+    }
+    this.latestData = marketData;
+    this.recalculate();
+}
+
+recalculate() {
+    console.log("Sonar: Bắt đầu tính toán lại Radar...");
+    if (!this.latestData || typeof this.latestData !== 'object') {
+        console.error("Sonar: latestData không hợp lệ!", this.latestData);
+        return;
+    }
+    
+    if (this.width === 0 || this.height === 0) {
+        console.error("Sonar: Kích thước Canvas bằng 0, không thể vẽ!", {w: this.width, h: this.height});
+        return;
     }
 
-    recalculate() {
-        // Kiểm tra dữ liệu và chiều rộng màn hình
-        if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
-        
-        const oldTxMap = {};
-        this.tokens.forEach(t => { oldTxMap[t.symbol] = t.tx; });
-
+    try {
         const newTokens = [];
-        let maxVol = 0, maxLiq = 0;
+        let maxVol = 0;
 
-        // Vòng 1: Tìm giá trị lớn nhất (Chỉ quét các Token hợp lệ)
         Object.entries(this.latestData).forEach(([key, t]) => {
-            // Chốt chặn 1: Bỏ qua nếu dữ liệu không phải object hoặc thiếu Volume (.v)
-            if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
-            
+            if (!t || typeof t !== 'object' || !t.v) return;
             if (t.v.dt > maxVol) maxVol = t.v.dt;
-            let liq = t.l || t.v.dt || 1000; 
-            if (liq > maxLiq) maxLiq = liq;
         });
 
-        // Vòng 2: Tạo danh sách đốm sáng Token
+        console.log(`Sonar: Tìm thấy ${Object.keys(this.latestData).length} mục, Vol lớn nhất: ${maxVol}`);
+
         Object.entries(this.latestData).forEach(([key, t]) => {
-            // Chốt chặn 2: Kiểm tra Token hợp lệ lần nữa
             if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
             
-            let liq = t.l || t.v.dt || 1000;
             let symbol = t.symbol || key.replace('ALPHA_', '');
-            
+            let liq = t.l || t.v.dt || 1000;
             let size = Math.max(2, (t.v.dt / (maxVol || 1)) * 15); 
-            let liqRatio = Math.max(0.01, liq / (maxLiq || 1));
-            let r = this.maxRadius * (1 - Math.pow(liqRatio, 0.2)); 
-            if (r < 20) r = 20 + Math.random() * 20;
-
+            let liqRatio = Math.max(0.01, liq / 1000000); 
+            let r = this.maxRadius * (1 - Math.min(1, liqRatio)); 
+            
             let c = t.c || 0;
             let mappedAngle = (c / 15) * Math.PI; 
             
-            let posX = this.centerX + r * Math.cos(mappedAngle);
-            let posY = this.centerY - r * Math.sin(mappedAngle);
-            let colorHex = c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff');
-
-            if (oldTxMap[symbol] !== undefined && t.tx > oldTxMap[symbol]) {
-                this.ripples.push({ x: posX, y: posY, r: size, alpha: 1, color: colorHex });
-            }
-
             newTokens.push({
                 symbol: symbol,
-                x: posX,
-                y: posY,
+                x: this.centerX + r * Math.cos(mappedAngle),
+                y: this.centerY - r * Math.sin(mappedAngle),
                 size: size,
-                color: colorHex,
-                tx: t.tx || 0,
-                price: t.p || 0,
-                vol: t.v.dt || 0,
-                change: c
+                color: c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff')
             });
         });
-        
+
         this.tokens = newTokens;
-        this.checkHover();
+        console.log(`Sonar: Đã xử lý xong ${this.tokens.length} token để vẽ.`);
+    } catch (err) {
+        console.error("Sonar: Lỗi nghiêm trọng trong recalculate:", err);
     }
+}
 
     checkHover() {
         this.hoveredToken = null;
