@@ -1,11 +1,11 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V10 MOBILE RESPONSIVE)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V11 BULLETPROOF)
  * ============================================================================
- * Đã Fix: 
- * - Tương thích 100% Điện thoại: Hỗ trợ Touch/Chạm thay vì chỉ xài Chuột.
- * - Sửa lỗi Canvas bị tàng hình do container xẹp chiều cao trên Mobile.
- * - CSS Media Queries: Thu nhỏ Side Panel và Control Bar để vừa màn hình đt.
+ * Đã Fix Lỗi Đơ 1 Phút (Freeze/Crash):
+ * - Fix vòng lặp vô tận (Infinite Loop) khi load Logo lỗi.
+ * - Ép kiểu dữ liệu (Safe Float) để chống NaN Crash từ API gửi về.
+ * - Bọc Failsafe Try-Catch: Kể cả 1 token bị lỗi, tia quét vẫn hoạt động.
  * ============================================================================
  */
 
@@ -14,8 +14,8 @@ class AlphaSonarGalaxy {
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) return;
         
-        this.ctx = this.canvas.getContext('2d');
-        this.container = this.canvas.parentElement;
+        // Failsafe nếu chưa render kịp DOM
+        this.container = this.canvas.parentElement || document.body;
         this.container.style.position = 'relative'; 
         this.container.style.overflow = 'hidden';
 
@@ -43,12 +43,19 @@ class AlphaSonarGalaxy {
         this.animate();
     }
 
+    // --- BỘ LỌC DỮ LIỆU CHỐNG CRASH (SAFE PARSE) ---
+    safeNum(val, fallback = 0) {
+        const n = parseFloat(val);
+        return isNaN(n) ? fallback : n;
+    }
+
     formatCompact(num) {
-        if (!num) return '0';
-        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
-        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-        if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
-        return parseFloat(num).toFixed(2);
+        let n = this.safeNum(num);
+        if (n === 0) return '0';
+        if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+        if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K';
+        return n.toFixed(2);
     }
 
     initUI() {
@@ -56,13 +63,11 @@ class AlphaSonarGalaxy {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
-                /* CONTROL BAR */
                 #sonar-control-bar { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2); backdrop-filter: blur(5px); }
                 .sonar-btn { background: transparent; border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; transition: all 0.2s; }
                 .sonar-btn:hover, .sonar-btn.active { background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
                 .sonar-btn.pause-btn.paused { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
                 
-                /* SIDE PANEL (TERMINAL STYLE) */
                 #sonar-side-panel { position: absolute; top: 0; right: -360px; width: 320px; height: 100%; background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff; z-index: 100; backdrop-filter: blur(10px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -10px 0 30px rgba(0, 240, 255, 0.1); display: flex; flex-direction: column; overflow-y: auto; }
                 #sonar-side-panel.open { right: 0; }
                 #sonar-side-panel::-webkit-scrollbar { width: 4px; } #sonar-side-panel::-webkit-scrollbar-thumb { background: #00f0ff; }
@@ -98,7 +103,6 @@ class AlphaSonarGalaxy {
                 
                 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
 
-                /* CSS RESPONSIVE CHO MOBILE */
                 @media (max-width: 768px) {
                     #sonar-control-bar { top: 5px; left: 5px; right: 5px; flex-wrap: wrap; justify-content: center; padding: 6px; }
                     .sonar-btn { font-size: 11px; padding: 4px 8px; flex: 1; text-align: center; }
@@ -145,7 +149,6 @@ class AlphaSonarGalaxy {
         this.container.appendChild(this.sidePanel);
     }
 
-    // --- CẬP NHẬT: XỬ LÝ SỰ KIỆN TƯƠNG THÍCH MOBILE (TOUCH) ---
     bindEvents() {
         const updatePointer = (clientX, clientY) => {
             const rect = this.canvas.getBoundingClientRect();
@@ -154,14 +157,10 @@ class AlphaSonarGalaxy {
             this.checkHover();
         };
 
-        // Chuột trên Desktop
         this.canvas.addEventListener('mousemove', (e) => updatePointer(e.clientX, e.clientY));
         
-        // Cảm ứng trên Điện thoại
         this.canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) {
-                updatePointer(e.touches[0].clientX, e.touches[0].clientY);
-            }
+            if (e.touches.length > 0) updatePointer(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
 
         this.canvas.addEventListener('mouseleave', () => {
@@ -169,7 +168,6 @@ class AlphaSonarGalaxy {
             this.canvas.style.cursor = 'default';
         });
 
-        // Click / Tap hoạt động chung
         this.canvas.addEventListener('click', () => {
             if (this.hoveredToken) {
                 this.lockedToken = this.hoveredToken;
@@ -181,21 +179,18 @@ class AlphaSonarGalaxy {
         });
     }
 
-    // --- CẬP NHẬT: CHỐNG XẸP CONTAINER TRÊN ĐIỆN THOẠI ---
     resize() {
-        // Nếu Container bị 0px chiều cao (thường gặp trên mobile CSS flex), ép nó tối thiểu 400px
         if (this.container.clientHeight < 100) {
             this.container.style.height = '450px';
         }
 
         const dpr = window.devicePixelRatio || 1; 
         
-        this.width = this.container.clientWidth || window.innerWidth || 400;
-        this.height = this.container.clientHeight || 450;
+        this.width = Math.max(300, this.container.clientWidth || window.innerWidth);
+        this.height = Math.max(300, this.container.clientHeight || window.innerHeight);
         
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
-        
         this.canvas.style.width = `${this.width}px`;
         this.canvas.style.height = `${this.height}px`;
 
@@ -218,7 +213,7 @@ class AlphaSonarGalaxy {
         }
     }
 
-    recalculate(force = false) {
+    recalculate() {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
         
         if (typeof allTokens !== 'undefined' && this.lastTokenCount !== allTokens.length) {
@@ -242,33 +237,23 @@ class AlphaSonarGalaxy {
             if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
             
             let tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
-            let realSymbol = '';
-            let logoUrl = '';
-            
-            let mc = t.mc || 0;
-            let holders = t.h || 0;
-            let vLimit = t.v.dl || 0;
-            let contract = '';
-            let liq = t.l || 0; 
-
             let targetToken = this.tokenDict[tokenKey];
 
-            if (targetToken) {
-                realSymbol = targetToken.symbol;
-                logoUrl = targetToken.icon;
-                mc = targetToken.market_cap || mc;
-                holders = targetToken.holders || holders;
-                vLimit = (targetToken.volume && targetToken.volume.daily_limit) ? targetToken.volume.daily_limit : vLimit;
-                contract = targetToken.contract || '';
-                liq = targetToken.liquidity || liq; 
-            }
-
-            if (!realSymbol) realSymbol = t.symbol || t.s || t.name || tokenKey;
-            if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
-
-            let vol = t.v.dt || 0;
-            if (!liq) liq = vol || 1000; 
-
+            // ÉP KIỂU SỐ TOÀN BỘ DỮ LIỆU ĐẦU VÀO ĐỂ TRÁNH NAN CRASH
+            let realSymbol = (targetToken ? targetToken.symbol : (t.symbol || t.s || t.name || tokenKey)) + "";
+            let logoUrl = targetToken ? targetToken.icon : `assets/tokens/${realSymbol.toUpperCase()}.png`;
+            
+            let mc = this.safeNum(targetToken ? targetToken.market_cap : t.mc);
+            let holders = this.safeNum(targetToken ? targetToken.holders : t.h);
+            let vLimit = this.safeNum(targetToken?.volume?.daily_limit || t.v.dl);
+            let contract = targetToken ? targetToken.contract : '';
+            
+            let vol = this.safeNum(t.v.dt);
+            let liq = this.safeNum(targetToken ? targetToken.liquidity : t.l, vol || 1000); 
+            let change = this.safeNum(t.c);
+            let tx = this.safeNum(t.tx);
+            let price = this.safeNum(t.p);
+            
             let vChain = Math.max(0, vol - vLimit); 
             
             if (vol > maxVol) maxVol = vol;
@@ -277,7 +262,7 @@ class AlphaSonarGalaxy {
             dataArray.push({ 
                 symbol: realSymbol, logo: logoUrl, contract: contract,
                 vol: vol, liq: liq, mc: mc, holders: holders, vLimit: vLimit, vChain: vChain,
-                change: t.c || 0, tx: t.tx || 0, price: t.p || 0 
+                change: change, tx: tx, price: price 
             });
         });
 
@@ -295,7 +280,7 @@ class AlphaSonarGalaxy {
             if (targetR < 30) targetR = 30 + Math.random() * 5;
 
             let angleBase = (data.change / 15) * Math.PI; 
-            let hashOffset = (data.symbol.charCodeAt(0) % 10) / 10 - 0.5; 
+            let hashOffset = ((data.symbol.charCodeAt(0) || 0) % 10) / 10 - 0.5; 
             let targetAngle = angleBase + hashOffset; 
             
             let tX = this.centerX + targetR * Math.cos(targetAngle);
@@ -317,11 +302,14 @@ class AlphaSonarGalaxy {
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
                 
+                // CẬP NHẬT: Ngăn chặn vòng lặp onerror vô tận gây sập mạng
                 if (existingToken.logo !== data.logo) {
                     existingToken.logo = data.logo;
                     let img = new Image();
+                    img.onerror = function() { 
+                        if (!this.failed) { this.failed = true; this.src = 'assets/tokens/default.png'; }
+                    };
                     img.src = data.logo;
-                    img.onerror = function() { this.src = 'assets/tokens/default.png'; };
                     existingToken.imgObj = img;
                 }
 
@@ -334,8 +322,10 @@ class AlphaSonarGalaxy {
                 existingToken.updated = true; 
             } else {
                 let img = new Image();
+                img.onerror = function() { 
+                    if (!this.failed) { this.failed = true; this.src = 'assets/tokens/default.png'; }
+                };
                 img.src = data.logo;
-                img.onerror = function() { this.src = 'assets/tokens/default.png'; };
 
                 this.tokens.push({
                     symbol: data.symbol, logo: data.logo, contract: data.contract,
@@ -460,173 +450,176 @@ class AlphaSonarGalaxy {
             return;
         }
 
-        this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        try {
+            this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
+            this.ctx.fillRect(0, 0, this.width, this.height);
 
-        this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
-        this.ctx.lineWidth = 1;
-        for (let i = 1; i <= 4; i++) {
-            let currentRadius = (this.maxRadius / 4) * i;
-            this.ctx.beginPath();
-            this.ctx.arc(this.centerX, this.centerY, currentRadius, 0, Math.PI * 2);
-            this.ctx.stroke();
-        }
-
-        this.ctx.setLineDash([4, 4]); 
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.centerX, this.centerY - this.maxRadius);
-        this.ctx.lineTo(this.centerX, this.centerY + this.maxRadius);
-        this.ctx.moveTo(this.centerX - this.maxRadius, this.centerY);
-        this.ctx.lineTo(this.centerX + this.maxRadius, this.centerY);
-        this.ctx.stroke();
-        this.ctx.setLineDash([]); 
-
-        for (let i = this.ripples.length - 1; i >= 0; i--) {
-            let rip = this.ripples[i];
-            this.ctx.beginPath();
-            this.ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
-            this.ctx.strokeStyle = rip.color;
-            this.ctx.globalAlpha = rip.alpha;
-            this.ctx.lineWidth = 1.5;
-            this.ctx.stroke();
-            
-            if (!this.isPaused) {
-                rip.r += 1.2; 
-                rip.alpha -= 0.02; 
-            }
-            if (rip.alpha <= 0) this.ripples.splice(i, 1);
-        }
-        this.ctx.globalAlpha = 1.0; 
-
-        let normalizedSweep = this.angle % (Math.PI * 2);
-        if (normalizedSweep < 0) normalizedSweep += Math.PI * 2;
-
-        // VÒNG 1: VẼ LOGO
-        this.tokens.forEach(t => {
-            if (!this.isPaused) {
-                t.x += (t.tX - t.x) * 0.05; 
-                t.y += (t.tY - t.y) * 0.05;
-                t.size += (t.targetSize - t.size) * 0.1;
-            }
-
-            let tA = Math.atan2(t.y - this.centerY, t.x - this.centerX);
-            if (tA < 0) tA += Math.PI * 2;
-            let angleDiff = normalizedSweep - tA;
-            if (angleDiff < 0) angleDiff += Math.PI * 2;
-
-            let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
-            let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
-            
-            let blipBrightness = 0.25; 
-            if (angleDiff < 0.8 && !this.isPaused) blipBrightness = 1.0 - (angleDiff / 0.8);
-            if (isHovered || isLocked) blipBrightness = 1.0;
-
-            let imgSize = Math.max(16, t.size * 2.5);
-            let radius = imgSize / 2;
-
-            this.ctx.globalAlpha = Math.max(0.2, blipBrightness);
-            this.ctx.shadowBlur = 0; 
-
-            if (t.imgObj && t.imgObj.complete) {
-                this.ctx.save();
+            this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+            this.ctx.lineWidth = 1;
+            for (let i = 1; i <= 4; i++) {
+                let currentRadius = (this.maxRadius / 4) * i;
                 this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                this.ctx.closePath();
-                this.ctx.clip(); 
-                
-                this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, imgSize, imgSize);
-                this.ctx.restore();
-            } else {
-                this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                this.ctx.fillStyle = '#1a1f2e';
-                this.ctx.fill();
+                this.ctx.arc(this.centerX, this.centerY, currentRadius, 0, Math.PI * 2);
+                this.ctx.stroke();
             }
 
+            this.ctx.setLineDash([4, 4]); 
             this.ctx.beginPath();
-            this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-            this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : 'rgba(255,255,255,0.15)';
-            this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
+            this.ctx.moveTo(this.centerX, this.centerY - this.maxRadius);
+            this.ctx.lineTo(this.centerX, this.centerY + this.maxRadius);
+            this.ctx.moveTo(this.centerX - this.maxRadius, this.centerY);
+            this.ctx.lineTo(this.centerX + this.maxRadius, this.centerY);
             this.ctx.stroke();
+            this.ctx.setLineDash([]); 
 
-            this.ctx.globalAlpha = 1.0;
-        });
-
-        // VÒNG 2: VẼ CHỮ HUD VÀ CROSSHAIR
-        this.tokens.forEach(t => {
-            let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
-            let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
-            
-            let imgSize = Math.max(16, t.size * 2.5);
-            let radius = imgSize / 2;
-
-            if (isLocked) {
-                this.ctx.strokeStyle = '#ff3366'; 
+            for (let i = this.ripples.length - 1; i >= 0; i--) {
+                let rip = this.ripples[i];
+                this.ctx.beginPath();
+                this.ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
+                this.ctx.strokeStyle = rip.color;
+                this.ctx.globalAlpha = rip.alpha;
                 this.ctx.lineWidth = 1.5;
-                let d = radius + 6; 
-                let l = 6; 
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(t.x - d, t.y - d + l); this.ctx.lineTo(t.x - d, t.y - d); this.ctx.lineTo(t.x - d + l, t.y - d);
-                this.ctx.moveTo(t.x + d - l, t.y - d); this.ctx.lineTo(t.x + d, t.y - d); this.ctx.lineTo(t.x + d, t.y - d + l);
-                this.ctx.moveTo(t.x + d, t.y + d - l); this.ctx.lineTo(t.x + d, t.y + d); this.ctx.lineTo(t.x + d - l, t.y + d);
-                this.ctx.moveTo(t.x - d + l, t.y + d); this.ctx.lineTo(t.x - d, t.y + d); this.ctx.lineTo(t.x - d, t.y + d - l);
                 this.ctx.stroke();
-            } 
-            
-            if (isHovered && !isLocked) {
-                let tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
                 
-                this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif'; 
-                let textMetrics = this.ctx.measureText(tagText);
-                let textWidth = textMetrics.width;
-                
-                let tagX = t.x + radius + 8;
-                let tagY = t.y - radius - 8;
-
-                this.ctx.fillStyle = 'rgba(10, 14, 23, 0.9)';
-                this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                this.ctx.lineWidth = 1;
-                
-                this.ctx.fillRect(tagX, tagY - 14, textWidth + 8, 20);
-                this.ctx.strokeRect(tagX, tagY - 14, textWidth + 8, 20);
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(t.x + radius + 2, t.y - radius - 2);
-                this.ctx.lineTo(tagX, tagY - 4);
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-                this.ctx.stroke();
-
-                this.ctx.fillStyle = '#fff';
-                this.ctx.fillText(tagText, tagX + 4, tagY + 1);
+                if (!this.isPaused) {
+                    rip.r += 1.2; 
+                    rip.alpha -= 0.02; 
+                }
+                if (rip.alpha <= 0) this.ripples.splice(i, 1);
             }
-        });
+            this.ctx.globalAlpha = 1.0; 
 
-        // --- VẼ TIA QUÉT ---
-        if (!this.isPaused) {
-            this.angle += 0.025;
+            let normalizedSweep = this.angle % (Math.PI * 2);
+            if (normalizedSweep < 0) normalizedSweep += Math.PI * 2;
+
+            this.tokens.forEach(t => {
+                if (!this.isPaused) {
+                    t.x += (t.tX - t.x) * 0.05; 
+                    t.y += (t.tY - t.y) * 0.05;
+                    t.size += (t.targetSize - t.size) * 0.1;
+                }
+
+                let tA = Math.atan2(t.y - this.centerY, t.x - this.centerX);
+                if (tA < 0) tA += Math.PI * 2;
+                let angleDiff = normalizedSweep - tA;
+                if (angleDiff < 0) angleDiff += Math.PI * 2;
+
+                let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
+                let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
+                
+                let blipBrightness = 0.25; 
+                if (angleDiff < 0.8 && !this.isPaused) blipBrightness = 1.0 - (angleDiff / 0.8);
+                if (isHovered || isLocked) blipBrightness = 1.0;
+
+                let imgSize = Math.max(16, t.size * 2.5);
+                let radius = imgSize / 2;
+
+                this.ctx.globalAlpha = Math.max(0.2, blipBrightness);
+                this.ctx.shadowBlur = 0; 
+
+                if (t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
+                    this.ctx.save();
+                    this.ctx.beginPath();
+                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                    this.ctx.closePath();
+                    this.ctx.clip(); 
+                    
+                    this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, imgSize, imgSize);
+                    this.ctx.restore();
+                } else {
+                    this.ctx.beginPath();
+                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#1a1f2e';
+                    this.ctx.fill();
+                }
+
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : 'rgba(255,255,255,0.15)';
+                this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
+                this.ctx.stroke();
+
+                this.ctx.globalAlpha = 1.0;
+            });
+
+            this.tokens.forEach(t => {
+                let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
+                let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
+                
+                let imgSize = Math.max(16, t.size * 2.5);
+                let radius = imgSize / 2;
+
+                if (isLocked) {
+                    this.ctx.strokeStyle = '#ff3366'; 
+                    this.ctx.lineWidth = 1.5;
+                    let d = radius + 6; 
+                    let l = 6; 
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(t.x - d, t.y - d + l); this.ctx.lineTo(t.x - d, t.y - d); this.ctx.lineTo(t.x - d + l, t.y - d);
+                    this.ctx.moveTo(t.x + d - l, t.y - d); this.ctx.lineTo(t.x + d, t.y - d); this.ctx.lineTo(t.x + d, t.y - d + l);
+                    this.ctx.moveTo(t.x + d, t.y + d - l); this.ctx.lineTo(t.x + d, t.y + d); this.ctx.lineTo(t.x + d - l, t.y + d);
+                    this.ctx.moveTo(t.x - d + l, t.y + d); this.ctx.lineTo(t.x - d, t.y + d); this.ctx.lineTo(t.x - d, t.y + d - l);
+                    this.ctx.stroke();
+                } 
+                
+                if (isHovered && !isLocked) {
+                    let tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
+                    
+                    this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif'; 
+                    let textMetrics = this.ctx.measureText(tagText);
+                    let textWidth = textMetrics.width;
+                    
+                    let tagX = t.x + radius + 8;
+                    let tagY = t.y - radius - 8;
+
+                    this.ctx.fillStyle = 'rgba(10, 14, 23, 0.9)';
+                    this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                    this.ctx.lineWidth = 1;
+                    
+                    this.ctx.fillRect(tagX, tagY - 14, textWidth + 8, 20);
+                    this.ctx.strokeRect(tagX, tagY - 14, textWidth + 8, 20);
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(t.x + radius + 2, t.y - radius - 2);
+                    this.ctx.lineTo(tagX, tagY - 4);
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                    this.ctx.stroke();
+
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.fillText(tagText, tagX + 4, tagY + 1);
+                }
+            });
+
+            if (!this.isPaused) {
+                this.angle += 0.025;
+            }
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.centerX, this.centerY);
+            this.ctx.lineTo(this.centerX + this.maxRadius * Math.cos(this.angle), this.centerY + this.maxRadius * Math.sin(this.angle));
+            this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.9)';
+            this.ctx.lineWidth = 2;
+            this.ctx.shadowBlur = 12;
+            this.ctx.shadowColor = '#00f0ff';
+            this.ctx.stroke();
+            this.ctx.shadowBlur = 0;
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.centerX, this.centerY);
+            this.ctx.arc(this.centerX, this.centerY, this.maxRadius, this.angle - 0.7, this.angle, false);
+            this.ctx.lineTo(this.centerX, this.centerY);
+            
+            let grad = this.ctx.createRadialGradient(this.centerX, this.centerY, 0, this.centerX, this.centerY, this.maxRadius);
+            grad.addColorStop(0, 'rgba(0, 240, 255, 0)');
+            grad.addColorStop(1, 'rgba(0, 240, 255, 0.3)'); 
+            this.ctx.fillStyle = grad;
+            this.ctx.fill();
+
+        } catch (e) {
+            // Bọc Failsafe: Bắt lỗi nếu có, không để chết vòng lặp animate
+            console.warn("Radar Render Prevented Crash:", e);
         }
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.centerX, this.centerY);
-        this.ctx.lineTo(this.centerX + this.maxRadius * Math.cos(this.angle), this.centerY + this.maxRadius * Math.sin(this.angle));
-        this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.9)';
-        this.ctx.lineWidth = 2;
-        this.ctx.shadowBlur = 12;
-        this.ctx.shadowColor = '#00f0ff';
-        this.ctx.stroke();
-        this.ctx.shadowBlur = 0;
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.centerX, this.centerY);
-        this.ctx.arc(this.centerX, this.centerY, this.maxRadius, this.angle - 0.7, this.angle, false);
-        this.ctx.lineTo(this.centerX, this.centerY);
-        
-        let grad = this.ctx.createRadialGradient(this.centerX, this.centerY, 0, this.centerX, this.centerY, this.maxRadius);
-        grad.addColorStop(0, 'rgba(0, 240, 255, 0)');
-        grad.addColorStop(1, 'rgba(0, 240, 255, 0.3)'); 
-        this.ctx.fillStyle = grad;
-        this.ctx.fill();
 
         requestAnimationFrame(() => this.animate());
     }
