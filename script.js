@@ -3510,16 +3510,15 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
     function switchTab(t) { document.querySelectorAll('.p-tab').forEach(el=>el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); ['chart','activity','chat'].forEach(x => document.getElementById(`content-${x}`).style.display = x===t ? (x==='chat'?'flex':'block') : 'none'); }
 
         
-// HÀM CHUYỂN 3 TAB CHÍNH Ở NGOÀI MÀN HÌNH (THÊM MỚI HOÀN TOÀN)
 function switchMainTab(tab) {
-    // 1. Đổi màu nút Tab
     document.querySelectorAll('#alpha-tab-nav .tab-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById('btn-tab-' + tab).classList.add('active');
 
-    // 2. Tắt hết 3 màn hình
     document.getElementById('alpha-market-view').style.display = 'none';
     if(document.getElementById('view-dashboard')) document.getElementById('view-dashboard').style.display = 'none';
     if(document.getElementById('sonar-market-view')) document.getElementById('sonar-market-view').style.display = 'none';
+    
+    if(document.getElementById('view-predict')) document.getElementById('view-predict').style.display = 'none'; 
 
     // 3. Bật màn hình tương ứng
     if (tab === 'market') {
