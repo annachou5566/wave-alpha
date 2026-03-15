@@ -1,11 +1,13 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V18 SMART DODGE)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V19 ULTIMATE ENGINE)
  * ============================================================================
- * Đã Fix Lỗi Orbit Speed (Quay chóng mặt):
- * - Hủy bỏ lực đẩy góc (Angular Push) gây sai lệch tốc độ thực tế.
- * - Áp dụng cơ chế "Radial Dodge" (Lách độ cao): Token bay nhanh sẽ tự động
- * nâng/hạ bán kính quỹ đạo để vượt mặt token bay chậm mà không bị đổi tốc độ.
+ * ĐÃ FIX CÁC LỖI CHÍ MẠNG VỀ HIỆU NĂNG:
+ * 1. Xóa bỏ lệnh `clip()` và `shadowBlur` tàn phá GPU.
+ * 2. Tối ưu vòng lặp Toán học (Bỏ Sin/Cos thừa, dùng bình phương khoảng cách).
+ * 3. Chống DOM Thrashing: Chỉ cập nhật các con số trong Side Panel thay vì vẽ 
+ * lại toàn bộ HTML mỗi giây.
+ * 4. Giao diện Deep Space (Không lưới caro).
  * ============================================================================
  */
 
@@ -21,7 +23,7 @@ class AlphaSonarGalaxy {
         this.isRunning = true; 
         this.isVisible = true; 
 
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Tối ưu GPU
         this.container = this.canvas.parentElement || document.body;
         this.container.style.position = 'relative'; 
         this.container.style.overflow = 'hidden';
@@ -124,10 +126,8 @@ class AlphaSonarGalaxy {
                 .sp-vol-bar-wrap { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; margin-bottom: 0;}
                 .sp-vol-head { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px; letter-spacing: 0.5px;}
                 .sp-vol-track { width: 100%; height: 6px; background: #1e2329; border-radius: 3px; display: flex; overflow: hidden; }
-                .sp-vol-limit { height: 100%; background: #F0B90B; box-shadow: 0 0 5px #F0B90B;}
-                .sp-vol-chain { height: 100%; background: #9945FF; box-shadow: 0 0 5px #9945FF;}
-                
-                @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+                .sp-vol-limit { height: 100%; background: #F0B90B; transition: width 0.3s;}
+                .sp-vol-chain { height: 100%; background: #9945FF; transition: width 0.3s;}
 
                 @media (max-width: 768px) {
                     #sonar-control-bar { top: 5px; left: 5px; right: 5px; flex-wrap: wrap; justify-content: center; padding: 6px; }
@@ -278,13 +278,11 @@ class AlphaSonarGalaxy {
             let tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
             let targetToken = this.tokenDict[tokenKey];
 
-            let realSymbol = "";
-            let logoUrl = "";
+            let realSymbol = targetToken ? targetToken.symbol || "" : "";
+            let logoUrl = targetToken ? targetToken.icon || "" : "";
             let mc = 0, holders = 0, vLimit = 0, contract = '', liq = 0;
 
             if (targetToken) {
-                realSymbol = targetToken.symbol || "";
-                logoUrl = targetToken.icon || "";
                 mc = targetToken.market_cap || 0;
                 holders = targetToken.holders || 0;
                 if (targetToken.volume && targetToken.volume.daily_limit !== undefined) vLimit = targetToken.volume.daily_limit;
@@ -348,7 +346,7 @@ class AlphaSonarGalaxy {
                 if (baseOrbitRadius < 40) baseOrbitRadius = 40 + Math.random() * 10;
 
                 orbitAngle = Math.random() * Math.PI * 2; 
-                orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006; // Tốc độ cân bằng hơn
+                orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006; 
                 if (data.change < 0) orbitSpeed *= -1; 
 
                 baseX = this.centerX + baseOrbitRadius * Math.cos(orbitAngle);
@@ -369,8 +367,7 @@ class AlphaSonarGalaxy {
                 existingToken.mc = data.mc;
                 
                 if (this.visualMode === 'orbit') {
-                    if(!existingToken.orbitAngle) existingToken.orbitAngle = orbitAngle;
-                    // FIX V18: Dùng baseOrbitRadius làm điểm gốc để neo quỹ đạo
+                    if(existingToken.orbitAngle === undefined) existingToken.orbitAngle = orbitAngle;
                     existingToken.baseOrbitRadius = baseOrbitRadius;
                     existingToken.orbitSpeed = orbitSpeed;
                 }
@@ -394,13 +391,8 @@ class AlphaSonarGalaxy {
                     x: this.centerX, y: this.centerY,
                     tX: baseX, tY: baseY,
                     baseX: baseX, baseY: baseY, 
-                    
-                    // FIX V18: Khởi tạo baseOrbitRadius và currentOrbitRadius
-                    baseOrbitRadius: baseOrbitRadius,
-                    currentOrbitRadius: baseOrbitRadius, 
-                    orbitSpeed: orbitSpeed, 
-                    orbitAngle: orbitAngle,
-                    
+                    baseOrbitRadius: baseOrbitRadius, currentOrbitRadius: baseOrbitRadius, 
+                    orbitSpeed: orbitSpeed, orbitAngle: orbitAngle,
                     size: 0, targetSize: targetSize, color: colorHex, 
                     price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
                     mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
@@ -418,13 +410,15 @@ class AlphaSonarGalaxy {
 
     checkHover() {
         this.hoveredToken = null;
+        let bestDistSq = 999999;
         for (let t of this.tokens) {
             let dx = this.mouseX - t.x;
             let dy = this.mouseY - t.y;
-            let hitRadius = t.size + 6; 
-            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
+            let distSq = dx*dx + dy*dy;
+            let hitRadius = t.size + 8; 
+            if (distSq < hitRadius*hitRadius && distSq < bestDistSq) {
                 this.hoveredToken = t;
-                break;
+                bestDistSq = distSq;
             }
         }
         this.canvas.style.cursor = this.hoveredToken ? 'crosshair' : 'default';
@@ -439,6 +433,7 @@ class AlphaSonarGalaxy {
         this.sidePanel.classList.remove('open');
     }
 
+    // --- CHỐNG DOM THRASHING: CẬP NHẬT CỤC BỘ ---
     updateSidePanelData() {
         if (!this.lockedToken) return;
         const t = this.lockedToken;
@@ -454,13 +449,34 @@ class AlphaSonarGalaxy {
         let pctLimit = isNaN(MathLim) ? 0 : MathLim;
         let pctChain = Math.max(0, 100 - pctLimit);
 
+        // Chỉ cập nhật nếu thẻ ID tồn tại, tránh ghi đè toàn bộ HTML
+        let existingSymbol = document.getElementById('sp-locked-symbol');
+        if (existingSymbol && existingSymbol.innerText === t.symbol) {
+            document.getElementById('sp-price-val').innerText = `$${t.price < 0.0001 ? t.price.toExponential(2) : t.price.toFixed(4)}`;
+            let chgEl = document.getElementById('sp-price-chg');
+            chgEl.innerText = `${cSign}${t.change.toFixed(2)}%`;
+            chgEl.style.color = cColor; chgEl.style.backgroundColor = cBg;
+            
+            document.getElementById('sp-vol-val').innerText = `$${this.formatCompact(t.vol)}`;
+            document.getElementById('sp-liq-val').innerText = `$${this.formatCompact(t.liq)}`;
+            document.getElementById('sp-mc-val').innerText = `$${this.formatCompact(t.mc)}`;
+            document.getElementById('sp-hold-val').innerText = this.formatCompact(t.holders);
+            
+            document.getElementById('sp-limit-txt').innerText = `CEX: $${this.formatCompact(t.vLimit)} (${pctLimit.toFixed(0)}%)`;
+            document.getElementById('sp-chain-txt').innerText = `ON-CHAIN: $${this.formatCompact(t.vChain)} (${pctChain.toFixed(0)}%)`;
+            document.getElementById('sp-limit-bar').style.width = `${pctLimit}%`;
+            document.getElementById('sp-chain-bar').style.width = `${pctChain}%`;
+            return;
+        }
+
+        // Tái tạo lại nếu người dùng click mục tiêu mới
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
             <div class="sp-lock-status"><span class="blink-dot"></span> SATELLITE LINK ESTABLISHED</div>
             <div class="sp-head">
                 <img src="${t.logo}" onerror="this.src='assets/tokens/default.png'">
                 <div class="sp-sym-wrap">
-                    <div class="sp-title">${t.symbol}</div>
+                    <div class="sp-title" id="sp-locked-symbol">${t.symbol}</div>
                     <div class="sp-contract" onclick="window.pluginCopy && window.pluginCopy('${t.contract}')" title="Copy Contract">
                         ${shortContract} <i class="far fa-copy"></i>
                     </div>
@@ -469,19 +485,22 @@ class AlphaSonarGalaxy {
             <div class="sp-price-box">
                 <div>
                     <div class="sp-price-lbl">CURRENT PRICE</div>
-                    <div class="sp-price-val">$${t.price < 0.0001 ? t.price.toExponential(2) : t.price.toFixed(4)}</div>
+                    <div class="sp-price-val" id="sp-price-val">$${t.price < 0.0001 ? t.price.toExponential(2) : t.price.toFixed(4)}</div>
                 </div>
-                <div class="sp-price-chg" style="color: ${cColor}; background: ${cBg};">${cSign}${t.change.toFixed(2)}%</div>
+                <div class="sp-price-chg" id="sp-price-chg" style="color: ${cColor}; background: ${cBg};">${cSign}${t.change.toFixed(2)}%</div>
             </div>
             <div class="sp-grid">
-                <div class="sp-box"><div class="sp-box-lbl">24H VOLUME</div><div class="sp-box-val" style="color: #F0B90B;">$${this.formatCompact(t.vol)}</div></div>
-                <div class="sp-box"><div class="sp-box-lbl">LIQUIDITY</div><div class="sp-box-val" style="color: #00f0ff;">$${this.formatCompact(t.liq)}</div></div>
-                <div class="sp-box"><div class="sp-box-lbl">MARKET CAP</div><div class="sp-box-val" style="color: #fff;">$${this.formatCompact(t.mc)}</div></div>
-                <div class="sp-box"><div class="sp-box-lbl">HOLDERS</div><div class="sp-box-val" style="color: #eaecef;">${this.formatCompact(t.holders)}</div></div>
+                <div class="sp-box"><div class="sp-box-lbl">24H VOLUME</div><div class="sp-box-val" id="sp-vol-val" style="color: #F0B90B;">$${this.formatCompact(t.vol)}</div></div>
+                <div class="sp-box"><div class="sp-box-lbl">LIQUIDITY</div><div class="sp-box-val" id="sp-liq-val" style="color: #00f0ff;">$${this.formatCompact(t.liq)}</div></div>
+                <div class="sp-box"><div class="sp-box-lbl">MARKET CAP</div><div class="sp-box-val" id="sp-mc-val" style="color: #fff;">$${this.formatCompact(t.mc)}</div></div>
+                <div class="sp-box"><div class="sp-box-lbl">HOLDERS</div><div class="sp-box-val" id="sp-hold-val" style="color: #eaecef;">${this.formatCompact(t.holders)}</div></div>
             </div>
             <div class="sp-vol-bar-wrap" style="margin-bottom: 0;">
-                <div class="sp-vol-head"><span style="color: #F0B90B;">CEX: ${pctLimit.toFixed(0)}%</span><span style="color: #9945FF;">DEX: ${pctChain.toFixed(0)}%</span></div>
-                <div class="sp-vol-track"><div class="sp-vol-limit" style="width: ${pctLimit}%"></div><div class="sp-vol-chain" style="width: ${pctChain}%"></div></div>
+                <div class="sp-vol-head">
+                    <span id="sp-limit-txt" style="color: #F0B90B;">CEX: $${this.formatCompact(t.vLimit)} (${pctLimit.toFixed(0)}%)</span>
+                    <span id="sp-chain-txt" style="color: #9945FF;">ON-CHAIN: $${this.formatCompact(t.vChain)} (${pctChain.toFixed(0)}%)</span>
+                </div>
+                <div class="sp-vol-track"><div id="sp-limit-bar" class="sp-vol-limit" style="width: ${pctLimit}%"></div><div id="sp-chain-bar" class="sp-vol-chain" style="width: ${pctChain}%"></div></div>
             </div>
         `;
     }
@@ -492,15 +511,15 @@ class AlphaSonarGalaxy {
         if (!this.isVisible || this.width === 0) return;
 
         try {
-            this.ctx.fillStyle = 'rgba(10, 14, 23, 0.2)'; 
+            // Fill background đen đặc (chuẩn Không gian)
+            this.ctx.fillStyle = '#0a0e17'; 
             this.ctx.fillRect(0, 0, this.width, this.height);
 
-            // --- VẼ BACKGROUND THEO MÔ HÌNH ---
+            // --- VẼ CHÚ THÍCH HUD ---
             this.ctx.font = '600 11px "Courier New", monospace';
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-
+            
             if (this.visualMode === 'orbit') {
-                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
+                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
                 this.ctx.lineWidth = 1;
                 for (let i = 1; i <= 4; i++) {
                     let currentRadius = (this.maxRadius / 4) * i;
@@ -509,21 +528,20 @@ class AlphaSonarGalaxy {
                     this.ctx.stroke();
                 }
                 this.ctx.beginPath();
-                this.ctx.arc(this.centerX, this.centerY, 10, 0, Math.PI * 2);
-                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.3)';
+                this.ctx.arc(this.centerX, this.centerY, 8, 0, Math.PI * 2);
+                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
                 this.ctx.fill();
 
-                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.6)';
+                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('[ CORE: MAX LIQUIDITY/VOL ]', this.centerX, this.centerY - 15);
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                this.ctx.fillText('[ OUTER: MIN LIQUIDITY/VOL ]', this.centerX, this.centerY - this.maxRadius + 15);
-                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.6)';
-                this.ctx.fillText('* ORBIT SPEED INDICATES TRANSACTION ACTIVITY (TXs) *', this.centerX, this.height - 15);
+                this.ctx.fillText('[ CORE: MAX LIQ/VOL ]', this.centerX, this.centerY - 15);
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                this.ctx.fillText('[ OUTER: MIN LIQ/VOL ]', this.centerX, this.centerY - this.maxRadius + 15);
+                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.4)';
+                this.ctx.fillText('* ORBIT SPEED = TRANSACTION ACTIVITY *', this.centerX, this.height - 15);
                 this.ctx.textAlign = 'left';
-
             } else {
-                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
+                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
                 this.ctx.setLineDash([4, 4]);
                 this.ctx.beginPath();
                 this.ctx.moveTo(this.centerX, 0); this.ctx.lineTo(this.centerX, this.height);
@@ -531,51 +549,57 @@ class AlphaSonarGalaxy {
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
 
-                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.5)'; 
+                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.3)'; 
                 this.ctx.textAlign = 'left';
                 this.ctx.fillText('[ HIGH VOL / BEARISH ]', 15, 60);
                 this.ctx.fillText('[ LOW VOL / BEARISH ]', 15, this.height - 20);
 
-                this.ctx.fillStyle = 'rgba(14, 203, 129, 0.5)'; 
+                this.ctx.fillStyle = 'rgba(14, 203, 129, 0.3)'; 
                 this.ctx.textAlign = 'right';
                 this.ctx.fillText('[ HIGH VOL / BULLISH ]', this.width - 15, 60);
                 this.ctx.fillText('[ LOW VOL / BULLISH ]', this.width - 15, this.height - 20);
 
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('<<< PRICE DROP (MOMENTUM)', this.centerX / 2, this.centerY - 5);
-                this.ctx.fillText('(MOMENTUM) PRICE SURGE >>>', this.centerX + (this.centerX / 2), this.centerY - 5);
+                this.ctx.fillText('<<< PRICE DROP', this.centerX / 2, this.centerY - 5);
+                this.ctx.fillText('PRICE SURGE >>>', this.centerX + (this.centerX / 2), this.centerY - 5);
                 this.ctx.textAlign = 'left';
             }
 
-            // --- VẬT LÝ VÀ CHỐNG ĐÈ 3D ---
+            // --- TÍNH TOÁN VỊ TRÍ ĐÍCH TRƯỚC (Pre-calculate để tối ưu O(N^2)) ---
             for (let i = 0; i < this.tokens.length; i++) {
                 let t = this.tokens[i];
-
                 if (!this.isPaused) {
-                    
                     if (this.visualMode === 'orbit') {
-                        // 1. Tốc độ góc (Orbit Speed) độc lập hoàn toàn với va chạm
                         t.orbitAngle += t.orbitSpeed;
+                        t.calcX = this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle);
+                        t.calcY = this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle);
+                    } else {
+                        t.calcX = t.tX;
+                        t.calcY = t.tY;
+                    }
+                }
+            }
+
+            // --- TỐI ƯU VẬT LÝ O(N^2) BẰNG BÌNH PHƯƠNG KHOẢNG CÁCH ---
+            if (!this.isPaused) {
+                for (let i = 0; i < this.tokens.length; i++) {
+                    let t = this.tokens[i];
+                    for (let j = i + 1; j < this.tokens.length; j++) {
+                        let other = this.tokens[j];
                         
-                        // 2. Lực đàn hồi kéo bán kính bay về lại quỹ đạo gốc
-                        t.currentOrbitRadius += (t.baseOrbitRadius - t.currentOrbitRadius) * 0.05;
+                        let dx = t.calcX - other.calcX;
+                        let dy = t.calcY - other.calcY;
+                        let distSq = dx*dx + dy*dy;
+                        
+                        let minDist = t.size + other.size + (this.visualMode === 'orbit' ? 4 : 15);
+                        let minDistSq = minDist * minDist;
 
-                        // 3. FIX V18: LÁCH LÀN (RADIAL DODGE)
-                        for (let j = i + 1; j < this.tokens.length; j++) {
-                            let other = this.tokens[j];
-                            let dx = (this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle)) - 
-                                     (this.centerX + other.currentOrbitRadius * Math.cos(other.orbitAngle));
-                            let dy = (this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle)) - 
-                                     (this.centerY + other.currentOrbitRadius * Math.sin(other.orbitAngle));
-                            let dist = Math.sqrt(dx*dx + dy*dy) || 1; 
+                        if (distSq < minDistSq && distSq > 0.1) {
+                            let dist = Math.sqrt(distSq);
+                            let pushForce = (minDist - dist) * (this.visualMode === 'orbit' ? 0.05 : 0.15);
                             
-                            // Cho phép đè nhẹ, nếu quá sát (< 12px) thì mới lách
-                            let minDist = t.size + other.size + 6; 
-
-                            if (dist < minDist) {
-                                let pushForce = (minDist - dist) * 0.1; 
-                                // Ai có bán kính đang nhỉnh hơn thì đẩy bay cao hơn nữa
+                            if (this.visualMode === 'orbit') {
                                 if (t.currentOrbitRadius >= other.currentOrbitRadius) {
                                     t.currentOrbitRadius += pushForce;
                                     other.currentOrbitRadius -= pushForce;
@@ -583,44 +607,35 @@ class AlphaSonarGalaxy {
                                     t.currentOrbitRadius -= pushForce;
                                     other.currentOrbitRadius += pushForce;
                                 }
-                            }
-                        }
-
-                        // Cập nhật tọa độ đích dựa trên góc chuẩn và bán kính lách làn
-                        t.tX = this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle);
-                        t.tY = this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle);
-
-                    } else {
-                        // Vật lý của MESH (Không đổi)
-                        t.tX += (t.baseX - t.tX) * 0.05;
-                        t.tY += (t.baseY - t.tY) * 0.05;
-
-                        for (let j = i + 1; j < this.tokens.length; j++) {
-                            let other = this.tokens[j];
-                            let dx = t.tX - other.tX;
-                            let dy = t.tY - other.tY;
-                            let dist = Math.sqrt(dx*dx + dy*dy) || 1; 
-                            let minDist = t.size + other.size + 15; 
-
-                            if (dist < minDist) {
-                                let force = (minDist - dist) * 0.15; 
-                                let fX = (dx / dist) * force;
-                                let fY = (dy / dist) * force;
+                            } else {
+                                let fX = (dx / dist) * pushForce;
+                                let fY = (dy / dist) * pushForce;
                                 t.tX += fX; t.tY += fY;
                                 other.tX -= fX; other.tY -= fY;
                             }
-                            
-                            let realDist = Math.sqrt(Math.pow(t.x - other.x, 2) + Math.pow(t.y - other.y, 2));
-                            if (realDist < 80 && t.color === other.color) {
+                        }
+                        
+                        // Tia nối Mesh
+                        if (this.visualMode === 'mesh' && distSq < 6400 && t.color === other.color) { 
+                            let realDistSq = Math.pow(t.x - other.x, 2) + Math.pow(t.y - other.y, 2);
+                            if (realDistSq < 6400) {
                                 this.ctx.beginPath();
                                 this.ctx.moveTo(t.x, t.y);
                                 this.ctx.lineTo(other.x, other.y);
                                 this.ctx.strokeStyle = t.color;
-                                this.ctx.globalAlpha = 0.15 * (1 - realDist/80);
+                                this.ctx.globalAlpha = 0.15 * (1 - Math.sqrt(realDistSq)/80);
                                 this.ctx.stroke();
                             }
                         }
+                    }
 
+                    if (this.visualMode === 'orbit') {
+                        t.currentOrbitRadius += (t.baseOrbitRadius - t.currentOrbitRadius) * 0.05;
+                        t.tX = this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle);
+                        t.tY = this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle);
+                    } else {
+                        t.tX += (t.baseX - t.tX) * 0.05;
+                        t.tY += (t.baseY - t.tY) * 0.05;
                         t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
                         t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
                     }
@@ -632,7 +647,7 @@ class AlphaSonarGalaxy {
             }
             this.ctx.globalAlpha = 1.0;
 
-            // --- VẼ LOGO ---
+            // --- VẼ LOGO (Không dùng clip() để cứu GPU) ---
             this.tokens.forEach(t => {
                 let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
                 let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
@@ -640,20 +655,13 @@ class AlphaSonarGalaxy {
                 this.ctx.globalAlpha = (isHovered || isLocked) ? 1.0 : 0.8;
                 let radius = t.size;
 
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#1a1f2e';
+                this.ctx.fill();
+
                 if (t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
-                    this.ctx.save();
-                    this.ctx.beginPath();
-                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                    this.ctx.closePath();
-                    this.ctx.clip(); 
-                    
                     this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, radius*2, radius*2);
-                    this.ctx.restore();
-                } else {
-                    this.ctx.beginPath();
-                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                    this.ctx.fillStyle = '#1a1f2e';
-                    this.ctx.fill();
                 }
 
                 this.ctx.beginPath();
@@ -664,7 +672,7 @@ class AlphaSonarGalaxy {
                 this.ctx.globalAlpha = 1.0;
             });
 
-            // --- VẼ HUD & CROSSHAIR NỔI LÊN TRÊN ---
+            // --- VẼ HUD & CROSSHAIR ---
             this.tokens.forEach(t => {
                 let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
                 let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
@@ -708,10 +716,19 @@ class AlphaSonarGalaxy {
                 }
             });
 
+            if (!this.isPaused) {
+                this.angle += 0.025;
+            }
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.centerX, this.centerY);
+            this.ctx.lineTo(this.centerX + this.maxRadius * Math.cos(this.angle), this.centerY + this.maxRadius * Math.sin(this.angle));
+            this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
         } catch (e) {
             console.warn("Radar Render Prevented Crash:", e);
         }
-
-        requestAnimationFrame(() => this.animate());
     }
 }
