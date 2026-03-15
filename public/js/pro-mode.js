@@ -737,6 +737,7 @@ function injectLayout() {
     tabNav.innerHTML = `
         <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
         <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
+        <button id="btn-tab-sonar" class="tab-btn" onclick="window.pluginSwitchTab('sonar')">SONAR GALAXY</button>
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
     
@@ -826,21 +827,30 @@ function injectLayout() {
 window.pluginSwitchTab = (tab, instant = false) => {
     localStorage.setItem('wave_main_tab', tab);
     const alphaView = document.getElementById('alpha-market-view');
-    const compView = document.getElementById('view-dashboard'); 
-    
+    const compView = document.getElementById('view-dashboard');
+    const sonarView = document.getElementById('sonar-market-view');
+
     const btnA = document.getElementById('btn-tab-alpha');
     const btnC = document.getElementById('btn-tab-competition');
+    const btnS = document.getElementById('btn-tab-sonar');
+
+    // Reset màu nút
+    [btnA, btnC, btnS].forEach(btn => btn?.classList.remove('active'));
+    // Ẩn tất cả màn hình
+    [alphaView, compView, sonarView].forEach(v => { if(v) v.style.display = 'none'; });
 
     if (tab === 'alpha') {
         btnA?.classList.add('active');
-        btnC?.classList.remove('active');
-        if(compView) compView.style.display = 'none';
         if(alphaView) alphaView.style.display = 'block';
-    } else {
+    } else if (tab === 'competition' || tab === 'comp') {
         btnC?.classList.add('active');
-        btnA?.classList.remove('active');
-        if(alphaView) alphaView.style.display = 'none';
         if(compView) compView.style.display = 'block';
+    } else if (tab === 'sonar') {
+        btnS?.classList.add('active');
+        if(sonarView) sonarView.style.display = 'block';
+        if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
+            setTimeout(() => mySonarGalaxy.resize(), 50);
+        }
     }
 };
 
