@@ -3486,30 +3486,32 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
 
         
 function switchMainTab(tab) {
-    document.querySelectorAll('#alpha-tab-nav .tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('btn-tab-' + tab).classList.add('active');
+    // 1. Cập nhật trạng thái Active cho nút (Market, Comp, Sonar)
+    document.querySelectorAll('#alpha-tab-nav .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById('btn-tab-' + tab);
+    if (activeBtn) activeBtn.classList.add('active');
 
-    document.getElementById('alpha-market-view').style.display = 'none';
-    if(document.getElementById('view-dashboard')) document.getElementById('view-dashboard').style.display = 'none';
-    if(document.getElementById('sonar-market-view')) document.getElementById('sonar-market-view').style.display = 'none';
-    
-    if(document.getElementById('view-predict')) document.getElementById('view-predict').style.display = 'none'; 
+    // 2. Ẩn tất cả các màn hình nội dung
+    const views = ['alpha-market-view', 'view-dashboard', 'sonar-market-view', 'view-predict'];
+    views.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 
-    // 3. Bật màn hình tương ứng
+    // 3. Hiển thị màn hình tương ứng
     if (tab === 'market') {
         document.getElementById('alpha-market-view').style.display = 'block';
     } else if (tab === 'comp') {
-        if(document.getElementById('view-dashboard')) document.getElementById('view-dashboard').style.display = 'block';
-        if(typeof renderGrid === 'function') renderGrid(); 
+        document.getElementById('view-dashboard').style.display = 'block';
+        if (typeof renderGrid === 'function') renderGrid(); 
     } else if (tab === 'sonar') {
         document.getElementById('sonar-market-view').style.display = 'block';
-        
-        // Ép Radar đo lại kích thước cho chuẩn
-        setTimeout(() => {
-            if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
-                mySonarGalaxy.resize();
-            }
-        }, 50);
+        // Ép Radar vẽ lại để không bị đen màn hình
+        if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
+            setTimeout(() => mySonarGalaxy.resize(), 50);
+        }
     }
 }
 
