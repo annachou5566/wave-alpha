@@ -3518,8 +3518,9 @@ function switchMainTab(tab) {
     } else if (tab === 'sonar') {
         document.getElementById('sonar-market-view').style.display = 'block';
         // Ép Radar vẽ lại để không bị đen màn hình
-        if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
-            setTimeout(() => mySonarGalaxy.resize(), 50);
+        const sonar = ensureSonarGalaxy();
+        if (sonar) {
+            setTimeout(() => sonar.resize(), 50);
         }
     }
 }
@@ -6690,7 +6691,8 @@ function applyLayer2Data(serverData, forceApply = false) {
     if (hasChanges && typeof updateGridValuesOnly === 'function') {
         updateGridValuesOnly();
     }
-    if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) mySonarGalaxy.updateData(serverData);
+    const sonar = ensureSonarGalaxy();
+    if (sonar) sonar.updateData(serverData);
 }
 
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
