@@ -825,19 +825,27 @@ function injectLayout() {
 }
 
 window.pluginSwitchTab = (tab, instant = false) => {
+    console.log(`Tab Switch: Chuyển sang tab [${tab}]`);
     localStorage.setItem('wave_main_tab', tab);
-    const alphaView = document.getElementById('alpha-market-view');
-    const compView = document.getElementById('view-dashboard');
+    
     const sonarView = document.getElementById('sonar-market-view');
-
-    const btnA = document.getElementById('btn-tab-alpha');
-    const btnC = document.getElementById('btn-tab-competition');
-    const btnS = document.getElementById('btn-tab-sonar');
-
-    // Reset màu nút
-    [btnA, btnC, btnS].forEach(btn => btn?.classList.remove('active'));
-    // Ẩn tất cả màn hình
-    [alphaView, compView, sonarView].forEach(v => { if(v) v.style.display = 'none'; });
+    if (tab === 'sonar') {
+        if (!sonarView) {
+            console.error("LỖI: Không tìm thấy thẻ HTML có id='sonar-market-view'!");
+            return;
+        }
+        sonarView.style.display = 'block';
+        console.log("Sonar: Đã set display = 'block' cho sonar-market-view");
+        
+        if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
+            console.log("Sonar: Đang gọi resize cho Radar...");
+            setTimeout(() => mySonarGalaxy.resize(), 50);
+        } else {
+            console.warn("Sonar: Biến 'mySonarGalaxy' chưa được khởi tạo!");
+        }
+    } else {
+        if(sonarView) sonarView.style.display = 'none';
+    }
 
     if (tab === 'alpha') {
         btnA?.classList.add('active');
