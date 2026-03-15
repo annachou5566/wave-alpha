@@ -1,11 +1,3 @@
-/**
- * Alpha Sonar Galaxy - Performance Refactor
- * - Default token cap = 50 (nhẹ khi mở tab)
- * - Cho phép chọn 10/50/100/200/500
- * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
- * - Mesh mode có anti-clump + laser links nhưng giới hạn để tránh lag
- */
-
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -51,6 +43,11 @@ class AlphaSonarGalaxy {
         this.meshHardCapMobile = 120;
         this.orbitHardCapDesktop = 520;
         this.orbitHardCapMobile = 280;
+        this.meshRepulsionStrength = 0.085;
+        this.meshMaxPush = 1.8;
+        this.meshRepulsionBuffer = 10;
+
+        this.firstRunHintUntil = Date.now() + 12000;
 
         // User configurable cap (default nhẹ)
         this.tokenCapOptions = [10, 50, 100, 200, 500];
@@ -132,6 +129,11 @@ class AlphaSonarGalaxy {
                     background: rgba(9,14,22,0.95); color: #fff; border: 1px solid rgba(0,240,255,0.3);
                     border-radius: 4px; padding: 2px 4px; font: 700 12px 'Rajdhani', sans-serif;
                 }
+                .sonar-mode-hint {
+                    color: rgba(255,255,255,0.75); border: 1px dashed rgba(255,255,255,0.25);
+                    border-radius: 6px; padding: 3px 8px; font: 600 11px 'Rajdhani', sans-serif;
+                    letter-spacing: 0.2px;
+                }
 
                 #sonar-side-panel {
                     position: absolute; top: 0; right: -360px; width: 320px; height: 100%; z-index: 100;
@@ -178,6 +180,7 @@ class AlphaSonarGalaxy {
                 </select>
             </div>
             <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
+            <span class="sonar-mode-hint" id="sonar-mode-hint">TIP: TRY ORBITAL SYSTEM</span>
         `;
         this.container.appendChild(this.controlBar);
         this.canvas.style.display = 'block';
@@ -195,6 +198,8 @@ class AlphaSonarGalaxy {
                 modeBtn.style.borderColor = '#F0B90B';
                 modeBtn.style.color = '#F0B90B';
             }
+            const hint = this.controlBar.querySelector('#sonar-mode-hint');
+            if (hint) hint.innerText = this.visualMode === 'mesh' ? 'TIP: TRY ORBITAL SYSTEM' : 'TIP: SWITCH BACK TO MESH';
             this.recalculate(true);
         });
 
@@ -572,7 +577,9 @@ class AlphaSonarGalaxy {
             }
             this.ctx.textAlign = 'center';
             this.ctx.fillStyle = 'rgba(0,240,255,0.38)';
-            this.ctx.fillText('[ ORBIT: TOP TOKENS ]', this.centerX, this.centerY - 14);
+            this.ctx.fillText('[ ORBIT VIEW ]', this.centerX, this.centerY - 14);
+            this.ctx.fillStyle = 'rgba(255,255,255,0.34)';
+            this.ctx.fillText('CENTER = HIGHER VOL/LIQ | OUTER = LOWER VOL/LIQ', this.centerX, this.height - 28);
             this.ctx.textAlign = 'left';
         } else {
             this.ctx.strokeStyle = 'rgba(0,240,255,0.08)';
@@ -582,10 +589,23 @@ class AlphaSonarGalaxy {
             this.ctx.moveTo(0, this.centerY); this.ctx.lineTo(this.width, this.centerY);
             this.ctx.stroke();
             this.ctx.setLineDash([]);
+
+            this.ctx.fillStyle = 'rgba(255,255,255,0.34)';
+            this.ctx.fillText('X = PRICE CHANGE (LEFT BEAR / RIGHT BULL)', 12, this.height - 28);
+            this.ctx.fillText('Y = RELATIVE VOLUME (TOP HIGH / BOTTOM LOW)', 12, this.height - 14);
         }
 
-        this.ctx.fillStyle = 'rgba(255,255,255,0.38)';
-        this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, this.height - 12);
+        this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, 16);
+
+        if (Date.now() < this.firstRunHintUntil) {
+            this.ctx.fillStyle = 'rgba(240,185,11,0.18)';
+            this.ctx.fillRect(this.width - 290, 8, 282, 26);
+            this.ctx.strokeStyle = 'rgba(240,185,11,0.5)';
+            this.ctx.strokeRect(this.width - 290, 8, 282, 26);
+            this.ctx.fillStyle = 'rgba(255,220,120,0.95)';
+            this.ctx.fillText('TIP: CLICK [ ORBITAL SYSTEM ] TO CHANGE VIEW', this.width - 282, 25);
+        }
     }
 
     animate() {
@@ -627,11 +647,13 @@ class AlphaSonarGalaxy {
                             distSq = 0.0002;
                         }
 
-                        const minDist = t.size + o.size + pushPadding;
+                        const minDist = t.size + o.size + pushPadding + this.meshRepulsionBuffer;
                         const minDistSq = minDist * minDist;
                         if (distSq < minDistSq) {
                             const dist = Math.sqrt(distSq);
-                            const pushForce = (minDist - dist) * 0.2;
+                            const overlap = (minDist - dist) / minDist;
+                            let pushForce = overlap * overlap * this.meshRepulsionStrength * minDist;
+                            if (pushForce > this.meshMaxPush) pushForce = this.meshMaxPush;
                             const fx = (dx / dist) * pushForce;
                             const fy = (dy / dist) * pushForce;
                             t.tX += fx; t.tY += fy;
@@ -659,8 +681,8 @@ class AlphaSonarGalaxy {
                 const t = this.tokens[i];
                 t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
                 t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
-                t.x += (t.tX - t.x) * 0.15;
-                t.y += (t.tY - t.y) * 0.15;
+                t.x += (t.tX - t.x) * 0.12;
+                t.y += (t.tY - t.y) * 0.12;
                 t.size += (t.targetSize - t.size) * 0.1;
                 t.lowDetail = this.visualMode === 'orbit' && this.tokens.length > 180 && t.size < this.minLogoRenderSize;
             }
