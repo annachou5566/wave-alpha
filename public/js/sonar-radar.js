@@ -701,15 +701,40 @@ class AlphaSonarGalaxy {
                 const tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
                 this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
                 const textWidth = this.ctx.measureText(tagText).width;
-                const tagX = t.x + radius + 8;
-                const tagY = t.y - radius - 8;
+
+                const boxW = textWidth + 8;
+                const boxH = 20;
+                const pad = 8;
+
+                let tagX = t.x + radius + 8;
+                let tagY = t.y - radius - 8;
+
+                // Nếu sát cạnh phải thì lật tooltip sang bên trái token
+                if (tagX + boxW > this.width - pad) {
+                    tagX = t.x - radius - 8 - boxW;
+                }
+
+                // Clamp theo biên trên/dưới để luôn đọc được ở các góc
+                let boxTop = tagY - 14;
+                boxTop = Math.max(pad, Math.min(this.height - boxH - pad, boxTop));
+                const textY = boxTop + 15;
 
                 this.ctx.fillStyle = 'rgba(10,14,23,0.9)';
-                this.ctx.fillRect(tagX, tagY - 14, textWidth + 8, 20);
+                this.ctx.fillRect(tagX, boxTop, boxW, boxH);
                 this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                this.ctx.strokeRect(tagX, tagY - 14, textWidth + 8, 20);
+                this.ctx.strokeRect(tagX, boxTop, boxW, boxH);
+
+                // Vẽ connector ngắn từ token tới tooltip
+                const anchorX = tagX > t.x ? tagX : tagX + boxW;
+                const anchorY = Math.max(boxTop + 4, Math.min(boxTop + boxH - 4, t.y));
+                this.ctx.beginPath();
+                this.ctx.moveTo(t.x + (tagX > t.x ? radius : -radius), t.y);
+                this.ctx.lineTo(anchorX, anchorY);
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                this.ctx.stroke();
+
                 this.ctx.fillStyle = '#fff';
-                this.ctx.fillText(tagText, tagX + 4, tagY + 1);
+                this.ctx.fillText(tagText, tagX + 4, textY);
             }
         }
     }
