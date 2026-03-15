@@ -1,8 +1,11 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - FINAL FIX)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V3 TERMINAL HUD)
  * ============================================================================
- * Đã Fix: Sử dụng mảng `allTokens` từ pro-mode.js để lấy chính xác Tên và Logo
+ * Đã Fix: Nâng cấp Side Panel thành "Military/Bloomberg Terminal"
+ * - Format số liệu (K, M, B)
+ * - Lưới dữ liệu (Data Grid)
+ * - Thanh phân tích Volume (CEX vs DEX)
  * ============================================================================
  */
 
@@ -38,35 +41,81 @@ class AlphaSonarGalaxy {
         this.animate();
     }
 
-    // --- KHỞI TẠO UI (CONTROL BAR & HUD) ---
+    // --- TIỆN ÍCH: FORMAT SỐ LIỆU ---
+    formatCompact(num) {
+        if (!num) return '0';
+        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+        return parseFloat(num).toFixed(2);
+    }
+
+    // --- KHỞI TẠO UI (CSS MỚI CỰC XỊN CHO SIDE PANEL) ---
     initUI() {
         if (!document.getElementById('sonar-pro-styles')) {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
+                /* TOOLTIP */
                 #sonar-hud-tooltip { position: fixed; top: 0; left: 0; width: 220px; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.05); border-radius: 6px; padding: 12px; pointer-events: none; opacity: 0; z-index: 9999; font-family: 'Rajdhani', sans-serif; backdrop-filter: blur(4px); transition: opacity 0.15s ease-in-out, transform 0.05s linear; }
                 #sonar-hud-tooltip::before { content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid #00f0ff; border-left: 2px solid #00f0ff; }
                 #sonar-hud-tooltip::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid #00f0ff; border-right: 2px solid #00f0ff; }
-                .hud-header { display: flex; align-items: center; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px; margin-bottom: 10px; }
+                .hud-header { display: flex; align-items: center; border-bottom: 1px dashed rgba(0, 240, 255, 0.3); padding-bottom: 10px; margin-bottom: 10px; }
                 .hud-logo { width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; background: #1a1f2e; border: 1px solid rgba(255, 255, 255, 0.1); object-fit: cover; }
                 .hud-symbol { font-size: 18px; font-weight: 700; line-height: 1; }
                 .hud-status { font-size: 11px; color: #00f0ff; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
                 .hud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
                 .hud-label { color: rgba(255, 255, 255, 0.5); font-weight: 500; }
                 .hud-val { font-weight: 700; text-shadow: 0 0 5px rgba(255, 255, 255, 0.2); }
-                #sonar-control-bar { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; background: rgba(0, 0, 0, 0.5); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2); backdrop-filter: blur(5px); }
+                
+                /* CONTROL BAR */
+                #sonar-control-bar { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2); backdrop-filter: blur(5px); }
                 .sonar-btn { background: transparent; border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; transition: all 0.2s; }
                 .sonar-btn:hover, .sonar-btn.active { background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
                 .sonar-btn.pause-btn.paused { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
-                #sonar-side-panel { position: absolute; top: 15px; right: -320px; width: 280px; height: calc(100% - 30px); background: rgba(10, 14, 23, 0.85); border-left: 2px solid #00f0ff; z-index: 10; backdrop-filter: blur(8px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -5px 0 20px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
+                
+                /* NEW SIDE PANEL (TERMINAL STYLE) */
+                #sonar-side-panel { position: absolute; top: 15px; right: -360px; width: 320px; height: calc(100% - 30px); background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff; border-top: 1px solid rgba(0, 240, 255, 0.2); border-bottom: 1px solid rgba(0, 240, 255, 0.2); z-index: 10; backdrop-filter: blur(10px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -10px 0 30px rgba(0, 240, 255, 0.1); display: flex; flex-direction: column; overflow-y: auto; }
                 #sonar-side-panel.open { right: 0; }
-                .sp-close { position: absolute; top: 10px; right: 15px; cursor: pointer; color: #fff; font-size: 20px; opacity: 0.5; }
-                .sp-close:hover { opacity: 1; }
-                .sp-title { font-size: 24px; font-weight: bold; color: #00f0ff; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; }
-                .sp-subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 20px; text-transform: uppercase; }
-                .sp-stat { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
-                .sp-stat-label { font-size: 12px; color: rgba(255,255,255,0.5); }
-                .sp-stat-value { font-size: 18px; font-weight: bold; margin-top: 4px; }
+                #sonar-side-panel::-webkit-scrollbar { width: 4px; } #sonar-side-panel::-webkit-scrollbar-thumb { background: #00f0ff; }
+                
+                .sp-close { position: absolute; top: 10px; right: 15px; cursor: pointer; color: #fff; font-size: 24px; opacity: 0.5; transition: 0.2s;}
+                .sp-close:hover { opacity: 1; color: #ff3366; transform: scale(1.1); }
+                
+                .sp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px;}
+                .sp-head img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(0, 240, 255, 0.5); }
+                .sp-sym-wrap { display: flex; flex-direction: column; }
+                .sp-title { font-size: 24px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: 1px; }
+                .sp-contract { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; font-family: 'Courier New', monospace; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+                .sp-contract:hover { color: #00f0ff; }
+                
+                .sp-lock-status { font-size: 11px; color: #ff3366; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; margin-bottom: 15px; font-weight: 600;}
+                .blink-dot { width: 8px; height: 8px; background: #ff3366; border-radius: 50%; box-shadow: 0 0 8px #ff3366; animation: blink 1s infinite; }
+                
+                .sp-price-box { display: flex; align-items: flex-end; justify-content: space-between; background: rgba(0, 240, 255, 0.05); padding: 15px; border-radius: 6px; border: 1px solid rgba(0, 240, 255, 0.15); margin-bottom: 15px; }
+                .sp-price-lbl { font-size: 11px; color: #848e9c; letter-spacing: 1px; margin-bottom: 4px;}
+                .sp-price-val { font-size: 28px; font-weight: 800; color: #fff; line-height: 1; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+                .sp-price-chg { font-size: 16px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+                
+                .sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+                .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; }
+                .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+                .sp-box-val { font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace; }
+                
+                .sp-vol-bar-wrap { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 4px; margin-bottom: 20px;}
+                .sp-vol-head { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px; letter-spacing: 0.5px;}
+                .sp-vol-track { width: 100%; height: 6px; background: #1e2329; border-radius: 3px; display: flex; overflow: hidden; }
+                .sp-vol-limit { height: 100%; background: #F0B90B; box-shadow: 0 0 5px #F0B90B;}
+                .sp-vol-chain { height: 100%; background: #9945FF; box-shadow: 0 0 5px #9945FF;}
+                
+                .sp-actions { display: flex; gap: 10px; margin-top: auto;}
+                .sp-btn { flex: 1; background: transparent; border: 1px solid; padding: 10px; border-radius: 4px; font-family: 'Rajdhani'; font-weight: 700; font-size: 13px; text-transform: uppercase; cursor: pointer; letter-spacing: 1px; transition: 0.2s;}
+                .sp-btn-chart { border-color: #00f0ff; color: #00f0ff; background: rgba(0, 240, 255, 0.05); }
+                .sp-btn-chart:hover { background: #00f0ff; color: #000; box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
+                .sp-btn-trade { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.05); }
+                .sp-btn-trade:hover { background: #ff3366; color: #fff; box-shadow: 0 0 15px rgba(255, 51, 102, 0.4); }
+                
+                @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
             `;
             document.head.appendChild(style);
         }
@@ -157,7 +206,7 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // LOGIC CỐT LÕI: ĐỒNG BỘ VỚI PRO-MODE.JS
+    // LOGIC CỐT LÕI (Bổ sung thu thập thêm Market Cap, Limit, Holders)
     // ==========================================
     recalculate(force = false) {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
@@ -172,12 +221,16 @@ class AlphaSonarGalaxy {
         Object.entries(this.latestData).forEach(([key, t]) => {
             if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
             
-            // --- CỤM FIX: LẤY METADATA TỪ MẢNG allTokens ---
             let tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
             let realSymbol = '';
             let logoUrl = '';
+            
+            // Khai báo các biến chuyên sâu
+            let mc = t.mc || 0;
+            let holders = t.h || 0;
+            let vLimit = t.v.dl || 0;
+            let contract = '';
 
-            // Lục tìm trong mảng allTokens (đã được pro-mode.js xử lý từ JSON)
             if (typeof allTokens !== 'undefined' && allTokens.length > 0) {
                 let targetToken = allTokens.find(item => 
                     (item.alphaId && String(item.alphaId).replace('ALPHA_','') === tokenKey) || 
@@ -187,29 +240,35 @@ class AlphaSonarGalaxy {
 
                 if (targetToken) {
                     realSymbol = targetToken.symbol;
-                    logoUrl = targetToken.icon; // Đã đổi sang .icon theo chuẩn pro-mode
+                    logoUrl = targetToken.icon;
+                    mc = targetToken.market_cap || mc;
+                    holders = targetToken.holders || holders;
+                    vLimit = (targetToken.volume && targetToken.volume.daily_limit) ? targetToken.volume.daily_limit : vLimit;
+                    contract = targetToken.contract || '';
                 }
             }
 
-            // Fallback nếu token quá mới, chưa có trong allTokens
             if (!realSymbol) realSymbol = t.symbol || t.s || t.name || tokenKey;
             if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
-            // --- KẾT THÚC CỤM FIX ---
 
             let vol = t.v.dt || 0;
             let liq = t.l || vol || 1000;
+            let vChain = Math.max(0, vol - vLimit); // DEX = Tổng - CEX Limit
             
             if (vol > maxVol) maxVol = vol;
             if (liq > maxLiq) maxLiq = liq;
 
-            dataArray.push({ raw: t, symbol: realSymbol, logo: logoUrl, vol: vol, liq: liq, change: t.c || 0, tx: t.tx || 0, price: t.p || 0 });
+            dataArray.push({ 
+                symbol: realSymbol, logo: logoUrl, contract: contract,
+                vol: vol, liq: liq, mc: mc, holders: holders, vLimit: vLimit, vChain: vChain,
+                change: t.c || 0, tx: t.tx || 0, price: t.p || 0 
+            });
         });
 
-        // Sắp xếp theo Filter
         if (this.filterMode === 'volume') dataArray.sort((a, b) => b.vol - a.vol);
         else if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
         
-        dataArray = dataArray.slice(0, 80); // Lọc top 80 cho đỡ nhiễu
+        dataArray = dataArray.slice(0, 80); 
 
         dataArray.forEach(data => {
             let ratio = this.filterMode === 'liquidity' 
@@ -234,8 +293,7 @@ class AlphaSonarGalaxy {
 
             let existingToken = this.tokens.find(t => t.symbol === data.symbol);
             if (existingToken) {
-                existingToken.tX = tX;
-                existingToken.tY = tY;
+                existingToken.tX = tX; existingToken.tY = tY;
                 existingToken.targetSize = targetSize;
                 existingToken.color = colorHex;
                 existingToken.price = data.price;
@@ -243,14 +301,20 @@ class AlphaSonarGalaxy {
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
                 existingToken.logo = data.logo; 
+                // Cập nhật dữ liệu Pro
+                existingToken.mc = data.mc;
+                existingToken.holders = data.holders;
+                existingToken.vLimit = data.vLimit;
+                existingToken.vChain = data.vChain;
+                existingToken.contract = data.contract;
                 existingToken.updated = true; 
             } else {
                 this.tokens.push({
-                    symbol: data.symbol,
-                    logo: data.logo, 
+                    symbol: data.symbol, logo: data.logo, contract: data.contract,
                     x: tX, y: tY, tX: tX, tY: tY,
-                    size: 0, targetSize: targetSize, 
-                    color: colorHex, price: data.price, vol: data.vol, change: data.change, tx: data.tx,
+                    size: 0, targetSize: targetSize, color: colorHex, 
+                    price: data.price, vol: data.vol, change: data.change, tx: data.tx,
+                    mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
                     updated: true
                 });
             }
@@ -264,7 +328,7 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // UI UPDATES (TOOLTIP & SIDE PANEL)
+    // UI UPDATES
     // ==========================================
     checkHover() {
         this.hoveredToken = null;
@@ -286,7 +350,6 @@ class AlphaSonarGalaxy {
             let tipX = this.clientX + 15;
             let tipY = this.clientY + 15;
             let tipW = 220, tipH = 150;
-
             if (tipX + tipW > window.innerWidth) tipX = this.clientX - tipW - 15;
             if (tipY + tipH > window.innerHeight) tipY = this.clientY - tipH - 15;
 
@@ -304,7 +367,7 @@ class AlphaSonarGalaxy {
                     </div>
                 </div>
                 <div class="hud-row"><span class="hud-label">PRICE</span><span class="hud-val" style="color:#fff;">$${t.price.toFixed(4)}</span></div>
-                <div class="hud-row"><span class="hud-label">24H VOL</span><span class="hud-val" style="color:#F0B90B;">$${Math.round(t.vol).toLocaleString()}</span></div>
+                <div class="hud-row"><span class="hud-label">24H VOL</span><span class="hud-val" style="color:#F0B90B;">$${this.formatCompact(t.vol)}</span></div>
                 <div class="hud-row"><span class="hud-label">MOMENTUM</span><span class="hud-val" style="color:${cColor};">${cSign}${t.change.toFixed(2)}%</span></div>
             `;
         } else if (this.tooltip) {
@@ -322,41 +385,89 @@ class AlphaSonarGalaxy {
         this.sidePanel.classList.remove('open');
     }
 
+    // --- BƠM DỮ LIỆU HTML CHO SIDE PANEL TERMINAL ---
     updateSidePanelData() {
         if (!this.lockedToken) return;
         const t = this.lockedToken;
-        let cColor = t.change > 0 ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#F0B90B');
-        let cSign = t.change > 0 ? '+' : '';
+        
+        let isUp = t.change > 0;
+        let cColor = isUp ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#F0B90B');
+        let cSign = isUp ? '+' : '';
+        let cBg = isUp ? 'rgba(14, 203, 129, 0.2)' : (t.change < 0 ? 'rgba(246, 70, 93, 0.2)' : 'rgba(240, 185, 11, 0.2)');
+
+        let shortContract = t.contract ? `${t.contract.substring(0,6)}...${t.contract.slice(-4)}` : 'N/A';
+        
+        // Tính tỷ lệ Volume
+        let totalVol = t.vol || 1;
+        let pctLimit = ((t.vLimit || 0) / totalVol) * 100;
+        let pctChain = ((t.vChain || 0) / totalVol) * 100;
 
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
-            <div class="sp-title">
-                <img src="${t.logo}" onerror="this.src='assets/tokens/default.png'" style="width:30px; height:30px; border-radius:50%;">
-                $${t.symbol}
-            </div>
-            <div class="sp-subtitle">Target Locked</div>
             
-            <div class="sp-stat">
-                <div class="sp-stat-label">CURRENT PRICE</div>
-                <div class="sp-stat-value" style="color: #fff">$${t.price.toFixed(6)}</div>
+            <div class="sp-lock-status">
+                <span class="blink-dot"></span> TARGET LOCKED // SECTOR RADAR
             </div>
-            <div class="sp-stat">
-                <div class="sp-stat-label">24H MOMENTUM</div>
-                <div class="sp-stat-value" style="color: ${cColor}">${cSign}${t.change.toFixed(2)}%</div>
+
+            <div class="sp-head">
+                <img src="${t.logo}" onerror="this.src='assets/tokens/default.png'">
+                <div class="sp-sym-wrap">
+                    <div class="sp-title">${t.symbol}</div>
+                    <div class="sp-contract" onclick="window.pluginCopy && window.pluginCopy('${t.contract}')" title="Copy Contract">
+                        ${shortContract} <i class="far fa-copy"></i>
+                    </div>
+                </div>
             </div>
-            <div class="sp-stat">
-                <div class="sp-stat-label">24H VOLUME</div>
-                <div class="sp-stat-value" style="color: #F0B90B">$${Math.round(t.vol).toLocaleString()}</div>
+            
+            <div class="sp-price-box">
+                <div>
+                    <div class="sp-price-lbl">CURRENT PRICE</div>
+                    <div class="sp-price-val">$${t.price < 0.0001 ? t.price.toExponential(2) : t.price.toFixed(4)}</div>
+                </div>
+                <div class="sp-price-chg" style="color: ${cColor}; background: ${cBg};">
+                    ${cSign}${t.change.toFixed(2)}%
+                </div>
             </div>
-            <div class="sp-stat">
-                <div class="sp-stat-label">TRANSACTIONS</div>
-                <div class="sp-stat-value" style="color: #fff">${t.tx}</div>
+
+            <div class="sp-grid">
+                <div class="sp-box">
+                    <div class="sp-box-lbl">24H VOLUME</div>
+                    <div class="sp-box-val" style="color: #F0B90B;">$${this.formatCompact(t.vol)}</div>
+                </div>
+                <div class="sp-box">
+                    <div class="sp-box-lbl">LIQUIDITY</div>
+                    <div class="sp-box-val" style="color: #00f0ff;">$${this.formatCompact(t.liq)}</div>
+                </div>
+                <div class="sp-box">
+                    <div class="sp-box-lbl">MARKET CAP</div>
+                    <div class="sp-box-val" style="color: #fff;">$${this.formatCompact(t.mc)}</div>
+                </div>
+                <div class="sp-box">
+                    <div class="sp-box-lbl">HOLDERS / TXs</div>
+                    <div class="sp-box-val" style="color: #eaecef;">${this.formatCompact(t.holders)} <span style="font-size:10px; color:#888">(${this.formatCompact(t.tx)})</span></div>
+                </div>
+            </div>
+
+            <div class="sp-vol-bar-wrap">
+                <div class="sp-vol-head">
+                    <span style="color: #F0B90B;">CEX LIMIT: ${pctLimit.toFixed(0)}%</span>
+                    <span style="color: #9945FF;">ON-CHAIN: ${pctChain.toFixed(0)}%</span>
+                </div>
+                <div class="sp-vol-track">
+                    <div class="sp-vol-limit" style="width: ${pctLimit}%"></div>
+                    <div class="sp-vol-chain" style="width: ${pctChain}%"></div>
+                </div>
+            </div>
+
+            <div class="sp-actions">
+                <button class="sp-btn sp-btn-chart">TERMINAL</button>
+                <button class="sp-btn sp-btn-trade">EXECUTE</button>
             </div>
         `;
     }
 
     // ==========================================
-    // RENDER ENGINE (CANVAS)
+    // RENDER ENGINE (CANVAS) - KHÔNG ĐỔI
     // ==========================================
     animate() {
         if (this.width === 0) {
