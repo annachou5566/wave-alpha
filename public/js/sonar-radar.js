@@ -1,10 +1,11 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V9 PERFORMANCE FIX)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V10 MOBILE RESPONSIVE)
  * ============================================================================
- * Đã Fix Hiệu Năng (Chống Đơ/Freeze khi mới load):
- * 1. Chuyển thuật toán quét mảng O(N*M) thành Hash Map O(1) siêu tốc.
- * 2. Cài đặt Throttling (Giảm chấn): Giới hạn tính toán 500ms/lần để bảo vệ CPU.
+ * Đã Fix: 
+ * - Tương thích 100% Điện thoại: Hỗ trợ Touch/Chạm thay vì chỉ xài Chuột.
+ * - Sửa lỗi Canvas bị tàng hình do container xẹp chiều cao trên Mobile.
+ * - CSS Media Queries: Thu nhỏ Side Panel và Control Bar để vừa màn hình đt.
  * ============================================================================
  */
 
@@ -31,10 +32,9 @@ class AlphaSonarGalaxy {
         this.mouseX = -1;
         this.mouseY = -1;
 
-        // --- CÁC BIẾN TỐI ƯU HIỆU NĂNG ---
-        this.lastCalcTime = 0;       // Bộ đếm thời gian Throttling
-        this.tokenDict = {};         // "Từ điển" lưu data siêu tốc
-        this.lastTokenCount = 0;     // Theo dõi lượng token để update từ điển
+        this.lastCalcTime = 0;       
+        this.tokenDict = {};         
+        this.lastTokenCount = 0;     
 
         this.initUI();
         this.resize();
@@ -56,19 +56,21 @@ class AlphaSonarGalaxy {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
+                /* CONTROL BAR */
                 #sonar-control-bar { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; background: rgba(0, 0, 0, 0.6); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2); backdrop-filter: blur(5px); }
                 .sonar-btn { background: transparent; border: 1px solid rgba(0, 240, 255, 0.4); color: #00f0ff; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; transition: all 0.2s; }
                 .sonar-btn:hover, .sonar-btn.active { background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
                 .sonar-btn.pause-btn.paused { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
                 
-                #sonar-side-panel { position: absolute; top: 15px; right: -360px; width: 320px; height: calc(100% - 30px); background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff; border-top: 1px solid rgba(0, 240, 255, 0.2); border-bottom: 1px solid rgba(0, 240, 255, 0.2); z-index: 10; backdrop-filter: blur(10px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -10px 0 30px rgba(0, 240, 255, 0.1); display: flex; flex-direction: column; overflow-y: auto; }
+                /* SIDE PANEL (TERMINAL STYLE) */
+                #sonar-side-panel { position: absolute; top: 0; right: -360px; width: 320px; height: 100%; background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff; z-index: 100; backdrop-filter: blur(10px); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; box-sizing: border-box; color: white; font-family: 'Rajdhani', sans-serif; box-shadow: -10px 0 30px rgba(0, 240, 255, 0.1); display: flex; flex-direction: column; overflow-y: auto; }
                 #sonar-side-panel.open { right: 0; }
                 #sonar-side-panel::-webkit-scrollbar { width: 4px; } #sonar-side-panel::-webkit-scrollbar-thumb { background: #00f0ff; }
                 
-                .sp-close { position: absolute; top: 10px; right: 15px; cursor: pointer; color: #fff; font-size: 24px; opacity: 0.5; transition: 0.2s;}
+                .sp-close { position: absolute; top: 10px; right: 15px; cursor: pointer; color: #fff; font-size: 24px; opacity: 0.5; transition: 0.2s; padding: 5px;}
                 .sp-close:hover { opacity: 1; color: #ff3366; transform: scale(1.1); }
                 
-                .sp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px;}
+                .sp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px; margin-top: 10px;}
                 .sp-head img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(0, 240, 255, 0.5); object-fit: cover; background: #000; }
                 .sp-sym-wrap { display: flex; flex-direction: column; }
                 .sp-title { font-size: 24px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: 1px; }
@@ -95,6 +97,14 @@ class AlphaSonarGalaxy {
                 .sp-vol-chain { height: 100%; background: #9945FF; box-shadow: 0 0 5px #9945FF;}
                 
                 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+                /* CSS RESPONSIVE CHO MOBILE */
+                @media (max-width: 768px) {
+                    #sonar-control-bar { top: 5px; left: 5px; right: 5px; flex-wrap: wrap; justify-content: center; padding: 6px; }
+                    .sonar-btn { font-size: 11px; padding: 4px 8px; flex: 1; text-align: center; }
+                    #sonar-side-panel { width: 100%; right: -100%; border-left: none; }
+                    .sp-price-val { font-size: 24px; }
+                }
             `;
             document.head.appendChild(style);
         }
@@ -135,19 +145,31 @@ class AlphaSonarGalaxy {
         this.container.appendChild(this.sidePanel);
     }
 
+    // --- CẬP NHẬT: XỬ LÝ SỰ KIỆN TƯƠNG THÍCH MOBILE (TOUCH) ---
     bindEvents() {
-        this.canvas.addEventListener('mousemove', (e) => {
+        const updatePointer = (clientX, clientY) => {
             const rect = this.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
+            this.mouseX = clientX - rect.left;
+            this.mouseY = clientY - rect.top;
             this.checkHover();
-        });
+        };
+
+        // Chuột trên Desktop
+        this.canvas.addEventListener('mousemove', (e) => updatePointer(e.clientX, e.clientY));
+        
+        // Cảm ứng trên Điện thoại
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                updatePointer(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
 
         this.canvas.addEventListener('mouseleave', () => {
             this.hoveredToken = null;
             this.canvas.style.cursor = 'default';
         });
 
+        // Click / Tap hoạt động chung
         this.canvas.addEventListener('click', () => {
             if (this.hoveredToken) {
                 this.lockedToken = this.hoveredToken;
@@ -159,11 +181,17 @@ class AlphaSonarGalaxy {
         });
     }
 
+    // --- CẬP NHẬT: CHỐNG XẸP CONTAINER TRÊN ĐIỆN THOẠI ---
     resize() {
+        // Nếu Container bị 0px chiều cao (thường gặp trên mobile CSS flex), ép nó tối thiểu 400px
+        if (this.container.clientHeight < 100) {
+            this.container.style.height = '450px';
+        }
+
         const dpr = window.devicePixelRatio || 1; 
         
-        this.width = this.container.clientWidth || 800;
-        this.height = this.container.clientHeight || 600;
+        this.width = this.container.clientWidth || window.innerWidth || 400;
+        this.height = this.container.clientHeight || 450;
         
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
@@ -179,30 +207,23 @@ class AlphaSonarGalaxy {
         this.maxRadius = Math.max(10, Math.min(this.centerX, this.centerY) - 50);
     }
 
-    // --- CẬP NHẬT: THÊM BỘ GIẢM CHẤN (THROTTLING) ---
     updateData(marketData) {
         if (!marketData || this.isPaused) return;
         this.latestData = marketData;
         
         const now = Date.now();
-        // Chỉ cho phép tính toán lại 2 lần mỗi giây (mỗi 500ms) để không làm đơ máy
         if (now - this.lastCalcTime > 500) {
             this.recalculate();
             this.lastCalcTime = now;
         }
     }
 
-    // ==========================================
-    // CẬP NHẬT: XÂY DỰNG TỪ ĐIỂN TÌM KIẾM SIÊU TỐC
-    // ==========================================
     recalculate(force = false) {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
         
-        // 1. CHUẨN BỊ TỪ ĐIỂN: Kiểm tra xem allTokens có thay đổi số lượng không
         if (typeof allTokens !== 'undefined' && this.lastTokenCount !== allTokens.length) {
-            this.tokenDict = {}; // Làm mới từ điển
+            this.tokenDict = {}; 
             allTokens.forEach(item => {
-                // Lấy các định dạng ID khác nhau làm "chìa khóa" (Key) để tra cứu
                 if (item.alphaId) this.tokenDict[String(item.alphaId).replace('ALPHA_','')] = item;
                 if (item.id) this.tokenDict[String(item.id).replace('ALPHA_','')] = item;
                 if (item.symbol) this.tokenDict[item.symbol] = item;
@@ -230,7 +251,6 @@ class AlphaSonarGalaxy {
             let contract = '';
             let liq = t.l || 0; 
 
-            // 2. TRA CỨU SIÊU TỐC: Không dùng vòng lặp .find() nữa, móc thẳng từ Từ Điển ra!
             let targetToken = this.tokenDict[tokenKey];
 
             if (targetToken) {
@@ -443,7 +463,6 @@ class AlphaSonarGalaxy {
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- VẼ LƯỚI ---
         this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
         this.ctx.lineWidth = 1;
         for (let i = 1; i <= 4; i++) {
@@ -462,7 +481,6 @@ class AlphaSonarGalaxy {
         this.ctx.stroke();
         this.ctx.setLineDash([]); 
 
-        // --- VẼ SÓNG ÂM ---
         for (let i = this.ripples.length - 1; i >= 0; i--) {
             let rip = this.ripples[i];
             this.ctx.beginPath();
