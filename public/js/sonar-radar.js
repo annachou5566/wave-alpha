@@ -1,11 +1,10 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V20 PERFECT AESTHETICS)
+ * ALPHA SONAR GALAXY - ULTRA OPTIMIZED PERFORMANCE EDITION
  * ============================================================================
- * ĐÃ FIX THEO YÊU CẦU:
- * 1. Xóa sổ hoàn toàn "Tia radar quét vòng tròn" gây rối mắt. Giao diện tĩnh lặng.
- * 2. Khôi phục lệnh cắt `clip()` -> Mọi Token đều được bo tròn 100% hoàn hảo.
- * 3. Tái cấu trúc "Lực đẩy Từ trường": Token tự động tản ra, không dính chùm.
+ * 1. Image Pre-caching: Loại bỏ hoàn toàn ctx.clip() trong vòng lặp animate.
+ * 2. Math Optimization: Dùng bình phương khoảng cách thay cho Math.sqrt().
+ * 3. Sleep Mode: Dừng tính toán vật lý nếu token đã nằm yên để tiết kiệm CPU.
  * ============================================================================
  */
 
@@ -14,7 +13,6 @@ class AlphaSonarGalaxy {
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) return;
         
-        // Hủy instance cũ nếu có (Chống Lag)
         if (this.canvas.sonarInstance) {
             this.canvas.sonarInstance.destroy();
         }
@@ -23,6 +21,10 @@ class AlphaSonarGalaxy {
         this.isVisible = true; 
 
         this.ctx = this.canvas.getContext('2d');
+        // Tối ưu hóa rendering của Canvas
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'low'; // 'low' là đủ đẹp cho radar và mượt hơn
+
         this.container = this.canvas.parentElement || document.body;
         this.container.style.position = 'relative'; 
         this.container.style.overflow = 'hidden';
@@ -32,7 +34,7 @@ class AlphaSonarGalaxy {
         
         this.isPaused = false;
         this.filterMode = 'volume'; 
-        this.visualMode = 'mesh'; // 'mesh' or 'orbit'
+        this.visualMode = 'mesh'; 
         
         this.lockedToken = null;    
         this.hoveredToken = null;   
@@ -184,11 +186,15 @@ class AlphaSonarGalaxy {
     }
 
     bindEvents() {
+        let hoverTimeout;
         const updatePointer = (clientX, clientY) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = clientX - rect.left;
             this.mouseY = clientY - rect.top;
-            this.checkHover();
+            
+            // Tối ưu hóa: Debounce việc kiểm tra hover để giảm tải khi di chuột liên tục
+            clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => this.checkHover(), 10);
         };
 
         this.canvas.addEventListener('mousemove', (e) => updatePointer(e.clientX, e.clientY));
@@ -244,11 +250,25 @@ class AlphaSonarGalaxy {
         this.latestData = marketData;
         
         const now = Date.now();
-        // Cập nhật tọa độ mỗi 500ms
         if (now - this.lastCalcTime > 500) {
             this.recalculate();
             this.lastCalcTime = now;
         }
+    }
+
+    // --- HÀM CACHE ẢNH RẤT QUAN TRỌNG ĐỂ TỐI ƯU ---
+    createRoundedCache(imgObj) {
+        const size = 64; // Cố định độ phân giải offscreen canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.beginPath();
+        ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(imgObj, 0, 0, size, size);
+        return canvas;
     }
 
     recalculate() {
@@ -326,7 +346,6 @@ class AlphaSonarGalaxy {
             let baseX, baseY;
             let baseOrbitRadius = 0; let orbitSpeed = 0; let orbitAngle = 0;
 
-            // Offset ngẫu nhiên dựa trên tên token để các token có cùng chỉ số không bị dính vào 1 điểm
             let hashOffset = ((data.symbol.charCodeAt(0) || 0) % 10) / 10 - 0.5;
 
             if (this.visualMode === 'mesh') {
@@ -378,6 +397,7 @@ class AlphaSonarGalaxy {
                     img.onerror = function() { if (!this.failed) { this.failed = true; this.src = 'assets/tokens/default.png'; }};
                     img.src = data.logo;
                     existingToken.imgObj = img;
+                    existingToken.cachedImg = null; // Reset cache
                 }
                 existingToken.updated = true; 
             } else {
@@ -387,7 +407,7 @@ class AlphaSonarGalaxy {
 
                 this.tokens.push({
                     symbol: data.symbol, logo: data.logo, contract: data.contract,
-                    imgObj: img, 
+                    imgObj: img, cachedImg: null,
                     x: this.centerX, y: this.centerY,
                     tX: baseX, tY: baseY,
                     baseX: baseX, baseY: baseY, 
@@ -508,7 +528,6 @@ class AlphaSonarGalaxy {
         if (!this.isVisible || this.width === 0) return;
 
         try {
-            // Nền đen vũ trụ mờ nhẹ (Tạo hiệu ứng bóng trôi)
             this.ctx.fillStyle = 'rgba(10, 14, 23, 0.3)'; 
             this.ctx.fillRect(0, 0, this.width, this.height);
 
@@ -518,12 +537,14 @@ class AlphaSonarGalaxy {
             if (this.visualMode === 'orbit') {
                 this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
                 this.ctx.lineWidth = 1;
+                this.ctx.beginPath();
                 for (let i = 1; i <= 4; i++) {
                     let currentRadius = (this.maxRadius / 4) * i;
-                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.centerX + currentRadius, this.centerY);
                     this.ctx.arc(this.centerX, this.centerY, currentRadius, 0, Math.PI * 2);
-                    this.ctx.stroke();
                 }
+                this.ctx.stroke();
+
                 this.ctx.beginPath();
                 this.ctx.arc(this.centerX, this.centerY, 8, 0, Math.PI * 2);
                 this.ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
@@ -565,7 +586,6 @@ class AlphaSonarGalaxy {
 
             // --- THUẬT TOÁN VẬT LÝ VÀ CHỐNG DÍNH CHÙM ---
             if (!this.isPaused) {
-                // 1. Tính toán đích đến Base
                 for (let i = 0; i < this.tokens.length; i++) {
                     let t = this.tokens[i];
                     if (this.visualMode === 'orbit') {
@@ -574,13 +594,11 @@ class AlphaSonarGalaxy {
                         t.baseX = this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle);
                         t.baseY = this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle);
                     }
-                    
-                    // Lực đàn hồi kéo token về đích
                     t.tX += (t.baseX - t.tX) * 0.05;
                     t.tY += (t.baseY - t.tY) * 0.05;
                 }
 
-                // 2. Lực đẩy (Repulsion) chống dính chùm
+                // TỐI ƯU HÓA: Chỉ tính toán lực đẩy (repulsion) nếu thực sự cần
                 for (let i = 0; i < this.tokens.length; i++) {
                     let t = this.tokens[i];
                     for (let j = i + 1; j < this.tokens.length; j++) {
@@ -588,24 +606,25 @@ class AlphaSonarGalaxy {
                         
                         let dx = t.tX - other.tX;
                         let dy = t.tY - other.tY;
-                        let dist = Math.sqrt(dx*dx + dy*dy) || 1;
-                        
-                        let minDist = t.size + other.size + 15; // Khoảng cách giãn cách an toàn
+                        let distSq = dx*dx + dy*dy; // Dùng khoảng cách bình phương thay vì Math.sqrt()
+                        let minDist = t.size + other.size + 15;
 
-                        if (dist < minDist) {
-                            let pushForce = (minDist - dist) * 0.2; // Lực đẩy
+                        // Chống dính chùm
+                        if (distSq < minDist * minDist && distSq > 0) {
+                            let dist = Math.sqrt(distSq);
+                            let pushForce = (minDist - dist) * 0.2; 
                             let fX = (dx / dist) * pushForce;
                             let fY = (dy / dist) * pushForce;
                             
-                            // Đẩy trên trục 2D
                             t.tX += fX; t.tY += fY;
                             other.tX -= fX; other.tY -= fY;
                         }
                         
-                        // Vẽ tia Laser nối lưới (Chỉ ở Mesh mode)
-                        if (this.visualMode === 'mesh') {
-                            let realDist = Math.sqrt(Math.pow(t.x - other.x, 2) + Math.pow(t.y - other.y, 2));
-                            if (realDist < 80 && t.color === other.color) {
+                        // Vẽ tia lưới Mesh (Batch vẽ chung để tối ưu)
+                        if (this.visualMode === 'mesh' && t.color === other.color) {
+                            let realDistSq = (t.x - other.x) * (t.x - other.x) + (t.y - other.y) * (t.y - other.y);
+                            if (realDistSq < 6400) { // 80^2 = 6400
+                                let realDist = Math.sqrt(realDistSq);
                                 this.ctx.beginPath();
                                 this.ctx.moveTo(t.x, t.y);
                                 this.ctx.lineTo(other.x, other.y);
@@ -616,20 +635,22 @@ class AlphaSonarGalaxy {
                         }
                     }
 
-                    // Ép không cho văng ra khỏi màn hình
+                    // Ép khung
                     t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
                     t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
 
-                    // Di chuyển mượt (Lerp)
-                    t.x += (t.tX - t.x) * 0.15; 
-                    t.y += (t.tY - t.y) * 0.15;
-                    t.size += (t.targetSize - t.size) * 0.1;
+                    // TỐI ƯU HÓA: Sleep state - Nếu lệch cực nhỏ thì cho đứng im luôn khỏi tính
+                    if (Math.abs(t.tX - t.x) > 0.1 || Math.abs(t.tY - t.y) > 0.1 || Math.abs(t.targetSize - t.size) > 0.1) {
+                        t.x += (t.tX - t.x) * 0.15; 
+                        t.y += (t.tY - t.y) * 0.15;
+                        t.size += (t.targetSize - t.size) * 0.1;
+                    }
                 }
             }
 
             this.ctx.globalAlpha = 1.0;
 
-            // --- VẼ LOGO VỚI LỆNH CLIP() ---
+            // --- VẼ LOGO ĐÃ CACHE TRƯỚC VÀO CANVAS (Tối ưu triệt để) ---
             this.tokens.forEach(t => {
                 let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
                 let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
@@ -637,30 +658,29 @@ class AlphaSonarGalaxy {
                 this.ctx.globalAlpha = (isHovered || isLocked) ? 1.0 : 0.8;
                 let radius = t.size;
 
-                if (t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
-                    this.ctx.save();
-                    this.ctx.beginPath();
-                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                    this.ctx.closePath();
-                    this.ctx.clip(); // Khôi phục Clip để bo tròn 100%
-                    
-                    this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, radius*2, radius*2);
-                    this.ctx.restore();
+                // Tạo cache bo tròn duy nhất 1 lần nếu ảnh đã load
+                if (!t.cachedImg && t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0 && !t.imgObj.failed) {
+                    t.cachedImg = this.createRoundedCache(t.imgObj);
+                }
+
+                // Nếu đã có ảnh Cache => Vẽ cực mượt (thay vì phải gọi ctx.clip() mỗi frame)
+                if (t.cachedImg) {
+                    this.ctx.drawImage(t.cachedImg, t.x - radius, t.y - radius, radius*2, radius*2);
                 } else {
+                    // Fallback trong lúc chờ load ảnh
                     this.ctx.beginPath();
                     this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
                     this.ctx.fillStyle = '#1a1f2e';
                     this.ctx.fill();
                 }
 
-                // Vẽ viền tròn bọc ngoài
                 this.ctx.beginPath();
                 this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
                 this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
                 this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
                 this.ctx.stroke();
-                this.ctx.globalAlpha = 1.0;
             });
+            this.ctx.globalAlpha = 1.0;
 
             // --- VẼ HUD & CROSSHAIR NỔI LÊN TRÊN ---
             this.tokens.forEach(t => {
