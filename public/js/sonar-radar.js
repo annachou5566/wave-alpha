@@ -1,11 +1,11 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V17 3D ORBIT PHYSICS)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V18 SMART DODGE)
  * ============================================================================
- * Đã Fix:
- * 1. Chống đè 3D Orbit: Token bay cùng quỹ đạo sẽ "xịt về sau" (Angular Push) 
- * thay vì văng ra khỏi đường ray. Vẫn cho phép đè một phần tạo cảm giác 3D.
- * 2. Tối ưu hóa siêu hiệu năng, cắt giảm hoàn toàn Zombie Loop (từ V16).
+ * Đã Fix Lỗi Orbit Speed (Quay chóng mặt):
+ * - Hủy bỏ lực đẩy góc (Angular Push) gây sai lệch tốc độ thực tế.
+ * - Áp dụng cơ chế "Radial Dodge" (Lách độ cao): Token bay nhanh sẽ tự động
+ * nâng/hạ bán kính quỹ đạo để vượt mặt token bay chậm mà không bị đổi tốc độ.
  * ============================================================================
  */
 
@@ -329,7 +329,7 @@ class AlphaSonarGalaxy {
             let targetSize = Math.max(10, Math.min(24, 10 + (data.vol / (maxVol || 1)) * 14));
             let colorHex = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
             let baseX, baseY;
-            let orbitRadius = 0; let orbitSpeed = 0; let orbitAngle = 0;
+            let baseOrbitRadius = 0; let orbitSpeed = 0; let orbitAngle = 0;
 
             if (this.visualMode === 'mesh') {
                 let normChange = Math.max(-20, Math.min(20, data.change)); 
@@ -344,15 +344,15 @@ class AlphaSonarGalaxy {
                 let ratio = this.filterMode === 'liquidity' 
                             ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1)))
                             : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
-                orbitRadius = this.maxRadius * (1 - Math.pow(ratio, 0.3));
-                if (orbitRadius < 40) orbitRadius = 40 + Math.random() * 10;
+                baseOrbitRadius = this.maxRadius * (1 - Math.pow(ratio, 0.3));
+                if (baseOrbitRadius < 40) baseOrbitRadius = 40 + Math.random() * 10;
 
                 orbitAngle = Math.random() * Math.PI * 2; 
-                orbitSpeed = 0.002 + (data.tx / (maxTx || 1)) * 0.008;
+                orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006; // Tốc độ cân bằng hơn
                 if (data.change < 0) orbitSpeed *= -1; 
 
-                baseX = this.centerX + orbitRadius * Math.cos(orbitAngle);
-                baseY = this.centerY + orbitRadius * Math.sin(orbitAngle);
+                baseX = this.centerX + baseOrbitRadius * Math.cos(orbitAngle);
+                baseY = this.centerY + baseOrbitRadius * Math.sin(orbitAngle);
             }
 
             let existingToken = this.tokens.find(t => t.symbol === data.symbol);
@@ -370,7 +370,8 @@ class AlphaSonarGalaxy {
                 
                 if (this.visualMode === 'orbit') {
                     if(!existingToken.orbitAngle) existingToken.orbitAngle = orbitAngle;
-                    existingToken.orbitRadius = orbitRadius;
+                    // FIX V18: Dùng baseOrbitRadius làm điểm gốc để neo quỹ đạo
+                    existingToken.baseOrbitRadius = baseOrbitRadius;
                     existingToken.orbitSpeed = orbitSpeed;
                 }
 
@@ -393,7 +394,13 @@ class AlphaSonarGalaxy {
                     x: this.centerX, y: this.centerY,
                     tX: baseX, tY: baseY,
                     baseX: baseX, baseY: baseY, 
-                    orbitRadius: orbitRadius, orbitSpeed: orbitSpeed, orbitAngle: orbitAngle,
+                    
+                    // FIX V18: Khởi tạo baseOrbitRadius và currentOrbitRadius
+                    baseOrbitRadius: baseOrbitRadius,
+                    currentOrbitRadius: baseOrbitRadius, 
+                    orbitSpeed: orbitSpeed, 
+                    orbitAngle: orbitAngle,
+                    
                     size: 0, targetSize: targetSize, color: colorHex, 
                     price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
                     mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
@@ -488,7 +495,7 @@ class AlphaSonarGalaxy {
             this.ctx.fillStyle = 'rgba(10, 14, 23, 0.2)'; 
             this.ctx.fillRect(0, 0, this.width, this.height);
 
-            // --- VẼ BACKGROUND THEO MÔ HÌNH (Không còn lưới ca rô) ---
+            // --- VẼ BACKGROUND THEO MÔ HÌNH ---
             this.ctx.font = '600 11px "Courier New", monospace';
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
 
@@ -546,44 +553,50 @@ class AlphaSonarGalaxy {
                 let t = this.tokens[i];
 
                 if (!this.isPaused) {
-                    if (this.visualMode === 'orbit') {
-                        t.orbitAngle += t.orbitSpeed;
-                        t.baseX = this.centerX + t.orbitRadius * Math.cos(t.orbitAngle);
-                        t.baseY = this.centerY + t.orbitRadius * Math.sin(t.orbitAngle);
-                    }
                     
-                    t.tX += (t.baseX - t.tX) * 0.05;
-                    t.tY += (t.baseY - t.tY) * 0.05;
+                    if (this.visualMode === 'orbit') {
+                        // 1. Tốc độ góc (Orbit Speed) độc lập hoàn toàn với va chạm
+                        t.orbitAngle += t.orbitSpeed;
+                        
+                        // 2. Lực đàn hồi kéo bán kính bay về lại quỹ đạo gốc
+                        t.currentOrbitRadius += (t.baseOrbitRadius - t.currentOrbitRadius) * 0.05;
 
-                    for (let j = i + 1; j < this.tokens.length; j++) {
-                        let other = this.tokens[j];
-
-                        if (this.visualMode === 'orbit') {
-                            // FIX V17: Chống đè 3D trên quỹ đạo bằng Lực đẩy Góc (Angular Push)
-                            let dx = t.tX - other.tX;
-                            let dy = t.tY - other.tY;
+                        // 3. FIX V18: LÁCH LÀN (RADIAL DODGE)
+                        for (let j = i + 1; j < this.tokens.length; j++) {
+                            let other = this.tokens[j];
+                            let dx = (this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle)) - 
+                                     (this.centerX + other.currentOrbitRadius * Math.cos(other.orbitAngle));
+                            let dy = (this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle)) - 
+                                     (this.centerY + other.currentOrbitRadius * Math.sin(other.orbitAngle));
                             let dist = Math.sqrt(dx*dx + dy*dy) || 1; 
                             
-                            // Cho phép đè một phần (cảm giác 3D), chỉ tách nếu quá gần (< 15px)
-                            let minDist = 15; 
+                            // Cho phép đè nhẹ, nếu quá sát (< 12px) thì mới lách
+                            let minDist = t.size + other.size + 6; 
 
                             if (dist < minDist) {
-                                // Xác định ai chạy trước ai chạy sau
-                                let angleDiff = t.orbitAngle - other.orbitAngle;
-                                angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff)); 
-                                
-                                // Đẩy (xịt về sau/tới trước) dọc theo vòng quay quỹ đạo
-                                let pushForce = 0.008; 
-                                if (angleDiff > 0) {
-                                    t.orbitAngle += pushForce;
-                                    other.orbitAngle -= pushForce;
+                                let pushForce = (minDist - dist) * 0.1; 
+                                // Ai có bán kính đang nhỉnh hơn thì đẩy bay cao hơn nữa
+                                if (t.currentOrbitRadius >= other.currentOrbitRadius) {
+                                    t.currentOrbitRadius += pushForce;
+                                    other.currentOrbitRadius -= pushForce;
                                 } else {
-                                    t.orbitAngle -= pushForce;
-                                    other.orbitAngle += pushForce;
+                                    t.currentOrbitRadius -= pushForce;
+                                    other.currentOrbitRadius += pushForce;
                                 }
                             }
-                        } else {
-                            // Vật lý của MESH (Giữ nguyên)
+                        }
+
+                        // Cập nhật tọa độ đích dựa trên góc chuẩn và bán kính lách làn
+                        t.tX = this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle);
+                        t.tY = this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle);
+
+                    } else {
+                        // Vật lý của MESH (Không đổi)
+                        t.tX += (t.baseX - t.tX) * 0.05;
+                        t.tY += (t.baseY - t.tY) * 0.05;
+
+                        for (let j = i + 1; j < this.tokens.length; j++) {
+                            let other = this.tokens[j];
                             let dx = t.tX - other.tX;
                             let dy = t.tY - other.tY;
                             let dist = Math.sqrt(dx*dx + dy*dy) || 1; 
@@ -597,7 +610,6 @@ class AlphaSonarGalaxy {
                                 other.tX -= fX; other.tY -= fY;
                             }
                             
-                            // Tia kết nối (Chỉ hiện trong MESH)
                             let realDist = Math.sqrt(Math.pow(t.x - other.x, 2) + Math.pow(t.y - other.y, 2));
                             if (realDist < 80 && t.color === other.color) {
                                 this.ctx.beginPath();
@@ -608,10 +620,10 @@ class AlphaSonarGalaxy {
                                 this.ctx.stroke();
                             }
                         }
-                    }
 
-                    t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
-                    t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
+                        t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
+                        t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
+                    }
 
                     t.x += (t.tX - t.x) * 0.1; 
                     t.y += (t.tY - t.y) * 0.1;
@@ -699,5 +711,7 @@ class AlphaSonarGalaxy {
         } catch (e) {
             console.warn("Radar Render Prevented Crash:", e);
         }
+
+        requestAnimationFrame(() => this.animate());
     }
 }
