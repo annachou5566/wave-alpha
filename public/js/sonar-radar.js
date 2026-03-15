@@ -157,6 +157,16 @@ class AlphaSonarGalaxy {
                 .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px; }
                 .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.45); margin-bottom: 3px; }
                 .sp-box-val { font-size: 16px; font-weight: 700; font-family: monospace; }
+                .sp-block { margin-top: 10px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 10px; }
+                .sp-block-title { font-size: 11px; letter-spacing: 0.4px; color: rgba(255,255,255,0.7); margin-bottom: 8px; font-weight: 700; }
+                .sp-stat-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin: 4px 0; }
+                .sp-stat-row .k { color: rgba(255,255,255,0.55); }
+                .sp-stat-row .v { color: #fff; font-weight: 700; font-family: monospace; }
+                .sp-bar-wrap { margin-top: 8px; }
+                .sp-bar-head { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
+                .sp-bar-track { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; display: flex; overflow: hidden; }
+                .sp-bar-cex { height: 100%; background: #F0B90B; }
+                .sp-bar-dex { height: 100%; background: #00f0ff; }
 
                 @media (max-width: 768px) {
                     #sonar-control-bar { margin: 8px 8px 6px; gap: 6px; }
@@ -174,6 +184,7 @@ class AlphaSonarGalaxy {
             <button class="sonar-btn active" id="btn-mode-toggle" style="border-color:#9945FF;color:#9945FF;">[ MESH NETWORK ]</button>
             <button class="sonar-btn active" data-filter="volume">TOP VOL</button>
             <button class="sonar-btn" data-filter="liquidity">TOP LIQ</button>
+            <button class="sonar-btn" data-filter="marketcap">TOP MC</button>
             <div class="sonar-cap-wrap">TOKENS
                 <select id="sonar-token-cap">
                     ${this.tokenCapOptions.map(v => `<option value="${v}" ${v === this.userTokenCap ? 'selected' : ''}>${v}</option>`).join('')}
@@ -352,6 +363,7 @@ class AlphaSonarGalaxy {
         });
 
         if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
+        else if (this.filterMode === 'marketcap') dataArray.sort((a, b) => b.mc - a.mc);
         else dataArray.sort((a, b) => b.vol - a.vol);
 
         const effectiveCap = this.getEffectiveCap();
@@ -535,6 +547,14 @@ class AlphaSonarGalaxy {
         const cBg = isUp ? 'rgba(14,203,129,0.2)' : (t.change < 0 ? 'rgba(246,70,93,0.2)' : 'rgba(240,185,11,0.2)');
         const shortContract = t.contract ? `${t.contract.substring(0, 6)}...${t.contract.slice(-4)}` : 'N/A';
 
+        const totalVol = Math.max(1, this.safeNum(t.vol));
+        const cexVol = Math.max(0, this.safeNum(t.vLimit));
+        const dexVol = Math.max(0, this.safeNum(t.vChain));
+        const cexPct = Math.max(0, Math.min(100, (cexVol / totalVol) * 100));
+        const dexPct = Math.max(0, 100 - cexPct);
+        const liqToMc = t.mc > 0 ? (t.liq / t.mc) * 100 : 0;
+        const volToLiq = t.liq > 0 ? (t.vol / t.liq) : 0;
+
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
             <div class="sp-head">
@@ -556,6 +576,26 @@ class AlphaSonarGalaxy {
                 <div class="sp-box"><div class="sp-box-lbl">LIQUIDITY</div><div class="sp-box-val" style="color:#00f0ff;">$${this.formatCompact(t.liq)}</div></div>
                 <div class="sp-box"><div class="sp-box-lbl">MARKET CAP</div><div class="sp-box-val">$${this.formatCompact(t.mc)}</div></div>
                 <div class="sp-box"><div class="sp-box-lbl">HOLDERS</div><div class="sp-box-val">${this.formatCompact(t.holders)}</div></div>
+            </div>
+            <div class="sp-block">
+                <div class="sp-block-title">VOLUME SOURCE BREAKDOWN</div>
+                <div class="sp-bar-wrap">
+                    <div class="sp-bar-head">
+                        <span>CEX LIMIT: $${this.formatCompact(cexVol)} (${cexPct.toFixed(0)}%)</span>
+                        <span>DEX ONCHAIN: $${this.formatCompact(dexVol)} (${dexPct.toFixed(0)}%)</span>
+                    </div>
+                    <div class="sp-bar-track">
+                        <div class="sp-bar-cex" style="width:${cexPct}%;"></div>
+                        <div class="sp-bar-dex" style="width:${dexPct}%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="sp-block">
+                <div class="sp-block-title">KEY METRICS</div>
+                <div class="sp-stat-row"><span class="k">TX COUNT (24H)</span><span class="v">${this.formatCompact(t.tx || 0)}</span></div>
+                <div class="sp-stat-row"><span class="k">VOL / LIQ RATIO</span><span class="v">${volToLiq.toFixed(2)}x</span></div>
+                <div class="sp-stat-row"><span class="k">LIQ / MC COVERAGE</span><span class="v">${liqToMc.toFixed(2)}%</span></div>
+                <div class="sp-stat-row"><span class="k">PRICE CHANGE</span><span class="v" style="color:${cColor};">${cSign}${t.change.toFixed(2)}%</span></div>
             </div>
         `;
     }
