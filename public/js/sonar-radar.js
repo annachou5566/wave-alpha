@@ -2,347 +2,341 @@ class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) return;
+
         this.ctx = this.canvas.getContext('2d');
+        if (!this.ctx) return;
+
         this.tokens = [];
-        this.ripples = []; 
-        this.angle = 0;
+        this.ripples = [];
+        this.alertFeed = [];
         this.latestData = null;
-        
-        // Tọa độ chuột trong Canvas
+
         this.mouseX = -1;
         this.mouseY = -1;
-        // Tọa độ chuột thực trên Màn hình (Để vẽ HUD HTML)
-        this.clientX = -1;
-        this.clientY = -1;
-        
         this.hoveredToken = null;
 
-        this.initHUD(); // Khởi tạo Tooltip HTML
+        this.angle = 0;
+        this.frame = 0;
+        this.isPaused = false;
+
+        this.maxFeedItems = 5;
+        this.maxRipples = 200;
+        this.lastFrameAt = performance.now();
+        this.fps = 60;
 
         this.resize();
+
         window.addEventListener('resize', () => this.resize());
-        
-        // Theo dõi chuột
+
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = e.clientX - rect.left;
             this.mouseY = e.clientY - rect.top;
-            this.clientX = e.clientX;
-            this.clientY = e.clientY;
             this.checkHover();
         });
 
-        // Tắt HUD khi chuột rời khỏi Radar
         this.canvas.addEventListener('mouseleave', () => {
+            this.mouseX = -1;
+            this.mouseY = -1;
             this.hoveredToken = null;
-            if (this.tooltip) this.tooltip.style.opacity = '0';
             this.canvas.style.cursor = 'default';
+        });
+
+        this.canvas.addEventListener('dblclick', () => {
+            this.isPaused = !this.isPaused;
         });
 
         this.animate();
     }
 
-    // --- TẠO HTML TOOLTIP ---
-    initHUD() {
-        this.tooltip = document.getElementById('sonar-hud-tooltip');
-        if (!this.tooltip) {
-            this.tooltip = document.createElement('div');
-            this.tooltip.id = 'sonar-hud-tooltip';
-            document.body.appendChild(this.tooltip);
-        }
-    }
-
     resize() {
         const parent = this.canvas.parentElement;
-        this.width = parent.clientWidth || 800;
-        this.height = parent.clientHeight || 600;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        this.width = parent?.clientWidth || 800;
+        this.height = parent?.clientHeight || 600;
+
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = Math.round(this.width * dpr);
+        this.canvas.height = Math.round(this.height * dpr);
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
-        this.maxRadius = Math.max(10, Math.min(this.centerX, this.centerY) - 40); // Giữ lề 40px cho chữ
+        this.maxRadius = Math.max(60, Math.min(this.centerX, this.centerY) - 26);
+
+        if (this.latestData) this.recalculate();
     }
 
     updateData(marketData) {
-        if (!marketData) return;
+        if (!marketData || typeof marketData !== 'object') return;
         this.latestData = marketData;
         this.recalculate();
     }
 
-    recalculate() {
-        if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
-        
-        const oldTxMap = {};
-        this.tokens.forEach(t => { oldTxMap[t.symbol] = t.tx; });
+    getToneByChange(change) {
+        if (change > 0) return '#00f0ff';
+        if (change < 0) return '#ff3366';
+        return '#cfd6e4';
+    }
 
-        const newTokens = [];
+    logAlert(symbol, message, tone = 'info') {
+        const colorMap = {
+            info: '#9ca3af',
+            up: '#00f0ff',
+            down: '#ff3366',
+            hot: '#f0b90b'
+        };
+
+        this.alertFeed.unshift({
+            text: `${symbol}: ${message}`,
+            color: colorMap[tone] || '#9ca3af',
+            at: Date.now()
+        });
+
+        if (this.alertFeed.length > this.maxFeedItems) {
+            this.alertFeed.length = this.maxFeedItems;
+        }
+    }
+
+    normalizeEntry(key, t, maxVol, maxLiq, oldMap) {
+        const symbol = t.symbol || key.replace('ALPHA_', '');
+        const change = Number(t.c || 0);
+        const vol = Number(t?.v?.dt || 0);
+        const liq = Number(t.l || vol || 1000);
+        const tx = Number(t.tx || 0);
+        const price = Number(t.p || 0);
+
+        const liqRatio = Math.max(0.01, Math.min(1, liq / (maxLiq || 1)));
+        let radius = this.maxRadius * (1 - Math.pow(liqRatio, 0.32));
+        radius = Math.max(20, radius);
+
+        const angle = (change / 18) * Math.PI;
+        const targetX = this.centerX + radius * Math.cos(angle);
+        const targetY = this.centerY - radius * Math.sin(angle);
+
+        const old = oldMap.get(symbol);
+        const smooth = old ? 0.2 : 1;
+        const x = old ? old.x + (targetX - old.x) * smooth : targetX;
+        const y = old ? old.y + (targetY - old.y) * smooth : targetY;
+
+        const size = Math.max(3.5, Math.min(18, (vol / (maxVol || 1)) * 18));
+        const tone = this.getToneByChange(change);
+
+        if (old && tx > old.tx) {
+            this.ripples.push({ x, y, r: size * 0.7, alpha: 0.95, color: tone });
+
+            const txDelta = tx - old.tx;
+            if (txDelta >= 20) {
+                this.logAlert(symbol, `TX spike +${txDelta.toLocaleString()}`, 'hot');
+            }
+        }
+
+        if (old && Math.abs(change - old.change) >= 2.5) {
+            this.logAlert(
+                symbol,
+                `Momentum ${change > old.change ? 'up' : 'down'} ${change.toFixed(2)}%`,
+                change > old.change ? 'up' : 'down'
+            );
+        }
+
+        return {
+            symbol,
+            x,
+            y,
+            targetX,
+            targetY,
+            size,
+            color: tone,
+            tx,
+            price,
+            vol,
+            liq,
+            change,
+            liqRatio
+        };
+    }
+
+    recalculate() {
+        if (!this.latestData || this.width <= 0) return;
+
+        const oldMap = new Map(this.tokens.map((t) => [t.symbol, t]));
         let maxVol = 0;
         let maxLiq = 0;
 
-        // Quét lần 1 để tìm Max Volume / Liquidity
-        Object.entries(this.latestData).forEach(([key, t]) => {
+        Object.values(this.latestData).forEach((t) => {
             if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
-            if (t.v.dt > maxVol) maxVol = t.v.dt;
-            let liq = t.l || t.v.dt || 1000;
+            const vol = Number(t.v.dt || 0);
+            const liq = Number(t.l || vol || 1000);
+            if (vol > maxVol) maxVol = vol;
             if (liq > maxLiq) maxLiq = liq;
         });
 
-        // Quét lần 2 để tạo danh sách Token
+        const nextTokens = [];
         Object.entries(this.latestData).forEach(([key, t]) => {
             if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
-            
-            // XỬ LÝ FIX LỖI "HIỆN TOÀN SỐ"
-            let realSymbol = t.symbol || t.s || t.name;
-            if (!realSymbol && t.baseToken && t.baseToken.symbol) realSymbol = t.baseToken.symbol;
-            if (!realSymbol) {
-                if (typeof key === 'string' && isNaN(key)) {
-                    realSymbol = key.replace('ALPHA_', '');
-                } else {
-                    realSymbol = 'UNKNOWN';
-                }
-            }
-
-            let liq = t.l || t.v.dt || 1000;
-            let change = t.c || 0;
-
-            // Tính bán kính (Distance) dựa trên Liquidity/Volume
-            let liqRatio = Math.max(0.01, Math.min(1, liq / (maxLiq || 1000000)));
-            let r = this.maxRadius * (1 - Math.pow(liqRatio, 0.3));
-            if (r < 30) r = 30 + Math.random() * 10; // Không đè ngay tâm
-
-            // Tính góc: Phân bổ dựa trên biến động giá %
-            let angleBase = (change / 15) * Math.PI; 
-            let angle = angleBase + (Math.random() * 0.5 - 0.25); 
-            
-            let posX = this.centerX + r * Math.cos(angle);
-            // Căn chỉnh trục Y theo chuẩn Canvas (Dương là đi xuống)
-            let posY = this.centerY + r * Math.sin(angle); 
-            
-            let colorHex = change > 0 ? '#00f0ff' : (change < 0 ? '#ff3366' : '#F0B90B');
-
-            // Bắn sóng âm nếu có giao dịch mới (TX tăng)
-            if (oldTxMap[realSymbol] !== undefined && (t.tx || 0) > oldTxMap[realSymbol]) {
-                this.ripples.push({ x: posX, y: posY, r: 5, alpha: 1, color: colorHex });
-            }
-
-            newTokens.push({
-                symbol: realSymbol,
-                x: posX,
-                y: posY,
-                // Tính góc thực tế từ tâm để làm hiệu ứng phát sáng khi Radar quét qua
-                tAngle: Math.atan2(posY - this.centerY, posX - this.centerX),
-                size: Math.max(3, (t.v.dt / (maxVol || 1)) * 10),
-                color: colorHex,
-                tx: t.tx || 0,
-                price: t.p || 0,
-                vol: t.v.dt || 0,
-                change: change
-            });
+            nextTokens.push(this.normalizeEntry(key, t, maxVol, maxLiq, oldMap));
         });
-        
-        this.tokens = newTokens;
+
+        nextTokens.sort((a, b) => b.vol - a.vol);
+        this.tokens = nextTokens;
+
+        if (this.ripples.length > this.maxRipples) {
+            this.ripples = this.ripples.slice(-this.maxRipples);
+        }
+
         this.checkHover();
     }
 
-    // --- CẬP NHẬT GIAO DIỆN HTML HUD ---
     checkHover() {
         this.hoveredToken = null;
-        for (let t of this.tokens) {
-            let dx = this.mouseX - t.x;
-            let dy = this.mouseY - t.y;
-            // Tăng vùng hover (Hitbox) lên để dễ trúng hơn
-            if (Math.sqrt(dx*dx + dy*dy) < Math.max(t.size * 2, 12)) {
+
+        for (let i = this.tokens.length - 1; i >= 0; i--) {
+            const t = this.tokens[i];
+            const dx = this.mouseX - t.x;
+            const dy = this.mouseY - t.y;
+            if (Math.hypot(dx, dy) <= Math.max(t.size, 10)) {
                 this.hoveredToken = t;
                 break;
             }
         }
-        
+
         this.canvas.style.cursor = this.hoveredToken ? 'crosshair' : 'default';
+    }
 
-        if (this.hoveredToken && this.tooltip) {
-            const t = this.hoveredToken;
-            this.tooltip.style.opacity = '1';
-            
-            // Tính toán chống tràn màn hình cho Tooltip
-            let tipX = this.clientX + 15;
-            let tipY = this.clientY + 15;
-            
-            let tipW = this.tooltip.offsetWidth || 220;
-            let tipH = this.tooltip.offsetHeight || 150;
+    formatCompact(value) {
+        if (!Number.isFinite(value)) return '0';
+        return new Intl.NumberFormat('en-US', {
+            notation: 'compact',
+            maximumFractionDigits: 1
+        }).format(value);
+    }
 
-            if (tipX + tipW > window.innerWidth) tipX = this.clientX - tipW - 15;
-            if (tipY + tipH > window.innerHeight) tipY = this.clientY - tipH - 15;
+    drawGrid() {
+        const ctx = this.ctx;
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+        ctx.lineWidth = 1;
 
-            this.tooltip.style.transform = `translate(${tipX}px, ${tipY}px)`;
-            
-            let cColor = t.change > 0 ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#F0B90B');
-            let cSign = t.change > 0 ? '+' : '';
-            let imgSrc = `assets/tokens/${t.symbol.toUpperCase()}.png`;
-
-            // Bơm dữ liệu vào HTML
-            this.tooltip.innerHTML = `
-                <div class="hud-header">
-                    <img class="hud-logo" src="${imgSrc}" onerror="this.src='assets/tokens/default.png'">
-                    <div>
-                        <div class="hud-symbol" style="color:${t.color}">${t.symbol}</div>
-                        <div class="hud-status">Target Locked <i class="fas fa-crosshairs"></i></div>
-                    </div>
-                </div>
-                <div class="hud-row">
-                    <span class="hud-label">PRICE (USDT)</span>
-                    <span class="hud-val" style="color:#fff;">$${t.price.toFixed(4)}</span>
-                </div>
-                <div class="hud-row">
-                    <span class="hud-label">24H VOL</span>
-                    <span class="hud-val" style="color:#F0B90B;">$${Math.round(t.vol).toLocaleString()}</span>
-                </div>
-                <div class="hud-row">
-                    <span class="hud-label">MOMENTUM</span>
-                    <span class="hud-val" style="color:${cColor};">${cSign}${t.change.toFixed(2)}%</span>
-                </div>
-            `;
-        } else if (this.tooltip) {
-            this.tooltip.style.opacity = '0';
+        for (let i = 1; i <= 5; i++) {
+            ctx.beginPath();
+            ctx.arc(this.centerX, this.centerY, (this.maxRadius / 5) * i, 0, Math.PI * 2);
+            ctx.stroke();
         }
+
+        ctx.beginPath();
+        ctx.moveTo(this.centerX - this.maxRadius, this.centerY);
+        ctx.lineTo(this.centerX + this.maxRadius, this.centerY);
+        ctx.moveTo(this.centerX, this.centerY - this.maxRadius);
+        ctx.lineTo(this.centerX, this.centerY + this.maxRadius);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
+        ctx.font = '11px "Be Vietnam Pro", Arial';
+        ctx.fillText('SELL PRESSURE', this.centerX - this.maxRadius + 8, this.centerY - 8);
+        ctx.fillText('BUY PRESSURE', this.centerX + this.maxRadius - 86, this.centerY - 8);
+        ctx.fillText('HIGH LIQUIDITY CORE', this.centerX - 62, this.centerY + 14);
+    }
+
+    drawSweep() {
+        const ctx = this.ctx;
+        this.angle += 0.018;
+
+        ctx.beginPath();
+        ctx.moveTo(this.centerX, this.centerY);
+        ctx.lineTo(
+            this.centerX + this.maxRadius * Math.cos(this.angle),
+            this.centerY + this.maxRadius * Math.sin(this.angle)
+        );
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.75)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(this.centerX, this.centerY);
+        ctx.arc(this.centerX, this.centerY, this.maxRadius, this.angle - 0.48, this.angle, false);
+        ctx.closePath();
+
+        const grad = ctx.createRadialGradient(
+            this.centerX,
+            this.centerY,
+            0,
+            this.centerX,
+            this.centerY,
+            this.maxRadius
+        );
+
+        grad.addColorStop(0, 'rgba(0,240,255,0)');
+        grad.addColorStop(1, 'rgba(0,240,255,0.14)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+    }
+
+    drawRipples() {
+        const ctx = this.ctx;
+
+        for (let i = this.ripples.length - 1; i >= 0; i--) {
+            const r = this.ripples[i];
+
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+            ctx.strokeStyle = r.color;
+            ctx.globalAlpha = r.alpha;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+
+            r.r += 0.9;
+            r.alpha -= 0.02;
+
+            if (r.alpha <= 0) this.ripples.splice(i, 1);
+        }
+
+        ctx.globalAlpha = 1;
+    }
+
+    drawTokens() {
+        const ctx = this.ctx;
+
+        for (const t of this.tokens) {
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
+            ctx.fillStyle = t.color;
+
+            if (this.hoveredToken && this.hoveredToken.symbol === t.symbol) {
+                ctx.shadowBlur = t.size * 4;
+                ctx.shadowColor = '#ffffff';
+                ctx.fillStyle = '#ffffff';
+            } else {
+                ctx.shadowBlur = t.size * 2;
+                ctx.shadowColor = t.color;
+            }
+
+            ctx.fill();
+        }
+
+        ctx.shadowBlur = 0;
     }
 
     animate() {
-        if (this.width === 0) {
+        if (this.width === 0 || this.height === 0) {
             requestAnimationFrame(() => this.animate());
             return;
         }
 
-        // Tạo bóng mờ đen nhạt (Fade Trail)
-        this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)'; 
+        const now = performance.now();
+        const dt = now - this.lastFrameAt;
+        this.lastFrameAt = now;
+        this.fps = 1000 / Math.max(1, dt);
+
+        this.ctx.fillStyle = 'rgba(10, 14, 23, 0.15)';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- 1. VẼ LƯỚI MILITARY RADAR ---
-        this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
-        this.ctx.lineWidth = 1;
-        
-        // Vòng tròn khoảng cách
-        for (let i = 1; i <= 4; i++) {
-            let currentRadius = (this.maxRadius / 4) * i;
-            this.ctx.beginPath();
-            this.ctx.arc(this.centerX, this.centerY, currentRadius, 0, Math.PI * 2);
-            this.ctx.stroke();
-            
-            // Ghi số cự ly 
-            if (i < 4) {
-                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
-                this.ctx.font = '10px Courier New';
-                this.ctx.fillText(`${i * 25}%`, this.centerX + 5, this.centerY - currentRadius - 5);
-            }
+        this.drawGrid();
+        this.drawRipples();
+        this.drawTokens();
+
+        if (!this.isPaused) {
+            this.drawSweep();
         }
-
-        // Trục chữ thập nét đứt
-        this.ctx.setLineDash([4, 4]); 
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.centerX, this.centerY - this.maxRadius);
-        this.ctx.lineTo(this.centerX, this.centerY + this.maxRadius);
-        this.ctx.moveTo(this.centerX - this.maxRadius, this.centerY);
-        this.ctx.lineTo(this.centerX + this.maxRadius, this.centerY);
-        this.ctx.stroke();
-        this.ctx.setLineDash([]); 
-
-        // Chữ tọa độ N, S, E, W
-        this.ctx.fillStyle = 'rgba(0, 240, 255, 0.6)';
-        this.ctx.font = 'bold 12px Courier New';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('0°/360°', this.centerX + this.maxRadius + 25, this.centerY + 4);
-        this.ctx.fillText('180°', this.centerX - this.maxRadius - 20, this.centerY + 4);
-        this.ctx.fillText('90°', this.centerX, this.centerY + this.maxRadius + 15);
-        this.ctx.fillText('270°', this.centerX, this.centerY - this.maxRadius - 10);
-        this.ctx.textAlign = 'left';
-
-        // --- 2. VẼ HIỆU ỨNG SÓNG ÂM (RIPPLES) ---
-        for (let i = this.ripples.length - 1; i >= 0; i--) {
-            let rip = this.ripples[i];
-            this.ctx.beginPath();
-            this.ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
-            this.ctx.strokeStyle = rip.color;
-            this.ctx.globalAlpha = rip.alpha;
-            this.ctx.lineWidth = 1.5;
-            this.ctx.stroke();
-            
-            rip.r += 1.2; 
-            rip.alpha -= 0.02; 
-            if (rip.alpha <= 0) this.ripples.splice(i, 1);
-        }
-        this.ctx.globalAlpha = 1.0; 
-
-        // Tính góc Tia quét hiện tại (Normalize về 0 -> 2PI)
-        let normalizedSweep = this.angle % (Math.PI * 2);
-        if (normalizedSweep < 0) normalizedSweep += Math.PI * 2;
-
-        // --- 3. VẼ TOKEN (CÁC MỤC TIÊU/BLIPS) ---
-        this.tokens.forEach(t => {
-            let tA = t.tAngle;
-            if (tA < 0) tA += Math.PI * 2;
-            
-            // Tính khoảng cách góc giữa Tia quét và Token
-            let angleDiff = normalizedSweep - tA;
-            if (angleDiff < 0) angleDiff += Math.PI * 2;
-
-            // Logic phát sáng: Tia quét vừa đi qua thì sáng rực
-            let blipBrightness = 0.25; // Mặc định mờ mờ
-            if (angleDiff < 0.8) {
-                blipBrightness = 1.0 - (angleDiff / 0.8);
-            }
-
-            let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
-            if (isHovered) blipBrightness = 1.0;
-
-            this.ctx.globalAlpha = Math.max(0.2, blipBrightness);
-
-            // Vẽ Lõi sáng (Core)
-            this.ctx.beginPath();
-            this.ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
-            this.ctx.fillStyle = isHovered ? '#fff' : t.color;
-            
-            // Vẽ Vầng hào quang (Glow)
-            this.ctx.shadowBlur = isHovered ? t.size * 5 : t.size * (2 + blipBrightness * 4);
-            this.ctx.shadowColor = isHovered ? '#fff' : t.color;
-            this.ctx.fill();
-
-            // Hiệu ứng vòng bao (Echo) khi tia vừa lướt qua
-            if (blipBrightness > 0.6 && !isHovered) {
-                this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, t.size + 3 + (1 - blipBrightness) * 5, 0, Math.PI * 2);
-                this.ctx.strokeStyle = t.color;
-                this.ctx.lineWidth = 1;
-                this.ctx.stroke();
-            }
-
-            this.ctx.globalAlpha = 1.0;
-            this.ctx.shadowBlur = 0;
-        });
-
-        // --- 4. TIA QUÉT RADAR (SWEEP BEAM) ---
-        this.angle += 0.025; // Tốc độ quét
-
-        // Tia chỉ điểm
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.centerX, this.centerY);
-        this.ctx.lineTo(this.centerX + this.maxRadius * Math.cos(this.angle), this.centerY + this.maxRadius * Math.sin(this.angle));
-        this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.9)';
-        this.ctx.lineWidth = 2;
-        this.ctx.shadowBlur = 12;
-        this.ctx.shadowColor = '#00f0ff';
-        this.ctx.stroke();
-        this.ctx.shadowBlur = 0;
-
-        // Vệt sáng mờ sau đuôi (Gradient sector)
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.centerX, this.centerY);
-        this.ctx.arc(this.centerX, this.centerY, this.maxRadius, this.angle - 0.7, this.angle, false);
-        this.ctx.lineTo(this.centerX, this.centerY);
-        
-        let grad = this.ctx.createRadialGradient(this.centerX, this.centerY, 0, this.centerX, this.centerY, this.maxRadius);
-        grad.addColorStop(0, 'rgba(0, 240, 255, 0)');
-        grad.addColorStop(1, 'rgba(0, 240, 255, 0.3)'); 
-        this.ctx.fillStyle = grad;
-        this.ctx.fill();
 
         requestAnimationFrame(() => this.animate());
     }
