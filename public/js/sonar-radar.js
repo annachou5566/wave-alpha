@@ -1,11 +1,10 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V3 TERMINAL HUD)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V4)
  * ============================================================================
- * Đã Fix: Nâng cấp Side Panel thành "Military/Bloomberg Terminal"
- * - Format số liệu (K, M, B)
- * - Lưới dữ liệu (Data Grid)
- * - Thanh phân tích Volume (CEX vs DEX)
+ * Đã Fix: 
+ * - Lấy chuẩn dữ liệu Liquidity từ mảng allTokens
+ * - Xóa các nút Action vô dụng ở Side Panel để giao diện gọn gàng hơn
  * ============================================================================
  */
 
@@ -46,15 +45,16 @@ class AlphaSonarGalaxy {
         if (!num) return '0';
         if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
         if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
-        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+        if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
         return parseFloat(num).toFixed(2);
     }
 
-    // --- KHỞI TẠO UI (CSS MỚI CỰC XỊN CHO SIDE PANEL) ---
+    // --- KHỞI TẠO UI ---
     initUI() {
         if (!document.getElementById('sonar-pro-styles')) {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
+            // Đã dọn dẹp CSS của 2 nút action cũ
             style.innerHTML = `
                 /* TOOLTIP */
                 #sonar-hud-tooltip { position: fixed; top: 0; left: 0; width: 220px; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), inset 0 0 20px rgba(0, 240, 255, 0.05); border-radius: 6px; padding: 12px; pointer-events: none; opacity: 0; z-index: 9999; font-family: 'Rajdhani', sans-serif; backdrop-filter: blur(4px); transition: opacity 0.15s ease-in-out, transform 0.05s linear; }
@@ -107,13 +107,6 @@ class AlphaSonarGalaxy {
                 .sp-vol-track { width: 100%; height: 6px; background: #1e2329; border-radius: 3px; display: flex; overflow: hidden; }
                 .sp-vol-limit { height: 100%; background: #F0B90B; box-shadow: 0 0 5px #F0B90B;}
                 .sp-vol-chain { height: 100%; background: #9945FF; box-shadow: 0 0 5px #9945FF;}
-                
-                .sp-actions { display: flex; gap: 10px; margin-top: auto;}
-                .sp-btn { flex: 1; background: transparent; border: 1px solid; padding: 10px; border-radius: 4px; font-family: 'Rajdhani'; font-weight: 700; font-size: 13px; text-transform: uppercase; cursor: pointer; letter-spacing: 1px; transition: 0.2s;}
-                .sp-btn-chart { border-color: #00f0ff; color: #00f0ff; background: rgba(0, 240, 255, 0.05); }
-                .sp-btn-chart:hover { background: #00f0ff; color: #000; box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
-                .sp-btn-trade { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.05); }
-                .sp-btn-trade:hover { background: #ff3366; color: #fff; box-shadow: 0 0 15px rgba(255, 51, 102, 0.4); }
                 
                 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
             `;
@@ -206,7 +199,7 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // LOGIC CỐT LÕI (Bổ sung thu thập thêm Market Cap, Limit, Holders)
+    // LOGIC CỐT LÕI (FIX LIQUIDITY 0$)
     // ==========================================
     recalculate(force = false) {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
@@ -230,6 +223,7 @@ class AlphaSonarGalaxy {
             let holders = t.h || 0;
             let vLimit = t.v.dl || 0;
             let contract = '';
+            let liq = t.l || 0; // Gán tạm liquidity từ realtime
 
             if (typeof allTokens !== 'undefined' && allTokens.length > 0) {
                 let targetToken = allTokens.find(item => 
@@ -245,6 +239,9 @@ class AlphaSonarGalaxy {
                     holders = targetToken.holders || holders;
                     vLimit = (targetToken.volume && targetToken.volume.daily_limit) ? targetToken.volume.daily_limit : vLimit;
                     contract = targetToken.contract || '';
+                    
+                    // FIX: Ưu tiên lấy Liquidity chuẩn xác từ allTokens
+                    liq = targetToken.liquidity || liq; 
                 }
             }
 
@@ -252,8 +249,9 @@ class AlphaSonarGalaxy {
             if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
 
             let vol = t.v.dt || 0;
-            let liq = t.l || vol || 1000;
-            let vChain = Math.max(0, vol - vLimit); // DEX = Tổng - CEX Limit
+            if (!liq) liq = vol || 1000; // Fallback cuối cùng nếu vẫn bằng 0
+
+            let vChain = Math.max(0, vol - vLimit); 
             
             if (vol > maxVol) maxVol = vol;
             if (liq > maxLiq) maxLiq = liq;
@@ -301,7 +299,7 @@ class AlphaSonarGalaxy {
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
                 existingToken.logo = data.logo; 
-                // Cập nhật dữ liệu Pro
+                existingToken.liq = data.liq; // Cập nhật liq mới
                 existingToken.mc = data.mc;
                 existingToken.holders = data.holders;
                 existingToken.vLimit = data.vLimit;
@@ -313,7 +311,7 @@ class AlphaSonarGalaxy {
                     symbol: data.symbol, logo: data.logo, contract: data.contract,
                     x: tX, y: tY, tX: tX, tY: tY,
                     size: 0, targetSize: targetSize, color: colorHex, 
-                    price: data.price, vol: data.vol, change: data.change, tx: data.tx,
+                    price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
                     mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
                     updated: true
                 });
@@ -399,9 +397,11 @@ class AlphaSonarGalaxy {
         
         // Tính tỷ lệ Volume
         let totalVol = t.vol || 1;
-        let pctLimit = ((t.vLimit || 0) / totalVol) * 100;
-        let pctChain = ((t.vChain || 0) / totalVol) * 100;
+        let MathLim = Math.max(0, Math.min(100, ((t.vLimit || 0) / totalVol) * 100));
+        let pctLimit = isNaN(MathLim) ? 0 : MathLim;
+        let pctChain = Math.max(0, 100 - pctLimit);
 
+        // Đã bỏ div .sp-actions
         this.sidePanel.innerHTML = `
             <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
             
@@ -448,7 +448,7 @@ class AlphaSonarGalaxy {
                 </div>
             </div>
 
-            <div class="sp-vol-bar-wrap">
+            <div class="sp-vol-bar-wrap" style="margin-bottom: 0;">
                 <div class="sp-vol-head">
                     <span style="color: #F0B90B;">CEX LIMIT: ${pctLimit.toFixed(0)}%</span>
                     <span style="color: #9945FF;">ON-CHAIN: ${pctChain.toFixed(0)}%</span>
@@ -458,16 +458,11 @@ class AlphaSonarGalaxy {
                     <div class="sp-vol-chain" style="width: ${pctChain}%"></div>
                 </div>
             </div>
-
-            <div class="sp-actions">
-                <button class="sp-btn sp-btn-chart">TERMINAL</button>
-                <button class="sp-btn sp-btn-trade">EXECUTE</button>
-            </div>
         `;
     }
 
     // ==========================================
-    // RENDER ENGINE (CANVAS) - KHÔNG ĐỔI
+    // RENDER ENGINE (CANVAS)
     // ==========================================
     animate() {
         if (this.width === 0) {
