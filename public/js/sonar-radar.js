@@ -1,20 +1,20 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - DUAL ENGINE V13)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V14 TACTICAL LEGENDS)
  * ============================================================================
- * TÍNH NĂNG MỚI:
- * 1. Chuyển đổi 2 mô hình UX (Nút bấm trên Control Bar):
- * - MESH (Lưới vệ tinh): Tận dụng 100% không gian chữ nhật, chống đè logo.
- * - ORBIT (Quỹ đạo tâm): Xoay vòng quanh tâm theo dòng tiền.
- * 2. Mượt mà 100%: Khi chuyển mode, token sẽ tự bay lướt đến vị trí mới.
- * 3. Chỉ cần 1 file js duy nhất.
+ * Đã Fix:
+ * 1. Thêm Chú thích HUD (Tactical Legends) giải thích các trục X/Y cho user dễ hiểu.
+ * 2. Toàn bộ UI, nút bấm, giải thích được chuyển sang 100% Tiếng Anh.
  * ============================================================================
  */
 
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
-        if (!this.canvas) return;
+        if (!this.canvas) {
+            console.error("AlphaSonar: Canvas ID not found.");
+            return;
+        }
         
         this.ctx = this.canvas.getContext('2d');
         this.container = this.canvas.parentElement || document.body;
@@ -23,15 +23,16 @@ class AlphaSonarGalaxy {
 
         this.tokens = [];
         this.ripples = []; 
+        this.angle = 0;
         this.latestData = null;
         
         this.isPaused = false;
         this.filterMode = 'volume'; 
-        // MODE MỚI: 'mesh' (Mô hình 1) hoặc 'orbit' (Mô hình 2)
-        this.visualMode = 'mesh'; 
+        this.visualMode = 'mesh'; // 'mesh' or 'orbit'
         
         this.lockedToken = null;    
         this.hoveredToken = null;   
+        
         this.mouseX = -1;
         this.mouseY = -1;
 
@@ -110,6 +111,7 @@ class AlphaSonarGalaxy {
                 .sp-vol-chain { height: 100%; background: #9945FF; box-shadow: 0 0 5px #9945FF;}
                 
                 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
                 @media (max-width: 768px) {
                     #sonar-control-bar { top: 5px; left: 5px; right: 5px; flex-wrap: wrap; justify-content: center; padding: 6px; }
                     .sonar-btn { font-size: 11px; padding: 4px 8px; flex: 1; text-align: center; }
@@ -123,27 +125,26 @@ class AlphaSonarGalaxy {
         this.controlBar = document.createElement('div');
         this.controlBar.id = 'sonar-control-bar';
         this.controlBar.innerHTML = `
-            <button class="sonar-btn active" id="btn-mode-toggle" style="border-color: #9945FF; color: #9945FF;">[ MẠNG LƯỚI ]</button>
-            <button class="sonar-btn active" data-filter="volume">VOL</button>
-            <button class="sonar-btn" data-filter="liquidity">LIQ</button>
-            <button class="sonar-btn pause-btn" id="sonar-pause-btn">||</button>
+            <button class="sonar-btn active" id="btn-mode-toggle" style="border-color: #9945FF; color: #9945FF;">[ MESH NETWORK ]</button>
+            <button class="sonar-btn active" data-filter="volume">TOP VOL</button>
+            <button class="sonar-btn" data-filter="liquidity">TOP LIQ</button>
+            <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
         `;
         this.container.appendChild(this.controlBar);
 
-        // Logic Nút chuyển đổi Mô hình
         const modeBtn = document.getElementById('btn-mode-toggle');
         modeBtn.addEventListener('click', () => {
             this.visualMode = this.visualMode === 'mesh' ? 'orbit' : 'mesh';
             if (this.visualMode === 'mesh') {
-                modeBtn.innerText = '[ MẠNG LƯỚI ]';
+                modeBtn.innerText = '[ MESH NETWORK ]';
                 modeBtn.style.borderColor = '#9945FF';
                 modeBtn.style.color = '#9945FF';
             } else {
-                modeBtn.innerText = '[ QUỸ ĐẠO ]';
+                modeBtn.innerText = '[ ORBITAL SYSTEM ]';
                 modeBtn.style.borderColor = '#F0B90B';
                 modeBtn.style.color = '#F0B90B';
             }
-            this.recalculate(true); // Ép tính lại tọa độ đích
+            this.recalculate(true); 
         });
 
         const btns = this.controlBar.querySelectorAll('button[data-filter]');
@@ -160,7 +161,7 @@ class AlphaSonarGalaxy {
         pauseBtn.addEventListener('click', () => {
             this.isPaused = !this.isPaused;
             pauseBtn.classList.toggle('paused');
-            pauseBtn.innerText = this.isPaused ? '▶' : '||';
+            pauseBtn.innerText = this.isPaused ? 'RESUME' : 'PAUSE';
         });
 
         this.sidePanel = document.createElement('div');
@@ -177,6 +178,7 @@ class AlphaSonarGalaxy {
         };
 
         this.canvas.addEventListener('mousemove', (e) => updatePointer(e.clientX, e.clientY));
+        
         this.canvas.addEventListener('touchstart', (e) => {
             if (e.touches && e.touches.length > 0) {
                 updatePointer(e.touches[0].clientX, e.touches[0].clientY);
@@ -219,7 +221,6 @@ class AlphaSonarGalaxy {
 
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
-        // Bán kính quỹ đạo cho Mô hình 2
         this.maxRadius = Math.max(10, Math.min(this.centerX, this.centerY) - 40);
         this.recalculate(true);
     }
@@ -235,7 +236,7 @@ class AlphaSonarGalaxy {
         }
     }
 
-    recalculate(force = false) {
+    recalculate() {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
         
         if (typeof allTokens !== 'undefined' && Array.isArray(allTokens) && this.lastTokenCount !== allTokens.length) {
@@ -248,6 +249,9 @@ class AlphaSonarGalaxy {
             this.lastTokenCount = allTokens.length;
         }
 
+        const oldTxMap = {};
+        this.tokens.forEach(t => { oldTxMap[t.symbol] = t.tx; });
+
         let maxVol = 0; let maxLiq = 0; let maxTx = 0;
         let dataArray = [];
 
@@ -257,17 +261,30 @@ class AlphaSonarGalaxy {
             let tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
             let targetToken = this.tokenDict[tokenKey];
 
-            let realSymbol = (targetToken ? targetToken.symbol : (t.symbol || t.s || t.name || tokenKey)) + "";
-            let logoUrl = targetToken ? targetToken.icon : `assets/tokens/${realSymbol.toUpperCase()}.png`;
-            
-            let mc = this.safeNum(targetToken ? targetToken.market_cap : t.mc);
-            let holders = this.safeNum(targetToken ? targetToken.holders : t.h);
-            let vLimit = this.safeNum(targetToken?.volume?.daily_limit || (t.v ? t.v.dl : 0));
-            let contract = targetToken ? targetToken.contract : '';
-            
+            let realSymbol = "";
+            let logoUrl = "";
+            let mc = 0, holders = 0, vLimit = 0, contract = '', liq = 0;
+
+            if (targetToken) {
+                realSymbol = targetToken.symbol || "";
+                logoUrl = targetToken.icon || "";
+                mc = targetToken.market_cap || 0;
+                holders = targetToken.holders || 0;
+                if (targetToken.volume && targetToken.volume.daily_limit !== undefined) vLimit = targetToken.volume.daily_limit;
+                contract = targetToken.contract || '';
+                liq = targetToken.liquidity || 0; 
+            }
+
+            if (!realSymbol) realSymbol = t.symbol || t.s || t.name || tokenKey;
+            if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
+
             let vol = this.safeNum(t.v ? t.v.dt : 0);
-            let liq = this.safeNum(targetToken ? targetToken.liquidity : t.l, vol || 1000); 
+            if (!vLimit) vLimit = this.safeNum(t.v ? t.v.dl : 0);
+            if (!liq) liq = this.safeNum(t.l, vol || 1000);
             
+            mc = this.safeNum(mc ? mc : t.mc);
+            holders = this.safeNum(holders ? holders : t.h);
+
             let change = this.safeNum(t.c);
             let tx = this.safeNum(t.tx);
             let price = this.safeNum(t.p);
@@ -288,7 +305,7 @@ class AlphaSonarGalaxy {
         if (this.filterMode === 'volume') dataArray.sort((a, b) => b.vol - a.vol);
         else if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
         
-        dataArray = dataArray.slice(0, 60); // Giữ 60 token cho thoáng màn hình
+        dataArray = dataArray.slice(0, 60);
 
         dataArray.forEach(data => {
             let targetSize = Math.max(10, Math.min(24, 10 + (data.vol / (maxVol || 1)) * 14));
@@ -296,22 +313,16 @@ class AlphaSonarGalaxy {
             let tX, tY;
             let orbitRadius = 0; let orbitSpeed = 0; let orbitAngle = 0;
 
-            // --- TÍNH TỌA ĐỘ ĐÍCH TÙY THEO MÔ HÌNH ---
             if (this.visualMode === 'mesh') {
-                // LƯỚI VỆ TINH (Tận dụng 100% chữ nhật)
-                // X: Trái là Giảm mạnh, Phải là Tăng mạnh. Y: Cao là Vol to, Thấp là Vol nhỏ.
                 let normChange = Math.max(-20, Math.min(20, data.change)); 
-                let paddingX = 40; let paddingY = 60;
+                let paddingX = 40; let paddingY = 80; // Tăng paddingY để nhường chỗ cho chữ HUD
                 let useableW = this.width - paddingX * 2;
                 let useableH = this.height - paddingY * 2;
                 
                 tX = paddingX + (useableW / 2) + (normChange / 20) * (useableW / 2);
                 let volRatio = Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
-                // Y đảo ngược (tọa độ 0 ở trên cùng)
                 tY = paddingY + useableH - (Math.pow(volRatio, 0.4) * useableH); 
-            } 
-            else {
-                // QUỸ ĐẠO KHÔNG GIAN
+            } else {
                 let ratio = this.filterMode === 'liquidity' 
                             ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1)))
                             : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
@@ -320,7 +331,7 @@ class AlphaSonarGalaxy {
 
                 orbitAngle = ((data.symbol.charCodeAt(0) || 0) % 10) / 10 * Math.PI * 2; 
                 orbitSpeed = 0.002 + (data.tx / (maxTx || 1)) * 0.008;
-                if (data.change < 0) orbitSpeed *= -1; // Đỏ bay ngược chiều
+                if (data.change < 0) orbitSpeed *= -1; 
 
                 tX = this.centerX + orbitRadius * Math.cos(orbitAngle);
                 tY = this.centerY + orbitRadius * Math.sin(orbitAngle);
@@ -360,7 +371,7 @@ class AlphaSonarGalaxy {
                 this.tokens.push({
                     symbol: data.symbol, logo: data.logo, contract: data.contract,
                     imgObj: img, 
-                    x: this.centerX, y: this.centerY, // Xuất hiện từ giữa tỏa ra
+                    x: this.centerX, y: this.centerY,
                     tX: tX, tY: tY,
                     orbitRadius: orbitRadius, orbitSpeed: orbitSpeed, orbitAngle: orbitAngle,
                     size: 0, targetSize: targetSize, color: colorHex, 
@@ -455,11 +466,15 @@ class AlphaSonarGalaxy {
         }
 
         try {
-            // Xóa nền mờ
             this.ctx.fillStyle = 'rgba(10, 14, 23, 0.2)'; 
             this.ctx.fillRect(0, 0, this.width, this.height);
 
-            // --- VẼ BACKGROUND THEO MÔ HÌNH ---
+            // ==========================================
+            // VẼ CHÚ THÍCH HUD (TACTICAL LEGENDS) TRÊN NỀN
+            // ==========================================
+            this.ctx.font = '600 11px "Courier New", monospace';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+
             if (this.visualMode === 'orbit') {
                 this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
                 this.ctx.lineWidth = 1;
@@ -469,13 +484,27 @@ class AlphaSonarGalaxy {
                     this.ctx.arc(this.centerX, this.centerY, currentRadius, 0, Math.PI * 2);
                     this.ctx.stroke();
                 }
-                // Central Core
                 this.ctx.beginPath();
                 this.ctx.arc(this.centerX, this.centerY, 10, 0, Math.PI * 2);
                 this.ctx.fillStyle = 'rgba(0, 240, 255, 0.3)';
                 this.ctx.fill();
+
+                // Legend ORBIT
+                this.ctx.fillStyle = 'rgba(0, 240, 255, 0.6)';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('[ CORE: MAX LIQUIDITY/VOL ]', this.centerX, this.centerY - 15);
+                
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                this.ctx.fillText('[ OUTER: MIN LIQUIDITY/VOL ]', this.centerX, this.centerY - this.maxRadius + 15);
+                
+                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.6)';
+                this.ctx.fillText('* ORBIT SPEED INDICATES TRANSACTION ACTIVITY (TXs) *', this.centerX, this.height - 15);
+                
+                // Trả lại align chuẩn
+                this.ctx.textAlign = 'left';
+
             } else {
-                // MESH Grid Background (Mặt phẳng chiến thuật)
+                // Legend MESH Grid
                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
                 this.ctx.lineWidth = 1;
                 let step = 50;
@@ -484,7 +513,6 @@ class AlphaSonarGalaxy {
                 for(let y = 0; y < this.height; y += step) { this.ctx.moveTo(0, y); this.ctx.lineTo(this.width, y); }
                 this.ctx.stroke();
                 
-                // Trục tọa độ trung tâm tàng hình
                 this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
                 this.ctx.setLineDash([4, 4]);
                 this.ctx.beginPath();
@@ -492,9 +520,28 @@ class AlphaSonarGalaxy {
                 this.ctx.moveTo(0, this.centerY); this.ctx.lineTo(this.width, this.centerY);
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
+
+                // Chú thích 4 Góc (4 Quadrants)
+                this.ctx.fillStyle = 'rgba(255, 51, 102, 0.5)'; // Đỏ (Bearish)
+                this.ctx.textAlign = 'left';
+                this.ctx.fillText('[ HIGH VOL / BEARISH ]', 15, 60);
+                this.ctx.fillText('[ LOW VOL / BEARISH ]', 15, this.height - 20);
+
+                this.ctx.fillStyle = 'rgba(14, 203, 129, 0.5)'; // Xanh (Bullish)
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText('[ HIGH VOL / BULLISH ]', this.width - 15, 60);
+                this.ctx.fillText('[ LOW VOL / BULLISH ]', this.width - 15, this.height - 20);
+
+                // Chú thích Trục (Axes)
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('<<< PRICE DROP (MOMENTUM)', this.centerX / 2, this.centerY - 5);
+                this.ctx.fillText('(MOMENTUM) PRICE SURGE >>>', this.centerX + (this.centerX / 2), this.centerY - 5);
+                
+                this.ctx.textAlign = 'left';
             }
 
-            // --- TÍNH TOÁN VẬT LÝ VÀ CHỐNG ĐÈ (COLLISION/REPULSION) ---
+            // --- VẬT LÝ VÀ CHỐNG ĐÈ ---
             for (let i = 0; i < this.tokens.length; i++) {
                 let t = this.tokens[i];
 
@@ -505,21 +552,18 @@ class AlphaSonarGalaxy {
                         t.tY = this.centerY + t.orbitRadius * Math.sin(t.orbitAngle);
                     }
                     
-                    // Lực kéo về đích
                     t.x += (t.tX - t.x) * 0.08; 
                     t.y += (t.tY - t.y) * 0.08;
                     t.size += (t.targetSize - t.size) * 0.1;
 
-                    // Lực Đẩy chống đè logo (chỉ áp dụng ở Mesh Mode để nhìn rõ)
                     if (this.visualMode === 'mesh') {
                         for (let j = i + 1; j < this.tokens.length; j++) {
                             let other = this.tokens[j];
                             let dx = t.x - other.x;
                             let dy = t.y - other.y;
                             let dist = Math.sqrt(dx*dx + dy*dy);
-                            let minDist = t.size + other.size + 10; // Khoảng cách an toàn
+                            let minDist = t.size + other.size + 10; 
 
-                            // Nếu 2 logo đè lên nhau, đẩy nhau ra xa
                             if (dist < minDist && dist > 0) {
                                 let force = (minDist - dist) / 2;
                                 let fX = (dx / dist) * force;
@@ -528,7 +572,6 @@ class AlphaSonarGalaxy {
                                 other.x -= fX; other.y -= fY;
                             }
                             
-                            // Vẽ tia laser nối các token cùng màu gần nhau
                             if (dist < 100 && t.color === other.color) {
                                 this.ctx.beginPath();
                                 this.ctx.moveTo(t.x, t.y);
@@ -543,7 +586,7 @@ class AlphaSonarGalaxy {
             }
             this.ctx.globalAlpha = 1.0;
 
-            // --- VẼ LOGO TOKEN CHÌM BÊN DƯỚI ---
+            // --- VẼ LOGO TOKEN ---
             this.tokens.forEach(t => {
                 let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
                 let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
@@ -567,7 +610,6 @@ class AlphaSonarGalaxy {
                     this.ctx.fill();
                 }
 
-                // Viền token
                 this.ctx.beginPath();
                 this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
                 this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
@@ -576,7 +618,7 @@ class AlphaSonarGalaxy {
                 this.ctx.globalAlpha = 1.0;
             });
 
-            // --- VẼ HUD & CROSSHAIR NỔI LÊN TRÊN ---
+            // --- VẼ HUD & CROSSHAIR ---
             this.tokens.forEach(t => {
                 let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
                 let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
