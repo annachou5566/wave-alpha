@@ -1153,14 +1153,23 @@ async function quickSyncData() {
     return; 
 }
 
+function ensureSonarGalaxy() {
+    if (typeof AlphaSonarGalaxy === 'undefined') return null;
+    if (mySonarGalaxy && mySonarGalaxy.ctx) return mySonarGalaxy;
+
+    const canvas = document.getElementById('sonar-canvas');
+    if (!canvas) return null;
+
+    mySonarGalaxy = new AlphaSonarGalaxy('sonar-canvas');
+    return mySonarGalaxy;
+}
+
 function init() {
     fetchUserProfile();
     checkLegal();
     syncAlphaData();
     startRealtimeSync();
-if (typeof AlphaSonarGalaxy !== 'undefined') {
-        mySonarGalaxy = new AlphaSonarGalaxy('sonar-canvas');
-    }
+    ensureSonarGalaxy();
     const cachedData = localStorage.getItem('wave_comp_list');
     let hasCache = false;
 
