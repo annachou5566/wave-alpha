@@ -1,20 +1,23 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V11 BULLETPROOF)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V12 ULTIMATE FIX)
  * ============================================================================
- * Đã Fix Lỗi Đơ 1 Phút (Freeze/Crash):
- * - Fix vòng lặp vô tận (Infinite Loop) khi load Logo lỗi.
- * - Ép kiểu dữ liệu (Safe Float) để chống NaN Crash từ API gửi về.
- * - Bọc Failsafe Try-Catch: Kể cả 1 token bị lỗi, tia quét vẫn hoạt động.
+ * Đã Fix Lỗi Trắng Màn Hình (Fatal Syntax Error):
+ * - Xóa bỏ hoàn toàn cú pháp đời mới `?.` gây sập trình duyệt/điện thoại cũ.
+ * - Code tương thích ngược 100% (Backward Compatible).
+ * - Bổ sung cơ chế dọn dẹp rác UI khi reload (Anti-Duplicate DOM).
  * ============================================================================
  */
 
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
-        if (!this.canvas) return;
+        if (!this.canvas) {
+            console.error("AlphaSonar: Không tìm thấy Canvas ID.");
+            return;
+        }
         
-        // Failsafe nếu chưa render kịp DOM
+        this.ctx = this.canvas.getContext('2d');
         this.container = this.canvas.parentElement || document.body;
         this.container.style.position = 'relative'; 
         this.container.style.overflow = 'hidden';
@@ -43,8 +46,9 @@ class AlphaSonarGalaxy {
         this.animate();
     }
 
-    // --- BỘ LỌC DỮ LIỆU CHỐNG CRASH (SAFE PARSE) ---
+    // --- BỘ LỌC DỮ LIỆU AN TOÀN TUYỆT ĐỐI ---
     safeNum(val, fallback = 0) {
+        if (val === undefined || val === null) return fallback;
         const n = parseFloat(val);
         return isNaN(n) ? fallback : n;
     }
@@ -59,6 +63,12 @@ class AlphaSonarGalaxy {
     }
 
     initUI() {
+        // Dọn dẹp UI cũ nếu bị load lại nhiều lần
+        const oldBar = document.getElementById('sonar-control-bar');
+        if (oldBar) oldBar.remove();
+        const oldPanel = document.getElementById('sonar-side-panel');
+        if (oldPanel) oldPanel.remove();
+
         if (!document.getElementById('sonar-pro-styles')) {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
@@ -160,7 +170,9 @@ class AlphaSonarGalaxy {
         this.canvas.addEventListener('mousemove', (e) => updatePointer(e.clientX, e.clientY));
         
         this.canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) updatePointer(e.touches[0].clientX, e.touches[0].clientY);
+            if (e.touches && e.touches.length > 0) {
+                updatePointer(e.touches[0].clientX, e.touches[0].clientY);
+            }
         }, { passive: true });
 
         this.canvas.addEventListener('mouseleave', () => {
@@ -216,7 +228,7 @@ class AlphaSonarGalaxy {
     recalculate() {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
         
-        if (typeof allTokens !== 'undefined' && this.lastTokenCount !== allTokens.length) {
+        if (typeof allTokens !== 'undefined' && Array.isArray(allTokens) && this.lastTokenCount !== allTokens.length) {
             this.tokenDict = {}; 
             allTokens.forEach(item => {
                 if (item.alphaId) this.tokenDict[String(item.alphaId).replace('ALPHA_','')] = item;
@@ -239,17 +251,33 @@ class AlphaSonarGalaxy {
             let tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
             let targetToken = this.tokenDict[tokenKey];
 
-            // ÉP KIỂU SỐ TOÀN BỘ DỮ LIỆU ĐẦU VÀO ĐỂ TRÁNH NAN CRASH
-            let realSymbol = (targetToken ? targetToken.symbol : (t.symbol || t.s || t.name || tokenKey)) + "";
-            let logoUrl = targetToken ? targetToken.icon : `assets/tokens/${realSymbol.toUpperCase()}.png`;
+            // CÚ PHÁP CỔ ĐIỂN - 100% CHỐNG LỖI SYNTAX TRÊN MỌI THIẾT BỊ
+            let realSymbol = "";
+            let logoUrl = "";
+            let mc = 0, holders = 0, vLimit = 0, contract = '', liq = 0;
+
+            if (targetToken) {
+                realSymbol = targetToken.symbol || "";
+                logoUrl = targetToken.icon || "";
+                mc = targetToken.market_cap || 0;
+                holders = targetToken.holders || 0;
+                if (targetToken.volume && targetToken.volume.daily_limit !== undefined) {
+                    vLimit = targetToken.volume.daily_limit;
+                }
+                contract = targetToken.contract || '';
+                liq = targetToken.liquidity || 0; 
+            }
+
+            if (!realSymbol) realSymbol = t.symbol || t.s || t.name || tokenKey;
+            if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
+
+            let vol = this.safeNum(t.v ? t.v.dt : 0);
+            if (!vLimit) vLimit = this.safeNum(t.v ? t.v.dl : 0);
+            if (!liq) liq = this.safeNum(t.l, vol || 1000);
             
-            let mc = this.safeNum(targetToken ? targetToken.market_cap : t.mc);
-            let holders = this.safeNum(targetToken ? targetToken.holders : t.h);
-            let vLimit = this.safeNum(targetToken?.volume?.daily_limit || t.v.dl);
-            let contract = targetToken ? targetToken.contract : '';
-            
-            let vol = this.safeNum(t.v.dt);
-            let liq = this.safeNum(targetToken ? targetToken.liquidity : t.l, vol || 1000); 
+            mc = this.safeNum(mc ? mc : t.mc);
+            holders = this.safeNum(holders ? holders : t.h);
+
             let change = this.safeNum(t.c);
             let tx = this.safeNum(t.tx);
             let price = this.safeNum(t.p);
@@ -302,7 +330,6 @@ class AlphaSonarGalaxy {
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
                 
-                // CẬP NHẬT: Ngăn chặn vòng lặp onerror vô tận gây sập mạng
                 if (existingToken.logo !== data.logo) {
                     existingToken.logo = data.logo;
                     let img = new Image();
@@ -617,7 +644,6 @@ class AlphaSonarGalaxy {
             this.ctx.fill();
 
         } catch (e) {
-            // Bọc Failsafe: Bắt lỗi nếu có, không để chết vòng lặp animate
             console.warn("Radar Render Prevented Crash:", e);
         }
 
