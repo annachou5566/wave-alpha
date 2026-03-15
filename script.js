@@ -3480,32 +3480,7 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
     }
 }
 
-    function switchView(view) {
-    // 1. Ẩn tất cả các màn hình (Views)
-    document.getElementById('view-dashboard').style.display = 'none';
-    document.getElementById('view-predict').style.display = 'none';
-    if (document.getElementById('view-sonar')) {
-        document.getElementById('view-sonar').style.display = 'none';
-    }
-
-    // 2. Bật màn hình được chọn
-    if (view === 'dashboard') {
-        document.getElementById('view-dashboard').style.display = 'block';
-        currentPolyId = null;
-        renderGrid();
-    } 
-    else if (view === 'predict') {
-        document.getElementById('view-predict').style.display = 'block';
-    }
-    else if (view === 'sonar') {
-        document.getElementById('view-sonar').style.display = 'block';
-        
-        // Cú chốt: Khi view hiện lên, ép Radar tính lại kích thước để không bị móp!
-        if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
-            setTimeout(() => mySonarGalaxy.resize(), 50);
-        }
-    }
-}
+    
 
     function switchTab(t) { document.querySelectorAll('.p-tab').forEach(el=>el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); ['chart','activity','chat'].forEach(x => document.getElementById(`content-${x}`).style.display = x===t ? (x==='chat'?'flex':'block') : 'none'); }
 
@@ -5524,23 +5499,6 @@ async function openPredictionView(id) {
 }
 
 
-function switchView(view) {
-
-    document.getElementById('view-dashboard').style.display = 'none';
-    document.getElementById('view-predict').style.display = 'none';
-
-
-    if (view === 'dashboard') {
-        document.getElementById('view-dashboard').style.display = 'block';
-
-        currentPolyId = null;
-        renderGrid();
-    } 
-    else if (view === 'predict') {
-
-        document.getElementById('view-predict').style.display = 'block';
-    }
-}
 
 
 function renderCardMiniChart(c, customCanvasId = null) {
