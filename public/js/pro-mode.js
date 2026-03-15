@@ -826,18 +826,18 @@ function injectLayout() {
 
 window.pluginSwitchTab = (tab, instant = false) => {
     localStorage.setItem('wave_main_tab', tab);
+    
     const alphaView = document.getElementById('alpha-market-view');
     const compView = document.getElementById('view-dashboard');
     const sonarView = document.getElementById('sonar-market-view');
-
+    
     const btnA = document.getElementById('btn-tab-alpha');
     const btnC = document.getElementById('btn-tab-competition');
     const btnS = document.getElementById('btn-tab-sonar');
 
-    // Reset màu nút
-    [btnA, btnC, btnS].forEach(btn => btn?.classList.remove('active'));
-    // Ẩn tất cả màn hình
+    // Reset trạng thái
     [alphaView, compView, sonarView].forEach(v => { if(v) v.style.display = 'none'; });
+    [btnA, btnC, btnS].forEach(b => b?.classList.remove('active'));
 
     if (tab === 'alpha') {
         btnA?.classList.add('active');
@@ -845,11 +845,14 @@ window.pluginSwitchTab = (tab, instant = false) => {
     } else if (tab === 'competition' || tab === 'comp') {
         btnC?.classList.add('active');
         if(compView) compView.style.display = 'block';
+        if (typeof renderGrid === 'function') renderGrid();
     } else if (tab === 'sonar') {
         btnS?.classList.add('active');
-        if(sonarView) sonarView.style.display = 'block';
-        if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
-            setTimeout(() => mySonarGalaxy.resize(), 50);
+        if(sonarView) {
+            sonarView.style.display = 'block';
+            if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
+                setTimeout(() => mySonarGalaxy.resize(), 50);
+            }
         }
     }
 };
