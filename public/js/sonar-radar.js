@@ -1,8 +1,8 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - V2)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 1 - FINAL FIX)
  * ============================================================================
- * Đã Fix: Cross-reference lấy đúng Symbol và Logo chuẩn từ compList
+ * Đã Fix: Sử dụng mảng `allTokens` từ pro-mode.js để lấy chính xác Tên và Logo
  * ============================================================================
  */
 
@@ -157,7 +157,7 @@ class AlphaSonarGalaxy {
     }
 
     // ==========================================
-    // LOGIC CỐT LÕI: MAPPING & TÍNH TỌA ĐỘ
+    // LOGIC CỐT LÕI: ĐỒNG BỘ VỚI PRO-MODE.JS
     // ==========================================
     recalculate(force = false) {
         if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
@@ -172,24 +172,27 @@ class AlphaSonarGalaxy {
         Object.entries(this.latestData).forEach(([key, t]) => {
             if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
             
-            // --- CỤM FIX: LẤY METADATA TỪ COMPLIST ---
-            let dbId = key.replace('ALPHA_', '').replace('legacy_', '');
+            // --- CỤM FIX: LẤY METADATA TỪ MẢNG allTokens ---
+            let tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
             let realSymbol = '';
             let logoUrl = '';
 
-            // Lục tìm trong từ điển toàn cục (script.js đã load)
-            if (typeof window.compList !== 'undefined' && window.compList.length > 0) {
-                let comp = window.compList.find(c => c.db_id == dbId || c.id == dbId || c.alphaId === key);
-                if (comp) {
-                    let rawName = comp.symbol || comp.s || comp.name || comp.n;
-                    if (rawName) realSymbol = rawName.split('(')[0].trim().toUpperCase();
-                    // Ưu tiên lấy Logo chuẩn từ DB
-                    logoUrl = comp.logo || comp.icon || comp.ic;
+            // Lục tìm trong mảng allTokens (đã được pro-mode.js xử lý từ JSON)
+            if (typeof allTokens !== 'undefined' && allTokens.length > 0) {
+                let targetToken = allTokens.find(item => 
+                    (item.alphaId && String(item.alphaId).replace('ALPHA_','') === tokenKey) || 
+                    (item.id && String(item.id).replace('ALPHA_','') === tokenKey) ||
+                    item.symbol === tokenKey
+                );
+
+                if (targetToken) {
+                    realSymbol = targetToken.symbol;
+                    logoUrl = targetToken.icon; // Đã đổi sang .icon theo chuẩn pro-mode
                 }
             }
 
-            // Fallback nếu token không có trong hệ thống giải đấu
-            if (!realSymbol) realSymbol = t.symbol || t.s || t.name || dbId;
+            // Fallback nếu token quá mới, chưa có trong allTokens
+            if (!realSymbol) realSymbol = t.symbol || t.s || t.name || tokenKey;
             if (!logoUrl) logoUrl = `assets/tokens/${realSymbol.toUpperCase()}.png`;
             // --- KẾT THÚC CỤM FIX ---
 
@@ -202,6 +205,7 @@ class AlphaSonarGalaxy {
             dataArray.push({ raw: t, symbol: realSymbol, logo: logoUrl, vol: vol, liq: liq, change: t.c || 0, tx: t.tx || 0, price: t.p || 0 });
         });
 
+        // Sắp xếp theo Filter
         if (this.filterMode === 'volume') dataArray.sort((a, b) => b.vol - a.vol);
         else if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
         
@@ -238,12 +242,12 @@ class AlphaSonarGalaxy {
                 existingToken.vol = data.vol;
                 existingToken.change = data.change;
                 existingToken.tx = data.tx;
-                existingToken.logo = data.logo; // Cập nhật logo nếu có thay đổi
+                existingToken.logo = data.logo; 
                 existingToken.updated = true; 
             } else {
                 this.tokens.push({
                     symbol: data.symbol,
-                    logo: data.logo, // Lưu logo
+                    logo: data.logo, 
                     x: tX, y: tY, tX: tX, tY: tY,
                     size: 0, targetSize: targetSize, 
                     color: colorHex, price: data.price, vol: data.vol, change: data.change, tx: data.tx,
@@ -291,7 +295,6 @@ class AlphaSonarGalaxy {
             let cColor = t.change > 0 ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#F0B90B');
             let cSign = t.change > 0 ? '+' : '';
 
-            // SỬ DỤNG LOGO CHUẨN ĐÃ LƯU
             this.tooltip.innerHTML = `
                 <div class="hud-header">
                     <img class="hud-logo" src="${t.logo}" onerror="this.src='assets/tokens/default.png'">
