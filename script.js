@@ -3510,7 +3510,34 @@ async function callVoteBackend(tournamentId, voteType, estVal) {
     function switchTab(t) { document.querySelectorAll('.p-tab').forEach(el=>el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); ['chart','activity','chat'].forEach(x => document.getElementById(`content-${x}`).style.display = x===t ? (x==='chat'?'flex':'block') : 'none'); }
 
         
+// HÀM CHUYỂN 3 TAB CHÍNH Ở NGOÀI MÀN HÌNH (THÊM MỚI HOÀN TOÀN)
+function switchMainTab(tab) {
+    // 1. Đổi màu nút Tab
+    document.querySelectorAll('#alpha-tab-nav .tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btn-tab-' + tab).classList.add('active');
 
+    // 2. Tắt hết 3 màn hình
+    document.getElementById('alpha-market-view').style.display = 'none';
+    if(document.getElementById('view-dashboard')) document.getElementById('view-dashboard').style.display = 'none';
+    if(document.getElementById('sonar-market-view')) document.getElementById('sonar-market-view').style.display = 'none';
+
+    // 3. Bật màn hình tương ứng
+    if (tab === 'market') {
+        document.getElementById('alpha-market-view').style.display = 'block';
+    } else if (tab === 'comp') {
+        if(document.getElementById('view-dashboard')) document.getElementById('view-dashboard').style.display = 'block';
+        if(typeof renderGrid === 'function') renderGrid(); 
+    } else if (tab === 'sonar') {
+        document.getElementById('sonar-market-view').style.display = 'block';
+        
+        // Ép Radar đo lại kích thước cho chuẩn
+        setTimeout(() => {
+            if (typeof mySonarGalaxy !== 'undefined' && mySonarGalaxy) {
+                mySonarGalaxy.resize();
+            }
+        }, 50);
+    }
+}
 
 function updateTerminalData(id) {
     let c = compList.find(x => x.db_id == id); if(!c) return;
