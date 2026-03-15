@@ -1,4 +1,4 @@
-* Alpha Sonar Galaxy - Performance Refactor
+/* Alpha Sonar Galaxy - Performance Refactor
  * - Default token cap = 50 (nhẹ khi mở tab)
  * - Cho phép chọn 10/50/100/200/500
  * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
