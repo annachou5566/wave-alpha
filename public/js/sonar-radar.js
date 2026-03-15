@@ -1,4 +1,5 @@
-/* Alpha Sonar Galaxy - Performance Refactor
+/**
+ * Alpha Sonar Galaxy - Performance Refactor
  * - Default token cap = 50 (nhẹ khi mở tab)
  * - Cho phép chọn 10/50/100/200/500
  * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
@@ -19,6 +20,8 @@ class AlphaSonarGalaxy {
         this.container = this.canvas.parentElement || document.body;
         this.container.style.position = 'relative';
         this.container.style.overflow = 'hidden';
+        this.container.style.display = 'flex';
+        this.container.style.flexDirection = 'column';
 
         this.isRunning = true;
         this.isVisible = true;
@@ -99,10 +102,12 @@ class AlphaSonarGalaxy {
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
                 #sonar-control-bar {
-                    position: absolute; top: 14px; left: 14px; z-index: 15;
+                    position: relative; z-index: 15;
                     display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
                     background: rgba(0,0,0,0.55); border: 1px solid rgba(0,240,255,0.18);
                     padding: 8px 10px; border-radius: 10px; backdrop-filter: blur(5px);
+                    margin: 10px 10px 8px;
+                    flex: 0 0 auto;
                 }
                 .sonar-btn {
                     background: transparent; border: 1px solid rgba(0,240,255,0.35);
@@ -152,6 +157,9 @@ class AlphaSonarGalaxy {
                 .sp-box-val { font-size: 16px; font-weight: 700; font-family: monospace; }
 
                 @media (max-width: 768px) {
+                    #sonar-control-bar { margin: 8px 8px 6px; gap: 6px; }
+                    .sonar-btn { font-size: 11px; padding: 4px 8px; }
+                    .sonar-cap-wrap { font-size: 10px; }
                     #sonar-side-panel { width: 100%; right: -100%; border-left: none; }
                 }
             `;
@@ -172,6 +180,8 @@ class AlphaSonarGalaxy {
             <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
         `;
         this.container.appendChild(this.controlBar);
+        this.canvas.style.display = 'block';
+        this.canvas.style.flex = '1 1 auto';
 
         const modeBtn = this.controlBar.querySelector('#btn-mode-toggle');
         modeBtn.addEventListener('click', () => {
@@ -249,7 +259,8 @@ class AlphaSonarGalaxy {
         const dpr = window.devicePixelRatio || 1;
 
         this.width = Math.max(300, this.container.clientWidth || window.innerWidth);
-        this.height = Math.max(300, this.container.clientHeight || window.innerHeight);
+        const controlH = this.controlBar ? this.controlBar.offsetHeight + 20 : 0;
+        this.height = Math.max(220, (this.container.clientHeight || window.innerHeight) - controlH);
 
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
@@ -361,7 +372,7 @@ class AlphaSonarGalaxy {
             if (this.visualMode === 'mesh') {
                 const normChange = Math.max(-20, Math.min(20, data.change));
                 const paddingX = 38;
-                const paddingY = 76;
+                const paddingY = 32;
                 const usableW = Math.max(1, this.width - paddingX * 2);
                 const usableH = Math.max(1, this.height - paddingY * 2);
 
