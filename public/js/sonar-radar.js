@@ -1,13 +1,11 @@
 /**
  * ============================================================================
- * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V16 ULTIMATE PERFORMANCE)
+ * ALPHA SONAR GALAXY - PRO MILITARY EDITION (PHASE 2 - V17 3D ORBIT PHYSICS)
  * ============================================================================
  * Đã Fix:
- * 1. Chống Lag Toàn Web: Tích hợp IntersectionObserver & Zombie Killer. 
- * Tự động ngủ đông (0% CPU) khi bạn chuyển tab sang Alpha Market.
- * 2. Vật lý Quỹ Đạo: Áp dụng Lực đẩy Từ trường cho Orbit mode, token sẽ 
- * tự động lách lượn tránh nhau khi bay cùng quỹ đạo.
- * 3. Space Theme: Xóa bỏ lưới ca-rô rườm rà, giao diện sâu và vũ trụ hơn.
+ * 1. Chống đè 3D Orbit: Token bay cùng quỹ đạo sẽ "xịt về sau" (Angular Push) 
+ * thay vì văng ra khỏi đường ray. Vẫn cho phép đè một phần tạo cảm giác 3D.
+ * 2. Tối ưu hóa siêu hiệu năng, cắt giảm hoàn toàn Zombie Loop (từ V16).
  * ============================================================================
  */
 
@@ -16,14 +14,12 @@ class AlphaSonarGalaxy {
         this.canvas = document.getElementById(canvasId);
         if (!this.canvas) return;
         
-        // CHỐNG LAG 1: DIỆT ZOMBIE LOOP 
-        // Nếu chuyển tab rồi quay lại, script cũ sẽ bị tiêu diệt, tránh chạy đè 2-3 radar cùng lúc
         if (this.canvas.sonarInstance) {
             this.canvas.sonarInstance.destroy();
         }
         this.canvas.sonarInstance = this;
-        this.isRunning = true; // Cờ sinh tử của vòng lặp
-        this.isVisible = true; // Cờ ngủ đông
+        this.isRunning = true; 
+        this.isVisible = true; 
 
         this.ctx = this.canvas.getContext('2d');
         this.container = this.canvas.parentElement || document.body;
@@ -53,8 +49,6 @@ class AlphaSonarGalaxy {
         window.addEventListener('resize', () => this.resize());
         this.bindEvents();
         
-        // CHỐNG LAG 2: INTERSECTION OBSERVER
-        // Radar sẽ "ngủ" (không render) khi bị khuất màn hình hoặc chuyển tab
         if ('IntersectionObserver' in window) {
             this.observer = new IntersectionObserver((entries) => {
                 this.isVisible = entries[0].isIntersecting;
@@ -65,7 +59,6 @@ class AlphaSonarGalaxy {
         this.animate();
     }
 
-    // Hàm tiêu diệt phiên bản cũ để giải phóng RAM/CPU
     destroy() {
         this.isRunning = false;
         if (this.observer) this.observer.disconnect();
@@ -250,7 +243,7 @@ class AlphaSonarGalaxy {
     }
 
     updateData(marketData) {
-        if (!marketData || this.isPaused || !this.isVisible) return; // Tối ưu Throttling thêm
+        if (!marketData || this.isPaused || !this.isVisible) return; 
         this.latestData = marketData;
         
         const now = Date.now();
@@ -354,7 +347,6 @@ class AlphaSonarGalaxy {
                 orbitRadius = this.maxRadius * (1 - Math.pow(ratio, 0.3));
                 if (orbitRadius < 40) orbitRadius = 40 + Math.random() * 10;
 
-                // Random hóa góc xuất phát để chúng không bị xếp chồng lên nhau lúc đầu
                 orbitAngle = Math.random() * Math.PI * 2; 
                 orbitSpeed = 0.002 + (data.tx / (maxTx || 1)) * 0.008;
                 if (data.change < 0) orbitSpeed *= -1; 
@@ -365,7 +357,6 @@ class AlphaSonarGalaxy {
 
             let existingToken = this.tokens.find(t => t.symbol === data.symbol);
             if (existingToken) {
-                // Tọa độ base (gốc) đóng vai trò mỏ neo kéo token về
                 existingToken.baseX = baseX; 
                 existingToken.baseY = baseY;
                 existingToken.targetSize = targetSize;
@@ -489,18 +480,15 @@ class AlphaSonarGalaxy {
     }
 
     animate() {
-        // KIỂM SOÁT ZOMBIE LOOP: Nếu đã bị hủy, chặn không cho đệ quy nữa
         if (!this.isRunning) return;
         requestAnimationFrame(() => this.animate());
-
-        // CHỐNG LAG: Chỉ vẽ khi Radar đang hiển thị trên màn hình
         if (!this.isVisible || this.width === 0) return;
 
         try {
             this.ctx.fillStyle = 'rgba(10, 14, 23, 0.2)'; 
             this.ctx.fillRect(0, 0, this.width, this.height);
 
-            // --- VẼ CHÚ THÍCH HUD (Bỏ lưới ca rô theo yêu cầu) ---
+            // --- VẼ BACKGROUND THEO MÔ HÌNH (Không còn lưới ca rô) ---
             this.ctx.font = '600 11px "Courier New", monospace';
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
 
@@ -528,7 +516,6 @@ class AlphaSonarGalaxy {
                 this.ctx.textAlign = 'left';
 
             } else {
-                // XÓA LƯỚI CA-RÔ TẠI ĐÂY (Chỉ giữ lại trục tọa độ mờ)
                 this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
                 this.ctx.setLineDash([4, 4]);
                 this.ctx.beginPath();
@@ -537,7 +524,6 @@ class AlphaSonarGalaxy {
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
 
-                // Chú thích 4 Góc
                 this.ctx.fillStyle = 'rgba(255, 51, 102, 0.5)'; 
                 this.ctx.textAlign = 'left';
                 this.ctx.fillText('[ HIGH VOL / BEARISH ]', 15, 60);
@@ -555,7 +541,7 @@ class AlphaSonarGalaxy {
                 this.ctx.textAlign = 'left';
             }
 
-            // --- VẬT LÝ VÀ CHỐNG ĐÈ CHO CẢ 2 MÔ HÌNH ---
+            // --- VẬT LÝ VÀ CHỐNG ĐÈ 3D ---
             for (let i = 0; i < this.tokens.length; i++) {
                 let t = this.tokens[i];
 
@@ -566,28 +552,52 @@ class AlphaSonarGalaxy {
                         t.baseY = this.centerY + t.orbitRadius * Math.sin(t.orbitAngle);
                     }
                     
-                    // 1. Kéo tX, tY về vị trí gốc (base)
                     t.tX += (t.baseX - t.tX) * 0.05;
                     t.tY += (t.baseY - t.tY) * 0.05;
 
-                    // 2. Chống đè logo (Áp dụng cho cả Orbit và Mesh)
                     for (let j = i + 1; j < this.tokens.length; j++) {
                         let other = this.tokens[j];
-                        let dx = t.tX - other.tX;
-                        let dy = t.tY - other.tY;
-                        let dist = Math.sqrt(dx*dx + dy*dy) || 1; 
-                        let minDist = t.size + other.size + 15; 
 
-                        if (dist < minDist) {
-                            let force = (minDist - dist) * 0.15; // Lực đẩy nhẹ
-                            let fX = (dx / dist) * force;
-                            let fY = (dy / dist) * force;
-                            t.tX += fX; t.tY += fY;
-                            other.tX -= fX; other.tY -= fY;
-                        }
-                        
-                        // Tia kết nối (chỉ vẽ bên Mesh cho gọn màn hình)
-                        if (this.visualMode === 'mesh') {
+                        if (this.visualMode === 'orbit') {
+                            // FIX V17: Chống đè 3D trên quỹ đạo bằng Lực đẩy Góc (Angular Push)
+                            let dx = t.tX - other.tX;
+                            let dy = t.tY - other.tY;
+                            let dist = Math.sqrt(dx*dx + dy*dy) || 1; 
+                            
+                            // Cho phép đè một phần (cảm giác 3D), chỉ tách nếu quá gần (< 15px)
+                            let minDist = 15; 
+
+                            if (dist < minDist) {
+                                // Xác định ai chạy trước ai chạy sau
+                                let angleDiff = t.orbitAngle - other.orbitAngle;
+                                angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff)); 
+                                
+                                // Đẩy (xịt về sau/tới trước) dọc theo vòng quay quỹ đạo
+                                let pushForce = 0.008; 
+                                if (angleDiff > 0) {
+                                    t.orbitAngle += pushForce;
+                                    other.orbitAngle -= pushForce;
+                                } else {
+                                    t.orbitAngle -= pushForce;
+                                    other.orbitAngle += pushForce;
+                                }
+                            }
+                        } else {
+                            // Vật lý của MESH (Giữ nguyên)
+                            let dx = t.tX - other.tX;
+                            let dy = t.tY - other.tY;
+                            let dist = Math.sqrt(dx*dx + dy*dy) || 1; 
+                            let minDist = t.size + other.size + 15; 
+
+                            if (dist < minDist) {
+                                let force = (minDist - dist) * 0.15; 
+                                let fX = (dx / dist) * force;
+                                let fY = (dy / dist) * force;
+                                t.tX += fX; t.tY += fY;
+                                other.tX -= fX; other.tY -= fY;
+                            }
+                            
+                            // Tia kết nối (Chỉ hiện trong MESH)
                             let realDist = Math.sqrt(Math.pow(t.x - other.x, 2) + Math.pow(t.y - other.y, 2));
                             if (realDist < 80 && t.color === other.color) {
                                 this.ctx.beginPath();
@@ -600,11 +610,9 @@ class AlphaSonarGalaxy {
                         }
                     }
 
-                    // Không cho văng ra khỏi màn hình
                     t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
                     t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
 
-                    // 3. Di chuyển vật thể thật (x, y) đến vị trí đích (tX, tY)
                     t.x += (t.tX - t.x) * 0.1; 
                     t.y += (t.tY - t.y) * 0.1;
                     t.size += (t.targetSize - t.size) * 0.1;
@@ -612,7 +620,7 @@ class AlphaSonarGalaxy {
             }
             this.ctx.globalAlpha = 1.0;
 
-            // --- VẼ LOGO TOKEN ---
+            // --- VẼ LOGO ---
             this.tokens.forEach(t => {
                 let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
                 let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
@@ -644,7 +652,7 @@ class AlphaSonarGalaxy {
                 this.ctx.globalAlpha = 1.0;
             });
 
-            // --- VẼ HUD & CROSSHAIR ---
+            // --- VẼ HUD & CROSSHAIR NỔI LÊN TRÊN ---
             this.tokens.forEach(t => {
                 let isHovered = (this.hoveredToken && this.hoveredToken.symbol === t.symbol);
                 let isLocked = (this.lockedToken && this.lockedToken.symbol === t.symbol);
