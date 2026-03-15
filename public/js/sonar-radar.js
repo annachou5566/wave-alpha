@@ -39,64 +39,51 @@ class AlphaSonarGalaxy {
     }
 
     updateData(marketData) {
-    console.log("=== Sonar: Nhận dữ liệu mới ===", marketData); // Xem dữ liệu có đổ về không
-    if (!marketData) {
-        console.warn("Sonar: Dữ liệu marketData bị rỗng!");
-        return;
-    }
+    if (!marketData) return;
     this.latestData = marketData;
     this.recalculate();
 }
 
 recalculate() {
-    console.log("Sonar: Bắt đầu tính toán lại Radar...");
-    if (!this.latestData || typeof this.latestData !== 'object') {
-        console.error("Sonar: latestData không hợp lệ!", this.latestData);
-        return;
-    }
+    if (!this.latestData || typeof this.latestData !== 'object' || this.width === 0) return;
     
-    if (this.width === 0 || this.height === 0) {
-        console.error("Sonar: Kích thước Canvas bằng 0, không thể vẽ!", {w: this.width, h: this.height});
-        return;
-    }
+    const newTokens = [];
+    let maxVol = 0;
 
-    try {
-        const newTokens = [];
-        let maxVol = 0;
+    // Tìm maxVol để tính tỷ lệ kích thước
+    Object.entries(this.latestData).forEach(([key, t]) => {
+        if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
+        if (t.v.dt > maxVol) maxVol = t.v.dt;
+    });
 
-        Object.entries(this.latestData).forEach(([key, t]) => {
-            if (!t || typeof t !== 'object' || !t.v) return;
-            if (t.v.dt > maxVol) maxVol = t.v.dt;
+    Object.entries(this.latestData).forEach(([key, t]) => {
+        // Chỉ xử lý các token hợp lệ, bỏ qua metadata của server
+        if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
+        
+        let symbol = t.symbol || key.replace('ALPHA_', '');
+        let liq = t.l || t.v.dt || 1000;
+        
+        // Tính bán kính (r): Token có thanh khoản (liq) càng cao thì càng nằm gần tâm
+        // Dùng 1,000,000 làm mốc chuẩn để chia vùng
+        let liqRatio = Math.min(1, liq / 1000000); 
+        let r = this.maxRadius * (1 - (liqRatio * 0.8)); // Đảm bảo r không bao giờ bằng 0 để không bị tụ hết vào tâm
+
+        let c = t.c || 0;
+        let mappedAngle = (c / 15) * Math.PI; 
+        
+        newTokens.push({
+            symbol: symbol,
+            x: this.centerX + r * Math.cos(mappedAngle),
+            y: this.centerY - r * Math.sin(mappedAngle),
+            size: Math.max(3, (t.v.dt / (maxVol || 1)) * 15), 
+            color: c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff'),
+            price: t.p || 0,
+            vol: t.v.dt || 0,
+            change: c
         });
+    });
 
-        console.log(`Sonar: Tìm thấy ${Object.keys(this.latestData).length} mục, Vol lớn nhất: ${maxVol}`);
-
-        Object.entries(this.latestData).forEach(([key, t]) => {
-            if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
-            
-            let symbol = t.symbol || key.replace('ALPHA_', '');
-            let liq = t.l || t.v.dt || 1000;
-            let size = Math.max(2, (t.v.dt / (maxVol || 1)) * 15); 
-            let liqRatio = Math.max(0.01, liq / 1000000); 
-            let r = this.maxRadius * (1 - Math.min(1, liqRatio)); 
-            
-            let c = t.c || 0;
-            let mappedAngle = (c / 15) * Math.PI; 
-            
-            newTokens.push({
-                symbol: symbol,
-                x: this.centerX + r * Math.cos(mappedAngle),
-                y: this.centerY - r * Math.sin(mappedAngle),
-                size: size,
-                color: c > 0 ? '#00f0ff' : (c < 0 ? '#ff3366' : '#ffffff')
-            });
-        });
-
-        this.tokens = newTokens;
-        console.log(`Sonar: Đã xử lý xong ${this.tokens.length} token để vẽ.`);
-    } catch (err) {
-        console.error("Sonar: Lỗi nghiêm trọng trong recalculate:", err);
-    }
+    this.tokens = newTokens;
 }
 
     checkHover() {
