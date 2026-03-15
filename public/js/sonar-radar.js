@@ -44,7 +44,9 @@ class AlphaSonarGalaxy {
         this.lastTokenCount = 0;     
         this.connectionDistance = 80;
         this.connectionDistanceSq = this.connectionDistance * this.connectionDistance;
-        
+        this.orbitLaneSpacing = 18;
+        this.orbitDriftStrength = 0.35;
+
         this.initUI();
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -321,13 +323,14 @@ class AlphaSonarGalaxy {
         
         let maxDisplay = this.width < 768 ? 30 : 60;
         dataArray = dataArray.slice(0, maxDisplay);
+
         const tokenBySymbol = new Map(this.tokens.map(t => [t.symbol, t]));
-        
+
         dataArray.forEach(data => {
             let targetSize = Math.max(10, Math.min(24, 10 + (data.vol / (maxVol || 1)) * 14));
             let colorHex = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
             let baseX, baseY;
-            let baseOrbitRadius = 0; let orbitSpeed = 0; let orbitAngle = 0;
+            let baseOrbitRadius = 0; let orbitSpeed = 0; let orbitAngle = 0; let driftPhase = 0;
 
             // Offset ngẫu nhiên dựa trên tên token để các token có cùng chỉ số không bị dính vào 1 điểm
             let hashOffset = ((data.symbol.charCodeAt(0) || 0) % 10) / 10 - 0.5;
@@ -346,7 +349,12 @@ class AlphaSonarGalaxy {
                             ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1)))
                             : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
                 baseOrbitRadius = this.maxRadius * (1 - Math.pow(ratio, 0.3));
-                if (baseOrbitRadius < 40) baseOrbitRadius = 40 + Math.random() * 10;
+                if (baseOrbitRadius < 40) baseOrbitRadius = 40;
+
+                const symbolCode = data.symbol.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+                const laneOffset = ((symbolCode % 7) - 3) * this.orbitLaneSpacing;
+                driftPhase = (symbolCode % 360) * (Math.PI / 180);
+                baseOrbitRadius = Math.max(40, Math.min(this.maxRadius, baseOrbitRadius + laneOffset));
 
                 orbitAngle = Math.random() * Math.PI * 2; 
                 orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006; 
@@ -376,6 +384,7 @@ class AlphaSonarGalaxy {
                     if(existingToken.orbitAngle === undefined) existingToken.orbitAngle = orbitAngle;
                     existingToken.baseOrbitRadius = baseOrbitRadius;
                     existingToken.orbitSpeed = orbitSpeed;
+                    existingToken.driftPhase = driftPhase;
                 }
 
                 if (existingToken.logo !== data.logo) {
@@ -398,7 +407,7 @@ class AlphaSonarGalaxy {
                     tX: baseX, tY: baseY,
                     baseX: baseX, baseY: baseY, 
                     baseOrbitRadius: baseOrbitRadius, currentOrbitRadius: baseOrbitRadius, 
-                    orbitSpeed: orbitSpeed, orbitAngle: orbitAngle,
+                    orbitSpeed: orbitSpeed, orbitAngle: orbitAngle, driftPhase: driftPhase,
                     size: 0, targetSize: targetSize, color: colorHex, 
                     price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
                     mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
@@ -577,8 +586,10 @@ class AlphaSonarGalaxy {
                     if (this.visualMode === 'orbit') {
                         t.orbitAngle += t.orbitSpeed;
                         t.currentOrbitRadius += (t.baseOrbitRadius - t.currentOrbitRadius) * 0.05;
-                        t.baseX = this.centerX + t.currentOrbitRadius * Math.cos(t.orbitAngle);
-                        t.baseY = this.centerY + t.currentOrbitRadius * Math.sin(t.orbitAngle);
+                        const drift = Math.sin(t.orbitAngle * 2 + (t.driftPhase || 0)) * this.orbitDriftStrength;
+                        const orbitRadius = t.currentOrbitRadius + drift;
+                        t.baseX = this.centerX + orbitRadius * Math.cos(t.orbitAngle);
+                        t.baseY = this.centerY + orbitRadius * Math.sin(t.orbitAngle);
                     }
                     
                     // Lực đàn hồi kéo token về đích
@@ -586,39 +597,34 @@ class AlphaSonarGalaxy {
                     t.tY += (t.baseY - t.tY) * 0.05;
                 }
 
-                // 2. Lực đẩy (Repulsion) chống dính chùm
-                const pushPadding = 15;
-                for (let i = 0; i < this.tokens.length; i++) {
-                    let t = this.tokens[i];
-                    for (let j = i + 1; j < this.tokens.length; j++) {
-                        let other = this.tokens[j];
-                        
-                        let dx = t.tX - other.tX;
-                        let dy = t.tY - other.tY;
-                        
-                        
-                        let distSq = dx * dx + dy * dy;
-                        if (distSq === 0) {
-                            dx = 0.01;
-                            dy = 0.01;
-                            distSq = 0.0002;
-                        }
-                        const minDist = t.size + other.size + pushPadding;
-                        const minDistSq = minDist * minDist;
-                        if (distSq < minDistSq) {
-                        const dist = Math.sqrt(distSq);
+                // 2. Lực đẩy chống dính chỉ áp dụng trong Mesh mode.
+                if (this.visualMode === 'mesh') {
+                    const pushPadding = 15;
+                    for (let i = 0; i < this.tokens.length; i++) {
+                        let t = this.tokens[i];
+                        for (let j = i + 1; j < this.tokens.length; j++) {
+                            let other = this.tokens[j];
                             
-                        let pushForce = (minDist - dist) * 0.2; // Lực đẩy
-                            let fX = (dx / dist) * pushForce;
-                            let fY = (dy / dist) * pushForce;
-                            
-                            // Đẩy trên trục 2D
-                            t.tX += fX; t.tY += fY;
-                            other.tX -= fX; other.tY -= fY;
-                        }
-                        
-                        // Vẽ tia Laser nối lưới (Chỉ ở Mesh mode)
-                        if (this.visualMode === 'mesh') {
+                            let dx = t.tX - other.tX;
+                            let dy = t.tY - other.tY;
+                            let distSq = dx * dx + dy * dy;
+                            if (distSq === 0) {
+                                dx = 0.01;
+                                dy = 0.01;
+                                distSq = 0.0002;
+                            }
+                            const minDist = t.size + other.size + pushPadding;
+                            const minDistSq = minDist * minDist;
+
+                            if (distSq < minDistSq) {
+                                const dist = Math.sqrt(distSq);
+                                let pushForce = (minDist - dist) * 0.2;
+                                let fX = (dx / dist) * pushForce;
+                                let fY = (dy / dist) * pushForce;
+                                t.tX += fX; t.tY += fY;
+                                other.tX -= fX; other.tY -= fY;
+                            }
+
                             const rDx = t.x - other.x;
                             const rDy = t.y - other.y;
                             const realDistSq = rDx * rDx + rDy * rDy;
@@ -633,12 +639,12 @@ class AlphaSonarGalaxy {
                             }
                         }
                     }
+                }
 
-                    // Ép không cho văng ra khỏi màn hình
+                for (let i = 0; i < this.tokens.length; i++) {
+                    const t = this.tokens[i];
                     t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
                     t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
-
-                    // Di chuyển mượt (Lerp)
                     t.x += (t.tX - t.x) * 0.15; 
                     t.y += (t.tY - t.y) * 0.15;
                     t.size += (t.targetSize - t.size) * 0.1;
@@ -728,6 +734,5 @@ class AlphaSonarGalaxy {
             console.warn("Radar Render Prevented Crash:", e);
         }
 
-        
     }
 }
