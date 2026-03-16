@@ -1095,6 +1095,7 @@ class AlphaSonarGalaxy {
         this.drawBackdrop();
 
         if (!this.isPaused) {
+            // 1. CẬP NHẬT TỌA ĐỘ VÀ KÍCH THƯỚC (QUAN TRỌNG: KHÔNG CÓ CÁI NÀY SIZE SẼ BẰNG 0)
             for (let i = 0; i < this.tokens.length; i++) {
                 const t = this.tokens[i];
                 if (this.visualMode === 'orbit') {
@@ -1105,11 +1106,25 @@ class AlphaSonarGalaxy {
                     t.baseX = this.orbitCenterX + r * Math.cos(t.orbitAngle);
                     t.baseY = this.orbitCenterY + r * Math.sin(t.orbitAngle);
                 }
+                
                 t.tX += (t.baseX - t.tX) * 0.05;
                 t.tY += (t.baseY - t.tY) * 0.05;
+
+                if (this.visualMode !== 'heatmap') {
+                    t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
+                    t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
+                }
+
+                t.x += (t.tX - t.x) * 0.12;
+                t.y += (t.tY - t.y) * 0.12;
+                t.size += ((t.targetSize || 0) - t.size) * 0.1;
+                t.rectW += ((t.targetRectW || 0) - (t.rectW || 0)) * 0.12;
+                t.rectH += ((t.targetRectH || 0) - (t.rectH || 0)) * 0.12;
+                
+                t.lowDetail = this.visualMode === 'orbit' && this.tokens.length > 180 && t.size < this.minLogoRenderSize;
             }
 
-            // Repulsion + laser links chỉ cho Mesh để tiết kiệm CPU và đúng concept
+            // 2. MESH REPULSION & LASER LINKS
             if (this.visualMode === 'mesh') {
                 const pushPadding = 15;
                 let linksDrawn = 0;
@@ -1117,15 +1132,10 @@ class AlphaSonarGalaxy {
                     const t = this.tokens[i];
                     for (let j = i + 1; j < this.tokens.length; j++) {
                         const o = this.tokens[j];
-
                         let dx = t.tX - o.tX;
                         let dy = t.tY - o.tY;
                         let distSq = dx * dx + dy * dy;
-                        if (distSq === 0) {
-                            dx = 0.01;
-                            dy = 0.01;
-                            distSq = 0.0002;
-                        }
+                        if (distSq === 0) { dx = 0.01; dy = 0.01; distSq = 0.0002; }
 
                         const minDist = t.size + o.size + pushPadding + this.meshRepulsionBuffer;
                         const minDistSq = minDist * minDist;
@@ -1157,8 +1167,9 @@ class AlphaSonarGalaxy {
                     }
                 }
             }
+        } // Hết phần xử lý khi không PAUSE
 
-            // Token render
+        // 3. VẼ TOKENS LÊN CANVAS
         for (let i = 0; i < this.tokens.length; i++) {
             const t = this.tokens[i];
             const isHovered = this.hoveredToken && this.hoveredToken.symbol === t.symbol;
@@ -1195,8 +1206,10 @@ class AlphaSonarGalaxy {
                     this.ctx.textBaseline = 'alphabetic';
                 }
             } else {
-                const radius = t.size;
-                const liqRatio = this.maxLiqCached > 0 ? (t.liq / this.maxLiqCached) : 0;
+                const radius = Math.max(0, t.size || 0);
+                if (radius === 0) continue; // Bỏ qua nếu size chưa load kịp
+
+                const liqRatio = this.maxLiqCached > 0 ? ((t.liq||0) / this.maxLiqCached) : 0;
                 if (liqRatio > 0.3) {
                     this.ctx.shadowColor = t.color;
                     this.ctx.shadowBlur = 3 + liqRatio * 8;
@@ -1235,62 +1248,12 @@ class AlphaSonarGalaxy {
                 }
             }
         }
-        }
 
-        // Token render
-        for (let i = 0; i < this.tokens.length; i++) {
-            const t = this.tokens[i];
-            const isHovered = this.hoveredToken && this.hoveredToken.symbol === t.symbol;
-            const isLocked = this.lockedToken && this.lockedToken.symbol === t.symbol;
-            const radius = t.size;
-
-            this.ctx.globalAlpha = (isHovered || isLocked) ? 1 : 0.8;
-
-            const liqRatio = this.maxLiqCached > 0 ? (t.liq / this.maxLiqCached) : 0;
-            if (liqRatio > 0.3) {
-                this.ctx.shadowColor = t.color;
-                this.ctx.shadowBlur = 3 + liqRatio * 8;
-            } else {
-                this.ctx.shadowBlur = 0;
-            }
-
-            if (!t.lowDetail && t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
-                this.ctx.save();
-                this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                this.ctx.closePath();
-                this.ctx.clip();
-                this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, radius * 2, radius * 2);
-                this.ctx.restore();
-            } else {
-                this.ctx.beginPath();
-                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-                this.ctx.fillStyle = '#1a1f2e';
-                this.ctx.fill();
-            }
-
-            this.ctx.beginPath();
-            this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-            this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
-            this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
-            this.ctx.stroke();
-            this.ctx.globalAlpha = 1;
-            this.ctx.shadowBlur = 0;
-
-            if (t.isWhale) {
-                const isHighSeverity = t.whaleSeverity === 'HIGH';
-                this.ctx.fillStyle = isHighSeverity ? 'rgba(246,70,93,0.95)' : 'rgba(240,185,11,0.95)';
-                this.ctx.font = '700 10px "Rajdhani", sans-serif';
-                this.ctx.fillText(isHighSeverity ? '🚨 Anomaly' : '🐋 Whale', t.x + radius + 6, t.y + radius + 10);
-            }
-        }
-
-
-        // Draw tooltip last to keep it above all tokens
+        // 4. VẼ TOOLTIP CUỐI CÙNG ĐỂ NỔI LÊN TRÊN CÙNG
         const tooltipToken = this.hoveredToken && !this.lockedToken ? this.hoveredToken : null;
         if (tooltipToken) {
             const t = tooltipToken;
-            const radius = t.size;
+            const radius = t.size || 0;
             const tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
             this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
             const textWidth = this.ctx.measureText(tagText).width;
