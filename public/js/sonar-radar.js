@@ -348,19 +348,29 @@ class AlphaSonarGalaxy {
         this.canvas.style.display = 'block';
 
         const modeBtn = this.controlBar.querySelector('#btn-mode-toggle');
+        const modes = ['orbit', 'mesh', 'heatmap'];
         modeBtn.addEventListener('click', () => {
-            this.visualMode = this.visualMode === 'mesh' ? 'orbit' : 'mesh';
+            const currentIdx = modes.indexOf(this.visualMode);
+            this.visualMode = modes[(currentIdx + 1) % modes.length] || 'orbit';
+
             if (this.visualMode === 'mesh') {
                 modeBtn.innerText = '[ MESH NETWORK ]';
                 modeBtn.style.borderColor = '#9945FF';
                 modeBtn.style.color = '#9945FF';
+            } else if (this.visualMode === 'heatmap') {
+                modeBtn.innerText = '[ HEATMAP ]';
+                modeBtn.style.borderColor = '#F6465D';
+                modeBtn.style.color = '#F6465D';
             } else {
                 modeBtn.innerText = '[ ORBITAL SYSTEM ]';
                 modeBtn.style.borderColor = '#F0B90B';
                 modeBtn.style.color = '#F0B90B';
             }
             const hint = this.controlBar.querySelector('#sonar-mode-hint');
-            if (hint) hint.innerText = this.visualMode === 'mesh' ? 'TIP: TRY ORBITAL SYSTEM' : 'TIP: SWITCH BACK TO MESH';
+            if (hint) {
+                const nextMode = modes[(modes.indexOf(this.visualMode) + 1) % modes.length];
+                hint.innerText = `TIP: TRY ${nextMode.toUpperCase()}`;
+            }
             this.recalculate(true);
         });
 
@@ -698,13 +708,74 @@ class AlphaSonarGalaxy {
         const selected = dataArray.slice(0, Math.min(effectiveCap, dataArray.length));
         const densityScale = selected.length > 300 ? 0.55 : (selected.length > 180 ? 0.75 : 1);
 
+        // THUẬT TOÁN TREEMAP CHO HEATMAP
+        if (this.visualMode === 'heatmap') {
+            const pad = 2;
+            const htArea = { x: 5, y: 5, w: this.width - 10, h: this.height - 10 };
+            const getVal = (t) => this.filterMode === 'liquidity' ? t.liq : (this.filterMode === 'marketcap' ? t.mc : t.vol);
+            const totalMetric = selected.reduce((s, t) => s + (getVal(t) || 1), 0);
+
+            const splitRect = (rX, rY, rW, rH, arr, sum) => {
+                if (arr.length === 0) return;
+                if (arr.length === 1) {
+                    arr[0].htX = rX + rW / 2;
+                    arr[0].htY = rY + rH / 2;
+                    arr[0].htW = Math.max(0, rW - pad);
+                    arr[0].htH = Math.max(0, rH - pad);
+                    return;
+                }
+                let half = sum / 2;
+                let running = 0;
+                let splitIdx = 1;
+                for (let i = 0; i < arr.length; i++) {
+                    running += (getVal(arr[i]) || 1);
+                    if (running >= half && i > 0) {
+                        splitIdx = i; break;
+                    }
+                }
+                let leftArr = arr.slice(0, splitIdx);
+                let rightArr = arr.slice(splitIdx);
+                let leftSum = leftArr.reduce((s, t) => s + (getVal(t) || 1), 0);
+                let rightSum = rightArr.reduce((s, t) => s + (getVal(t) || 1), 0);
+
+                if (rW > rH) {
+                    let leftW = sum > 0 ? rW * (leftSum / sum) : rW / 2;
+                    splitRect(rX, rY, leftW, rH, leftArr, leftSum);
+                    splitRect(rX + leftW, rY, rW - leftW, rH, rightArr, rightSum);
+                } else {
+                    let topH = sum > 0 ? rH * (leftSum / sum) : rH / 2;
+                    splitRect(rX, rY, rW, topH, leftArr, leftSum);
+                    splitRect(rX, rY + topH, rW, rH - topH, rightArr, rightSum);
+                }
+            };
+            splitRect(htArea.x, htArea.y, htArea.w, htArea.h, selected, totalMetric);
+        }
+
         const tokenBySymbol = new Map(this.tokens.map(t => [t.symbol, t]));
         selected.forEach((data, idx) => {
             const sizeMetric = this.filterMode === 'liquidity' ? data.liq : (this.filterMode === 'marketcap' ? data.mc : data.vol);
             const sizeMax = this.filterMode === 'liquidity' ? maxLiq : (this.filterMode === 'marketcap' ? maxMc : maxVol);
             const sizeBase = 10 + (sizeMetric / (sizeMax || 1)) * 14;
             const targetSize = Math.max(3.5, Math.min(24, sizeBase * densityScale));
-            const color = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
+            
+            // Xử lý dải màu gradient tự động cho Heatmap
+            let color;
+            if (this.visualMode === 'heatmap') {
+                const intensity = Math.min(1, Math.abs(data.change) / 10);
+                if (data.change > 0) {
+                    const r = Math.floor(14 * (1 - intensity));
+                    const g = Math.floor(203 * intensity + 80 * (1 - intensity));
+                    const b = Math.floor(129 * intensity + 80 * (1 - intensity));
+                    color = `rgb(${r},${g},${b})`;
+                } else if (data.change < 0) {
+                    const r = Math.floor(246 * intensity + 80 * (1 - intensity));
+                    const g = Math.floor(70 * intensity + 20 * (1 - intensity));
+                    const b = Math.floor(93 * intensity + 20 * (1 - intensity));
+                    color = `rgb(${r},${g},${b})`;
+                } else { color = '#848E9C'; }
+            } else {
+                color = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
+            }
 
             let baseX = this.centerX;
             let baseY = this.centerY;
@@ -712,28 +783,28 @@ class AlphaSonarGalaxy {
             let orbitSpeed = 0;
             let orbitAngle = 0;
             let driftPhase = 0;
+            let rectW = 0;
+            let rectH = 0;
 
             const symbolCode = String(data.symbol).split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
 
-            if (this.visualMode === 'mesh') {
+            if (this.visualMode === 'heatmap') {
+                baseX = data.htX || this.centerX;
+                baseY = data.htY || this.centerY;
+                rectW = data.htW || 0;
+                rectH = data.htH || 0;
+            } else if (this.visualMode === 'mesh') {
                 const normChange = Math.max(-20, Math.min(20, data.change));
-                const paddingX = 38;
-                const paddingY = 32;
+                const paddingX = 38; const paddingY = 32;
                 const usableW = Math.max(1, this.width - paddingX * 2);
                 const usableH = Math.max(1, this.height - paddingY * 2);
-
                 const hashOffset = ((symbolCode % 11) / 10) - 0.5;
                 const volRatio = Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
 
                 baseX = paddingX + (usableW / 2) + (normChange / 20) * (usableW / 2) + hashOffset * 24;
                 baseY = paddingY + usableH - (Math.pow(volRatio, 0.4) * usableH) + hashOffset * 16;
             } else {
-                const ratio = this.filterMode === 'liquidity'
-                    ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1)))
-                    : (this.filterMode === 'marketcap'
-                        ? Math.max(0.01, Math.min(1, data.mc / (maxMc || 1)))
-                        : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1))));
-
+                const ratio = this.filterMode === 'liquidity' ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1))) : (this.filterMode === 'marketcap' ? Math.max(0.01, Math.min(1, data.mc / (maxMc || 1))) : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1))));
                 baseOrbitRadius = this.maxRadius * (1 - Math.pow(ratio, 0.3));
                 baseOrbitRadius = Math.max(36, baseOrbitRadius);
 
@@ -755,85 +826,42 @@ class AlphaSonarGalaxy {
 
             const existing = tokenBySymbol.get(data.symbol);
             if (existing) {
-                existing.baseX = baseX;
-                existing.baseY = baseY;
-                existing.targetSize = targetSize;
-                existing.color = color;
-                existing.price = data.price;
-                existing.vol = data.vol;
-                existing.change = data.change;
-                existing.tx = data.tx;
-                existing.liq = data.liq;
-                existing.mc = data.mc;
-                existing.holders = data.holders;
-                existing.vLimit = data.vLimit;
-                existing.vChain = data.vChain;
-                existing.isWhale = data.isWhale;
+                existing.baseX = baseX; existing.baseY = baseY;
+                existing.targetSize = targetSize; existing.color = color;
+                existing.price = data.price; existing.vol = data.vol;
+                existing.change = data.change; existing.tx = data.tx;
+                existing.liq = data.liq; existing.mc = data.mc;
+                existing.holders = data.holders; existing.vLimit = data.vLimit;
+                existing.vChain = data.vChain; existing.isWhale = data.isWhale;
                 existing.whaleSeverity = data.whaleSeverity;
+                existing.targetRectW = rectW; existing.targetRectH = rectH;
 
                 if (this.visualMode === 'orbit') {
                     if (existing.orbitAngle === undefined) existing.orbitAngle = orbitAngle;
                     existing.baseOrbitRadius = baseOrbitRadius;
-                    existing.orbitSpeed = orbitSpeed;
-                    existing.driftPhase = driftPhase;
+                    existing.orbitSpeed = orbitSpeed; existing.driftPhase = driftPhase;
                 }
-
                 if (existing.logo !== data.logo) {
-                    existing.logo = data.logo;
-                    const img = new Image();
-                    img.onerror = function () {
-                        if (!this.failed) {
-                            this.failed = true;
-                            this.src = 'assets/tokens/default.png';
-                        }
-                    };
-                    img.src = data.logo;
-                    existing.imgObj = img;
+                    existing.logo = data.logo; const img = new Image();
+                    img.onerror = function() { if(!this.failed){this.failed=true;this.src='assets/tokens/default.png';} };
+                    img.src = data.logo; existing.imgObj = img;
                 }
-
                 existing.updated = true;
             } else {
                 const img = new Image();
-                img.onerror = function () {
-                    if (!this.failed) {
-                        this.failed = true;
-                        this.src = 'assets/tokens/default.png';
-                    }
-                };
+                img.onerror = function() { if(!this.failed){this.failed=true;this.src='assets/tokens/default.png';} };
                 img.src = data.logo;
 
                 this.tokens.push({
-                    symbol: data.symbol,
-                    logo: data.logo,
-                    contract: data.contract,
-                    imgObj: img,
-                    x: this.centerX,
-                    y: this.centerY,
-                    tX: baseX,
-                    tY: baseY,
-                    baseX,
-                    baseY,
-                    baseOrbitRadius,
-                    currentOrbitRadius: baseOrbitRadius,
-                    orbitSpeed,
-                    orbitAngle,
-                    driftPhase,
-                    size: 0,
-                    targetSize,
-                    color,
-                    price: data.price,
-                    vol: data.vol,
-                    liq: data.liq,
-                    change: data.change,
-                    tx: data.tx,
-                    mc: data.mc,
-                    holders: data.holders,
-                    vLimit: data.vLimit,
-                    vChain: data.vChain,
-                    isWhale: data.isWhale,
-                    whaleSeverity: data.whaleSeverity,
-                    lowDetail: false,
-                    updated: true
+                    symbol: data.symbol, logo: data.logo, contract: data.contract, imgObj: img,
+                    x: this.centerX, y: this.centerY, tX: baseX, tY: baseY,
+                    baseX, baseY, baseOrbitRadius, currentOrbitRadius: baseOrbitRadius,
+                    orbitSpeed, orbitAngle, driftPhase, size: 0, targetSize, color,
+                    price: data.price, vol: data.vol, liq: data.liq, change: data.change, tx: data.tx,
+                    mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
+                    isWhale: data.isWhale, whaleSeverity: data.whaleSeverity,
+                    rectW: 0, rectH: 0, targetRectW: rectW, targetRectH: rectH,
+                    lowDetail: false, updated: true
                 });
             }
         });
@@ -921,13 +949,23 @@ class AlphaSonarGalaxy {
 
         for (let i = 0; i < this.tokens.length; i++) {
             const t = this.tokens[i];
-            const dx = this.mouseX - t.x;
-            const dy = this.mouseY - t.y;
-            const distSq = dx * dx + dy * dy;
-            const hitRadius = t.size + 8;
-            if (distSq < hitRadius * hitRadius && distSq < bestDistSq) {
-                bestDistSq = distSq;
-                this.hoveredToken = t;
+            if (this.visualMode === 'heatmap') {
+                const rx = t.x - (t.rectW || 0) / 2;
+                const ry = t.y - (t.rectH || 0) / 2;
+                if (this.mouseX >= rx && this.mouseX <= rx + (t.rectW || 0) &&
+                    this.mouseY >= ry && this.mouseY <= ry + (t.rectH || 0)) {
+                    this.hoveredToken = t;
+                    break;
+                }
+            } else {
+                const dx = this.mouseX - t.x;
+                const dy = this.mouseY - t.y;
+                const distSq = dx * dx + dy * dy;
+                const hitRadius = t.size + 8;
+                if (distSq < hitRadius * hitRadius && distSq < bestDistSq) {
+                    bestDistSq = distSq;
+                    this.hoveredToken = t;
+                }
             }
         }
         this.canvas.style.cursor = this.hoveredToken ? 'crosshair' : 'default';
@@ -1028,6 +1066,9 @@ class AlphaSonarGalaxy {
             this.ctx.fillStyle = 'rgba(255,255,255,0.34)';
             this.ctx.fillText('CENTER = HIGHER VOL/LIQ/MC | OUTER = LOWER', this.orbitCenterX, this.height - 28);
             this.ctx.textAlign = 'left';
+        } else if (this.visualMode === 'heatmap') {
+            this.ctx.fillStyle = 'rgba(255,255,255,0.34)';
+            this.ctx.fillText('AREA = DATA METRIC | COLOR = PERFORMANCE', 12, this.height - 14);
         } else {
             this.ctx.strokeStyle = 'rgba(0,240,255,0.08)';
             this.ctx.setLineDash([4, 4]);
@@ -1117,15 +1158,83 @@ class AlphaSonarGalaxy {
                 }
             }
 
-            for (let i = 0; i < this.tokens.length; i++) {
-                const t = this.tokens[i];
-                t.tX = Math.max(20, Math.min(this.width - 20, t.tX));
-                t.tY = Math.max(20, Math.min(this.height - 20, t.tY));
-                t.x += (t.tX - t.x) * 0.12;
-                t.y += (t.tY - t.y) * 0.12;
-                t.size += (t.targetSize - t.size) * 0.1;
-                t.lowDetail = this.visualMode === 'orbit' && this.tokens.length > 180 && t.size < this.minLogoRenderSize;
+            // Token render
+        for (let i = 0; i < this.tokens.length; i++) {
+            const t = this.tokens[i];
+            const isHovered = this.hoveredToken && this.hoveredToken.symbol === t.symbol;
+            const isLocked = this.lockedToken && this.lockedToken.symbol === t.symbol;
+            
+            this.ctx.globalAlpha = (isHovered || isLocked) ? 1 : (this.visualMode === 'heatmap' ? 0.95 : 0.8);
+
+            if (this.visualMode === 'heatmap') {
+                const rW = Math.max(0.1, t.rectW || 0);
+                const rH = Math.max(0.1, t.rectH || 0);
+                const rx = t.x - rW / 2;
+                const ry = t.y - rH / 2;
+
+                this.ctx.fillStyle = t.color;
+                this.ctx.fillRect(rx, ry, rW, rH);
+
+                if (isHovered || isLocked) {
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(rx, ry, rW, rH);
+                }
+
+                if (rW > 36 && rH > 24) {
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.font = '800 12px "Rajdhani", sans-serif';
+                    this.ctx.fillText(t.symbol, t.x, t.y - (rH>36 ? 6 : 0));
+                    if (rH > 36) {
+                        this.ctx.font = '600 10px "Rajdhani", sans-serif';
+                        this.ctx.fillText((t.change>0?'+':'') + t.change.toFixed(2)+'%', t.x, t.y + 8);
+                    }
+                    this.ctx.textAlign = 'left';
+                    this.ctx.textBaseline = 'alphabetic';
+                }
+            } else {
+                const radius = t.size;
+                const liqRatio = this.maxLiqCached > 0 ? (t.liq / this.maxLiqCached) : 0;
+                if (liqRatio > 0.3) {
+                    this.ctx.shadowColor = t.color;
+                    this.ctx.shadowBlur = 3 + liqRatio * 8;
+                } else {
+                    this.ctx.shadowBlur = 0;
+                }
+
+                if (!t.lowDetail && t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
+                    this.ctx.save();
+                    this.ctx.beginPath();
+                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                    this.ctx.closePath();
+                    this.ctx.clip();
+                    this.ctx.drawImage(t.imgObj, t.x - radius, t.y - radius, radius * 2, radius * 2);
+                    this.ctx.restore();
+                } else {
+                    this.ctx.beginPath();
+                    this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                    this.ctx.fillStyle = '#1a1f2e';
+                    this.ctx.fill();
+                }
+
+                this.ctx.beginPath();
+                this.ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+                this.ctx.strokeStyle = (isHovered || isLocked) ? '#fff' : t.color;
+                this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
+                this.ctx.stroke();
+                this.ctx.globalAlpha = 1;
+                this.ctx.shadowBlur = 0;
+
+                if (t.isWhale) {
+                    const isHighSeverity = t.whaleSeverity === 'HIGH';
+                    this.ctx.fillStyle = isHighSeverity ? 'rgba(246,70,93,0.95)' : 'rgba(240,185,11,0.95)';
+                    this.ctx.font = '700 10px "Rajdhani", sans-serif';
+                    this.ctx.fillText(isHighSeverity ? '🚨 Anomaly' : '🐋 Whale', t.x + radius + 6, t.y + radius + 10);
+                }
             }
+        }
         }
 
         // Token render
