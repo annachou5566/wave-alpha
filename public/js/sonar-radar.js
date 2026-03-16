@@ -60,6 +60,8 @@ class AlphaSonarGalaxy {
         // User configurable cap (default nhẹ)
         this.tokenCapOptions = [10, 50, 100, 200, 500];
         this.userTokenCap = 50;
+        this.absoluteMaxCap = 2000;
+        this.panelOpenedAt = 0;
 
         this.initUI();
         this.resize();
@@ -147,10 +149,12 @@ class AlphaSonarGalaxy {
                     padding: 3px 6px; color: rgba(255,255,255,0.7);
                     font: 600 11px 'Rajdhani', sans-serif;
                 }
-                #sonar-token-cap {
+                #sonar-token-cap, #sonar-token-cap-custom {
                     background: rgba(9,14,22,0.95); color: #fff; border: 1px solid rgba(0,240,255,0.3);
                     border-radius: 4px; padding: 2px 4px; font: 700 12px 'Rajdhani', sans-serif;
                 }
+                #sonar-token-cap-custom { width: 68px; }
+                #sonar-token-cap-apply { padding: 3px 8px; font-size: 11px; }
                 .sonar-mode-hint {
                     color: rgba(255,255,255,0.75); border: 1px dashed rgba(255,255,255,0.25);
                     border-radius: 6px; padding: 3px 8px; font: 600 11px 'Rajdhani', sans-serif;
@@ -168,18 +172,26 @@ class AlphaSonarGalaxy {
                 #sonar-read-guide.open { display: block; }
                 #sonar-read-guide b { color: #fff; }
 
-                #sonar-side-panel {
-                    position: absolute; top: 0; right: -360px; width: 320px; height: 100%; z-index: 100;
-                    background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff;
-                    backdrop-filter: blur(10px); transition: right 0.25s ease;
-                    padding: 20px; box-sizing: border-box; color: #fff; font-family: 'Rajdhani', sans-serif;
-                    overflow: hidden; display: flex; flex-direction: column;
+                #sonar-panel-backdrop {
+                    position: absolute; inset: 0; z-index: 95;
+                    background: rgba(0,0,0,0.38); opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
                 }
-                #sonar-side-panel.open { right: 0; }
+                #sonar-panel-backdrop.open { opacity: 1; pointer-events: auto; }
 
-                .sp-close { position: absolute; top: 10px; right: 14px; cursor: pointer; font-size: 24px; opacity: 0.7; }
+                #sonar-side-panel {
+                    position: absolute; left: 50%; bottom: -110%; transform: translateX(-50%);
+                    width: min(560px, 92%); max-height: 78%; z-index: 100;
+                    background: rgba(10, 14, 23, 0.97); border: 1px solid rgba(0,240,255,0.45);
+                    border-radius: 14px; backdrop-filter: blur(10px); transition: bottom 0.28s ease;
+                    padding: 14px; box-sizing: border-box; color: #fff; font-family: 'Rajdhani', sans-serif;
+                    overflow: hidden; display: flex; flex-direction: column;
+                    box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+                }
+                #sonar-side-panel.open { bottom: 12px; }
+
+                .sp-close { position: absolute; top: 8px; right: 10px; cursor: pointer; font-size: 22px; opacity: 0.8; line-height: 1; }
                 .sp-close:hover { opacity: 1; color: #ff4775; }
-                .sp-head { display: flex; gap: 10px; align-items: center; margin: 8px 0 8px; border-bottom: 1px dashed rgba(255,255,255,0.14); padding-bottom: 8px; }
+                .sp-head { display: flex; gap: 8px; align-items: center; margin: 2px 0 6px; border-bottom: 1px dashed rgba(255,255,255,0.14); padding-bottom: 6px; }
                 .sp-head img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(0,240,255,0.5); object-fit: cover; }
                 .sp-title { font-size: clamp(18px, 2.1vw, 22px); font-weight: 800; line-height: 1.1; }
                 .sp-contract { font-size: 11px; color: rgba(255,255,255,0.5); font-family: monospace; cursor: pointer; }
@@ -190,9 +202,9 @@ class AlphaSonarGalaxy {
                 .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px; }
                 .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.45); margin-bottom: 3px; }
                 .sp-box-val { font-size: clamp(12px, 1.5vw, 14px); font-weight: 700; font-family: monospace; }
-                .sp-block { margin-top: 6px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px; }
+                .sp-block { margin-top: 5px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px; }
                 .sp-block-title { font-size: 11px; letter-spacing: 0.4px; color: rgba(255,255,255,0.7); margin-bottom: 8px; font-weight: 700; }
-                .sp-stat-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin: 4px 0; }
+                .sp-stat-row { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; margin: 2px 0; }
                 .sp-stat-row .k { color: rgba(255,255,255,0.55); }
                 .sp-stat-row .v { color: #fff; font-weight: 700; font-family: monospace; }
                 .sp-bar-wrap { margin-top: 8px; }
@@ -205,7 +217,8 @@ class AlphaSonarGalaxy {
                     #sonar-control-bar { margin: 8px 8px 6px; gap: 6px; }
                     .sonar-btn { font-size: 11px; padding: 4px 8px; }
                     .sonar-cap-wrap { font-size: 10px; }
-                    #sonar-side-panel { width: 100%; right: -100%; border-left: none; }
+                    #sonar-token-cap-custom { width: 54px; }
+                    #sonar-side-panel { width: 96%; max-height: 82%; padding: 10px; }
                 }
             `;
             document.head.appendChild(style);
@@ -222,6 +235,8 @@ class AlphaSonarGalaxy {
                 <select id="sonar-token-cap">
                     ${this.tokenCapOptions.map(v => `<option value="${v}" ${v === this.userTokenCap ? 'selected' : ''}>${v}</option>`).join('')}
                 </select>
+                <input id="sonar-token-cap-custom" type="number" min="1" max="2000" step="1" placeholder="Custom">
+                <button class="sonar-btn" id="sonar-token-cap-apply">SET</button>
             </div>
             <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
             <button class="sonar-btn" id="sonar-read-guide-btn" style="border-color:#F0B90B;color:#F0B90B;">HOW TO READ</button>
@@ -260,9 +275,21 @@ class AlphaSonarGalaxy {
 
         const capSelect = this.controlBar.querySelector('#sonar-token-cap');
         capSelect.addEventListener('change', (e) => {
-            this.userTokenCap = Math.max(10, this.safeNum(e.target.value, 50));
+            this.userTokenCap = Math.max(1, this.safeNum(e.target.value, 50));
             this.recalculate(true);
         });
+
+        const capCustom = this.controlBar.querySelector('#sonar-token-cap-custom');
+        const capApply = this.controlBar.querySelector('#sonar-token-cap-apply');
+        const applyCustomCap = () => {
+            const n = Math.floor(this.safeNum(capCustom?.value, 0));
+            if (n > 0) {
+                this.userTokenCap = n;
+                this.recalculate(true);
+            }
+        };
+        if (capApply) capApply.addEventListener('click', applyCustomCap);
+        if (capCustom) capCustom.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') applyCustomCap(); });
 
         const pauseBtn = this.controlBar.querySelector('#sonar-pause-btn');
         pauseBtn.addEventListener('click', () => {
@@ -270,6 +297,11 @@ class AlphaSonarGalaxy {
             pauseBtn.classList.toggle('paused', this.isPaused);
             pauseBtn.innerText = this.isPaused ? 'RESUME' : 'PAUSE';
         });
+
+        this.panelBackdrop = document.createElement('div');
+        this.panelBackdrop.id = 'sonar-panel-backdrop';
+        this.panelBackdrop.addEventListener('click', () => { this.lockedToken = null; this.closeSidePanel(); });
+        this.container.appendChild(this.panelBackdrop);
 
         this.sidePanel = document.createElement('div');
         this.sidePanel.id = 'sonar-side-panel';
@@ -289,6 +321,15 @@ class AlphaSonarGalaxy {
         if (guideBtn) {
             guideBtn.addEventListener('click', () => this.readGuide.classList.toggle('open'));
         }
+
+        document.addEventListener('pointerdown', (e) => {
+            if (!this.sidePanel || !this.sidePanel.classList.contains('open')) return;
+            if (Date.now() - this.panelOpenedAt < 120) return;
+            const target = e.target;
+            if (this.sidePanel.contains(target) || this.controlBar.contains(target)) return;
+            this.lockedToken = null;
+            this.closeSidePanel();
+        });
     }
 
     bindEvents() {
@@ -360,11 +401,8 @@ class AlphaSonarGalaxy {
     }
 
     getEffectiveCap() {
-        const isMobile = this.width < 768;
-        const hardCap = this.visualMode === 'orbit'
-            ? (isMobile ? this.orbitHardCapMobile : this.orbitHardCapDesktop)
-            : (isMobile ? this.meshHardCapMobile : this.meshHardCapDesktop);
-        return Math.min(this.userTokenCap, hardCap);
+        const requested = Math.max(1, Math.floor(this.userTokenCap || 50));
+        return Math.min(requested, this.absoluteMaxCap);
     }
 
     rebuildTokenDictIfNeeded() {
@@ -592,11 +630,14 @@ class AlphaSonarGalaxy {
 
     openSidePanel() {
         this.sidePanel.classList.add('open');
+        if (this.panelBackdrop) this.panelBackdrop.classList.add('open');
+        this.panelOpenedAt = Date.now();
         this.updateSidePanelData();
     }
 
     closeSidePanel() {
         this.sidePanel.classList.remove('open');
+        if (this.panelBackdrop) this.panelBackdrop.classList.remove('open');
     }
 
     updateSidePanelData() {
@@ -657,7 +698,6 @@ class AlphaSonarGalaxy {
                 <div class="sp-stat-row"><span class="k">TX COUNT (24H)</span><span class="v">${this.formatCompact(t.tx || 0)}</span></div>
                 <div class="sp-stat-row"><span class="k">VOL / LIQ RATIO</span><span class="v">${volToLiq.toFixed(2)}x</span></div>
                 <div class="sp-stat-row"><span class="k">LIQ / MC COVERAGE</span><span class="v">${liqToMc.toFixed(2)}%</span></div>
-                <div class="sp-stat-row"><span class="k">PRICE CHANGE</span><span class="v" style="color:${cColor};">${cSign}${t.change.toFixed(2)}%</span></div>
             </div>
         `;
     }
