@@ -34,7 +34,7 @@ class AlphaSonarGalaxy {
         this.lastCalcTime = 0;
 
         this.filterMode = 'volume';
-        this.visualMode = 'mesh';
+        this.visualMode = 'orbit';
 
         this.lockedToken = null;
         this.hoveredToken = null;
@@ -155,6 +155,25 @@ class AlphaSonarGalaxy {
                 }
                 #sonar-token-cap-custom { width: 68px; }
                 #sonar-token-cap-apply { padding: 3px 8px; font-size: 11px; }
+                .sonar-search-wrap { position: relative; display: flex; align-items: center; gap: 4px; }
+                #sonar-search-input {
+                    width: 150px; background: rgba(9,14,22,0.95); color: #fff; border: 1px solid rgba(0,240,255,0.3);
+                    border-radius: 4px; padding: 4px 6px; font: 600 12px 'Rajdhani', sans-serif;
+                }
+                #sonar-search-list {
+                    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
+                    background: rgba(8,12,18,0.96); border: 1px solid rgba(0,240,255,0.25); border-radius: 8px;
+                    max-height: 260px; overflow-y: auto; display: none;
+                }
+                #sonar-search-list.open { display: block; }
+                .sonar-search-item {
+                    padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer;
+                    font: 600 11px 'Rajdhani', sans-serif; color: #d9e7ef;
+                }
+                .sonar-search-item:last-child { border-bottom: none; }
+                .sonar-search-item:hover { background: rgba(0,240,255,0.12); }
+                .sonar-search-item .sym { color: #fff; font-weight: 800; }
+                .sonar-search-item .meta { color: rgba(255,255,255,0.62); font-size: 10px; }
                 .sonar-mode-hint {
                     color: rgba(255,255,255,0.75); border: 1px dashed rgba(255,255,255,0.25);
                     border-radius: 6px; padding: 3px 8px; font: 600 11px 'Rajdhani', sans-serif;
@@ -162,12 +181,12 @@ class AlphaSonarGalaxy {
                 }
                 #sonar-read-guide {
                     position: absolute; left: 10px; bottom: 10px; z-index: 30;
-                    width: min(430px, calc(100% - 20px));
+                    width: min(430px, calc(100% - 20px)); max-height: 56%;
                     background: rgba(7,10,16,0.93); border: 1px solid rgba(0,240,255,0.26);
                     border-radius: 10px; padding: 10px 12px; color: #d8e6f0;
                     font: 600 11px/1.35 'Rajdhani', sans-serif;
                     box-shadow: 0 8px 25px rgba(0,0,0,0.35);
-                    display: none;
+                    display: none; overflow: auto;
                 }
                 #sonar-read-guide.open { display: block; }
                 #sonar-read-guide b { color: #fff; }
@@ -216,6 +235,8 @@ class AlphaSonarGalaxy {
                     .sonar-btn { font-size: 11px; padding: 4px 8px; }
                     .sonar-cap-wrap { font-size: 10px; }
                     #sonar-token-cap-custom { width: 54px; }
+                    #sonar-search-input { width: 120px; }
+                    #sonar-read-guide { max-height: 50%; bottom: 8px; }
                     #sonar-side-panel { width: min(360px, 94%); max-height: 88%; padding: 10px; }
                 }
             `;
@@ -225,7 +246,7 @@ class AlphaSonarGalaxy {
         this.controlBar = document.createElement('div');
         this.controlBar.id = 'sonar-control-bar';
         this.controlBar.innerHTML = `
-            <button class="sonar-btn active" id="btn-mode-toggle" style="border-color:#9945FF;color:#9945FF;">[ MESH NETWORK ]</button>
+            <button class="sonar-btn active" id="btn-mode-toggle" style="border-color:#F0B90B;color:#F0B90B;">[ ORBITAL SYSTEM ]</button>
             <button class="sonar-btn active" data-filter="volume">TOP VOL</button>
             <button class="sonar-btn" data-filter="liquidity">TOP LIQ</button>
             <button class="sonar-btn" data-filter="marketcap">TOP MC</button>
@@ -237,6 +258,10 @@ class AlphaSonarGalaxy {
                 <button class="sonar-btn" id="sonar-token-cap-apply">SET</button>
             </div>
             <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
+            <div class="sonar-search-wrap">
+                <input id="sonar-search-input" type="text" placeholder="Search symbol / contract">
+                <div id="sonar-search-list"></div>
+            </div>
             <button class="sonar-btn" id="sonar-read-guide-btn" style="border-color:#F0B90B;color:#F0B90B;">HOW TO READ</button>
             <span class="sonar-mode-hint" id="sonar-mode-hint">TIP: TRY ORBITAL SYSTEM</span>
         `;
@@ -289,6 +314,41 @@ class AlphaSonarGalaxy {
         if (capApply) capApply.addEventListener('click', applyCustomCap);
         if (capCustom) capCustom.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') applyCustomCap(); });
 
+        const searchInput = this.controlBar.querySelector('#sonar-search-input');
+        const searchList = this.controlBar.querySelector('#sonar-search-list');
+        const renderSearchResults = (query = '') => {
+            if (!searchList) return;
+            const items = this.getSearchCandidates(query).slice(0, 10);
+            searchList.innerHTML = items.map(item => `
+                <div class="sonar-search-item" data-symbol="${item.symbol}" data-contract="${item.contract || ''}">
+                    <div class="sym">${item.symbol}</div>
+                    <div class="meta">VOL $${this.formatCompact(item.vol)} • LIQ $${this.formatCompact(item.liq)} • MC $${this.formatCompact(item.mc)}</div>
+                </div>
+            `).join('');
+            searchList.classList.toggle('open', items.length > 0);
+        };
+
+        if (searchInput) {
+            searchInput.addEventListener('focus', () => renderSearchResults(searchInput.value || ''));
+            searchInput.addEventListener('input', (e) => renderSearchResults((e.target.value || '').trim()));
+        }
+
+        if (searchList) {
+            searchList.addEventListener('click', (e) => {
+                const row = e.target.closest('.sonar-search-item');
+                if (!row) return;
+                const symbol = row.getAttribute('data-symbol');
+                const contract = row.getAttribute('data-contract') || '';
+                const token = this.findTokenForDetails(symbol, contract);
+                if (token) {
+                    this.lockedToken = token;
+                    this.openSidePanel();
+                }
+                searchList.classList.remove('open');
+                if (searchInput) searchInput.blur();
+            });
+        }
+
         const pauseBtn = this.controlBar.querySelector('#sonar-pause-btn');
         pauseBtn.addEventListener('click', () => {
             this.isPaused = !this.isPaused;
@@ -308,7 +368,7 @@ class AlphaSonarGalaxy {
         this.readGuide = document.createElement('div');
         this.readGuide.id = 'sonar-read-guide';
         this.readGuide.innerHTML = `
-            <div><b>How to read SONAR:</b></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><b>How to read SONAR:</b><button id="sonar-guide-close" class="sonar-btn" style="padding:2px 8px;font-size:10px;">CLOSE</button></div>
             <div><b>Mesh Network:</b> X = Price change (left bearish, right bullish), Y = Relative volume (top high, bottom low).</div>
             <div><b>Orbital System:</b> Near center = token có Vol/Liq lớn hơn, outer rings = nhỏ hơn. Tốc độ quỹ đạo phản ánh hoạt động giao dịch.</div>
             <div><b>Filters:</b> TOP VOL / TOP LIQ / TOP MC sẽ đổi thứ hạng và kích thước token theo đúng metric đang chọn.</div>
@@ -316,18 +376,73 @@ class AlphaSonarGalaxy {
         this.container.appendChild(this.readGuide);
 
         const guideBtn = this.controlBar.querySelector('#sonar-read-guide-btn');
+        const closeGuideBtn = this.readGuide.querySelector('#sonar-guide-close');
         if (guideBtn) {
             guideBtn.addEventListener('click', () => this.readGuide.classList.toggle('open'));
         }
+        if (closeGuideBtn) {
+            closeGuideBtn.addEventListener('click', () => this.readGuide.classList.remove('open'));
+        }
 
         document.addEventListener('pointerdown', (e) => {
+            const target = e.target;
+
+            if (this.readGuide && this.readGuide.classList.contains('open') && !this.readGuide.contains(target) && !this.controlBar.contains(target)) {
+                this.readGuide.classList.remove('open');
+            }
+
+            const searchListEl = this.controlBar ? this.controlBar.querySelector('#sonar-search-list') : null;
+            const searchWrapEl = this.controlBar ? this.controlBar.querySelector('.sonar-search-wrap') : null;
+            if (searchListEl && searchListEl.classList.contains('open') && (!searchWrapEl || !searchWrapEl.contains(target))) {
+                searchListEl.classList.remove('open');
+            }
+
             if (!this.sidePanel || !this.sidePanel.classList.contains('open')) return;
             if (Date.now() - this.panelOpenedAt < 120) return;
-            const target = e.target;
             if (this.sidePanel.contains(target) || this.controlBar.contains(target)) return;
             this.lockedToken = null;
             this.closeSidePanel();
         });
+    }
+
+    getSearchCandidates(query = '') {
+        if (!this.latestData || typeof this.latestData !== 'object') return [];
+        this.rebuildTokenDictIfNeeded();
+        const q = String(query || '').trim().toLowerCase();
+        const list = [];
+        Object.entries(this.latestData).forEach(([key, t]) => {
+            if (!t || typeof t !== 'object' || !t.v || t.ss === 1) return;
+            const tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
+            const meta = this.tokenDict[tokenKey];
+            if (this.isExcludedToken(t, meta)) return;
+
+            const symbol = meta?.symbol || t.symbol || t.s || t.name || tokenKey;
+            const contract = meta?.contract || '';
+            const vol = this.safeNum(t.v?.dt);
+            const liq = this.safeNum(meta?.liquidity, this.safeNum(t.l));
+            const mc = this.safeNum(meta?.market_cap, this.safeNum(t.mc));
+            const logo = meta?.icon || `assets/tokens/${String(symbol).toUpperCase()}.png`;
+            const change = this.safeNum(t.c);
+            const tx = this.safeNum(t.tx);
+            const price = this.safeNum(t.p);
+            const holders = this.safeNum(meta?.holders, this.safeNum(t.h));
+            const vLimit = this.safeNum(meta?.volume?.daily_limit, this.safeNum(t.v?.dl));
+            const vChain = Math.max(0, vol - vLimit);
+
+            const hay = `${symbol} ${contract}`.toLowerCase();
+            if (q && !hay.includes(q)) return;
+
+            list.push({ symbol, contract, vol, liq, mc, logo, change, tx, price, holders, vLimit, vChain });
+        });
+        list.sort((a, b) => b.vol - a.vol);
+        return list;
+    }
+
+    findTokenForDetails(symbol, contract = '') {
+        const inCanvas = this.tokens.find(t => t.symbol === symbol || (contract && t.contract === contract));
+        if (inCanvas) return inCanvas;
+        const inSearch = this.getSearchCandidates(symbol).find(t => t.symbol === symbol || (contract && t.contract === contract));
+        return inSearch || null;
     }
 
     bindEvents() {
@@ -894,4 +1009,4 @@ class AlphaSonarGalaxy {
             this.ctx.fillText(tagText, tagX + 4, textY);
         }
     }
- }
+}
