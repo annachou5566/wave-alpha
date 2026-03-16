@@ -1,3 +1,11 @@
+/**
+ * Alpha Sonar Galaxy - Performance Refactor
+ * - Default token cap = 50 (nhẹ khi mở tab)
+ * - Cho phép chọn 10/50/100/200/500
+ * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
+ * - Mesh mode có anti-clump + laser links nhưng giới hạn để tránh lag
+ */
+
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -88,6 +96,20 @@ class AlphaSonarGalaxy {
         return n.toFixed(2);
     }
 
+
+    isExcludedToken(source, tokenMeta = null) {
+        const text = [
+            source?.symbol, source?.s, source?.name, source?.status, source?.cat,
+            tokenMeta?.symbol, tokenMeta?.name, tokenMeta?.status,
+            Array.isArray(source?.tags) ? source.tags.join(' ') : source?.tags,
+            Array.isArray(tokenMeta?.tags) ? tokenMeta.tags.join(' ') : tokenMeta?.tags
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        if (!text) return false;
+        return text.includes('delist') || text.includes('de-list') || text.includes('spot') ||
+               text.includes('security') || text.includes('chứng khoán') || text.includes('chung khoan');
+    }
+
     initUI() {
         const oldBar = document.getElementById('sonar-control-bar');
         if (oldBar) oldBar.remove();
@@ -134,30 +156,41 @@ class AlphaSonarGalaxy {
                     border-radius: 6px; padding: 3px 8px; font: 600 11px 'Rajdhani', sans-serif;
                     letter-spacing: 0.2px;
                 }
+                #sonar-read-guide {
+                    position: absolute; left: 10px; bottom: 10px; z-index: 30;
+                    width: min(430px, calc(100% - 20px));
+                    background: rgba(7,10,16,0.93); border: 1px solid rgba(0,240,255,0.26);
+                    border-radius: 10px; padding: 10px 12px; color: #d8e6f0;
+                    font: 600 11px/1.35 'Rajdhani', sans-serif;
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+                    display: none;
+                }
+                #sonar-read-guide.open { display: block; }
+                #sonar-read-guide b { color: #fff; }
 
                 #sonar-side-panel {
                     position: absolute; top: 0; right: -360px; width: 320px; height: 100%; z-index: 100;
                     background: rgba(10, 14, 23, 0.95); border-left: 1px solid #00f0ff;
                     backdrop-filter: blur(10px); transition: right 0.25s ease;
                     padding: 20px; box-sizing: border-box; color: #fff; font-family: 'Rajdhani', sans-serif;
-                    overflow-y: auto;
+                    overflow: hidden; display: flex; flex-direction: column;
                 }
                 #sonar-side-panel.open { right: 0; }
 
                 .sp-close { position: absolute; top: 10px; right: 14px; cursor: pointer; font-size: 24px; opacity: 0.7; }
                 .sp-close:hover { opacity: 1; color: #ff4775; }
-                .sp-head { display: flex; gap: 12px; align-items: center; margin: 18px 0 14px; border-bottom: 1px dashed rgba(255,255,255,0.14); padding-bottom: 12px; }
+                .sp-head { display: flex; gap: 10px; align-items: center; margin: 8px 0 8px; border-bottom: 1px dashed rgba(255,255,255,0.14); padding-bottom: 8px; }
                 .sp-head img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(0,240,255,0.5); object-fit: cover; }
-                .sp-title { font-size: 24px; font-weight: 800; }
+                .sp-title { font-size: clamp(18px, 2.1vw, 22px); font-weight: 800; line-height: 1.1; }
                 .sp-contract { font-size: 11px; color: rgba(255,255,255,0.5); font-family: monospace; cursor: pointer; }
-                .sp-price-box { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 14px; }
-                .sp-price-val { font-size: 28px; font-weight: 800; }
+                .sp-price-box { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 8px; }
+                .sp-price-val { font-size: clamp(18px, 2.2vw, 24px); font-weight: 800; line-height: 1.1; }
                 .sp-price-chg { font-size: 15px; font-weight: 800; padding: 2px 8px; border-radius: 4px; }
-                .sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-                .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px; }
+                .sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+                .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px; }
                 .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.45); margin-bottom: 3px; }
-                .sp-box-val { font-size: 16px; font-weight: 700; font-family: monospace; }
-                .sp-block { margin-top: 10px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 10px; }
+                .sp-box-val { font-size: clamp(12px, 1.5vw, 14px); font-weight: 700; font-family: monospace; }
+                .sp-block { margin-top: 6px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px; }
                 .sp-block-title { font-size: 11px; letter-spacing: 0.4px; color: rgba(255,255,255,0.7); margin-bottom: 8px; font-weight: 700; }
                 .sp-stat-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin: 4px 0; }
                 .sp-stat-row .k { color: rgba(255,255,255,0.55); }
@@ -191,6 +224,7 @@ class AlphaSonarGalaxy {
                 </select>
             </div>
             <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
+            <button class="sonar-btn" id="sonar-read-guide-btn" style="border-color:#F0B90B;color:#F0B90B;">HOW TO READ</button>
             <span class="sonar-mode-hint" id="sonar-mode-hint">TIP: TRY ORBITAL SYSTEM</span>
         `;
         this.container.appendChild(this.controlBar);
@@ -240,6 +274,21 @@ class AlphaSonarGalaxy {
         this.sidePanel = document.createElement('div');
         this.sidePanel.id = 'sonar-side-panel';
         this.container.appendChild(this.sidePanel);
+
+        this.readGuide = document.createElement('div');
+        this.readGuide.id = 'sonar-read-guide';
+        this.readGuide.innerHTML = `
+            <div><b>How to read SONAR:</b></div>
+            <div><b>Mesh Network:</b> X = Price change (left bearish, right bullish), Y = Relative volume (top high, bottom low).</div>
+            <div><b>Orbital System:</b> Near center = token có Vol/Liq lớn hơn, outer rings = nhỏ hơn. Tốc độ quỹ đạo phản ánh hoạt động giao dịch.</div>
+            <div><b>Filters:</b> TOP VOL / TOP LIQ / TOP MC sẽ đổi thứ hạng và kích thước token theo đúng metric đang chọn.</div>
+        `;
+        this.container.appendChild(this.readGuide);
+
+        const guideBtn = this.controlBar.querySelector('#sonar-read-guide-btn');
+        if (guideBtn) {
+            guideBtn.addEventListener('click', () => this.readGuide.classList.toggle('open'));
+        }
     }
 
     bindEvents() {
@@ -288,7 +337,13 @@ class AlphaSonarGalaxy {
 
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
-        this.maxRadius = Math.max(20, Math.min(this.centerX, this.centerY) - 36);
+        this.orbitCenterX = this.width / 2;
+        this.orbitCenterY = Math.max(90, this.height * 0.43);
+        const maxLeft = this.orbitCenterX - 24;
+        const maxRight = this.width - this.orbitCenterX - 24;
+        const maxTop = this.orbitCenterY - 24;
+        const maxBottom = this.height - this.orbitCenterY - 58;
+        this.maxRadius = Math.max(20, Math.min(maxLeft, maxRight, maxTop, maxBottom));
 
         this.recalculate(true);
     }
@@ -333,6 +388,7 @@ class AlphaSonarGalaxy {
         let maxVol = 0;
         let maxLiq = 0;
         let maxTx = 0;
+        let maxMc = 0;
         const dataArray = [];
 
         Object.entries(this.latestData).forEach(([key, t]) => {
@@ -340,6 +396,7 @@ class AlphaSonarGalaxy {
 
             const tokenKey = key.replace('ALPHA_', '').replace('legacy_', '');
             const tokenMeta = this.tokenDict[tokenKey];
+            if (this.isExcludedToken(t, tokenMeta)) return;
 
             let symbol = tokenMeta?.symbol || t.symbol || t.s || t.name || tokenKey;
             let logo = tokenMeta?.icon || `assets/tokens/${String(symbol).toUpperCase()}.png`;
@@ -358,6 +415,7 @@ class AlphaSonarGalaxy {
             if (vol > maxVol) maxVol = vol;
             if (liq > maxLiq) maxLiq = liq;
             if (tx > maxTx) maxTx = tx;
+            if (mc > maxMc) maxMc = mc;
 
             dataArray.push({ symbol, logo, contract, vol, liq, change, tx, price, mc, holders, vLimit, vChain });
         });
@@ -373,7 +431,9 @@ class AlphaSonarGalaxy {
         const tokenBySymbol = new Map(this.tokens.map(t => [t.symbol, t]));
 
         selected.forEach((data, idx) => {
-            const sizeBase = 10 + (data.vol / (maxVol || 1)) * 14;
+            const sizeMetric = this.filterMode === 'liquidity' ? data.liq : (this.filterMode === 'marketcap' ? data.mc : data.vol);
+            const sizeMax = this.filterMode === 'liquidity' ? maxLiq : (this.filterMode === 'marketcap' ? maxMc : maxVol);
+            const sizeBase = 10 + (sizeMetric / (sizeMax || 1)) * 14;
             const targetSize = Math.max(3.5, Math.min(24, sizeBase * densityScale));
             const color = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
 
@@ -401,7 +461,9 @@ class AlphaSonarGalaxy {
             } else {
                 const ratio = this.filterMode === 'liquidity'
                     ? Math.max(0.01, Math.min(1, data.liq / (maxLiq || 1)))
-                    : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1)));
+                    : (this.filterMode === 'marketcap'
+                        ? Math.max(0.01, Math.min(1, data.mc / (maxMc || 1)))
+                        : Math.max(0.01, Math.min(1, data.vol / (maxVol || 1))));
 
                 baseOrbitRadius = this.maxRadius * (1 - Math.pow(ratio, 0.3));
                 baseOrbitRadius = Math.max(36, baseOrbitRadius);
@@ -418,8 +480,8 @@ class AlphaSonarGalaxy {
                 orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006;
                 if (data.change < 0) orbitSpeed *= -1;
 
-                baseX = this.centerX + baseOrbitRadius * Math.cos(orbitAngle);
-                baseY = this.centerY + baseOrbitRadius * Math.sin(orbitAngle);
+                baseX = this.orbitCenterX + baseOrbitRadius * Math.cos(orbitAngle);
+                baseY = this.orbitCenterY + baseOrbitRadius * Math.sin(orbitAngle);
             }
 
             const existing = tokenBySymbol.get(data.symbol);
@@ -612,14 +674,14 @@ class AlphaSonarGalaxy {
             for (let i = 1; i <= 4; i++) {
                 const r = (this.maxRadius / 4) * i;
                 this.ctx.beginPath();
-                this.ctx.arc(this.centerX, this.centerY, r, 0, Math.PI * 2);
+                this.ctx.arc(this.orbitCenterX, this.orbitCenterY, r, 0, Math.PI * 2);
                 this.ctx.stroke();
             }
             this.ctx.textAlign = 'center';
             this.ctx.fillStyle = 'rgba(0,240,255,0.38)';
-            this.ctx.fillText('[ ORBIT VIEW ]', this.centerX, this.centerY - 14);
+            this.ctx.fillText('[ ORBIT VIEW ]', this.orbitCenterX, this.orbitCenterY - 14);
             this.ctx.fillStyle = 'rgba(255,255,255,0.34)';
-            this.ctx.fillText('CENTER = HIGHER VOL/LIQ | OUTER = LOWER VOL/LIQ', this.centerX, this.height - 28);
+            this.ctx.fillText('CENTER = HIGHER VOL/LIQ/MC | OUTER = LOWER', this.orbitCenterX, this.height - 28);
             this.ctx.textAlign = 'left';
         } else {
             this.ctx.strokeStyle = 'rgba(0,240,255,0.08)';
@@ -663,8 +725,8 @@ class AlphaSonarGalaxy {
                     t.currentOrbitRadius += (t.baseOrbitRadius - t.currentOrbitRadius) * 0.05;
                     const drift = Math.sin(t.orbitAngle * 2 + (t.driftPhase || 0)) * this.orbitDriftStrength;
                     const r = t.currentOrbitRadius + drift;
-                    t.baseX = this.centerX + r * Math.cos(t.orbitAngle);
-                    t.baseY = this.centerY + r * Math.sin(t.orbitAngle);
+                    t.baseX = this.orbitCenterX + r * Math.cos(t.orbitAngle);
+                    t.baseY = this.orbitCenterY + r * Math.sin(t.orbitAngle);
                 }
                 t.tX += (t.baseX - t.tX) * 0.05;
                 t.tY += (t.baseY - t.tY) * 0.05;
@@ -758,46 +820,43 @@ class AlphaSonarGalaxy {
             this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
             this.ctx.stroke();
             this.ctx.globalAlpha = 1;
+        }
 
-            if (isHovered && !isLocked) {
-                const tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
-                this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
-                const textWidth = this.ctx.measureText(tagText).width;
+        // Draw tooltip last to keep it above all tokens
+        const tooltipToken = this.hoveredToken && !this.lockedToken ? this.hoveredToken : null;
+        if (tooltipToken) {
+            const t = tooltipToken;
+            const radius = t.size;
+            const tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
+            this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
+            const textWidth = this.ctx.measureText(tagText).width;
+            const boxW = textWidth + 8;
+            const boxH = 20;
+            const pad = 8;
 
-                const boxW = textWidth + 8;
-                const boxH = 20;
-                const pad = 8;
+            let tagX = t.x + radius + 8;
+            let tagY = t.y - radius - 8;
+            if (tagX + boxW > this.width - pad) tagX = t.x - radius - 8 - boxW;
 
-                let tagX = t.x + radius + 8;
-                let tagY = t.y - radius - 8;
+            let boxTop = tagY - 14;
+            boxTop = Math.max(pad, Math.min(this.height - boxH - pad, boxTop));
+            const textY = boxTop + 15;
 
-                // Nếu sát cạnh phải thì lật tooltip sang bên trái token
-                if (tagX + boxW > this.width - pad) {
-                    tagX = t.x - radius - 8 - boxW;
-                }
+            this.ctx.fillStyle = 'rgba(10,14,23,0.95)';
+            this.ctx.fillRect(tagX, boxTop, boxW, boxH);
+            this.ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+            this.ctx.strokeRect(tagX, boxTop, boxW, boxH);
 
-                // Clamp theo biên trên/dưới để luôn đọc được ở các góc
-                let boxTop = tagY - 14;
-                boxTop = Math.max(pad, Math.min(this.height - boxH - pad, boxTop));
-                const textY = boxTop + 15;
+            const anchorX = tagX > t.x ? tagX : tagX + boxW;
+            const anchorY = Math.max(boxTop + 4, Math.min(boxTop + boxH - 4, t.y));
+            this.ctx.beginPath();
+            this.ctx.moveTo(t.x + (tagX > t.x ? radius : -radius), t.y);
+            this.ctx.lineTo(anchorX, anchorY);
+            this.ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            this.ctx.stroke();
 
-                this.ctx.fillStyle = 'rgba(10,14,23,0.9)';
-                this.ctx.fillRect(tagX, boxTop, boxW, boxH);
-                this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                this.ctx.strokeRect(tagX, boxTop, boxW, boxH);
-
-                // Vẽ connector ngắn từ token tới tooltip
-                const anchorX = tagX > t.x ? tagX : tagX + boxW;
-                const anchorY = Math.max(boxTop + 4, Math.min(boxTop + boxH - 4, t.y));
-                this.ctx.beginPath();
-                this.ctx.moveTo(t.x + (tagX > t.x ? radius : -radius), t.y);
-                this.ctx.lineTo(anchorX, anchorY);
-                this.ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-                this.ctx.stroke();
-
-                this.ctx.fillStyle = '#fff';
-                this.ctx.fillText(tagText, tagX + 4, textY);
-            }
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillText(tagText, tagX + 4, textY);
         }
     }
 }
