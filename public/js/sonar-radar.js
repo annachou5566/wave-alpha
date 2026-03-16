@@ -1,3 +1,11 @@
+/**
+ * Alpha Sonar Galaxy - Performance Refactor
+ * - Default token cap = 50 (nhẹ khi mở tab)
+ * - Cho phép chọn 10/50/100/200/500
+ * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
+ * - Mesh mode có anti-clump + laser links nhưng giới hạn để tránh lag
+ */
+
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -50,7 +58,7 @@ class AlphaSonarGalaxy {
 
         // User configurable cap (default nhẹ)
         this.tokenCapOptions = [10, 50, 100, 200, 500];
-        this.userTokenCap = 50;
+        this.userTokenCap = 10;
         this.absoluteMaxCap = 1000;
         this.maxMeshLinksPerFrame = 1200;
         this.panelOpenedAt = 0;
@@ -172,7 +180,7 @@ class AlphaSonarGalaxy {
 
                 #sonar-side-panel {
                     position: absolute; left: 50%; bottom: -110%; transform: translateX(-50%);
-                    width: min(560px, 92%); max-height: 92%; z-index: 100;
+                    width: min(360px, 92%); max-height: 90%; z-index: 100;
                     background: rgba(10, 14, 23, 0.97); border: 1px solid rgba(0,240,255,0.45);
                     border-radius: 14px; backdrop-filter: blur(10px); transition: bottom 0.28s ease;
                     padding: 14px; box-sizing: border-box; color: #fff; font-family: 'Rajdhani', sans-serif;
@@ -181,8 +189,6 @@ class AlphaSonarGalaxy {
                 }
                 #sonar-side-panel.open { bottom: 12px; }
 
-                .sp-close { position: absolute; top: 8px; right: 10px; cursor: pointer; font-size: 22px; opacity: 0.8; line-height: 1; }
-                .sp-close:hover { opacity: 1; color: #ff4775; }
                 .sp-head { display: flex; gap: 8px; align-items: center; margin: 2px 0 6px; border-bottom: 1px dashed rgba(255,255,255,0.14); padding-bottom: 6px; }
                 .sp-head img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(0,240,255,0.5); object-fit: cover; }
                 .sp-title { font-size: clamp(18px, 2.1vw, 22px); font-weight: 800; line-height: 1.1; }
@@ -210,7 +216,7 @@ class AlphaSonarGalaxy {
                     .sonar-btn { font-size: 11px; padding: 4px 8px; }
                     .sonar-cap-wrap { font-size: 10px; }
                     #sonar-token-cap-custom { width: 54px; }
-                    #sonar-side-panel { width: 96%; max-height: 90%; padding: 10px; }
+                    #sonar-side-panel { width: min(360px, 94%); max-height: 88%; padding: 10px; }
                 }
             `;
             document.head.appendChild(style);
@@ -371,11 +377,11 @@ class AlphaSonarGalaxy {
         this.centerX = this.width / 2;
         this.centerY = this.height / 2;
         this.orbitCenterX = this.width / 2;
-        this.orbitCenterY = Math.max(90, this.height * 0.43);
-        const maxLeft = this.orbitCenterX - 24;
-        const maxRight = this.width - this.orbitCenterX - 24;
-        const maxTop = this.orbitCenterY - 24;
-        const maxBottom = this.height - this.orbitCenterY - 58;
+        this.orbitCenterY = Math.max(110, this.height * 0.5);
+        const maxLeft = this.orbitCenterX - 12;
+        const maxRight = this.width - this.orbitCenterX - 12;
+        const maxTop = this.orbitCenterY - 12;
+        const maxBottom = this.height - this.orbitCenterY - 18;
         this.maxRadius = Math.max(20, Math.min(maxLeft, maxRight, maxTop, maxBottom));
 
         this.recalculate(true);
@@ -634,6 +640,7 @@ class AlphaSonarGalaxy {
     closeSidePanel() {
         this.sidePanel.classList.remove('open');
         if (this.panelBackdrop) this.panelBackdrop.classList.remove('open');
+        this.lockedToken = null;
     }
 
     updateSidePanelData() {
@@ -655,7 +662,6 @@ class AlphaSonarGalaxy {
         const volToLiq = t.liq > 0 ? (t.vol / t.liq) : 0;
 
         this.sidePanel.innerHTML = `
-            <div class="sp-close" onclick="document.getElementById('sonar-side-panel').classList.remove('open')">×</div>
             <div class="sp-head">
                 <img src="${t.logo}" onerror="this.src='assets/tokens/default.png'">
                 <div>
@@ -888,4 +894,4 @@ class AlphaSonarGalaxy {
             this.ctx.fillText(tagText, tagX + 4, textY);
         }
     }
-}
+ }
