@@ -868,7 +868,7 @@ class AlphaSonarGalaxy {
         if (this.leftPanel && this.rightPanel) {
             this.leftPanel.innerHTML = `
                 <div class="sap-title">MARKET FLOW</div>
-                <div class="sap-kv"><div class="sap-k">TOTAL VOL 24H</div><div class="sap-v">$${this.formatCompact(totalVol)}</div></div>
+                <div class="sap-kv"><div class="sap-k">DAILY VOL (UTC)</div><div class="sap-v">$${this.formatCompact(totalVol)}</div></div>
                 <div class="sap-kv"><div class="sap-k">DEX VOL</div><div class="sap-v">$${this.formatCompact(dexVol)}</div></div>
                 <div class="sap-kv"><div class="sap-k">CEX VOL</div><div class="sap-v">$${this.formatCompact(cexVol)}</div></div>
                 <div class="sap-kv"><div class="sap-k">DEX SHARE</div><div class="sap-v">${this.pct(dexVol, totalVol).toFixed(1)}%</div></div>
