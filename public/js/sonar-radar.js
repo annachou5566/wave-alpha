@@ -18,6 +18,7 @@ class AlphaSonarGalaxy {
 
         this.ctx = this.canvas.getContext('2d');
         this.container = this.canvas.parentElement || document.body;
+        this.layoutHost = this.container.parentElement || document.body;
         this.container.style.position = 'relative';
         this.container.style.overflow = 'hidden';
         this.container.style.display = 'flex';
@@ -123,11 +124,11 @@ class AlphaSonarGalaxy {
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
                 #sonar-control-bar {
-                    position: relative; z-index: 15;
+                    position: relative; z-index: 220;
                     display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
                     background: rgba(0,0,0,0.55); border: 1px solid rgba(0,240,255,0.18);
                     padding: 8px 10px; border-radius: 10px; backdrop-filter: blur(5px);
-                    margin: 10px 10px 8px;
+                    margin: 0 0 8px 0;
                     flex: 0 0 auto;
                 }
                 .sonar-btn {
@@ -161,7 +162,7 @@ class AlphaSonarGalaxy {
                     border-radius: 4px; padding: 4px 6px; font: 600 12px 'Rajdhani', sans-serif;
                 }
                 #sonar-search-list {
-                    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
+                    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 260;
                     background: rgba(8,12,18,0.96); border: 1px solid rgba(0,240,255,0.25); border-radius: 8px;
                     max-height: 260px; overflow-y: auto; display: none;
                 }
@@ -231,7 +232,7 @@ class AlphaSonarGalaxy {
                 .sp-bar-dex { height: 100%; background: #00f0ff; }
 
                 @media (max-width: 768px) {
-                    #sonar-control-bar { margin: 8px 8px 6px; gap: 6px; }
+                    #sonar-control-bar { margin: 0 0 6px 0; gap: 6px; }
                     .sonar-btn { font-size: 11px; padding: 4px 8px; }
                     .sonar-cap-wrap { font-size: 10px; }
                     #sonar-token-cap-custom { width: 54px; }
@@ -265,9 +266,12 @@ class AlphaSonarGalaxy {
             <button class="sonar-btn" id="sonar-read-guide-btn" style="border-color:#F0B90B;color:#F0B90B;">HOW TO READ</button>
             <span class="sonar-mode-hint" id="sonar-mode-hint">TIP: TRY ORBITAL SYSTEM</span>
         `;
-        this.container.appendChild(this.controlBar);
+        if (this.layoutHost && this.layoutHost !== this.container) {
+            this.layoutHost.insertBefore(this.controlBar, this.container);
+        } else {
+            this.container.insertBefore(this.controlBar, this.container.firstChild);
+        }
         this.canvas.style.display = 'block';
-        this.canvas.style.flex = '1 1 auto';
 
         const modeBtn = this.controlBar.querySelector('#btn-mode-toggle');
         modeBtn.addEventListener('click', () => {
@@ -478,8 +482,7 @@ class AlphaSonarGalaxy {
         const dpr = window.devicePixelRatio || 1;
 
         this.width = Math.max(300, this.container.clientWidth || window.innerWidth);
-        const controlH = this.controlBar ? this.controlBar.offsetHeight + 20 : 0;
-        this.height = Math.max(320, (this.container.clientHeight || window.innerHeight) - controlH);
+        this.height = Math.max(320, this.container.clientHeight || window.innerHeight);
 
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
