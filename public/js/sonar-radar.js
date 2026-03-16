@@ -1,11 +1,3 @@
-/**
- * Alpha Sonar Galaxy - Performance Refactor
- * - Default token cap = 50 (nhẹ khi mở tab)
- * - Cho phép chọn 10/50/100/200/500
- * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
- * - Mesh mode có anti-clump + laser links nhưng giới hạn để tránh lag
- */
-
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -47,20 +39,20 @@ class AlphaSonarGalaxy {
         this.orbitLaneSpacing = 11;
         this.orbitDriftStrength = 0.35;
         this.minLogoRenderSize = 9;
-        this.meshHardCapDesktop = 220;
-        this.meshHardCapMobile = 120;
-        this.orbitHardCapDesktop = 520;
-        this.orbitHardCapMobile = 280;
+        this.meshHardCapDesktop = 180;
+        this.meshHardCapMobile = 100;
+        this.orbitHardCapDesktop = 420;
+        this.orbitHardCapMobile = 240;
         this.meshRepulsionStrength = 0.085;
         this.meshMaxPush = 1.8;
         this.meshRepulsionBuffer = 10;
 
-        this.firstRunHintUntil = Date.now() + 12000;
 
         // User configurable cap (default nhẹ)
         this.tokenCapOptions = [10, 50, 100, 200, 500];
         this.userTokenCap = 50;
-        this.absoluteMaxCap = 2000;
+        this.absoluteMaxCap = 1000;
+        this.maxMeshLinksPerFrame = 1200;
         this.panelOpenedAt = 0;
 
         this.initUI();
@@ -180,7 +172,7 @@ class AlphaSonarGalaxy {
 
                 #sonar-side-panel {
                     position: absolute; left: 50%; bottom: -110%; transform: translateX(-50%);
-                    width: min(560px, 92%); max-height: 78%; z-index: 100;
+                    width: min(560px, 92%); max-height: 92%; z-index: 100;
                     background: rgba(10, 14, 23, 0.97); border: 1px solid rgba(0,240,255,0.45);
                     border-radius: 14px; backdrop-filter: blur(10px); transition: bottom 0.28s ease;
                     padding: 14px; box-sizing: border-box; color: #fff; font-family: 'Rajdhani', sans-serif;
@@ -198,17 +190,17 @@ class AlphaSonarGalaxy {
                 .sp-price-box { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 8px; }
                 .sp-price-val { font-size: clamp(18px, 2.2vw, 24px); font-weight: 800; line-height: 1.1; }
                 .sp-price-chg { font-size: 15px; font-weight: 800; padding: 2px 8px; border-radius: 4px; }
-                .sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+                .sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
                 .sp-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px; }
                 .sp-box-lbl { font-size: 10px; color: rgba(255,255,255,0.45); margin-bottom: 3px; }
                 .sp-box-val { font-size: clamp(12px, 1.5vw, 14px); font-weight: 700; font-family: monospace; }
                 .sp-block { margin-top: 5px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px; }
-                .sp-block-title { font-size: 11px; letter-spacing: 0.4px; color: rgba(255,255,255,0.7); margin-bottom: 8px; font-weight: 700; }
+                .sp-block-title { font-size: 10px; letter-spacing: 0.35px; color: rgba(255,255,255,0.7); margin-bottom: 5px; font-weight: 700; }
                 .sp-stat-row { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; margin: 2px 0; }
                 .sp-stat-row .k { color: rgba(255,255,255,0.55); }
                 .sp-stat-row .v { color: #fff; font-weight: 700; font-family: monospace; }
-                .sp-bar-wrap { margin-top: 8px; }
-                .sp-bar-head { display: flex; justify-content: space-between; font-size: 10px; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
+                .sp-bar-wrap { margin-top: 5px; }
+                .sp-bar-head { display: flex; justify-content: space-between; font-size: 9px; color: rgba(255,255,255,0.7); margin-bottom: 4px; }
                 .sp-bar-track { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; display: flex; overflow: hidden; }
                 .sp-bar-cex { height: 100%; background: #F0B90B; }
                 .sp-bar-dex { height: 100%; background: #00f0ff; }
@@ -218,7 +210,7 @@ class AlphaSonarGalaxy {
                     .sonar-btn { font-size: 11px; padding: 4px 8px; }
                     .sonar-cap-wrap { font-size: 10px; }
                     #sonar-token-cap-custom { width: 54px; }
-                    #sonar-side-panel { width: 96%; max-height: 82%; padding: 10px; }
+                    #sonar-side-panel { width: 96%; max-height: 90%; padding: 10px; }
                 }
             `;
             document.head.appendChild(style);
@@ -361,12 +353,12 @@ class AlphaSonarGalaxy {
     }
 
     resize() {
-        if (this.container.clientHeight < 100) this.container.style.height = '450px';
+        if (this.container.clientHeight < 100) this.container.style.height = '560px';
         const dpr = window.devicePixelRatio || 1;
 
         this.width = Math.max(300, this.container.clientWidth || window.innerWidth);
         const controlH = this.controlBar ? this.controlBar.offsetHeight + 20 : 0;
-        this.height = Math.max(220, (this.container.clientHeight || window.innerHeight) - controlH);
+        this.height = Math.max(320, (this.container.clientHeight || window.innerHeight) - controlH);
 
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
@@ -402,7 +394,11 @@ class AlphaSonarGalaxy {
 
     getEffectiveCap() {
         const requested = Math.max(1, Math.floor(this.userTokenCap || 50));
-        return Math.min(requested, this.absoluteMaxCap);
+        const isMobile = this.width < 768;
+        const modeHardCap = this.visualMode === 'orbit'
+            ? (isMobile ? this.orbitHardCapMobile : this.orbitHardCapDesktop)
+            : (isMobile ? this.meshHardCapMobile : this.meshHardCapDesktop);
+        return Math.min(requested, modeHardCap, this.absoluteMaxCap);
     }
 
     rebuildTokenDictIfNeeded() {
@@ -739,15 +735,6 @@ class AlphaSonarGalaxy {
 
         this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
         this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, 16);
-
-        if (Date.now() < this.firstRunHintUntil) {
-            this.ctx.fillStyle = 'rgba(240,185,11,0.18)';
-            this.ctx.fillRect(this.width - 290, 8, 282, 26);
-            this.ctx.strokeStyle = 'rgba(240,185,11,0.5)';
-            this.ctx.strokeRect(this.width - 290, 8, 282, 26);
-            this.ctx.fillStyle = 'rgba(255,220,120,0.95)';
-            this.ctx.fillText('TIP: CLICK [ ORBITAL SYSTEM ] TO CHANGE VIEW', this.width - 282, 25);
-        }
     }
 
     animate() {
@@ -775,6 +762,7 @@ class AlphaSonarGalaxy {
             // Repulsion + laser links chỉ cho Mesh để tiết kiệm CPU và đúng concept
             if (this.visualMode === 'mesh') {
                 const pushPadding = 15;
+                let linksDrawn = 0;
                 for (let i = 0; i < this.tokens.length; i++) {
                     const t = this.tokens[i];
                     for (let j = i + 1; j < this.tokens.length; j++) {
@@ -805,7 +793,7 @@ class AlphaSonarGalaxy {
                         const rDx = t.x - o.x;
                         const rDy = t.y - o.y;
                         const realDistSq = rDx * rDx + rDy * rDy;
-                        if (realDistSq < this.connectionDistanceSq && t.color === o.color) {
+                        if (linksDrawn < this.maxMeshLinksPerFrame && realDistSq < this.connectionDistanceSq && t.color === o.color) {
                             const realDist = Math.sqrt(realDistSq);
                             this.ctx.beginPath();
                             this.ctx.moveTo(t.x, t.y);
@@ -814,6 +802,7 @@ class AlphaSonarGalaxy {
                             this.ctx.globalAlpha = 0.15 * (1 - realDist / this.connectionDistance);
                             this.ctx.stroke();
                             this.ctx.globalAlpha = 1;
+                            linksDrawn++;
                         }
                     }
                 }
