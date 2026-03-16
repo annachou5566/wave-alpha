@@ -62,6 +62,7 @@ class AlphaSonarGalaxy {
         this.pulseDuration = 3200;
         this.lastPulseAt = 0;
         this.pulseWaves = [];
+        this.whaleAlertHistory = {}; 
 
         this.initUI();
         this.resize();
@@ -625,6 +626,8 @@ class AlphaSonarGalaxy {
         let maxLiq = 0;
         let maxTx = 0;
         let maxMc = 0;
+        let maxChange = 0;
+        let sumVol = 0;
         const dataArray = [];
 
         Object.entries(this.latestData).forEach(([key, t]) => {
@@ -652,9 +655,38 @@ class AlphaSonarGalaxy {
             if (liq > maxLiq) maxLiq = liq;
             if (tx > maxTx) maxTx = tx;
             if (mc > maxMc) maxMc = mc;
+            if (Math.abs(change) > maxChange) maxChange = Math.abs(change);
+            sumVol += vol;
 
-            const sector = this.detectSector(tokenMeta || t);
-            dataArray.push({ symbol, logo, contract, vol, liq, change, tx, price, mc, holders, vLimit, vChain, sector });
+            dataArray.push({ symbol, logo, contract, vol, liq, change, tx, price, mc, holders, vLimit, vChain });
+        });
+
+        // TÍNH TOÁN THỐNG KÊ Z-SCORE (Chỉ tính 1 lần)
+        const meanVolume = dataArray.length ? sumVol / dataArray.length : 0;
+        const stdVolume = Math.sqrt(dataArray.reduce((sq, t) => sq + Math.pow(t.vol - meanVolume, 2), 0) / (dataArray.length || 1));
+        const now = Date.now();
+
+        dataArray.forEach(data => {
+            // 1. Tính Activity Score
+            const volRatio = maxVol > 0 ? data.vol / maxVol : 0;
+            const txRatio = maxTx > 0 ? data.tx / maxTx : 0;
+            const volatility = maxChange > 0 ? Math.abs(data.change) / maxChange : 0;
+            data.activityScore = 0.5 * volRatio + 0.3 * txRatio + 0.2 * volatility;
+
+            // 2. Tính Z-Score Whale Alert
+            data.isWhale = false;
+            data.whaleSeverity = 'LOW';
+            if (stdVolume > 0) {
+                const zScore = (data.vol - meanVolume) / stdVolume;
+                if (zScore > 2 && data.vol > meanVolume * 1.5 && data.liq > 10000) {
+                    const lastAlert = this.whaleAlertHistory[data.symbol] || 0;
+                    if (now - lastAlert > 600000) { // Rate limit 10 phút
+                        data.isWhale = true;
+                        data.whaleSeverity = zScore > 3 ? 'HIGH' : 'MEDIUM';
+                        this.whaleAlertHistory[data.symbol] = now;
+                    }
+                }
+            }
         });
 
         if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
@@ -667,8 +699,6 @@ class AlphaSonarGalaxy {
         const densityScale = selected.length > 300 ? 0.55 : (selected.length > 180 ? 0.75 : 1);
 
         const tokenBySymbol = new Map(this.tokens.map(t => [t.symbol, t]));
-
-        const avgVolForWhale = dataArray.length ? dataArray.reduce((a,t)=>a+t.vol,0)/dataArray.length : 0;
         selected.forEach((data, idx) => {
             const sizeMetric = this.filterMode === 'liquidity' ? data.liq : (this.filterMode === 'marketcap' ? data.mc : data.vol);
             const sizeMax = this.filterMode === 'liquidity' ? maxLiq : (this.filterMode === 'marketcap' ? maxMc : maxVol);
@@ -716,7 +746,7 @@ class AlphaSonarGalaxy {
                 const goldenAngle = 2.399963229728653;
                 orbitAngle = ((idx + 1) * goldenAngle + driftPhase) % (Math.PI * 2);
 
-                orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006;
+                orbitSpeed = 0.001 + (data.activityScore * 0.006);
                 if (data.change < 0) orbitSpeed *= -1;
 
                 baseX = this.orbitCenterX + baseOrbitRadius * Math.cos(orbitAngle);
@@ -738,7 +768,8 @@ class AlphaSonarGalaxy {
                 existing.holders = data.holders;
                 existing.vLimit = data.vLimit;
                 existing.vChain = data.vChain;
-                existing.isWhale = avgVolForWhale > 0 && data.vol > avgVolForWhale * 3;
+                existing.isWhale = data.isWhale;
+                existing.whaleSeverity = data.whaleSeverity;
 
                 if (this.visualMode === 'orbit') {
                     if (existing.orbitAngle === undefined) existing.orbitAngle = orbitAngle;
@@ -799,7 +830,8 @@ class AlphaSonarGalaxy {
                     holders: data.holders,
                     vLimit: data.vLimit,
                     vChain: data.vChain,
-                    isWhale: avgVolForWhale > 0 && data.vol > avgVolForWhale * 3,
+                    isWhale: data.isWhale,
+                    whaleSeverity: data.whaleSeverity,
                     lowDetail: false,
                     updated: true
                 });
@@ -825,47 +857,43 @@ class AlphaSonarGalaxy {
         const neutral = dataArray.length - bullish - bearish;
 
         const topGainers = [...dataArray].sort((a,b)=>b.change-a.change).slice(0,5);
-        const topVolume = [...dataArray].sort((a,b)=>b.vol-a.vol).slice(0,5);
+        const topLosers = [...dataArray].sort((a,b)=>a.change-b.change).slice(0,5);
+        const topMovers = [...dataArray].sort((a,b)=>(b.activityScore||0)-(a.activityScore||0)).slice(0,5);
 
-        const avgVolume = dataArray.length ? totalVol / dataArray.length : 0;
-        const whaleHits = [...dataArray].filter(t => t.vol > avgVolume * 3).sort((a,b)=>b.vol-a.vol).slice(0,5);
-        this.whaleAlerts = whaleHits.map(t => ({ symbol: t.symbol, vol: t.vol }));
+        const whaleHits = dataArray.filter(t => t.isWhale).sort((a,b)=>b.vol-a.vol).slice(0,5);
+        this.whaleAlerts = whaleHits.map(t => ({ symbol: t.symbol, vol: t.vol, severity: t.whaleSeverity }));
 
-        const sectorCounts = { DeFi:0, AI:0, Gaming:0, Infrastructure:0, Memecoin:0, Other:0 };
-        dataArray.forEach(t => { sectorCounts[t.sector || 'Other'] = (sectorCounts[t.sector || 'Other'] || 0) + 1; });
-
-        this.dashboardStats = { totalVol, dexVol, cexVol, bullish, bearish, neutral, topGainers, topVolume, sectorCounts, avgVolume };
+        this.dashboardStats = { totalVol, dexVol, cexVol, bullish, bearish, neutral, topGainers, topLosers, topMovers };
 
         if (this.leftPanel && this.rightPanel) {
-            const sectorTotal = dataArray.length || 1;
-            const sectorRows = Object.entries(sectorCounts).map(([k,v]) => `
-                <div class="sap-row"><span>${k}</span><span>${this.pct(v, sectorTotal).toFixed(0)}%</span></div>
-                <div class="sap-mini-bar"><div class="sap-mini-fill" style="width:${this.pct(v, sectorTotal)}%"></div></div>
-            `).join('');
-
             this.leftPanel.innerHTML = `
                 <div class="sap-title">MARKET FLOW</div>
                 <div class="sap-kv"><div class="sap-k">TOTAL VOL 24H</div><div class="sap-v">$${this.formatCompact(totalVol)}</div></div>
                 <div class="sap-kv"><div class="sap-k">DEX VOL</div><div class="sap-v">$${this.formatCompact(dexVol)}</div></div>
                 <div class="sap-kv"><div class="sap-k">CEX VOL</div><div class="sap-v">$${this.formatCompact(cexVol)}</div></div>
                 <div class="sap-kv"><div class="sap-k">DEX SHARE</div><div class="sap-v">${this.pct(dexVol, totalVol).toFixed(1)}%</div></div>
-                <div class="sap-title">MARKET STRUCTURE</div>
-                <div class="sap-row"><span>BULLISH</span><span>${bullish}</span></div>
-                <div class="sap-row"><span>BEARISH</span><span>${bearish}</span></div>
-                <div class="sap-row"><span>NEUTRAL</span><span>${neutral}</span></div>
-                <div class="sap-title">SECTOR ROTATION</div>
-                ${sectorRows}
+                <div class="sap-title" style="margin-top:10px">MARKET STRUCTURE</div>
+                <div class="sap-row"><span style="color:#0ECB81">BULLISH</span><span>${bullish}</span></div>
+                <div class="sap-row"><span style="color:#F6465D">BEARISH</span><span>${bearish}</span></div>
+                <div class="sap-row"><span style="color:#848E9C">NEUTRAL</span><span>${neutral}</span></div>
+                <div class="sap-title" style="margin-top:10px; color:#F0B90B;">🔥 TOP MOVERS</div>
+                ${topMovers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span style="color:#F0B90B">${(t.activityScore*100).toFixed(0)} pts</span></div>`).join('')}
             `;
 
             this.rightPanel.innerHTML = `
                 <div class="sap-title">TOP GAINERS</div>
-                ${topGainers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span style="color:#0ECB81">${t.change>0?'+':''}${t.change.toFixed(2)}%</span></div>`).join('')}
-                <div class="sap-title" style="margin-top:10px">TOP VOLUME</div>
-                ${topVolume.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span>$${this.formatCompact(t.vol)}</span></div>`).join('')}
-                <div class="sap-title" style="margin-top:10px">WHALE ALERTS</div>
-                ${this.whaleAlerts.length ? this.whaleAlerts.map(w=>`<div class="sap-row"><span>🐋 ${w.symbol}</span><span>$${this.formatCompact(w.vol)}</span></div>`).join('') : '<div class="sap-k">No large spikes</div>'}
+                ${topGainers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span style="color:#0ECB81">+${t.change.toFixed(2)}%</span></div>`).join('')}
+                <div class="sap-title" style="margin-top:10px">TOP LOSERS</div>
+                ${topLosers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span style="color:#F6465D">${t.change.toFixed(2)}%</span></div>`).join('')}
+                <div class="sap-title" style="margin-top:10px; color:#9945FF">🐋 WHALE ALERTS</div>
+                ${this.whaleAlerts.length ? this.whaleAlerts.map(w=>`
+                    <div class="sap-row">
+                        <span style="color:${w.severity === 'HIGH' ? '#F6465D' : '#F0B90B'}; font-weight:700;">${w.severity === 'HIGH' ? '🚨' : '⚠️'} ${w.symbol}</span>
+                        <span>$${this.formatCompact(w.vol)}</span>
+                    </div>`).join('') : '<div class="sap-k">Normal activity</div>'}
             `;
         }
+    }
 
         if (this.mobileDrawer) {
             const c = this.mobileDrawer.querySelector('.content');
@@ -1158,11 +1186,13 @@ class AlphaSonarGalaxy {
             this.ctx.shadowBlur = 0;
 
             if (t.isWhale) {
-                this.ctx.fillStyle = 'rgba(255,210,90,0.95)';
+                const isHighSeverity = t.whaleSeverity === 'HIGH';
+                this.ctx.fillStyle = isHighSeverity ? 'rgba(246,70,93,0.95)' : 'rgba(240,185,11,0.95)';
                 this.ctx.font = '700 10px "Rajdhani", sans-serif';
-                this.ctx.fillText('🐋 Whale Activity', t.x + radius + 6, t.y + radius + 10);
+                this.ctx.fillText(isHighSeverity ? '🚨 Anomaly' : '🐋 Whale', t.x + radius + 6, t.y + radius + 10);
             }
         }
+
 
         // Draw tooltip last to keep it above all tokens
         const tooltipToken = this.hoveredToken && !this.lockedToken ? this.hoveredToken : null;
