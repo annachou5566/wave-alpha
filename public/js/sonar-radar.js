@@ -1,11 +1,3 @@
-/**
- * Alpha Sonar Galaxy - Performance Refactor
- * - Default token cap = 50 (nhẹ khi mở tab)
- * - Cho phép chọn 10/50/100/200/500
- * - Orbit mode ưu tiên mượt, token có thể lướt qua nhau
- * - Mesh mode có anti-clump + laser links nhưng giới hạn để tránh lag
- */
-
 class AlphaSonarGalaxy {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -63,6 +55,13 @@ class AlphaSonarGalaxy {
         this.absoluteMaxCap = 1000;
         this.maxMeshLinksPerFrame = 1200;
         this.panelOpenedAt = 0;
+        this.dashboardStats = null;
+        this.whaleAlerts = [];
+        this.maxLiqCached = 0;
+        this.pulseInterval = 2400;
+        this.pulseDuration = 3200;
+        this.lastPulseAt = 0;
+        this.pulseWaves = [];
 
         this.initUI();
         this.resize();
@@ -113,16 +112,72 @@ class AlphaSonarGalaxy {
                text.includes('security') || text.includes('chứng khoán') || text.includes('chung khoan');
     }
 
+
+    detectSector(token) {
+        const raw = [token?.sector, token?.category, token?.tags, token?.cat]
+            .map(v => Array.isArray(v) ? v.join(' ') : (v || ''))
+            .join(' ')
+            .toLowerCase();
+        if (raw.includes('defi')) return 'DeFi';
+        if (raw.includes('ai')) return 'AI';
+        if (raw.includes('game')) return 'Gaming';
+        if (raw.includes('infra') || raw.includes('layer') || raw.includes('l1') || raw.includes('l2')) return 'Infrastructure';
+        if (raw.includes('meme')) return 'Memecoin';
+        return 'Other';
+    }
+
+    pct(num, den) {
+        if (!den) return 0;
+        return (num / den) * 100;
+    }
+
     initUI() {
         const oldBar = document.getElementById('sonar-control-bar');
         if (oldBar) oldBar.remove();
         const oldPanel = document.getElementById('sonar-side-panel');
         if (oldPanel) oldPanel.remove();
 
+        const oldShell = document.getElementById('sonar-main-container');
+        if (oldShell) {
+            oldShell.replaceWith(this.container);
+        }
+
+        this.dashboardShell = document.createElement('div');
+        this.dashboardShell.id = 'sonar-main-container';
+        this.dashboardShell.innerHTML = `
+            <aside id="sonar-left-panel" class="sonar-analytics-panel"></aside>
+            <section id="sonar-center-panel"></section>
+            <aside id="sonar-right-panel" class="sonar-analytics-panel"></aside>
+        `;
+
+        if (this.layoutHost && this.layoutHost !== this.container) {
+            this.layoutHost.insertBefore(this.dashboardShell, this.container);
+        } else if (this.container.parentElement) {
+            this.container.parentElement.insertBefore(this.dashboardShell, this.container);
+        }
+
+        this.centerPanel = this.dashboardShell.querySelector('#sonar-center-panel');
+        this.leftPanel = this.dashboardShell.querySelector('#sonar-left-panel');
+        this.rightPanel = this.dashboardShell.querySelector('#sonar-right-panel');
+        this.centerPanel.appendChild(this.container);
+        this.layoutHost = this.centerPanel;
+
         if (!document.getElementById('sonar-pro-styles')) {
             const style = document.createElement('style');
             style.id = 'sonar-pro-styles';
             style.innerHTML = `
+                #sonar-main-container { display: flex; gap: 10px; height: 100%; min-height: 560px; }
+                #sonar-center-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+                .sonar-analytics-panel { width: 220px; background: rgba(8,12,18,0.96); border: 1px solid rgba(0,240,255,0.25); border-radius: 10px; padding: 10px; box-sizing: border-box; overflow: auto; color: #d6e5ee; font-family: 'Rajdhani', monospace; }
+                .sap-title { color: #fff; font-size: 12px; font-weight: 800; letter-spacing: 0.6px; margin: 6px 0; }
+                .sap-kv { border-top: 1px solid rgba(255,255,255,0.08); padding: 6px 0; }
+                .sap-k { font-size: 10px; color: rgba(255,255,255,0.55); }
+                .sap-v { font-size: 15px; color: #fff; font-weight: 700; }
+                .sap-row { display:flex; justify-content:space-between; gap:8px; font-size:12px; padding:2px 0; }
+                .sap-mini-bar { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.09); overflow: hidden; }
+                .sap-mini-fill { height:100%; background:#00f0ff; }
+                #sonar-mobile-drawer { display:none; }
+
                 #sonar-control-bar {
                     position: relative; z-index: 220;
                     display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
@@ -239,6 +294,11 @@ class AlphaSonarGalaxy {
                     #sonar-search-input { width: 120px; }
                     #sonar-read-guide { max-height: 50%; bottom: 8px; }
                     #sonar-side-panel { width: min(360px, 94%); max-height: 88%; padding: 10px; }
+                    #sonar-left-panel, #sonar-right-panel { display: none; }
+                    #sonar-main-container { display:block; }
+                    #sonar-mobile-drawer { display:block; position:absolute; left:8px; right:8px; bottom:8px; z-index:120; background: rgba(8,12,18,0.96); border:1px solid rgba(0,240,255,0.25); border-radius:10px; max-height:60vh; overflow:auto; }
+                    #sonar-mobile-drawer .handle { width:36px; height:4px; border-radius:2px; background:rgba(255,255,255,0.35); margin:6px auto; }
+                    #sonar-mobile-drawer .content { padding: 6px 10px 10px; }
                 }
             `;
             document.head.appendChild(style);
@@ -378,6 +438,11 @@ class AlphaSonarGalaxy {
             <div><b>Filters:</b> TOP VOL / TOP LIQ / TOP MC sẽ đổi thứ hạng và kích thước token theo đúng metric đang chọn.</div>
         `;
         this.container.appendChild(this.readGuide);
+
+        this.mobileDrawer = document.createElement('div');
+        this.mobileDrawer.id = 'sonar-mobile-drawer';
+        this.mobileDrawer.innerHTML = '<div class="handle"></div><div class="content"></div>';
+        this.container.appendChild(this.mobileDrawer);
 
         const guideBtn = this.controlBar.querySelector('#sonar-read-guide-btn');
         const closeGuideBtn = this.readGuide.querySelector('#sonar-guide-close');
@@ -575,19 +640,22 @@ class AlphaSonarGalaxy {
             if (tx > maxTx) maxTx = tx;
             if (mc > maxMc) maxMc = mc;
 
-            dataArray.push({ symbol, logo, contract, vol, liq, change, tx, price, mc, holders, vLimit, vChain });
+            const sector = this.detectSector(tokenMeta || t);
+            dataArray.push({ symbol, logo, contract, vol, liq, change, tx, price, mc, holders, vLimit, vChain, sector });
         });
 
         if (this.filterMode === 'liquidity') dataArray.sort((a, b) => b.liq - a.liq);
         else if (this.filterMode === 'marketcap') dataArray.sort((a, b) => b.mc - a.mc);
         else dataArray.sort((a, b) => b.vol - a.vol);
 
+        this.maxLiqCached = maxLiq;
         const effectiveCap = this.getEffectiveCap();
         const selected = dataArray.slice(0, Math.min(effectiveCap, dataArray.length));
         const densityScale = selected.length > 300 ? 0.55 : (selected.length > 180 ? 0.75 : 1);
 
         const tokenBySymbol = new Map(this.tokens.map(t => [t.symbol, t]));
 
+        const avgVolForWhale = dataArray.length ? dataArray.reduce((a,t)=>a+t.vol,0)/dataArray.length : 0;
         selected.forEach((data, idx) => {
             const sizeMetric = this.filterMode === 'liquidity' ? data.liq : (this.filterMode === 'marketcap' ? data.mc : data.vol);
             const sizeMax = this.filterMode === 'liquidity' ? maxLiq : (this.filterMode === 'marketcap' ? maxMc : maxVol);
@@ -657,6 +725,7 @@ class AlphaSonarGalaxy {
                 existing.holders = data.holders;
                 existing.vLimit = data.vLimit;
                 existing.vChain = data.vChain;
+                existing.isWhale = avgVolForWhale > 0 && data.vol > avgVolForWhale * 3;
 
                 if (this.visualMode === 'orbit') {
                     if (existing.orbitAngle === undefined) existing.orbitAngle = orbitAngle;
@@ -717,6 +786,7 @@ class AlphaSonarGalaxy {
                     holders: data.holders,
                     vLimit: data.vLimit,
                     vChain: data.vChain,
+                    isWhale: avgVolForWhale > 0 && data.vol > avgVolForWhale * 3,
                     lowDetail: false,
                     updated: true
                 });
@@ -726,8 +796,83 @@ class AlphaSonarGalaxy {
         this.tokens = this.tokens.filter(t => t.updated);
         this.tokens.forEach(t => { t.updated = false; });
 
+        this.updateDashboardStats(dataArray);
+
         this.checkHover();
         if (this.lockedToken) this.updateSidePanelData();
+    }
+
+
+    updateDashboardStats(dataArray) {
+        const totalVol = dataArray.reduce((a, t) => a + (t.vol || 0), 0);
+        const dexVol = dataArray.reduce((a, t) => a + (t.vChain || 0), 0);
+        const cexVol = dataArray.reduce((a, t) => a + (t.vLimit || 0), 0);
+        const bullish = dataArray.filter(t => t.change > 0).length;
+        const bearish = dataArray.filter(t => t.change < 0).length;
+        const neutral = dataArray.length - bullish - bearish;
+
+        const topGainers = [...dataArray].sort((a,b)=>b.change-a.change).slice(0,5);
+        const topVolume = [...dataArray].sort((a,b)=>b.vol-a.vol).slice(0,5);
+
+        const avgVolume = dataArray.length ? totalVol / dataArray.length : 0;
+        const whaleHits = [...dataArray].filter(t => t.vol > avgVolume * 3).sort((a,b)=>b.vol-a.vol).slice(0,5);
+        this.whaleAlerts = whaleHits.map(t => ({ symbol: t.symbol, vol: t.vol }));
+
+        const sectorCounts = { DeFi:0, AI:0, Gaming:0, Infrastructure:0, Memecoin:0, Other:0 };
+        dataArray.forEach(t => { sectorCounts[t.sector || 'Other'] = (sectorCounts[t.sector || 'Other'] || 0) + 1; });
+
+        this.dashboardStats = { totalVol, dexVol, cexVol, bullish, bearish, neutral, topGainers, topVolume, sectorCounts, avgVolume };
+
+        if (this.leftPanel && this.rightPanel) {
+            const sectorTotal = dataArray.length || 1;
+            const sectorRows = Object.entries(sectorCounts).map(([k,v]) => `
+                <div class="sap-row"><span>${k}</span><span>${this.pct(v, sectorTotal).toFixed(0)}%</span></div>
+                <div class="sap-mini-bar"><div class="sap-mini-fill" style="width:${this.pct(v, sectorTotal)}%"></div></div>
+            `).join('');
+
+            this.leftPanel.innerHTML = `
+                <div class="sap-title">MARKET FLOW</div>
+                <div class="sap-kv"><div class="sap-k">TOTAL VOL 24H</div><div class="sap-v">$${this.formatCompact(totalVol)}</div></div>
+                <div class="sap-kv"><div class="sap-k">DEX VOL</div><div class="sap-v">$${this.formatCompact(dexVol)}</div></div>
+                <div class="sap-kv"><div class="sap-k">CEX VOL</div><div class="sap-v">$${this.formatCompact(cexVol)}</div></div>
+                <div class="sap-kv"><div class="sap-k">DEX SHARE</div><div class="sap-v">${this.pct(dexVol, totalVol).toFixed(1)}%</div></div>
+                <div class="sap-title">MARKET STRUCTURE</div>
+                <div class="sap-row"><span>BULLISH</span><span>${bullish}</span></div>
+                <div class="sap-row"><span>BEARISH</span><span>${bearish}</span></div>
+                <div class="sap-row"><span>NEUTRAL</span><span>${neutral}</span></div>
+                <div class="sap-title">SECTOR ROTATION</div>
+                ${sectorRows}
+            `;
+
+            this.rightPanel.innerHTML = `
+                <div class="sap-title">TOP GAINERS</div>
+                ${topGainers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span style="color:#0ECB81">${t.change>0?'+':''}${t.change.toFixed(2)}%</span></div>`).join('')}
+                <div class="sap-title" style="margin-top:10px">TOP VOLUME</div>
+                ${topVolume.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span>$${this.formatCompact(t.vol)}</span></div>`).join('')}
+                <div class="sap-title" style="margin-top:10px">WHALE ALERTS</div>
+                ${this.whaleAlerts.length ? this.whaleAlerts.map(w=>`<div class="sap-row"><span>🐋 ${w.symbol}</span><span>$${this.formatCompact(w.vol)}</span></div>`).join('') : '<div class="sap-k">No large spikes</div>'}
+            `;
+        }
+
+        if (this.mobileDrawer) {
+            const c = this.mobileDrawer.querySelector('.content');
+            if (c) {
+                c.innerHTML = `
+                    <div class="sap-title">MARKET FLOW</div>
+                    <div class="sap-row"><span>TOTAL</span><span>$${this.formatCompact(totalVol)}</span></div>
+                    <div class="sap-row"><span>DEX</span><span>$${this.formatCompact(dexVol)}</span></div>
+                    <div class="sap-row"><span>CEX</span><span>$${this.formatCompact(cexVol)}</span></div>
+                    <div class="sap-title">MARKET STRUCTURE</div>
+                    <div class="sap-row"><span>BULL/BEAR/NEU</span><span>${bullish}/${bearish}/${neutral}</span></div>
+                    <div class="sap-title">TOP GAINERS</div>
+                    ${topGainers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span>${t.change>0?'+':''}${t.change.toFixed(2)}%</span></div>`).join('')}
+                    <div class="sap-title">TOP VOLUME</div>
+                    ${topVolume.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span>$${this.formatCompact(t.vol)}</span></div>`).join('')}
+                    <div class="sap-title">WHALE ALERTS</div>
+                    ${this.whaleAlerts.length ? this.whaleAlerts.map(w=>`<div class="sap-row"><span>${w.symbol}</span><span>$${this.formatCompact(w.vol)}</span></div>`).join('') : '<div class="sap-k">No alerts</div>'}
+                `;
+            }
+        }
     }
 
     checkHover() {
@@ -825,6 +970,22 @@ class AlphaSonarGalaxy {
     drawBackdrop() {
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.35)';
         this.ctx.fillRect(0, 0, this.width, this.height);
+
+        const now = Date.now();
+        if (now - this.lastPulseAt > this.pulseInterval) {
+            this.lastPulseAt = now;
+            this.pulseWaves.push({ start: now });
+        }
+        this.pulseWaves = this.pulseWaves.filter(w => (now - w.start) < this.pulseDuration);
+        for (let i = 0; i < this.pulseWaves.length; i++) {
+            const age = (now - this.pulseWaves[i].start) / this.pulseDuration;
+            const r = this.maxRadius * age;
+            this.ctx.beginPath();
+            this.ctx.arc(this.orbitCenterX, this.orbitCenterY, r, 0, Math.PI * 2);
+            this.ctx.strokeStyle = `rgba(0,240,255,${0.18 * (1 - age)})`;
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+        }
 
         this.ctx.font = '600 11px "Courier New", monospace';
 
@@ -952,6 +1113,14 @@ class AlphaSonarGalaxy {
 
             this.ctx.globalAlpha = (isHovered || isLocked) ? 1 : 0.8;
 
+            const liqRatio = this.maxLiqCached > 0 ? (t.liq / this.maxLiqCached) : 0;
+            if (liqRatio > 0.3) {
+                this.ctx.shadowColor = t.color;
+                this.ctx.shadowBlur = 3 + liqRatio * 8;
+            } else {
+                this.ctx.shadowBlur = 0;
+            }
+
             if (!t.lowDetail && t.imgObj && t.imgObj.complete && t.imgObj.naturalWidth > 0) {
                 this.ctx.save();
                 this.ctx.beginPath();
@@ -973,6 +1142,13 @@ class AlphaSonarGalaxy {
             this.ctx.lineWidth = (isHovered || isLocked) ? 2 : 1;
             this.ctx.stroke();
             this.ctx.globalAlpha = 1;
+            this.ctx.shadowBlur = 0;
+
+            if (t.isWhale) {
+                this.ctx.fillStyle = 'rgba(255,210,90,0.95)';
+                this.ctx.font = '700 10px "Rajdhani", sans-serif';
+                this.ctx.fillText('🐋 Whale Activity', t.x + radius + 6, t.y + radius + 10);
+            }
         }
 
         // Draw tooltip last to keep it above all tokens
