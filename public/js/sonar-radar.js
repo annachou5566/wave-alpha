@@ -1011,22 +1011,6 @@ class AlphaSonarGalaxy {
         this.ctx.fillStyle = 'rgba(10, 14, 23, 0.35)';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        const now = Date.now();
-        if (now - this.lastPulseAt > this.pulseInterval) {
-            this.lastPulseAt = now;
-            this.pulseWaves.push({ start: now });
-        }
-        this.pulseWaves = this.pulseWaves.filter(w => (now - w.start) < this.pulseDuration);
-        for (let i = 0; i < this.pulseWaves.length; i++) {
-            const age = (now - this.pulseWaves[i].start) / this.pulseDuration;
-            const r = this.maxRadius * age;
-            this.ctx.beginPath();
-            this.ctx.arc(this.orbitCenterX, this.orbitCenterY, r, 0, Math.PI * 2);
-            this.ctx.strokeStyle = `rgba(0,240,255,${0.18 * (1 - age)})`;
-            this.ctx.lineWidth = 1;
-            this.ctx.stroke();
-        }
-
         this.ctx.font = '600 11px "Courier New", monospace';
 
         if (this.visualMode === 'orbit') {
