@@ -893,6 +893,26 @@ class AlphaSonarGalaxy {
                     </div>`).join('') : '<div class="sap-k">Normal activity</div>'}
             `;
         }
+
+        if (this.mobileDrawer) {
+            const c = this.mobileDrawer.querySelector('.content');
+            if (c) {
+                c.innerHTML = `
+                    <div class="sap-title">MARKET FLOW</div>
+                    <div class="sap-row"><span>TOTAL</span><span>$${this.formatCompact(totalVol)}</span></div>
+                    <div class="sap-row"><span>DEX</span><span>$${this.formatCompact(dexVol)}</span></div>
+                    <div class="sap-row"><span>CEX</span><span>$${this.formatCompact(cexVol)}</span></div>
+                    <div class="sap-title">MARKET STRUCTURE</div>
+                    <div class="sap-row"><span>BULL/BEAR/NEU</span><span>${bullish}/${bearish}/${neutral}</span></div>
+                    <div class="sap-title">TOP GAINERS</div>
+                    ${topGainers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span style="color:#0ECB81">+${t.change.toFixed(2)}%</span></div>`).join('')}
+                    <div class="sap-title" style="margin-top:10px">🔥 TOP MOVERS</div>
+                    ${topMovers.map(t=>`<div class="sap-row"><span>${t.symbol}</span><span style="color:#F0B90B">${(t.activityScore*100).toFixed(0)} pts</span></div>`).join('')}
+                    <div class="sap-title" style="margin-top:10px; color:#9945FF">🐋 WHALE ALERTS</div>
+                    ${this.whaleAlerts.length ? this.whaleAlerts.map(w=>`<div class="sap-row"><span style="color:${w.severity === 'HIGH' ? '#F6465D' : '#F0B90B'}; font-weight:700;">${w.severity === 'HIGH' ? '🚨' : '⚠️'} ${w.symbol}</span><span>$${this.formatCompact(w.vol)}</span></div>`).join('') : '<div class="sap-k">No alerts</div>'}
+                `;
+            }
+        }
     }
 
         if (this.mobileDrawer) {
