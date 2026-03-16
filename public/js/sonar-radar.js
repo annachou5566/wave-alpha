@@ -296,9 +296,23 @@ class AlphaSonarGalaxy {
                     #sonar-side-panel { width: min(360px, 94%); max-height: 88%; padding: 10px; }
                     #sonar-left-panel, #sonar-right-panel { display: none; }
                     #sonar-main-container { display:block; }
-                    #sonar-mobile-drawer { display:block; position:absolute; left:8px; right:8px; bottom:8px; z-index:120; background: rgba(8,12,18,0.96); border:1px solid rgba(0,240,255,0.25); border-radius:10px; max-height:60vh; overflow:auto; }
+                    #sonar-mobile-drawer {
+display:block;
+position:relative;
+margin:8px;
+z-index:20;
+background: rgba(8,12,18,0.96);
+border:1px solid rgba(0,240,255,0.25);
+border-radius:10px;
+max-height:60vh;
+overflow:auto;
+}
                     #sonar-mobile-drawer .handle { width:36px; height:4px; border-radius:2px; background:rgba(255,255,255,0.35); margin:6px auto; }
                     #sonar-mobile-drawer .content { padding: 6px 10px 10px; }
+                    #sonar-center-panel {
+flex:1;
+min-height:320px;
+}
                 }
             `;
             document.head.appendChild(style);
@@ -655,7 +669,11 @@ class AlphaSonarGalaxy {
 
         const tokenBySymbol = new Map(this.tokens.map(t => [t.symbol, t]));
 
-        const avgVolForWhale = dataArray.length ? dataArray.reduce((a,t)=>a+t.vol,0)/dataArray.length : 0;
+        const volumes = dataArray.map(t => t.vol || 0);
+const meanVol = volumes.reduce((a,b)=>a+b,0) / (volumes.length || 1);
+
+const variance = volumes.reduce((a,b)=>a + Math.pow(b - meanVol,2),0) / (volumes.length || 1);
+const stdVol = Math.sqrt(variance);
         selected.forEach((data, idx) => {
             const sizeMetric = this.filterMode === 'liquidity' ? data.liq : (this.filterMode === 'marketcap' ? data.mc : data.vol);
             const sizeMax = this.filterMode === 'liquidity' ? maxLiq : (this.filterMode === 'marketcap' ? maxMc : maxVol);
@@ -703,8 +721,18 @@ class AlphaSonarGalaxy {
                 const goldenAngle = 2.399963229728653;
                 orbitAngle = ((idx + 1) * goldenAngle + driftPhase) % (Math.PI * 2);
 
-                orbitSpeed = 0.001 + (data.tx / (maxTx || 1)) * 0.006;
-                if (data.change < 0) orbitSpeed *= -1;
+                const volRatio = maxVol > 0 ? data.vol / maxVol : 0;
+const txRatio = maxTx > 0 ? data.tx / maxTx : 0;
+const volatility = Math.min(1, Math.abs(data.change) / 20);
+
+const activityScore =
+    0.5 * volRatio +
+    0.3 * txRatio +
+    0.2 * volatility;
+
+orbitSpeed = 0.001 + activityScore * 0.006;
+
+if (data.change < 0) orbitSpeed *= -1;
 
                 baseX = this.orbitCenterX + baseOrbitRadius * Math.cos(orbitAngle);
                 baseY = this.orbitCenterY + baseOrbitRadius * Math.sin(orbitAngle);
@@ -725,7 +753,7 @@ class AlphaSonarGalaxy {
                 existing.holders = data.holders;
                 existing.vLimit = data.vLimit;
                 existing.vChain = data.vChain;
-                existing.isWhale = avgVolForWhale > 0 && data.vol > avgVolForWhale * 3;
+                existing.isWhale = stdVol > 0 && ((data.vol - meanVol) / stdVol) > 2;
 
                 if (this.visualMode === 'orbit') {
                     if (existing.orbitAngle === undefined) existing.orbitAngle = orbitAngle;
@@ -812,23 +840,24 @@ class AlphaSonarGalaxy {
         const neutral = dataArray.length - bullish - bearish;
 
         const topGainers = [...dataArray].sort((a,b)=>b.change-a.change).slice(0,5);
+        const topLosers = [...dataArray]
+.sort((a,b)=>a.change-b.change)
+.slice(0,5);
         const topVolume = [...dataArray].sort((a,b)=>b.vol-a.vol).slice(0,5);
 
         const avgVolume = dataArray.length ? totalVol / dataArray.length : 0;
         const whaleHits = [...dataArray].filter(t => t.vol > avgVolume * 3).sort((a,b)=>b.vol-a.vol).slice(0,5);
         this.whaleAlerts = whaleHits.map(t => ({ symbol: t.symbol, vol: t.vol }));
 
-        const sectorCounts = { DeFi:0, AI:0, Gaming:0, Infrastructure:0, Memecoin:0, Other:0 };
-        dataArray.forEach(t => { sectorCounts[t.sector || 'Other'] = (sectorCounts[t.sector || 'Other'] || 0) + 1; });
-
-        this.dashboardStats = { totalVol, dexVol, cexVol, bullish, bearish, neutral, topGainers, topVolume, sectorCounts, avgVolume };
-
-        if (this.leftPanel && this.rightPanel) {
-            const sectorTotal = dataArray.length || 1;
-            const sectorRows = Object.entries(sectorCounts).map(([k,v]) => `
-                <div class="sap-row"><span>${k}</span><span>${this.pct(v, sectorTotal).toFixed(0)}%</span></div>
-                <div class="sap-mini-bar"><div class="sap-mini-fill" style="width:${this.pct(v, sectorTotal)}%"></div></div>
-            `).join('');
+        const movers = [...dataArray]
+.map(t=>{
+    const volRatio = t.vol / (this.dashboardStats?.totalVol || 1);
+    const volatility = Math.abs(t.change) / 20;
+    const score = volRatio + volatility;
+    return { ...t, score };
+})
+.sort((a,b)=>b.score-a.score)
+.slice(0,5);
 
             this.leftPanel.innerHTML = `
                 <div class="sap-title">MARKET FLOW</div>
@@ -840,7 +869,6 @@ class AlphaSonarGalaxy {
                 <div class="sap-row"><span>BULLISH</span><span>${bullish}</span></div>
                 <div class="sap-row"><span>BEARISH</span><span>${bearish}</span></div>
                 <div class="sap-row"><span>NEUTRAL</span><span>${neutral}</span></div>
-                <div class="sap-title">SECTOR ROTATION</div>
                 ${sectorRows}
             `;
 
