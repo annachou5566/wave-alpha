@@ -311,8 +311,15 @@ class AlphaSonarGalaxy {
 }
 
 /* 3. Ẩn thanh handle đi vì giờ chúng ta dùng thao tác cuộn trang tự nhiên, không cần kéo/thả */
+/* 3. Ẩn thanh handle đi vì giờ chúng ta dùng thao tác cuộn trang tự nhiên, không cần kéo/thả */
 #sonar-mobile-drawer .handle { display: none; }
 #sonar-mobile-drawer .content { padding: 10px; }
+                }
+
+                #sonar-main-container.fullscreen-mode {
+                    position: fixed !important; top: 0; left: 0; right: 0; bottom: 0;
+                    z-index: 99999; background: #080c12; margin: 0; padding: 10px;
+                    height: 100vh !important;
                 }
             `;
             document.head.appendChild(style);
@@ -333,6 +340,7 @@ class AlphaSonarGalaxy {
                 <button class="sonar-btn" id="sonar-token-cap-apply">SET</button>
             </div>
             <button class="sonar-btn pause-btn" id="sonar-pause-btn">PAUSE</button>
+            <button class="sonar-btn" id="sonar-fullscreen-btn">⛶ FULLSCREEN</button>
             <div class="sonar-search-wrap">
                 <input id="sonar-search-input" type="text" placeholder="Search symbol / contract">
                 <div id="sonar-search-list"></div>
@@ -443,6 +451,15 @@ class AlphaSonarGalaxy {
             pauseBtn.classList.toggle('paused', this.isPaused);
             pauseBtn.innerText = this.isPaused ? 'RESUME' : 'PAUSE';
         });
+
+        const fsBtn = this.controlBar.querySelector('#sonar-fullscreen-btn');
+        if (fsBtn) {
+            fsBtn.addEventListener('click', () => {
+                this.dashboardShell.classList.toggle('fullscreen-mode');
+                this.resize(); 
+                fsBtn.innerText = this.dashboardShell.classList.contains('fullscreen-mode') ? '✖ EXIT FULLSCREEN' : '⛶ FULLSCREEN';
+            });
+        }
 
         this.panelBackdrop = document.createElement('div');
         this.panelBackdrop.id = 'sonar-panel-backdrop';
@@ -761,18 +778,38 @@ class AlphaSonarGalaxy {
             // Xử lý dải màu gradient tự động cho Heatmap
             let color;
             if (this.visualMode === 'heatmap') {
-                const intensity = Math.min(1, Math.abs(data.change) / 10);
-                if (data.change > 0) {
-                    const r = Math.floor(14 * (1 - intensity));
-                    const g = Math.floor(203 * intensity + 80 * (1 - intensity));
-                    const b = Math.floor(129 * intensity + 80 * (1 - intensity));
-                    color = `rgb(${r},${g},${b})`;
-                } else if (data.change < 0) {
-                    const r = Math.floor(246 * intensity + 80 * (1 - intensity));
-                    const g = Math.floor(70 * intensity + 20 * (1 - intensity));
-                    const b = Math.floor(93 * intensity + 20 * (1 - intensity));
-                    color = `rgb(${r},${g},${b})`;
-                } else { color = '#848E9C'; }
+                const rW = Math.max(0.1, t.rectW || 0);
+                const rH = Math.max(0.1, t.rectH || 0);
+                const rx = t.x - rW / 2;
+                const ry = t.y - rH / 2;
+
+                this.ctx.fillStyle = t.color;
+                this.ctx.fillRect(rx, ry, rW, rH);
+
+                if (isHovered || isLocked) {
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(rx, ry, rW, rH);
+                }
+
+                if (rW > 24 && rH > 16) {
+                    let fSize = Math.min(rW / 4.5, rH / 3);
+                    fSize = Math.max(9, Math.min(45, fSize));
+                    
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.font = `800 ${fSize}px "Rajdhani", sans-serif`;
+                    this.ctx.fillText(t.symbol, t.x, t.y - (rH > 36 ? fSize * 0.35 : 0));
+                    
+                    if (rH > 36) {
+                        let subSize = Math.max(8, fSize * 0.55);
+                        this.ctx.font = `600 ${subSize}px "Rajdhani", sans-serif`;
+                        this.ctx.fillText((t.change>0?'+':'') + t.change.toFixed(2)+'%', t.x, t.y + fSize * 0.65);
+                    }
+                    this.ctx.textAlign = 'left';
+                    this.ctx.textBaseline = 'alphabetic';
+                }
             } else {
                 color = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
             }
@@ -1069,6 +1106,28 @@ class AlphaSonarGalaxy {
         } else if (this.visualMode === 'heatmap') {
             this.ctx.fillStyle = 'rgba(255,255,255,0.34)';
             this.ctx.fillText('AREA = DATA METRIC | COLOR = PERFORMANCE', 12, this.height - 14);
+
+            const legW = Math.min(240, this.width - 40);
+            const legH = 6;
+            const legX = this.width / 2 - legW / 2;
+            const legY = this.height - 30;
+
+            const grad = this.ctx.createLinearGradient(legX, 0, legX + legW, 0);
+            grad.addColorStop(0, '#F6465D');
+            grad.addColorStop(0.5, '#848E9C');
+            grad.addColorStop(1, '#0ECB81');
+
+            this.ctx.fillStyle = grad;
+            this.ctx.fillRect(legX, legY, legW, legH);
+
+            this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            this.ctx.font = '600 10px "Rajdhani", sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('-10% or more', legX, legY + 18);
+            this.ctx.fillText('0%', legX + legW / 2, legY + 18);
+            this.ctx.fillText('+10% or more', legX + legW, legY + 18);
+            this.ctx.textAlign = 'left';
+
         } else {
             this.ctx.strokeStyle = 'rgba(0,240,255,0.08)';
             this.ctx.setLineDash([4, 4]);
@@ -1085,6 +1144,12 @@ class AlphaSonarGalaxy {
 
         this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
         this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, 16);
+
+        this.ctx.textAlign = 'right';
+        this.ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        this.ctx.font = '700 12px "Rajdhani", sans-serif';
+        this.ctx.fillText('Contact for work: @wavealphacrypto', this.width - 12, 20);
+        this.ctx.textAlign = 'left';
     }
 
     animate() {
@@ -1249,41 +1314,69 @@ class AlphaSonarGalaxy {
             }
         }
 
-        // 4. VẼ TOOLTIP CUỐI CÙNG ĐỂ NỔI LÊN TRÊN CÙNG
+        // Draw tooltip last to keep it above all tokens
         const tooltipToken = this.hoveredToken && !this.lockedToken ? this.hoveredToken : null;
         if (tooltipToken) {
             const t = tooltipToken;
-            const radius = t.size || 0;
-            const tagText = ` ${t.symbol} | ${t.change > 0 ? '+' : ''}${t.change.toFixed(2)}% `;
-            this.ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
-            const textWidth = this.ctx.measureText(tagText).width;
-            const boxW = textWidth + 8;
-            const boxH = 20;
-            const pad = 8;
-
-            let tagX = t.x + radius + 8;
-            let tagY = t.y - radius - 8;
-            if (tagX + boxW > this.width - pad) tagX = t.x - radius - 8 - boxW;
-
-            let boxTop = tagY - 14;
-            boxTop = Math.max(pad, Math.min(this.height - boxH - pad, boxTop));
-            const textY = boxTop + 15;
-
-            this.ctx.fillStyle = 'rgba(10,14,23,0.95)';
-            this.ctx.fillRect(tagX, boxTop, boxW, boxH);
-            this.ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-            this.ctx.strokeRect(tagX, boxTop, boxW, boxH);
-
-            const anchorX = tagX > t.x ? tagX : tagX + boxW;
-            const anchorY = Math.max(boxTop + 4, Math.min(boxTop + boxH - 4, t.y));
-            this.ctx.beginPath();
-            this.ctx.moveTo(t.x + (tagX > t.x ? radius : -radius), t.y);
-            this.ctx.lineTo(anchorX, anchorY);
-            this.ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-            this.ctx.stroke();
-
+            const isHeatmap = this.visualMode === 'heatmap';
+            
+            const tagXBase = isHeatmap ? this.mouseX : t.x;
+            const tagYBase = isHeatmap ? this.mouseY : t.y;
+            const radius = isHeatmap ? 0 : (t.size || 0);
+            
+            const cColor = t.change > 0 ? '#0ECB81' : (t.change < 0 ? '#F6465D' : '#848E9C');
+            const sign = t.change > 0 ? '+' : '';
+            
+            const boxW = 180;
+            const boxH = t.isWhale ? 104 : 84;
+            const pad = 10;
+            
+            let tagX = tagXBase + radius + 15;
+            let tagY = tagYBase - boxH / 2;
+            
+            if (tagX + boxW > this.width - pad) tagX = tagXBase - radius - 15 - boxW;
+            tagY = Math.max(pad, Math.min(this.height - boxH - pad, tagY));
+            
+            this.ctx.fillStyle = 'rgba(10,14,23,0.96)';
+            if (this.ctx.roundRect) {
+                this.ctx.beginPath(); this.ctx.roundRect(tagX, tagY, boxW, boxH, 6); this.ctx.fill();
+            } else {
+                this.ctx.fillRect(tagX, tagY, boxW, boxH);
+            }
+            this.ctx.strokeStyle = 'rgba(0,240,255,0.35)';
+            this.ctx.lineWidth = 1;
+            if (this.ctx.roundRect) this.ctx.stroke(); else this.ctx.strokeRect(tagX, tagY, boxW, boxH);
+            
             this.ctx.fillStyle = '#fff';
-            this.ctx.fillText(tagText, tagX + 4, textY);
+            this.ctx.font = '800 15px "Rajdhani", sans-serif';
+            this.ctx.fillText(t.symbol, tagX + 12, tagY + 24);
+            
+            this.ctx.textAlign = 'right';
+            this.ctx.fillStyle = cColor;
+            this.ctx.fillText(`${sign}${t.change.toFixed(2)}%`, tagX + boxW - 12, tagY + 24);
+            
+            this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            this.ctx.font = '600 12px "Rajdhani", sans-serif';
+            this.ctx.textAlign = 'left';
+            const priceStr = `$${t.price < 0.001 ? t.price.toExponential(2) : t.price.toFixed(4)}`;
+            this.ctx.fillText(priceStr, tagX + 12, tagY + 42);
+            
+            this.ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            this.ctx.font = '600 10px "Rajdhani", sans-serif';
+            this.ctx.fillText(`VOL: $${this.formatCompact(t.vol)}`, tagX + 12, tagY + 58);
+            this.ctx.textAlign = 'right';
+            const capStr = (this.filterMode === 'liquidity' || t.mc === 0) ? `LIQ: $${this.formatCompact(t.liq)}` : `MC: $${this.formatCompact(t.mc)}`;
+            this.ctx.fillText(capStr, tagX + boxW - 12, tagY + 58);
+            
+            this.ctx.textAlign = 'left';
+            this.ctx.fillStyle = '#F0B90B';
+            this.ctx.fillText(`MOMENTUM: ${(t.activityScore*100).toFixed(0)}`, tagX + 12, tagY + 74);
+            
+            if (t.isWhale) {
+                this.ctx.fillStyle = t.whaleSeverity === 'HIGH' ? '#F6465D' : '#F0B90B';
+                this.ctx.font = '700 10px "Rajdhani", sans-serif';
+                this.ctx.fillText(`🚨 WHALE ANOMALY: ${t.whaleSeverity}`, tagX + 12, tagY + 92);
+            }
         }
     }
 }
