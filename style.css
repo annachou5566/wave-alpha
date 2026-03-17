@@ -3390,20 +3390,4 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     }
 }
 
-/* Nâng cấp hiệu ứng nhấp nháy 60FPS (Flash) */
-.tick-up {
-    color: #00ff0a !important; /* Xanh Neon */
-    text-shadow: 0 0 10px rgba(0, 255, 10, 0.8), 0 0 20px rgba(0, 255, 10, 0.4) !important;
-    transition: color 0.1s ease-out, text-shadow 0.1s ease-out !important;
-}
 
-.tick-down {
-    color: #ff003c !important; /* Đỏ Neon */
-    text-shadow: 0 0 10px rgba(255, 0, 60, 0.8), 0 0 20px rgba(255, 0, 60, 0.4) !important;
-    transition: color 0.1s ease-out, text-shadow 0.1s ease-out !important;
-}
-
-/* Đảm bảo khi mất class, nó mờ đi từ từ chậm rãi (hiệu ứng nguội dần) */
-.live-price-val {
-    transition: color 0.5s ease-in, text-shadow 0.5s ease-in;
-}
