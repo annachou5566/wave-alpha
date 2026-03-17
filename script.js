@@ -6581,12 +6581,66 @@ function handleVote(tokenId, type, btnElement) {
 
 
 
-function startRealtimeSync() {
-    if (layer2Interval) clearInterval(layer2Interval);
-    
+// Biến toàn cục để quản lý WebSocket
+let wsSocket = null;
+let isRealtimeActive = false;
 
-    fetchLayer2Data(); 
-    layer2Interval = setInterval(fetchLayer2Data, 3000);
+function startRealtimeSync() {
+    // 1. Dọn dẹp interval cũ nếu đang chạy
+    if (layer2Interval) {
+        clearInterval(layer2Interval);
+        layer2Interval = null;
+    }
+
+    // 2. Nếu HTML đã nhúng thư viện Socket.io thành công
+    if (typeof io !== 'undefined' && !wsSocket) {
+        // Kết nối đến Server Render của bạn
+        wsSocket = io('https://alpha-realtime.onrender.com', {
+            transports: ['websocket', 'polling']
+        });
+
+        // KHI KẾT NỐI THÀNH CÔNG
+        wsSocket.on('connect', () => {
+            console.log('🟢 [FRONTEND] Đã kết nối Realtime WebSocket!');
+            isRealtimeActive = true;
+            
+            // Tắt Polling 3s để nhường sân khấu cho WS
+            if (layer2Interval) {
+                clearInterval(layer2Interval);
+                layer2Interval = null;
+            }
+            
+            // Lấy data mồi lần đầu tiên
+            fetchLayer2Data();
+        });
+
+        // KHI MẤT KẾT NỐI (Mạng yếu, Server sập...)
+        wsSocket.on('disconnect', () => {
+            console.log('🔴 [FRONTEND] Mất kết nối WS. Bật chế độ sinh tồn (REST API 10s)...');
+            isRealtimeActive = false;
+            
+            // Tự động quay lại dùng REST API để web không bao giờ chết
+            if (!layer2Interval) {
+                fetchLayer2Data();
+                layer2Interval = setInterval(fetchLayer2Data, 10000); 
+            }
+        });
+
+        // HỨNG DỮ LIỆU TICK-BY-TICK TỪ SERVER
+        wsSocket.on('market_delta_update', (deltaData) => {
+            // Dùng requestAnimationFrame để trình duyệt vẽ 60FPS không bị giật
+            requestAnimationFrame(() => {
+                // Tái sử dụng chính hàm xử lý data cực chuẩn của bạn
+                applyLayer2Data(deltaData);
+            });
+        });
+
+    } else if (!wsSocket) {
+        // Fallback: Nếu quên nhúng thẻ <script> socket.io trong HTML thì chạy như cũ
+        console.log('⚠️ [FRONTEND] Chưa có thư viện Socket.io, chạy API 3s mặc định.');
+        fetchLayer2Data(); 
+        layer2Interval = setInterval(fetchLayer2Data, 3000);
+    }
 }
 
 async function fetchLayer2Data() {
