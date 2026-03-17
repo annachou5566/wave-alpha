@@ -872,6 +872,7 @@ class AlphaSonarGalaxy {
                 existing.vChain = data.vChain; existing.isWhale = data.isWhale;
                 existing.whaleSeverity = data.whaleSeverity;
                 existing.targetRectW = rectW; existing.targetRectH = rectH;
+                existing.activityScore = data.activityScore;
 
                 if (this.visualMode === 'orbit') {
                     if (existing.orbitAngle === undefined) existing.orbitAngle = orbitAngle;
@@ -898,6 +899,7 @@ class AlphaSonarGalaxy {
                     mc: data.mc, holders: data.holders, vLimit: data.vLimit, vChain: data.vChain,
                     isWhale: data.isWhale, whaleSeverity: data.whaleSeverity,
                     rectW: 0, rectH: 0, targetRectW: rectW, targetRectH: rectH,
+                    activityScore: data.activityScore,
                     lowDetail: false, updated: true
                 });
             }
@@ -1144,12 +1146,6 @@ class AlphaSonarGalaxy {
 
         this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
         this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, 16);
-
-        this.ctx.textAlign = 'right';
-        this.ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        this.ctx.font = '700 12px "Rajdhani", sans-serif';
-        this.ctx.fillText('Contact for work: @wavealphacrypto', this.width - 12, 20);
-        this.ctx.textAlign = 'left';
     }
 
     animate() {
@@ -1160,7 +1156,6 @@ class AlphaSonarGalaxy {
         this.drawBackdrop();
 
         if (!this.isPaused) {
-            // 1. CẬP NHẬT TỌA ĐỘ VÀ KÍCH THƯỚC (QUAN TRỌNG: KHÔNG CÓ CÁI NÀY SIZE SẼ BẰNG 0)
             for (let i = 0; i < this.tokens.length; i++) {
                 const t = this.tokens[i];
                 if (this.visualMode === 'orbit') {
@@ -1189,7 +1184,6 @@ class AlphaSonarGalaxy {
                 t.lowDetail = this.visualMode === 'orbit' && this.tokens.length > 180 && t.size < this.minLogoRenderSize;
             }
 
-            // 2. MESH REPULSION & LASER LINKS
             if (this.visualMode === 'mesh') {
                 const pushPadding = 15;
                 let linksDrawn = 0;
@@ -1197,8 +1191,7 @@ class AlphaSonarGalaxy {
                     const t = this.tokens[i];
                     for (let j = i + 1; j < this.tokens.length; j++) {
                         const o = this.tokens[j];
-                        let dx = t.tX - o.tX;
-                        let dy = t.tY - o.tY;
+                        let dx = t.tX - o.tX; let dy = t.tY - o.tY;
                         let distSq = dx * dx + dy * dy;
                         if (distSq === 0) { dx = 0.01; dy = 0.01; distSq = 0.0002; }
 
@@ -1209,20 +1202,16 @@ class AlphaSonarGalaxy {
                             const overlap = (minDist - dist) / minDist;
                             let pushForce = overlap * overlap * this.meshRepulsionStrength * minDist;
                             if (pushForce > this.meshMaxPush) pushForce = this.meshMaxPush;
-                            const fx = (dx / dist) * pushForce;
-                            const fy = (dy / dist) * pushForce;
-                            t.tX += fx; t.tY += fy;
-                            o.tX -= fx; o.tY -= fy;
+                            const fx = (dx / dist) * pushForce; const fy = (dy / dist) * pushForce;
+                            t.tX += fx; t.tY += fy; o.tX -= fx; o.tY -= fy;
                         }
 
-                        const rDx = t.x - o.x;
-                        const rDy = t.y - o.y;
+                        const rDx = t.x - o.x; const rDy = t.y - o.y;
                         const realDistSq = rDx * rDx + rDy * rDy;
                         if (linksDrawn < this.maxMeshLinksPerFrame && realDistSq < this.connectionDistanceSq && t.color === o.color) {
                             const realDist = Math.sqrt(realDistSq);
                             this.ctx.beginPath();
-                            this.ctx.moveTo(t.x, t.y);
-                            this.ctx.lineTo(o.x, o.y);
+                            this.ctx.moveTo(t.x, t.y); this.ctx.lineTo(o.x, o.y);
                             this.ctx.strokeStyle = t.color;
                             this.ctx.globalAlpha = 0.15 * (1 - realDist / this.connectionDistance);
                             this.ctx.stroke();
@@ -1232,9 +1221,8 @@ class AlphaSonarGalaxy {
                     }
                 }
             }
-        } // Hết phần xử lý khi không PAUSE
+        }
 
-        // 3. VẼ TOKENS LÊN CANVAS
         for (let i = 0; i < this.tokens.length; i++) {
             const t = this.tokens[i];
             const isHovered = this.hoveredToken && this.hoveredToken.symbol === t.symbol;
@@ -1257,22 +1245,27 @@ class AlphaSonarGalaxy {
                     this.ctx.strokeRect(rx, ry, rW, rH);
                 }
 
-                if (rW > 36 && rH > 24) {
+                if (rW > 24 && rH > 16) {
+                    let fSize = Math.min(rW / 4.5, rH / 3);
+                    fSize = Math.max(9, Math.min(45, fSize)); 
+                    
                     this.ctx.fillStyle = '#fff';
                     this.ctx.textAlign = 'center';
                     this.ctx.textBaseline = 'middle';
-                    this.ctx.font = '800 12px "Rajdhani", sans-serif';
-                    this.ctx.fillText(t.symbol, t.x, t.y - (rH>36 ? 6 : 0));
+                    this.ctx.font = `800 ${fSize}px "Rajdhani", sans-serif`;
+                    this.ctx.fillText(t.symbol, t.x, t.y - (rH > 36 ? fSize * 0.35 : 0));
+                    
                     if (rH > 36) {
-                        this.ctx.font = '600 10px "Rajdhani", sans-serif';
-                        this.ctx.fillText((t.change>0?'+':'') + t.change.toFixed(2)+'%', t.x, t.y + 8);
+                        let subSize = Math.max(8, fSize * 0.55);
+                        this.ctx.font = `600 ${subSize}px "Rajdhani", sans-serif`;
+                        this.ctx.fillText((t.change>0?'+':'') + t.change.toFixed(2)+'%', t.x, t.y + fSize * 0.65);
                     }
                     this.ctx.textAlign = 'left';
                     this.ctx.textBaseline = 'alphabetic';
                 }
             } else {
                 const radius = Math.max(0, t.size || 0);
-                if (radius === 0) continue; // Bỏ qua nếu size chưa load kịp
+                if (radius === 0) continue;
 
                 const liqRatio = this.maxLiqCached > 0 ? ((t.liq||0) / this.maxLiqCached) : 0;
                 if (liqRatio > 0.3) {
@@ -1314,7 +1307,6 @@ class AlphaSonarGalaxy {
             }
         }
 
-        // Draw tooltip last to keep it above all tokens
         const tooltipToken = this.hoveredToken && !this.lockedToken ? this.hoveredToken : null;
         if (tooltipToken) {
             const t = tooltipToken;
@@ -1370,7 +1362,7 @@ class AlphaSonarGalaxy {
             
             this.ctx.textAlign = 'left';
             this.ctx.fillStyle = '#F0B90B';
-            this.ctx.fillText(`MOMENTUM: ${(t.activityScore*100).toFixed(0)}`, tagX + 12, tagY + 74);
+            this.ctx.fillText(`MOMENTUM: ${t.activityScore !== undefined ? (t.activityScore*100).toFixed(0) : '0'}`, tagX + 12, tagY + 74);
             
             if (t.isWhale) {
                 this.ctx.fillStyle = t.whaleSeverity === 'HIGH' ? '#F6465D' : '#F0B90B';
