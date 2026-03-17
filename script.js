@@ -6628,9 +6628,14 @@ function startRealtimeSync() {
 
         // HỨNG DỮ LIỆU TICK-BY-TICK TỪ SERVER
         wsSocket.on('market_delta_update', (deltaData) => {
-            // Dùng requestAnimationFrame để trình duyệt vẽ 60FPS không bị giật
+            // 1. BẢO VỆ DỮ LIỆU: Hợp nhất Token vừa nhảy giá vào Kho chứa Tổng
+            if (!window.FULL_MARKET_DATA) window.FULL_MARKET_DATA = {};
+            Object.keys(deltaData).forEach(id => {
+                window.FULL_MARKET_DATA[id] = { ...window.FULL_MARKET_DATA[id], ...deltaData[id] };
+            });
+
+            // 2. Yêu cầu trình duyệt vẽ
             requestAnimationFrame(() => {
-                // Tái sử dụng chính hàm xử lý data cực chuẩn của bạn
                 applyLayer2Data(deltaData);
             });
         });
@@ -6662,6 +6667,7 @@ async function fetchLayer2Data() {
         let actualData = json.data ? json.data : json; 
         
         if (actualData && Object.keys(actualData).length > 0) {
+            window.FULL_MARKET_DATA = actualData; 
             applyLayer2Data(actualData);
         }
     } catch (e) {
@@ -6739,14 +6745,26 @@ function applyLayer2Data(serverData, forceApply = false) {
     });
 
     if (typeof window.updateAlphaMarketUI === 'function') {
-        window.updateAlphaMarketUI(serverData);
+        window.updateAlphaMarketUI(serverData); // Bảng Market nhấp nháy 60FPS mượt mà
     }
 
-    if (hasChanges && typeof updateGridValuesOnly === 'function') {
-        updateGridValuesOnly();
+    // ========================================================
+    // 🛑 BỘ GIẢM XÓC DÀNH CHO CÁC TAB NẶNG (SONAR / HEATMAP)
+    // ========================================================
+    const now = Date.now();
+    if (!window.lastHeavyUIUpdate || now - window.lastHeavyUIUpdate >= 3000) {
+        window.lastHeavyUIUpdate = now;
+
+        if (hasChanges && typeof updateGridValuesOnly === 'function') {
+            updateGridValuesOnly();
+        }
+        
+        const sonar = ensureSonarGalaxy();
+        // 🚨 Bơm toàn bộ 500 token từ Kho Tổng vào Sonar để nó không bị loạn tỷ trọng
+        if (sonar && window.FULL_MARKET_DATA) {
+            sonar.updateData(window.FULL_MARKET_DATA); 
+        }
     }
-    const sonar = ensureSonarGalaxy();
-    if (sonar) sonar.updateData(serverData);
 }
 
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
