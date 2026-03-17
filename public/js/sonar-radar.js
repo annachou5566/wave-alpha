@@ -775,41 +775,21 @@ class AlphaSonarGalaxy {
             const sizeBase = 10 + (sizeMetric / (sizeMax || 1)) * 14;
             const targetSize = Math.max(3.5, Math.min(24, sizeBase * densityScale));
             
-            // Xử lý dải màu gradient tự động cho Heatmap
+           // Xử lý dải màu gradient tự động cho Heatmap
             let color;
             if (this.visualMode === 'heatmap') {
-                const rW = Math.max(0.1, t.rectW || 0);
-                const rH = Math.max(0.1, t.rectH || 0);
-                const rx = t.x - rW / 2;
-                const ry = t.y - rH / 2;
-
-                this.ctx.fillStyle = t.color;
-                this.ctx.fillRect(rx, ry, rW, rH);
-
-                if (isHovered || isLocked) {
-                    this.ctx.strokeStyle = '#fff';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.strokeRect(rx, ry, rW, rH);
-                }
-
-                if (rW > 24 && rH > 16) {
-                    let fSize = Math.min(rW / 4.5, rH / 3);
-                    fSize = Math.max(9, Math.min(45, fSize));
-                    
-                    this.ctx.fillStyle = '#fff';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.font = `800 ${fSize}px "Rajdhani", sans-serif`;
-                    this.ctx.fillText(t.symbol, t.x, t.y - (rH > 36 ? fSize * 0.35 : 0));
-                    
-                    if (rH > 36) {
-                        let subSize = Math.max(8, fSize * 0.55);
-                        this.ctx.font = `600 ${subSize}px "Rajdhani", sans-serif`;
-                        this.ctx.fillText((t.change>0?'+':'') + t.change.toFixed(2)+'%', t.x, t.y + fSize * 0.65);
-                    }
-                    this.ctx.textAlign = 'left';
-                    this.ctx.textBaseline = 'alphabetic';
-                }
+                const intensity = Math.min(1, Math.abs(data.change) / 10);
+                if (data.change > 0) {
+                    const r = Math.floor(14 * (1 - intensity));
+                    const g = Math.floor(203 * intensity + 80 * (1 - intensity));
+                    const b = Math.floor(129 * intensity + 80 * (1 - intensity));
+                    color = `rgb(${r},${g},${b})`;
+                } else if (data.change < 0) {
+                    const r = Math.floor(246 * intensity + 80 * (1 - intensity));
+                    const g = Math.floor(70 * intensity + 20 * (1 - intensity));
+                    const b = Math.floor(93 * intensity + 20 * (1 - intensity));
+                    color = `rgb(${r},${g},${b})`;
+                } else { color = '#848E9C'; }
             } else {
                 color = data.change > 0 ? '#0ECB81' : (data.change < 0 ? '#F6465D' : '#848E9C');
             }
