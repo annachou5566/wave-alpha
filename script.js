@@ -6585,41 +6585,26 @@ function handleVote(tokenId, type, btnElement) {
 
 
 
-function startRealtimeSync() {
-    // 1. Dọn dẹp interval cũ nếu đang chạy
-    if (layer2Interval) {
-        clearInterval(layer2Interval);
-        layer2Interval = null;
-    }
+window.FULL_MARKET_DATA = {}; // 📦 KHO CHỨA TỔNG 500 TOKEN ĐỂ NUÔI SONAR
 
-    // 2. Nếu HTML đã nhúng thư viện Socket.io thành công
+function startRealtimeSync() {
+    if (layer2Interval) { clearInterval(layer2Interval); layer2Interval = null; }
+
     if (typeof io !== 'undefined' && !wsSocket) {
-        // Kết nối đến Server Render của bạn
         wsSocket = io('https://alpha-realtime.onrender.com', {
             transports: ['websocket', 'polling']
         });
 
-        // KHI KẾT NỐI THÀNH CÔNG
         wsSocket.on('connect', () => {
             console.log('🟢 [FRONTEND] Đã kết nối Realtime WebSocket!');
             isRealtimeActive = true;
-            
-            // Tắt Polling 3s để nhường sân khấu cho WS
-            if (layer2Interval) {
-                clearInterval(layer2Interval);
-                layer2Interval = null;
-            }
-            
-            // Lấy data mồi lần đầu tiên
-            fetchLayer2Data();
+            if (layer2Interval) { clearInterval(layer2Interval); layer2Interval = null; }
+            fetchLayer2Data(); // Mồi 500 token lần đầu
         });
 
-        // KHI MẤT KẾT NỐI (Mạng yếu, Server sập...)
         wsSocket.on('disconnect', () => {
             console.log('🔴 [FRONTEND] Mất kết nối WS. Bật chế độ sinh tồn (REST API 10s)...');
             isRealtimeActive = false;
-            
-            // Tự động quay lại dùng REST API để web không bao giờ chết
             if (!layer2Interval) {
                 fetchLayer2Data();
                 layer2Interval = setInterval(fetchLayer2Data, 10000); 
@@ -6628,20 +6613,18 @@ function startRealtimeSync() {
 
         // HỨNG DỮ LIỆU TICK-BY-TICK TỪ SERVER
         wsSocket.on('market_delta_update', (deltaData) => {
-            // 1. BẢO VỆ DỮ LIỆU: Hợp nhất Token vừa nhảy giá vào Kho chứa Tổng
-            if (!window.FULL_MARKET_DATA) window.FULL_MARKET_DATA = {};
+            // 1. LIÊN TỤC CẬP NHẬT KHO TỔNG (Để Sonar Galaxy không bị sai tỷ lệ do thiếu coin)
             Object.keys(deltaData).forEach(id => {
                 window.FULL_MARKET_DATA[id] = { ...window.FULL_MARKET_DATA[id], ...deltaData[id] };
             });
 
-            // 2. Yêu cầu trình duyệt vẽ
+            // 2. CHỈ ĐẨY DỮ LIỆU THAY ĐỔI VÀO BỘ NHỚ RAM 60FPS
             requestAnimationFrame(() => {
                 applyLayer2Data(deltaData);
             });
         });
 
     } else if (!wsSocket) {
-        // Fallback: Nếu quên nhúng thẻ <script> socket.io trong HTML thì chạy như cũ
         console.log('⚠️ [FRONTEND] Chưa có thư viện Socket.io, chạy API 3s mặc định.');
         fetchLayer2Data(); 
         layer2Interval = setInterval(fetchLayer2Data, 3000);
@@ -6650,75 +6633,47 @@ function startRealtimeSync() {
 
 async function fetchLayer2Data() {
     if (document.hidden) return; 
-
     try {
         const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
         const res = await fetch(antiCacheUrl, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': REALTIME_API_KEY
-            }
+            headers: { 'Content-Type': 'application/json', 'x-api-key': REALTIME_API_KEY }
         });
-
         const json = await res.json();
-        
-        // SỬA Ở ĐÂY: Server mới trả thẳng object, không có json.success
         let actualData = json.data ? json.data : json; 
         
         if (actualData && Object.keys(actualData).length > 0) {
-            window.FULL_MARKET_DATA = actualData; 
+            window.FULL_MARKET_DATA = actualData; // Mồi kho tổng
             applyLayer2Data(actualData);
         }
-    } catch (e) {
-        console.error("Lỗi đồng bộ Realtime:", e);
-    }
+    } catch (e) { console.error("Lỗi đồng bộ Realtime:", e); }
 }
-
 
 function applyLayer2Data(serverData, forceApply = false) {
     if (!serverData || Object.keys(serverData).length === 0) return;
- if (isHeaderTooltipOpen && !forceApply) {
-        pendingRealtimeServerData = serverData;
-        return;
-    }
-    let hasChanges = false;
+    if (isHeaderTooltipOpen && !forceApply) { pendingRealtimeServerData = serverData; return; }
 
+    // CẬP NHẬT BIẾN RAM (Không vẽ lên giao diện ở đây)
     if (compList && compList.length > 0) {
         compList.forEach(c => {
             let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
             const liveItem = serverData[alphaId];
             
             if (liveItem) {
-                // 1. LUÔN CHO PHÉP CẬP NHẬT GIÁ (Cho cả History)
                 c.cachedPrice = liveItem.p;
-                hasChanges = true;
-                
-                // 2. TÍNH TOÁN TRẠNG THÁI KẾT THÚC THẬT CHUẨN
                 let currentStatus = (c.status || '').toUpperCase();
                 let isEnded = false;
                 let endStr = c.end_at || c.end || (c.data && c.data.end);
                 let endTimeStr = c.endTime || "23:59:59";
                 if(endTimeStr.length === 5) endTimeStr += ":00";
 
-                if (c.end_at) { 
-                    isEnded = Date.now() > new Date(c.end_at).getTime(); 
-                } else if (endStr) { 
-                    let endDateTime = new Date(endStr + 'T' + endTimeStr + 'Z');
-                    isEnded = Date.now() > endDateTime.getTime(); 
-                }
-                
+                if (c.end_at) { isEnded = Date.now() > new Date(c.end_at).getTime(); } 
+                else if (endStr) { let endDateTime = new Date(endStr + 'T' + endTimeStr + 'Z'); isEnded = Date.now() > endDateTime.getTime(); }
                 let isFinalized = c.is_finalized || currentStatus === 'ENDED' || currentStatus === 'FINALIZED' || (c.ai_prediction && c.ai_prediction.status_label === 'FINALIZED');
                 
-                // --- CHỐT CHẶN: NẾU ĐÃ KẾT THÚC THÌ DỪNG LẠI, KHÔNG CHẠM VÀO VOLUME ---
                 if (isEnded || isFinalized) return;
                 
-                // 3. CẬP NHẬT VOLUME (Chỉ dành cho giải đang chạy)
-                if (liveItem.v) {
-                    c.limit_daily_volume = liveItem.v.dl || 0;
-                    c.real_alpha_volume = liveItem.v.dt || 0;
-                }
-                
+                if (liveItem.v) { c.limit_daily_volume = liveItem.v.dl || 0; c.real_alpha_volume = liveItem.v.dt || 0; }
                 let baseTotal = parseFloat(c.base_total_vol || (c.data && c.data.base_total_vol) || 0);
                 let baseLimit = parseFloat(c.base_limit_vol || (c.data && c.data.base_limit_vol) || 0);
                 c.total_accumulated_volume = baseTotal + (c.real_alpha_volume || 0);
@@ -6730,42 +6685,36 @@ function applyLayer2Data(serverData, forceApply = false) {
         });
     }
 
-    // Cache cho Alpha Market
     Object.keys(serverData).forEach(key => {
         let liveItem = serverData[key];
         let symbol = liveItem.symbol || key.replace('ALPHA_', ''); 
-        
         if (!alphaMarketCache[symbol]) alphaMarketCache[symbol] = {};
         alphaMarketCache[symbol].price = liveItem.p;
-        if(liveItem.v) {
-            alphaMarketCache[symbol].daily_total = liveItem.v.dt;
-            alphaMarketCache[symbol].daily_limit = liveItem.v.dl;
-        }
+        if(liveItem.v) { alphaMarketCache[symbol].daily_total = liveItem.v.dt; alphaMarketCache[symbol].daily_limit = liveItem.v.dl; }
         alphaMarketCache[symbol].tx_count = liveItem.tx;
     });
 
+    // ⚡ CHỈ DUY NHẤT BẢNG DOM ĐƯỢC CHẠY 60FPS Ở ĐÂY ĐỂ TRÁNH LAG
     if (typeof window.updateAlphaMarketUI === 'function') {
-        window.updateAlphaMarketUI(serverData); // Bảng Market nhấp nháy 60FPS mượt mà
-    }
-
-    // ========================================================
-    // 🛑 BỘ GIẢM XÓC DÀNH CHO CÁC TAB NẶNG (SONAR / HEATMAP)
-    // ========================================================
-    const now = Date.now();
-    if (!window.lastHeavyUIUpdate || now - window.lastHeavyUIUpdate >= 3000) {
-        window.lastHeavyUIUpdate = now;
-
-        if (hasChanges && typeof updateGridValuesOnly === 'function') {
-            updateGridValuesOnly();
-        }
-        
-        const sonar = ensureSonarGalaxy();
-        // 🚨 Bơm toàn bộ 500 token từ Kho Tổng vào Sonar để nó không bị loạn tỷ trọng
-        if (sonar && window.FULL_MARKET_DATA) {
-            sonar.updateData(window.FULL_MARKET_DATA); 
-        }
+        window.updateAlphaMarketUI(serverData);
     }
 }
+
+// ========================================================
+// 🫀 NHỊP TIM 3 GIÂY ĐỘC LẬP (CHUYÊN TRỊ CÁC TAB NẶNG)
+// ========================================================
+setInterval(() => {
+    // 1. Phục hồi nhịp chớp 3s chuẩn xác cho Grid, Thẻ bài và Competition Radar
+    if (typeof updateGridValuesOnly === 'function') {
+        updateGridValuesOnly();
+    }
+    
+    // 2. Phục hồi Sonar Galaxy (Dùng data tổng 500 coin để Radar không bị giật/bóp méo)
+    const sonar = typeof ensureSonarGalaxy === 'function' ? ensureSonarGalaxy() : null;
+    if (sonar && window.FULL_MARKET_DATA && Object.keys(window.FULL_MARKET_DATA).length > 0) {
+        sonar.updateData(window.FULL_MARKET_DATA);
+    }
+}, 3000);
 
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
 
