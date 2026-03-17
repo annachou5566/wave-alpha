@@ -567,8 +567,19 @@ class AlphaSonarGalaxy {
         this.canvas.addEventListener('touchstart', (e) => {
             if (e.touches && e.touches.length > 0) updatePointer(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
+        
+        // Fix lỗi điện thoại: Hủy Tooltip ngay khi người dùng vuốt tay cuộn trang
+        this.canvas.addEventListener('touchmove', () => {
+            this.hoveredToken = null;
+            this.mouseX = -1000;
+            this.mouseY = -1000;
+        }, { passive: true });
+
+        // Fix lỗi nhấp nháy: Đẩy tọa độ chuột ra khỏi vũ trụ khi rời canvas
         this.canvas.addEventListener('mouseleave', () => {
             this.hoveredToken = null;
+            this.mouseX = -1000;
+            this.mouseY = -1000;
             this.canvas.style.cursor = 'default';
         });
 
@@ -728,7 +739,7 @@ class AlphaSonarGalaxy {
         // THUẬT TOÁN TREEMAP CHO HEATMAP
         if (this.visualMode === 'heatmap') {
             const pad = 2;
-            const htArea = { x: 5, y: 5, w: this.width - 10, h: this.height - 10 };
+            const htArea = { x: 5, y: 5, w: this.width - 10, h: this.height - 40 };
             const getVal = (t) => this.filterMode === 'liquidity' ? t.liq : (this.filterMode === 'marketcap' ? t.mc : t.vol);
             const totalMetric = selected.reduce((s, t) => s + (getVal(t) || 1), 0);
 
@@ -1086,13 +1097,10 @@ class AlphaSonarGalaxy {
             this.ctx.fillText('CENTER = HIGHER VOL/LIQ/MC | OUTER = LOWER', this.orbitCenterX, this.height - 28);
             this.ctx.textAlign = 'left';
         } else if (this.visualMode === 'heatmap') {
-            this.ctx.fillStyle = 'rgba(255,255,255,0.34)';
-            this.ctx.fillText('AREA = DATA METRIC | COLOR = PERFORMANCE', 12, this.height - 14);
-
             const legW = Math.min(240, this.width - 40);
             const legH = 6;
             const legX = this.width / 2 - legW / 2;
-            const legY = this.height - 30;
+            const legY = this.height - 24; 
 
             const grad = this.ctx.createLinearGradient(legX, 0, legX + legW, 0);
             grad.addColorStop(0, '#F6465D');
@@ -1105,9 +1113,9 @@ class AlphaSonarGalaxy {
             this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
             this.ctx.font = '600 10px "Rajdhani", sans-serif';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText('-10% or more', legX, legY + 18);
-            this.ctx.fillText('0%', legX + legW / 2, legY + 18);
-            this.ctx.fillText('+10% or more', legX + legW, legY + 18);
+            this.ctx.fillText('-10% or more', legX, legY + 16);
+            this.ctx.fillText('0%', legX + legW / 2, legY + 16);
+            this.ctx.fillText('+10% or more', legX + legW, legY + 16);
             this.ctx.textAlign = 'left';
 
         } else {
@@ -1124,8 +1132,10 @@ class AlphaSonarGalaxy {
             this.ctx.fillText('Y = RELATIVE VOLUME (TOP HIGH / BOTTOM LOW)', 12, this.height - 14);
         }
 
-        this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, 16);
+        if (this.visualMode !== 'heatmap') {
+            this.ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            this.ctx.fillText(`MODE: ${this.visualMode.toUpperCase()} | TOKENS: ${this.tokens.length}/${this.getEffectiveCap()}`, 12, 16);
+        }
     }
 
     animate() {
