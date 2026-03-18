@@ -1251,60 +1251,108 @@ let tvVolumeSeries = null; // SỬA LỖI 2: Đã phục hồi cột Volume
 window.currentChartToken = null; 
 
 // ==========================================
-// 🚀 KẾT NỐI TRỰC TIẾP (BẢO MẬT & VƯỢT TƯỜNG LỬA BINANCE)
+// 🚀 KẾT NỐI TRỰC TIẾP BINANCE KÈM BỘ DEBUG TÌM LỖI
 // ==========================================
 let chartWs = null;
 let isReconnecting = false;
 
-// Kỹ thuật che URL gốc khỏi các tool soi mã nguồn
+// Kỹ thuật che URL gốc
 function _getWSA() {
-    // Giải mã ra đúng chuỗi: wss://nbstream.binance.com/w3w/wsa/stream
     return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109);
+}
+
+// --- HÀM DEBUG TRÊN MÀN HÌNH ---
+function logDebug(msg, color='#fff') {
+    let dbg = document.getElementById('ws-debug-log');
+    if(!dbg) {
+        dbg = document.createElement('div');
+        dbg.id = 'ws-debug-log';
+        dbg.style.cssText = 'position:absolute;top:60px;left:10px;background:rgba(0,0,0,0.9);border:1px solid #F0B90B;padding:10px;z-index:99999;font-size:11px;font-family:monospace;width:350px;max-height:300px;overflow-y:auto;pointer-events:none;border-radius:4px;';
+        document.getElementById('super-chart-overlay').appendChild(dbg);
+        dbg.innerHTML = `<div style="color:#F0B90B;font-weight:bold;margin-bottom:5px;">🛠️ MÁY QUÉT KẾT NỐI BINANCE</div>`;
+    }
+    dbg.innerHTML += `<div style="color:${color};margin-bottom:4px;word-break:break-all;">> ${msg}</div>`;
+    dbg.scrollTop = dbg.scrollHeight;
 }
 
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     
-    // Gọi thẳng URL đã che giấu (Sẽ bypass được tường lửa Datacenter của Binance)
-    chartWs = new WebSocket(_getWSA());
+    let dbg = document.getElementById('ws-debug-log');
+    if (dbg) {
+        dbg.style.display = 'block';
+        dbg.innerHTML = `<div style="color:#F0B90B;font-weight:bold;margin-bottom:5px;">🛠️ MÁY QUÉT KẾT NỐI BINANCE</div>`;
+    }
 
-    // Build luồng Sổ lệnh chuẩn xác
+    // 1. VẼ MẢNG (AREA) MỒI ĐỂ CHART HIỆN KHỐI MÀU (FIX LỖI MẤT MẢNG)
+    if (tvLineSeries) {
+        let now = Math.floor(Date.now() / 1000);
+        let basePrice = parseFloat(t.price) || 0;
+        let initData = [];
+        // Vẽ 60 điểm đi ngang trong 1 phút qua để tạo hình "mảng" Area
+        for(let i=60; i>=0; i--) {
+            initData.push({ time: now - i, value: basePrice });
+        }
+        tvLineSeries.setData(initData);
+        tvChart.timeScale().fitContent();
+        logDebug(`✅ Đã vẽ mảng Area mồi (${basePrice}$)`, '#0ECB81');
+    }
+
+    // 2. KHỞI TẠO WEBSOCKET
+    logDebug(`Đang mở kết nối WebSocket...`, '#5CE1E6');
+    try {
+        chartWs = new WebSocket(_getWSA());
+    } catch(e) {
+        logDebug(`❌ TRÌNH DUYỆT CHẶN WS: ${e.message}`, '#F6465D');
+        return;
+    }
+
+    // Xử lý tên để sub stream Binance
     let streamSymbol = t.alphaId ? t.alphaId.toLowerCase() : t.symbol.toLowerCase();
     streamSymbol = streamSymbol.replace('alpha_', 'alpha_'); 
     if (!streamSymbol.endsWith('usdt')) streamSymbol += 'usdt'; 
     let tradeStream = `${streamSymbol}@aggTrade`;
     
-    // Xử lý ChainID cực kỳ quan trọng (Solana bắt buộc là CT_501)
-    let chainStr = '56'; // BSC mặc định
-    if (t.chain === 'ETH') chainStr = '1';
-    else if (t.chain === 'SOL' || t.chain === 'Solana') chainStr = 'CT_501';
-
+    // Xử lý ChainID (Cực kỳ quan trọng để Binance không báo lỗi)
+    let chainStr = '56'; // Mặc định BSC
+    if (t.chain) {
+        let c = t.chain.toUpperCase();
+        if (c === 'ETH' || c === 'ETHEREUM') chainStr = '1';
+        if (c === 'SOL' || c === 'SOLANA') chainStr = 'CT_501';
+        if (c === 'BASE') chainStr = '8453';
+        if (c === 'ARB' || c === 'ARBITRUM') chainStr = '42161';
+    }
     let klineStream = `came@${(t.contract || '').toLowerCase()}@${chainStr}@kline_1s`;
 
     let params = [tradeStream];
     if (t.contract) params.push(klineStream); 
-
-    if (tvLineSeries) {
-        let now = Math.floor(Date.now() / 1000);
-        tvLineSeries.setData([{ time: now, value: parseFloat(t.price) || 0 }]);
-    }
+    
+    logDebug(`Gói đăng ký: <br><span style="color:#aaa">${JSON.stringify(params)}</span>`, '#F0B90B');
 
     chartWs.onopen = () => {
         isReconnecting = false;
+        logDebug(`✅ WS Mở thành công! Đang gửi Subscribe...`, '#0ECB81');
         chartWs.send(JSON.stringify({
             "method": "SUBSCRIBE",
             "params": params,
             "id": Date.now()
         }));
-        
-        // Tắt bảng Debug dọn dẹp UI
-        let dbg = document.getElementById('ws-debug-box');
-        if (dbg) dbg.style.display = 'none';
     };
 
     chartWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        
+        // Theo dõi phản hồi từ Binance
+        if (data.id) logDebug(`📥 BINANCE ĐÁP: Chấp nhận ID ${data.id}`, '#00F0FF');
+        if (data.error) logDebug(`❌ BINANCE TỪ CHỐI: ${data.error.msg}`, '#F6465D');
+        
         if (!data.stream) return;
+
+        // Ẩn bảng log nếu data chạy về
+        if (dbg && dbg.style.display !== 'none') {
+            logDebug(`🔥 Dữ liệu đã trút xuống! Ẩn bảng sau 2s...`, '#0ECB81');
+            setTimeout(() => { if(dbg) dbg.style.display = 'none'; }, 2000);
+        }
 
         // 1. NẾN & VOLUME (kline_1s)
         if (data.stream.endsWith('@kline_1s')) {
@@ -1374,10 +1422,15 @@ function connectRealtimeChart(t) {
         }
     };
 
-    chartWs.onclose = () => {
+    chartWs.onerror = (e) => {
+        logDebug(`🚫 LỖI MẠNG TRÌNH DUYỆT! Không thể kết nối.`, '#f6465d');
+    };
+
+    chartWs.onclose = (e) => {
+        logDebug(`⚠️ WS BỊ NGẮT KẾT NỐI (Mã: ${e.code}). Chờ kết nối lại...`, '#f0b90b');
         if (document.getElementById('super-chart-overlay').classList.contains('active') && !isReconnecting) {
             isReconnecting = true;
-            setTimeout(() => connectRealtimeChart(window.currentChartToken), 2000);
+            setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000);
         }
     };
 }
@@ -1401,10 +1454,6 @@ window.openProChart = function(t) {
         chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`;
         chgEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
     }
-    
-    // Tắt bảng debug nếu đang hiển thị
-    let dbg = document.getElementById('ws-debug-box');
-    if (dbg) dbg.style.display = 'none';
 
     setTimeout(() => {
         if (!tvChart) {
@@ -1455,6 +1504,11 @@ window.closeProChart = function() {
         document.body.classList.remove('overlay-active');
     }
     window.currentChartToken = null; 
+    
+    // Tắt bảng debug
+    let dbg = document.getElementById('ws-debug-log');
+    if (dbg) dbg.style.display = 'none';
+
     if (chartWs) {
         chartWs.close();
         chartWs = null;
