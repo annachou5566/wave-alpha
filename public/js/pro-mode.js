@@ -733,17 +733,32 @@ window.hideTooltip = function() {
     if(t) t.style.display = 'none';
 };
 
-// --- File: public/js/pro-mode.js ---
 
-    // GHI ĐÈ TOÀN BỘ HÀM INJECT LAYOUT MỚI
-    injectLayout() {
-        const marketView = document.getElementById('alpha-market-view');
-        if (!marketView) return;
-
-        // Trả lại cấu trúc phẳng rộng 100% không còn chia đôi rối rắm
-        marketView.innerHTML = `
+function injectLayout() {
+    document.getElementById('alpha-tab-nav')?.remove();
+    document.getElementById('alpha-market-view')?.remove();
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+    
+    // 1. Tạo thanh Menu Tabs
+    const tabNav = document.createElement('div');
+    tabNav.id = 'alpha-tab-nav';
+    tabNav.innerHTML = `
+        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
+        <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
+        <button id="btn-tab-sonar" class="tab-btn" onclick="window.pluginSwitchTab('sonar')">SONAR GALAXY</button>
+    `;
+    navbar.insertAdjacentElement('afterend', tabNav);
+    
+    // 2. Tạo thẻ chứa Bảng Market
+    const marketView = document.createElement('div');
+    marketView.id = 'alpha-market-view';
+    marketView.style.display = 'none';
+    
+    // TRẢ LẠI GIAO DIỆN PHẲNG 100% + LỚP PHỦ SIÊU BIỂU ĐỒ BÊN TRONG
+    marketView.innerHTML = `
+        <div class="alpha-container">
             <div id="rwa-marquee-container"></div>
-            
             <div class="alpha-header">
                  <div class="filter-group">
                     <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
@@ -759,7 +774,6 @@ window.hideTooltip = function() {
                     <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                 </div>
             </div>
-
             <div class="table-responsive">
                 <table class="alpha-table">
                    <thead>
@@ -787,7 +801,6 @@ window.hideTooltip = function() {
                     <tbody id="market-table-body"></tbody>
                 </table>
             </div>
-
             <div class="pagination-container">
                 <div class="page-info">
                     Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
@@ -804,66 +817,80 @@ window.hideTooltip = function() {
                     <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
                 </div>
             </div>
+        </div>
 
-            <div id="super-chart-overlay">
-                
-                <div class="sc-header">
-                    <div class="sc-coin-info">
-                        <img id="sc-coin-logo" class="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
-                        <div>
-                            <div id="sc-coin-symbol" class="sc-coin-symbol">--- / USDT</div>
-                            <div id="sc-coin-contract" class="sc-coin-contract" onclick="copyContract()">---</div>
-                        </div>
-                    </div>
-                    <div class="sc-price-group">
-                        <div id="sc-live-price" class="sc-live-price">$--</div>
-                        <div id="sc-change-24h" class="sc-change-24h text-green">(--%)</div>
-                    </div>
-                    <button class="sc-close-btn" onclick="window.closeSuperChart()">✕</button>
-                </div>
-
-                <div class="sc-body">
-                    
-                    <div class="sc-chart-main">
-                        <div id="sc-chart-container">
-                            </div>
-                    </div>
-                    
-                    <div class="sc-side-panel">
-                        <div class="sc-panel-section">
-                            <div class="sc-panel-title">🐋 Whale Tracker</div>
-                            <div class="sc-metric-item">
-                                <span class="sc-metric-label">Ticket trung bình</span>
-                                <span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span>
-                            </div>
-                            <div class="sc-metric-item">
-                                <span class="sc-metric-label">Số lệnh lớn (>$5k)</span>
-                                <span id="sc-stat-whale-tx" class="sc-metric-value">0</span>
-                            </div>
-                        </div>
-                        
-                        <div class="sc-panel-section">
-                            <div class="sc-panel-title">📊 Flow & Speed</div>
-                            <div class="sc-metric-item">
-                                <span class="sc-metric-label">Dòng tiền Net</span>
-                                <span id="sc-stat-net-flow" class="sc-metric-value text-green">+$0</span>
-                            </div>
-                            <div class="sc-metric-item">
-                                <span class="sc-metric-label">Tốc độ khớp / s</span>
-                                <span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span>
-                            </div>
-                        </div>
+        <div id="super-chart-overlay">
+            
+            <div class="sc-header">
+                <div class="sc-coin-info">
+                    <img id="sc-coin-logo" class="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
+                    <div>
+                        <div id="sc-coin-symbol" class="sc-coin-symbol">--- / USDT</div>
+                        <div id="sc-coin-contract" class="sc-coin-contract" onclick="window.pluginCopy(this.innerText)">---</div>
                     </div>
                 </div>
-
+                <div class="sc-price-group">
+                    <div id="sc-live-price" class="sc-live-price">$--</div>
+                    <div id="sc-change-24h" class="sc-change-24h text-green">(--%)</div>
+                </div>
+                <button class="sc-close-btn" onclick="window.closeProChart()">✕</button>
             </div>
-        `;
 
-        // Thêm CSS ảo cho Marquee (giữ nguyên code cũ)
-        const marqueeStyle = document.createElement('style');
-        // ... giữ nguyên phần code tạo CSS marquee cũ ...
-        document.head.appendChild(marqueeStyle);
-    }
+            <div class="sc-body">
+                <div class="sc-chart-main">
+                    <div id="sc-chart-container"></div>
+                </div>
+                
+                <div class="sc-side-panel">
+                    <div class="sc-panel-section">
+                        <div class="sc-panel-title">🐋 Whale Tracker</div>
+                        <div class="sc-metric-item">
+                            <span class="sc-metric-label">Ticket trung bình</span>
+                            <span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span>
+                        </div>
+                        <div class="sc-metric-item">
+                            <span class="sc-metric-label">Số lệnh lớn (>$5k)</span>
+                            <span id="sc-stat-whale-tx" class="sc-metric-value">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="sc-panel-section">
+                        <div class="sc-panel-title">📊 Flow & Speed</div>
+                        <div class="sc-metric-item">
+                            <span class="sc-metric-label">Dòng tiền Net</span>
+                            <span id="sc-stat-net-flow" class="sc-metric-value text-green">+$0</span>
+                        </div>
+                        <div class="sc-metric-item">
+                            <span class="sc-metric-label">Tốc độ khớp / s</span>
+                            <span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    `;
+    
+    tabNav.insertAdjacentElement('afterend', marketView);
+
+    // 3. Sự kiện trượt thanh Nav Menu
+    let lastScrollY = window.scrollY;
+    window.removeEventListener('scroll', window._smartScroll);
+    window._smartScroll = function() {
+        const currentScrollY = window.scrollY;
+        const nav = document.getElementById('alpha-tab-nav');
+        if (!nav) return;
+        if (currentScrollY > lastScrollY && currentScrollY > 20) {
+            nav.classList.add('nav-hidden');
+        } else if (currentScrollY < lastScrollY) {
+            nav.classList.remove('nav-hidden');
+        }
+        lastScrollY = currentScrollY;
+    };
+    window.addEventListener('scroll', window._smartScroll, { passive: true });
+}
+
+
     tabNav.insertAdjacentElement('afterend', marketView);
     let lastScrollY = window.scrollY;
     window.removeEventListener('scroll', window._smartScroll);
@@ -1463,29 +1490,60 @@ function drawDummyCandles(basePrice) {
 }
 
 window.openProChart = function(symbol, icon, contract, price) {
-    const container = document.getElementById('alpha-split-container');
-    if (!container) return;
+    const overlay = document.getElementById('super-chart-overlay');
+    if (!overlay) return;
 
-    window.currentChartSymbol = symbol; // Lưu trạng thái token đang soi
-    container.classList.add('show-chart');
+    window.currentChartSymbol = symbol;
+    
+    // Kích hoạt Lớp phủ Siêu biểu đồ + Khóa cuộn trang
+    overlay.classList.add('active');
+    document.body.classList.add('overlay-active');
 
-    document.getElementById('tv-coin-symbol').innerText = (symbol || 'UNKNOWN') + ' / USDT';
-    document.getElementById('tv-coin-contract').innerText = contract ? contract.substring(0,10) + '...' : '';
-    document.getElementById('tv-coin-logo').src = icon || 'assets/tokens/default.png';
-    document.getElementById('tv-live-price').innerText = '$' + formatPrice(price);
+    // Đổ thông tin Header
+    document.getElementById('sc-coin-symbol').innerText = (symbol || 'UNKNOWN') + ' / USDT';
+    document.getElementById('sc-coin-contract').innerText = contract ? contract.substring(0,10) + '...' : '';
+    document.getElementById('sc-coin-logo').src = icon || 'assets/tokens/default.png';
+    document.getElementById('sc-live-price').innerText = '$' + formatPrice(price);
 
+    // Đợi hiệu ứng CSS mờ dần xong thì Khởi động Chart (Chỉ sửa ID vùng chứa thành sc-chart-container)
     setTimeout(() => {
         if (!tvChart) {
-            initTradingViewChart();
+            const container = document.getElementById('sc-chart-container');
+            if (!container) return;
+            container.innerHTML = ''; 
+            const rect = container.getBoundingClientRect();
+            
+            tvChart = LightweightCharts.createChart(container, {
+                width: rect.width, height: rect.height,
+                layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
+                grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                rightPriceScale: { borderColor: 'rgba(43, 49, 57, 0.8)' },
+                timeScale: { borderColor: 'rgba(43, 49, 57, 0.8)', timeVisible: true, secondsVisible: false },
+            });
+            tvCandleSeries = tvChart.addCandlestickSeries({
+                upColor: '#0ecb81', downColor: '#f6465d',
+                borderUpColor: '#0ecb81', borderDownColor: '#f6465d',
+                wickUpColor: '#0ecb81', wickDownColor: '#f6465d',
+            });
+            tvVolumeSeries = tvChart.addHistogramSeries({
+                color: '#26a69a', priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }, 
+            });
+            new ResizeObserver(entries => {
+                if (entries.length === 0 || entries[0].target !== container) return;
+                const newRect = entries[0].contentRect;
+                if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: newRect.height, width: newRect.width });
+            }).observe(container);
         }
         drawDummyCandles(price);
-    }, 350); 
+    }, 300); 
 };
 
 window.closeProChart = function() {
-    const container = document.getElementById('alpha-split-container');
-    if (container) {
-        container.classList.remove('show-chart');
+    const overlay = document.getElementById('super-chart-overlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+        document.body.classList.remove('overlay-active');
     }
-    window.currentChartSymbol = null; // Reset khi đóng
+    window.currentChartSymbol = null; 
 };
