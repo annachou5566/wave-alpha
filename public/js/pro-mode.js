@@ -218,7 +218,7 @@ function renderTableRows(tbody) {
         tr.style.cursor = 'pointer';
         tr.onclick = (e) => {
             if (!e.target.closest('.star-icon') && !e.target.closest('.contract-row')) {
-                window.openProChart(t.symbol, t.icon, t.contract, t.price);
+                window.openProChart(t.symbol, t.icon, t.contract, t.price, t.change_24h);
             }
         };
         const realIndex = startIndex + index + 1;
@@ -1237,14 +1237,23 @@ window.updateAlphaMarketUI = function(serverData) {
                         let tradeVol = (Math.random() * 1000).toFixed(1);
                         let tradeValUSD = newPrice * parseFloat(tradeVol);
 
+                        // Bơm sổ lệnh có Animation Chớp Nền
                         const tradesBox = document.getElementById('sc-live-trades');
                         if (tradesBox) {
                             if (tradesBox.innerText.includes('Connect')) tradesBox.innerHTML = '';
+                            let isUpTrade = newPrice >= oldPrice;
+                            let bgFlash = isUpTrade ? 'rgba(14,203,129,0.2)' : 'rgba(246,70,93,0.2)';
+                            
                             let row = document.createElement('div');
-                            row.style.cssText = 'display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.02);';
-                            row.innerHTML = `<span style="color:${isUp ? '#0ecb81':'#f6465d'}">${formatPrice(newPrice)}</span><span style="color:#eaecef">${tradeVol}</span><span style="color:#5e6673">${new Date().toLocaleTimeString('en-GB',{hour12:false})}</span>`;
+                            row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${bgFlash}; transition: background 0.4s ease;`;
+                            row.innerHTML = `<span style="color:${isUpTrade ? '#0ecb81':'#f6465d'}">${formatPrice(newPrice)}</span><span style="color:#eaecef">${(Math.random()*1000).toFixed(1)}</span><span style="color:#5e6673">${new Date().toLocaleTimeString('en-GB',{hour12:false})}</span>`;
+                            
                             tradesBox.insertBefore(row, tradesBox.firstChild);
-                            if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
+                            
+                            // Tắt chớp màu sau 400ms
+                            setTimeout(() => { row.style.background = 'transparent'; }, 400);
+                            
+                            if (tradesBox.children.length > 25) tradesBox.removeChild(tradesBox.lastChild);
                         }
 
                         // 3. TÍNH TOÁN CÁC THÔNG SỐ WHALE TRACKER & FLOW
@@ -1337,7 +1346,7 @@ function drawDummyLine(basePrice) {
     tvChart.timeScale().fitContent(); 
 }
 
-window.openProChart = function(symbol, icon, contract, price) {
+window.openProChart = function(symbol, icon, contract, price, change24h) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
 
@@ -1350,6 +1359,14 @@ window.openProChart = function(symbol, icon, contract, price) {
     document.getElementById('sc-coin-logo').src = icon || 'assets/tokens/default.png';
     document.getElementById('sc-live-price').innerText = '$' + formatPrice(price);
 
+    // Xử lý % thay đổi ngay lúc mở
+    let chg = parseFloat(change24h) || 0;
+    let chgEl = document.getElementById('sc-change-24h');
+    if (chgEl) {
+        chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`;
+        chgEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
+    }
+
     setTimeout(() => {
         if (!tvChart) {
             const container = document.getElementById('sc-chart-container');
@@ -1361,18 +1378,31 @@ window.openProChart = function(symbol, icon, contract, price) {
 
             tvChart = LightweightCharts.createChart(container, {
                 width: w, height: h,
-                layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
-                grid: { vertLines: { color: 'rgba(43, 49, 57, 0.05)' }, horzLines: { color: 'rgba(43, 49, 57, 0.05)' } },
+                layout: { 
+                    background: { type: 'solid', color: '#111418' }, 
+                    textColor: '#848e9c', 
+                    fontSize: 11 
+                },
+                // 🚀 THÊM WATERMARK CHÌM CỰC CHẤT LƯỢNG
+                watermark: {
+                    color: 'rgba(255, 255, 255, 0.03)',
+                    visible: true,
+                    text: symbol || 'WAVE ALPHA',
+                    fontSize: 110,
+                    horzAlign: 'center',
+                    vertAlign: 'center',
+                },
+                grid: { vertLines: { color: 'rgba(43, 49, 57, 0.2)' }, horzLines: { color: 'rgba(43, 49, 57, 0.2)' } },
                 crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
                 rightPriceScale: { borderColor: 'rgba(43, 49, 57, 0.5)' },
                 timeScale: { borderColor: 'rgba(43, 49, 57, 0.5)', timeVisible: true, secondsVisible: false },
             });
 
-            // GIAO DIỆN AREA CHART (ĐƯỜNG KẺ VÀNG KHỚP LỆNH CHUẨN PRO)
+            // 🚀 ĐỔI SANG MÀU CYAN PASTEL
             tvLineSeries = tvChart.addAreaSeries({
-                lineColor: '#F0B90B',
-                topColor: 'rgba(240, 185, 11, 0.4)',
-                bottomColor: 'rgba(240, 185, 11, 0.0)',
+                lineColor: '#5CE1E6', // Màu Cyan Pastel (Tiffany Blue)
+                topColor: 'rgba(92, 225, 230, 0.3)', // Bóng đổ màu Cyan
+                bottomColor: 'rgba(92, 225, 230, 0.0)',
                 lineWidth: 2,
                 priceFormat: { type: 'price', precision: 4, minMove: 0.0001 }
             });
@@ -1382,6 +1412,9 @@ window.openProChart = function(symbol, icon, contract, price) {
                 const newRect = entries[0].contentRect;
                 if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: newRect.height, width: newRect.width });
             }).observe(container);
+        } else {
+            // Nếu Chart đã có sẵn, chỉ cần update lại chữ Watermark
+            tvChart.applyOptions({ watermark: { text: symbol } });
         }
         
         if (typeof drawDummyLine === 'function') {
