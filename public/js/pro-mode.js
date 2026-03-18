@@ -734,13 +734,16 @@ window.hideTooltip = function() {
 };
 
 
+// =======================================================
+// GIAO DIỆN VÀ LOGIC CHÍNH
+// =======================================================
+
 function injectLayout() {
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
     
-    // 1. Tạo thanh Menu Tabs
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
@@ -750,12 +753,10 @@ function injectLayout() {
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
     
-    // 2. Tạo thẻ chứa Bảng Market
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
     marketView.style.display = 'none';
     
-    // TRẢ LẠI GIAO DIỆN PHẲNG 100% + LỚP PHỦ SIÊU BIỂU ĐỒ BÊN TRONG
     marketView.innerHTML = `
         <div class="alpha-container">
             <div id="rwa-marquee-container"></div>
@@ -820,7 +821,6 @@ function injectLayout() {
         </div>
 
         <div id="super-chart-overlay">
-            
             <div class="sc-header">
                 <div class="sc-coin-info">
                     <img id="sc-coin-logo" class="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
@@ -840,7 +840,6 @@ function injectLayout() {
                 <div class="sc-chart-main">
                     <div id="sc-chart-container"></div>
                 </div>
-                
                 <div class="sc-side-panel">
                     <div class="sc-panel-section">
                         <div class="sc-panel-title">🐋 Whale Tracker</div>
@@ -853,7 +852,6 @@ function injectLayout() {
                             <span id="sc-stat-whale-tx" class="sc-metric-value">0</span>
                         </div>
                     </div>
-                    
                     <div class="sc-panel-section">
                         <div class="sc-panel-title">📊 Flow & Speed</div>
                         <div class="sc-metric-item">
@@ -867,31 +865,11 @@ function injectLayout() {
                     </div>
                 </div>
             </div>
-
         </div>
     `;
     
     tabNav.insertAdjacentElement('afterend', marketView);
 
-    // 3. Sự kiện trượt thanh Nav Menu
-    let lastScrollY = window.scrollY;
-    window.removeEventListener('scroll', window._smartScroll);
-    window._smartScroll = function() {
-        const currentScrollY = window.scrollY;
-        const nav = document.getElementById('alpha-tab-nav');
-        if (!nav) return;
-        if (currentScrollY > lastScrollY && currentScrollY > 20) {
-            nav.classList.add('nav-hidden');
-        } else if (currentScrollY < lastScrollY) {
-            nav.classList.remove('nav-hidden');
-        }
-        lastScrollY = currentScrollY;
-    };
-    window.addEventListener('scroll', window._smartScroll, { passive: true });
-}
-
-
-    tabNav.insertAdjacentElement('afterend', marketView);
     let lastScrollY = window.scrollY;
     window.removeEventListener('scroll', window._smartScroll);
     window._smartScroll = function() {
@@ -910,16 +888,13 @@ function injectLayout() {
 
 window.pluginSwitchTab = (tab, instant = false) => {
     localStorage.setItem('wave_main_tab', tab);
-    
     const alphaView = document.getElementById('alpha-market-view');
     const compView = document.getElementById('view-dashboard');
     const sonarView = document.getElementById('sonar-market-view');
-    
     const btnA = document.getElementById('btn-tab-alpha');
     const btnC = document.getElementById('btn-tab-competition');
     const btnS = document.getElementById('btn-tab-sonar');
 
-    // Reset trạng thái
     [alphaView, compView, sonarView].forEach(v => { if(v) v.style.display = 'none'; });
     [btnA, btnC, btnS].forEach(b => b?.classList.remove('active'));
 
@@ -943,14 +918,9 @@ window.pluginSwitchTab = (tab, instant = false) => {
 
 window.pluginSort = function(key) {
     if (sortConfig.key === key) {
-        if (sortConfig.dir === 'desc') {
-            sortConfig.dir = 'asc';
-        } else if (sortConfig.dir === 'asc') {
-            sortConfig.key = null;
-            sortConfig.dir = null;
-        } else {
-            sortConfig.dir = 'desc';
-        }
+        if (sortConfig.dir === 'desc') sortConfig.dir = 'asc';
+        else if (sortConfig.dir === 'asc') { sortConfig.key = null; sortConfig.dir = null; } 
+        else sortConfig.dir = 'desc';
     } else {
         sortConfig.key = key;
         sortConfig.dir = 'desc';
@@ -975,24 +945,13 @@ let lastDataUpdateTime = "Waiting...";
 
 async function fetchMarketData() {
     try {
-        const res = await fetch(DATA_URL + '?t=' + Date.now(), {
-            method: 'GET',
-            headers: {
-                'X-Wave-Source': 'web-client'
-            }
-        });
-
-        if (!res.ok) {
-            console.error("Lỗi tải data:", res.status);
-            return;
-        }
-
+        const res = await fetch(DATA_URL + '?t=' + Date.now(), { method: 'GET', headers: { 'X-Wave-Source': 'web-client' } });
+        if (!res.ok) return;
         const json = await res.json();
         const rawList = json.data || json.tokens || []; 
         allTokens = rawList.map(item => unminifyToken(item));
 
         let rawTime = json.meta ? json.meta.u : (json.last_updated || "");
-        
         if (rawTime) {
             const d = new Date(rawTime.replace(' ', 'T')); 
             const hours = String(d.getHours()).padStart(2, '0');
@@ -1010,71 +969,40 @@ async function fetchMarketData() {
             const year = now.getFullYear();
             lastDataUpdateTime = `${hours}:${mins} ${day}/${month}/${year}`;
         }
-
         updateSummary();
         renderTable();
-
         const timeLbl = document.getElementById('last-updated');
-        if(timeLbl) {
-            timeLbl.innerText = 'Updated: ' + lastDataUpdateTime;
-        }
-
-    } catch (e) { 
-        console.error("Data error:", e); 
-    }
+        if(timeLbl) timeLbl.innerText = 'Updated: ' + lastDataUpdateTime;
+    } catch (e) { console.error("Data error:", e); }
 }
 
 window.togglePin = (symbol) => {
-    if (pinnedTokens.includes(symbol)) {
-        pinnedTokens = pinnedTokens.filter(s => s !== symbol);
-    } else {
-        pinnedTokens.push(symbol);
-    }
+    if (pinnedTokens.includes(symbol)) pinnedTokens = pinnedTokens.filter(s => s !== symbol);
+    else pinnedTokens.push(symbol);
     localStorage.setItem('alpha_pins', JSON.stringify(pinnedTokens));
     renderTable();
 };
 
-function formatNum(n) {
-    if (!n) return '0';
-    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n);
-}
-
-function formatCompactNum(n) {
-    if (!n) return '0';
-    return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(n);
-}
-
+function formatNum(n) { return (!n) ? '0' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n); }
+function formatCompactNum(n) { return (!n) ? '0' : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(n); }
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
 function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
 function setupEvents() { document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable()); window.addEventListener('scroll', () => { if (document.getElementById('alpha-market-view')?.style.display === 'block') { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) { if (displayCount < allTokens.length) { displayCount += 50; renderTable(); } } } }); }
 
 function getTokenStatus(t) {
-    if (t.status) {
-        return t.status.toUpperCase();
-    }
-    if (t.offline) {
-        if (t.listingCex) return 'SPOT';
-        return 'DELISTED';
-    }
+    if (t.status) return t.status.toUpperCase();
+    if (t.offline) { if (t.listingCex) return 'SPOT'; return 'DELISTED'; }
     return 'ALPHA'; 
 }
 
 function updateSummary() {
-    let total = allTokens.length;
-    let spot = 0;
-    let delisted = 0;
-    let alpha = 0;
-
+    let total = allTokens.length, spot = 0, delisted = 0, alpha = 0;
     allTokens.forEach(t => {
         const s = (t.status || '').toUpperCase();
-        if (s === 'SPOT') {
-            spot++;
-        } else if (s === 'DELISTED' || s === 'PRE_DELISTED') {
-            delisted++;
-        } else {
-            alpha++; 
-        }
+        if (s === 'SPOT') spot++;
+        else if (s === 'DELISTED' || s === 'PRE_DELISTED') delisted++;
+        else alpha++; 
     });
 
     const elTotal = document.getElementById('stat-total-tokens');
@@ -1097,56 +1025,30 @@ function updateSummary() {
 }
 
 window.toggleFilter = (filterType) => {
-    if (currentFilter === filterType) {
-        currentFilter = 'ALL';
-    } else {
-        currentFilter = filterType;
-    }
-    
+    currentFilter = (currentFilter === filterType) ? 'ALL' : filterType;
     document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active-filter'));
-    if (currentFilter === 'ALPHA') {
-        document.getElementById('card-alpha-vol')?.classList.add('active-filter');
-        document.getElementById('card-active')?.classList.add('active-filter');
-    } else if (currentFilter === 'SPOT') {
-        document.getElementById('card-spot')?.classList.add('active-filter');
-    } else if (currentFilter === 'DELISTED') {
-        document.getElementById('card-delist')?.classList.add('active-filter');
-    }
-
+    if (currentFilter === 'ALPHA') document.getElementById('card-alpha-vol')?.classList.add('active-filter');
+    else if (currentFilter === 'SPOT') document.getElementById('card-spot')?.classList.add('active-filter');
+    else if (currentFilter === 'DELISTED') document.getElementById('card-delist')?.classList.add('active-filter');
     renderTable(); 
 };
 
 function getSparklineSVG(data) {
     if (!data || !Array.isArray(data) || data.length < 2) return '';
-
-    const width = 100; 
-    const height = 30; 
-    
+    const width = 100, height = 30; 
     let prices, volumes, maxV = 1;
-
     if (typeof data[0] === 'object') {
-        prices = data.map(d => d.p);
-        volumes = data.map(d => d.v);
-        maxV = Math.max(...volumes) || 1;
-    } else {
-        prices = data;
-        volumes = [];
-    }
-
-    const minP = Math.min(...prices);
-    const maxP = Math.max(...prices);
-    const rangeP = maxP - minP || 1;
-
+        prices = data.map(d => d.p); volumes = data.map(d => d.v); maxV = Math.max(...volumes) || 1;
+    } else { prices = data; volumes = []; }
+    const minP = Math.min(...prices), maxP = Math.max(...prices), rangeP = maxP - minP || 1;
     const isUp = prices[prices.length - 1] >= prices[0];
     const color = isUp ? '#0ecb81' : '#f6465d'; 
-    
     let points = prices.map((p, i) => {
         const x = (i / (prices.length - 1)) * width;
         const bottomPadding = volumes.length > 0 ? 8 : 0; 
         const y = (height - bottomPadding) - ((p - minP) / rangeP) * (height - bottomPadding - 4) - 2; 
         return `${x},${y}`;
     }).join(' ');
-
     let bars = '';
     if (volumes.length > 0) {
         const barWidth = (width / (data.length - 1)) * 0.6; 
@@ -1158,18 +1060,11 @@ function getSparklineSVG(data) {
             bars += `<rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" opacity="0.3" />`;
         });
     }
-
-    return `
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="mini-chart" style="overflow:visible; display:block;">
-            ${bars}
-            <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-    `;
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="mini-chart" style="overflow:visible; display:block;">${bars}<polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
 }
 
 window.setFilter = function(status) {
-    currentFilter = status;
-    currentPage = 1;
+    currentFilter = status; currentPage = 1;
     ['all', 'alpha', 'spot', 'delist', 'rwa', 'fav'].forEach(k => {
         document.getElementById(`btn-f-${k}`)?.classList.remove(`active-${k}`);
         document.getElementById(`btn-f-${k}`)?.classList.remove('active');
@@ -1181,10 +1076,7 @@ window.setFilter = function(status) {
     else if (status === 'RWA') document.getElementById('btn-f-rwa').classList.add('active-rwa');
     else if (status === 'FAV') {
         const btn = document.getElementById('btn-f-fav');
-        if(btn) {
-             btn.classList.add('active');
-             btn.style.color = '#F0B90B';
-        }
+        if(btn) { btn.classList.add('active'); btn.style.color = '#F0B90B'; }
     }
     renderTable();
 };
@@ -1192,44 +1084,25 @@ window.setFilter = function(status) {
 window.togglePoints = function() {
     filterPoints = !filterPoints;
     const btn = document.getElementById('btn-f-points');
-    
-    if (filterPoints) {
-        btn.classList.add('active-points');
-    } else {
-        btn.classList.remove('active-points');
-    }
+    if (filterPoints) btn.classList.add('active-points'); else btn.classList.remove('active-points');
     renderTable();
 };
 
 const KEY_MAP_REVERSE = {
-  "i": "id", "s": "symbol", "n": "name", "ic": "icon",
-  "cn": "chain", "ci": "chain_icon", 
-  "ct": "contract",
-  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", 
-  "mc": "market_cap", "l": "liquidity", "v": "volume",
-  "r24": "rolling_24h", "dt": "daily_total",
-  "dl": "daily_limit", "do": "daily_onchain",
-  "ch": "chart", "lt": "listing_time", "tx": "tx_count",
-  "off": "offline", "cex": "listingCex",
-  "tge": "onlineTge", "air": "onlineAirdrop",
-  "aid": "alphaId",
-   "h": "holders"
+  "i": "id", "s": "symbol", "n": "name", "ic": "icon", "cn": "chain", "ci": "chain_icon", "ct": "contract",
+  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", "mc": "market_cap", "l": "liquidity", "v": "volume",
+  "r24": "rolling_24h", "dt": "daily_total", "dl": "daily_limit", "do": "daily_onchain", "ch": "chart", "lt": "listing_time", "tx": "tx_count",
+  "off": "offline", "cex": "listingCex", "tge": "onlineTge", "air": "onlineAirdrop", "aid": "alphaId", "h": "holders"
 };
 
 function unminifyToken(minifiedItem) {
   const fullItem = {};
   for (const [shortKey, value] of Object.entries(minifiedItem)) {
     const fullKey = KEY_MAP_REVERSE[shortKey] || shortKey; 
-    
     if (fullKey === "volume" && typeof value === 'object') {
       fullItem[fullKey] = {};
-      for (const [vKey, vVal] of Object.entries(value)) {
-        fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
-      }
-    } 
-    else {
-      fullItem[fullKey] = value;
-    }
+      for (const [vKey, vVal] of Object.entries(value)) fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
+    } else { fullItem[fullKey] = value; }
   }
   return fullItem;
 }
@@ -1238,52 +1111,27 @@ window.showListTooltip = function(e, label, tokensStr) {
     const t = document.getElementById('hud-tooltip');
     if (!t) return;
     if(e.type === 'click') e.stopPropagation();
-
     if (!tokensStr) tokensStr = "No tokens";
     let displayStr = tokensStr;
     if (displayStr.length > 150) displayStr = displayStr.substring(0, 150) + "...";
-
     t.style.display = 'block';
-    
     t.innerHTML = `
-        <div style="color:#00F0FF; font-size:11px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">
-            PRICE RANGE: ${label}
-        </div>
-        <div style="color:#eaecef; font-size:10px; line-height:1.4; word-wrap:break-word;">
-            ${displayStr}
-        </div>
+        <div style="color:#00F0FF; font-size:11px; font-weight:bold; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:2px;">PRICE RANGE: ${label}</div>
+        <div style="color:#eaecef; font-size:10px; line-height:1.4; word-wrap:break-word;">${displayStr}</div>
     `;
-    
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    t.style.left = (x + 10) + 'px';
-    t.style.top = (y + 10) + 'px';
+    t.style.left = (e.clientX + 10) + 'px';
+    t.style.top = (e.clientY + 10) + 'px';
 };
 
-window.prevPage = function() {
-    if (currentPage > 1) {
-        currentPage--;
-        renderTable();
-    }
-};
-window.nextPage = function() {
-    currentPage++;
-    renderTable();
-};
+window.prevPage = function() { if (currentPage > 1) { currentPage--; renderTable(); } };
+window.nextPage = function() { currentPage++; renderTable(); };
 window.changeRowsPerPage = function() {
     const select = document.getElementById('rows-per-page');
-    if (select) {
-        rowsPerPage = parseInt(select.value);
-        currentPage = 1;
-        renderTable();
-    }
+    if (select) { rowsPerPage = parseInt(select.value); currentPage = 1; renderTable(); }
 };
 
 window.updateAlphaMarketUI = function(serverData) {
     if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
-
-    // HỨNG LỊCH SỬ TỪ SERVER
     if (serverData['_STATS']) window.MARKET_VOL_HISTORY = serverData['_STATS'];
 
     let hasUpdates = false;
@@ -1294,21 +1142,12 @@ window.updateAlphaMarketUI = function(serverData) {
 
     Object.keys(serverData).forEach(key => {
         if (key === '_STATS') return;
-        
         let liveItem = serverData[key];
-        
         let tokenKey = key.replace('ALPHA_', ''); 
-        if (liveItem.alphaId) {
-            tokenKey = liveItem.alphaId.replace('ALPHA_', '');
-        } else if (!key.startsWith('ALPHA_')) {
-            tokenKey = liveItem.symbol || key;
-        }
+        if (liveItem.alphaId) tokenKey = liveItem.alphaId.replace('ALPHA_', '');
+        else if (!key.startsWith('ALPHA_')) tokenKey = liveItem.symbol || key;
 
-        let targetToken = allTokens.find(t => 
-            (t.alphaId && t.alphaId.replace('ALPHA_','') === tokenKey) || 
-            (t.id && t.id.replace('ALPHA_','') === tokenKey) ||
-            t.symbol === tokenKey
-        );
+        let targetToken = allTokens.find(t => (t.alphaId && t.alphaId.replace('ALPHA_','') === tokenKey) || (t.id && t.id.replace('ALPHA_','') === tokenKey) || t.symbol === tokenKey);
 
         if (targetToken) {
             hasUpdates = true;
@@ -1333,18 +1172,13 @@ window.updateAlphaMarketUI = function(serverData) {
         if (priceEl && liveItem.p !== undefined) {
             let oldPrice = parseFloat(priceEl.getAttribute('data-raw')) || parseFloat(liveItem.p);
             let newPrice = parseFloat(liveItem.p);
-            
             if (newPrice !== oldPrice) {
                 let isUp = newPrice > oldPrice;
-                let color = isUp ? '#0ECB81' : '#F6465D';
-                
-                priceEl.style.color = color;
+                priceEl.style.color = isUp ? '#0ECB81' : '#F6465D';
                 priceEl.innerHTML = `$${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
                 priceEl.setAttribute('data-raw', newPrice);
                 setTimeout(() => { priceEl.style.color = ''; }, 1000);
-            } else if (!priceEl.getAttribute('data-raw')) {
-                priceEl.setAttribute('data-raw', newPrice);
-            }
+            } else if (!priceEl.getAttribute('data-raw')) { priceEl.setAttribute('data-raw', newPrice); }
 
             let tdPriceEl = document.getElementById(`alpha-td-price-${tokenKey}`);
             if (tdPriceEl && targetToken) {
@@ -1364,6 +1198,34 @@ window.updateAlphaMarketUI = function(serverData) {
             let sign = chg >= 0 ? '+' : '';
             changeEl.innerText = `${sign}${chg.toFixed(2)}%`;
             changeEl.className = chg >= 0 ? 'text-green' : 'text-red';
+        }
+
+        // ==================================================
+        // 🚀 BƠM GIÁ REALTIME VÀO TRADINGVIEW (OVERLAY MỚI)
+        // ==================================================
+        if (window.currentChartSymbol && (tokenKey === window.currentChartSymbol || (targetToken && targetToken.symbol === window.currentChartSymbol))) {
+            const scPriceEl = document.getElementById('sc-live-price');
+            const scChangeEl = document.getElementById('sc-change-24h');
+            
+            if (scPriceEl && liveItem.p !== undefined) {
+                let newPrice = parseFloat(liveItem.p);
+                scPriceEl.innerText = '$' + formatPrice(newPrice);
+                
+                // Giật nến realtime
+                if (tvCandleSeries && window.lastDummyCandle) {
+                    window.lastDummyCandle.close = newPrice;
+                    window.lastDummyCandle.high = Math.max(window.lastDummyCandle.high, newPrice);
+                    window.lastDummyCandle.low = Math.min(window.lastDummyCandle.low, newPrice);
+                    tvCandleSeries.update(window.lastDummyCandle);
+                }
+            }
+
+            if (scChangeEl && liveItem.c !== undefined) {
+                let chg = parseFloat(liveItem.c);
+                let sign = chg >= 0 ? '+' : '';
+                scChangeEl.innerText = `(${sign}${chg.toFixed(2)}%)`;
+                scChangeEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
+            }
         }
 
         let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
@@ -1405,57 +1267,14 @@ window.updateAlphaMarketUI = function(serverData) {
     }
 };
 
-
 // ==========================================
-// 📈 TRADINGVIEW SPLIT-SCREEN LOGIC
+// 📈 TRADINGVIEW SUPER CHART LOGIC
 // ==========================================
 let tvChart = null;
 let tvCandleSeries = null;
 let tvVolumeSeries = null;
-window.currentChartSymbol = null; // Lưu lại token đang soi
-window.lastDummyCandle = null; // Lưu nến cuối để giật realtime
-
-function initTradingViewChart() {
-    const container = document.getElementById('tv-chart-container');
-    if (!container) return;
-    
-    // 1. Xóa chữ chờ và XÓA ÉP KIỂU FLEXBOX để Canvas bung ra
-    container.innerHTML = ''; 
-    container.style.display = 'block'; 
-
-    const rect = container.getBoundingClientRect();
-
-    tvChart = LightweightCharts.createChart(container, {
-        width: rect.width,    
-        height: rect.height,  
-        layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
-        grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
-        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-        rightPriceScale: { borderColor: 'rgba(43, 49, 57, 0.8)' },
-        timeScale: { borderColor: 'rgba(43, 49, 57, 0.8)', timeVisible: true, secondsVisible: false },
-    });
-
-    tvCandleSeries = tvChart.addCandlestickSeries({
-        upColor: '#0ecb81', downColor: '#f6465d',
-        borderUpColor: '#0ecb81', borderDownColor: '#f6465d',
-        wickUpColor: '#0ecb81', wickDownColor: '#f6465d',
-    });
-
-    tvVolumeSeries = tvChart.addHistogramSeries({
-        color: '#26a69a',
-        priceFormat: { type: 'volume' },
-        priceScaleId: '', 
-        scaleMargins: { top: 0.8, bottom: 0 }, 
-    });
-
-    new ResizeObserver(entries => {
-        if (entries.length === 0 || entries[0].target !== container) return;
-        const newRect = entries[0].contentRect;
-        if (newRect.width > 0 && newRect.height > 0) {
-            tvChart.applyOptions({ height: newRect.height, width: newRect.width });
-        }
-    }).observe(container);
-}
+window.currentChartSymbol = null; 
+window.lastDummyCandle = null; 
 
 function drawDummyCandles(basePrice) {
     if (!tvCandleSeries || !tvVolumeSeries || !tvChart) return; 
@@ -1483,9 +1302,7 @@ function drawDummyCandles(basePrice) {
     tvCandleSeries.setData(candleData);
     tvVolumeSeries.setData(volumeData);
     
-    // Lưu lại cây nến cuối cùng
     window.lastDummyCandle = candleData[candleData.length - 1];
-
     tvChart.timeScale().fitContent(); 
 }
 
@@ -1493,19 +1310,19 @@ window.openProChart = function(symbol, icon, contract, price) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
 
-    window.currentChartSymbol = symbol;
+    window.currentChartSymbol = symbol; 
     
-    // Kích hoạt Lớp phủ Siêu biểu đồ + Khóa cuộn trang
+    // Bật Lớp Phủ Kín Màn Hình
     overlay.classList.add('active');
     document.body.classList.add('overlay-active');
 
-    // Đổ thông tin Header
+    // Chèn text Header
     document.getElementById('sc-coin-symbol').innerText = (symbol || 'UNKNOWN') + ' / USDT';
     document.getElementById('sc-coin-contract').innerText = contract ? contract.substring(0,10) + '...' : '';
     document.getElementById('sc-coin-logo').src = icon || 'assets/tokens/default.png';
     document.getElementById('sc-live-price').innerText = '$' + formatPrice(price);
 
-    // Đợi hiệu ứng CSS mờ dần xong thì Khởi động Chart (Chỉ sửa ID vùng chứa thành sc-chart-container)
+    // Đợi 300ms cho hiệu ứng mờ kính (backdrop-blur) hiện lên rồi vẽ nến
     setTimeout(() => {
         if (!tvChart) {
             const container = document.getElementById('sc-chart-container');
@@ -1514,7 +1331,8 @@ window.openProChart = function(symbol, icon, contract, price) {
             const rect = container.getBoundingClientRect();
             
             tvChart = LightweightCharts.createChart(container, {
-                width: rect.width, height: rect.height,
+                width: rect.width, 
+                height: rect.height,
                 layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
                 grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
                 crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
