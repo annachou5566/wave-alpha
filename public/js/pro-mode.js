@@ -1413,11 +1413,34 @@ function connectRealtimeChart(t) {
             }
         }
 
+        // 2. KHỚP LỆNH CHỦ ĐỘNG (aggTrade)
         if (data.stream.endsWith('@aggTrade')) {
             const p = parseFloat(data.data.p);
             const q = parseFloat(data.data.q);
             const isUpTrade = !data.data.m; 
             const tradeValUSD = p * q;
+            const tradeTime = Math.floor(data.data.T / 1000); // Lấy thời gian thực của lệnh
+
+            // ==========================================
+            // 🔥 ÉP CHART & VOLUME VẼ NGAY THEO SỔ LỆNH
+            // ==========================================
+            if (tvLineSeries && window.lastDummyCandle) {
+                if (tradeTime > window.lastDummyCandle.time) {
+                    window.lastDummyCandle = { time: tradeTime, value: p };
+                } else {
+                    window.lastDummyCandle.value = p; // Nếu cùng 1 giây thì gán giá mới nhất
+                }
+                tvLineSeries.update(window.lastDummyCandle);
+            }
+
+            if (tvVolumeSeries) {
+                tvVolumeSeries.update({
+                    time: tradeTime,
+                    value: q, // Vẽ cột Volume theo số lượng Token khớp
+                    color: isUpTrade ? 'rgba(92, 225, 230, 0.6)' : 'rgba(246, 70, 93, 0.6)'
+                });
+            }
+            // ==========================================
 
             const scPriceEl = document.getElementById('sc-live-price');
             if (scPriceEl) {
@@ -1429,7 +1452,9 @@ function connectRealtimeChart(t) {
                 }
             }
 
+            const tradesBox = document.getElementById('sc-live-trades');
             if (tradesBox) {
+                if (tradesBox.innerText.includes('Connect')) tradesBox.innerHTML = '';
                 let bgFlash = isUpTrade ? 'rgba(92, 225, 230, 0.2)' : 'rgba(246,70,93,0.2)';
                 let row = document.createElement('div');
                 row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${bgFlash}; transition: background 0.4s ease;`;
