@@ -1397,28 +1397,43 @@ function initTradingViewChart() {
     }).observe(container);
 }
 
+// --- File: public/js/pro-mode (23).js ---
+
 // Hàm sinh Nến Giả (Dummy Data) để bạn Test Giao diện trước
 function drawDummyCandles(basePrice) {
-    if (!tvCandleSeries || !tvVolumeSeries) return;
+    if (!tvCandleSeries || !tvVolumeSeries || !tvChart) return; // 🚨 Sửa lỗi kiểm tra tvChart
     const candleData = []; const volumeData = [];
     let currentPrice = parseFloat(basePrice) || 100;
-    let time = Math.floor(Date.now() / 1000) - 100 * 60; // Lùi về 100 phút trước
+    // Lùi về 100 phút trước
+    let time = Math.floor(Date.now() / 1000) - 100 * 60; 
 
     for (let i = 0; i < 100; i++) {
         const open = currentPrice;
-        const close = open + (Math.random() - 0.5) * (open * 0.02);
+        // Giá nhảy lung tung +-2%
+        const close = open + (Math.random() - 0.5) * (open * 0.02); 
+        // Tạo High/Low ngẫu nhiên
         const high = Math.max(open, close) + (Math.random() * open * 0.01);
         const low = Math.min(open, close) - (Math.random() * open * 0.01);
         const vol = Math.random() * 1000;
         const isUp = close >= open;
 
         candleData.push({ time: time, open, high, low, close });
-        volumeData.push({ time: time, value: vol, color: isUp ? 'rgba(14, 203, 129, 0.4)' : 'rgba(246, 70, 93, 0.4)' });
+        // Set màu cột Volume mờ mờ chuẩn Pro
+        volumeData.push({ 
+            time: time, 
+            value: vol, 
+            color: isUp ? 'rgba(14, 203, 129, 0.4)' : 'rgba(246, 70, 93, 0.4)' 
+        });
 
-        currentPrice = close; time += 60; 
+        currentPrice = close; 
+        time += 60; // Cộng thêm 1 phút
     }
     tvCandleSeries.setData(candleData);
     tvVolumeSeries.setData(volumeData);
+
+    // 🚨 CHÌA KHÓA FIX LỖI CHART TRỐNG: 🚨
+    // Ép biểu đồ phải tự động thu phóng để hiển thị toàn bộ data vừa tạo
+    tvChart.timeScale().fitContent(); 
 }
 
 window.openProChart = function(symbol, icon, contract, price) {
