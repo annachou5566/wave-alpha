@@ -215,6 +215,12 @@ function renderTableRows(tbody) {
 
     pageList.forEach((t, index) => {
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.onclick = (e) => {
+            if (!e.target.closest('.star-icon') && !e.target.closest('.contract-row')) {
+                window.openProChart(t.symbol, t.icon, t.contract, t.price);
+            }
+        };
         const realIndex = startIndex + index + 1;
 
         let domKey = t.symbol; 
@@ -745,66 +751,89 @@ function injectLayout() {
     marketView.id = 'alpha-market-view';
     marketView.style.display = 'none';
     marketView.innerHTML = `
-        <div class="alpha-container">
-            <div id="rwa-marquee-container"></div>
-            <div class="alpha-header">
-                 <div class="filter-group">
-                    <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
-                    <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
-                    <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
-                    <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
-                    <button class="filter-btn" id="btn-f-rwa" onclick="setFilter('RWA')">RWA Stocks</button>
-                    <button class="filter-btn" id="btn-f-fav" onclick="setFilter('FAV')">★ Favorites</button>
-                    <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
+        <div class="alpha-container" id="alpha-split-container">
+            
+            <div class="market-left-panel">
+                <div id="rwa-marquee-container"></div>
+                <div class="alpha-header">
+                     <div class="filter-group">
+                        <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
+                        <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
+                        <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
+                        <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
+                        <button class="filter-btn" id="btn-f-rwa" onclick="setFilter('RWA')">RWA Stocks</button>
+                        <button class="filter-btn" id="btn-f-fav" onclick="setFilter('FAV')">★ Favorites</button>
+                        <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
+                    </div>
+                    <div class="search-group">
+                        <i class="fas fa-search search-icon-small"></i>
+                        <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+                    </div>
                 </div>
-                <div class="search-group">
-                    <i class="fas fa-search search-icon-small"></i>
-                    <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+                <div class="table-responsive">
+                    <table class="alpha-table">
+                       <thead>
+                            <tr class="h-top">
+                                <th rowspan="2" class="text-center col-fix-1">#</th>
+                                <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
+                                <th rowspan="2" class="text-center">STATUS</th>
+                                <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort('price')">PRICE (24h%)</th>
+                                <th rowspan="2" class="text-center">CHART</th>
+                                <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
+                                <th colspan="5" class="text-center th-group-stats">MARKET STATS</th> 
+                            </tr>
+                            <tr class="h-sub">
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                                
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('market_cap')">MCAP</th>
+                                <th class="text-end cursor-pointer" onclick="window.pluginSort('holders')">HOLDERS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="market-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-container">
+                    <div class="page-info">
+                        Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
+                    </div>
+                    <div class="page-controls">
+                        Rows: 
+                        <select id="rows-per-page" class="rows-selector" onchange="changeRowsPerPage()">
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <button class="page-btn" id="btn-prev" onclick="prevPage()">&lt;</button>
+                        <span id="page-num" style="margin:0 10px; font-weight:bold;">Page 1</span>
+                        <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
+                    </div>
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="alpha-table">
-                   <thead>
-                        <tr class="h-top">
-                            <th rowspan="2" class="text-center col-fix-1">#</th>
-                            <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
-                            <th rowspan="2" class="text-center">STATUS</th>
-                            <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort('price')">PRICE (24h%)</th>
-                            <th rowspan="2" class="text-center">CHART</th>
-                            <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
-                            <th colspan="5" class="text-center th-group-stats">MARKET STATS</th> 
-                        </tr>
-                        <tr class="h-sub">
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                            
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('market_cap')">MCAP</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('holders')">HOLDERS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="market-table-body"></tbody>
-                </table>
-            </div>
-            <div class="pagination-container">
-                <div class="page-info">
-                    Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
+
+            <div class="market-right-panel" id="market-right-panel">
+                <div class="tv-header">
+                    <div class="tv-coin-info">
+                        <img id="tv-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
+                        <div>
+                            <div id="tv-coin-symbol" style="font-weight: 800; font-size: 16px; color: #fff;">---</div>
+                            <div id="tv-coin-contract" style="font-size: 11px; color: #848e9c; cursor: pointer;">---</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:15px; align-items:center;">
+                        <div id="tv-live-price" style="font-size: 20px; font-weight: 700; color: #0ecb81; font-family: var(--font-num);">--</div>
+                        <button class="tv-close-btn" onclick="window.closeProChart()">✕</button>
+                    </div>
                 </div>
-                <div class="page-controls">
-                    Rows: 
-                    <select id="rows-per-page" class="rows-selector" onchange="changeRowsPerPage()">
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <button class="page-btn" id="btn-prev" onclick="prevPage()">&lt;</button>
-                    <span id="page-num" style="margin:0 10px; font-weight:bold;">Page 1</span>
-                    <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
+                <div id="tv-chart-container" style="flex: 1; width: 100%; position: relative; background: #111418; display: flex; align-items: center; justify-content: center; color: #848e9c;">
+                    Đang thiết lập động cơ TradingView...
                 </div>
             </div>
+
         </div>
     `;
     tabNav.insertAdjacentElement('afterend', marketView);
@@ -1318,5 +1347,25 @@ window.updateAlphaMarketUI = function(serverData) {
         const freshStats = calculateMarketStats(allTokens);
         renderMarketHUD(freshStats); 
         updateSummary(); 
+    }
+};
+
+
+window.openProChart = function(symbol, icon, contract, price) {
+    const container = document.getElementById('alpha-split-container');
+    if (!container) return;
+
+    container.classList.add('show-chart');
+
+    document.getElementById('tv-coin-symbol').innerText = (symbol || 'UNKNOWN') + ' / USDT';
+    document.getElementById('tv-coin-contract').innerText = contract ? contract.substring(0,10) + '...' : '';
+    document.getElementById('tv-coin-logo').src = icon || 'assets/tokens/default.png';
+    document.getElementById('tv-live-price').innerText = '$' + formatPrice(price);
+};
+
+window.closeProChart = function() {
+    const container = document.getElementById('alpha-split-container');
+    if (container) {
+        container.classList.remove('show-chart');
     }
 };
