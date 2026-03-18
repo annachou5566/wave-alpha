@@ -1256,26 +1256,23 @@ let isReconnecting = false;
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     
-    // SỬA LỖI 1: Tên miền Worker chuẩn xác của bạn
-    const workerUrl = 'wss://wave-stream.wavealpha.workers.dev'; 
+    const workerUrl = 'wss://wave-stream.wavealpha.workers.dev/'; 
     chartWs = new WebSocket(workerUrl);
 
-    // SỬA LỖI 3: Build chuỗi Subscribe ĐÚNG CHUẨN Binance Web3 (nbstream)
-    let streamSymbol = t.alphaId ? t.alphaId.toLowerCase() : t.symbol.toLowerCase();
-    streamSymbol = streamSymbol.replace('alpha_', 'alpha_');
+    // 🚀 Xây dựng tên stream CHUẨN Binance Web3
+    let streamSymbol = (t.alphaId || t.symbol).toLowerCase();
+    streamSymbol = streamSymbol.replace('alpha_', 'alpha_'); 
     if (!streamSymbol.endsWith('usdt')) streamSymbol += 'usdt'; 
     
     let tradeStream = `${streamSymbol}@aggTrade`;
     
-    // Xác định Chain ID (BSC=56, ETH=1...)
-    let chainId = 56; 
+    let chainId = 56; // Mặc định là chain BSC
     if (t.chain === 'ETH') chainId = 1;
     let klineStream = `came@${(t.contract || '').toLowerCase()}@${chainId}@kline_1s`;
 
     let params = [tradeStream];
-    if (t.contract) params.push(klineStream); // Chỉ sub kline nếu có contract
+    if (t.contract) params.push(klineStream); // Phải có Contract thì mới lấy được Nến
 
-    // Mồi điểm giá đầu tiên
     if (tvLineSeries) {
         let now = Math.floor(Date.now() / 1000);
         tvLineSeries.setData([{ time: now, value: parseFloat(t.price) || 0 }]);
@@ -1413,7 +1410,6 @@ window.openProChart = function(t) {
                 lineColor: '#5CE1E6', topColor: 'rgba(92, 225, 230, 0.3)', bottomColor: 'rgba(92, 225, 230, 0.0)', lineWidth: 2, priceFormat: { type: 'price', precision: 4, minMove: 0.0001 }
             });
 
-            // SỬA LỖI 2: Thêm lại series Cột Volume
             tvVolumeSeries = tvChart.addHistogramSeries({
                 color: '#26a69a', priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.85, bottom: 0 }, 
             });
