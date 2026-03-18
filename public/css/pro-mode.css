@@ -1458,90 +1458,64 @@ body {
     50% { opacity: 0.4; }
 }
 /* =========================================
-   SPLIT-SCREEN TRADINGVIEW PRO TERMINAL
+   SPLIT-SCREEN TRADINGVIEW PRO TERMINAL (V2)
    ========================================= */
 #alpha-split-container {
     display: flex;
     width: 100%;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    gap: 0;
+    transition: all 0.3s ease;
     align-items: flex-start;
 }
 
-/* Panel Trái (Bảng Market) */
 .market-left-panel {
     flex: 1;
     width: 100%;
-    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.3s ease;
     overflow-x: hidden;
 }
 
-/* Panel Phải (TradingView) */
 .market-right-panel {
     width: 0;
     opacity: 0;
     overflow: hidden;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
     background: #111418;
-    border-left: 1px solid #2b3139;
-    /* Gắn chặt Panel bên phải để khi cuộn bảng bên trái, Chart không bị trôi đi */
-    height: calc(100vh - 75px); 
+    border-radius: 8px;
+    
+    /* Gắn chặt Panel bên phải để khi cuộn bảng, Chart không trôi */
     position: sticky;
-    top: 70px; 
-    border-radius: 0 8px 8px 0;
+    top: 80px; /* Cách mép trên màn hình 80px để không đè menu */
+    height: calc(100vh - 100px); /* Vừa khít màn hình, hết khoảng trống dưới */
 }
 
 /* 🚀 TRẠNG THÁI KÍCH HOẠT CHẺ ĐÔI */
 #alpha-split-container.show-chart .market-left-panel {
-    width: 45%;
-    flex: 0 0 45%; /* Bảng co lại còn 45% */
+    width: 40%;
+    flex: 0 0 40%;
 }
 
 #alpha-split-container.show-chart .market-right-panel {
-    width: 55%;
-    flex: 0 0 55%; /* Chart chiếm 55% màn hình */
+    width: 60%;
+    flex: 0 0 60%;
     opacity: 1;
-    box-shadow: -10px 0 20px rgba(0,0,0,0.4);
+    margin-left: 15px; /* Tạo khe hở 15px giữa Bảng và Chart cho dễ thở */
+    margin-top: 85px; /* ÉP CHART TỤT XUỐNG NGANG HÀNG VỚI BẢNG TABLE */
+    border: 1px solid #2b3139;
+    box-shadow: -5px 0 25px rgba(0,0,0,0.5);
 }
 
 /* Header của Chart */
 .tv-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    background: #161a1e;
-    border-bottom: 1px solid #2b3139;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px; background: #161a1e; border-bottom: 1px solid #2b3139;
 }
-.tv-coin-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.tv-coin-info img {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid #2b3139;
-}
+.tv-coin-info { display: flex; align-items: center; gap: 12px; }
+.tv-coin-info img { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #2b3139; }
 .tv-close-btn {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid #2b3139;
-    color: #848e9c;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: rgba(255,255,255,0.05); border: 1px solid #2b3139; color: #848e9c;
+    width: 32px; height: 32px; border-radius: 6px; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: 0.2s;
 }
-.tv-close-btn:hover {
-    background: #f6465d;
-    border-color: #f6465d;
-    color: #fff;
-}
+.tv-close-btn:hover { background: #f6465d; border-color: #f6465d; color: #fff; }
