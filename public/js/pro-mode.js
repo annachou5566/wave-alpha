@@ -1256,43 +1256,74 @@ let isReconnecting = false;
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     
+    // TẠO BẢNG LOG BẮT LỖI HIỂN THỊ TRỰC TIẾP TRÊN MÀN HÌNH
+    let dbg = document.getElementById('ws-debug-box');
+    if (!dbg) {
+        dbg = document.createElement('div');
+        dbg.id = 'ws-debug-box';
+        dbg.style.cssText = 'position:absolute; top:60px; left:20px; background:rgba(0,0,0,0.9); border:1px solid #f0b90b; color:#fff; padding:10px; z-index:9999; font-size:11px; font-family:monospace; max-width: 450px; max-height: 300px; overflow-y: auto; pointer-events: none; border-radius: 4px;';
+        document.getElementById('super-chart-overlay').appendChild(dbg);
+    }
+    dbg.innerHTML = `<div style="color:#f0b90b; font-weight:bold; margin-bottom:5px;">🛠️ WS DEBUGGER</div>`;
+
+    function logDebug(msg, color = '#eaecef') {
+        dbg.innerHTML += `<div style="color:${color}; margin-bottom:3px; word-break:break-all;">[${new Date().toLocaleTimeString('en-GB')}] ${msg}</div>`;
+        dbg.scrollTop = dbg.scrollHeight; // Cuộn xuống dòng mới nhất
+    }
+
     const workerUrl = 'wss://wave-stream.wavealpha.workers.dev/'; 
+    logDebug(`Đang kết nối Cloudflare Proxy...`, '#5CE1E6');
     chartWs = new WebSocket(workerUrl);
 
-    // 🚀 Xây dựng tên stream CHUẨN Binance Web3
+    // Xử lý tên để sub stream Binance
     let streamSymbol = (t.alphaId || t.symbol).toLowerCase();
     streamSymbol = streamSymbol.replace('alpha_', 'alpha_'); 
     if (!streamSymbol.endsWith('usdt')) streamSymbol += 'usdt'; 
     
     let tradeStream = `${streamSymbol}@aggTrade`;
-    
-    let chainId = 56; // Mặc định là chain BSC
-    if (t.chain === 'ETH') chainId = 1;
+    let chainId = t.chain === 'ETH' ? 1 : 56;
     let klineStream = `came@${(t.contract || '').toLowerCase()}@${chainId}@kline_1s`;
 
     let params = [tradeStream];
-    if (t.contract) params.push(klineStream); // Phải có Contract thì mới lấy được Nến
-
-    if (tvLineSeries) {
-        let now = Math.floor(Date.now() / 1000);
-        tvLineSeries.setData([{ time: now, value: parseFloat(t.price) || 0 }]);
-    }
+    if (t.contract) params.push(klineStream);
 
     chartWs.onopen = () => {
         isReconnecting = false;
-        chartWs.send(JSON.stringify({
+        logDebug(`✅ Mở cổng Cloudflare thành công!`, '#0ecb81');
+        
+        let subPayload = {
             "method": "SUBSCRIBE",
             "params": params,
             "id": Date.now()
-        }));
+        };
+        logDebug(`GỬI LỆNH ĐĂNG KÝ: <br><span style="color:#aaa">${JSON.stringify(params)}</span>`, '#f0b90b');
+        chartWs.send(JSON.stringify(subPayload));
     };
 
     chartWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        
+        // Bắt tin nhắn phản hồi của Binance (khi vừa sub xong)
+        if (data.id) {
+            logDebug(`📥 BINANCE TRẢ LỜI ID ${data.id}: <span style="color:#0ecb81">Đã chấp nhận kết nối!</span>`, '#00F0FF');
+            return;
+        }
+        
+        // Nếu bị báo lỗi
+        if (data.error) {
+            logDebug(`❌ LỖI BINANCE: ${data.error.msg} (Code: ${data.error.code})`, '#f6465d');
+            return;
+        }
+
         if (!data.stream) return;
 
-        // 1. NẾN & VOLUME (kline_1s)
+        // Xóa bảng Debug nếu luồng Nến (kline) bắt đầu chảy về mượt mà
         if (data.stream.endsWith('@kline_1s')) {
+            if (dbg && dbg.style.display !== 'none') {
+                logDebug(`🔥 Dữ liệu đã về! Ẩn Debug sau 2s...`, '#0ecb81');
+                setTimeout(() => { dbg.style.display = 'none'; }, 2000);
+            }
+            
             const k = data.data.k;
             const time = Math.floor(k.t / 1000); 
             const price = parseFloat(k.c);
@@ -1308,7 +1339,7 @@ function connectRealtimeChart(t) {
             }
         }
 
-        // 2. KHỚP LỆNH CHỦ ĐỘNG (aggTrade)
+        // Khớp lệnh
         if (data.stream.endsWith('@aggTrade')) {
             const p = parseFloat(data.data.p);
             const q = parseFloat(data.data.q);
@@ -1342,12 +1373,10 @@ function connectRealtimeChart(t) {
                 let currAvg = parseFloat((avgEl.innerText || '0').replace(/[^0-9.-]+/g, "")) || 0;
                 avgEl.innerText = '$' + formatCompactNum(currAvg === 0 ? tradeValUSD : (currAvg * 0.9 + tradeValUSD * 0.1));
             }
-
             if (tradeValUSD > 5000) {
                 let whaleEl = document.getElementById('sc-stat-whale-tx');
                 if(whaleEl) whaleEl.innerText = parseInt(whaleEl.innerText || 0) + 1;
             }
-
             let flowEl = document.getElementById('sc-stat-net-flow');
             if(flowEl) {
                 let currFlow = parseFloat(flowEl.getAttribute('data-raw') || 0);
@@ -1359,10 +1388,15 @@ function connectRealtimeChart(t) {
         }
     };
 
-    chartWs.onclose = () => {
+    chartWs.onerror = (error) => {
+        logDebug(`🚫 LỖI MẠNG: Không thể kết nối hoặc bị ngắt!`, '#f6465d');
+    };
+
+    chartWs.onclose = (e) => {
+        logDebug(`⚠️ WS ĐÓNG (Mã: ${e.code}). Chờ Reconnect...`, '#f0b90b');
         if (document.getElementById('super-chart-overlay').classList.contains('active') && !isReconnecting) {
             isReconnecting = true;
-            setTimeout(() => connectRealtimeChart(window.currentChartToken), 2000);
+            setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000);
         }
     };
 }
