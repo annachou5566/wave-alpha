@@ -1203,28 +1203,44 @@ window.updateAlphaMarketUI = function(serverData) {
         // ==================================================
         // 🚀 BƠM GIÁ REALTIME VÀO TRADINGVIEW (OVERLAY MỚI)
         // ==================================================
-        if (window.currentChartSymbol && (tokenKey === window.currentChartSymbol || (targetToken && targetToken.symbol === window.currentChartSymbol))) {
-            const scPriceEl = document.getElementById('sc-live-price');
-            const scChangeEl = document.getElementById('sc-change-24h');
+        if (window.currentChartSymbol) {
+            // Nới lỏng điều kiện so sánh tên Token (Bao gồm cả ALPHA_ hoặc USDT)
+            let chartSym = window.currentChartSymbol.toUpperCase();
+            let tKey = tokenKey.toUpperCase();
+            let targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
             
-            if (scPriceEl && liveItem.p !== undefined) {
-                let newPrice = parseFloat(liveItem.p);
-                scPriceEl.innerText = '$' + formatPrice(newPrice);
+            if (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey)) {
                 
-                // Giật nến realtime
-                if (tvCandleSeries && window.lastDummyCandle) {
-                    window.lastDummyCandle.close = newPrice;
-                    window.lastDummyCandle.high = Math.max(window.lastDummyCandle.high, newPrice);
-                    window.lastDummyCandle.low = Math.min(window.lastDummyCandle.low, newPrice);
-                    tvCandleSeries.update(window.lastDummyCandle);
+                const scPriceEl = document.getElementById('sc-live-price');
+                const scChangeEl = document.getElementById('sc-change-24h');
+                
+                if (scPriceEl && liveItem.p !== undefined) {
+                    let newPrice = parseFloat(liveItem.p);
+                    scPriceEl.innerText = '$' + formatPrice(newPrice);
+                    
+                    // 🚨 ÉP NHÁY NẾN REALTIME
+                    if (tvCandleSeries && window.lastDummyCandle) {
+                        window.lastDummyCandle.close = newPrice;
+                        window.lastDummyCandle.high = Math.max(window.lastDummyCandle.high, newPrice);
+                        window.lastDummyCandle.low = Math.min(window.lastDummyCandle.low, newPrice);
+                        
+                        // Phải truyền object mới vào thì thư viện mới chịu vẽ lại
+                        tvCandleSeries.update({
+                            time: window.lastDummyCandle.time,
+                            open: window.lastDummyCandle.open,
+                            high: window.lastDummyCandle.high,
+                            low: window.lastDummyCandle.low,
+                            close: window.lastDummyCandle.close
+                        });
+                    }
                 }
-            }
 
-            if (scChangeEl && liveItem.c !== undefined) {
-                let chg = parseFloat(liveItem.c);
-                let sign = chg >= 0 ? '+' : '';
-                scChangeEl.innerText = `(${sign}${chg.toFixed(2)}%)`;
-                scChangeEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
+                if (scChangeEl && liveItem.c !== undefined) {
+                    let chg = parseFloat(liveItem.c);
+                    let sign = chg >= 0 ? '+' : '';
+                    scChangeEl.innerText = `(${sign}${chg.toFixed(2)}%)`;
+                    scChangeEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
+                }
             }
         }
 
