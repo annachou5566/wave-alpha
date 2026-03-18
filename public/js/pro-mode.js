@@ -55,6 +55,27 @@ document.addEventListener('DOMContentLoaded', () => {
             
             /* HIỆU ỨNG NHẤP NHÁY CHO TRẠM TRACKING */
             @keyframes pulse-dot { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(14,203,129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0); } }
+            
+            /* CSS CHO NÚT CHỌN KHUNG GIỜ */
+            .sc-time-btn { 
+                background: transparent; 
+                border: none; 
+                color: #848e9c; 
+                font-size: 11px; 
+                cursor: pointer; 
+                padding: 4px 8px; 
+                border-radius: 3px; 
+                transition: 0.2s;
+                font-family: var(--font-main);
+            }
+            .sc-time-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+            .sc-time-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; font-weight: bold; }
+
+            /* HIỆU ỨNG NHẤP NHÁY GIÁ */
+            .price-up { color: #00F0FF !important; animation: glow-cyan 0.5s; }
+            .price-down { color: #FF007F !important; animation: glow-pink 0.5s; }
+            @keyframes glow-cyan { from { text-shadow: 0 0 10px #00F0FF; } to { text-shadow: none; } }
+            @keyframes glow-pink { from { text-shadow: 0 0 10px #FF007F; } to { text-shadow: none; } }
         `;
         document.head.appendChild(style);
     }
