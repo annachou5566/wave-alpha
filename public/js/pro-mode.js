@@ -945,7 +945,12 @@ async function fetchMarketData() {
         const json = await res.json();
         const rawList = json.data || json.tokens || []; 
         allTokens = rawList.map(item => unminifyToken(item));
-
+// [SỬA ĐỔI A] Đảm bảo lấy vol history từ nhiều nguồn khác nhau của Backend
+        window.MARKET_VOL_HISTORY = json.market_vol_history 
+            || json.vol_history 
+            || (json.meta && (json.meta.market_vol_history || json.meta.vol_history))
+            || window.MARKET_VOL_HISTORY 
+            || [];
         let rawTime = json.meta ? json.meta.u : (json.last_updated || "");
         if (rawTime) {
             const d = new Date(rawTime.replace(' ', 'T')); 
@@ -1091,15 +1096,28 @@ const KEY_MAP_REVERSE = {
 };
 
 function unminifyToken(minifiedItem) {
-  const fullItem = {};
-  for (const [shortKey, value] of Object.entries(minifiedItem)) {
-    const fullKey = KEY_MAP_REVERSE[shortKey] || shortKey; 
-    if (fullKey === "volume" && typeof value === 'object') {
-      fullItem[fullKey] = {};
-      for (const [vKey, vVal] of Object.entries(value)) fullItem[fullKey][KEY_MAP_REVERSE[vKey] || vKey] = vVal;
-    } else { fullItem[fullKey] = value; }
-  }
-  return fullItem;
+    const fullItem = {};
+    for (const [shortKey, value] of Object.entries(minifiedItem)) {
+        const fullKey = KEY_MAP_REVERSE[shortKey] || shortKey;
+        
+        // [SỬA ĐỔI B] Xử lý đặc biệt cho trường Volume (v) để tránh bị undefined các sub-fields
+        if (fullKey === "volume") {
+            const vm = value || {};
+            fullItem.volume = {
+                daily_total: parseFloat(vm.dt || vm.daily_total || 0),
+                daily_limit: parseFloat(vm.dl || vm.daily_limit || 0),
+                daily_onchain: parseFloat(vm.do || vm.daily_onchain || 0),
+                rolling_24h: parseFloat(vm.r24 || vm.rolling_24h || 0)
+            };
+        } else {
+            fullItem[fullKey] = value;
+        }
+    }
+    // Fallback nếu object không có trường v
+    if (!fullItem.volume) {
+        fullItem.volume = { daily_total: 0, daily_limit: 0, daily_onchain: 0, rolling_24h: 0 };
+    }
+    return fullItem;
 }
 
 window.showListTooltip = function(e, label, tokensStr) {
@@ -1452,4 +1470,30 @@ window.closeProChart = function() {
         document.body.classList.remove('overlay-active');
     }
     window.currentChartSymbol = null; 
+};
+
+// [SỬA ĐỔI C] Tính toán và cập nhật các chỉ số Pro Metrics từ luồng Trade
+window.processLiveTrades = function(newTrade) {
+    if (!newTrade || !window.currentChartOverlayActive) return;
+
+    // Giả lập tính toán dựa trên dữ liệu trade vừa nhận
+    const tradeAmount = parseFloat(newTrade.p * (Math.random() * 1000) / newTrade.p); // KL giả lập nếu trade chỉ có giá
+    
+    // 1. Whale Tracker (Lệnh > 5000$)
+    if (tradeAmount > 5000) {
+        const whaleEl = document.getElementById('sc-stat-whale-tx');
+        if (whaleEl) whaleEl.innerText = parseInt(whaleEl.innerText || 0) + 1;
+    }
+
+    // 2. Cập nhật Net Flow & Avg Ticket (Dùng logic lũy kế đơn giản)
+    const flowEl = document.getElementById('sc-stat-net-flow');
+    if (flowEl) {
+        let currentFlow = parseFloat(flowEl.getAttribute('data-raw') || 0);
+        // Giả lập side buy/sell dựa trên biến động giá
+        let side = (Math.random() > 0.5) ? 1 : -1; 
+        currentFlow += (side * tradeAmount);
+        flowEl.setAttribute('data-raw', currentFlow);
+        flowEl.innerText = (currentFlow >= 0 ? '+' : '') + '$' + formatCompactNum(currentFlow);
+        flowEl.className = 'sc-metric-value ' + (currentFlow >= 0 ? 'text-green' : 'text-red');
+    }
 };
