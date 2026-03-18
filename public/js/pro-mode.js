@@ -824,36 +824,58 @@ function injectLayout() {
             <div class="sc-header">
                 <div class="sc-coin-info">
                     <img id="sc-coin-logo" class="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
-                    <div>
-                        <div id="sc-coin-symbol" class="sc-coin-symbol">--- / USDT</div>
+                    <div style="display:flex; flex-direction:column; justify-content:center;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div id="sc-coin-symbol" class="sc-coin-symbol" style="color:#00F0FF; text-shadow: 0 0 10px rgba(0,240,255,0.4);">--- / USDT</div>
+                            <div class="sc-price-group" style="display:flex; align-items:baseline; gap:6px;">
+                                <div id="sc-live-price" class="sc-live-price" style="font-size:22px; color:#fff;">$--</div>
+                                <div id="sc-change-24h" class="sc-change-24h" style="font-size:14px;">(--%)</div>
+                            </div>
+                        </div>
                         <div id="sc-coin-contract" class="sc-coin-contract" onclick="window.pluginCopy(this.innerText)">---</div>
                     </div>
                 </div>
-                <div class="sc-price-group">
-                    <div id="sc-live-price" class="sc-live-price">$--</div>
-                    <div id="sc-change-24h" class="sc-change-24h text-green">(--%)</div>
+                
+                <div class="sc-metrics-bar" style="display:flex; gap:20px; font-family:var(--font-num); font-size:12px; border-left:1px solid rgba(255,255,255,0.1); padding-left:20px;">
+                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">MARKET CAP</span><span id="sc-top-mc" style="color:#fff; font-weight:bold;">$--</span></div>
+                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">LIQUIDITY</span><span id="sc-top-liq" style="color:#fff; font-weight:bold;">$--</span></div>
+                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">VOL 24H</span><span id="sc-top-vol" style="color:#fff; font-weight:bold;">$--</span></div>
+                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">HOLDERS</span><span id="sc-top-hold" style="color:#fff; font-weight:bold;">--</span></div>
+                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">TXs (24h)</span><span id="sc-top-tx" style="color:#fff; font-weight:bold;">--</span></div>
                 </div>
                 <button class="sc-close-btn" onclick="window.closeProChart()">✕</button>
             </div>
 
             <div class="sc-body">
-                <div class="sc-chart-main">
-                    <div id="sc-chart-container"></div>
+                <div class="sc-chart-main" style="position:relative; display:flex; flex-direction:column;">
+                    <div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick (Live)</button>
+                        <span style="color:#444; margin:0 4px;">|</span>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('5m', this)">5m</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('15m', this)">15m</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
+                    </div>
+                    <div id="sc-chart-container" style="flex:1;"></div>
                 </div>
+                
                 <div class="sc-side-panel">
                     <div class="sc-panel-section" style="margin-bottom: 15px;">
-                        <div class="sc-panel-title">🐋 Whale Tracker</div>
+                        <div class="sc-panel-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B90B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Whale Tracker</div>
                         <div class="sc-metric-item"><span class="sc-metric-label">Ticket trung bình</span><span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span></div>
                         <div class="sc-metric-item"><span class="sc-metric-label">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" class="sc-metric-value">0</span></div>
                     </div>
                     <div class="sc-panel-section" style="margin-bottom: 15px;">
-                        <div class="sc-panel-title">📊 Flow & Speed</div>
-                        <div class="sc-metric-item"><span class="sc-metric-label">Dòng tiền Net</span><span id="sc-stat-net-flow" class="sc-metric-value text-green">+$0</span></div>
+                        <div class="sc-panel-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Flow & Speed</div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Dòng tiền Net</span><span id="sc-stat-net-flow" class="sc-metric-value" style="color:#00F0FF;">+$0</span></div>
                         <div class="sc-metric-item"><span class="sc-metric-label">Tốc độ khớp / s</span><span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span></div>
                     </div>
                     <div class="sc-panel-section" style="flex:1; display:flex; flex-direction:column; overflow:hidden; margin-bottom:0;">
                         <div class="sc-panel-title" style="border-top:1px solid #2b3139; padding-top:15px; margin-bottom:10px;"><i class="fas fa-bolt" style="color:#F0B90B"></i> LIVE TRADES</div>
-                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; margin-bottom:5px; font-weight:700;"><span>GIÁ</span><span>KL</span><span>TIME</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; margin-bottom:5px; font-weight:700;"><span>GIÁ</span><span>KL ($)</span><span>TIME</span></div>
                         <div id="sc-live-trades" style="flex:1; overflow-y:auto; font-size:11px; font-family:var(--font-num);">
                             <div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>
                         </div>
@@ -1272,29 +1294,33 @@ function formatCompactUSD(num) {
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     
-    // 🧹 RESET TOÀN BỘ BỘ NHỚ KHI MỞ CHART MỚI (Fix lỗi dính Data Token cũ)
-    window.scSpeedWindow = [];
-    window.scNetFlow = 0;
-    window.scWhaleCount = 0;
-    window.scTotalVol = 0;
-    window.scTradeCount = 0;
+    window.scSpeedWindow = []; window.scNetFlow = 0; window.scWhaleCount = 0; window.scTotalVol = 0; window.scTradeCount = 0;
     window.scLastPrice = parseFloat(t.price) || 0;
-    
-    // THÊM DÒNG NÀY ĐỂ RESET HƯỚNG GIAO DỊCH KHI MỞ CHART MỚI
-    window.scLastTradeDir = undefined; 
-    
-    window.lastDummyCandle = null;
-    window.currentVolObj = null;
+    window.scLastTradeDir = undefined; // Fix lỗi Netflow
+    window.lastDummyCandle = null; window.currentVolObj = null;
     let hasInitDummy = false;
 
-    try { chartWs = new WebSocket(_getWSA()); } 
-    catch(e) { console.error("WS Blocked"); return; }
+    try { chartWs = new WebSocket(_getWSA()); } catch(e) { return; }
 
     let rawId = t.alphaId || t.id || '';
     rawId = String(rawId).toLowerCase().replace('alpha_', ''); 
-    let tradeStream = rawId ? `alpha_${rawId}usdt@aggTrade` : `${t.symbol.toLowerCase()}usdt@aggTrade`;
+    let sysSymbol = t.symbol.toLowerCase() + 'usdt';
     
-    let params = [tradeStream, 'came@allTokens@ticker24']; 
+    // SETUP PAYLOAD SUBSCRIPTION DỰA VÀO KHUNG GIỜ
+    let params = [];
+    if (window.currentChartInterval === 'tick') {
+        params.push(rawId ? `alpha_${rawId}usdt@aggTrade` : `${sysSymbol}@aggTrade`);
+    } else {
+        // Đăng ký luồng Kline. Nếu là W3W có contract thì xài chuẩn ca@chainId, không thì xài symbol chuẩn
+        if (t.contract && t.chain_id) {
+            params.push(`came@${t.contract}@${t.chain_id}@kline_${window.currentChartInterval}`);
+        } else {
+            params.push(`${sysSymbol}@kline_${window.currentChartInterval}`);
+        }
+        params.push(rawId ? `alpha_${rawId}usdt@aggTrade` : `${sysSymbol}@aggTrade`); // Vẫn lấy aggTrade để bơm Sổ Lệnh
+    }
+    params.push('came@allTokens@ticker24'); // Luôn lấy tick giá phụ trợ
+
     chartWs.onopen = () => {
         isReconnecting = false;
         chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
@@ -1307,155 +1333,93 @@ function connectRealtimeChart(t) {
         const tradesBox = document.getElementById('sc-live-trades');
         if (tradesBox && tradesBox.innerText.includes('Connect')) tradesBox.innerHTML = '';
 
-        if (data.stream.endsWith('@aggTrade') || data.stream === 'came@allTokens@ticker24') {
-            
-            let p, q, isUpTrade, tradeValUSD, tradeTimeSec;
+        // 1. XỬ LÝ NẾN NHẬT (KLINE STREAM)
+        if (data.e === 'kline' || data.stream.includes('@kline_')) {
+            let k = data.data.k;
+            let candleTime = Math.floor(k.t / 1000);
+            let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
+            let candleColor = isUpCandle ? '#00F0FF' : '#FF007F'; // Màu Cyan/Pink
+            let volColor = isUpCandle ? 'rgba(0, 240, 255, 0.5)' : 'rgba(255, 0, 127, 0.5)';
 
-            // 1. LUỒNG KHỚP LỆNH CHÍNH (`aggTrade`)
-            if (data.stream.endsWith('@aggTrade')) {
-                p = parseFloat(data.data.p);
-                q = parseFloat(data.data.q);
-                
-                // --- BẮT ĐẦU FIX BUG NETFLOW & TOÀN LỆNH XANH ---
-                if (p > window.scLastPrice) {
-                    isUpTrade = true;
-                } else if (p < window.scLastPrice) {
-                    isUpTrade = false;
-                } else {
-                    // Nếu giá đi ngang, kế thừa hướng của lệnh trước đó.
-                    // Fallback: nếu chưa có lệnh trước đó, mới thử dùng data.data.m
-                    isUpTrade = (typeof window.scLastTradeDir !== 'undefined') 
-                                ? window.scLastTradeDir 
-                                : (data.data.m !== undefined ? !data.data.m : true);
+            let candleObj = { time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) };
+            let volObj = { time: candleTime, value: parseFloat(k.v), color: volColor };
+
+            if (tvCandleSeries) tvCandleSeries.update(candleObj);
+            if (tvVolumeSeries) tvVolumeSeries.update(volObj);
+            
+            // Cập nhật giá Header
+            let scPriceEl = document.getElementById('sc-live-price');
+            if (scPriceEl) { scPriceEl.style.color = candleColor; scPriceEl.innerText = '$' + formatPrice(parseFloat(k.c)); }
+        }
+
+        // 2. XỬ LÝ TICK/AREA CHART VÀ SỔ LỆNH (AGGTRADE)
+        if (data.stream.endsWith('@aggTrade')) {
+            let p = parseFloat(data.data.p);
+            let q = parseFloat(data.data.q);
+            let isUpTrade;
+            
+            // THUẬT TOÁN TICK TEST FIX LỖI NETFLOW
+            if (p > window.scLastPrice) isUpTrade = true;
+            else if (p < window.scLastPrice) isUpTrade = false;
+            else isUpTrade = (typeof window.scLastTradeDir !== 'undefined') ? window.scLastTradeDir : (data.data.m !== undefined ? !data.data.m : true);
+            window.scLastTradeDir = isUpTrade;
+            window.scLastPrice = p;
+
+            let tradeValUSD = p * q;
+            let tradeTimeSec = Math.floor(data.data.T / 1000); 
+            let colorTick = isUpTrade ? '#00F0FF' : '#FF007F';
+
+            // VẼ TICK AREA CHART (Chỉ chạy khi tab Tick đang mở)
+            if (window.currentChartInterval === 'tick' && tvLineSeries) {
+                if (!hasInitDummy) {
+                    let initData = []; for(let i=60; i>=1; i--) { initData.push({ time: tradeTimeSec - i, value: p }); }
+                    try { tvLineSeries.setData(initData); tvChart.timeScale().fitContent(); } catch(e) {}
+                    hasInitDummy = true;
                 }
-                // Lưu lại hướng để tick tiếp theo dùng nếu giá đi ngang
-                window.scLastTradeDir = isUpTrade;
-                // --- KẾT THÚC FIX BUG ---
-                
-                tradeValUSD = p * q;
-                tradeTimeSec = Math.floor(data.data.T / 1000); 
-
-                // Tính tốc độ khớp
-                window.scSpeedWindow.push({ t: Date.now(), v: tradeValUSD });
-                window.scSpeedWindow = window.scSpeedWindow.filter(x => Date.now() - x.t <= 5000);
-                let speed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
-                let speedEl = document.getElementById('sc-stat-match-speed');
-                if(speedEl) speedEl.innerText = '$' + formatCompactUSD(speed) + ' /s';
-
-            } else {
-                // 2. LUỒNG CỨU CÁNH (Chỉ bơm giá khi token không có giao dịch)
-                let tickerList = data.data.d || [];
-                let myTicker = tickerList.find(item => item.s && (item.s === t.alphaId || item.s.toLowerCase() === (t.symbol+'usdt').toLowerCase()));
-                if (!myTicker) return;
-                
-                p = parseFloat(myTicker.p);
-                q = 0; // Không bơm volume ảo
-                isUpTrade = p > window.scLastPrice;
-                tradeValUSD = 0;
-                tradeTimeSec = window.lastDummyCandle ? Math.max(Math.floor(Date.now() / 1000), window.lastDummyCandle.time) : Math.floor(Date.now() / 1000);
-            }
-
-            // Lưu lại giá mới
-            let colorTick = p > window.scLastPrice ? '#0ecb81' : (p < window.scLastPrice ? '#f6465d' : '#eaecef');
-            if (p !== window.scLastPrice) window.scLastPrice = p;
-
-            // ==========================================
-            // VẼ CHART AREA VÀ VOLUME (ĐÃ FIX LAYOUT)
-            // ==========================================
-            if (tvLineSeries && !hasInitDummy) {
-                let initData = [];
-                for(let i=60; i>=1; i--) { initData.push({ time: tradeTimeSec - i, value: p }); }
-                try { tvLineSeries.setData(initData); } catch(e) {}
                 window.lastDummyCandle = { time: tradeTimeSec, value: p };
-                window.currentVolObj = { time: tradeTimeSec, value: 0, color: 'rgba(38,166,154,0)' };
-                tvChart.timeScale().fitContent();
-                hasInitDummy = true;
+                window.currentVolObj = { time: tradeTimeSec, value: q, color: isUpTrade ? 'rgba(0, 240, 255, 0.5)' : 'rgba(255, 0, 127, 0.5)' };
+                try { tvLineSeries.update(window.lastDummyCandle); tvVolumeSeries.update(window.currentVolObj); } catch(e) {}
+                
+                let scPriceEl = document.getElementById('sc-live-price');
+                if (scPriceEl) { scPriceEl.style.color = colorTick; scPriceEl.innerText = '$' + formatPrice(p); }
             }
 
-            if (tvLineSeries && hasInitDummy && window.lastDummyCandle) {
-                try {
-                    if (tradeTimeSec > window.lastDummyCandle.time) {
-                        window.lastDummyCandle = { time: tradeTimeSec, value: p };
-                    } else {
-                        window.lastDummyCandle.value = p; 
-                    }
-                    tvLineSeries.update(window.lastDummyCandle);
-                } catch(e) {}
-            }
-
-            if (tvVolumeSeries && hasInitDummy && window.currentVolObj && q > 0) {
-                let volColor = isUpTrade ? 'rgba(14, 203, 129, 0.6)' : 'rgba(246, 70, 93, 0.6)';
-                try {
-                    if (tradeTimeSec > window.currentVolObj.time) {
-                        window.currentVolObj = { time: tradeTimeSec, value: q, color: volColor };
-                    } else {
-                        window.currentVolObj.value += q; 
-                        window.currentVolObj.color = volColor; 
-                    }
-                    tvVolumeSeries.update(window.currentVolObj);
-                } catch(e) {}
-            }
-
-            // ==========================================
-            // CẬP NHẬT GIAO DIỆN UI TỪ BỘ NHỚ RAM
-            // ==========================================
-            
-            // 1. Header Giá
-            const scPriceEl = document.getElementById('sc-live-price');
-            if (scPriceEl && colorTick !== '#eaecef') {
-                scPriceEl.style.color = colorTick;
-                scPriceEl.innerText = '$' + formatPrice(p);
-            }
-
-            // 2. Bơm sổ lệnh (Có Xanh, Có Đỏ chuẩn)
-            if (tradesBox && data.stream.endsWith('@aggTrade')) {
-                let bgFlash = isUpTrade ? 'rgba(14, 203, 129, 0.2)' : 'rgba(246, 70, 93, 0.2)';
-                let textColor = isUpTrade ? '#0ecb81' : '#f6465d';
+            // BƠM SỔ LỆNH LIVE TRADES (Giá + Volume USD)
+            if (tradesBox) {
+                let bgFlash = isUpTrade ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 0, 127, 0.15)';
                 let row = document.createElement('div');
                 row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${bgFlash}; transition: background 0.4s ease;`;
-                row.innerHTML = `<span style="color:${textColor}">${formatPrice(p)}</span><span style="color:#eaecef">$${formatCompactUSD(tradeValUSD)}</span><span style="color:#5e6673">${new Date(data.data.T).toLocaleTimeString('en-GB',{hour12:false})}</span>`;
+                row.innerHTML = `<span style="color:${colorTick}">${formatPrice(p)}</span><span style="color:#eaecef">$${formatCompactUSD(tradeValUSD)}</span><span style="color:#5e6673">${new Date(data.data.T).toLocaleTimeString('en-GB',{hour12:false})}</span>`;
                 tradesBox.insertBefore(row, tradesBox.firstChild);
                 setTimeout(() => { row.style.background = 'transparent'; }, 400);
                 if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
             }
 
-            // 3. Tính toán Net Flow & Whale (Trực tiếp bằng RAM, không dùng DOM)
-            if (data.stream.endsWith('@aggTrade')) {
-                window.scTradeCount++;
-                window.scTotalVol += tradeValUSD;
-                
-                // Cập nhật Avg Ticket
-                let avgEl = document.getElementById('sc-stat-avg-ticket');
-                if (avgEl) avgEl.innerText = '$' + formatCompactUSD(window.scTotalVol / window.scTradeCount);
+            // TÍNH TOÁN ON-CHAIN DÒNG TIỀN
+            window.scTradeCount++; window.scTotalVol += tradeValUSD;
+            let avgEl = document.getElementById('sc-stat-avg-ticket');
+            if (avgEl) avgEl.innerText = '$' + formatCompactUSD(window.scTotalVol / window.scTradeCount);
 
-                // Cập nhật Whale
-                if (tradeValUSD > 5000) {
-                    window.scWhaleCount++;
-                    let whaleEl = document.getElementById('sc-stat-whale-tx');
-                    if (whaleEl) whaleEl.innerText = window.scWhaleCount;
-                }
-                
-                // Cập nhật NET FLOW (Mua cộng, Bán trừ)
-                window.scNetFlow += isUpTrade ? tradeValUSD : -tradeValUSD;
-                let flowEl = document.getElementById('sc-stat-net-flow');
-                if (flowEl) {
-                    flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
-                    flowEl.className = 'sc-metric-value ' + (window.scNetFlow >= 0 ? 'text-green' : 'text-red');
-                }
+            if (tradeValUSD > 5000) {
+                window.scWhaleCount++;
+                let whaleEl = document.getElementById('sc-stat-whale-tx'); if (whaleEl) whaleEl.innerText = window.scWhaleCount;
+            }
+            
+            window.scNetFlow += isUpTrade ? tradeValUSD : -tradeValUSD;
+            let flowEl = document.getElementById('sc-stat-net-flow');
+            if (flowEl) {
+                flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
+                flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
             }
         }
     };
-
-    chartWs.onerror = (e) => {};
-    chartWs.onclose = (e) => {
-        if (document.getElementById('super-chart-overlay').classList.contains('active') && !isReconnecting) {
-            isReconnecting = true;
-            setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000);
-        }
-    };
+    chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000); } };
 }
 
-window.openProChart = function(t) {
+window.currentChartInterval = 'tick'; // Mặc định mở lên là Tick
+let tvCandleSeries = null; // Thêm biến lưu trữ chuỗi nến Nhật
+
+window.openProChart = function(t, isTimeSwitch = false) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
 
@@ -1463,102 +1427,94 @@ window.openProChart = function(t) {
     overlay.classList.add('active');
     document.body.classList.add('overlay-active');
 
-    document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + ' / USDT';
-    document.getElementById('sc-coin-contract').innerText = t.contract ? t.contract.substring(0,10) + '...' : '';
-    document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
-    document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
-
-    let chg = parseFloat(t.change_24h) || 0;
-    let chgEl = document.getElementById('sc-change-24h');
-    if (chgEl) {
-        chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`;
-        chgEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
-    }
-    
-    let els = overlay.getElementsByTagName('*');
-    for(let el of els) {
-        if(el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
-            let text = el.innerText.trim();
-            if(text === '🐋 Whale Tracker') {
-                el.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B90B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Whale Tracker`;
-            }
-            if(text === '📊 Flow & Speed') {
-                el.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5CE1E6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Flow & Speed`;
-            }
-            if(text === 'KL' || text === 'KL (Token)') {
-                el.innerText = 'KL ($)';
-            }
+    if (!isTimeSwitch) {
+        // Bơm thông số Header
+        document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + ' / USDT';
+        document.getElementById('sc-coin-contract').innerText = t.contract ? t.contract.substring(0,10) + '...' : '';
+        document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
+        document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
+        
+        let chg = parseFloat(t.change_24h) || 0;
+        let chgEl = document.getElementById('sc-change-24h');
+        if (chgEl) {
+            chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`;
+            chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; // Hệ màu Cyan/Pink
         }
+
+        // BƠM DỮ LIỆU VÀO BẢNG CHỈ SỐ VÀNG
+        document.getElementById('sc-top-mc').innerText = '$' + formatCompactNum(t.market_cap);
+        document.getElementById('sc-top-liq').innerText = '$' + formatCompactNum(t.liquidity);
+        document.getElementById('sc-top-vol').innerText = '$' + formatCompactNum(t.volume?.daily_total || 0);
+        document.getElementById('sc-top-hold').innerText = formatInt(t.holders);
+        document.getElementById('sc-top-tx').innerText = formatInt(t.tx_count);
     }
+
+    // Reset Chart
+    const container = document.getElementById('sc-chart-container');
+    if (tvChart) { tvChart.remove(); tvChart = null; tvLineSeries = null; tvCandleSeries = null; tvVolumeSeries = null; }
+    container.innerHTML = ''; 
 
     setTimeout(() => {
-        const container = document.getElementById('sc-chart-container');
-        if (!container) return;
-        container.innerHTML = ''; 
         const rect = container.getBoundingClientRect();
-        
-        // 🛠️ GIẢI QUYẾT LỖI 1: TRỪ HAO 30PX ĐỂ KHÔNG BỊ CSS NUỐT TRỤC THỜI GIAN
         const w = rect.width > 0 ? rect.width : window.innerWidth * 0.75;
         const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7) - 30;
 
         let priceVal = parseFloat(t.price) || 1;
-        let prec = 4;
-        if (priceVal < 0.001) prec = 6;
-        if (priceVal < 0.00001) prec = 8;
-        if (priceVal < 0.0000001) prec = 10;
-        let minM = 1 / Math.pow(10, prec);
+        let prec = 4; minM = 0.0001;
+        if (priceVal < 0.001) { prec = 6; minM = 0.000001; }
+        if (priceVal < 0.00001) { prec = 8; minM = 0.00000001; }
 
         tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
             layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
-            watermark: { color: 'rgba(255, 255, 255, 0.03)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 110, horzAlign: 'center', vertAlign: 'center' },
-            grid: { vertLines: { color: 'rgba(43, 49, 57, 0.1)' }, horzLines: { color: 'rgba(43, 49, 57, 0.1)' } },
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-            
-            // 🛠️ ÉP RÕ TRỤC THỜI GIAN
-            timeScale: { 
-                visible: true,
-                borderColor: 'rgba(43, 49, 57, 0.5)', 
-                timeVisible: true, 
-                secondsVisible: true, 
-                fixLeftEdge: true, 
-                fixRightEdge: true 
-            },
-            // 🛠️ GIẢI QUYẾT LỖI 2: ĐẨY MẢNG AREA LÊN CAO (Cách đáy 35%)
-            rightPriceScale: {
-                autoScale: true,
-                scaleMargins: { top: 0.1, bottom: 0.35 } 
-            }
+            watermark: { color: 'rgba(255, 255, 255, 0.02)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
+            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, // Đứt nét mờ
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'} },
+            timeScale: { borderColor: 'rgba(43, 49, 57, 0.5)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
+            rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
         });
 
-        tvLineSeries = tvChart.addAreaSeries({
-            lineColor: '#5CE1E6', topColor: 'rgba(92, 225, 230, 0.3)', bottomColor: 'rgba(92, 225, 230, 0.0)', lineWidth: 2, 
-            priceFormat: { type: 'price', precision: prec, minMove: minM }
-        });
+        // NẾU LÀ TICK -> VẼ AREA CHART (MẢNG MÀU)
+        if (window.currentChartInterval === 'tick') {
+            tvLineSeries = tvChart.addAreaSeries({
+                lineColor: '#00F0FF', topColor: 'rgba(0, 240, 255, 0.3)', bottomColor: 'rgba(0, 240, 255, 0.0)', lineWidth: 2, 
+                priceFormat: { type: 'price', precision: prec, minMove: minM }
+            });
+        } 
+        // NẾU LÀ KHUNG THỜI GIAN -> VẼ NẾN NHẬT (CANDLESTICKS)
+        else {
+            tvCandleSeries = tvChart.addCandlestickSeries({
+                upColor: '#00F0FF', downColor: '#FF007F', // CYAN / PINK THẦN THÁNH
+                borderDownColor: '#FF007F', borderUpColor: '#00F0FF',
+                wickDownColor: '#FF007F', wickUpColor: '#00F0FF',
+                priceFormat: { type: 'price', precision: prec, minMove: minM }
+            });
+        }
 
-        // 🛠️ GIẢI QUYẾT LỖI VOLUME: TẠO TRỤC ĐỘC LẬP ÉP XUỐNG DƯỚI CÙNG (30% Dưới đáy)
+        // TRỤC VOLUME XÀI CHUNG HỆ MÀU
         tvVolumeSeries = tvChart.addHistogramSeries({
-            color: '#26a69a', 
-            priceFormat: { type: 'volume' }, 
-            priceScaleId: 'vol_scale' 
+            priceFormat: { type: 'volume' }, priceScaleId: 'vol_scale' 
         });
-        
-        tvChart.priceScale('vol_scale').applyOptions({
-            scaleMargins: { top: 0.7, bottom: 0 },
-            visible: false
-        });
+        tvChart.priceScale('vol_scale').applyOptions({ scaleMargins: { top: 0.7, bottom: 0 }, visible: false });
 
-        // KHI RESIZE CŨNG PHẢI TRỪ HAO 30PX
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if (newRect.width > 0 && newRect.height > 0) {
-                tvChart.applyOptions({ height: Math.max(0, newRect.height - 30), width: newRect.width });
-            }
+            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 30), width: newRect.width });
         }).observe(container);
         
         if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
-    }, 300); 
+    }, 100); 
+};
+
+// Hàm xử lý Click đổi khung giờ
+window.changeChartInterval = function(interval, btnEl) {
+    document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+    window.currentChartInterval = interval;
+    if (window.currentChartToken) {
+        window.openProChart(window.currentChartToken, true); // Gọi lại hàm mở chart (chế độ switch)
+    }
 };
 
 window.closeProChart = function() {
