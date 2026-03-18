@@ -1431,21 +1431,40 @@ function connectRealtimeChart(t) {
     };
     chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000); } };
 }
-// ==========================================
-// 📡 FETCH LỊCH SỬ NẾN TỪ BINANCE REST API
-// ==========================================
-async function fetchBinanceHistory(symbol, interval, isArea = false) {
+async function fetchBinanceHistory(t, interval, isArea = false) {
     try {
         let binanceInterval = interval === 'tick' ? '1s' : interval;
         let limit = isArea ? 100 : 300; 
-        let sym = symbol.toUpperCase().replace('ALPHA_', '');
-        if (!sym.endsWith('USDT')) sym += 'USDT';
+        let klines = [];
+
+        if (t.contract && t.chain_id) {
+            // --- 1. TOKEN DEX (W3W) - Dùng Proxy của Node.js ---
+            let cleanAddr = t.contract.toLowerCase();
+            if (t.chain_id === "CT_501" || t.chain_id === "CT_784") cleanAddr = t.contract; // Sol/Tron giữ nguyên hoa thường
+            
+            let bapiUrl = `https://www.binance.com/bapi/defi/v1/public/alpha-trade/agg-klines?chainId=${t.chain_id}&interval=${binanceInterval}&limit=${limit}&tokenAddress=${cleanAddr}&dataType=aggregate`;
+            
+            // Gọi qua Proxy chống CORS của Node.js (Giả sử Node.js của bạn chạy ở link này)
+            let proxyUrl = `https://alpha-realtime.onrender.com/api/proxy?url=${encodeURIComponent(bapiUrl)}`;
+            const res = await fetch(proxyUrl);
+            
+            if (!res.ok) return [];
+            const data = await res.json();
+            if (data.code === "000000" && data.data && data.data.klineInfos) {
+                klines = data.data.klineInfos;
+            }
+        } else {
+            // --- 2. TOKEN SPOT - Gọi thẳng API Spot ---
+            let sym = (t.symbol || '').toUpperCase().replace('ALPHA_', '');
+            if (!sym.endsWith('USDT')) sym += 'USDT';
+            
+            const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${binanceInterval}&limit=${limit}`);
+            if (!res.ok) return [];
+            klines = await res.json();
+        }
         
-        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${binanceInterval}&limit=${limit}`);
-        if (!res.ok) return [];
-        const data = await res.json();
-        
-        return data.map(d => {
+        // --- XỬ LÝ CHUẨN HÓA DATA CHO CHART ---
+        return klines.map(d => {
             let timeSec = Math.floor(d[0] / 1000);
             let isUp = parseFloat(d[4]) >= parseFloat(d[1]);
             if (isArea) {
@@ -1458,7 +1477,8 @@ async function fetchBinanceHistory(symbol, interval, isArea = false) {
             }
         });
     } catch (e) {
-        console.warn("Lỗi tải lịch sử cho", symbol); return [];
+        console.error("Lỗi lấy lịch sử:", e);
+        return [];
     }
 }
 
@@ -1556,8 +1576,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         }).observe(container);
         
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
-        let fetchSym = t.alphaId || t.symbol;
-        fetchBinanceHistory(fetchSym, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
+        fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
             if (histData.length > 0) {
                 if (window.currentChartInterval === 'tick' && tvLineSeries) {
                     tvLineSeries.setData(histData);
