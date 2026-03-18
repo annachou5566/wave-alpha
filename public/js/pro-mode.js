@@ -1362,11 +1362,15 @@ function initTradingViewChart() {
     const container = document.getElementById('tv-chart-container');
     if (!container) return;
     
-    // Xóa dòng chữ "Đang thiết lập..."
+    // Xóa dòng chữ chờ
     container.innerHTML = ''; 
 
-    // 1. Tạo bộ khung Chart chuẩn Binance Pro
+    // 🚨 BÍ QUYẾT 1: Đo đạc lại chính xác kích thước vùng chứa sau khi ngăn kéo mở
+    const rect = container.getBoundingClientRect();
+
     tvChart = LightweightCharts.createChart(container, {
+        width: rect.width,    // Ép cứng chiều rộng thực tế
+        height: rect.height,  // Ép cứng chiều cao thực tế
         layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
         grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -1374,93 +1378,48 @@ function initTradingViewChart() {
         timeScale: { borderColor: 'rgba(43, 49, 57, 0.8)', timeVisible: true, secondsVisible: false },
     });
 
-    // 2. Thêm Layer Nến Nhật (Candlestick)
     tvCandleSeries = tvChart.addCandlestickSeries({
         upColor: '#0ecb81', downColor: '#f6465d',
         borderUpColor: '#0ecb81', borderDownColor: '#f6465d',
         wickUpColor: '#0ecb81', wickDownColor: '#f6465d',
     });
 
-    // 3. Thêm Layer Cột Volume ở dưới cùng
     tvVolumeSeries = tvChart.addHistogramSeries({
         color: '#26a69a',
         priceFormat: { type: 'volume' },
         priceScaleId: '', 
-        scaleMargins: { top: 0.8, bottom: 0 }, // Volume chiếm 20% không gian phía dưới
+        scaleMargins: { top: 0.8, bottom: 0 }, 
     });
 
-    // Ép biểu đồ tự động co giãn khi kích thước màn hình thay đổi
+    // 🚨 BÍ QUYẾT 2: Bảo vệ lỗi Resize vòng lặp vô tận
     new ResizeObserver(entries => {
         if (entries.length === 0 || entries[0].target !== container) return;
         const newRect = entries[0].contentRect;
-        tvChart.applyOptions({ height: newRect.height, width: newRect.width });
+        // Chỉ bóp méo biểu đồ khi kích thước lớn hơn 0
+        if (newRect.width > 0 && newRect.height > 0) {
+            tvChart.applyOptions({ height: newRect.height, width: newRect.width });
+        }
     }).observe(container);
-}
-
-// --- File: public/js/pro-mode (23).js ---
-
-// Hàm sinh Nến Giả (Dummy Data) để bạn Test Giao diện trước
-function drawDummyCandles(basePrice) {
-    if (!tvCandleSeries || !tvVolumeSeries || !tvChart) return; // 🚨 Sửa lỗi kiểm tra tvChart
-    const candleData = []; const volumeData = [];
-    let currentPrice = parseFloat(basePrice) || 100;
-    // Lùi về 100 phút trước
-    let time = Math.floor(Date.now() / 1000) - 100 * 60; 
-
-    for (let i = 0; i < 100; i++) {
-        const open = currentPrice;
-        // Giá nhảy lung tung +-2%
-        const close = open + (Math.random() - 0.5) * (open * 0.02); 
-        // Tạo High/Low ngẫu nhiên
-        const high = Math.max(open, close) + (Math.random() * open * 0.01);
-        const low = Math.min(open, close) - (Math.random() * open * 0.01);
-        const vol = Math.random() * 1000;
-        const isUp = close >= open;
-
-        candleData.push({ time: time, open, high, low, close });
-        // Set màu cột Volume mờ mờ chuẩn Pro
-        volumeData.push({ 
-            time: time, 
-            value: vol, 
-            color: isUp ? 'rgba(14, 203, 129, 0.4)' : 'rgba(246, 70, 93, 0.4)' 
-        });
-
-        currentPrice = close; 
-        time += 60; // Cộng thêm 1 phút
-    }
-    tvCandleSeries.setData(candleData);
-    tvVolumeSeries.setData(volumeData);
-
-    // 🚨 CHÌA KHÓA FIX LỖI CHART TRỐNG: 🚨
-    // Ép biểu đồ phải tự động thu phóng để hiển thị toàn bộ data vừa tạo
-    tvChart.timeScale().fitContent(); 
 }
 
 window.openProChart = function(symbol, icon, contract, price) {
     const container = document.getElementById('alpha-split-container');
     if (!container) return;
 
-    // 1. Mở ngăn kéo
+    // 1. Ra lệnh cho CSS mở ngăn kéo
     container.classList.add('show-chart');
 
-    // 2. Cập nhật thông tin Header
+    // 2. Chớp nhoáng điền Tên/Giá/Logo lên góc trái của Chart
     document.getElementById('tv-coin-symbol').innerText = (symbol || 'UNKNOWN') + ' / USDT';
     document.getElementById('tv-coin-contract').innerText = contract ? contract.substring(0,10) + '...' : '';
     document.getElementById('tv-coin-logo').src = icon || 'assets/tokens/default.png';
     document.getElementById('tv-live-price').innerText = '$' + formatPrice(price);
 
-    // 3. Gọi động cơ TradingView (Chỉ gọi 1 lần duy nhất)
-    if (!tvChart) {
-        initTradingViewChart();
-    }
-
-    // 4. Vẽ data giả lên biểu đồ để test
-    drawDummyCandles(price);
-};
-
-window.closeProChart = function() {
-    const container = document.getElementById('alpha-split-container');
-    if (container) {
-        container.classList.remove('show-chart');
-    }
+    // 3. 🚨 BÍ QUYẾT 3 (QUAN TRỌNG NHẤT): Đợi 350ms cho CSS trượt mở xong rồi mới khởi động Động cơ vẽ
+    setTimeout(() => {
+        if (!tvChart) {
+            initTradingViewChart();
+        }
+        drawDummyCandles(price);
+    }, 350); 
 };
