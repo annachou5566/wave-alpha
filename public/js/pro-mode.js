@@ -1195,50 +1195,92 @@ window.updateAlphaMarketUI = function(serverData) {
             changeEl.className = chg >= 0 ? 'text-green' : 'text-red';
         }
 
+        // ==================================================
+        // 🚀 BƠM DỮ LIỆU REALTIME VÀO SIÊU BIỂU ĐỒ (SUPER CHART)
+        // ==================================================
         if (window.currentChartSymbol) {
             let chartSym = window.currentChartSymbol.toUpperCase();
             let tKey = tokenKey.toUpperCase();
             let targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
-            let isMatching = (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey));
-
-            if (isMatching) {
-                // X-Quang Debug
-                let dbg = document.getElementById('debug-box-rt');
-                if (!dbg && document.getElementById('super-chart-overlay').classList.contains('active')) {
-                    dbg = document.createElement('div'); dbg.id = 'debug-box-rt';
-                    dbg.style.cssText = 'position:absolute;top:70px;left:20px;background:rgba(0,0,0,0.8);border:1px solid #f0b90b;color:#0ecb81;padding:8px;z-index:9999;font-size:10px;font-family:monospace;';
-                    document.getElementById('super-chart-overlay').appendChild(dbg);
-                }
-                if (dbg) dbg.innerHTML = `MATCH: ${chartSym} | DATA: ${tKey} | PRICE: ${liveItem.p}`;
-
+            
+            // So khớp Token đang xem với luồng dữ liệu WebSocket
+            if (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey)) {
+                
                 const scPriceEl = document.getElementById('sc-live-price');
+                const scChangeEl = document.getElementById('sc-change-24h');
+                
+                // 1. Cập nhật Giá và Nến Realtime
                 if (scPriceEl && liveItem.p !== undefined) {
                     let newPrice = parseFloat(liveItem.p);
                     let oldPrice = parseFloat(scPriceEl.getAttribute('data-raw')) || newPrice;
+                    
                     scPriceEl.innerText = '$' + formatPrice(newPrice);
                     scPriceEl.setAttribute('data-raw', newPrice);
                     if (newPrice !== oldPrice) {
                         scPriceEl.style.color = newPrice > oldPrice ? '#0ecb81' : '#f6465d';
-                        // Nháy nến
-                        if (tvCandleSeries && window.lastDummyCandle) {
-                            window.lastDummyCandle.close = newPrice;
-                            window.lastDummyCandle.high = Math.max(window.lastDummyCandle.high, newPrice);
-                            window.lastDummyCandle.low = Math.min(window.lastDummyCandle.low, newPrice);
-                            tvCandleSeries.update({...window.lastDummyCandle});
-                        }
-                        // Bơm sổ lệnh
-                        const tradesBox = document.getElementById('sc-live-trades');
-                        if (tradesBox) {
-                            if (tradesBox.innerText.includes('Connect')) tradesBox.innerHTML = '';
-                            let row = document.createElement('div');
-                            row.style.cssText = 'display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.02);';
-                            row.innerHTML = `<span style="color:${newPrice > oldPrice ? '#0ecb81':'#f6465d'}">${formatPrice(newPrice)}</span><span style="color:#eaecef">${(Math.random()*1000).toFixed(1)}</span><span style="color:#5e6673">${new Date().toLocaleTimeString('en-GB',{hour12:false})}</span>`;
-                            tradesBox.insertBefore(row, tradesBox.firstChild);
-                            if (tradesBox.children.length > 20) tradesBox.removeChild(tradesBox.lastChild);
-                        }
+                    }
+
+                    // 🚨 CẬP NHẬT NẾN TRADINGVIEW (CHART CHẠY)
+                    if (tvCandleSeries && window.lastDummyCandle) {
+                        window.lastDummyCandle.close = newPrice;
+                        window.lastDummyCandle.high = Math.max(window.lastDummyCandle.high, newPrice);
+                        window.lastDummyCandle.low = Math.min(window.lastDummyCandle.low, newPrice);
+                        
+                        tvCandleSeries.update({
+                            time: window.lastDummyCandle.time,
+                            open: window.lastDummyCandle.open,
+                            high: window.lastDummyCandle.high,
+                            low: window.lastDummyCandle.low,
+                            close: window.lastDummyCandle.close
+                        });
+                    }
+                }
+
+                // 2. Cập nhật % thay đổi
+                if (scChangeEl && liveItem.c !== undefined) {
+                    let chg = parseFloat(liveItem.c);
+                    scChangeEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`;
+                    scChangeEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
+                }
+
+                // 3. CẬP NHẬT WHALE TRACKER & FLOW (FIX LỖI = 0)
+                if (liveItem.analysis) {
+                    const ana = liveItem.analysis;
+                    const safeSet = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+                    
+                    safeSet('sc-stat-avg-ticket', '$' + formatInt(ana.avg_ticket || 0));
+                    safeSet('sc-stat-whale-tx', formatInt(ana.whale_tx_count || 0));
+                    safeSet('sc-stat-match-speed', '$' + formatInt(ana.match_speed || 0) + ' /s');
+                    
+                    const flowEl = document.getElementById('sc-stat-net-flow');
+                    if (flowEl) {
+                        let flowVal = ana.net_flow || 0;
+                        flowEl.innerText = (flowVal >= 0 ? '+' : '') + '$' + formatCompactNum(flowVal);
+                        flowEl.className = 'sc-metric-value ' + (flowVal >= 0 ? 'text-green' : 'text-red');
+                    }
+                }
+
+                // 4. Bơm dữ liệu vào Sổ Khớp Lệnh (Live Trades)
+                const tradesBox = document.getElementById('sc-live-trades');
+                if (tradesBox && liveItem.p !== undefined) {
+                    let newPrice = parseFloat(liveItem.p);
+                    let oldPrice = parseFloat(scPriceEl.getAttribute('data-raw')) || newPrice;
+                    
+                    if (newPrice !== oldPrice) {
+                        if (tradesBox.innerText.includes('Connect')) tradesBox.innerHTML = '';
+                        let row = document.createElement('div');
+                        row.style.cssText = 'display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.02); animation: flashUpdate 0.5s;';
+                        row.innerHTML = `
+                            <span style="color:${newPrice > oldPrice ? '#0ecb81' : '#f6465d'}">${formatPrice(newPrice)}</span>
+                            <span style="color:#eaecef">${(Math.random() * 1000).toFixed(1)}</span>
+                            <span style="color:#5e6673">${new Date().toLocaleTimeString('en-GB', {hour12:false})}</span>
+                        `;
+                        tradesBox.insertBefore(row, tradesBox.firstChild);
+                        if (tradesBox.children.length > 25) tradesBox.removeChild(tradesBox.lastChild);
                     }
                 }
             }
+        }
         }
 
         let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
@@ -1348,23 +1390,45 @@ window.openProChart = function(symbol, icon, contract, price) {
             const h = rect.height > 0 ? rect.height : window.innerHeight * 0.7;
 
             tvChart = LightweightCharts.createChart(container, {
-                width: w, 
-                height: h,
-                layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
-                grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
-                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                rightPriceScale: { borderColor: 'rgba(43, 49, 57, 0.8)' },
-                timeScale: { borderColor: 'rgba(43, 49, 57, 0.8)', timeVisible: true, secondsVisible: false },
+                width: w, height: h,
+                layout: { 
+                    background: { type: 'solid', color: '#111418' }, 
+                    textColor: '#848e9c',
+                    fontSize: 11
+                },
+                grid: { 
+                    vertLines: { color: 'rgba(43, 49, 57, 0.1)' }, 
+                    horzLines: { color: 'rgba(43, 49, 57, 0.1)' } 
+                },
+                crosshair: { 
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                    vertLine: { labelBackgroundColor: '#2b3139' },
+                    horzLine: { labelBackgroundColor: '#2b3139' }
+                },
+                rightPriceScale: { 
+                    borderColor: 'rgba(43, 49, 57, 0.5)',
+                    scaleMargins: { top: 0.1, bottom: 0.2 } 
+                },
+                timeScale: { 
+                    borderColor: 'rgba(43, 49, 57, 0.5)', 
+                    timeVisible: true, 
+                    secondsVisible: false 
+                },
             });
 
+            // Lớp nến với màu sắc sắc nét
             tvCandleSeries = tvChart.addCandlestickSeries({
                 upColor: '#0ecb81', downColor: '#f6465d',
-                borderUpColor: '#0ecb81', borderDownColor: '#f6465d',
+                borderVisible: false,
                 wickUpColor: '#0ecb81', wickDownColor: '#f6465d',
             });
 
+            // Lớp Volume (Cột khối lượng) mờ dưới đáy
             tvVolumeSeries = tvChart.addHistogramSeries({
-                color: '#26a69a', priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }, 
+                color: '#26a69a',
+                priceFormat: { type: 'volume' },
+                priceScaleId: '', 
+                scaleMargins: { top: 0.85, bottom: 0 }, 
             });
 
             new ResizeObserver(entries => {
