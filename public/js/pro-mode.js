@@ -1413,7 +1413,7 @@ function connectRealtimeChart(t) {
                 let textColor = isUpTrade ? '#0ecb81' : '#f6465d';
                 let row = document.createElement('div');
                 row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${bgFlash}; transition: background 0.4s ease;`;
-                row.innerHTML = `<span style="color:${textColor}">${formatPrice(p)}</span><span style="color:#eaecef">${q.toFixed(2)}</span><span style="color:#5e6673">${new Date(data.data.T).toLocaleTimeString('en-GB',{hour12:false})}</span>`;
+                row.innerHTML = `<span style="color:${textColor}">${formatPrice(p)}</span><span style="color:#eaecef">$${formatCompactUSD(tradeValUSD)}</span><span style="color:#5e6673">${new Date(data.data.T).toLocaleTimeString('en-GB',{hour12:false})}</span>`;
                 tradesBox.insertBefore(row, tradesBox.firstChild);
                 setTimeout(() => { row.style.background = 'transparent'; }, 400);
                 if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
@@ -1485,8 +1485,8 @@ window.openProChart = function(t) {
             if(text === '📊 Flow & Speed') {
                 el.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5CE1E6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Flow & Speed`;
             }
-            if(text === 'KL') {
-                el.innerText = 'KL (Token)';
+            if(text === 'KL' || text === 'KL (Token)') {
+                el.innerText = 'KL ($)';
             }
         }
     }
