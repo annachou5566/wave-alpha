@@ -1279,6 +1279,10 @@ function connectRealtimeChart(t) {
     window.scTotalVol = 0;
     window.scTradeCount = 0;
     window.scLastPrice = parseFloat(t.price) || 0;
+    
+    // THÊM DÒNG NÀY ĐỂ RESET HƯỚNG GIAO DỊCH KHI MỞ CHART MỚI
+    window.scLastTradeDir = undefined; 
+    
     window.lastDummyCandle = null;
     window.currentVolObj = null;
     let hasInitDummy = false;
@@ -1311,8 +1315,23 @@ function connectRealtimeChart(t) {
             if (data.stream.endsWith('@aggTrade')) {
                 p = parseFloat(data.data.p);
                 q = parseFloat(data.data.q);
-                // CHUẨN API BINANCE: m = false là MUA, m = true là BÁN
-                isUpTrade = !data.data.m; 
+                
+                // --- BẮT ĐẦU FIX BUG NETFLOW & TOÀN LỆNH XANH ---
+                if (p > window.scLastPrice) {
+                    isUpTrade = true;
+                } else if (p < window.scLastPrice) {
+                    isUpTrade = false;
+                } else {
+                    // Nếu giá đi ngang, kế thừa hướng của lệnh trước đó.
+                    // Fallback: nếu chưa có lệnh trước đó, mới thử dùng data.data.m
+                    isUpTrade = (typeof window.scLastTradeDir !== 'undefined') 
+                                ? window.scLastTradeDir 
+                                : (data.data.m !== undefined ? !data.data.m : true);
+                }
+                // Lưu lại hướng để tick tiếp theo dùng nếu giá đi ngang
+                window.scLastTradeDir = isUpTrade;
+                // --- KẾT THÚC FIX BUG ---
+                
                 tradeValUSD = p * q;
                 tradeTimeSec = Math.floor(data.data.T / 1000); 
 
