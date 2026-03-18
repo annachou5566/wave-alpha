@@ -1313,6 +1313,7 @@ function connectRealtimeChart(t) {
 
             // 1. LUỒNG KHỚP LỆNH CHÍNH (`aggTrade`)
             if (data.stream.endsWith('@aggTrade')) {
+                console.log("🔍 RAW TRADE DATA:", JSON.stringify(data.data));
                 p = parseFloat(data.data.p);
                 q = parseFloat(data.data.q);
                 
