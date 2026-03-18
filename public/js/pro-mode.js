@@ -56,6 +56,25 @@ document.addEventListener('DOMContentLoaded', () => {
             /* HIỆU ỨNG NHẤP NHÁY CHO TRẠM TRACKING */
             @keyframes pulse-dot { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(14,203,129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0); } }
             
+            /* ÉP THANH TOOLBAR CHỌN GIỜ LUÔN NỔI LÊN VÀ RESPONSIVE TỐT TRÊN MOBILE */
+            .sc-toolbar {
+                display: flex !important;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 4px;
+                padding: 8px 15px;
+                background: #111418;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+                z-index: 999;
+            }
+            /* ĐẢM BẢO KHU VỰC CHART KHÔNG NUỐT TOOLBAR */
+            .sc-chart-main {
+                display: flex !important;
+                flex-direction: column !important;
+                height: 100%;
+                overflow: hidden;
+            }
+
             /* CSS CHO NÚT CHỌN KHUNG GIỜ */
             .sc-time-btn { 
                 background: transparent; 
