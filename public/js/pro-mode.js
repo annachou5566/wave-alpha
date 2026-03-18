@@ -841,26 +841,21 @@ function injectLayout() {
                     <div id="sc-chart-container"></div>
                 </div>
                 <div class="sc-side-panel">
-                    <div class="sc-panel-section">
+                    <div class="sc-panel-section" style="margin-bottom: 15px;">
                         <div class="sc-panel-title">🐋 Whale Tracker</div>
-                        <div class="sc-metric-item">
-                            <span class="sc-metric-label">Ticket trung bình</span>
-                            <span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span>
-                        </div>
-                        <div class="sc-metric-item">
-                            <span class="sc-metric-label">Số lệnh lớn (>$5k)</span>
-                            <span id="sc-stat-whale-tx" class="sc-metric-value">0</span>
-                        </div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Ticket trung bình</span><span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span></div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" class="sc-metric-value">0</span></div>
                     </div>
-                    <div class="sc-panel-section">
+                    <div class="sc-panel-section" style="margin-bottom: 15px;">
                         <div class="sc-panel-title">📊 Flow & Speed</div>
-                        <div class="sc-metric-item">
-                            <span class="sc-metric-label">Dòng tiền Net</span>
-                            <span id="sc-stat-net-flow" class="sc-metric-value text-green">+$0</span>
-                        </div>
-                        <div class="sc-metric-item">
-                            <span class="sc-metric-label">Tốc độ khớp / s</span>
-                            <span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Dòng tiền Net</span><span id="sc-stat-net-flow" class="sc-metric-value text-green">+$0</span></div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Tốc độ khớp / s</span><span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span></div>
+                    </div>
+                    <div class="sc-panel-section" style="flex:1; display:flex; flex-direction:column; overflow:hidden; margin-bottom:0;">
+                        <div class="sc-panel-title" style="border-top:1px solid #2b3139; padding-top:15px; margin-bottom:10px;"><i class="fas fa-bolt" style="color:#F0B90B"></i> LIVE TRADES</div>
+                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; margin-bottom:5px; font-weight:700;"><span>GIÁ</span><span>KL</span><span>TIME</span></div>
+                        <div id="sc-live-trades" style="flex:1; overflow-y:auto; font-size:11px; font-family:var(--font-num);">
+                            <div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>
                         </div>
                     </div>
                 </div>
@@ -1200,46 +1195,48 @@ window.updateAlphaMarketUI = function(serverData) {
             changeEl.className = chg >= 0 ? 'text-green' : 'text-red';
         }
 
-        // ==================================================
-        // 🚀 BƠM GIÁ REALTIME VÀO TRADINGVIEW (OVERLAY MỚI)
-        // ==================================================
         if (window.currentChartSymbol) {
-            // Nới lỏng điều kiện so sánh tên Token (Bao gồm cả ALPHA_ hoặc USDT)
             let chartSym = window.currentChartSymbol.toUpperCase();
             let tKey = tokenKey.toUpperCase();
             let targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
-            
-            if (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey)) {
-                
+            let isMatching = (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey));
+
+            if (isMatching) {
+                // X-Quang Debug
+                let dbg = document.getElementById('debug-box-rt');
+                if (!dbg && document.getElementById('super-chart-overlay').classList.contains('active')) {
+                    dbg = document.createElement('div'); dbg.id = 'debug-box-rt';
+                    dbg.style.cssText = 'position:absolute;top:70px;left:20px;background:rgba(0,0,0,0.8);border:1px solid #f0b90b;color:#0ecb81;padding:8px;z-index:9999;font-size:10px;font-family:monospace;';
+                    document.getElementById('super-chart-overlay').appendChild(dbg);
+                }
+                if (dbg) dbg.innerHTML = `MATCH: ${chartSym} | DATA: ${tKey} | PRICE: ${liveItem.p}`;
+
                 const scPriceEl = document.getElementById('sc-live-price');
-                const scChangeEl = document.getElementById('sc-change-24h');
-                
                 if (scPriceEl && liveItem.p !== undefined) {
                     let newPrice = parseFloat(liveItem.p);
+                    let oldPrice = parseFloat(scPriceEl.getAttribute('data-raw')) || newPrice;
                     scPriceEl.innerText = '$' + formatPrice(newPrice);
-                    
-                    // 🚨 ÉP NHÁY NẾN REALTIME
-                    if (tvCandleSeries && window.lastDummyCandle) {
-                        window.lastDummyCandle.close = newPrice;
-                        window.lastDummyCandle.high = Math.max(window.lastDummyCandle.high, newPrice);
-                        window.lastDummyCandle.low = Math.min(window.lastDummyCandle.low, newPrice);
-                        
-                        // Phải truyền object mới vào thì thư viện mới chịu vẽ lại
-                        tvCandleSeries.update({
-                            time: window.lastDummyCandle.time,
-                            open: window.lastDummyCandle.open,
-                            high: window.lastDummyCandle.high,
-                            low: window.lastDummyCandle.low,
-                            close: window.lastDummyCandle.close
-                        });
+                    scPriceEl.setAttribute('data-raw', newPrice);
+                    if (newPrice !== oldPrice) {
+                        scPriceEl.style.color = newPrice > oldPrice ? '#0ecb81' : '#f6465d';
+                        // Nháy nến
+                        if (tvCandleSeries && window.lastDummyCandle) {
+                            window.lastDummyCandle.close = newPrice;
+                            window.lastDummyCandle.high = Math.max(window.lastDummyCandle.high, newPrice);
+                            window.lastDummyCandle.low = Math.min(window.lastDummyCandle.low, newPrice);
+                            tvCandleSeries.update({...window.lastDummyCandle});
+                        }
+                        // Bơm sổ lệnh
+                        const tradesBox = document.getElementById('sc-live-trades');
+                        if (tradesBox) {
+                            if (tradesBox.innerText.includes('Connect')) tradesBox.innerHTML = '';
+                            let row = document.createElement('div');
+                            row.style.cssText = 'display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.02);';
+                            row.innerHTML = `<span style="color:${newPrice > oldPrice ? '#0ecb81':'#f6465d'}">${formatPrice(newPrice)}</span><span style="color:#eaecef">${(Math.random()*1000).toFixed(1)}</span><span style="color:#5e6673">${new Date().toLocaleTimeString('en-GB',{hour12:false})}</span>`;
+                            tradesBox.insertBefore(row, tradesBox.firstChild);
+                            if (tradesBox.children.length > 20) tradesBox.removeChild(tradesBox.lastChild);
+                        }
                     }
-                }
-
-                if (scChangeEl && liveItem.c !== undefined) {
-                    let chg = parseFloat(liveItem.c);
-                    let sign = chg >= 0 ? '+' : '';
-                    scChangeEl.innerText = `(${sign}${chg.toFixed(2)}%)`;
-                    scChangeEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
                 }
             }
         }
