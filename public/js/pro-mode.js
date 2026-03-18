@@ -1357,20 +1357,22 @@ window.updateAlphaMarketUI = function(serverData) {
 let tvChart = null;
 let tvCandleSeries = null;
 let tvVolumeSeries = null;
+window.currentChartSymbol = null; // Lưu lại token đang soi
+window.lastDummyCandle = null; // Lưu nến cuối để giật realtime
 
 function initTradingViewChart() {
     const container = document.getElementById('tv-chart-container');
     if (!container) return;
     
-    // Xóa dòng chữ chờ
+    // 1. Xóa chữ chờ và XÓA ÉP KIỂU FLEXBOX để Canvas bung ra
     container.innerHTML = ''; 
+    container.style.display = 'block'; 
 
-    // 🚨 BÍ QUYẾT 1: Đo đạc lại chính xác kích thước vùng chứa sau khi ngăn kéo mở
     const rect = container.getBoundingClientRect();
 
     tvChart = LightweightCharts.createChart(container, {
-        width: rect.width,    // Ép cứng chiều rộng thực tế
-        height: rect.height,  // Ép cứng chiều cao thực tế
+        width: rect.width,    
+        height: rect.height,  
         layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
         grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -1391,35 +1393,71 @@ function initTradingViewChart() {
         scaleMargins: { top: 0.8, bottom: 0 }, 
     });
 
-    // 🚨 BÍ QUYẾT 2: Bảo vệ lỗi Resize vòng lặp vô tận
     new ResizeObserver(entries => {
         if (entries.length === 0 || entries[0].target !== container) return;
         const newRect = entries[0].contentRect;
-        // Chỉ bóp méo biểu đồ khi kích thước lớn hơn 0
         if (newRect.width > 0 && newRect.height > 0) {
             tvChart.applyOptions({ height: newRect.height, width: newRect.width });
         }
     }).observe(container);
 }
 
+function drawDummyCandles(basePrice) {
+    if (!tvCandleSeries || !tvVolumeSeries || !tvChart) return; 
+    const candleData = []; const volumeData = [];
+    let currentPrice = parseFloat(basePrice) || 100;
+    let time = Math.floor(Date.now() / 1000) - 100 * 60; 
+
+    for (let i = 0; i < 100; i++) {
+        const open = currentPrice;
+        const close = open + (Math.random() - 0.5) * (open * 0.02); 
+        const high = Math.max(open, close) + (Math.random() * open * 0.01);
+        const low = Math.min(open, close) - (Math.random() * open * 0.01);
+        const vol = Math.random() * 1000;
+        const isUp = close >= open;
+
+        candleData.push({ time: time, open, high, low, close });
+        volumeData.push({ 
+            time: time, value: vol, 
+            color: isUp ? 'rgba(14, 203, 129, 0.4)' : 'rgba(246, 70, 93, 0.4)' 
+        });
+
+        currentPrice = close; 
+        time += 60; 
+    }
+    tvCandleSeries.setData(candleData);
+    tvVolumeSeries.setData(volumeData);
+    
+    // Lưu lại cây nến cuối cùng
+    window.lastDummyCandle = candleData[candleData.length - 1];
+
+    tvChart.timeScale().fitContent(); 
+}
+
 window.openProChart = function(symbol, icon, contract, price) {
     const container = document.getElementById('alpha-split-container');
     if (!container) return;
 
-    // 1. Ra lệnh cho CSS mở ngăn kéo
+    window.currentChartSymbol = symbol; // Lưu trạng thái token đang soi
     container.classList.add('show-chart');
 
-    // 2. Chớp nhoáng điền Tên/Giá/Logo lên góc trái của Chart
     document.getElementById('tv-coin-symbol').innerText = (symbol || 'UNKNOWN') + ' / USDT';
     document.getElementById('tv-coin-contract').innerText = contract ? contract.substring(0,10) + '...' : '';
     document.getElementById('tv-coin-logo').src = icon || 'assets/tokens/default.png';
     document.getElementById('tv-live-price').innerText = '$' + formatPrice(price);
 
-    // 3. 🚨 BÍ QUYẾT 3 (QUAN TRỌNG NHẤT): Đợi 350ms cho CSS trượt mở xong rồi mới khởi động Động cơ vẽ
     setTimeout(() => {
         if (!tvChart) {
             initTradingViewChart();
         }
         drawDummyCandles(price);
     }, 350); 
+};
+
+window.closeProChart = function() {
+    const container = document.getElementById('alpha-split-container');
+    if (container) {
+        container.classList.remove('show-chart');
+    }
+    window.currentChartSymbol = null; // Reset khi đóng
 };
