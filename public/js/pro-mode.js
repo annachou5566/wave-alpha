@@ -1436,7 +1436,17 @@ function connectRealtimeChart(t) {
             }
 
             // TÍNH TOÁN ON-CHAIN DÒNG TIỀN
+            // TÍNH TOÁN ON-CHAIN DÒNG TIỀN
             window.scTradeCount++; window.scTotalVol += tradeValUSD;
+            
+            // --- BẮT ĐẦU FIX LỖI TỐC ĐỘ KHỚP $0/s ---
+            window.scSpeedWindow.push({ t: Date.now(), v: tradeValUSD });
+            window.scSpeedWindow = window.scSpeedWindow.filter(x => Date.now() - x.t <= 5000);
+            let speed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
+            let speedEl = document.getElementById('sc-stat-match-speed');
+            if(speedEl) speedEl.innerText = '$' + formatCompactUSD(speed) + ' /s';
+            // --- KẾT THÚC FIX LỖI ---
+            
             let avgEl = document.getElementById('sc-stat-avg-ticket');
             if (avgEl) avgEl.innerText = '$' + formatCompactUSD(window.scTotalVol / window.scTradeCount);
 
@@ -1497,7 +1507,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
     setTimeout(() => {
         const rect = container.getBoundingClientRect();
         const w = rect.width > 0 ? rect.width : window.innerWidth * 0.75;
-        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7) - 30;
+        
+        // TĂNG KHOẢNG CÁCH ĐÁY LÊN 80PX ĐỂ KHÔNG BỊ THANH HOME CỦA IPAD CHE MẤT
+        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7) - 80;
+
+        // ÉP VÙNG ĐỆM AN TOÀN CHO TOÀN BỘ PHẦN THÂN CỦA CHART
+        const scBody = document.querySelector('.sc-body');
+        if (scBody) scBody.style.paddingBottom = 'max(20px, env(safe-area-inset-bottom))';
 
         let priceVal = parseFloat(t.price) || 1;
         let prec = 4; minM = 0.0001;
@@ -1540,7 +1556,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 30), width: newRect.width });
+            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 80), width: newRect.width });
         }).observe(container);
         
         if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
