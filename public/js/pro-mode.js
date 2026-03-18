@@ -1456,7 +1456,6 @@ window.openProChart = function(t) {
         chgEl.className = chg >= 0 ? 'sc-change-24h text-green' : 'sc-change-24h text-red';
     }
     
-    // Nâng cấp Icon
     let els = overlay.getElementsByTagName('*');
     for(let el of els) {
         if(el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
@@ -1478,8 +1477,10 @@ window.openProChart = function(t) {
         if (!container) return;
         container.innerHTML = ''; 
         const rect = container.getBoundingClientRect();
+        
+        // 🛠️ GIẢI QUYẾT LỖI 1: TRỪ HAO 30PX ĐỂ KHÔNG BỊ CSS NUỐT TRỤC THỜI GIAN
         const w = rect.width > 0 ? rect.width : window.innerWidth * 0.75;
-        const h = rect.height > 0 ? rect.height : window.innerHeight * 0.7;
+        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7) - 30;
 
         let priceVal = parseFloat(t.price) || 1;
         let prec = 4;
@@ -1494,17 +1495,20 @@ window.openProChart = function(t) {
             watermark: { color: 'rgba(255, 255, 255, 0.03)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 110, horzAlign: 'center', vertAlign: 'center' },
             grid: { vertLines: { color: 'rgba(43, 49, 57, 0.1)' }, horzLines: { color: 'rgba(43, 49, 57, 0.1)' } },
             crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            
+            // 🛠️ ÉP RÕ TRỤC THỜI GIAN
             timeScale: { 
+                visible: true,
                 borderColor: 'rgba(43, 49, 57, 0.5)', 
                 timeVisible: true, 
                 secondsVisible: true, 
                 fixLeftEdge: true, 
                 fixRightEdge: true 
             },
-            // FIX CHART VÀ VOLUME
+            // 🛠️ GIẢI QUYẾT LỖI 2: ĐẨY MẢNG AREA LÊN CAO (Cách đáy 35%)
             rightPriceScale: {
                 autoScale: true,
-                scaleMargins: { top: 0.1, bottom: 0.25 } // Đẩy đáy biểu đồ giá lên cách 25%
+                scaleMargins: { top: 0.1, bottom: 0.35 } 
             }
         });
 
@@ -1513,23 +1517,25 @@ window.openProChart = function(t) {
             priceFormat: { type: 'price', precision: prec, minMove: minM }
         });
 
-        // TẠO TRỤC RIÊNG CHO VOLUME ('vol_scale')
+        // 🛠️ GIẢI QUYẾT LỖI VOLUME: TẠO TRỤC ĐỘC LẬP ÉP XUỐNG DƯỚI CÙNG (30% Dưới đáy)
         tvVolumeSeries = tvChart.addHistogramSeries({
             color: '#26a69a', 
             priceFormat: { type: 'volume' }, 
             priceScaleId: 'vol_scale' 
         });
         
-        // Ép trục Volume lùn xuống chỉ chiếm 20% dưới đáy
         tvChart.priceScale('vol_scale').applyOptions({
-            scaleMargins: { top: 0.8, bottom: 0 },
+            scaleMargins: { top: 0.7, bottom: 0 },
             visible: false
         });
 
+        // KHI RESIZE CŨNG PHẢI TRỪ HAO 30PX
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: newRect.height, width: newRect.width });
+            if (newRect.width > 0 && newRect.height > 0) {
+                tvChart.applyOptions({ height: Math.max(0, newRect.height - 30), width: newRect.width });
+            }
         }).observe(container);
         
         if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
@@ -1543,7 +1549,6 @@ window.closeProChart = function() {
         document.body.classList.remove('overlay-active');
     }
     
-    // HỦY DIỆT HOÀN TOÀN BIỂU ĐỒ ĐỂ DỌN DẸP RAM
     if (chartWs) {
         chartWs.close();
         chartWs = null;
