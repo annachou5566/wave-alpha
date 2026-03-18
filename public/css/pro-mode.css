@@ -1457,76 +1457,195 @@ body {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.4; }
 }
-/* =========================================
-   SPLIT-SCREEN TRADINGVIEW PRO TERMINAL (V3 - Tablet fix)
-   ========================================= */
-#alpha-split-container {
-    display: flex;
-    width: 100%;
-    transition: all 0.3s ease;
-    align-items: flex-start; /* Giữ panel trái không bị kéo giãn */
-    position: relative;
-    /* Tạo khoảng trống phía trên container để không đụng Menu chính của web */
-    margin-top: 10px; 
-}
 
-.market-left-panel {
-    flex: 1;
-    width: 100%;
-    transition: width 0.3s ease;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-}
 
-.market-right-panel {
-    width: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    background: #111418;
-    border-radius: 8px;
-    position: relative; 
+/* ========================================================
+   📈 WAVE ALPHA SUPER CHART OVERLAY (FULL-SCREEN UI)
+   ======================================================== */
+
+/* 1. Lớp nền mờ phủ kín màn hình */
+#super-chart-overlay {
+    position: fixed;
     top: 0;
-    
-    /* 🚨 CHÌA KHÓA FIX LỖI KHOẢNG TRỐNG DƯỚI:
-       Trừ nhiều hơn để vừa khít màn hình Tablet (Menu+Filters+Pagination...) */
-    height: calc(100vh - 150px); 
-    min-height: 400px;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 12, 16, 0.98); /* Đen sâu thẳm, hơi trong suốt nhẹ */
+    z-index: 2000; /* Nổi lên trên tất cả mọi thứ */
+    display: none; /* Bình thường ẩn đi */
+    flex-direction: column;
+    color: #848e9c;
+    font-family: var(--font-main);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(10px); /* Làm mờ nhẹ bảng Market ở phía sau */
 }
 
-/* 🚀 TRẠNG THÁI KÍCH HOẠT CHẺ ĐÔI (Khi class .show-chart được thêm) */
-#alpha-split-container.show-chart .market-left-panel {
-    width: 40%;
-    flex: 0 0 40%;
-}
-
-#alpha-split-container.show-chart .market-right-panel {
-    width: 60%;
-    flex: 0 0 60%;
+/* Trạng thái Kích hoạt */
+#super-chart-overlay.active {
+    display: flex;
     opacity: 1;
-    margin-left: 15px; 
-    
-    /* 🚨 CHÌA KHÓA FIX LỖI NHẢY LÊN TOP: 
-       Đẩy nó xuống ngang hàng với header của Bảng Token (Filter/Search area is roughly 65px) */
-    margin-top: 65px; 
+}
 
+/* Ép body không được cuộn khi đang xem Chart */
+body.overlay-active {
+    overflow: hidden;
+}
+
+/* 2. Header của Siêu biểu đồ (Chuẩn UI TradingView) */
+.sc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: #161a1e;
+    border-bottom: 1px solid #2b3139;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.sc-coin-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.sc-coin-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #2b3139;
+}
+
+.sc-coin-symbol {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 2px;
+}
+
+.sc-coin-contract {
+    font-size: 11px;
+    color: #848e9c;
+    background: rgba(255,255,255,0.03);
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.sc-coin-contract:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+.sc-price-group {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.sc-live-price {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0ecb81;
+    font-family: var(--font-num);
+}
+
+.sc-change-24h {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Nút X đóng */
+.sc-close-btn {
+    background: transparent;
     border: 1px solid #2b3139;
-    box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+    color: #848e9c;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+.sc-close-btn:hover {
+    background: #f6465d;
+    border-color: #f6465d;
+    color: #fff;
 }
 
-/* --- Phần Header của Chart --- */
-.tv-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 15px; background: #161a1e; border-bottom: 1px solid #2b3139;
+/* 3. Khu vực Nội dung chính (Layout chẻ đôi) */
+.sc-body {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    overflow: hidden;
 }
-.tv-coin-info { display: flex; align-items: center; gap: 10px; }
-.tv-coin-info img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #2b3139; }
-.tv-close-btn {
-    background: rgba(255,255,255,0.05); border: 1px solid #2b3139; color: #848e9c;
-    width: 28px; height: 28px; border-radius: 6px; font-size: 14px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; transition: 0.2s;
+
+/* Panel Trái: TradingView Chart (Chiếm 75% không gian) */
+.sc-chart-main {
+    flex: 1;
+    height: 100%;
+    position: relative;
+    background: #111418;
 }
-.tv-close-btn:hover { background: #f6465d; border-color: #f6465d; color: #fff; }
+
+/* Vùng chứa Canvas TradingView */
+#sc-chart-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* Panel Phải: Thông số Pro Metrics (Chiếm 25% - Tách biệt rõ ràng) */
+.sc-side-panel {
+    width: 320px; /* Độ rộng cố định cho Side Panel */
+    height: 100%;
+    background: #13171b;
+    border-left: 1px solid #2b3139;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.sc-panel-section {
+    margin-bottom: 25px;
+}
+
+.sc-panel-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #848e9c;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+}
+
+/* Style cho các metrics nhỏ */
+.sc-metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.sc-metric-label {
+    font-size: 13px;
+    color: #848e9c;
+}
+
+.sc-metric-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    font-family: var(--font-num);
+}
+
+/* Gradient nền cho Side Panel */
+.sc-side-panel::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 150px;
+    background: linear-gradient(to top, rgba(240, 185, 11, 0.05), transparent);
+    pointer-events: none;
+}
