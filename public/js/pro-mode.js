@@ -1308,52 +1308,77 @@ function drawDummyCandles(basePrice) {
 
 window.openProChart = function(symbol, icon, contract, price) {
     const overlay = document.getElementById('super-chart-overlay');
-    if (!overlay) return;
+    if (!overlay) return alert("🔴 BUG 1: Không tìm thấy lớp phủ (overlay) trong HTML.");
 
-    window.currentChartSymbol = symbol; 
+    window.currentChartSymbol = symbol;
     
-    // Bật Lớp Phủ Kín Màn Hình
+    // Kích hoạt Lớp phủ
     overlay.classList.add('active');
     document.body.classList.add('overlay-active');
 
-    // Chèn text Header
     document.getElementById('sc-coin-symbol').innerText = (symbol || 'UNKNOWN') + ' / USDT';
-    document.getElementById('sc-coin-contract').innerText = contract ? contract.substring(0,10) + '...' : '';
-    document.getElementById('sc-coin-logo').src = icon || 'assets/tokens/default.png';
     document.getElementById('sc-live-price').innerText = '$' + formatPrice(price);
 
-    // Đợi 300ms cho hiệu ứng mờ kính (backdrop-blur) hiện lên rồi vẽ nến
+    // Đợi 300ms rồi bắt đầu soi lỗi
     setTimeout(() => {
-        if (!tvChart) {
-            const container = document.getElementById('sc-chart-container');
-            if (!container) return;
-            container.innerHTML = ''; 
-            const rect = container.getBoundingClientRect();
-            
-            tvChart = LightweightCharts.createChart(container, {
-                width: rect.width, 
-                height: rect.height,
-                layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
-                grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
-                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                rightPriceScale: { borderColor: 'rgba(43, 49, 57, 0.8)' },
-                timeScale: { borderColor: 'rgba(43, 49, 57, 0.8)', timeVisible: true, secondsVisible: false },
-            });
-            tvCandleSeries = tvChart.addCandlestickSeries({
-                upColor: '#0ecb81', downColor: '#f6465d',
-                borderUpColor: '#0ecb81', borderDownColor: '#f6465d',
-                wickUpColor: '#0ecb81', wickDownColor: '#f6465d',
-            });
-            tvVolumeSeries = tvChart.addHistogramSeries({
-                color: '#26a69a', priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }, 
-            });
-            new ResizeObserver(entries => {
-                if (entries.length === 0 || entries[0].target !== container) return;
-                const newRect = entries[0].contentRect;
-                if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: newRect.height, width: newRect.width });
-            }).observe(container);
+        // 1. Kiểm tra xem thư viện đã vào được trình duyệt chưa
+        if (typeof LightweightCharts === 'undefined') {
+            return alert("🔴 BUG 2: Thư viện TradingView CHƯA ĐƯỢC TẢI! Hãy bấm F12, mở tab Console xem có báo lỗi đỏ (mạng chặn file JS) không.");
         }
-        drawDummyCandles(price);
+
+        // 2. Kiểm tra xem vùng vẽ có tồn tại không
+        const container = document.getElementById('sc-chart-container');
+        if (!container) {
+            return alert("🔴 BUG 3: Thẻ chứa Chart (#sc-chart-container) đã bị mất tích khỏi HTML!");
+        }
+
+        // 3. Kiểm tra xem vùng vẽ có bị xẹp lép thành 0 pixel không
+        const rect = container.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            alert(`🔴 BUG 4: CSS bị xẹp! Kích thước khung vẽ đang là Width: ${rect.width}px, Height: ${rect.height}px.`);
+            // Tự động sơ cứu: Ép cứng kích thước
+            container.style.width = '100%';
+            container.style.height = '100%';
+            container.style.minHeight = '400px';
+        }
+
+        try {
+            if (!tvChart) {
+                container.innerHTML = ''; 
+                const finalRect = container.getBoundingClientRect();
+                
+                // Khởi động động cơ vẽ
+                tvChart = LightweightCharts.createChart(container, {
+                    width: finalRect.width > 0 ? finalRect.width : window.innerWidth * 0.7,
+                    height: finalRect.height > 0 ? finalRect.height : window.innerHeight * 0.6,
+                    layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c' },
+                    grid: { vertLines: { color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { color: 'rgba(43, 49, 57, 0.3)' } },
+                    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                    timeScale: { timeVisible: true, secondsVisible: false },
+                });
+                
+                tvCandleSeries = tvChart.addCandlestickSeries({
+                    upColor: '#0ecb81', downColor: '#f6465d',
+                    borderUpColor: '#0ecb81', borderDownColor: '#f6465d',
+                    wickUpColor: '#0ecb81', wickDownColor: '#f6465d',
+                });
+                
+                tvVolumeSeries = tvChart.addHistogramSeries({
+                    color: '#26a69a', priceFormat: { type: 'volume' }, priceScaleId: '', scaleMargins: { top: 0.8, bottom: 0 }, 
+                });
+            }
+            
+            // 4. Kiểm tra xem hàm tạo nến giả có tồn tại không
+            if (typeof drawDummyCandles === 'function') {
+                drawDummyCandles(price);
+            } else {
+                alert("🔴 BUG 5: Không tìm thấy hàm drawDummyCandles để vẽ nến!");
+            }
+
+        } catch (err) {
+            alert("🔴 BUG 6: Bị Crash khi đang vẽ Chart! Lỗi: " + err.message);
+            console.error(err);
+        }
     }, 300); 
 };
 
