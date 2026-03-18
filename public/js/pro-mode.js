@@ -1281,6 +1281,7 @@ window.updateAlphaMarketUI = function(serverData) {
                 }
             }
         }
+        }
 
         let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
         if (r24El && liveItem.r24 !== undefined) r24El.innerText = '$' + formatCompactNum(liveItem.r24);
