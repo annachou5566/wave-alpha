@@ -99,78 +99,49 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(style);
     }
 // ========================================================
-    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (CHUẨN BINANCE / COINGLASS)
+    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (CHUẨN BINANCE PRO)
     // ========================================================
     if (!document.getElementById('wave-alpha-mobile-chart')) {
         const mobileChartStyle = document.createElement('style');
         mobileChartStyle.id = 'wave-alpha-mobile-chart';
         mobileChartStyle.innerHTML = `
-            @media (max-width: 991px) {
-                #super-chart-overlay .sc-body {
-                    flex-direction: column !important;
-                    overflow-y: auto !important;
-                    display: flex !important;
-                }
-                #super-chart-overlay .sc-chart-main {
-                    height: 50vh !important;
-                    flex: none !important;
-                    width: 100% !important;
-                    border-bottom: 4px solid #1e2329 !important;
-                }
-                #super-chart-overlay .sc-side-panel {
-                    width: 100% !important;
-                    height: auto !important;
-                    border-left: none !important;
-                    padding: 15px !important;
-                }
-                #super-chart-overlay .sc-panel-section:last-child { flex: none !important; }
-                #super-chart-overlay #sc-live-trades {
-                    max-height: 250px !important;
-                    height: 250px !important;
-                    overflow-y: auto !important;
-                }
+            /* BASE METRIC STYLE (Dùng chung cho cả Desktop & Mobile) */
+            .sc-metric-col { display: flex; flex-direction: column; align-items: flex-end; }
+            .sc-metric-lbl { font-size: 10px; color: #848e9c; font-weight: 500; margin-bottom: 4px; }
+            .sc-metric-val { font-size: 13px; color: #eaecef; font-weight: 700; font-family: var(--font-num); }
 
-                /* =========================================
-                   THIẾT KẾ LẠI HEADER CHUẨN COINGLASS 
-                   ========================================= */
+            @media (max-width: 991px) {
+                /* Bố cục dọc cho toàn Chart */
+                #super-chart-overlay .sc-body { flex-direction: column !important; overflow-y: auto !important; display: flex !important; }
+                #super-chart-overlay .sc-chart-main { height: 50vh !important; flex: none !important; width: 100% !important; border-bottom: 4px solid #1e2329 !important; }
+                #super-chart-overlay .sc-side-panel { width: 100% !important; height: auto !important; border-left: none !important; padding: 15px !important; }
+                #super-chart-overlay .sc-panel-section:last-child { flex: none !important; }
+                #super-chart-overlay #sc-live-trades { max-height: 250px !important; height: 250px !important; overflow-y: auto !important; }
                 
-                /* 1. Đẩy Lưới (Grid) xuống dưới cụm Giá để giải phóng không gian */
-                #super-chart-overlay .sc-header-main {
+                /* TÁCH LỚP HEADER ĐỈNH CAO */
+                #super-chart-overlay .sc-header { padding: 12px !important; }
+                
+                /* 1. Ép cụm Giá và Thông số xuống dòng cách ly nhau */
+                #super-chart-overlay .sc-header-main { 
                     flex-direction: column !important; 
                     align-items: flex-start !important; 
-                    gap: 15px !important; /* Tạo độ thoáng giữa Giá và Grid */
-                    width: 100% !important;
+                    gap: 15px !important; 
                 }
                 
-                /* 2. Cụm Giá: Xếp Giá và phần trăm (%) lên cùng một hàng ngang cho gọn */
-                #super-chart-overlay .sc-header-main > div:first-child {
-                    padding-right: 0 !important;
-                    display: flex !important;
-                    flex-direction: row !important;
-                    align-items: baseline !important;
-                    gap: 12px !important;
+                /* 2. Cụm Giá to rõ */
+                #super-chart-overlay .sc-price-wrapper { padding-right: 0 !important; width: 100% !important; }
+                
+                /* 3. Phá bỏ cấu trúc Flex ngang của Thông số, biến thành Grid 3 cột */
+                #super-chart-overlay .sc-metrics-grid { 
+                    display: grid !important; 
+                    grid-template-columns: 1fr 1fr 1fr !important; 
+                    gap: 12px 10px !important; 
+                    width: 100% !important; 
+                    justify-content: flex-start !important;
                 }
-                #super-chart-overlay .sc-live-price {
-                    font-size: 32px !important; 
-                }
-                #super-chart-overlay .sc-change-24h {
-                    margin-top: 0 !important;
-                    font-size: 16px !important;
-                }
-
-                /* 3. Lưới thông số: Dàn đều chiếm trọn 100% bề ngang màn hình */
-                #super-chart-overlay .sc-header-main > div:last-child {
-                    width: 100% !important;
-                    max-width: 100% !important;
-                }
-
-                /* 4. Ma thuật căn lề: Cột 1 ép sát lề trái, Cột 2 ép sát lề phải */
-                #super-chart-overlay .sc-header-main > div:last-child > div:nth-child(odd) {
-                    align-items: flex-start !important; 
-                }
-                #super-chart-overlay .sc-header-main > div:last-child > div:nth-child(even) {
-                    align-items: flex-end !important;   
-                }
+                
+                /* 4. Canh lề trái cho dễ đọc trên Mobile (Giống Binance/Coinglass) */
+                #super-chart-overlay .sc-metric-col { align-items: flex-start !important; }
             }
         `;
         document.head.appendChild(mobileChartStyle);
@@ -937,45 +908,41 @@ function injectLayout() {
         </div>
 
         <div id="super-chart-overlay">
-            <div class="sc-header" style="background: #111418; padding: 12px 15px 15px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div class="sc-header" style="background: #111418; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <img id="sc-coin-logo" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #333;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
-                        <span id="sc-coin-symbol" style="font-size: 18px; font-weight: 800; color: #eaecef; letter-spacing: 0.5px;">--- / USDT</span>
-                        <span id="sc-coin-contract" onclick="window.pluginCopy(this.innerText)" style="background: #2b3139; color: #848e9c; font-size: 11px; padding: 2px 6px; border-radius: 4px; cursor: pointer; border: 1px solid #474d57; font-family: var(--font-num);">---</span>
+                        <span id="sc-coin-symbol" style="font-size: 18px; font-weight: 800; color: #eaecef;">--- / USDT</span>
                     </div>
-                    <button class="sc-close-btn" onclick="window.closeProChart()" style="background: rgba(255,255,255,0.08); border: none; color: #eaecef; font-size: 14px; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;">✕</button>
+                    <button class="sc-close-btn" onclick="window.closeProChart()" style="background: rgba(255,255,255,0.08); border: none; color: #eaecef; font-size: 14px; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
                 </div>
 
                 <div class="sc-header-main" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; flex-direction: column; flex: 0 0 auto; padding-right: 15px;">
-                        <div id="sc-live-price" class="sc-live-price" style="font-size: 32px; font-weight: 700; color: #0ecb81; line-height: 1; font-family: var(--font-num);">$--</div>
-                        <div id="sc-change-24h" class="sc-change-24h" style="font-size: 14px; font-weight: 600; color: #0ecb81; margin-top: 5px; font-family: var(--font-num);">--%</div>
-                    </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; flex: 1; max-width: 400px;">
-                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 10px; color: #848e9c; font-weight: 500;">24H VOL</span>
-                            <span id="sc-top-vol" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                    <div class="sc-price-wrapper" style="display: flex; flex-direction: column; padding-right: 20px;">
+                        <div style="display: flex; align-items: baseline; gap: 10px;">
+                            <div id="sc-live-price" class="sc-live-price" style="font-size: 32px; font-weight: 700; color: #0ecb81; line-height: 1; font-family: var(--font-num);">$--</div>
+                            <div id="sc-change-24h" class="sc-change-24h" style="font-size: 14px; font-weight: 600; color: #0ecb81; font-family: var(--font-num);">--%</div>
                         </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 10px; color: #848e9c; font-weight: 500;">LIQUIDITY</span>
-                            <span id="sc-top-liq" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        <span id="sc-coin-contract" onclick="window.pluginCopy(this.innerText)" style="background: #1e2329; color: #848e9c; font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: 1px solid #2b3139; font-family: var(--font-num); margin-top: 10px; width: fit-content; user-select: none;">---</span>
+                    </div>
+
+                    <div class="sc-metrics-grid" style="display: flex; gap: 25px; flex: 1; justify-content: flex-end;">
+                        <div class="sc-metric-col">
+                            <span class="sc-metric-lbl">24H VOL</span>
+                            <span id="sc-top-vol" class="sc-metric-val">$--</span>
                         </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 10px; color: #848e9c; font-weight: 500;">MARKET CAP</span>
-                            <span id="sc-top-mc" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        <div class="sc-metric-col">
+                            <span class="sc-metric-lbl">LIQUIDITY</span>
+                            <span id="sc-top-liq" class="sc-metric-val">$--</span>
                         </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                                <span style="font-size: 10px; color: #848e9c; font-weight: 500;">HOLDERS</span>
-                                <span id="sc-top-hold" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
-                            </div>
-                            <span style="color:#474d57; font-size:12px; display:flex; align-items:flex-end;">|</span>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                                <span style="font-size: 10px; color: #848e9c; font-weight: 500;">TXs</span>
-                                <span id="sc-top-tx" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
-                            </div>
+                        <div class="sc-metric-col">
+                            <span class="sc-metric-lbl">MARKET CAP</span>
+                            <span id="sc-top-mc" class="sc-metric-val">$--</span>
+                        </div>
+                        <div class="sc-metric-col">
+                            <span class="sc-metric-lbl">HOLDERS</span>
+                            <span id="sc-top-hold" class="sc-metric-val">--</span>
                         </div>
                     </div>
                 </div>
