@@ -2455,6 +2455,13 @@ fullHtml += `
 
                                 <div class="token-title d-flex align-items-center">
                                     ${c.name}
+                                    <span onclick="event.stopPropagation(); if(typeof window.openProChart === 'function') window.openProChart(compList.find(x => x.db_id == '${c.db_id}'));" 
+                                          title="Mở Biểu Đồ Pro" 
+                                          style="margin-left:8px; color:#00F0FF; font-size:0.9rem; cursor:pointer; transition:0.2s; text-shadow: 0 0 5px rgba(0,240,255,0.4);" 
+                                          onmouseover="this.style.transform='scale(1.2)'" 
+                                          onmouseout="this.style.transform='scale(1)'">
+                                        <i class="fas fa-chart-area"></i>
+                                    </span>
                                     <a href="${botLink}" target="_blank" onclick="event.stopPropagation()" 
                                        title="Check on Telegram" 
                                        style="margin-left:8px; color:#2AABEE; font-size:0.85rem; transition:0.2s;" 
