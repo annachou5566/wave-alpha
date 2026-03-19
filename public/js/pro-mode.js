@@ -1,4 +1,4 @@
-const DATA_URL = '/data/market-data.json';
+const DATA_URL = 'https://alpha-realtime.onrender.com/api/market-data';
 let allTokens = [];
 let currentPage = 1;
 let rowsPerPage = 20;
