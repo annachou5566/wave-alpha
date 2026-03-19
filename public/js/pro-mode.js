@@ -1331,24 +1331,31 @@ function formatCompactUSD(num) {
     return num.toFixed(2);
 }
 
+
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     window.scSpeedWindow = []; window.scNetFlow = 0; window.scWhaleCount = 0; window.scTotalVol = 0; window.scTradeCount = 0;
     window.scLastPrice = parseFloat(t.price) || 0; window.scLastTradeDir = undefined;
     
-    try { chartWs = new WebSocket(_getWSA()); } catch(e) { return; }
+    // Ép cứng kết nối vào đúng máy chủ Web3/DEX của Binance
+    try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
-    let sysSymbol = t.symbol.toLowerCase() + 'usdt';
+    let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
+    
+    let contract = t.contract;
+    // 🛑 CHỖ SỬA LỖI: Bắt đúng biến chainId dù viết hoa hay viết thường
+    let chainId = t.chainId || t.chain_id || 56;
     
     let params = [
         rawId ? `alpha_${rawId}usdt@aggTrade` : `${sysSymbol}@aggTrade`,
         'came@allTokens@ticker24'
     ];
     
+    // 🛑 ĐĂNG KÝ ĐÚNG LUỒNG NẾN DEX (KLINE)
     if (window.currentChartInterval !== 'tick') {
-        if (t.contract && t.chain_id) {
-            params.push(`came@${t.contract}@${t.chain_id}@kline_${window.currentChartInterval}`);
+        if (contract) {
+            params.push(`came@${contract}@${chainId}@kline_${window.currentChartInterval}`);
         } else {
             params.push(`${sysSymbol}@kline_${window.currentChartInterval}`);
         }
@@ -1362,21 +1369,26 @@ function connectRealtimeChart(t) {
 
         const tradesBox = document.getElementById('sc-live-trades');
 
-        // 1. XỬ LÝ NẾN NHẬT (KLINE TỪ BINANCE)
+        // 1. CẬP NHẬT NẾN NHẬT LIÊN TỤC
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
             let k = data.data.k;
-            let candleTime = Math.floor(k.t / 1000);
-            let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
+            // Bắt đúng thời gian mở nến (ot) theo tài liệu Binance Web3
+            let rawTime = k.ot !== undefined ? k.ot : k.t; 
             
-            if (tvCandleSeries) {
-                tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
-            }
-            if (tvVolumeSeries) {
-                tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
+            if (rawTime) {
+                let candleTime = Math.floor(rawTime / 1000);
+                let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
+                
+                if (tvCandleSeries) {
+                    tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
+                }
+                if (tvVolumeSeries) {
+                    tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
+                }
             }
         }
 
-        // 2. XỬ LÝ TICK/AREA VÀ SỔ LỆNH
+        // 2. XỬ LÝ TICK CHART, SỔ LỆNH VÀ CÁC CHỈ SỐ (AggTrade)
         if (data.stream.endsWith('@aggTrade')) {
             let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
             let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
@@ -1384,12 +1396,13 @@ function connectRealtimeChart(t) {
             let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
             let color = isUp ? '#00F0FF' : '#FF007F';
 
-            // CHỈ UPDATE TIẾP NỐI VÀO ĐUÔI BIỂU ĐỒ, KHÔNG DÙNG THỦ THUẬT VẼ LÓT NỮA
+            // VẼ TICK CHART
             if (window.currentChartInterval === 'tick' && tvLineSeries) {
                 tvLineSeries.update({ time: timeSec, value: p });
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
             }
 
+            // BƠM DỮ LIỆU SỔ LỆNH (LIVE TRADES)
             if (tradesBox) {
                 let row = document.createElement('div');
                 row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${isUp ? 'rgba(0,240,255,0.1)' : 'rgba(255,0,127,0.1)'}; transition:0.4s;`;
@@ -1399,7 +1412,7 @@ function connectRealtimeChart(t) {
                 if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
             }
 
-            // TÍNH TỐC ĐỘ KHỚP $ /S (ĐÃ FIX CHUẨN)
+            // TÍNH TOÁN CÁC CHỈ SỐ VÀNG (SPEED, NETFLOW, WHALE)
             window.scTradeCount++; window.scTotalVol += valUSD;
             window.scSpeedWindow.push({ t: Date.now(), v: valUSD });
             window.scSpeedWindow = window.scSpeedWindow.filter(x => Date.now() - x.t <= 5000);
@@ -1429,8 +1442,12 @@ function connectRealtimeChart(t) {
             }
         }
     };
+    
     chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000); } };
 }
+
+
+
 async function fetchBinanceHistory(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
