@@ -98,7 +98,69 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.head.appendChild(style);
     }
+// ========================================================
+    // BƠM CSS THIẾT KẾ LẠI CHART CHO DI ĐỘNG (MOBILE-FIRST)
+    // ========================================================
+    if (!document.getElementById('wave-alpha-mobile-chart')) {
+        const mobileChartStyle = document.createElement('style');
+        mobileChartStyle.id = 'wave-alpha-mobile-chart';
+        mobileChartStyle.innerHTML = `
+            @media (max-width: 991px) {
+                /* 1. Xếp dọc toàn bộ khung body */
+                #super-chart-overlay .sc-body {
+                    flex-direction: column !important;
+                    overflow-y: auto !important;
+                    display: flex !important;
+                }
 
+                /* 2. Ép Chart nằm trên cùng, chiếm 55% màn hình */
+                #super-chart-overlay .sc-chart-main {
+                    height: 55vh !important;
+                    flex: none !important;
+                    width: 100% !important;
+                    border-bottom: 2px solid #2b3139 !important;
+                }
+
+                /* 3. Đẩy phần thông số xuống dưới, rộng 100% */
+                #super-chart-overlay .sc-side-panel {
+                    width: 100% !important;
+                    height: auto !important;
+                    border-left: none !important;
+                    padding: 10px 15px !important;
+                }
+
+                /* 4. Giới hạn chiều cao Sổ Lệnh để có thể cuộn nội bộ */
+                #super-chart-overlay .sc-panel-section:last-child {
+                    flex: none !important;
+                }
+                #super-chart-overlay #sc-live-trades {
+                    max-height: 250px !important;
+                    height: 250px !important;
+                    overflow-y: auto !important;
+                }
+
+                /* 5. Gọn lại Header trên cùng (Giá, Volume, MCAP) */
+                #super-chart-overlay .sc-header {
+                    flex-wrap: wrap !important;
+                    height: auto !important;
+                    padding-bottom: 15px !important;
+                }
+                #super-chart-overlay .sc-metrics-bar {
+                    border-left: none !important;
+                    padding-left: 0 !important;
+                    margin-top: 15px !important;
+                    width: 100% !important;
+                    justify-content: space-between !important;
+                    flex-wrap: wrap !important;
+                    gap: 15px 5px !important;
+                }
+                #super-chart-overlay .sc-metrics-bar > div {
+                    flex: 1 1 30% !important; /* Chia đều 3 cột cho đẹp */
+                }
+            }
+        `;
+        document.head.appendChild(mobileChartStyle);
+    }
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         document.body.appendChild(modal);
