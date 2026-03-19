@@ -1436,7 +1436,7 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
         let limit = isArea ? 100 : 300; 
         let sym = t.alphaId || t.symbol;
         
-        // GỌI THẲNG VÀO API NỘI BỘ CỦA BẠN (BẢO MẬT 100%)
+        // GỌI THẲNG VÀO API NỘI BỘ CỦA BẠN (GIẤU KÍN 100% CỘI NGUỒN BINANCE)
         let apiUrl = `https://alpha-realtime.onrender.com/api/klines?symbol=${sym}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
@@ -1444,13 +1444,16 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
         
         const data = await res.json();
         
-        // Bơm data sạch vào mảng vẽ Chart
+        // Cấu trúc lại mảng khớp 100% với yêu cầu của Lightweight Charts
         return data.map(d => {
             let isUp = d.close >= d.open;
             return {
                 time: d.time, 
-                open: d.open, high: d.high, low: d.low, close: d.close,
-                volValue: d.volume, // Khối lượng chuẩn USD
+                open: d.open, 
+                high: d.high, 
+                low: d.low, 
+                close: d.close,
+                volValue: d.volume, 
                 volColor: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)', 
                 value: isArea ? d.close : undefined
             };
