@@ -6591,57 +6591,29 @@ function handleVote(tokenId, type, btnElement) {
 
 
 
+// ========================================================
+// 🚀 HYBRID REALTIME ENGINE (TIẾT KIỆM 99% BĂNG THÔNG RENDER)
+// ========================================================
+let caToAlphaIdCache = {};
+let globalBinanceWs = null;
 
 window.FULL_MARKET_DATA = {}; // 📦 KHO CHỨA TỔNG 500 TOKEN ĐỂ NUÔI SONAR
 
 function startRealtimeSync() {
-    if (layer2Interval) { clearInterval(layer2Interval); layer2Interval = null; }
+    console.log("🟢 Khởi động Hybrid Engine: Chuyển gánh nặng WS sang Binance!");
+    isRealtimeActive = true;
 
-    // 🛑 ĐÃ THÊM LẠI DÒNG IF BỊ THIẾU Ở ĐÂY ĐỂ TRÁNH LỖI ELSE
-    if (typeof io !== 'undefined') {
-        wsSocket = io('https://alpha-realtime.onrender.com', {
-            transports: ['websocket'], // 🛑 CHỖ VÁ LỖI: Ép dùng thẳng WS, cấm sinh rác HTTP
-            upgrade: false
-        });
+    // 1. HTTP POLLING: Gọi Server Render lấy Data Volume & Config (Giãn cách 15 giây)
+    fetchLayer2Data();
+    if (layer2Interval) clearInterval(layer2Interval);
+    layer2Interval = setInterval(fetchLayer2Data, 15000); 
 
-        wsSocket.on('connect', () => {
-            console.log('🟢 [FRONTEND] Đã kết nối Realtime WebSocket!');
-            isRealtimeActive = true;
-            if (layer2Interval) { clearInterval(layer2Interval); layer2Interval = null; }
-            fetchLayer2Data(); // Mồi 500 token lần đầu
-        });
-
-        wsSocket.on('disconnect', () => {
-            console.log('🔴 [FRONTEND] Mất kết nối WS. Bật chế độ sinh tồn (REST API 10s)...');
-            isRealtimeActive = false;
-            if (!layer2Interval) {
-                fetchLayer2Data();
-                layer2Interval = setInterval(fetchLayer2Data, 10000); 
-            }
-        });
-
-        // HỨNG DỮ LIỆU TICK-BY-TICK TỪ SERVER
-        wsSocket.on('market_delta_update', (deltaData) => {
-            // 1. LIÊN TỤC CẬP NHẬT KHO TỔNG (Để Sonar Galaxy không bị sai tỷ lệ do thiếu coin)
-            Object.keys(deltaData).forEach(id => {
-                window.FULL_MARKET_DATA[id] = { ...window.FULL_MARKET_DATA[id], ...deltaData[id] };
-            });
-
-            // 2. CHỈ ĐẨY DỮ LIỆU THAY ĐỔI VÀO BỘ NHỚ RAM 60FPS
-            requestAnimationFrame(() => {
-                applyLayer2Data(deltaData);
-            });
-        });
-
-    } else {
-        console.log('⚠️ [FRONTEND] Chưa có thư viện Socket.io, chạy API 3s mặc định.');
-        fetchLayer2Data(); 
-        layer2Interval = setInterval(fetchLayer2Data, 3000);
-    }
+    // 2. WEBSOCKET DIRECT: Trình duyệt nối thẳng lên Binance lấy Giá Nháy 60FPS
+    connectDirectBinanceWS();
 }
 
 async function fetchLayer2Data() {
-    if (document.hidden) return; 
+    if (document.hidden) return; // Không gọi API khi user ẩn tab
     try {
         const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
         const res = await fetch(antiCacheUrl, {
@@ -6652,10 +6624,76 @@ async function fetchLayer2Data() {
         let actualData = json.data ? json.data : json; 
         
         if (actualData && Object.keys(actualData).length > 0) {
-            window.FULL_MARKET_DATA = actualData; // Mồi kho tổng
-            applyLayer2Data(actualData);
+            window.FULL_MARKET_DATA = actualData; // Mồi kho tổng cho Sonar
+            
+            // Lọc bỏ Giá (p) và % Thay đổi (c) khỏi Server, nhường sân khấu cho Binance
+            let volDataOnly = JSON.parse(JSON.stringify(actualData));
+            Object.keys(volDataOnly).forEach(k => {
+                if(volDataOnly[k].p !== undefined) delete volDataOnly[k].p; 
+                if(volDataOnly[k].c !== undefined) delete volDataOnly[k].c; 
+            });
+
+            applyLayer2Data(volDataOnly);
         }
-    } catch (e) { console.error("Lỗi đồng bộ Realtime:", e); }
+    } catch (e) { console.error("Lỗi đồng bộ Layer2:", e); }
+}
+
+function connectDirectBinanceWS() {
+    if (globalBinanceWs) globalBinanceWs.close();
+
+    // Dùng URL đã mã hóa để tránh bot quét
+    const wsUrl = String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109);
+    globalBinanceWs = new WebSocket(wsUrl);
+
+    globalBinanceWs.onopen = () => {
+        console.log("🟢 [CLIENT] Đã kết nối thẳng Binance WS!");
+        globalBinanceWs.send(JSON.stringify({
+            "method": "SUBSCRIBE",
+            "params": ["came@allTokens@ticker24"],
+            "id": 999
+        }));
+    };
+
+    let clientPriceBuffer = {};
+
+    globalBinanceWs.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.stream === 'came@allTokens@ticker24' && data.data && data.data.d) {
+            
+            // Xây dựng từ điển map (Contract -> Alpha ID) 1 lần duy nhất
+            if(Object.keys(caToAlphaIdCache).length === 0 && typeof compList !== 'undefined' && compList.length > 0) {
+                compList.forEach(c => {
+                    if(c.contract) caToAlphaIdCache[c.contract.toLowerCase()] = c.alphaId || `ALPHA_${c.db_id}`;
+                });
+            }
+
+            data.data.d.forEach(t => {
+                const contractStr = String(t.ca).split('@')[0].toLowerCase();
+                const alphaId = caToAlphaIdCache[contractStr];
+
+                if (alphaId) {
+                    // Cập nhật cả Giá ($) và % Thay đổi từ Binance
+                    clientPriceBuffer[alphaId] = {
+                        p: parseFloat(t.p),
+                        c: parseFloat(t.pc24)
+                    };
+                }
+            });
+        }
+    };
+
+    // Throttle 1 giây bơm vào UI 1 lần để điện thoại User không bị khựng
+    setInterval(() => {
+        if (Object.keys(clientPriceBuffer).length > 0 && !document.hidden) {
+            applyLayer2Data(clientPriceBuffer, true);
+            clientPriceBuffer = {};
+        }
+    }, 1000);
+
+    globalBinanceWs.onclose = () => {
+        console.log("🔴 [CLIENT] Mất kết nối Binance, kết nối lại sau 3s...");
+        setTimeout(connectDirectBinanceWS, 3000);
+    };
 }
 
 function applyLayer2Data(serverData, forceApply = false) {
