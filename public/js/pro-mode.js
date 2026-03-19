@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(style);
     }
 // ========================================================
-    // BƠM CSS THIẾT KẾ LẠI CHART CHO DI ĐỘNG (MOBILE-FIRST)
+    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (CHUẨN BINANCE / COINGLASS)
     // ========================================================
     if (!document.getElementById('wave-alpha-mobile-chart')) {
         const mobileChartStyle = document.createElement('style');
@@ -113,49 +113,143 @@ document.addEventListener('DOMContentLoaded', () => {
                     display: flex !important;
                 }
 
-                /* 2. Ép Chart nằm trên cùng, chiếm 55% màn hình */
+                /* 2. Ép Chart nằm trên cùng, chừa chỗ cho Header to ra */
                 #super-chart-overlay .sc-chart-main {
-                    height: 55vh !important;
+                    height: 50vh !important;
                     flex: none !important;
                     width: 100% !important;
-                    border-bottom: 2px solid #2b3139 !important;
+                    border-bottom: 4px solid #1e2329 !important;
                 }
 
-                /* 3. Đẩy phần thông số xuống dưới, rộng 100% */
+                /* 3. Đẩy phần thông số phụ xuống dưới */
                 #super-chart-overlay .sc-side-panel {
                     width: 100% !important;
                     height: auto !important;
                     border-left: none !important;
-                    padding: 10px 15px !important;
+                    padding: 15px !important;
                 }
 
-                /* 4. Giới hạn chiều cao Sổ Lệnh để có thể cuộn nội bộ */
-                #super-chart-overlay .sc-panel-section:last-child {
-                    flex: none !important;
-                }
+                #super-chart-overlay .sc-panel-section:last-child { flex: none !important; }
                 #super-chart-overlay #sc-live-trades {
                     max-height: 250px !important;
                     height: 250px !important;
                     overflow-y: auto !important;
                 }
 
-                /* 5. Gọn lại Header trên cùng (Giá, Volume, MCAP) */
+                /* =========================================
+                   THIẾT KẾ LẠI HEADER CHUẨN BINANCE/COINGLASS 
+                   ========================================= */
+                
                 #super-chart-overlay .sc-header {
-                    flex-wrap: wrap !important;
+                    flex-direction: column !important;
+                    align-items: flex-start !important;
+                    padding: 15px 15px 20px 15px !important;
                     height: auto !important;
-                    padding-bottom: 15px !important;
+                    position: relative;
+                    background: #111418 !important;
                 }
-                #super-chart-overlay .sc-metrics-bar {
-                    border-left: none !important;
-                    padding-left: 0 !important;
-                    margin-top: 15px !important;
+
+                /* Nút Close: Tròn, gọn, góc phải */
+                #super-chart-overlay .sc-close-btn {
+                    position: absolute !important;
+                    top: 15px !important;
+                    right: 15px !important;
+                    background: rgba(255,255,255,0.08) !important;
+                    border-radius: 50% !important;
+                    width: 28px !important;
+                    height: 28px !important;
+                    line-height: 28px !important;
+                    padding: 0 !important;
+                    text-align: center !important;
+                    font-size: 14px !important;
+                }
+
+                /* Tách Header thành cấu trúc rõ ràng */
+                #super-chart-overlay .sc-coin-info {
                     width: 100% !important;
-                    justify-content: space-between !important;
-                    flex-wrap: wrap !important;
-                    gap: 15px 5px !important;
+                    align-items: flex-start !important;
                 }
+                
+                /* Bẻ gãy layout ngang, ép xuống dòng */
+                #super-chart-overlay .sc-coin-info > div > div:first-child {
+                    flex-direction: column !important;
+                    align-items: flex-start !important;
+                    gap: 6px !important;
+                }
+
+                /* Tên Coin Trắng sáng */
+                #super-chart-overlay #sc-coin-symbol {
+                    font-size: 18px !important;
+                    font-weight: 800 !important;
+                    color: #eaecef !important;
+                    text-shadow: none !important;
+                }
+
+                /* Cụm Giá: Siêu to khổng lồ */
+                #super-chart-overlay .sc-price-group {
+                    margin-top: 4px !important;
+                }
+                #super-chart-overlay #sc-live-price {
+                    font-size: 32px !important;
+                    font-weight: 700 !important;
+                    line-height: 1 !important;
+                }
+                #super-chart-overlay #sc-change-24h {
+                    font-size: 15px !important;
+                    font-weight: 700 !important;
+                }
+
+                /* Contract: Thiết kế thành dạng Badge (Nhãn) */
+                #super-chart-overlay #sc-coin-contract {
+                    margin-top: 12px !important;
+                    background: #1e2329 !important;
+                    padding: 5px 10px !important;
+                    border-radius: 6px !important;
+                    font-size: 11px !important;
+                    color: #848e9c !important;
+                    border: 1px solid #2b3139 !important;
+                    display: inline-block !important;
+                }
+
+                /* =========================================
+                   MA THUẬT GRID ĐỀU TĂM TẮP CHO THÔNG SỐ 
+                   ========================================= */
+                #super-chart-overlay .sc-metrics-bar {
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important; /* Chia đúng 2 cột 50-50 */
+                    gap: 12px 25px !important; /* Khoảng cách siêu chuẩn */
+                    width: 100% !important;
+                    border-left: none !important;
+                    padding: 0 !important;
+                    margin-top: 25px !important;
+                }
+
+                /* Từng ô thông số: Label trái, Số phải */
                 #super-chart-overlay .sc-metrics-bar > div {
-                    flex: 1 1 30% !important; /* Chia đều 3 cột cho đẹp */
+                    display: flex !important;
+                    flex-direction: row !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
+                }
+
+                #super-chart-overlay .sc-metrics-bar > div span:first-child {
+                    color: #848e9c !important;
+                    font-size: 11px !important;
+                    font-weight: 500 !important;
+                }
+
+                #super-chart-overlay .sc-metrics-bar > div span:last-child {
+                    font-size: 13px !important;
+                    color: #eaecef !important;
+                    font-weight: 700 !important;
+                    text-align: right !important;
+                }
+
+                /* Kéo dài dòng TXs sang 2 cột cho bố cục hoàn hảo */
+                #super-chart-overlay .sc-metrics-bar > div:nth-child(5) {
+                    grid-column: span 2;
+                    border-top: 1px dashed rgba(255,255,255,0.1);
+                    padding-top: 12px;
                 }
             }
         `;
