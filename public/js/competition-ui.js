@@ -452,6 +452,13 @@ class CompetitionRadar {
                             ${chainImgHtml}
                         </div>
                         <span style="font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stats.symbol}</span>
+                        <span onclick="event.stopPropagation(); if(typeof window.openProChart === 'function' && typeof compList !== 'undefined') window.openProChart(compList.find(x => x.contract.toLowerCase() === '${stats.contract}'.toLowerCase()));" 
+                              title="Mở Biểu Đồ Pro" 
+                              style="margin-left:8px; color:#00F0FF; font-size:0.9rem; cursor:pointer; transition:0.2s; text-shadow: 0 0 5px rgba(0,240,255,0.4);" 
+                              onmouseover="this.style.transform='scale(1.2)'" 
+                              onmouseout="this.style.transform='scale(1)'">
+                            <i class="fas fa-chart-area"></i>
+                        </span>
                     </div>
                     <div class="text-end">
                         <div style="margin-bottom:-2px;">     <span class="tippy-header" data-tippy-content="Ngưỡng an toàn dựa trên tốc độ khớp lệnh Limit." style="font-size: 0.5rem; color: #888; font-weight: 700; text-transform:uppercase;">ALGO LIMIT</span> </div>
