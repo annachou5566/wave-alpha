@@ -452,7 +452,7 @@ class CompetitionRadar {
                             ${chainImgHtml}
                         </div>
                         <span style="font-weight: 800; font-size: 1rem; color: #fff; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stats.symbol}</span>
-                        <span onclick="event.stopPropagation(); if(typeof window.openProChart === 'function' && typeof compList !== 'undefined') window.openProChart(compList.find(x => x.contract.toLowerCase() === '${stats.contract}'.toLowerCase()));" 
+                        <span onclick="event.stopPropagation(); let tk = allTokens.find(x => x.contract && x.contract.toLowerCase() === '${stats.contract || ''}'.toLowerCase()); if(tk) { window.openProChart(tk); } else { alert('Đang đồng bộ dữ liệu Chart, vui lòng thử lại sau vài giây!'); }" 
                               title="Mở Biểu Đồ Pro" 
                               style="margin-left:8px; color:#00F0FF; font-size:0.9rem; cursor:pointer; transition:0.2s; text-shadow: 0 0 5px rgba(0,240,255,0.4);" 
                               onmouseover="this.style.transform='scale(1.2)'" 
