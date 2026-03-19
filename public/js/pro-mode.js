@@ -1434,20 +1434,20 @@ function connectRealtimeChart(t) {
 async function fetchBinanceHistory(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
-        let sym = t.alphaId || t.symbol;
         
-        let apiUrl = `https://alpha-realtime.onrender.com/api/klines?symbol=${sym}&interval=${interval}&limit=${limit}`;
-        console.log("🌐 [Web] Đang gọi API lấy nến:", apiUrl);
+        // Lấy chính xác Contract và ChainID từ Token bạn vừa Click
+        let contract = t.contract || '';
+        let chainId = t.chain_id || t.chainId || 56;
+        
+        if (!contract) return []; // An toàn: không có contract thì không vẽ
+        
+        // Truyền thẳng thông tin vào URL
+        let apiUrl = `https://alpha-realtime.onrender.com/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
-        if (!res.ok) {
-            console.error("❌ [Web] Lỗi HTTP từ Render:", res.status);
-            return [];
-        }
+        if (!res.ok) return [];
         
         const data = await res.json();
-        console.log(`📊 [Web] Đã nhận được ${data.length} cây nến từ Backend!`);
-        
         if (data.length === 0) return [];
 
         return data.map(d => {
@@ -1462,7 +1462,7 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
         });
 
     } catch (e) {
-        console.error("❌ [Web] Lỗi Frontend khi xử lý:", e);
+        console.error("Lỗi vẽ nến:", e);
         return [];
     }
 }
