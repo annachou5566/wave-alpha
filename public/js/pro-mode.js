@@ -1433,51 +1433,31 @@ function connectRealtimeChart(t) {
 }
 async function fetchBinanceHistory(t, interval, isArea = false) {
     try {
-        let binanceInterval = interval === 'tick' ? '1s' : interval;
         let limit = isArea ? 100 : 300; 
-        let klines = [];
-
-        if (t.contract && t.chain_id) {
-            // --- 1. TOKEN DEX (W3W) - Dùng Proxy của Node.js ---
-            let cleanAddr = t.contract.toLowerCase();
-            if (t.chain_id === "CT_501" || t.chain_id === "CT_784") cleanAddr = t.contract; // Sol/Tron giữ nguyên hoa thường
-            
-            let bapiUrl = `https://www.binance.com/bapi/defi/v1/public/alpha-trade/agg-klines?chainId=${t.chain_id}&interval=${binanceInterval}&limit=${limit}&tokenAddress=${cleanAddr}&dataType=aggregate`;
-            
-            // Gọi qua Proxy chống CORS của Node.js (Giả sử Node.js của bạn chạy ở link này)
-            let proxyUrl = `https://alpha-realtime.onrender.com/api/proxy?url=${encodeURIComponent(bapiUrl)}`;
-            const res = await fetch(proxyUrl);
-            
-            if (!res.ok) return [];
-            const data = await res.json();
-            if (data.code === "000000" && data.data && data.data.klineInfos) {
-                klines = data.data.klineInfos;
-            }
-        } else {
-            // --- 2. TOKEN SPOT - Gọi thẳng API Spot ---
-            let sym = (t.symbol || '').toUpperCase().replace('ALPHA_', '');
-            if (!sym.endsWith('USDT')) sym += 'USDT';
-            
-            const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${binanceInterval}&limit=${limit}`);
-            if (!res.ok) return [];
-            klines = await res.json();
-        }
+        let sym = t.alphaId || t.symbol;
         
-        // --- XỬ LÝ CHUẨN HÓA DATA CHO CHART ---
-        return klines.map(d => {
-            let timeSec = Math.floor(d[0] / 1000);
-            let isUp = parseFloat(d[4]) >= parseFloat(d[1]);
-            if (isArea) {
-                return { time: timeSec, value: parseFloat(d[4]) }; 
-            } else {
-                return {
-                    time: timeSec, open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]),
-                    volColor: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)', volValue: parseFloat(d[5])
-                };
-            }
+        // GỌI THẲNG VÀO API NỘI BỘ CỦA BẠN (BẢO MẬT 100%)
+        let apiUrl = `https://alpha-realtime.onrender.com/api/klines?symbol=${sym}&interval=${interval}&limit=${limit}`;
+        
+        const res = await fetch(apiUrl);
+        if (!res.ok) return [];
+        
+        const data = await res.json();
+        
+        // Bơm data sạch vào mảng vẽ Chart
+        return data.map(d => {
+            let isUp = d.close >= d.open;
+            return {
+                time: d.time, 
+                open: d.open, high: d.high, low: d.low, close: d.close,
+                volValue: d.volume, // Khối lượng chuẩn USD
+                volColor: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)', 
+                value: isArea ? d.close : undefined
+            };
         });
+
     } catch (e) {
-        console.error("Lỗi lấy lịch sử:", e);
+        console.error("Lỗi lấy lịch sử nội bộ:", e);
         return [];
     }
 }
