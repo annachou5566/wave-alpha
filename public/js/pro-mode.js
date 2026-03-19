@@ -1436,23 +1436,25 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
         let limit = isArea ? 100 : 300; 
         let sym = t.alphaId || t.symbol;
         
-        // GỌI THẲNG VÀO API NỘI BỘ CỦA BẠN (GIẤU KÍN 100% CỘI NGUỒN BINANCE)
         let apiUrl = `https://alpha-realtime.onrender.com/api/klines?symbol=${sym}&interval=${interval}&limit=${limit}`;
+        console.log("🌐 [Web] Đang gọi API lấy nến:", apiUrl);
         
         const res = await fetch(apiUrl);
-        if (!res.ok) return [];
+        if (!res.ok) {
+            console.error("❌ [Web] Lỗi HTTP từ Render:", res.status);
+            return [];
+        }
         
         const data = await res.json();
+        console.log(`📊 [Web] Đã nhận được ${data.length} cây nến từ Backend!`);
         
-        // Cấu trúc lại mảng khớp 100% với yêu cầu của Lightweight Charts
+        if (data.length === 0) return [];
+
         return data.map(d => {
             let isUp = d.close >= d.open;
             return {
                 time: d.time, 
-                open: d.open, 
-                high: d.high, 
-                low: d.low, 
-                close: d.close,
+                open: d.open, high: d.high, low: d.low, close: d.close,
                 volValue: d.volume, 
                 volColor: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)', 
                 value: isArea ? d.close : undefined
@@ -1460,7 +1462,7 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
         });
 
     } catch (e) {
-        console.error("Lỗi lấy lịch sử nội bộ:", e);
+        console.error("❌ [Web] Lỗi Frontend khi xử lý:", e);
         return [];
     }
 }
