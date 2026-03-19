@@ -6594,8 +6594,8 @@ function handleVote(tokenId, type, btnElement) {
 // ========================================================
 // 🚀 HYBRID REALTIME ENGINE (TIẾT KIỆM 99% BĂNG THÔNG RENDER)
 // ========================================================
-let caToAlphaIdCache = {};
-let globalBinanceWs = null;
+var caToAlphaIdCache = {};
+var globalBinanceWs = null;
 
 window.FULL_MARKET_DATA = {}; // 📦 KHO CHỨA TỔNG 500 TOKEN ĐỂ NUÔI SONAR
 
