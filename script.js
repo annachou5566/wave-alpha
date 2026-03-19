@@ -6597,9 +6597,9 @@ window.FULL_MARKET_DATA = {}; // 📦 KHO CHỨA TỔNG 500 TOKEN ĐỂ NUÔI SO
 function startRealtimeSync() {
     if (layer2Interval) { clearInterval(layer2Interval); layer2Interval = null; }
 
-    if (typeof io !== 'undefined' && !wsSocket) {
-        wsSocket = io('https://alpha-realtime.onrender.com', {
-            transports: ['websocket', 'polling']
+    wsSocket = io('https://alpha-realtime.onrender.com', {
+            transports: ['websocket'], // 🛑 CHỖ VÁ LỖI: Ép dùng thẳng WS, cấm sinh rác HTTP
+            upgrade: false
         });
 
         wsSocket.on('connect', () => {
