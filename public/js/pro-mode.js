@@ -927,6 +927,8 @@ function injectLayout() {
     
     tabNav.insertAdjacentElement('afterend', marketView);
 
+    document.body.appendChild(document.getElementById('super-chart-overlay'));
+
     let lastScrollY = window.scrollY;
     window.removeEventListener('scroll', window._smartScroll);
     window._smartScroll = function() {
