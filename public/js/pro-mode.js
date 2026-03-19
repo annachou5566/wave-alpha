@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(style);
     }
 // ========================================================
-    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (CHUẨN BINANCE)
+    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (CHUẨN BINANCE / COINGLASS)
     // ========================================================
     if (!document.getElementById('wave-alpha-mobile-chart')) {
         const mobileChartStyle = document.createElement('style');
@@ -129,12 +129,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     height: 250px !important;
                     overflow-y: auto !important;
                 }
-                /* CHUẨN HÓA HEADER TRÊN MÀN HÌNH NHỎ */
+
+                /* =========================================
+                   THIẾT KẾ LẠI HEADER CHUẨN COINGLASS 
+                   ========================================= */
+                
+                /* 1. Đẩy Lưới (Grid) xuống dưới cụm Giá để giải phóng không gian */
                 #super-chart-overlay .sc-header-main {
+                    flex-direction: column !important; 
                     align-items: flex-start !important; 
+                    gap: 15px !important; /* Tạo độ thoáng giữa Giá và Grid */
+                    width: 100% !important;
+                }
+                
+                /* 2. Cụm Giá: Xếp Giá và phần trăm (%) lên cùng một hàng ngang cho gọn */
+                #super-chart-overlay .sc-header-main > div:first-child {
+                    padding-right: 0 !important;
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: baseline !important;
+                    gap: 12px !important;
                 }
                 #super-chart-overlay .sc-live-price {
-                    font-size: 28px !important; /* Hạ size tí trên mobile cho khỏi vỡ */
+                    font-size: 32px !important; 
+                }
+                #super-chart-overlay .sc-change-24h {
+                    margin-top: 0 !important;
+                    font-size: 16px !important;
+                }
+
+                /* 3. Lưới thông số: Dàn đều chiếm trọn 100% bề ngang màn hình */
+                #super-chart-overlay .sc-header-main > div:last-child {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                }
+
+                /* 4. Ma thuật căn lề: Cột 1 ép sát lề trái, Cột 2 ép sát lề phải */
+                #super-chart-overlay .sc-header-main > div:last-child > div:nth-child(odd) {
+                    align-items: flex-start !important; 
+                }
+                #super-chart-overlay .sc-header-main > div:last-child > div:nth-child(even) {
+                    align-items: flex-end !important;   
                 }
             }
         `;
