@@ -6589,13 +6589,12 @@ function handleVote(tokenId, type, btnElement) {
 
 
 
-
-
 // ========================================================
 // 🚀 HYBRID REALTIME ENGINE (TIẾT KIỆM 99% BĂNG THÔNG RENDER)
 // ========================================================
-var caToAlphaIdCache = {};
-var globalBinanceWs = null;
+// 🛑 Đã chuyển thành window. để miễn nhiễm mọi lỗi đụng độ biến
+window.caToAlphaIdCache = window.caToAlphaIdCache || {};
+window.globalBinanceWs = window.globalBinanceWs || null;
 
 window.FULL_MARKET_DATA = {}; // 📦 KHO CHỨA TỔNG 500 TOKEN ĐỂ NUÔI SONAR
 
@@ -6633,21 +6632,23 @@ async function fetchLayer2Data() {
                 if(volDataOnly[k].c !== undefined) delete volDataOnly[k].c; 
             });
 
-            applyLayer2Data(volDataOnly);
+            if (typeof applyLayer2Data === 'function') {
+                applyLayer2Data(volDataOnly);
+            }
         }
     } catch (e) { console.error("Lỗi đồng bộ Layer2:", e); }
 }
 
 function connectDirectBinanceWS() {
-    if (globalBinanceWs) globalBinanceWs.close();
+    if (window.globalBinanceWs) window.globalBinanceWs.close();
 
     // Dùng URL đã mã hóa để tránh bot quét
     const wsUrl = String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109);
-    globalBinanceWs = new WebSocket(wsUrl);
+    window.globalBinanceWs = new WebSocket(wsUrl);
 
-    globalBinanceWs.onopen = () => {
+    window.globalBinanceWs.onopen = () => {
         console.log("🟢 [CLIENT] Đã kết nối thẳng Binance WS!");
-        globalBinanceWs.send(JSON.stringify({
+        window.globalBinanceWs.send(JSON.stringify({
             "method": "SUBSCRIBE",
             "params": ["came@allTokens@ticker24"],
             "id": 999
@@ -6656,20 +6657,20 @@ function connectDirectBinanceWS() {
 
     let clientPriceBuffer = {};
 
-    globalBinanceWs.onmessage = (event) => {
+    window.globalBinanceWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.stream === 'came@allTokens@ticker24' && data.data && data.data.d) {
             
             // Xây dựng từ điển map (Contract -> Alpha ID) 1 lần duy nhất
-            if(Object.keys(caToAlphaIdCache).length === 0 && typeof compList !== 'undefined' && compList.length > 0) {
+            if(Object.keys(window.caToAlphaIdCache).length === 0 && typeof compList !== 'undefined' && compList.length > 0) {
                 compList.forEach(c => {
-                    if(c.contract) caToAlphaIdCache[c.contract.toLowerCase()] = c.alphaId || `ALPHA_${c.db_id}`;
+                    if(c.contract) window.caToAlphaIdCache[c.contract.toLowerCase()] = c.alphaId || `ALPHA_${c.db_id}`;
                 });
             }
 
             data.data.d.forEach(t => {
                 const contractStr = String(t.ca).split('@')[0].toLowerCase();
-                const alphaId = caToAlphaIdCache[contractStr];
+                const alphaId = window.caToAlphaIdCache[contractStr];
 
                 if (alphaId) {
                     // Cập nhật cả Giá ($) và % Thay đổi từ Binance
@@ -6685,12 +6686,14 @@ function connectDirectBinanceWS() {
     // Throttle 1 giây bơm vào UI 1 lần để điện thoại User không bị khựng
     setInterval(() => {
         if (Object.keys(clientPriceBuffer).length > 0 && !document.hidden) {
-            applyLayer2Data(clientPriceBuffer, true);
+            if (typeof applyLayer2Data === 'function') {
+                applyLayer2Data(clientPriceBuffer, true);
+            }
             clientPriceBuffer = {};
         }
     }, 1000);
 
-    globalBinanceWs.onclose = () => {
+    window.globalBinanceWs.onclose = () => {
         console.log("🔴 [CLIENT] Mất kết nối Binance, kết nối lại sau 3s...");
         setTimeout(connectDirectBinanceWS, 3000);
     };
