@@ -99,157 +99,42 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(style);
     }
 // ========================================================
-    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (CHUẨN BINANCE / COINGLASS)
+    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (CHUẨN BINANCE)
     // ========================================================
     if (!document.getElementById('wave-alpha-mobile-chart')) {
         const mobileChartStyle = document.createElement('style');
         mobileChartStyle.id = 'wave-alpha-mobile-chart';
         mobileChartStyle.innerHTML = `
             @media (max-width: 991px) {
-                /* 1. Xếp dọc toàn bộ khung body */
                 #super-chart-overlay .sc-body {
                     flex-direction: column !important;
                     overflow-y: auto !important;
                     display: flex !important;
                 }
-
-                /* 2. Ép Chart nằm trên cùng, chừa chỗ cho Header to ra */
                 #super-chart-overlay .sc-chart-main {
                     height: 50vh !important;
                     flex: none !important;
                     width: 100% !important;
                     border-bottom: 4px solid #1e2329 !important;
                 }
-
-                /* 3. Đẩy phần thông số phụ xuống dưới */
                 #super-chart-overlay .sc-side-panel {
                     width: 100% !important;
                     height: auto !important;
                     border-left: none !important;
                     padding: 15px !important;
                 }
-
                 #super-chart-overlay .sc-panel-section:last-child { flex: none !important; }
                 #super-chart-overlay #sc-live-trades {
                     max-height: 250px !important;
                     height: 250px !important;
                     overflow-y: auto !important;
                 }
-
-                /* =========================================
-                   THIẾT KẾ LẠI HEADER CHUẨN BINANCE/COINGLASS 
-                   ========================================= */
-                
-                #super-chart-overlay .sc-header {
-                    flex-direction: column !important;
-                    align-items: flex-start !important;
-                    padding: 15px 15px 20px 15px !important;
-                    height: auto !important;
-                    position: relative;
-                    background: #111418 !important;
+                /* CHUẨN HÓA HEADER TRÊN MÀN HÌNH NHỎ */
+                #super-chart-overlay .sc-header-main {
+                    align-items: flex-start !important; 
                 }
-
-                /* Nút Close: Tròn, gọn, góc phải */
-                #super-chart-overlay .sc-close-btn {
-                    position: absolute !important;
-                    top: 15px !important;
-                    right: 15px !important;
-                    background: rgba(255,255,255,0.08) !important;
-                    border-radius: 50% !important;
-                    width: 28px !important;
-                    height: 28px !important;
-                    line-height: 28px !important;
-                    padding: 0 !important;
-                    text-align: center !important;
-                    font-size: 14px !important;
-                }
-
-                /* Tách Header thành cấu trúc rõ ràng */
-                #super-chart-overlay .sc-coin-info {
-                    width: 100% !important;
-                    align-items: flex-start !important;
-                }
-                
-                /* Bẻ gãy layout ngang, ép xuống dòng */
-                #super-chart-overlay .sc-coin-info > div > div:first-child {
-                    flex-direction: column !important;
-                    align-items: flex-start !important;
-                    gap: 6px !important;
-                }
-
-                /* Tên Coin Trắng sáng */
-                #super-chart-overlay #sc-coin-symbol {
-                    font-size: 18px !important;
-                    font-weight: 800 !important;
-                    color: #eaecef !important;
-                    text-shadow: none !important;
-                }
-
-                /* Cụm Giá: Siêu to khổng lồ */
-                #super-chart-overlay .sc-price-group {
-                    margin-top: 4px !important;
-                }
-                #super-chart-overlay #sc-live-price {
-                    font-size: 32px !important;
-                    font-weight: 700 !important;
-                    line-height: 1 !important;
-                }
-                #super-chart-overlay #sc-change-24h {
-                    font-size: 15px !important;
-                    font-weight: 700 !important;
-                }
-
-                /* Contract: Thiết kế thành dạng Badge (Nhãn) */
-                #super-chart-overlay #sc-coin-contract {
-                    margin-top: 12px !important;
-                    background: #1e2329 !important;
-                    padding: 5px 10px !important;
-                    border-radius: 6px !important;
-                    font-size: 11px !important;
-                    color: #848e9c !important;
-                    border: 1px solid #2b3139 !important;
-                    display: inline-block !important;
-                }
-
-                /* =========================================
-                   MA THUẬT GRID ĐỀU TĂM TẮP CHO THÔNG SỐ 
-                   ========================================= */
-                #super-chart-overlay .sc-metrics-bar {
-                    display: grid !important;
-                    grid-template-columns: 1fr 1fr !important; /* Chia đúng 2 cột 50-50 */
-                    gap: 12px 25px !important; /* Khoảng cách siêu chuẩn */
-                    width: 100% !important;
-                    border-left: none !important;
-                    padding: 0 !important;
-                    margin-top: 25px !important;
-                }
-
-                /* Từng ô thông số: Label trái, Số phải */
-                #super-chart-overlay .sc-metrics-bar > div {
-                    display: flex !important;
-                    flex-direction: row !important;
-                    justify-content: space-between !important;
-                    align-items: center !important;
-                }
-
-                #super-chart-overlay .sc-metrics-bar > div span:first-child {
-                    color: #848e9c !important;
-                    font-size: 11px !important;
-                    font-weight: 500 !important;
-                }
-
-                #super-chart-overlay .sc-metrics-bar > div span:last-child {
-                    font-size: 13px !important;
-                    color: #eaecef !important;
-                    font-weight: 700 !important;
-                    text-align: right !important;
-                }
-
-                /* Kéo dài dòng TXs sang 2 cột cho bố cục hoàn hảo */
-                #super-chart-overlay .sc-metrics-bar > div:nth-child(5) {
-                    grid-column: span 2;
-                    border-top: 1px dashed rgba(255,255,255,0.1);
-                    padding-top: 12px;
+                #super-chart-overlay .sc-live-price {
+                    font-size: 28px !important; /* Hạ size tí trên mobile cho khỏi vỡ */
                 }
             }
         `;
@@ -1017,29 +902,48 @@ function injectLayout() {
         </div>
 
         <div id="super-chart-overlay">
-            <div class="sc-header">
-                <div class="sc-coin-info">
-                    <img id="sc-coin-logo" class="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
-                    <div style="display:flex; flex-direction:column; justify-content:center;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <div id="sc-coin-symbol" class="sc-coin-symbol" style="color:#00F0FF; text-shadow: 0 0 10px rgba(0,240,255,0.4);">--- / USDT</div>
-                            <div class="sc-price-group" style="display:flex; align-items:baseline; gap:6px;">
-                                <div id="sc-live-price" class="sc-live-price" style="font-size:22px; color:#fff;">$--</div>
-                                <div id="sc-change-24h" class="sc-change-24h" style="font-size:14px;">(--%)</div>
+            <div class="sc-header" style="background: #111418; padding: 12px 15px 15px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <img id="sc-coin-logo" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #333;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
+                        <span id="sc-coin-symbol" style="font-size: 18px; font-weight: 800; color: #eaecef; letter-spacing: 0.5px;">--- / USDT</span>
+                        <span id="sc-coin-contract" onclick="window.pluginCopy(this.innerText)" style="background: #2b3139; color: #848e9c; font-size: 11px; padding: 2px 6px; border-radius: 4px; cursor: pointer; border: 1px solid #474d57; font-family: var(--font-num);">---</span>
+                    </div>
+                    <button class="sc-close-btn" onclick="window.closeProChart()" style="background: rgba(255,255,255,0.08); border: none; color: #eaecef; font-size: 14px; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;">✕</button>
+                </div>
+
+                <div class="sc-header-main" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; flex-direction: column; flex: 0 0 auto; padding-right: 15px;">
+                        <div id="sc-live-price" class="sc-live-price" style="font-size: 32px; font-weight: 700; color: #0ecb81; line-height: 1; font-family: var(--font-num);">$--</div>
+                        <div id="sc-change-24h" class="sc-change-24h" style="font-size: 14px; font-weight: 600; color: #0ecb81; margin-top: 5px; font-family: var(--font-num);">--%</div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; flex: 1; max-width: 400px;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 10px; color: #848e9c; font-weight: 500;">24H VOL</span>
+                            <span id="sc-top-vol" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 10px; color: #848e9c; font-weight: 500;">LIQUIDITY</span>
+                            <span id="sc-top-liq" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 10px; color: #848e9c; font-weight: 500;">MARKET CAP</span>
+                            <span id="sc-top-mc" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                                <span style="font-size: 10px; color: #848e9c; font-weight: 500;">HOLDERS</span>
+                                <span id="sc-top-hold" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
+                            </div>
+                            <span style="color:#474d57; font-size:12px; display:flex; align-items:flex-end;">|</span>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                                <span style="font-size: 10px; color: #848e9c; font-weight: 500;">TXs</span>
+                                <span id="sc-top-tx" style="font-size: 12px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
                             </div>
                         </div>
-                        <div id="sc-coin-contract" class="sc-coin-contract" onclick="window.pluginCopy(this.innerText)">---</div>
                     </div>
                 </div>
-                
-                <div class="sc-metrics-bar" style="display:flex; gap:20px; font-family:var(--font-num); font-size:12px; border-left:1px solid rgba(255,255,255,0.1); padding-left:20px;">
-                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">MARKET CAP</span><span id="sc-top-mc" style="color:#fff; font-weight:bold;">$--</span></div>
-                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">LIQUIDITY</span><span id="sc-top-liq" style="color:#fff; font-weight:bold;">$--</span></div>
-                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">VOL 24H</span><span id="sc-top-vol" style="color:#fff; font-weight:bold;">$--</span></div>
-                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">HOLDERS</span><span id="sc-top-hold" style="color:#fff; font-weight:bold;">--</span></div>
-                    <div style="display:flex; flex-direction:column; justify-content:center;"><span style="color:#848e9c; font-size:10px;">TXs (24h)</span><span id="sc-top-tx" style="color:#fff; font-weight:bold;">--</span></div>
-                </div>
-                <button class="sc-close-btn" onclick="window.closeProChart()">✕</button>
             </div>
 
             <div class="sc-body">
