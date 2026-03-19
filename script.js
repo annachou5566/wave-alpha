@@ -6597,7 +6597,9 @@ window.FULL_MARKET_DATA = {}; // 📦 KHO CHỨA TỔNG 500 TOKEN ĐỂ NUÔI SO
 function startRealtimeSync() {
     if (layer2Interval) { clearInterval(layer2Interval); layer2Interval = null; }
 
-    wsSocket = io('https://alpha-realtime.onrender.com', {
+    // 🛑 ĐÃ THÊM LẠI DÒNG IF BỊ THIẾU Ở ĐÂY ĐỂ TRÁNH LỖI ELSE
+    if (typeof io !== 'undefined') {
+        wsSocket = io('https://alpha-realtime.onrender.com', {
             transports: ['websocket'], // 🛑 CHỖ VÁ LỖI: Ép dùng thẳng WS, cấm sinh rác HTTP
             upgrade: false
         });
@@ -6631,7 +6633,7 @@ function startRealtimeSync() {
             });
         });
 
-    } else if (!wsSocket) {
+    } else {
         console.log('⚠️ [FRONTEND] Chưa có thư viện Socket.io, chạy API 3s mặc định.');
         fetchLayer2Data(); 
         layer2Interval = setInterval(fetchLayer2Data, 3000);
