@@ -2455,7 +2455,7 @@ fullHtml += `
 
                                 <div class="token-title d-flex align-items-center">
                                     ${c.name}
-                                    <span onclick="event.stopPropagation(); if(typeof window.openProChart === 'function') window.openProChart(compList.find(x => x.db_id == '${c.db_id}'));" 
+                                    <span onclick="event.stopPropagation(); let tk = allTokens.find(x => x.contract && x.contract.toLowerCase() === '${c.contract_address || c.contract || ''}'.toLowerCase()); if(tk) { window.openProChart(tk); } else { alert('Đang đồng bộ dữ liệu Chart, vui lòng thử lại sau vài giây!'); }" 
                                           title="Mở Biểu Đồ Pro" 
                                           style="margin-left:8px; color:#00F0FF; font-size:0.9rem; cursor:pointer; transition:0.2s; text-shadow: 0 0 5px rgba(0,240,255,0.4);" 
                                           onmouseover="this.style.transform='scale(1.2)'" 
