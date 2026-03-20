@@ -1017,6 +1017,16 @@ function injectLayout() {
                                 </div>
                             </div>
                         </div>
+
+                        <div class="sc-panel-section" style="border-bottom: none; padding-top: 10px;">
+                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Data Flow (Realtime)</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#00F0FF; font-weight:700;">+$0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Tốc độ khớp / s</span><span id="sc-stat-match-speed" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0 /s</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Spread (15s)</span><span id="sc-stat-spread" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Trend (VWAP 60s)</span><span id="sc-stat-trend" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Rớt đỉnh (Drop 5m)</span><span id="sc-stat-drop" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
+                        </div>
+                    </div>
             </div>
         </div>
     `;
@@ -1778,16 +1788,19 @@ function connectRealtimeChart(t) {
                 // BẮN VẠCH MỚI LÊN CHART
                 let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
                 newWalls.forEach(wall => {
-                    // Tường bự hơn 10 lần lệnh trung bình thì nét cực dày (4), bự hơn 5 lần thì nét vừa (2)
+                    // Thuần hóa đường Line: Làm cho nó mỏng đi và dùng màu nhạt (RGBA)
                     let thickness = 1;
-                    if (wall.v > currentAvgTicket * 10) thickness = 4;
-                    else if (wall.v > currentAvgTicket * 5) thickness = 2;
+                    if (wall.v > currentAvgTicket * 10) thickness = 2; // Tối đa chỉ dày mức 2 để khỏi rối
+
+                    // Đổi màu thành Vàng Cam (Kháng cự) và Xanh Lá (Hỗ trợ) cho khác biệt với nến
+                    // Độ trong suốt 0.35 để nó chìm vào nền như một bóng ma
+                    let lineColor = wall.isAsk ? 'rgba(240, 185, 11, 0.35)' : 'rgba(14, 203, 129, 0.35)';
 
                     let priceLine = activeSeries.createPriceLine({
                         price: wall.p,
-                        color: wall.isAsk ? '#FF007F' : '#00F0FF', // Bán: Đỏ Pink | Mua: Xanh Cyan
+                        color: lineColor,
                         lineWidth: thickness,
-                        lineStyle: 0, // Nét Solid
+                        lineStyle: 2, // 0 = Solid, 1 = Dotted, 2 = Dashed, 3 = Large Dashed
                         axisLabelVisible: true,
                         title: formatCompactUSD(wall.v)
                     });
