@@ -1508,24 +1508,23 @@ function connectRealtimeChart(t) {
             }
         }
 
-        // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART NẾN
+        // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART
         let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
         let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
         
-        // Kích hoạt khi rớt giá > 0.6% VÀ Tốc độ xả mạnh hơn 50% trung bình
         if (drop <= -0.6 && currentSpeed > (avgSpeed60s * 1.5)) {
-            if (tvCandleSeries && window.currentChartInterval !== 'tick') {
+            let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+            if (activeSeries) {
                 let lastTick = window.scTickHistory[window.scTickHistory.length - 1];
                 if (lastTick) {
                     let timeSec = Math.floor(lastTick.t / 1000);
                     let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
-                    // Cooldown 15 giây mới in 1 Icon để chart không bị loạn
                     if (!lastMarker || lastMarker.text !== '⚠️ DUMP' || (timeSec - lastMarker.time > 15)) {
                         window.scChartMarkers.push({
                             time: timeSec, position: 'aboveBar', color: '#FF003C', shape: 'arrowDown', text: '⚠️ DUMP'
                         });
                         if (window.scChartMarkers.length > 30) window.scChartMarkers.shift();
-                        tvCandleSeries.setMarkers(window.scChartMarkers);
+                        activeSeries.setMarkers(window.scChartMarkers);
                     }
                 }
             }
@@ -1619,28 +1618,24 @@ function connectRealtimeChart(t) {
 
             // GHI NHẬN CÁ MẬP & IN MARKER LÊN NẾN
             // [FIXED] GHI NHẬN CÁ MẬP & GẮN ICON VÀO CHART
+            // [FIXED] GHI NHẬN CÁ MẬP & GẮN ICON VÀO CHART (HỖ TRỢ CẢ TICK VÀ NẾN)
             if (valUSD > 5000) {
                 window.scWhaleCount++;
                 let whaleEl = document.getElementById('sc-stat-whale-tx'); 
                 if (whaleEl) whaleEl.innerText = window.scWhaleCount;
 
-                // CHỈ HIỆN ICON TRÊN NẾN KLINE (Không hiện ở Tick/Line Chart)
-                if (tvCandleSeries && window.currentChartInterval !== 'tick') {
-                    // console.log("Gắn icon Cá mập", isUp ? "MUA" : "BÁN");
+                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+                if (activeSeries) {
                     window.scChartMarkers.push({
-                        time: timeSec, // Thời gian trade tính bằng giây
-                        position: isUp ? 'belowBar' : 'aboveBar', // Mua ở dưới, Bán ở trên nến
-                        color: isUp ? '#00F0FF' : '#FF007F', // Màu Wave Alpha Cyan/Pink
+                        time: timeSec, 
+                        position: isUp ? 'belowBar' : 'aboveBar', 
+                        color: isUp ? '#00F0FF' : '#FF007F', 
                         shape: isUp ? 'arrowUp' : 'arrowDown',
-                        // Dùng hàm formatPrice có sẵn trong file của bạn
-                        text: '🐋 $' + window.pluginFormatPrice(valUSD) 
+                        text: '🐋 $' + formatCompactUSD(valUSD) 
                     });
                     
-                    // Giới hạn 50 marker gần nhất để không lag máy
                     if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                    
-                    // Lệnh quan trọng: Ép series vẽ markers ra màn hình
-                    tvCandleSeries.setMarkers(window.scChartMarkers);
+                    activeSeries.setMarkers(window.scChartMarkers);
                 }
             }
 
@@ -1729,7 +1724,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
         // Bơm thông số Algo Limit
-        let algoLimit = t.algoLimit || (t.market_analysis && t.market_analysis.algoLimit) || 0;
+        let algoLimit = (t.volume && t.volume.daily_limit) || 0;
         let limitText = algoLimit > 0 ? `< $${formatCompactNum(algoLimit)}` : 'N/A';
         let limitEl = document.getElementById('sc-algo-limit');
         if (limitEl) limitEl.innerHTML = `ALGO LIMIT: ${limitText}`;
