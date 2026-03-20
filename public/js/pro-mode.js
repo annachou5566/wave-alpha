@@ -1780,7 +1780,7 @@ function connectRealtimeChart(t) {
                 // XÓA VẠCH CŨ TRÊN CHART
                 if (window.scActivePriceLines && window.scActivePriceLines.length > 0) {
                     window.scActivePriceLines.forEach(line => {
-                        try { activeSeries.removePriceLine(line); } catch(e) {}
+                        try { window.tvHeatmapLayer.removePriceLine(line); } catch(e) {}
                     });
                 }
                 window.scActivePriceLines = [];
@@ -1808,7 +1808,7 @@ function connectRealtimeChart(t) {
                         thickness = 2;
                     }
 
-                    let priceLine = activeSeries.createPriceLine({
+                    let priceLine = window.tvHeatmapLayer.createPriceLine({
                         price: wall.p,
                         color: lineColor,
                         lineWidth: thickness,
@@ -2002,6 +2002,26 @@ window.openProChart = function(t, isTimeSwitch = false) {
             rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
         });
 
+
+tvChart = LightweightCharts.createChart(container, {
+            width: w, height: h,
+            layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
+            watermark: { color: 'rgba(255, 255, 255, 0.02)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
+            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, // Đứt nét mờ
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'} },
+            timeScale: { borderColor: 'rgba(43, 49, 57, 0.5)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
+            rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
+        });
+
+        // [NEW] TẠO LỚP NỀN (BACKGROUND LAYER) ĐỂ VẼ TƯỜNG THANH KHOẢN CHÌM XUỐNG ĐÁY
+        window.tvHeatmapLayer = tvChart.addLineSeries({
+            lineWidth: 0, // Đường kẻ tàng hình
+            crosshairMarkerVisible: false, // Tắt marker khi rê chuột
+            priceLineVisible: false, // Tắt đường giá
+            lastValueVisible: false // Tắt hiển thị số
+        });
+
+        
         // NẾU LÀ TICK -> VẼ AREA CHART (MẢNG MÀU)
         if (window.currentChartInterval === 'tick') {
             tvLineSeries = tvChart.addAreaSeries({
