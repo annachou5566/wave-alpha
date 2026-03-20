@@ -1713,7 +1713,6 @@ function connectRealtimeChart(t) {
                 priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
             }
             
-            // ĐỒNG BỘ CACHE ĐỂ KHÔNG MẤT DỮ LIỆU (Nằm ngoài if(priceEl))
             if (window.AlphaChartState && window.AlphaChartState[sym]) {
                 window.AlphaChartState[sym].netFlow = window.scNetFlow;
                 window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
@@ -1721,6 +1720,9 @@ function connectRealtimeChart(t) {
                 window.AlphaChartState[sym].tradeCount = window.scTradeCount;
                 window.AlphaChartState[sym].lastPrice = window.scLastPrice;
                 window.AlphaChartState[sym].lastTradeDir = window.scLastTradeDir;
+                window.AlphaChartState[sym].speedWindow = window.scSpeedWindow;
+                window.AlphaChartState[sym].tickHistory = window.scTickHistory;
+                window.AlphaChartState[sym].chartMarkers = window.scChartMarkers;
             }
         }
     };
