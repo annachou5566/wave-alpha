@@ -1133,7 +1133,17 @@ window.togglePin = (symbol) => {
 function formatNum(n) { return (!n) ? '0' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n); }
 function formatCompactNum(n) { return (!n) ? '0' : new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(n); }
 function formatInt(n) { return n ? new Intl.NumberFormat('en-US').format(n) : '0'; }
-function formatPrice(n) { return !n ? '0' : (n < 0.0001 ? n.toExponential(2) : n.toFixed(4)); }
+function formatPrice(n) {
+    if (!n) return '0';
+    let v = parseFloat(n);
+    let absV = Math.abs(v);
+    if (absV >= 1000) return v.toFixed(2);
+    if (absV >= 1) return v.toFixed(4);
+    if (absV >= 0.1) return v.toFixed(6);
+    if (absV >= 0.0001) return v.toFixed(8); 
+    if (absV >= 0.000001) return v.toFixed(10);
+    return v.toExponential(4);
+}
 function getVal(obj, path) { return path.split('.').reduce((o, i) => (o ? o[i] : 0), obj); }
 function setupEvents() { document.getElementById('alpha-search')?.addEventListener('keyup', () => renderTable()); window.addEventListener('scroll', () => { if (document.getElementById('alpha-market-view')?.style.display === 'block') { if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) { if (displayCount < allTokens.length) { displayCount += 50; renderTable(); } } } }); }
 
@@ -1841,9 +1851,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
         const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7);
 
         let priceVal = parseFloat(t.price) || 1;
-        let prec = 4; minM = 0.0001;
-        if (priceVal < 0.001) { prec = 6; minM = 0.000001; }
-        if (priceVal < 0.00001) { prec = 8; minM = 0.00000001; }
+        let prec = 4; let minM = 0.0001;
+        if (priceVal < 1) { prec = 6; minM = 0.000001; }
+        if (priceVal < 0.1) { prec = 8; minM = 0.00000001; }
+        if (priceVal < 0.0001) { prec = 10; minM = 0.0000000001; }
 
         tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
