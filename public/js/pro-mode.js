@@ -1724,8 +1724,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
         // Bơm thông số Algo Limit
-        let algoLimit = (t.volume && t.volume.daily_limit) || 0;
-        let limitText = algoLimit > 0 ? `< $${formatCompactNum(algoLimit)}` : 'N/A';
+        let algoLimitToken = t.algoLimit || (t.market_analysis && t.market_analysis.algoLimit) || 0;
+        let algoLimitUSD = algoLimitToken * (parseFloat(t.price) || 0);
+        let limitText = algoLimitUSD > 0 ? `< $${formatCompactNum(algoLimitUSD)}` : 'N/A';
         let limitEl = document.getElementById('sc-algo-limit');
         if (limitEl) limitEl.innerHTML = `ALGO LIMIT: ${limitText}`;
         let chg = parseFloat(t.change_24h) || 0;
