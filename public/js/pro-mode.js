@@ -1455,7 +1455,56 @@ function connectRealtimeChart(t) {
     window.scTradeCount = cache.tradeCount; window.scLastPrice = cache.lastPrice; 
     window.scLastTradeDir = cache.lastTradeDir; window.scTickHistory = cache.tickHistory; 
     window.scChartMarkers = cache.chartMarkers;
+// --- KHAI BÁO HÀM SMART TAPE (XỬ LÝ CỤM LỆNH) ---
+    window.scCurrentCluster = null;
+    window.flushSmartTape = function(cluster) {
+        if (!cluster) return;
+        let tradesBox = document.getElementById('sc-live-trades');
+        let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
+        
+        let isWhale   = cluster.vol >= (currentAvgTicket * 20) && cluster.vol >= 10000;
+        let isShark   = cluster.vol >= (currentAvgTicket * 10) && cluster.vol >= 5000;
+        let isDolphin = cluster.vol >= (currentAvgTicket * 5)  && cluster.vol >= 2000;
+        let isSweep   = cluster.count >= 15; // Bot càn quét 15 lệnh liên tiếp
 
+        let icon = ''; let fontWeight = 'normal';
+        if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
+        else if (isShark) { icon = '🦈 '; fontWeight = '700'; }
+        else if (isDolphin) { icon = '🐬 '; fontWeight = '600'; }
+        else if (isSweep) { icon = '🤖 '; fontWeight = '600'; }
+
+        if (tradesBox) {
+            let row = document.createElement('div');
+            let bgAlpha = icon !== '' ? '0.25' : '0.1';
+            row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${cluster.dir ? `rgba(0,240,255,${bgAlpha})` : `rgba(255,0,127,${bgAlpha})`}; transition:0.4s; font-weight:${fontWeight};`;
+            
+            let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false});
+            row.innerHTML = `<span style="color:${cluster.dir ? '#00F0FF' : '#FF007F'}">${formatPrice(cluster.p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(cluster.vol)}</span><span style="color:#5e6673">${timeStr}</span>`;
+            tradesBox.insertBefore(row, tradesBox.firstChild);
+            
+            setTimeout(() => row.style.background = 'transparent', 400);
+            if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
+        }
+
+        if (isDolphin || isShark || isWhale || isSweep) {
+            window.scWhaleCount++;
+            let whaleEl = document.getElementById('sc-stat-whale-tx'); 
+            if (whaleEl) whaleEl.innerText = window.scWhaleCount;
+
+            let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+            if (activeSeries) {
+                let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
+                if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP'; // Ưu tiên báo Sweep nếu tiền bé
+                
+                window.scChartMarkers.push({
+                    time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
+                    color: cluster.dir ? '#00F0FF' : '#FF007F', shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg 
+                });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                activeSeries.setMarkers(window.scChartMarkers);
+            }
+        }
+    };
     try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
@@ -1478,7 +1527,11 @@ function connectRealtimeChart(t) {
     window.scCalcInterval = setInterval(() => {
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         const now = Date.now();
-        
+        // Dọn rác cụm lệnh bị kẹt (Chống treo giao diện nếu ngừng giao dịch)
+        if (window.scCurrentCluster && (now - window.scCurrentCluster.startT >= 1000)) {
+            window.flushSmartTape(window.scCurrentCluster);
+            window.scCurrentCluster = null;
+        }
         // Dọn rác: Chỉ giữ tick trong 5 phút qua
         window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
         
@@ -1658,71 +1711,47 @@ function connectRealtimeChart(t) {
                 }
             }
         }
-        // LỆNH LIVE & LOGIC CÁ MẬP
+        // LỆNH LIVE & LOGIC CÁ MẬP (SMART TAPE AGGREGATION)
         if (data.stream.endsWith('@aggTrade')) {
             let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
             let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
             window.scLastTradeDir = isUp; window.scLastPrice = p;
             let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
-            let color = isUp ? '#00F0FF' : '#FF007F';
 
-            // Nạp data vào RAM cho cỗ máy Interval chạy
+            // 1. Cập nhật Nến/Line và Giá lên UI NGAY LẬP TỨC để biểu đồ mượt mà
             window.scTickHistory.push({ t: Date.now(), p: p, q: q, v: valUSD, dir: isUp });
-
             if (window.currentChartInterval === 'tick' && tvLineSeries) {
                 tvLineSeries.update({ time: timeSec, value: p });
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
             }
-
-            // --- LOGIC PHÂN CẤP SINH HỌC (HYBRID ALGO) ---
-            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
-            
-            let isWhale   = valUSD >= (currentAvgTicket * 20) && valUSD >= 10000;
-            let isShark   = valUSD >= (currentAvgTicket * 10) && valUSD >= 5000;
-            let isDolphin = valUSD >= (currentAvgTicket * 5)  && valUSD >= 2000;
-
-            let icon = '';
-            let fontWeight = 'normal';
-            if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
-            else if (isShark) { icon = '🦈 '; fontWeight = '700'; }
-            else if (isDolphin) { icon = '🐬 '; fontWeight = '600'; }
-
-            if (tradesBox) {
-                let row = document.createElement('div');
-                let bgAlpha = icon !== '' ? '0.25' : '0.1';
-                row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${isUp ? `rgba(0,240,255,${bgAlpha})` : `rgba(255,0,127,${bgAlpha})`}; transition:0.4s; font-weight:${fontWeight};`;
-                
-                row.innerHTML = `<span style="color:${color}">${formatPrice(p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(valUSD)}</span><span style="color:#5e6673">${new Date(data.data.T).toLocaleTimeString('en-GB',{hour12:false})}</span>`;
-                tradesBox.insertBefore(row, tradesBox.firstChild);
-                
-                setTimeout(() => row.style.background = 'transparent', 400);
-                if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
+            let priceEl = document.getElementById('sc-live-price');
+            if (priceEl) {
+                priceEl.innerText = '$' + formatPrice(p);
+                priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
             }
 
-            
-            if (isDolphin || isShark || isWhale) {
-                window.scWhaleCount++;
-                let whaleEl = document.getElementById('sc-stat-whale-tx'); 
-                if (whaleEl) whaleEl.innerText = window.scWhaleCount;
-
-                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-                if (activeSeries) {
-                    window.scChartMarkers.push({
-                        time: timeSec, 
-                        position: isUp ? 'belowBar' : 'aboveBar', 
-                        color: isUp ? '#00F0FF' : '#FF007F', 
-                        shape: isUp ? 'arrowUp' : 'arrowDown',
-                        text: `${icon}$${formatCompactUSD(valUSD)}` 
-                    });
-                    
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                    activeSeries.setMarkers(window.scChartMarkers);
+            // 2. LOGIC GOM CỤM THỜI GIAN THỰC (SMART TAPE) - 1 GIÂY
+            let nowT = Date.now();
+            if (!window.scCurrentCluster) {
+                // Tạo rổ chứa mới
+                window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
+            } else {
+                // Cùng chiều MUA/BÁN và chưa qua 1 giây -> NHỒI VÀO RỔ
+                if (window.scCurrentCluster.dir === isUp && (nowT - window.scCurrentCluster.startT < 1000)) {
+                    window.scCurrentCluster.vol += valUSD;
+                    window.scCurrentCluster.count += 1;
+                    window.scCurrentCluster.p = p; 
+                } else {
+                    // Ngược chiều hoặc đã qua 1 giây -> ĐÓNG RỔ IN RA UI, VÀ TẠO RỔ MỚI
+                    window.flushSmartTape(window.scCurrentCluster);
+                    window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
                 }
             }
 
+            // 3. Cập nhật thông số vĩ mô (Speed, NetFlow, Cache)
             window.scTradeCount++; window.scTotalVol += valUSD;
-            window.scSpeedWindow.push({ t: Date.now(), v: valUSD });
-            window.scSpeedWindow = window.scSpeedWindow.filter(x => Date.now() - x.t <= 5000);
+            window.scSpeedWindow.push({ t: nowT, v: valUSD });
+            window.scSpeedWindow = window.scSpeedWindow.filter(x => nowT - x.t <= 5000);
             
             let speed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
             let speedEl = document.getElementById('sc-stat-match-speed');
@@ -1737,12 +1766,8 @@ function connectRealtimeChart(t) {
                 flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
                 flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
             }
-            let priceEl = document.getElementById('sc-live-price');
-            if (priceEl) {
-                priceEl.innerText = '$' + formatPrice(p);
-                priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
-            }
             
+            // ĐỒNG BỘ CACHE
             if (window.AlphaChartState && window.AlphaChartState[sym]) {
                 window.AlphaChartState[sym].netFlow = window.scNetFlow;
                 window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
