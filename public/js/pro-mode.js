@@ -1532,7 +1532,46 @@ function connectRealtimeChart(t) {
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
             }
         }
+// 3. BẮT DỮ LIỆU TICKER 24H (VOL, LIQ, MCAP, HOLD, TXs)
+        if (data.e === 'tickerList' || data.stream === 'came@allTokens@ticker24') {
+            if (data.data && data.data.d) {
+                // Binance trả về ca dạng "0xabc...@56" hoặc "0xabc...@CT_501"
+                let target1 = `${contract}@${chainId}`.toLowerCase();
+                let target2 = `${contract}@CT_${chainId}`.toLowerCase();
+                
+                // Tìm đúng đồng token đang mở chart trong mảng Binance trả về
+                let ticker = data.data.d.find(item => {
+                    let itemCa = item.ca.toLowerCase();
+                    return itemCa === target1 || itemCa === target2;
+                });
 
+                if (ticker) {
+                    // Bơm số nhảy realtime
+                    let volEl = document.getElementById('sc-top-vol');
+                    if (volEl) volEl.innerText = '$' + formatCompactNum(parseFloat(ticker.vol24 || 0));
+
+                    let liqEl = document.getElementById('sc-top-liq');
+                    if (liqEl) liqEl.innerText = '$' + formatCompactNum(parseFloat(ticker.liq || 0));
+
+                    let mcEl = document.getElementById('sc-top-mc');
+                    if (mcEl) mcEl.innerText = '$' + formatCompactNum(parseFloat(ticker.mc || 0));
+
+                    let holdEl = document.getElementById('sc-top-hold');
+                    if (holdEl) holdEl.innerText = formatInt(ticker.hc || 0);
+
+                    let txEl = document.getElementById('sc-top-tx');
+                    if (txEl) txEl.innerText = formatInt(ticker.cnt24 || 0);
+
+                    // Cập nhật luôn % thay đổi giá 24H cho chính xác với Binance
+                    let chgEl = document.getElementById('sc-change-24h');
+                    if (chgEl && ticker.pc24) {
+                        let chg = parseFloat(ticker.pc24);
+                        chgEl.innerText = `${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%`;
+                        chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F';
+                    }
+                }
+            }
+        }
         // LỆNH LIVE & LOGIC CÁ MẬP
         if (data.stream.endsWith('@aggTrade')) {
             let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
