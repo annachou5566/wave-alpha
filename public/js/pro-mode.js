@@ -1453,7 +1453,6 @@ function formatCompactUSD(num) {
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     
-    // 1. KHỞI TẠO BỘ NHỚ RAM STATE
     // 1. KHỞI TẠO BỘ NHỚ RAM STATE (CÓ BỘ ĐỆM CACHE CHỐNG MẤT DỮ LIỆU)
     if (!window.AlphaChartState) window.AlphaChartState = {};
     let sym = t.symbol || 'UNKNOWN';
@@ -1462,7 +1461,8 @@ function connectRealtimeChart(t) {
     if (!window.AlphaChartState[sym]) {
         window.AlphaChartState[sym] = {
             speedWindow: [], netFlow: 0, whaleCount: 0, totalVol: 0, tradeCount: 0,
-            tickHistory: [], chartMarkers: [], lastPrice: parseFloat(t.price) || 0, lastTradeDir: undefined
+            tickHistory: [], chartMarkers: [], lastPrice: parseFloat(t.price) || 0, lastTradeDir: undefined,
+            cWhale: 0, cShark: 0, cDolphin: 0, cSweep: 0 // [FIX] Cấp đất cho 4 con cá xây nhà
         };
     }
     
@@ -1473,6 +1473,12 @@ function connectRealtimeChart(t) {
     window.scTradeCount = cache.tradeCount; window.scLastPrice = cache.lastPrice; 
     window.scLastTradeDir = cache.lastTradeDir; window.scTickHistory = cache.tickHistory; 
     window.scChartMarkers = cache.chartMarkers;
+
+    // [FIX] Bốc 4 con cá từ Cache ra lại biến tạm
+    window.scCWhale = cache.cWhale || 0;
+    window.scCShark = cache.cShark || 0;
+    window.scCDolphin = cache.cDolphin || 0;
+    window.scCSweep = cache.cSweep || 0;
 // --- KHAI BÁO HÀM SMART TAPE (XỬ LÝ CỤM LỆNH) ---
     window.scCurrentCluster = null;
     window.flushSmartTape = function(cluster) {
@@ -1667,12 +1673,24 @@ function connectRealtimeChart(t) {
                 }
             }
         }
-        // LƯU CACHE MẢNG SAU KHI DỌN RÁC HOẶC GẮN ICON XẢ HÀNG
-        if (window.AlphaChartState && window.AlphaChartState[sym]) {
-            window.AlphaChartState[sym].speedWindow = window.scSpeedWindow;
-            window.AlphaChartState[sym].tickHistory = window.scTickHistory;
-            window.AlphaChartState[sym].chartMarkers = window.scChartMarkers;
-        }
+        // ĐỒNG BỘ CACHE
+            if (window.AlphaChartState && window.AlphaChartState[sym]) {
+                window.AlphaChartState[sym].netFlow = window.scNetFlow;
+                window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
+                window.AlphaChartState[sym].totalVol = window.scTotalVol;
+                window.AlphaChartState[sym].tradeCount = window.scTradeCount;
+                window.AlphaChartState[sym].lastPrice = window.scLastPrice;
+                window.AlphaChartState[sym].lastTradeDir = window.scLastTradeDir;
+                window.AlphaChartState[sym].speedWindow = window.scSpeedWindow;
+                window.AlphaChartState[sym].tickHistory = window.scTickHistory;
+                window.AlphaChartState[sym].chartMarkers = window.scChartMarkers;
+                
+                // [FIX] Cất 4 con cá vào đúng két sắt của token này
+                window.AlphaChartState[sym].cWhale = window.scCWhale;
+                window.AlphaChartState[sym].cShark = window.scCShark;
+                window.AlphaChartState[sym].cDolphin = window.scCDolphin;
+                window.AlphaChartState[sym].cSweep = window.scCSweep;
+            }
     }, 1000);
 
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
@@ -2143,16 +2161,19 @@ tvChart = LightweightCharts.createChart(container, {
                     activeSeries.setMarkers(window.scChartMarkers); // Vẽ lại Cá mập lên biểu đồ
                 }
                 
-                // In lại ngay Dòng Tiền và Số Cá Mập ra bảng Info
+                // In lại ngay Dòng Tiền
                 let flowEl = document.getElementById('sc-stat-net-flow');
                 if (flowEl && window.scNetFlow !== undefined) {
                     flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
                     flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
                 }
-                let whaleEl = document.getElementById('sc-stat-whale-tx'); 
-                if (whaleEl && window.scWhaleCount !== undefined) {
-                    whaleEl.innerText = window.scWhaleCount;
-                }
+                
+                // [FIX] In lại chuẩn xác số lượng 4 con cá lên Dashboard
+                let eWhale = document.getElementById('sc-stat-whale'); if (eWhale) eWhale.innerText = window.scCWhale || 0;
+                let eShark = document.getElementById('sc-stat-shark'); if (eShark) eShark.innerText = window.scCShark || 0;
+                let eDolphin = document.getElementById('sc-stat-dolphin'); if (eDolphin) eDolphin.innerText = window.scCDolphin || 0;
+                let eSweep = document.getElementById('sc-stat-sweep'); if (eSweep) eSweep.innerText = window.scCSweep || 0;
+                
             }, 200);
         });
         // KẾT THÚC
