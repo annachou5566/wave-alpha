@@ -1675,7 +1675,9 @@ function connectRealtimeChart(t) {
             if (priceEl) {
                 priceEl.innerText = '$' + formatPrice(p);
                 priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
-                // ĐỒNG BỘ CACHE ĐỂ KHÔNG MẤT DỮ LIỆU KHI TẮT APP HOẶC ĐÓNG CHART
+            }
+            
+            // ĐỒNG BỘ CACHE ĐỂ KHÔNG MẤT DỮ LIỆU (Nằm ngoài if(priceEl))
             if (window.AlphaChartState && window.AlphaChartState[sym]) {
                 window.AlphaChartState[sym].netFlow = window.scNetFlow;
                 window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
