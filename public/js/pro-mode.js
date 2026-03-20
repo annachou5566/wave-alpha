@@ -928,6 +928,7 @@ function injectLayout() {
                     <img id="sc-coin-logo" style="width: 22px; height: 22px; border-radius: 50%;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
                     <span id="sc-coin-symbol" style="font-size: 16px; font-weight: 800; color: #eaecef; font-family: var(--font-num);">---/USDT</span>
                     <span id="sc-coin-contract" style="background: rgba(255,255,255,0.05); color: #848e9c; font-size: 10px; padding: 3px 6px; border-radius: 4px; cursor: pointer;" onclick="window.pluginCopy(this.innerText)">---</span>
+                    <span id="sc-algo-limit" style="background: rgba(14,203,129,0.1); color: #0ecb81; font-size: 10px; font-weight: 800; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(14,203,129,0.3); white-space: nowrap;">ALGO: N/A</span>
                 </div>
                 <button style="background: transparent; border: none; color: #848e9c; font-size: 18px; cursor: pointer;" onclick="window.closeProChart()">✕</button>
             </div>
@@ -983,15 +984,18 @@ function injectLayout() {
                     </div>
 
                     <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
-                        <div class="sc-panel-section">
+                        <div class="sc-panel-section" style="padding-bottom: 10px;">
                             <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Whale Tracker</div>
-                            <div class="sc-metric-item"><span class="sc-metric-label">Ticket trung bình</span><span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span></div>
-                            <div class="sc-metric-item"><span class="sc-metric-label">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" class="sc-metric-value">0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" style="font-family:var(--font-num); color:#F0B90B; font-weight:700;">0</span></div>
                         </div>
-                        <div class="sc-panel-section" style="border-bottom: none;">
-                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Flow & Speed</div>
-                            <div class="sc-metric-item"><span class="sc-metric-label">Dòng tiền Net</span><span id="sc-stat-net-flow" class="sc-metric-value" style="color:#00F0FF;">+$0</span></div>
-                            <div class="sc-metric-item"><span class="sc-metric-label">Tốc độ khớp / s</span><span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span></div>
+                        <div class="sc-panel-section" style="border-bottom: none; padding-top: 10px;">
+                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Data Flow (Realtime)</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#00F0FF; font-weight:700;">+$0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Tốc độ khớp / s</span><span id="sc-stat-match-speed" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0 /s</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Spread (15s)</span><span id="sc-stat-spread" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Trend (VWAP 60s)</span><span id="sc-stat-trend" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Rớt đỉnh (Drop 5m)</span><span id="sc-stat-drop" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
                         </div>
                     </div>
                 </div>
@@ -1410,17 +1414,18 @@ function formatCompactUSD(num) {
 
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
+    
+    // 1. KHỞI TẠO BỘ NHỚ RAM STATE
     window.scSpeedWindow = []; window.scNetFlow = 0; window.scWhaleCount = 0; window.scTotalVol = 0; window.scTradeCount = 0;
     window.scLastPrice = parseFloat(t.price) || 0; window.scLastTradeDir = undefined;
-    
-    // Ép cứng kết nối vào đúng máy chủ Web3/DEX của Binance
+    window.scTickHistory = []; 
+    window.scChartMarkers = [];
+
     try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
-    
     let contract = t.contract;
-    // 🛑 CHỖ SỬA LỖI: Bắt đúng biến chainId dù viết hoa hay viết thường
     let chainId = t.chainId || t.chain_id || 56;
     
     let params = [
@@ -1428,14 +1433,84 @@ function connectRealtimeChart(t) {
         'came@allTokens@ticker24'
     ];
     
-    // 🛑 ĐĂNG KÝ ĐÚNG LUỒNG NẾN DEX (KLINE)
     if (window.currentChartInterval !== 'tick') {
-        if (contract) {
-            params.push(`came@${contract}@${chainId}@kline_${window.currentChartInterval}`);
-        } else {
-            params.push(`${sysSymbol}@kline_${window.currentChartInterval}`);
-        }
+        if (contract) params.push(`came@${contract}@${chainId}@kline_${window.currentChartInterval}`);
+        else params.push(`${sysSymbol}@kline_${window.currentChartInterval}`);
     }
+
+    // 2. CỖ MÁY TOÁN HỌC CHẠY NGẦM (Mỗi giây 1 lần để chống lag UI)
+    if (window.scCalcInterval) clearInterval(window.scCalcInterval);
+    window.scCalcInterval = setInterval(() => {
+        if (!window.scTickHistory || window.scTickHistory.length === 0) return;
+        const now = Date.now();
+        
+        // Dọn rác: Chỉ giữ tick trong 5 phút qua
+        window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
+        
+        // A. TÍNH SPREAD (Bỏ nhiễu bằng phân vị 90/10)
+        const hist15s = window.scTickHistory.filter(x => now - x.t <= 15000);
+        let spread = 0;
+        if (hist15s.length > 5) {
+            let prices = hist15s.map(x => x.p).sort((a,b) => a - b);
+            let p10 = prices[Math.floor(prices.length * 0.1)];
+            let p90 = prices[Math.floor(prices.length * 0.9)];
+            if (p10 > 0) spread = ((p90 - p10) / p10) * 100;
+        }
+        let spreadEl = document.getElementById('sc-stat-spread');
+        if(spreadEl) spreadEl.innerText = spread.toFixed(2) + '%';
+
+        // B. TÍNH TREND (Gia tốc VWAP 60s)
+        const hist60s = window.scTickHistory.filter(x => now - x.t <= 60000);
+        let trend = 0;
+        if (hist60s.length > 10) {
+            let oldHalf = hist60s.filter(x => now - x.t > 30000);
+            let newHalf = hist60s.filter(x => now - x.t <= 30000);
+            let vwapOld = oldHalf.reduce((s, x) => s + x.p * x.v, 0) / (oldHalf.reduce((s, x) => s + x.v, 0) || 1);
+            let vwapNew = newHalf.reduce((s, x) => s + x.p * x.v, 0) / (newHalf.reduce((s, x) => s + x.v, 0) || 1);
+            if (vwapOld > 0 && vwapNew > 0) trend = ((vwapNew - vwapOld) / vwapOld) * 100;
+        }
+        let trendEl = document.getElementById('sc-stat-trend');
+        if(trendEl) {
+            trendEl.innerText = (trend > 0 ? '+' : '') + trend.toFixed(2) + '%';
+            trendEl.style.color = trend >= 0 ? '#0ECB81' : '#F6465D';
+        }
+
+        // C. TÍNH DROP (So với P95 đỉnh 5 phút)
+        let drop = 0;
+        if (window.scTickHistory.length > 20) {
+            let prices5m = window.scTickHistory.map(x => x.p).sort((a,b) => a - b);
+            let peakP95 = prices5m[Math.floor(prices5m.length * 0.95)];
+            if (peakP95 > 0) drop = ((window.scLastPrice - peakP95) / peakP95) * 100;
+        }
+        let dropEl = document.getElementById('sc-stat-drop');
+        if (dropEl) {
+            dropEl.innerText = drop.toFixed(2) + '%';
+            dropEl.style.color = drop <= -0.6 ? '#F6465D' : '#eaecef';
+        }
+
+        // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART NẾN
+        let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
+        let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
+        
+        // Kích hoạt khi rớt giá > 0.6% VÀ Tốc độ xả mạnh hơn 50% trung bình
+        if (drop <= -0.6 && currentSpeed > (avgSpeed60s * 1.5)) {
+            if (tvCandleSeries && window.currentChartInterval !== 'tick') {
+                let lastTick = window.scTickHistory[window.scTickHistory.length - 1];
+                if (lastTick) {
+                    let timeSec = Math.floor(lastTick.t / 1000);
+                    let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
+                    // Cooldown 15 giây mới in 1 Icon để chart không bị loạn
+                    if (!lastMarker || lastMarker.text !== '⚠️ DUMP' || (timeSec - lastMarker.time > 15)) {
+                        window.scChartMarkers.push({
+                            time: timeSec, position: 'aboveBar', color: '#FF003C', shape: 'arrowDown', text: '⚠️ DUMP'
+                        });
+                        if (window.scChartMarkers.length > 30) window.scChartMarkers.shift();
+                        tvCandleSeries.setMarkers(window.scChartMarkers);
+                    }
+                }
+            }
+        }
+    }, 1000);
 
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
 
@@ -1445,26 +1520,20 @@ function connectRealtimeChart(t) {
 
         const tradesBox = document.getElementById('sc-live-trades');
 
-        // 1. CẬP NHẬT NẾN NHẬT LIÊN TỤC
+        // NẾN NHẬT
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
             let k = data.data.k;
-            // Bắt đúng thời gian mở nến (ot) theo tài liệu Binance Web3
             let rawTime = k.ot !== undefined ? k.ot : k.t; 
-            
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
                 
-                if (tvCandleSeries) {
-                    tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
-                }
-                if (tvVolumeSeries) {
-                    tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
-                }
+                if (tvCandleSeries) tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
+                if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
             }
         }
 
-        // 2. XỬ LÝ TICK CHART, SỔ LỆNH VÀ CÁC CHỈ SỐ (AggTrade)
+        // LỆNH LIVE & LOGIC CÁ MẬP
         if (data.stream.endsWith('@aggTrade')) {
             let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
             let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
@@ -1472,13 +1541,14 @@ function connectRealtimeChart(t) {
             let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
             let color = isUp ? '#00F0FF' : '#FF007F';
 
-            // VẼ TICK CHART
+            // Nạp data vào RAM cho cỗ máy Interval chạy
+            window.scTickHistory.push({ t: Date.now(), p: p, q: q, v: valUSD, dir: isUp });
+
             if (window.currentChartInterval === 'tick' && tvLineSeries) {
                 tvLineSeries.update({ time: timeSec, value: p });
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
             }
 
-            // BƠM DỮ LIỆU SỔ LỆNH (LIVE TRADES)
             if (tradesBox) {
                 let row = document.createElement('div');
                 row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${isUp ? 'rgba(0,240,255,0.1)' : 'rgba(255,0,127,0.1)'}; transition:0.4s;`;
@@ -1488,21 +1558,36 @@ function connectRealtimeChart(t) {
                 if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
             }
 
-            // TÍNH TOÁN CÁC CHỈ SỐ VÀNG (SPEED, NETFLOW, WHALE)
+            // GHI NHẬN CÁ MẬP & IN MARKER LÊN NẾN
+            if (valUSD > 5000) {
+                window.scWhaleCount++;
+                let whaleEl = document.getElementById('sc-stat-whale-tx'); 
+                if (whaleEl) whaleEl.innerText = window.scWhaleCount;
+
+                // IN MARKER CÁ MẬP VÀO BIỂU ĐỒ TRADINGVIEW
+                if (tvCandleSeries && window.currentChartInterval !== 'tick') {
+                    window.scChartMarkers.push({
+                        time: timeSec,
+                        position: isUp ? 'belowBar' : 'aboveBar',
+                        color: isUp ? '#00F0FF' : '#FF007F', // Xanh lơ nếu cá mập MUA, Hồng nếu BÁN
+                        shape: isUp ? 'arrowUp' : 'arrowDown',
+                        text: '🐋 $' + formatCompactUSD(valUSD)
+                    });
+                    if (window.scChartMarkers.length > 30) window.scChartMarkers.shift();
+                    tvCandleSeries.setMarkers(window.scChartMarkers);
+                }
+            }
+
             window.scTradeCount++; window.scTotalVol += valUSD;
             window.scSpeedWindow.push({ t: Date.now(), v: valUSD });
             window.scSpeedWindow = window.scSpeedWindow.filter(x => Date.now() - x.t <= 5000);
+            
             let speed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
             let speedEl = document.getElementById('sc-stat-match-speed');
             if(speedEl) speedEl.innerText = '$' + formatCompactUSD(speed) + ' /s';
 
             let avgEl = document.getElementById('sc-stat-avg-ticket');
             if (avgEl) avgEl.innerText = '$' + formatCompactUSD(window.scTotalVol / window.scTradeCount);
-
-            if (valUSD > 5000) {
-                window.scWhaleCount++;
-                let whaleEl = document.getElementById('sc-stat-whale-tx'); if (whaleEl) whaleEl.innerText = window.scWhaleCount;
-            }
 
             window.scNetFlow += isUp ? valUSD : -valUSD;
             let flowEl = document.getElementById('sc-stat-net-flow');
@@ -1577,7 +1662,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-coin-contract').innerText = t.contract ? t.contract.substring(0,10) + '...' : '';
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
-        
+        // Bơm thông số Algo Limit
+        let algoLimit = t.algoLimit || (t.market_analysis && t.market_analysis.algoLimit) || 0;
+        let limitText = algoLimit > 0 ? `< $${formatCompactNum(algoLimit)}` : 'N/A';
+        let limitEl = document.getElementById('sc-algo-limit');
+        if (limitEl) limitEl.innerHTML = `ALGO LIMIT: ${limitText}`;
         let chg = parseFloat(t.change_24h) || 0;
         let chgEl = document.getElementById('sc-change-24h');
         if (chgEl) {
@@ -1680,6 +1769,7 @@ window.changeChartInterval = function(interval, btnEl) {
 };
 
 window.closeProChart = function() {
+    if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) {
         overlay.classList.remove('active');
