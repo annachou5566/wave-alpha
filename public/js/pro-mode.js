@@ -99,49 +99,71 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(style);
     }
 // ========================================================
-    // BƠM CSS THIẾT KẾ LẠI CHART DI ĐỘNG (BỐ CỤC CHUẨN - MÀU WAVE ALPHA)
+    // BƠM CSS THIẾT KẾ LẠI CHART (BỐ CỤC PRO & MOBILE TABS)
     // ========================================================
-    if (!document.getElementById('wave-alpha-mobile-chart')) {
-        const mobileChartStyle = document.createElement('style');
-        mobileChartStyle.id = 'wave-alpha-mobile-chart';
-        mobileChartStyle.innerHTML = `
-            /* Ẩn thanh cuộn ngang của ribbon thông số */
-            .sc-metrics-ribbon::-webkit-scrollbar { display: none; }
+    if (!document.getElementById('wave-alpha-pro-chart-styles')) {
+        const proChartStyle = document.createElement('style');
+        proChartStyle.id = 'wave-alpha-pro-chart-styles';
+        proChartStyle.innerHTML = `
+            /* THIẾT KẾ LẠI HEADER & BỐ CỤC TỔNG THỂ */
+            #super-chart-overlay { background: rgba(8, 10, 14, 0.98); backdrop-filter: blur(15px); font-family: var(--font-main); }
+            .sc-topbar { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #0B0E11; border-bottom: 1px solid rgba(255,255,255,0.03); height: 45px; flex-shrink: 0; }
+            .sc-body { display: flex; flex: 1; overflow: hidden; width: 100%; }
             
+            /* CỘT TRÁI: CHART & THỐNG KÊ */
+            .sc-chart-area { flex: 1; display: flex; flex-direction: column; background: transparent; overflow: hidden; }
+            .sc-stats-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(22, 26, 30, 0.4); }
+            .sc-metrics-compact { display: flex; gap: 20px; align-items: center; }
+            .sc-mc-item { display: flex; flex-direction: column; align-items: flex-end; }
+            .sc-mc-item span { font-size: 10px; color: #5E6673; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+            .sc-mc-item strong { font-size: 13px; color: #EAECEF; font-family: var(--font-num); font-weight: 700; }
+            
+            /* CỘT PHẢI: SIDE PANEL (Whale & Trades) */
+            .sc-side-panel { width: 320px; background: #12151A; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.02); z-index: 2;}
+            .sc-panel-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+            .sc-panel-title { font-size: 11px; text-transform: uppercase; color: #848e9c; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; display:flex; align-items:center; gap:6px;}
+            
+            /* TABS CHO MOBILE (Mặc định ẩn trên Desktop) */
+            .sc-mobile-tabs { display: none; }
+            .sc-tab-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+            
+            /* THANH CUỘN MƯỢT TRONG TRADES */
+            #sc-live-trades::-webkit-scrollbar { width: 4px; }
+            #sc-live-trades::-webkit-scrollbar-track { background: transparent; }
+            #sc-live-trades::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+            /* =======================================
+               MOBILE RESPONSIVE (UI Tabbed)
+               ======================================= */
             @media (max-width: 991px) {
-                /* ÉP CÁC KHỐI CHÍNH XẾP DỌC TRÊN MOBILE */
-                #super-chart-overlay .sc-body { flex-direction: column !important; overflow-y: auto !important; display: flex !important; }
-                #super-chart-overlay .sc-chart-main { height: 50vh !important; flex: none !important; width: 100% !important; border-bottom: 4px solid #1e2329 !important; }
-                #super-chart-overlay .sc-side-panel { width: 100% !important; height: auto !important; border-left: none !important; padding: 15px !important; }
-                #super-chart-overlay .sc-panel-section:last-child { flex: none !important; }
-                #super-chart-overlay #sc-live-trades { max-height: 250px !important; height: 250px !important; overflow-y: auto !important; }
+                .sc-body { flex-direction: column !important; overflow-y: hidden !important; }
+                .sc-topbar { padding: 8px 10px; }
                 
-                /* BỐ CỤC LẠI HEADER CHO MOBILE */
-                #super-chart-overlay .sc-header { padding: 12px 15px !important; }
-                #super-chart-overlay .sc-header-main { 
-                    flex-direction: column !important; 
-                    align-items: flex-start !important; 
-                    gap: 12px !important; 
-                }
-                #super-chart-overlay .sc-price-box { padding-right: 0 !important; }
-                #super-chart-overlay .sc-live-price { font-size: 32px !important; }
-                #super-chart-overlay .sc-change-24h { font-size: 16px !important; }
+                /* Khu vực Chart cố định chiều cao trên mobile */
+                .sc-chart-area { flex: none !important; height: 50vh !important; border-bottom: 2px solid #1e2329; }
                 
-                /* THANH CUỘN NGANG CHO THÔNG SỐ (VUỐT ĐỂ XEM NHƯ BINANCE) */
-                #super-chart-overlay .sc-metrics-ribbon {
-                    justify-content: flex-start !important; 
-                    width: 100% !important; 
-                    overflow-x: auto !important; 
-                    padding-bottom: 5px !important; 
-                    -webkit-overflow-scrolling: touch; 
-                    gap: 20px !important;
-                }
+                /* Dải thông số vuốt ngang */
+                .sc-stats-row { padding: 8px 10px; }
+                .sc-metrics-compact { overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+                .sc-metrics-compact::-webkit-scrollbar { display: none; }
                 
-                /* CĂN LỀ TRÁI CHO CÁC CỘT THÔNG SỐ TRÊN MOBILE */
-                #super-chart-overlay .sc-metric-col { align-items: flex-start !important; flex: 0 0 auto !important; }
+                /* Side panel biến thành Tabs ở nửa dưới */
+                .sc-side-panel { width: 100% !important; flex: 1 !important; border-left: none; background: #0B0E11; }
+                
+                /* Nút Tab */
+                .sc-mobile-tabs { display: flex; background: #12151A; border-bottom: 1px solid #1e2329; }
+                .sc-tab-btn { flex: 1; background: transparent; border: none; color: #5e6673; padding: 10px 0; font-size: 12px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s;}
+                .sc-tab-btn.active { color: #00F0FF; border-bottom-color: #00F0FF; background: rgba(0, 240, 255, 0.05); }
+                
+                /* Quản lý nội dung Tab */
+                .sc-tab-content { display: none; padding: 10px; flex: 1; overflow-y: auto;}
+                .sc-tab-content.active { display: flex; }
+                
+                /* Bỏ padding thừa của section trong mobile */
+                .sc-panel-section { padding: 5px 0 10px 0; border-bottom: none; margin-bottom: 10px;}
             }
         `;
-        document.head.appendChild(mobileChartStyle);
+        document.head.appendChild(proChartStyle);
     }
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
@@ -905,52 +927,35 @@ function injectLayout() {
         </div>
 
         <div id="super-chart-overlay">
-            <div class="sc-header" style="background: #111418; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <div class="sc-header-top" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div class="sc-coin-title" style="display: flex; align-items: center; gap: 10px;">
-                        <img id="sc-coin-logo" style="width: 26px; height: 26px; border-radius: 50%; border: 1px solid #333;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
-                        <span id="sc-coin-symbol" style="font-size: 20px; font-weight: 800; color: #eaecef;">--- / USDT</span>
-                        <span id="sc-coin-contract" style="background: #1e2329; color: #848e9c; font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: 1px solid #2b3139; font-family: var(--font-num);" onclick="window.pluginCopy(this.innerText)">---</span>
-                    </div>
-                    <button class="sc-close-btn" style="background: rgba(255,255,255,0.08); border: none; color: #eaecef; font-size: 16px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;" onclick="window.closeProChart()">✕</button>
+            <div class="sc-topbar">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img id="sc-coin-logo" style="width: 22px; height: 22px; border-radius: 50%;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
+                    <span id="sc-coin-symbol" style="font-size: 16px; font-weight: 800; color: #eaecef; font-family: var(--font-num);">---/USDT</span>
+                    <span id="sc-coin-contract" style="background: rgba(255,255,255,0.05); color: #848e9c; font-size: 10px; padding: 3px 6px; border-radius: 4px; cursor: pointer;" onclick="window.pluginCopy(this.innerText)">---</span>
                 </div>
-
-                <div class="sc-header-main" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="sc-price-box" style="display: flex; align-items: baseline; gap: 12px; padding-right: 20px;">
-                        <div id="sc-live-price" class="sc-live-price" style="font-size: 32px; font-weight: 700; color: #0ecb81; line-height: 1; font-family: var(--font-num);">$--</div>
-                        <div id="sc-change-24h" class="sc-change-24h" style="font-size: 16px; font-weight: 600; font-family: var(--font-num); color: #0ecb81;">--%</div>
-                    </div>
-                    
-                    <div class="sc-metrics-ribbon" style="display: flex; gap: 25px; flex: 1; justify-content: flex-end;">
-                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">24H VOL</span>
-                            <span id="sc-top-vol" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
-                        </div>
-                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">LIQUIDITY</span>
-                            <span id="sc-top-liq" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
-                        </div>
-                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">MARKET CAP</span>
-                            <span id="sc-top-mc" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
-                        </div>
-                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">HOLDERS</span>
-                            <span id="sc-top-hold" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
-                        </div>
-                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
-                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">TXs</span>
-                            <span id="sc-top-tx" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
-                        </div>
-                    </div>
-                </div>
+                <button style="background: transparent; border: none; color: #848e9c; font-size: 18px; cursor: pointer;" onclick="window.closeProChart()">✕</button>
             </div>
 
             <div class="sc-body">
-                <div class="sc-chart-main" style="position:relative; display:flex; flex-direction:column;">
+                <div class="sc-chart-area">
+                    <div class="sc-stats-row">
+                        <div style="display: flex; align-items: baseline; gap: 10px; margin-right: 15px;">
+                            <div id="sc-live-price" class="sc-live-price" style="font-size: 28px; font-weight: 700; color: #00F0FF; line-height: 1; font-family: var(--font-num); text-shadow: 0 0 10px rgba(0,240,255,0.2);">$--</div>
+                            <div id="sc-change-24h" class="sc-change-24h" style="font-size: 14px; font-weight: 600; font-family: var(--font-num); color: #00F0FF;">--%</div>
+                        </div>
+                        
+                        <div class="sc-metrics-compact">
+                            <div class="sc-mc-item"><span>VOL (24H)</span><strong id="sc-top-vol">$--</strong></div>
+                            <div class="sc-mc-item"><span>LIQ</span><strong id="sc-top-liq">$--</strong></div>
+                            <div class="sc-mc-item"><span>MCAP</span><strong id="sc-top-mc">$--</strong></div>
+                            <div class="sc-mc-item"><span>HOLD</span><strong id="sc-top-hold">--</strong></div>
+                            <div class="sc-mc-item"><span>TXs</span><strong id="sc-top-tx">--</strong></div>
+                        </div>
+                    </div>
+                    
                     <div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick (Live)</button>
-                        <span style="color:#444; margin:0 4px;">|</span>
+                        <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick</button>
+                        <span style="color:#2b3139; margin:0 2px;">|</span>
                         <button class="sc-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
                         <button class="sc-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
                         <button class="sc-time-btn" onclick="window.changeChartInterval('5m', this)">5m</button>
@@ -959,25 +964,38 @@ function injectLayout() {
                         <button class="sc-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
                         <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
                     </div>
-                    <div id="sc-chart-container" style="flex:1;"></div>
+                    
+                    <div id="sc-chart-container" style="flex:1; position: relative;"></div>
                 </div>
                 
                 <div class="sc-side-panel">
-                    <div class="sc-panel-section" style="margin-bottom: 15px;">
-                        <div class="sc-panel-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B90B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Whale Tracker</div>
-                        <div class="sc-metric-item"><span class="sc-metric-label">Ticket trung bình</span><span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span></div>
-                        <div class="sc-metric-item"><span class="sc-metric-label">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" class="sc-metric-value">0</span></div>
+                    <div class="sc-mobile-tabs">
+                        <button class="sc-tab-btn active" onclick="window.switchScTab('trades', this)">Live Trades</button>
+                        <button class="sc-tab-btn" onclick="window.switchScTab('info', this)">Data Flow</button>
                     </div>
-                    <div class="sc-panel-section" style="margin-bottom: 15px;">
-                        <div class="sc-panel-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Flow & Speed</div>
-                        <div class="sc-metric-item"><span class="sc-metric-label">Dòng tiền Net</span><span id="sc-stat-net-flow" class="sc-metric-value" style="color:#00F0FF;">+$0</span></div>
-                        <div class="sc-metric-item"><span class="sc-metric-label">Tốc độ khớp / s</span><span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span></div>
+
+                    <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex; flex-direction: column;">
+                        <div class="sc-panel-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329;">
+                            <i class="fas fa-bolt" style="color:#00F0FF; margin-right: 5px;"></i> LIVE TRADES
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; padding: 6px 15px; font-weight:700; background: #0B0E11;">
+                            <span>GIÁ</span><span>KL ($)</span><span>TIME</span>
+                        </div>
+                        <div id="sc-live-trades" style="flex:1; overflow-y:auto; padding: 0 10px; font-size:11.5px; font-family:var(--font-num);">
+                            <div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>
+                        </div>
                     </div>
-                    <div class="sc-panel-section" style="flex:1; display:flex; flex-direction:column; overflow:hidden; margin-bottom:0;">
-                        <div class="sc-panel-title" style="border-top:1px solid #2b3139; padding-top:15px; margin-bottom:10px;"><i class="fas fa-bolt" style="color:#F0B90B"></i> LIVE TRADES</div>
-                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; margin-bottom:5px; font-weight:700;"><span>GIÁ</span><span>KL ($)</span><span>TIME</span></div>
-                        <div id="sc-live-trades" style="flex:1; overflow-y:auto; font-size:11px; font-family:var(--font-num);">
-                            <div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>
+
+                    <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
+                        <div class="sc-panel-section">
+                            <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Whale Tracker</div>
+                            <div class="sc-metric-item"><span class="sc-metric-label">Ticket trung bình</span><span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span></div>
+                            <div class="sc-metric-item"><span class="sc-metric-label">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" class="sc-metric-value">0</span></div>
+                        </div>
+                        <div class="sc-panel-section" style="border-bottom: none;">
+                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Flow & Speed</div>
+                            <div class="sc-metric-item"><span class="sc-metric-label">Dòng tiền Net</span><span id="sc-stat-net-flow" class="sc-metric-value" style="color:#00F0FF;">+$0</span></div>
+                            <div class="sc-metric-item"><span class="sc-metric-label">Tốc độ khớp / s</span><span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span></div>
                         </div>
                     </div>
                 </div>
@@ -1689,3 +1707,28 @@ window.closeProChart = function() {
     }
     window.currentChartToken = null; 
 };
+// Hàm chuyển Tab cho giao diện Mobile Chart
+window.switchScTab = function(tabId, btnElement) {
+    // 1. Reset nút Tab
+    document.querySelectorAll('.sc-tab-btn').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+    
+    // 2. Ẩn tất cả nội dung
+    document.getElementById('tab-trades').style.display = 'none';
+    document.getElementById('tab-info').style.display = 'none';
+    
+    // 3. Hiển thị nội dung được chọn
+    document.getElementById('tab-' + tabId).style.display = 'flex';
+};
+
+// Fix lỗi trên Desktop: Đảm bảo cả 2 khu vực đều hiển thị khi đổi kích thước màn hình
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 991) {
+        document.getElementById('tab-trades').style.display = 'flex';
+        document.getElementById('tab-info').style.display = 'block';
+    } else {
+        // Trả về mặc định hiển thị tab đang active
+        let activeTab = document.querySelector('.sc-tab-btn.active');
+        if (activeTab) activeTab.click();
+    }
+});
