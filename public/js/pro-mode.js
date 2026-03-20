@@ -840,8 +840,8 @@ function injectLayout() {
         const bStyle = document.createElement('style');
         bStyle.id = 'binance-pro-chart-style';
         bStyle.innerHTML = `
-            #super-chart-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0B0E11; z-index: 99999; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-            #super-chart-overlay.active { display: flex; }
+            #super-chart-overlay { display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0B0E11; z-index: 99999; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+            #super-chart-overlay.active { display: flex !important; }
             .bn-header { display: flex; align-items: center; background: #161A1E; padding: 12px 24px; border-bottom: 1px solid #2B3139; gap: 30px; }
             .bn-ticker-left { display: flex; align-items: center; gap: 12px; min-width: 180px; }
             .bn-ticker-left img { width: 32px; height: 32px; border-radius: 50%; }
@@ -863,18 +863,22 @@ function injectLayout() {
             .bn-header-actions { margin-left: auto; border-left: 1px solid #2B3139; padding-left: 20px; }
             .bn-close-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; padding: 8px; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
             .bn-close-btn:hover { background: #2B3139; color: #EAECEF; }
-            .bn-body { display: flex; flex: 1; height: calc(100vh - 70px); overflow: hidden; background: #0B0E11; }
-            .bn-chart-section { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #2B3139; }
-            .bn-toolbar { display: flex; align-items: center; padding: 8px 16px; background: #161A1E; border-bottom: 1px solid #2B3139; gap: 4px; }
+            .bn-body { display: flex; flex: 1; height: calc(100vh - 70px); overflow: hidden; background: #0B0E11; width: 100vw; }
+            
+            /* 🛑 KHÓA KHUNG CHỐNG TRÀN BỞI MIN-WIDTH: 0 VÀ FLEX-SHRINK: 0 */
+            .bn-chart-section { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #2B3139; min-width: 0; overflow: hidden; }
+            .bn-side-panel { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; background: #161A1E; overflow: hidden; }
+            .bn-chart-container { flex: 1; width: 100%; position: relative; min-height: 0; }
+            
+            .bn-toolbar { display: flex; align-items: center; padding: 8px 16px; background: #161A1E; border-bottom: 1px solid #2B3139; gap: 4px; flex-shrink: 0; }
             .bn-time-btn { background: transparent; border: none; color: #848E9C; font-size: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: 500; }
             .bn-time-btn:hover { color: #EAECEF; }
             .bn-time-btn.active { color: #00F0FF; background: rgba(0,240,255,0.1); }
             .bn-divider { width: 1px; height: 14px; background: #2B3139; margin: 0 8px; }
-            .bn-chart-container { flex: 1; width: 100%; position: relative; }
-            .bn-side-panel { width: 320px; display: flex; flex-direction: column; background: #161A1E; }
-            .bn-panel-header { font-size: 13px; font-weight: 600; color: #EAECEF; padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
+            
+            .bn-panel-header { font-size: 13px; font-weight: 600; color: #EAECEF; padding: 12px 16px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
             .bn-trades-table { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-            .bn-trades-head { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 11px; color: #848E9C; }
+            .bn-trades-head { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 11px; color: #848E9C; flex-shrink: 0; }
             .bn-trades-head span { flex: 1; }
             .text-left { text-align: left; }
             .text-right { text-align: right; }
@@ -884,7 +888,7 @@ function injectLayout() {
             .bn-trade-row { display: flex; justify-content: space-between; padding: 4px 6px; margin-bottom: 2px; font-size: 12px; font-family: var(--font-num); cursor: pointer; border-radius: 2px; }
             .bn-trade-row:hover { background: rgba(255,255,255,0.05) !important; }
             .bn-trade-row span { flex: 1; }
-            .bn-analytics-grid { padding: 0 16px 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+            .bn-analytics-grid { padding: 0 16px 12px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
             .bn-stat-row { display: flex; justify-content: space-between; align-items: center; }
             .bn-stat-label { font-size: 12px; color: #848E9C; }
             .bn-stat-val { font-size: 13px; font-weight: 500; color: #EAECEF; font-family: var(--font-num); }
@@ -895,7 +899,7 @@ function injectLayout() {
                 .hide-mobile { display: none; }
                 .bn-body { flex-direction: column; overflow-y: auto; }
                 .bn-chart-section { height: 50vh; flex: none; border-right: none; border-bottom: 4px solid #0B0E11; }
-                .bn-side-panel { width: 100%; height: auto; }
+                .bn-side-panel { width: 100%; height: auto; flex-shrink: 1; }
                 .bn-trades-table { height: 350px; flex: none; }
             }
         `;
@@ -1680,58 +1684,47 @@ window.openProChart = function(t, isTimeSwitch = false) {
     container.innerHTML = ''; 
 
     setTimeout(() => {
-        const rect = container.getBoundingClientRect();
-        const w = rect.width > 0 ? rect.width : window.innerWidth * 0.75;
+        // Lấy đúng kích thước thật của container, không được ăn gian
+        const w = container.clientWidth || 800;
+        const h = container.clientHeight || 500;
         
-        // TĂNG KHOẢNG CÁCH ĐÁY LÊN 80PX ĐỂ KHÔNG BỊ THANH HOME CỦA IPAD CHE MẤT
-        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7) - 80;
-
-        // ÉP VÙNG ĐỆM AN TOÀN CHO TOÀN BỘ PHẦN THÂN CỦA CHART
-        const scBody = document.querySelector('.sc-body');
-        if (scBody) scBody.style.paddingBottom = 'max(20px, env(safe-area-inset-bottom))';
-
-        let priceVal = parseFloat(t.price) || 1;
-        let prec = 4; minM = 0.0001;
-        if (priceVal < 0.001) { prec = 6; minM = 0.000001; }
-        if (priceVal < 0.00001) { prec = 8; minM = 0.00000001; }
-
         tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
-            layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
+            layout: { background: { type: 'solid', color: '#0B0E11' }, textColor: '#848e9c', fontSize: 11 },
             watermark: { color: 'rgba(255, 255, 255, 0.02)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
-            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, // Đứt nét mờ
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'} },
+            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, 
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#F0B90B'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#F0B90B'} },
             timeScale: { borderColor: 'rgba(43, 49, 57, 0.5)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
             rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
         });
 
-        // NẾU LÀ TICK -> VẼ AREA CHART (MẢNG MÀU)
+        // Màu sắc Cyan / Pink cho Wave Alpha
         if (window.currentChartInterval === 'tick') {
             tvLineSeries = tvChart.addAreaSeries({
                 lineColor: '#00F0FF', topColor: 'rgba(0, 240, 255, 0.3)', bottomColor: 'rgba(0, 240, 255, 0.0)', lineWidth: 2, 
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
-        } 
-        // NẾU LÀ KHUNG THỜI GIAN -> VẼ NẾN NHẬT (CANDLESTICKS)
-        else {
+        } else {
             tvCandleSeries = tvChart.addCandlestickSeries({
-                upColor: '#00F0FF', downColor: '#FF007F', // CYAN / PINK THẦN THÁNH
+                upColor: '#00F0FF', downColor: '#FF007F', 
                 borderDownColor: '#FF007F', borderUpColor: '#00F0FF',
                 wickDownColor: '#FF007F', wickUpColor: '#00F0FF',
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
         }
 
-        // TRỤC VOLUME XÀI CHUNG HỆ MÀU
         tvVolumeSeries = tvChart.addHistogramSeries({
             priceFormat: { type: 'volume' }, priceScaleId: 'vol_scale' 
         });
         tvChart.priceScale('vol_scale').applyOptions({ scaleMargins: { top: 0.7, bottom: 0 }, visible: false });
 
+        // Tự động resize vừa khít mà không đẩy khung
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 80), width: newRect.width });
+            if (newRect.width > 0 && newRect.height > 0) {
+                tvChart.applyOptions({ width: newRect.width, height: newRect.height });
+            }
         }).observe(container);
         
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
