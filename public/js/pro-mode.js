@@ -1780,7 +1780,7 @@ function connectRealtimeChart(t) {
                 // XÓA VẠCH CŨ TRÊN CHART
                 if (window.scActivePriceLines && window.scActivePriceLines.length > 0) {
                     window.scActivePriceLines.forEach(line => {
-                        try { window.tvHeatmapLayer.removePriceLine(line); } catch(e) {}
+                        try { if(window.tvHeatmapLayer) window.tvHeatmapLayer.removePriceLine(line); } catch(e) {}
                     });
                 }
                 window.scActivePriceLines = [];
@@ -1788,36 +1788,37 @@ function connectRealtimeChart(t) {
                 // BẮN VẠCH MỚI LÊN CHART (CHUẨN NHIỆT ĐỘ - KHÔNG TRÙNG MÀU NẾN)
                 let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
                 
-                newWalls.forEach(wall => {
-                    // Phối màu theo "Độ Nhiệt" (Bỏ hoàn toàn tư duy màu Xanh/Đỏ)
-                    // Dùng Vàng -> Cam -> Tím Neon để tách biệt 100% với màu Nến
-                    let lineColor = '';
-                    let thickness = 1;
+                // [FIXED] THÊM CHỐT AN TOÀN: Chờ lớp nền render xong mới cho phép vẽ
+                if (window.tvHeatmapLayer) { 
+                    newWalls.forEach(wall => {
+                        let lineColor = '';
+                        let thickness = 1;
 
-                    if (wall.v > currentAvgTicket * 20) {
-                        // Tường Cực Nóng / Siêu Khủng: Màu Tím Neon
-                        lineColor = 'rgba(176, 38, 255, 0.6)'; 
-                        thickness = 4;
-                    } else if (wall.v > currentAvgTicket * 10) {
-                        // Tường Nóng / Lớn: Màu Cam Sáng
-                        lineColor = 'rgba(255, 152, 0, 0.5)';
-                        thickness = 3;
-                    } else {
-                        // Tường Ấm / Vừa: Màu Vàng Chanh
-                        lineColor = 'rgba(255, 235, 59, 0.4)';
-                        thickness = 2;
-                    }
+                        if (wall.v > currentAvgTicket * 20) {
+                            // Tường Cực Nóng / Siêu Khủng: Màu Tím Neon
+                            lineColor = 'rgba(176, 38, 255, 0.6)'; 
+                            thickness = 4;
+                        } else if (wall.v > currentAvgTicket * 10) {
+                            // Tường Nóng / Lớn: Màu Cam Sáng
+                            lineColor = 'rgba(255, 152, 0, 0.5)';
+                            thickness = 3;
+                        } else {
+                            // Tường Ấm / Vừa: Màu Vàng Chanh
+                            lineColor = 'rgba(255, 235, 59, 0.4)';
+                            thickness = 2;
+                        }
 
-                    let priceLine = window.tvHeatmapLayer.createPriceLine({
-                        price: wall.p,
-                        color: lineColor,
-                        lineWidth: thickness,
-                        lineStyle: 0, // Nét liền mờ (Solid)
-                        axisLabelVisible: false, // Tàng hình con số để không rối trục giá
-                        title: ''                
+                        let priceLine = window.tvHeatmapLayer.createPriceLine({
+                            price: wall.p,
+                            color: lineColor,
+                            lineWidth: thickness,
+                            lineStyle: 0, // Nét liền mờ (Solid)
+                            axisLabelVisible: false, // Tàng hình con số để không rối trục giá
+                            title: ''                
+                        });
+                        window.scActivePriceLines.push(priceLine);
                     });
-                    window.scActivePriceLines.push(priceLine);
-                });
+                }
             }
         }
         
@@ -1992,17 +1993,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if (priceVal < 0.1) { prec = 8; minM = 0.00000001; }
         if (priceVal < 0.0001) { prec = 10; minM = 0.0000000001; }
 
-        tvChart = LightweightCharts.createChart(container, {
-            width: w, height: h,
-            layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
-            watermark: { color: 'rgba(255, 255, 255, 0.02)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
-            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, // Đứt nét mờ
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'} },
-            timeScale: { borderColor: 'rgba(43, 49, 57, 0.5)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
-            rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
-        });
-
-
+        
 tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
             layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
