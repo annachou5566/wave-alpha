@@ -1785,42 +1785,42 @@ function connectRealtimeChart(t) {
                 }
                 window.scActivePriceLines = [];
 
-                // BẮN VẠCH MỚI LÊN CHART (STYLE COINGLASS HEATMAP)
+                // BẮN VẠCH MỚI LÊN CHART (CHUẨN NHIỆT ĐỘ - KHÔNG TRÙNG MÀU NẾN)
                 let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
                 
                 newWalls.forEach(wall => {
-                    // 1. Tính toán độ dày (Đơn giản hóa, tối đa là 3 để không bị thô)
-                    let thickness = 1;
-                    if (wall.v > currentAvgTicket * 10) thickness = 3;
-                    else if (wall.v > currentAvgTicket * 5) thickness = 2;
-
-                    // 2. Phối màu theo kiểu "Độ Nhiệt" (Heatmap Gradient)
+                    // Phối màu theo "Độ Nhiệt" (Bỏ hoàn toàn tư duy màu Xanh/Đỏ)
+                    // Dùng Vàng -> Cam -> Tím Neon để tách biệt 100% với màu Nến
                     let lineColor = '';
+                    let thickness = 1;
+
                     if (wall.v > currentAvgTicket * 20) {
-                        // Tường Cực Nóng (Màu Đỏ Tím / Đỏ Đậm)
-                        lineColor = wall.isAsk ? 'rgba(196, 28, 28, 0.4)' : 'rgba(153, 0, 255, 0.4)'; 
+                        // Tường Cực Nóng / Siêu Khủng: Màu Tím Neon
+                        lineColor = 'rgba(176, 38, 255, 0.6)'; 
+                        thickness = 4;
                     } else if (wall.v > currentAvgTicket * 10) {
-                        // Tường Nóng (Màu Cam / Vàng Đậm)
-                        lineColor = wall.isAsk ? 'rgba(246, 70, 93, 0.3)' : 'rgba(240, 185, 11, 0.3)';
+                        // Tường Nóng / Lớn: Màu Cam Sáng
+                        lineColor = 'rgba(255, 152, 0, 0.5)';
+                        thickness = 3;
                     } else {
-                        // Tường Ấm (Màu Hồng nhạt / Xanh lơ nhạt)
-                        lineColor = wall.isAsk ? 'rgba(255, 105, 180, 0.2)' : 'rgba(0, 240, 255, 0.2)';
+                        // Tường Ấm / Vừa: Màu Vàng Chanh
+                        lineColor = 'rgba(255, 235, 59, 0.4)';
+                        thickness = 2;
                     }
 
-                    // 3. Tạo Line Ẩn Số (Bỏ axisLabelVisible và title)
                     let priceLine = activeSeries.createPriceLine({
                         price: wall.p,
                         color: lineColor,
                         lineWidth: thickness,
-                        lineStyle: 0, // Đổi lại thành nét liền (Solid) nhưng có độ mờ (Alpha)
-                        axisLabelVisible: false, // TẮT HIỂN THỊ SỐ Ở TRỤC Y
-                        title: ''                // TẮT CHỮ TRÊN ĐƯỜNG LINE
+                        lineStyle: 0, // Nét liền mờ (Solid)
+                        axisLabelVisible: false, // Tàng hình con số để không rối trục giá
+                        title: ''                
                     });
                     window.scActivePriceLines.push(priceLine);
                 });
             }
         }
-         
+        
         // ---------------------------------------------------------
         // LỆNH LIVE & LOGIC CÁ MẬP (SMART TAPE AGGREGATION)
         if (data.stream.endsWith('@aggTrade')) {
