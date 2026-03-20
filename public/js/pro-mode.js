@@ -819,103 +819,665 @@ window.hideTooltip = function() {
 
 
 function injectLayout() {
-    document.getElementById('alpha-tab-nav')?.remove();
-    document.getElementById('alpha-market-view')?.remove();
+    const OLD_IDS = ['alpha-tab-nav', 'alpha-market-view', 'super-chart-overlay'];
+
+    // Dọn bản cũ trước để tránh DOM rác / trùng id
+    OLD_IDS.forEach((id) => document.getElementById(id)?.remove());
+
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
-    
+
+    // =========================
+    // TAB NAV
+    // =========================
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
-        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
-        <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
-        <button id="btn-tab-sonar" class="tab-btn" onclick="window.pluginSwitchTab('sonar')">SONAR GALAXY</button>
+        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab && window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
+        <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab && window.pluginSwitchTab('competition')">COMPETITION</button>
+        <button id="btn-tab-sonar" class="tab-btn" onclick="window.pluginSwitchTab && window.pluginSwitchTab('sonar')">SONAR GALAXY</button>
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
 
-    // ==========================================
-    // BƠM CSS CHUẨN BINANCE CHO CHART
-    // ==========================================
+    // =========================
+    // STYLE
+    // =========================
     if (!document.getElementById('binance-pro-chart-style')) {
-        const bStyle = document.createElement('style');
-        bStyle.id = 'binance-pro-chart-style';
-        bStyle.innerHTML = `
-            #super-chart-overlay { display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0B0E11; z-index: 99999; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-            #super-chart-overlay.active { display: flex !important; }
-            .bn-header { display: flex; align-items: center; background: #161A1E; padding: 12px 24px; border-bottom: 1px solid #2B3139; gap: 30px; }
-            .bn-ticker-left { display: flex; align-items: center; gap: 12px; min-width: 180px; }
-            .bn-ticker-left img { width: 32px; height: 32px; border-radius: 50%; }
-            .bn-symbol-wrapper h1 { margin: 0; font-size: 20px; color: #EAECEF; font-weight: 600; line-height: 1.2; }
-            .bn-symbol-wrapper span { font-size: 12px; color: #848E9C; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-            .bn-symbol-wrapper span:hover { color: #F0B90B; }
-            .bn-ticker-price { display: flex; flex-direction: column; justify-content: center; min-width: 120px; }
-            .bn-price-text { font-size: 20px; font-weight: 600; line-height: 1.2; font-family: var(--font-num); }
-            .bn-change-text { font-size: 13px; font-weight: 500; font-family: var(--font-num); margin-top: 2px;}
-            
-            /* 🛑 MÀU CYAN / PINK HUYỀN THOẠI CỦA WAVE ALPHA */
-            .text-green { color: #00F0FF !important; text-shadow: 0 0 10px rgba(0,240,255,0.2); }
-            .text-red { color: #FF007F !important; text-shadow: 0 0 10px rgba(255,0,127,0.2); }
-            
-            .bn-ticker-stats { display: flex; gap: 30px; flex: 1; justify-content: flex-end; padding-right: 20px; }
-            .bn-stat-item { display: flex; flex-direction: column; justify-content: center; }
-            .bn-stat-label { font-size: 11px; color: #848E9C; margin-bottom: 2px; white-space: nowrap; }
-            .bn-stat-value { font-size: 13px; color: #EAECEF; font-weight: 500; font-family: var(--font-num); }
-            .bn-header-actions { margin-left: auto; border-left: 1px solid #2B3139; padding-left: 20px; }
-            .bn-close-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; padding: 8px; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-            .bn-close-btn:hover { background: #2B3139; color: #EAECEF; }
-            .bn-body { display: flex; flex: 1; height: calc(100vh - 70px); overflow: hidden; background: #0B0E11; width: 100vw; }
-            
-            /* 🛑 KHÓA KHUNG CHỐNG TRÀN BỞI MIN-WIDTH: 0 VÀ FLEX-SHRINK: 0 */
-            .bn-chart-section { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #2B3139; min-width: 0; overflow: hidden; }
-            .bn-side-panel { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; background: #161A1E; overflow: hidden; }
-            .bn-chart-container { flex: 1; width: 100%; position: relative; min-height: 0; }
-            
-            .bn-toolbar { display: flex; align-items: center; padding: 8px 16px; background: #161A1E; border-bottom: 1px solid #2B3139; gap: 4px; flex-shrink: 0; }
-            .bn-time-btn { background: transparent; border: none; color: #848E9C; font-size: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: 500; }
-            .bn-time-btn:hover { color: #EAECEF; }
-            .bn-time-btn.active { color: #00F0FF; background: rgba(0,240,255,0.1); }
-            .bn-divider { width: 1px; height: 14px; background: #2B3139; margin: 0 8px; }
-            
-            .bn-panel-header { font-size: 13px; font-weight: 600; color: #EAECEF; padding: 12px 16px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-            .bn-trades-table { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-            .bn-trades-head { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 11px; color: #848E9C; flex-shrink: 0; }
+        const style = document.createElement('style');
+        style.id = 'binance-pro-chart-style';
+        style.textContent = `
+            :root {
+                --bg-0: #0B0E11;
+                --bg-1: #161A1E;
+                --bg-2: #1E2329;
+                --border: #2B3139;
+                --text-0: #EAECEF;
+                --text-1: #C7CDD4;
+                --text-2: #848E9C;
+                --green: #0ECB81;
+                --red: #F6465D;
+                --accent: #F0B90B;
+                --shadow: 0 12px 30px rgba(0,0,0,.35);
+                --radius: 12px;
+                --font-num: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            }
+
+            #alpha-tab-nav {
+                display: flex;
+                gap: 8px;
+                padding: 10px 12px;
+                align-items: center;
+                background: linear-gradient(180deg, rgba(22,26,30,.98), rgba(22,26,30,.92));
+                border-bottom: 1px solid var(--border);
+                position: sticky;
+                top: 0;
+                z-index: 1000;
+                backdrop-filter: blur(10px);
+                transition: transform .22s ease, opacity .22s ease;
+            }
+            #alpha-tab-nav.nav-hidden {
+                transform: translateY(-110%);
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .tab-btn {
+                border: 1px solid transparent;
+                background: transparent;
+                color: var(--text-2);
+                padding: 10px 14px;
+                border-radius: 10px;
+                font-size: 13px;
+                font-weight: 700;
+                letter-spacing: .02em;
+                cursor: pointer;
+                transition: all .18s ease;
+                white-space: nowrap;
+            }
+            .tab-btn:hover {
+                color: var(--text-0);
+                background: rgba(255,255,255,.04);
+                border-color: rgba(255,255,255,.05);
+            }
+            .tab-btn:active {
+                transform: translateY(1px);
+            }
+
+            #alpha-market-view {
+                display: none;
+                width: 100%;
+                background: var(--bg-0);
+                color: var(--text-0);
+            }
+
+            .alpha-container {
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+                background: var(--bg-0);
+            }
+
+            #rwa-marquee-container {
+                min-height: 0;
+            }
+
+            .alpha-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 14px 16px;
+                background: var(--bg-1);
+                border-bottom: 1px solid var(--border);
+            }
+
+            .filter-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .filter-btn,
+            .points-btn {
+                border: 1px solid var(--border);
+                background: #11151a;
+                color: var(--text-2);
+                padding: 8px 12px;
+                border-radius: 10px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all .18s ease;
+                line-height: 1;
+            }
+            .filter-btn:hover,
+            .points-btn:hover {
+                color: var(--text-0);
+                border-color: rgba(240,185,11,.35);
+                box-shadow: 0 0 0 3px rgba(240,185,11,.06);
+            }
+            .filter-btn.active-all {
+                color: #111;
+                background: var(--accent);
+                border-color: var(--accent);
+            }
+
+            .search-group {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-width: 280px;
+                max-width: 420px;
+                width: 100%;
+                background: #11151a;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 0 12px;
+                height: 42px;
+            }
+            .search-icon-small {
+                color: var(--text-2);
+                font-size: 13px;
+                flex: 0 0 auto;
+            }
+            #alpha-search {
+                width: 100%;
+                border: none;
+                outline: none;
+                background: transparent;
+                color: var(--text-0);
+                font-size: 13px;
+            }
+            #alpha-search::placeholder {
+                color: var(--text-2);
+            }
+
+            .table-responsive {
+                overflow: auto;
+                background: var(--bg-0);
+                border-top: 0;
+            }
+
+            .alpha-table {
+                width: 100%;
+                border-collapse: collapse;
+                min-width: 1220px;
+            }
+
+            .alpha-table thead th {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: var(--bg-1);
+                color: var(--text-2);
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: .04em;
+                text-transform: uppercase;
+                border-bottom: 1px solid var(--border);
+                padding: 10px 12px;
+                white-space: nowrap;
+            }
+            .alpha-table thead tr.h-top th {
+                top: 0;
+            }
+            .alpha-table thead tr.h-sub th {
+                top: 44px;
+                border-top: 1px solid rgba(43,49,57,.6);
+            }
+
+            .alpha-table tbody td {
+                border-bottom: 1px solid rgba(43,49,57,.55);
+                color: var(--text-1);
+                font-size: 13px;
+                padding: 11px 12px;
+                vertical-align: middle;
+                white-space: nowrap;
+            }
+
+            .alpha-table tbody tr:hover {
+                background: rgba(255,255,255,.03);
+            }
+
+            .text-center { text-align: center; }
+            .text-end { text-align: right; }
+            .cursor-pointer { cursor: pointer; }
+
+            .col-fix-1 { width: 52px; }
+            .col-fix-2 { width: 240px; }
+
+            .pagination-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 16px;
+                background: var(--bg-1);
+                border-top: 1px solid var(--border);
+                color: var(--text-2);
+                font-size: 13px;
+                flex-wrap: wrap;
+            }
+
+            .page-controls {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .rows-selector {
+                background: #11151a;
+                color: var(--text-0);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 7px 10px;
+                outline: none;
+            }
+
+            .page-btn {
+                width: 34px;
+                height: 34px;
+                border-radius: 10px;
+                border: 1px solid var(--border);
+                background: #11151a;
+                color: var(--text-0);
+                cursor: pointer;
+                transition: .18s ease;
+            }
+            .page-btn:hover {
+                border-color: rgba(240,185,11,.35);
+                color: var(--accent);
+            }
+
+            /* ===== SUPER CHART OVERLAY ===== */
+            #super-chart-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: var(--bg-0);
+                z-index: 99999;
+                flex-direction: column;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            }
+            #super-chart-overlay.active {
+                display: flex;
+            }
+
+            .bn-header {
+                display: flex;
+                align-items: center;
+                gap: 24px;
+                padding: 12px 20px;
+                background: linear-gradient(180deg, #161A1E, #13171b);
+                border-bottom: 1px solid var(--border);
+                box-shadow: var(--shadow);
+            }
+
+            .bn-ticker-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                min-width: 220px;
+                flex: 0 0 auto;
+            }
+
+            .bn-ticker-left img {
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                object-fit: cover;
+                background: #0f1216;
+                border: 1px solid rgba(255,255,255,.05);
+            }
+
+            .bn-symbol-wrapper h1 {
+                margin: 0;
+                font-size: 20px;
+                color: var(--text-0);
+                font-weight: 700;
+                line-height: 1.2;
+            }
+
+            .bn-symbol-wrapper span {
+                display: inline-block;
+                margin-top: 2px;
+                font-size: 12px;
+                color: var(--text-2);
+                cursor: pointer;
+                text-decoration: underline;
+                text-underline-offset: 2px;
+                transition: color .18s ease;
+            }
+            .bn-symbol-wrapper span:hover {
+                color: var(--accent);
+            }
+
+            .bn-ticker-price {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                min-width: 150px;
+            }
+
+            .bn-price-text {
+                font-size: 22px;
+                font-weight: 700;
+                line-height: 1.2;
+                font-family: var(--font-num);
+            }
+
+            .bn-change-text {
+                font-size: 13px;
+                font-weight: 600;
+                font-family: var(--font-num);
+                margin-top: 4px;
+            }
+
+            .text-green { color: var(--green) !important; }
+            .text-red { color: var(--red) !important; }
+
+            .bn-ticker-stats {
+                display: flex;
+                gap: 22px;
+                flex: 1;
+                justify-content: flex-end;
+                padding-right: 8px;
+                overflow: hidden;
+            }
+
+            .bn-ticker-stat {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                min-width: 92px;
+            }
+
+            .bn-ticker-label {
+                font-size: 11px;
+                color: var(--text-2);
+                margin-bottom: 2px;
+                white-space: nowrap;
+            }
+
+            .bn-ticker-value {
+                font-size: 13px;
+                color: var(--text-0);
+                font-weight: 600;
+                font-family: var(--font-num);
+            }
+
+            .bn-header-actions {
+                margin-left: auto;
+                padding-left: 16px;
+                border-left: 1px solid var(--border);
+                flex: 0 0 auto;
+            }
+
+            .bn-close-btn {
+                background: transparent;
+                border: none;
+                color: var(--text-2);
+                cursor: pointer;
+                padding: 8px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all .18s ease;
+            }
+            .bn-close-btn:hover {
+                background: #262c34;
+                color: var(--text-0);
+            }
+
+            .bn-body {
+                display: flex;
+                flex: 1;
+                min-height: 0;
+                overflow: hidden;
+                background: var(--bg-0);
+            }
+
+            .bn-chart-section {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                border-right: 1px solid var(--border);
+            }
+
+            .bn-toolbar {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 8px 12px;
+                background: var(--bg-1);
+                border-bottom: 1px solid var(--border);
+                overflow-x: auto;
+            }
+
+            .bn-time-btn {
+                background: transparent;
+                border: none;
+                color: var(--text-2);
+                font-size: 12px;
+                padding: 6px 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: all .18s ease;
+                white-space: nowrap;
+            }
+            .bn-time-btn:hover {
+                color: var(--text-0);
+                background: rgba(255,255,255,.04);
+            }
+            .bn-time-btn.active {
+                color: var(--accent);
+                background: rgba(240,185,11,.1);
+            }
+
+            .bn-divider {
+                width: 1px;
+                height: 16px;
+                background: var(--border);
+                margin: 0 8px;
+                flex: 0 0 auto;
+            }
+
+            .bn-chart-container {
+                flex: 1;
+                min-height: 0;
+                width: 100%;
+                position: relative;
+                background: var(--bg-0);
+            }
+
+            .bn-side-panel {
+                width: 340px;
+                display: flex;
+                flex-direction: column;
+                background: var(--bg-1);
+                min-width: 300px;
+                box-shadow: inset 1px 0 0 rgba(255,255,255,.02);
+            }
+
+            .bn-panel-header {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--text-0);
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: rgba(255,255,255,.01);
+            }
+
+            .bn-trades-table {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                min-height: 0;
+            }
+
+            .bn-trades-head {
+                display: flex;
+                justify-content: space-between;
+                padding: 10px 16px;
+                font-size: 11px;
+                color: var(--text-2);
+                border-bottom: 1px solid rgba(43,49,57,.65);
+            }
+
             .bn-trades-head span { flex: 1; }
             .text-left { text-align: left; }
             .text-right { text-align: right; }
-            .bn-trades-body { flex: 1; overflow-y: auto; padding: 0 10px; }
-            .bn-trades-body::-webkit-scrollbar { width: 4px; }
-            .bn-trades-body::-webkit-scrollbar-thumb { background: #2B3139; border-radius: 4px; }
-            .bn-trade-row { display: flex; justify-content: space-between; padding: 4px 6px; margin-bottom: 2px; font-size: 12px; font-family: var(--font-num); cursor: pointer; border-radius: 2px; }
-            .bn-trade-row:hover { background: rgba(255,255,255,0.05) !important; }
+
+            .bn-trades-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 6px 10px 10px;
+            }
+            .bn-trades-body::-webkit-scrollbar { width: 5px; }
+            .bn-trades-body::-webkit-scrollbar-thumb {
+                background: #2B3139;
+                border-radius: 999px;
+            }
+
+            .bn-trade-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 6px 8px;
+                margin-bottom: 2px;
+                font-size: 12px;
+                font-family: var(--font-num);
+                cursor: pointer;
+                border-radius: 8px;
+                transition: background .16s ease;
+            }
+            .bn-trade-row:hover {
+                background: rgba(255,255,255,.05);
+            }
             .bn-trade-row span { flex: 1; }
-            .bn-analytics-grid { padding: 0 16px 12px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
-            .bn-stat-row { display: flex; justify-content: space-between; align-items: center; }
-            .bn-stat-label { font-size: 12px; color: #848E9C; }
-            .bn-stat-val { font-size: 13px; font-weight: 500; color: #EAECEF; font-family: var(--font-num); }
+
+            .bn-analytics-grid {
+                padding: 14px 16px 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                background: #0B0E11;
+                border-top: 1px solid var(--border);
+            }
+
+            .bn-stat-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .bn-analytics-label {
+                font-size: 12px;
+                color: var(--text-2);
+            }
+
+            .bn-stat-val {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text-0);
+                font-family: var(--font-num);
+            }
+
             @media (max-width: 991px) {
-                .bn-header { flex-direction: column; align-items: flex-start; padding: 16px; gap: 16px; }
-                .bn-header-actions { position: absolute; top: 16px; right: 16px; border: none; }
-                .bn-ticker-stats { width: 100%; overflow-x: auto; padding-bottom: 8px; justify-content: flex-start; }
-                .hide-mobile { display: none; }
-                .bn-body { flex-direction: column; overflow-y: auto; }
-                .bn-chart-section { height: 50vh; flex: none; border-right: none; border-bottom: 4px solid #0B0E11; }
-                .bn-side-panel { width: 100%; height: auto; flex-shrink: 1; }
-                .bn-trades-table { height: 350px; flex: none; }
+                #alpha-tab-nav {
+                    padding: 8px 10px;
+                    gap: 6px;
+                    overflow-x: auto;
+                }
+
+                .alpha-header {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .search-group {
+                    max-width: none;
+                    min-width: 0;
+                }
+
+                .pagination-container {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+
+                .bn-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 14px;
+                    padding: 14px 16px;
+                    position: relative;
+                }
+
+                .bn-header-actions {
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    border: none;
+                    padding-left: 0;
+                }
+
+                .bn-ticker-stats {
+                    width: 100%;
+                    overflow-x: auto;
+                    justify-content: flex-start;
+                    padding-right: 0;
+                }
+
+                .hide-mobile {
+                    display: none !important;
+                }
+
+                .bn-body {
+                    flex-direction: column;
+                    overflow-y: auto;
+                }
+
+                .bn-chart-section {
+                    height: 52vh;
+                    flex: none;
+                    border-right: none;
+                    border-bottom: 1px solid var(--border);
+                }
+
+                .bn-side-panel {
+                    width: 100%;
+                    min-width: 0;
+                }
+
+                .bn-trades-table {
+                    height: 340px;
+                    flex: none;
+                }
             }
         `;
-        document.head.appendChild(bStyle);
+        document.head.appendChild(style);
     }
 
+    // =========================
+    // MAIN VIEW
+    // =========================
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
-    marketView.style.display = 'none';
-    
-    // GỘP CẢ BẢNG GỐC VÀ BIỂU ĐỒ BINANCE VÀO CHUNG
     marketView.innerHTML = `
         <div class="alpha-container">
             <div id="rwa-marquee-container"></div>
+
             <div class="alpha-header">
-                 <div class="filter-group">
+                <div class="filter-group">
                     <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
                     <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
                     <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
@@ -924,51 +1486,54 @@ function injectLayout() {
                     <button class="filter-btn" id="btn-f-fav" onclick="setFilter('FAV')">★ Favorites</button>
                     <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
                 </div>
+
                 <div class="search-group">
                     <i class="fas fa-search search-icon-small"></i>
                     <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
                 </div>
             </div>
+
             <div class="table-responsive">
                 <table class="alpha-table">
-                   <thead>
+                    <thead>
                         <tr class="h-top">
                             <th rowspan="2" class="text-center col-fix-1">#</th>
                             <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
                             <th rowspan="2" class="text-center">STATUS</th>
-                            <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort('price')">PRICE (24h%)</th>
+                            <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort && window.pluginSort('price')">PRICE (24h%)</th>
                             <th rowspan="2" class="text-center">CHART</th>
                             <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
-                            <th colspan="5" class="text-center th-group-stats">MARKET STATS</th> 
+                            <th colspan="5" class="text-center th-group-stats">MARKET STATS</th>
                         </tr>
                         <tr class="h-sub">
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                            
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('market_cap')">MCAP</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('holders')">HOLDERS</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('volume.daily_total')">TOTAL</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('volume.daily_limit')">LIMIT</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('tx_count')">TXs</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('liquidity')">LIQ</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('market_cap')">MCAP</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort && window.pluginSort('holders')">HOLDERS</th>
                         </tr>
                     </thead>
                     <tbody id="market-table-body"></tbody>
                 </table>
             </div>
+
             <div class="pagination-container">
                 <div class="page-info">
                     Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
                 </div>
                 <div class="page-controls">
-                    Rows: 
+                    Rows:
                     <select id="rows-per-page" class="rows-selector" onchange="changeRowsPerPage()">
                         <option value="20">20</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
                     <button class="page-btn" id="btn-prev" onclick="prevPage()">&lt;</button>
-                    <span id="page-num" style="margin:0 10px; font-weight:bold;">Page 1</span>
+                    <span id="page-num" style="margin:0 10px; font-weight:700;">Page 1</span>
                     <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
                 </div>
             </div>
@@ -980,41 +1545,44 @@ function injectLayout() {
                     <img id="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
                     <div class="bn-symbol-wrapper">
                         <h1 id="sc-coin-symbol">--- / USDT</h1>
-                        <span id="sc-coin-contract" onclick="window.pluginCopy(this.innerText)">---</span>
+                        <span id="sc-coin-contract" onclick="window.pluginCopy && window.pluginCopy(this.innerText)">---</span>
                     </div>
                 </div>
-                
+
                 <div class="bn-ticker-price">
                     <div id="sc-live-price" class="bn-price-text text-green">$--</div>
                     <div id="sc-change-24h" class="bn-change-text text-green">--%</div>
                 </div>
-                
+
                 <div class="bn-ticker-stats">
-                    <div class="bn-stat-item">
-                        <div class="bn-stat-label">24h Vol (USD)</div>
-                        <div id="sc-top-vol" class="bn-stat-value">$--</div>
+                    <div class="bn-ticker-stat">
+                        <div class="bn-ticker-label">24h Vol (USD)</div>
+                        <div id="sc-top-vol" class="bn-ticker-value">$--</div>
                     </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">Market Cap</div>
-                        <div id="sc-top-mc" class="bn-stat-value">$--</div>
+                    <div class="bn-ticker-stat hide-mobile">
+                        <div class="bn-ticker-label">Market Cap</div>
+                        <div id="sc-top-mc" class="bn-ticker-value">$--</div>
                     </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">Liquidity</div>
-                        <div id="sc-top-liq" class="bn-stat-value">$--</div>
+                    <div class="bn-ticker-stat hide-mobile">
+                        <div class="bn-ticker-label">Liquidity</div>
+                        <div id="sc-top-liq" class="bn-ticker-value">$--</div>
                     </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">Holders</div>
-                        <div id="sc-top-hold" class="bn-stat-value">--</div>
+                    <div class="bn-ticker-stat hide-mobile">
+                        <div class="bn-ticker-label">Holders</div>
+                        <div id="sc-top-hold" class="bn-ticker-value">--</div>
                     </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">TXs</div>
-                        <div id="sc-top-tx" class="bn-stat-value">--</div>
+                    <div class="bn-ticker-stat hide-mobile">
+                        <div class="bn-ticker-label">TXs</div>
+                        <div id="sc-top-tx" class="bn-ticker-value">--</div>
                     </div>
                 </div>
-                
+
                 <div class="bn-header-actions">
-                    <button class="bn-close-btn" onclick="window.closeProChart()">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <button class="bn-close-btn" onclick="window.closeProChart && window.closeProChart()">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -1022,53 +1590,27 @@ function injectLayout() {
             <div class="bn-body">
                 <div class="bn-chart-section">
                     <div class="bn-toolbar">
-                        <button class="bn-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick</button>
+                        <button class="bn-time-btn active" onclick="window.changeChartInterval && window.changeChartInterval('tick', this)">Tick</button>
                         <span class="bn-divider"></span>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('5m', this)">5m</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('15m', this)">15m</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
+                        <button class="bn-time-btn" onclick="window.changeChartInterval && window.changeChartInterval('1s', this)">1s</button>
+                        <button class="bn-time-btn" onclick="window.changeChartInterval && window.changeChartInterval('1m', this)">1m</button>
+                        <button class="bn-time-btn" onclick="window.changeChartInterval && window.changeChartInterval('5m', this)">5m</button>
+                        <button class="bn-time-btn" onclick="window.changeChartInterval && window.changeChartInterval('15m', this)">15m</button>
+                        <button class="bn-time-btn" onclick="window.changeChartInterval && window.changeChartInterval('1h', this)">1h</button>
+                        <button class="bn-time-btn" onclick="window.changeChartInterval && window.changeChartInterval('4h', this)">4h</button>
+                        <button class="bn-time-btn" onclick="window.changeChartInterval && window.changeChartInterval('1d', this)">1d</button>
                     </div>
                     <div id="sc-chart-container" class="bn-chart-container"></div>
                 </div>
 
                 <div class="bn-side-panel">
-                    <div class="bn-panel-header" style="border-bottom: 1px solid #2B3139; padding-bottom: 10px; margin-bottom: 10px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B90B" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                        Whale Tracker
-                    </div>
-                    <div class="bn-analytics-grid">
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Ticket trung bình</span>
-                            <span id="sc-stat-avg-ticket" class="bn-stat-val">$0</span>
-                        </div>
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Số lệnh lớn (>$5k)</span>
-                            <span id="sc-stat-whale-tx" class="bn-stat-val">0</span>
-                        </div>
+                    <div class="bn-panel-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F0B90B" stroke-width="2" aria-hidden="true">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        Market Trades
                     </div>
 
-                    <div class="bn-panel-header" style="border-top: 1px solid #2B3139; border-bottom: 1px solid #2B3139; padding-top: 12px; padding-bottom: 10px; margin-bottom: 10px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                        Flow & Speed
-                    </div>
-                    <div class="bn-analytics-grid">
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Dòng tiền Net</span>
-                            <span id="sc-stat-net-flow" class="bn-stat-val text-green">+$0</span>
-                        </div>
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Tốc độ khớp / s</span>
-                            <span id="sc-stat-match-speed" class="bn-stat-val">$0 /s</span>
-                        </div>
-                    </div>
-
-                    <div class="bn-panel-header" style="border-top: 1px solid #2B3139; margin-bottom: 0; padding-top: 12px;">
-                        <i class="fas fa-bolt" style="color:#F0B90B; margin-right: 6px;"></i> LIVE TRADES
-                    </div>
                     <div class="bn-trades-table">
                         <div class="bn-trades-head">
                             <span class="text-left">Price(USD)</span>
@@ -1079,28 +1621,66 @@ function injectLayout() {
                             <div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>
                         </div>
                     </div>
+
+                    <div class="bn-panel-header" style="border-top: 1px solid var(--border); margin-bottom: 0;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0ECB81" stroke-width="2" aria-hidden="true">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                        </svg>
+                        Alpha Analytics
+                    </div>
+
+                    <div class="bn-analytics-grid">
+                        <div class="bn-stat-row">
+                            <span class="bn-analytics-label">Net Flow</span>
+                            <span id="sc-stat-net-flow" class="bn-stat-val text-green">+$0</span>
+                        </div>
+                        <div class="bn-stat-row">
+                            <span class="bn-analytics-label">Speed/s</span>
+                            <span id="sc-stat-match-speed" class="bn-stat-val">$0</span>
+                        </div>
+                        <div class="bn-stat-row">
+                            <span class="bn-analytics-label">Avg Ticket</span>
+                            <span id="sc-stat-avg-ticket" class="bn-stat-val">$0</span>
+                        </div>
+                        <div class="bn-stat-row">
+                            <span class="bn-analytics-label">Whales (>$5k)</span>
+                            <span id="sc-stat-whale-tx" class="bn-stat-val">0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     `;
-    
+
     tabNav.insertAdjacentElement('afterend', marketView);
 
-    document.body.appendChild(document.getElementById('super-chart-overlay'));
+    // Đưa overlay ra body để không bị mất khi re-render view
+    const overlay = document.getElementById('super-chart-overlay');
+    if (overlay) document.body.appendChild(overlay);
 
-    let lastScrollY = window.scrollY;
-    window.removeEventListener('scroll', window._smartScroll);
-    window._smartScroll = function() {
-        const currentScrollY = window.scrollY;
+    // =========================
+    // SMART SCROLL
+    // =========================
+    let lastScrollY = window.scrollY || 0;
+
+    if (window._smartScroll) {
+        window.removeEventListener('scroll', window._smartScroll);
+    }
+
+    window._smartScroll = function () {
+        const currentScrollY = window.scrollY || 0;
         const nav = document.getElementById('alpha-tab-nav');
         if (!nav) return;
+
         if (currentScrollY > lastScrollY && currentScrollY > 20) {
             nav.classList.add('nav-hidden');
-        } else if (currentScrollY < lastScrollY) {
+        } else {
             nav.classList.remove('nav-hidden');
         }
+
         lastScrollY = currentScrollY;
     };
+
     window.addEventListener('scroll', window._smartScroll, { passive: true });
 }
 
