@@ -1785,26 +1785,27 @@ function connectRealtimeChart(t) {
                 }
                 window.scActivePriceLines = [];
 
-                // BẮN VẠCH MỚI LÊN CHART (CHUẨN NHIỆT ĐỘ - KHÔNG TRÙNG MÀU NẾN)
+                // BẮN VẠCH MỚI LÊN CHART (STYLE BOOKMAP)
                 let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
                 
-                // [FIXED] THÊM CHỐT AN TOÀN: Chờ lớp nền render xong mới cho phép vẽ
+                // Chốt an toàn: Chờ lớp nền render xong mới vẽ
                 if (window.tvHeatmapLayer) { 
                     newWalls.forEach(wall => {
                         let lineColor = '';
                         let thickness = 1;
 
-                        if (wall.v > currentAvgTicket * 20) {
-                            // Tường Cực Nóng / Siêu Khủng: Màu Tím Neon
-                            lineColor = 'rgba(176, 38, 255, 0.6)'; 
+                        // Bảng màu Bookmap: Xanh Lạnh -> Cam Ấm -> Đỏ Nóng -> Trắng Dung Nham
+                        if (wall.v > currentAvgTicket * 30) {
+                            lineColor = 'rgba(255, 255, 255, 0.7)'; // Trắng (Tường Dung Nham)
+                            thickness = 6; // Khối siêu dày
+                        } else if (wall.v > currentAvgTicket * 15) {
+                            lineColor = 'rgba(255, 50, 50, 0.5)'; // Đỏ rực (Tường Nóng)
                             thickness = 4;
-                        } else if (wall.v > currentAvgTicket * 10) {
-                            // Tường Nóng / Lớn: Màu Cam Sáng
-                            lineColor = 'rgba(255, 152, 0, 0.5)';
+                        } else if (wall.v > currentAvgTicket * 8) {
+                            lineColor = 'rgba(255, 152, 0, 0.4)'; // Cam (Tường Ấm)
                             thickness = 3;
                         } else {
-                            // Tường Ấm / Vừa: Màu Vàng Chanh
-                            lineColor = 'rgba(255, 235, 59, 0.4)';
+                            lineColor = 'rgba(33, 150, 243, 0.3)'; // Xanh dương (Tường Lạnh)
                             thickness = 2;
                         }
 
@@ -1812,8 +1813,8 @@ function connectRealtimeChart(t) {
                             price: wall.p,
                             color: lineColor,
                             lineWidth: thickness,
-                            lineStyle: 0, // Nét liền mờ (Solid)
-                            axisLabelVisible: false, // Tàng hình con số để không rối trục giá
+                            lineStyle: 0, // Nét khối liền (Solid) giống mảng màu Bookmap
+                            axisLabelVisible: false, // Tàng hình số
                             title: ''                
                         });
                         window.scActivePriceLines.push(priceLine);
@@ -1832,6 +1833,10 @@ function connectRealtimeChart(t) {
 
             // 1. Cập nhật Nến/Line và Giá lên UI NGAY LẬP TỨC để biểu đồ mượt mà
             window.scTickHistory.push({ t: Date.now(), p: p, q: q, v: valUSD, dir: isUp });
+            
+            // [FIX LỖI TÀNG HÌNH]: Giữ nhịp đập cho Lớp Nền để Tường không bị mất
+            if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
+
             if (window.currentChartInterval === 'tick' && tvLineSeries) {
                 tvLineSeries.update({ time: timeSec, value: p });
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
@@ -2108,6 +2113,13 @@ tvChart = LightweightCharts.createChart(container, {
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
         fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
             if (histData.length > 0) {
+                
+                // [FIX LỖI TÀNG HÌNH]: Bơm dữ liệu mồi để Lớp Nền (Background) sống dậy và chịu vẽ Tường
+                if (window.tvHeatmapLayer) {
+                    let heatData = histData.map(d => ({ time: d.time, value: d.close || d.value }));
+                    window.tvHeatmapLayer.setData(heatData);
+                }
+
                 if (window.currentChartInterval === 'tick' && tvLineSeries) {
                     tvLineSeries.setData(histData);
                     let volData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
@@ -2119,7 +2131,7 @@ tvChart = LightweightCharts.createChart(container, {
                     if (tvVolumeSeries) tvVolumeSeries.setData(volData);
                 }
             }
-            // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
+            
             // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
             if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
 
