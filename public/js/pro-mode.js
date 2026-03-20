@@ -1716,34 +1716,50 @@ function connectRealtimeChart(t) {
             }
         }
         // ---------------------------------------------------------
-        // 4. BẢN ĐỒ TƯỜNG THANH KHOẢN (DYNAMIC LIQUIDITY WALLS)
+        // 4. BẢN ĐỒ TƯỜNG THANH KHOẢN (LOCAL ORDER BOOK - ĐÃ FIX DELTAS)
         // ---------------------------------------------------------
         if (data.e === 'depthUpdate' || (data.stream && data.stream.includes('@fulldepth'))) {
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries) {
-                let asks = data.data.a || []; // Sổ lệnh Bán (Kháng cự)
-                let bids = data.data.b || []; // Sổ lệnh Mua (Hỗ trợ)
-                
-                // Ngưỡng Tường cứng: Lớn hơn 10 lần Ticket Trung bình VÀ tối thiểu $10,000
-                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
-                let wallThreshold = Math.max(10000, currentAvgTicket * 10);
+                // Khởi tạo hoặc Reset Sổ lệnh cục bộ nếu đổi đồng coin khác
+                let currentSym = data.data.s || 'UNKNOWN';
+                if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
+                    window.scLocalOrderBook = { sym: currentSym, asks: {}, bids: {} };
+                }
 
-                // Hàm lọc tìm Cá Voi đang kê lệnh
-                const processWalls = (orderArray, isAsk) => {
+                let asks = data.data.a || []; // Mảng cập nhật Bán
+                let bids = data.data.b || []; // Mảng cập nhật Mua
+
+                // Lắp ráp các lệnh nhỏ lẻ (Deltas) thành Tường hoàn chỉnh
+                asks.forEach(item => {
+                    let p = item[0], q = parseFloat(item[1]);
+                    if (q === 0) delete window.scLocalOrderBook.asks[p]; // Xóa lệnh nếu bị hủy/khớp hết
+                    else window.scLocalOrderBook.asks[p] = q; // Thêm mới hoặc cập nhật
+                });
+                bids.forEach(item => {
+                    let p = item[0], q = parseFloat(item[1]);
+                    if (q === 0) delete window.scLocalOrderBook.bids[p];
+                    else window.scLocalOrderBook.bids[p] = q;
+                });
+
+                // Hạ ngưỡng Tường xuống một chút để dễ test: Lớn hơn 5 lần Ticket Trung bình VÀ tối thiểu $5,000
+                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
+                let wallThreshold = Math.max(5000, currentAvgTicket * 5); 
+
+                const processWalls = (orderMap, isAsk) => {
                     let walls = [];
-                    for (let i = 0; i < orderArray.length; i++) {
-                        let p = parseFloat(orderArray[i][0]);
-                        let q = parseFloat(orderArray[i][1]);
-                        let valUSD = p * q;
-                        if (valUSD >= wallThreshold) walls.push({ p: p, v: valUSD, isAsk: isAsk });
+                    for (let p in orderMap) {
+                        let price = parseFloat(p);
+                        let valUSD = price * orderMap[p];
+                        if (valUSD >= wallThreshold) walls.push({ p: price, v: valUSD, isAsk: isAsk });
                     }
-                    walls.sort((a, b) => b.v - a.v);
-                    return walls.slice(0, 5); // Chỉ lấy 5 bức tường to nhất mỗi bên để Chart không bị rối
+                    walls.sort((a, b) => b.v - a.v); // Sắp xếp tường từ to nhất xuống
+                    return walls.slice(0, 5); // Chỉ lấy top 5 bức tường to nhất mỗi bên
                 };
 
-                let newWalls = [...processWalls(asks, true), ...processWalls(bids, false)];
+                let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
 
-                // Xóa các Vạch Laser cũ của 500ms trước
+                // Dọn dẹp các tia Laser cũ của nhịp trước
                 if (window.scActivePriceLines && window.scActivePriceLines.length > 0) {
                     window.scActivePriceLines.forEach(line => {
                         try { activeSeries.removePriceLine(line); } catch(e) {}
@@ -1751,21 +1767,20 @@ function connectRealtimeChart(t) {
                 }
                 window.scActivePriceLines = [];
 
-                // Bắn Vạch Laser mới lên Chart
+                // Bắn tia Laser mới lên Chart
                 newWalls.forEach(wall => {
-                    // Tường càng nhiều tiền, Vạch laser càng dày
                     let thickness = 1;
-                    if (wall.v > wallThreshold * 5) thickness = 4; // Tường siêu to khổng lồ
+                    if (wall.v > wallThreshold * 5) thickness = 4; // Tường siêu khủng
                     else if (wall.v > wallThreshold * 3) thickness = 3;
                     else if (wall.v > wallThreshold * 2) thickness = 2;
 
                     let priceLine = activeSeries.createPriceLine({
                         price: wall.p,
-                        color: wall.isAsk ? '#FF007F' : '#00F0FF', // Bán thì Pink, Mua thì Cyan
+                        color: wall.isAsk ? '#FF007F' : '#00F0FF',
                         lineWidth: thickness,
-                        lineStyle: 0, // Nét liền (Solid)
+                        lineStyle: 0, // Nét liền
                         axisLabelVisible: true,
-                        title: formatCompactUSD(wall.v) // Hiện số tiền (Ví dụ: 120K) ở rìa trục giá
+                        title: formatCompactUSD(wall.v) 
                     });
                     window.scActivePriceLines.push(priceLine);
                 });
