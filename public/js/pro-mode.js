@@ -1489,7 +1489,7 @@ function connectRealtimeChart(t) {
         let isWhale   = cluster.vol >= (currentAvgTicket * 20) && cluster.vol >= 10000;
         let isShark   = cluster.vol >= (currentAvgTicket * 10) && cluster.vol >= 5000;
         let isDolphin = cluster.vol >= (currentAvgTicket * 5)  && cluster.vol >= 2000;
-        let isSweep   = cluster.count >= 15; // Bot càn quét 15 lệnh liên tiếp
+        let isSweep   = cluster.count >= 6; 
 
         let icon = ''; let fontWeight = 'normal';
         if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
@@ -1656,6 +1656,9 @@ function connectRealtimeChart(t) {
             algoEl.style.background = bgColor;
             algoEl.style.borderColor = bdColor;
         }
+        // -------------------------------------------------------------------
+        // F. THUẬT TOÁN PHÂN TÍCH VỊ THẾ BẮT ĐÁY (3 KỊCH BẢN SAU DUMP)
+        // -------------------------------------------------------------------
         if (drop <= -0.6 && currentSpeed > (avgSpeed60s * 1.5)) {
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries) {
@@ -1663,11 +1666,53 @@ function connectRealtimeChart(t) {
                 if (lastTick) {
                     let timeSec = Math.floor(lastTick.t / 1000);
                     let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
-                    if (!lastMarker || lastMarker.text !== '⚠️ DUMP' || (timeSec - lastMarker.time > 15)) {
+                    
+                    // Chống spam: Mỗi tín hiệu cách nhau ít nhất 15 giây
+                    if (!lastMarker || !lastMarker.text.includes('DUMP') || (timeSec - lastMarker.time > 15)) {
+                        
+                        let markerText = '⚠️ DUMP';
+                        let markerColor = '#F0B90B'; // Vàng Gold
+                        
+                        // BỘ LỌC 1: KIỂM TRA CHẠM TƯỜNG (Biên độ 0.2%)
+                        let hitWall = false;
+                        if (window.scLocalOrderBook && window.scLocalOrderBook.bids) {
+                            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+                            let wallThreshold = Math.max(500, currentAvgTicket * 5); // Tường hợp lệ
+                            
+                            for (let p in window.scLocalOrderBook.bids) {
+                                let price = parseFloat(p);
+                                let valUSD = price * window.scLocalOrderBook.bids[p];
+                                if (valUSD >= wallThreshold) {
+                                    let diff = Math.abs(window.scLastPrice - price) / price;
+                                    if (diff <= 0.002) { hitWall = true; break; } // Giá cách Tường <= 0.2%
+                                }
+                            }
+                        }
+
+                        // BỘ LỌC 2: PHÂN TÍCH HÀNH VI DÒNG TIỀN (5 Giây gần nhất)
+                        let recentTicks = window.scTickHistory.filter(x => Date.now() - x.t <= 5000);
+                        let recentBuyVol = recentTicks.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
+                        let recentSellVol = recentTicks.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
+                        let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+
+                        // RA QUYẾT ĐỊNH PHÂN LOẠI
+                        if (hitWall) {
+                            markerText = '🛡️ WALL HIT (Chạm Tường)';
+                            markerColor = '#F0B90B'; // Màu Vàng báo hiệu hỗ trợ cứng
+                        } else if (recentBuyVol > recentSellVol * 2 && recentBuyVol > avgTicket * 10) {
+                            markerText = '🪝 STOP-HUNT (Quét SL)';
+                            markerColor = '#00F0FF'; // Xanh Cyan báo hiệu Cá Mập cướp hàng (Long)
+                        } else {
+                            markerText = '🪫 EXHAUSTED (Cạn Lực Bán)';
+                            markerColor = '#848e9c'; // Xám mờ báo hiệu TT yếu, chưa nên vào ngay
+                        }
+
+                        // Bắn Marker lên Chart (Mũi tên chỉ LÊN, nằm DƯỚI nến vì đây là tìm điểm Bắt đáy)
                         window.scChartMarkers.push({
-                            time: timeSec, position: 'aboveBar', color: '#FF003C', shape: 'arrowDown', text: '⚠️ DUMP'
+                            time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText 
                         });
-                        if (window.scChartMarkers.length > 30) window.scChartMarkers.shift();
+                        
+                        if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                         activeSeries.setMarkers(window.scChartMarkers);
                     }
                 }
