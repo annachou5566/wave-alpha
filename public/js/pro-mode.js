@@ -1526,7 +1526,43 @@ function connectRealtimeChart(t) {
         // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART
         let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
         let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
+        // -------------------------------------------------------------------
+        // E. THUẬT TOÁN ALGO LIMIT REALTIME (COPY CHUẨN TỪ COMPETITION RADAR)
+        // -------------------------------------------------------------------
+        let txPerSec = window.scSpeedWindow.length / 5; // Tần suất lệnh mỗi giây
+        let algoLimit = currentSpeed * 0.15; // Base: 15% tốc độ khớp
         
+        // Phạt Limit nếu Spread giãn rộng (Tránh trượt giá)
+        if (spread <= 0.5) algoLimit *= 1.0;
+        else if (spread <= 1.5) algoLimit *= 0.8;
+        else if (spread <= 3.0) algoLimit *= 0.5;
+        else algoLimit *= 0.2;
+
+        // Phạt Limit nếu quá ít người giao dịch
+        if (txPerSec < 3) algoLimit *= 0.5;
+        algoLimit = Math.round(algoLimit);
+
+        let algoEl = document.getElementById('sc-algo-limit');
+        if (algoEl) {
+            let limitText = `< $${formatCompactUSD(algoLimit)}`;
+            let limitColor = '#0ECB81'; let bgColor = 'rgba(14,203,129,0.1)'; let bdColor = 'rgba(14,203,129,0.3)';
+
+            if (algoLimit < 10) { 
+                limitColor = '#F6465D'; limitText = '💀 DEAD'; 
+                bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
+            } else if (algoLimit < 50) { 
+                limitColor = '#F6465D'; 
+                bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
+            } else if (algoLimit <= 200) { 
+                limitColor = '#F0B90B'; 
+                bgColor = 'rgba(240,185,11,0.1)'; bdColor = 'rgba(240,185,11,0.3)';
+            }
+
+            algoEl.innerHTML = `ALGO LIMIT: ${limitText}`;
+            algoEl.style.color = limitColor;
+            algoEl.style.background = bgColor;
+            algoEl.style.borderColor = bdColor;
+        }
         if (drop <= -0.6 && currentSpeed > (avgSpeed60s * 1.5)) {
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries) {
@@ -1748,12 +1784,14 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-coin-contract').innerText = t.contract ? t.contract.substring(0,10) + '...' : '';
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
-        // Bơm thông số Algo Limit
-        // Bơm thông số Algo Limit (Dữ liệu gốc đã là USD)
-        let algoLimitUSD = (t.volume && t.volume.daily_limit) || 0;
-        let limitText = algoLimitUSD > 0 ? `< $${formatCompactNum(algoLimitUSD)}` : 'N/A';
+        // Chờ WebSocket gom đủ nến trong vài giây để chạy thuật toán Algo Limit
         let limitEl = document.getElementById('sc-algo-limit');
-        if (limitEl) limitEl.innerHTML = `ALGO LIMIT: ${limitText}`;
+        if (limitEl) {
+            limitEl.innerHTML = `ALGO LIMIT: ⏳ TÍNH TOÁN...`;
+            limitEl.style.color = '#F0B90B';
+            limitEl.style.background = 'rgba(240,185,11,0.1)';
+            limitEl.style.borderColor = 'rgba(240,185,11,0.3)';
+        }
         let chg = parseFloat(t.change_24h) || 0;
         let chgEl = document.getElementById('sc-change-24h');
         if (chgEl) {
