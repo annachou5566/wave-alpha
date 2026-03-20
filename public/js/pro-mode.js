@@ -996,23 +996,27 @@ function injectLayout() {
                     <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
                         <div class="sc-panel-section" style="padding-bottom: 10px;">
                             <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape Tracker</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
                             
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Cá Voi 🐋 (>20x)</span><span id="sc-stat-whale" style="font-family:var(--font-num); color:#F0B90B; font-weight:700;">0</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Cá Mập 🦈 (>10x)</span><span id="sc-stat-shark" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Cá Heo 🐬 (>5x)</span><span id="sc-stat-dolphin" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Bot Sweep 🤖 (Càn quét)</span><span id="sc-stat-sweep" style="font-family:var(--font-num); color:#FF007F; font-weight:700;">0</span></div>
+                            <div style="display:flex; justify-content:space-between; text-align:center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
+                                <div style="flex:1;">
+                                    <div style="font-size:14px; margin-bottom:4px;" title="Cá Voi (>20x)">🐋</div>
+                                    <div id="sc-stat-whale" style="font-family:var(--font-num); color:#F0B90B; font-weight:700; font-size:12px;">0</div>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-size:14px; margin-bottom:4px;" title="Cá Mập (>10x)">🦈</div>
+                                    <div id="sc-stat-shark" style="font-family:var(--font-num); color:#eaecef; font-weight:700; font-size:12px;">0</div>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-size:14px; margin-bottom:4px;" title="Cá Heo (>5x)">🐬</div>
+                                    <div id="sc-stat-dolphin" style="font-family:var(--font-num); color:#eaecef; font-weight:700; font-size:12px;">0</div>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-size:14px; margin-bottom:4px;" title="Bot Sweep (Càn quét)">🤖</div>
+                                    <div id="sc-stat-sweep" style="font-family:var(--font-num); color:#FF007F; font-weight:700; font-size:12px;">0</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="sc-panel-section" style="border-bottom: none; padding-top: 10px;">
-                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Data Flow (Realtime)</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#00F0FF; font-weight:700;">+$0</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Tốc độ khớp / s</span><span id="sc-stat-match-speed" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0 /s</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Spread (15s)</span><span id="sc-stat-spread" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Trend (VWAP 60s)</span><span id="sc-stat-trend" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Rớt đỉnh (Drop 5m)</span><span id="sc-stat-drop" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     `;
@@ -1722,14 +1726,9 @@ function connectRealtimeChart(t) {
             }
         }
         // ---------------------------------------------------------
-        // 4. BẢN ĐỒ TƯỜNG THANH KHOẢN (MÁY DÒ LỖI API)
+        // 4. BẢN ĐỒ TƯỜNG THANH KHOẢN (ĐÃ FIX: LẤY TOP 5 BẤT CHẤP THRESHOLD)
         // ---------------------------------------------------------
         if (data.stream && data.stream.includes('@fulldepth')) {
-            
-            // MÁY DÒ LỖI: In dữ liệu thật ra Console để chúng ta bắt mạch!
-            console.log("🔥 ĐÃ NHẬN DỮ LIỆU SỔ LỆNH TỪ BINANCE!");
-            console.log("📦 Dữ liệu gốc:", data);
-            
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries && data.data) {
                 let currentSym = data.data.s || 'UNKNOWN';
@@ -1740,13 +1739,11 @@ function connectRealtimeChart(t) {
                 let asks = data.data.a || []; 
                 let bids = data.data.b || []; 
                 
-                console.log(`📊 Số lệnh Bán (Asks): ${asks.length} | Số lệnh Mua (Bids): ${bids.length}`);
-
-                // Lắp ráp các lệnh nhỏ lẻ (Deltas) thành Tường hoàn chỉnh
+                // Lắp ráp Order Book
                 asks.forEach(item => {
                     let p = item[0], q = parseFloat(item[1]);
-                    if (q === 0) delete window.scLocalOrderBook.asks[p]; // Xóa lệnh nếu bị hủy/khớp hết
-                    else window.scLocalOrderBook.asks[p] = q; // Thêm mới hoặc cập nhật
+                    if (q === 0) delete window.scLocalOrderBook.asks[p];
+                    else window.scLocalOrderBook.asks[p] = q;
                 });
                 bids.forEach(item => {
                     let p = item[0], q = parseFloat(item[1]);
@@ -1754,24 +1751,23 @@ function connectRealtimeChart(t) {
                     else window.scLocalOrderBook.bids[p] = q;
                 });
 
-                // Hạ ngưỡng Tường xuống một chút để dễ test: Lớn hơn 5 lần Ticket Trung bình VÀ tối thiểu $5,000
-                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
-                let wallThreshold = Math.max(5000, currentAvgTicket * 5); 
-
+                // TÌM TƯỜNG: Bỏ điều kiện >= 5000 cứng nhắc. Chỉ cần > $500 là lấy, sau đó chọn 5 bức to nhất.
                 const processWalls = (orderMap, isAsk) => {
                     let walls = [];
                     for (let p in orderMap) {
                         let price = parseFloat(p);
                         let valUSD = price * orderMap[p];
-                        if (valUSD >= wallThreshold) walls.push({ p: price, v: valUSD, isAsk: isAsk });
+                        if (valUSD > 500) { // Ngưỡng an toàn tối thiểu để loại bỏ nhiễu rác
+                            walls.push({ p: price, v: valUSD, isAsk: isAsk });
+                        }
                     }
-                    walls.sort((a, b) => b.v - a.v); // Sắp xếp tường từ to nhất xuống
-                    return walls.slice(0, 5); // Chỉ lấy top 5 bức tường to nhất mỗi bên
+                    walls.sort((a, b) => b.v - a.v); 
+                    return walls.slice(0, 5); // Cắt lấy top 5 Tường to nhất
                 };
 
                 let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
 
-                // Dọn dẹp các tia Laser cũ của nhịp trước
+                // XÓA VẠCH CŨ TRÊN CHART
                 if (window.scActivePriceLines && window.scActivePriceLines.length > 0) {
                     window.scActivePriceLines.forEach(line => {
                         try { activeSeries.removePriceLine(line); } catch(e) {}
@@ -1779,20 +1775,21 @@ function connectRealtimeChart(t) {
                 }
                 window.scActivePriceLines = [];
 
-                // Bắn tia Laser mới lên Chart
+                // BẮN VẠCH MỚI LÊN CHART
+                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
                 newWalls.forEach(wall => {
+                    // Tường bự hơn 10 lần lệnh trung bình thì nét cực dày (4), bự hơn 5 lần thì nét vừa (2)
                     let thickness = 1;
-                    if (wall.v > wallThreshold * 5) thickness = 4; // Tường siêu khủng
-                    else if (wall.v > wallThreshold * 3) thickness = 3;
-                    else if (wall.v > wallThreshold * 2) thickness = 2;
+                    if (wall.v > currentAvgTicket * 10) thickness = 4;
+                    else if (wall.v > currentAvgTicket * 5) thickness = 2;
 
                     let priceLine = activeSeries.createPriceLine({
                         price: wall.p,
-                        color: wall.isAsk ? '#FF007F' : '#00F0FF',
+                        color: wall.isAsk ? '#FF007F' : '#00F0FF', // Bán: Đỏ Pink | Mua: Xanh Cyan
                         lineWidth: thickness,
-                        lineStyle: 0, // Nét liền
+                        lineStyle: 0, // Nét Solid
                         axisLabelVisible: true,
-                        title: formatCompactUSD(wall.v) 
+                        title: formatCompactUSD(wall.v)
                     });
                     window.scActivePriceLines.push(priceLine);
                 });
