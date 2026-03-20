@@ -1426,10 +1426,25 @@ function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     
     // 1. KHỞI TẠO BỘ NHỚ RAM STATE
-    window.scSpeedWindow = []; window.scNetFlow = 0; window.scWhaleCount = 0; window.scTotalVol = 0; window.scTradeCount = 0;
-    window.scLastPrice = parseFloat(t.price) || 0; window.scLastTradeDir = undefined;
-    window.scTickHistory = []; 
-    window.scChartMarkers = [];
+    // 1. KHỞI TẠO BỘ NHỚ RAM STATE (CÓ BỘ ĐỆM CACHE CHỐNG MẤT DỮ LIỆU)
+    if (!window.AlphaChartState) window.AlphaChartState = {};
+    let sym = t.symbol || 'UNKNOWN';
+    
+    // Nếu chưa có cache cho đồng coin này, tạo mới
+    if (!window.AlphaChartState[sym]) {
+        window.AlphaChartState[sym] = {
+            speedWindow: [], netFlow: 0, whaleCount: 0, totalVol: 0, tradeCount: 0,
+            tickHistory: [], chartMarkers: [], lastPrice: parseFloat(t.price) || 0, lastTradeDir: undefined
+        };
+    }
+    
+    // Nạp lại dữ liệu cũ vào luồng chạy
+    let cache = window.AlphaChartState[sym];
+    window.scSpeedWindow = cache.speedWindow; window.scNetFlow = cache.netFlow; 
+    window.scWhaleCount = cache.whaleCount; window.scTotalVol = cache.totalVol; 
+    window.scTradeCount = cache.tradeCount; window.scLastPrice = cache.lastPrice; 
+    window.scLastTradeDir = cache.lastTradeDir; window.scTickHistory = cache.tickHistory; 
+    window.scChartMarkers = cache.chartMarkers;
 
     try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
@@ -1657,13 +1672,15 @@ function connectRealtimeChart(t) {
                 flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
             }
             
-            let priceEl = document.getElementById('sc-live-price');
-            if (priceEl) {
-                priceEl.innerText = '$' + formatPrice(p);
-                priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
+            // ĐỒNG BỘ CACHE ĐỂ KHÔNG MẤT DỮ LIỆU KHI TẮT APP HOẶC ĐÓNG CHART
+            if (window.AlphaChartState && window.AlphaChartState[sym]) {
+                window.AlphaChartState[sym].netFlow = window.scNetFlow;
+                window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
+                window.AlphaChartState[sym].totalVol = window.scTotalVol;
+                window.AlphaChartState[sym].tradeCount = window.scTradeCount;
+                window.AlphaChartState[sym].lastPrice = window.scLastPrice;
+                window.AlphaChartState[sym].lastTradeDir = window.scLastTradeDir;
             }
-        }
-    };
     
     chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000); } };
 }
@@ -1724,8 +1741,8 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
         // Bơm thông số Algo Limit
-        let algoLimitToken = t.algoLimit || (t.market_analysis && t.market_analysis.algoLimit) || 0;
-        let algoLimitUSD = algoLimitToken * (parseFloat(t.price) || 0);
+        // Bơm thông số Algo Limit (Dữ liệu gốc đã là USD)
+        let algoLimitUSD = (t.volume && t.volume.daily_limit) || 0;
         let limitText = algoLimitUSD > 0 ? `< $${formatCompactNum(algoLimitUSD)}` : 'N/A';
         let limitEl = document.getElementById('sc-algo-limit');
         if (limitEl) limitEl.innerHTML = `ALGO LIMIT: ${limitText}`;
