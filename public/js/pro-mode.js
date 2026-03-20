@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const proChartStyle = document.createElement('style');
         proChartStyle.id = 'wave-alpha-pro-chart-styles';
         proChartStyle.innerHTML = `
-            #super-chart-overlay { height: 100dvh !important; padding-bottom: 10px; box-sizing: border-box; background: rgba(8, 10, 14, 0.98); backdrop-filter: blur(15px); font-family: var(--font-main); }
+            #super-chart-overlay { height: 100dvh !important; padding-bottom: 5px; box-sizing: border-box; background: rgba(8, 10, 14, 0.98); backdrop-filter: blur(15px); font-family: var(--font-main); }
             .sc-topbar { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #0B0E11; border-bottom: 1px solid rgba(255,255,255,0.03); height: 45px; flex-shrink: 0; }
             .sc-body { display: flex; flex: 1; overflow: hidden; width: 100%; }
             
@@ -1645,7 +1645,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 10), width: newRect.width });
+            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 5), width: newRect.width });
         }).observe(container);
         
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
