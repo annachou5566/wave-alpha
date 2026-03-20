@@ -995,10 +995,10 @@ function injectLayout() {
 
                     <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
                         <div class="sc-panel-section" style="padding-bottom: 10px;">
-                            <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Whale Tracker</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" style="font-family:var(--font-num); color:#F0B90B; font-weight:700;">0</span></div>
-                        </div>
+            <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape Tracker</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Lệnh đột biến (🐋🦈🐬🤖)</span><span id="sc-stat-whale-tx" style="font-family:var(--font-num); color:#F0B90B; font-weight:700;">0</span></div>
+        </div>
                         <div class="sc-panel-section" style="border-bottom: none; padding-top: 10px;">
                             <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Data Flow (Realtime)</div>
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#00F0FF; font-weight:700;">+$0</span></div>
