@@ -975,8 +975,7 @@ function injectLayout() {
                             <div>T: <strong id="tp-t" style="color:#5e6673;">--</strong></div>
                         </div>
                     </div>
-                
-                <div class="sc-side-panel">
+                </div> <div class="sc-side-panel">
                     <div class="sc-mobile-tabs">
                         <button class="sc-tab-btn active" onclick="window.switchScTab('trades', this)">Live Trades</button>
                         <button class="sc-tab-btn" onclick="window.switchScTab('info', this)">Data Flow</button>
