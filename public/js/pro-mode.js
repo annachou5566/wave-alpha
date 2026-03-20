@@ -962,8 +962,19 @@ function injectLayout() {
                         <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
                     </div>
                     
-                    <div id="sc-chart-container" style="flex:1; position: relative;"></div>
-                </div>
+                    <div id="sc-chart-container" style="flex:1; position: relative; overflow: hidden;">
+                        <div id="sc-custom-tooltip" style="display:none; position: absolute; top: 10px; left: 10px; padding: 8px 12px; background: rgba(14, 18, 22, 0.9); border-radius: 4px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 500; pointer-events: none; z-index: 5; border: 1px solid rgba(255,255,255,0.02);">
+                            <div id="tp-symbol" style="color:#eaecef; font-weight:800; font-size:12px; margin-bottom: 3px;">---</div>
+                            <div style="display:flex; gap: 8px;">
+                                <span>O: <strong id="tp-o" style="color:#eaecef;">--</strong></span>
+                                <span>H: <strong id="tp-h" style="color:#00F0FF;">--</strong></span>
+                                <span>L: <strong id="tp-l" style="color:#FF007F;">--</strong></span>
+                                <span>C: <strong id="tp-c" style="color:#eaecef;">--</strong></span>
+                            </div>
+                            <div>V: <strong id="tp-v" style="color:#eaecef;">--</strong></div>
+                            <div>T: <strong id="tp-t" style="color:#5e6673;">--</strong></div>
+                        </div>
+                    </div>
                 
                 <div class="sc-side-panel">
                     <div class="sc-mobile-tabs">
@@ -1475,7 +1486,7 @@ function connectRealtimeChart(t) {
             trendEl.style.color = trend >= 0 ? '#0ECB81' : '#F6465D';
         }
 
-        // C. TÍNH DROP (So với P95 đỉnh 5 phút)
+        // C. TÍNH DROP (So với P95 đỉnh 5 phút) - Đã cập nhật logic màu Tăng/Giảm
         let drop = 0;
         if (window.scTickHistory.length > 20) {
             let prices5m = window.scTickHistory.map(x => x.p).sort((a,b) => a - b);
@@ -1484,8 +1495,18 @@ function connectRealtimeChart(t) {
         }
         let dropEl = document.getElementById('sc-stat-drop');
         if (dropEl) {
-            dropEl.innerText = drop.toFixed(2) + '%';
-            dropEl.style.color = drop <= -0.6 ? '#F6465D' : '#eaecef';
+            // Thêm dấu + nếu số dương
+            let sign = drop >= 0 ? '+' : '';
+            dropEl.innerText = sign + drop.toFixed(2) + '%';
+            
+            // Logic màu Wave Alpha strict: Tăng Cyan / Giảm Pink
+            if (drop > 0) {
+                dropEl.style.color = '#00F0FF'; // Neon Cyan
+            } else if (drop < 0) {
+                dropEl.style.color = '#FF007F'; // Neon Pink
+            } else {
+                dropEl.style.color = '#eaecef'; // Trắng xám cho 0.00%
+            }
         }
 
         // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART NẾN
@@ -1598,21 +1619,28 @@ function connectRealtimeChart(t) {
             }
 
             // GHI NHẬN CÁ MẬP & IN MARKER LÊN NẾN
+            // [FIXED] GHI NHẬN CÁ MẬP & GẮN ICON VÀO CHART
             if (valUSD > 5000) {
                 window.scWhaleCount++;
                 let whaleEl = document.getElementById('sc-stat-whale-tx'); 
                 if (whaleEl) whaleEl.innerText = window.scWhaleCount;
 
-                // IN MARKER CÁ MẬP VÀO BIỂU ĐỒ TRADINGVIEW
+                // CHỈ HIỆN ICON TRÊN NẾN KLINE (Không hiện ở Tick/Line Chart)
                 if (tvCandleSeries && window.currentChartInterval !== 'tick') {
+                    // console.log("Gắn icon Cá mập", isUp ? "MUA" : "BÁN");
                     window.scChartMarkers.push({
-                        time: timeSec,
-                        position: isUp ? 'belowBar' : 'aboveBar',
-                        color: isUp ? '#00F0FF' : '#FF007F', // Xanh lơ nếu cá mập MUA, Hồng nếu BÁN
+                        time: timeSec, // Thời gian trade tính bằng giây
+                        position: isUp ? 'belowBar' : 'aboveBar', // Mua ở dưới, Bán ở trên nến
+                        color: isUp ? '#00F0FF' : '#FF007F', // Màu Wave Alpha Cyan/Pink
                         shape: isUp ? 'arrowUp' : 'arrowDown',
-                        text: '🐋 $' + formatCompactUSD(valUSD)
+                        // Dùng hàm formatPrice có sẵn trong file của bạn
+                        text: '🐋 $' + window.pluginFormatPrice(valUSD) 
                     });
-                    if (window.scChartMarkers.length > 30) window.scChartMarkers.shift();
+                    
+                    // Giới hạn 50 marker gần nhất để không lag máy
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                    
+                    // Lệnh quan trọng: Ép series vẽ markers ra màn hình
                     tvCandleSeries.setMarkers(window.scChartMarkers);
                 }
             }
@@ -1775,7 +1803,70 @@ window.openProChart = function(t, isTimeSwitch = false) {
             const newRect = entries[0].contentRect;
             if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 5), width: newRect.width });
         }).observe(container);
+        // [PROFESSIONAL] LOGIC RÊ CHUỘT HIỆN THÔNG SỐ (CROSSHAIR MOVE)
+        const tooltipEl = document.getElementById('sc-custom-tooltip');
+        const tpSymbol = document.getElementById('tp-symbol');
+        const tpO = document.getElementById('tp-o'); const tpH = document.getElementById('tp-h');
+        const tpL = document.getElementById('tp-l'); const tpC = document.getElementById('tp-c');
+        const tpV = document.getElementById('tp-v'); const tpT = document.getElementById('tp-t');
         
+        // Gọi lệnh từ biến tvChart
+        tvChart.subscribeCrosshairMove((param) => {
+            if (param.point === undefined || !param.time || param.point.x < 0 || param.point.y < 0) {
+                if (tooltipEl) tooltipEl.style.display = 'none';
+                return;
+            }
+
+            if (tooltipEl) {
+                tooltipEl.style.display = 'block';
+                tooltipEl.style.left = '10px'; 
+                tooltipEl.style.top = '10px'; 
+            }
+            if (tpSymbol) tpSymbol.innerText = (window.currentChartToken && window.currentChartToken.symbol) || '---';
+
+            let dataPoint, ohlc, volume;
+            
+            if (window.currentChartInterval === 'tick') {
+                // Chế độ Tick/Line: Chỉ có giá Close
+                if (tvLineSeries) dataPoint = param.seriesData.get(tvLineSeries);
+                if (tpC) tpC.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(dataPoint ? dataPoint.value : 0) : formatPrice(dataPoint ? dataPoint.value : 0);
+                if (tpO) {
+                    tpO.parentElement.style.display = 'none'; 
+                    tpH.parentElement.style.display = 'none'; 
+                    tpL.parentElement.style.display = 'none';
+                }
+                if (tvVolumeSeries) volume = param.seriesData.get(tvVolumeSeries);
+                if (tpV) tpV.innerText = formatCompactUSD(volume ? volume.value : 0);
+            } else {
+                // Chế độ Nến: Đủ OHLVC
+                if (tvCandleSeries) ohlc = param.seriesData.get(tvCandleSeries);
+                if (ohlc) {
+                    if (tpO) {
+                        tpO.parentElement.style.display = 'inline'; 
+                        tpH.parentElement.style.display = 'inline'; 
+                        tpL.parentElement.style.display = 'inline';
+                        tpO.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.open) : formatPrice(ohlc.open);
+                        tpH.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.high) : formatPrice(ohlc.high);
+                        tpL.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.low) : formatPrice(ohlc.low);
+                        tpC.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.close) : formatPrice(ohlc.close);
+                        tpC.style.color = ohlc.close >= ohlc.open ? '#00F0FF' : '#FF007F';
+                    }
+                }
+                if (tvVolumeSeries) volume = param.seriesData.get(tvVolumeSeries);
+                if (tpV) tpV.innerText = formatCompactUSD(volume ? volume.value : 0);
+            }
+            
+            // Format thời gian rê chuột đẹp
+            if (tpT) {
+                let timeObj = param.time; 
+                let timestamp = 0;
+                if (typeof timeObj === 'number') timestamp = timeObj * 1000;
+                else if (timeObj.year) timestamp = new Date(timeObj.year, timeObj.month - 1, timeObj.day, timeObj.hour, timeObj.minute, timeObj.second).getTime();
+                else timestamp = new Date(timeObj).getTime(); 
+                
+                tpT.innerText = formatInt(new Date(timestamp).toLocaleDateString('en-GB')) + ' ' + new Date(timestamp).toLocaleTimeString('en-GB', {hour12: false});
+            }
+        });
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
         fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
             if (histData.length > 0) {
