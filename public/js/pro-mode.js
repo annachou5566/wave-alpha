@@ -1671,8 +1671,11 @@ function connectRealtimeChart(t) {
                 flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
                 flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
             }
-            
-            // ĐỒNG BỘ CACHE ĐỂ KHÔNG MẤT DỮ LIỆU KHI TẮT APP HOẶC ĐÓNG CHART
+            let priceEl = document.getElementById('sc-live-price');
+            if (priceEl) {
+                priceEl.innerText = '$' + formatPrice(p);
+                priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
+                // ĐỒNG BỘ CACHE ĐỂ KHÔNG MẤT DỮ LIỆU KHI TẮT APP HOẶC ĐÓNG CHART
             if (window.AlphaChartState && window.AlphaChartState[sym]) {
                 window.AlphaChartState[sym].netFlow = window.scNetFlow;
                 window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
@@ -1681,6 +1684,9 @@ function connectRealtimeChart(t) {
                 window.AlphaChartState[sym].lastPrice = window.scLastPrice;
                 window.AlphaChartState[sym].lastTradeDir = window.scLastTradeDir;
             }
+        }
+    };
+            
     
     chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000); } };
 }
