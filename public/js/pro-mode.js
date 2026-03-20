@@ -105,62 +105,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const proChartStyle = document.createElement('style');
         proChartStyle.id = 'wave-alpha-pro-chart-styles';
         proChartStyle.innerHTML = `
-            /* THIẾT KẾ LẠI HEADER & BỐ CỤC TỔNG THỂ */
             #super-chart-overlay { background: rgba(8, 10, 14, 0.98); backdrop-filter: blur(15px); font-family: var(--font-main); }
             .sc-topbar { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #0B0E11; border-bottom: 1px solid rgba(255,255,255,0.03); height: 45px; flex-shrink: 0; }
             .sc-body { display: flex; flex: 1; overflow: hidden; width: 100%; }
             
-            /* CỘT TRÁI: CHART & THỐNG KÊ */
             .sc-chart-area { flex: 1; display: flex; flex-direction: column; background: transparent; overflow: hidden; }
             .sc-stats-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(22, 26, 30, 0.4); }
+            
+            /* Class mới cho layout giá */
+            .sc-price-box { display: flex; align-items: baseline; gap: 10px; margin-right: 15px; }
+            
             .sc-metrics-compact { display: flex; gap: 20px; align-items: center; }
             .sc-mc-item { display: flex; flex-direction: column; align-items: flex-end; }
             .sc-mc-item span { font-size: 10px; color: #5E6673; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
             .sc-mc-item strong { font-size: 13px; color: #EAECEF; font-family: var(--font-num); font-weight: 700; }
             
-            /* CỘT PHẢI: SIDE PANEL (Whale & Trades) */
             .sc-side-panel { width: 320px; background: #12151A; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.02); z-index: 2;}
             .sc-panel-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); }
             .sc-panel-title { font-size: 11px; text-transform: uppercase; color: #848e9c; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; display:flex; align-items:center; gap:6px;}
             
-            /* TABS CHO MOBILE (Mặc định ẩn trên Desktop) */
             .sc-mobile-tabs { display: none; }
             .sc-tab-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
             
-            /* THANH CUỘN MƯỢT TRONG TRADES */
             #sc-live-trades::-webkit-scrollbar { width: 4px; }
-            #sc-live-trades::-webkit-scrollbar-track { background: transparent; }
             #sc-live-trades::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
-            /* =======================================
-               MOBILE RESPONSIVE (UI Tabbed)
-               ======================================= */
+            /* MOBILE RESPONSIVE (Tối ưu khít không gian, chữ nhỏ) */
             @media (max-width: 991px) {
                 .sc-body { flex-direction: column !important; overflow-y: hidden !important; }
                 .sc-topbar { padding: 8px 10px; }
                 
-                /* Khu vực Chart cố định chiều cao trên mobile */
-                .sc-chart-area { flex: none !important; height: 50vh !important; border-bottom: 2px solid #1e2329; }
+                /* Tăng chiều cao chart 1 chút, khít với Tab dưới */
+                .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid #1e2329; }
                 
-                /* Dải thông số vuốt ngang */
-                .sc-stats-row { padding: 8px 10px; }
-                .sc-metrics-compact { overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
-                .sc-metrics-compact::-webkit-scrollbar { display: none; }
+                /* Đẩy Giá và % thành cột dọc */
+                .sc-stats-row { padding: 6px 10px; gap: 8px; }
+                .sc-price-box { flex-direction: column; align-items: flex-start; gap: 0px; margin-right: 5px; justify-content: center;}
+                .sc-price-box #sc-live-price { font-size: 22px !important; }
+                .sc-price-box #sc-change-24h { font-size: 11px !important; }
                 
-                /* Side panel biến thành Tabs ở nửa dưới */
+                /* Ép 5 thông số nằm vừa 1 hàng không cuộn */
+                .sc-metrics-compact { width: 100%; justify-content: space-between; gap: 2px; overflow: hidden; padding-bottom: 0;}
+                .sc-mc-item span { font-size: 8px; margin-bottom: 0; }
+                .sc-mc-item strong { font-size: 10.5px; }
+                
                 .sc-side-panel { width: 100% !important; flex: 1 !important; border-left: none; background: #0B0E11; }
-                
-                /* Nút Tab */
                 .sc-mobile-tabs { display: flex; background: #12151A; border-bottom: 1px solid #1e2329; }
-                .sc-tab-btn { flex: 1; background: transparent; border: none; color: #5e6673; padding: 10px 0; font-size: 12px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s;}
+                .sc-tab-btn { flex: 1; background: transparent; border: none; color: #5e6673; padding: 8px 0; font-size: 11px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s;}
                 .sc-tab-btn.active { color: #00F0FF; border-bottom-color: #00F0FF; background: rgba(0, 240, 255, 0.05); }
                 
-                /* Quản lý nội dung Tab */
-                .sc-tab-content { display: none; padding: 10px; flex: 1; overflow-y: auto;}
+                .sc-tab-content { display: none; padding: 5px 0; flex: 1; overflow-y: auto;}
                 .sc-tab-content.active { display: flex; }
-                
-                /* Bỏ padding thừa của section trong mobile */
-                .sc-panel-section { padding: 5px 0 10px 0; border-bottom: none; margin-bottom: 10px;}
+                .sc-panel-section { padding: 5px 15px 10px 15px; border-bottom: none; margin-bottom: 5px;}
             }
         `;
         document.head.appendChild(proChartStyle);
@@ -939,13 +935,13 @@ function injectLayout() {
             <div class="sc-body">
                 <div class="sc-chart-area">
                     <div class="sc-stats-row">
-                        <div style="display: flex; align-items: baseline; gap: 10px; margin-right: 15px;">
-                            <div id="sc-live-price" class="sc-live-price" style="font-size: 28px; font-weight: 700; color: #00F0FF; line-height: 1; font-family: var(--font-num); text-shadow: 0 0 10px rgba(0,240,255,0.2);">$--</div>
-                            <div id="sc-change-24h" class="sc-change-24h" style="font-size: 14px; font-weight: 600; font-family: var(--font-num); color: #00F0FF;">--%</div>
+                        <div class="sc-price-box">
+                            <div id="sc-live-price" style="font-size: 28px; font-weight: 700; color: #00F0FF; line-height: 1; font-family: var(--font-num); text-shadow: 0 0 10px rgba(0,240,255,0.2);">$--</div>
+                            <div id="sc-change-24h" style="font-size: 14px; font-weight: 600; font-family: var(--font-num); color: #00F0FF;">--%</div>
                         </div>
                         
                         <div class="sc-metrics-compact">
-                            <div class="sc-mc-item"><span>VOL (24H)</span><strong id="sc-top-vol">$--</strong></div>
+                            <div class="sc-mc-item"><span>VOL(24H)</span><strong id="sc-top-vol">$--</strong></div>
                             <div class="sc-mc-item"><span>LIQ</span><strong id="sc-top-liq">$--</strong></div>
                             <div class="sc-mc-item"><span>MCAP</span><strong id="sc-top-mc">$--</strong></div>
                             <div class="sc-mc-item"><span>HOLD</span><strong id="sc-top-hold">--</strong></div>
@@ -1606,12 +1602,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         const rect = container.getBoundingClientRect();
         const w = rect.width > 0 ? rect.width : window.innerWidth * 0.75;
         
-        // TĂNG KHOẢNG CÁCH ĐÁY LÊN 80PX ĐỂ KHÔNG BỊ THANH HOME CỦA IPAD CHE MẤT
-        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7) - 80;
-
-        // ÉP VÙNG ĐỆM AN TOÀN CHO TOÀN BỘ PHẦN THÂN CỦA CHART
-        const scBody = document.querySelector('.sc-body');
-        if (scBody) scBody.style.paddingBottom = 'max(20px, env(safe-area-inset-bottom))';
+        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7);
 
         let priceVal = parseFloat(t.price) || 1;
         let prec = 4; minM = 0.0001;
@@ -1654,7 +1645,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 80), width: newRect.width });
+            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height), width: newRect.width });
         }).observe(container);
         
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
