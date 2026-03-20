@@ -995,10 +995,14 @@ function injectLayout() {
 
                     <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
                         <div class="sc-panel-section" style="padding-bottom: 10px;">
-            <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape Tracker</div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Lệnh đột biến (🐋🦈🐬🤖)</span><span id="sc-stat-whale-tx" style="font-family:var(--font-num); color:#F0B90B; font-weight:700;">0</span></div>
-        </div>
+                            <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape Tracker</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
+                            
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Cá Voi 🐋 (>20x)</span><span id="sc-stat-whale" style="font-family:var(--font-num); color:#F0B90B; font-weight:700;">0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Cá Mập 🦈 (>10x)</span><span id="sc-stat-shark" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Cá Heo 🐬 (>5x)</span><span id="sc-stat-dolphin" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0</span></div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Bot Sweep 🤖 (Càn quét)</span><span id="sc-stat-sweep" style="font-family:var(--font-num); color:#FF007F; font-weight:700;">0</span></div>
+                        </div>
                         <div class="sc-panel-section" style="border-bottom: none; padding-top: 10px;">
                             <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Data Flow (Realtime)</div>
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#00F0FF; font-weight:700;">+$0</span></div>
@@ -1487,9 +1491,11 @@ function connectRealtimeChart(t) {
         }
 
         if (isDolphin || isShark || isWhale || isSweep) {
-            window.scWhaleCount++;
-            let whaleEl = document.getElementById('sc-stat-whale-tx'); 
-            if (whaleEl) whaleEl.innerText = window.scWhaleCount;
+            // Tách riêng từng bộ đếm
+            if (isWhale) { window.scCWhale = (window.scCWhale||0) + 1; let el = document.getElementById('sc-stat-whale'); if(el) el.innerText = window.scCWhale; }
+            else if (isShark) { window.scCShark = (window.scCShark||0) + 1; let el = document.getElementById('sc-stat-shark'); if(el) el.innerText = window.scCShark; }
+            else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
+            else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
 
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries) {
@@ -1716,19 +1722,25 @@ function connectRealtimeChart(t) {
             }
         }
         // ---------------------------------------------------------
-        // 4. BẢN ĐỒ TƯỜNG THANH KHOẢN (LOCAL ORDER BOOK - ĐÃ FIX DELTAS)
+        // 4. BẢN ĐỒ TƯỜNG THANH KHOẢN (MÁY DÒ LỖI API)
         // ---------------------------------------------------------
-        if (data.e === 'depthUpdate' || (data.stream && data.stream.includes('@fulldepth'))) {
+        if (data.stream && data.stream.includes('@fulldepth')) {
+            
+            // MÁY DÒ LỖI: In dữ liệu thật ra Console để chúng ta bắt mạch!
+            console.log("🔥 ĐÃ NHẬN DỮ LIỆU SỔ LỆNH TỪ BINANCE!");
+            console.log("📦 Dữ liệu gốc:", data);
+            
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-            if (activeSeries) {
-                // Khởi tạo hoặc Reset Sổ lệnh cục bộ nếu đổi đồng coin khác
+            if (activeSeries && data.data) {
                 let currentSym = data.data.s || 'UNKNOWN';
                 if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
                     window.scLocalOrderBook = { sym: currentSym, asks: {}, bids: {} };
                 }
 
-                let asks = data.data.a || []; // Mảng cập nhật Bán
-                let bids = data.data.b || []; // Mảng cập nhật Mua
+                let asks = data.data.a || []; 
+                let bids = data.data.b || []; 
+                
+                console.log(`📊 Số lệnh Bán (Asks): ${asks.length} | Số lệnh Mua (Bids): ${bids.length}`);
 
                 // Lắp ráp các lệnh nhỏ lẻ (Deltas) thành Tường hoàn chỉnh
                 asks.forEach(item => {
