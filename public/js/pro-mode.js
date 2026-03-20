@@ -818,14 +818,17 @@ window.hideTooltip = function() {
 };
 
 
+// BƯỚC 1: HÀM INJECTLAYOUT CHỈ TẠO BẢNG GIÁ VÀ CÁC THÀNH PHẦN CƠ BẢN
 function injectLayout() {
-    // 1. Dọn dẹp DOM cũ để không bị nhân bản
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
+    
+    // Xóa luôn cái overlay cũ nếu còn sót lại
+    document.getElementById('super-chart-overlay')?.remove();
+
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
     
-    // 2. Tạo Tab Navigation
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
@@ -835,13 +838,101 @@ function injectLayout() {
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
 
-    // 3. Bơm CSS CỨNG CÁP CHO CHART (Khóa cứng chiều cao, không thể bị tàng hình)
+    const marketView = document.createElement('div');
+    marketView.id = 'alpha-market-view';
+    // Đảm bảo marketView luôn hiện (vì ta đã chọn tab Alpha mặc định)
+    marketView.style.display = 'block'; 
+    
+    marketView.innerHTML = `
+        <div class="alpha-container">
+            <div id="rwa-marquee-container"></div>
+            <div class="alpha-header">
+                 <div class="filter-group">
+                    <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
+                    <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
+                    <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
+                    <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
+                    <button class="filter-btn" id="btn-f-rwa" onclick="setFilter('RWA')">RWA Stocks</button>
+                    <button class="filter-btn" id="btn-f-fav" onclick="setFilter('FAV')">★ Favorites</button>
+                    <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
+                </div>
+                <div class="search-group">
+                    <i class="fas fa-search search-icon-small"></i>
+                    <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="alpha-table">
+                   <thead>
+                        <tr class="h-top">
+                            <th rowspan="2" class="text-center col-fix-1">#</th>
+                            <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
+                            <th rowspan="2" class="text-center">STATUS</th>
+                            <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort('price')">PRICE (24h%)</th>
+                            <th rowspan="2" class="text-center">CHART</th>
+                            <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
+                            <th colspan="5" class="text-center th-group-stats">MARKET STATS</th> 
+                        </tr>
+                        <tr class="h-sub">
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('market_cap')">MCAP</th>
+                            <th class="text-end cursor-pointer" onclick="window.pluginSort('holders')">HOLDERS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="market-table-body"></tbody>
+                </table>
+            </div>
+            <div class="pagination-container">
+                <div class="page-info">
+                    Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
+                </div>
+                <div class="page-controls">
+                    Rows: 
+                    <select id="rows-per-page" class="rows-selector" onchange="changeRowsPerPage()">
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <button class="page-btn" id="btn-prev" onclick="prevPage()">&lt;</button>
+                    <span id="page-num" style="margin:0 10px; font-weight:bold;">Page 1</span>
+                    <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    tabNav.insertAdjacentElement('afterend', marketView);
+
+    // Xử lý scroll header (Giữ nguyên)
+    let lastScrollY = window.scrollY;
+    window.removeEventListener('scroll', window._smartScroll);
+    window._smartScroll = function() {
+        const currentScrollY = window.scrollY;
+        const nav = document.getElementById('alpha-tab-nav');
+        if (!nav) return;
+        if (currentScrollY > lastScrollY && currentScrollY > 20) {
+            nav.classList.add('nav-hidden');
+        } else if (currentScrollY < lastScrollY) {
+            nav.classList.remove('nav-hidden');
+        }
+        lastScrollY = currentScrollY;
+    };
+    window.addEventListener('scroll', window._smartScroll, { passive: true });
+}
+// BƯỚC 2: HÀM KHỞI TẠO KHUNG BIỂU ĐỒ (Chỉ chạy khi cần)
+function ensureChartOverlayExists() {
+    // 1. BƠM CSS BỐ CỤC BINANCE + MÀU WAVE ALPHA
     if (!document.getElementById('binance-pro-chart-style')) {
         const bStyle = document.createElement('style');
         bStyle.id = 'binance-pro-chart-style';
         bStyle.innerHTML = `
             #super-chart-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0B0E11; z-index: 99999; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-            #super-chart-overlay.active { display: flex !important; }
+            #super-chart-overlay.active { display: flex; }
             
             .bn-header { display: flex; align-items: center; background: #161A1E; padding: 12px 24px; border-bottom: 1px solid #2B3139; gap: 30px; flex-shrink: 0; height: 75px; box-sizing: border-box; }
             .bn-ticker-left { display: flex; align-items: center; gap: 12px; min-width: 180px; }
@@ -910,76 +1001,11 @@ function injectLayout() {
         document.head.appendChild(bStyle);
     }
 
-    // 4. Tạo Khung Giao Diện Chính 
-    const marketView = document.createElement('div');
-    marketView.id = 'alpha-market-view';
-    // Ép hiển thị bảng chính
-    marketView.style.display = 'block'; 
-    
-    // Nối HTML (Gồm cả Bảng Main VÀ Khung Overlay Chart)
-    marketView.innerHTML = `
-        <div class="alpha-container">
-            <div id="rwa-marquee-container"></div>
-            <div class="alpha-header">
-                 <div class="filter-group">
-                    <button class="filter-btn active-all" id="btn-f-all" onclick="setFilter('ALL')">All</button>
-                    <button class="filter-btn" id="btn-f-alpha" onclick="setFilter('ALPHA')">Alpha</button>
-                    <button class="filter-btn" id="btn-f-spot" onclick="setFilter('SPOT')">Spot</button>
-                    <button class="filter-btn" id="btn-f-delist" onclick="setFilter('DELISTED')">Delisted</button>
-                    <button class="filter-btn" id="btn-f-rwa" onclick="setFilter('RWA')">RWA Stocks</button>
-                    <button class="filter-btn" id="btn-f-fav" onclick="setFilter('FAV')">★ Favorites</button>
-                    <button class="filter-btn points-btn" id="btn-f-points" onclick="togglePoints()">Points +</button>
-                </div>
-                <div class="search-group">
-                    <i class="fas fa-search search-icon-small"></i>
-                    <input type="text" id="alpha-search" placeholder="Search Token / Contract..." autocomplete="off">
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table class="alpha-table">
-                   <thead>
-                        <tr class="h-top">
-                            <th rowspan="2" class="text-center col-fix-1">#</th>
-                            <th rowspan="2" class="col-fix-2">TOKEN INFO</th>
-                            <th rowspan="2" class="text-center">STATUS</th>
-                            <th rowspan="2" class="text-center cursor-pointer" onclick="window.pluginSort('price')">PRICE (24h%)</th>
-                            <th rowspan="2" class="text-center">CHART</th>
-                            <th colspan="3" class="text-center th-group-vol">DAILY VOLUME (UTC)</th>
-                            <th colspan="5" class="text-center th-group-stats">MARKET STATS</th> 
-                        </tr>
-                        <tr class="h-sub">
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('market_cap')">MCAP</th>
-                            <th class="text-end cursor-pointer" onclick="window.pluginSort('holders')">HOLDERS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="market-table-body"></tbody>
-                </table>
-            </div>
-            <div class="pagination-container">
-                <div class="page-info">
-                    Showing <span id="page-start">0</span>-<span id="page-end">0</span> of <span id="total-tokens">0</span> tokens
-                </div>
-                <div class="page-controls">
-                    Rows: 
-                    <select id="rows-per-page" class="rows-selector" onchange="changeRowsPerPage()">
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <button class="page-btn" id="btn-prev" onclick="prevPage()">&lt;</button>
-                    <span id="page-num" style="margin:0 10px; font-weight:bold;">Page 1</span>
-                    <button class="page-btn" id="btn-next" onclick="nextPage()">&gt;</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="super-chart-overlay">
+    // 2. TẠO HTML KHUNG BIỂU ĐỒ (Nếu chưa có)
+    if (!document.getElementById('super-chart-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'super-chart-overlay';
+        overlay.innerHTML = `
             <div class="bn-header">
                 <div class="bn-ticker-left">
                     <img id="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
@@ -1037,6 +1063,7 @@ function injectLayout() {
                         <button class="bn-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
                         <button class="bn-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
                     </div>
+                    <!-- DIV CHỨA CHART (Chắc chắn có kích thước nhờ CSS) -->
                     <div id="sc-chart-container" class="bn-chart-container"></div>
                 </div>
 
@@ -1086,33 +1113,11 @@ function injectLayout() {
                     </div>
                 </div>
             </div>
-        </div>
-    `;
-    
-    tabNav.insertAdjacentElement('afterend', marketView);
-
-    // KÉO SUPER CHART OVERLAY RA NGOÀI BODY ĐỂ TRÁNH BỊ CHE HOẶC BÓP MÉO BỞI CÁC DIV KHÁC
-    const overlay = document.getElementById('super-chart-overlay');
-    if (overlay) {
+        `;
+        // GẮN TRỰC TIẾP VÀO BODY - Giải quyết vấn đề layout lộn xộn
         document.body.appendChild(overlay);
     }
-
-    let lastScrollY = window.scrollY;
-    window.removeEventListener('scroll', window._smartScroll);
-    window._smartScroll = function() {
-        const currentScrollY = window.scrollY;
-        const nav = document.getElementById('alpha-tab-nav');
-        if (!nav) return;
-        if (currentScrollY > lastScrollY && currentScrollY > 20) {
-            nav.classList.add('nav-hidden');
-        } else if (currentScrollY < lastScrollY) {
-            nav.classList.remove('nav-hidden');
-        }
-        lastScrollY = currentScrollY;
-    };
-    window.addEventListener('scroll', window._smartScroll, { passive: true });
 }
-
 window.pluginSwitchTab = (tab, instant = false) => {
     localStorage.setItem('wave_main_tab', tab);
     const alphaView = document.getElementById('alpha-market-view');
@@ -1658,45 +1663,73 @@ window.currentChartInterval = 'tick'; // Mặc định mở lên là Tick
 let tvCandleSeries = null; // Thêm biến lưu trữ chuỗi nến Nhật
 
 window.openProChart = function(t, isTimeSwitch = false) {
+    if(!t || !t.contract) return;
+    
+    // BẢO ĐẢM KHUNG OVERLAY TỒN TẠI
+    ensureChartOverlayExists();
+
+    window.currentChartToken = t;
+    if (!isTimeSwitch) { window.currentChartInterval = 'tick'; }
+
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
-
-    window.currentChartToken = t; 
+    
+    // HIỆN KHUNG LÊN TRƯỚC
     overlay.classList.add('active');
-    document.body.classList.add('overlay-active');
+    document.body.style.overflow = 'hidden';
 
-    if (!isTimeSwitch) {
-        // Bơm thông số Header
-        document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + ' / USDT';
-        document.getElementById('sc-coin-contract').innerText = t.contract ? t.contract.substring(0,10) + '...' : '';
-        document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
-        document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
-        
+    // DÙNG setTimeout ĐỂ TRÌNH DUYỆT KỊP VẼ KHUNG XONG RỒI MỚI VẼ CHART BÊN TRONG (CHỐNG LỖI HEIGHT 0)
+    setTimeout(() => {
+        // --- Code điền thông tin header ---
+        let logoEl = document.getElementById('sc-coin-logo');
+        if (logoEl) logoEl.src = t.logo || 'assets/tokens/default.png';
+        let symEl = document.getElementById('sc-coin-symbol');
+        if (symEl) symEl.innerText = `${t.symbol || '---'} / USDT`;
+        let caEl = document.getElementById('sc-coin-contract');
+        if (caEl) caEl.innerText = t.contract;
+
         let chg = parseFloat(t.change_24h) || 0;
         let chgEl = document.getElementById('sc-change-24h');
         if (chgEl) {
-            chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`;
-            chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; // Hệ màu Cyan/Pink
+            chgEl.innerText = `${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%`;
+            chgEl.className = 'bn-change-text ' + (chg >= 0 ? 'text-green' : 'text-red');
         }
 
-        // BƠM DỮ LIỆU VÀO BẢNG CHỈ SỐ VÀNG
-        document.getElementById('sc-top-mc').innerText = '$' + formatCompactNum(t.market_cap);
-        document.getElementById('sc-top-liq').innerText = '$' + formatCompactNum(t.liquidity);
-        document.getElementById('sc-top-vol').innerText = '$' + formatCompactNum(t.volume?.daily_total || 0);
-        document.getElementById('sc-top-hold').innerText = formatInt(t.holders);
-        document.getElementById('sc-top-tx').innerText = formatInt(t.tx_count);
-    }
+        let tv = parseFloat(t.volume?.daily_total || 0);
+        let mc = parseFloat(t.market_cap || 0);
+        let liq = parseFloat(t.liquidity || 0);
 
-    // Reset Chart
-    const container = document.getElementById('sc-chart-container');
-    if (tvChart) { tvChart.remove(); tvChart = null; tvLineSeries = null; tvCandleSeries = null; tvVolumeSeries = null; }
-    container.innerHTML = ''; 
+        let vEl = document.getElementById('sc-top-vol');
+        if (vEl) vEl.innerText = tv > 0 ? '$' + formatCompactUSD(tv) : '$--';
+        let mcEl = document.getElementById('sc-top-mc');
+        if (mcEl) mcEl.innerText = mc > 0 ? '$' + formatCompactUSD(mc) : '$--';
+        let liqEl = document.getElementById('sc-top-liq');
+        if (liqEl) liqEl.innerText = liq > 0 ? '$' + formatCompactUSD(liq) : '$--';
+        
+        let txEl = document.getElementById('sc-top-tx');
+        if (txEl) txEl.innerText = t.tx_count > 0 ? t.tx_count : '--';
+        let holdEl = document.getElementById('sc-top-hold');
+        if (holdEl) holdEl.innerText = t.holders > 0 ? t.holders : '--';
 
-    setTimeout(() => {
-        // Lấy đúng kích thước thật của container, không được ăn gian
+        // --- Cập nhật UI nút thời gian ---
+        document.querySelectorAll('.bn-time-btn').forEach(b => b.classList.remove('active'));
+        let activeBtn = Array.from(document.querySelectorAll('.bn-time-btn')).find(b => b.innerText.toLowerCase() === window.currentChartInterval || (window.currentChartInterval==='tick' && b.innerText==='Tick'));
+        if (activeBtn) activeBtn.classList.add('active');
+
+        // --- Bắt đầu Vẽ Biểu Đồ ---
+        const container = document.getElementById('sc-chart-container');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        if (tvChart) { tvChart.remove(); tvChart = null; }
+
+        // BÂY GIỜ CONTAINER CHẮC CHẮN ĐÃ CÓ KÍCH THƯỚC (w, h > 0)
         const w = container.clientWidth || 800;
         const h = container.clientHeight || 500;
         
+        let prec = t.price < 0.0001 ? 8 : (t.price < 0.01 ? 6 : 4);
+        let minM = 1 / Math.pow(10, prec);
+
         tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
             layout: { background: { type: 'solid', color: '#0B0E11' }, textColor: '#848e9c', fontSize: 11 },
@@ -1707,7 +1740,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
         });
 
-        // Màu sắc Cyan / Pink cho Wave Alpha
+        // Màu Cyan/Pink
         if (window.currentChartInterval === 'tick') {
             tvLineSeries = tvChart.addAreaSeries({
                 lineColor: '#00F0FF', topColor: 'rgba(0, 240, 255, 0.3)', bottomColor: 'rgba(0, 240, 255, 0.0)', lineWidth: 2, 
@@ -1715,7 +1748,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             });
         } else {
             tvCandleSeries = tvChart.addCandlestickSeries({
-                upColor: '#00F0FF', downColor: '#FF007F', 
+                upColor: '#00F0FF', downColor: '#FF007F',
                 borderDownColor: '#FF007F', borderUpColor: '#00F0FF',
                 wickDownColor: '#FF007F', wickUpColor: '#00F0FF',
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
@@ -1727,7 +1760,6 @@ window.openProChart = function(t, isTimeSwitch = false) {
         });
         tvChart.priceScale('vol_scale').applyOptions({ scaleMargins: { top: 0.7, bottom: 0 }, visible: false });
 
-        // Tự động resize vừa khít mà không đẩy khung
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
@@ -1735,26 +1767,31 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 tvChart.applyOptions({ width: newRect.width, height: newRect.height });
             }
         }).observe(container);
+
+        // --- Reset Data cũ ---
+        if (chartWs) { chartWs.close(); chartWs = null; }
+        document.getElementById('sc-live-trades').innerHTML = '<div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>';
         
-        // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
-        fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-            if (histData.length > 0) {
-                if (window.currentChartInterval === 'tick' && tvLineSeries) {
-                    tvLineSeries.setData(histData);
-                    let volData = histData.map(d => ({ time: d.time, value: 0, color: 'rgba(0,0,0,0)' }));
-                    if (tvVolumeSeries) tvVolumeSeries.setData(volData);
-                } else if (tvCandleSeries) {
-                    let candleData = histData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
-                    let volData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
-                    tvCandleSeries.setData(candleData);
-                    if (tvVolumeSeries) tvVolumeSeries.setData(volData);
-                }
-            }
-            // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
-            if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
-        });
-        // KẾT THÚC
-    }, 100); 
+        window.scNetFlow = 0;
+        window.scWhaleCount = 0;
+        window.scAvgTicket = 0;
+        window.scTotalTrades = 0;
+        window.scTotalVol = 0;
+        window.scLastTradeTime = Date.now();
+        window._matchSpeedInterval = setInterval(() => {
+            let spdEl = document.getElementById('sc-stat-match-speed');
+            if(spdEl) spdEl.innerText = '$0 /s';
+        }, 2000);
+        
+        // --- Tải dữ liệu ---
+        if (window.currentChartInterval === 'tick') {
+            fetchBinanceHistory(t, '1s', 60); 
+            connectRealtimeChart(t);
+        } else {
+            fetchBinanceHistory(t, window.currentChartInterval, 100);
+            connectRealtimeChart(t);
+        }
+    }, 50); // Cho trình duyệt 50ms để vẽ layout xong
 };
 
 // Hàm xử lý Click đổi khung giờ
