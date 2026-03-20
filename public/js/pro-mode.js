@@ -1512,10 +1512,14 @@ function connectRealtimeChart(t) {
     let contract = t.contract;
     let chainId = t.chainId || t.chain_id || 56;
     
+    // Thêm luồng Sổ lệnh 500ms vào danh sách đăng ký
+    let depthStream = rawId ? `alpha_${rawId}usdt@fulldepth@500ms` : `${sysSymbol}@fulldepth@500ms`;
     let params = [
         rawId ? `alpha_${rawId}usdt@aggTrade` : `${sysSymbol}@aggTrade`,
-        'came@allTokens@ticker24'
+        'came@allTokens@ticker24',
+        depthStream
     ];
+    window.scActivePriceLines = []; // Khởi tạo mảng chứa các Vạch Laser thanh khoản
     
     if (window.currentChartInterval !== 'tick') {
         if (contract) params.push(`came@${contract}@${chainId}@kline_${window.currentChartInterval}`);
@@ -1711,6 +1715,63 @@ function connectRealtimeChart(t) {
                 }
             }
         }
+        // ---------------------------------------------------------
+        // 4. BẢN ĐỒ TƯỜNG THANH KHOẢN (DYNAMIC LIQUIDITY WALLS)
+        // ---------------------------------------------------------
+        if (data.e === 'depthUpdate' || (data.stream && data.stream.includes('@fulldepth'))) {
+            let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+            if (activeSeries) {
+                let asks = data.data.a || []; // Sổ lệnh Bán (Kháng cự)
+                let bids = data.data.b || []; // Sổ lệnh Mua (Hỗ trợ)
+                
+                // Ngưỡng Tường cứng: Lớn hơn 10 lần Ticket Trung bình VÀ tối thiểu $10,000
+                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
+                let wallThreshold = Math.max(10000, currentAvgTicket * 10);
+
+                // Hàm lọc tìm Cá Voi đang kê lệnh
+                const processWalls = (orderArray, isAsk) => {
+                    let walls = [];
+                    for (let i = 0; i < orderArray.length; i++) {
+                        let p = parseFloat(orderArray[i][0]);
+                        let q = parseFloat(orderArray[i][1]);
+                        let valUSD = p * q;
+                        if (valUSD >= wallThreshold) walls.push({ p: p, v: valUSD, isAsk: isAsk });
+                    }
+                    walls.sort((a, b) => b.v - a.v);
+                    return walls.slice(0, 5); // Chỉ lấy 5 bức tường to nhất mỗi bên để Chart không bị rối
+                };
+
+                let newWalls = [...processWalls(asks, true), ...processWalls(bids, false)];
+
+                // Xóa các Vạch Laser cũ của 500ms trước
+                if (window.scActivePriceLines && window.scActivePriceLines.length > 0) {
+                    window.scActivePriceLines.forEach(line => {
+                        try { activeSeries.removePriceLine(line); } catch(e) {}
+                    });
+                }
+                window.scActivePriceLines = [];
+
+                // Bắn Vạch Laser mới lên Chart
+                newWalls.forEach(wall => {
+                    // Tường càng nhiều tiền, Vạch laser càng dày
+                    let thickness = 1;
+                    if (wall.v > wallThreshold * 5) thickness = 4; // Tường siêu to khổng lồ
+                    else if (wall.v > wallThreshold * 3) thickness = 3;
+                    else if (wall.v > wallThreshold * 2) thickness = 2;
+
+                    let priceLine = activeSeries.createPriceLine({
+                        price: wall.p,
+                        color: wall.isAsk ? '#FF007F' : '#00F0FF', // Bán thì Pink, Mua thì Cyan
+                        lineWidth: thickness,
+                        lineStyle: 0, // Nét liền (Solid)
+                        axisLabelVisible: true,
+                        title: formatCompactUSD(wall.v) // Hiện số tiền (Ví dụ: 120K) ở rìa trục giá
+                    });
+                    window.scActivePriceLines.push(priceLine);
+                });
+            }
+        }
+        // ---------------------------------------------------------
         // LỆNH LIVE & LOGIC CÁ MẬP (SMART TAPE AGGREGATION)
         if (data.stream.endsWith('@aggTrade')) {
             let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
