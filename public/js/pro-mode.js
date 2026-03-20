@@ -1664,19 +1664,33 @@ function connectRealtimeChart(t) {
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
             }
 
+            // --- LOGIC PHÂN CẤP SINH HỌC (HYBRID ALGO) ---
+            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
+            
+            let isWhale   = valUSD >= (currentAvgTicket * 20) && valUSD >= 10000;
+            let isShark   = valUSD >= (currentAvgTicket * 10) && valUSD >= 5000;
+            let isDolphin = valUSD >= (currentAvgTicket * 5)  && valUSD >= 2000;
+
+            let icon = '';
+            let fontWeight = 'normal';
+            if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
+            else if (isShark) { icon = '🦈 '; fontWeight = '700'; }
+            else if (isDolphin) { icon = '🐬 '; fontWeight = '600'; }
+
             if (tradesBox) {
                 let row = document.createElement('div');
-                row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${isUp ? 'rgba(0,240,255,0.1)' : 'rgba(255,0,127,0.1)'}; transition:0.4s;`;
-                row.innerHTML = `<span style="color:${color}">${formatPrice(p)}</span><span style="color:#eaecef">$${formatCompactUSD(valUSD)}</span><span style="color:#5e6673">${new Date(data.data.T).toLocaleTimeString('en-GB',{hour12:false})}</span>`;
+                let bgAlpha = icon !== '' ? '0.25' : '0.1';
+                row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${isUp ? `rgba(0,240,255,${bgAlpha})` : `rgba(255,0,127,${bgAlpha})`}; transition:0.4s; font-weight:${fontWeight};`;
+                
+                row.innerHTML = `<span style="color:${color}">${formatPrice(p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(valUSD)}</span><span style="color:#5e6673">${new Date(data.data.T).toLocaleTimeString('en-GB',{hour12:false})}</span>`;
                 tradesBox.insertBefore(row, tradesBox.firstChild);
+                
                 setTimeout(() => row.style.background = 'transparent', 400);
                 if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
             }
 
-            // GHI NHẬN CÁ MẬP & IN MARKER LÊN NẾN
-            // [FIXED] GHI NHẬN CÁ MẬP & GẮN ICON VÀO CHART
-            // [FIXED] GHI NHẬN CÁ MẬP & GẮN ICON VÀO CHART (HỖ TRỢ CẢ TICK VÀ NẾN)
-            if (valUSD > 5000) {
+            
+            if (isDolphin || isShark || isWhale) {
                 window.scWhaleCount++;
                 let whaleEl = document.getElementById('sc-stat-whale-tx'); 
                 if (whaleEl) whaleEl.innerText = window.scWhaleCount;
@@ -1688,7 +1702,7 @@ function connectRealtimeChart(t) {
                         position: isUp ? 'belowBar' : 'aboveBar', 
                         color: isUp ? '#00F0FF' : '#FF007F', 
                         shape: isUp ? 'arrowUp' : 'arrowDown',
-                        text: '🐋 $' + formatCompactUSD(valUSD) 
+                        text: `${icon}$${formatCompactUSD(valUSD)}` 
                     });
                     
                     if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
