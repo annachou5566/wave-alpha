@@ -1938,7 +1938,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             if (histData.length > 0) {
                 if (window.currentChartInterval === 'tick' && tvLineSeries) {
                     tvLineSeries.setData(histData);
-                    let volData = histData.map(d => ({ time: d.time, value: 0, color: 'rgba(0,0,0,0)' }));
+                    let volData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
                     if (tvVolumeSeries) tvVolumeSeries.setData(volData);
                 } else if (tvCandleSeries) {
                     let candleData = histData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
