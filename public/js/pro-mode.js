@@ -818,30 +818,28 @@ window.hideTooltip = function() {
 };
 
 
-// BƯỚC 1: HÀM INJECTLAYOUT CHỈ TẠO BẢNG GIÁ VÀ CÁC THÀNH PHẦN CƠ BẢN
+// =======================================================
+// GIAO DIỆN VÀ LOGIC CHÍNH
+// =======================================================
+
 function injectLayout() {
     document.getElementById('alpha-tab-nav')?.remove();
     document.getElementById('alpha-market-view')?.remove();
-    
-    // Xóa luôn cái overlay cũ nếu còn sót lại
-    document.getElementById('super-chart-overlay')?.remove();
-
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
     
     const tabNav = document.createElement('div');
     tabNav.id = 'alpha-tab-nav';
     tabNav.innerHTML = `
-        <button id="btn-tab-alpha" class="tab-btn active" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
+        <button id="btn-tab-alpha" class="tab-btn" onclick="window.pluginSwitchTab('alpha')">ALPHA MARKET</button>
         <button id="btn-tab-competition" class="tab-btn" onclick="window.pluginSwitchTab('competition')">COMPETITION</button>
         <button id="btn-tab-sonar" class="tab-btn" onclick="window.pluginSwitchTab('sonar')">SONAR GALAXY</button>
     `;
     navbar.insertAdjacentElement('afterend', tabNav);
-
+    
     const marketView = document.createElement('div');
     marketView.id = 'alpha-market-view';
-    // Đảm bảo marketView luôn hiện (vì ta đã chọn tab Alpha mặc định)
-    marketView.style.display = 'block'; 
+    marketView.style.display = 'none';
     
     marketView.innerHTML = `
         <div class="alpha-container">
@@ -877,6 +875,7 @@ function injectLayout() {
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
+                            
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
@@ -904,11 +903,92 @@ function injectLayout() {
                 </div>
             </div>
         </div>
+
+        <div id="super-chart-overlay">
+            <div class="sc-header" style="background: #111418; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="sc-header-top" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div class="sc-coin-title" style="display: flex; align-items: center; gap: 10px;">
+                        <img id="sc-coin-logo" style="width: 26px; height: 26px; border-radius: 50%; border: 1px solid #333;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
+                        <span id="sc-coin-symbol" style="font-size: 20px; font-weight: 800; color: #eaecef;">--- / USDT</span>
+                        <span id="sc-coin-contract" style="background: #1e2329; color: #848e9c; font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: 1px solid #2b3139; font-family: var(--font-num);" onclick="window.pluginCopy(this.innerText)">---</span>
+                    </div>
+                    <button class="sc-close-btn" style="background: rgba(255,255,255,0.08); border: none; color: #eaecef; font-size: 16px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;" onclick="window.closeProChart()">✕</button>
+                </div>
+
+                <div class="sc-header-main" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="sc-price-box" style="display: flex; align-items: baseline; gap: 12px; padding-right: 20px;">
+                        <div id="sc-live-price" class="sc-live-price" style="font-size: 32px; font-weight: 700; color: #0ecb81; line-height: 1; font-family: var(--font-num);">$--</div>
+                        <div id="sc-change-24h" class="sc-change-24h" style="font-size: 16px; font-weight: 600; font-family: var(--font-num); color: #0ecb81;">--%</div>
+                    </div>
+                    
+                    <div class="sc-metrics-ribbon" style="display: flex; gap: 25px; flex: 1; justify-content: flex-end;">
+                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">24H VOL</span>
+                            <span id="sc-top-vol" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        </div>
+                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">LIQUIDITY</span>
+                            <span id="sc-top-liq" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        </div>
+                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">MARKET CAP</span>
+                            <span id="sc-top-mc" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">$--</span>
+                        </div>
+                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">HOLDERS</span>
+                            <span id="sc-top-hold" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
+                        </div>
+                        <div class="sc-metric-col" style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span style="font-size: 11px; color: #848e9c; font-weight: 500; margin-bottom: 4px;">TXs</span>
+                            <span id="sc-top-tx" style="font-size: 14px; color: #eaecef; font-weight: 700; font-family: var(--font-num);">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sc-body">
+                <div class="sc-chart-main" style="position:relative; display:flex; flex-direction:column;">
+                    <div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick (Live)</button>
+                        <span style="color:#444; margin:0 4px;">|</span>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('5m', this)">5m</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('15m', this)">15m</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
+                        <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
+                    </div>
+                    <div id="sc-chart-container" style="flex:1;"></div>
+                </div>
+                
+                <div class="sc-side-panel">
+                    <div class="sc-panel-section" style="margin-bottom: 15px;">
+                        <div class="sc-panel-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B90B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Whale Tracker</div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Ticket trung bình</span><span id="sc-stat-avg-ticket" class="sc-metric-value">$0</span></div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Số lệnh lớn (>$5k)</span><span id="sc-stat-whale-tx" class="sc-metric-value">0</span></div>
+                    </div>
+                    <div class="sc-panel-section" style="margin-bottom: 15px;">
+                        <div class="sc-panel-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Flow & Speed</div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Dòng tiền Net</span><span id="sc-stat-net-flow" class="sc-metric-value" style="color:#00F0FF;">+$0</span></div>
+                        <div class="sc-metric-item"><span class="sc-metric-label">Tốc độ khớp / s</span><span id="sc-stat-match-speed" class="sc-metric-value">$0 /s</span></div>
+                    </div>
+                    <div class="sc-panel-section" style="flex:1; display:flex; flex-direction:column; overflow:hidden; margin-bottom:0;">
+                        <div class="sc-panel-title" style="border-top:1px solid #2b3139; padding-top:15px; margin-bottom:10px;"><i class="fas fa-bolt" style="color:#F0B90B"></i> LIVE TRADES</div>
+                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; margin-bottom:5px; font-weight:700;"><span>GIÁ</span><span>KL ($)</span><span>TIME</span></div>
+                        <div id="sc-live-trades" style="flex:1; overflow-y:auto; font-size:11px; font-family:var(--font-num);">
+                            <div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
     
     tabNav.insertAdjacentElement('afterend', marketView);
 
-    // Xử lý scroll header (Giữ nguyên)
+    document.body.appendChild(document.getElementById('super-chart-overlay'));
+
     let lastScrollY = window.scrollY;
     window.removeEventListener('scroll', window._smartScroll);
     window._smartScroll = function() {
@@ -924,200 +1004,7 @@ function injectLayout() {
     };
     window.addEventListener('scroll', window._smartScroll, { passive: true });
 }
-// BƯỚC 2: HÀM KHỞI TẠO KHUNG BIỂU ĐỒ (Chỉ chạy khi cần)
-function ensureChartOverlayExists() {
-    // 1. BƠM CSS BỐ CỤC BINANCE + MÀU WAVE ALPHA
-    if (!document.getElementById('binance-pro-chart-style')) {
-        const bStyle = document.createElement('style');
-        bStyle.id = 'binance-pro-chart-style';
-        bStyle.innerHTML = `
-            #super-chart-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0B0E11; z-index: 99999; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-            #super-chart-overlay.active { display: flex; }
-            
-            .bn-header { display: flex; align-items: center; background: #161A1E; padding: 12px 24px; border-bottom: 1px solid #2B3139; gap: 30px; flex-shrink: 0; height: 75px; box-sizing: border-box; }
-            .bn-ticker-left { display: flex; align-items: center; gap: 12px; min-width: 180px; }
-            .bn-ticker-left img { width: 32px; height: 32px; border-radius: 50%; }
-            .bn-symbol-wrapper h1 { margin: 0; font-size: 20px; color: #EAECEF; font-weight: 600; line-height: 1.2; }
-            .bn-symbol-wrapper span { font-size: 12px; color: #848E9C; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-            .bn-symbol-wrapper span:hover { color: #F0B90B; }
-            .bn-ticker-price { display: flex; flex-direction: column; justify-content: center; min-width: 120px; }
-            .bn-price-text { font-size: 20px; font-weight: 600; line-height: 1.2; font-family: var(--font-num); }
-            .bn-change-text { font-size: 13px; font-weight: 500; font-family: var(--font-num); margin-top: 2px;}
-            
-            /* Màu Cyan / Pink đặc trưng Wave Alpha */
-            .text-green { color: #00F0FF !important; text-shadow: 0 0 10px rgba(0,240,255,0.2); }
-            .text-red { color: #FF007F !important; text-shadow: 0 0 10px rgba(255,0,127,0.2); }
-            
-            .bn-ticker-stats { display: flex; gap: 30px; flex: 1; justify-content: flex-end; padding-right: 20px; }
-            .bn-stat-item { display: flex; flex-direction: column; justify-content: center; }
-            .bn-stat-label { font-size: 11px; color: #848E9C; margin-bottom: 2px; white-space: nowrap; }
-            .bn-stat-value { font-size: 13px; color: #EAECEF; font-weight: 500; font-family: var(--font-num); }
-            .bn-header-actions { margin-left: auto; border-left: 1px solid #2B3139; padding-left: 20px; height: 100%; display: flex; align-items: center; }
-            .bn-close-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; padding: 8px; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-            .bn-close-btn:hover { background: #2B3139; color: #EAECEF; }
-            
-            .bn-body { display: flex; flex: 1; overflow: hidden; background: #0B0E11; width: 100vw; height: calc(100vh - 75px); }
-            .bn-chart-section { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #2B3139; min-width: 0; overflow: hidden; }
-            
-            .bn-toolbar { display: flex; align-items: center; padding: 8px 16px; background: #161A1E; border-bottom: 1px solid #2B3139; gap: 4px; flex-shrink: 0; height: 48px; box-sizing: border-box; }
-            .bn-time-btn { background: transparent; border: none; color: #848E9C; font-size: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: 500; }
-            .bn-time-btn:hover { color: #EAECEF; }
-            .bn-time-btn.active { color: #00F0FF; background: rgba(0,240,255,0.1); }
-            .bn-divider { width: 1px; height: 14px; background: #2B3139; margin: 0 8px; }
-            
-            /* KHÓA CỨNG CHIỀU CAO CHO CHART ĐỂ KHÔNG BỊ TÀNG HÌNH */
-            .bn-chart-container { flex: 1; width: 100%; height: 100%; min-height: 400px; position: relative; overflow: hidden; display: block; }
-            
-            .bn-side-panel { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; background: #161A1E; overflow: hidden; }
-            .bn-panel-header { font-size: 13px; font-weight: 600; color: #EAECEF; padding: 12px 16px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-            .bn-trades-table { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 150px; }
-            .bn-trades-head { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 11px; color: #848E9C; flex-shrink: 0; }
-            .bn-trades-head span { flex: 1; }
-            .text-left { text-align: left; }
-            .text-right { text-align: right; }
-            .bn-trades-body { flex: 1; overflow-y: auto; padding: 0 10px; }
-            .bn-trades-body::-webkit-scrollbar { width: 4px; }
-            .bn-trades-body::-webkit-scrollbar-thumb { background: #2B3139; border-radius: 4px; }
-            .bn-trade-row { display: flex; justify-content: space-between; padding: 4px 6px; margin-bottom: 2px; font-size: 12px; font-family: var(--font-num); cursor: pointer; border-radius: 2px; }
-            .bn-trade-row:hover { background: rgba(255,255,255,0.05) !important; }
-            .bn-trade-row span { flex: 1; }
-            
-            .bn-analytics-grid { padding: 0 16px 12px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
-            .bn-stat-row { display: flex; justify-content: space-between; align-items: center; }
-            .bn-stat-label { font-size: 12px; color: #848E9C; }
-            .bn-stat-val { font-size: 13px; font-weight: 500; color: #EAECEF; font-family: var(--font-num); }
-            
-            @media (max-width: 991px) {
-                .bn-header { flex-direction: column; align-items: flex-start; padding: 16px; gap: 16px; height: auto; }
-                .bn-header-actions { position: absolute; top: 16px; right: 16px; border: none; }
-                .bn-ticker-stats { width: 100%; overflow-x: auto; padding-bottom: 8px; justify-content: flex-start; }
-                .hide-mobile { display: none; }
-                .bn-body { flex-direction: column; overflow-y: auto; height: auto; }
-                .bn-chart-section { height: 50vh; flex: none; border-right: none; border-bottom: 4px solid #0B0E11; }
-                .bn-side-panel { width: 100%; height: auto; flex-shrink: 1; }
-                .bn-trades-table { height: 350px; flex: none; }
-            }
-        `;
-        document.head.appendChild(bStyle);
-    }
 
-    // 2. TẠO HTML KHUNG BIỂU ĐỒ (Nếu chưa có)
-    if (!document.getElementById('super-chart-overlay')) {
-        const overlay = document.createElement('div');
-        overlay.id = 'super-chart-overlay';
-        overlay.innerHTML = `
-            <div class="bn-header">
-                <div class="bn-ticker-left">
-                    <img id="sc-coin-logo" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
-                    <div class="bn-symbol-wrapper">
-                        <h1 id="sc-coin-symbol">--- / USDT</h1>
-                        <span id="sc-coin-contract" onclick="window.pluginCopy(this.innerText)">---</span>
-                    </div>
-                </div>
-                
-                <div class="bn-ticker-price">
-                    <div id="sc-live-price" class="bn-price-text text-green">$--</div>
-                    <div id="sc-change-24h" class="bn-change-text text-green">--%</div>
-                </div>
-                
-                <div class="bn-ticker-stats">
-                    <div class="bn-stat-item">
-                        <div class="bn-stat-label">24h Vol (USD)</div>
-                        <div id="sc-top-vol" class="bn-stat-value">$--</div>
-                    </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">Market Cap</div>
-                        <div id="sc-top-mc" class="bn-stat-value">$--</div>
-                    </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">Liquidity</div>
-                        <div id="sc-top-liq" class="bn-stat-value">$--</div>
-                    </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">Holders</div>
-                        <div id="sc-top-hold" class="bn-stat-value">--</div>
-                    </div>
-                    <div class="bn-stat-item hide-mobile">
-                        <div class="bn-stat-label">TXs</div>
-                        <div id="sc-top-tx" class="bn-stat-value">--</div>
-                    </div>
-                </div>
-                
-                <div class="bn-header-actions">
-                    <button class="bn-close-btn" onclick="window.closeProChart()">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="bn-body">
-                <div class="bn-chart-section">
-                    <div class="bn-toolbar">
-                        <button class="bn-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick</button>
-                        <span class="bn-divider"></span>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('5m', this)">5m</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('15m', this)">15m</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
-                        <button class="bn-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
-                    </div>
-                    <!-- DIV CHỨA CHART (Chắc chắn có kích thước nhờ CSS) -->
-                    <div id="sc-chart-container" class="bn-chart-container"></div>
-                </div>
-
-                <div class="bn-side-panel">
-                    <div class="bn-panel-header" style="border-bottom: 1px solid #2B3139; padding-bottom: 10px; margin-bottom: 10px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F0B90B" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                        Whale Tracker
-                    </div>
-                    <div class="bn-analytics-grid">
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Ticket trung bình</span>
-                            <span id="sc-stat-avg-ticket" class="bn-stat-val">$0</span>
-                        </div>
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Số lệnh lớn (>$5k)</span>
-                            <span id="sc-stat-whale-tx" class="bn-stat-val">0</span>
-                        </div>
-                    </div>
-
-                    <div class="bn-panel-header" style="border-top: 1px solid #2B3139; border-bottom: 1px solid #2B3139; padding-top: 12px; padding-bottom: 10px; margin-bottom: 10px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                        Flow & Speed
-                    </div>
-                    <div class="bn-analytics-grid">
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Dòng tiền Net</span>
-                            <span id="sc-stat-net-flow" class="bn-stat-val text-green">+$0</span>
-                        </div>
-                        <div class="bn-stat-row">
-                            <span class="bn-stat-label">Tốc độ khớp / s</span>
-                            <span id="sc-stat-match-speed" class="bn-stat-val">$0 /s</span>
-                        </div>
-                    </div>
-
-                    <div class="bn-panel-header" style="border-top: 1px solid #2B3139; margin-bottom: 0; padding-top: 12px;">
-                        <i class="fas fa-bolt" style="color:#F0B90B; margin-right: 6px;"></i> LIVE TRADES
-                    </div>
-                    <div class="bn-trades-table">
-                        <div class="bn-trades-head">
-                            <span class="text-left">Price(USD)</span>
-                            <span class="text-right">Vol(USD)</span>
-                            <span class="text-right">Time</span>
-                        </div>
-                        <div id="sc-live-trades" class="bn-trades-body">
-                            <div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        // GẮN TRỰC TIẾP VÀO BODY - Giải quyết vấn đề layout lộn xộn
-        document.body.appendChild(overlay);
-    }
-}
 window.pluginSwitchTab = (tab, instant = false) => {
     localStorage.setItem('wave_main_tab', tab);
     const alphaView = document.getElementById('alpha-market-view');
@@ -1663,98 +1550,84 @@ window.currentChartInterval = 'tick'; // Mặc định mở lên là Tick
 let tvCandleSeries = null; // Thêm biến lưu trữ chuỗi nến Nhật
 
 window.openProChart = function(t, isTimeSwitch = false) {
-    if(!t || !t.contract) return;
-    
-    // BẢO ĐẢM KHUNG OVERLAY TỒN TẠI
-    ensureChartOverlayExists();
-
-    window.currentChartToken = t;
-    if (!isTimeSwitch) { window.currentChartInterval = 'tick'; }
-
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
-    
-    // HIỆN KHUNG LÊN TRƯỚC
+
+    window.currentChartToken = t; 
     overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('overlay-active');
 
-    // DÙNG setTimeout ĐỂ TRÌNH DUYỆT KỊP VẼ KHUNG XONG RỒI MỚI VẼ CHART BÊN TRONG (CHỐNG LỖI HEIGHT 0)
-    setTimeout(() => {
-        // --- Code điền thông tin header ---
-        let logoEl = document.getElementById('sc-coin-logo');
-        if (logoEl) logoEl.src = t.logo || 'assets/tokens/default.png';
-        let symEl = document.getElementById('sc-coin-symbol');
-        if (symEl) symEl.innerText = `${t.symbol || '---'} / USDT`;
-        let caEl = document.getElementById('sc-coin-contract');
-        if (caEl) caEl.innerText = t.contract;
-
+    if (!isTimeSwitch) {
+        // Bơm thông số Header
+        document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + ' / USDT';
+        document.getElementById('sc-coin-contract').innerText = t.contract ? t.contract.substring(0,10) + '...' : '';
+        document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
+        document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
+        
         let chg = parseFloat(t.change_24h) || 0;
         let chgEl = document.getElementById('sc-change-24h');
         if (chgEl) {
-            chgEl.innerText = `${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%`;
-            chgEl.className = 'bn-change-text ' + (chg >= 0 ? 'text-green' : 'text-red');
+            chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`;
+            chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; // Hệ màu Cyan/Pink
         }
 
-        let tv = parseFloat(t.volume?.daily_total || 0);
-        let mc = parseFloat(t.market_cap || 0);
-        let liq = parseFloat(t.liquidity || 0);
+        // BƠM DỮ LIỆU VÀO BẢNG CHỈ SỐ VÀNG
+        document.getElementById('sc-top-mc').innerText = '$' + formatCompactNum(t.market_cap);
+        document.getElementById('sc-top-liq').innerText = '$' + formatCompactNum(t.liquidity);
+        document.getElementById('sc-top-vol').innerText = '$' + formatCompactNum(t.volume?.daily_total || 0);
+        document.getElementById('sc-top-hold').innerText = formatInt(t.holders);
+        document.getElementById('sc-top-tx').innerText = formatInt(t.tx_count);
+    }
 
-        let vEl = document.getElementById('sc-top-vol');
-        if (vEl) vEl.innerText = tv > 0 ? '$' + formatCompactUSD(tv) : '$--';
-        let mcEl = document.getElementById('sc-top-mc');
-        if (mcEl) mcEl.innerText = mc > 0 ? '$' + formatCompactUSD(mc) : '$--';
-        let liqEl = document.getElementById('sc-top-liq');
-        if (liqEl) liqEl.innerText = liq > 0 ? '$' + formatCompactUSD(liq) : '$--';
+    // Reset Chart
+    const container = document.getElementById('sc-chart-container');
+    if (tvChart) { tvChart.remove(); tvChart = null; tvLineSeries = null; tvCandleSeries = null; tvVolumeSeries = null; }
+    container.innerHTML = ''; 
+
+    setTimeout(() => {
+        const rect = container.getBoundingClientRect();
+        const w = rect.width > 0 ? rect.width : window.innerWidth * 0.75;
         
-        let txEl = document.getElementById('sc-top-tx');
-        if (txEl) txEl.innerText = t.tx_count > 0 ? t.tx_count : '--';
-        let holdEl = document.getElementById('sc-top-hold');
-        if (holdEl) holdEl.innerText = t.holders > 0 ? t.holders : '--';
+        // TĂNG KHOẢNG CÁCH ĐÁY LÊN 80PX ĐỂ KHÔNG BỊ THANH HOME CỦA IPAD CHE MẤT
+        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7) - 80;
 
-        // --- Cập nhật UI nút thời gian ---
-        document.querySelectorAll('.bn-time-btn').forEach(b => b.classList.remove('active'));
-        let activeBtn = Array.from(document.querySelectorAll('.bn-time-btn')).find(b => b.innerText.toLowerCase() === window.currentChartInterval || (window.currentChartInterval==='tick' && b.innerText==='Tick'));
-        if (activeBtn) activeBtn.classList.add('active');
+        // ÉP VÙNG ĐỆM AN TOÀN CHO TOÀN BỘ PHẦN THÂN CỦA CHART
+        const scBody = document.querySelector('.sc-body');
+        if (scBody) scBody.style.paddingBottom = 'max(20px, env(safe-area-inset-bottom))';
 
-        // --- Bắt đầu Vẽ Biểu Đồ ---
-        const container = document.getElementById('sc-chart-container');
-        if (!container) return;
-        
-        container.innerHTML = '';
-        if (tvChart) { tvChart.remove(); tvChart = null; }
-
-        // BÂY GIỜ CONTAINER CHẮC CHẮN ĐÃ CÓ KÍCH THƯỚC (w, h > 0)
-        const w = container.clientWidth || 800;
-        const h = container.clientHeight || 500;
-        
-        let prec = t.price < 0.0001 ? 8 : (t.price < 0.01 ? 6 : 4);
-        let minM = 1 / Math.pow(10, prec);
+        let priceVal = parseFloat(t.price) || 1;
+        let prec = 4; minM = 0.0001;
+        if (priceVal < 0.001) { prec = 6; minM = 0.000001; }
+        if (priceVal < 0.00001) { prec = 8; minM = 0.00000001; }
 
         tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
-            layout: { background: { type: 'solid', color: '#0B0E11' }, textColor: '#848e9c', fontSize: 11 },
+            layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
             watermark: { color: 'rgba(255, 255, 255, 0.02)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
-            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, 
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#F0B90B'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#F0B90B'} },
+            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, // Đứt nét mờ
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'} },
             timeScale: { borderColor: 'rgba(43, 49, 57, 0.5)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
             rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
         });
 
-        // Màu Cyan/Pink
+        // NẾU LÀ TICK -> VẼ AREA CHART (MẢNG MÀU)
         if (window.currentChartInterval === 'tick') {
             tvLineSeries = tvChart.addAreaSeries({
                 lineColor: '#00F0FF', topColor: 'rgba(0, 240, 255, 0.3)', bottomColor: 'rgba(0, 240, 255, 0.0)', lineWidth: 2, 
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
-        } else {
+        } 
+        // NẾU LÀ KHUNG THỜI GIAN -> VẼ NẾN NHẬT (CANDLESTICKS)
+        else {
             tvCandleSeries = tvChart.addCandlestickSeries({
-                upColor: '#00F0FF', downColor: '#FF007F',
+                upColor: '#00F0FF', downColor: '#FF007F', // CYAN / PINK THẦN THÁNH
                 borderDownColor: '#FF007F', borderUpColor: '#00F0FF',
                 wickDownColor: '#FF007F', wickUpColor: '#00F0FF',
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
         }
 
+        // TRỤC VOLUME XÀI CHUNG HỆ MÀU
         tvVolumeSeries = tvChart.addHistogramSeries({
             priceFormat: { type: 'volume' }, priceScaleId: 'vol_scale' 
         });
@@ -1763,35 +1636,28 @@ window.openProChart = function(t, isTimeSwitch = false) {
         new ResizeObserver(entries => {
             if (entries.length === 0 || entries[0].target !== container) return;
             const newRect = entries[0].contentRect;
-            if (newRect.width > 0 && newRect.height > 0) {
-                tvChart.applyOptions({ width: newRect.width, height: newRect.height });
-            }
+            if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 80), width: newRect.width });
         }).observe(container);
-
-        // --- Reset Data cũ ---
-        if (chartWs) { chartWs.close(); chartWs = null; }
-        document.getElementById('sc-live-trades').innerHTML = '<div style="text-align:center; margin-top:10px; color:#5e6673; font-style:italic;">Connecting...</div>';
         
-        window.scNetFlow = 0;
-        window.scWhaleCount = 0;
-        window.scAvgTicket = 0;
-        window.scTotalTrades = 0;
-        window.scTotalVol = 0;
-        window.scLastTradeTime = Date.now();
-        window._matchSpeedInterval = setInterval(() => {
-            let spdEl = document.getElementById('sc-stat-match-speed');
-            if(spdEl) spdEl.innerText = '$0 /s';
-        }, 2000);
-        
-        // --- Tải dữ liệu ---
-        if (window.currentChartInterval === 'tick') {
-            fetchBinanceHistory(t, '1s', 60); 
-            connectRealtimeChart(t);
-        } else {
-            fetchBinanceHistory(t, window.currentChartInterval, 100);
-            connectRealtimeChart(t);
-        }
-    }, 50); // Cho trình duyệt 50ms để vẽ layout xong
+        // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
+        fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
+            if (histData.length > 0) {
+                if (window.currentChartInterval === 'tick' && tvLineSeries) {
+                    tvLineSeries.setData(histData);
+                    let volData = histData.map(d => ({ time: d.time, value: 0, color: 'rgba(0,0,0,0)' }));
+                    if (tvVolumeSeries) tvVolumeSeries.setData(volData);
+                } else if (tvCandleSeries) {
+                    let candleData = histData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
+                    let volData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
+                    tvCandleSeries.setData(candleData);
+                    if (tvVolumeSeries) tvVolumeSeries.setData(volData);
+                }
+            }
+            // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
+            if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
+        });
+        // KẾT THÚC
+    }, 100); 
 };
 
 // Hàm xử lý Click đổi khung giờ
