@@ -1580,6 +1580,12 @@ function connectRealtimeChart(t) {
                 }
             }
         }
+        // LƯU CACHE MẢNG SAU KHI DỌN RÁC HOẶC GẮN ICON XẢ HÀNG
+        if (window.AlphaChartState && window.AlphaChartState[sym]) {
+            window.AlphaChartState[sym].speedWindow = window.scSpeedWindow;
+            window.AlphaChartState[sym].tickHistory = window.scTickHistory;
+            window.AlphaChartState[sym].chartMarkers = window.scChartMarkers;
+        }
     }, 1000);
 
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
@@ -1942,7 +1948,27 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 }
             }
             // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
+            // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
             if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
+
+            // PHỤC HỒI LẠI ICON VÀ SỐ LIỆU TỪ CACHE NGAY LẬP TỨC
+            setTimeout(() => {
+                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+                if (activeSeries && window.scChartMarkers && window.scChartMarkers.length > 0) {
+                    activeSeries.setMarkers(window.scChartMarkers); // Vẽ lại Cá mập lên biểu đồ
+                }
+                
+                // In lại ngay Dòng Tiền và Số Cá Mập ra bảng Info
+                let flowEl = document.getElementById('sc-stat-net-flow');
+                if (flowEl && window.scNetFlow !== undefined) {
+                    flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
+                    flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
+                }
+                let whaleEl = document.getElementById('sc-stat-whale-tx'); 
+                if (whaleEl && window.scWhaleCount !== undefined) {
+                    whaleEl.innerText = window.scWhaleCount;
+                }
+            }, 200);
         });
         // KẾT THÚC
     }, 100); 
