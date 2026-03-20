@@ -2014,7 +2014,8 @@ tvChart = LightweightCharts.createChart(container, {
             lineWidth: 0, // Đường kẻ tàng hình
             crosshairMarkerVisible: false, // Tắt marker khi rê chuột
             priceLineVisible: false, // Tắt đường giá
-            lastValueVisible: false // Tắt hiển thị số
+            lastValueVisible: false, // Tắt hiển thị số
+            priceFormat: { type: 'price', precision: prec, minMove: minM } // [FIXED]: Nạp định dạng thập phân để không bị mất cột giá trục Y
         });
 
         
