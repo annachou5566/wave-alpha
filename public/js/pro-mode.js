@@ -1567,9 +1567,8 @@ function connectRealtimeChart(t) {
         }
         if (!window.isHeatmapOn && window.scActivePriceLines) {
             window.scActivePriceLines.forEach(line => {
-                try { if (window.tvHeatmapLayer) window.tvHeatmapLayer.removePriceLine(line); } catch(e) {}
+                try { line.applyOptions({ color: 'transparent' }); } catch(e) {}
             });
-            window.scActivePriceLines = [];
         }
     };
     window.flushSmartTape = function(cluster) {
@@ -1948,34 +1947,46 @@ function connectRealtimeChart(t) {
 
                 let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
 
-                // XÓA VẠCH CŨ TRÊN CHART
-                if (window.scActivePriceLines && window.scActivePriceLines.length > 0) {
-                    window.scActivePriceLines.forEach(line => {
-                        try { if(window.tvHeatmapLayer) window.tvHeatmapLayer.removePriceLine(line); } catch(e) {}
-                    });
-                }
-                window.scActivePriceLines = [];
+                if (!window.scActivePriceLines) window.scActivePriceLines = [];
 
-                let toggle = document.getElementById('sc-heatmap-toggle');
-                let isHeatmapEnabled = toggle ? toggle.checked : true;
-
-                // Sửa biến check thành isHeatmapOn
+                // [FIX TRÀN RAM CỰC MẠNH]: Tái sử dụng Object Line, tuyệt đối không Tạo/Xóa liên tục
                 if (window.isHeatmapOn && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
                     let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+                    
                     if (window.tvHeatmapLayer) { 
-                        newWalls.forEach(wall => {
+                        for (let i = 0; i < newWalls.length; i++) {
+                            let wall = newWalls[i];
                             let lineColor = ''; let thickness = 1;
-                            // Bảng màu Matrix Heatmap
                             let isTrad = window.currentTheme === 'trad';
+                            
                             if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
                             else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
                             else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
                             else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
-                            let priceLine = window.tvHeatmapLayer.createPriceLine({
-                                price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
-                            });
-                            window.scActivePriceLines.push(priceLine);
+                            // Thuật toán Tái sử dụng (Object Pooling)
+                            if (i < window.scActivePriceLines.length) {
+                                // Nếu vạch đã có sẵn -> Chỉ cập nhật tọa độ và màu sắc
+                                window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness });
+                            } else {
+                                // Nếu vạch bị thiếu -> Mới cấp phép tạo thêm
+                                let priceLine = window.tvHeatmapLayer.createPriceLine({
+                                    price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
+                                });
+                                window.scActivePriceLines.push(priceLine);
+                            }
+                        }
+                        
+                        // Dọn rác an toàn: Chuyển các vạch dư thừa (nếu có) sang tàng hình
+                        for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) {
+                            window.scActivePriceLines[i].applyOptions({ color: 'transparent' });
+                        }
+                    }
+                } else {
+                    // Khi Heatmap bị tắt -> Chuyển tất cả vạch sang tàng hình
+                    if (window.scActivePriceLines && window.scActivePriceLines.length > 0) {
+                        window.scActivePriceLines.forEach(line => {
+                            try { line.applyOptions({ color: 'transparent' }); } catch(e) {}
                         });
                     }
                 }
