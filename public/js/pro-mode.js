@@ -90,9 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
             .sc-time-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
             .sc-time-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; font-weight: bold; }
 
-            /* HIỆU ỨNG NHẤP NHÁY GIÁ (CYBERPUNK) */
-            .price-up { color: #2af592 !important; transition: color 0.3s; }
-            .price-down { color: #cb55e3 !important; transition: color 0.3s; }
+            /* HỆ THỐNG MÀU THEME ĐỘNG */
+            .theme-cyber .price-up { color: #2af592 !important; transition: color 0.3s; }
+            .theme-cyber .price-down { color: #cb55e3 !important; transition: color 0.3s; }
+            .theme-trad .price-up { color: #0ECB81 !important; transition: color 0.3s; }
+            .theme-trad .price-down { color: #F6465D !important; transition: color 0.3s; }
         `;
         document.head.appendChild(style);
     }
@@ -948,7 +950,8 @@ function injectLayout() {
                         </div>
                     </div>
                     
-                    <div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05);">
+
+<div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05);">
                         <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick</button>
                         <span style="color:#2b3139; margin:0 2px;">|</span>
                         <button class="sc-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
@@ -958,9 +961,18 @@ function injectLayout() {
                         <button class="sc-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
                         <button class="sc-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
                         <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
+                        
+                        <div style="margin-left: auto; display:flex; align-items:center;">
+                            <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:1px solid rgba(255,255,255,0.1); font-size:10px; padding:2px 4px; border-radius:3px; outline:none; cursor:pointer;">
+                                <option value="cyber">🎨 Wave Alpha</option>
+                                <option value="trad">🎨 Basic</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <div id="sc-chart-container" style="flex:1; position: relative; overflow: hidden;">
+                        <div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
+                        
                         <div id="sc-custom-tooltip" style="display:none; position: absolute; top: 10px; left: 10px; padding: 8px 12px; background: rgba(14, 18, 22, 0.9); border-radius: 4px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 500; pointer-events: none; z-index: 5; border: 1px solid rgba(255,255,255,0.02);">
                             <div id="tp-symbol" style="color:#eaecef; font-weight:800; font-size:12px; margin-bottom: 3px;">---</div>
                             <div style="display:flex; gap: 8px;">
@@ -973,6 +985,9 @@ function injectLayout() {
                             <div>T: <strong id="tp-t" style="color:#5e6673;">--</strong></div>
                         </div>
                     </div>
+
+
+                    
                 </div> <div class="sc-side-panel">
                     <div class="sc-mobile-tabs">
                         <button class="sc-tab-btn active" onclick="window.switchScTab('trades', this)">Live Trades</button>
@@ -1552,10 +1567,16 @@ function connectRealtimeChart(t) {
         if (tradesBox) {
             let row = document.createElement('div');
             let bgAlpha = icon !== '' ? '0.25' : '0.1';
-            row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${cluster.dir ? `rgba(42,245,146,${bgAlpha})` : `rgba(203,85,227,${bgAlpha})`}; transition:0.4s; font-weight:${fontWeight};`;
+            let isTrad = window.currentTheme === 'trad';
+            let c_up = isTrad ? '#0ECB81' : '#2af592';
+            let c_down = isTrad ? '#F6465D' : '#cb55e3';
+            let c_bg_up = isTrad ? `rgba(14,203,129,${bgAlpha})` : `rgba(42,245,146,${bgAlpha})`;
+            let c_bg_down = isTrad ? `rgba(246,70,93,${bgAlpha})` : `rgba(203,85,227,${bgAlpha})`;
+
+            row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${cluster.dir ? c_bg_up : c_bg_down}; transition:0.4s; font-weight:${fontWeight};`;
             
             let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false});
-            row.innerHTML = `<span style="color:${cluster.dir ? '#2af592' : '#cb55e3'}">${formatPrice(cluster.p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(cluster.vol)}</span><span style="color:#527c82">${timeStr}</span>`;
+            row.innerHTML = `<span style="color:${cluster.dir ? c_up : c_down}">${formatPrice(cluster.p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(cluster.vol)}</span><span style="color:${isTrad?'#848e9c':'#527c82'}">${timeStr}</span>`;
             tradesBox.insertBefore(row, tradesBox.firstChild);
             
             setTimeout(() => row.style.background = 'transparent', 400);
@@ -1575,7 +1596,7 @@ function connectRealtimeChart(t) {
             
             let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
             if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
-            let markerColor = cluster.dir ? '#2af592' : '#cb55e3';
+            let markerColor = cluster.dir ? (window.currentTheme === 'trad' ? '#0ECB81' : '#2af592') : (window.currentTheme === 'trad' ? '#F6465D' : '#cb55e3');
 
             window.scChartMarkers.push({
                 time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
@@ -1921,10 +1942,11 @@ function connectRealtimeChart(t) {
                         newWalls.forEach(wall => {
                             let lineColor = ''; let thickness = 1;
                             // Bảng màu Matrix Heatmap
-                            if (wall.v > currentAvgTicket * 30) { lineColor = 'rgba(203, 85, 227, 0.7)'; thickness = 6; } // Tím chói
-                            else if (wall.v > currentAvgTicket * 15) { lineColor = 'rgba(137, 57, 153, 0.5)'; thickness = 4; } // Tím đậm
-                            else if (wall.v > currentAvgTicket * 8) { lineColor = 'rgba(85, 69, 125, 0.4)'; thickness = 3; } // Tím trầm
-                            else { lineColor = 'rgba(22, 96, 73, 0.3)'; thickness = 2; } // Xanh rêu tàng hình
+                            let isTrad = window.currentTheme === 'trad';
+                            if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
+                            else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
+                            else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
+                            else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
                             let priceLine = window.tvHeatmapLayer.createPriceLine({
                                 price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
@@ -1950,7 +1972,8 @@ function connectRealtimeChart(t) {
             if (window.currentChartInterval === 'tick') {
                 if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
                 if (tvLineSeries) tvLineSeries.update({ time: timeSec, value: p });
-                if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)' });
+                let isTrad = window.currentTheme === 'trad';
+                if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)') });
             }
 
             let priceEl = document.getElementById('sc-live-price');
@@ -2042,7 +2065,7 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
                 time: d.time, 
                 open: d.open, high: d.high, low: d.low, close: d.close,
                 volValue: d.volume, 
-                volColor: isUp ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)',
+                volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
                 value: isArea ? d.close : undefined
             };
         });
@@ -2055,7 +2078,15 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
 
 window.currentChartInterval = 'tick'; // Mặc định mở lên là Tick
 let tvCandleSeries = null; // Thêm biến lưu trữ chuỗi nến Nhật
-
+window.currentTheme = localStorage.getItem('wave_theme') || 'cyber';
+window.changeTheme = function() {
+    let el = document.getElementById('sc-theme-select');
+    if (el) {
+        window.currentTheme = el.value;
+        localStorage.setItem('wave_theme', window.currentTheme);
+        if (window.currentChartToken) window.openProChart(window.currentChartToken, true); // Tải lại chart để áp màu
+    }
+};
 window.openProChart = function(t, isTimeSwitch = false) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
@@ -2111,15 +2142,30 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if (priceVal < 0.0001) { prec = 10; minM = 0.0000000001; }
 
         
-// KHỞI TẠO BIỂU ĐỒ MÀU CYBERPUNK
+// XỬ LÝ MÀU THEME
+        let isTrad = window.currentTheme === 'trad';
+        let t_bg = isTrad ? '#111418' : '#0f1a1c';
+        let t_text = isTrad ? '#848e9c' : '#527c82';
+        let t_line = isTrad ? '#00F0FF' : '#41e6e7';
+        let t_up = isTrad ? '#0ECB81' : '#2af592';
+        let t_down = isTrad ? '#F6465D' : '#cb55e3';
+        
+        let overlayElem = document.getElementById('super-chart-overlay');
+        if(overlayElem) {
+            overlayElem.classList.remove('theme-cyber', 'theme-trad');
+            overlayElem.classList.add('theme-' + window.currentTheme);
+        }
+        let themeSel = document.getElementById('sc-theme-select');
+        if(themeSel) themeSel.value = window.currentTheme;
+
+        // KHỞI TẠO BIỂU ĐỒ (TẮT GRID, BỎ WATERMARK CŨ)
         tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
-            layout: { background: { type: 'solid', color: '#0f1a1c' }, textColor: '#527c82', fontSize: 11 },
-            watermark: { color: 'rgba(65, 230, 231, 0.03)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
-            grid: { vertLines: { style: 3, color: 'rgba(82, 124, 130, 0.2)' }, horzLines: { style: 3, color: 'rgba(82, 124, 130, 0.2)' } }, 
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#527c82', labelBackgroundColor: '#55457d'}, horzLine: { color: '#527c82', labelBackgroundColor: '#55457d'} },
-            timeScale: { borderColor: 'rgba(82, 124, 130, 0.4)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
-            rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
+            layout: { background: { type: 'solid', color: t_bg }, textColor: t_text, fontSize: 11 },
+            grid: { vertLines: { visible: false }, horzLines: { visible: false } }, // [ĐÃ TẮT LƯỚI RỐI MẮT]
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: t_text, labelBackgroundColor: t_down}, horzLine: { color: t_text, labelBackgroundColor: t_down} },
+            timeScale: { borderColor: 'rgba(82, 124, 130, 0.2)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
+            rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 }, borderColor: 'rgba(82, 124, 130, 0.2)' }
         });
 
         window.tvHeatmapLayer = tvChart.addLineSeries({
@@ -2129,14 +2175,14 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         if (window.currentChartInterval === 'tick') {
             tvLineSeries = tvChart.addAreaSeries({
-                lineColor: '#41e6e7', topColor: 'rgba(65, 230, 231, 0.3)', bottomColor: 'rgba(65, 230, 231, 0.0)', lineWidth: 2, 
+                lineColor: t_line, topColor: isTrad ? 'rgba(0, 240, 255, 0.3)' : 'rgba(65, 230, 231, 0.3)', bottomColor: 'rgba(0,0,0,0)', lineWidth: 2, 
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
         } else {
             tvCandleSeries = tvChart.addCandlestickSeries({
-                upColor: '#2af592', downColor: '#cb55e3',
-                borderDownColor: '#cb55e3', borderUpColor: '#2af592',
-                wickDownColor: '#cb55e3', wickUpColor: '#2af592',
+                upColor: t_up, downColor: t_down,
+                borderDownColor: t_down, borderUpColor: t_up,
+                wickDownColor: t_down, wickUpColor: t_up,
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
         }
