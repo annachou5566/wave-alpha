@@ -2155,10 +2155,19 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-top-tx').innerText = formatInt(t.tx_count);
     }
 
-    // Reset Chart
+    // Reset Chart & Dọn rác UI cũ
     const container = document.getElementById('sc-chart-container');
     if (tvChart) { tvChart.remove(); tvChart = null; tvLineSeries = null; tvCandleSeries = null; tvVolumeSeries = null; }
     container.innerHTML = ''; 
+    
+    // Nếu là bấm sang Token mới (không phải đổi khung giờ) -> Quét sạch bảng Live Trades
+    if (!isTimeSwitch) {
+        let tradesBox = document.getElementById('sc-live-trades');
+        if (tradesBox) {
+            tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
+        }
+        window.scCurrentCluster = null; // Cắt đứt cụm lệnh (Smart Tape) đang tính dở của token cũ
+    }
 
     setTimeout(() => {
         const rect = container.getBoundingClientRect();
