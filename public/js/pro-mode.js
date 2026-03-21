@@ -2248,17 +2248,8 @@ tvChart = LightweightCharts.createChart(container, {
 
             // PHỤC HỒI LẠI ICON VÀ SỐ LIỆU TỪ CACHE NGAY LẬP TỨC
             setTimeout(() => {
-                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-                if (activeSeries && window.scChartMarkers && window.scChartMarkers.length > 0) {
-                    // [ĐÃ FIX]: Chỉ vẽ lại Cá cũ nếu đang ở khung Tick hoặc 1s
-                    if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
-                        activeSeries.setMarkers(window.scChartMarkers); 
-                    } else {
-                        // PHỤC HỒI LẠI ICON VÀ SỐ LIỆU TỪ CACHE NGAY LẬP TỨC
-            setTimeout(() => {
-                window.applyFishFilter(); // Gọi thẳng hàm lọc cá hồi tố thay vì set cứng
-                    }
-                }
+                // Gọi thẳng hàm lọc cá (Hàm này đã có sẵn Logic: Nếu khung >=1m thì tự xóa cá, nếu <=1s thì lọc theo Dropdown)
+                if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
                 
                 // In lại ngay Dòng Tiền và Số Cá Mập ra bảng Info
                 let flowEl = document.getElementById('sc-stat-net-flow');
@@ -2275,6 +2266,7 @@ tvChart = LightweightCharts.createChart(container, {
             }, 200);
         });
         // KẾT THÚC
+       
     }, 100); 
 };
 
