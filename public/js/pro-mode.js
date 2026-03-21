@@ -2656,57 +2656,30 @@ window.updateSmartMoneyRadar = function(apiData) {
     updateCVDBar('4h', parseFloat(d.volume4hBuy || 0), parseFloat(d.volume4hSell || 0));
 };
 
-// Hàm gọi API thực tế (Tích hợp Radar kiểm tra lỗi và Vượt rào CORS)
+// Hàm gọi API thực tế (Chọc thẳng vào Backend Render của bạn)
 window.fetchSmartMoneyData = async function(contract, chainId) {
     if (!contract) return;
     
-    // 1. Hiển thị trạng thái đang tải lên Tiêu đề Tab
     let titleEl = document.querySelector('#tab-smartmoney .sc-panel-title');
     if (titleEl) {
-        titleEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#F0B90B; margin-right: 5px;"></i> ĐANG KẾT NỐI BINANCE WEB3...`;
+        titleEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#F0B90B; margin-right: 5px;"></i> ĐANG TRÍCH XUẤT ON-CHAIN...`;
     }
 
-    let targetUrl = `https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info?chainId=${chainId || 56}&contractAddress=${contract}`;
-    
     try {
-        // 2. Thử gọi trực tiếp bằng đường chính (Chắc chắn 99% sẽ bị trình duyệt chặn CORS)
-        let res = await fetch(targetUrl);
+        // GỌI THẲNG VỀ API RENDER MÀ BẠN VỪA TẠO Ở BƯỚC 1 (Lấy đường dẫn tương đối /api/...)
+        let url = `/api/smart-money?chainId=${chainId || 56}&contractAddress=${contract}`;
+        let res = await fetch(url);
         let json = await res.json();
         
         if (json && json.success) {
             window.updateSmartMoneyRadar(json);
-            if (titleEl) titleEl.innerHTML = `<i class="fas fa-check-circle" style="color:#0ECB81; margin-right: 5px;"></i> RADAR DÒNG TIỀN (TRỰC TIẾP)`;
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-bolt" style="color:#0ECB81; margin-right: 5px;"></i> RADAR SMART MONEY (LIVE)`;
+        } else {
+            throw new Error("Lỗi API");
         }
     } catch(e) {
-        console.warn("⚠️ Bị Binance chặn CORS. Hệ thống đang tự động bẻ lái qua Proxy...");
-        
-        // 3. Nếu bị chặn CORS -> Tự động dùng Proxy miễn phí để vượt tường lửa
-        try {
-            // Dùng dịch vụ AllOrigins để lấy data giúp trình duyệt
-            let proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-            let resProxy = await fetch(proxyUrl);
-            let jsonProxy = await resProxy.json();
-            
-            // AllOrigins trả dữ liệu ở dạng chuỗi string trong biến 'contents', cần Parse ra JSON thật
-            let realData = JSON.parse(jsonProxy.contents);
-            
-            if (realData && realData.success) {
-                window.updateSmartMoneyRadar(realData);
-                if (titleEl) titleEl.innerHTML = `<i class="fas fa-shield-alt" style="color:#00F0FF; margin-right: 5px;"></i> RADAR DÒNG TIỀN (VƯỢT CORS)`;
-            } else {
-                throw new Error("Proxy không lấy được dữ liệu");
-            }
-        } catch(proxyError) {
-            console.error("❌ Lỗi kết nối toàn tập:", proxyError);
-            if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> LỖI KẾT NỐI API BINANCE`;
-            
-            // In chữ LỖI CORS thẳng ra giao diện cho dễ nhìn
-            let smartPctEl = document.getElementById('sm-pct-smart');
-            if (smartPctEl) {
-                smartPctEl.innerText = "LỖI CORS";
-                smartPctEl.style.color = "#F6465D";
-            }
-        }
+        console.log("Lỗi kết nối Server Render:", e);
+        if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> SERVER MẤT KẾT NỐI`;
     }
 };
 
