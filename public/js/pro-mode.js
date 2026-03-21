@@ -95,6 +95,12 @@ document.addEventListener('DOMContentLoaded', () => {
             .theme-cyber .price-down { color: #cb55e3 !important; transition: color 0.3s; }
             .theme-trad .price-up { color: #0ECB81 !important; transition: color 0.3s; }
             .theme-trad .price-down { color: #F6465D !important; transition: color 0.3s; }
+
+            /* DATA FLOW WIDGETS (COCKPIT STYLE) */
+            .df-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+            .df-box { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 10px 8px; display: flex; flex-direction: column; justify-content: center; }
+            .df-label { font-size: 9px; color: #527c82; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; white-space: nowrap; letter-spacing: 0.5px;}
+            .df-val { font-size: 14px; font-family: var(--font-num); font-weight: 700; color: #eaecef; }
         `;
         document.head.appendChild(style);
     }
@@ -966,27 +972,40 @@ function injectLayout() {
                         
                         <div style="margin-left: auto; display:flex; align-items:center; gap:12px; font-family:var(--font-num);">
                             
-                            <div style="display:flex; gap:8px; font-size:11px; font-weight:700; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.02);">
-                                <span title="Cá Voi" style="color:#cb55e3">🐋 <span id="sc-stat-whale">0</span></span>
-                                <span title="Cá Mập" style="color:#eaecef">🦈 <span id="sc-stat-shark">0</span></span>
-                                <span title="Cá Heo" style="color:#eaecef">🐬 <span id="sc-stat-dolphin">0</span></span>
-                                <span title="Sweep" style="color:#2af592">🤖 <span id="sc-stat-sweep">0</span></span>
+                            <div style="display:flex; gap:10px; align-items:center; background:rgba(0,0,0,0.25); padding:4px 10px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
+                                
+                                <div onclick="window.toggleHeatmapUI()" style="cursor:pointer; display:flex; align-items:center; gap:5px; color:#41e6e7; font-size:10px; font-weight:700; font-family:var(--font-main);">
+                                    <i id="sc-heatmap-icon" class="fas fa-eye"></i> <span style="padding-top:1px;">HEATMAP</span>
+                                </div>
+                                
+                                <span style="color:#2b3139;">|</span>
+                                
+                                <div style="display:flex; align-items:center; gap:4px; color:#527c82; font-size:10px; font-weight:700; font-family:var(--font-main);">
+                                    <i class="fas fa-filter"></i>
+                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0;">
+                                        <option value="sweep">TẤT CẢ BOT</option>
+                                        <option value="dolphin">TỪ CÁ HEO</option>
+                                        <option value="shark">TỪ CÁ MẬP</option>
+                                        <option value="whale">CHỈ CÁ VOI</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:10px; font-size:11px; font-weight:700; background:rgba(0,0,0,0.25); padding:4px 10px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
+                                <span title="Cá Voi" style="color:#cb55e3; display:flex; gap:4px; align-items:center;">🐋 <span id="sc-stat-whale">0</span></span>
+                                <span title="Cá Mập" style="color:#eaecef; display:flex; gap:4px; align-items:center;">🦈 <span id="sc-stat-shark">0</span></span>
+                                <span title="Cá Heo" style="color:#eaecef; display:flex; gap:4px; align-items:center;">🐬 <span id="sc-stat-dolphin">0</span></span>
+                                <span title="Sweep" style="color:#2af592; display:flex; gap:4px; align-items:center;">🤖 <span id="sc-stat-sweep">0</span></span>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:4px; color:#848e9c; font-size:10px; font-weight:700; font-family:var(--font-main);">
+                                <i class="fas fa-palette"></i>
+                                <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0;">
+                                    <option value="cyber">WAVE ALPHA</option>
+                                    <option value="trad">TRUYỀN THỐNG</option>
+                                </select>
                             </div>
                             
-                            <div style="display:flex; gap:6px; align-items:center;">
-                                <i id="sc-heatmap-icon" class="fas fa-eye" onclick="window.toggleHeatmapUI()" style="color:#41e6e7; cursor:pointer; font-size:12px; transition:0.2s;" title="Bật/Tắt Heatmap"></i>
-                                <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer;">
-                                    <option value="sweep">🤖 Tất cả Bot</option>
-                                    <option value="dolphin">🐬 Từ Cá Heo</option>
-                                    <option value="shark">🦈 Từ Cá Mập</option>
-                                    <option value="whale">🐋 Chỉ Cá Voi</option>
-                                </select>
-                                <span style="color:#2b3139;">|</span>
-                                <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:1px solid rgba(255,255,255,0.1); font-size:10px; padding:2px 4px; border-radius:3px; outline:none; cursor:pointer;">
-                                    <option value="cyber">🎨 Wave Alpha</option>
-                                    <option value="trad">🎨 Basic</option>
-                                </select>
-                            </div>
                         </div>
                     </div>
                     
@@ -1026,21 +1045,38 @@ function injectLayout() {
                         </div>
                     </div>
 
-                    <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
-                        <div class="sc-panel-section" style="border-bottom: none; padding-top: 10px;">
-                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> Data Flow (Realtime)</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#41e6e7; font-weight:700;">+$0</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Tốc độ khớp / s</span><span id="sc-stat-match-speed" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0 /s</span></div>
-                            
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket TB (Mỗi lệnh)</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
-                            
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Spread (15s)</span><span id="sc-stat-spread" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Trend (VWAP 60s)</span><span id="sc-stat-trend" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Rớt đỉnh (Drop 5m)</span><span id="sc-stat-drop" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
+                    <div id="tab-info" class="sc-tab-content" style="background: #12151A; padding: 10px 15px;">
+                        <div class="sc-panel-title" style="margin-bottom: 0; color:#eaecef;"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> DATA FLOW (REALTIME)</div>
+                        
+                        <div class="df-grid">
+                            <div class="df-box">
+                                <div class="df-label">Dòng tiền Net</div>
+                                <div class="df-val" id="sc-stat-net-flow" style="color:#41e6e7;">+$0</div>
+                            </div>
+                            <div class="df-box">
+                                <div class="df-label">Tốc độ / Giây</div>
+                                <div class="df-val" id="sc-stat-match-speed">$0 /s</div>
+                            </div>
+                            <div class="df-box">
+                                <div class="df-label">Ticket TB / Lệnh</div>
+                                <div class="df-val" id="sc-stat-avg-ticket">$0</div>
+                            </div>
+                            <div class="df-box">
+                                <div class="df-label">Spread (15s)</div>
+                                <div class="df-val" id="sc-stat-spread">0.00%</div>
+                            </div>
+                            <div class="df-box">
+                                <div class="df-label">Trend (VWAP 60s)</div>
+                                <div class="df-val" id="sc-stat-trend">0.00%</div>
+                            </div>
+                            <div class="df-box">
+                                <div class="df-label">Drop (5 Phút)</div>
+                                <div class="df-val" id="sc-stat-drop">0.00%</div>
+                            </div>
                         </div>
                     </div>
+                </div>
             </div>
-        </div>
     `;
     
     tabNav.insertAdjacentElement('afterend', marketView);
@@ -1764,14 +1800,14 @@ function connectRealtimeChart(t) {
 
                         // RA QUYẾT ĐỊNH PHÂN LOẠI
                         if (hitWall) {
-                            markerText = '🛡️ WALL HIT (Chạm Tường)';
-                            markerColor = '#F0B90B'; // Màu Vàng báo hiệu hỗ trợ cứng
+                            markerText = '🛡️ WALL HIT';
+                            markerColor = '#F0B90B'; 
                         } else if (recentBuyVol > recentSellVol * 2 && recentBuyVol > avgTicket * 10) {
-                            markerText = '🪝 STOP-HUNT (Quét SL)';
-                            markerColor = '#00F0FF'; // Xanh Cyan báo hiệu Cá Mập cướp hàng (Long)
+                            markerText = '🪝 STOP-HUNT';
+                            markerColor = '#00F0FF'; 
                         } else {
-                            markerText = '🪫 EXHAUSTED (Cạn Lực Bán)';
-                            markerColor = '#848e9c'; // Xám mờ báo hiệu TT yếu, chưa nên vào ngay
+                            markerText = '🪫 EXHAUSTED';
+                            markerColor = '#848e9c'; 
                         }
 
                         // Bắn Marker lên Chart (Mũi tên chỉ LÊN, nằm DƯỚI nến vì đây là tìm điểm Bắt đáy)
