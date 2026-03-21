@@ -1557,20 +1557,20 @@ function connectRealtimeChart(t) {
     };
 
    // --- HÀM 2: CÔNG TẮC HEATMAP (DÙNG ICON MẮT) ---
-    window.isHeatmapOn = true;
-    window.toggleHeatmapUI = function() {
-        window.isHeatmapOn = !window.isHeatmapOn;
-        let icon = document.getElementById('sc-heatmap-icon');
-        if (icon) {
-            icon.className = window.isHeatmapOn ? 'fas fa-eye' : 'fas fa-eye-slash';
-            icon.style.color = window.isHeatmapOn ? '#41e6e7' : '#527c82';
-        }
-        if (!window.isHeatmapOn && window.scActivePriceLines) {
-            window.scActivePriceLines.forEach(line => {
-                try { line.applyOptions({ color: 'transparent' }); } catch(e) {}
-            });
-        }
-    };
+    window.isHeatmapOn = true;
+    window.toggleHeatmapUI = function() {
+        window.isHeatmapOn = !window.isHeatmapOn;
+        let icon = document.getElementById('sc-heatmap-icon');
+        if (icon) {
+            icon.className = window.isHeatmapOn ? 'fas fa-eye' : 'fas fa-eye-slash';
+            icon.style.color = window.isHeatmapOn ? '#41e6e7' : '#527c82';
+        }
+        if (!window.isHeatmapOn && window.scActivePriceLines) {
+            window.scActivePriceLines.forEach(line => {
+                try { line.applyOptions({ color: 'transparent' }); } catch(e) {}
+            });
+        }
+    };
     window.flushSmartTape = function(cluster) {
         if (!cluster) return;
         let tradesBox = document.getElementById('sc-live-trades');
@@ -1834,58 +1834,105 @@ function connectRealtimeChart(t) {
                 window.AlphaChartState[sym].cShark = window.scCShark;
                 window.AlphaChartState[sym].cDolphin = window.scCDolphin;
                 window.AlphaChartState[sym].cSweep = window.scCSweep;
-            }
+            }
 
-        // ==========================================================
-        // [GIẢI CỨU CPU]: CHỈ VẼ HEATMAP VÀ CÁ 1 LẦN MỖI GIÂY
-        // ==========================================================
-        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
-            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-            
-            const processWalls = (orderMap, isAsk) => {
-                let walls = [];
-                for (let p in orderMap) {
-                    let price = parseFloat(p);
-                    let valUSD = price * orderMap[p];
-                    if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk });
-                }
-                walls.sort((a, b) => b.v - a.v); 
-                return walls.slice(0, 5); 
-            };
+        // ==========================================================
+        // PRO QUANT HEATMAP LOGIC (Gộp Tường, Lọc Nhiễu, Chống Lệnh Ma)
+        // ==========================================================
+        if (window.isHeatmapOn && window.scLocalOrderBook && window.scLastPrice > 0 && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
+            if (!window.scWallAges) window.scWallAges = {};
+            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+            let nowTs = Date.now();
+            let currentP = window.scLastPrice;
+            
+            // 1. TẠO HỘC CHỨA (BINS) & VÙNG GIAO TRANH (±1.5%)
+            const getCumulativeBins = (orderMap, isAsk) => {
+                let validOrders = [];
+                for (let p in orderMap) {
+                    let price = parseFloat(p);
+                    // BỘ LỌC PROXIMITY: Lọc bỏ toàn bộ lệnh cách quá 1.5% so với giá hiện tại (Giảm 90% tính toán)
+                    if (Math.abs(price - currentP) / currentP > 0.015) continue;
+                    validOrders.push({ p: price, v: price * orderMap[p] });
+                }
+                validOrders.sort((a, b) => a.p - b.p);
+                
+                let bins = [];
+                let currentBin = null;
+                // BỘ LỌC CUMULATIVE: Gộp các lệnh siêu nhỏ xếp sát nhau (<0.1%) thành 1 Vùng Đệm
+                for (let order of validOrders) {
+                    if (!currentBin) {
+                        currentBin = { p: order.p, v: order.v, count: 1 };
+                        bins.push(currentBin);
+                    } else {
+                        if ((order.p - currentBin.p)/currentBin.p < 0.001) { 
+                            currentBin.v += order.v;
+                            currentBin.p = (currentBin.p * currentBin.count + order.p) / (currentBin.count + 1); 
+                            currentBin.count++;
+                        } else {
+                            currentBin = { p: order.p, v: order.v, count: 1 };
+                            bins.push(currentBin);
+                        }
+                    }
+                }
 
-            let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
-            if (!window.scActivePriceLines) window.scActivePriceLines = [];
-            
-            if (window.tvHeatmapLayer) { 
-                for (let i = 0; i < newWalls.length; i++) {
-                    let wall = newWalls[i];
-                    let lineColor = ''; let thickness = 1;
-                    let isTrad = window.currentTheme === 'trad';
-                    
-                    if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
-                    else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
-                    else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
-                    else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
+                let finalWalls = [];
+                for (let b of bins) {
+                    // BỘ LỌC ĐỘ CỨNG: Phải to hơn 5 lần Ticket Trung Bình
+                    if (b.v > Math.max(500, currentAvgTicket * 5)) {
+                        let keyStr = b.p.toPrecision(4); // Lấy 4 số đầu làm mã ID nhận diện bức tường
+                        
+                        // BỘ LỌC ANTI-SPOOFING (LỆNH MA): Tồn tại đủ 3 giây mới cho phép hiển thị
+                        if (!window.scWallAges[keyStr]) {
+                            window.scWallAges[keyStr] = nowTs; 
+                        } else if (nowTs - window.scWallAges[keyStr] >= 3000) {
+                            finalWalls.push({ p: b.p, v: b.v, isAsk: isAsk });
+                        }
+                    }
+                }
+                return finalWalls.sort((a, b) => b.v - a.v).slice(0, 6); // Chọn 6 tường cứng nhất mỗi bên
+            };
 
-                    // Object Pooling: Tái sử dụng vạch thay vì xóa
-                    if (i < window.scActivePriceLines.length) {
-                        window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness });
-                    } else {
-                        let priceLine = window.tvHeatmapLayer.createPriceLine({
-                            price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
-                        });
-                        window.scActivePriceLines.push(priceLine);
-                    }
-                }
-                // Tàng hình các vạch dư thừa
-                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) {
-                    window.scActivePriceLines[i].applyOptions({ color: 'transparent' });
-                }
-            }
-        }
+            let newWalls = [...getCumulativeBins(window.scLocalOrderBook.asks, true), ...getCumulativeBins(window.scLocalOrderBook.bids, false)];
+            
+            // Dọn dẹp bộ nhớ chống tràn
+            let validKeys = newWalls.map(w => w.p.toPrecision(4));
+            for (let key in window.scWallAges) {
+                if (!validKeys.includes(key)) delete window.scWallAges[key];
+            }
 
-        if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
-    }, 1000);
+            if (!window.scActivePriceLines) window.scActivePriceLines = [];
+            
+            // THUẬT TOÁN OBJECT POOLING (CẬP NHẬT TỌA ĐỘ THAY VÌ XÓA VẼ LẠI)
+            if (window.tvHeatmapLayer) { 
+                for (let i = 0; i < newWalls.length; i++) {
+                    let wall = newWalls[i];
+                    let lineColor = ''; let thickness = 1;
+                    let isTrad = window.currentTheme === 'trad';
+                    
+                    if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
+                    else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
+                    else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
+                    else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
+
+                    if (i < window.scActivePriceLines.length) {
+                        window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness });
+                    } else {
+                        let priceLine = window.tvHeatmapLayer.createPriceLine({
+                            price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
+                        });
+                        window.scActivePriceLines.push(priceLine);
+                    }
+                }
+                
+                // Chuyển các vạch thừa sang tàng hình
+                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) {
+                    window.scActivePriceLines[i].applyOptions({ color: 'transparent' });
+                }
+            }
+        }
+
+        if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
+    }, 1000);
 
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
 
