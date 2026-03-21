@@ -2491,9 +2491,9 @@ function injectSmartMoneyTab() {
             </div>
         </div>
 
-        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;">
-            <span>🏦 VỊ THẾ TRÊN BINANCE CEX</span>
-            <span id="sm-bn-traders" style="color:#00F0FF; font-size:9px;">-- Traders / -- Ví KYC</span>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
+            <div style="font-size:10px; color:#848e9c; font-weight:700;">🏦 VỊ THẾ BINANCE CEX</div>
+            <div id="sm-bn-traders" style="color:#00F0FF; font-size:9.5px; font-family:var(--font-num); font-weight:700; white-space:nowrap;">-- Traders | -- KYC</div>
         </div>
         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px; margin-bottom: 15px;">
             <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
@@ -2586,7 +2586,8 @@ window.updateSmartMoneyRadar = function(apiData) {
     safeSet('sm-pct-sniper', sniperBundlerPct > 0 ? (sniperBundlerPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-sniper', d.bundlerHolders || '0');
 
-    safeSet('sm-bn-traders', `${d.bnTraders || 0} Traders / ${d.bnUniqueHolders || d.kycHolderCount || 0} KYC`);
+    let fShort = (n) => n ? new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(n) : '0';
+    safeSet('sm-bn-traders', `${fShort(d.bnTraders)} Traders <span style="color:#527c82">|</span> ${fShort(d.bnUniqueHolders || d.kycHolderCount)} KYC`);
     
     let currentPrice = parseFloat(d.price || 0);
     let avgBuy = parseFloat(d.bnAvgBuyPrice || 0);
