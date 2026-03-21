@@ -951,22 +951,42 @@ function injectLayout() {
                     </div>
                     
 
-<div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick</button>
-                        <span style="color:#2b3139; margin:0 2px;">|</span>
-                        <button class="sc-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
-                        <button class="sc-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
-                        <button class="sc-time-btn" onclick="window.changeChartInterval('5m', this)">5m</button>
-                        <button class="sc-time-btn" onclick="window.changeChartInterval('15m', this)">15m</button>
-                        <button class="sc-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
-                        <button class="sc-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
-                        <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
+<div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center; flex-wrap:wrap;">
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick</button>
+                            <span style="color:#2b3139; margin:0 2px;">|</span>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('5m', this)">5m</button>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('15m', this)">15m</button>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
+                        </div>
                         
-                        <div style="margin-left: auto; display:flex; align-items:center;">
-                            <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:1px solid rgba(255,255,255,0.1); font-size:10px; padding:2px 4px; border-radius:3px; outline:none; cursor:pointer;">
-                                <option value="cyber">🎨 Wave Alpha</option>
-                                <option value="trad">🎨 Basic</option>
-                            </select>
+                        <div style="margin-left: auto; display:flex; align-items:center; gap:12px; font-family:var(--font-num);">
+                            
+                            <div style="display:flex; gap:8px; font-size:11px; font-weight:700; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.02);">
+                                <span title="Cá Voi" style="color:#cb55e3">🐋 <span id="sc-stat-whale">0</span></span>
+                                <span title="Cá Mập" style="color:#eaecef">🦈 <span id="sc-stat-shark">0</span></span>
+                                <span title="Cá Heo" style="color:#eaecef">🐬 <span id="sc-stat-dolphin">0</span></span>
+                                <span title="Sweep" style="color:#2af592">🤖 <span id="sc-stat-sweep">0</span></span>
+                            </div>
+                            
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <i id="sc-heatmap-icon" class="fas fa-eye" onclick="window.toggleHeatmapUI()" style="color:#41e6e7; cursor:pointer; font-size:12px; transition:0.2s;" title="Bật/Tắt Heatmap"></i>
+                                <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer;">
+                                    <option value="sweep">🤖 Tất cả Bot</option>
+                                    <option value="dolphin">🐬 Từ Cá Heo</option>
+                                    <option value="shark">🦈 Từ Cá Mập</option>
+                                    <option value="whale">🐋 Chỉ Cá Voi</option>
+                                </select>
+                                <span style="color:#2b3139;">|</span>
+                                <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:1px solid rgba(255,255,255,0.1); font-size:10px; padding:2px 4px; border-radius:3px; outline:none; cursor:pointer;">
+                                    <option value="cyber">🎨 Wave Alpha</option>
+                                    <option value="trad">🎨 Basic</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     
@@ -1007,45 +1027,13 @@ function injectLayout() {
                     </div>
 
                     <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
-                        <div class="sc-panel-section" style="padding-bottom: 10px;">
-                            <div class="sc-panel-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                                <div><i class="fas fa-water" style="color:#41e6e7; margin-right: 5px;"></i> Smart Tape</div>
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <i id="sc-heatmap-icon" class="fas fa-eye" onclick="window.toggleHeatmapUI()" style="color:#41e6e7; cursor:pointer; font-size:12px; transition:0.2s;" title="Bật/Tắt Heatmap"></i>
-                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:9px; font-weight:700; outline:none; cursor:pointer; padding:0; text-align:right;">
-                                        <option value="sweep">🤖 Tất cả Bot</option>
-                                        <option value="dolphin">🐬 Từ Cá Heo</option>
-                                        <option value="shark">🦈 Từ Cá Mập</option>
-                                        <option value="whale">🐋 Chỉ Cá Voi</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
-                            
-                            <div style="display:flex; justify-content:space-between; text-align:center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
-                                <div style="flex:1;">
-                                    <div style="font-size:14px; margin-bottom:4px;" title="Cá Voi (>20x)">🐋</div>
-                                    <div id="sc-stat-whale" style="font-family:var(--font-num); color:#F0B90B; font-weight:700; font-size:12px;">0</div>
-                                </div>
-                                <div style="flex:1;">
-                                    <div style="font-size:14px; margin-bottom:4px;" title="Cá Mập (>10x)">🦈</div>
-                                    <div id="sc-stat-shark" style="font-family:var(--font-num); color:#eaecef; font-weight:700; font-size:12px;">0</div>
-                                </div>
-                                <div style="flex:1;">
-                                    <div style="font-size:14px; margin-bottom:4px;" title="Cá Heo (>5x)">🐬</div>
-                                    <div id="sc-stat-dolphin" style="font-family:var(--font-num); color:#eaecef; font-weight:700; font-size:12px;">0</div>
-                                </div>
-                                <div style="flex:1;">
-                                    <div style="font-size:14px; margin-bottom:4px;" title="Bot Sweep (Càn quét)">🤖</div>
-                                    <div id="sc-stat-sweep" style="font-family:var(--font-num); color:#FF007F; font-weight:700; font-size:12px;">0</div>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="sc-panel-section" style="border-bottom: none; padding-top: 10px;">
-                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#FF007F; margin-right: 5px;"></i> Data Flow (Realtime)</div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#00F0FF; font-weight:700;">+$0</span></div>
+                            <div class="sc-panel-title"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> Data Flow (Realtime)</div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Dòng tiền Net</span><span id="sc-stat-net-flow" style="font-family:var(--font-num); color:#41e6e7; font-weight:700;">+$0</span></div>
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Tốc độ khớp / s</span><span id="sc-stat-match-speed" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0 /s</span></div>
+                            
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Ticket TB (Mỗi lệnh)</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
+                            
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Spread (15s)</span><span id="sc-stat-spread" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Trend (VWAP 60s)</span><span id="sc-stat-trend" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="color:#848e9c; font-size:11px;">Rớt đỉnh (Drop 5m)</span><span id="sc-stat-drop" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">0.00%</span></div>
