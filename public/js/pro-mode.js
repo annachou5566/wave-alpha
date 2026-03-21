@@ -1783,6 +1783,11 @@ function connectRealtimeChart(t) {
                 
                 if (tvCandleSeries) tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
+
+                // [ĐÃ FIX]: Cập nhật Lớp Nền theo nhịp NẾN PHÚT (Chống trôi biểu đồ)
+                if (window.currentChartInterval !== 'tick' && window.tvHeatmapLayer) {
+                    window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
+                }
             }
         }
 // 3. BẮT DỮ LIỆU TICKER 24H (VOL, LIQ, MCAP, HOLD, TXs)
@@ -1924,13 +1929,13 @@ function connectRealtimeChart(t) {
             // 1. Cập nhật Nến/Line và Giá lên UI NGAY LẬP TỨC để biểu đồ mượt mà
             window.scTickHistory.push({ t: Date.now(), p: p, q: q, v: valUSD, dir: isUp });
             
-            // [FIX LỖI TÀNG HÌNH]: Giữ nhịp đập cho Lớp Nền để Tường không bị mất
-            if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
-
-            if (window.currentChartInterval === 'tick' && tvLineSeries) {
-                tvLineSeries.update({ time: timeSec, value: p });
+            // [ĐÃ FIX]: Chỉ nhồi dữ liệu Tick vào Lớp Nền nếu đang xem khung Tick
+            if (window.currentChartInterval === 'tick') {
+                if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
+                if (tvLineSeries) tvLineSeries.update({ time: timeSec, value: p });
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
             }
+
             let priceEl = document.getElementById('sc-live-price');
             if (priceEl) {
                 priceEl.innerText = '$' + formatPrice(p);
@@ -2231,17 +2236,22 @@ tvChart = LightweightCharts.createChart(container, {
             setTimeout(() => {
                 let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
                 if (activeSeries && window.scChartMarkers && window.scChartMarkers.length > 0) {
-                    activeSeries.setMarkers(window.scChartMarkers); // Vẽ lại Cá mập lên biểu đồ
+                    // [ĐÃ FIX]: Chỉ vẽ lại Cá cũ nếu đang ở khung Tick hoặc 1s
+                    if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
+                        activeSeries.setMarkers(window.scChartMarkers); 
+                    } else {
+                        // Khung lớn thì xóa sạch marker trên màn hình (nhưng vẫn giữ ngầm trong Cache)
+                        activeSeries.setMarkers([]); 
+                    }
                 }
                 
-                // In lại ngay Dòng Tiền
+                // In lại ngay Dòng Tiền và Số Cá Mập ra bảng Info
                 let flowEl = document.getElementById('sc-stat-net-flow');
                 if (flowEl && window.scNetFlow !== undefined) {
                     flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
                     flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
                 }
                 
-                // [FIX] In lại chuẩn xác số lượng 4 con cá lên Dashboard
                 let eWhale = document.getElementById('sc-stat-whale'); if (eWhale) eWhale.innerText = window.scCWhale || 0;
                 let eShark = document.getElementById('sc-stat-shark'); if (eShark) eShark.innerText = window.scCShark || 0;
                 let eDolphin = document.getElementById('sc-stat-dolphin'); if (eDolphin) eDolphin.innerText = window.scCDolphin || 0;
