@@ -1544,7 +1544,7 @@ function connectRealtimeChart(t) {
 
         // Lọc mảng lịch sử 50 markers
         let filteredMarkers = window.scChartMarkers.filter(m => {
-            if (!m.fishType) return true; // Luôn giữ lại các mác DUMP, WALL HIT, STOP-HUNT
+            if (!m.fishType) return true; 
 
             if (fVal === 'whale' && m.fishType === 'whale') return true;
             if (fVal === 'shark' && (m.fishType === 'whale' || m.fishType === 'shark')) return true;
@@ -1553,7 +1553,12 @@ function connectRealtimeChart(t) {
             return false;
         });
 
-        activeSeries.setMarkers(filteredMarkers); // Vẽ lại mảng đã lọc
+        // [ĐÃ FIX]: Bắt buộc phải sắp xếp thời gian tăng dần để thư viện chịu vẽ
+        filteredMarkers.sort((a, b) => a.time - b.time);
+
+        try {
+            activeSeries.setMarkers(filteredMarkers); 
+        } catch (e) {}
     };
 
    // --- HÀM 2: CÔNG TẮC HEATMAP (DÙNG ICON MẮT) ---
@@ -1954,7 +1959,9 @@ function connectRealtimeChart(t) {
                 let volThreshold = Math.max(10000, currentAvgTicket * 15); // Khối lượng nện vào phải là Big Size
                 
                 let isTrad = window.currentTheme === 'trad';
-                let timeSec = Math.floor(nowTs / 1000);
+                
+                // [ĐÃ FIX]: Lấy chính xác thời gian của luồng Binance, chặn lỗi đặt mác lọt vào tương lai
+                let timeSec = window.scCurrentCluster ? window.scCurrentCluster.timeSec : Math.floor(nowTs / 1000);
                 let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
 
                 if (activeSeries) {
