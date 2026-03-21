@@ -2042,7 +2042,7 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
                 time: d.time, 
                 open: d.open, high: d.high, low: d.low, close: d.close,
                 volValue: d.volume, 
-                volColor: isUp ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)'
+                volColor: isUp ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)',
                 value: isArea ? d.close : undefined
             };
         });
