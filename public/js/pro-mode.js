@@ -995,12 +995,17 @@ function injectLayout() {
                         <div class="sc-panel-section" style="padding-bottom: 10px;">
                             <div class="sc-panel-title" style="display:flex; justify-content:space-between; align-items:center;">
                                 <div><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape</div>
-                                <select id="sc-fish-filter" style="background:#1e2329; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:2px 4px; border-radius:3px;">
-                                    <option value="sweep">Tất cả (🤖+)</option>
-                                    <option value="dolphin">Từ Cá Heo (🐬+)</option>
-                                    <option value="shark">Từ Cá Mập (🦈+)</option>
-                                    <option value="whale">Chỉ Cá Voi (🐋)</option>
-                                </select>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <label style="color:#848e9c; font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
+                                        <input type="checkbox" id="sc-heatmap-toggle" checked onchange="window.toggleHeatmap()" style="accent-color: #F0B90B; cursor:pointer;"> Heatmap
+                                    </label>
+                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:#1e2329; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:2px 4px; border-radius:3px;">
+                                        <option value="sweep">Tất cả (🤖+)</option>
+                                        <option value="dolphin">Từ Cá Heo (🐬+)</option>
+                                        <option value="shark">Từ Cá Mập (🦈+)</option>
+                                        <option value="whale">Chỉ Cá Voi (🐋)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
                             
@@ -1487,6 +1492,44 @@ function connectRealtimeChart(t) {
     window.scCSweep = cache.cSweep || 0;
 // --- KHAI BÁO HÀM SMART TAPE (XỬ LÝ CỤM LỆNH) ---
     window.scCurrentCluster = null;
+    // --- HÀM 1: LỌC CÁ HỒI TỐ (QUÉT LẠI LỊCH SỬ) ---
+    window.applyFishFilter = function() {
+        let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+        if (!activeSeries) return;
+
+        // Nếu khung giờ lớn hơn 1s -> Xóa sạch
+        if (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
+            activeSeries.setMarkers([]); return;
+        }
+
+        let filterEl = document.getElementById('sc-fish-filter');
+        let fVal = filterEl ? filterEl.value : 'sweep';
+
+        // Lọc mảng lịch sử 50 markers
+        let filteredMarkers = window.scChartMarkers.filter(m => {
+            if (!m.fishType) return true; // Luôn giữ lại các mác DUMP, WALL HIT, STOP-HUNT
+
+            if (fVal === 'whale' && m.fishType === 'whale') return true;
+            if (fVal === 'shark' && (m.fishType === 'whale' || m.fishType === 'shark')) return true;
+            if (fVal === 'dolphin' && (m.fishType === 'whale' || m.fishType === 'shark' || m.fishType === 'dolphin')) return true;
+            if (fVal === 'sweep') return true;
+            return false;
+        });
+
+        activeSeries.setMarkers(filteredMarkers); // Vẽ lại mảng đã lọc
+    };
+
+    // --- HÀM 2: CÔNG TẮC HEATMAP TƯỜNG THANH KHOẢN ---
+    window.toggleHeatmap = function() {
+        let toggle = document.getElementById('sc-heatmap-toggle');
+        // Nếu người dùng Tắt -> Xóa ngay lập tức các vạch trên màn hình
+        if (toggle && !toggle.checked && window.scActivePriceLines) {
+            window.scActivePriceLines.forEach(line => {
+                try { if (window.tvHeatmapLayer) window.tvHeatmapLayer.removePriceLine(line); } catch(e) {}
+            });
+            window.scActivePriceLines = [];
+        }
+    };
     window.flushSmartTape = function(cluster) {
         if (!cluster) return;
         let tradesBox = document.getElementById('sc-live-trades');
@@ -1523,39 +1566,24 @@ function connectRealtimeChart(t) {
             else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
             else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
 
-            // [ĐÃ FIX 3] CHỈ IN CÁ LÊN CHART Ở KHUNG TICK HOẶC 1 GIÂY
-            if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
-                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-                if (activeSeries) {
-                    
-                    // [ĐÃ FIX 1] LẤY GIÁ TRỊ CỦA BỘ LỌC CÁ TRÊN GIAO DIỆN
-                    let filterEl = document.getElementById('sc-fish-filter');
-                    let fVal = filterEl ? filterEl.value : 'sweep';
-                    let canDraw = false;
+            // LUÔN LƯU VÀO BỘ NHỚ BẤT CHẤP KHUNG GIỜ VÀ BỘ LỌC
+            let fishType = 'sweep';
+            if (isWhale) fishType = 'whale'; else if (isShark) fishType = 'shark'; else if (isDolphin) fishType = 'dolphin';
+            
+            let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
+            if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
+            let markerColor = cluster.dir ? '#0ECB81' : '#F6465D';
 
-                    if (fVal === 'whale' && isWhale) canDraw = true;
-                    else if (fVal === 'shark' && (isWhale || isShark)) canDraw = true;
-                    else if (fVal === 'dolphin' && (isWhale || isShark || isDolphin)) canDraw = true;
-                    else if (fVal === 'sweep') canDraw = true;
-
-                    // NẾU ĐẠT ĐIỀU KIỆN LỌC THÌ MỚI VẼ
-                    if (canDraw) {
-                        let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
-                        if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
-                        
-                        // [ĐÃ FIX 2] ĐỔI MÀU MŨI TÊN THÀNH XANH LÁ (BINANCE GREEN) / ĐỎ (BINANCE RED)
-                        let markerColor = cluster.dir ? '#0ECB81' : '#F6465D';
-
-                        window.scChartMarkers.push({
-                            time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
-                            color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg 
-                        });
-                        
-                        if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                        activeSeries.setMarkers(window.scChartMarkers);
-                    }
-                }
-            }
+            window.scChartMarkers.push({
+                time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
+                color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg,
+                fishType: fishType // [QUAN TRỌNG] Đóng mác loại cá để xài bộ lọc
+            });
+            
+            if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            
+            // Kích hoạt hàm lọc để tự động quét lại bộ nhớ và vẽ
+            window.applyFishFilter();
         }
     };
     try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
@@ -1880,43 +1908,29 @@ function connectRealtimeChart(t) {
                 }
                 window.scActivePriceLines = [];
 
-                // BẮN VẠCH MỚI LÊN CHART (STYLE BOOKMAP)
-                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-                
-                // Chốt an toàn: Chờ lớp nền render xong mới vẽ
-                if (window.tvHeatmapLayer) { 
-                    newWalls.forEach(wall => {
-                        let lineColor = '';
-                        let thickness = 1;
+                let toggle = document.getElementById('sc-heatmap-toggle');
+                let isHeatmapEnabled = toggle ? toggle.checked : true;
 
-                        // Bảng màu Bookmap: Xanh Lạnh -> Cam Ấm -> Đỏ Nóng -> Trắng Dung Nham
-                        if (wall.v > currentAvgTicket * 30) {
-                            lineColor = 'rgba(255, 255, 255, 0.7)'; // Trắng (Tường Dung Nham)
-                            thickness = 6; // Khối siêu dày
-                        } else if (wall.v > currentAvgTicket * 15) {
-                            lineColor = 'rgba(255, 50, 50, 0.5)'; // Đỏ rực (Tường Nóng)
-                            thickness = 4;
-                        } else if (wall.v > currentAvgTicket * 8) {
-                            lineColor = 'rgba(255, 152, 0, 0.4)'; // Cam (Tường Ấm)
-                            thickness = 3;
-                        } else {
-                            lineColor = 'rgba(33, 150, 243, 0.3)'; // Xanh dương (Tường Lạnh)
-                            thickness = 2;
-                        }
+                // CHỈ VẼ HEATMAP NẾU NGƯỜI DÙNG BẬT CÔNG TẮC
+                if (isHeatmapEnabled && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
+                    let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+                    
+                    if (window.tvHeatmapLayer) { 
+                        newWalls.forEach(wall => {
+                            let lineColor = ''; let thickness = 1;
 
-                        let priceLine = window.tvHeatmapLayer.createPriceLine({
-                            price: wall.p,
-                            color: lineColor,
-                            lineWidth: thickness,
-                            lineStyle: 0, // Nét khối liền (Solid) giống mảng màu Bookmap
-                            axisLabelVisible: false, // Tàng hình số
-                            title: ''                
+                            if (wall.v > currentAvgTicket * 30) { lineColor = 'rgba(255, 255, 255, 0.7)'; thickness = 6; }
+                            else if (wall.v > currentAvgTicket * 15) { lineColor = 'rgba(255, 50, 50, 0.5)'; thickness = 4; }
+                            else if (wall.v > currentAvgTicket * 8) { lineColor = 'rgba(255, 152, 0, 0.4)'; thickness = 3; }
+                            else { lineColor = 'rgba(33, 150, 243, 0.3)'; thickness = 2; }
+
+                            let priceLine = window.tvHeatmapLayer.createPriceLine({
+                                price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
+                            });
+                            window.scActivePriceLines.push(priceLine);
                         });
-                        window.scActivePriceLines.push(priceLine);
-                    });
+                    }
                 }
-            }
-        }
         
         // ---------------------------------------------------------
         // LỆNH LIVE & LOGIC CÁ MẬP (SMART TAPE AGGREGATION)
@@ -2240,8 +2254,9 @@ tvChart = LightweightCharts.createChart(container, {
                     if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
                         activeSeries.setMarkers(window.scChartMarkers); 
                     } else {
-                        // Khung lớn thì xóa sạch marker trên màn hình (nhưng vẫn giữ ngầm trong Cache)
-                        activeSeries.setMarkers([]); 
+                        // PHỤC HỒI LẠI ICON VÀ SỐ LIỆU TỪ CACHE NGAY LẬP TỨC
+            setTimeout(() => {
+                window.applyFishFilter(); // Gọi thẳng hàm lọc cá hồi tố thay vì set cứng
                     }
                 }
                 
