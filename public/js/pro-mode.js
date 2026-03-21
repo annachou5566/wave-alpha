@@ -1931,7 +1931,8 @@ function connectRealtimeChart(t) {
                         });
                     }
                 }
-        
+        } 
+        } 
         // ---------------------------------------------------------
         // LỆNH LIVE & LOGIC CÁ MẬP (SMART TAPE AGGREGATION)
         if (data.stream.endsWith('@aggTrade')) {
@@ -2265,8 +2266,7 @@ tvChart = LightweightCharts.createChart(container, {
                 
             }, 200);
         });
-        // KẾT THÚC
-       
+     
     }, 100); 
 };
 
