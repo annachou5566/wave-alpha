@@ -2462,32 +2462,26 @@ window.switchScTab = function(tabId, btnElement) {
     if (targetTab) targetTab.classList.add('active');
 };
 
-// =====================================================================
-// 🚀 TRỤ CỘT 4: ADD-ON SMART MONEY RADAR (ĐỘC LẬP - KHÔNG GÂY LỖI CODE CŨ)
-// =====================================================================
-
-// 1. Hàm tự động tiêm Tab "Smart Money" vào giao diện hiện tại
 function injectSmartMoneyTab() {
     const tabsContainer = document.querySelector('.sc-mobile-tabs');
     const sidePanel = document.querySelector('.sc-side-panel');
     
     if (!tabsContainer || !sidePanel || document.getElementById('tab-smartmoney')) return;
 
-    // Tiêm Nút Tab mới
+    tabsContainer.style.display = 'flex';
+    
     const newTabBtn = document.createElement('button');
     newTabBtn.className = 'sc-tab-btn';
     newTabBtn.innerText = 'Smart Money';
     newTabBtn.onclick = function() { window.switchScTab('smartmoney', this); };
     tabsContainer.appendChild(newTabBtn);
 
-    // Tiêm Nội dung Tab (UI Bảng điều khiển)
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
     newTabContent.className = 'sc-tab-content';
-    newTabContent.style.cssText = 'background: #12151A; padding: 10px 15px; display: none; overflow-y: auto;';
+    newTabContent.style.cssText = 'background: #12151A; padding: 10px 15px; display: none; flex-direction: column; overflow-y: auto;';
     
     newTabContent.innerHTML = `
-        newTabContent.innerHTML = `
         <div class="sc-panel-title" style="margin-bottom: 15px; color:#eaecef;">
             <i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> RADAR DÒNG TIỀN ON-CHAIN
         </div>
@@ -2676,7 +2670,24 @@ const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
     oldOpenProChart(t, isTimeSwitch);
     if (!isTimeSwitch) {
+        setTimeout(injectSmartMoneyTab, 100);
         window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+    }
+};
+
+window.switchScTab = function(tabId, btnElement) {
+    document.querySelectorAll('.sc-tab-btn').forEach(btn => btn.classList.remove('active'));
+    if(btnElement) btnElement.classList.add('active');
+    
+    document.querySelectorAll('.sc-tab-content').forEach(tab => {
+        tab.style.display = 'none';
+        tab.classList.remove('active');
+    });
+    
+    let targetTab = document.getElementById('tab-' + tabId);
+    if (targetTab) {
+        targetTab.style.display = 'flex';
+        targetTab.classList.add('active');
     }
 };
 
