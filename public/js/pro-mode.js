@@ -1024,7 +1024,6 @@ function injectLayout() {
                     <div class="sc-mobile-tabs">
                         <button class="sc-tab-btn active" onclick="window.switchScTab('trades', this)">Live Trades</button>
                         <button class="sc-tab-btn" onclick="window.switchScTab('info', this)">Data Flow</button>
-                        <button class="sc-tab-btn" onclick="window.switchScTab('smartmoney', this)">Smart Money</button>
                     </div>
 
                     <div id="tab-trades" class="sc-tab-content active" style="padding: 0;">
@@ -1070,47 +1069,6 @@ function injectLayout() {
                         </div>
                     </div>
                 </div>
-                <div id="tab-smartmoney" class="sc-tab-content">
-                        <div class="sc-panel-title" style="margin-bottom: 12px; color:#eaecef;">
-                             <i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> RADAR DÒNG TIỀN ON-CHAIN
-                        </div>
-                        
-                        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">💎 PHÂN BỔ HOLDER</div>
-                        <div class="df-grid" style="margin-top:0; margin-bottom:15px;">
-                            <div class="df-box" style="border-color: rgba(42, 245, 146, 0.2);"><div class="df-label">Smart Money</div><div class="df-val" id="sm-pct-smart">--%</div></div>
-                            <div class="df-box" style="border-color: rgba(240, 185, 11, 0.2);"><div class="df-label">KOLs / Pro</div><div class="df-val" id="sm-pct-kol" style="color:#F0B90B;">--%</div></div>
-                            <div class="df-box"><div class="df-label">New Wallet</div><div class="df-val" id="sm-pct-new">--%</div></div>
-                            <div class="df-box"><div class="df-label">Sniper</div><div class="df-val" id="sm-pct-sniper" style="color:#FF007F;">--%</div></div>
-                        </div>
-
-                        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">🏦 DÒNG TIỀN BINANCE CEX</div>
-                        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
-                                <span style="font-size:10px; color:#848e9c;">Giá Mua TB:</span>
-                                <span id="sm-bn-avg-buy" style="font-size:12px; font-weight:700; color:#0ECB81;">$--</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
-                                <span style="font-size:10px; color:#848e9c;">Giá Bán TB:</span>
-                                <span id="sm-bn-avg-sell" style="font-size:12px; font-weight:700; color:#F6465D;">$--</span>
-                            </div>
-                            <div style="display:flex; justify-content:space-between;">
-                                <span style="font-size:10px; color:#848e9c;">Net Flow:</span>
-                                <span id="sm-bn-netflow" style="font-size:12px; font-weight:700;">$--</span>
-                            </div>
-                        </div>
-
-                        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">⚡ GIA TỐC VOLUME</div>
-                        <div style="display:flex; gap:8px;">
-                            <div style="flex:1; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px; text-align:center;">
-                                <div style="font-size:8px; color:#527c82;">5 PHÚT</div>
-                                <div id="sm-vol-5m" style="font-size:11px; font-weight:700;">$--</div>
-                            </div>
-                            <div style="flex:1; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px; text-align:center;">
-                                <div style="font-size:8px; color:#527c82;">1 GIỜ</div>
-                                <div id="sm-vol-1h" style="font-size:11px; font-weight:700;">$--</div>
-                            </div>
-                        </div>
-                    </div>
             </div>
     `;
     
@@ -2452,16 +2410,31 @@ window.closeProChart = function() {
     }
     window.currentChartToken = null; 
 };
-// Hàm chuyển Tab dùng Class thay vì Style cứng
+
+
+
+// =====================================================================
+// 🚀 TRỤ CỘT 4: SMART MONEY RADAR (ĐÃ FIX LỖI SYNTAX VÀ MAPPING DỮ LIỆU)
+// =====================================================================
+
+// 1. Logic chuyển Tab chuẩn xác
 window.switchScTab = function(tabId, btnElement) {
     document.querySelectorAll('.sc-tab-btn').forEach(btn => btn.classList.remove('active'));
-    btnElement.classList.add('active');
+    if(btnElement) btnElement.classList.add('active');
     
-    document.querySelectorAll('.sc-tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.sc-tab-content').forEach(tab => {
+        tab.style.display = 'none';
+        tab.classList.remove('active');
+    });
+    
     let targetTab = document.getElementById('tab-' + tabId);
-    if (targetTab) targetTab.classList.add('active');
+    if (targetTab) {
+        targetTab.style.display = 'flex';
+        targetTab.classList.add('active');
+    }
 };
 
+// 2. Tự động tiêm UI Smart Money vào Side Panel
 function injectSmartMoneyTab() {
     const tabsContainer = document.querySelector('.sc-mobile-tabs');
     const sidePanel = document.querySelector('.sc-side-panel');
@@ -2583,23 +2556,20 @@ function injectSmartMoneyTab() {
     sidePanel.appendChild(newTabContent);
 }
 
+// 3. Phân tích dữ liệu API JSON
 window.updateSmartMoneyRadar = function(apiData) {
     if (!apiData || !apiData.data) return;
     const d = apiData.data;
 
     const safeSet = (id, val, color) => {
         let el = document.getElementById(id);
-        if (el) { 
-            el.innerHTML = val; 
-            if (color) el.style.color = color; 
-        }
+        if (el) { el.innerHTML = val; if (color) el.style.color = color; }
     };
 
     const fmtPct = (val) => val && !isNaN(val) ? (parseFloat(val) * 100).toFixed(2) + '%' : '0.00%';
     const fmtUsd = (val) => val && !isNaN(val) ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
     const fmtPrice = (val) => val && !isNaN(val) ? parseFloat(val).toPrecision(5) : '--';
 
-    // ĐÃ FIX: Tính toán chuẩn xác các thông số % của Holder theo JSON Binance mới nhất
     let smartPct = parseFloat(d.holdersSmartMoneyPercent || d.smartMoneyHoldingPercent || 0);
     safeSet('sm-pct-smart', smartPct > 0 ? (smartPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-smart', d.smartMoneyHolders || '0');
@@ -2616,7 +2586,6 @@ window.updateSmartMoneyRadar = function(apiData) {
     safeSet('sm-pct-sniper', sniperBundlerPct > 0 ? (sniperBundlerPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-sniper', d.bundlerHolders || '0');
 
-    // ĐÃ FIX: Binance CEX Stats
     safeSet('sm-bn-traders', `${d.bnTraders || 0} Traders / ${d.bnUniqueHolders || d.kycHolderCount || 0} KYC`);
     
     let currentPrice = parseFloat(d.price || 0);
@@ -2640,7 +2609,6 @@ window.updateSmartMoneyRadar = function(apiData) {
     let net24h = parseFloat(d.volume24hNetBinance || 0);
     safeSet('sm-bn-netflow-24h', (net24h >= 0 ? '+' : '') + fmtUsd(Math.abs(net24h)), net24h >= 0 ? '#0ECB81' : '#F6465D');
 
-    // ĐÃ FIX: CVD Bar (Volume Mua/Bán)
     const updateCVDBar = (timeKey, buyVol, sellVol) => {
         let total = buyVol + sellVol;
         safeSet(`sm-vol-${timeKey}-total`, `Vol: ` + fmtUsd(total));
@@ -2661,19 +2629,18 @@ window.updateSmartMoneyRadar = function(apiData) {
     updateCVDBar('4h', parseFloat(d.volume4hBuy || 0), parseFloat(d.volume4hSell || 0));
 };
 
+// 4. Lệnh Gọi Fetch Data
 window.fetchSmartMoneyData = async function(contract, chainId) {
     if (!contract) return;
     
     let titleEl = document.querySelector('#tab-smartmoney .sc-panel-title');
     if (titleEl) {
-        titleEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#F0B90B; margin-right: 5px;"></i> ĐANG TRÍCH XUẤT ON-CHAIN...`;
+        titleEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#F0B90B; margin-right: 5px;"></i> ĐANG KẾT NỐI SERVER...`;
     }
 
     try {
-        // [ĐÃ FIX]: Phải trỏ ĐÚNG TÊN MIỀN RENDER của bạn, nếu không trình duyệt sẽ gọi đi chỗ khác!
         let url = `https://alpha-realtime.onrender.com/api/smart-money?chainId=${chainId || 56}&contractAddress=${contract}`;
-        
-        console.log("Đang gọi Render lấy Smart Money:", url); // Báo log trên trình duyệt F12
+        console.log("📡 Đang lấy dữ liệu Smart Money từ:", url);
         
         let res = await fetch(url);
         let json = await res.json();
@@ -2682,11 +2649,23 @@ window.fetchSmartMoneyData = async function(contract, chainId) {
             window.updateSmartMoneyRadar(json);
             if (titleEl) titleEl.innerHTML = `<i class="fas fa-bolt" style="color:#0ECB81; margin-right: 5px;"></i> RADAR SMART MONEY (LIVE)`;
         } else {
-            if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> ${json.message || 'LỖI API'}`;
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> API TRẢ VỀ RỖNG`;
         }
     } catch(e) {
-        console.log("Lỗi kết nối Server Render:", e);
-        if (titleEl) titleEl.innerHTML = `<i class="fas fa-wifi" style="color:#F6465D; margin-right: 5px;"></i> SERVER MẤT KẾT NỐI`;
+        console.error("❌ Lỗi Fetch Data:", e);
+        if (titleEl) titleEl.innerHTML = `<i class="fas fa-wifi" style="color:#F6465D; margin-right: 5px;"></i> LỖI KẾT NỐI MẠNG`;
+    }
+};
+
+// 5. Móc Hàm vào Lệnh Mở Chart
+const oldOpenProChart = window.openProChart;
+window.openProChart = function(t, isTimeSwitch = false) {
+    oldOpenProChart(t, isTimeSwitch);
+    if (!isTimeSwitch) {
+        setTimeout(() => {
+            injectSmartMoneyTab();
+            window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+        }, 100);
     }
 };
 
