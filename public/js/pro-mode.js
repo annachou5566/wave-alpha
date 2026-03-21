@@ -130,38 +130,31 @@ document.addEventListener('DOMContentLoaded', () => {
             .sc-panel-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); }
             .sc-panel-title { font-size: 11px; text-transform: uppercase; color: #848e9c; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; display:flex; align-items:center; gap:6px;}
             
-            .sc-mobile-tabs { display: none; }
-            .sc-tab-content { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+            /* TABS LUÔN HIỆN TRÊN CẢ PC VÀ MOBILE */
+            .sc-mobile-tabs { display: flex; background: #12151A; border-bottom: 1px solid #1e2329; flex-shrink: 0; }
+            .sc-tab-btn { flex: 1; background: transparent; border: none; color: #5e6673; padding: 10px 0; font-size: 11px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s;}
+            .sc-tab-btn.active { color: #00F0FF; border-bottom-color: #00F0FF; background: rgba(0, 240, 255, 0.05); }
+            
+            .sc-tab-content { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 10px 15px; background: #12151A;}
+            .sc-tab-content.active { display: flex !important; }
             
             #sc-live-trades::-webkit-scrollbar { width: 4px; }
             #sc-live-trades::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
-            /* MOBILE RESPONSIVE (Tối ưu khít không gian, chữ nhỏ) */
+            /* MOBILE RESPONSIVE */
             @media (max-width: 991px) {
                 .sc-body { flex-direction: column !important; overflow-y: hidden !important; }
                 .sc-topbar { padding: 8px 10px; }
-                
-                /* Tăng chiều cao chart 1 chút, khít với Tab dưới */
                 .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid #1e2329; }
-                
-                /* Đẩy Giá và % thành cột dọc */
                 .sc-stats-row { padding: 6px 10px; gap: 8px; }
                 .sc-price-box { flex-direction: column; align-items: flex-start; gap: 0px; margin-right: 5px; justify-content: center;}
                 .sc-price-box #sc-live-price { font-size: 22px !important; }
                 .sc-price-box #sc-change-24h { font-size: 11px !important; }
-                
-                /* Ép 5 thông số nằm vừa 1 hàng không cuộn */
                 .sc-metrics-compact { width: 100%; justify-content: space-between; gap: 2px; overflow: hidden; padding-bottom: 0;}
                 .sc-mc-item span { font-size: 8px; margin-bottom: 0; }
                 .sc-mc-item strong { font-size: 10.5px; }
-                
                 .sc-side-panel { width: 100% !important; flex: 1 !important; border-left: none; background: #0B0E11; }
-                .sc-mobile-tabs { display: flex; background: #12151A; border-bottom: 1px solid #1e2329; }
-                .sc-tab-btn { flex: 1; background: transparent; border: none; color: #5e6673; padding: 8px 0; font-size: 11px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s;}
-                .sc-tab-btn.active { color: #00F0FF; border-bottom-color: #00F0FF; background: rgba(0, 240, 255, 0.05); }
-                
-                .sc-tab-content { display: none; padding: 5px 0; flex: 1; overflow-y: auto;}
-                .sc-tab-content.active { display: flex; }
+                .sc-tab-content { padding: 5px 0; }
                 .sc-panel-section { padding: 5px 15px 10px 15px; border-bottom: none; margin-bottom: 5px;}
             }
         `;
@@ -1034,7 +1027,7 @@ function injectLayout() {
                         <button class="sc-tab-btn" onclick="window.switchScTab('smartmoney', this)">Smart Money</button>
                     </div>
 
-                    <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex; flex-direction: column;">
+                    <div id="tab-trades" class="sc-tab-content active" style="padding: 0;">
                         <div class="sc-panel-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329;">
                             <i class="fas fa-bolt" style="color:#00F0FF; margin-right: 5px;"></i> LIVE TRADES
                         </div>
@@ -1046,7 +1039,7 @@ function injectLayout() {
                         </div>
                     </div>
 
-                    <div id="tab-info" class="sc-tab-content" style="background: #12151A; padding: 10px 15px;">
+                    <div id="tab-info" class="sc-tab-content">
                         <div class="sc-panel-title" style="margin-bottom: 0; color:#eaecef;"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> DATA FLOW (REALTIME)</div>
                         
                         <div class="df-grid">
@@ -1077,7 +1070,7 @@ function injectLayout() {
                         </div>
                     </div>
                 </div>
-                <div id="tab-smartmoney" class="sc-tab-content" style="background: #12151A; padding: 10px 15px; display:none; flex-direction:column;">
+                <div id="tab-smartmoney" class="sc-tab-content">
                         <div class="sc-panel-title" style="margin-bottom: 12px; color:#eaecef;">
                              <i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> RADAR DÒNG TIỀN ON-CHAIN
                         </div>
@@ -2459,31 +2452,16 @@ window.closeProChart = function() {
     }
     window.currentChartToken = null; 
 };
-// Hàm chuyển Tab cho giao diện Mobile Chart
+// Hàm chuyển Tab dùng Class thay vì Style cứng
 window.switchScTab = function(tabId, btnElement) {
-    // 1. Reset nút Tab
     document.querySelectorAll('.sc-tab-btn').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
     
-    // 2. Ẩn tất cả nội dung
-    document.getElementById('tab-trades').style.display = 'none';
-    document.getElementById('tab-info').style.display = 'none';
-    
-    // 3. Hiển thị nội dung được chọn
-    document.getElementById('tab-' + tabId).style.display = 'flex';
+    document.querySelectorAll('.sc-tab-content').forEach(tab => tab.classList.remove('active'));
+    let targetTab = document.getElementById('tab-' + tabId);
+    if (targetTab) targetTab.classList.add('active');
 };
 
-// Fix lỗi trên Desktop: Đảm bảo cả 2 khu vực đều hiển thị khi đổi kích thước màn hình
-window.addEventListener('resize', () => {
-    if (window.innerWidth > 991) {
-        document.getElementById('tab-trades').style.display = 'flex';
-        document.getElementById('tab-info').style.display = 'block';
-    } else {
-        // Trả về mặc định hiển thị tab đang active
-        let activeTab = document.querySelector('.sc-tab-btn.active');
-        if (activeTab) activeTab.click();
-    }
-});
 // =====================================================================
 // 🚀 TRỤ CỘT 4: ADD-ON SMART MONEY RADAR (ĐỘC LẬP - KHÔNG GÂY LỖI CODE CŨ)
 // =====================================================================
