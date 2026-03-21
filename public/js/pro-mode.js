@@ -91,10 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .sc-time-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; font-weight: bold; }
 
             /* HIỆU ỨNG NHẤP NHÁY GIÁ */
-            .price-up { color: #00F0FF !important; animation: glow-cyan 0.5s; }
-            .price-down { color: #FF007F !important; animation: glow-pink 0.5s; }
-            @keyframes glow-cyan { from { text-shadow: 0 0 10px #00F0FF; } to { text-shadow: none; } }
-            @keyframes glow-pink { from { text-shadow: 0 0 10px #FF007F; } to { text-shadow: none; } }
+            .price-up { color: #0ECB81 !important; transition: color 0.3s; }
+            .price-down { color: #F6465D !important; transition: color 0.3s; }
         `;
         document.head.appendChild(style);
     }
@@ -995,7 +993,15 @@ function injectLayout() {
 
                     <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
                         <div class="sc-panel-section" style="padding-bottom: 10px;">
-                            <div class="sc-panel-title"><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape Tracker</div>
+                            <div class="sc-panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape</div>
+                                <select id="sc-fish-filter" style="background:#1e2329; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:2px 4px; border-radius:3px;">
+                                    <option value="sweep">Tất cả (🤖+)</option>
+                                    <option value="dolphin">Từ Cá Heo (🐬+)</option>
+                                    <option value="shark">Từ Cá Mập (🦈+)</option>
+                                    <option value="whale">Chỉ Cá Voi (🐋)</option>
+                                </select>
+                            </div>
                             <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="color:#848e9c; font-size:11px;">Ticket trung bình</span><span id="sc-stat-avg-ticket" style="font-family:var(--font-num); color:#eaecef; font-weight:700;">$0</span></div>
                             
                             <div style="display:flex; justify-content:space-between; text-align:center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
@@ -1517,17 +1523,38 @@ function connectRealtimeChart(t) {
             else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
             else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
 
-            let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-            if (activeSeries) {
-                let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
-                if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP'; // Ưu tiên báo Sweep nếu tiền bé
-                
-                window.scChartMarkers.push({
-                    time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
-                    color: cluster.dir ? '#00F0FF' : '#FF007F', shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg 
-                });
-                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                activeSeries.setMarkers(window.scChartMarkers);
+            // [ĐÃ FIX 3] CHỈ IN CÁ LÊN CHART Ở KHUNG TICK HOẶC 1 GIÂY
+            if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
+                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+                if (activeSeries) {
+                    
+                    // [ĐÃ FIX 1] LẤY GIÁ TRỊ CỦA BỘ LỌC CÁ TRÊN GIAO DIỆN
+                    let filterEl = document.getElementById('sc-fish-filter');
+                    let fVal = filterEl ? filterEl.value : 'sweep';
+                    let canDraw = false;
+
+                    if (fVal === 'whale' && isWhale) canDraw = true;
+                    else if (fVal === 'shark' && (isWhale || isShark)) canDraw = true;
+                    else if (fVal === 'dolphin' && (isWhale || isShark || isDolphin)) canDraw = true;
+                    else if (fVal === 'sweep') canDraw = true;
+
+                    // NẾU ĐẠT ĐIỀU KIỆN LỌC THÌ MỚI VẼ
+                    if (canDraw) {
+                        let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
+                        if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
+                        
+                        // [ĐÃ FIX 2] ĐỔI MÀU MŨI TÊN THÀNH XANH LÁ (BINANCE GREEN) / ĐỎ (BINANCE RED)
+                        let markerColor = cluster.dir ? '#0ECB81' : '#F6465D';
+
+                        window.scChartMarkers.push({
+                            time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
+                            color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg 
+                        });
+                        
+                        if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                        activeSeries.setMarkers(window.scChartMarkers);
+                    }
+                }
             }
         }
     };
@@ -2074,11 +2101,12 @@ tvChart = LightweightCharts.createChart(container, {
 
         // [NEW] TẠO LỚP NỀN (BACKGROUND LAYER) ĐỂ VẼ TƯỜNG THANH KHOẢN CHÌM XUỐNG ĐÁY
         window.tvHeatmapLayer = tvChart.addLineSeries({
+            color: 'transparent', // [ĐÃ FIX LỖI]: Ép màu trong suốt để triệt tiêu cái đường line Xanh Dương chạy rác biểu đồ
             lineWidth: 0, // Đường kẻ tàng hình
             crosshairMarkerVisible: false, // Tắt marker khi rê chuột
             priceLineVisible: false, // Tắt đường giá
             lastValueVisible: false, // Tắt hiển thị số
-            priceFormat: { type: 'price', precision: prec, minMove: minM } // [FIXED]: Nạp định dạng thập phân để không bị mất cột giá trục Y
+            priceFormat: { type: 'price', precision: prec, minMove: minM } // Nạp định dạng thập phân
         });
 
         
