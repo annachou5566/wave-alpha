@@ -90,9 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .sc-time-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
             .sc-time-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; font-weight: bold; }
 
-            /* HIỆU ỨNG NHẤP NHÁY GIÁ */
-            .price-up { color: #0ECB81 !important; transition: color 0.3s; }
-            .price-down { color: #F6465D !important; transition: color 0.3s; }
+            /* HIỆU ỨNG NHẤP NHÁY GIÁ (CYBERPUNK) */
+            .price-up { color: #2af592 !important; transition: color 0.3s; }
+            .price-down { color: #cb55e3 !important; transition: color 0.3s; }
         `;
         document.head.appendChild(style);
     }
@@ -993,17 +993,15 @@ function injectLayout() {
 
                     <div id="tab-info" class="sc-tab-content" style="background: #12151A;">
                         <div class="sc-panel-section" style="padding-bottom: 10px;">
-                            <div class="sc-panel-title" style="display:flex; justify-content:space-between; align-items:center;">
-                                <div><i class="fas fa-water" style="color:#00F0FF; margin-right: 5px;"></i> Smart Tape</div>
-                                <div style="display:flex; gap:10px; align-items:center;">
-                                    <label style="color:#848e9c; font-size:9px; cursor:pointer; display:flex; align-items:center; gap:3px;">
-                                        <input type="checkbox" id="sc-heatmap-toggle" checked onchange="window.toggleHeatmap()" style="accent-color: #F0B90B; cursor:pointer;"> Heatmap
-                                    </label>
-                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:#1e2329; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:2px 4px; border-radius:3px;">
-                                        <option value="sweep">Tất cả (🤖+)</option>
-                                        <option value="dolphin">Từ Cá Heo (🐬+)</option>
-                                        <option value="shark">Từ Cá Mập (🦈+)</option>
-                                        <option value="whale">Chỉ Cá Voi (🐋)</option>
+                            <div class="sc-panel-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                                <div><i class="fas fa-water" style="color:#41e6e7; margin-right: 5px;"></i> Smart Tape</div>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <i id="sc-heatmap-icon" class="fas fa-eye" onclick="window.toggleHeatmapUI()" style="color:#41e6e7; cursor:pointer; font-size:12px; transition:0.2s;" title="Bật/Tắt Heatmap"></i>
+                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:9px; font-weight:700; outline:none; cursor:pointer; padding:0; text-align:right;">
+                                        <option value="sweep">🤖 Tất cả Bot</option>
+                                        <option value="dolphin">🐬 Từ Cá Heo</option>
+                                        <option value="shark">🦈 Từ Cá Mập</option>
+                                        <option value="whale">🐋 Chỉ Cá Voi</option>
                                     </select>
                                 </div>
                             </div>
@@ -1519,11 +1517,16 @@ function connectRealtimeChart(t) {
         activeSeries.setMarkers(filteredMarkers); // Vẽ lại mảng đã lọc
     };
 
-    // --- HÀM 2: CÔNG TẮC HEATMAP TƯỜNG THANH KHOẢN ---
-    window.toggleHeatmap = function() {
-        let toggle = document.getElementById('sc-heatmap-toggle');
-        // Nếu người dùng Tắt -> Xóa ngay lập tức các vạch trên màn hình
-        if (toggle && !toggle.checked && window.scActivePriceLines) {
+    // --- HÀM 2: CÔNG TẮC HEATMAP (DÙNG ICON MẮT) ---
+    window.isHeatmapOn = true;
+    window.toggleHeatmapUI = function() {
+        window.isHeatmapOn = !window.isHeatmapOn;
+        let icon = document.getElementById('sc-heatmap-icon');
+        if (icon) {
+            icon.className = window.isHeatmapOn ? 'fas fa-eye' : 'fas fa-eye-slash';
+            icon.style.color = window.isHeatmapOn ? '#41e6e7' : '#527c82';
+        }
+        if (!window.isHeatmapOn && window.scActivePriceLines) {
             window.scActivePriceLines.forEach(line => {
                 try { if (window.tvHeatmapLayer) window.tvHeatmapLayer.removePriceLine(line); } catch(e) {}
             });
@@ -1549,10 +1552,10 @@ function connectRealtimeChart(t) {
         if (tradesBox) {
             let row = document.createElement('div');
             let bgAlpha = icon !== '' ? '0.25' : '0.1';
-            row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${cluster.dir ? `rgba(0,240,255,${bgAlpha})` : `rgba(255,0,127,${bgAlpha})`}; transition:0.4s; font-weight:${fontWeight};`;
+            row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${cluster.dir ? `rgba(42,245,146,${bgAlpha})` : `rgba(203,85,227,${bgAlpha})`}; transition:0.4s; font-weight:${fontWeight};`;
             
             let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false});
-            row.innerHTML = `<span style="color:${cluster.dir ? '#00F0FF' : '#FF007F'}">${formatPrice(cluster.p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(cluster.vol)}</span><span style="color:#5e6673">${timeStr}</span>`;
+            row.innerHTML = `<span style="color:${cluster.dir ? '#2af592' : '#cb55e3'}">${formatPrice(cluster.p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(cluster.vol)}</span><span style="color:#527c82">${timeStr}</span>`;
             tradesBox.insertBefore(row, tradesBox.firstChild);
             
             setTimeout(() => row.style.background = 'transparent', 400);
@@ -1572,7 +1575,7 @@ function connectRealtimeChart(t) {
             
             let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
             if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
-            let markerColor = cluster.dir ? '#0ECB81' : '#F6465D';
+            let markerColor = cluster.dir ? '#2af592' : '#cb55e3';
 
             window.scChartMarkers.push({
                 time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
@@ -1810,7 +1813,7 @@ function connectRealtimeChart(t) {
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
                 
                 if (tvCandleSeries) tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
-                if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
+                if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)' });
 
                 // [ĐÃ FIX]: Cập nhật Lớp Nền theo nhịp NẾN PHÚT (Chống trôi biểu đồ)
                 if (window.currentChartInterval !== 'tick' && window.tvHeatmapLayer) {
@@ -1911,18 +1914,17 @@ function connectRealtimeChart(t) {
                 let toggle = document.getElementById('sc-heatmap-toggle');
                 let isHeatmapEnabled = toggle ? toggle.checked : true;
 
-                // CHỈ VẼ HEATMAP NẾU NGƯỜI DÙNG BẬT CÔNG TẮC
-                if (isHeatmapEnabled && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
+                // Sửa biến check thành isHeatmapOn
+                if (window.isHeatmapOn && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
                     let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-                    
                     if (window.tvHeatmapLayer) { 
                         newWalls.forEach(wall => {
                             let lineColor = ''; let thickness = 1;
-
-                            if (wall.v > currentAvgTicket * 30) { lineColor = 'rgba(255, 255, 255, 0.7)'; thickness = 6; }
-                            else if (wall.v > currentAvgTicket * 15) { lineColor = 'rgba(255, 50, 50, 0.5)'; thickness = 4; }
-                            else if (wall.v > currentAvgTicket * 8) { lineColor = 'rgba(255, 152, 0, 0.4)'; thickness = 3; }
-                            else { lineColor = 'rgba(33, 150, 243, 0.3)'; thickness = 2; }
+                            // Bảng màu Matrix Heatmap
+                            if (wall.v > currentAvgTicket * 30) { lineColor = 'rgba(203, 85, 227, 0.7)'; thickness = 6; } // Tím chói
+                            else if (wall.v > currentAvgTicket * 15) { lineColor = 'rgba(137, 57, 153, 0.5)'; thickness = 4; } // Tím đậm
+                            else if (wall.v > currentAvgTicket * 8) { lineColor = 'rgba(85, 69, 125, 0.4)'; thickness = 3; } // Tím trầm
+                            else { lineColor = 'rgba(22, 96, 73, 0.3)'; thickness = 2; } // Xanh rêu tàng hình
 
                             let priceLine = window.tvHeatmapLayer.createPriceLine({
                                 price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
@@ -1948,7 +1950,7 @@ function connectRealtimeChart(t) {
             if (window.currentChartInterval === 'tick') {
                 if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
                 if (tvLineSeries) tvLineSeries.update({ time: timeSec, value: p });
-                if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)' });
+                if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)' });
             }
 
             let priceEl = document.getElementById('sc-live-price');
@@ -2040,7 +2042,7 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
                 time: d.time, 
                 open: d.open, high: d.high, low: d.low, close: d.close,
                 volValue: d.volume, 
-                volColor: isUp ? 'rgba(0, 240, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)', 
+                volColor: isUp ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)'
                 value: isArea ? d.close : undefined
             };
         });
@@ -2109,48 +2111,37 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if (priceVal < 0.0001) { prec = 10; minM = 0.0000000001; }
 
         
-tvChart = LightweightCharts.createChart(container, {
+// KHỞI TẠO BIỂU ĐỒ MÀU CYBERPUNK
+        tvChart = LightweightCharts.createChart(container, {
             width: w, height: h,
-            layout: { background: { type: 'solid', color: '#111418' }, textColor: '#848e9c', fontSize: 11 },
-            watermark: { color: 'rgba(255, 255, 255, 0.02)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
-            grid: { vertLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' }, horzLines: { style: 3, color: 'rgba(43, 49, 57, 0.3)' } }, // Đứt nét mờ
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'}, horzLine: { color: '#848e9c', labelBackgroundColor: '#00F0FF'} },
-            timeScale: { borderColor: 'rgba(43, 49, 57, 0.5)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
+            layout: { background: { type: 'solid', color: '#0f1a1c' }, textColor: '#527c82', fontSize: 11 },
+            watermark: { color: 'rgba(65, 230, 231, 0.03)', visible: true, text: t.symbol || 'WAVE ALPHA', fontSize: 100, horzAlign: 'center', vertAlign: 'center' },
+            grid: { vertLines: { style: 3, color: 'rgba(82, 124, 130, 0.2)' }, horzLines: { style: 3, color: 'rgba(82, 124, 130, 0.2)' } }, 
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: '#527c82', labelBackgroundColor: '#55457d'}, horzLine: { color: '#527c82', labelBackgroundColor: '#55457d'} },
+            timeScale: { borderColor: 'rgba(82, 124, 130, 0.4)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
             rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 } }
         });
 
-        // [NEW] TẠO LỚP NỀN (BACKGROUND LAYER) ĐỂ VẼ TƯỜNG THANH KHOẢN CHÌM XUỐNG ĐÁY
         window.tvHeatmapLayer = tvChart.addLineSeries({
-            color: 'transparent', // [ĐÃ FIX LỖI]: Ép màu trong suốt để triệt tiêu cái đường line Xanh Dương chạy rác biểu đồ
-            lineWidth: 0, // Đường kẻ tàng hình
-            crosshairMarkerVisible: false, // Tắt marker khi rê chuột
-            priceLineVisible: false, // Tắt đường giá
-            lastValueVisible: false, // Tắt hiển thị số
-            priceFormat: { type: 'price', precision: prec, minMove: minM } // Nạp định dạng thập phân
+            color: 'transparent', lineWidth: 0, crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false,
+            priceFormat: { type: 'price', precision: prec, minMove: minM }
         });
 
-        
-        // NẾU LÀ TICK -> VẼ AREA CHART (MẢNG MÀU)
         if (window.currentChartInterval === 'tick') {
             tvLineSeries = tvChart.addAreaSeries({
-                lineColor: '#00F0FF', topColor: 'rgba(0, 240, 255, 0.3)', bottomColor: 'rgba(0, 240, 255, 0.0)', lineWidth: 2, 
+                lineColor: '#41e6e7', topColor: 'rgba(65, 230, 231, 0.3)', bottomColor: 'rgba(65, 230, 231, 0.0)', lineWidth: 2, 
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
-        } 
-        // NẾU LÀ KHUNG THỜI GIAN -> VẼ NẾN NHẬT (CANDLESTICKS)
-        else {
+        } else {
             tvCandleSeries = tvChart.addCandlestickSeries({
-                upColor: '#00F0FF', downColor: '#FF007F', // CYAN / PINK THẦN THÁNH
-                borderDownColor: '#FF007F', borderUpColor: '#00F0FF',
-                wickDownColor: '#FF007F', wickUpColor: '#00F0FF',
+                upColor: '#2af592', downColor: '#cb55e3',
+                borderDownColor: '#cb55e3', borderUpColor: '#2af592',
+                wickDownColor: '#cb55e3', wickUpColor: '#2af592',
                 priceFormat: { type: 'price', precision: prec, minMove: minM }
             });
         }
 
-        // TRỤC VOLUME XÀI CHUNG HỆ MÀU
-        tvVolumeSeries = tvChart.addHistogramSeries({
-            priceFormat: { type: 'volume' }, priceScaleId: 'vol_scale' 
-        });
+        tvVolumeSeries = tvChart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol_scale' });
         tvChart.priceScale('vol_scale').applyOptions({ scaleMargins: { top: 0.7, bottom: 0 }, visible: false });
 
         new ResizeObserver(entries => {
