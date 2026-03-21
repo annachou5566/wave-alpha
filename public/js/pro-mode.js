@@ -2656,7 +2656,6 @@ window.updateSmartMoneyRadar = function(apiData) {
     updateCVDBar('4h', parseFloat(d.volume4hBuy || 0), parseFloat(d.volume4hSell || 0));
 };
 
-// Hàm gọi API thực tế (Chọc thẳng vào Backend Render của bạn)
 window.fetchSmartMoneyData = async function(contract, chainId) {
     if (!contract) return;
     
@@ -2666,8 +2665,11 @@ window.fetchSmartMoneyData = async function(contract, chainId) {
     }
 
     try {
-        // GỌI THẲNG VỀ API RENDER MÀ BẠN VỪA TẠO Ở BƯỚC 1 (Lấy đường dẫn tương đối /api/...)
-        let url = `/api/smart-money?chainId=${chainId || 56}&contractAddress=${contract}`;
+        // [ĐÃ FIX]: Phải trỏ ĐÚNG TÊN MIỀN RENDER của bạn, nếu không trình duyệt sẽ gọi đi chỗ khác!
+        let url = `https://alpha-realtime.onrender.com/api/smart-money?chainId=${chainId || 56}&contractAddress=${contract}`;
+        
+        console.log("Đang gọi Render lấy Smart Money:", url); // Báo log trên trình duyệt F12
+        
         let res = await fetch(url);
         let json = await res.json();
         
@@ -2675,11 +2677,11 @@ window.fetchSmartMoneyData = async function(contract, chainId) {
             window.updateSmartMoneyRadar(json);
             if (titleEl) titleEl.innerHTML = `<i class="fas fa-bolt" style="color:#0ECB81; margin-right: 5px;"></i> RADAR SMART MONEY (LIVE)`;
         } else {
-            throw new Error("Lỗi API");
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> ${json.message || 'LỖI API'}`;
         }
     } catch(e) {
         console.log("Lỗi kết nối Server Render:", e);
-        if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> SERVER MẤT KẾT NỐI`;
+        if (titleEl) titleEl.innerHTML = `<i class="fas fa-wifi" style="color:#F6465D; margin-right: 5px;"></i> SERVER MẤT KẾT NỐI`;
     }
 };
 
