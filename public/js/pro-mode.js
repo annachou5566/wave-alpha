@@ -1031,6 +1031,7 @@ function injectLayout() {
                     <div class="sc-mobile-tabs">
                         <button class="sc-tab-btn active" onclick="window.switchScTab('trades', this)">Live Trades</button>
                         <button class="sc-tab-btn" onclick="window.switchScTab('info', this)">Data Flow</button>
+                        <button class="sc-tab-btn" onclick="window.switchScTab('smartmoney', this)">Smart Money</button>
                     </div>
 
                     <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex; flex-direction: column;">
@@ -1076,6 +1077,47 @@ function injectLayout() {
                         </div>
                     </div>
                 </div>
+                <div id="tab-smartmoney" class="sc-tab-content" style="background: #12151A; padding: 10px 15px; display:none; flex-direction:column;">
+                        <div class="sc-panel-title" style="margin-bottom: 12px; color:#eaecef;">
+                             <i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> RADAR DÒNG TIỀN ON-CHAIN
+                        </div>
+                        
+                        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">💎 PHÂN BỔ HOLDER</div>
+                        <div class="df-grid" style="margin-top:0; margin-bottom:15px;">
+                            <div class="df-box" style="border-color: rgba(42, 245, 146, 0.2);"><div class="df-label">Smart Money</div><div class="df-val" id="sm-pct-smart">--%</div></div>
+                            <div class="df-box" style="border-color: rgba(240, 185, 11, 0.2);"><div class="df-label">KOLs / Pro</div><div class="df-val" id="sm-pct-kol" style="color:#F0B90B;">--%</div></div>
+                            <div class="df-box"><div class="df-label">New Wallet</div><div class="df-val" id="sm-pct-new">--%</div></div>
+                            <div class="df-box"><div class="df-label">Sniper</div><div class="df-val" id="sm-pct-sniper" style="color:#FF007F;">--%</div></div>
+                        </div>
+
+                        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">🏦 DÒNG TIỀN BINANCE CEX</div>
+                        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                                <span style="font-size:10px; color:#848e9c;">Giá Mua TB:</span>
+                                <span id="sm-bn-avg-buy" style="font-size:12px; font-weight:700; color:#0ECB81;">$--</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                                <span style="font-size:10px; color:#848e9c;">Giá Bán TB:</span>
+                                <span id="sm-bn-avg-sell" style="font-size:12px; font-weight:700; color:#F6465D;">$--</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span style="font-size:10px; color:#848e9c;">Net Flow:</span>
+                                <span id="sm-bn-netflow" style="font-size:12px; font-weight:700;">$--</span>
+                            </div>
+                        </div>
+
+                        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">⚡ GIA TỐC VOLUME</div>
+                        <div style="display:flex; gap:8px;">
+                            <div style="flex:1; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px; text-align:center;">
+                                <div style="font-size:8px; color:#527c82;">5 PHÚT</div>
+                                <div id="sm-vol-5m" style="font-size:11px; font-weight:700;">$--</div>
+                            </div>
+                            <div style="flex:1; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 4px; text-align:center;">
+                                <div style="font-size:8px; color:#527c82;">1 GIỜ</div>
+                                <div id="sm-vol-1h" style="font-size:11px; font-weight:700;">$--</div>
+                            </div>
+                        </div>
+                    </div>
             </div>
     `;
     
@@ -2578,28 +2620,53 @@ window.updateSmartMoneyRadar = function(apiData) {
     }
 };
 
-// 3. Hàm gọi API tự động khi mở Chart
-window.fetchSmartMoneyData = async function(contract, chainId) {
-    if (!contract) return;
-    let url = `https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info?chainId=${chainId || 56}&contractAddress=${contract}`;
-    try {
-        let res = await fetch(url); // Lưu ý: Cần cấu hình Proxy/CORS trên server của bạn nếu fetch trực tiếp từ trình duyệt bị lỗi CORS
-        let json = await res.json();
-        if (json.success) window.updateSmartMoneyRadar(json);
-    } catch(e) { console.log("Lỗi fetch Smart Money API:", e); }
+// Hàm Bơm Dữ Liệu từ Binance Web3 API vào bảng Smart Money
+window.updateSmartMoneyRadar = function(apiData) {
+    if (!apiData || !apiData.data) return;
+    const d = apiData.data;
+
+    const safeSet = (id, val, color) => {
+        let el = document.getElementById(id);
+        if (el) { el.innerText = val; if (color) el.style.color = color; }
+    };
+
+    const fmtPct = (val) => val ? parseFloat(val).toFixed(2) + '%' : '0.00%';
+    const fmtUsd = (val) => val ? '$' + formatCompactNum(parseFloat(val)) : '$0';
+
+    // Đổ dữ liệu vào các ô ID đã tạo ở Bước 2
+    safeSet('sm-pct-smart', fmtPct(d.holdersSmartMoneyPercent));
+    safeSet('sm-pct-kol', fmtPct(d.kolHoldingPercent));
+    safeSet('sm-pct-new', fmtPct(d.newWalletHoldingPercent));
+    safeSet('sm-pct-sniper', fmtPct(d.sniperHoldingPercent));
+
+    safeSet('sm-bn-avg-buy', '$' + formatPrice(d.bnAvgBuyPrice));
+    safeSet('sm-bn-avg-sell', '$' + formatPrice(d.bnAvgSellPrice));
+    
+    let netFlow = parseFloat(d.volume24hNetBinance || 0);
+    safeSet('sm-bn-netflow', (netFlow >= 0 ? '+' : '') + fmtUsd(netFlow), netFlow >= 0 ? '#0ECB81' : '#F6465D');
+
+    safeSet('sm-vol-5m', fmtUsd(parseFloat(d.volume5mBuy || 0) + parseFloat(d.volume5mSell || 0)));
+    safeSet('sm-vol-1h', fmtUsd(parseFloat(d.volume1hBuy || 0) + parseFloat(d.volume1hSell || 0)));
 };
 
-// Móc (Hook) tự động vào quá trình Mở biểu đồ và Tải trang
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(injectSmartMoneyTab, 500); // Chờ UI gốc load xong rồi Tiêm Tab vào
-});
+// Hàm gọi API thực tế
+window.fetchSmartMoneyData = async function(contract, chainId) {
+    if (!contract) return;
+    try {
+        let url = `https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info?chainId=${chainId || 56}&contractAddress=${contract}`;
+        let res = await fetch(url);
+        let json = await res.json();
+        if (json.success) window.updateSmartMoneyRadar(json);
+    } catch(e) { console.log("CORS hoặc Lỗi API:", e); }
+};
 
-// Chèn 1 dòng gọi API vào hàm openProChart gốc của bạn
-const originalOpenProChart = window.openProChart;
+// Móc lệnh gọi API vào mỗi lần mở biểu đồ mới
+const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
-    originalOpenProChart(t, isTimeSwitch); // Giữ nguyên luồng cũ
+    oldOpenProChart(t, isTimeSwitch);
     if (!isTimeSwitch) {
-        // Chỉ gọi API khi mới mở Chart (không gọi lại khi đổi khung giờ)
         window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
     }
 };
+
+
