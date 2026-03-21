@@ -1812,68 +1812,31 @@ function connectRealtimeChart(t) {
         }
 
         // ==========================================================
-        // G. PRO QUANT HEATMAP LOGIC (Gộp Tường, Lọc Nhiễu, Chống Lệnh Ma)
+        // BẢN ĐỒ HEATMAP (ĐÃ FIX: OBJECT POOLING SIÊU MƯỢT, HIỆN LẠI TƯỜNG)
         // ==========================================================
-        if (window.isHeatmapOn && window.scLocalOrderBook && window.scLastPrice > 0 && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
-            if (!window.scWallAges) window.scWallAges = {};
+        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-            let nowTs = Date.now();
-            let currentP = window.scLastPrice;
             
-            const getCumulativeBins = (orderMap, isAsk) => {
-                let validOrders = [];
+            const processWalls = (orderMap, isAsk) => {
+                let walls = [];
                 for (let p in orderMap) {
                     let price = parseFloat(p);
-                    if (Math.abs(price - currentP) / currentP > 0.015) continue;
-                    validOrders.push({ p: price, v: price * orderMap[p] });
+                    let valUSD = price * orderMap[p];
+                    if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk });
                 }
-                validOrders.sort((a, b) => a.p - b.p);
-                
-                let bins = [];
-                let currentBin = null;
-                for (let order of validOrders) {
-                    if (!currentBin) {
-                        currentBin = { p: order.p, v: order.v, count: 1 };
-                        bins.push(currentBin);
-                    } else {
-                        if ((order.p - currentBin.p)/currentBin.p < 0.001) { 
-                            currentBin.v += order.v;
-                            currentBin.p = (currentBin.p * currentBin.count + order.p) / (currentBin.count + 1); 
-                            currentBin.count++;
-                        } else {
-                            currentBin = { p: order.p, v: order.v, count: 1 };
-                            bins.push(currentBin);
-                        }
-                    }
-                }
-
-                let finalWalls = [];
-                for (let b of bins) {
-                    if (b.v > Math.max(500, currentAvgTicket * 5)) {
-                        let keyStr = b.p.toPrecision(4);
-                        if (!window.scWallAges[keyStr]) {
-                            window.scWallAges[keyStr] = nowTs; 
-                        } else if (nowTs - window.scWallAges[keyStr] >= 3000) {
-                            finalWalls.push({ p: b.p, v: b.v, isAsk: isAsk });
-                        }
-                    }
-                }
-                return finalWalls.sort((a, b) => b.v - a.v).slice(0, 6);
+                walls.sort((a, b) => b.v - a.v); 
+                return walls.slice(0, 5); 
             };
 
-            let newWalls = [...getCumulativeBins(window.scLocalOrderBook.asks, true), ...getCumulativeBins(window.scLocalOrderBook.bids, false)];
+            let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
             
-            let validKeys = newWalls.map(w => w.p.toPrecision(4));
-            for (let key in window.scWallAges) {
-                if (!validKeys.includes(key)) delete window.scWallAges[key];
-            }
-
             if (!window.scActivePriceLines) window.scActivePriceLines = [];
             
             if (window.tvHeatmapLayer) { 
                 for (let i = 0; i < newWalls.length; i++) {
                     let wall = newWalls[i];
-                    let lineColor = ''; let thickness = 1; let isTrad = window.currentTheme === 'trad';
+                    let lineColor = ''; let thickness = 1;
+                    let isTrad = window.currentTheme === 'trad';
                     
                     if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
                     else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
@@ -1890,6 +1853,7 @@ function connectRealtimeChart(t) {
                     }
                 }
                 
+                // Dọn các vạch thừa sang tàng hình
                 for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) {
                     window.scActivePriceLines[i].applyOptions({ color: 'transparent' });
                 }
