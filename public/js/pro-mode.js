@@ -1630,8 +1630,7 @@ function connectRealtimeChart(t) {
             
             if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             
-            // Kích hoạt hàm lọc để tự động quét lại bộ nhớ và vẽ
-            window.applyFishFilter();
+           
         }
     };
     try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
@@ -1839,6 +1838,7 @@ function connectRealtimeChart(t) {
                 window.AlphaChartState[sym].cDolphin = window.scCDolphin;
                 window.AlphaChartState[sym].cSweep = window.scCSweep;
             }
+        if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
     }, 1000);
 
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
