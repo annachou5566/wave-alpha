@@ -2595,25 +2595,29 @@ window.updateSmartMoneyRadar = function(apiData) {
         }
     };
 
-    const fmtPct = (val) => val ? parseFloat(val).toFixed(2) + '%' : '0.00%';
-    const fmtUsd = (val) => val ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
-    const fmtPrice = (val) => val ? parseFloat(val).toPrecision(5) : '--';
+    const fmtPct = (val) => val && !isNaN(val) ? (parseFloat(val) * 100).toFixed(2) + '%' : '0.00%';
+    const fmtUsd = (val) => val && !isNaN(val) ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
+    const fmtPrice = (val) => val && !isNaN(val) ? parseFloat(val).toPrecision(5) : '--';
 
-    safeSet('sm-pct-smart', fmtPct(d.holdersSmartMoneyPercent));
+    // ĐÃ FIX: Tính toán chuẩn xác các thông số % của Holder theo JSON Binance mới nhất
+    let smartPct = parseFloat(d.holdersSmartMoneyPercent || d.smartMoneyHoldingPercent || 0);
+    safeSet('sm-pct-smart', smartPct > 0 ? (smartPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-smart', d.smartMoneyHolders || '0');
     
     let kolProPct = parseFloat(d.kolHoldingPercent || 0) + parseFloat(d.proHoldingPercent || 0);
-    safeSet('sm-pct-kol', kolProPct.toFixed(3) + '%');
+    safeSet('sm-pct-kol', kolProPct > 0 ? (kolProPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-kol', parseInt(d.kolHolders || 0) + parseInt(d.proHolders || 0));
     
-    safeSet('sm-pct-new', fmtPct(d.newWalletHoldingPercent));
+    let newPct = parseFloat(d.newWalletHoldingPercent || 0);
+    safeSet('sm-pct-new', newPct > 0 ? (newPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-new', d.newWalletHolders || '0');
     
     let sniperBundlerPct = parseFloat(d.sniperHoldingPercent || 0) + parseFloat(d.bundlerHoldingPercent || 0);
-    safeSet('sm-pct-sniper', sniperBundlerPct.toFixed(3) + '%');
+    safeSet('sm-pct-sniper', sniperBundlerPct > 0 ? (sniperBundlerPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-sniper', d.bundlerHolders || '0');
 
-    safeSet('sm-bn-traders', `${d.bnTraders || 0} Traders / ${d.bnUniqueHolders || 0} KYC`);
+    // ĐÃ FIX: Binance CEX Stats
+    safeSet('sm-bn-traders', `${d.bnTraders || 0} Traders / ${d.bnUniqueHolders || d.kycHolderCount || 0} KYC`);
     
     let currentPrice = parseFloat(d.price || 0);
     let avgBuy = parseFloat(d.bnAvgBuyPrice || 0);
@@ -2636,6 +2640,7 @@ window.updateSmartMoneyRadar = function(apiData) {
     let net24h = parseFloat(d.volume24hNetBinance || 0);
     safeSet('sm-bn-netflow-24h', (net24h >= 0 ? '+' : '') + fmtUsd(Math.abs(net24h)), net24h >= 0 ? '#0ECB81' : '#F6465D');
 
+    // ĐÃ FIX: CVD Bar (Volume Mua/Bán)
     const updateCVDBar = (timeKey, buyVol, sellVol) => {
         let total = buyVol + sellVol;
         safeSet(`sm-vol-${timeKey}-total`, `Vol: ` + fmtUsd(total));
