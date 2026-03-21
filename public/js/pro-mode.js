@@ -1931,6 +1931,58 @@ function connectRealtimeChart(t) {
             }
         }
 
+        // ==========================================================
+        // [PRO QUANT] ICEBERG & ABSORPTION DETECTION
+        // ==========================================================
+        if (!window.scLastIcebergTime) window.scLastIcebergTime = 0;
+        
+        // Chỉ chạy thuật toán nếu cách lần báo trước ít nhất 10 giây (chống spam chart)
+        if (nowTs - window.scLastIcebergTime > 10000 && window.scTickHistory && window.scTickHistory.length > 10) {
+            // Lấy dữ liệu Tick trong 3 giây gần nhất
+            let recent3s = window.scTickHistory.filter(x => nowTs - x.t <= 3000);
+            
+            if (recent3s.length > 5) {
+                let buyVol3s = recent3s.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
+                let sellVol3s = recent3s.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
+                
+                // Đo biên độ dịch chuyển giá
+                let pMax = Math.max(...recent3s.map(x => x.p));
+                let pMin = Math.min(...recent3s.map(x => x.p));
+                let priceDiffPct = pMin > 0 ? ((pMax - pMin) / pMin) * 100 : 1;
+                
+                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+                let volThreshold = Math.max(10000, currentAvgTicket * 15); // Khối lượng nện vào phải là Big Size
+                
+                let isTrad = window.currentTheme === 'trad';
+                let timeSec = Math.floor(nowTs / 1000);
+                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+
+                if (activeSeries) {
+                    // KỊCH BẢN 1: Lực BÁN nện cực mạnh nhưng giá KHÔNG RỚT -> Mua gom ngầm (BUY ABSORPTION)
+                    if (sellVol3s > buyVol3s * 3 && sellVol3s > volThreshold && priceDiffPct < 0.05) {
+                        window.scChartMarkers.push({
+                            time: timeSec, position: 'belowBar', 
+                            color: isTrad ? '#0ECB81' : '#00F0FF', shape: 'arrowUp', 
+                            text: '🧊 BUY ABSORPTION', fishType: 'whale' 
+                        });
+                        window.scLastIcebergTime = nowTs;
+                    }
+                    // KỊCH BẢN 2: Lực MUA ủi cực mạnh nhưng giá KHÔNG TĂNG -> Bán đè ngầm (SELL ABSORPTION)
+                    else if (buyVol3s > sellVol3s * 3 && buyVol3s > volThreshold && priceDiffPct < 0.05) {
+                        window.scChartMarkers.push({
+                            time: timeSec, position: 'aboveBar', 
+                            color: isTrad ? '#F6465D' : '#FF007F', shape: 'arrowDown', 
+                            text: '🧊 SELL ABSORPTION', fishType: 'whale'
+                        });
+                        window.scLastIcebergTime = nowTs;
+                    }
+                    
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                }
+            }
+        }
+
+        // Ép biểu đồ cập nhật Cá Mập & Iceberg
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
     }, 1000);
 
