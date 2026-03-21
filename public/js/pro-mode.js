@@ -2249,19 +2249,61 @@ window.openProChart = function(t, isTimeSwitch = false) {
         });
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
         fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-            if (histData.length > 0) {
+            
+            // ==============================================================
+            // ĐỒNG BỘ HÓA "KÉT SẮT RAM" CHỐNG MẤT TRÍ NHỚ KHI CHUYỂN TAB/GIỜ
+            // ==============================================================
+            if (window.currentChartInterval === 'tick') {
+                let tickData = [];
+                let volData = [];
+                let isTrad = window.currentTheme === 'trad';
                 
-                // [FIX LỖI TÀNG HÌNH]: Bơm dữ liệu mồi để Lớp Nền (Background) sống dậy và chịu vẽ Tường
+                // Gom nhóm Két sắt (scTickHistory) theo từng giây để Chart không bị lỗi lặp thời gian
+                let groupedTicks = {};
+                if (window.scTickHistory && window.scTickHistory.length > 0) {
+                    window.scTickHistory.forEach(tk => {
+                        let tSec = Math.floor(tk.t / 1000);
+                        if (!groupedTicks[tSec]) {
+                            groupedTicks[tSec] = { time: tSec, value: tk.p, vol: tk.q, dir: tk.dir };
+                        } else {
+                            groupedTicks[tSec].value = tk.p; 
+                            groupedTicks[tSec].vol += tk.q;  
+                            groupedTicks[tSec].dir = tk.dir;
+                        }
+                    });
+                }
+                
+                // Lắp ráp dữ liệu chuẩn bị bơm vào Chart
+                Object.values(groupedTicks).sort((a,b) => a.time - b.time).forEach(d => {
+                    tickData.push({ time: d.time, value: d.value });
+                    volData.push({ 
+                        time: d.time, 
+                        value: d.vol, 
+                        color: d.dir ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)')
+                    });
+                });
+
+                // ƯU TIÊN 1: Lấy tối đa 5 phút dữ liệu từ Két Sắt RAM đổ ập vào Chart ngay lập tức
+                if (tickData.length > 0) {
+                    if (window.tvHeatmapLayer) window.tvHeatmapLayer.setData(tickData);
+                    if (tvLineSeries) tvLineSeries.setData(tickData);
+                    if (tvVolumeSeries) tvVolumeSeries.setData(volData);
+                } 
+                else if (histData.length > 0) {
+                    let apiHeatData = histData.map(d => ({ time: d.time, value: d.close || d.value }));
+                    if (window.tvHeatmapLayer) window.tvHeatmapLayer.setData(apiHeatData);
+                    if (tvLineSeries) tvLineSeries.setData(histData);
+                    let apiVolData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
+                    if (tvVolumeSeries) tvVolumeSeries.setData(apiVolData);
+                }
+            } 
+          
+            else if (histData.length > 0) {
                 if (window.tvHeatmapLayer) {
-                    let heatData = histData.map(d => ({ time: d.time, value: d.close || d.value }));
+                    let heatData = histData.map(d => ({ time: d.time, value: d.close }));
                     window.tvHeatmapLayer.setData(heatData);
                 }
-
-                if (window.currentChartInterval === 'tick' && tvLineSeries) {
-                    tvLineSeries.setData(histData);
-                    let volData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
-                    if (tvVolumeSeries) tvVolumeSeries.setData(volData);
-                } else if (tvCandleSeries) {
+                if (tvCandleSeries) {
                     let candleData = histData.map(d => ({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close }));
                     let volData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
                     tvCandleSeries.setData(candleData);
