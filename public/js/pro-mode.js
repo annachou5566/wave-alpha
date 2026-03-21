@@ -2487,158 +2487,191 @@ function injectSmartMoneyTab() {
     newTabContent.style.cssText = 'background: #12151A; padding: 10px 15px; display: none; overflow-y: auto;';
     
     newTabContent.innerHTML = `
+        newTabContent.innerHTML = `
         <div class="sc-panel-title" style="margin-bottom: 15px; color:#eaecef;">
-            <i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> PHÂN TÍCH VÍ & CÁ MẬP
+            <i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> RADAR DÒNG TIỀN ON-CHAIN
         </div>
         
-        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">💎 PHÂN BỔ HOLDER (Tỷ lệ nắm giữ)</div>
-        <div class="df-grid" style="margin-top:0; margin-bottom:15px;">
+        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">💎 PHÂN LỚP HOLDER (ON-CHAIN)</div>
+        <div class="df-grid" style="margin-top:0; margin-bottom:15px; grid-template-columns: 1fr 1fr;">
             <div class="df-box" style="background: rgba(42, 245, 146, 0.05); border-color: rgba(42, 245, 146, 0.2);">
                 <div class="df-label">Smart Money</div>
-                <div class="df-val" id="sm-pct-smart">--%</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <div class="df-val" id="sm-pct-smart">--%</div>
+                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-smart">0</span> ví</div>
+                </div>
             </div>
             <div class="df-box" style="background: rgba(240, 185, 11, 0.05); border-color: rgba(240, 185, 11, 0.2);">
                 <div class="df-label">KOLs / Pro</div>
-                <div class="df-val" id="sm-pct-kol" style="color:#F0B90B;">--%</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <div class="df-val" id="sm-pct-kol" style="color:#F0B90B;">--%</div>
+                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-kol">0</span> ví</div>
+                </div>
             </div>
             <div class="df-box">
                 <div class="df-label">New Wallets</div>
-                <div class="df-val" id="sm-pct-new">--%</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <div class="df-val" id="sm-pct-new">--%</div>
+                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-new">0</span> ví</div>
+                </div>
             </div>
             <div class="df-box">
                 <div class="df-label">Sniper / Bundler</div>
-                <div class="df-val" id="sm-pct-sniper" style="color:#FF007F;">--%</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                    <div class="df-val" id="sm-pct-sniper" style="color:#FF007F;">--%</div>
+                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-sniper">0</span> ví</div>
+                </div>
             </div>
         </div>
 
         <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;">
-            <span>🏦 DÒNG TIỀN TRÊN BINANCE</span>
-            <span id="sm-bn-traders" style="color:#00F0FF;">-- Traders</span>
+            <span>🏦 VỊ THẾ TRÊN BINANCE CEX</span>
+            <span id="sm-bn-traders" style="color:#00F0FF; font-size:9px;">-- Traders / -- Ví KYC</span>
         </div>
         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                <span style="font-size:10px; color:#848e9c;">Trung bình Giá MUA:</span>
-                <span id="sm-bn-avg-buy" style="font-size:12px; font-weight:700; color:#0ECB81; font-family:var(--font-num);">$--</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
+                <span style="font-size:10px; color:#848e9c;">TB Giá Gom (Buy):</span>
+                <div style="text-align:right;">
+                    <span id="sm-bn-avg-buy" style="font-size:12px; font-weight:700; color:#eaecef; font-family:var(--font-num);">$--</span>
+                    <span id="sm-bn-buy-status" style="font-size:9px; margin-left:4px;">(--)</span>
+                </div>
             </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                <span style="font-size:10px; color:#848e9c;">Trung bình Giá BÁN:</span>
-                <span id="sm-bn-avg-sell" style="font-size:12px; font-weight:700; color:#F6465D; font-family:var(--font-num);">$--</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
+                <span style="font-size:10px; color:#848e9c;">TB Giá Xả (Sell):</span>
+                <span id="sm-bn-avg-sell" style="font-size:12px; font-weight:700; color:#848e9c; font-family:var(--font-num);">$--</span>
             </div>
-            <div style="height:1px; background:rgba(255,255,255,0.05); margin: 8px 0;"></div>
+            
+            <div style="height:1px; background:rgba(255,255,255,0.05); margin: 10px 0;"></div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                <span style="font-size:10px; color:#848e9c;">Net Flow Binance (4h):</span>
+                <span id="sm-bn-netflow-4h" style="font-size:11px; font-weight:700; font-family:var(--font-num);">$--</span>
+            </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:10px; color:#848e9c;">Net Flow (24h):</span>
-                <span id="sm-bn-netflow" style="font-size:13px; font-weight:800; font-family:var(--font-num);">$--</span>
+                <span style="font-size:10px; color:#848e9c;">Net Flow Binance (24h):</span>
+                <span id="sm-bn-netflow-24h" style="font-size:12px; font-weight:800; font-family:var(--font-num);">$--</span>
             </div>
         </div>
 
-        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">⚡ GIA TỐC VOLUME (Mua/Bán)</div>
-        <div style="display:flex; gap:10px;">
-            <div style="flex:1; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; text-align:center;">
-                <div style="font-size:9px; color:#527c82; margin-bottom:4px;">5 PHÚT QUA</div>
-                <div id="sm-vol-5m" style="font-size:12px; font-weight:700; font-family:var(--font-num); color:#eaecef;">$--</div>
-                <div id="sm-vol-5m-ratio" style="font-size:10px; margin-top:2px;">--</div>
+        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">⚖️ CÁN CÂN CUNG CẦU (ON-CHAIN)</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.02); padding: 8px; border-radius: 4px;">
+                <div style="display:flex; justify-content:space-between; font-size:9px; color:#527c82; margin-bottom:4px;">
+                    <span>Khung 1 GIỜ</span>
+                    <span id="sm-vol-1h-total">Vol: $--</span>
+                </div>
+                <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; background:#2b3139;">
+                    <div id="sm-bar-1h-buy" style="height:100%; width:50%; background:#0ECB81; transition:0.3s;"></div>
+                    <div id="sm-bar-1h-sell" style="height:100%; width:50%; background:#F6465D; transition:0.3s;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:4px; font-family:var(--font-num); font-weight:700;">
+                    <span id="sm-txt-1h-buy" style="color:#0ECB81;">--%</span>
+                    <span id="sm-txt-1h-sell" style="color:#F6465D;">--%</span>
+                </div>
             </div>
-            <div style="flex:1; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; text-align:center;">
-                <div style="font-size:9px; color:#527c82; margin-bottom:4px;">1 GIỜ QUA</div>
-                <div id="sm-vol-1h" style="font-size:12px; font-weight:700; font-family:var(--font-num); color:#eaecef;">$--</div>
-                <div id="sm-vol-1h-ratio" style="font-size:10px; margin-top:2px;">--</div>
+            
+            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.02); padding: 8px; border-radius: 4px;">
+                <div style="display:flex; justify-content:space-between; font-size:9px; color:#527c82; margin-bottom:4px;">
+                    <span>Khung 4 GIỜ</span>
+                    <span id="sm-vol-4h-total">Vol: $--</span>
+                </div>
+                <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; background:#2b3139;">
+                    <div id="sm-bar-4h-buy" style="height:100%; width:50%; background:#0ECB81; transition:0.3s;"></div>
+                    <div id="sm-bar-4h-sell" style="height:100%; width:50%; background:#F6465D; transition:0.3s;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:4px; font-family:var(--font-num); font-weight:700;">
+                    <span id="sm-txt-4h-buy" style="color:#0ECB81;">--%</span>
+                    <span id="sm-txt-4h-sell" style="color:#F6465D;">--%</span>
+                </div>
             </div>
         </div>
     `;
     sidePanel.appendChild(newTabContent);
 }
 
-// 2. Hàm Bơm Dữ Liệu vào UI (Sẽ gọi khi fetch được API dynamic/info)
 window.updateSmartMoneyRadar = function(apiData) {
     if (!apiData || !apiData.data) return;
     const d = apiData.data;
 
     const safeSet = (id, val, color) => {
         let el = document.getElementById(id);
-        if (el) {
-            el.innerText = val;
-            if (color) el.style.color = color;
+        if (el) { 
+            el.innerHTML = val; 
+            if (color) el.style.color = color; 
         }
     };
 
-    // Định dạng % và số liệu
-    const fmtPct = (val) => val ? parseFloat(val).toFixed(3) + '%' : '0.00%';
+    const fmtPct = (val) => val ? parseFloat(val).toFixed(2) + '%' : '0.00%';
     const fmtUsd = (val) => val ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
-    const fmtPrice = (val) => val ? '$' + parseFloat(val).toPrecision(4) : '$--';
+    const fmtPrice = (val) => val ? parseFloat(val).toPrecision(5) : '--';
 
-    // Phân bổ Holder
     safeSet('sm-pct-smart', fmtPct(d.holdersSmartMoneyPercent));
-    let kolPro = (parseFloat(d.kolHoldingPercent || 0) + parseFloat(d.proHoldingPercent || 0)).toFixed(3);
-    safeSet('sm-pct-kol', kolPro + '%');
-    safeSet('sm-pct-new', fmtPct(d.newWalletHoldingPercent));
-    let sniperBundler = (parseFloat(d.sniperHoldingPercent || 0) + parseFloat(d.bundlerHoldingPercent || 0)).toFixed(3);
-    safeSet('sm-pct-sniper', sniperBundler + '%');
-
-    // Thống kê Binance CEX
-    safeSet('sm-bn-traders', (d.bnTraders || 0) + ' Traders');
-    safeSet('sm-bn-avg-buy', fmtPrice(d.bnAvgBuyPrice));
-    safeSet('sm-bn-avg-sell', fmtPrice(d.bnAvgSellPrice));
+    safeSet('sm-cnt-smart', d.smartMoneyHolders || '0');
     
-    let netFlowBinance = parseFloat(d.volume24hNetBinance || 0);
-    safeSet('sm-bn-netflow', (netFlowBinance >= 0 ? '+' : '') + fmtUsd(Math.abs(netFlowBinance)), netFlowBinance >= 0 ? '#0ECB81' : '#F6465D');
+    let kolProPct = parseFloat(d.kolHoldingPercent || 0) + parseFloat(d.proHoldingPercent || 0);
+    safeSet('sm-pct-kol', kolProPct.toFixed(3) + '%');
+    safeSet('sm-cnt-kol', parseInt(d.kolHolders || 0) + parseInt(d.proHolders || 0));
+    
+    safeSet('sm-pct-new', fmtPct(d.newWalletHoldingPercent));
+    safeSet('sm-cnt-new', d.newWalletHolders || '0');
+    
+    let sniperBundlerPct = parseFloat(d.sniperHoldingPercent || 0) + parseFloat(d.bundlerHoldingPercent || 0);
+    safeSet('sm-pct-sniper', sniperBundlerPct.toFixed(3) + '%');
+    safeSet('sm-cnt-sniper', d.bundlerHolders || '0');
 
-    // Phân tích Volume Gia Tốc
-    let vol5mBuy = parseFloat(d.volume5mBuy || 0); let vol5mSell = parseFloat(d.volume5mSell || 0);
-    safeSet('sm-vol-5m', fmtUsd(vol5mBuy + vol5mSell));
-    if (vol5mBuy + vol5mSell > 0) {
-        let isBuyMore5m = vol5mBuy >= vol5mSell;
-        safeSet('sm-vol-5m-ratio', isBuyMore5m ? 'BUY Áp đảo' : 'SELL Áp đảo', isBuyMore5m ? '#0ECB81' : '#F6465D');
+    safeSet('sm-bn-traders', `${d.bnTraders || 0} Traders / ${d.bnUniqueHolders || 0} KYC`);
+    
+    let currentPrice = parseFloat(d.price || 0);
+    let avgBuy = parseFloat(d.bnAvgBuyPrice || 0);
+    let avgSell = parseFloat(d.bnAvgSellPrice || 0);
+    
+    safeSet('sm-bn-avg-buy', '$' + fmtPrice(avgBuy));
+    safeSet('sm-bn-avg-sell', '$' + fmtPrice(avgSell));
+
+    let buyStatusEl = document.getElementById('sm-bn-buy-status');
+    if (buyStatusEl && avgBuy > 0 && currentPrice > 0) {
+        let pnlPct = ((currentPrice - avgBuy) / avgBuy) * 100;
+        let sign = pnlPct >= 0 ? '+' : '';
+        buyStatusEl.innerText = `(${sign}${pnlPct.toFixed(2)}%)`;
+        buyStatusEl.style.color = pnlPct >= 0 ? '#0ECB81' : '#F6465D';
     }
 
-    let vol1hBuy = parseFloat(d.volume1hBuy || 0); let vol1hSell = parseFloat(d.volume1hSell || 0);
-    safeSet('sm-vol-1h', fmtUsd(vol1hBuy + vol1hSell));
-    if (vol1hBuy + vol1hSell > 0) {
-        let isBuyMore1h = vol1hBuy >= vol1hSell;
-        safeSet('sm-vol-1h-ratio', isBuyMore1h ? 'BUY Áp đảo' : 'SELL Áp đảo', isBuyMore1h ? '#0ECB81' : '#F6465D');
-    }
-};
+    let net4h = parseFloat(d.volume4hNetBinance || 0);
+    safeSet('sm-bn-netflow-4h', (net4h >= 0 ? '+' : '') + fmtUsd(Math.abs(net4h)), net4h >= 0 ? '#0ECB81' : '#F6465D');
 
-// Hàm Bơm Dữ Liệu từ Binance Web3 API vào bảng Smart Money
-window.updateSmartMoneyRadar = function(apiData) {
-    if (!apiData || !apiData.data) return;
-    const d = apiData.data;
+    let net24h = parseFloat(d.volume24hNetBinance || 0);
+    safeSet('sm-bn-netflow-24h', (net24h >= 0 ? '+' : '') + fmtUsd(Math.abs(net24h)), net24h >= 0 ? '#0ECB81' : '#F6465D');
 
-    const safeSet = (id, val, color) => {
-        let el = document.getElementById(id);
-        if (el) { el.innerText = val; if (color) el.style.color = color; }
+    const updateCVDBar = (timeKey, buyVol, sellVol) => {
+        let total = buyVol + sellVol;
+        safeSet(`sm-vol-${timeKey}-total`, `Vol: ` + fmtUsd(total));
+        
+        let buyPct = total > 0 ? (buyVol / total) * 100 : 50;
+        let sellPct = total > 0 ? (sellVol / total) * 100 : 50;
+        
+        let barBuy = document.getElementById(`sm-bar-${timeKey}-buy`);
+        let barSell = document.getElementById(`sm-bar-${timeKey}-sell`);
+        if (barBuy) barBuy.style.width = buyPct + '%';
+        if (barSell) barSell.style.width = sellPct + '%';
+        
+        safeSet(`sm-txt-${timeKey}-buy`, buyPct.toFixed(1) + '%');
+        safeSet(`sm-txt-${timeKey}-sell`, sellPct.toFixed(1) + '%');
     };
 
-    const fmtPct = (val) => val ? parseFloat(val).toFixed(2) + '%' : '0.00%';
-    const fmtUsd = (val) => val ? '$' + formatCompactNum(parseFloat(val)) : '$0';
-
-    // Đổ dữ liệu vào các ô ID đã tạo ở Bước 2
-    safeSet('sm-pct-smart', fmtPct(d.holdersSmartMoneyPercent));
-    safeSet('sm-pct-kol', fmtPct(d.kolHoldingPercent));
-    safeSet('sm-pct-new', fmtPct(d.newWalletHoldingPercent));
-    safeSet('sm-pct-sniper', fmtPct(d.sniperHoldingPercent));
-
-    safeSet('sm-bn-avg-buy', '$' + formatPrice(d.bnAvgBuyPrice));
-    safeSet('sm-bn-avg-sell', '$' + formatPrice(d.bnAvgSellPrice));
-    
-    let netFlow = parseFloat(d.volume24hNetBinance || 0);
-    safeSet('sm-bn-netflow', (netFlow >= 0 ? '+' : '') + fmtUsd(netFlow), netFlow >= 0 ? '#0ECB81' : '#F6465D');
-
-    safeSet('sm-vol-5m', fmtUsd(parseFloat(d.volume5mBuy || 0) + parseFloat(d.volume5mSell || 0)));
-    safeSet('sm-vol-1h', fmtUsd(parseFloat(d.volume1hBuy || 0) + parseFloat(d.volume1hSell || 0)));
+    updateCVDBar('1h', parseFloat(d.volume1hBuy || 0), parseFloat(d.volume1hSell || 0));
+    updateCVDBar('4h', parseFloat(d.volume4hBuy || 0), parseFloat(d.volume4hSell || 0));
 };
 
-// Hàm gọi API thực tế
 window.fetchSmartMoneyData = async function(contract, chainId) {
     if (!contract) return;
     try {
         let url = `https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info?chainId=${chainId || 56}&contractAddress=${contract}`;
         let res = await fetch(url);
         let json = await res.json();
-        if (json.success) window.updateSmartMoneyRadar(json);
-    } catch(e) { console.log("CORS hoặc Lỗi API:", e); }
+        if (json && json.success) window.updateSmartMoneyRadar(json);
+    } catch(e) {}
 };
 
-// Móc lệnh gọi API vào mỗi lần mở biểu đồ mới
 const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
     oldOpenProChart(t, isTimeSwitch);
@@ -2646,5 +2679,4 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
     }
 };
-
 
