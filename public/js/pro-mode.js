@@ -2442,3 +2442,164 @@ window.addEventListener('resize', () => {
         if (activeTab) activeTab.click();
     }
 });
+// =====================================================================
+// 🚀 TRỤ CỘT 4: ADD-ON SMART MONEY RADAR (ĐỘC LẬP - KHÔNG GÂY LỖI CODE CŨ)
+// =====================================================================
+
+// 1. Hàm tự động tiêm Tab "Smart Money" vào giao diện hiện tại
+function injectSmartMoneyTab() {
+    const tabsContainer = document.querySelector('.sc-mobile-tabs');
+    const sidePanel = document.querySelector('.sc-side-panel');
+    
+    if (!tabsContainer || !sidePanel || document.getElementById('tab-smartmoney')) return;
+
+    // Tiêm Nút Tab mới
+    const newTabBtn = document.createElement('button');
+    newTabBtn.className = 'sc-tab-btn';
+    newTabBtn.innerText = 'Smart Money';
+    newTabBtn.onclick = function() { window.switchScTab('smartmoney', this); };
+    tabsContainer.appendChild(newTabBtn);
+
+    // Tiêm Nội dung Tab (UI Bảng điều khiển)
+    const newTabContent = document.createElement('div');
+    newTabContent.id = 'tab-smartmoney';
+    newTabContent.className = 'sc-tab-content';
+    newTabContent.style.cssText = 'background: #12151A; padding: 10px 15px; display: none; overflow-y: auto;';
+    
+    newTabContent.innerHTML = `
+        <div class="sc-panel-title" style="margin-bottom: 15px; color:#eaecef;">
+            <i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> PHÂN TÍCH VÍ & CÁ MẬP
+        </div>
+        
+        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">💎 PHÂN BỔ HOLDER (Tỷ lệ nắm giữ)</div>
+        <div class="df-grid" style="margin-top:0; margin-bottom:15px;">
+            <div class="df-box" style="background: rgba(42, 245, 146, 0.05); border-color: rgba(42, 245, 146, 0.2);">
+                <div class="df-label">Smart Money</div>
+                <div class="df-val" id="sm-pct-smart">--%</div>
+            </div>
+            <div class="df-box" style="background: rgba(240, 185, 11, 0.05); border-color: rgba(240, 185, 11, 0.2);">
+                <div class="df-label">KOLs / Pro</div>
+                <div class="df-val" id="sm-pct-kol" style="color:#F0B90B;">--%</div>
+            </div>
+            <div class="df-box">
+                <div class="df-label">New Wallets</div>
+                <div class="df-val" id="sm-pct-new">--%</div>
+            </div>
+            <div class="df-box">
+                <div class="df-label">Sniper / Bundler</div>
+                <div class="df-val" id="sm-pct-sniper" style="color:#FF007F;">--%</div>
+            </div>
+        </div>
+
+        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between;">
+            <span>🏦 DÒNG TIỀN TRÊN BINANCE</span>
+            <span id="sm-bn-traders" style="color:#00F0FF;">-- Traders</span>
+        </div>
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <span style="font-size:10px; color:#848e9c;">Trung bình Giá MUA:</span>
+                <span id="sm-bn-avg-buy" style="font-size:12px; font-weight:700; color:#0ECB81; font-family:var(--font-num);">$--</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <span style="font-size:10px; color:#848e9c;">Trung bình Giá BÁN:</span>
+                <span id="sm-bn-avg-sell" style="font-size:12px; font-weight:700; color:#F6465D; font-family:var(--font-num);">$--</span>
+            </div>
+            <div style="height:1px; background:rgba(255,255,255,0.05); margin: 8px 0;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:10px; color:#848e9c;">Net Flow (24h):</span>
+                <span id="sm-bn-netflow" style="font-size:13px; font-weight:800; font-family:var(--font-num);">$--</span>
+            </div>
+        </div>
+
+        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">⚡ GIA TỐC VOLUME (Mua/Bán)</div>
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; text-align:center;">
+                <div style="font-size:9px; color:#527c82; margin-bottom:4px;">5 PHÚT QUA</div>
+                <div id="sm-vol-5m" style="font-size:12px; font-weight:700; font-family:var(--font-num); color:#eaecef;">$--</div>
+                <div id="sm-vol-5m-ratio" style="font-size:10px; margin-top:2px;">--</div>
+            </div>
+            <div style="flex:1; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; text-align:center;">
+                <div style="font-size:9px; color:#527c82; margin-bottom:4px;">1 GIỜ QUA</div>
+                <div id="sm-vol-1h" style="font-size:12px; font-weight:700; font-family:var(--font-num); color:#eaecef;">$--</div>
+                <div id="sm-vol-1h-ratio" style="font-size:10px; margin-top:2px;">--</div>
+            </div>
+        </div>
+    `;
+    sidePanel.appendChild(newTabContent);
+}
+
+// 2. Hàm Bơm Dữ Liệu vào UI (Sẽ gọi khi fetch được API dynamic/info)
+window.updateSmartMoneyRadar = function(apiData) {
+    if (!apiData || !apiData.data) return;
+    const d = apiData.data;
+
+    const safeSet = (id, val, color) => {
+        let el = document.getElementById(id);
+        if (el) {
+            el.innerText = val;
+            if (color) el.style.color = color;
+        }
+    };
+
+    // Định dạng % và số liệu
+    const fmtPct = (val) => val ? parseFloat(val).toFixed(3) + '%' : '0.00%';
+    const fmtUsd = (val) => val ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
+    const fmtPrice = (val) => val ? '$' + parseFloat(val).toPrecision(4) : '$--';
+
+    // Phân bổ Holder
+    safeSet('sm-pct-smart', fmtPct(d.holdersSmartMoneyPercent));
+    let kolPro = (parseFloat(d.kolHoldingPercent || 0) + parseFloat(d.proHoldingPercent || 0)).toFixed(3);
+    safeSet('sm-pct-kol', kolPro + '%');
+    safeSet('sm-pct-new', fmtPct(d.newWalletHoldingPercent));
+    let sniperBundler = (parseFloat(d.sniperHoldingPercent || 0) + parseFloat(d.bundlerHoldingPercent || 0)).toFixed(3);
+    safeSet('sm-pct-sniper', sniperBundler + '%');
+
+    // Thống kê Binance CEX
+    safeSet('sm-bn-traders', (d.bnTraders || 0) + ' Traders');
+    safeSet('sm-bn-avg-buy', fmtPrice(d.bnAvgBuyPrice));
+    safeSet('sm-bn-avg-sell', fmtPrice(d.bnAvgSellPrice));
+    
+    let netFlowBinance = parseFloat(d.volume24hNetBinance || 0);
+    safeSet('sm-bn-netflow', (netFlowBinance >= 0 ? '+' : '') + fmtUsd(Math.abs(netFlowBinance)), netFlowBinance >= 0 ? '#0ECB81' : '#F6465D');
+
+    // Phân tích Volume Gia Tốc
+    let vol5mBuy = parseFloat(d.volume5mBuy || 0); let vol5mSell = parseFloat(d.volume5mSell || 0);
+    safeSet('sm-vol-5m', fmtUsd(vol5mBuy + vol5mSell));
+    if (vol5mBuy + vol5mSell > 0) {
+        let isBuyMore5m = vol5mBuy >= vol5mSell;
+        safeSet('sm-vol-5m-ratio', isBuyMore5m ? 'BUY Áp đảo' : 'SELL Áp đảo', isBuyMore5m ? '#0ECB81' : '#F6465D');
+    }
+
+    let vol1hBuy = parseFloat(d.volume1hBuy || 0); let vol1hSell = parseFloat(d.volume1hSell || 0);
+    safeSet('sm-vol-1h', fmtUsd(vol1hBuy + vol1hSell));
+    if (vol1hBuy + vol1hSell > 0) {
+        let isBuyMore1h = vol1hBuy >= vol1hSell;
+        safeSet('sm-vol-1h-ratio', isBuyMore1h ? 'BUY Áp đảo' : 'SELL Áp đảo', isBuyMore1h ? '#0ECB81' : '#F6465D');
+    }
+};
+
+// 3. Hàm gọi API tự động khi mở Chart
+window.fetchSmartMoneyData = async function(contract, chainId) {
+    if (!contract) return;
+    let url = `https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info?chainId=${chainId || 56}&contractAddress=${contract}`;
+    try {
+        let res = await fetch(url); // Lưu ý: Cần cấu hình Proxy/CORS trên server của bạn nếu fetch trực tiếp từ trình duyệt bị lỗi CORS
+        let json = await res.json();
+        if (json.success) window.updateSmartMoneyRadar(json);
+    } catch(e) { console.log("Lỗi fetch Smart Money API:", e); }
+};
+
+// Móc (Hook) tự động vào quá trình Mở biểu đồ và Tải trang
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(injectSmartMoneyTab, 500); // Chờ UI gốc load xong rồi Tiêm Tab vào
+});
+
+// Chèn 1 dòng gọi API vào hàm openProChart gốc của bạn
+const originalOpenProChart = window.openProChart;
+window.openProChart = function(t, isTimeSwitch = false) {
+    originalOpenProChart(t, isTimeSwitch); // Giữ nguyên luồng cũ
+    if (!isTimeSwitch) {
+        // Chỉ gọi API khi mới mở Chart (không gọi lại khi đổi khung giờ)
+        window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+    }
+};
