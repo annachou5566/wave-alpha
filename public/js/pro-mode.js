@@ -2656,38 +2656,57 @@ window.updateSmartMoneyRadar = function(apiData) {
     updateCVDBar('4h', parseFloat(d.volume4hBuy || 0), parseFloat(d.volume4hSell || 0));
 };
 
+// Hàm gọi API thực tế (Tích hợp Radar kiểm tra lỗi và Vượt rào CORS)
 window.fetchSmartMoneyData = async function(contract, chainId) {
     if (!contract) return;
-    try {
-        let url = `https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info?chainId=${chainId || 56}&contractAddress=${contract}`;
-        let res = await fetch(url);
-        let json = await res.json();
-        if (json && json.success) window.updateSmartMoneyRadar(json);
-    } catch(e) {}
-};
-
-const oldOpenProChart = window.openProChart;
-window.openProChart = function(t, isTimeSwitch = false) {
-    oldOpenProChart(t, isTimeSwitch);
-    if (!isTimeSwitch) {
-        setTimeout(injectSmartMoneyTab, 100);
-        window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+    
+    // 1. Hiển thị trạng thái đang tải lên Tiêu đề Tab
+    let titleEl = document.querySelector('#tab-smartmoney .sc-panel-title');
+    if (titleEl) {
+        titleEl.innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#F0B90B; margin-right: 5px;"></i> ĐANG KẾT NỐI BINANCE WEB3...`;
     }
-};
 
-window.switchScTab = function(tabId, btnElement) {
-    document.querySelectorAll('.sc-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if(btnElement) btnElement.classList.add('active');
+    let targetUrl = `https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info?chainId=${chainId || 56}&contractAddress=${contract}`;
     
-    document.querySelectorAll('.sc-tab-content').forEach(tab => {
-        tab.style.display = 'none';
-        tab.classList.remove('active');
-    });
-    
-    let targetTab = document.getElementById('tab-' + tabId);
-    if (targetTab) {
-        targetTab.style.display = 'flex';
-        targetTab.classList.add('active');
+    try {
+        // 2. Thử gọi trực tiếp bằng đường chính (Chắc chắn 99% sẽ bị trình duyệt chặn CORS)
+        let res = await fetch(targetUrl);
+        let json = await res.json();
+        
+        if (json && json.success) {
+            window.updateSmartMoneyRadar(json);
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-check-circle" style="color:#0ECB81; margin-right: 5px;"></i> RADAR DÒNG TIỀN (TRỰC TIẾP)`;
+        }
+    } catch(e) {
+        console.warn("⚠️ Bị Binance chặn CORS. Hệ thống đang tự động bẻ lái qua Proxy...");
+        
+        // 3. Nếu bị chặn CORS -> Tự động dùng Proxy miễn phí để vượt tường lửa
+        try {
+            // Dùng dịch vụ AllOrigins để lấy data giúp trình duyệt
+            let proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+            let resProxy = await fetch(proxyUrl);
+            let jsonProxy = await resProxy.json();
+            
+            // AllOrigins trả dữ liệu ở dạng chuỗi string trong biến 'contents', cần Parse ra JSON thật
+            let realData = JSON.parse(jsonProxy.contents);
+            
+            if (realData && realData.success) {
+                window.updateSmartMoneyRadar(realData);
+                if (titleEl) titleEl.innerHTML = `<i class="fas fa-shield-alt" style="color:#00F0FF; margin-right: 5px;"></i> RADAR DÒNG TIỀN (VƯỢT CORS)`;
+            } else {
+                throw new Error("Proxy không lấy được dữ liệu");
+            }
+        } catch(proxyError) {
+            console.error("❌ Lỗi kết nối toàn tập:", proxyError);
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> LỖI KẾT NỐI API BINANCE`;
+            
+            // In chữ LỖI CORS thẳng ra giao diện cho dễ nhìn
+            let smartPctEl = document.getElementById('sm-pct-smart');
+            if (smartPctEl) {
+                smartPctEl.innerText = "LỖI CORS";
+                smartPctEl.style.color = "#F6465D";
+            }
+        }
     }
 };
 
