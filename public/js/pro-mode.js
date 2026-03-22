@@ -2977,32 +2977,26 @@ window.updateSmartMoneyRadar = function(apiData) {
         }
     }
 
-    // 1.3 Lạm phát (Unlock / FDV vs MCAP) - ĐÃ TỐI ƯU LẤY ALL-CHAIN
+    // Lấy nguyên gốc MC của Binance
     let mc = Number(d.marketCap) || 0;
-    let fdv = Number(d.fdv) || (mc > 0 ? mc : 1);
     
-    // THÊM ĐOẠN NÀY ĐỂ BƠM FDV LÊN THANH TOPBAR
+    // FDV ĐÚNG NGHĨA = Giá hiện tại * Tổng cung tối đa (Tính luôn cả All-chain nếu có)
+    let maxSup = Number(d.allChainMaxSupply) || Number(d.totalSupply) || Number(d.maxSupply);
+    let fdv = maxSup > 0 ? (Number(d.price) * maxSup) : (Number(d.fdv) || mc);
+
+    // Chặn triệt để mọi cú lừa từ API (Nếu API ngáo làm FDV < MC thì gán bằng nhau luôn)
+    if (fdv < mc) fdv = mc;
+
+    // Tính % Mở khóa
+    let unlockPct = (mc / fdv) * 100;
+    if (unlockPct > 100) unlockPct = 100;
+
+    // Bơm lên UI Topbar
     let topFdvEl = document.getElementById('sc-top-fdv');
     if (topFdvEl) topFdvEl.innerText = '$' + formatCompactNum(fdv);
     
-    let unlockPct = 100; // Mặc định
-
-    // Bắt đúng biến All-chain từ API để tính lạm phát tổng của toàn dự án
-    let allCirculating = Number(d.allChainCirculatingSupply);
-    let allMax = Number(d.allChainMaxSupply);
-    
-    // Nếu token có dữ liệu đa chuỗi, dùng nó. Nếu không, fallback về MC/FDV cục bộ
-    if (allCirculating > 0 && allMax > 0) {
-        unlockPct = (allCirculating / allMax) * 100;
-    } else if (fdv > 0) {
-        unlockPct = (mc / fdv) * 100;
-    }
-    
-    // Fix ngàm an toàn chống tràn UI (Trường hợp API ngáo)
-    if (unlockPct > 100) unlockPct = 100;
-    
+    // Bơm lên UI Smart Money
     safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
-    
     let unlockBadge = document.getElementById('sm-unlock-badge');
     if (unlockBadge) {
         if (unlockPct < 30) {
