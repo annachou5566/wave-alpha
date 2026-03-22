@@ -1858,6 +1858,10 @@ function formatCompactUSD(num) {
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
     
+    // [FIX BÓNG MA] Tạo Session ID dựa trên thời gian thực để khóa luồng dữ liệu
+    window.activeChartSessionId = Date.now() + '_' + t.symbol;
+    let currentSession = window.activeChartSessionId;
+
     // 1. KHỞI TẠO BỘ NHỚ RAM STATE (CÓ BỘ ĐỆM CACHE CHỐNG MẤT DỮ LIỆU)
     if (!window.AlphaChartState) window.AlphaChartState = {};
     let sym = t.symbol || 'UNKNOWN';
@@ -2047,6 +2051,8 @@ function connectRealtimeChart(t) {
     // 2. CỖ MÁY TOÁN HỌC CHẠY NGẦM (Mỗi giây 1 lần để chống lag UI)
     if (window.scCalcInterval) clearInterval(window.scCalcInterval);
     window.scCalcInterval = setInterval(() => {
+        if (window.activeChartSessionId !== currentSession) return;
+        
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         const now = Date.now();
         // Dọn rác cụm lệnh bị kẹt (Chống treo giao diện nếu ngừng giao dịch)
@@ -2320,6 +2326,8 @@ function connectRealtimeChart(t) {
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
 
     chartWs.onmessage = (event) => {
+        if (window.activeChartSessionId !== currentSession) return;
+
         const data = JSON.parse(event.data);
         if (!data.stream) return;
 
