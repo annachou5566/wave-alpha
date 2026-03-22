@@ -2978,7 +2978,11 @@ window.updateSmartMoneyRadar = function(apiData) {
     }
 
     // 1.3 Lạm phát (Unlock / FDV vs MCAP)
-    let mc = Number(d.marketCap) || 0;
+    let currentPrice = Number(d.price) || 0;
+    let realCirculating = Number(d.allChainCirculatingSupply) || 0;
+    
+    // Tính MCAP thật từ cung lưu hành on-chain, nếu rỗng thì mới xài tạm marketCap ảo của API
+    let mc = (realCirculating > 0 && currentPrice > 0) ? (realCirculating * currentPrice) : (Number(d.marketCap) || 0);
     let fdv = Number(d.fdv);
     
     // Ép logic chặt chẽ: Chỉ khi API thật sự không có FDV hoặc FDV = 0 thì mới mượn tạm MC
@@ -2990,6 +2994,8 @@ window.updateSmartMoneyRadar = function(apiData) {
     
     // Fix chống ngáo API: Đôi khi sàn gõ nhầm MC lớn hơn cả FDV, mình chặn luôn ở 100% cho UI khỏi vỡ
     if (unlockPct > 100) unlockPct = 100;
+    
+    // Render ra UI
     safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
     let unlockBadge = document.getElementById('sm-unlock-badge');
     if (unlockBadge) {
