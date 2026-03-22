@@ -1358,7 +1358,7 @@ window.togglePoints = function() {
 
 const KEY_MAP_REVERSE = {
   "i": "id", "s": "symbol", "n": "name", "ic": "icon", "cn": "chain", "ci": "chain_icon", "ct": "contract",
-  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", "mc": "market_cap", "l": "liquidity", "v": "volume",
+  "st": "status", "p": "price", "c": "change_24h", "mp": "mul_point", "mc": "market_cap", "f": "fdv", "l": "liquidity", "v": "volume", 
   "r24": "rolling_24h", "dt": "daily_total", "dl": "daily_limit", "do": "daily_onchain", "ch": "chart", "lt": "listing_time", "tx": "tx_count",
   "off": "offline", "cex": "listingCex", "tge": "onlineTge", "air": "onlineAirdrop", "aid": "alphaId", "h": "holders"
 };
@@ -2978,23 +2978,18 @@ window.updateSmartMoneyRadar = function(apiData) {
     }
 
     // 1.3 Lạm phát (Unlock / FDV vs MCAP)
-    let realCirculating = Number(d.allChainCirculatingSupply) || 0;
+    let t = window.currentChartToken || {};
     
-    // Tính MCAP thật từ cung lưu hành on-chain, biến currentPrice đã có sẵn ở trên (mục 1.2) rồi!
-    let mc = (realCirculating > 0 && currentPrice > 0) ? (realCirculating * currentPrice) : (Number(d.marketCap) || 0);
-    let fdv = Number(d.fdv);
+    let mc = Number(t.market_cap) || Number(d.marketCap) || 0;
+    let fdv = Number(t.fdv) || Number(d.fdv);
     
-    // Ép logic chặt chẽ: Chỉ khi API thật sự không có FDV hoặc FDV = 0 thì mới mượn tạm MC
     if (!fdv || fdv <= 0) {
         fdv = mc > 0 ? mc : 1; 
     }
     
     let unlockPct = (mc / fdv) * 100;
-    
-    // Fix chống ngáo API: Đôi khi sàn gõ nhầm MC lớn hơn cả FDV, mình chặn luôn ở 100% cho UI khỏi vỡ
     if (unlockPct > 100) unlockPct = 100;
     
-    // Render ra UI
     safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
     let unlockBadge = document.getElementById('sm-unlock-badge');
     if (unlockBadge) {
