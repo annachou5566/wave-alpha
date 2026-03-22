@@ -1636,11 +1636,11 @@ window.updateCommandCenterUI = function() {
             if (shortNetFlow > 0) {
                 algoStatus.innerText = '🤖 SWEEPING ASKS (GOM)';
                 algoStatus.style.color = '#2af592'; algoBox.style.borderLeftColor = '#2af592';
-                algoStatus.style.animation = 'pulse-dot 0.5s infinite';
+                algoStatus.style.animation = 'none'; // Đã tắt chớp nháy
             } else {
                 algoStatus.innerText = '🤖 SWEEPING BIDS (XẢ)';
                 algoStatus.style.color = '#cb55e3'; algoBox.style.borderLeftColor = '#cb55e3';
-                algoStatus.style.animation = 'pulse-dot 0.5s infinite';
+                algoStatus.style.animation = 'none'; // Đã tắt chớp nháy
             }
         } else {
             algoStatus.innerText = '🤖 TĨNH LẶNG (XÁM)';
@@ -2295,6 +2295,23 @@ function connectRealtimeChart(t) {
             window.AlphaChartState[sym].quantStats = window.quantStats;
         }
 
+// [ĐÃ TỐI ƯU] Cập nhật UI Vĩ mô 1 lần/giây, không nhồi nhét vào WebSocket
+        let displaySpeed = window.scSpeedWindow.filter(x => now - x.t <= 5000).reduce((s, x) => s + x.v, 0) / 5;
+        let speedEl = document.getElementById('sc-stat-match-speed');
+        if(speedEl) speedEl.innerText = '$' + formatCompactUSD(displaySpeed) + ' /s';
+
+        let avgEl = document.getElementById('sc-stat-avg-ticket');
+        if (avgEl) avgEl.innerText = '$' + formatCompactUSD(window.scTotalVol / (window.scTradeCount || 1));
+
+        let flowEl = document.getElementById('sc-stat-net-flow');
+        if (flowEl) {
+            flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
+            flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
+        }
+
+        // Dọn rác scSpeedWindow an toàn định kỳ 1 giây
+        window.scSpeedWindow = window.scSpeedWindow.filter(x => now - x.t <= 5000);
+        
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
 // Cập nhật Command Center UI mỗi giây
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
@@ -2396,10 +2413,17 @@ function connectRealtimeChart(t) {
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)') });
             }
 
-            let priceEl = document.getElementById('sc-live-price');
-            if (priceEl) {
-                priceEl.innerText = '$' + formatPrice(p);
-                priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
+            // [ĐÃ TỐI ƯU] Render giá bằng requestAnimationFrame
+            if (!window.isRenderingPrice) {
+                window.isRenderingPrice = true;
+                requestAnimationFrame(() => {
+                    let priceEl = document.getElementById('sc-live-price');
+                    if (priceEl) {
+                        priceEl.innerText = '$' + formatPrice(window.scLastPrice);
+                        priceEl.className = 'sc-live-price ' + (window.scLastTradeDir ? 'price-up' : 'price-down');
+                    }
+                    window.isRenderingPrice = false;
+                });
             }
 
             // LOGIC GOM CỤM THỜI GIAN THỰC (SMART TAPE) - 1 GIÂY
@@ -2417,24 +2441,13 @@ function connectRealtimeChart(t) {
                 }
             }
 
-            // Cập nhật thông số vĩ mô
-            window.scTradeCount++; window.scTotalVol += valUSD;
-            window.scSpeedWindow.push({ t: nowT, v: valUSD });
-            window.scSpeedWindow = window.scSpeedWindow.filter(x => nowT - x.t <= 5000);
-            
-            let speed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
-            let speedEl = document.getElementById('sc-stat-match-speed');
-            if(speedEl) speedEl.innerText = '$' + formatCompactUSD(speed) + ' /s';
-
-            let avgEl = document.getElementById('sc-stat-avg-ticket');
-            if (avgEl) avgEl.innerText = '$' + formatCompactUSD(window.scTotalVol / window.scTradeCount);
-
+            // [ĐÃ TỐI ƯU] Chỉ ghi nhận Data, việc tính toán để cho vòng lặp 1s xử lý
+            window.scTradeCount++; 
+            window.scTotalVol += valUSD;
             window.scNetFlow += isUp ? valUSD : -valUSD;
-            let flowEl = document.getElementById('sc-stat-net-flow');
-            if (flowEl) {
-                flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
-                flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
-            }
+            // Dùng mảng fixed size nhẹ nhàng thay vì filter liên tục
+            if (window.scSpeedWindow.length > 500) window.scSpeedWindow.shift(); 
+            window.scSpeedWindow.push({ t: nowT, v: valUSD });
             
             if (window.AlphaChartState && window.AlphaChartState[sym]) {
                 window.AlphaChartState[sym].netFlow = window.scNetFlow;
