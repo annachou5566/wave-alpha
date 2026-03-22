@@ -2443,7 +2443,7 @@ window.switchScTab = function(tabId, btnElement) {
     }
 };
 
-// 2. Tự động tiêm UI Smart Money vào Side Panel (PRO QUANT VERSION)
+// 2. Tự động tiêm UI Smart Money (PRO QUANT V3 - MOBILE OPTIMIZED)
 function injectSmartMoneyTab() {
     const tabsContainer = document.querySelector('.sc-mobile-tabs');
     const sidePanel = document.querySelector('.sc-side-panel');
@@ -2461,110 +2461,125 @@ function injectSmartMoneyTab() {
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
     newTabContent.className = 'sc-tab-content';
-    newTabContent.style.cssText = 'background: #12151A; padding: 10px 15px; display: none; flex-direction: column; overflow-y: auto;';
+    // FIX MOBILE SCROLL: Thêm -webkit-overflow-scrolling và padding-bottom
+    newTabContent.style.cssText = 'background: #12151A; padding: 10px 10px 50px 10px; display: none; flex-direction: column; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;';
     
     newTabContent.innerHTML = `
-        <div class="sc-panel-title" style="margin-bottom: 15px; color:#eaecef; display: flex; justify-content: space-between; align-items: center;">
+        <div class="sc-panel-title" style="margin-bottom: 12px; color:#eaecef; display: flex; justify-content: space-between; align-items: center; font-size: 10px; white-space: nowrap;">
             <div><i class="fas fa-microscope" style="color:#F0B90B; margin-right: 5px;"></i> RADAR DÒNG TIỀN ON-CHAIN</div>
         </div>
         
-        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px; display:flex; gap: 5px; align-items: center;">
-            <i class="fas fa-exclamation-triangle text-danger"></i> RỦI RO HỆ THỐNG
+        <div style="font-size:9px; color:#848e9c; font-weight:700; margin-bottom:6px; display:flex; gap: 5px; align-items: center; white-space: nowrap;">
+            <i class="fas fa-exclamation-triangle text-danger"></i> RỦI RO HỆ THỐNG & TOKENOMICS
         </div>
-        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom: 8px; align-items:center;">
-                <span style="font-size:10px; color:#848e9c;">Mức độ Tập trung (Top 10):</span>
-                <div style="text-align:right;">
-                    <span id="sm-top10-pct" style="font-size:12px; font-weight:700; color:#eaecef; font-family:var(--font-num);">--%</span>
-                    <span id="sm-top10-badge" style="font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; margin-left:6px;">--</span>
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; padding: 8px; margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 6px; align-items:center; white-space: nowrap;">
+                <span style="font-size:8.5px; color:#848e9c;">Ví Top 10 Hold:</span>
+                <div style="text-align:right; display:flex; align-items:center; gap: 4px;">
+                    <span id="sm-top10-pct" style="font-size:10.5px; font-weight:700; color:#eaecef; font-family:var(--font-num);">--%</span>
+                    <span id="sm-top10-badge" style="font-size:8px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
                 </div>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:10px; color:#848e9c;" title="Trung bình giá mua của ví CEX">Áp lực Dump CEX (Avg Buy):</span>
-                <div style="text-align:right;">
-                    <span id="sm-bn-avg-buy" style="font-size:12px; font-weight:700; color:#eaecef; font-family:var(--font-num);">$--</span>
-                    <span id="sm-dump-risk-badge" style="font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; margin-left:6px;">--</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom: 6px; align-items:center; white-space: nowrap;">
+                <span style="font-size:8.5px; color:#848e9c;">Áp lực xả (Dump CEX):</span>
+                <div style="text-align:right; display:flex; align-items:center; gap: 4px;">
+                    <span id="sm-bn-avg-buy" style="font-size:10.5px; font-weight:700; color:#eaecef; font-family:var(--font-num);">$--</span>
+                    <span id="sm-dump-risk-badge" style="font-size:8px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
                 </div>
             </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-            <div style="font-size:10px; color:#848e9c; font-weight:700;">💎 TỔ HỢP VÍ (ON-CHAIN)</div>
-            <div id="sm-verdict-badge" style="font-size:9px; font-weight:800; padding: 3px 6px; border-radius: 4px; background: transparent; border: 1px solid #444;">-- Đang quét --</div>
-        </div>
-        <div class="df-grid" style="margin-top:0; margin-bottom:15px; grid-template-columns: 1fr 1fr;">
-            <div class="df-box" style="background: rgba(42, 245, 146, 0.05); border-color: rgba(42, 245, 146, 0.2);">
-                <div class="df-label">Smart Money</div>
-                <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                    <div class="df-val" id="sm-pct-smart">--%</div>
-                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-smart">0</span> ví</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom: 6px; align-items:center; white-space: nowrap;">
+                <span style="font-size:8.5px; color:#848e9c;">Mở khóa (MC/FDV):</span>
+                <div style="text-align:right; display:flex; align-items:center; gap: 4px;">
+                    <span id="sm-unlock-pct" style="font-size:10.5px; font-weight:700; color:#eaecef; font-family:var(--font-num);">--%</span>
+                    <span id="sm-unlock-badge" style="font-size:8px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
                 </div>
             </div>
-            <div class="df-box" style="background: rgba(240, 185, 11, 0.05); border-color: rgba(240, 185, 11, 0.2);">
-                <div class="df-label">KOLs / Pro</div>
-                <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                    <div class="df-val" id="sm-pct-kol" style="color:#F0B90B;">--%</div>
-                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-kol">0</span> ví</div>
-                </div>
-            </div>
-            <div class="df-box">
-                <div class="df-label">New Wallets</div>
-                <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                    <div class="df-val" id="sm-pct-new">--%</div>
-                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-new">0</span> ví</div>
-                </div>
-            </div>
-            <div class="df-box">
-                <div class="df-label">Sniper / Bundler</div>
-                <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                    <div class="df-val" id="sm-pct-sniper" style="color:#FF007F;">--%</div>
-                    <div style="font-size:9px; color:#848e9c;"><span id="sm-cnt-sniper">0</span> ví</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; white-space: nowrap;">
+                <span style="font-size:8.5px; color:#848e9c;">Sức đỡ Thanh khoản:</span>
+                <div style="text-align:right; display:flex; align-items:center; gap: 4px;">
+                    <span id="sm-liq-ratio" style="font-size:10.5px; font-weight:700; color:#eaecef; font-family:var(--font-num);">--%</span>
+                    <span id="sm-liq-badge" style="font-size:8px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
                 </div>
             </div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-            <div style="font-size:10px; color:#848e9c; font-weight:700;">🏦 DÒNG TIỀN BINANCE CEX</div>
-            <div id="sm-bn-traders" style="color:#00F0FF; font-size:9.5px; font-family:var(--font-num); font-weight:700; white-space:nowrap;">-- Traders | -- KYC</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:6px; white-space: nowrap;">
+            <div style="font-size:9px; color:#848e9c; font-weight:700;">💎 TỔ HỢP VÍ (ON-CHAIN)</div>
+            <div id="sm-verdict-badge" style="font-size:8.5px; font-weight:800; padding: 2px 4px; border-radius: 3px; background: transparent; border: 1px solid #444;">-- Đang quét --</div>
         </div>
-        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-                <span style="font-size:10px; color:#848e9c;">Net Flow Binance (4H):</span>
-                <span id="sm-bn-netflow-4h" style="font-size:11px; font-weight:700; font-family:var(--font-num);">$--</span>
+        <div class="df-grid" style="margin-top:0; margin-bottom:12px; grid-template-columns: 1fr 1fr; gap: 4px;">
+            <div class="df-box" style="background: rgba(42, 245, 146, 0.05); border-color: rgba(42, 245, 146, 0.2); padding: 6px;">
+                <div class="df-label" style="font-size:8px; white-space:nowrap;">Smart Money</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; white-space:nowrap;">
+                    <div class="df-val" id="sm-pct-smart" style="font-size:10.5px;">--%</div>
+                    <div style="font-size:8px; color:#848e9c;"><span id="sm-cnt-smart">0</span> ví</div>
+                </div>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:10px; color:#848e9c;">Net Flow Binance (24H):</span>
-                <span id="sm-bn-netflow-24h" style="font-size:12px; font-weight:800; font-family:var(--font-num);">$--</span>
+            <div class="df-box" style="background: rgba(240, 185, 11, 0.05); border-color: rgba(240, 185, 11, 0.2); padding: 6px;">
+                <div class="df-label" style="font-size:8px; white-space:nowrap;">KOLs / Pro</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; white-space:nowrap;">
+                    <div class="df-val" id="sm-pct-kol" style="color:#F0B90B; font-size:10.5px;">--%</div>
+                    <div style="font-size:8px; color:#848e9c;"><span id="sm-cnt-kol">0</span> ví</div>
+                </div>
+            </div>
+            <div class="df-box" style="padding: 6px;">
+                <div class="df-label" style="font-size:8px; white-space:nowrap;">New Wallets</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; white-space:nowrap;">
+                    <div class="df-val" id="sm-pct-new" style="font-size:10.5px;">--%</div>
+                    <div style="font-size:8px; color:#848e9c;"><span id="sm-cnt-new">0</span> ví</div>
+                </div>
+            </div>
+            <div class="df-box" style="padding: 6px;">
+                <div class="df-label" style="font-size:8px; white-space:nowrap;">Sniper / Bundler</div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; white-space:nowrap;">
+                    <div class="df-val" id="sm-pct-sniper" style="color:#FF007F; font-size:10.5px;">--%</div>
+                    <div style="font-size:8px; color:#848e9c;"><span id="sm-cnt-sniper">0</span> ví</div>
+                </div>
             </div>
         </div>
 
-        <div style="font-size:10px; color:#848e9c; font-weight:700; margin-bottom:8px;">⚖️ ĐỘNG LƯỢNG MUA/BÁN (CVD)</div>
-        <div style="display:flex; flex-direction:column; gap:8px;">
-            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.02); padding: 8px; border-radius: 4px;">
-                <div style="display:flex; justify-content:space-between; font-size:9px; color:#527c82; margin-bottom:4px; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:6px; white-space: nowrap;">
+            <div style="font-size:9px; color:#848e9c; font-weight:700;">🏦 DÒNG TIỀN BINANCE CEX</div>
+            <div id="sm-bn-traders" style="color:#00F0FF; font-size:8.5px; font-family:var(--font-num); font-weight:700;">-- Traders | -- KYC</div>
+        </div>
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; padding: 8px; margin-bottom: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; white-space: nowrap;">
+                <span style="font-size:8.5px; color:#848e9c;">Net Flow Binance (4H):</span>
+                <span id="sm-bn-netflow-4h" style="font-size:10.5px; font-weight:700; font-family:var(--font-num);">$--</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; white-space: nowrap;">
+                <span style="font-size:8.5px; color:#848e9c;">Net Flow Binance (24H):</span>
+                <span id="sm-bn-netflow-24h" style="font-size:10.5px; font-weight:800; font-family:var(--font-num);">$--</span>
+            </div>
+        </div>
+
+        <div style="font-size:9px; color:#848e9c; font-weight:700; margin-bottom:6px; white-space: nowrap;">⚖️ ĐỘNG LƯỢNG MUA/BÁN (CVD)</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.02); padding: 6px; border-radius: 4px;">
+                <div style="display:flex; justify-content:space-between; font-size:8.5px; color:#527c82; margin-bottom:4px; align-items:center; white-space: nowrap;">
                     <span>Khung 1 GIỜ</span>
                     <span id="sm-tag-1h" style="font-weight:bold; padding:2px 4px; border-radius:3px;">--</span>
                 </div>
-                <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; background:#2b3139;">
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:#2b3139;">
                     <div id="sm-bar-1h-buy" style="height:100%; width:50%; background:#0ECB81; transition:0.3s;"></div>
                     <div id="sm-bar-1h-sell" style="height:100%; width:50%; background:#F6465D; transition:0.3s;"></div>
                 </div>
-                <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:4px; font-family:var(--font-num); font-weight:700;">
+                <div style="display:flex; justify-content:space-between; font-size:9px; margin-top:4px; font-family:var(--font-num); font-weight:700;">
                     <span id="sm-txt-1h-buy" style="color:#0ECB81;">--%</span>
                     <span id="sm-txt-1h-sell" style="color:#F6465D;">--%</span>
                 </div>
             </div>
             
-            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.02); padding: 8px; border-radius: 4px;">
-                <div style="display:flex; justify-content:space-between; font-size:9px; color:#527c82; margin-bottom:4px; align-items:center;">
+            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.02); padding: 6px; border-radius: 4px;">
+                <div style="display:flex; justify-content:space-between; font-size:8.5px; color:#527c82; margin-bottom:4px; align-items:center; white-space: nowrap;">
                     <span>Khung 4 GIỜ</span>
                     <span id="sm-tag-4h" style="font-weight:bold; padding:2px 4px; border-radius:3px;">--</span>
                 </div>
-                <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; background:#2b3139;">
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:#2b3139;">
                     <div id="sm-bar-4h-buy" style="height:100%; width:50%; background:#0ECB81; transition:0.3s;"></div>
                     <div id="sm-bar-4h-sell" style="height:100%; width:50%; background:#F6465D; transition:0.3s;"></div>
                 </div>
-                <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:4px; font-family:var(--font-num); font-weight:700;">
+                <div style="display:flex; justify-content:space-between; font-size:9px; margin-top:4px; font-family:var(--font-num); font-weight:700;">
                     <span id="sm-txt-4h-buy" style="color:#0ECB81;">--%</span>
                     <span id="sm-txt-4h-sell" style="color:#F6465D;">--%</span>
                 </div>
@@ -2587,23 +2602,25 @@ window.updateSmartMoneyRadar = function(apiData) {
     const fmtUsd = (val) => val && !isNaN(val) ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
     const fmtPrice = (val) => val && !isNaN(val) ? parseFloat(val).toPrecision(5) : '--';
 
-    // --- ZONE 1: LOGIC RỦI RO SỐNG CÒN ---
+    // --- ZONE 1: LOGIC RỦI RO SỐNG CÒN & TOKENOMICS ---
+    // 1.1 Tập trung Ví
     let top10Pct = parseFloat(d.top10HoldersPercentage || 0);
-    safeSet('sm-top10-pct', top10Pct.toFixed(2) + '%');
+    safeSet('sm-top10-pct', top10Pct.toFixed(1) + '%');
     let top10Badge = document.getElementById('sm-top10-badge');
     if (top10Badge) {
         if (top10Pct >= 80) {
-            top10Badge.innerText = '⚠️ RỦI RO THAO TÚNG CAO';
+            top10Badge.innerText = 'Thao túng cao';
             top10Badge.style.background = 'rgba(246, 70, 93, 0.2)'; top10Badge.style.color = '#F6465D';
-        } else if (top10Pct >= 50) {
-            top10Badge.innerText = 'Cảnh giác (Centralized)';
+        } else if (top10Pct >= 40) {
+            top10Badge.innerText = 'Cảnh giác (CEX Hold)';
             top10Badge.style.background = 'rgba(240, 185, 11, 0.2)'; top10Badge.style.color = '#F0B90B';
         } else {
-            top10Badge.innerText = '✓ Phân bổ tốt (Decentralized)';
+            top10Badge.innerText = 'An toàn';
             top10Badge.style.background = 'rgba(14, 203, 129, 0.2)'; top10Badge.style.color = '#0ECB81';
         }
     }
 
+    // 1.2 Áp lực Dump
     let currentPrice = parseFloat(d.price || 0);
     let avgBuy = parseFloat(d.bnAvgBuyPrice || 0);
     safeSet('sm-bn-avg-buy', '$' + fmtPrice(avgBuy));
@@ -2611,15 +2628,51 @@ window.updateSmartMoneyRadar = function(apiData) {
     if (dumpBadge && avgBuy > 0 && currentPrice > 0) {
         let pnlPct = ((currentPrice - avgBuy) / avgBuy) * 100;
         if (pnlPct > 50) {
-            dumpBadge.innerText = `🔥 Lời lớn (+${pnlPct.toFixed(0)}%) - Dễ xả`;
+            dumpBadge.innerText = `Lãi to (+${pnlPct.toFixed(0)}%)`;
             dumpBadge.style.background = 'rgba(246, 70, 93, 0.2)'; dumpBadge.style.color = '#F6465D';
         } else if (pnlPct < -20) {
-            dumpBadge.innerText = `🥶 Đu đỉnh (${pnlPct.toFixed(0)}%) - Xả cắt lỗ`;
+            dumpBadge.innerText = `Cắt lỗ (${pnlPct.toFixed(0)}%)`;
             dumpBadge.style.background = 'rgba(240, 185, 11, 0.2)'; dumpBadge.style.color = '#F0B90B';
         } else {
-            let sign = pnlPct >= 0 ? '+' : '';
-            dumpBadge.innerText = `Tích lũy (${sign}${pnlPct.toFixed(2)}%)`;
+            dumpBadge.innerText = `Tích lũy`;
             dumpBadge.style.background = 'rgba(14, 203, 129, 0.2)'; dumpBadge.style.color = '#0ECB81';
+        }
+    }
+
+    // 1.3 Lạm phát (Unlock / FDV vs MCAP)
+    let mc = parseFloat(d.marketCap || 0);
+    let fdv = parseFloat(d.fdv || mc || 1);
+    let unlockPct = (mc / fdv) * 100;
+    safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
+    let unlockBadge = document.getElementById('sm-unlock-badge');
+    if (unlockBadge) {
+        if (unlockPct < 30) {
+            unlockBadge.innerText = 'Lạm phát cực cao';
+            unlockBadge.style.background = 'rgba(246, 70, 93, 0.2)'; unlockBadge.style.color = '#F6465D';
+        } else if (unlockPct < 70) {
+            unlockBadge.innerText = 'Mở khóa trung bình';
+            unlockBadge.style.background = 'rgba(240, 185, 11, 0.2)'; unlockBadge.style.color = '#F0B90B';
+        } else {
+            unlockBadge.innerText = 'Lưu thông tốt';
+            unlockBadge.style.background = 'rgba(14, 203, 129, 0.2)'; unlockBadge.style.color = '#0ECB81';
+        }
+    }
+
+    // 1.4 Độ sâu thanh khoản (Liquidity vs MCAP)
+    let liq = parseFloat(d.liquidity || 0);
+    let liqRatio = mc > 0 ? (liq / mc) * 100 : 0;
+    safeSet('sm-liq-ratio', liqRatio.toFixed(2) + '%');
+    let liqBadge = document.getElementById('sm-liq-badge');
+    if (liqBadge) {
+        if (liqRatio < 1) {
+            liqBadge.innerText = 'Kém (Dễ trượt giá)';
+            liqBadge.style.background = 'rgba(246, 70, 93, 0.2)'; liqBadge.style.color = '#F6465D';
+        } else if (liqRatio < 5) {
+            liqBadge.innerText = 'Chấp nhận được';
+            liqBadge.style.background = 'rgba(240, 185, 11, 0.2)'; liqBadge.style.color = '#F0B90B';
+        } else {
+            liqBadge.innerText = 'Dày & Khỏe';
+            liqBadge.style.background = 'rgba(14, 203, 129, 0.2)'; liqBadge.style.color = '#0ECB81';
         }
     }
 
@@ -2644,16 +2697,16 @@ window.updateSmartMoneyRadar = function(apiData) {
     let verdictEl = document.getElementById('sm-verdict-badge');
     if (verdictEl) {
         if (smartPct + kolProPct > 1) {
-            verdictEl.innerText = '🦈 CÁ MẬP ĐANG GOM';
+            verdictEl.innerText = 'CÁ MẬP GOM';
             verdictEl.style.color = '#0ECB81'; verdictEl.style.border = '1px solid rgba(14, 203, 129, 0.5)'; verdictEl.style.background = 'rgba(14, 203, 129, 0.1)';
         } else if (sniperPct > 5) {
-            verdictEl.innerText = '🤖 BOT/DEV KIỂM SOÁT';
+            verdictEl.innerText = 'BOT KIỂM SOÁT';
             verdictEl.style.color = '#FF007F'; verdictEl.style.border = '1px solid rgba(255, 0, 127, 0.5)'; verdictEl.style.background = 'rgba(255, 0, 127, 0.1)';
         } else if (newPct > 10) {
-            verdictEl.innerText = '🎢 FOMO NHỎ LẺ (RETAIL)';
+            verdictEl.innerText = 'FOMO RETAIL';
             verdictEl.style.color = '#F0B90B'; verdictEl.style.border = '1px solid rgba(240, 185, 11, 0.5)'; verdictEl.style.background = 'rgba(240, 185, 11, 0.1)';
         } else {
-            verdictEl.innerText = '🦐 VẮNG BÓNG TAY TO';
+            verdictEl.innerText = 'KHÔNG CÓ TAY TO';
             verdictEl.style.color = '#848e9c'; verdictEl.style.border = '1px solid #444'; verdictEl.style.background = 'transparent';
         }
     }
@@ -2682,17 +2735,16 @@ window.updateSmartMoneyRadar = function(apiData) {
         safeSet(`sm-txt-${timeKey}-buy`, buyPct.toFixed(1) + '%');
         safeSet(`sm-txt-${timeKey}-sell`, sellPct.toFixed(1) + '%');
 
-        // Gắn tag sức mạnh phe
         let tagEl = document.getElementById(`sm-tag-${timeKey}`);
         if (tagEl) {
             if (buyPct > 65) {
-                tagEl.innerText = 'BULLISH (Bơm mạnh)';
+                tagEl.innerText = 'BULLISH';
                 tagEl.style.background = 'rgba(14, 203, 129, 0.2)'; tagEl.style.color = '#0ECB81';
             } else if (sellPct > 65) {
-                tagEl.innerText = 'BEARISH (Xả mạnh)';
+                tagEl.innerText = 'BEARISH';
                 tagEl.style.background = 'rgba(246, 70, 93, 0.2)'; tagEl.style.color = '#F6465D';
             } else {
-                tagEl.innerText = 'SIDEO (Giằng co)';
+                tagEl.innerText = 'SIDEO';
                 tagEl.style.background = 'rgba(255, 255, 255, 0.1)'; tagEl.style.color = '#848e9c';
             }
         }
