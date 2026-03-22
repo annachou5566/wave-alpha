@@ -1710,72 +1710,109 @@ window.updateCommandCenterUI = function() {
 
 
 // =========================================================
-    // 6. 🧠 SUPER QUANT AI VERDICT (BẮT BÀI ORDER SLICING & SPOOFING)
+    // 6. 🧠 SUPER QUANT AI VERDICT V3 (CROSS-MARKET & MM TRACKER)
     // =========================================================
     const verdictEl = document.getElementById('ai-verdict-badge');
     if (verdictEl) {
-        // Lấy lại các thông số từ quantStats để tính toán cho chính xác
+        // 1. Dữ liệu Spot & Hành vi giao dịch
         let _vTrend = window.quantStats.trend || 0;
         let _vDrop = window.quantStats.drop || 0;
         let _vWBuy = window.quantStats.whaleBuyVol || 0;
         let _vWSell = window.quantStats.whaleSellVol || 0;
         let _vTotalW = _vWBuy + _vWSell;
-        let _vBPct = _vTotalW > 0 ? (_vWBuy / _vTotalW) * 100 : 50;
         let _vSPct = _vTotalW > 0 ? (_vWSell / _vTotalW) * 100 : 50;
+        let _vBPct = _vTotalW > 0 ? (_vWBuy / _vTotalW) * 100 : 50;
         let _vWNet = _vWBuy - _vWSell;
         let _vRNet = (window.scNetFlow || 0) - _vWNet;
         
-        // Tính toán Spoofing (Orderbook Imbalance) - Thêm check an toàn tuyệt đối
+        let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
+        let txPerSec = window.scSpeedWindow ? (window.scSpeedWindow.length / 5) : 0;
+        let spread = window.quantStats.spread || 0;
+
+        // 2. Dữ liệu Futures (Nếu có)
+        let hasFutures = document.getElementById('cc-futures-status')?.innerText === '🟢 ACTIVE';
+        let fFunding = window.quantStats.fundingRate || 0;
+        let liqLong = window.quantStats.longLiq || 0;
+        let liqShort = window.quantStats.shortLiq || 0;
+        
+        // 3. Tính toán Spoofing
         let sBids = 0, sAsks = 0;
         if (window.scLocalOrderBook && window.scLastPrice > 0) {
-            let bids = window.scLocalOrderBook.bids || {};
-            let asks = window.scLocalOrderBook.asks || {};
             let pLimitDown = window.scLastPrice * 0.99;
             let pLimitUp = window.scLastPrice * 1.01;
-
-            for (let p in bids) { if (parseFloat(p) >= pLimitDown) sBids += parseFloat(p) * bids[p]; }
-            for (let p in asks) { if (parseFloat(p) <= pLimitUp) sAsks += parseFloat(p) * asks[p]; }
+            if (window.scLocalOrderBook.bids) {
+                for (let p in window.scLocalOrderBook.bids) { if (parseFloat(p) >= pLimitDown) sBids += parseFloat(p) * window.scLocalOrderBook.bids[p]; }
+            }
+            if (window.scLocalOrderBook.asks) {
+                for (let p in window.scLocalOrderBook.asks) { if (parseFloat(p) <= pLimitUp) sAsks += parseFloat(p) * window.scLocalOrderBook.asks[p]; }
+            }
         }
-
-        // Logic Spoofing chuẩn: Tường dày gấp 3 lần và phải có lệnh thực (tránh chia cho 0)
         let isSpoofBids = (sAsks > 0 && sBids > sAsks * 3) && (_vTrend < 0);
         let isSpoofAsks = (sBids > 0 && sAsks > sBids * 3) && (_vTrend > 0);
 
-        // HIỂN THỊ KỊCH BẢN (Dùng các biến nội bộ _v để không trùng lặp gây sụp web)
-        if (_vSPct > 65 && _vRNet > Math.abs(_vWNet) * 0.5 && _vTrend > 0 && isHighUrgency) {
-            verdictEl.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
-        }
-        else if (isSpoofBids) {
-            verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG MUA ẢO)';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-        }
-        else if (isSpoofAsks) {
-            verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG BÁN ẢO)';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-        }
-        else if (_vTrend > 0 && (window.scNetFlow || 0) < 0 && _vSPct > 60) {
-            verdictEl.innerText = '⚠️ LATE DISTRIBUTION (PHÂN PHỐI ĐỈNH)';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-        }
-        else if (_vDrop < -1.0 && (window.scNetFlow || 0) < 0 && _vSPct > 65) {
-            verdictEl.innerText = '🩸 FLASH DUMP (CÁ XẢ + ĐÁM ĐÔNG BÁN)';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
-        }
-        else if (_vDrop < -1.0 && _vBPct > 70) {
-            verdictEl.innerText = '🛡️ SMART ACCUMULATION (TAY TO HỨNG ĐÁY)';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
-        }
-        else if (_vBPct > 60 && isHighUrgency && (window.scNetFlow || 0) > 0) {
-            verdictEl.innerText = '🚀 MOMENTUM BULL (TAY TO ĐẨY GIÁ)';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
-        }
+        // ====================================================
+        // NHÁNH A: CÓ PHÁI SINH (ĐÁNH LIÊN THỊ TRƯỜNG)
+        // ====================================================
+        if (hasFutures) {
+            if (_vTrend > 0.5 && liqShort > 5000 && fFunding < -0.005) {
+                verdictEl.innerText = '🔥 SHORT SQUEEZE (DIỆT SHORT)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
+            }
+            else if (_vDrop < -0.5 && liqLong > 5000 && fFunding > 0.01) {
+                verdictEl.innerText = '🩸 LONG CASCADE (RŨ ĐÒN BẨY)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
+            }
+            else if (_vWNet < 0 && _vSPct > 65 && fFunding > 0.01) {
+                verdictEl.innerText = '⚠️ TRAP DIVERGENCE (BẪY GIẢ)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else if (_vBPct > 60 && isHighUrgency && _vWNet > 0 && fFunding <= 0.01) {
+                verdictEl.innerText = '🚀 REAL MOMENTUM (BƠM THẬT)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+            }
+            else if (isSpoofBids) {
+                verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG MUA ẢO)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else if (isSpoofAsks) {
+                verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG BÁN ẢO)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else {
+                verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+            }
+        } 
+        // ====================================================
+        // NHÁNH B: KHÔNG CÓ PHÁI SINH (BẮT BÀI MARKET MAKER)
+        // ====================================================
         else {
-            verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
-            verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+            // 1. ZOMBIE ILLIQUID (Không ai thèm mua bán, chênh lệch giá toác hoác)
+            if (txPerSec < 0.5 && spread > 1.0) {
+                verdictEl.innerText = '💀 ILLIQUID (THIẾU THANH KHOẢN)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(132, 142, 156, 0.2); color: #848e9c; border: 1px solid #848e9c;';
+            }
+            // 2. EMPTY PUMP (Giá tăng vút nhưng trung bình mỗi lệnh mua rất nhỏ, dòng tiền yếu)
+            else if (_vTrend > 0.5 && avgTicket < 1000 && txPerSec < 3) {
+                verdictEl.innerText = '🎈 EMPTY PUMP (BƠM RỖNG / LÙA GÀ)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
+            }
+            // 3. WASH TRADING (Giá đi ngang, Volume thì siêu to nhưng thực chất là 1-2 ví quay tay)
+            else if (Math.abs(_vTrend) < 0.2 && avgTicket > 10000 && txPerSec < 2) {
+                verdictEl.innerText = '🌀 WASH TRADING (MM QUAY TAY)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(203, 85, 227, 0.2); color: #cb55e3; border: 1px solid #cb55e3;';
+            }
+            // 4. SPOT ACCUMULATION (MM gom hàng chậm rãi, lệnh mua lớn áp đảo)
+            else if (_vBPct > 75 && Math.abs(_vTrend) < 0.3 && avgTicket > 3000) {
+                verdictEl.innerText = '🛡️ GOM HÀNG NGẦM (ACCUMULATION)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+            }
+            else {
+                verdictEl.innerText = '⚖️ TỰ NHIÊN / SIDEO';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+            }
         }
     }
-};
     
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
