@@ -1693,54 +1693,63 @@ window.updateCommandCenterUI = function() {
     // 6. 🧠 SUPER QUANT AI VERDICT (BẮT BÀI ORDER SLICING & SPOOFING)
     // =========================================================
     {
-        const verdictEl = document.getElementById('ai-verdict-badge');
-        if (verdictEl) {
-            // Lấy dữ liệu từ RAM thông qua prefix _ để tránh trùng lặp
+        const vBadge = document.getElementById('ai-verdict-badge');
+        if (vBadge) {
+            // Lấy dữ liệu an toàn từ RAM (quantStats) - Dùng tên biến riêng biệt để tránh sụp web
             const _trend = window.quantStats.trend || 0;
             const _drop = window.quantStats.drop || 0;
             const _wBuy = window.quantStats.whaleBuyVol || 0;
             const _wSell = window.quantStats.whaleSellVol || 0;
-            const _totalWhale = _wBuy + _wSell;
-            const _buyPct = _totalWhale > 0 ? (_wBuy / _totalWhale) * 100 : 50;
-            const _sellPct = _totalWhale > 0 ? (_wSell / _totalWhale) * 100 : 50;
-            const _speed = window.scSpeedWindow ? window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5 : 0;
-            const _isHighUrgency = _speed > 50000;
-            const _whaleNetFlow = _wBuy - _wSell;
-            const _retailNetFlow = (window.scNetFlow || 0) - _whaleNetFlow;
+            const _totalW = _wBuy + _wSell;
+            const _bPct = _totalW > 0 ? (_wBuy / _totalW) * 100 : 50;
+            const _sPct = _totalW > 0 ? (_wSell / _totalW) * 100 : 50;
+            const _spd = window.scSpeedWindow ? window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5 : 0;
+            const _highUrg = _spd > 50000;
+            const _wNet = _wBuy - _wSell;
+            const _rNet = (window.scNetFlow || 0) - _wNet;
 
-            // Kiểm tra Sổ lệnh an toàn
-            let _sumBids = 0, _sumAsks = 0;
+            // Tính SPOOFING an toàn (Tránh lỗi undefined/NaN)
+            let _sBids = 0, _sAsks = 0;
             if (window.scLocalOrderBook && window.scLastPrice > 0) {
                 const bids = window.scLocalOrderBook.bids || {};
                 const asks = window.scLocalOrderBook.asks || {};
-                const pLimitDown = window.scLastPrice * 0.99;
-                const pLimitUp = window.scLastPrice * 1.01;
-                for (let p in bids) { if (parseFloat(p) >= pLimitDown) _sumBids += parseFloat(p) * bids[p]; }
-                for (let p in asks) { if (parseFloat(p) <= pLimitUp) _sumAsks += parseFloat(p) * asks[p]; }
+                const pDown = window.scLastPrice * 0.99;
+                const pUp = window.scLastPrice * 1.01;
+                for (let p in bids) { if (parseFloat(p) >= pDown) _sBids += parseFloat(p) * bids[p]; }
+                for (let p in asks) { if (parseFloat(p) <= pUp) _sAsks += parseFloat(p) * asks[p]; }
             }
             
-            const _isSpoofBids = (_sumAsks > 0 && _sumBids > _sumAsks * 3) && (_trend < 0);
-            const _isSpoofAsks = (_sumBids > 0 && _sumAsks > _sumBids * 3) && (_trend > 0);
+            const _isSpoofBids = (_sAsks > 0 && _sBids > _sAsks * 3) && (_trend < 0);
+            const _isSpoofAsks = (_sBids > 0 && _sAsks > _sBids * 3) && (_trend > 0);
 
-            if (_sellPct > 65 && _retailNetFlow > Math.abs(_whaleNetFlow) * 0.5 && _trend > 0 && _isHighUrgency) {
-                verdictEl.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
+            // PHÂN LOẠI KỊCH BẢN (Logic gốc của bạn)
+            if (_sPct > 65 && _rNet > Math.abs(_wNet) * 0.5 && _trend > 0 && _highUrg) {
+                vBadge.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
+                vBadge.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
             }
             else if (_isSpoofBids || _isSpoofAsks) {
-                verdictEl.innerText = '⚠️ SPOOFING (TƯỜNG ẢO)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+                vBadge.innerText = '⚠️ SPOOFING (TƯỜNG ẢO)';
+                vBadge.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
             }
-            else if (_drop < -1.0 && (window.scNetFlow || 0) < 0 && _sellPct > 65) {
-                verdictEl.innerText = '🩸 FLASH DUMP (BÁN THÁO)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
+            else if (_trend > 0 && (window.scNetFlow || 0) < 0 && _sPct > 60) {
+                vBadge.innerText = '⚠️ LATE DISTRIBUTION (PHÂN PHỐI ĐỈNH)';
+                vBadge.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
             }
-            else if (_buyPct > 60 && _isHighUrgency && (window.scNetFlow || 0) > 0) {
-                verdictEl.innerText = '🚀 MOMENTUM BULL (ĐẨY GIÁ)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+            else if (_drop < -1.0 && (window.scNetFlow || 0) < 0 && _sPct > 65) {
+                vBadge.innerText = '🩸 FLASH DUMP (BÁN THÁO)';
+                vBadge.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
+            }
+            else if (_drop < -1.0 && _bPct > 70) {
+                vBadge.innerText = '🛡️ SMART ACCUMULATION (HỨNG ĐÁY)';
+                vBadge.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+            }
+            else if (_bPct > 60 && _highUrg && (window.scNetFlow || 0) > 0) {
+                vBadge.innerText = '🚀 MOMENTUM BULL (ĐẨY GIÁ)';
+                vBadge.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
             }
             else {
-                verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+                vBadge.innerText = '⚖️ TÍCH LŨY / CHOPPING';
+                vBadge.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
             }
         }
     }
