@@ -1709,6 +1709,7 @@ window.updateCommandCenterUI = function() {
     }
 
 
+
 // =========================================================
     // 6. 🧠 SUPER QUANT AI VERDICT V3 (CROSS-MARKET & MM TRACKER)
     // =========================================================
@@ -1728,6 +1729,22 @@ window.updateCommandCenterUI = function() {
         let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
         let txPerSec = window.scSpeedWindow ? (window.scSpeedWindow.length / 5) : 0;
         let spread = window.quantStats.spread || 0;
+
+        // ==========================================
+        // TÍNH TOÁN NGƯỠNG ĐỘNG (ADAPTIVE THRESHOLDS)
+        // ==========================================
+        let t_chart = window.currentChartToken || {};
+        let dailyTx = t_chart.tx_count || 86400; // Tránh chia 0
+        let dailyVol = t_chart.volume?.daily_total || 1000000;
+        
+        // Baseline 24h của chính token này
+        let normalTxPerSec = dailyTx / 86400; 
+        let normalAvgTicket = dailyVol / dailyTx;
+
+        // Các biến điều kiện siêu việt:
+        let isCrazyFast = txPerSec > Math.max(3, normalTxPerSec * 4); // Tốc độ x4 lần bình thường (min 3)
+        let isRetailTicket = avgTicket < Math.max(100, normalAvgTicket * 0.3); // Size lệnh < 30% bình thường
+        let isHeavyDump = _vWNet < -(Math.max(10000, normalAvgTicket * 20)); // Xả cực mạnh so với thanh khoản của nó
 
         // 2. Dữ liệu Futures (Nếu có)
         let hasFutures = document.getElementById('cc-futures-status')?.innerText === '🟢 ACTIVE';
@@ -1791,6 +1808,16 @@ window.updateCommandCenterUI = function() {
             if (txPerSec < 0.5 && spread > 1.0) {
                 verdictEl.innerText = '💀 ILLIQUID (THIẾU THANH KHOẢN)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(132, 142, 156, 0.2); color: #848e9c; border: 1px solid #848e9c;';
+            }
+            // [PRO] KỊCH BẢN BINANCE ALPHA 1: DEV XẢ NGẦM (Adaptive)
+            else if (isCrazyFast && Math.abs(_vTrend) < 0.5 && isHeavyDump) {
+                verdictEl.innerText = '🩸 DEV EXIT (XẢ NGẦM MÙA GIẢI)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.3s infinite;';
+            }
+            // [PRO] KỊCH BẢN BINANCE ALPHA 2: NHỎ LẺ CÀY VOLUME (Adaptive)
+            else if (isCrazyFast && isRetailTicket && Math.abs(_vTrend) < 0.3) {
+                verdictEl.innerText = '🤖 RETAIL FARMING (CÀY VOLUME)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF;';
             }
             // 2. EMPTY PUMP (Giá tăng vút nhưng trung bình mỗi lệnh mua rất nhỏ, dòng tiền yếu)
             else if (_vTrend > 0.5 && avgTicket < 1000 && txPerSec < 3) {
