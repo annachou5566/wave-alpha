@@ -3173,7 +3173,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
 };
 
 // =========================================================
-// 🚀 CỖ MÁY PHÁI SINH TỔNG HỢP (TÁCH ĐỘC LẬP - SIÊU AN TOÀN)
+// 🚀 CỖ MÁY PHÁI SINH (CHỐNG TREO - LỌC KÝ TỰ - BẤT TỬ)
 // =========================================================
 let liquidationWs = null;
 let futuresDataInterval = null;
@@ -3182,62 +3182,77 @@ window.startFuturesEngine = async function(symbol) {
     window.stopFuturesEngine();
     if (!symbol) return;
 
-    let cleanSymbol = symbol.toUpperCase().replace('USDT', '');
+    // 1. LỌC SẠCH RÁC: Xóa mọi dấu cách, dấu gạch ngang (VD: "GUA / USDT" -> "GUAUSDT")
+    let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '');
     let fSymbol = cleanSymbol + 'USDT';
-    let streamSymbol = cleanSymbol.toLowerCase() + 'usdt';
+    let streamSymbol = fSymbol.toLowerCase();
 
-    // 1. Reset Giao diện
+    // In ra Console để bạn dễ check lỗi
+    console.log(`[Futures Engine] Bắt đầu quét: ${fSymbol}`);
+
     let statusEl = document.getElementById('cc-futures-status');
     let oiEl = document.getElementById('cc-oi-val');
     let fundEl = document.getElementById('cc-funding-val');
     let liqLong = document.getElementById('cc-liq-long');
     let liqShort = document.getElementById('cc-liq-short');
 
+    // 2. Reset Giao diện
     if (statusEl) { statusEl.innerText = '⏳ ĐANG DÒ...'; statusEl.style.color = '#F0B90B'; }
     if (oiEl) oiEl.innerText = '$--';
     if (fundEl) { fundEl.innerText = '--%'; fundEl.style.color = '#eaecef'; }
-    if (liqLong) liqLong.innerText = '🩸 Liq Long: $0';
-    if (liqShort) liqShort.innerText = '💥 Liq Short: $0';
 
     if (!window.quantStats) window.quantStats = {};
     window.quantStats.longLiq = 0;
     window.quantStats.shortLiq = 0;
 
-    // 2. Hàm gọi REST API ĐỘC LẬP
+    // 3. Hàm Fetch bọc lớp giáp chống treo (Timeout 4 giây)
+    const fetchWithTimeout = async (url) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 4000);
+        try {
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(id);
+            if (!response.ok) throw new Error(`HTTP Lỗi ${response.status}`);
+            return await response.json();
+        } catch (err) {
+            clearTimeout(id);
+            throw err;
+        }
+    };
+
+    // 4. Kéo dữ liệu REST API
     const fetchRestData = async () => {
         try {
-            // Lấy Funding Rate trước (Cái này luôn chuẩn, dùng làm thước đo xem coin có trên Futures ko)
-            let fundRes = await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
-            if (!fundRes.ok) throw new Error("Not on Futures");
-            let fundData = await fundRes.json();
-
-            // Lấy Open Interest riêng, lỗi thì bỏ qua không làm sụp web
-            let oiUsd = 0;
-            try {
-                let oiRes = await fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
-                if (oiRes.ok) {
-                    let oiData = await oiRes.json();
-                    let currentPrice = window.scLastPrice || (window.currentChartToken ? parseFloat(window.currentChartToken.price) : 0);
-                    oiUsd = parseFloat(oiData.openInterest) * currentPrice;
-                }
-            } catch(e) {} // Lỗi OI thì âm thầm giấu đi
-
-            // Update UI (Gọi lại ID để chắc chắn DOM không bị mất)
+            // Lấy Funding Rate
+            let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
+            
+            // Nếu qua được dòng trên -> CHẮC CHẮN CÓ FUTURES
             let _statusEl = document.getElementById('cc-futures-status');
-            let _oiEl = document.getElementById('cc-oi-val');
-            let _fundEl = document.getElementById('cc-funding-val');
-
             if (_statusEl) { _statusEl.innerText = '🟢 ACTIVE'; _statusEl.style.color = '#0ECB81'; }
-            if (_oiEl && oiUsd > 0) _oiEl.innerText = '$' + formatCompactUSD(oiUsd);
 
+            let _fundEl = document.getElementById('cc-funding-val');
             if (_fundEl && fundData.lastFundingRate) {
                 let fRate = parseFloat(fundData.lastFundingRate) * 100;
                 let sign = fRate > 0 ? '+' : '';
                 _fundEl.innerText = sign + fRate.toFixed(4) + '%';
                 _fundEl.style.color = fRate > 0.01 ? '#F6465D' : (fRate < -0.01 ? '#00F0FF' : '#eaecef');
             }
+
+            // Lấy Open Interest
+            try {
+                let oiData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
+                let _oiEl = document.getElementById('cc-oi-val');
+                let currentPrice = window.scLastPrice || (window.currentChartToken ? parseFloat(window.currentChartToken.price) : 0);
+                let oiUsd = parseFloat(oiData.openInterest) * currentPrice;
+                if (_oiEl && oiUsd > 0) _oiEl.innerText = '$' + formatCompactUSD(oiUsd);
+            } catch(oiErr) {
+                console.log(`[Futures] Không kéo được OI:`, oiErr.message);
+            }
             return true;
+
         } catch (err) {
+            // Lỗi hoặc không có Futures -> Báo đỏ ngay lập tức, không treo
+            console.log(`[Futures] Không có dữ liệu cho ${fSymbol}:`, err.message);
             let _statusEl = document.getElementById('cc-futures-status');
             let _oiEl = document.getElementById('cc-oi-val');
             let _fundEl = document.getElementById('cc-funding-val');
@@ -3248,7 +3263,7 @@ window.startFuturesEngine = async function(symbol) {
         }
     };
 
-    // 3. Kích hoạt luồng chạy
+    // 5. Khởi động vòng lặp và Websocket
     let hasFutures = await fetchRestData();
     if (hasFutures) {
         futuresDataInterval = setInterval(fetchRestData, 15000);
