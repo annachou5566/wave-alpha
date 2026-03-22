@@ -1728,6 +1728,7 @@ window.updateCommandCenterUI = function() {
         let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
         let txPerSec = window.scSpeedWindow ? (window.scSpeedWindow.length / 5) : 0;
         let spread = window.quantStats.spread || 0;
+
         // ==========================================
         // TÍNH TOÁN NGƯỠNG ĐỘNG (ADAPTIVE THRESHOLDS)
         // ==========================================
@@ -1807,14 +1808,12 @@ window.updateCommandCenterUI = function() {
                 verdictEl.innerText = '💀 ILLIQUID (THIẾU THANH KHOẢN)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(132, 142, 156, 0.2); color: #848e9c; border: 1px solid #848e9c;';
             }
-                // [PRO] KỊCH BẢN BINANCE ALPHA 1: DEV XẢ NGẦM (Adaptive)
-            // Lệnh nhanh bất thường, giá đi ngang, Cá xả áp đảo so với thanh khoản token
+            // [PRO] KỊCH BẢN BINANCE ALPHA 1: DEV XẢ NGẦM (Adaptive)
             else if (isCrazyFast && Math.abs(_vTrend) < 0.5 && isHeavyDump) {
                 verdictEl.innerText = '🩸 DEV EXIT (XẢ NGẦM MÙA GIẢI)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.3s infinite;';
             }
             // [PRO] KỊCH BẢN BINANCE ALPHA 2: NHỎ LẺ CÀY VOLUME (Adaptive)
-            // Tốc độ chóng mặt, nhưng lệnh toàn tí hon so với baseline, Cá to không xả hàng
             else if (isCrazyFast && isRetailTicket && Math.abs(_vTrend) < 0.3) {
                 verdictEl.innerText = '🤖 RETAIL FARMING (CÀY VOLUME)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF;';
@@ -1840,6 +1839,7 @@ window.updateCommandCenterUI = function() {
             }
         }
     }
+    };
     
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
