@@ -2443,12 +2443,43 @@ window.switchScTab = function(tabId, btnElement) {
     }
 };
 
-// 2. Tự động tiêm UI Smart Money (PRO QUANT V3 - MOBILE OPTIMIZED)
+// 2. Tự động tiêm UI Smart Money (PRO QUANT V4 - FIX TẬN GỐC LỖI CUỘN MOBILE)
 function injectSmartMoneyTab() {
     const tabsContainer = document.querySelector('.sc-mobile-tabs');
     const sidePanel = document.querySelector('.sc-side-panel');
     
     if (!tabsContainer || !sidePanel || document.getElementById('tab-smartmoney')) return;
+
+    // --- THUỐC ĐẶC TRỊ LỖI CUỘN TRÊN ĐIỆN THOẠI (CHỐNG SCROLL BLEEDING) ---
+    if (!document.getElementById('sm-mobile-scroll-fix')) {
+        const style = document.createElement('style');
+        style.id = 'sm-mobile-scroll-fix';
+        style.innerHTML = `
+            /* 1. Khoá chết trang web nền khi đang mở Chart */
+            body.overlay-active {
+                overflow: hidden !important;
+            }
+            /* 2. Ép khung Flexbox không được phình to, bắt buộc hiện thanh cuộn bên trong */
+            @media (max-width: 991px) {
+                .sc-body { min-height: 0 !important; }
+                .sc-side-panel { 
+                    min-height: 0 !important; 
+                    display: flex !important; 
+                    flex-direction: column !important; 
+                }
+                .sc-tab-content { 
+                    flex: 1 1 auto !important; 
+                    min-height: 0 !important; 
+                    overflow-y: auto !important; 
+                    overflow-x: hidden !important;
+                    overscroll-behavior: contain !important; /* Cấm cuộn lây lan ra ngoài */
+                    -webkit-overflow-scrolling: touch !important; /* Vuốt mượt có quán tính trên iOS */
+                    padding-bottom: 80px !important; /* Tránh thanh điều hướng của iPhone che mất dòng cuối */
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     tabsContainer.style.display = 'flex';
     
@@ -2461,14 +2492,7 @@ function injectSmartMoneyTab() {
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
     newTabContent.className = 'sc-tab-content';
-    
-    // FIX MOBILE SCROLL: Thêm min-height: 0, overscroll-behavior và height: 100%
-    newTabContent.style.cssText = 'background: #12151A; padding: 10px 10px 50px 10px; display: none; flex-direction: column; flex: 1; min-height: 0; height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;';
-    
-    // NGĂN CHẶN XUNG ĐỘT VUỐT (CHỐNG KẸT TRÊN IOS/SAFARI)
-    newTabContent.addEventListener('touchmove', function(e) {
-        e.stopPropagation();
-    }, { passive: true });
+    newTabContent.style.cssText = 'background: #12151A; padding: 10px 10px; display: none; flex-direction: column;';
     
     newTabContent.innerHTML = `
         <div class="sc-panel-title" style="margin-bottom: 12px; color:#eaecef; display: flex; justify-content: space-between; align-items: center; font-size: 10px; white-space: nowrap;">
