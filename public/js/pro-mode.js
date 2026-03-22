@@ -2977,20 +2977,28 @@ window.updateSmartMoneyRadar = function(apiData) {
         }
     }
 
-    // 1.3 Lạm phát (Unlock / FDV vs MCAP)
-    let t = window.currentChartToken || {};
+    // 1.3 Lạm phát (Unlock / FDV vs MCAP) - ĐÃ TỐI ƯU LẤY ALL-CHAIN
+    let mc = Number(d.marketCap) || 0;
+    let fdv = Number(d.fdv) || (mc > 0 ? mc : 1);
     
-    let mc = Number(t.market_cap) || Number(d.marketCap) || 0;
-    let fdv = Number(t.fdv) || Number(d.fdv);
+    let unlockPct = 100; // Mặc định
+
+    // Bắt đúng biến All-chain từ API để tính lạm phát tổng của toàn dự án
+    let allCirculating = Number(d.allChainCirculatingSupply);
+    let allMax = Number(d.allChainMaxSupply);
     
-    if (!fdv || fdv <= 0) {
-        fdv = mc > 0 ? mc : 1; 
+    // Nếu token có dữ liệu đa chuỗi, dùng nó. Nếu không, fallback về MC/FDV cục bộ
+    if (allCirculating > 0 && allMax > 0) {
+        unlockPct = (allCirculating / allMax) * 100;
+    } else if (fdv > 0) {
+        unlockPct = (mc / fdv) * 100;
     }
     
-    let unlockPct = (mc / fdv) * 100;
+    // Fix ngàm an toàn chống tràn UI (Trường hợp API ngáo)
     if (unlockPct > 100) unlockPct = 100;
     
     safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
+    
     let unlockBadge = document.getElementById('sm-unlock-badge');
     if (unlockBadge) {
         if (unlockPct < 30) {
