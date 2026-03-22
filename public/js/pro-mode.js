@@ -1115,6 +1115,16 @@ function injectLayout() {
             <span>🎯 LỆNH ĐỘT BIẾN (SNIPER TAPE)</span>
             <span style="color:#527c82;">> $10k</span>
         </div>
+        <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02); margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; font-size: 8px; color: #848e9c; margin-bottom: 4px; font-weight: 700;">
+                <span>🔥 THANH LÝ PHÁI SINH (LIQ)</span>
+                <span id="cc-liq-status" style="color: #F0B90B;">⏳ ĐANG DÒ...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 10px; font-family: var(--font-num); font-weight:bold;">
+                <span id="cc-liq-long" style="color:#F6465D;">🩸 Long: $0</span>
+                <span id="cc-liq-short" style="color:#0ECB81;">💥 Short: $0</span>
+            </div>
+        </div>
         <div id="cc-sniper-tape" style="background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.05); border-radius: 4px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
             <div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 40px; font-style:italic;">Đang rình cá mập...</div>
         </div>
@@ -3154,7 +3164,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
 };
 
 // =========================================================
-// 🚀 TÍNH NĂNG MỚI: RADAR BẮT LỆNH THANH LÝ (LIQUIDATION)
+// 🚀 TÍNH NĂNG MỚI: RADAR BẮT LỆNH THANH LÝ (CÓ GIAO DIỆN)
 // =========================================================
 let liquidationWs = null;
 
@@ -3162,16 +3172,29 @@ window.connectLiquidationStream = function(symbol) {
     if (liquidationWs) { liquidationWs.close(); }
     if (!symbol) return;
 
-    // Phải thêm đuôi usdt thì Binance Futures mới hiểu (ví dụ: btcusdt)
+    // Reset giao diện và biến đếm khi mở coin mới
+    window.quantStats.longLiq = 0;
+    window.quantStats.shortLiq = 0;
+    let liqStatus = document.getElementById('cc-liq-status');
+    let liqLong = document.getElementById('cc-liq-long');
+    let liqShort = document.getElementById('cc-liq-short');
+    
+    if (liqStatus) { liqStatus.innerText = '⏳ ĐANG DÒ...'; liqStatus.style.color = '#F0B90B'; }
+    if (liqLong) liqLong.innerText = '🩸 Long: $0';
+    if (liqShort) liqShort.innerText = '💥 Short: $0';
+
     let streamSymbol = symbol.toLowerCase() + 'usdt';
     let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
-    
-    // Lưu lại thời điểm bắt đầu kết nối
     let connectTime = Date.now();
 
     try {
         liquidationWs = new WebSocket(wsUrl);
         
+        // Khi kết nối thành công -> Đổi trạng thái sang ACTIVE
+        liquidationWs.onopen = () => {
+            if (liqStatus) { liqStatus.innerText = '🟢 ACTIVE'; liqStatus.style.color = '#0ECB81'; }
+        };
+
         liquidationWs.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
@@ -3182,8 +3205,19 @@ window.connectLiquidationStream = function(symbol) {
                 let qty = parseFloat(order.q);
                 let valUSD = price * qty;
                 
+                let isLongLiq = (side === 'SELL'); 
+
+                // CỘNG DỒN SỐ TIỀN THANH LÝ HIỂN THỊ LÊN BOX (Lấy mọi lệnh dù nhỏ)
+                if (isLongLiq) {
+                    window.quantStats.longLiq += valUSD;
+                    if (liqLong) liqLong.innerText = `🩸 Long: $${formatCompactUSD(window.quantStats.longLiq)}`;
+                } else {
+                    window.quantStats.shortLiq += valUSD;
+                    if (liqShort) liqShort.innerText = `💥 Short: $${formatCompactUSD(window.quantStats.shortLiq)}`;
+                }
+                
+                // Lọc nhiễu: Chỉ báo động nhấp nháy vào Sniper Tape khi lệnh cháy lớn hơn 1,000$
                 if (valUSD > 1000) {
-                    let isLongLiq = (side === 'SELL'); 
                     window.logToSniperTape(
                         !isLongLiq, 
                         valUSD, 
@@ -3198,16 +3232,18 @@ window.connectLiquidationStream = function(symbol) {
             let aliveTime = Date.now() - connectTime;
             let overlay = document.getElementById('super-chart-overlay');
             
-            // CHỐT CHẶN: Chỉ reconnect nếu sống được trên 5 giây và đang mở chart
             if (aliveTime > 5000 && overlay && overlay.classList.contains('active')) {
+                // Sống lâu mà rớt mạng -> Mất kết nối, thử lại
+                if (liqStatus) { liqStatus.innerText = '⏳ RECONNECTING...'; liqStatus.style.color = '#F0B90B'; }
                 setTimeout(() => window.connectLiquidationStream(symbol), 3000);
             } else {
-                // Nếu bị sàn đá ra ngay lập tức -> Không có trên Futures -> Âm thầm nghỉ ngơi
-                console.log(`[Smart Money] Token ${symbol} không có trên Futures. Bỏ qua quét thanh lý.`);
+                // Chết yểu -> Không có trên Futures
+                if (liqStatus) { liqStatus.innerText = '🚫 NO FUTURES'; liqStatus.style.color = '#848e9c'; }
+                console.log(`[Smart Money] Token ${symbol} không có trên Futures.`);
             }
         };
     } catch(e) {
-        console.log("[Smart Money] Không thể kết nối luồng Thanh lý.");
+        if (liqStatus) { liqStatus.innerText = '🚫 ERROR'; liqStatus.style.color = '#F6465D'; }
     }
 };
 
