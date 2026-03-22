@@ -104,58 +104,76 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.head.appendChild(style);
     }
-// ========================================================
-    // BƠM CSS THIẾT KẾ LẠI CHART (BỐ CỤC PRO & MOBILE TABS)
-    // ========================================================
-    if (!document.getElementById('wave-alpha-pro-chart-styles')) {
+if (!document.getElementById('wave-alpha-pro-chart-styles')) {
         const proChartStyle = document.createElement('style');
         proChartStyle.id = 'wave-alpha-pro-chart-styles';
         proChartStyle.innerHTML = `
-            #super-chart-overlay { height: 100dvh !important; padding-bottom: 5px; box-sizing: border-box; background: rgba(8, 10, 14, 0.98); backdrop-filter: blur(15px); font-family: var(--font-main); }
-            .sc-topbar { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #0B0E11; border-bottom: 1px solid rgba(255,255,255,0.03); height: 45px; flex-shrink: 0; }
+            /* BẢN SẮC BLOOMBERG TERMINAL (THỰC CHIẾN) */
+            :root { 
+                --term-bg: #000000;         /* Đen tuyệt đối */
+                --term-panel: #0B0E14;      /* Xám nền Panel */
+                --term-border: #1A1F26;     /* Viền cực mảnh */
+                --term-text: #EAECEF;       /* Trắng sáng */
+                --term-dim: #707A8A;        /* Xám mờ cho Label */
+                --term-up: #0ECB81;         /* Xanh Mua */
+                --term-down: #F6465D;       /* Đỏ Bán */
+                --term-warn: #F0B90B;       /* Vàng Cảnh báo */
+            }
+            
+            /* TẮT TOÀN BỘ BÓNG ĐỔ VÀ HOẠT ẢNH RÁC */
+            #super-chart-overlay * { text-shadow: none !important; box-shadow: none !important; }
+            #super-chart-overlay { height: 100dvh !important; padding-bottom: 0; box-sizing: border-box; background: var(--term-bg); font-family: var(--font-main); }
+            
+            /* LAYOUT CHÍNH */
+            .sc-topbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 15px; background: var(--term-panel); border-bottom: 1px solid var(--term-border); height: 42px; flex-shrink: 0; }
             .sc-body { display: flex; flex: 1; overflow: hidden; width: 100%; }
+            .sc-chart-area { flex: 1; display: flex; flex-direction: column; background: var(--term-bg); overflow: hidden; }
+            .sc-stats-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 15px; background: var(--term-panel); border-bottom: 1px solid var(--term-border); }
+            .sc-side-panel { width: 340px; background: var(--term-bg); display: flex; flex-direction: column; border-left: 1px solid var(--term-border); z-index: 2;}
             
-            .sc-chart-area { flex: 1; display: flex; flex-direction: column; background: transparent; overflow: hidden; }
-            .sc-stats-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(22, 26, 30, 0.4); }
-            
-            /* Class mới cho layout giá */
+            /* TOP BAR METRICS */
             .sc-price-box { display: flex; align-items: baseline; gap: 10px; margin-right: 15px; }
-            
             .sc-metrics-compact { display: flex; gap: 20px; align-items: center; }
             .sc-mc-item { display: flex; flex-direction: column; align-items: flex-end; }
-            .sc-mc-item span { font-size: 10px; color: #5E6673; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
-            .sc-mc-item strong { font-size: 13px; color: #EAECEF; font-family: var(--font-num); font-weight: 700; }
+            .sc-mc-item span { font-size: 9.5px; color: var(--term-dim); font-weight: 600; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px;}
+            .sc-mc-item strong { font-size: 13px; color: var(--term-text); font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
             
-            .sc-side-panel { width: 320px; background: #12151A; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.02); z-index: 2;}
-            .sc-panel-section { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-            .sc-panel-title { font-size: 11px; text-transform: uppercase; color: #848e9c; letter-spacing: 1px; margin-bottom: 12px; font-weight: 700; display:flex; align-items:center; gap:6px;}
-            
-            /* TABS LUÔN HIỆN TRÊN CẢ PC VÀ MOBILE */
-            .sc-mobile-tabs { display: flex; background: #12151A; border-bottom: 1px solid #1e2329; flex-shrink: 0; }
-            .sc-tab-btn { flex: 1; background: transparent; border: none; color: #5e6673; padding: 10px 0; font-size: 11px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s;}
-            .sc-tab-btn.active { color: #00F0FF; border-bottom-color: #00F0FF; background: rgba(0, 240, 255, 0.05); }
-            
-            .sc-tab-content { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 10px 15px; background: #12151A;}
+            /* TABS BÊN PHẢI */
+            .sc-mobile-tabs { display: flex; background: var(--term-panel); border-bottom: 1px solid var(--term-border); flex-shrink: 0; }
+            .sc-tab-btn { flex: 1; background: transparent; border: none; color: var(--term-dim); padding: 8px 0; font-size: 10.5px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s; letter-spacing: 0.5px;}
+            .sc-tab-btn.active { color: var(--term-warn); border-bottom-color: var(--term-warn); background: rgba(240, 185, 11, 0.05); }
+            .sc-tab-content { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 10px; background: var(--term-bg);}
             .sc-tab-content.active { display: flex !important; }
             
+            /* ========================================= */
+            /* BỘ CLASS WIDGET MỚI DÀNH CHO COMMAND CENTER */
+            /* ========================================= */
+            .term-widget { background: var(--term-panel); border: 1px solid var(--term-border); border-radius: 2px; padding: 8px; margin-bottom: 6px; }
+            .term-w-title { font-size: 9.5px; color: var(--term-dim); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px;}
+            .term-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-variant-numeric: tabular-nums;}
+            .term-row:last-child { margin-bottom: 0; }
+            .term-lbl { font-size: 9.5px; color: var(--term-dim); }
+            .term-val { font-size: 11px; font-weight: 700; color: var(--term-text); font-family: var(--font-num); }
+            
+            /* CUỘN TAPE */
             #sc-live-trades::-webkit-scrollbar { width: 4px; }
-            #sc-live-trades::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+            #sc-live-trades::-webkit-scrollbar-thumb { background: #2B3139; border-radius: 0; }
+            #sc-live-trades::-webkit-scrollbar-track { background: var(--term-bg); }
 
             /* MOBILE RESPONSIVE */
             @media (max-width: 991px) {
                 .sc-body { flex-direction: column !important; overflow-y: hidden !important; }
-                .sc-topbar { padding: 8px 10px; }
-                .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid #1e2329; }
+                .sc-topbar { padding: 6px 10px; }
+                .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid var(--term-border); }
                 .sc-stats-row { padding: 6px 10px; gap: 8px; }
                 .sc-price-box { flex-direction: column; align-items: flex-start; gap: 0px; margin-right: 5px; justify-content: center;}
-                .sc-price-box #sc-live-price { font-size: 22px !important; }
+                .sc-price-box #sc-live-price { font-size: 20px !important; }
                 .sc-price-box #sc-change-24h { font-size: 11px !important; }
                 .sc-metrics-compact { width: 100%; justify-content: space-between; gap: 2px; overflow: hidden; padding-bottom: 0;}
                 .sc-mc-item span { font-size: 8px; margin-bottom: 0; }
                 .sc-mc-item strong { font-size: 10.5px; }
-                .sc-side-panel { width: 100% !important; flex: 1 !important; border-left: none; background: #0B0E11; }
-                .sc-tab-content { padding: 5px 0; }
-                .sc-panel-section { padding: 5px 15px 10px 15px; border-bottom: none; margin-bottom: 5px;}
+                .sc-side-panel { width: 100% !important; flex: 1 !important; border-left: none; }
+                .sc-tab-content { padding: 6px; }
             }
         `;
         document.head.appendChild(proChartStyle);
@@ -1039,108 +1057,78 @@ function injectLayout() {
                     </div>
 
                     <div id="tab-info" class="sc-tab-content" style="padding: 10px;">
-    <div class="sc-panel-title" style="margin-bottom: 8px; color:#eaecef;"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> COMMAND CENTER (PRO)</div>
-    
-    <div id="quant-command-center" style="display: flex; flex-direction: column; gap: 8px;">
-        
-        <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="font-size: 8.5px; color: #848e9c; font-weight: 700;">LIVE VERDICT:</div>
-            <div id="ai-verdict-badge" style="font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.1); color: #F0B90B; border: 1px solid rgba(240, 185, 11, 0.3);">
-                ĐANG QUÉT...
-            </div>
+        <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
+            <i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 5px;"></i> COMMAND CENTER (PRO)
         </div>
+        
+        <div id="quant-command-center" style="display: flex; flex-direction: column;">
+            
+            <div class="term-widget" style="border-left: 2px solid var(--term-warn);">
+                <div class="term-row">
+                    <span class="term-lbl">LIVE VERDICT:</span>
+                    <span id="ai-verdict-badge" style="font-size: 10px; font-weight: 800; color: var(--term-warn);">ĐANG QUÉT...</span>
+                </div>
+            </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #0ECB81;" id="cc-nf-box">
-                <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px;">NET FLOW (THỰC TẾ)</div>
-                <div id="cc-net-flow" style="font-size: 13px; font-weight: 700; color: #0ECB81; font-family: var(--font-num);">+$0</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+                <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up);">
+                    <div class="term-w-title">NET FLOW (REAL)</div>
+                    <div id="cc-net-flow" class="term-val" style="font-size: 14px; color: var(--term-up);">+$0</div>
+                </div>
+                
+                <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim);">
+                    <div class="term-w-title">ALGO SPEED <span id="cc-speed" style="color:var(--term-text); text-transform:none;">$0/s</span></div>
+                    <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px;">🤖 TĨNH LẶNG (XÁM)</div>
+                    <div style="display: flex; height: 3px; border-radius: 1px; overflow: hidden; background: var(--term-border); position: relative;">
+                        <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s linear;"></div>
+                        <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s linear;"></div>
+                        <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #000; z-index: 2;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+                <div class="term-widget" style="margin-bottom: 0;">
+                    <div class="term-w-title">DÒNG TIỀN (60s)</div>
+                    <div class="term-row"><span class="term-lbl">Avg Ticket</span><span id="cc-avg-ticket" class="term-val">🦐 $0</span></div>
+                    <div class="term-row"><span class="term-lbl">VWAP</span><span id="cc-vwap-trend" class="term-val">0.00%</span></div>
+                </div>
+
+                <div class="term-widget" style="margin-bottom: 0;">
+                    <div class="term-w-title">RỦI RO THANH KHOẢN</div>
+                    <div class="term-row"><span class="term-lbl">Spread</span><span id="cc-spread-val" class="term-val" style="color:var(--term-up);">0.00%</span></div>
+                    <div style="height:2px; background:var(--term-border); margin: 2px 0 4px 0;"><div id="cc-spread-meter" style="height:100%; width:10%; background:var(--term-up);"></div></div>
+                    <div class="term-row"><span class="term-lbl">Drop (5m)</span><span id="cc-drop-val" class="term-val">0.00%</span></div>
+                </div>
+            </div>
+
+            <div class="term-widget">
+                <div class="term-w-title">WHALES & SHARKS <span id="cc-whale-ratio" style="color: var(--term-text);">--% BUY</span></div>
+                <div style="display: flex; height: 4px; border-radius: 1px; overflow: hidden; background: var(--term-border); margin-bottom: 4px;">
+                    <div id="cc-whale-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s;"></div>
+                    <div id="cc-whale-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s;"></div>
+                </div>
+                <div class="term-row" style="font-size: 10px; color: var(--term-dim);">
+                    <span id="cc-whale-vol-buy">B: $0</span>
+                    <span id="cc-whale-vol-sell">S: $0</span>
+                </div>
+            </div>
+
+            <div class="term-w-title" style="margin-top: 4px;">SNIPER TAPE (> $10k)</div>
+            <div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;">
+                <div style="font-size: 9px; color: var(--term-dim); text-align: center; margin-top: 40px;">Đang rình cá mập...</div>
+            </div>
+
+            <div class="term-widget" style="margin-bottom: 0;">
+                <div class="term-w-title">FUTURES <span id="cc-futures-status" style="color: var(--term-warn);">⏳ ĐANG DÒ...</span></div>
+                <div class="term-row"><span class="term-lbl">Open Interest</span><span id="cc-oi-val" class="term-val">$--</span></div>
+                <div class="term-row"><span class="term-lbl">Funding Rate</span><span id="cc-funding-val" class="term-val">--%</span></div>
+                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-top: 4px;">
+                    <span id="cc-liq-long" style="color:var(--term-down); font-size:9.5px; font-weight:700; font-family:var(--font-num);">🩸 Liq L: $0</span>
+                    <span id="cc-liq-short" style="color:var(--term-up); font-size:9.5px; font-weight:700; font-family:var(--font-num);">💥 Liq S: $0</span>
+                </div>
             </div>
             
-            <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #848e9c;" id="cc-algo-box">
-                <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px; display:flex; justify-content:space-between;">
-                    <span>ALGO & URGENCY</span>
-                    <span id="cc-speed" style="color:#eaecef; font-family:var(--font-num);">$0/s</span>
-                </div>
-                <div id="cc-algo-status" style="font-size: 9.5px; font-weight: 800; color: #848e9c; margin-top:3px; margin-bottom:5px;">
-                    🤖 TĨNH LẶNG (XÁM)
-                </div>
-                <div style="display: flex; height: 3px; border-radius: 2px; overflow: hidden; background: #2b3139; position: relative;">
-                    <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: #F6465D; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-                    <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: #0ECB81; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-                    <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.4); z-index: 2;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
-                <div style="font-size: 8px; color: #527c82; margin-bottom: 4px; font-weight:700;">HỒ SƠ DÒNG TIỀN</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
-                    <span style="font-size:8.5px; color:#848e9c;">Avg Ticket:</span>
-                    <span id="cc-avg-ticket" style="font-size:10px; font-weight:700; color:#eaecef; font-family:var(--font-num);">🦐 $0</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:8.5px; color:#848e9c;">VWAP (60s):</span>
-                    <span id="cc-vwap-trend" style="font-size:10px; font-weight:700; font-family:var(--font-num);">0.00%</span>
-                </div>
-            </div>
-
-            <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
-                <div style="font-size: 8px; color: #527c82; margin-bottom: 4px; font-weight:700;">RỦI RO THANH KHOẢN</div>
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 2px;">
-                    <span style="font-size:8.5px; color:#848e9c;">Spread:</span>
-                    <span id="cc-spread-val" style="font-size:9px; font-family:var(--font-num); font-weight:bold; color:#0ECB81;">0.00%</span>
-                </div>
-                <div style="height:3px; background:#2b3139; border-radius:2px; margin-bottom: 6px; position:relative;">
-                    <div id="cc-spread-meter" style="height:100%; width:10%; background:#0ECB81; border-radius:2px; transition:0.3s;"></div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:8.5px; color:#848e9c;">Drop (5m):</span>
-                    <span id="cc-drop-val" style="font-size:10px; font-weight:700; font-family:var(--font-num);">0.00%</span>
-                </div>
-            </div>
-        </div>
-
-        <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
-            <div style="display: flex; justify-content: space-between; font-size: 8px; color: #848e9c; margin-bottom: 4px;">
-                <span>🐋 TAY TO (WHALES & SHARKS)</span>
-                <span id="cc-whale-ratio" style="font-weight: bold; color: #eaecef;">--% BUY</span>
-            </div>
-            <div style="display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: #2b3139;">
-                <div id="cc-whale-bar-buy" style="height: 100%; width: 50%; background: #0ECB81; transition: 0.3s;"></div>
-                <div id="cc-whale-bar-sell" style="height: 100%; width: 50%; background: #F6465D; transition: 0.3s;"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-top: 4px; color: #527c82; font-family: var(--font-num); font-weight:bold;">
-                <span id="cc-whale-vol-buy">B: $0</span>
-                <span id="cc-whale-vol-sell">S: $0</span>
-            </div>
-        </div>
-
-        <div style="font-size: 8px; color: #848e9c; font-weight: 700; margin-top: 2px; display:flex; justify-content:space-between;">
-            <span>🎯 LỆNH ĐỘT BIẾN (SNIPER TAPE)</span>
-            <span style="color:#527c82;">> $10k</span>
-        </div>
-        
-        <div id="cc-sniper-tape" style="background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.05); border-radius: 4px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
-            <div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 40px; font-style:italic;">Đang rình cá mập...</div>
-        </div>
-        <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02); margin-top: 4px;">
-            <div style="display: flex; justify-content: space-between; font-size: 8px; color: #848e9c; margin-bottom: 4px; font-weight: 700;">
-                <span>📈 DỮ LIỆU PHÁI SINH (FUTURES)</span>
-                <span id="cc-futures-status" style="color: #F0B90B;">⏳ ĐANG DÒ...</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                <span style="font-size:8.5px; color:#848e9c;">Open Interest (OI):</span>
-                <span id="cc-oi-val" style="font-size:10px; font-weight:700; color:#eaecef; font-family:var(--font-num);">$--</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size:8.5px; color:#848e9c;" title="Lãi suất vay">Funding Rate:</span>
-                <span id="cc-funding-val" style="font-size:10px; font-weight:700; font-family:var(--font-num);">--%</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-family: var(--font-num); font-weight:bold; border-top: 1px dashed rgba(255,255,255,0.05); padding-top: 4px;">
-                <span id="cc-liq-long" style="color:#F6465D;">🩸 Liq Long: $0</span>
-                <span id="cc-liq-short" style="color:#0ECB81;">💥 Liq Short: $0</span>
-            </div>
         </div>
     </div>
 </div>
@@ -2001,20 +1989,38 @@ function connectRealtimeChart(t) {
 
         if (tradesBox) {
             let row = document.createElement('div');
-            let bgAlpha = icon !== '' ? '0.25' : '0.1';
-            let isTrad = window.currentTheme === 'trad';
-            let c_up = isTrad ? '#0ECB81' : '#2af592';
-            let c_down = isTrad ? '#F6465D' : '#cb55e3';
-            let c_bg_up = isTrad ? `rgba(14,203,129,${bgAlpha})` : `rgba(42,245,146,${bgAlpha})`;
-            let c_bg_down = isTrad ? `rgba(246,70,93,${bgAlpha})` : `rgba(203,85,227,${bgAlpha})`;
-
-            row.style.cssText = `display:flex; justify-content:space-between; padding:4px 6px; margin-bottom:2px; border-radius:3px; background:${cluster.dir ? c_bg_up : c_bg_down}; transition:0.4s; font-weight:${fontWeight};`;
             
-            let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false});
-            row.innerHTML = `<span style="color:${cluster.dir ? c_up : c_down}">${formatPrice(cluster.p)}</span><span style="color:#eaecef">${icon}$${formatCompactUSD(cluster.vol)}</span><span style="color:${isTrad?'#848e9c':'#527c82'}">${timeStr}</span>`;
+            // Terminal Style: Không màu nền cho lệnh nhỏ, nền cực mờ cho lệnh vừa
+            let c_up = '#0ECB81'; let c_down = '#F6465D';
+            let c_bg_up = 'transparent'; let c_bg_down = 'transparent';
+            if (isWhale || isShark || isSweep) {
+                c_bg_up = 'rgba(14, 203, 129, 0.15)'; 
+                c_bg_down = 'rgba(246, 70, 93, 0.15)';
+            }
+
+            // Ép Tabular nums và canh lề 3 cột bằng width %
+            row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:3px 4px; border-bottom:1px solid #1A1F26; background:${cluster.dir ? c_bg_up : c_bg_down}; font-weight:${fontWeight}; font-variant-numeric: tabular-nums; transition: 0.1s;`;
+            
+            let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            
+            row.innerHTML = `
+                <span style="color:${cluster.dir ? c_up : c_down}; width:30%; text-align:left;">${formatPrice(cluster.p)}</span>
+                <span style="color:#eaecef; width:45%; text-align:right;">${icon}$${formatCompactUSD(cluster.vol)}</span>
+                <span style="color:#707A8A; width:25%; text-align:right;">${timeStr}</span>
+            `;
+            
             tradesBox.insertBefore(row, tradesBox.firstChild);
             
-            setTimeout(() => row.style.background = 'transparent', 400);
+            // Hiệu ứng Flash (Chớp Inverse Color) cực nhanh 100ms cho cá mập
+            if (isWhale || isShark) {
+                row.style.background = cluster.dir ? c_up : c_down;
+                row.style.color = '#000000'; // Đổi chữ thành đen để nổi bật
+                setTimeout(() => { 
+                    row.style.background = cluster.dir ? c_bg_up : c_bg_down; 
+                    row.style.color = ''; 
+                }, 100); // 100ms là đủ để não nhận thức, không gây mù mắt
+            }
+
             if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
             // [PRO QUANT] Bơm vào Sniper Tape và Cộng dồn Volume
         if (isWhale || isShark) {
