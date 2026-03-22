@@ -2690,7 +2690,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             
             // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
             if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
-if (typeof window.connectLiquidationStream === 'function') { window.connectLiquidationStream(t.symbol); }
+if (typeof window.startFuturesEngine === 'function') { window.startFuturesEngine(t.symbol); }
             // PHỤC HỒI LẠI ICON VÀ SỐ LIỆU TỪ CACHE NGAY LẬP TỨC
             setTimeout(() => {
                 // Gọi thẳng hàm lọc cá (Hàm này đã có sẵn Logic: Nếu khung >=1m thì tự xóa cá, nếu <=1s thì lọc theo Dropdown)
@@ -2725,7 +2725,7 @@ window.changeChartInterval = function(interval, btnEl) {
 };
 
 window.closeProChart = function() {
-    if (typeof window.closeLiquidationStream === 'function') window.closeLiquidationStream();
+    if (typeof window.stopFuturesEngine === 'function') window.stopFuturesEngine();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) {
@@ -3173,46 +3173,45 @@ window.openProChart = function(t, isTimeSwitch = false) {
 };
 
 // =========================================================
-// 🚀 CỖ MÁY PHÁI SINH (CHỐNG TREO - LỌC KÝ TỰ - BẤT TỬ)
+// 🚀 CỖ MÁY PHÁI SINH TỔNG HỢP (BẢN FINAL V4)
 // =========================================================
 let liquidationWs = null;
 let futuresDataInterval = null;
+
+// Hàm cập nhật an toàn mọi ngóc ngách của giao diện
+function updateAllDOM(id, text, color) {
+    let elements = document.querySelectorAll(`[id="${id}"]`);
+    elements.forEach(el => {
+        if (text !== null) el.innerText = text;
+        if (color !== null) el.style.color = color;
+    });
+}
 
 window.startFuturesEngine = async function(symbol) {
     window.stopFuturesEngine();
     if (!symbol) return;
 
-    // 1. LỌC SẠCH RÁC: Xóa mọi dấu cách, dấu gạch ngang (VD: "GUA / USDT" -> "GUAUSDT")
     let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '');
     let fSymbol = cleanSymbol + 'USDT';
     let streamSymbol = fSymbol.toLowerCase();
 
-    // In ra Console để bạn dễ check lỗi
-    console.log(`[Futures Engine] Bắt đầu quét: ${fSymbol}`);
+    console.log(`[Futures Engine] Đã kích hoạt cho: ${fSymbol}`);
 
-    let statusEl = document.getElementById('cc-futures-status');
-    let oiEl = document.getElementById('cc-oi-val');
-    let fundEl = document.getElementById('cc-funding-val');
-    let liqLong = document.getElementById('cc-liq-long');
-    let liqShort = document.getElementById('cc-liq-short');
-
-    // 2. Reset Giao diện
-    if (statusEl) { statusEl.innerText = '⏳ ĐANG DÒ...'; statusEl.style.color = '#F0B90B'; }
-    if (oiEl) oiEl.innerText = '$--';
-    if (fundEl) { fundEl.innerText = '--%'; fundEl.style.color = '#eaecef'; }
+    updateAllDOM('cc-futures-status', '⏳ ĐANG DÒ...', '#F0B90B');
+    updateAllDOM('cc-oi-val', '$--', null);
+    updateAllDOM('cc-funding-val', '--%', '#eaecef');
 
     if (!window.quantStats) window.quantStats = {};
     window.quantStats.longLiq = 0;
     window.quantStats.shortLiq = 0;
 
-    // 3. Hàm Fetch bọc lớp giáp chống treo (Timeout 4 giây)
     const fetchWithTimeout = async (url) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), 4000);
         try {
             const response = await fetch(url, { signal: controller.signal });
             clearTimeout(id);
-            if (!response.ok) throw new Error(`HTTP Lỗi ${response.status}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.json();
         } catch (err) {
             clearTimeout(id);
@@ -3220,50 +3219,37 @@ window.startFuturesEngine = async function(symbol) {
         }
     };
 
-    // 4. Kéo dữ liệu REST API
     const fetchRestData = async () => {
         try {
-            // Lấy Funding Rate
+            // Check Funding Rate để khẳng định có mặt trên Futures
             let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
             
-            // Nếu qua được dòng trên -> CHẮC CHẮN CÓ FUTURES
-            let _statusEl = document.getElementById('cc-futures-status');
-            if (_statusEl) { _statusEl.innerText = '🟢 ACTIVE'; _statusEl.style.color = '#0ECB81'; }
+            updateAllDOM('cc-futures-status', '🟢 ACTIVE', '#0ECB81');
 
-            let _fundEl = document.getElementById('cc-funding-val');
-            if (_fundEl && fundData.lastFundingRate) {
+            if (fundData && fundData.lastFundingRate) {
                 let fRate = parseFloat(fundData.lastFundingRate) * 100;
                 let sign = fRate > 0 ? '+' : '';
-                _fundEl.innerText = sign + fRate.toFixed(4) + '%';
-                _fundEl.style.color = fRate > 0.01 ? '#F6465D' : (fRate < -0.01 ? '#00F0FF' : '#eaecef');
+                let color = fRate > 0.01 ? '#F6465D' : (fRate < -0.01 ? '#00F0FF' : '#eaecef');
+                updateAllDOM('cc-funding-val', sign + fRate.toFixed(4) + '%', color);
             }
 
-            // Lấy Open Interest
             try {
                 let oiData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
-                let _oiEl = document.getElementById('cc-oi-val');
                 let currentPrice = window.scLastPrice || (window.currentChartToken ? parseFloat(window.currentChartToken.price) : 0);
                 let oiUsd = parseFloat(oiData.openInterest) * currentPrice;
-                if (_oiEl && oiUsd > 0) _oiEl.innerText = '$' + formatCompactUSD(oiUsd);
-            } catch(oiErr) {
-                console.log(`[Futures] Không kéo được OI:`, oiErr.message);
-            }
+                if (oiUsd > 0) updateAllDOM('cc-oi-val', '$' + formatCompactUSD(oiUsd), null);
+            } catch(oiErr) {}
             return true;
 
         } catch (err) {
-            // Lỗi hoặc không có Futures -> Báo đỏ ngay lập tức, không treo
-            console.log(`[Futures] Không có dữ liệu cho ${fSymbol}:`, err.message);
-            let _statusEl = document.getElementById('cc-futures-status');
-            let _oiEl = document.getElementById('cc-oi-val');
-            let _fundEl = document.getElementById('cc-funding-val');
-            if (_statusEl) { _statusEl.innerText = '🚫 NO FUTURES'; _statusEl.style.color = '#848e9c'; }
-            if (_oiEl) _oiEl.innerText = 'N/A';
-            if (_fundEl) { _fundEl.innerText = 'N/A'; _fundEl.style.color = '#848e9c'; }
+            console.log(`[Futures Engine] Không có Futures cho ${fSymbol}`);
+            updateAllDOM('cc-futures-status', '🚫 NO FUTURES', '#848e9c');
+            updateAllDOM('cc-oi-val', 'N/A', null);
+            updateAllDOM('cc-funding-val', 'N/A', '#848e9c');
             return false;
         }
     };
 
-    // 5. Khởi động vòng lặp và Websocket
     let hasFutures = await fetchRestData();
     if (hasFutures) {
         futuresDataInterval = setInterval(fetchRestData, 15000);
@@ -3280,12 +3266,10 @@ window.startFuturesEngine = async function(symbol) {
 
                 if (isLongLiq) {
                     window.quantStats.longLiq += valUSD;
-                    let _liqLong = document.getElementById('cc-liq-long');
-                    if (_liqLong) _liqLong.innerText = `🩸 Liq Long: $${formatCompactUSD(window.quantStats.longLiq)}`;
+                    updateAllDOM('cc-liq-long', `🩸 Liq Long: $${formatCompactUSD(window.quantStats.longLiq)}`, null);
                 } else {
                     window.quantStats.shortLiq += valUSD;
-                    let _liqShort = document.getElementById('cc-liq-short');
-                    if (_liqShort) _liqShort.innerText = `💥 Liq Short: $${formatCompactUSD(window.quantStats.shortLiq)}`;
+                    updateAllDOM('cc-liq-short', `💥 Liq Short: $${formatCompactUSD(window.quantStats.shortLiq)}`, null);
                 }
 
                 if (valUSD > 1000 && typeof window.logToSniperTape === 'function') {
@@ -3295,9 +3279,8 @@ window.startFuturesEngine = async function(symbol) {
         };
 
         liquidationWs.onclose = () => {
-            let overlay = document.getElementById('super-chart-overlay');
-            let _statusEl = document.getElementById('cc-futures-status');
-            if (overlay && overlay.classList.contains('active') && _statusEl && _statusEl.innerText !== '🚫 NO FUTURES') {
+            let anyStatus = document.querySelector('[id="cc-futures-status"]');
+            if (anyStatus && anyStatus.innerText !== '🚫 NO FUTURES') {
                 setTimeout(() => window.startFuturesEngine(symbol), 3000);
             }
         };
