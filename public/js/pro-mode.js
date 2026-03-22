@@ -2940,6 +2940,9 @@ window.updateSmartMoneyRadar = function(apiData) {
     const fmtUsd = (val) => val && !isNaN(val) ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
     const fmtPrice = (val) => val && !isNaN(val) ? parseFloat(val).toPrecision(5) : '--';
 
+    // --- LẤY DATA GỐC TỪ CHART ĐANG MỞ ĐỂ ĐỒNG BỘ TUYỆT ĐỐI ---
+    let t_chart = window.currentChartToken || {};
+
     // --- ZONE 1: LOGIC RỦI RO SỐNG CÒN & TOKENOMICS ---
     // 1.1 Tập trung Ví
     let top10Pct = parseFloat(d.top10HoldersPercentage || 0);
@@ -2959,7 +2962,8 @@ window.updateSmartMoneyRadar = function(apiData) {
     }
 
     // 1.2 Áp lực Dump
-    let currentPrice = parseFloat(d.price || 0);
+    // Đã gộp biến currentPrice để dùng chung, không bị lỗi trùng lặp nữa
+    let currentPrice = Number(t_chart.price) || parseFloat(d.price || 0);
     let avgBuy = parseFloat(d.bnAvgBuyPrice || 0);
     safeSet('sm-bn-avg-buy', '$' + fmtPrice(avgBuy));
     let dumpBadge = document.getElementById('sm-dump-risk-badge');
@@ -2977,21 +2981,16 @@ window.updateSmartMoneyRadar = function(apiData) {
         }
     }
 
-    // 1.3 Lạm phát (Unlock / FDV vs MCAP) - ĐỒNG BỘ TUYỆT ĐỐI VỚI TOPBAR
-    let t_chart = window.currentChartToken || {};
-    
-    // Ép buộc lấy MC từ dữ liệu Topbar (chuẩn nhất), nếu API rỗng mới dùng d.marketCap
+    // 1.3 Lạm phát (Unlock / FDV vs MCAP) - ĐỒNG BỘ TUYỆT ĐỐI
     let mc = Number(t_chart.market_cap) || Number(d.marketCap) || 0;
     
     // Tính FDV = Giá * Tổng cung (ưu tiên lấy Max Supply All-chain nếu có)
-    let currentPrice = Number(t_chart.price) || Number(d.price) || 0;
     let maxSup = Number(d.allChainMaxSupply) || Number(d.totalSupply) || Number(d.maxSupply);
     let fdv = maxSup > 0 ? (currentPrice * maxSup) : (Number(d.fdv) || mc);
 
     // Chặn triệt để: FDV không bao giờ được nhỏ hơn MC
     if (fdv < mc) fdv = mc;
 
-    // Tính tỷ lệ % mở khóa (Giờ thì lấy 59.17M / 298.05M = ~19.8% chuẩn cmnl)
     let unlockPct = fdv > 0 ? (mc / fdv) * 100 : 100;
     if (unlockPct > 100) unlockPct = 100;
 
@@ -2999,7 +2998,7 @@ window.updateSmartMoneyRadar = function(apiData) {
     let topFdvEl = document.getElementById('sc-top-fdv');
     if (topFdvEl) topFdvEl.innerText = '$' + formatCompactNum(fdv);
 
-    // Xử lý hiển thị UI cho tab Smart Money
+    // Xử lý hiển thị UI cho Lạm phát
     safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
     let unlockBadge = document.getElementById('sm-unlock-badge');
     if (unlockBadge) {
@@ -3014,18 +3013,15 @@ window.updateSmartMoneyRadar = function(apiData) {
             unlockBadge.style.background = 'rgba(14, 203, 129, 0.2)'; unlockBadge.style.color = '#0ECB81';
         }
     }
-// 1.4 Độ sâu thanh khoản (Liquidity vs MCAP)
-    // Lấy thanh khoản từ token đang mở trên chart (window.currentChartToken) thay vì biến t
-    let currentTokenLiq = window.currentChartToken ? window.currentChartToken.liquidity : 0;
+
+    // 1.4 Độ sâu thanh khoản (Liquidity vs MCAP)
+    let currentTokenLiq = t_chart.liquidity ? t_chart.liquidity : 0;
     let liq = Number(currentTokenLiq) || Number(d.liquidity) || 0;
     
-    // mc là Market Cap thật đã được tính cực chuẩn ở phần 1.3 ngay bên trên
     let liqRatio = mc > 0 ? (liq / mc) * 100 : 0;
-    
     safeSet('sm-liq-ratio', liqRatio.toFixed(2) + '%');
     let liqBadge = document.getElementById('sm-liq-badge');
     if (liqBadge) {
-        // Ràng buộc cẩn thận: Nếu thanh khoản rỗng hoặc = 0 thì báo lỗi luôn
         if (liq <= 0) {
             liqBadge.innerText = 'Đang dò Pool...';
             liqBadge.style.background = 'rgba(255, 255, 255, 0.1)'; liqBadge.style.color = '#848e9c';
@@ -3040,6 +3036,7 @@ window.updateSmartMoneyRadar = function(apiData) {
             liqBadge.style.background = 'rgba(14, 203, 129, 0.2)'; liqBadge.style.color = '#0ECB81';
         }
     }
+
     // --- ZONE 2: LOGIC DẤU CHÂN CÁ MẬP ---
     let smartPct = parseFloat(d.holdersSmartMoneyPercent || d.smartMoneyHoldingPercent || 0);
     safeSet('sm-pct-smart', smartPct > 0 ? (smartPct * 1).toFixed(2) + '%' : '0.00%');
@@ -3057,7 +3054,6 @@ window.updateSmartMoneyRadar = function(apiData) {
     safeSet('sm-pct-sniper', sniperPct > 0 ? (sniperPct * 1).toFixed(2) + '%' : '0.00%');
     safeSet('sm-cnt-sniper', d.bundlerHolders || '0');
 
-    // Chốt kết luận (Verdict)
     let verdictEl = document.getElementById('sm-verdict-badge');
     if (verdictEl) {
         if (smartPct + kolProPct > 1) {
