@@ -1596,7 +1596,7 @@ window.updateCommandCenterUI = function() {
     if (nfEl && window.scNetFlow !== undefined) {
         nfEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
         nfEl.style.color = window.scNetFlow >= 0 ? '#0ECB81' : '#F6465D';
-        nfBox.style.borderLeftColor = window.scNetFlow >= 0 ? '#0ECB81' : '#F6465D';
+        if (nfBox) nfBox.style.borderLeftColor = window.scNetFlow >= 0 ? '#0ECB81' : '#F6465D';
     }
 
     // --- 2. NHIỆT KẾ BOT (ALGO URGENCY) ---
@@ -1607,27 +1607,28 @@ window.updateCommandCenterUI = function() {
     let algoStatus = document.getElementById('cc-algo-status');
     let algoBox = document.getElementById('cc-algo-box');
     
-    // Tính số lệnh Sweep trong 15s qua
+    // Tính số lệnh Sweep
     let now = Date.now();
-    let recentSweeps = window.scTickHistory ? window.scTickHistory.filter(x => (now - x.t <= 15000) && x.q > 0) : []; // Giả lập quét
-    // Dựa vào tổng Netflow ngắn hạn để xác định hướng quét
+    let recentSweeps = window.scTickHistory ? window.scTickHistory.filter(x => (now - x.t <= 15000) && x.q > 0) : [];
     let shortNetFlow = recentSweeps.reduce((s, x) => s + (x.dir ? x.v : -x.v), 0);
-    let isHighUrgency = speed > 50000 || (recentSweeps.length > 20); // Nếu tốc độ >50k/s hoặc lệnh nhồi liên tục
+    let isHighUrgency = speed > 50000 || (recentSweeps.length > 20);
 
-    if (isHighUrgency) {
-        if (shortNetFlow > 0) {
-            algoStatus.innerText = '🤖 SWEEPING ASKS (GOM)';
-            algoStatus.style.color = '#2af592'; algoBox.style.borderLeftColor = '#2af592';
-            algoStatus.style.animation = 'pulse-dot 0.5s infinite'; // Chớp nháy
+    if (algoStatus && algoBox) {
+        if (isHighUrgency) {
+            if (shortNetFlow > 0) {
+                algoStatus.innerText = '🤖 SWEEPING ASKS (GOM)';
+                algoStatus.style.color = '#2af592'; algoBox.style.borderLeftColor = '#2af592';
+                algoStatus.style.animation = 'pulse-dot 0.5s infinite';
+            } else {
+                algoStatus.innerText = '🤖 SWEEPING BIDS (XẢ)';
+                algoStatus.style.color = '#cb55e3'; algoBox.style.borderLeftColor = '#cb55e3';
+                algoStatus.style.animation = 'pulse-dot 0.5s infinite';
+            }
         } else {
-            algoStatus.innerText = '🤖 SWEEPING BIDS (XẢ)';
-            algoStatus.style.color = '#cb55e3'; algoBox.style.borderLeftColor = '#cb55e3';
-            algoStatus.style.animation = 'pulse-dot 0.5s infinite';
+            algoStatus.innerText = '🤖 TĨNH LẶNG (XÁM)';
+            algoStatus.style.color = '#848e9c'; algoBox.style.borderLeftColor = '#848e9c';
+            algoStatus.style.animation = 'none';
         }
-    } else {
-        algoStatus.innerText = '🤖 TĨNH LẶNG (XÁM)';
-        algoStatus.style.color = '#848e9c'; algoBox.style.borderLeftColor = '#848e9c';
-        algoStatus.style.animation = 'none';
     }
 
     // --- 3. HỒ SƠ DÒNG TIỀN ---
@@ -1639,20 +1640,22 @@ window.updateCommandCenterUI = function() {
         avgEl.innerHTML = `${icon} <span style="color:${color}">$${formatCompactUSD(avgTicket)}</span>`;
     }
 
+    // [ĐÃ FIX LỖI 0.00%]: ĐỌC DỮ LIỆU TREND TỪ RAM
+    let trend = window.quantStats.trend || 0;
     let trendEl = document.getElementById('cc-vwap-trend');
-    let trend = parseFloat(document.getElementById('sc-stat-trend')?.innerText || 0); // Lấy từ logic bạn đã tính
     if (trendEl) {
         trendEl.innerText = (trend > 0 ? '▲ +' : (trend < 0 ? '▼ ' : '')) + Math.abs(trend).toFixed(2) + '%';
         trendEl.style.color = trend >= 0 ? '#0ECB81' : '#F6465D';
     }
 
     // --- 4. RỦI RO THANH KHOẢN ---
-    let spread = parseFloat(document.getElementById('sc-stat-spread')?.innerText || 0);
+    // [ĐÃ FIX LỖI 0.00%]: ĐỌC DỮ LIỆU SPREAD VÀ DROP TỪ RAM
+    let spread = window.quantStats.spread || 0;
     let spVal = document.getElementById('cc-spread-val');
     let spMeter = document.getElementById('cc-spread-meter');
     if (spVal && spMeter) {
         spVal.innerText = spread.toFixed(2) + '%';
-        let fill = (spread / 2.0) * 100; // Giả định Spread 2.0% là max nguy hiểm (100%)
+        let fill = (spread / 2.0) * 100;
         fill = Math.min(100, Math.max(5, fill));
         spMeter.style.width = fill + '%';
         if (spread < 0.2) { spMeter.style.background = '#0ECB81'; spVal.style.color = '#0ECB81'; }
@@ -1660,24 +1663,37 @@ window.updateCommandCenterUI = function() {
         else { spMeter.style.background = '#F6465D'; spVal.style.color = '#F6465D'; }
     }
 
+    let drop = window.quantStats.drop || 0;
     let dropEl = document.getElementById('cc-drop-val');
-    let drop = parseFloat(document.getElementById('sc-stat-drop')?.innerText || 0);
     if (dropEl) {
         dropEl.innerText = drop.toFixed(2) + '%';
-        dropEl.style.color = drop < -2.0 ? '#00F0FF' : '#eaecef'; // Âm nặng thì màu xanh dương (vị thế bắt đáy)
+        dropEl.style.color = drop < -2.0 ? '#00F0FF' : '#eaecef';
     }
 
     // --- 5. LA BÀN CÁ MẬP ---
-    const totalWhale = window.quantStats.whaleBuyVol + window.quantStats.whaleSellVol;
+    const totalWhale = (window.quantStats.whaleBuyVol || 0) + (window.quantStats.whaleSellVol || 0);
     let buyPct = 50, sellPct = 50;
-    if (totalWhale > 0) { buyPct = (window.quantStats.whaleBuyVol / totalWhale) * 100; sellPct = (window.quantStats.whaleSellVol / totalWhale) * 100; }
-    document.getElementById('cc-whale-bar-buy').style.width = `${buyPct}%`; document.getElementById('cc-whale-bar-sell').style.width = `${sellPct}%`;
-    document.getElementById('cc-whale-vol-buy').innerText = 'B: $' + formatCompactUSD(window.quantStats.whaleBuyVol);
-    document.getElementById('cc-whale-vol-sell').innerText = 'S: $' + formatCompactUSD(window.quantStats.whaleSellVol);
-    document.getElementById('cc-whale-ratio').innerText = `${buyPct.toFixed(0)}% BUY`;
-    document.getElementById('cc-whale-ratio').style.color = buyPct > 50 ? '#0ECB81' : '#F6465D';
+    if (totalWhale > 0) { 
+        buyPct = (window.quantStats.whaleBuyVol / totalWhale) * 100; 
+        sellPct = (window.quantStats.whaleSellVol / totalWhale) * 100; 
+    }
+    let barBuy = document.getElementById('cc-whale-bar-buy');
+    let barSell = document.getElementById('cc-whale-bar-sell');
+    if(barBuy) barBuy.style.width = `${buyPct}%`; 
+    if(barSell) barSell.style.width = `${sellPct}%`;
+    
+    let volBuy = document.getElementById('cc-whale-vol-buy');
+    if(volBuy) volBuy.innerText = 'B: $' + formatCompactUSD(window.quantStats.whaleBuyVol || 0);
+    let volSell = document.getElementById('cc-whale-vol-sell');
+    if(volSell) volSell.innerText = 'S: $' + formatCompactUSD(window.quantStats.whaleSellVol || 0);
+    
+    let ratioTxt = document.getElementById('cc-whale-ratio');
+    if(ratioTxt) {
+        ratioTxt.innerText = `${buyPct.toFixed(0)}% BUY`;
+        ratioTxt.style.color = buyPct > 50 ? '#0ECB81' : '#F6465D';
+    }
 
-    // --- 6. AI VERDICT (TỔNG KẾT THEO KỊCH BẢN YÊU CẦU) ---
+    // --- 6. AI VERDICT ---
     const verdictEl = document.getElementById('ai-verdict-badge');
     if (!verdictEl) return;
     
@@ -1923,8 +1939,7 @@ function connectRealtimeChart(t) {
             let p90 = prices[Math.floor(prices.length * 0.9)];
             if (p10 > 0) spread = ((p90 - p10) / p10) * 100;
         }
-        let spreadEl = document.getElementById('sc-stat-spread');
-        if(spreadEl) spreadEl.innerText = spread.toFixed(2) + '%';
+        window.quantStats.spread = spread; // ĐÃ FIX: LƯU VÀO RAM
 
         // B. TÍNH TREND (Gia tốc VWAP 60s)
         const hist60s = window.scTickHistory.filter(x => now - x.t <= 60000);
@@ -1936,11 +1951,7 @@ function connectRealtimeChart(t) {
             let vwapNew = newHalf.reduce((s, x) => s + x.p * x.v, 0) / (newHalf.reduce((s, x) => s + x.v, 0) || 1);
             if (vwapOld > 0 && vwapNew > 0) trend = ((vwapNew - vwapOld) / vwapOld) * 100;
         }
-        let trendEl = document.getElementById('sc-stat-trend');
-        if(trendEl) {
-            trendEl.innerText = (trend > 0 ? '+' : '') + trend.toFixed(2) + '%';
-            trendEl.style.color = trend >= 0 ? '#0ECB81' : '#F6465D';
-        }
+        window.quantStats.trend = trend; // ĐÃ FIX: LƯU VÀO RAM
 
         // C. TÍNH DROP (So với P95 đỉnh 5 phút)
         let drop = 0;
@@ -1949,14 +1960,7 @@ function connectRealtimeChart(t) {
             let peakP95 = prices5m[Math.floor(prices5m.length * 0.95)];
             if (peakP95 > 0) drop = ((window.scLastPrice - peakP95) / peakP95) * 100;
         }
-        let dropEl = document.getElementById('sc-stat-drop');
-        if (dropEl) {
-            let sign = drop >= 0 ? '+' : '';
-            dropEl.innerText = sign + drop.toFixed(2) + '%';
-            if (drop > 0) { dropEl.style.color = '#00F0FF'; } 
-            else if (drop < 0) { dropEl.style.color = '#FF007F'; } 
-            else { dropEl.style.color = '#eaecef'; }
-        }
+        window.quantStats.drop = drop; // ĐÃ FIX: LƯU VÀO RAM
 
         // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART
         let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
