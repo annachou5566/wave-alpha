@@ -1782,7 +1782,6 @@ window.updateCommandCenterUI = function() {
         // NHÁNH A: CÓ PHÁI SINH (ĐÁNH LIÊN THỊ TRƯỜNG)
         // ====================================================
         if (hasFutures) {
-            // Dùng Z-Score và OFI làm tín hiệu kích hoạt (Trigger)
             if (zScore > 2.5 && ofi > 0.6 && liqShort > 5000) {
                 verdictEl.innerText = '🔥 SHORT SQUEEZE (DIỆT SHORT)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
@@ -1808,33 +1807,6 @@ window.updateCommandCenterUI = function() {
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
             }
         }
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
-            }
-            else if (_vDrop < -0.5 && liqLong > 5000 && fFunding > 0.01) {
-                verdictEl.innerText = '🩸 LONG CASCADE (RŨ ĐÒN BẨY)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
-            }
-            else if (_vWNet < 0 && _vSPct > 65 && fFunding > 0.01) {
-                verdictEl.innerText = '⚠️ TRAP DIVERGENCE (BẪY GIẢ)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-            }
-            else if (_vBPct > 60 && isHighUrgency && _vWNet > 0 && fFunding <= 0.01) {
-                verdictEl.innerText = '🚀 REAL MOMENTUM (BƠM THẬT)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
-            }
-            else if (isSpoofBids) {
-                verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG MUA ẢO)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-            }
-            else if (isSpoofAsks) {
-                verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG BÁN ẢO)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-            }
-            else {
-                verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
-            }
-        } 
         // ====================================================
         // NHÁNH B: KHÔNG CÓ PHÁI SINH (BẮT BÀI MARKET MAKER)
         // ====================================================
