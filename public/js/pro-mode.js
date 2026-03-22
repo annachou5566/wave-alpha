@@ -2110,6 +2110,9 @@ function connectRealtimeChart(t) {
         // ==========================================
         // [VŨ KHÍ QUANT] 2. ADAPTIVE Z-SCORE (ĐỘT BIẾN KHỐI LƯỢNG)
         // ==========================================
+        // [ĐÃ FIX LỖI DEAD ZONE] Dời currentSpeed lên trước khi tính Z-Score
+        let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5; 
+        
         if (!window.quantStats.speedHist) window.quantStats.speedHist = [];
         window.quantStats.speedHist.push(currentSpeed);
         if (window.quantStats.speedHist.length > 60) window.quantStats.speedHist.shift(); // Giữ lịch sử 60s
@@ -2125,7 +2128,6 @@ function connectRealtimeChart(t) {
         window.quantStats.zScore = zScore;
         
         // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART
-        let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
         let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
 
         // E. THUẬT TOÁN ALGO LIMIT REALTIME
