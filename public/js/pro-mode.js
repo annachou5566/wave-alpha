@@ -2461,8 +2461,14 @@ function injectSmartMoneyTab() {
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
     newTabContent.className = 'sc-tab-content';
-    // FIX MOBILE SCROLL: Thêm -webkit-overflow-scrolling và padding-bottom
-    newTabContent.style.cssText = 'background: #12151A; padding: 10px 10px 50px 10px; display: none; flex-direction: column; flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;';
+    
+    // FIX MOBILE SCROLL: Thêm min-height: 0, overscroll-behavior và height: 100%
+    newTabContent.style.cssText = 'background: #12151A; padding: 10px 10px 50px 10px; display: none; flex-direction: column; flex: 1; min-height: 0; height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;';
+    
+    // NGĂN CHẶN XUNG ĐỘT VUỐT (CHỐNG KẸT TRÊN IOS/SAFARI)
+    newTabContent.addEventListener('touchmove', function(e) {
+        e.stopPropagation();
+    }, { passive: true });
     
     newTabContent.innerHTML = `
         <div class="sc-panel-title" style="margin-bottom: 12px; color:#eaecef; display: flex; justify-content: space-between; align-items: center; font-size: 10px; white-space: nowrap;">
