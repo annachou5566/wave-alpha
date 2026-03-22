@@ -2977,25 +2977,25 @@ window.updateSmartMoneyRadar = function(apiData) {
         }
     }
 
-    // Lấy nguyên gốc MC của Binance
+    // 1.3 Lạm phát (Unlock / FDV vs MCAP) - CHUẨN TÀI CHÍNH
     let mc = Number(d.marketCap) || 0;
     
-    // FDV ĐÚNG NGHĨA = Giá hiện tại * Tổng cung tối đa (Tính luôn cả All-chain nếu có)
+    // Tính FDV = Giá * Tổng cung (ưu tiên lấy Max Supply All-chain nếu có)
     let maxSup = Number(d.allChainMaxSupply) || Number(d.totalSupply) || Number(d.maxSupply);
     let fdv = maxSup > 0 ? (Number(d.price) * maxSup) : (Number(d.fdv) || mc);
 
-    // Chặn triệt để mọi cú lừa từ API (Nếu API ngáo làm FDV < MC thì gán bằng nhau luôn)
+    // Chặn triệt để lỗi API Binance: FDV không bao giờ được nhỏ hơn MC
     if (fdv < mc) fdv = mc;
 
-    // Tính % Mở khóa
-    let unlockPct = (mc / fdv) * 100;
+    // Tính tỷ lệ % mở khóa an toàn
+    let unlockPct = fdv > 0 ? (mc / fdv) * 100 : 100;
     if (unlockPct > 100) unlockPct = 100;
 
-    // Bơm lên UI Topbar
+    // Bơm FDV lên thanh Topbar phía trên biểu đồ
     let topFdvEl = document.getElementById('sc-top-fdv');
     if (topFdvEl) topFdvEl.innerText = '$' + formatCompactNum(fdv);
-    
-    // Bơm lên UI Smart Money
+
+    // Xử lý hiển thị UI cho tab Smart Money
     safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
     let unlockBadge = document.getElementById('sm-unlock-badge');
     if (unlockBadge) {
