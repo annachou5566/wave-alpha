@@ -1038,33 +1038,46 @@ function injectLayout() {
                         </div>
                     </div>
 
-                    <div id="tab-info" class="sc-tab-content">
-                        <div class="sc-panel-title" style="margin-bottom: 0; color:#eaecef;"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> DATA FLOW (REALTIME)</div>
+                    <div id="tab-info" class="sc-tab-content" style="padding: 10px;">
+                        <div class="sc-panel-title" style="margin-bottom: 8px; color:#eaecef;"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> COMMAND CENTER (PRO)</div>
                         
-                        <div class="df-grid">
-                            <div class="df-box">
-                                <div class="df-label">Dòng tiền Net</div>
-                                <div class="df-val" id="sc-stat-net-flow" style="color:#41e6e7;">+$0</div>
+                        <div id="quant-command-center" style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                                <div style="font-size: 8.5px; color: #848e9c; font-weight: 700;">LIVE VERDICT:</div>
+                                <div id="ai-verdict-badge" style="font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.1); color: #F0B90B; border: 1px solid rgba(240, 185, 11, 0.3);">
+                                    ĐANG QUÉT...
+                                </div>
                             </div>
-                            <div class="df-box">
-                                <div class="df-label">Tốc độ / Giây</div>
-                                <div class="df-val" id="sc-stat-match-speed">$0 /s</div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #0ECB81;">
+                                    <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px;">NET FLOW (THỰC TẾ)</div>
+                                    <div id="cc-net-flow" style="font-size: 12px; font-weight: 700; color: #0ECB81; font-family: var(--font-num);">+$0</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #00F0FF;">
+                                    <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px;">TỐC ĐỘ KHỚP</div>
+                                    <div id="cc-speed" style="font-size: 12px; font-weight: 700; color: #eaecef; font-family: var(--font-num);">$0 /s</div>
+                                </div>
                             </div>
-                            <div class="df-box">
-                                <div class="df-label">Ticket TB / Lệnh</div>
-                                <div class="df-val" id="sc-stat-avg-ticket">$0</div>
+
+                            <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
+                                <div style="display: flex; justify-content: space-between; font-size: 8px; color: #848e9c; margin-bottom: 4px;">
+                                    <span>🐋 TAY TO (WHALES & SHARKS)</span>
+                                    <span id="cc-whale-ratio" style="font-weight: bold; color: #eaecef;">--% BUY</span>
+                                </div>
+                                <div style="display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: #2b3139;">
+                                    <div id="cc-whale-bar-buy" style="height: 100%; width: 50%; background: #0ECB81; transition: 0.3s;"></div>
+                                    <div id="cc-whale-bar-sell" style="height: 100%; width: 50%; background: #F6465D; transition: 0.3s;"></div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-top: 4px; color: #527c82; font-family: var(--font-num); font-weight:bold;">
+                                    <span id="cc-whale-vol-buy">B: $0</span>
+                                    <span id="cc-whale-vol-sell">S: $0</span>
+                                </div>
                             </div>
-                            <div class="df-box">
-                                <div class="df-label">Spread (15s)</div>
-                                <div class="df-val" id="sc-stat-spread">0.00%</div>
-                            </div>
-                            <div class="df-box">
-                                <div class="df-label">Trend (VWAP 60s)</div>
-                                <div class="df-val" id="sc-stat-trend">0.00%</div>
-                            </div>
-                            <div class="df-box">
-                                <div class="df-label">Drop (5 Phút)</div>
-                                <div class="df-val" id="sc-stat-drop">0.00%</div>
+
+                            <div style="font-size: 8px; color: #848e9c; font-weight: 700; margin-top: 2px;">🎯 LỆNH ĐỘT BIẾN (SNIPER TAPE)</div>
+                            <div id="cc-sniper-tape" style="background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.05); border-radius: 4px; padding: 4px; height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;">
+                                <div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 30px; font-style:italic;">Đang rình cá mập...</div>
                             </div>
                         </div>
                     </div>
@@ -1476,7 +1489,95 @@ window.currentChartToken = null;
 // ==========================================
 let chartWs = null;
 let isReconnecting = false;
+// --- BỘ NHỚ COMMAND CENTER ---
+window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
 
+// Hàm đẩy thông báo vào Sniper Tape
+window.logToSniperTape = function(isBuy, vol, type, price) {
+    const tape = document.getElementById('cc-sniper-tape');
+    if (!tape) return;
+    if (tape.innerHTML.includes('Đang rình')) tape.innerHTML = '';
+
+    const color = isBuy ? '#0ECB81' : '#F6465D';
+    const bg = isBuy ? 'rgba(14, 203, 129, 0.1)' : 'rgba(246, 70, 93, 0.1)';
+    const action = isBuy ? 'BUY' : 'SELL';
+    
+    const entry = document.createElement('div');
+    entry.style.cssText = `display: flex; justify-content: space-between; font-size: 9px; padding: 3px 4px; background: ${bg}; border-left: 2px solid ${color}; border-radius: 2px; font-family: var(--font-num);`;
+    entry.innerHTML = `<span style="color:${color}; font-weight:bold;">${type} ${action}</span><span style="color:#eaecef;">$${formatCompactUSD(vol)} @ ${formatPrice(price)}</span>`;
+    
+    tape.prepend(entry);
+    if (tape.children.length > 15) tape.removeChild(tape.lastChild);
+};
+
+// Hàm cập nhật Giao diện Command Center (Máy đọc trận đấu)
+window.updateCommandCenterUI = function() {
+    if (!document.getElementById('quant-command-center')) return;
+
+    // 1. Cập nhật Core Flow (Lấy dữ liệu từ biến hệ thống có sẵn của bạn)
+    let nfEl = document.getElementById('cc-net-flow');
+    if (nfEl && window.scNetFlow !== undefined) {
+        nfEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
+        nfEl.style.color = window.scNetFlow >= 0 ? '#0ECB81' : '#F6465D';
+    }
+    
+    let speed = window.scSpeedWindow ? window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5 : 0;
+    let speedEl = document.getElementById('cc-speed');
+    if (speedEl) speedEl.innerText = '$' + formatCompactUSD(speed) + ' /s';
+
+    // 2. Cập nhật La bàn Cá Mập
+    const totalWhale = window.quantStats.whaleBuyVol + window.quantStats.whaleSellVol;
+    let buyPct = 50, sellPct = 50;
+    if (totalWhale > 0) {
+        buyPct = (window.quantStats.whaleBuyVol / totalWhale) * 100;
+        sellPct = (window.quantStats.whaleSellVol / totalWhale) * 100;
+    }
+    document.getElementById('cc-whale-bar-buy').style.width = `${buyPct}%`;
+    document.getElementById('cc-whale-bar-sell').style.width = `${sellPct}%`;
+    document.getElementById('cc-whale-vol-buy').innerText = 'B: $' + formatCompactUSD(window.quantStats.whaleBuyVol);
+    document.getElementById('cc-whale-vol-sell').innerText = 'S: $' + formatCompactUSD(window.quantStats.whaleSellVol);
+    document.getElementById('cc-whale-ratio').innerText = `${buyPct.toFixed(0)}% BUY`;
+    document.getElementById('cc-whale-ratio').style.color = buyPct > 50 ? '#0ECB81' : '#F6465D';
+
+    // 3. AI VERDICT (CHỐNG THAO TÚNG)
+    const verdictEl = document.getElementById('ai-verdict-badge');
+    if (!verdictEl) return;
+    
+    // Tính giá hiện tại so với 60s trước
+    let now = Date.now();
+    let trend = 0;
+    if (window.scTickHistory && window.scTickHistory.length > 5) {
+        let oldTicks = window.scTickHistory.filter(x => now - x.t > 30000);
+        let currentP = window.scLastPrice;
+        let oldP = oldTicks.length > 0 ? oldTicks[0].p : currentP;
+        trend = ((currentP - oldP) / oldP) * 100;
+    }
+
+    if (trend > 0 && window.scNetFlow < 0 && sellPct > 60) {
+        verdictEl.innerText = '⚠️ KÉO XẢ (FAKE PUMP)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D;';
+    } 
+    else if (trend < 0 && window.scNetFlow < 0 && buyPct > 70) {
+        verdictEl.innerText = '🛡️ HỨNG ĐÁY (ABSORPTION)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+    }
+    else if (totalWhale > 50000 && buyPct > 45 && buyPct < 55 && Math.abs(window.scNetFlow) < 10000) {
+        verdictEl.innerText = '🤖 WASH TRADING (VOL GIẢ)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+    }
+    else if (window.scNetFlow > 0 && buyPct > 65) {
+        verdictEl.innerText = '🚀 BULLISH FLOW (GOM)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+    }
+    else if (window.scNetFlow < 0 && sellPct > 65) {
+         verdictEl.innerText = '🩸 BEARISH FLOW (XẢ)';
+         verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D;';
+    }
+    else {
+        verdictEl.innerText = '⚖️ CHOPPING (ĐANG GIẰNG CO)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+    }
+};
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
 
@@ -1523,7 +1624,10 @@ function connectRealtimeChart(t) {
 
     // --- KHAI BÁO HÀM SMART TAPE (XỬ LÝ CỤM LỆNH) ---
     window.scCurrentCluster = null;
-
+// Reset Data Command Center
+    window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+    let tape = document.getElementById('cc-sniper-tape');
+    if(tape) tape.innerHTML = '<div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 30px; font-style:italic;">Đang rình cá mập...</div>';
     // --- HÀM 1: LỌC CÁ HỒI TỐ (QUÉT LẠI LỊCH SỬ) ---
     window.applyFishFilter = function() {
         let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
@@ -1606,6 +1710,20 @@ function connectRealtimeChart(t) {
             
             setTimeout(() => row.style.background = 'transparent', 400);
             if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
+            // [PRO QUANT] Bơm vào Sniper Tape và Cộng dồn Volume
+        if (isWhale || isShark) {
+            if (cluster.dir) window.quantStats.whaleBuyVol += cluster.vol;
+            else window.quantStats.whaleSellVol += cluster.vol;
+            window.logToSniperTape(cluster.dir, cluster.vol, isWhale ? '🐋 VOI' : '🦈 MẬP', cluster.p);
+        }
+        else if (isSweep) {
+            if (cluster.dir) window.quantStats.botSweepBuy++;
+            else window.quantStats.botSweepSell++;
+            window.logToSniperTape(cluster.dir, cluster.vol, '🤖 SWEEP', cluster.p);
+        }
+        else if (isDolphin) {
+            window.logToSniperTape(cluster.dir, cluster.vol, '🐬 HEO', cluster.p);
+        }
         }
 
         if (isDolphin || isShark || isWhale || isSweep) {
@@ -1913,7 +2031,8 @@ function connectRealtimeChart(t) {
         }
 
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
-
+// Cập nhật Command Center UI mỗi giây
+        if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
     }, 1000);
 
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
