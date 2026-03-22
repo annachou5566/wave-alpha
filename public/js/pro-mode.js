@@ -2671,7 +2671,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             
             // Mồi lịch sử xong thì mở WebSocket chạy tiếp realtime
             if (typeof connectRealtimeChart === 'function') { connectRealtimeChart(t); }
-
+if (typeof window.connectLiquidationStream === 'function') { window.connectLiquidationStream(t.symbol); }
             // PHỤC HỒI LẠI ICON VÀ SỐ LIỆU TỪ CACHE NGAY LẬP TỨC
             setTimeout(() => {
                 // Gọi thẳng hàm lọc cá (Hàm này đã có sẵn Logic: Nếu khung >=1m thì tự xóa cá, nếu <=1s thì lọc theo Dropdown)
@@ -2706,6 +2706,7 @@ window.changeChartInterval = function(interval, btnEl) {
 };
 
 window.closeProChart = function() {
+    if (typeof window.closeLiquidationStream === 'function') window.closeLiquidationStream();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) {
@@ -3152,3 +3153,65 @@ window.openProChart = function(t, isTimeSwitch = false) {
     }
 };
 
+// =========================================================
+// 🚀 TÍNH NĂNG MỚI: RADAR BẮT LỆNH THANH LÝ (LIQUIDATION)
+// =========================================================
+let liquidationWs = null;
+
+window.connectLiquidationStream = function(symbol) {
+    if (liquidationWs) { liquidationWs.close(); }
+    if (!symbol) return;
+
+    // Ép sang chữ thường và dán đuôi @forceOrder của Binance Futures
+    let wsUrl = `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@forceOrder`;
+    
+    try {
+        liquidationWs = new WebSocket(wsUrl);
+        
+        liquidationWs.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            // Nếu có sự kiện forceOrder (Thanh lý)
+            if (data.e === 'forceOrder' && data.o) {
+                let order = data.o;
+                let side = order.S; // "BUY" hoặc "SELL"
+                let price = parseFloat(order.p);
+                let qty = parseFloat(order.q);
+                let valUSD = price * qty;
+                
+                // Lọc nhiễu: Chỉ báo động khi lệnh cháy lớn hơn 1,000$
+                if (valUSD > 1000) {
+                    // Mẹo: Lệnh ép BÁN (SELL) nghĩa là 1 ông đánh LONG bị cháy
+                    // Lệnh ép MUA (BUY) nghĩa là 1 ông đánh SHORT bị cháy
+                    let isLongLiq = (side === 'SELL'); 
+                    
+                    // Bơm thẳng vào bảng Sniper Tape có sẵn của bạn
+                    window.logToSniperTape(
+                        !isLongLiq, // Màu sắc: Cháy Long (Đỏ), Cháy Short (Xanh)
+                        valUSD, 
+                        isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', 
+                        price
+                    );
+                }
+            }
+        };
+        
+        // Tự động kết nối lại nếu rớt mạng mà chart vẫn đang mở
+        liquidationWs.onclose = () => {
+            let overlay = document.getElementById('super-chart-overlay');
+            if (overlay && overlay.classList.contains('active')) {
+                setTimeout(() => window.connectLiquidationStream(symbol), 3000);
+            }
+        };
+    } catch(e) {
+        console.error("Lỗi WebSocket Thanh lý:", e);
+    }
+};
+
+// Hàm ngắt kết nối khi đóng chart
+window.closeLiquidationStream = function() {
+    if (liquidationWs) {
+        liquidationWs.close();
+        liquidationWs = null;
+    }
+};
