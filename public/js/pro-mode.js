@@ -1039,48 +1039,87 @@ function injectLayout() {
                     </div>
 
                     <div id="tab-info" class="sc-tab-content" style="padding: 10px;">
-                        <div class="sc-panel-title" style="margin-bottom: 8px; color:#eaecef;"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> COMMAND CENTER (PRO)</div>
-                        
-                        <div id="quant-command-center" style="display: flex; flex-direction: column; gap: 8px;">
-                            <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
-                                <div style="font-size: 8.5px; color: #848e9c; font-weight: 700;">LIVE VERDICT:</div>
-                                <div id="ai-verdict-badge" style="font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.1); color: #F0B90B; border: 1px solid rgba(240, 185, 11, 0.3);">
-                                    ĐANG QUÉT...
-                                </div>
-                            </div>
+    <div class="sc-panel-title" style="margin-bottom: 8px; color:#eaecef;"><i class="fas fa-wave-square" style="color:#41e6e7; margin-right: 5px;"></i> COMMAND CENTER (PRO)</div>
+    
+    <div id="quant-command-center" style="display: flex; flex-direction: column; gap: 8px;">
+        
+        <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 8.5px; color: #848e9c; font-weight: 700;">LIVE VERDICT:</div>
+            <div id="ai-verdict-badge" style="font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.1); color: #F0B90B; border: 1px solid rgba(240, 185, 11, 0.3);">
+                ĐANG QUÉT...
+            </div>
+        </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                                <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #0ECB81;">
-                                    <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px;">NET FLOW (THỰC TẾ)</div>
-                                    <div id="cc-net-flow" style="font-size: 12px; font-weight: 700; color: #0ECB81; font-family: var(--font-num);">+$0</div>
-                                </div>
-                                <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #00F0FF;">
-                                    <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px;">TỐC ĐỘ KHỚP</div>
-                                    <div id="cc-speed" style="font-size: 12px; font-weight: 700; color: #eaecef; font-family: var(--font-num);">$0 /s</div>
-                                </div>
-                            </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #0ECB81;" id="cc-nf-box">
+                <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px;">NET FLOW (THỰC TẾ)</div>
+                <div id="cc-net-flow" style="font-size: 13px; font-weight: 700; color: #0ECB81; font-family: var(--font-num);">+$0</div>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.02); padding: 6px; border-radius: 4px; border-left: 2px solid #848e9c;" id="cc-algo-box">
+                <div style="font-size: 8px; color: #848e9c; margin-bottom: 2px; display:flex; justify-content:space-between;">
+                    <span>ALGO & URGENCY</span>
+                    <span id="cc-speed" style="color:#eaecef; font-family:var(--font-num);">$0/s</span>
+                </div>
+                <div id="cc-algo-status" style="font-size: 9.5px; font-weight: 800; color: #848e9c; margin-top:3px;">
+                    🤖 TĨNH LẶNG (XÁM)
+                </div>
+            </div>
+        </div>
 
-                            <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
-                                <div style="display: flex; justify-content: space-between; font-size: 8px; color: #848e9c; margin-bottom: 4px;">
-                                    <span>🐋 TAY TO (WHALES & SHARKS)</span>
-                                    <span id="cc-whale-ratio" style="font-weight: bold; color: #eaecef;">--% BUY</span>
-                                </div>
-                                <div style="display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: #2b3139;">
-                                    <div id="cc-whale-bar-buy" style="height: 100%; width: 50%; background: #0ECB81; transition: 0.3s;"></div>
-                                    <div id="cc-whale-bar-sell" style="height: 100%; width: 50%; background: #F6465D; transition: 0.3s;"></div>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-top: 4px; color: #527c82; font-family: var(--font-num); font-weight:bold;">
-                                    <span id="cc-whale-vol-buy">B: $0</span>
-                                    <span id="cc-whale-vol-sell">S: $0</span>
-                                </div>
-                            </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
+                <div style="font-size: 8px; color: #527c82; margin-bottom: 4px; font-weight:700;">HỒ SƠ DÒNG TIỀN</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                    <span style="font-size:8.5px; color:#848e9c;">Avg Ticket:</span>
+                    <span id="cc-avg-ticket" style="font-size:10px; font-weight:700; color:#eaecef; font-family:var(--font-num);">🦐 $0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:8.5px; color:#848e9c;">VWAP (60s):</span>
+                    <span id="cc-vwap-trend" style="font-size:10px; font-weight:700; font-family:var(--font-num);">0.00%</span>
+                </div>
+            </div>
 
-                            <div style="font-size: 8px; color: #848e9c; font-weight: 700; margin-top: 2px;">🎯 LỆNH ĐỘT BIẾN (SNIPER TAPE)</div>
-                            <div id="cc-sniper-tape" style="background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.05); border-radius: 4px; padding: 4px; height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;">
-                                <div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 30px; font-style:italic;">Đang rình cá mập...</div>
-                            </div>
-                        </div>
-                    </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
+                <div style="font-size: 8px; color: #527c82; margin-bottom: 4px; font-weight:700;">RỦI RO THANH KHOẢN</div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 2px;">
+                    <span style="font-size:8.5px; color:#848e9c;">Spread:</span>
+                    <span id="cc-spread-val" style="font-size:9px; font-family:var(--font-num); font-weight:bold; color:#0ECB81;">0.00%</span>
+                </div>
+                <div style="height:3px; background:#2b3139; border-radius:2px; margin-bottom: 6px; position:relative;">
+                    <div id="cc-spread-meter" style="height:100%; width:10%; background:#0ECB81; border-radius:2px; transition:0.3s;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:8.5px; color:#848e9c;">Drop (5m):</span>
+                    <span id="cc-drop-val" style="font-size:10px; font-weight:700; font-family:var(--font-num);">0.00%</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
+            <div style="display: flex; justify-content: space-between; font-size: 8px; color: #848e9c; margin-bottom: 4px;">
+                <span>🐋 TAY TO (WHALES & SHARKS)</span>
+                <span id="cc-whale-ratio" style="font-weight: bold; color: #eaecef;">--% BUY</span>
+            </div>
+            <div style="display: flex; height: 4px; border-radius: 2px; overflow: hidden; background: #2b3139;">
+                <div id="cc-whale-bar-buy" style="height: 100%; width: 50%; background: #0ECB81; transition: 0.3s;"></div>
+                <div id="cc-whale-bar-sell" style="height: 100%; width: 50%; background: #F6465D; transition: 0.3s;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-top: 4px; color: #527c82; font-family: var(--font-num); font-weight:bold;">
+                <span id="cc-whale-vol-buy">B: $0</span>
+                <span id="cc-whale-vol-sell">S: $0</span>
+            </div>
+        </div>
+
+        <div style="font-size: 8px; color: #848e9c; font-weight: 700; margin-top: 2px; display:flex; justify-content:space-between;">
+            <span>🎯 LỆNH ĐỘT BIẾN (SNIPER TAPE)</span>
+            <span style="color:#527c82;">> $10k</span>
+        </div>
+        <div id="cc-sniper-tape" style="background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.05); border-radius: 4px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 40px; font-style:italic;">Đang rình cá mập...</div>
+        </div>
+    </div>
+</div>
                 </div>
             </div>
     `;
@@ -1492,89 +1531,170 @@ let isReconnecting = false;
 // --- BỘ NHỚ COMMAND CENTER ---
 window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
 
+// --- BỘ NHỚ COMMAND CENTER MỞ RỘNG ---
+window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0 };
+
+// 🔊 Trình phát âm thanh Ping (Web Audio API - không lo lỗi file)
+window.playProPing = function() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime); // 880Hz (Nốt A5)
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.start(); osc.stop(ctx.currentTime + 0.3);
+    } catch(e) {}
+};
+
 // Hàm đẩy thông báo vào Sniper Tape
 window.logToSniperTape = function(isBuy, vol, type, price) {
     const tape = document.getElementById('cc-sniper-tape');
     if (!tape) return;
+    
+    // Lọc bỏ cò con < $500 (chỉ lấy Cá hoặc Bot lớn)
+    if (vol < 500 && !type.includes('BOT')) return;
+
     if (tape.innerHTML.includes('Đang rình')) tape.innerHTML = '';
 
+    const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊');
+    
+    // Đèn Flash và Ping nếu là Cá Voi/Iceberg
+    if (isWhaleOrShark) {
+        window.playProPing();
+    }
+
     const color = isBuy ? '#0ECB81' : '#F6465D';
-    const bg = isBuy ? 'rgba(14, 203, 129, 0.1)' : 'rgba(246, 70, 93, 0.1)';
+    // Nếu là Cá to -> Màu nền rực sáng (Flash Vàng/Xanh lá), Cá nhỏ -> nền mờ
+    const bg = isWhaleOrShark 
+        ? (isBuy ? 'rgba(42, 245, 146, 0.3)' : 'rgba(203, 85, 227, 0.3)') 
+        : (isBuy ? 'rgba(14, 203, 129, 0.05)' : 'rgba(246, 70, 93, 0.05)');
     const action = isBuy ? 'BUY' : 'SELL';
     
     const entry = document.createElement('div');
-    entry.style.cssText = `display: flex; justify-content: space-between; font-size: 9px; padding: 3px 4px; background: ${bg}; border-left: 2px solid ${color}; border-radius: 2px; font-family: var(--font-num);`;
-    entry.innerHTML = `<span style="color:${color}; font-weight:bold;">${type} ${action}</span><span style="color:#eaecef;">$${formatCompactUSD(vol)} @ ${formatPrice(price)}</span>`;
+    entry.style.cssText = `display: flex; justify-content: space-between; font-size: 9px; padding: 4px 6px; background: ${bg}; border-left: 3px solid ${color}; border-radius: 2px; font-family: var(--font-num); animation: fadeIn 0.3s ease;`;
+    
+    let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
+    entry.innerHTML = `<span style="color:${color}; font-weight:800; ${glow}">${type} ${action}</span><span style="color:#eaecef; font-weight:bold;">$${formatCompactUSD(vol)} @ ${formatPrice(price)}</span>`;
     
     tape.prepend(entry);
-    if (tape.children.length > 15) tape.removeChild(tape.lastChild);
+    
+    // Hiệu ứng Flash chớp tắt sau 1 giây
+    if (isWhaleOrShark) {
+        setTimeout(() => { entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.05)' : 'rgba(246, 70, 93, 0.05)'; entry.style.textShadow = 'none'; }, 800);
+    }
+
+    if (tape.children.length > 20) tape.removeChild(tape.lastChild);
 };
 
-// Hàm cập nhật Giao diện Command Center (Máy đọc trận đấu)
 window.updateCommandCenterUI = function() {
     if (!document.getElementById('quant-command-center')) return;
 
-    // 1. Cập nhật Core Flow (Lấy dữ liệu từ biến hệ thống có sẵn của bạn)
+    // --- 1. CORE FLOW ---
     let nfEl = document.getElementById('cc-net-flow');
+    let nfBox = document.getElementById('cc-nf-box');
     if (nfEl && window.scNetFlow !== undefined) {
         nfEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
         nfEl.style.color = window.scNetFlow >= 0 ? '#0ECB81' : '#F6465D';
+        nfBox.style.borderLeftColor = window.scNetFlow >= 0 ? '#0ECB81' : '#F6465D';
     }
-    
+
+    // --- 2. NHIỆT KẾ BOT (ALGO URGENCY) ---
     let speed = window.scSpeedWindow ? window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5 : 0;
     let speedEl = document.getElementById('cc-speed');
     if (speedEl) speedEl.innerText = '$' + formatCompactUSD(speed) + ' /s';
 
-    // 2. Cập nhật La bàn Cá Mập
+    let algoStatus = document.getElementById('cc-algo-status');
+    let algoBox = document.getElementById('cc-algo-box');
+    
+    // Tính số lệnh Sweep trong 15s qua
+    let now = Date.now();
+    let recentSweeps = window.scTickHistory ? window.scTickHistory.filter(x => (now - x.t <= 15000) && x.q > 0) : []; // Giả lập quét
+    // Dựa vào tổng Netflow ngắn hạn để xác định hướng quét
+    let shortNetFlow = recentSweeps.reduce((s, x) => s + (x.dir ? x.v : -x.v), 0);
+    let isHighUrgency = speed > 50000 || (recentSweeps.length > 20); // Nếu tốc độ >50k/s hoặc lệnh nhồi liên tục
+
+    if (isHighUrgency) {
+        if (shortNetFlow > 0) {
+            algoStatus.innerText = '🤖 SWEEPING ASKS (GOM)';
+            algoStatus.style.color = '#2af592'; algoBox.style.borderLeftColor = '#2af592';
+            algoStatus.style.animation = 'pulse-dot 0.5s infinite'; // Chớp nháy
+        } else {
+            algoStatus.innerText = '🤖 SWEEPING BIDS (XẢ)';
+            algoStatus.style.color = '#cb55e3'; algoBox.style.borderLeftColor = '#cb55e3';
+            algoStatus.style.animation = 'pulse-dot 0.5s infinite';
+        }
+    } else {
+        algoStatus.innerText = '🤖 TĨNH LẶNG (XÁM)';
+        algoStatus.style.color = '#848e9c'; algoBox.style.borderLeftColor = '#848e9c';
+        algoStatus.style.animation = 'none';
+    }
+
+    // --- 3. HỒ SƠ DÒNG TIỀN ---
+    let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
+    let avgEl = document.getElementById('cc-avg-ticket');
+    if (avgEl) {
+        let icon = avgTicket > 3000 ? '🐋' : '🦐';
+        let color = avgTicket > 3000 ? '#F0B90B' : '#eaecef';
+        avgEl.innerHTML = `${icon} <span style="color:${color}">$${formatCompactUSD(avgTicket)}</span>`;
+    }
+
+    let trendEl = document.getElementById('cc-vwap-trend');
+    let trend = parseFloat(document.getElementById('sc-stat-trend')?.innerText || 0); // Lấy từ logic bạn đã tính
+    if (trendEl) {
+        trendEl.innerText = (trend > 0 ? '▲ +' : (trend < 0 ? '▼ ' : '')) + Math.abs(trend).toFixed(2) + '%';
+        trendEl.style.color = trend >= 0 ? '#0ECB81' : '#F6465D';
+    }
+
+    // --- 4. RỦI RO THANH KHOẢN ---
+    let spread = parseFloat(document.getElementById('sc-stat-spread')?.innerText || 0);
+    let spVal = document.getElementById('cc-spread-val');
+    let spMeter = document.getElementById('cc-spread-meter');
+    if (spVal && spMeter) {
+        spVal.innerText = spread.toFixed(2) + '%';
+        let fill = (spread / 2.0) * 100; // Giả định Spread 2.0% là max nguy hiểm (100%)
+        fill = Math.min(100, Math.max(5, fill));
+        spMeter.style.width = fill + '%';
+        if (spread < 0.2) { spMeter.style.background = '#0ECB81'; spVal.style.color = '#0ECB81'; }
+        else if (spread < 0.8) { spMeter.style.background = '#F0B90B'; spVal.style.color = '#F0B90B'; }
+        else { spMeter.style.background = '#F6465D'; spVal.style.color = '#F6465D'; }
+    }
+
+    let dropEl = document.getElementById('cc-drop-val');
+    let drop = parseFloat(document.getElementById('sc-stat-drop')?.innerText || 0);
+    if (dropEl) {
+        dropEl.innerText = drop.toFixed(2) + '%';
+        dropEl.style.color = drop < -2.0 ? '#00F0FF' : '#eaecef'; // Âm nặng thì màu xanh dương (vị thế bắt đáy)
+    }
+
+    // --- 5. LA BÀN CÁ MẬP ---
     const totalWhale = window.quantStats.whaleBuyVol + window.quantStats.whaleSellVol;
     let buyPct = 50, sellPct = 50;
-    if (totalWhale > 0) {
-        buyPct = (window.quantStats.whaleBuyVol / totalWhale) * 100;
-        sellPct = (window.quantStats.whaleSellVol / totalWhale) * 100;
-    }
-    document.getElementById('cc-whale-bar-buy').style.width = `${buyPct}%`;
-    document.getElementById('cc-whale-bar-sell').style.width = `${sellPct}%`;
+    if (totalWhale > 0) { buyPct = (window.quantStats.whaleBuyVol / totalWhale) * 100; sellPct = (window.quantStats.whaleSellVol / totalWhale) * 100; }
+    document.getElementById('cc-whale-bar-buy').style.width = `${buyPct}%`; document.getElementById('cc-whale-bar-sell').style.width = `${sellPct}%`;
     document.getElementById('cc-whale-vol-buy').innerText = 'B: $' + formatCompactUSD(window.quantStats.whaleBuyVol);
     document.getElementById('cc-whale-vol-sell').innerText = 'S: $' + formatCompactUSD(window.quantStats.whaleSellVol);
     document.getElementById('cc-whale-ratio').innerText = `${buyPct.toFixed(0)}% BUY`;
     document.getElementById('cc-whale-ratio').style.color = buyPct > 50 ? '#0ECB81' : '#F6465D';
 
-    // 3. AI VERDICT (CHỐNG THAO TÚNG)
+    // --- 6. AI VERDICT (TỔNG KẾT THEO KỊCH BẢN YÊU CẦU) ---
     const verdictEl = document.getElementById('ai-verdict-badge');
     if (!verdictEl) return;
     
-    // Tính giá hiện tại so với 60s trước
-    let now = Date.now();
-    let trend = 0;
-    if (window.scTickHistory && window.scTickHistory.length > 5) {
-        let oldTicks = window.scTickHistory.filter(x => now - x.t > 30000);
-        let currentP = window.scLastPrice;
-        let oldP = oldTicks.length > 0 ? oldTicks[0].p : currentP;
-        trend = ((currentP - oldP) / oldP) * 100;
-    }
-
-    if (trend > 0 && window.scNetFlow < 0 && sellPct > 60) {
-        verdictEl.innerText = '⚠️ KÉO XẢ (FAKE PUMP)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D;';
+    if (sellPct > 70 && isHighUrgency && shortNetFlow < 0) {
+        verdictEl.innerText = '⚠️ CẢNH BÁO DUMP (CÁ XẢ + BOT)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
     } 
-    else if (trend < 0 && window.scNetFlow < 0 && buyPct > 70) {
-        verdictEl.innerText = '🛡️ HỨNG ĐÁY (ABSORPTION)';
+    else if (drop < -1.0 && buyPct > 70) {
+        verdictEl.innerText = '🛡️ BUY ABSORPTION (TAY TO HỨNG ĐÁY)';
         verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
     }
-    else if (totalWhale > 50000 && buyPct > 45 && buyPct < 55 && Math.abs(window.scNetFlow) < 10000) {
-        verdictEl.innerText = '🤖 WASH TRADING (VOL GIẢ)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-    }
-    else if (window.scNetFlow > 0 && buyPct > 65) {
-        verdictEl.innerText = '🚀 BULLISH FLOW (GOM)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
-    }
-    else if (window.scNetFlow < 0 && sellPct > 65) {
-         verdictEl.innerText = '🩸 BEARISH FLOW (XẢ)';
-         verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D;';
+    else if (buyPct > 60 && isHighUrgency && shortNetFlow > 0) {
+        verdictEl.innerText = '🚀 MOMENTUM BULL (SWEEP GOM)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
     }
     else {
-        verdictEl.innerText = '⚖️ CHOPPING (ĐANG GIẰNG CO)';
+        verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
         verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
     }
 };
@@ -1621,30 +1741,22 @@ function connectRealtimeChart(t) {
     window.scCShark = cache.cShark || 0;
     window.scCDolphin = cache.cDolphin || 0;
     window.scCSweep = cache.cSweep || 0;
+    window.quantStats = cache.quantStats || { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
 
     // --- KHAI BÁO HÀM SMART TAPE (XỬ LÝ CỤM LỆNH) ---
     window.scCurrentCluster = null;
-// Reset Data Command Center
-    window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
-    let tape = document.getElementById('cc-sniper-tape');
-    if(tape) tape.innerHTML = '<div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 30px; font-style:italic;">Đang rình cá mập...</div>';
-    // --- HÀM 1: LỌC CÁ HỒI TỐ (QUÉT LẠI LỊCH SỬ) ---
+
+    // --- HÀM 1: LỌC CÁ HỒI TỐ (ĐÃ FIX LỖI MẤT CÁ TRÊN KHUNG NẾN) ---
     window.applyFishFilter = function() {
         let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
         if (!activeSeries) return;
 
-        // Nếu khung giờ lớn hơn 1s -> Xóa sạch
-        if (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
-            activeSeries.setMarkers([]); return;
-        }
-
         let filterEl = document.getElementById('sc-fish-filter');
         let fVal = filterEl ? filterEl.value : 'sweep';
 
-        // Lọc mảng lịch sử 50 markers
+        // Lọc mảng lịch sử
         let filteredMarkers = window.scChartMarkers.filter(m => {
             if (!m.fishType) return true; 
-
             if (fVal === 'whale' && m.fishType === 'whale') return true;
             if (fVal === 'shark' && (m.fishType === 'whale' || m.fishType === 'shark')) return true;
             if (fVal === 'dolphin' && (m.fishType === 'whale' || m.fishType === 'shark' || m.fishType === 'dolphin')) return true;
@@ -1652,12 +1764,29 @@ function connectRealtimeChart(t) {
             return false;
         });
 
-        // [ĐÃ FIX]: Bắt buộc phải sắp xếp thời gian tăng dần để thư viện chịu vẽ (Chống lỗi mất cá trên khung Tick)
-        filteredMarkers.sort((a, b) => a.time - b.time);
+        // Xử lý làm tròn thời gian (Snap to Candle) để thư viện chịu vẽ trên khung lớn
+        let intervalSec = 0;
+        if (window.currentChartInterval === '1m') intervalSec = 60;
+        else if (window.currentChartInterval === '5m') intervalSec = 300;
+        else if (window.currentChartInterval === '15m') intervalSec = 900;
+        else if (window.currentChartInterval === '1h') intervalSec = 3600;
+        else if (window.currentChartInterval === '4h') intervalSec = 14400;
+        else if (window.currentChartInterval === '1d') intervalSec = 86400;
 
+        let processedMarkers = filteredMarkers.map(m => {
+            let newTime = m.time;
+            if (intervalSec > 0) {
+                newTime = Math.floor(m.time / intervalSec) * intervalSec; // Làm tròn về đầu nến
+            }
+            return { ...m, time: newTime };
+        });
+
+        // Sắp xếp tăng dần và gộp các cá trùng thời gian (tránh lỗi đè marker)
+        processedMarkers.sort((a, b) => a.time - b.time);
+        
         try {
-            activeSeries.setMarkers(filteredMarkers); 
-        } catch (e) {}
+            activeSeries.setMarkers(processedMarkers); 
+        } catch (e) { console.error("Lỗi vẽ cá:", e); }
     };
 
    // --- HÀM 2: CÔNG TẮC HEATMAP (DÙNG ICON MẮT) ---
@@ -2028,6 +2157,11 @@ function connectRealtimeChart(t) {
             window.AlphaChartState[sym].speedWindow = window.scSpeedWindow;
             window.AlphaChartState[sym].tickHistory = window.scTickHistory;
             window.AlphaChartState[sym].chartMarkers = window.scChartMarkers;
+            window.AlphaChartState[sym].cWhale = window.scCWhale;
+            window.AlphaChartState[sym].cShark = window.scCShark;
+            window.AlphaChartState[sym].cDolphin = window.scCDolphin;
+            window.AlphaChartState[sym].cSweep = window.scCSweep;
+            window.AlphaChartState[sym].quantStats = window.quantStats;
         }
 
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
@@ -2286,6 +2420,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
             tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
         }
         window.scCurrentCluster = null; // Cắt đứt cụm lệnh (Smart Tape) đang tính dở của token cũ
+
+        // DÁN ĐOẠN RESET VÀO ĐÚNG CHỖ NÀY:
+        window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+        let tape = document.getElementById('cc-sniper-tape');
+        if(tape) tape.innerHTML = '<div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 40px; font-style:italic;">Đang rình cá mập...</div>';
     }
 
     setTimeout(() => {
