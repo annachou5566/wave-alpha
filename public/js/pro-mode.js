@@ -1061,8 +1061,13 @@ function injectLayout() {
                     <span>ALGO & URGENCY</span>
                     <span id="cc-speed" style="color:#eaecef; font-family:var(--font-num);">$0/s</span>
                 </div>
-                <div id="cc-algo-status" style="font-size: 9.5px; font-weight: 800; color: #848e9c; margin-top:3px;">
+                <div id="cc-algo-status" style="font-size: 9.5px; font-weight: 800; color: #848e9c; margin-top:3px; margin-bottom:5px;">
                     🤖 TĨNH LẶNG (XÁM)
+                </div>
+                <div style="display: flex; height: 3px; border-radius: 2px; overflow: hidden; background: #2b3139; position: relative;">
+                    <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: #F6465D; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                    <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: #0ECB81; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                    <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.4); z-index: 2;"></div>
                 </div>
             </div>
         </div>
@@ -1660,6 +1665,29 @@ window.updateCommandCenterUI = function() {
         }
     }
 
+// [UI/UX NÂNG CẤP] Cập nhật thanh OFI Power Meter động
+    let ofiBarBuy = document.getElementById('cc-ofi-bar-buy');
+    let ofiBarSell = document.getElementById('cc-ofi-bar-sell');
+    if (ofiBarBuy && ofiBarSell) {
+        let currentOFI = window.quantStats.ofi || 0; 
+        
+        // Quy đổi OFI (-1.0 đến +1.0) thành phần trăm (0% đến 100%)
+        // Nếu OFI = +1 (Mua tuyệt đối) -> buyPct = 100%, sellPct = 0%
+        // Nếu OFI = 0 (Cân bằng) -> buyPct = 50%, sellPct = 50%
+        let buyPct = ((currentOFI + 1) / 2) * 100;
+        let sellPct = 100 - buyPct;
+        
+        ofiBarBuy.style.width = `${buyPct}%`;
+        ofiBarSell.style.width = `${sellPct}%`;
+        
+        // Hiệu ứng "Tia chớp" khi có áp đảo lực (vượt ngưỡng 75%)
+        ofiBarBuy.style.background = buyPct >= 75 ? '#00F0FF' : '#0ECB81'; 
+        ofiBarBuy.style.boxShadow = buyPct >= 75 ? '0 0 5px #00F0FF' : 'none';
+
+        ofiBarSell.style.background = sellPct >= 75 ? '#FF007F' : '#F6465D';
+        ofiBarSell.style.boxShadow = sellPct >= 75 ? '0 0 5px #FF007F' : 'none';
+    }
+    
     // --- 3. HỒ SƠ DÒNG TIỀN ---
     let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
     let avgEl = document.getElementById('cc-avg-ticket');
