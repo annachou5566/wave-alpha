@@ -148,14 +148,15 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
             /* ========================================= */
             /* BỘ CLASS WIDGET MỚI DÀNH CHO COMMAND CENTER */
             /* ========================================= */
-            .term-widget { background: var(--term-panel); border: 1px solid var(--term-border); border-radius: 2px; padding: 8px; margin-bottom: 6px; }
+            /* [FIX NHẢY KHUNG] Thêm overflow: hidden để khóa cứng biên giới hộp */
+            .term-widget { background: var(--term-panel); border: 1px solid var(--term-border); border-radius: 2px; padding: 8px; margin-bottom: 6px; overflow: hidden; }
             
-            /* [FIX TABLET] Thêm white-space nowrap và gap chống vỡ chữ */
             .term-w-title { font-size: 9px; color: var(--term-dim); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px; white-space: nowrap; gap: 4px; overflow: hidden; }
             .term-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; gap: 4px; }
             .term-lbl { font-size: 9px; color: var(--term-dim); overflow: hidden; text-overflow: ellipsis; }
             
-            .term-val { font-size: 11px; font-weight: 700; color: var(--term-text); font-family: var(--font-num); }
+            /* [FIX NHẢY KHUNG] Thêm ép chữ tự thu gọn bằng dấu ... nếu quá dài */
+            .term-val { font-size: 11px; font-weight: 700; color: var(--term-text); font-family: var(--font-num); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; text-align: right;}
             
             /* CUỘN TAPE */
             #sc-live-trades::-webkit-scrollbar { width: 4px; }
@@ -1072,7 +1073,7 @@ function injectLayout() {
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
                 <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up);">
                     <div class="term-w-title">NET FLOW (REAL)</div>
                     <div id="cc-net-flow" class="term-val" style="font-size: 14px; color: var(--term-up);">+$0</div>
@@ -1089,7 +1090,7 @@ function injectLayout() {
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
                 <div class="term-widget" style="margin-bottom: 0;">
                     <div class="term-w-title">DÒNG TIỀN (60s)</div>
                     <div class="term-row"><span class="term-lbl">Avg Ticket</span><span id="cc-avg-ticket" class="term-val">🦐 $0</span></div>
