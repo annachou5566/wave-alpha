@@ -941,12 +941,12 @@ function injectLayout() {
                         </div>
                         
                         <div class="sc-metrics-compact">
-                            <div class="sc-mc-item"><span>VOL(24H)</span><strong id="sc-top-vol">$--</strong></div>
-                            <div class="sc-mc-item"><span>LIQ</span><strong id="sc-top-liq">$--</strong></div>
-                            <div class="sc-mc-item"><span>MCAP</span><strong id="sc-top-mc">$--</strong></div>
-                            <div class="sc-mc-item"><span>HOLD</span><strong id="sc-top-hold">--</strong></div>
-                            <div class="sc-mc-item"><span>TXs</span><strong id="sc-top-tx">--</strong></div>
-                        </div>
+    <div class="sc-mc-item"><span>VOL(24H)</span><strong id="sc-top-vol">$--</strong></div>
+    <div class="sc-mc-item"><span>LIQ</span><strong id="sc-top-liq">$--</strong></div>
+    <div class="sc-mc-item"><span>MCAP</span><strong id="sc-top-mc">$--</strong></div>
+    <div class="sc-mc-item"><span>FDV</span><strong id="sc-top-fdv">$--</strong></div> <div class="sc-mc-item"><span>HOLD</span><strong id="sc-top-hold">--</strong></div>
+    <div class="sc-mc-item"><span>TXs</span><strong id="sc-top-tx">--</strong></div>
+</div>
                     </div>
                     
 
@@ -2980,6 +2980,10 @@ window.updateSmartMoneyRadar = function(apiData) {
     // 1.3 Lạm phát (Unlock / FDV vs MCAP) - ĐÃ TỐI ƯU LẤY ALL-CHAIN
     let mc = Number(d.marketCap) || 0;
     let fdv = Number(d.fdv) || (mc > 0 ? mc : 1);
+    
+    // THÊM ĐOẠN NÀY ĐỂ BƠM FDV LÊN THANH TOPBAR
+    let topFdvEl = document.getElementById('sc-top-fdv');
+    if (topFdvEl) topFdvEl.innerText = '$' + formatCompactNum(fdv);
     
     let unlockPct = 100; // Mặc định
 
