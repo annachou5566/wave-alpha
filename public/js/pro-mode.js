@@ -3011,8 +3011,9 @@ window.updateSmartMoneyRadar = function(apiData) {
         }
     }
 // 1.4 Độ sâu thanh khoản (Liquidity vs MCAP)
-    // Ưu tiên lấy thanh khoản realtime từ WebSocket (t.liquidity), nếu rỗng mới lấy từ d.liquidity
-    let liq = Number(t.liquidity) || Number(d.liquidity) || 0;
+    // Lấy thanh khoản từ token đang mở trên chart (window.currentChartToken) thay vì biến t
+    let currentTokenLiq = window.currentChartToken ? window.currentChartToken.liquidity : 0;
+    let liq = Number(currentTokenLiq) || Number(d.liquidity) || 0;
     
     // mc là Market Cap thật đã được tính cực chuẩn ở phần 1.3 ngay bên trên
     let liqRatio = mc > 0 ? (liq / mc) * 100 : 0;
