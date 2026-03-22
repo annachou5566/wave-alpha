@@ -3173,26 +3173,26 @@ window.openProChart = function(t, isTimeSwitch = false) {
 };
 
 // =========================================================
-// 🚀 CỖ MÁY PHÁI SINH TỔNG HỢP (OI + FUNDING + LIQUIDATION)
+// 🚀 CỖ MÁY PHÁI SINH TỔNG HỢP (TÁCH ĐỘC LẬP - SIÊU AN TOÀN)
 // =========================================================
 let liquidationWs = null;
 let futuresDataInterval = null;
 
-window.startFuturesEngine = function(symbol) {
-    // 1. Dọn dẹp luồng cũ trước khi chạy luồng mới
+window.startFuturesEngine = async function(symbol) {
     window.stopFuturesEngine();
     if (!symbol) return;
 
-    let fSymbol = symbol.toUpperCase() + 'USDT';
-    let streamSymbol = symbol.toLowerCase() + 'usdt';
-    
+    let cleanSymbol = symbol.toUpperCase().replace('USDT', '');
+    let fSymbol = cleanSymbol + 'USDT';
+    let streamSymbol = cleanSymbol.toLowerCase() + 'usdt';
+
+    // 1. Reset Giao diện
     let statusEl = document.getElementById('cc-futures-status');
     let oiEl = document.getElementById('cc-oi-val');
     let fundEl = document.getElementById('cc-funding-val');
     let liqLong = document.getElementById('cc-liq-long');
     let liqShort = document.getElementById('cc-liq-short');
 
-    // 2. Reset Giao diện
     if (statusEl) { statusEl.innerText = '⏳ ĐANG DÒ...'; statusEl.style.color = '#F0B90B'; }
     if (oiEl) oiEl.innerText = '$--';
     if (fundEl) { fundEl.innerText = '--%'; fundEl.style.color = '#eaecef'; }
@@ -3203,93 +3203,92 @@ window.startFuturesEngine = function(symbol) {
     window.quantStats.longLiq = 0;
     window.quantStats.shortLiq = 0;
 
-    // 3. Hàm gọi REST API (OI & Funding)
-    const fetchFuturesData = async () => {
+    // 2. Hàm gọi REST API ĐỘC LẬP
+    const fetchRestData = async () => {
         try {
-            const [oiRes, fundRes] = await Promise.all([
-                fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`),
-                fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`)
-            ]);
+            // Lấy Funding Rate trước (Cái này luôn chuẩn, dùng làm thước đo xem coin có trên Futures ko)
+            let fundRes = await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
+            if (!fundRes.ok) throw new Error("Not on Futures");
+            let fundData = await fundRes.json();
 
-            if (!oiRes.ok || !fundRes.ok) throw new Error("No Futures");
+            // Lấy Open Interest riêng, lỗi thì bỏ qua không làm sụp web
+            let oiUsd = 0;
+            try {
+                let oiRes = await fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
+                if (oiRes.ok) {
+                    let oiData = await oiRes.json();
+                    let currentPrice = window.scLastPrice || (window.currentChartToken ? parseFloat(window.currentChartToken.price) : 0);
+                    oiUsd = parseFloat(oiData.openInterest) * currentPrice;
+                }
+            } catch(e) {} // Lỗi OI thì âm thầm giấu đi
 
-            const oiData = await oiRes.json();
-            const fundData = await fundRes.json();
+            // Update UI (Gọi lại ID để chắc chắn DOM không bị mất)
+            let _statusEl = document.getElementById('cc-futures-status');
+            let _oiEl = document.getElementById('cc-oi-val');
+            let _fundEl = document.getElementById('cc-funding-val');
 
-            if (statusEl) { statusEl.innerText = '🟢 ACTIVE'; statusEl.style.color = '#0ECB81'; }
+            if (_statusEl) { _statusEl.innerText = '🟢 ACTIVE'; _statusEl.style.color = '#0ECB81'; }
+            if (_oiEl && oiUsd > 0) _oiEl.innerText = '$' + formatCompactUSD(oiUsd);
 
-            // Tính OI ra tiền USD
-            let currentPrice = window.scLastPrice || (window.currentChartToken ? window.currentChartToken.price : 0);
-            let oiUsd = parseFloat(oiData.openInterest) * currentPrice;
-            if (oiEl && oiUsd > 0) oiEl.innerText = '$' + formatCompactUSD(oiUsd);
-
-            // Tính Funding Rate
-            if (fundEl && fundData.lastFundingRate) {
-                let fRate = parseFloat(fundData.lastFundingRate) * 100; 
+            if (_fundEl && fundData.lastFundingRate) {
+                let fRate = parseFloat(fundData.lastFundingRate) * 100;
                 let sign = fRate > 0 ? '+' : '';
-                fundEl.innerText = sign + fRate.toFixed(4) + '%';
-                fundEl.style.color = fRate > 0.01 ? '#F6465D' : (fRate < -0.01 ? '#00F0FF' : '#eaecef');
+                _fundEl.innerText = sign + fRate.toFixed(4) + '%';
+                _fundEl.style.color = fRate > 0.01 ? '#F6465D' : (fRate < -0.01 ? '#00F0FF' : '#eaecef');
             }
-            return true; // Báo hiệu token này CÓ trên Futures
-
-        } catch (e) {
-            // Token KHÔNG có trên Futures -> Tắt hết
-            if (statusEl) { statusEl.innerText = '🚫 NO FUTURES'; statusEl.style.color = '#848e9c'; }
-            if (oiEl) oiEl.innerText = 'N/A';
-            if (fundEl) { fundEl.innerText = 'N/A'; fundEl.style.color = '#848e9c'; }
-            return false; 
+            return true;
+        } catch (err) {
+            let _statusEl = document.getElementById('cc-futures-status');
+            let _oiEl = document.getElementById('cc-oi-val');
+            let _fundEl = document.getElementById('cc-funding-val');
+            if (_statusEl) { _statusEl.innerText = '🚫 NO FUTURES'; _statusEl.style.color = '#848e9c'; }
+            if (_oiEl) _oiEl.innerText = 'N/A';
+            if (_fundEl) { _fundEl.innerText = 'N/A'; _fundEl.style.color = '#848e9c'; }
+            return false;
         }
     };
 
-    // 4. Kích hoạt Cỗ máy
-    fetchFuturesData().then(hasFutures => {
-        // CHỈ khi token có trên Futures mới bật vòng lặp và mở WebSocket
-        if (hasFutures) {
-            // Cập nhật OI & Funding mỗi 15 giây
-            futuresDataInterval = setInterval(fetchFuturesData, 15000);
+    // 3. Kích hoạt luồng chạy
+    let hasFutures = await fetchRestData();
+    if (hasFutures) {
+        futuresDataInterval = setInterval(fetchRestData, 15000);
 
-            // Bật WebSocket bắt lệnh Thanh lý
-            let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
-            liquidationWs = new WebSocket(wsUrl);
+        let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
+        liquidationWs = new WebSocket(wsUrl);
 
-            liquidationWs.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.e === 'forceOrder' && data.o) {
-                    let order = data.o;
-                    let side = order.S; 
-                    let price = parseFloat(order.p);
-                    let qty = parseFloat(order.q);
-                    let valUSD = price * qty;
-                    let isLongLiq = (side === 'SELL'); 
+        liquidationWs.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.e === 'forceOrder' && data.o) {
+                let order = data.o;
+                let valUSD = parseFloat(order.p) * parseFloat(order.q);
+                let isLongLiq = (order.S === 'SELL');
 
-                    // Cộng dồn tiền lên Box
-                    if (isLongLiq) {
-                        window.quantStats.longLiq += valUSD;
-                        if (liqLong) liqLong.innerText = `🩸 Liq Long: $${formatCompactUSD(window.quantStats.longLiq)}`;
-                    } else {
-                        window.quantStats.shortLiq += valUSD;
-                        if (liqShort) liqShort.innerText = `💥 Liq Short: $${formatCompactUSD(window.quantStats.shortLiq)}`;
-                    }
-                    
-                    // Bắn tín hiệu vào Sniper Tape (Lọc lệnh > 1000$)
-                    if (valUSD > 1000 && typeof window.logToSniperTape === 'function') {
-                        window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', price);
-                    }
+                if (isLongLiq) {
+                    window.quantStats.longLiq += valUSD;
+                    let _liqLong = document.getElementById('cc-liq-long');
+                    if (_liqLong) _liqLong.innerText = `🩸 Liq Long: $${formatCompactUSD(window.quantStats.longLiq)}`;
+                } else {
+                    window.quantStats.shortLiq += valUSD;
+                    let _liqShort = document.getElementById('cc-liq-short');
+                    if (_liqShort) _liqShort.innerText = `💥 Liq Short: $${formatCompactUSD(window.quantStats.shortLiq)}`;
                 }
-            };
 
-            // Tự động kết nối lại nếu bị rớt mạng
-            liquidationWs.onclose = () => {
-                let overlay = document.getElementById('super-chart-overlay');
-                if (overlay && overlay.classList.contains('active') && statusEl && statusEl.innerText !== '🚫 NO FUTURES') {
-                    setTimeout(() => window.startFuturesEngine(symbol), 3000);
+                if (valUSD > 1000 && typeof window.logToSniperTape === 'function') {
+                    window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
                 }
-            };
-        }
-    });
+            }
+        };
+
+        liquidationWs.onclose = () => {
+            let overlay = document.getElementById('super-chart-overlay');
+            let _statusEl = document.getElementById('cc-futures-status');
+            if (overlay && overlay.classList.contains('active') && _statusEl && _statusEl.innerText !== '🚫 NO FUTURES') {
+                setTimeout(() => window.startFuturesEngine(symbol), 3000);
+            }
+        };
+    }
 };
 
-// Hàm dọn dẹp tắt máy khi đóng chart
 window.stopFuturesEngine = function() {
     if (futuresDataInterval) { clearInterval(futuresDataInterval); futuresDataInterval = null; }
     if (liquidationWs) { liquidationWs.close(); liquidationWs = null; }
