@@ -2978,10 +2978,9 @@ window.updateSmartMoneyRadar = function(apiData) {
     }
 
     // 1.3 Lạm phát (Unlock / FDV vs MCAP)
-    let currentPrice = Number(d.price) || 0;
     let realCirculating = Number(d.allChainCirculatingSupply) || 0;
     
-    // Tính MCAP thật từ cung lưu hành on-chain, nếu rỗng thì mới xài tạm marketCap ảo của API
+    // Tính MCAP thật từ cung lưu hành on-chain, biến currentPrice đã có sẵn ở trên (mục 1.2) rồi!
     let mc = (realCirculating > 0 && currentPrice > 0) ? (realCirculating * currentPrice) : (Number(d.marketCap) || 0);
     let fdv = Number(d.fdv);
     
