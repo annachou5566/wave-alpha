@@ -3162,32 +3162,30 @@ window.connectLiquidationStream = function(symbol) {
     if (liquidationWs) { liquidationWs.close(); }
     if (!symbol) return;
 
-    // Ép sang chữ thường và dán đuôi @forceOrder của Binance Futures
-    let wsUrl = `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@forceOrder`;
+    // Phải thêm đuôi usdt thì Binance Futures mới hiểu (ví dụ: btcusdt)
+    let streamSymbol = symbol.toLowerCase() + 'usdt';
+    let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
     
+    // Lưu lại thời điểm bắt đầu kết nối
+    let connectTime = Date.now();
+
     try {
         liquidationWs = new WebSocket(wsUrl);
         
         liquidationWs.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
-            // Nếu có sự kiện forceOrder (Thanh lý)
             if (data.e === 'forceOrder' && data.o) {
                 let order = data.o;
-                let side = order.S; // "BUY" hoặc "SELL"
+                let side = order.S; 
                 let price = parseFloat(order.p);
                 let qty = parseFloat(order.q);
                 let valUSD = price * qty;
                 
-                // Lọc nhiễu: Chỉ báo động khi lệnh cháy lớn hơn 1,000$
                 if (valUSD > 1000) {
-                    // Mẹo: Lệnh ép BÁN (SELL) nghĩa là 1 ông đánh LONG bị cháy
-                    // Lệnh ép MUA (BUY) nghĩa là 1 ông đánh SHORT bị cháy
                     let isLongLiq = (side === 'SELL'); 
-                    
-                    // Bơm thẳng vào bảng Sniper Tape có sẵn của bạn
                     window.logToSniperTape(
-                        !isLongLiq, // Màu sắc: Cháy Long (Đỏ), Cháy Short (Xanh)
+                        !isLongLiq, 
                         valUSD, 
                         isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', 
                         price
@@ -3196,19 +3194,23 @@ window.connectLiquidationStream = function(symbol) {
             }
         };
         
-        // Tự động kết nối lại nếu rớt mạng mà chart vẫn đang mở
         liquidationWs.onclose = () => {
+            let aliveTime = Date.now() - connectTime;
             let overlay = document.getElementById('super-chart-overlay');
-            if (overlay && overlay.classList.contains('active')) {
+            
+            // CHỐT CHẶN: Chỉ reconnect nếu sống được trên 5 giây và đang mở chart
+            if (aliveTime > 5000 && overlay && overlay.classList.contains('active')) {
                 setTimeout(() => window.connectLiquidationStream(symbol), 3000);
+            } else {
+                // Nếu bị sàn đá ra ngay lập tức -> Không có trên Futures -> Âm thầm nghỉ ngơi
+                console.log(`[Smart Money] Token ${symbol} không có trên Futures. Bỏ qua quét thanh lý.`);
             }
         };
     } catch(e) {
-        console.error("Lỗi WebSocket Thanh lý:", e);
+        console.log("[Smart Money] Không thể kết nối luồng Thanh lý.");
     }
 };
 
-// Hàm ngắt kết nối khi đóng chart
 window.closeLiquidationStream = function() {
     if (liquidationWs) {
         liquidationWs.close();
