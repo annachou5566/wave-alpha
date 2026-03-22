@@ -2978,9 +2978,18 @@ window.updateSmartMoneyRadar = function(apiData) {
     }
 
     // 1.3 Lạm phát (Unlock / FDV vs MCAP)
-    let mc = parseFloat(d.marketCap || 0);
-    let fdv = parseFloat(d.fdv || mc || 1);
+    let mc = Number(d.marketCap) || 0;
+    let fdv = Number(d.fdv);
+    
+    // Ép logic chặt chẽ: Chỉ khi API thật sự không có FDV hoặc FDV = 0 thì mới mượn tạm MC
+    if (!fdv || fdv <= 0) {
+        fdv = mc > 0 ? mc : 1; 
+    }
+    
     let unlockPct = (mc / fdv) * 100;
+    
+    // Fix chống ngáo API: Đôi khi sàn gõ nhầm MC lớn hơn cả FDV, mình chặn luôn ở 100% cho UI khỏi vỡ
+    if (unlockPct > 100) unlockPct = 100;
     safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
     let unlockBadge = document.getElementById('sm-unlock-badge');
     if (unlockBadge) {
