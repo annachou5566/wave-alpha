@@ -1763,8 +1763,8 @@ window.updateCommandCenterUI = function() {
                 for (let p in window.scLocalOrderBook.asks) { if (parseFloat(p) <= pLimitUp) sAsks += parseFloat(p) * window.scLocalOrderBook.asks[p]; }
             }
         }
-        let isSpoofBids = (sAsks > 0 && sBids > sAsks * 3) && (_vTrend < 0);
-        let isSpoofAsks = (sBids > 0 && sAsks > sBids * 3) && (_vTrend > 0);
+        let isSpoofBids = (sAsks > 0 && sBids > sAsks * 4) && (_vTrend < -0.1) && (!isCrazyFast);
+        let isSpoofAsks = (sBids > 0 && sAsks > sBids * 4) && (_vTrend > 0.1) && (!isCrazyFast);
 
         // ====================================================
         // NHÁNH A: CÓ PHÁI SINH (ĐÁNH LIÊN THỊ TRƯỜNG)
@@ -1956,12 +1956,16 @@ function connectRealtimeChart(t) {
     window.flushSmartTape = function(cluster) {
         if (!cluster) return;
         let tradesBox = document.getElementById('sc-live-trades');
-        let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
         
-        let isWhale   = cluster.vol >= (currentAvgTicket * 20) && cluster.vol >= 10000;
-        let isShark   = cluster.vol >= (currentAvgTicket * 10) && cluster.vol >= 5000;
-        let isDolphin = cluster.vol >= (currentAvgTicket * 5)  && cluster.vol >= 2000;
-        let isSweep   = cluster.count >= 6; 
+        // [NÂNG CẤP QUANT] Ngưỡng động dựa trên quy mô của đồng coin
+        let tokenDailyVol = window.currentChartToken ? (window.currentChartToken.volume?.daily_total || 5000000) : 5000000;
+        // Chuẩn cá mập: 0.05% Volume 24H, kẹp giữa mức tối thiểu 2.000$ và tối đa 100.000$
+        let baseWhaleThreshold = Math.max(2000, Math.min(100000, tokenDailyVol * 0.0005)); 
+        
+        let isWhale   = cluster.vol >= baseWhaleThreshold;
+        let isShark   = cluster.vol >= baseWhaleThreshold * 0.4 && cluster.vol < baseWhaleThreshold;
+        let isDolphin = cluster.vol >= baseWhaleThreshold * 0.15 && cluster.vol < baseWhaleThreshold * 0.4;
+        let isSweep   = cluster.count >= 6;
 
         let icon = ''; let fontWeight = 'normal';
         if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
@@ -2148,8 +2152,8 @@ function connectRealtimeChart(t) {
                         
                         let hitWall = false;
                         if (window.scLocalOrderBook && window.scLocalOrderBook.bids) {
-                            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-                            let wallThreshold = Math.max(500, currentAvgTicket * 5); 
+                let tokenDailyVol = window.currentChartToken ? (window.currentChartToken.volume?.daily_total || 5000000) : 5000000;
+                let volThreshold = Math.max(5000, Math.min(200000, tokenDailyVol * 0.001));
                             
                             for (let p in window.scLocalOrderBook.bids) {
                                 let price = parseFloat(p);
