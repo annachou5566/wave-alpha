@@ -149,10 +149,12 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
             /* BỘ CLASS WIDGET MỚI DÀNH CHO COMMAND CENTER */
             /* ========================================= */
             .term-widget { background: var(--term-panel); border: 1px solid var(--term-border); border-radius: 2px; padding: 8px; margin-bottom: 6px; }
-            .term-w-title { font-size: 9.5px; color: var(--term-dim); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px;}
-            .term-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-variant-numeric: tabular-nums;}
-            .term-row:last-child { margin-bottom: 0; }
-            .term-lbl { font-size: 9.5px; color: var(--term-dim); }
+            
+            /* [FIX TABLET] Thêm white-space nowrap và gap chống vỡ chữ */
+            .term-w-title { font-size: 9px; color: var(--term-dim); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px; white-space: nowrap; gap: 4px; overflow: hidden; }
+            .term-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; gap: 4px; }
+            .term-lbl { font-size: 9px; color: var(--term-dim); overflow: hidden; text-overflow: ellipsis; }
+            
             .term-val { font-size: 11px; font-weight: 700; color: var(--term-text); font-family: var(--font-num); }
             
             /* CUỘN TAPE */
@@ -1078,7 +1080,7 @@ function injectLayout() {
                 
                 <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim);">
                     <div class="term-w-title">ALGO SPEED <span id="cc-speed" style="color:var(--term-text); text-transform:none;">$0/s</span></div>
-                    <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px;">🤖 TĨNH LẶNG (XÁM)</div>
+                    <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤖 TĨNH LẶNG (XÁM)</div>
                     <div style="display: flex; height: 3px; border-radius: 1px; overflow: hidden; background: var(--term-border); position: relative;">
                         <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s linear;"></div>
                         <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s linear;"></div>
@@ -1114,7 +1116,7 @@ function injectLayout() {
                 </div>
             </div>
 
-            <div class="term-w-title" style="margin-top: 4px;">SNIPER TAPE (> $10k)</div>
+            <div class="term-w-title" style="margin-top: 4px;">SNIPER TAPE (ADAPTIVE)</div>
             <div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;">
                 <div style="font-size: 9px; color: var(--term-dim); text-align: center; margin-top: 40px;">Đang rình cá mập...</div>
             </div>
@@ -2004,9 +2006,9 @@ function connectRealtimeChart(t) {
             let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
             
             row.innerHTML = `
-                <span style="color:${cluster.dir ? c_up : c_down}; width:30%; text-align:left;">${formatPrice(cluster.p)}</span>
-                <span style="color:#eaecef; width:45%; text-align:right;">${icon}$${formatCompactUSD(cluster.vol)}</span>
-                <span style="color:#707A8A; width:25%; text-align:right;">${timeStr}</span>
+                <span style="color:${cluster.dir ? c_up : c_down}; flex: 1; text-align: left; overflow: hidden; white-space: nowrap;">${formatPrice(cluster.p)}</span>
+                <span style="color:#eaecef; flex: 1; text-align: center; white-space: nowrap;">${icon}$${formatCompactUSD(cluster.vol)}</span>
+                <span style="color:#707A8A; flex: 1; text-align: right; white-space: nowrap;">${timeStr}</span>
             `;
             
             tradesBox.insertBefore(row, tradesBox.firstChild);
