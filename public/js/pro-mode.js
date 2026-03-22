@@ -1632,20 +1632,31 @@ window.updateCommandCenterUI = function() {
     let isHighUrgency = speed > 50000 || (recentSweeps.length > 20);
 
     if (algoStatus && algoBox) {
-        if (isHighUrgency) {
-            if (shortNetFlow > 0) {
-                algoStatus.innerText = '🤖 SWEEPING ASKS (GOM)';
-                algoStatus.style.color = '#2af592'; algoBox.style.borderLeftColor = '#2af592';
-                algoStatus.style.animation = 'none'; // Đã tắt chớp nháy
+        let z = window.quantStats.zScore || 0;
+        let ofi = window.quantStats.ofi || 0;
+        
+        // Hiển thị OFI và Z-Score trực quan
+        let ofiText = ofi >= 0 ? `+${ofi.toFixed(2)}` : `${ofi.toFixed(2)}`;
+        let zText = `Z:${z.toFixed(1)}`;
+        
+        if (z > 3.0) { // Đột biến cực mạnh (Chỉ 0.3% thời gian xảy ra)
+            if (ofi > 0.5) {
+                algoStatus.innerHTML = `🚀 ĐỘT BIẾN MUA [${zText} | OFI ${ofiText}]`;
+                algoStatus.style.color = '#00F0FF'; algoBox.style.borderLeftColor = '#00F0FF';
+            } else if (ofi < -0.5) {
+                algoStatus.innerHTML = `🩸 ĐỘT BIẾN BÁN [${zText} | OFI ${ofiText}]`;
+                algoStatus.style.color = '#FF007F'; algoBox.style.borderLeftColor = '#FF007F';
             } else {
-                algoStatus.innerText = '🤖 SWEEPING BIDS (XẢ)';
-                algoStatus.style.color = '#cb55e3'; algoBox.style.borderLeftColor = '#cb55e3';
-                algoStatus.style.animation = 'none'; // Đã tắt chớp nháy
+                algoStatus.innerHTML = `⚔️ TRANH CHẤP GẮT [${zText}]`;
+                algoStatus.style.color = '#F0B90B'; algoBox.style.borderLeftColor = '#F0B90B';
             }
+        } else if (isHighUrgency) {
+            algoStatus.innerHTML = shortNetFlow > 0 ? `🤖 SWEEP GOM [OFI ${ofiText}]` : `🤖 SWEEP XẢ [OFI ${ofiText}]`;
+            algoStatus.style.color = shortNetFlow > 0 ? '#2af592' : '#cb55e3';
+            algoBox.style.borderLeftColor = shortNetFlow > 0 ? '#2af592' : '#cb55e3';
         } else {
-            algoStatus.innerText = '🤖 TĨNH LẶNG (XÁM)';
+            algoStatus.innerHTML = `🤖 TĨNH LẶNG [${zText}]`;
             algoStatus.style.color = '#848e9c'; algoBox.style.borderLeftColor = '#848e9c';
-            algoStatus.style.animation = 'none';
         }
     }
 
@@ -1728,7 +1739,8 @@ window.updateCommandCenterUI = function() {
         let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
         let txPerSec = window.scSpeedWindow ? (window.scSpeedWindow.length / 5) : 0;
         let spread = window.quantStats.spread || 0;
-
+        let zScore = window.quantStats.zScore || 0;
+        let ofi = window.quantStats.ofi || 0;
         // ==========================================
         // TÍNH TOÁN NGƯỠNG ĐỘNG (ADAPTIVE THRESHOLDS)
         // ==========================================
@@ -1770,8 +1782,32 @@ window.updateCommandCenterUI = function() {
         // NHÁNH A: CÓ PHÁI SINH (ĐÁNH LIÊN THỊ TRƯỜNG)
         // ====================================================
         if (hasFutures) {
-            if (_vTrend > 0.5 && liqShort > 5000 && fFunding < -0.005) {
+            // Dùng Z-Score và OFI làm tín hiệu kích hoạt (Trigger)
+            if (zScore > 2.5 && ofi > 0.6 && liqShort > 5000) {
                 verdictEl.innerText = '🔥 SHORT SQUEEZE (DIỆT SHORT)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
+            }
+            else if (zScore > 2.5 && ofi < -0.6 && liqLong > 5000) {
+                verdictEl.innerText = '🩸 LONG CASCADE (RŨ ĐÒN BẨY)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
+            }
+            else if (zScore > 2.0 && ofi > 0.7 && fFunding <= 0.01) {
+                verdictEl.innerText = '🚀 BÙNG NỔ MUA (REAL MOMENTUM)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+            }
+            else if (_vWNet < 0 && _vSPct > 65 && fFunding > 0.01 && zScore < 1.0) {
+                verdictEl.innerText = '⚠️ TRAP DIVERGENCE (BẪY GIẢ)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else if (isSpoofBids || isSpoofAsks) {
+                verdictEl.innerText = isSpoofBids ? '⚠️ SPOOFING (TƯỜNG MUA ẢO)' : '⚠️ SPOOFING (TƯỜNG BÁN ẢO)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else {
+                verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+            }
+        }
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
             }
             else if (_vDrop < -0.5 && liqLong > 5000 && fFunding > 0.01) {
@@ -1803,33 +1839,23 @@ window.updateCommandCenterUI = function() {
         // NHÁNH B: KHÔNG CÓ PHÁI SINH (BẮT BÀI MARKET MAKER)
         // ====================================================
         else {
-            // 1. ZOMBIE ILLIQUID (Không ai thèm mua bán, chênh lệch giá toác hoác)
             if (txPerSec < 0.5 && spread > 1.0) {
                 verdictEl.innerText = '💀 ILLIQUID (THIẾU THANH KHOẢN)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(132, 142, 156, 0.2); color: #848e9c; border: 1px solid #848e9c;';
             }
-            // [PRO] KỊCH BẢN BINANCE ALPHA 1: DEV XẢ NGẦM (Adaptive)
-            else if (isCrazyFast && Math.abs(_vTrend) < 0.5 && isHeavyDump) {
-                verdictEl.innerText = '🩸 DEV EXIT (XẢ NGẦM MÙA GIẢI)';
+            else if (zScore > 3.0 && ofi < -0.7 && isHeavyDump) {
+                verdictEl.innerText = '🩸 DEV EXIT (XẢ NGẦM KHỦNG)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.3s infinite;';
             }
-            // [PRO] KỊCH BẢN BINANCE ALPHA 2: NHỎ LẺ CÀY VOLUME (Adaptive)
-            else if (isCrazyFast && isRetailTicket && Math.abs(_vTrend) < 0.3) {
-                verdictEl.innerText = '🤖 RETAIL FARMING (CÀY VOLUME)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF;';
+            else if (zScore > 2.0 && isRetailTicket && Math.abs(ofi) < 0.3) {
+                verdictEl.innerText = '🤖 WASH TRADING (BOT QUAY TAY)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(203, 85, 227, 0.2); color: #cb55e3; border: 1px solid #cb55e3;';
             }
-            // 2. EMPTY PUMP (Giá tăng vút nhưng trung bình mỗi lệnh mua rất nhỏ, dòng tiền yếu)
-            else if (_vTrend > 0.5 && avgTicket < 1000 && txPerSec < 3) {
+            else if (zScore > 2.5 && ofi > 0.8 && avgTicket < 500) {
                 verdictEl.innerText = '🎈 EMPTY PUMP (BƠM RỖNG / LÙA GÀ)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
             }
-            // 3. WASH TRADING (Giá đi ngang, Volume thì siêu to nhưng thực chất là 1-2 ví quay tay)
-            else if (Math.abs(_vTrend) < 0.2 && avgTicket > 10000 && txPerSec < 2) {
-                verdictEl.innerText = '🌀 WASH TRADING (MM QUAY TAY)';
-                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(203, 85, 227, 0.2); color: #cb55e3; border: 1px solid #cb55e3;';
-            }
-            // 4. SPOT ACCUMULATION (MM gom hàng chậm rãi, lệnh mua lớn áp đảo)
-            else if (_vBPct > 75 && Math.abs(_vTrend) < 0.3 && avgTicket > 3000) {
+            else if (zScore < 1.0 && ofi > 0.5 && avgTicket > 3000) {
                 verdictEl.innerText = '🛡️ GOM HÀNG NGẦM (ACCUMULATION)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
             }
@@ -2099,6 +2125,33 @@ function connectRealtimeChart(t) {
         }
         window.quantStats.drop = drop; // ĐÃ FIX: LƯU VÀO RAM
 
+
+// ==========================================
+        // [VŨ KHÍ QUANT] 1. ORDER FLOW IMBALANCE (OFI)
+        // ==========================================
+        let buyVol15s = hist15s.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
+        let sellVol15s = hist15s.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
+        let totalVol15s = buyVol15s + sellVol15s;
+        // OFI dao động từ -1.0 (Full Sell) đến 1.0 (Full Buy)
+        window.quantStats.ofi = totalVol15s > 0 ? ((buyVol15s - sellVol15s) / totalVol15s) : 0;
+
+        // ==========================================
+        // [VŨ KHÍ QUANT] 2. ADAPTIVE Z-SCORE (ĐỘT BIẾN KHỐI LƯỢNG)
+        // ==========================================
+        if (!window.quantStats.speedHist) window.quantStats.speedHist = [];
+        window.quantStats.speedHist.push(currentSpeed);
+        if (window.quantStats.speedHist.length > 60) window.quantStats.speedHist.shift(); // Giữ lịch sử 60s
+
+        let zScore = 0;
+        if (window.quantStats.speedHist.length >= 10) {
+            let mean = window.quantStats.speedHist.reduce((a, b) => a + b, 0) / window.quantStats.speedHist.length;
+            let variance = window.quantStats.speedHist.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / window.quantStats.speedHist.length;
+            let stdDev = Math.sqrt(variance);
+            if (stdDev === 0) stdDev = 1; // Tránh chia cho 0
+            zScore = (currentSpeed - mean) / stdDev;
+        }
+        window.quantStats.zScore = zScore;
+        
         // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART
         let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5;
         let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
