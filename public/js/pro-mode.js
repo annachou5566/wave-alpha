@@ -1693,9 +1693,9 @@ window.updateCommandCenterUI = function() {
     // 6. 🧠 SUPER QUANT AI VERDICT (BẮT BÀI ORDER SLICING & SPOOFING)
     // =========================================================
     {
-        const vEl = document.getElementById('ai-verdict-badge');
-        if (vEl) {
-            // Lấy dữ liệu an toàn từ bộ nhớ RAM (quantStats)
+        const verdictEl = document.getElementById('ai-verdict-badge');
+        if (verdictEl) {
+            // Lấy dữ liệu từ RAM thông qua prefix _ để tránh trùng lặp
             const _trend = window.quantStats.trend || 0;
             const _drop = window.quantStats.drop || 0;
             const _wBuy = window.quantStats.whaleBuyVol || 0;
@@ -1708,13 +1708,13 @@ window.updateCommandCenterUI = function() {
             const _whaleNetFlow = _wBuy - _wSell;
             const _retailNetFlow = (window.scNetFlow || 0) - _whaleNetFlow;
 
-            // TÍNH TOÁN SPOOFING AN TOÀN
+            // Kiểm tra Sổ lệnh an toàn
             let _sumBids = 0, _sumAsks = 0;
             if (window.scLocalOrderBook && window.scLastPrice > 0) {
-                const pLimitDown = window.scLastPrice * 0.99;
-                const pLimitUp = window.scLastPrice * 1.01;
                 const bids = window.scLocalOrderBook.bids || {};
                 const asks = window.scLocalOrderBook.asks || {};
+                const pLimitDown = window.scLastPrice * 0.99;
+                const pLimitUp = window.scLastPrice * 1.01;
                 for (let p in bids) { if (parseFloat(p) >= pLimitDown) _sumBids += parseFloat(p) * bids[p]; }
                 for (let p in asks) { if (parseFloat(p) <= pLimitUp) _sumAsks += parseFloat(p) * asks[p]; }
             }
@@ -1722,38 +1722,25 @@ window.updateCommandCenterUI = function() {
             const _isSpoofBids = (_sumAsks > 0 && _sumBids > _sumAsks * 3) && (_trend < 0);
             const _isSpoofAsks = (_sumBids > 0 && _sumAsks > _sumBids * 3) && (_trend > 0);
 
-            // PHÂN LOẠI KỊCH BẢN
             if (_sellPct > 65 && _retailNetFlow > Math.abs(_whaleNetFlow) * 0.5 && _trend > 0 && _isHighUrgency) {
-                vEl.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
+                verdictEl.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
             }
-            else if (_isSpoofBids) {
-                vEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG MUA ẢO)';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-            }
-            else if (_isSpoofAsks) {
-                vEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG BÁN ẢO)';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-            }
-            else if (_trend > 0 && (window.scNetFlow || 0) < 0 && _sellPct > 60) {
-                vEl.innerText = '⚠️ LATE DISTRIBUTION (PHÂN PHỐI ĐỈNH)';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            else if (_isSpoofBids || _isSpoofAsks) {
+                verdictEl.innerText = '⚠️ SPOOFING (TƯỜNG ẢO)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
             }
             else if (_drop < -1.0 && (window.scNetFlow || 0) < 0 && _sellPct > 65) {
-                vEl.innerText = '🩸 FLASH DUMP (CÁ XẢ + ĐÁM ĐÔNG BÁN)';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
-            }
-            else if (_drop < -1.0 && _buyPct > 70) {
-                vEl.innerText = '🛡️ SMART ACCUMULATION (TAY TO HỨNG ĐÁY)';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+                verdictEl.innerText = '🩸 FLASH DUMP (BÁN THÁO)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
             }
             else if (_buyPct > 60 && _isHighUrgency && (window.scNetFlow || 0) > 0) {
-                vEl.innerText = '🚀 MOMENTUM BULL (TAY TO ĐẨY GIÁ)';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+                verdictEl.innerText = '🚀 MOMENTUM BULL (ĐẨY GIÁ)';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
             }
             else {
-                vEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
-                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+                verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
+                verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
             }
         }
     }
