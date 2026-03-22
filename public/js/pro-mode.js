@@ -1692,77 +1692,70 @@ window.updateCommandCenterUI = function() {
     // =========================================================
     // 6. 🧠 SUPER QUANT AI VERDICT (BẮT BÀI ORDER SLICING & SPOOFING)
     // =========================================================
-    const verdictEl = document.getElementById('ai-verdict-badge');
-    if (!verdictEl) return;
+    {
+        const vEl = document.getElementById('ai-verdict-badge');
+        if (vEl) {
+            // Lấy dữ liệu an toàn từ bộ nhớ RAM (quantStats)
+            const _trend = window.quantStats.trend || 0;
+            const _drop = window.quantStats.drop || 0;
+            const _wBuy = window.quantStats.whaleBuyVol || 0;
+            const _wSell = window.quantStats.whaleSellVol || 0;
+            const _totalWhale = _wBuy + _wSell;
+            const _buyPct = _totalWhale > 0 ? (_wBuy / _totalWhale) * 100 : 50;
+            const _sellPct = _totalWhale > 0 ? (_wSell / _totalWhale) * 100 : 50;
+            const _speed = window.scSpeedWindow ? window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5 : 0;
+            const _isHighUrgency = _speed > 50000;
+            const _whaleNetFlow = _wBuy - _wSell;
+            const _retailNetFlow = (window.scNetFlow || 0) - _whaleNetFlow;
 
-    // Lấy lại các biến cần thiết từ quantStats để đảm bảo không bị lỗi undefined
-    let trend = window.quantStats.trend || 0;
-    let drop = window.quantStats.drop || 0;
-    let wBuy = window.quantStats.whaleBuyVol || 0;
-    let wSell = window.quantStats.whaleSellVol || 0;
-    let totalWhale = wBuy + wSell;
-    let buyPct = totalWhale > 0 ? (wBuy / totalWhale) * 100 : 50;
-    let sellPct = totalWhale > 0 ? (wSell / totalWhale) * 100 : 50;
-    let speed = window.scSpeedWindow ? window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5 : 0;
-    let isHighUrgency = speed > 50000;
-    
-    // TÍNH TOÁN DIVERGENCE
-    let whaleNetFlow = wBuy - wSell;
-    let retailNetFlow = (window.scNetFlow || 0) - whaleNetFlow;
-    
-    // TÍNH TOÁN SPOOFING (Thêm check an toàn cho OrderBook)
-    let sumBids = 0, sumAsks = 0;
-    if (window.scLocalOrderBook && window.scLastPrice > 0) {
-        let pLimitDown = window.scLastPrice * 0.99;
-        let pLimitUp = window.scLastPrice * 1.01;
-        
-        let bids = window.scLocalOrderBook.bids || {};
-        let asks = window.scLocalOrderBook.asks || {};
+            // TÍNH TOÁN SPOOFING AN TOÀN
+            let _sumBids = 0, _sumAsks = 0;
+            if (window.scLocalOrderBook && window.scLastPrice > 0) {
+                const pLimitDown = window.scLastPrice * 0.99;
+                const pLimitUp = window.scLastPrice * 1.01;
+                const bids = window.scLocalOrderBook.bids || {};
+                const asks = window.scLocalOrderBook.asks || {};
+                for (let p in bids) { if (parseFloat(p) >= pLimitDown) _sumBids += parseFloat(p) * bids[p]; }
+                for (let p in asks) { if (parseFloat(p) <= pLimitUp) _sumAsks += parseFloat(p) * asks[p]; }
+            }
+            
+            const _isSpoofBids = (_sumAsks > 0 && _sumBids > _sumAsks * 3) && (_trend < 0);
+            const _isSpoofAsks = (_sumBids > 0 && _sumAsks > _sumBids * 3) && (_trend > 0);
 
-        for (let p in bids) {
-            if (parseFloat(p) >= pLimitDown) sumBids += parseFloat(p) * bids[p];
+            // PHÂN LOẠI KỊCH BẢN
+            if (_sellPct > 65 && _retailNetFlow > Math.abs(_whaleNetFlow) * 0.5 && _trend > 0 && _isHighUrgency) {
+                vEl.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
+            }
+            else if (_isSpoofBids) {
+                vEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG MUA ẢO)';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else if (_isSpoofAsks) {
+                vEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG BÁN ẢO)';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else if (_trend > 0 && (window.scNetFlow || 0) < 0 && _sellPct > 60) {
+                vEl.innerText = '⚠️ LATE DISTRIBUTION (PHÂN PHỐI ĐỈNH)';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+            }
+            else if (_drop < -1.0 && (window.scNetFlow || 0) < 0 && _sellPct > 65) {
+                vEl.innerText = '🩸 FLASH DUMP (CÁ XẢ + ĐÁM ĐÔNG BÁN)';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
+            }
+            else if (_drop < -1.0 && _buyPct > 70) {
+                vEl.innerText = '🛡️ SMART ACCUMULATION (TAY TO HỨNG ĐÁY)';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+            }
+            else if (_buyPct > 60 && _isHighUrgency && (window.scNetFlow || 0) > 0) {
+                vEl.innerText = '🚀 MOMENTUM BULL (TAY TO ĐẨY GIÁ)';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
+            }
+            else {
+                vEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
+                vEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
+            }
         }
-        for (let p in asks) {
-            if (parseFloat(p) <= pLimitUp) sumAsks += parseFloat(p) * asks[p];
-        }
-    }
-    
-    // Đảm bảo không chia cho 0 hoặc so sánh với undefined
-    let isSpoofingBids = (sumAsks > 0 && sumBids > sumAsks * 3) && (trend < 0);
-    let isSpoofingAsks = (sumBids > 0 && sumAsks > sumBids * 3) && (trend > 0);
-
-    // PHÂN LOẠI KỊCH BẢN:
-    if (sellPct > 65 && retailNetFlow > Math.abs(whaleNetFlow) * 0.5 && trend > 0 && isHighUrgency) {
-        verdictEl.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
-    }
-    else if (isSpoofingBids) {
-        verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG MUA ẢO)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-    }
-    else if (isSpoofingAsks) {
-        verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG BÁN ẢO)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-    }
-    else if (trend > 0 && (window.scNetFlow || 0) < 0 && sellPct > 60) {
-        verdictEl.innerText = '⚠️ LATE DISTRIBUTION (PHÂN PHỐI ĐỈNH)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
-    }
-    else if (drop < -1.0 && (window.scNetFlow || 0) < 0 && sellPct > 65) {
-        verdictEl.innerText = '🩸 FLASH DUMP (CÁ XẢ + ĐÁM ĐÔNG BÁN)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
-    }
-    else if (drop < -1.0 && buyPct > 70) {
-        verdictEl.innerText = '🛡️ SMART ACCUMULATION (TAY TO HỨNG ĐÁY)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
-    }
-    else if (buyPct > 60 && isHighUrgency && (window.scNetFlow || 0) > 0) {
-        verdictEl.innerText = '🚀 MOMENTUM BULL (TAY TO ĐẨY GIÁ)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
-    }
-    else {
-        verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
     }
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
