@@ -3173,7 +3173,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
 };
 
 // =========================================================
-// 🚀 CỖ MÁY PHÁI SINH TỔNG HỢP (BẢN FINAL V4)
+// 🚀 CỖ MÁY PHÁI SINH TỔNG HỢP (BẢN FINAL V5 - CHỐNG BÓNG MA)
 // =========================================================
 let liquidationWs = null;
 let futuresDataInterval = null;
@@ -3190,6 +3190,10 @@ function updateAllDOM(id, text, color) {
 window.startFuturesEngine = async function(symbol) {
     window.stopFuturesEngine();
     if (!symbol) return;
+
+    // TẠO KHÓA PHIÊN: Ghi nhớ coin đang mở hiện tại
+    window.activeFuturesSession = symbol.toUpperCase();
+    let currentSession = window.activeFuturesSession;
 
     let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '');
     let fSymbol = cleanSymbol + 'USDT';
@@ -3220,10 +3224,15 @@ window.startFuturesEngine = async function(symbol) {
     };
 
     const fetchRestData = async () => {
+        // CHỐNG NHIỄU 1: Nếu user đã click sang coin khác thì hủy không chạy tiếp
+        if (window.activeFuturesSession !== currentSession) return false;
+
         try {
-            // Check Funding Rate để khẳng định có mặt trên Futures
             let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
             
+            // CHỐNG NHIỄU 2: Chờ API xong, kiểm tra lại xem user có đổi coin không
+            if (window.activeFuturesSession !== currentSession) return false;
+
             updateAllDOM('cc-futures-status', '🟢 ACTIVE', '#0ECB81');
 
             if (fundData && fundData.lastFundingRate) {
@@ -3235,6 +3244,8 @@ window.startFuturesEngine = async function(symbol) {
 
             try {
                 let oiData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
+                if (window.activeFuturesSession !== currentSession) return false;
+
                 let currentPrice = window.scLastPrice || (window.currentChartToken ? parseFloat(window.currentChartToken.price) : 0);
                 let oiUsd = parseFloat(oiData.openInterest) * currentPrice;
                 if (oiUsd > 0) updateAllDOM('cc-oi-val', '$' + formatCompactUSD(oiUsd), null);
@@ -3242,6 +3253,7 @@ window.startFuturesEngine = async function(symbol) {
             return true;
 
         } catch (err) {
+            if (window.activeFuturesSession !== currentSession) return false;
             console.log(`[Futures Engine] Không có Futures cho ${fSymbol}`);
             updateAllDOM('cc-futures-status', '🚫 NO FUTURES', '#848e9c');
             updateAllDOM('cc-oi-val', 'N/A', null);
@@ -3251,13 +3263,19 @@ window.startFuturesEngine = async function(symbol) {
     };
 
     let hasFutures = await fetchRestData();
-    if (hasFutures) {
-        futuresDataInterval = setInterval(fetchRestData, 15000);
+    // CHỈ mở vòng lặp và Websocket nếu vẫn đang ở đúng đồng coin ban đầu
+    if (hasFutures && window.activeFuturesSession === currentSession) {
+        futuresDataInterval = setInterval(() => {
+            if (window.activeFuturesSession === currentSession) fetchRestData();
+        }, 15000);
 
         let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
         liquidationWs = new WebSocket(wsUrl);
 
         liquidationWs.onmessage = (event) => {
+            // BỎ QUA DỮ LIỆU CŨ NẾU LỠ CÓ BÓNG MA WEBSOCKET
+            if (window.activeFuturesSession !== currentSession) return;
+
             const data = JSON.parse(event.data);
             if (data.e === 'forceOrder' && data.o) {
                 let order = data.o;
@@ -3280,7 +3298,7 @@ window.startFuturesEngine = async function(symbol) {
 
         liquidationWs.onclose = () => {
             let anyStatus = document.querySelector('[id="cc-futures-status"]');
-            if (anyStatus && anyStatus.innerText !== '🚫 NO FUTURES') {
+            if (anyStatus && anyStatus.innerText !== '🚫 NO FUTURES' && window.activeFuturesSession === currentSession) {
                 setTimeout(() => window.startFuturesEngine(symbol), 3000);
             }
         };
@@ -3288,6 +3306,7 @@ window.startFuturesEngine = async function(symbol) {
 };
 
 window.stopFuturesEngine = function() {
+    window.activeFuturesSession = null; // Khóa mọi luồng đang chạy dở
     if (futuresDataInterval) { clearInterval(futuresDataInterval); futuresDataInterval = null; }
     if (liquidationWs) { liquidationWs.close(); liquidationWs = null; }
 };
