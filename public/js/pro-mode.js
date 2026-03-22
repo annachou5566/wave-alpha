@@ -2977,21 +2977,25 @@ window.updateSmartMoneyRadar = function(apiData) {
         }
     }
 
-    // 1.3 Lạm phát (Unlock / FDV vs MCAP) - CHUẨN TÀI CHÍNH
-    let mc = Number(d.marketCap) || 0;
+    // 1.3 Lạm phát (Unlock / FDV vs MCAP) - ĐỒNG BỘ TUYỆT ĐỐI VỚI TOPBAR
+    let t_chart = window.currentChartToken || {};
+    
+    // Ép buộc lấy MC từ dữ liệu Topbar (chuẩn nhất), nếu API rỗng mới dùng d.marketCap
+    let mc = Number(t_chart.market_cap) || Number(d.marketCap) || 0;
     
     // Tính FDV = Giá * Tổng cung (ưu tiên lấy Max Supply All-chain nếu có)
+    let currentPrice = Number(t_chart.price) || Number(d.price) || 0;
     let maxSup = Number(d.allChainMaxSupply) || Number(d.totalSupply) || Number(d.maxSupply);
-    let fdv = maxSup > 0 ? (Number(d.price) * maxSup) : (Number(d.fdv) || mc);
+    let fdv = maxSup > 0 ? (currentPrice * maxSup) : (Number(d.fdv) || mc);
 
-    // Chặn triệt để lỗi API Binance: FDV không bao giờ được nhỏ hơn MC
+    // Chặn triệt để: FDV không bao giờ được nhỏ hơn MC
     if (fdv < mc) fdv = mc;
 
-    // Tính tỷ lệ % mở khóa an toàn
+    // Tính tỷ lệ % mở khóa (Giờ thì lấy 59.17M / 298.05M = ~19.8% chuẩn cmnl)
     let unlockPct = fdv > 0 ? (mc / fdv) * 100 : 100;
     if (unlockPct > 100) unlockPct = 100;
 
-    // Bơm FDV lên thanh Topbar phía trên biểu đồ
+    // Bơm FDV lên thanh Topbar
     let topFdvEl = document.getElementById('sc-top-fdv');
     if (topFdvEl) topFdvEl.innerText = '$' + formatCompactNum(fdv);
 
