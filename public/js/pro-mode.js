@@ -1607,7 +1607,6 @@ window.updateCommandCenterUI = function() {
     let algoStatus = document.getElementById('cc-algo-status');
     let algoBox = document.getElementById('cc-algo-box');
     
-    // Tính số lệnh Sweep
     let now = Date.now();
     let recentSweeps = window.scTickHistory ? window.scTickHistory.filter(x => (now - x.t <= 15000) && x.q > 0) : [];
     let shortNetFlow = recentSweeps.reduce((s, x) => s + (x.dir ? x.v : -x.v), 0);
@@ -1640,7 +1639,6 @@ window.updateCommandCenterUI = function() {
         avgEl.innerHTML = `${icon} <span style="color:${color}">$${formatCompactUSD(avgTicket)}</span>`;
     }
 
-    // [ĐÃ FIX LỖI 0.00%]: ĐỌC DỮ LIỆU TREND TỪ RAM
     let trend = window.quantStats.trend || 0;
     let trendEl = document.getElementById('cc-vwap-trend');
     if (trendEl) {
@@ -1649,14 +1647,12 @@ window.updateCommandCenterUI = function() {
     }
 
     // --- 4. RỦI RO THANH KHOẢN ---
-    // [ĐÃ FIX LỖI 0.00%]: ĐỌC DỮ LIỆU SPREAD VÀ DROP TỪ RAM
     let spread = window.quantStats.spread || 0;
     let spVal = document.getElementById('cc-spread-val');
     let spMeter = document.getElementById('cc-spread-meter');
     if (spVal && spMeter) {
         spVal.innerText = spread.toFixed(2) + '%';
-        let fill = (spread / 2.0) * 100;
-        fill = Math.min(100, Math.max(5, fill));
+        let fill = Math.min(100, Math.max(5, (spread / 2.0) * 100));
         spMeter.style.width = fill + '%';
         if (spread < 0.2) { spMeter.style.background = '#0ECB81'; spVal.style.color = '#0ECB81'; }
         else if (spread < 0.8) { spMeter.style.background = '#F0B90B'; spVal.style.color = '#F0B90B'; }
@@ -1667,25 +1663,25 @@ window.updateCommandCenterUI = function() {
     let dropEl = document.getElementById('cc-drop-val');
     if (dropEl) {
         dropEl.innerText = drop.toFixed(2) + '%';
-        dropEl.style.color = drop < -2.0 ? '#00F0FF' : '#eaecef';
+        dropEl.style.color = drop < -1.0 ? '#00F0FF' : '#eaecef';
     }
 
     // --- 5. LA BÀN CÁ MẬP ---
-    const totalWhale = (window.quantStats.whaleBuyVol || 0) + (window.quantStats.whaleSellVol || 0);
+    const wBuy = window.quantStats.whaleBuyVol || 0;
+    const wSell = window.quantStats.whaleSellVol || 0;
+    const totalWhale = wBuy + wSell;
     let buyPct = 50, sellPct = 50;
-    if (totalWhale > 0) { 
-        buyPct = (window.quantStats.whaleBuyVol / totalWhale) * 100; 
-        sellPct = (window.quantStats.whaleSellVol / totalWhale) * 100; 
-    }
+    if (totalWhale > 0) { buyPct = (wBuy / totalWhale) * 100; sellPct = (wSell / totalWhale) * 100; }
+    
     let barBuy = document.getElementById('cc-whale-bar-buy');
     let barSell = document.getElementById('cc-whale-bar-sell');
     if(barBuy) barBuy.style.width = `${buyPct}%`; 
     if(barSell) barSell.style.width = `${sellPct}%`;
     
     let volBuy = document.getElementById('cc-whale-vol-buy');
-    if(volBuy) volBuy.innerText = 'B: $' + formatCompactUSD(window.quantStats.whaleBuyVol || 0);
+    if(volBuy) volBuy.innerText = 'B: $' + formatCompactUSD(wBuy);
     let volSell = document.getElementById('cc-whale-vol-sell');
-    if(volSell) volSell.innerText = 'S: $' + formatCompactUSD(window.quantStats.whaleSellVol || 0);
+    if(volSell) volSell.innerText = 'S: $' + formatCompactUSD(wSell);
     
     let ratioTxt = document.getElementById('cc-whale-ratio');
     if(ratioTxt) {
@@ -1693,21 +1689,71 @@ window.updateCommandCenterUI = function() {
         ratioTxt.style.color = buyPct > 50 ? '#0ECB81' : '#F6465D';
     }
 
-    // --- 6. AI VERDICT ---
+    // =========================================================
+    // 6. 🧠 SUPER QUANT AI VERDICT (BẮT BÀI ORDER SLICING & SPOOFING)
+    // =========================================================
     const verdictEl = document.getElementById('ai-verdict-badge');
     if (!verdictEl) return;
     
-    if (sellPct > 70 && isHighUrgency && shortNetFlow < 0) {
-        verdictEl.innerText = '⚠️ CẢNH BÁO DUMP (CÁ XẢ + BOT)';
+    // TÍNH TOÁN DIVERGENCE (Dòng tiền Tôm Tép = Tổng Net - Cá Voi Net)
+    let whaleNetFlow = wBuy - wSell;
+    let retailNetFlow = (window.scNetFlow || 0) - whaleNetFlow;
+    
+    // TÍNH TOÁN SPOOFING (Phân tích Sổ lệnh Orderbook Imbalance trong biên độ 1%)
+    let sumBids = 0, sumAsks = 0;
+    if (window.scLocalOrderBook && window.scLastPrice > 0) {
+        let pLimitDown = window.scLastPrice * 0.99;
+        let pLimitUp = window.scLastPrice * 1.01;
+        for (let p in window.scLocalOrderBook.bids) {
+            if (parseFloat(p) >= pLimitDown) sumBids += parseFloat(p) * window.scLocalOrderBook.bids[p];
+        }
+        for (let p in window.scLocalOrderBook.asks) {
+            if (parseFloat(p) <= pLimitUp) sumAsks += parseFloat(p) * window.scLocalOrderBook.asks[p];
+        }
+    }
+    
+    let isSpoofingBids = (sumBids > sumAsks * 3) && (trend < 0); // Kê mua gấp 3 lần bán nhưng giá rớt
+    let isSpoofingAsks = (sumAsks > sumBids * 3) && (trend > 0); // Kê bán gấp 3 lần mua nhưng giá tăng
+
+    // PHÂN LOẠI KỊCH BẢN ĐỈNH CAO:
+    
+    // Kịch bản 1: BOT GOM NGẦM (TWAP/Algo Băm Lệnh)
+    // Tay to hiện Sell áp đảo, nhưng Tôm Tép Mua cực mạnh (Bot giả dạng), tốc độ khớp cực nhanh, giá Trend Tăng.
+    if (sellPct > 65 && retailNetFlow > Math.abs(whaleNetFlow) * 0.5 && trend > 0 && isHighUrgency) {
+        verdictEl.innerText = '🤖 ALGO ABSORPTION (BOT BĂM LỆNH GOM)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
+    }
+    // Kịch bản 2: TƯỜNG ẢO DỤ GÀ (Spoofing)
+    else if (isSpoofingBids) {
+        verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG MUA ẢO)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+    }
+    else if (isSpoofingAsks) {
+        verdictEl.innerText = '⚠️ SPOOFING (KÊ TƯỜNG BÁN ẢO)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+    }
+    // Kịch bản 3: PHÂN PHỐI ĐỈNH (Late Distribution)
+    // Giá đang cố rướn lên (Trend > 0) nhưng Tay To đã bán, Tổng Net Flow ÂM (Tiền đang rút ra thực sự).
+    else if (trend > 0 && window.scNetFlow < 0 && sellPct > 60) {
+        verdictEl.innerText = '⚠️ LATE DISTRIBUTION (PHÂN PHỐI ĐỈNH)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(240, 185, 11, 0.2); color: #F0B90B; border: 1px solid #F0B90B;';
+    }
+    // Kịch bản 4: SẬP THỰC SỰ (Flash Dump)
+    // Giá rớt mạnh (Drop < -1), Tay To và Nhỏ Lẻ đồng thuận bán tháo.
+    else if (drop < -1.0 && window.scNetFlow < 0 && sellPct > 65) {
+        verdictEl.innerText = '🩸 FLASH DUMP (CÁ XẢ + ĐÁM ĐÔNG BÁN)';
         verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(246, 70, 93, 0.2); color: #F6465D; border: 1px solid #F6465D; animation: pulse-dot 0.5s infinite;';
-    } 
+    }
+    // Kịch bản 5: HỨNG ĐÁY (Smart Accumulation)
+    // Giá rớt mạnh, nhưng Cá Voi mua áp đảo.
     else if (drop < -1.0 && buyPct > 70) {
-        verdictEl.innerText = '🛡️ BUY ABSORPTION (TAY TO HỨNG ĐÁY)';
+        verdictEl.innerText = '🛡️ SMART ACCUMULATION (TAY TO HỨNG ĐÁY)';
         verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
     }
-    else if (buyPct > 60 && isHighUrgency && shortNetFlow > 0) {
-        verdictEl.innerText = '🚀 MOMENTUM BULL (SWEEP GOM)';
-        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(0, 240, 255, 0.2); color: #00F0FF; border: 1px solid #00F0FF; animation: pulse-dot 0.5s infinite;';
+    // Kịch bản 6: MOMENTUM BULL THUẦN TÚY
+    else if (buyPct > 60 && isHighUrgency && window.scNetFlow > 0) {
+        verdictEl.innerText = '🚀 MOMENTUM BULL (TAY TO ĐẨY GIÁ)';
+        verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(14, 203, 129, 0.2); color: #0ECB81; border: 1px solid #0ECB81;';
     }
     else {
         verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
