@@ -3004,7 +3004,31 @@ window.updateSmartMoneyRadar = function(apiData) {
             unlockBadge.style.background = 'rgba(14, 203, 129, 0.2)'; unlockBadge.style.color = '#0ECB81';
         }
     }
-
+// 1.4 Độ sâu thanh khoản (Liquidity vs MCAP)
+    // Ưu tiên lấy thanh khoản realtime từ WebSocket (t.liquidity), nếu rỗng mới lấy từ d.liquidity
+    let liq = Number(t.liquidity) || Number(d.liquidity) || 0;
+    
+    // mc là Market Cap thật đã được tính cực chuẩn ở phần 1.3 ngay bên trên
+    let liqRatio = mc > 0 ? (liq / mc) * 100 : 0;
+    
+    safeSet('sm-liq-ratio', liqRatio.toFixed(2) + '%');
+    let liqBadge = document.getElementById('sm-liq-badge');
+    if (liqBadge) {
+        // Ràng buộc cẩn thận: Nếu thanh khoản rỗng hoặc = 0 thì báo lỗi luôn
+        if (liq <= 0) {
+            liqBadge.innerText = 'Đang dò Pool...';
+            liqBadge.style.background = 'rgba(255, 255, 255, 0.1)'; liqBadge.style.color = '#848e9c';
+        } else if (liqRatio < 1) {
+            liqBadge.innerText = 'Kém (Dễ trượt giá)';
+            liqBadge.style.background = 'rgba(246, 70, 93, 0.2)'; liqBadge.style.color = '#F6465D';
+        } else if (liqRatio < 5) {
+            liqBadge.innerText = 'Chấp nhận được';
+            liqBadge.style.background = 'rgba(240, 185, 11, 0.2)'; liqBadge.style.color = '#F0B90B';
+        } else {
+            liqBadge.innerText = 'Dày & Khỏe';
+            liqBadge.style.background = 'rgba(14, 203, 129, 0.2)'; liqBadge.style.color = '#0ECB81';
+        }
+    }
     // --- ZONE 2: LOGIC DẤU CHÂN CÁ MẬP ---
     let smartPct = parseFloat(d.holdersSmartMoneyPercent || d.smartMoneyHoldingPercent || 0);
     safeSet('sm-pct-smart', smartPct > 0 ? (smartPct * 1).toFixed(2) + '%' : '0.00%');
