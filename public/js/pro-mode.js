@@ -181,9 +181,13 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
             #sc-live-trades::-webkit-scrollbar-thumb { background: #2B3139; border-radius: 0; }
             #sc-live-trades::-webkit-scrollbar-track { background: var(--term-bg); }
 
-            /* MOBILE RESPONSIVE */
+            /* MOBILE RESPONSIVE CÓ KHÓA CUỘN (SCROLL BLEEDING FIX) */
             @media (max-width: 991px) {
-                .sc-body { flex-direction: column !important; overflow-y: hidden !important; }
+                /* 1. KHOÁ CHẾT NỀN TRANG WEB BÊN DƯỚI */
+                body.overlay-active { overflow: hidden !important; }
+                
+                /* 2. CÁC STYLE PHẦN BIỂU ĐỒ BÊN TRÊN (GIỮ NGUYÊN CỦA BẠN) */
+                .sc-body { flex-direction: column !important; min-height: 0 !important; flex: 1 1 auto !important; }
                 .sc-topbar { padding: 6px 10px; }
                 .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid var(--term-border); }
                 .sc-stats-row { padding: 6px 10px; gap: 8px; }
@@ -193,13 +197,26 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
                 .sc-metrics-compact { width: 100%; justify-content: space-between; gap: 2px; overflow: hidden; padding-bottom: 0;}
                 .sc-mc-item span { font-size: 8px; margin-bottom: 0; }
                 .sc-mc-item strong { font-size: 10.5px; }
-                .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1; border-left: none; }
-                .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; }
+                
+                /* 3. BỘ KHUNG PANEL BÊN DƯỚI KÈM THUỐC TRỊ LỖI CUỘN */
+                .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1 1 auto; border-left: none; min-height: 0 !important; }
+                .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; flex-shrink: 0; }
                 .sc-sidebar-icon { border-left: none !important; border-bottom: 2px solid transparent; }
                 .sc-sidebar-icon.active { border-bottom-color: var(--term-warn); }
                 .sc-sidebar-icon:hover::after { display: none; }
-                .sc-panel-content { width: 100% !important; flex: 1; transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+                
+                .sc-panel-content { width: 100% !important; flex: 1 1 auto !important; min-height: 0 !important; transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
                 .sc-panel-content.collapsed { height: 0px !important; flex: none !important; }
+                
+                .sc-tab-content { 
+                    flex: 1 1 auto !important; 
+                    min-height: 0 !important; 
+                    overflow-y: auto !important; 
+                    overflow-x: hidden !important;
+                    overscroll-behavior: contain !important; /* Ngăn cuộn lây lan ra ngoài (Scroll Bleeding) */
+                    -webkit-overflow-scrolling: touch !important; /* Vuốt mượt có quán tính trên iOS */
+                    padding-bottom: 30px !important; 
+                }
             }
         `;
         document.head.appendChild(proChartStyle);
