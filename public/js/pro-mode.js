@@ -1088,12 +1088,88 @@ function injectLayout() {
                             </div>
                         </div>
 
-                        <div id="tab-info" class="sc-tab-content" style="padding: 10px;">
+                        <div id="tab-info" class="sc-tab-content" style="padding: 10px; display: none; flex-direction: column; height: 100%; overflow-y: auto;">
                             <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
                                 <i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 5px;"></i> COMMAND CENTER (PRO)
                             </div>
-                            <div style="font-size: 11px; color:#848e9c; text-align:center; margin-top: 20px;">
-                                Data Flow is running...
+                            
+                            <div id="quant-command-center" style="display: flex; flex-direction: column;">
+                                <div class="term-widget" style="border-left: 2px solid var(--term-warn);">
+                                    <div class="term-row">
+                                        <span class="term-lbl">LIVE VERDICT:</span>
+                                        <span id="ai-verdict-badge" style="font-size: 10px; font-weight: 800; color: var(--term-warn);">ĐANG QUÉT...</span>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
+                                    <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; gap: 6px;">
+                                        <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up); flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                                            <div class="term-w-title">REALTIME FLOW</div>
+                                            <div id="cc-net-flow" class="term-val" style="font-size: 14px; color: var(--term-up);">+$0</div>
+                                        </div>
+                                        <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim); flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                                            <div class="term-w-title">ALGO <span id="cc-speed" style="color:var(--term-text); text-transform:none;">$0/s</span></div>
+                                            <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤖 TĨNH LẶNG (XÁM)</div>
+                                            <div style="display: flex; height: 3px; border-radius: 1px; overflow: hidden; background: var(--term-border); position: relative;">
+                                                <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s linear;"></div>
+                                                <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s linear;"></div>
+                                                <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #000; z-index: 2;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #3B82F6; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+                                        <div class="term-w-title" style="color: #3B82F6; margin-bottom: auto;">BINANCE NET FLOW</div>
+                                        <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
+                                            <div class="term-row"><span class="term-lbl">5 Phút</span><span id="cc-api-nf-5m" class="term-val">...</span></div>
+                                            <div class="term-row"><span class="term-lbl">1 Giờ</span><span id="cc-api-nf-1h" class="term-val">...</span></div>
+                                            <div class="term-row"><span class="term-lbl">4 Giờ</span><span id="cc-api-nf-4h" class="term-val">...</span></div>
+                                            <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">24 Giờ</span><span id="cc-api-nf-24h" class="term-val">...</span></div>
+                                        </div>
+                                    </div>
+                                </div> 
+                                
+                                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
+                                    <div class="term-widget" style="margin-bottom: 0;">
+                                        <div class="term-w-title">DÒNG TIỀN (60s)</div>
+                                        <div class="term-row"><span class="term-lbl">Avg Ticket</span><span id="cc-avg-ticket" class="term-val">🦐 $0</span></div>
+                                        <div class="term-row"><span class="term-lbl">VWAP</span><span id="cc-vwap-trend" class="term-val">0.00%</span></div>
+                                    </div>
+
+                                    <div class="term-widget" style="margin-bottom: 0;">
+                                        <div class="term-w-title">RỦI RO THANH KHOẢN</div>
+                                        <div class="term-row"><span class="term-lbl">Spread</span><span id="cc-spread-val" class="term-val" style="color:var(--term-up);">0.00%</span></div>
+                                        <div style="height:2px; background:var(--term-border); margin: 2px 0 4px 0;"><div id="cc-spread-meter" style="height:100%; width:10%; background:var(--term-up);"></div></div>
+                                        <div class="term-row"><span class="term-lbl">Drop (5m)</span><span id="cc-drop-val" class="term-val">0.00%</span></div>
+                                    </div>
+                                </div>
+
+                                <div class="term-widget">
+                                    <div class="term-w-title">WHALES & SHARKS <span id="cc-whale-ratio" style="color: var(--term-text);">--% BUY</span></div>
+                                    <div style="display: flex; height: 4px; border-radius: 1px; overflow: hidden; background: var(--term-border); margin-bottom: 4px;">
+                                        <div id="cc-whale-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s;"></div>
+                                        <div id="cc-whale-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s;"></div>
+                                    </div>
+                                    <div class="term-row" style="font-size: 10px; color: var(--term-dim);">
+                                        <span id="cc-whale-vol-buy">B: $0</span>
+                                        <span id="cc-whale-vol-sell">S: $0</span>
+                                    </div>
+                                </div>
+
+                                <div class="term-w-title" style="margin-top: 4px;">SNIPER TAPE (ADAPTIVE)</div>
+                                <div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;">
+                                    <div style="font-size: 9px; color: var(--term-dim); text-align: center; margin-top: 40px;">Đang rình cá mập...</div>
+                                </div>
+
+                                <div class="term-widget" style="margin-bottom: 0;">
+                                    <div class="term-w-title">FUTURES <span id="cc-futures-status" style="color: var(--term-warn);">⏳ ĐANG DÒ...</span></div>
+                                    <div class="term-row"><span class="term-lbl">Open Interest</span><span id="cc-oi-val" class="term-val">$--</span></div>
+                                    <div class="term-row"><span class="term-lbl" id="cc-funding-lbl">Funding Rate</span><span id="cc-funding-val" class="term-val">--%</span></div>
+                                    <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-top: 4px;">
+                                        <span id="cc-liq-long" style="color:var(--term-down); font-size:9.5px; font-weight:700; font-family:var(--font-num);">🩸 Liq L: $0</span>
+                                        <span id="cc-liq-short" style="color:var(--term-up); font-size:9.5px; font-weight:700; font-family:var(--font-num);">💥 Liq S: $0</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1224,6 +1300,7 @@ window.togglePin = (symbol) => {
     else pinnedTokens.push(symbol);
     localStorage.setItem('alpha_pins', JSON.stringify(pinnedTokens));
     renderTable();
+    if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist(); // Cập nhật Watchlist ngay lập tức
 };
 
 function formatNum(n) { return (!n) ? '0' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n); }
@@ -1497,6 +1574,7 @@ window.updateAlphaMarketUI = function(serverData) {
         const freshStats = calculateMarketStats(allTokens);
         renderMarketHUD(freshStats); 
         updateSummary(); 
+        if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist(); // Update Watchlist Realtime
     }
 };
 
@@ -3477,4 +3555,38 @@ window.stopFuturesEngine = function() {
     window.activeFuturesSession = null;
     if (futuresDataInterval) { clearInterval(futuresDataInterval); futuresDataInterval = null; }
     if (liquidationWs) { liquidationWs.close(); liquidationWs = null; }
+};
+// HÀM: Bơm dữ liệu Token Yêu thích vào Watchlist Sidebar
+window.renderProWatchlist = function() {
+    const wlBody = document.getElementById('sc-watchlist-body');
+    if (!wlBody) return;
+    
+    let pinned = JSON.parse(localStorage.getItem('alpha_pins')) || [];
+    if (pinned.length === 0) {
+        wlBody.innerHTML = '<div style="text-align:center; margin-top:30px; color:#5e6673; font-size:11px; font-style:italic;">Chưa có token nào trong Watchlist.<br><br>Hãy bấm dấu <span style="color:#F0B90B">★</span> ở bảng Market<br>để thêm vào đây.</div>';
+        return;
+    }
+
+    let html = '';
+    pinned.forEach(sym => {
+        let t = allTokens.find(x => x.symbol === sym);
+        if (t) {
+            let isUp = (t.change_24h || 0) >= 0;
+            let colorClass = isUp ? 'text-green' : 'text-red';
+            let sign = isUp ? '+' : '';
+            let priceStr = formatPrice(t.price);
+            
+            html += `
+                <div class="wl-item" onclick="window.openProChart(allTokens.find(x => x.symbol === '${sym}'))">
+                    <div class="wl-sym">
+                        <img src="${t.icon || 'assets/tokens/default.png'}" onerror="this.src='assets/tokens/default.png'">
+                        ${t.symbol}
+                    </div>
+                    <div class="wl-price">$${priceStr}</div>
+                    <div class="wl-chg ${colorClass}">${sign}${parseFloat(t.change_24h||0).toFixed(2)}%</div>
+                </div>
+            `;
+        }
+    });
+    wlBody.innerHTML = html;
 };
