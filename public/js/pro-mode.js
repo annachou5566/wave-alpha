@@ -1167,7 +1167,11 @@ function injectLayout() {
                                 </div>
 
                                 <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
-    <span>SNIPER TAPE <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;"><option value="all">ALL</option><option value="whale">WHALE</option><option value="shark">SHARK+</option></select></span>
+    <span style="display:flex; align-items:center; gap:6px;">
+        SNIPER TAPE 
+        <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;"><option value="all">ALL</option><option value="whale">WHALE</option><option value="shark">SHARK+</option></select>
+        <i id="cc-sound-icon" class="fas fa-volume-up" style="color:#0ECB81; cursor:pointer; font-size:11px; transition:0.2s;" onclick="window.toggleProSound()" title="Bật/Tắt Âm Cảnh Báo"></i>
+    </span>
     <span style="display:flex; width: 55%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
         <span style="width: 65%; text-align: center;">SIZE & GIÁ</span>
         <span style="width: 35%; text-align: right;">TIME</span>
