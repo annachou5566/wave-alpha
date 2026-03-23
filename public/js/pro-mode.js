@@ -1983,7 +1983,7 @@ function formatCompactUSD(num) {
 
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
-    
+
     // [FIX BÓNG MA] Tạo Session ID dựa trên thời gian thực để khóa luồng dữ liệu
     window.activeChartSessionId = Date.now() + '_' + t.symbol;
     let currentSession = window.activeChartSessionId;
@@ -1991,17 +1991,15 @@ function connectRealtimeChart(t) {
     // 1. KHỞI TẠO BỘ NHỚ RAM STATE (CÓ BỘ ĐỆM CACHE CHỐNG MẤT DỮ LIỆU)
     if (!window.AlphaChartState) window.AlphaChartState = {};
     let sym = t.symbol || 'UNKNOWN';
-    
-    // Nếu chưa có cache cho đồng coin này, tạo mới
+
     if (!window.AlphaChartState[sym]) {
         window.AlphaChartState[sym] = {
             speedWindow: [], netFlow: 0, whaleCount: 0, totalVol: 0, tradeCount: 0,
             tickHistory: [], chartMarkers: [], lastPrice: parseFloat(t.price) || 0, lastTradeDir: undefined,
-            cWhale: 0, cShark: 0, cDolphin: 0, cSweep: 0 // [FIX] Cấp đất cho 4 con cá xây nhà
+            cWhale: 0, cShark: 0, cDolphin: 0, cSweep: 0
         };
     }
-    
-    // Nạp lại dữ liệu cũ vào luồng chạy
+
     let cache = window.AlphaChartState[sym];
     window.scSpeedWindow = cache.speedWindow; window.scNetFlow = cache.netFlow; 
     window.scWhaleCount = cache.whaleCount; window.scTotalVol = cache.totalVol; 
@@ -2009,31 +2007,25 @@ function connectRealtimeChart(t) {
     window.scLastTradeDir = cache.lastTradeDir; window.scTickHistory = cache.tickHistory; 
     window.scChartMarkers = cache.chartMarkers;
 
-    // [FIX] Bốc 4 con cá từ Cache ra lại biến tạm
     window.scCWhale = cache.cWhale || 0;
     window.scCShark = cache.cShark || 0;
     window.scCDolphin = cache.cDolphin || 0;
     window.scCSweep = cache.cSweep || 0;
     window.quantStats = cache.quantStats || { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
 
-    // --- KHAI BÁO HÀM SMART TAPE (XỬ LÝ CỤM LỆNH) ---
     window.scCurrentCluster = null;
 
-    // --- HÀM 1: LỌC CÁ HỒI TỐ (ĐÃ FIX LỖI MẤT CÁ TRÊN KHUNG NẾN) ---
     window.applyFishFilter = function() {
         let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
         if (!activeSeries) return;
-
         let filterEl = document.getElementById('sc-fish-filter');
         let fVal = filterEl ? filterEl.value : 'sweep';
 
-        // [TỐI ƯU UI] Ẩn toàn bộ cá nếu chọn "ẨN TẤT CẢ" HOẶC đang ở khung nến (>= 1m)
         if (fVal === 'none' || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
             try { activeSeries.setMarkers([]); } catch (e) {}
             return;
         }
 
-        // Lọc mảng lịch sử
         let filteredMarkers = window.scChartMarkers.filter(m => {
             if (!m.fishType) return true; 
             if (fVal === 'whale' && m.fishType === 'whale') return true;
@@ -2043,10 +2035,6 @@ function connectRealtimeChart(t) {
             return false;
         });
 
-        // Xử lý làm tròn thời gian...
-        // ... (Giữ nguyên toàn bộ phần bên dưới của hàm này) ...
-
-        // Xử lý làm tròn thời gian (Snap to Candle) để thư viện chịu vẽ trên khung lớn
         let intervalSec = 0;
         if (window.currentChartInterval === '1m') intervalSec = 60;
         else if (window.currentChartInterval === '5m') intervalSec = 300;
@@ -2058,20 +2046,15 @@ function connectRealtimeChart(t) {
         let processedMarkers = filteredMarkers.map(m => {
             let newTime = m.time;
             if (intervalSec > 0) {
-                newTime = Math.floor(m.time / intervalSec) * intervalSec; // Làm tròn về đầu nến
+                newTime = Math.floor(m.time / intervalSec) * intervalSec;
             }
             return { ...m, time: newTime };
         });
 
-        // Sắp xếp tăng dần và gộp các cá trùng thời gian (tránh lỗi đè marker)
         processedMarkers.sort((a, b) => a.time - b.time);
-        
-        try {
-            activeSeries.setMarkers(processedMarkers); 
-        } catch (e) { console.error("Lỗi vẽ cá:", e); }
+        try { activeSeries.setMarkers(processedMarkers); } catch (e) {}
     };
 
-   // --- HÀM 2: CÔNG TẮC HEATMAP (DÙNG ICON MẮT) ---
     window.isHeatmapOn = true;
     window.toggleHeatmapUI = function() {
         window.isHeatmapOn = !window.isHeatmapOn;
@@ -2080,7 +2063,6 @@ function connectRealtimeChart(t) {
             icon.className = window.isHeatmapOn ? 'fas fa-eye' : 'fas fa-eye-slash';
             icon.style.color = window.isHeatmapOn ? '#41e6e7' : '#527c82';
         }
-        // [ĐÃ FIX TRÀN RAM]: Đổi sang tàng hình thay vì xóa line liên tục
         if (!window.isHeatmapOn && window.scActivePriceLines) {
             window.scActivePriceLines.forEach(line => {
                 try { line.applyOptions({ color: 'transparent' }); } catch(e) {}
@@ -2090,27 +2072,20 @@ function connectRealtimeChart(t) {
 
     window.flushSmartTape = function(cluster) {
         if (!cluster) return;
-        
-        // [TỐI ƯU UI] Chặn in lệnh ra bảng Live Trades nếu user chọn "Ẩn Tất Cả"
         let filterEl = document.getElementById('sc-fish-filter');
         if (filterEl && filterEl.value === 'none') return;
         
         let tradesBox = document.getElementById('sc-live-trades');
-        
-        // [QUANT FIX] Dùng Live Average Ticket để làm thước đo chuẩn xác 100%
         let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
         
-        // Cá Voi: Gấp ít nhất 15 lần lệnh trung bình & TỐI THIỂU 15.000$
         let whaleMin = Math.max(15000, currentAvgTicket * 15);
-        // Cá Mập: Gấp ít nhất 7 lần lệnh trung bình & TỐI THIỂU 5.000$
         let sharkMin = Math.max(5000, currentAvgTicket * 7);
-        // Cá Heo: Gấp ít nhất 3 lần lệnh trung bình & TỐI THIỂU 2.000$
         let dolphinMin = Math.max(2000, currentAvgTicket * 3);
 
         let isWhale   = cluster.vol >= whaleMin;
         let isShark   = cluster.vol >= sharkMin && cluster.vol < whaleMin;
         let isDolphin = cluster.vol >= dolphinMin && cluster.vol < sharkMin;
-        let isSweep   = cluster.count >= 6 && cluster.vol >= 1000; // Sweep rác < 1k$ không thèm tính
+        let isSweep   = cluster.count >= 6 && cluster.vol >= 1000;
 
         let icon = ''; let fontWeight = 'normal';
         if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
@@ -2120,8 +2095,6 @@ function connectRealtimeChart(t) {
 
         if (tradesBox) {
             let row = document.createElement('div');
-            
-            // Terminal Style: Không màu nền cho lệnh nhỏ, nền cực mờ cho lệnh vừa
             let c_up = '#0ECB81'; let c_down = '#F6465D';
             let c_bg_up = 'transparent'; let c_bg_down = 'transparent';
             if (isWhale || isShark || isSweep) {
@@ -2129,57 +2102,49 @@ function connectRealtimeChart(t) {
                 c_bg_down = 'rgba(246, 70, 93, 0.15)';
             }
 
-            // Ép Tabular nums và canh lề 3 cột bằng width %
             row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:3px 4px; border-bottom:1px solid #1A1F26; background:${cluster.dir ? c_bg_up : c_bg_down}; font-weight:${fontWeight}; font-variant-numeric: tabular-nums; transition: 0.1s;`;
-            
             let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
-            
             row.innerHTML = `
                 <span style="color:${cluster.dir ? c_up : c_down}; flex: 1; text-align: left; overflow: hidden; white-space: nowrap;">${formatPrice(cluster.p)}</span>
                 <span style="color:#eaecef; flex: 1; text-align: center; white-space: nowrap;">${icon}$${formatCompactUSD(cluster.vol)}</span>
                 <span style="color:#707A8A; flex: 1; text-align: right; white-space: nowrap;">${timeStr}</span>
             `;
-            
             tradesBox.insertBefore(row, tradesBox.firstChild);
             
-            // Hiệu ứng Flash (Chớp Inverse Color) cực nhanh 100ms cho cá mập
             if (isWhale || isShark) {
                 row.style.background = cluster.dir ? c_up : c_down;
-                row.style.color = '#000000'; // Đổi chữ thành đen để nổi bật
+                row.style.color = '#000000';
                 setTimeout(() => { 
                     row.style.background = cluster.dir ? c_bg_up : c_bg_down; 
                     row.style.color = ''; 
-                }, 100); // 100ms là đủ để não nhận thức, không gây mù mắt
+                }, 100);
             }
 
             if (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
-            // [PRO QUANT] Bơm vào Sniper Tape và Cộng dồn Volume
-        if (isWhale || isShark) {
-            if (cluster.dir) window.quantStats.whaleBuyVol += cluster.vol;
-            else window.quantStats.whaleSellVol += cluster.vol;
-            window.logToSniperTape(cluster.dir, cluster.vol, isWhale ? '🐋 VOI' : '🦈 MẬP', cluster.p);
-        }
-        else if (isSweep) {
-            if (cluster.dir) window.quantStats.botSweepBuy++;
-            else window.quantStats.botSweepSell++;
-            window.logToSniperTape(cluster.dir, cluster.vol, '🤖 SWEEP', cluster.p);
-        }
-        else if (isDolphin) {
-            window.logToSniperTape(cluster.dir, cluster.vol, '🐬 HEO', cluster.p);
-        }
+
+            if (isWhale || isShark) {
+                if (cluster.dir) window.quantStats.whaleBuyVol += cluster.vol;
+                else window.quantStats.whaleSellVol += cluster.vol;
+                window.logToSniperTape(cluster.dir, cluster.vol, isWhale ? '🐋 VOI' : '🦈 MẬP', cluster.p);
+            }
+            else if (isSweep) {
+                if (cluster.dir) window.quantStats.botSweepBuy++;
+                else window.quantStats.botSweepSell++;
+                window.logToSniperTape(cluster.dir, cluster.vol, '🤖 SWEEP', cluster.p);
+            }
+            else if (isDolphin) {
+                window.logToSniperTape(cluster.dir, cluster.vol, '🐬 HEO', cluster.p);
+            }
         }
 
         if (isDolphin || isShark || isWhale || isSweep) {
-            // Tách riêng từng bộ đếm
             if (isWhale) { window.scCWhale = (window.scCWhale||0) + 1; let el = document.getElementById('sc-stat-whale'); if(el) el.innerText = window.scCWhale; }
             else if (isShark) { window.scCShark = (window.scCShark||0) + 1; let el = document.getElementById('sc-stat-shark'); if(el) el.innerText = window.scCShark; }
             else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
             else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
 
-            // LUÔN LƯU VÀO BỘ NHỚ BẤT CHẤP KHUNG GIỜ VÀ BỘ LỌC
             let fishType = 'sweep';
             if (isWhale) fishType = 'whale'; else if (isShark) fishType = 'shark'; else if (isDolphin) fishType = 'dolphin';
-            
             let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
             if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
             let markerColor = cluster.dir ? (window.currentTheme === 'trad' ? '#0ECB81' : '#2af592') : (window.currentTheme === 'trad' ? '#F6465D' : '#cb55e3');
@@ -2187,9 +2152,8 @@ function connectRealtimeChart(t) {
             window.scChartMarkers.push({
                 time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
                 color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg,
-                fishType: fishType // [QUAN TRỌNG] Đóng mác loại cá để xài bộ lọc
+                fishType: fishType
             });
-            
             if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
         }
     };
@@ -2201,42 +2165,40 @@ function connectRealtimeChart(t) {
     let contract = t.contract;
     let chainId = t.chainId || t.chain_id || 56;
     
-    // Thêm luồng Sổ lệnh 500ms vào danh sách đăng ký
     let depthStream = rawId ? `alpha_${rawId}usdt@fulldepth@500ms` : `${sysSymbol}@fulldepth@500ms`;
     let params = [
         rawId ? `alpha_${rawId}usdt@aggTrade` : `${sysSymbol}@aggTrade`,
         'came@allTokens@ticker24',
         depthStream
     ];
-    window.scActivePriceLines = []; // Khởi tạo mảng chứa các Vạch Laser thanh khoản
+    window.scActivePriceLines = []; 
     
     if (window.currentChartInterval !== 'tick') {
         if (contract) params.push(`came@${contract}@${chainId}@kline_${window.currentChartInterval}`);
         else params.push(`${sysSymbol}@kline_${window.currentChartInterval}`);
     }
 
-    // 2. CỖ MÁY TOÁN HỌC CHẠY NGẦM (Mỗi giây 1 lần để chống lag UI)
+    // ==========================================
+    // 2. CỖ MÁY TOÁN HỌC CHẠY NGẦM (MỖI GIÂY 1 LẦN)
+    // ==========================================
     if (window.scCalcInterval) clearInterval(window.scCalcInterval);
     window.scCalcInterval = setInterval(() => {
         if (window.activeChartSessionId !== currentSession) return;
-        
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
+        
         const now = Date.now();
-        // Dọn rác cụm lệnh bị kẹt (Chống treo giao diện nếu ngừng giao dịch)
         if (window.scCurrentCluster && (now - window.scCurrentCluster.startT >= 1000)) {
             window.flushSmartTape(window.scCurrentCluster);
             window.scCurrentCluster = null;
         }
-        // [KIẾN TRÚC FIX] Tìm Index cần cắt và dùng Splice 1 lần duy nhất (Tránh re-index mảng O(N^2) gây sập CPU)
+
+        // [KIẾN TRÚC FIX] Dọn rác Tick bằng 1 nhát chém Splice
         let expireTickIdx = 0;
         while (expireTickIdx < window.scTickHistory.length && now - window.scTickHistory[expireTickIdx].t > 300000) {
             expireTickIdx++;
         }
-        if (expireTickIdx > 0) {
-            window.scTickHistory.splice(0, expireTickIdx);
-        }
+        if (expireTickIdx > 0) window.scTickHistory.splice(0, expireTickIdx);
         
-        // A. TÍNH SPREAD (Bỏ nhiễu bằng phân vị 90/10)
         const hist15s = window.scTickHistory.filter(x => now - x.t <= 15000);
         let spread = 0;
         if (hist15s.length > 5) {
@@ -2245,9 +2207,8 @@ function connectRealtimeChart(t) {
             let p90 = prices[Math.floor(prices.length * 0.9)];
             if (p10 > 0) spread = ((p90 - p10) / p10) * 100;
         }
-        window.quantStats.spread = spread; // ĐÃ FIX: LƯU VÀO RAM
+        window.quantStats.spread = spread; 
 
-        // B. TÍNH TREND (Gia tốc VWAP 60s)
         const hist60s = window.scTickHistory.filter(x => now - x.t <= 60000);
         let trend = 0;
         if (hist60s.length > 10) {
@@ -2257,38 +2218,26 @@ function connectRealtimeChart(t) {
             let vwapNew = newHalf.reduce((s, x) => s + x.p * x.v, 0) / (newHalf.reduce((s, x) => s + x.v, 0) || 1);
             if (vwapOld > 0 && vwapNew > 0) trend = ((vwapNew - vwapOld) / vwapOld) * 100;
         }
-        window.quantStats.trend = trend; // ĐÃ FIX: LƯU VÀO RAM
+        window.quantStats.trend = trend;
 
-        // C. TÍNH DROP (So với P95 đỉnh 5 phút)
         let drop = 0;
         if (window.scTickHistory.length > 20) {
             let prices5m = window.scTickHistory.map(x => x.p).sort((a,b) => a - b);
             let peakP95 = prices5m[Math.floor(prices5m.length * 0.95)];
             if (peakP95 > 0) drop = ((window.scLastPrice - peakP95) / peakP95) * 100;
         }
-        window.quantStats.drop = drop; // ĐÃ FIX: LƯU VÀO RAM
+        window.quantStats.drop = drop; 
 
-
-// ==========================================
-        // [VŨ KHÍ QUANT] 1. ORDER FLOW IMBALANCE (OFI)
-        // ==========================================
         let buyVol15s = hist15s.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
         let sellVol15s = hist15s.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
         let totalVol15s = buyVol15s + sellVol15s;
-        // OFI dao động từ -1.0 (Full Sell) đến 1.0 (Full Buy)
         window.quantStats.ofi = totalVol15s > 0 ? ((buyVol15s - sellVol15s) / totalVol15s) : 0;
 
-        // ==========================================
-        // [VŨ KHÍ QUANT] 2. ADAPTIVE Z-SCORE (ĐỘT BIẾN KHỐI LƯỢNG)
-        // ==========================================
-        // [ĐÃ FIX LỖI DEAD ZONE] Dời currentSpeed lên trước khi tính Z-Score
         let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5; 
-        
         if (!window.quantStats.speedHist) window.quantStats.speedHist = [];
         window.quantStats.speedHist.push(currentSpeed);
-        if (window.quantStats.speedHist.length > 60) window.quantStats.speedHist.shift(); // Giữ lịch sử 60s
+        if (window.quantStats.speedHist.length > 60) window.quantStats.speedHist.shift();
 
-        let zScore = 0;
         let zScore = 0;
         if (window.quantStats.speedHist.length >= 10) {
             let mean = window.quantStats.speedHist.reduce((a, b) => a + b, 0) / window.quantStats.speedHist.length;
@@ -2300,18 +2249,13 @@ function connectRealtimeChart(t) {
         }
         window.quantStats.zScore = zScore;
         
-        // D. KÍCH HOẠT MARKER CẢNH BÁO ĐẢO CHIỀU TRÊN CHART
         let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
-
-        // E. THUẬT TOÁN ALGO LIMIT REALTIME
         let txPerSec = window.scSpeedWindow.length / 5; 
         let algoLimit = currentSpeed * 0.15; 
-        
         if (spread <= 0.5) algoLimit *= 1.0;
         else if (spread <= 1.5) algoLimit *= 0.8;
         else if (spread <= 3.0) algoLimit *= 0.5;
         else algoLimit *= 0.2;
-
         if (txPerSec < 3) algoLimit *= 0.5;
         algoLimit = Math.round(algoLimit);
 
@@ -2319,25 +2263,16 @@ function connectRealtimeChart(t) {
         if (algoEl) {
             let limitText = `< $${formatCompactUSD(algoLimit)}`;
             let limitColor = '#0ECB81'; let bgColor = 'rgba(14,203,129,0.1)'; let bdColor = 'rgba(14,203,129,0.3)';
-
-            if (algoLimit < 10) { 
-                limitColor = '#F6465D'; limitText = '💀 DEAD'; 
-                bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
-            } else if (algoLimit < 50) { 
-                limitColor = '#F6465D'; 
+            if (algoLimit < 10 || algoLimit < 50) { 
+                limitColor = '#F6465D'; limitText = algoLimit < 10 ? '💀 DEAD' : limitText; 
                 bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
             } else if (algoLimit <= 200) { 
-                limitColor = '#F0B90B'; 
-                bgColor = 'rgba(240,185,11,0.1)'; bdColor = 'rgba(240,185,11,0.3)';
+                limitColor = '#F0B90B'; bgColor = 'rgba(240,185,11,0.1)'; bdColor = 'rgba(240,185,11,0.3)';
             }
-
             algoEl.innerHTML = `ALGO LIMIT: ${limitText}`;
-            algoEl.style.color = limitColor;
-            algoEl.style.background = bgColor;
-            algoEl.style.borderColor = bdColor;
+            algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        // F. THUẬT TOÁN PHÂN TÍCH VỊ THẾ BẮT ĐÁY (3 KỊCH BẢN SAU DUMP)
         if (drop <= -0.6 && currentSpeed > (avgSpeed60s * 1.5)) {
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries) {
@@ -2345,73 +2280,45 @@ function connectRealtimeChart(t) {
                 if (lastTick) {
                     let timeSec = Math.floor(lastTick.t / 1000);
                     let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
-                    
                     if (!lastMarker || !lastMarker.text.includes('DUMP') || (timeSec - lastMarker.time > 15)) {
-                        let markerText = '⚠️ DUMP';
-                        let markerColor = '#F0B90B'; 
-                        
                         let hitWall = false;
+                        let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+                        let wallThreshold = Math.max(10000, currentAvgTicket * 15);
                         if (window.scLocalOrderBook && window.scLocalOrderBook.bids) {
-                // [QUANT FIX] Phát hiện Iceberg dựa trên áp lực mua/bán thực tế (15x Avg Ticket)
-                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-                let volThreshold = Math.max(10000, currentAvgTicket * 15); // Lực đè tối thiểu 10k$
-                            
                             for (let p in window.scLocalOrderBook.bids) {
-                                let price = parseFloat(p);
-                                let valUSD = price * window.scLocalOrderBook.bids[p];
+                                let price = parseFloat(p); let valUSD = price * window.scLocalOrderBook.bids[p];
                                 if (valUSD >= wallThreshold) {
                                     let diff = Math.abs(window.scLastPrice - price) / price;
                                     if (diff <= 0.002) { hitWall = true; break; } 
                                 }
                             }
                         }
-
                         let recentTicks = window.scTickHistory.filter(x => Date.now() - x.t <= 5000);
                         let recentBuyVol = recentTicks.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
                         let recentSellVol = recentTicks.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
-                        let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+                        let markerText = '🪫 EXHAUSTED'; let markerColor = '#848e9c'; 
+                        if (hitWall) { markerText = '🛡️ WALL HIT'; markerColor = '#F0B90B'; } 
+                        else if (recentBuyVol > recentSellVol * 2 && recentBuyVol > currentAvgTicket * 10) { markerText = '🪝 STOP-HUNT'; markerColor = '#00F0FF'; }
 
-                        if (hitWall) {
-                            markerText = '🛡️ WALL HIT';
-                            markerColor = '#F0B90B'; 
-                        } else if (recentBuyVol > recentSellVol * 2 && recentBuyVol > avgTicket * 10) {
-                            markerText = '🪝 STOP-HUNT';
-                            markerColor = '#00F0FF'; 
-                        } else {
-                            markerText = '🪫 EXHAUSTED';
-                            markerColor = '#848e9c'; 
-                        }
-
-                        window.scChartMarkers.push({
-                            time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText 
-                        });
-                        
+                        window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
                         if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                        // Để applyFishFilter() tự động sort và render ở cuối hàm, an toàn hơn.
                     }
                 }
             }
         }
 
-        // ==========================================================
-        // BẢN ĐỒ HEATMAP (ĐÃ FIX: OBJECT POOLING SIÊU MƯỢT, HIỆN LẠI TƯỜNG)
-        // ==========================================================
         if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-            
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
                 for (let p in orderMap) {
-                    let price = parseFloat(p);
-                    let valUSD = price * orderMap[p];
+                    let price = parseFloat(p); let valUSD = price * orderMap[p];
                     if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk });
                 }
-                walls.sort((a, b) => b.v - a.v); 
-                return walls.slice(0, 5); 
+                return walls.sort((a, b) => b.v - a.v).slice(0, 5); 
             };
 
             let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
-            
             if (!window.scActivePriceLines) window.scActivePriceLines = [];
             
             if (window.tvHeatmapLayer) { 
@@ -2419,76 +2326,49 @@ function connectRealtimeChart(t) {
                     let wall = newWalls[i];
                     let lineColor = ''; let thickness = 1;
                     let isTrad = window.currentTheme === 'trad';
-                    
                     if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
                     else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
                     else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
                     else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
-                    if (i < window.scActivePriceLines.length) {
-                        window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness });
-                    } else {
-                        let priceLine = window.tvHeatmapLayer.createPriceLine({
-                            price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: ''                
-                        });
+                    if (i < window.scActivePriceLines.length) { window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); } 
+                    else {
+                        let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
                         window.scActivePriceLines.push(priceLine);
                     }
                 }
-                
-                // Dọn các vạch thừa sang tàng hình
-                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) {
-                    window.scActivePriceLines[i].applyOptions({ color: 'transparent' });
-                }
+                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); }
             }
         }
 
-        // ==========================================================
-        // H. [PRO QUANT] ICEBERG & ABSORPTION DETECTION
-        // ==========================================================
         if (!window.scLastIcebergTime) window.scLastIcebergTime = 0;
-        let nowTsObj = Date.now();
-        
-        if (nowTsObj - window.scLastIcebergTime > 10000 && window.scTickHistory && window.scTickHistory.length > 10) {
-            let recent3s = window.scTickHistory.filter(x => nowTsObj - x.t <= 3000);
-            
+        if (now - window.scLastIcebergTime > 10000 && window.scTickHistory && window.scTickHistory.length > 10) {
+            let recent3s = window.scTickHistory.filter(x => now - x.t <= 3000);
             if (recent3s.length > 5) {
                 let buyVol3s = recent3s.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
                 let sellVol3s = recent3s.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
-                
-                let pMax = Math.max(...recent3s.map(x => x.p));
-                let pMin = Math.min(...recent3s.map(x => x.p));
+                let pMax = Math.max(...recent3s.map(x => x.p)); let pMin = Math.min(...recent3s.map(x => x.p));
                 let priceDiffPct = pMin > 0 ? ((pMax - pMin) / pMin) * 100 : 1;
-                
                 let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
                 let volThreshold = Math.max(10000, currentAvgTicket * 15);
-                
                 let isTrad = window.currentTheme === 'trad';
-                let timeSec = window.scCurrentCluster ? window.scCurrentCluster.timeSec : Math.floor(nowTsObj / 1000);
+                let timeSec = window.scCurrentCluster ? window.scCurrentCluster.timeSec : Math.floor(now / 1000);
                 let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
 
                 if (activeSeries) {
                     if (sellVol3s > buyVol3s * 3 && sellVol3s > volThreshold && priceDiffPct < 0.05) {
-                        window.scChartMarkers.push({
-                            time: timeSec, position: 'belowBar', 
-                            color: isTrad ? '#0ECB81' : '#00F0FF', shape: 'arrowUp', 
-                            text: '🧊 BUY ABSORPTION', fishType: 'whale' 
-                        });
-                        window.scLastIcebergTime = nowTsObj;
+                        window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: isTrad ? '#0ECB81' : '#00F0FF', shape: 'arrowUp', text: '🧊 BUY ABSORPTION', fishType: 'whale' });
+                        window.scLastIcebergTime = now;
                     }
                     else if (buyVol3s > sellVol3s * 3 && buyVol3s > volThreshold && priceDiffPct < 0.05) {
-                        window.scChartMarkers.push({
-                            time: timeSec, position: 'aboveBar', 
-                            color: isTrad ? '#F6465D' : '#FF007F', shape: 'arrowDown', 
-                            text: '🧊 SELL ABSORPTION', fishType: 'whale'
-                        });
-                        window.scLastIcebergTime = nowTsObj;
+                        window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: isTrad ? '#F6465D' : '#FF007F', shape: 'arrowDown', text: '🧊 SELL ABSORPTION', fishType: 'whale' });
+                        window.scLastIcebergTime = now;
                     }
                     if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                 }
             }
         }
 
-        // ĐỒNG BỘ CACHE VÀ VẼ LÊN CHART ĐÚNG 1 LẦN MỖI GIÂY
         if (window.AlphaChartState && window.AlphaChartState[sym]) {
             window.AlphaChartState[sym].netFlow = window.scNetFlow;
             window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
@@ -2506,31 +2386,27 @@ function connectRealtimeChart(t) {
             window.AlphaChartState[sym].quantStats = window.quantStats;
         }
 
-// [ĐÃ TỐI ƯU] Cập nhật UI Vĩ mô 1 lần/giây, không nhồi nhét vào WebSocket
         let displaySpeed = window.scSpeedWindow.filter(x => now - x.t <= 5000).reduce((s, x) => s + x.v, 0) / 5;
-        let speedEl = document.getElementById('sc-stat-match-speed');
-        if(speedEl) speedEl.innerText = '$' + formatCompactUSD(displaySpeed) + ' /s';
+        let speedElUI = document.getElementById('sc-stat-match-speed');
+        if(speedElUI) speedElUI.innerText = '$' + formatCompactUSD(displaySpeed) + ' /s';
 
-        let avgEl = document.getElementById('sc-stat-avg-ticket');
-        if (avgEl) avgEl.innerText = '$' + formatCompactUSD(window.scTotalVol / (window.scTradeCount || 1));
+        let avgElUI = document.getElementById('sc-stat-avg-ticket');
+        if (avgElUI) avgElUI.innerText = '$' + formatCompactUSD(window.scTotalVol / (window.scTradeCount || 1));
 
-        let flowEl = document.getElementById('sc-stat-net-flow');
-        if (flowEl) {
-            flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
-            flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
+        let flowElUI = document.getElementById('sc-stat-net-flow');
+        if (flowElUI) {
+            flowElUI.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + formatCompactUSD(Math.abs(window.scNetFlow));
+            flowElUI.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
         }
 
-        // [KIẾN TRÚC FIX] Dọn rác Speed Window một lần cắt
+        // [KIẾN TRÚC FIX] Dọn rác Speed Window bằng 1 nhát chém Splice
         let expireSpeedIdx = 0;
         while (expireSpeedIdx < window.scSpeedWindow.length && now - window.scSpeedWindow[expireSpeedIdx].t > 5000) {
             expireSpeedIdx++;
         }
-        if (expireSpeedIdx > 0) {
-            window.scSpeedWindow.splice(0, expireSpeedIdx);
-        }
-        
+        if (expireSpeedIdx > 0) window.scSpeedWindow.splice(0, expireSpeedIdx);
+
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
-// Cập nhật Command Center UI mỗi giây
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
     }, 1000);
 
@@ -2538,47 +2414,31 @@ function connectRealtimeChart(t) {
 
     chartWs.onmessage = (event) => {
         if (window.activeChartSessionId !== currentSession) return;
-
         const data = JSON.parse(event.data);
         if (!data.stream) return;
 
-        const tradesBox = document.getElementById('sc-live-trades');
-
-        // NẾN NHẬT
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
-            let k = data.data.k;
-            let rawTime = k.ot !== undefined ? k.ot : k.t; 
+            let k = data.data.k; let rawTime = k.ot !== undefined ? k.ot : k.t; 
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
-                
                 if (tvCandleSeries) tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
                 if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)' });
-
-                if (window.currentChartInterval !== 'tick' && window.tvHeatmapLayer) {
-                    window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
-                }
+                if (window.currentChartInterval !== 'tick' && window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
             }
         }
         
-        // DỮ LIỆU TICKER 24H
         if (data.e === 'tickerList' || data.stream === 'came@allTokens@ticker24') {
             if (data.data && data.data.d) {
                 let target1 = `${contract}@${chainId}`.toLowerCase();
                 let target2 = `${contract}@CT_${chainId}`.toLowerCase();
-                
-                let ticker = data.data.d.find(item => {
-                    let itemCa = item.ca.toLowerCase();
-                    return itemCa === target1 || itemCa === target2;
-                });
-
+                let ticker = data.data.d.find(item => item.ca.toLowerCase() === target1 || item.ca.toLowerCase() === target2);
                 if (ticker) {
                     let volEl = document.getElementById('sc-top-vol'); if (volEl) volEl.innerText = '$' + formatCompactNum(parseFloat(ticker.vol24 || 0));
                     let liqEl = document.getElementById('sc-top-liq'); if (liqEl) liqEl.innerText = '$' + formatCompactNum(parseFloat(ticker.liq || 0));
                     let mcEl = document.getElementById('sc-top-mc'); if (mcEl) mcEl.innerText = '$' + formatCompactNum(parseFloat(ticker.mc || 0));
                     let holdEl = document.getElementById('sc-top-hold'); if (holdEl) holdEl.innerText = formatInt(ticker.hc || 0);
                     let txEl = document.getElementById('sc-top-tx'); if (txEl) txEl.innerText = formatInt(ticker.cnt24 || 0);
-
                     let chgEl = document.getElementById('sc-change-24h');
                     if (chgEl && ticker.pc24) {
                         let chg = parseFloat(ticker.pc24);
@@ -2589,50 +2449,34 @@ function connectRealtimeChart(t) {
             }
         }
         
-        // ---------------------------------------------------------
-        // BẢN ĐỒ TƯỜNG THANH KHOẢN (CHỈ CẬP NHẬT TỪ ĐIỂN VÀO RAM, KHÔNG VẼ Ở ĐÂY CHỐNG LAG)
-        // ---------------------------------------------------------
-        if (data.stream && data.stream.includes('@fulldepth')) {
-            if (data.data) {
-                let currentSym = data.data.s || 'UNKNOWN';
-                if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
-                    window.scLocalOrderBook = { sym: currentSym, asks: {}, bids: {} };
-                }
-
-                let asks = data.data.a || []; 
-                let bids = data.data.b || []; 
-                
-                asks.forEach(item => {
-                    let p = item[0], q = parseFloat(item[1]);
-                    if (q === 0) delete window.scLocalOrderBook.asks[p];
-                    else window.scLocalOrderBook.asks[p] = q;
-                });
-                bids.forEach(item => {
-                    let p = item[0], q = parseFloat(item[1]);
-                    if (q === 0) delete window.scLocalOrderBook.bids[p];
-                    else window.scLocalOrderBook.bids[p] = q;
-                });
-            }
+        if (data.stream && data.stream.includes('@fulldepth') && data.data) {
+            let currentSym = data.data.s || 'UNKNOWN';
+            if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) window.scLocalOrderBook = { sym: currentSym, asks: {}, bids: {} };
+            (data.data.a || []).forEach(item => { let p = item[0], q = parseFloat(item[1]); if (q === 0) delete window.scLocalOrderBook.asks[p]; else window.scLocalOrderBook.asks[p] = q; });
+            (data.data.b || []).forEach(item => { let p = item[0], q = parseFloat(item[1]); if (q === 0) delete window.scLocalOrderBook.bids[p]; else window.scLocalOrderBook.bids[p] = q; });
         }
         
-        // LỆNH LIVE & LOGIC CÁ MẬP (SMART TAPE AGGREGATION)
         if (data.stream.endsWith('@aggTrade')) {
             let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
             let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
             window.scLastTradeDir = isUp; window.scLastPrice = p;
             let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
+            let nowT = Date.now();
 
-            // Cập nhật Nến/Line và Giá lên UI NGAY LẬP TỨC để biểu đồ mượt mà
-            window.scTickHistory.push({ t: Date.now(), p: p, q: q, v: valUSD, dir: isUp });
-            
+            window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
+
+            // [CHỐNG SẬP CPU FINAL BOSS] Throttling giới hạn Render Canvas tối đa 6 FPS (150ms/lần)
+            // Thay vì vẽ 200 lần/giây theo tốc độ của Binance, giờ Chart chỉ vẽ những gì mượt mà nhất.
             if (window.currentChartInterval === 'tick') {
-                if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
-                if (tvLineSeries) tvLineSeries.update({ time: timeSec, value: p });
-                let isTrad = window.currentTheme === 'trad';
-                if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)') });
+                if (nowT - (window.lastChartRender || 0) > 150) {
+                    window.lastChartRender = nowT;
+                    if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
+                    if (tvLineSeries) tvLineSeries.update({ time: timeSec, value: p });
+                    let isTrad = window.currentTheme === 'trad';
+                    if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)') });
+                }
             }
 
-            // [ĐÃ TỐI ƯU] Render giá bằng requestAnimationFrame
             if (!window.isRenderingPrice) {
                 window.isRenderingPrice = true;
                 requestAnimationFrame(() => {
@@ -2645,40 +2489,22 @@ function connectRealtimeChart(t) {
                 });
             }
 
-            // LOGIC GOM CỤM THỜI GIAN THỰC (SMART TAPE) - 1 GIÂY
-            let nowT = Date.now();
             if (!window.scCurrentCluster) {
                 window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
             } else {
                 if (window.scCurrentCluster.dir === isUp && (nowT - window.scCurrentCluster.startT < 1000)) {
-                    window.scCurrentCluster.vol += valUSD;
-                    window.scCurrentCluster.count += 1;
-                    window.scCurrentCluster.p = p; 
+                    window.scCurrentCluster.vol += valUSD; window.scCurrentCluster.count += 1; window.scCurrentCluster.p = p; 
                 } else {
                     window.flushSmartTape(window.scCurrentCluster);
                     window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
                 }
             }
 
-            // [ĐÃ TỐI ƯU] Chỉ ghi nhận Data, việc tính toán để cho vòng lặp 1s xử lý
-            window.scTradeCount++; 
-            window.scTotalVol += valUSD;
-            window.scNetFlow += isUp ? valUSD : -valUSD;
-            // Dùng mảng fixed size nhẹ nhàng thay vì filter liên tục
+            window.scTradeCount++; window.scTotalVol += valUSD; window.scNetFlow += isUp ? valUSD : -valUSD;
+            
+            // Mảng Speed cố định 500 phần tử (rất nhẹ, O(N) không đáng kể)
             if (window.scSpeedWindow.length > 500) window.scSpeedWindow.shift(); 
             window.scSpeedWindow.push({ t: nowT, v: valUSD });
-            
-            if (window.AlphaChartState && window.AlphaChartState[sym]) {
-                window.AlphaChartState[sym].netFlow = window.scNetFlow;
-                window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
-                window.AlphaChartState[sym].totalVol = window.scTotalVol;
-                window.AlphaChartState[sym].tradeCount = window.scTradeCount;
-                window.AlphaChartState[sym].lastPrice = window.scLastPrice;
-                window.AlphaChartState[sym].lastTradeDir = window.scLastTradeDir;
-                window.AlphaChartState[sym].speedWindow = window.scSpeedWindow;
-                window.AlphaChartState[sym].tickHistory = window.scTickHistory;
-                window.AlphaChartState[sym].chartMarkers = window.scChartMarkers;
-            }
         }
     };
             
