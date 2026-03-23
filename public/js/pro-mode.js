@@ -1860,6 +1860,29 @@ window.updateCommandCenterUI = function() {
             }
         }
     }
+    // --- 7. BỘ ĐẾM NGƯỢC FUNDING RATE ---
+    if (window.quantStats && window.quantStats.fundingRateObj) {
+        let fObj = window.quantStats.fundingRateObj;
+        let remain = fObj.nextTime - Date.now();
+        
+        let countdownStr = "";
+        if (remain > 0) {
+            let hrs = Math.floor(remain / (1000 * 60 * 60));
+            let mins = Math.floor((remain % (1000 * 60 * 60)) / (1000 * 60));
+            let secs = Math.floor((remain % (1000 * 60)) / 1000);
+            countdownStr = `in ${hrs}h ${mins}m ${secs}s`;
+        } else {
+            countdownStr = "Settling...";
+        }
+
+        let sign = fObj.rate > 0 ? '+' : '';
+        let color = fObj.rate > 0.01 ? '#F6465D' : (fObj.rate < -0.01 ? '#00F0FF' : '#eaecef');
+        
+        let fEl = document.getElementById('cc-funding-val');
+        if (fEl) {
+            fEl.innerHTML = `<span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span> <span style="font-size:8.5px; color:#848e9c; font-weight:normal; margin-left:4px;">(${countdownStr})</span>`;
+        }
+    }
     };
     
 // Kỹ thuật che URL gốc
