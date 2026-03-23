@@ -3069,6 +3069,32 @@ function injectSmartMoneyTab() {
             </div>
             <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-4h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-4h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
         </div>
+        <div class="term-widget" style="border-left: 2px solid #9945FF; margin-top: 6px; padding: 8px;" id="sm-futures-sentiment-box">
+            <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: #9945FF;"><i class="fas fa-satellite-dish"></i> VỊ THẾ CÁ MẬP (FUTURES)</span>
+                <span id="sm-fs-status" style="color:var(--term-warn); font-size: 8.5px;">⏳ Đang tải...</span>
+            </div>
+
+            <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Tiền (Margin)</span><span id="sm-fs-pos-ratio" class="term-val">--% L / --% S</span></div>
+            <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
+                <div id="sm-fs-pos-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                <div id="sm-fs-pos-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+            </div>
+
+            <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Người (Traders)</span><span id="sm-fs-acc-ratio" class="term-val">--% L / --% S</span></div>
+            <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
+                <div id="sm-fs-acc-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                <div id="sm-fs-acc-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+            </div>
+
+            <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-bottom: 0;">
+                <span class="term-lbl">Taker Volume (5m)</span>
+                <div style="text-align:right;">
+                    <div style="font-size: 10px; color: var(--term-up); font-weight: 800; font-family: var(--font-num);">Buy: <span id="sm-fs-taker-buy">$--</span></div>
+                    <div style="font-size: 10px; color: var(--term-down); font-weight: 800; font-family: var(--font-num);">Sell: <span id="sm-fs-taker-sell">$--</span></div>
+                </div>
+            </div>
+        </div>
     `;
     sidePanel.appendChild(newTabContent);
 }
@@ -3301,6 +3327,67 @@ window.fetchSmartMoneyData = async function(contract, chainId) {
     }
 };
 
+// 🚀 ENGINE: HÚT DỮ LIỆU TÂM LÝ TAY TO PHÁI SINH TỪ BINANCE
+window.fetchFuturesSentiment = async function(symbol) {
+    if (!symbol) return;
+    // Chuẩn hóa tên symbol cho API Binance Futures (ví dụ: BTCUSDT)
+    let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '') + 'USDT';
+
+    const box = document.getElementById('sm-futures-sentiment-box');
+    if (!box) return;
+
+    try {
+        // Gắn timeout để không bị treo web nếu Binance lag
+        const fetchTimeout = (url) => Promise.race([
+            fetch(url), new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000))
+        ]);
+
+        // Gọi 3 API cùng lúc (Song song) để tối ưu tốc độ
+        const [posRes, accRes, takerRes] = await Promise.all([
+            fetchTimeout(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${cleanSymbol}&period=5m&limit=1`),
+            fetchTimeout(`https://fapi.binance.com/futures/data/topLongShortAccountRatio?symbol=${cleanSymbol}&period=5m&limit=1`),
+            fetchTimeout(`https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=${cleanSymbol}&period=5m&limit=1`)
+        ]);
+
+        const posData = await posRes.json();
+        const accData = await accRes.json();
+        const takerData = await takerRes.json();
+
+        document.getElementById('sm-fs-status').innerText = '🟢 ĐÃ ĐỒNG BỘ';
+        document.getElementById('sm-fs-status').style.color = '#0ECB81';
+
+        // 1. Tỷ lệ Tiền (Khối lượng Vị thế Long/Short của Cá mập)
+        if (posData && posData.length > 0) {
+            let longPct = parseFloat(posData[0].longAccount) * 100;
+            let shortPct = parseFloat(posData[0].shortAccount) * 100;
+            document.getElementById('sm-fs-pos-ratio').innerText = `${longPct.toFixed(1)}% L / ${shortPct.toFixed(1)}% S`;
+            document.getElementById('sm-fs-pos-long').style.width = `${longPct}%`;
+            document.getElementById('sm-fs-pos-short').style.width = `${shortPct}%`;
+        }
+
+        // 2. Tỷ lệ Người (Số lượng tài khoản Cá mập Long/Short)
+        if (accData && accData.length > 0) {
+            let longPct = parseFloat(accData[0].longAccount) * 100;
+            let shortPct = parseFloat(accData[0].shortAccount) * 100;
+            document.getElementById('sm-fs-acc-ratio').innerText = `${longPct.toFixed(1)}% L / ${shortPct.toFixed(1)}% S`;
+            document.getElementById('sm-fs-acc-long').style.width = `${longPct}%`;
+            document.getElementById('sm-fs-acc-short').style.width = `${shortPct}%`;
+        }
+
+        // 3. Khối lượng khớp chủ động (Bọn nó đang Market Buy hay Market Sell)
+        if (takerData && takerData.length > 0) {
+            let buyVol = parseFloat(takerData[0].buyVol);
+            let sellVol = parseFloat(takerData[0].sellVol);
+            document.getElementById('sm-fs-taker-buy').innerText = '$' + formatCompactUSD(buyVol);
+            document.getElementById('sm-fs-taker-sell').innerText = '$' + formatCompactUSD(sellVol);
+        }
+
+    } catch(e) {
+        console.error("Lỗi lấy dữ liệu Sentiment:", e);
+        document.getElementById('sm-fs-status').innerText = '🚫 KHÔNG CÓ DATA';
+        document.getElementById('sm-fs-status').style.color = '#848e9c';
+    }
+};
 // 5. Móc Hàm vào Lệnh Mở Chart
 const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
@@ -3309,6 +3396,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
         setTimeout(() => {
             injectSmartMoneyTab();
             window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+            
+            // GỌI HÀM VỪA TẠO Ở ĐÂY ĐỂ NÓ CHẠY CÙNG LÚC!
+            window.fetchFuturesSentiment(t.symbol);
+            
         }, 100);
     }
 };
