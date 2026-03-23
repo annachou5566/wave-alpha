@@ -1173,10 +1173,16 @@ function injectLayout() {
                                     </div>
                                 </div>
 
-                                <div class="term-w-title" style="margin-top: 4px;">SNIPER TAPE (ADAPTIVE)</div>
-                                <div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;">
-                                    <div style="font-size: 9px; color: var(--term-dim); text-align: center; margin-top: 40px;">Đang rình cá mập...</div>
-                                </div>
+                                <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+    <span>SNIPER TAPE (ADAPTIVE)</span>
+    <span style="display:flex; width: 65%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
+        <span style="width: 65%; text-align: center;">SIZE & GIÁ</span>
+        <span style="width: 35%; text-align: right;">TIME</span>
+    </span>
+</div>
+<div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px;">
+    <div style="font-size: 11px; color: var(--term-dim); text-align: center; margin-top: 50px; font-style: italic;">Đang quét...</div>
+</div>
 
                                 <div class="term-widget" style="margin-bottom: 0;">
                                     <div class="term-w-title">FUTURES <span id="cc-futures-status" style="color: var(--term-warn);">⏳ ĐANG DÒ...</span></div>
