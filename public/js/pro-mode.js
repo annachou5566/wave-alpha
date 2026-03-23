@@ -1613,8 +1613,20 @@ window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepS
 // --- BỘ NHỚ COMMAND CENTER MỞ RỘNG ---
 window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0 };
 
-// 🔊 Trình phát âm thanh Ping (Web Audio API - không lo lỗi file)
+// 🔊 CÔNG TẮC VÀ TRÌNH PHÁT ÂM THANH
+window.isProSoundOn = true; 
+
+window.toggleProSound = function() {
+    window.isProSoundOn = !window.isProSoundOn;
+    let icon = document.getElementById('cc-sound-icon');
+    if (icon) {
+        icon.className = window.isProSoundOn ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        icon.style.color = window.isProSoundOn ? '#0ECB81' : '#F6465D';
+    }
+};
+
 window.playProPing = function() {
+    if (!window.isProSoundOn) return; 
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator(); const gain = ctx.createGain();
