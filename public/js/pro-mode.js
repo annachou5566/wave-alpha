@@ -1891,7 +1891,7 @@ window.updateCommandCenterUI = function() {
 
         // 2. Dữ liệu Futures (Nếu có)
         let hasFutures = document.getElementById('cc-futures-status')?.innerText === '🟢 ACTIVE';
-        let fFunding = window.quantStats.fundingRate || 0;
+        let fFunding = window.quantStats.fundingRateObj ? window.quantStats.fundingRateObj.rate : 0;
         let liqLong = window.quantStats.longLiq || 0;
         let liqShort = window.quantStats.shortLiq || 0;
         
