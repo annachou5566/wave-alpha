@@ -1974,15 +1974,20 @@ function connectRealtimeChart(t) {
         if (!cluster) return;
         let tradesBox = document.getElementById('sc-live-trades');
         
-        // [NÂNG CẤP QUANT] Ngưỡng động dựa trên quy mô của đồng coin
-        let tokenDailyVol = window.currentChartToken ? (window.currentChartToken.volume?.daily_total || 5000000) : 5000000;
-        // Chuẩn cá mập: 0.05% Volume 24H, kẹp giữa mức tối thiểu 2.000$ và tối đa 100.000$
-        let baseWhaleThreshold = Math.max(2000, Math.min(100000, tokenDailyVol * 0.0005)); 
+        // [QUANT FIX] Dùng Live Average Ticket để làm thước đo chuẩn xác 100%
+        let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
         
-        let isWhale   = cluster.vol >= baseWhaleThreshold;
-        let isShark   = cluster.vol >= baseWhaleThreshold * 0.4 && cluster.vol < baseWhaleThreshold;
-        let isDolphin = cluster.vol >= baseWhaleThreshold * 0.15 && cluster.vol < baseWhaleThreshold * 0.4;
-        let isSweep   = cluster.count >= 6;
+        // Cá Voi: Gấp ít nhất 15 lần lệnh trung bình & TỐI THIỂU 15.000$
+        let whaleMin = Math.max(15000, currentAvgTicket * 15);
+        // Cá Mập: Gấp ít nhất 7 lần lệnh trung bình & TỐI THIỂU 5.000$
+        let sharkMin = Math.max(5000, currentAvgTicket * 7);
+        // Cá Heo: Gấp ít nhất 3 lần lệnh trung bình & TỐI THIỂU 2.000$
+        let dolphinMin = Math.max(2000, currentAvgTicket * 3);
+
+        let isWhale   = cluster.vol >= whaleMin;
+        let isShark   = cluster.vol >= sharkMin && cluster.vol < whaleMin;
+        let isDolphin = cluster.vol >= dolphinMin && cluster.vol < sharkMin;
+        let isSweep   = cluster.count >= 6 && cluster.vol >= 1000; // Sweep rác < 1k$ không thèm tính
 
         let icon = ''; let fontWeight = 'normal';
         if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
@@ -2216,8 +2221,9 @@ function connectRealtimeChart(t) {
                         
                         let hitWall = false;
                         if (window.scLocalOrderBook && window.scLocalOrderBook.bids) {
-                let tokenDailyVol = window.currentChartToken ? (window.currentChartToken.volume?.daily_total || 5000000) : 5000000;
-                let volThreshold = Math.max(5000, Math.min(200000, tokenDailyVol * 0.001));
+                // [QUANT FIX] Phát hiện Iceberg dựa trên áp lực mua/bán thực tế (15x Avg Ticket)
+                let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+                let volThreshold = Math.max(10000, currentAvgTicket * 15); // Lực đè tối thiểu 10k$
                             
                             for (let p in window.scLocalOrderBook.bids) {
                                 let price = parseFloat(p);
