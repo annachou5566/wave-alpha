@@ -984,12 +984,12 @@ function injectLayout() {
                             <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
                         </div>
                         
-                        <div style="margin-left: auto; display:flex; align-items:center; gap:12px; font-family:var(--font-num);">
+                        <div style="margin-left: auto; display:flex; align-items:center; gap:4px; font-family:var(--font-num); flex-wrap: wrap; justify-content: flex-end;">
                             
-                            <div style="display:flex; gap:10px; align-items:center; background:rgba(0,0,0,0.25); padding:4px 10px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
+                            <div style="display:flex; gap:6px; align-items:center; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
                                 <div style="display:flex; align-items:center; gap:4px; color:#527c82; font-size:10px; font-weight:700; font-family:var(--font-main);">
                                     <i class="fas fa-filter"></i>
-                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0;">
+                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 80px; text-overflow: ellipsis;">
                                         <option value="sweep">TẤT CẢ BOT</option>
                                         <option value="dolphin">TỪ CÁ HEO</option>
                                         <option value="shark">TỪ CÁ MẬP</option>
@@ -999,18 +999,18 @@ function injectLayout() {
                                 </div>
                             </div>
 
-                            <div style="display:flex; gap:10px; font-size:11px; font-weight:700; background:rgba(0,0,0,0.25); padding:4px 10px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
-                                <span title="Cá Voi" style="color:#cb55e3; display:flex; gap:4px; align-items:center;">🐋 <span id="sc-stat-whale">0</span></span>
-                                <span title="Cá Mập" style="color:#eaecef; display:flex; gap:4px; align-items:center;">🦈 <span id="sc-stat-shark">0</span></span>
-                                <span title="Cá Heo" style="color:#eaecef; display:flex; gap:4px; align-items:center;">🐬 <span id="sc-stat-dolphin">0</span></span>
-                                <span title="Sweep" style="color:#2af592; display:flex; gap:4px; align-items:center;">🤖 <span id="sc-stat-sweep">0</span></span>
+                            <div style="display:flex; gap:6px; font-size:11px; font-weight:700; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
+                                <span title="Cá Voi" style="color:#cb55e3; display:flex; gap:2px; align-items:center;">🐋 <span id="sc-stat-whale">0</span></span>
+                                <span title="Cá Mập" style="color:#eaecef; display:flex; gap:2px; align-items:center;">🦈 <span id="sc-stat-shark">0</span></span>
+                                <span title="Cá Heo" style="color:#eaecef; display:flex; gap:2px; align-items:center;">🐬 <span id="sc-stat-dolphin">0</span></span>
+                                <span title="Sweep" style="color:#2af592; display:flex; gap:2px; align-items:center;">🤖 <span id="sc-stat-sweep">0</span></span>
                             </div>
 
-                            <div style="display:flex; align-items:center; gap:4px; color:#848e9c; font-size:10px; font-weight:700; font-family:var(--font-main);">
+                            <div style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03); color:#848e9c; font-size:10px; font-weight:700; font-family:var(--font-main);">
                                 <i class="fas fa-palette"></i>
-                                <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0;">
-                                    <option value="cyber">WAVE ALPHA</option>
-                                    <option value="trad">TRUYỀN THỐNG</option>
+                                <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 70px; text-overflow: ellipsis;">
+                                    <option value="cyber">ALPHA</option>
+                                    <option value="trad">CLASSIC</option>
                                 </select>
                             </div>
                             
@@ -1085,14 +1085,15 @@ function injectLayout() {
                     </div>
                 </div>
 
-                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #3B82F6;">
-                    <div class="term-w-title" style="color: #3B82F6;">BINANCE NET FLOW</div>
-                    <div class="term-row"><span class="term-lbl">5 Phút</span><span id="cc-api-nf-5m" class="term-val">...</span></div>
-                    <div class="term-row"><span class="term-lbl">1 Giờ</span><span id="cc-api-nf-1h" class="term-val">...</span></div>
-                    <div class="term-row"><span class="term-lbl">4 Giờ</span><span id="cc-api-nf-4h" class="term-val">...</span></div>
-                    <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">24 Giờ</span><span id="cc-api-nf-24h" class="term-val">...</span></div>
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #3B82F6; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+                    <div class="term-w-title" style="color: #3B82F6; margin-bottom: auto;">BINANCE NET FLOW</div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
+                        <div class="term-row"><span class="term-lbl">5 Phút</span><span id="cc-api-nf-5m" class="term-val">...</span></div>
+                        <div class="term-row"><span class="term-lbl">1 Giờ</span><span id="cc-api-nf-1h" class="term-val">...</span></div>
+                        <div class="term-row"><span class="term-lbl">4 Giờ</span><span id="cc-api-nf-4h" class="term-val">...</span></div>
+                        <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">24 Giờ</span><span id="cc-api-nf-24h" class="term-val">...</span></div>
+                    </div>
                 </div>
-            </div>
 
             <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
                 <div class="term-widget" style="margin-bottom: 0;">
@@ -1883,7 +1884,7 @@ window.updateCommandCenterUI = function() {
 
             let fEl = document.getElementById('cc-funding-val');
             if (fEl) {
-                fEl.innerHTML = `<span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span><span style="color:#527c82; margin: 0 2px;">/</span><span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span>`;
+                fEl.innerHTML = `<span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span><span style="color:#527c82; margin: 0 4px;">/</span><span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span>`;
             }
         }
     };
