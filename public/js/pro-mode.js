@@ -1060,16 +1060,13 @@ function injectLayout() {
                     <div id="sc-chart-container" style="flex:1; position: relative; overflow: hidden;">
                         <div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
                         
-                        <div id="sc-custom-tooltip" style="display:none; position: absolute; top: 10px; left: 10px; padding: 8px 12px; background: rgba(14, 18, 22, 0.9); border-radius: 4px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 500; pointer-events: none; z-index: 5; border: 1px solid rgba(255,255,255,0.02);">
-                            <div id="tp-symbol" style="color:#eaecef; font-weight:800; font-size:12px; margin-bottom: 3px;">---</div>
-                            <div style="display:flex; gap: 8px;">
-                                <span>O: <strong id="tp-o" style="color:#eaecef;">--</strong></span>
-                                <span>H: <strong id="tp-h" style="color:#00F0FF;">--</strong></span>
-                                <span>L: <strong id="tp-l" style="color:#FF007F;">--</strong></span>
-                                <span>C: <strong id="tp-c" style="color:#eaecef;">--</strong></span>
-                            </div>
-                            <div>V: <strong id="tp-v" style="color:#eaecef;">--</strong></div>
-                            <div>T: <strong id="tp-t" style="color:#5e6673;">--</strong></div>
+                        <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 15px; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; color: #848e9c; font-size: 12px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+                            <span id="tp-symbol" style="color:#eaecef; font-weight:800; font-size:15px;">---</span>
+                            <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span>
+                            <span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span>
+                            <span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span>
+                            <span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span>
+                            <span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
                         </div>
                     </div>
 
@@ -2711,70 +2708,79 @@ window.openProChart = function(t, isTimeSwitch = false) {
             const newRect = entries[0].contentRect;
             if (newRect.width > 0 && newRect.height > 0) tvChart.applyOptions({ height: Math.max(0, newRect.height - 5), width: newRect.width });
         }).observe(container);
-        // [PROFESSIONAL] LOGIC RÊ CHUỘT HIỆN THÔNG SỐ (CROSSHAIR MOVE)
+
+// [PROFESSIONAL] LOGIC RÊ CHUỘT HIỆN THÔNG SỐ (CROSSHAIR MOVE) CHUẨN TRADINGVIEW
         const tooltipEl = document.getElementById('sc-custom-tooltip');
         const tpSymbol = document.getElementById('tp-symbol');
-        const tpO = document.getElementById('tp-o'); const tpH = document.getElementById('tp-h');
-        const tpL = document.getElementById('tp-l'); const tpC = document.getElementById('tp-c');
-        const tpV = document.getElementById('tp-v'); const tpT = document.getElementById('tp-t');
+        const tpV = document.getElementById('tp-v'); 
         
-        // Gọi lệnh từ biến tvChart
         tvChart.subscribeCrosshairMove((param) => {
-            if (param.point === undefined || !param.time || param.point.x < 0 || param.point.y < 0) {
-                if (tooltipEl) tooltipEl.style.display = 'none';
-                return;
-            }
-
-            if (tooltipEl) {
-                tooltipEl.style.display = 'block';
-                tooltipEl.style.left = '10px'; 
-                tooltipEl.style.top = '10px'; 
-            }
+            if (tooltipEl) tooltipEl.style.display = 'flex';
             if (tpSymbol) tpSymbol.innerText = (window.currentChartToken && window.currentChartToken.symbol) || '---';
 
+            // [CHUẨN TRADINGVIEW] Khi rút chuột ra ngoài, không ẩn tooltip đi, mà giữ nguyên số liệu nến cuối
+            if (param.point === undefined || !param.time || param.point.x < 0 || param.point.y < 0) {
+                return; 
+            }
+
             let dataPoint, ohlc, volume;
+            const tpoWrap = document.getElementById('tp-o-wrap');
+            const tphWrap = document.getElementById('tp-h-wrap');
+            const tplWrap = document.getElementById('tp-l-wrap');
+            const tpcWrap = document.getElementById('tp-c-wrap');
             
             if (window.currentChartInterval === 'tick') {
-                // Chế độ Tick/Line: Chỉ có giá Close
+                // Khung Tick (Area Chart) chỉ hiện Price và Volume, ẩn O H L
                 if (tvLineSeries) dataPoint = param.seriesData.get(tvLineSeries);
-                if (tpC) tpC.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(dataPoint ? dataPoint.value : 0) : formatPrice(dataPoint ? dataPoint.value : 0);
-                if (tpO) {
-                    tpO.parentElement.style.display = 'none'; 
-                    tpH.parentElement.style.display = 'none'; 
-                    tpL.parentElement.style.display = 'none';
-                }
-                if (tvVolumeSeries) volume = param.seriesData.get(tvVolumeSeries);
-                if (tpV) tpV.innerText = formatCompactUSD(volume ? volume.value : 0);
-            } else {
-                // Chế độ Nến: Đủ OHLVC
-                if (tvCandleSeries) ohlc = param.seriesData.get(tvCandleSeries);
-                if (ohlc) {
-                    if (tpO) {
-                        tpO.parentElement.style.display = 'inline'; 
-                        tpH.parentElement.style.display = 'inline'; 
-                        tpL.parentElement.style.display = 'inline';
-                        tpO.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.open) : formatPrice(ohlc.open);
-                        tpH.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.high) : formatPrice(ohlc.high);
-                        tpL.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.low) : formatPrice(ohlc.low);
-                        tpC.innerText = window.pluginFormatPrice ? window.pluginFormatPrice(ohlc.close) : formatPrice(ohlc.close);
-                        tpC.style.color = ohlc.close >= ohlc.open ? '#00F0FF' : '#FF007F';
+                if (dataPoint) {
+                    if (tpoWrap) tpoWrap.style.display = 'none';
+                    if (tphWrap) tphWrap.style.display = 'none';
+                    if (tplWrap) tplWrap.style.display = 'none';
+                    
+                    if (tpcWrap) {
+                        tpcWrap.innerHTML = `Price <span id="tp-c" style="color:#00F0FF;">${formatPrice(dataPoint.value)}</span>`;
                     }
                 }
-                if (tvVolumeSeries) volume = param.seriesData.get(tvVolumeSeries);
-                if (tpV) tpV.innerText = formatCompactUSD(volume ? volume.value : 0);
-            }
-            
-            // Format thời gian rê chuột đẹp
-            if (tpT) {
-                let timeObj = param.time; 
-                let timestamp = 0;
-                if (typeof timeObj === 'number') timestamp = timeObj * 1000;
-                else if (timeObj.year) timestamp = new Date(timeObj.year, timeObj.month - 1, timeObj.day, timeObj.hour, timeObj.minute, timeObj.second).getTime();
-                else timestamp = new Date(timeObj).getTime(); 
+                if (tvVolumeSeries) {
+                    volume = param.seriesData.get(tvVolumeSeries);
+                    if (tpV) tpV.innerText = formatCompactUSD(volume ? volume.value : 0);
+                }
+            } else {
+                // Khung Nến (Candlestick): Hiện đủ O H L C
+                if (tvCandleSeries) ohlc = param.seriesData.get(tvCandleSeries);
+                if (ohlc) {
+                    if (tpoWrap) tpoWrap.style.display = 'inline';
+                    if (tphWrap) tphWrap.style.display = 'inline';
+                    if (tplWrap) tplWrap.style.display = 'inline';
+                    
+                    // Trả lại cấu trúc HTML ban đầu cho C
+                    if (tpcWrap && !tpcWrap.innerHTML.startsWith('C')) {
+                        tpcWrap.innerHTML = `C <span id="tp-c">--</span>`;
+                    }
+                    
+                    const elO = document.getElementById('tp-o');
+                    const elH = document.getElementById('tp-h');
+                    const elL = document.getElementById('tp-l');
+                    const elC = document.getElementById('tp-c');
+                    
+                    if (elO) elO.innerText = formatPrice(ohlc.open);
+                    if (elH) elH.innerText = formatPrice(ohlc.high);
+                    if (elL) elL.innerText = formatPrice(ohlc.low);
+                    if (elC) {
+                        elC.innerText = formatPrice(ohlc.close);
+                        // Đổi màu C dựa theo nến Tăng (Xanh) hay Giảm (Đỏ)
+                        elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D';
+                    }
+                }
                 
-                tpT.innerText = formatInt(new Date(timestamp).toLocaleDateString('en-GB')) + ' ' + new Date(timestamp).toLocaleTimeString('en-GB', {hour12: false});
+                if (tvVolumeSeries) {
+                    volume = param.seriesData.get(tvVolumeSeries);
+                    if (tpV) tpV.innerText = formatCompactUSD(volume ? volume.value : 0);
+                }
             }
         });
+
+        
         // BẮT ĐẦU: LẤY LỊCH SỬ RỒI MỚI CHẠY REALTIME
         fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
             
