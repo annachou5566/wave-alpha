@@ -1743,57 +1743,7 @@ async function loadFromCloud(isSilent = false) {
         const listDEX = exchanges.filter(e => e.type !== 'EXCHANGE');
 
 
-        const generateCards = (list) => {
-            let html = '';
-            list.forEach(ex => {
-
-                if(ex.link) {
-
-
-                    let logoUrl = ex.logo || 'https://placehold.co/50x50/333/999?text=' + ex.name.charAt(0).toUpperCase();
-
-                    html += `
-                    <div class="arsenal-card" onclick="trackAffiliateClick('${ex.name}'); window.open('${ex.link}', '_blank'); playSfx('click')">
-                        <img src="${logoUrl}" class="ex-logo">
-                        <div class="ex-info">
-                            <div class="ex-name">${ex.name}</div>
-                            <div class="ex-bonus" style="opacity: 0.7; font-weight: normal;">${ex.type}</div>
-                        </div>
-                    </div>`;
-                }
-            });
-            return html;
-        };
-
-
-        let cexHtml = generateCards(listCEX);
-        let dexHtml = generateCards(listDEX);
-
-
-        if (cexHtml) {
-            container.innerHTML += `<div class="text-sub small fw-bold mb-2 ps-1 text-uppercase" style="letter-spacing:1px; font-size:0.7rem"><i class="fas fa-building me-2"></i> CENTRALIZED EXCHANGES (CEX)</div>`;
-            container.innerHTML += `<div class="arsenal-grid mb-4">${cexHtml}</div>`;
-        }
-
-
-        if (dexHtml) {
-            container.innerHTML += `<div class="text-sub small fw-bold mb-2 ps-1 text-uppercase" style="letter-spacing:1px; font-size:0.7rem"><i class="fas fa-wallet me-2"></i> DECENTRALIZED & WEB3</div>`;
-            container.innerHTML += `<div class="arsenal-grid mb-2">${dexHtml}</div>`;
-        }
-    }
-
-
-
-    function trackAffiliateClick(exchangeId) {
-        console.log("Tracking Click:", exchangeId);
-
-        if(typeof gtag === 'function') {
-            gtag('event', 'click_affiliate', {
-                'event_category': 'monetization',
-                'event_label': exchangeId
-            });
-        }
-    }
+        
 
 
     function renderFooter() {
@@ -1842,8 +1792,7 @@ brandImg.style.display = 'block';
     else { img.style.display = 'none'; }
 
 
-    let arsenalList = siteConfig.arsenal_items || [];
-    renderArsenalInputs(arsenalList);
+    
 
     new bootstrap.Modal(document.getElementById('configModal')).show();
 }
@@ -5131,69 +5080,7 @@ function restoreData(input) {
     
 
 
-    function renderArsenalInputs(items = []) {
-        const container = document.getElementById('cfg-arsenal-list');
-        container.innerHTML = '';
-
-        items.forEach((item, index) => {
-            addArsenalItem(item, index);
-        });
-    }
-
-
-    function addArsenalItem(data = null, index = null) {
-        const container = document.getElementById('cfg-arsenal-list');
-        const uniqueId = Date.now() + Math.random().toString(36).substr(2, 9); 
-
-        const name = data ? data.name : '';
-        const link = data ? data.link : '';
-        const logo = data ? data.logo : '';
-        const type = data ? data.type : 'EXCHANGE'; 
-
-        const html = `
-        <div class="p-3 rounded border border-secondary border-opacity-25 bg-dark arsenal-item-row" data-id="${uniqueId}">
-            <div class="d-flex gap-2 mb-2">
-                <input type="text" class="form-control form-control-sm inp-name" placeholder="Tên sàn (VD: Binance)" value="${name}" style="flex:1">
-                <select class="form-select form-select-sm inp-type" style="width:130px">
-                    <option value="EXCHANGE" ${type==='EXCHANGE'?'selected':''}>Sàn CEX</option>
-                    <option value="WEB3 WALLET" ${type==='WEB3 WALLET'?'selected':''}>Binance Wallet</option>
-                    <option value="DEX SWAP" ${type==='DEX SWAP'?'selected':''}>Sàn DEX</option>
-                </select>
-            </div>
-
-            <div class="d-flex gap-2 mb-2 align-items-center">
-                <input type="text" class="form-control form-control-sm inp-link" placeholder="Link Ref (https://...)" value="${link}">
-
-                <div class="position-relative btn btn-sm btn-outline-secondary" style="width:35px; overflow:hidden;" title="Logo">
-                    <i class="fas fa-camera"></i>
-                    <input type="file" onchange="uploadImage(this, 'prev-${uniqueId}', 'val-${uniqueId}')" style="position:absolute;left:0;top:0;opacity:0;cursor:pointer;width:100%;height:100%">
-                </div>
-                <input type="hidden" class="inp-logo" id="val-${uniqueId}" value="${logo}">
-                <img id="prev-${uniqueId}" src="${logo}" style="width:30px;height:30px;object-fit:contain; ${logo?'':'display:none'}; border:1px solid #444; border-radius:4px">
-            </div>
-
-            <div class="d-flex justify-content-between">
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-dark border-secondary" onclick="moveItem(this, -1)" title="Lên"><i class="fas fa-arrow-up"></i></button>
-                    <button class="btn btn-sm btn-dark border-secondary" onclick="moveItem(this, 1)" title="Xuống"><i class="fas fa-arrow-down"></i></button>
-                </div>
-                <button class="btn btn-sm btn-outline-danger border-0" onclick="this.closest('.arsenal-item-row').remove()"><i class="fas fa-trash me-1"></i> Xóa</button>
-            </div>
-        </div>`;
-
-        container.insertAdjacentHTML('beforeend', html);
-    }
-
-
-    function moveItem(btn, direction) {
-        const row = btn.closest('.arsenal-item-row');
-        const container = document.getElementById('cfg-arsenal-list');
-        if (direction === -1 && row.previousElementSibling) {
-            container.insertBefore(row, row.previousElementSibling);
-        } else if (direction === 1 && row.nextElementSibling) {
-            container.insertBefore(row.nextElementSibling, row);
-        }
-    }
+    
 
 
 function calculateSafeAvg(id, currentTotalVol) {
