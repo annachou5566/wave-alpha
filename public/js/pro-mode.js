@@ -2021,7 +2021,28 @@ function formatCompactUSD(num) {
 
 function connectRealtimeChart(t) {
     if (chartWs) { chartWs.close(); }
-
+// Khởi tạo Web Worker nếu chưa có
+    if (!window.quantWorker) {
+        window.quantWorker = new Worker('public/js/quant-worker.js');
+        
+        // Lắng nghe kết quả từ Worker trả về
+        window.quantWorker.onmessage = function(e) {
+            if (e.data.cmd === 'STATS_UPDATE') {
+                // Nhận Data và gán thẳng vào biến quantStats của hệ thống
+                let s = e.data.stats;
+                window.quantStats.spread = s.spread;
+                window.quantStats.trend = s.trend;
+                window.quantStats.drop = s.drop;
+                window.quantStats.ofi = s.ofi;
+                window.quantStats.zScore = s.zScore;
+                window.quantStats.currentSpeed = s.currentSpeed;
+                window.quantStats.algoLimit = s.algoLimit;
+                window.quantStats.avgSpeed60s = s.avgSpeed60s;
+            }
+        };
+    }
+    // Gửi lệnh Clear Data cũ cho Worker
+    window.quantWorker.postMessage({ cmd: 'INIT' });
     // [FIX BÓNG MA] Tạo Session ID dựa trên thời gian thực để khóa luồng dữ liệu
     window.activeChartSessionId = Date.now() + '_' + t.symbol;
     let currentSession = window.activeChartSessionId;
@@ -2217,7 +2238,7 @@ function connectRealtimeChart(t) {
     }
 
     // ==========================================
-    // 2. CỖ MÁY TOÁN HỌC CHẠY NGẦM (MỖI GIÂY 1 LẦN)
+    // 2. CỖ MÁY UI CHẠY NGẦM (MỖI GIÂY 1 LẦN) - ĐÃ ĐƯỢC TỐI ƯU CỰC HẠN
     // ==========================================
     if (window.scCalcInterval) clearInterval(window.scCalcInterval);
     window.scCalcInterval = setInterval(() => {
@@ -2225,6 +2246,7 @@ function connectRealtimeChart(t) {
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
         const now = Date.now();
+        // Dọn rác cụm lệnh bị kẹt (Chống treo giao diện nếu ngừng giao dịch)
         if (window.scCurrentCluster && (now - window.scCurrentCluster.startT >= 1000)) {
             window.flushSmartTape(window.scCurrentCluster);
             window.scCurrentCluster = null;
@@ -2236,82 +2258,25 @@ function connectRealtimeChart(t) {
             expireTickIdx++;
         }
         if (expireTickIdx > 0) window.scTickHistory.splice(0, expireTickIdx);
-        
-        const hist15s = window.scTickHistory.filter(x => now - x.t <= 15000);
-        let spread = 0;
-        if (hist15s.length > 5) {
-            let prices = hist15s.map(x => x.p).sort((a,b) => a - b);
-            let p10 = prices[Math.floor(prices.length * 0.1)];
-            let p90 = prices[Math.floor(prices.length * 0.9)];
-            if (p10 > 0) spread = ((p90 - p10) / p10) * 100;
-        }
-        window.quantStats.spread = spread; 
 
-        const hist60s = window.scTickHistory.filter(x => now - x.t <= 60000);
-        let trend = 0;
-        if (hist60s.length > 10) {
-            let oldHalf = hist60s.filter(x => now - x.t > 30000);
-            let newHalf = hist60s.filter(x => now - x.t <= 30000);
-            let vwapOld = oldHalf.reduce((s, x) => s + x.p * x.v, 0) / (oldHalf.reduce((s, x) => s + x.v, 0) || 1);
-            let vwapNew = newHalf.reduce((s, x) => s + x.p * x.v, 0) / (newHalf.reduce((s, x) => s + x.v, 0) || 1);
-            if (vwapOld > 0 && vwapNew > 0) trend = ((vwapNew - vwapOld) / vwapOld) * 100;
-        }
-        window.quantStats.trend = trend;
-
-        let drop = 0;
-        if (window.scTickHistory.length > 20) {
-            let prices5m = window.scTickHistory.map(x => x.p).sort((a,b) => a - b);
-            let peakP95 = prices5m[Math.floor(prices5m.length * 0.95)];
-            if (peakP95 > 0) drop = ((window.scLastPrice - peakP95) / peakP95) * 100;
-        }
-        window.quantStats.drop = drop; 
-
-        let buyVol15s = hist15s.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
-        let sellVol15s = hist15s.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
-        let totalVol15s = buyVol15s + sellVol15s;
-        window.quantStats.ofi = totalVol15s > 0 ? ((buyVol15s - sellVol15s) / totalVol15s) : 0;
-
-        let currentSpeed = window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5; 
-        if (!window.quantStats.speedHist) window.quantStats.speedHist = [];
-        window.quantStats.speedHist.push(currentSpeed);
-        if (window.quantStats.speedHist.length > 60) window.quantStats.speedHist.shift();
-
-        let zScore = 0;
-        if (window.quantStats.speedHist.length >= 10) {
-            let mean = window.quantStats.speedHist.reduce((a, b) => a + b, 0) / window.quantStats.speedHist.length;
-            let variance = window.quantStats.speedHist.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / window.quantStats.speedHist.length;
-            let stdDev = Math.sqrt(variance);
-            const baselineStd = Math.max(1000, mean * 0.15);
-            if (stdDev < baselineStd) stdDev = baselineStd; 
-            zScore = (currentSpeed - mean) / stdDev;
-        }
-        window.quantStats.zScore = zScore;
-        
-        let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
-        let txPerSec = window.scSpeedWindow.length / 5; 
-        let algoLimit = currentSpeed * 0.15; 
-        if (spread <= 0.5) algoLimit *= 1.0;
-        else if (spread <= 1.5) algoLimit *= 0.8;
-        else if (spread <= 3.0) algoLimit *= 0.5;
-        else algoLimit *= 0.2;
-        if (txPerSec < 3) algoLimit *= 0.5;
-        algoLimit = Math.round(algoLimit);
-
+        // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm và đẩy vào window.quantStats) ---
         let algoEl = document.getElementById('sc-algo-limit');
-        if (algoEl) {
-            let limitText = `< $${formatCompactUSD(algoLimit)}`;
+        if (algoEl && window.quantStats.algoLimit !== undefined) {
+            let algoLmt = window.quantStats.algoLimit;
+            let limitText = `< $${formatCompactUSD(algoLmt)}`;
             let limitColor = '#0ECB81'; let bgColor = 'rgba(14,203,129,0.1)'; let bdColor = 'rgba(14,203,129,0.3)';
-            if (algoLimit < 10 || algoLimit < 50) { 
-                limitColor = '#F6465D'; limitText = algoLimit < 10 ? '💀 DEAD' : limitText; 
+            if (algoLmt < 10 || algoLmt < 50) { 
+                limitColor = '#F6465D'; limitText = algoLmt < 10 ? '💀 DEAD' : limitText; 
                 bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
-            } else if (algoLimit <= 200) { 
+            } else if (algoLmt <= 200) { 
                 limitColor = '#F0B90B'; bgColor = 'rgba(240,185,11,0.1)'; bdColor = 'rgba(240,185,11,0.3)';
             }
             algoEl.innerHTML = `ALGO LIMIT: ${limitText}`;
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        if (drop <= -0.6 && currentSpeed > (avgSpeed60s * 1.5)) {
+        // --- PHÁT HIỆN ICEBERG & STOP-HUNT (Dùng dữ liệu từ Worker kết hợp Sổ lệnh) ---
+        if (window.quantStats.drop <= -0.6 && window.quantStats.currentSpeed > ((window.quantStats.avgSpeed60s || 0) * 1.5)) {
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries) {
                 let lastTick = window.scTickHistory[window.scTickHistory.length - 1];
@@ -2345,6 +2310,7 @@ function connectRealtimeChart(t) {
             }
         }
 
+        // --- BẢN ĐỒ TƯỜNG THANH KHOẢN (HEATMAP) ---
         if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
@@ -2379,6 +2345,7 @@ function connectRealtimeChart(t) {
             }
         }
 
+        // --- BẮT BÀI ICEBERG ABSORPTION ---
         if (!window.scLastIcebergTime) window.scLastIcebergTime = 0;
         if (now - window.scLastIcebergTime > 10000 && window.scTickHistory && window.scTickHistory.length > 10) {
             let recent3s = window.scTickHistory.filter(x => now - x.t <= 3000);
@@ -2407,6 +2374,8 @@ function connectRealtimeChart(t) {
             }
         }
 
+        // --- ĐỒNG BỘ RAM CACHE BẢO VỆ STATE ---
+        let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
         if (window.AlphaChartState && window.AlphaChartState[sym]) {
             window.AlphaChartState[sym].netFlow = window.scNetFlow;
             window.AlphaChartState[sym].whaleCount = window.scWhaleCount;
@@ -2424,6 +2393,14 @@ function connectRealtimeChart(t) {
             window.AlphaChartState[sym].quantStats = window.quantStats;
         }
 
+        // [KIẾN TRÚC FIX] Dọn rác Speed Window bằng 1 nhát chém Splice
+        let expireSpeedIdx = 0;
+        while (expireSpeedIdx < window.scSpeedWindow.length && now - window.scSpeedWindow[expireSpeedIdx].t > 5000) {
+            expireSpeedIdx++;
+        }
+        if (expireSpeedIdx > 0) window.scSpeedWindow.splice(0, expireSpeedIdx);
+
+        // --- CẬP NHẬT CÁC WIDGET GIAO DIỆN (UI) ---
         let displaySpeed = window.scSpeedWindow.filter(x => now - x.t <= 5000).reduce((s, x) => s + x.v, 0) / 5;
         let speedElUI = document.getElementById('sc-stat-match-speed');
         if(speedElUI) speedElUI.innerText = '$' + formatCompactUSD(displaySpeed) + ' /s';
@@ -2437,15 +2414,9 @@ function connectRealtimeChart(t) {
             flowElUI.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
         }
 
-        // [KIẾN TRÚC FIX] Dọn rác Speed Window bằng 1 nhát chém Splice
-        let expireSpeedIdx = 0;
-        while (expireSpeedIdx < window.scSpeedWindow.length && now - window.scSpeedWindow[expireSpeedIdx].t > 5000) {
-            expireSpeedIdx++;
-        }
-        if (expireSpeedIdx > 0) window.scSpeedWindow.splice(0, expireSpeedIdx);
-
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
+        
     }, 1000);
 
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
@@ -2502,7 +2473,8 @@ function connectRealtimeChart(t) {
             let nowT = Date.now();
 
             window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
-
+// Bắn đạn sang cho Worker tính toán ngầm
+            window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
             // [CHỐNG SẬP CPU FINAL BOSS] Throttling giới hạn Render Canvas tối đa 6 FPS (150ms/lần)
             // Thay vì vẽ 200 lần/giây theo tốc độ của Binance, giờ Chart chỉ vẽ những gì mượt mà nhất.
             if (window.currentChartInterval === 'tick') {
