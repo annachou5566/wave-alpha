@@ -2626,7 +2626,19 @@ window.openProChart = function(t, isTimeSwitch = false) {
     // Reset Chart & Dọn rác UI cũ
     const container = document.getElementById('sc-chart-container');
     if (tvChart) { tvChart.remove(); tvChart = null; tvLineSeries = null; tvCandleSeries = null; tvVolumeSeries = null; }
-    container.innerHTML = ''; 
+    
+    container.innerHTML = `
+        <div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
+        
+        <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 15px; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; color: #848e9c; font-size: 12px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+            <span id="tp-symbol" style="color:#eaecef; font-weight:800; font-size:15px;">${t.symbol}</span>
+            <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span>
+            <span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span>
+            <span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span>
+            <span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span>
+            <span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
+        </div>
+    `;
     
     // Nếu là bấm sang Token mới (không phải đổi khung giờ) -> Quét sạch bảng Live Trades
     if (!isTimeSwitch) {
