@@ -3450,10 +3450,14 @@ window.stopFuturesEngine = function() {
     if (liquidationWs) { liquidationWs.close(); liquidationWs = null; }
 };
 // HÀM: Bơm dữ liệu Token Yêu thích vào Watchlist Sidebar (Nâng cấp Hybrid)
-window.renderProWatchlist = function(searchTerm = '') {
+window.renderProWatchlist = function(passedSearchTerm) {
     const wlBody = document.getElementById('sc-watchlist-body');
     if (!wlBody) return;
     
+    // [FIX LỖI MẤT KẾT QUẢ] Luôn ưu tiên đọc giá trị đang gõ trong ô Search để không bị Reset khi Server update giá Real-time
+    let searchInput = document.getElementById('wl-search');
+    let searchTerm = typeof passedSearchTerm === 'string' ? passedSearchTerm : (searchInput ? searchInput.value : '');
+
     let tokensToRender = [];
     let isSearching = searchTerm && searchTerm.trim().length > 0;
     let isShowingSuggested = false;
@@ -3477,7 +3481,6 @@ window.renderProWatchlist = function(searchTerm = '') {
 
     let html = '';
     
-    // Nếu là hàng gợi ý, in thêm cái tiêu đề cảnh báo
     if (isShowingSuggested) {
         html += '<div style="padding:6px 15px; font-size:8.5px; color:#F0B90B; font-weight:800; background:rgba(240,185,11,0.05); border-bottom:1px solid #1A1F26; text-align:center;">CHƯA CÓ WATCHLIST - GỢI Ý TOP 20 TRENDING</div>';
     }
@@ -3490,7 +3493,6 @@ window.renderProWatchlist = function(searchTerm = '') {
         let sign = isUp ? '+' : '';
         let priceStr = formatPrice(t.price);
         
-        // Nút Sao phát sáng nếu đã ghim, mờ đi nếu chưa ghim
         let pinIconColor = isPinned ? '#F0B90B' : '#474d57';
 
         html += `
@@ -3499,7 +3501,7 @@ window.renderProWatchlist = function(searchTerm = '') {
                     <i class="fas fa-star" style="color:${pinIconColor}; font-size:10px; margin-right:6px; transition:0.2s;" 
                        onmouseover="this.style.color='#F0B90B'" 
                        onmouseout="this.style.color='${pinIconColor}'"
-                       onclick="event.stopPropagation(); window.togglePin('${sym}'); window.renderProWatchlist(document.getElementById('wl-search')?.value);"></i>
+                       onclick="event.stopPropagation(); window.togglePin('${sym}'); window.renderProWatchlist();"></i>
                     <img src="${t.icon || 'assets/tokens/default.png'}" onerror="this.src='assets/tokens/default.png'">
                     ${sym}
                 </div>
