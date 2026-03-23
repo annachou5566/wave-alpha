@@ -987,13 +987,6 @@ function injectLayout() {
                         <div style="margin-left: auto; display:flex; align-items:center; gap:12px; font-family:var(--font-num);">
                             
                             <div style="display:flex; gap:10px; align-items:center; background:rgba(0,0,0,0.25); padding:4px 10px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
-                                
-                                <div onclick="window.toggleHeatmapUI()" style="cursor:pointer; display:flex; align-items:center; gap:5px; color:#41e6e7; font-size:10px; font-weight:700; font-family:var(--font-main);">
-                                    <i id="sc-heatmap-icon" class="fas fa-eye"></i> <span style="padding-top:1px;">HEATMAP</span>
-                                </div>
-                                
-                                <span style="color:#2b3139;">|</span>
-                                
                                 <div style="display:flex; align-items:center; gap:4px; color:#527c82; font-size:10px; font-weight:700; font-family:var(--font-main);">
                                     <i class="fas fa-filter"></i>
                                     <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0;">
@@ -1001,6 +994,7 @@ function injectLayout() {
                                         <option value="dolphin">TỪ CÁ HEO</option>
                                         <option value="shark">TỪ CÁ MẬP</option>
                                         <option value="whale">CHỈ CÁ VOI</option>
+                                        <option value="none" style="color:var(--term-dim)">🚫 ẨN TẤT CẢ</option>
                                     </select>
                                 </div>
                             </div>
@@ -1074,19 +1068,29 @@ function injectLayout() {
             </div>
 
             <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
-                <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up);">
-                    <div class="term-w-title">NET FLOW (REAL)</div>
-                    <div id="cc-net-flow" class="term-val" style="font-size: 14px; color: var(--term-up);">+$0</div>
-                </div>
-                
-                <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim);">
-                    <div class="term-w-title">ALGO SPEED <span id="cc-speed" style="color:var(--term-text); text-transform:none;">$0/s</span></div>
-                    <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤖 TĨNH LẶNG (XÁM)</div>
-                    <div style="display: flex; height: 3px; border-radius: 1px; overflow: hidden; background: var(--term-border); position: relative;">
-                        <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s linear;"></div>
-                        <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s linear;"></div>
-                        <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #000; z-index: 2;"></div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up); padding-bottom: 4px;">
+                        <div class="term-w-title">REALTIME FLOW</div>
+                        <div id="cc-net-flow" class="term-val" style="font-size: 14px; color: var(--term-up);">+$0</div>
                     </div>
+                    
+                    <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim);">
+                        <div class="term-w-title">ALGO <span id="cc-speed" style="color:var(--term-text); text-transform:none;">$0/s</span></div>
+                        <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤖 TĨNH LẶNG (XÁM)</div>
+                        <div style="display: flex; height: 3px; border-radius: 1px; overflow: hidden; background: var(--term-border); position: relative;">
+                            <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s linear;"></div>
+                            <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s linear;"></div>
+                            <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #000; z-index: 2;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #3B82F6;">
+                    <div class="term-w-title" style="color: #3B82F6;">BINANCE NET FLOW</div>
+                    <div class="term-row"><span class="term-lbl">5 Phút</span><span id="cc-api-nf-5m" class="term-val">...</span></div>
+                    <div class="term-row"><span class="term-lbl">1 Giờ</span><span id="cc-api-nf-1h" class="term-val">...</span></div>
+                    <div class="term-row"><span class="term-lbl">4 Giờ</span><span id="cc-api-nf-4h" class="term-val">...</span></div>
+                    <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">24 Giờ</span><span id="cc-api-nf-24h" class="term-val">...</span></div>
                 </div>
             </div>
 
@@ -1918,6 +1922,12 @@ function connectRealtimeChart(t) {
         let filterEl = document.getElementById('sc-fish-filter');
         let fVal = filterEl ? filterEl.value : 'sweep';
 
+        // [TỐI ƯU UI] Ẩn toàn bộ cá nếu chọn "ẨN TẤT CẢ" HOẶC đang ở khung nến (>= 1m)
+        if (fVal === 'none' || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
+            try { activeSeries.setMarkers([]); } catch (e) {}
+            return;
+        }
+
         // Lọc mảng lịch sử
         let filteredMarkers = window.scChartMarkers.filter(m => {
             if (!m.fishType) return true; 
@@ -1927,6 +1937,9 @@ function connectRealtimeChart(t) {
             if (fVal === 'sweep') return true;
             return false;
         });
+
+        // Xử lý làm tròn thời gian...
+        // ... (Giữ nguyên toàn bộ phần bên dưới của hàm này) ...
 
         // Xử lý làm tròn thời gian (Snap to Candle) để thư viện chịu vẽ trên khung lớn
         let intervalSec = 0;
@@ -1972,6 +1985,11 @@ function connectRealtimeChart(t) {
 
     window.flushSmartTape = function(cluster) {
         if (!cluster) return;
+        
+        // [TỐI ƯU UI] Chặn in lệnh ra bảng Live Trades nếu user chọn "Ẩn Tất Cả"
+        let filterEl = document.getElementById('sc-fish-filter');
+        if (filterEl && filterEl.value === 'none') return;
+        
         let tradesBox = document.getElementById('sc-live-trades');
         
         // [QUANT FIX] Dùng Live Average Ticket để làm thước đo chuẩn xác 100%
@@ -3116,7 +3134,20 @@ window.updateSmartMoneyRadar = function(apiData) {
 
     const fmtUsd = (val) => val && !isNaN(val) ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
     const fmtPrice = (val) => val && !isNaN(val) ? parseFloat(val).toPrecision(5) : '--';
+// [UPDATE DATA FLOW HISTORY] Hàm format Net Flow +/-
+    const fmtNetFlow = (val) => {
+        let n = parseFloat(val || 0);
+        if (isNaN(n) || n === 0) return '<span style="color:var(--term-dim)">$0</span>';
+        let color = n >= 0 ? 'var(--term-up)' : 'var(--term-down)';
+        let sign = n >= 0 ? '+' : '-';
+        return `<span style="color:${color}">${sign}$${formatCompactUSD(Math.abs(n))}</span>`;
+    };
 
+    // Bơm dữ liệu từ Binance API vào Data Flow (Command Center)
+    safeSet('cc-api-nf-5m', fmtNetFlow(d.volume5mNetBinance));
+    safeSet('cc-api-nf-1h', fmtNetFlow(d.volume1hNetBinance));
+    safeSet('cc-api-nf-4h', fmtNetFlow(d.volume4hNetBinance));
+    safeSet('cc-api-nf-24h', fmtNetFlow(d.volume24hNetBinance));
     // --- LẤY DATA GỐC TỪ CHART ĐANG MỞ ĐỂ ĐỒNG BỘ TUYỆT ĐỐI ---
     let t_chart = window.currentChartToken || {};
 
