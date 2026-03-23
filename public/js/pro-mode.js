@@ -1633,14 +1633,13 @@ window.playProPing = function() {
     } catch(e) {}
 };
 
-// Hàm đẩy thông báo vào Sniper Tape
 window.logToSniperTape = function(isBuy, vol, type, price) {
     const tape = document.getElementById('cc-sniper-tape');
     if (!tape) return;
     
     if (vol < 500 && !type.includes('BOT')) return;
 
-    if (tape.innerHTML.includes('Đang rình')) tape.innerHTML = '';
+    if (tape.innerHTML.includes('Đang quét') || tape.innerHTML.includes('Đang rình')) tape.innerHTML = '';
 
     const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊');
     
@@ -1648,27 +1647,23 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
         window.playProPing();
     }
 
-    // [QUANT UI] Tính toán Base Ticket để đo độ béo của cá
     const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-    const sizeMultiplier = Math.min(1, Math.max(0.15, vol / (currentAvgTicket * 3))); // Tối đa 100% Opacity, tối thiểu 15%
+    const sizeMultiplier = Math.min(1, Math.max(0.15, vol / (currentAvgTicket * 3))); 
     
     const color = isBuy ? '#0ECB81' : '#F6465D';
-    
-    // Nền Heat-map: Khối lượng càng to nền càng chói
     const baseRgb = isWhaleOrShark ? (isBuy ? '42, 245, 146' : '203, 85, 227') : (isBuy ? '14, 203, 129' : '246, 70, 93');
     const bg = `rgba(${baseRgb}, ${isWhaleOrShark ? (0.2 + sizeMultiplier * 0.4) : (0.05 + sizeMultiplier * 0.15)})`;
-    
     const action = isBuy ? 'BUY' : 'SELL';
     
     const entry = document.createElement('div');
-    // Độ đậm của font chữ cũng thay đổi theo volume
     const fontWt = vol > currentAvgTicket * 10 ? '900' : (vol > currentAvgTicket * 5 ? '800' : '600');
     
+    // [QUAN TRỌNG] Gắn nhãn Data cho bộ lọc nhận diện
     entry.dataset.tapeType = isWhaleOrShark ? (type.includes('VOI') ? 'whale' : 'shark') : 'bot';
+    
     entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${vol > currentAvgTicket * 10 ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); animation: fadeIn 0.3s ease; gap: 4px; font-weight: ${fontWt};`;
     
     let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
-    
     const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     entry.innerHTML = `
@@ -1677,13 +1672,39 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
         <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
     `;
     
+    // [LOGIC THỜI GIAN THỰC] - Đọc cài đặt Filter hiện tại để tàng hình ngay lập tức lệnh rác nếu đang bật chế độ lọc
+    const filterEl = document.getElementById('cc-tape-filter');
+    const currentFilter = filterEl ? filterEl.value : 'all';
+    if (currentFilter === 'whale' && entry.dataset.tapeType !== 'whale') entry.style.display = 'none';
+    else if (currentFilter === 'shark' && entry.dataset.tapeType === 'bot') entry.style.display = 'none';
+
     tape.prepend(entry);
     
     if (isWhaleOrShark) {
         setTimeout(() => { entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.05)' : 'rgba(246, 70, 93, 0.05)'; entry.style.textShadow = 'none'; }, 800);
     }
 
-    if (tape.children.length > 30) tape.removeChild(tape.lastChild);
+    // Tăng số lượng hiển thị trên Tape lên 50 để đỡ bị hụt data khi lọc
+    if (tape.children.length > 50) tape.removeChild(tape.lastChild);
+};
+
+// [NÃO BỘ CỦA NÚT DROPDOWN] - Hàm quét lại các lệnh đã in ra mỗi khi User bấm chuyển Dropdown
+window.filterSniperTape = function() {
+    const fVal = document.getElementById('cc-tape-filter').value;
+    const tape = document.getElementById('cc-sniper-tape');
+    if (!tape) return;
+    
+    Array.from(tape.children).forEach(child => {
+        if (!child.dataset.tapeType) return; // Bỏ qua dòng text "Đang quét..."
+        
+        if (fVal === 'all') {
+            child.style.display = 'flex';
+        } else if (fVal === 'whale') {
+            child.style.display = child.dataset.tapeType === 'whale' ? 'flex' : 'none';
+        } else if (fVal === 'shark') {
+            child.style.display = (child.dataset.tapeType === 'whale' || child.dataset.tapeType === 'shark') ? 'flex' : 'none';
+        }
+    });
 };
 
 window.updateCommandCenterUI = function() {
