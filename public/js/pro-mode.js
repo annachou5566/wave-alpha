@@ -2972,7 +2972,7 @@ function injectSmartMoneyTab() {
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
     newTabContent.className = 'sc-tab-content';
-    newTabContent.style.cssText = 'background: var(--term-bg); padding: 10px 10px; display: none; flex-direction: column;';
+    newTabContent.style.cssText = 'background: var(--term-bg); padding: 10px 10px; display: none; flex-direction: column; height: 100%; overflow-y: auto;';
     
     newTabContent.innerHTML = `
         <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
