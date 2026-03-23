@@ -1632,39 +1632,42 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     const tape = document.getElementById('cc-sniper-tape');
     if (!tape) return;
     
-    // Lọc bỏ cò con < $500 (chỉ lấy Cá hoặc Bot lớn)
     if (vol < 500 && !type.includes('BOT')) return;
 
     if (tape.innerHTML.includes('Đang rình')) tape.innerHTML = '';
 
     const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊');
     
-    // Đèn Flash và Ping nếu là Cá Voi/Iceberg
     if (isWhaleOrShark) {
         window.playProPing();
     }
 
     const color = isBuy ? '#0ECB81' : '#F6465D';
-    // Nếu là Cá to -> Màu nền rực sáng (Flash Vàng/Xanh lá), Cá nhỏ -> nền mờ
     const bg = isWhaleOrShark 
         ? (isBuy ? 'rgba(42, 245, 146, 0.3)' : 'rgba(203, 85, 227, 0.3)') 
         : (isBuy ? 'rgba(14, 203, 129, 0.05)' : 'rgba(246, 70, 93, 0.05)');
     const action = isBuy ? 'BUY' : 'SELL';
     
     const entry = document.createElement('div');
-    entry.style.cssText = `display: flex; justify-content: space-between; font-size: 9px; padding: 4px 6px; background: ${bg}; border-left: 3px solid ${color}; border-radius: 2px; font-family: var(--font-num); animation: fadeIn 0.3s ease;`;
+    entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: 3px solid ${color}; border-radius: 2px; font-family: var(--font-num); animation: fadeIn 0.3s ease; gap: 4px;`;
     
     let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
-    entry.innerHTML = `<span style="color:${color}; font-weight:800; ${glow}">${type} ${action}</span><span style="color:#eaecef; font-weight:bold;">$${formatCompactUSD(vol)} @ ${formatPrice(price)}</span>`;
+    
+    const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    entry.innerHTML = `
+        <span style="color:${color}; font-weight:800; width: 35%; ${glow}">${type} ${action}</span>
+        <span style="color:#eaecef; font-weight:bold; width: 45%; text-align: center;">$${formatCompactUSD(vol)} @ ${formatPrice(price)}</span>
+        <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
+    `;
     
     tape.prepend(entry);
     
-    // Hiệu ứng Flash chớp tắt sau 1 giây
     if (isWhaleOrShark) {
         setTimeout(() => { entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.05)' : 'rgba(246, 70, 93, 0.05)'; entry.style.textShadow = 'none'; }, 800);
     }
 
-    if (tape.children.length > 20) tape.removeChild(tape.lastChild);
+    if (tape.children.length > 30) tape.removeChild(tape.lastChild);
 };
 
 window.updateCommandCenterUI = function() {
