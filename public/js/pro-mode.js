@@ -1075,19 +1075,15 @@ function injectLayout() {
                 </div> <div class="sc-right-container" id="sc-right-container">
                     <div class="sc-panel-content" id="sc-panel-content">
                         <div id="tab-watchlist" class="sc-tab-content" style="padding: 0; display: none;">
-                            <div class="sc-panel-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329;">
-                                <i class="fas fa-list" style="color:#F0B90B; margin-right: 5px;"></i> WATCHLIST
+                            <div class="sc-panel-title" style="padding: 10px 15px; margin: 0; background: #12151A; display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-size: 11px; color:#eaecef;"><i class="fas fa-list" style="color:#F0B90B; margin-right: 5px;"></i> WATCHLIST</div>
+                                <input type="text" id="wl-search" placeholder="Tìm token..." onkeyup="window.renderProWatchlist(this.value)" autocomplete="off" style="background:rgba(255,255,255,0.05); border:1px solid #2b3139; color:#eaecef; font-size:10px; padding:3px 8px; border-radius:2px; width:120px; outline:none; font-family:var(--font-main);">
                             </div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; padding: 6px 15px; font-weight:700; background: #0B0E11;">
-                                <span style="width:35%">TOKEN</span><span style="width:35%; text-align:right;">GIÁ</span><span style="width:30%; text-align:right;">24H%</span>
+                            <div style="display:flex; justify-content:space-between; font-size:9px; color:#5e6673; padding: 6px 15px; font-weight:800; background: #0B0E11; border-top: 1px solid #1A1F26; border-bottom: 1px solid #1A1F26; letter-spacing: 0.5px;">
+                                <span style="width:45%">TOKEN</span><span style="width:30%; text-align:right;">GIÁ</span><span style="width:25%; text-align:right;">24H%</span>
                             </div>
-                            <div id="sc-watchlist-body" style="flex:1; overflow-y:auto;">
-                                <div class="wl-item">
-                                    <div class="wl-sym"><img src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'"> BTC</div>
-                                    <div class="wl-price">$95,000.00</div>
-                                    <div class="wl-chg text-green">+2.5%</div>
+                            <div id="sc-watchlist-body" style="flex:1; overflow-y:auto; background: var(--term-bg);">
                                 </div>
-                            </div>
                         </div>
 
                         <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex;">
@@ -3453,37 +3449,69 @@ window.stopFuturesEngine = function() {
     if (futuresDataInterval) { clearInterval(futuresDataInterval); futuresDataInterval = null; }
     if (liquidationWs) { liquidationWs.close(); liquidationWs = null; }
 };
-// HÀM: Bơm dữ liệu Token Yêu thích vào Watchlist Sidebar
-window.renderProWatchlist = function() {
+// HÀM: Bơm dữ liệu Token Yêu thích vào Watchlist Sidebar (Nâng cấp Hybrid)
+window.renderProWatchlist = function(searchTerm = '') {
     const wlBody = document.getElementById('sc-watchlist-body');
     if (!wlBody) return;
     
-    let pinned = JSON.parse(localStorage.getItem('alpha_pins')) || [];
-    if (pinned.length === 0) {
-        wlBody.innerHTML = '<div style="text-align:center; margin-top:30px; color:#5e6673; font-size:11px; font-style:italic;">Chưa có token nào trong Watchlist.<br><br>Hãy bấm dấu <span style="color:#F0B90B">★</span> ở bảng Market<br>để thêm vào đây.</div>';
-        return;
+    let tokensToRender = [];
+    let isSearching = searchTerm && searchTerm.trim().length > 0;
+    let isShowingSuggested = false;
+
+    if (isSearching) {
+        // [CHẾ ĐỘ TÌM KIẾM]: Lọc toàn thị trường nhưng cắt đúng 50 con đầu tiên để chống lag CPU
+        let term = searchTerm.trim().toLowerCase();
+        tokensToRender = allTokens.filter(t => (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term))).slice(0, 50);
+    } else {
+        // [CHẾ ĐỘ MẶC ĐỊNH]: Lấy hàng đã Pin
+        let pinned = JSON.parse(localStorage.getItem('alpha_pins')) || [];
+        tokensToRender = allTokens.filter(t => pinned.includes(t.symbol));
+
+        // Nếu chưa Pin con nào, tự động nhét Top 20 Trending Volume vào làm gợi ý
+        if (tokensToRender.length === 0) {
+            isShowingSuggested = true;
+            let sortedByVol = [...allTokens].sort((a,b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
+            tokensToRender = sortedByVol.slice(0, 20);
+        }
     }
 
     let html = '';
-    pinned.forEach(sym => {
-        let t = allTokens.find(x => x.symbol === sym);
-        if (t) {
-            let isUp = (t.change_24h || 0) >= 0;
-            let colorClass = isUp ? 'text-green' : 'text-red';
-            let sign = isUp ? '+' : '';
-            let priceStr = formatPrice(t.price);
-            
-            html += `
-                <div class="wl-item" onclick="window.openProChart(allTokens.find(x => x.symbol === '${sym}'))">
-                    <div class="wl-sym">
-                        <img src="${t.icon || 'assets/tokens/default.png'}" onerror="this.src='assets/tokens/default.png'">
-                        ${t.symbol}
-                    </div>
-                    <div class="wl-price">$${priceStr}</div>
-                    <div class="wl-chg ${colorClass}">${sign}${parseFloat(t.change_24h||0).toFixed(2)}%</div>
+    
+    // Nếu là hàng gợi ý, in thêm cái tiêu đề cảnh báo
+    if (isShowingSuggested) {
+        html += '<div style="padding:6px 15px; font-size:8.5px; color:#F0B90B; font-weight:800; background:rgba(240,185,11,0.05); border-bottom:1px solid #1A1F26; text-align:center;">CHƯA CÓ WATCHLIST - GỢI Ý TOP 20 TRENDING</div>';
+    }
+
+    tokensToRender.forEach(t => {
+        let sym = t.symbol;
+        let isPinned = (JSON.parse(localStorage.getItem('alpha_pins')) || []).includes(sym);
+        let isUp = (t.change_24h || 0) >= 0;
+        let colorClass = isUp ? 'text-green' : 'text-red';
+        let sign = isUp ? '+' : '';
+        let priceStr = formatPrice(t.price);
+        
+        // Nút Sao phát sáng nếu đã ghim, mờ đi nếu chưa ghim
+        let pinIconColor = isPinned ? '#F0B90B' : '#474d57';
+
+        html += `
+            <div class="wl-item" onclick="window.openProChart(allTokens.find(x => x.symbol === '${sym}'))">
+                <div class="wl-sym" style="width: 45%;">
+                    <i class="fas fa-star" style="color:${pinIconColor}; font-size:10px; margin-right:6px; transition:0.2s;" 
+                       onmouseover="this.style.color='#F0B90B'" 
+                       onmouseout="this.style.color='${pinIconColor}'"
+                       onclick="event.stopPropagation(); window.togglePin('${sym}'); window.renderProWatchlist(document.getElementById('wl-search')?.value);"></i>
+                    <img src="${t.icon || 'assets/tokens/default.png'}" onerror="this.src='assets/tokens/default.png'">
+                    ${sym}
                 </div>
-            `;
-        }
+                <div class="wl-price" style="width: 30%;">$${priceStr}</div>
+                <div class="wl-chg ${colorClass}" style="width: 25%;">${sign}${parseFloat(t.change_24h||0).toFixed(2)}%</div>
+            </div>
+        `;
     });
+
+    if (tokensToRender.length === 0 && isSearching) {
+        html = '<div style="text-align:center; padding:30px 10px; color:#5e6673; font-style:italic; font-size: 11px;">Không tìm thấy token nào trùng khớp.</div>';
+    }
+
     wlBody.innerHTML = html;
 };
