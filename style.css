@@ -3390,4 +3390,123 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     }
 }
 
+/* ========================================== */
+/* CSS CHO FOOTER VÀ POPUP PHÁP LÝ            */
+/* ========================================== */
 
+/* 1. FOOTER */
+.legal-footer {
+    background-color: #0b0e11;
+    border-top: 1px solid #1e2329;
+    padding: 15px 20px;
+    text-align: justify;
+    font-size: 11.5px;
+    color: #848e9c;
+    line-height: 1.6;
+    width: 100%;
+    z-index: 10;
+}
+.legal-footer strong {
+    color: #F0B90B; /* Màu vàng cảnh báo */
+}
+
+/* 2. MODAL POPUP */
+.legal-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    z-index: 99999; /* Luôn đè lên trên cùng */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.3s ease;
+}
+.legal-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+.legal-modal-box {
+    background: #12151A;
+    border: 1px solid #F0B90B;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 650px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+    transform: translateY(30px) scale(0.95);
+    transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.legal-modal-overlay.show .legal-modal-box {
+    transform: translateY(0) scale(1);
+}
+.legal-modal-header {
+    padding: 15px 20px;
+    background: rgba(240, 185, 11, 0.1);
+    border-bottom: 1px solid #1e2329;
+    color: #F0B90B;
+    font-weight: 800;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+.legal-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    color: #eaecef;
+    font-size: 13px;
+    line-height: 1.6;
+}
+.legal-modal-body .beta-warning {
+    color: #00F0FF; /* Cyan theme của Wave Alpha */
+    font-weight: 700;
+    font-style: italic;
+    margin-bottom: 12px;
+}
+.legal-modal-body ul {
+    padding-left: 20px;
+    margin-top: 15px;
+}
+.legal-modal-body li {
+    margin-bottom: 12px;
+    color: #848e9c;
+    text-align: justify;
+}
+.legal-modal-body li strong {
+    color: #eaecef;
+}
+.legal-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #1e2329;
+    text-align: right;
+}
+.btn-legal-accept {
+    background: #F0B90B;
+    color: #000;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-legal-accept:hover {
+    background: #fcd535;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(240, 185, 11, 0.3);
+}
+
+/* 3. Responsive Mobile */
+@media (max-width: 768px) {
+    .legal-footer { font-size: 10px; padding: 10px 15px; }
+    .legal-modal-body { font-size: 12px; }
+    .btn-legal-accept { width: 100%; padding: 12px; }
+}
