@@ -1681,10 +1681,15 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     tape.prepend(entry);
     
     if (isWhaleOrShark) {
-        setTimeout(() => { entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.05)' : 'rgba(246, 70, 93, 0.05)'; entry.style.textShadow = 'none'; }, 800);
+        entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.8)' : 'rgba(246, 70, 93, 0.8)';
+        
+        setTimeout(() => { 
+            entry.style.transition = 'background 0.8s ease'; 
+            entry.style.background = bg; 
+            entry.style.textShadow = 'none'; 
+        }, 150);
     }
 
-    // Tăng số lượng hiển thị trên Tape lên 50 để đỡ bị hụt data khi lọc
     if (tape.children.length > 50) tape.removeChild(tape.lastChild);
 };
 
