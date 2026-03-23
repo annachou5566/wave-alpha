@@ -1716,34 +1716,7 @@ async function loadFromCloud(isSilent = false) {
     }
 }
 
-
-
-    function renderArsenal() {
-        const container = document.getElementById('arsenal-grid');
-        if(!container) return;
-
-
-        container.className = '';
-        container.innerHTML = '';
-
-
-
-        let exchanges = siteConfig.arsenal_items || [];
-
-
-        if(exchanges.length === 0) {
-            if(document.body.classList.contains('is-admin')) {
-                container.innerHTML = `<div class="col-12 text-center text-sub border border-dashed border-secondary p-3 rounded" onclick="openConfigModal()" style="cursor:pointer; font-size:0.8rem">Admin: Click to Add Trading Platforms</div>`;
-            }
-            return;
-        }
-
-
-        const listCEX = exchanges.filter(e => e.type === 'EXCHANGE');
-        const listDEX = exchanges.filter(e => e.type !== 'EXCHANGE');
-
-
-        
+  
 
 
     function renderFooter() {
