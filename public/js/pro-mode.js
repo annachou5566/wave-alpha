@@ -1886,7 +1886,7 @@ window.updateCommandCenterUI = function() {
                 fEl.innerHTML = `<span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span><span style="color:#527c82; margin: 0 2px;">/</span><span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span>`;
             }
         }
-    
+    };
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
 
