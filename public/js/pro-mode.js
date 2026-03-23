@@ -1013,7 +1013,7 @@ function injectLayout() {
 
 <div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center; flex-wrap:wrap;">
                         <div style="display:flex; gap:4px; align-items:center;">
-                            <button class="sc-time-btn active" onclick="window.changeChartInterval('tick', this)">Tick</button>
+                            <button class="sc-time-btn" onclick="window.changeChartInterval('tick', this)">Tick</button>
                             <span style="color:#2b3139; margin:0 2px;">|</span>
                             <button class="sc-time-btn" onclick="window.changeChartInterval('1s', this)">1s</button>
                             <button class="sc-time-btn" onclick="window.changeChartInterval('1m', this)">1m</button>
@@ -1021,7 +1021,7 @@ function injectLayout() {
                             <button class="sc-time-btn" onclick="window.changeChartInterval('15m', this)">15m</button>
                             <button class="sc-time-btn" onclick="window.changeChartInterval('1h', this)">1h</button>
                             <button class="sc-time-btn" onclick="window.changeChartInterval('4h', this)">4h</button>
-                            <button class="sc-time-btn" onclick="window.changeChartInterval('1d', this)">1d</button>
+                            <button class="sc-time-btn active" onclick="window.changeChartInterval('1d', this)">1d</button>
                         </div>
                         
                         <div style="margin-left: auto; display:flex; align-items:center; gap:4px; font-family:var(--font-num); flex-wrap: wrap; justify-content: flex-end;">
@@ -1032,7 +1032,7 @@ function injectLayout() {
                                     <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 80px; text-overflow: ellipsis;">
                                         <option value="sweep">TẤT CẢ BOT</option>
                                         <option value="dolphin">TỪ CÁ HEO</option>
-                                        <option value="shark">TỪ CÁ MẬP</option>
+                                        <option value="shark" selected>TỪ CÁ MẬP</option>
                                         <option value="whale">CHỈ CÁ VOI</option>
                                         <option value="none" style="color:var(--term-dim)">🚫 ẨN TẤT CẢ</option>
                                     </select>
@@ -1174,8 +1174,8 @@ function injectLayout() {
                                 </div>
 
                                 <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
-    <span>SNIPER TAPE (ADAPTIVE)</span>
-    <span style="display:flex; width: 65%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
+    <span>SNIPER TAPE <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;"><option value="all">ALL</option><option value="whale">WHALE</option><option value="shark">SHARK+</option></select></span>
+    <span style="display:flex; width: 55%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
         <span style="width: 65%; text-align: center;">SIZE & GIÁ</span>
         <span style="width: 35%; text-align: right;">TIME</span>
     </span>
@@ -1648,14 +1648,24 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
         window.playProPing();
     }
 
+    // [QUANT UI] Tính toán Base Ticket để đo độ béo của cá
+    const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+    const sizeMultiplier = Math.min(1, Math.max(0.15, vol / (currentAvgTicket * 3))); // Tối đa 100% Opacity, tối thiểu 15%
+    
     const color = isBuy ? '#0ECB81' : '#F6465D';
-    const bg = isWhaleOrShark 
-        ? (isBuy ? 'rgba(42, 245, 146, 0.3)' : 'rgba(203, 85, 227, 0.3)') 
-        : (isBuy ? 'rgba(14, 203, 129, 0.05)' : 'rgba(246, 70, 93, 0.05)');
+    
+    // Nền Heat-map: Khối lượng càng to nền càng chói
+    const baseRgb = isWhaleOrShark ? (isBuy ? '42, 245, 146' : '203, 85, 227') : (isBuy ? '14, 203, 129' : '246, 70, 93');
+    const bg = `rgba(${baseRgb}, ${isWhaleOrShark ? (0.2 + sizeMultiplier * 0.4) : (0.05 + sizeMultiplier * 0.15)})`;
+    
     const action = isBuy ? 'BUY' : 'SELL';
     
     const entry = document.createElement('div');
-    entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: 3px solid ${color}; border-radius: 2px; font-family: var(--font-num); animation: fadeIn 0.3s ease; gap: 4px;`;
+    // Độ đậm của font chữ cũng thay đổi theo volume
+    const fontWt = vol > currentAvgTicket * 10 ? '900' : (vol > currentAvgTicket * 5 ? '800' : '600');
+    
+    entry.dataset.tapeType = isWhaleOrShark ? (type.includes('VOI') ? 'whale' : 'shark') : 'bot';
+    entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${vol > currentAvgTicket * 10 ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); animation: fadeIn 0.3s ease; gap: 4px; font-weight: ${fontWt};`;
     
     let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
     
@@ -2217,8 +2227,10 @@ function connectRealtimeChart(t) {
             window.flushSmartTape(window.scCurrentCluster);
             window.scCurrentCluster = null;
         }
-        // Dọn rác: Chỉ giữ tick trong 5 phút qua
-        window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
+        // [KIẾN TRÚC] Dùng cấu trúc Queue (Shift) để dọn rác O(1) thay vì Filter O(N) gây nghẽn Garbage Collector
+        while (window.scTickHistory.length > 0 && now - window.scTickHistory[0].t > 300000) {
+            window.scTickHistory.shift();
+        }
         
         // A. TÍNH SPREAD (Bỏ nhiễu bằng phân vị 90/10)
         const hist15s = window.scTickHistory.filter(x => now - x.t <= 15000);
@@ -2273,11 +2285,13 @@ function connectRealtimeChart(t) {
         if (window.quantStats.speedHist.length > 60) window.quantStats.speedHist.shift(); // Giữ lịch sử 60s
 
         let zScore = 0;
+        let zScore = 0;
         if (window.quantStats.speedHist.length >= 10) {
             let mean = window.quantStats.speedHist.reduce((a, b) => a + b, 0) / window.quantStats.speedHist.length;
             let variance = window.quantStats.speedHist.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / window.quantStats.speedHist.length;
             let stdDev = Math.sqrt(variance);
-            if (stdDev === 0) stdDev = 1; // Tránh chia cho 0
+            const baselineStd = Math.max(1000, mean * 0.15);
+            if (stdDev < baselineStd) stdDev = baselineStd; 
             zScore = (currentSpeed - mean) / stdDev;
         }
         window.quantStats.zScore = zScore;
@@ -2502,8 +2516,10 @@ function connectRealtimeChart(t) {
             flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
         }
 
-        // Dọn rác scSpeedWindow an toàn định kỳ 1 giây
-        window.scSpeedWindow = window.scSpeedWindow.filter(x => now - x.t <= 5000);
+        // [KIẾN TRÚC] Dọn rác O(1) cho Speed Window
+        while (window.scSpeedWindow.length > 0 && now - window.scSpeedWindow[0].t > 5000) {
+            window.scSpeedWindow.shift();
+        }
         
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
 // Cập nhật Command Center UI mỗi giây
@@ -2699,8 +2715,8 @@ async function fetchBinanceHistory(t, interval, isArea = false) {
     }
 }
 
-window.currentChartInterval = 'tick'; // Mặc định mở lên là Tick
-let tvCandleSeries = null; // Thêm biến lưu trữ chuỗi nến Nhật
+window.currentChartInterval = '1d'; 
+let tvCandleSeries = null; 
 window.currentTheme = localStorage.getItem('wave_theme') || 'cyber';
 window.changeTheme = function() {
     let el = document.getElementById('sc-theme-select');
