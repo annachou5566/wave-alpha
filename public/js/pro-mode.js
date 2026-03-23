@@ -1129,7 +1129,7 @@ function injectLayout() {
             <div class="term-widget" style="margin-bottom: 0;">
                 <div class="term-w-title">FUTURES <span id="cc-futures-status" style="color: var(--term-warn);">⏳ ĐANG DÒ...</span></div>
                 <div class="term-row"><span class="term-lbl">Open Interest</span><span id="cc-oi-val" class="term-val">$--</span></div>
-                <div class="term-row"><span class="term-lbl">Funding Rate</span><span id="cc-funding-val" class="term-val">--%</span></div>
+                <div class="term-row"><span class="term-lbl" id="cc-funding-lbl">Funding Rate</span><span id="cc-funding-val" class="term-val">--%</span></div>
                 <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-top: 4px;">
                     <span id="cc-liq-long" style="color:var(--term-down); font-size:9.5px; font-weight:700; font-family:var(--font-num);">🩸 Liq L: $0</span>
                     <span id="cc-liq-short" style="color:var(--term-up); font-size:9.5px; font-weight:700; font-family:var(--font-num);">💥 Liq S: $0</span>
@@ -3411,15 +3411,17 @@ window.startFuturesEngine = async function(symbol) {
     let fSymbol = cleanSymbol + 'USDT';
     let streamSymbol = fSymbol.toLowerCase();
 
-    // Chỉ set "ĐANG DÒ" lúc mới mở chart lần đầu
+    // Chỉ báo "ĐANG DÒ" DUY NHẤT LÚC MỚI BẤM SANG COIN MỚI
     updateAllDOM('cc-futures-status', '⏳ ĐANG DÒ...', '#F0B90B');
     updateAllDOM('cc-oi-val', '$--', null);
+    updateAllDOM('cc-funding-lbl', 'Funding Rate', null);
     updateAllDOM('cc-funding-val', '--%', '#eaecef');
 
     if (!window.quantStats) window.quantStats = {};
     window.quantStats.longLiq = 0;
     window.quantStats.shortLiq = 0;
-    window.quantStats.fundingRateObj = null; // Reset data cũ
+    window.quantStats.fundingRateObj = null; 
+    window.quantStats.fundingInterval = null; // Biến lưu trữ Khung giờ thu phí
 
     const fetchWithTimeout = async (url) => {
         const controller = new AbortController();
@@ -3438,20 +3440,30 @@ window.startFuturesEngine = async function(symbol) {
     const fetchRestData = async () => {
         if (window.activeFuturesSession !== currentSession) return false;
         try {
+            // 1. CHỈ GỌI API TÌM KHUNG GIỜ FUNDING 1 LẦN DUY NHẤT
+            if (!window.quantStats.fundingInterval) {
+                try {
+                    let fInfo = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/fundingInfo`);
+                    let sInfo = fInfo.find(x => x.symbol === fSymbol);
+                    window.quantStats.fundingInterval = sInfo ? sInfo.fundingIntervalHours : 8;
+                } catch(e) { window.quantStats.fundingInterval = 8; }
+            }
+
+            // 2. CẬP NHẬT CHỈ SỐ RATE HIỆN TẠI
             let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
             if (window.activeFuturesSession !== currentSession) return false;
 
             updateAllDOM('cc-futures-status', '🟢 ACTIVE', '#0ECB81');
 
             if (fundData && fundData.lastFundingRate) {
-                let fRate = parseFloat(fundData.lastFundingRate) * 100;
-                // [TỐI ƯU] Lưu lại Thời gian thu phí để làm Đồng hồ đếm ngược
                 window.quantStats.fundingRateObj = {
-                    rate: fRate,
-                    nextTime: fundData.nextFundingTime
+                    rate: parseFloat(fundData.lastFundingRate) * 100,
+                    nextTime: fundData.nextFundingTime,
+                    interval: window.quantStats.fundingInterval
                 };
             }
 
+            // 3. CẬP NHẬT OPEN INTEREST
             try {
                 let oiData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
                 if (window.activeFuturesSession !== currentSession) return false;
@@ -3466,6 +3478,7 @@ window.startFuturesEngine = async function(symbol) {
             if (window.activeFuturesSession !== currentSession) return false;
             updateAllDOM('cc-futures-status', '🚫 NO FUTURES', '#848e9c');
             updateAllDOM('cc-oi-val', 'N/A', null);
+            updateAllDOM('cc-funding-lbl', 'Funding Rate', null);
             updateAllDOM('cc-funding-val', 'N/A', '#848e9c');
             return false;
         }
@@ -3473,13 +3486,12 @@ window.startFuturesEngine = async function(symbol) {
 
     let hasFutures = await fetchRestData();
     
-    // Nếu có Phái sinh, thiết lập vòng lặp API và Websocket
+    // NẾU CÓ PHÁI SINH -> BẬT VÒNG LẶP VÀ WEBSOCKET
     if (hasFutures && window.activeFuturesSession === currentSession) {
         futuresDataInterval = setInterval(() => {
             if (window.activeFuturesSession === currentSession) fetchRestData();
         }, 15000);
 
-        // [TỐI ƯU] Tách hàm kết nối Websocket ra để nối cáp im lặng (Silent Reconnect)
         const connectForceOrderWS = () => {
             if (window.activeFuturesSession !== currentSession) return;
             
@@ -3509,7 +3521,7 @@ window.startFuturesEngine = async function(symbol) {
             };
 
             liquidationWs.onclose = () => {
-                // SILENT RECONNECT: Nếu mất kết nối, âm thầm nối lại sau 3s mà không Reset màn hình
+                // SILENT RECONNECT: Nối cáp ngầm, không reset UI gây chớp tắt
                 if (window.activeFuturesSession === currentSession) {
                     setTimeout(() => connectForceOrderWS(), 3000);
                 }
@@ -3521,7 +3533,7 @@ window.startFuturesEngine = async function(symbol) {
 };
 
 window.stopFuturesEngine = function() {
-    window.activeFuturesSession = null; // Khóa mọi luồng đang chạy dở
+    window.activeFuturesSession = null;
     if (futuresDataInterval) { clearInterval(futuresDataInterval); futuresDataInterval = null; }
     if (liquidationWs) { liquidationWs.close(); liquidationWs = null; }
 };
