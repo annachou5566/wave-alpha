@@ -2227,9 +2227,13 @@ function connectRealtimeChart(t) {
             window.flushSmartTape(window.scCurrentCluster);
             window.scCurrentCluster = null;
         }
-        // [KIẾN TRÚC] Dùng cấu trúc Queue (Shift) để dọn rác O(1) thay vì Filter O(N) gây nghẽn Garbage Collector
-        while (window.scTickHistory.length > 0 && now - window.scTickHistory[0].t > 300000) {
-            window.scTickHistory.shift();
+        // [KIẾN TRÚC FIX] Tìm Index cần cắt và dùng Splice 1 lần duy nhất (Tránh re-index mảng O(N^2) gây sập CPU)
+        let expireTickIdx = 0;
+        while (expireTickIdx < window.scTickHistory.length && now - window.scTickHistory[expireTickIdx].t > 300000) {
+            expireTickIdx++;
+        }
+        if (expireTickIdx > 0) {
+            window.scTickHistory.splice(0, expireTickIdx);
         }
         
         // A. TÍNH SPREAD (Bỏ nhiễu bằng phân vị 90/10)
@@ -2516,9 +2520,13 @@ function connectRealtimeChart(t) {
             flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F';
         }
 
-        // [KIẾN TRÚC] Dọn rác O(1) cho Speed Window
-        while (window.scSpeedWindow.length > 0 && now - window.scSpeedWindow[0].t > 5000) {
-            window.scSpeedWindow.shift();
+        // [KIẾN TRÚC FIX] Dọn rác Speed Window một lần cắt
+        let expireSpeedIdx = 0;
+        while (expireSpeedIdx < window.scSpeedWindow.length && now - window.scSpeedWindow[expireSpeedIdx].t > 5000) {
+            expireSpeedIdx++;
+        }
+        if (expireSpeedIdx > 0) {
+            window.scSpeedWindow.splice(0, expireSpeedIdx);
         }
         
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
