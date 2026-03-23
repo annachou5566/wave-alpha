@@ -6689,7 +6689,6 @@ function applyLayer2Data(serverData, forceApply = false) {
     if (!serverData || Object.keys(serverData).length === 0) return;
     if (isHeaderTooltipOpen && !forceApply) { pendingRealtimeServerData = serverData; return; }
 
-    // CẬP NHẬT BIẾN RAM (Không vẽ lên giao diện ở đây)
     if (compList && compList.length > 0) {
         compList.forEach(c => {
             let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
@@ -6730,22 +6729,16 @@ function applyLayer2Data(serverData, forceApply = false) {
         alphaMarketCache[symbol].tx_count = liveItem.tx;
     });
 
-    // ⚡ CHỈ DUY NHẤT BẢNG DOM ĐƯỢC CHẠY 60FPS Ở ĐÂY ĐỂ TRÁNH LAG
     if (typeof window.updateAlphaMarketUI === 'function') {
         window.updateAlphaMarketUI(serverData);
     }
 }
 
-// ========================================================
-// 🫀 NHỊP TIM 3 GIÂY ĐỘC LẬP (CHUYÊN TRỊ CÁC TAB NẶNG)
-// ========================================================
 setInterval(() => {
-    // 1. Phục hồi nhịp chớp 3s chuẩn xác cho Grid, Thẻ bài và Competition Radar
     if (typeof updateGridValuesOnly === 'function') {
         updateGridValuesOnly();
     }
     
-    // 2. Phục hồi Sonar Galaxy (Dùng data tổng 500 coin để Radar không bị giật/bóp méo)
     const sonar = typeof ensureSonarGalaxy === 'function' ? ensureSonarGalaxy() : null;
     if (sonar && window.FULL_MARKET_DATA && Object.keys(window.FULL_MARKET_DATA).length > 0) {
         sonar.updateData(window.FULL_MARKET_DATA);
@@ -6754,7 +6747,6 @@ setInterval(() => {
 
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
 
-// Hàm hiển thị bảng Tiered
 function showTiersModal(dbId) {
     let c = compList.find(x => x.db_id == dbId);
     if (!c || !c.tiers_data) return;
@@ -6762,12 +6754,10 @@ function showTiersModal(dbId) {
     let tbody = document.getElementById('tiers-table-body');
     let html = '';
 
-    // Lấy giá hiện tại của token
     let usePrice = parseFloat(c.cachedPrice) || ((c.market_analysis && c.market_analysis.price) ? parseFloat(c.market_analysis.price) : 0);
     let tokenName = c.name ? c.name.split('(')[0].trim() : '';
 
     c.tiers_data.forEach(t => {
-        // Tính giá trị USD cho từng mốc
         let estVal = (parseFloat(t.reward) || 0) * usePrice;
         let estValStr = estVal > 0 ? `~$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(estVal)}` : '---';
         let rewardStr = `${fmtNum(t.reward)} ${tokenName}`;
@@ -6784,3 +6774,25 @@ function showTiersModal(dbId) {
     tbody.innerHTML = html;
     new bootstrap.Modal(document.getElementById('tiersModal')).show();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const legalModal = document.getElementById('legal-modal-overlay');
+    const btnAcceptLegal = document.getElementById('btn-accept-legal');
+    
+    if (!localStorage.getItem('wave_alpha_legal_accepted')) {
+        setTimeout(() => {
+            if (legalModal) {
+                legalModal.classList.add('show');
+                document.body.style.overflow = 'hidden'; 
+            }
+        }, 1000); 
+    }
+
+    if (btnAcceptLegal) {
+        btnAcceptLegal.addEventListener('click', () => {
+            legalModal.classList.remove('show');
+            document.body.style.overflow = ''; 
+            localStorage.setItem('wave_alpha_legal_accepted', 'true');
+        });
+    }
+});
