@@ -3341,6 +3341,24 @@ window.fetchFuturesSentiment = async function(symbol) {
     const box = document.getElementById('sm-futures-sentiment-box');
     if (!box) return;
 
+    // =======================================================
+    // [FIX BÓNG MA DỮ LIỆU] Tẩy trắng toàn bộ UI về mặc định ngay khi bấm sang Coin mới
+    // =======================================================
+    document.getElementById('sm-fs-status').innerText = '⏳ Đang tải...';
+    document.getElementById('sm-fs-status').style.color = 'var(--term-warn)';
+    
+    document.getElementById('sm-fs-pos-ratio').innerText = '--% L / --% S';
+    document.getElementById('sm-fs-pos-long').style.width = '50%';
+    document.getElementById('sm-fs-pos-short').style.width = '50%';
+    
+    document.getElementById('sm-fs-acc-ratio').innerText = '--% L / --% S';
+    document.getElementById('sm-fs-acc-long').style.width = '50%';
+    document.getElementById('sm-fs-acc-short').style.width = '50%';
+    
+    document.getElementById('sm-fs-taker-buy').innerText = '$--';
+    document.getElementById('sm-fs-taker-sell').innerText = '$--';
+    // =======================================================
+
     try {
         // Gắn timeout để không bị treo web nếu Binance lag
         const fetchTimeout = (url) => Promise.race([
@@ -3358,6 +3376,7 @@ window.fetchFuturesSentiment = async function(symbol) {
         const accData = await accRes.json();
         const takerData = await takerRes.json();
 
+        // Cập nhật Trạng thái thành công
         document.getElementById('sm-fs-status').innerText = '🟢 ĐÃ ĐỒNG BỘ';
         document.getElementById('sm-fs-status').style.color = '#0ECB81';
 
@@ -3388,7 +3407,7 @@ window.fetchFuturesSentiment = async function(symbol) {
         }
 
     } catch(e) {
-        console.error("Lỗi lấy dữ liệu Sentiment:", e);
+        console.warn(`[Smart Money] Không có dữ liệu Futures cho ${cleanSymbol}`);
         document.getElementById('sm-fs-status').innerText = '🚫 KHÔNG CÓ DATA';
         document.getElementById('sm-fs-status').style.color = '#848e9c';
     }
