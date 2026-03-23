@@ -3381,7 +3381,6 @@ window.startFuturesEngine = async function(symbol) {
     window.stopFuturesEngine();
     if (!symbol) return;
 
-    // TẠO KHÓA PHIÊN: Ghi nhớ coin đang mở hiện tại
     window.activeFuturesSession = symbol.toUpperCase();
     let currentSession = window.activeFuturesSession;
 
@@ -3389,8 +3388,7 @@ window.startFuturesEngine = async function(symbol) {
     let fSymbol = cleanSymbol + 'USDT';
     let streamSymbol = fSymbol.toLowerCase();
 
-    console.log(`[Futures Engine] Đã kích hoạt cho: ${fSymbol}`);
-
+    // Chỉ set "ĐANG DÒ" lúc mới mở chart lần đầu
     updateAllDOM('cc-futures-status', '⏳ ĐANG DÒ...', '#F0B90B');
     updateAllDOM('cc-oi-val', '$--', null);
     updateAllDOM('cc-funding-val', '--%', '#eaecef');
@@ -3398,6 +3396,7 @@ window.startFuturesEngine = async function(symbol) {
     if (!window.quantStats) window.quantStats = {};
     window.quantStats.longLiq = 0;
     window.quantStats.shortLiq = 0;
+    window.quantStats.fundingRateObj = null; // Reset data cũ
 
     const fetchWithTimeout = async (url) => {
         const controller = new AbortController();
@@ -3414,22 +3413,20 @@ window.startFuturesEngine = async function(symbol) {
     };
 
     const fetchRestData = async () => {
-        // CHỐNG NHIỄU 1: Nếu user đã click sang coin khác thì hủy không chạy tiếp
         if (window.activeFuturesSession !== currentSession) return false;
-
         try {
             let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
-            
-            // CHỐNG NHIỄU 2: Chờ API xong, kiểm tra lại xem user có đổi coin không
             if (window.activeFuturesSession !== currentSession) return false;
 
             updateAllDOM('cc-futures-status', '🟢 ACTIVE', '#0ECB81');
 
             if (fundData && fundData.lastFundingRate) {
                 let fRate = parseFloat(fundData.lastFundingRate) * 100;
-                let sign = fRate > 0 ? '+' : '';
-                let color = fRate > 0.01 ? '#F6465D' : (fRate < -0.01 ? '#00F0FF' : '#eaecef');
-                updateAllDOM('cc-funding-val', sign + fRate.toFixed(4) + '%', color);
+                // [TỐI ƯU] Lưu lại Thời gian thu phí để làm Đồng hồ đếm ngược
+                window.quantStats.fundingRateObj = {
+                    rate: fRate,
+                    nextTime: fundData.nextFundingTime
+                };
             }
 
             try {
@@ -3444,7 +3441,6 @@ window.startFuturesEngine = async function(symbol) {
 
         } catch (err) {
             if (window.activeFuturesSession !== currentSession) return false;
-            console.log(`[Futures Engine] Không có Futures cho ${fSymbol}`);
             updateAllDOM('cc-futures-status', '🚫 NO FUTURES', '#848e9c');
             updateAllDOM('cc-oi-val', 'N/A', null);
             updateAllDOM('cc-funding-val', 'N/A', '#848e9c');
@@ -3453,45 +3449,51 @@ window.startFuturesEngine = async function(symbol) {
     };
 
     let hasFutures = await fetchRestData();
-    // CHỈ mở vòng lặp và Websocket nếu vẫn đang ở đúng đồng coin ban đầu
+    
+    // Nếu có Phái sinh, thiết lập vòng lặp API và Websocket
     if (hasFutures && window.activeFuturesSession === currentSession) {
         futuresDataInterval = setInterval(() => {
             if (window.activeFuturesSession === currentSession) fetchRestData();
         }, 15000);
 
-        let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
-        liquidationWs = new WebSocket(wsUrl);
-
-        liquidationWs.onmessage = (event) => {
-            // BỎ QUA DỮ LIỆU CŨ NẾU LỠ CÓ BÓNG MA WEBSOCKET
+        // [TỐI ƯU] Tách hàm kết nối Websocket ra để nối cáp im lặng (Silent Reconnect)
+        const connectForceOrderWS = () => {
             if (window.activeFuturesSession !== currentSession) return;
+            
+            let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
+            liquidationWs = new WebSocket(wsUrl);
 
-            const data = JSON.parse(event.data);
-            if (data.e === 'forceOrder' && data.o) {
-                let order = data.o;
-                let valUSD = parseFloat(order.p) * parseFloat(order.q);
-                let isLongLiq = (order.S === 'SELL');
+            liquidationWs.onmessage = (event) => {
+                if (window.activeFuturesSession !== currentSession) return;
+                const data = JSON.parse(event.data);
+                if (data.e === 'forceOrder' && data.o) {
+                    let order = data.o;
+                    let valUSD = parseFloat(order.p) * parseFloat(order.q);
+                    let isLongLiq = (order.S === 'SELL');
 
-                if (isLongLiq) {
-                    window.quantStats.longLiq += valUSD;
-                    updateAllDOM('cc-liq-long', `🩸 Liq Long: $${formatCompactUSD(window.quantStats.longLiq)}`, null);
-                } else {
-                    window.quantStats.shortLiq += valUSD;
-                    updateAllDOM('cc-liq-short', `💥 Liq Short: $${formatCompactUSD(window.quantStats.shortLiq)}`, null);
+                    if (isLongLiq) {
+                        window.quantStats.longLiq += valUSD;
+                        updateAllDOM('cc-liq-long', `🩸 Liq L: $${formatCompactUSD(window.quantStats.longLiq)}`, null);
+                    } else {
+                        window.quantStats.shortLiq += valUSD;
+                        updateAllDOM('cc-liq-short', `💥 Liq S: $${formatCompactUSD(window.quantStats.shortLiq)}`, null);
+                    }
+
+                    if (valUSD > 1000 && typeof window.logToSniperTape === 'function') {
+                        window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
+                    }
                 }
+            };
 
-                if (valUSD > 1000 && typeof window.logToSniperTape === 'function') {
-                    window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
+            liquidationWs.onclose = () => {
+                // SILENT RECONNECT: Nếu mất kết nối, âm thầm nối lại sau 3s mà không Reset màn hình
+                if (window.activeFuturesSession === currentSession) {
+                    setTimeout(() => connectForceOrderWS(), 3000);
                 }
-            }
+            };
         };
-
-        liquidationWs.onclose = () => {
-            let anyStatus = document.querySelector('[id="cc-futures-status"]');
-            if (anyStatus && anyStatus.innerText !== '🚫 NO FUTURES' && window.activeFuturesSession === currentSession) {
-                setTimeout(() => window.startFuturesEngine(symbol), 3000);
-            }
-        };
+        
+        connectForceOrderWS();
     }
 };
 
