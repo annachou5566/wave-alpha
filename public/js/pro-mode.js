@@ -1648,29 +1648,21 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     }
 
     // ====================================================
-    // 🔥 TRUE HEATMAP ENGINE (MÀU SẮC DỰA TRÊN ĐỘ LỚN VOLUME)
+    // 🔥 TRUE HEATMAP ENGINE (ĐÃ FIX OPACITY CHỐNG CHÓI)
     // ====================================================
     const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-    
-    // Tính tỷ lệ Volume so với lệnh trung bình. Mốc max là gấp 15 lần lệnh trung bình (hoặc tối thiểu 5000$)
     const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
     const heatRatio = Math.min(1, vol / heatMaxThreshold); 
     
-    // Opacity (độ chói) dao động từ 5% (mờ tịt) đến 85% (sáng chói) dựa vào số tiền
-    const opacity = 0.05 + (heatRatio * 0.8); 
+    const opacity = 0.03 + (heatRatio * 0.27); 
     
-    // CHUẨN HÓA MÀU SẮC (KHAI TỬ MÀU HỒNG): Chỉ có Xanh (#0ECB81) và Đỏ (#F6465D)
     const color = isBuy ? '#0ECB81' : '#F6465D';
     const baseRgb = isBuy ? '14, 203, 129' : '246, 70, 93';
     
-    // Áp dụng opacity tính toán ở trên vào Background
     const bg = `rgba(${baseRgb}, ${opacity})`;
-    
     const action = isBuy ? 'BUY' : 'SELL';
     
     const entry = document.createElement('div');
-    
-    // Lệnh to thì Font chữ cũng in đậm (Bold) hơn
     const fontWt = heatRatio > 0.6 ? '900' : (heatRatio > 0.3 ? '800' : '600');
     
     entry.dataset.tapeType = isWhaleOrShark ? (type.includes('VOI') ? 'whale' : 'shark') : 'bot';
@@ -1686,7 +1678,6 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
         <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
     `;
     
-    // [GÁC CỔNG FILTER] Ẩn ngay lập tức nếu không đúng chuẩn lọc
     const filterEl = document.getElementById('cc-tape-filter');
     const currentFilter = filterEl ? filterEl.value : 'all';
     if (currentFilter === 'whale' && entry.dataset.tapeType !== 'whale') entry.style.display = 'none';
@@ -1694,11 +1685,10 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
 
     tape.prepend(entry);
     
-    // Cá Mập / Voi xuất hiện sẽ chớp sáng lóe lên 1 phát, sau 150ms trả về ĐÚNG MÀU HEATMAP
     if (isWhaleOrShark) {
-        entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.95)' : 'rgba(246, 70, 93, 0.95)';
+        entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.55)' : 'rgba(246, 70, 93, 0.55)';
         setTimeout(() => { 
-            entry.style.background = bg; // Trả về màu Heatmap vĩnh viễn
+            entry.style.background = bg; 
             entry.style.textShadow = 'none'; 
         }, 150);
     }
