@@ -2972,130 +2972,135 @@ function injectSmartMoneyTab() {
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
     newTabContent.className = 'sc-tab-content';
-    newTabContent.style.cssText = 'background: var(--term-bg); padding: 10px 10px; display: none; flex-direction: column; height: 100%; overflow-y: auto;';
+    // [FIX KHUNG GẦM] Bỏ height 100% gây tràn, chuyển thành flex layout nguyên thủy
+    newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
     
     newTabContent.innerHTML = `
-        <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
+        <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#EAECEF; font-size: 11px; flex-shrink: 0;">
             <i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 5px;"></i> RADAR SMART MONEY (PRO)
         </div>
         
-        <div class="term-widget" style="border-left: 2px solid #F6465D;">
-            <div class="term-w-title">RỦI RO HỆ THỐNG & TOKENOMICS</div>
-            <div class="term-row" style="margin-bottom: 6px;">
-                <span class="term-lbl">Ví Top 10 Hold:</span>
-                <div style="display:flex; align-items:center; gap: 6px;">
-                    <span id="sm-top10-pct" class="term-val">--%</span>
-                    <span id="sm-top10-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+        <div id="sm-scroll-area" style="flex: 1; overflow-y: auto; padding: 10px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
+            
+            <div class="term-widget" style="border-left: 2px solid #F6465D;">
+                <div class="term-w-title">RỦI RO HỆ THỐNG & TOKENOMICS</div>
+                <div class="term-row" style="margin-bottom: 6px;">
+                    <span class="term-lbl">Ví Top 10 Hold:</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-top10-pct" class="term-val">--%</span>
+                        <span id="sm-top10-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
+                </div>
+                <div class="term-row" style="margin-bottom: 6px;">
+                    <span class="term-lbl">Áp lực xả (Dump CEX):</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-bn-avg-buy" class="term-val">$--</span>
+                        <span id="sm-dump-risk-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
+                </div>
+                <div class="term-row" style="margin-bottom: 6px;">
+                    <span class="term-lbl">Mở khóa (MC/FDV):</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-unlock-pct" class="term-val">--%</span>
+                        <span id="sm-unlock-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
+                </div>
+                <div class="term-row">
+                    <span class="term-lbl">Sức đỡ Thanh khoản:</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-liq-ratio" class="term-val">--%</span>
+                        <span id="sm-liq-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
                 </div>
             </div>
-            <div class="term-row" style="margin-bottom: 6px;">
-                <span class="term-lbl">Áp lực xả (Dump CEX):</span>
-                <div style="display:flex; align-items:center; gap: 6px;">
-                    <span id="sm-bn-avg-buy" class="term-val">$--</span>
-                    <span id="sm-dump-risk-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+
+            <div class="term-w-title" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>💎 TỔ HỢP VÍ (ON-CHAIN)</span>
+                <span id="sm-verdict-badge" style="font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 3px; background: transparent; border: 1px solid #444;">-- Đang quét --</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #0ECB81; padding: 6px;">
+                    <div class="term-w-title">Smart Money</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-smart">0 ví</span><span class="term-val" id="sm-pct-smart" style="color: #0ECB81;">--%</span></div>
+                </div>
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #F0B90B; padding: 6px;">
+                    <div class="term-w-title">KOLs / Pro</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-kol">0 ví</span><span class="term-val" id="sm-pct-kol" style="color: #F0B90B;">--%</span></div>
+                </div>
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #848e9c; padding: 6px;">
+                    <div class="term-w-title">New Wallets</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-new">0 ví</span><span class="term-val" id="sm-pct-new">--%</span></div>
+                </div>
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #FF007F; padding: 6px;">
+                    <div class="term-w-title">Sniper/Bundler</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-sniper">0 ví</span><span class="term-val" id="sm-pct-sniper" style="color: #FF007F;">--%</span></div>
                 </div>
             </div>
-            <div class="term-row" style="margin-bottom: 6px;">
-                <span class="term-lbl">Mở khóa (MC/FDV):</span>
-                <div style="display:flex; align-items:center; gap: 6px;">
-                    <span id="sm-unlock-pct" class="term-val">--%</span>
-                    <span id="sm-unlock-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+
+            <div class="term-widget" style="border-left: 2px solid #3B82F6; margin-top: 4px;">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span>🏦 DÒNG TIỀN BINANCE CEX</span>
+                    <span id="sm-bn-traders" style="color:#00F0FF; font-size: 8.5px; font-family:var(--font-num); font-weight:700;">-- Traders | -- KYC</span>
+                </div>
+                <div class="term-row"><span class="term-lbl">Net Flow (4H)</span><span id="sm-bn-netflow-4h" class="term-val">$--</span></div>
+                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">Net Flow (24H)</span><span id="sm-bn-netflow-24h" class="term-val">$--</span></div>
+            </div>
+
+            <div class="term-w-title" style="margin-top: 8px; margin-bottom: 4px;">⚖️ ĐỘNG LƯỢNG MUA/BÁN (CVD)</div>
+            
+            <div class="term-widget" style="margin-bottom: 6px; padding: 6px 8px;">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 8.5px;">Khung 1 Giờ</span>
+                    <span id="sm-tag-1h" style="font-weight:bold; padding:2px 4px; border-radius:3px; font-size: 8px;">--</span>
+                </div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0;">
+                    <div id="sm-bar-1h-buy" style="height:100%; width:50%; background:var(--term-up); transition:0.3s;"></div>
+                    <div id="sm-bar-1h-sell" style="height:100%; width:50%; background:var(--term-down); transition:0.3s;"></div>
+                </div>
+                <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-1h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-1h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
+            </div>
+
+            <div class="term-widget" style="margin-bottom: 0; padding: 6px 8px;">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 8.5px;">Khung 4 Giờ</span>
+                    <span id="sm-tag-4h" style="font-weight:bold; padding:2px 4px; border-radius:3px; font-size: 8px;">--</span>
+                </div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0;">
+                    <div id="sm-bar-4h-buy" style="height:100%; width:50%; background:var(--term-up); transition:0.3s;"></div>
+                    <div id="sm-bar-4h-sell" style="height:100%; width:50%; background:var(--term-down); transition:0.3s;"></div>
+                </div>
+                <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-4h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-4h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
+            </div>
+
+            <div class="term-widget" style="border-left: 2px solid #9945FF; margin-top: 6px; margin-bottom: 20px; padding: 8px;" id="sm-futures-sentiment-box">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #9945FF;"><i class="fas fa-satellite-dish"></i> VỊ THẾ CÁ MẬP (FUTURES)</span>
+                    <span id="sm-fs-status" style="color:var(--term-warn); font-size: 8.5px;">⏳ Đang tải...</span>
+                </div>
+
+                <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Tiền (Margin)</span><span id="sm-fs-pos-ratio" class="term-val">--% L / --% S</span></div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
+                    <div id="sm-fs-pos-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                    <div id="sm-fs-pos-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+                </div>
+
+                <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Người (Traders)</span><span id="sm-fs-acc-ratio" class="term-val">--% L / --% S</span></div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
+                    <div id="sm-fs-acc-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                    <div id="sm-fs-acc-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+                </div>
+
+                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-bottom: 0;">
+                    <span class="term-lbl">Taker Volume (5m)</span>
+                    <div style="text-align:right;">
+                        <div style="font-size: 10px; color: var(--term-up); font-weight: 800; font-family: var(--font-num);">Buy: <span id="sm-fs-taker-buy">$--</span></div>
+                        <div style="font-size: 10px; color: var(--term-down); font-weight: 800; font-family: var(--font-num);">Sell: <span id="sm-fs-taker-sell">$--</span></div>
+                    </div>
                 </div>
             </div>
-            <div class="term-row">
-                <span class="term-lbl">Sức đỡ Thanh khoản:</span>
-                <div style="display:flex; align-items:center; gap: 6px;">
-                    <span id="sm-liq-ratio" class="term-val">--%</span>
-                    <span id="sm-liq-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
-                </div>
-            </div>
-        </div>
 
-        <div class="term-w-title" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <span>💎 TỔ HỢP VÍ (ON-CHAIN)</span>
-            <span id="sm-verdict-badge" style="font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 3px; background: transparent; border: 1px solid #444;">-- Đang quét --</span>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
-            <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #0ECB81; padding: 6px;">
-                <div class="term-w-title">Smart Money</div>
-                <div class="term-row"><span class="term-lbl" id="sm-cnt-smart">0 ví</span><span class="term-val" id="sm-pct-smart" style="color: #0ECB81;">--%</span></div>
-            </div>
-            <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #F0B90B; padding: 6px;">
-                <div class="term-w-title">KOLs / Pro</div>
-                <div class="term-row"><span class="term-lbl" id="sm-cnt-kol">0 ví</span><span class="term-val" id="sm-pct-kol" style="color: #F0B90B;">--%</span></div>
-            </div>
-            <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #848e9c; padding: 6px;">
-                <div class="term-w-title">New Wallets</div>
-                <div class="term-row"><span class="term-lbl" id="sm-cnt-new">0 ví</span><span class="term-val" id="sm-pct-new">--%</span></div>
-            </div>
-            <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #FF007F; padding: 6px;">
-                <div class="term-w-title">Sniper/Bundler</div>
-                <div class="term-row"><span class="term-lbl" id="sm-cnt-sniper">0 ví</span><span class="term-val" id="sm-pct-sniper" style="color: #FF007F;">--%</span></div>
-            </div>
-        </div>
-
-        <div class="term-widget" style="border-left: 2px solid #3B82F6; margin-top: 4px;">
-            <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span>🏦 DÒNG TIỀN BINANCE CEX</span>
-                <span id="sm-bn-traders" style="color:#00F0FF; font-size: 8.5px; font-family:var(--font-num); font-weight:700;">-- Traders | -- KYC</span>
-            </div>
-            <div class="term-row"><span class="term-lbl">Net Flow (4H)</span><span id="sm-bn-netflow-4h" class="term-val">$--</span></div>
-            <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">Net Flow (24H)</span><span id="sm-bn-netflow-24h" class="term-val">$--</span></div>
-        </div>
-
-        <div class="term-w-title" style="margin-top: 8px; margin-bottom: 4px;">⚖️ ĐỘNG LƯỢNG MUA/BÁN (CVD)</div>
-        
-        <div class="term-widget" style="margin-bottom: 6px; padding: 6px 8px;">
-            <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-size: 8.5px;">Khung 1 Giờ</span>
-                <span id="sm-tag-1h" style="font-weight:bold; padding:2px 4px; border-radius:3px; font-size: 8px;">--</span>
-            </div>
-            <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0;">
-                <div id="sm-bar-1h-buy" style="height:100%; width:50%; background:var(--term-up); transition:0.3s;"></div>
-                <div id="sm-bar-1h-sell" style="height:100%; width:50%; background:var(--term-down); transition:0.3s;"></div>
-            </div>
-            <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-1h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-1h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
-        </div>
-
-        <div class="term-widget" style="margin-bottom: 0; padding: 6px 8px;">
-            <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-size: 8.5px;">Khung 4 Giờ</span>
-                <span id="sm-tag-4h" style="font-weight:bold; padding:2px 4px; border-radius:3px; font-size: 8px;">--</span>
-            </div>
-            <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0;">
-                <div id="sm-bar-4h-buy" style="height:100%; width:50%; background:var(--term-up); transition:0.3s;"></div>
-                <div id="sm-bar-4h-sell" style="height:100%; width:50%; background:var(--term-down); transition:0.3s;"></div>
-            </div>
-            <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-4h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-4h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
-        </div>
-        <div class="term-widget" style="border-left: 2px solid #9945FF; margin-top: 6px; padding: 8px;" id="sm-futures-sentiment-box">
-            <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="color: #9945FF;"><i class="fas fa-satellite-dish"></i> VỊ THẾ CÁ MẬP (FUTURES)</span>
-                <span id="sm-fs-status" style="color:var(--term-warn); font-size: 8.5px;">⏳ Đang tải...</span>
-            </div>
-
-            <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Tiền (Margin)</span><span id="sm-fs-pos-ratio" class="term-val">--% L / --% S</span></div>
-            <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
-                <div id="sm-fs-pos-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
-                <div id="sm-fs-pos-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
-            </div>
-
-            <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Người (Traders)</span><span id="sm-fs-acc-ratio" class="term-val">--% L / --% S</span></div>
-            <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
-                <div id="sm-fs-acc-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
-                <div id="sm-fs-acc-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
-            </div>
-
-            <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-bottom: 0;">
-                <span class="term-lbl">Taker Volume (5m)</span>
-                <div style="text-align:right;">
-                    <div style="font-size: 10px; color: var(--term-up); font-weight: 800; font-family: var(--font-num);">Buy: <span id="sm-fs-taker-buy">$--</span></div>
-                    <div style="font-size: 10px; color: var(--term-down); font-weight: 800; font-family: var(--font-num);">Sell: <span id="sm-fs-taker-sell">$--</span></div>
-                </div>
-            </div>
-        </div>
-    `;
+        </div> `;
     sidePanel.appendChild(newTabContent);
 }
 
