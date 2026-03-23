@@ -1068,13 +1068,14 @@ function injectLayout() {
             </div>
 
             <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up); padding-bottom: 4px;">
+                
+                <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; gap: 6px;">
+                    <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up); flex: 1; display: flex; flex-direction: column; justify-content: center;">
                         <div class="term-w-title">REALTIME FLOW</div>
                         <div id="cc-net-flow" class="term-val" style="font-size: 14px; color: var(--term-up);">+$0</div>
                     </div>
                     
-                    <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim);">
+                    <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim); flex: 1; display: flex; flex-direction: column; justify-content: center;">
                         <div class="term-w-title">ALGO <span id="cc-speed" style="color:var(--term-text); text-transform:none;">$0/s</span></div>
                         <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤖 TĨNH LẶNG (XÁM)</div>
                         <div style="display: flex; height: 3px; border-radius: 1px; overflow: hidden; background: var(--term-border); position: relative;">
@@ -1094,8 +1095,8 @@ function injectLayout() {
                         <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">24 Giờ</span><span id="cc-api-nf-24h" class="term-val">...</span></div>
                     </div>
                 </div>
-
-            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
+                
+            </div> <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
                 <div class="term-widget" style="margin-bottom: 0;">
                     <div class="term-w-title">DÒNG TIỀN (60s)</div>
                     <div class="term-row"><span class="term-lbl">Avg Ticket</span><span id="cc-avg-ticket" class="term-val">🦐 $0</span></div>
