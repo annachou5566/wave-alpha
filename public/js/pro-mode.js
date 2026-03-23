@@ -138,10 +138,28 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
             .sc-mc-item span { font-size: 9.5px; color: var(--term-dim); font-weight: 600; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px;}
             .sc-mc-item strong { font-size: 13px; color: var(--term-text); font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
             
-            /* TABS BÊN PHẢI */
-            .sc-mobile-tabs { display: flex; background: var(--term-panel); border-bottom: 1px solid var(--term-border); flex-shrink: 0; }
-            .sc-tab-btn { flex: 1; background: transparent; border: none; color: var(--term-dim); padding: 8px 0; font-size: 10.5px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; transition: 0.2s; letter-spacing: 0.5px;}
-            .sc-tab-btn.active { color: var(--term-warn); border-bottom-color: var(--term-warn); background: rgba(240, 185, 11, 0.05); }
+            /* ========================================= */
+            /* BỘ KHUNG LAYOUT TERMINAL BÊN PHẢI (MỚI) */
+            /* ========================================= */
+            .sc-right-container { display: flex; height: 100%; background: var(--term-bg); border-left: 1px solid var(--term-border); z-index: 2; flex-shrink: 0; }
+            .sc-panel-content { width: 340px; height: 100%; background: var(--term-bg); display: flex; flex-direction: column; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-x: hidden; overflow-y: hidden; }
+            .sc-panel-content.collapsed { width: 0px !important; }
+            
+            .sc-icon-sidebar { width: 40px; height: 100%; background: var(--term-panel); border-left: 1px solid var(--term-border); display: flex; flex-direction: column; align-items: center; padding-top: 10px; flex-shrink: 0; z-index: 3; }
+            .sc-sidebar-icon { width: 40px; height: 40px; background: transparent; border: none; color: var(--term-dim); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; position: relative; border-left: 2px solid transparent; }
+            .sc-sidebar-icon:hover { color: var(--term-text); background: rgba(255,255,255,0.05); }
+            .sc-sidebar-icon.active { color: var(--term-warn); background: rgba(240, 185, 11, 0.1); border-left-color: var(--term-warn); }
+            
+            .sc-sidebar-icon::after { content: attr(data-title); position: absolute; right: 45px; background: #1e2329; color: #eaecef; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; transform: translateX(10px); border: 1px solid var(--term-border); box-shadow: 0 2px 8px rgba(0,0,0,0.5); z-index: 100; }
+            .sc-sidebar-icon:hover::after { opacity: 1; transform: translateX(0); }
+            
+            .wl-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; border-bottom: 1px solid var(--term-border); cursor: pointer; transition: 0.2s;}
+            .wl-item:hover { background: rgba(255,255,255,0.03); }
+            .wl-sym { font-weight: 700; color: var(--term-text); font-size: 12px; display: flex; align-items: center; gap: 6px; width: 35%;}
+            .wl-sym img { width: 18px; height: 18px; border-radius: 50%; }
+            .wl-price { font-family: var(--font-num); color: var(--term-text); font-size: 13px; text-align: right; width: 35%; font-weight: 600;}
+            .wl-chg { font-family: var(--font-num); font-size: 12px; font-weight: 700; text-align: right; width: 30%;}
+            
             .sc-tab-content { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 10px; background: var(--term-bg);}
             .sc-tab-content.active { display: flex !important; }
             
@@ -175,8 +193,13 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
                 .sc-metrics-compact { width: 100%; justify-content: space-between; gap: 2px; overflow: hidden; padding-bottom: 0;}
                 .sc-mc-item span { font-size: 8px; margin-bottom: 0; }
                 .sc-mc-item strong { font-size: 10.5px; }
-                .sc-side-panel { width: 100% !important; flex: 1 !important; border-left: none; }
-                .sc-tab-content { padding: 6px; }
+                .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1; border-left: none; }
+                .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; }
+                .sc-sidebar-icon { border-left: none !important; border-bottom: 2px solid transparent; }
+                .sc-sidebar-icon.active { border-bottom-color: var(--term-warn); }
+                .sc-sidebar-icon:hover::after { display: none; }
+                .sc-panel-content { width: 100% !important; flex: 1; transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+                .sc-panel-content.collapsed { height: 0px !important; flex: none !important; }
             }
         `;
         document.head.appendChild(proChartStyle);
@@ -1035,112 +1058,53 @@ function injectLayout() {
 
 
                     
-                </div> <div class="sc-side-panel">
-                    <div class="sc-mobile-tabs">
-                        <button class="sc-tab-btn active" onclick="window.switchScTab('trades', this)">Live Trades</button>
-                        <button class="sc-tab-btn" onclick="window.switchScTab('info', this)">Data Flow</button>
-                    </div>
-
-                    <div id="tab-trades" class="sc-tab-content active" style="padding: 0;">
-                        <div class="sc-panel-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329;">
-                            <i class="fas fa-bolt" style="color:#00F0FF; margin-right: 5px;"></i> LIVE TRADES
+                </div> <div class="sc-right-container" id="sc-right-container">
+                    <div class="sc-panel-content" id="sc-panel-content">
+                        <div id="tab-watchlist" class="sc-tab-content" style="padding: 0; display: none;">
+                            <div class="sc-panel-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329;">
+                                <i class="fas fa-list" style="color:#F0B90B; margin-right: 5px;"></i> WATCHLIST
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; padding: 6px 15px; font-weight:700; background: #0B0E11;">
+                                <span style="width:35%">TOKEN</span><span style="width:35%; text-align:right;">GIÁ</span><span style="width:30%; text-align:right;">24H%</span>
+                            </div>
+                            <div id="sc-watchlist-body" style="flex:1; overflow-y:auto;">
+                                <div class="wl-item">
+                                    <div class="wl-sym"><img src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'"> BTC</div>
+                                    <div class="wl-price">$95,000.00</div>
+                                    <div class="wl-chg text-green">+2.5%</div>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; padding: 6px 15px; font-weight:700; background: #0B0E11;">
-                            <span>GIÁ</span><span>KL ($)</span><span>TIME</span>
-                        </div>
-                        <div id="sc-live-trades" style="flex:1; overflow-y:auto; padding: 0 10px; font-size:11.5px; font-family:var(--font-num);">
-                            <div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>
-                        </div>
-                    </div>
 
-                    <div id="tab-info" class="sc-tab-content" style="padding: 10px;">
-        <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
-            <i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 5px;"></i> COMMAND CENTER (PRO)
-        </div>
-        
-        <div id="quant-command-center" style="display: flex; flex-direction: column;">
-            
-            <div class="term-widget" style="border-left: 2px solid var(--term-warn);">
-                <div class="term-row">
-                    <span class="term-lbl">LIVE VERDICT:</span>
-                    <span id="ai-verdict-badge" style="font-size: 10px; font-weight: 800; color: var(--term-warn);">ĐANG QUÉT...</span>
-                </div>
-            </div>
+                        <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex;">
+                            <div class="sc-panel-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329;">
+                                <i class="fas fa-bolt" style="color:#00F0FF; margin-right: 5px;"></i> LIVE TRADES
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; padding: 6px 15px; font-weight:700; background: #0B0E11;">
+                                <span>GIÁ</span><span>KL ($)</span><span>TIME</span>
+                            </div>
+                            <div id="sc-live-trades" style="flex:1; overflow-y:auto; padding: 0 10px; font-size:11.5px; font-family:var(--font-num);">
+                                <div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>
+                            </div>
+                        </div>
 
-            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
-                
-                <div style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; gap: 6px;">
-                    <div class="term-widget" id="cc-nf-box" style="margin-bottom: 0; border-left: 2px solid var(--term-up); flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                        <div class="term-w-title">REALTIME FLOW</div>
-                        <div id="cc-net-flow" class="term-val" style="font-size: 14px; color: var(--term-up);">+$0</div>
-                    </div>
-                    
-                    <div class="term-widget" id="cc-algo-box" style="margin-bottom: 0; border-left: 2px solid var(--term-dim); flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                        <div class="term-w-title">ALGO <span id="cc-speed" style="color:var(--term-text); text-transform:none;">$0/s</span></div>
-                        <div id="cc-algo-status" style="font-size: 9px; font-weight: 800; color: var(--term-dim); margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤖 TĨNH LẶNG (XÁM)</div>
-                        <div style="display: flex; height: 3px; border-radius: 1px; overflow: hidden; background: var(--term-border); position: relative;">
-                            <div id="cc-ofi-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s linear;"></div>
-                            <div id="cc-ofi-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s linear;"></div>
-                            <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #000; z-index: 2;"></div>
+                        <div id="tab-info" class="sc-tab-content" style="padding: 10px;">
+                            <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
+                                <i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 5px;"></i> COMMAND CENTER (PRO)
+                            </div>
+                            <div style="font-size: 11px; color:#848e9c; text-align:center; margin-top: 20px;">
+                                Data Flow is running...
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #3B82F6; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-                    <div class="term-w-title" style="color: #3B82F6; margin-bottom: auto;">BINANCE NET FLOW</div>
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
-                        <div class="term-row"><span class="term-lbl">5 Phút</span><span id="cc-api-nf-5m" class="term-val">...</span></div>
-                        <div class="term-row"><span class="term-lbl">1 Giờ</span><span id="cc-api-nf-1h" class="term-val">...</span></div>
-                        <div class="term-row"><span class="term-lbl">4 Giờ</span><span id="cc-api-nf-4h" class="term-val">...</span></div>
-                        <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">24 Giờ</span><span id="cc-api-nf-24h" class="term-val">...</span></div>
+                    <div class="sc-icon-sidebar">
+                        <button class="sc-sidebar-icon" data-title="Watchlist" onclick="window.toggleProSidePanel('watchlist', this)"><i class="fas fa-list"></i></button>
+                        <button class="sc-sidebar-icon active" data-title="Live Trades" onclick="window.toggleProSidePanel('trades', this)"><i class="fas fa-bolt"></i></button>
+                        <button class="sc-sidebar-icon" data-title="Data Flow" onclick="window.toggleProSidePanel('info', this)"><i class="fas fa-wave-square"></i></button>
+                        <button class="sc-sidebar-icon" data-title="Smart Money" onclick="window.toggleProSidePanel('smartmoney', this)"><i class="fas fa-microscope"></i></button>
                     </div>
                 </div>
-                
-            </div> <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
-                <div class="term-widget" style="margin-bottom: 0;">
-                    <div class="term-w-title">DÒNG TIỀN (60s)</div>
-                    <div class="term-row"><span class="term-lbl">Avg Ticket</span><span id="cc-avg-ticket" class="term-val">🦐 $0</span></div>
-                    <div class="term-row"><span class="term-lbl">VWAP</span><span id="cc-vwap-trend" class="term-val">0.00%</span></div>
-                </div>
-
-                <div class="term-widget" style="margin-bottom: 0;">
-                    <div class="term-w-title">RỦI RO THANH KHOẢN</div>
-                    <div class="term-row"><span class="term-lbl">Spread</span><span id="cc-spread-val" class="term-val" style="color:var(--term-up);">0.00%</span></div>
-                    <div style="height:2px; background:var(--term-border); margin: 2px 0 4px 0;"><div id="cc-spread-meter" style="height:100%; width:10%; background:var(--term-up);"></div></div>
-                    <div class="term-row"><span class="term-lbl">Drop (5m)</span><span id="cc-drop-val" class="term-val">0.00%</span></div>
-                </div>
-            </div>
-
-            <div class="term-widget">
-                <div class="term-w-title">WHALES & SHARKS <span id="cc-whale-ratio" style="color: var(--term-text);">--% BUY</span></div>
-                <div style="display: flex; height: 4px; border-radius: 1px; overflow: hidden; background: var(--term-border); margin-bottom: 4px;">
-                    <div id="cc-whale-bar-buy" style="height: 100%; width: 50%; background: var(--term-up); transition: 0.2s;"></div>
-                    <div id="cc-whale-bar-sell" style="height: 100%; width: 50%; background: var(--term-down); transition: 0.2s;"></div>
-                </div>
-                <div class="term-row" style="font-size: 10px; color: var(--term-dim);">
-                    <span id="cc-whale-vol-buy">B: $0</span>
-                    <span id="cc-whale-vol-sell">S: $0</span>
-                </div>
-            </div>
-
-            <div class="term-w-title" style="margin-top: 4px;">SNIPER TAPE (ADAPTIVE)</div>
-            <div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px;">
-                <div style="font-size: 9px; color: var(--term-dim); text-align: center; margin-top: 40px;">Đang rình cá mập...</div>
-            </div>
-
-            <div class="term-widget" style="margin-bottom: 0;">
-                <div class="term-w-title">FUTURES <span id="cc-futures-status" style="color: var(--term-warn);">⏳ ĐANG DÒ...</span></div>
-                <div class="term-row"><span class="term-lbl">Open Interest</span><span id="cc-oi-val" class="term-val">$--</span></div>
-                <div class="term-row"><span class="term-lbl" id="cc-funding-lbl">Funding Rate</span><span id="cc-funding-val" class="term-val">--%</span></div>
-                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-top: 4px;">
-                    <span id="cc-liq-long" style="color:var(--term-down); font-size:9.5px; font-weight:700; font-family:var(--font-num);">🩸 Liq L: $0</span>
-                    <span id="cc-liq-short" style="color:var(--term-up); font-size:9.5px; font-weight:700; font-family:var(--font-num);">💥 Liq S: $0</span>
-                </div>
-            </div>
-            
-        </div>
-    </div>
-</div>
                 </div>
             </div>
     `;
@@ -2956,16 +2920,31 @@ window.closeProChart = function() {
 // 🚀 TRỤ CỘT 4: SMART MONEY RADAR (ĐÃ FIX LỖI SYNTAX VÀ MAPPING DỮ LIỆU)
 // =====================================================================
 
-// 1. Logic chuyển Tab chuẩn xác
-window.switchScTab = function(tabId, btnElement) {
-    document.querySelectorAll('.sc-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if(btnElement) btnElement.classList.add('active');
-    
-    document.querySelectorAll('.sc-tab-content').forEach(tab => {
+// Logic ẩn/hiện Tab chuẩn TradingView Zen Mode
+window.toggleProSidePanel = function(tabId, btnElement) {
+    const panelContent = document.getElementById('sc-panel-content');
+    const allBtns = document.querySelectorAll('.sc-sidebar-icon');
+    const allTabs = document.querySelectorAll('.sc-tab-content');
+
+    // Nếu ấn lại nút đang active -> Gập panel lại (Zen Mode)
+    if (btnElement && btnElement.classList.contains('active')) {
+        panelContent.classList.toggle('collapsed');
+        return; 
+    }
+
+    // Nếu panel đang gập mà ấn nút khác -> Mở panel ra
+    if (panelContent.classList.contains('collapsed')) {
+        panelContent.classList.remove('collapsed');
+    }
+
+    allBtns.forEach(btn => btn.classList.remove('active'));
+    if (btnElement) btnElement.classList.add('active');
+
+    allTabs.forEach(tab => {
         tab.style.display = 'none';
         tab.classList.remove('active');
     });
-    
+
     let targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) {
         targetTab.style.display = 'flex';
@@ -2973,51 +2952,9 @@ window.switchScTab = function(tabId, btnElement) {
     }
 };
 
-// 2. Tự động tiêm UI Smart Money (PRO QUANT V4 - FIX TẬN GỐC LỖI CUỘN MOBILE)
 function injectSmartMoneyTab() {
-    const tabsContainer = document.querySelector('.sc-mobile-tabs');
-    const sidePanel = document.querySelector('.sc-side-panel');
-    
-    if (!tabsContainer || !sidePanel || document.getElementById('tab-smartmoney')) return;
-
-    // --- THUỐC ĐẶC TRỊ LỖI CUỘN TRÊN ĐIỆN THOẠI (CHỐNG SCROLL BLEEDING) ---
-    if (!document.getElementById('sm-mobile-scroll-fix')) {
-        const style = document.createElement('style');
-        style.id = 'sm-mobile-scroll-fix';
-        style.innerHTML = `
-            /* 1. Khoá chết trang web nền khi đang mở Chart */
-            body.overlay-active {
-                overflow: hidden !important;
-            }
-            /* 2. Ép khung Flexbox không được phình to, bắt buộc hiện thanh cuộn bên trong */
-            @media (max-width: 991px) {
-                .sc-body { min-height: 0 !important; }
-                .sc-side-panel { 
-                    min-height: 0 !important; 
-                    display: flex !important; 
-                    flex-direction: column !important; 
-                }
-                .sc-tab-content { 
-                    flex: 1 1 auto !important; 
-                    min-height: 0 !important; 
-                    overflow-y: auto !important; 
-                    overflow-x: hidden !important;
-                    overscroll-behavior: contain !important; /* Cấm cuộn lây lan ra ngoài */
-                    -webkit-overflow-scrolling: touch !important; /* Vuốt mượt có quán tính trên iOS */
-                    padding-bottom: 80px !important; /* Tránh thanh điều hướng của iPhone che mất dòng cuối */
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    tabsContainer.style.display = 'flex';
-    
-    const newTabBtn = document.createElement('button');
-    newTabBtn.className = 'sc-tab-btn';
-    newTabBtn.innerText = 'Smart Money';
-    newTabBtn.onclick = function() { window.switchScTab('smartmoney', this); };
-    tabsContainer.appendChild(newTabBtn);
+    const sidePanel = document.getElementById('sc-panel-content');
+    if (!sidePanel || document.getElementById('tab-smartmoney')) return;
 
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
