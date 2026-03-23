@@ -2763,7 +2763,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         // DÁN ĐOẠN RESET VÀO ĐÚNG CHỖ NÀY:
         window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
         let tape = document.getElementById('cc-sniper-tape');
-        if(tape) tape.innerHTML = '<div style="font-size: 8.5px; color: #527c82; text-align: center; margin-top: 40px; font-style:italic;">Đang rình cá mập...</div>';
+        if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
     }
 
     setTimeout(() => {
