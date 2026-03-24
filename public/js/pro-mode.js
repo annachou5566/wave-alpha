@@ -984,13 +984,13 @@ function injectLayout() {
 
         <div id="super-chart-overlay">
             <div class="sc-topbar">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <img id="sc-coin-logo" style="width: 22px; height: 22px; border-radius: 50%;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
-                    <span id="sc-coin-symbol" style="font-size: 16px; font-weight: 800; color: #eaecef; font-family: var(--font-num);">---/USDT</span>
-                    <span id="sc-coin-contract" style="background: rgba(255,255,255,0.05); color: #848e9c; font-size: 10px; padding: 3px 6px; border-radius: 4px; cursor: pointer;" onclick="window.pluginCopy(this.innerText)">---</span>
-                    <span id="sc-algo-limit" style="background: rgba(14,203,129,0.1); color: #0ecb81; font-size: 10px; font-weight: 800; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(14,203,129,0.3); white-space: nowrap;">ALGO: N/A</span>
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden;">
+                    <img id="sc-coin-logo" style="width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;" src="assets/tokens/default.png" onerror="this.src='assets/tokens/default.png'">
+                    <span id="sc-coin-symbol" style="font-size: 14px; font-weight: 800; color: #eaecef; font-family: var(--font-num); white-space: nowrap; flex-shrink: 0;">---/USDT</span>
+                    <span id="sc-coin-name" style="background: rgba(255,255,255,0.05); color: #848e9c; font-size: 10px; padding: 3px 6px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;">---</span>
+                    <span id="sc-algo-limit" style="background: rgba(14,203,129,0.1); color: #0ecb81; font-size: 10px; font-weight: 800; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(14,203,129,0.3); white-space: nowrap; flex-shrink: 0;">ALGO: N/A</span>
                 </div>
-                <button style="background: transparent; border: none; color: #848e9c; font-size: 18px; cursor: pointer;" onclick="window.closeProChart()">✕</button>
+                <button style="background: transparent; border: none; color: #848e9c; font-size: 18px; cursor: pointer; flex-shrink: 0;" onclick="window.closeProChart()">✕</button>
             </div>
 
             <div class="sc-body">
@@ -2581,7 +2581,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
     if (!isTimeSwitch) {
         // Bơm thông số Header
         document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + ' / USDT';
-        document.getElementById('sc-coin-contract').innerText = t.contract ? t.contract.substring(0,10) + '...' : '';
+        document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + '/USDT';
+        let nameEl = document.getElementById('sc-coin-name');
+        if (nameEl) nameEl.innerText = t.name || t.symbol; 
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + formatPrice(t.price);
         // Chờ WebSocket gom đủ nến trong vài giây để chạy thuật toán Algo Limit
@@ -2611,11 +2613,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
     const container = document.getElementById('sc-chart-container');
     if (tvChart) { tvChart.remove(); tvChart = null; tvLineSeries = null; tvCandleSeries = null; tvVolumeSeries = null; }
     
+    // [FIX LỖI MẤT TOOLTIP & LÀM GỌN UI MOBILE]
     container.innerHTML = `
         <div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
         
-        <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 15px; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; color: #848e9c; font-size: 12px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
-            <span id="tp-symbol" style="color:#eaecef; font-weight:800; font-size:15px;">${t.symbol}</span>
+        <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
             <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span>
             <span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span>
             <span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span>
