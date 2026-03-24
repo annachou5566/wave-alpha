@@ -72,10 +72,13 @@ setInterval(() => {
     let totalVol15s = buyVol15s + sellVol15s;
     let ofi = totalVol15s > 0 ? ((buyVol15s - sellVol15s) / totalVol15s) : 0;
 
-    // --- E. TÍNH Z-SCORE (Đột biến dòng tiền) ---
+    // --- E & F. TOÁN HỌC ALGO LIMIT (BẢN CHUẨN QUANT - REAL TICK COUNT) ---
     let currentSpeed = speedWindow.reduce((s, x) => s + x.v, 0) / 5; 
-    let txPerSec = speedWindow.length / 5;
     
+    // Đếm chính xác số lượng lệnh thực tế đã khớp trong 5 giây qua
+    let txPerSec = speedWindow.length / 5; 
+
+    // Tính Z-Score (Đo độ đột biến dòng tiền)
     if (!self.speedHist) self.speedHist = [];
     self.speedHist.push(currentSpeed);
     if (self.speedHist.length > 60) self.speedHist.shift();
@@ -90,16 +93,16 @@ setInterval(() => {
         zScore = (currentSpeed - mean) / stdDev;
     }
 
-    // --- F. TÍNH ALGO LIMIT ---
+    // Tính ALGO LIMIT (Dựa trên dòng tiền thực và số lệnh thực)
     let algoLimit = currentSpeed * 0.15; 
     if (spread <= 0.5) algoLimit *= 1.0;
     else if (spread <= 1.5) algoLimit *= 0.8;
     else if (spread <= 3.0) algoLimit *= 0.5;
     else algoLimit *= 0.2;
+    
+    // Nếu giao dịch quá thưa thớt (dưới 3 lệnh/giây), phạt giảm 50% thanh khoản thuật toán để tránh dính trấu Cá voi
     if (txPerSec < 3) algoLimit *= 0.5;
     algoLimit = Math.round(algoLimit);
-
-    let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60;
 
     // Gửi cục kết quả đã tính xong về lại cho Luồng Chính vẽ UI
     self.postMessage({
