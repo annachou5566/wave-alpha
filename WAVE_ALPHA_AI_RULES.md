@@ -85,6 +85,13 @@
   }
   ```
 
+### 2.5. Internal Node.js APIs (Wave Alpha Backend)
+Frontend giao tiếp với Server nội bộ qua các endpoint sau (đã bọc Cache):
+* `GET /api/market-data`: Lấy `GLOBAL_MARKET` cache 60s (Fallback nếu R2 lỗi).
+* `GET /api/competition-data`: Trả về dữ liệu giải đấu đang active từ Supabase + logic AI Prediction.
+* `GET /api/klines`: Proxy gọi API nến của Binance (tránh CORS/Rate limit cho Client).
+* `GET /api/smart-money`: Proxy lấy dữ liệu dòng tiền (có cache trên RAM Node.js).
+
 ---
 
 ## 3. RANH GIỚI DATABASE (STORAGE STRATEGY)
@@ -96,6 +103,16 @@
   * Bảng `tournaments`: Lưu cấu hình giải đấu (Start, End, ChainID, Contract). ID `-1` dùng làm Global Config.
   * Bảng `profiles`, `predictions`, `prediction_votes`: Lưu User Data, số dư, và các lệnh dự đoán khối lượng.
   * Mục tiêu: Logic nghiệp vụ cốt lõi, xác thực người dùng.
+
+### 3.1. Cấu trúc Minify JSON (Python -> R2 -> Frontend)
+Để tiết kiệm băng thông, dữ liệu ném lên `market-data.json` đã được rút gọn key. AI khi code Frontend đọc data từ R2 phải tuân thủ map sau:
+* `s`: symbol (Tên token)
+* `p`: price (Giá hiện tại)
+* `v`: volume24h (Khối lượng 24h)
+* `c`: count24h (Số lượng giao dịch)
+* `mc`: marketCap (Vốn hóa)
+* `l`: liquidity (Thanh khoản)
+* `r24`: percentChange24h (% thay đổi 24h)
 
 ---
 
@@ -120,4 +137,18 @@
 * **Sự cố đứt gãy WebSocket:**
   * WSS của Binance có thể ngắt kết nối định kỳ hoặc khi đổi IP.
   * Phải có cơ chế tự động reconnect với hàm Exponential Backoff (1s -> 2s -> 4s) và khôi phục mảng `clientPriceBuffer`. Giữ mạng sống kể cả khi trình duyệt bị đưa vào background tab (sử dụng Web Worker nếu cần thiết).
+
+---
+
+## 6. CÔNG THỨC QUANT LÕI (QUANT ALGORITHMS)
+Toàn bộ logic HFT nằm trong `quant-worker.js`. AI khi can thiệp phải hiểu các định nghĩa sau:
+* **Spread (Độ lệch Bid/Ask 15s):** Dựa trên phân vị giá `P90` và `P10`. Công thức: `((P90 - P10) / P10) * 100`.
+* **VWAP Trend (Quán tính 60s):** Chia 60s làm 2 nửa, tính VWAP từng nửa. Quán tính = `((vwapNew - vwapOld) / vwapOld) * 100`.
+* **Drop (Độ sập 5m):** Lấy đỉnh `P95` trong 5 phút so với giá hiện tại để tính % sụt giảm.
+* **OFI (Order Flow Imbalance 15s):** `(BuyVol - SellVol) / TotalVol`.
+* **Z-Score (Đột biến khối lượng):** Tính Mean và StdDev trên mảng 60 điểm (mỗi điểm = tốc độ trung bình 5s). `Z-Score = (CurrentSpeed - Mean) / StdDev`.
+* **Algo Limit (Bộ lọc Cá Voi - Dual-Bound):**
+  * `maxAbsorbLimit` = Trung bình lệnh dân thường x 5.
+  * `baseFlowLimit` = Tốc độ trung bình 60s x 0.25.
+  * Giới hạn lệnh hợp lệ = `Min(baseFlowLimit, maxAbsorbLimit)`. Bị trừ penalty (20-80%) nếu Spread > 1% hoặc Tx/sec < 1.
 ```
