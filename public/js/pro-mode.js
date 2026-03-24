@@ -2642,6 +2642,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
     const container = document.getElementById('sc-chart-container');
     if (tvChart) { tvChart.remove(); tvChart = null; tvLineSeries = null; tvCandleSeries = null; tvVolumeSeries = null; }
     
+    // [FIX HEATMAP] Xóa sạch bộ nhớ các đường Heatmap cũ khi đập đi xây lại Chart
+    window.scActivePriceLines = [];
+    
     // [FIX LỖI MẤT TOOLTIP & LÀM GỌN UI MOBILE]
     container.innerHTML = `
         <div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
