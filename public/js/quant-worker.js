@@ -25,14 +25,9 @@ setInterval(() => {
     if (tickHistory.length === 0) return;
     const now = Date.now();
 
-    // --- Dọn rác nội bộ Worker ---
-    let expireTickIdx = 0;
-    while (expireTickIdx < tickHistory.length && now - tickHistory[expireTickIdx].t > 300000) expireTickIdx++;
-    if (expireTickIdx > 0) tickHistory.splice(0, expireTickIdx);
-
-    let expireSpeedIdx = 0;
-    while (expireSpeedIdx < speedWindow.length && now - speedWindow[expireSpeedIdx].t > 5000) expireSpeedIdx++;
-    if (expireSpeedIdx > 0) speedWindow.splice(0, expireSpeedIdx);
+    // --- Dọn rác nội bộ Worker siêu tốc bằng Filter ---
+    tickHistory = tickHistory.filter(x => now - x.t <= 300000);
+    speedWindow = speedWindow.filter(x => now - x.t <= 5000);
 
     if (tickHistory.length === 0) return;
     const lastPrice = tickHistory[tickHistory.length - 1].p;
