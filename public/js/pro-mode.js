@@ -2237,15 +2237,16 @@ function connectRealtimeChart(t) {
         else params.push(`${sysSymbol}@kline_${window.currentChartInterval}`);
     }
 
-    // ==========================================
-    // 2. CỖ MÁY UI CHẠY NGẦM (MỖI GIÂY 1 LẦN) - ĐÃ ĐƯỢC TỐI ƯU CỰC HẠN
+   // ==========================================
+    // 2. CỖ MÁY UI CHẠY NGẦM (MỖI GIÂY 1 LẦN) - ĐÃ FIX LỖI CRASH
     // ==========================================
     if (window.scCalcInterval) clearInterval(window.scCalcInterval);
     window.scCalcInterval = setInterval(() => {
         if (window.activeChartSessionId !== currentSession) return;
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
-        
+        // 🔥 ĐÂY LÀ NHỊP TIM ĐÃ BỊ XÓA NHẦM - CHÚNG TA BƠM NÓ TRỞ LẠI!
+        const now = Date.now();
 
         // [KIẾN TRÚC FIX] Dọn rác Tick bằng 1 nhát chém Splice
         let expireTickIdx = 0;
@@ -2254,7 +2255,7 @@ function connectRealtimeChart(t) {
         }
         if (expireTickIdx > 0) window.scTickHistory.splice(0, expireTickIdx);
 
-        // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm và đẩy vào window.quantStats) ---
+        // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm) ---
         let algoEl = document.getElementById('sc-algo-limit');
         if (algoEl && window.quantStats.algoLimit !== undefined) {
             let algoLmt = window.quantStats.algoLimit;
@@ -2270,7 +2271,7 @@ function connectRealtimeChart(t) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        // --- PHÁT HIỆN ICEBERG & STOP-HUNT (Dùng dữ liệu từ Worker kết hợp Sổ lệnh) ---
+        // --- PHÁT HIỆN ICEBERG & STOP-HUNT ---
         if (window.quantStats.drop <= -0.6 && window.quantStats.currentSpeed > ((window.quantStats.avgSpeed60s || 0) * 1.5)) {
             let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
             if (activeSeries) {
@@ -2291,7 +2292,7 @@ function connectRealtimeChart(t) {
                                 }
                             }
                         }
-                        let recentTicks = window.scTickHistory.filter(x => Date.now() - x.t <= 5000);
+                        let recentTicks = window.scTickHistory.filter(x => now - x.t <= 5000);
                         let recentBuyVol = recentTicks.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
                         let recentSellVol = recentTicks.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
                         let markerText = '🪫 EXHAUSTED'; let markerColor = '#848e9c'; 
@@ -2369,7 +2370,7 @@ function connectRealtimeChart(t) {
             }
         }
 
-        // --- ĐỒNG BỘ RAM CACHE BẢO VỆ STATE ---
+        // --- ĐỒNG BỘ RAM CACHE ---
         let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
         if (window.AlphaChartState && window.AlphaChartState[sym]) {
             window.AlphaChartState[sym].netFlow = window.scNetFlow;
@@ -2395,7 +2396,7 @@ function connectRealtimeChart(t) {
         }
         if (expireSpeedIdx > 0) window.scSpeedWindow.splice(0, expireSpeedIdx);
 
-        // --- CẬP NHẬT CÁC WIDGET GIAO DIỆN (UI) ---
+        // --- CẬP NHẬT CÁC WIDGET GIAO DIỆN ---
         let displaySpeed = window.scSpeedWindow.filter(x => now - x.t <= 5000).reduce((s, x) => s + x.v, 0) / 5;
         let speedElUI = document.getElementById('sc-stat-match-speed');
         if(speedElUI) speedElUI.innerText = '$' + formatCompactUSD(displaySpeed) + ' /s';
