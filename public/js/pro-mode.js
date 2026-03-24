@@ -1553,7 +1553,7 @@ window.updateAlphaMarketUI = function(serverData) {
         if (window.currentChartSymbol) {
             let chartSym = window.currentChartSymbol.toUpperCase();
             let tKey = tokenKey.toUpperCase();
-            llet targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
+            let targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
             let isMatching = (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey));
         }
 
