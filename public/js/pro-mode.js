@@ -1692,17 +1692,46 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     if (currentFilter === 'whale' && entry.dataset.tapeType !== 'whale') entry.style.display = 'none';
     else if (currentFilter === 'shark' && entry.dataset.tapeType === 'bot') entry.style.display = 'none';
 
-    tape.prepend(entry);
-    
-    if (isWhaleOrShark) {
-        entry.style.background = isBuy ? 'rgba(14, 203, 129, 0.55)' : 'rgba(246, 70, 93, 0.55)';
-        setTimeout(() => { 
-            entry.style.background = bg; 
-            entry.style.textShadow = 'none'; 
-        }, 150);
-    }
+    // Thêm Node vào hàng đợi tàng hình thay vì vẽ thẳng ra DOM
+    if (!window.tapeRenderQueue) window.tapeRenderQueue = [];
+    window.tapeRenderQueue.push({ entry, isWhaleOrShark, isBuy, bg });
 
-    if (tape.children.length > 50) tape.removeChild(tape.lastChild);
+    // Bóp cò xả đạn đồng bộ với tần số quét của màn hình (120Hz/60Hz)
+    if (!window.isTapeRendering) {
+        window.isTapeRendering = true;
+        
+        requestAnimationFrame(() => {
+            if (window.tapeRenderQueue && window.tapeRenderQueue.length > 0) {
+                const fragment = document.createDocumentFragment();
+                const itemsToProcess = [...window.tapeRenderQueue];
+                window.tapeRenderQueue = []; // Reset queue ngay lập tức
+                
+                // Gom tất cả lệnh trong frame này vào một Fragment nháp
+                for (let i = 0; i < itemsToProcess.length; i++) {
+                    let item = itemsToProcess[i];
+                    fragment.insertBefore(item.entry, fragment.firstChild);
+                    
+                    // Xử lý hiệu ứng chớp tắt cho Cá voi/Cá mập
+                    if (item.isWhaleOrShark) {
+                        item.entry.style.background = item.isBuy ? 'rgba(14, 203, 129, 0.55)' : 'rgba(246, 70, 93, 0.55)';
+                        setTimeout(() => { 
+                            item.entry.style.background = item.bg; 
+                            item.entry.style.textShadow = 'none'; 
+                        }, 150);
+                    }
+                }
+                
+                // In ra màn hình CHỈ 1 LẦN DUY NHẤT
+                tape.prepend(fragment);
+                
+                // Dọn rác DOM dư thừa êm ái
+                while (tape.children.length > 50) {
+                    tape.removeChild(tape.lastChild);
+                }
+            }
+            window.isTapeRendering = false;
+        });
+    }
 };
 
 // [NÃO BỘ CỦA NÚT DROPDOWN] - Hàm quét lại các lệnh đã in ra mỗi khi User bấm chuyển Dropdown
@@ -2248,12 +2277,8 @@ function connectRealtimeChart(t) {
         // 🔥 ĐÂY LÀ NHỊP TIM ĐÃ BỊ XÓA NHẦM - CHÚNG TA BƠM NÓ TRỞ LẠI!
         const now = Date.now();
 
-        // [KIẾN TRÚC FIX] Dọn rác Tick bằng 1 nhát chém Splice
-        let expireTickIdx = 0;
-        while (expireTickIdx < window.scTickHistory.length && now - window.scTickHistory[expireTickIdx].t > 300000) {
-            expireTickIdx++;
-        }
-        if (expireTickIdx > 0) window.scTickHistory.splice(0, expireTickIdx);
+        // Tối ưu hóa Garbage Collection bằng Filter (V8 Engine xử lý siêu tốc)
+        window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
 
         // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm) ---
         let algoEl = document.getElementById('sc-algo-limit');
@@ -2389,12 +2414,8 @@ function connectRealtimeChart(t) {
             window.AlphaChartState[sym].quantStats = window.quantStats;
         }
 
-        // [KIẾN TRÚC FIX] Dọn rác Speed Window bằng 1 nhát chém Splice
-        let expireSpeedIdx = 0;
-        while (expireSpeedIdx < window.scSpeedWindow.length && now - window.scSpeedWindow[expireSpeedIdx].t > 5000) {
-            expireSpeedIdx++;
-        }
-        if (expireSpeedIdx > 0) window.scSpeedWindow.splice(0, expireSpeedIdx);
+        // Tối ưu hóa Garbage Collection bằng Filter (V8 Engine xử lý siêu tốc)
+        window.scSpeedWindow = window.scSpeedWindow.filter(x => now - x.t <= 5000);
 
         // --- CẬP NHẬT CÁC WIDGET GIAO DIỆN ---
         let displaySpeed = window.scSpeedWindow.filter(x => now - x.t <= 5000).reduce((s, x) => s + x.v, 0) / 5;
