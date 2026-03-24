@@ -1553,12 +1553,11 @@ window.updateAlphaMarketUI = function(serverData) {
         if (window.currentChartSymbol) {
             let chartSym = window.currentChartSymbol.toUpperCase();
             let tKey = tokenKey.toUpperCase();
-            let targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
-            let isMatching = (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey));
+            llet targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
+            let isMatching = (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey));
+        }
 
-            
- }
-        let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
+        let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
         if (r24El && liveItem.r24 !== undefined) r24El.innerText = '$' + formatCompactNum(liveItem.r24);
 
         let liqEl = document.getElementById(`alpha-liq-${tokenKey}`);
@@ -2241,31 +2240,10 @@ window.flushSmartTape = function(cluster) {
             window.logToSniperTape(cluster.dir, cluster.vol, '🤖 SWEEP', cluster.p);
         }
         else if (isDolphin) {
-            window.logToSniperTape(cluster.dir, cluster.vol, '🐬 HEO', cluster.p);
-        }
-    }
+            window.logToSniperTape(cluster.dir, cluster.vol, '🐬 HEO', cluster.p);
+        }
+    }
 };
-
-        if (isDolphin || isShark || isWhale || isSweep) {
-            if (isWhale) { window.scCWhale = (window.scCWhale||0) + 1; let el = document.getElementById('sc-stat-whale'); if(el) el.innerText = window.scCWhale; }
-            else if (isShark) { window.scCShark = (window.scCShark||0) + 1; let el = document.getElementById('sc-stat-shark'); if(el) el.innerText = window.scCShark; }
-            else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
-            else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
-
-            let fishType = 'sweep';
-            if (isWhale) fishType = 'whale'; else if (isShark) fishType = 'shark'; else if (isDolphin) fishType = 'dolphin';
-            let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
-            if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
-            let markerColor = cluster.dir ? (window.currentTheme === 'trad' ? '#0ECB81' : '#2af592') : (window.currentTheme === 'trad' ? '#F6465D' : '#cb55e3');
-
-            window.scChartMarkers.push({
-                time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
-                color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg,
-                fishType: fishType
-            });
-            if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-        }
-    };
 
     try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
