@@ -74,7 +74,7 @@ setInterval(() => {
 
     // --- E. TÍNH Z-SCORE (Đột biến dòng tiền) ---
     let currentSpeed = speedWindow.reduce((s, x) => s + x.v, 0) / 5; 
-    let txPerSec = speedWindow.length / 5;
+    let txPerSec = speedWindow.length / 5; // Khai báo txPerSec DUY NHẤT 1 lần ở đây
     
     if (!self.speedHist) self.speedHist = [];
     self.speedHist.push(currentSpeed);
@@ -92,8 +92,7 @@ setInterval(() => {
 
     // --- F. TÍNH ALGO LIMIT (CHUẨN QUANT THỰC CHIẾN - CHỐNG TRƯỢT GIÁ) ---
     let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60; // Tốc độ nền 60s
-    let txPerSec = speedWindow.length / 5;
-
+    
     let algoLimit = 0;
     if (hist60s.length > 5) {
         // 1. TÌM LỆNH TRUNG BÌNH CỦA "DÂN THƯỜNG" (TRIMMED MEAN)
@@ -108,25 +107,20 @@ setInterval(() => {
         let normalTicket = normalVols.reduce((a, b) => a + b, 0) / normalVols.length;
 
         // 2. THIẾT LẬP GIỚI HẠN KÉP (DUAL-BOUND)
-        // Limit 1: Không vượt quá 20% tốc độ nền của 60s qua
-        let baseFlowLimit = avgSpeed60s * 0.20; 
-        
-        // Limit 2: Không được đánh 1 lệnh to gấp 5 lần lệnh trung bình của dân thường
-        let maxAbsorbLimit = normalTicket * 5; 
-
-        // Lấy con số nhỏ hơn (An toàn nhất)
+        let baseFlowLimit = avgSpeed60s * 0.20; // Limit 1: Không vượt quá 20% tốc độ nền
+        let maxAbsorbLimit = normalTicket * 5;  // Limit 2: Không to gấp 5 lần lệnh trung bình
         algoLimit = Math.min(baseFlowLimit, maxAbsorbLimit);
     }
 
     // 3. HỆ SỐ PHẠT TRƯỢT GIÁ (SPREAD PENALTY)
-    if (spread <= 0.5) algoLimit *= 1.0;       // Thanh khoản dày -> Bơm tẹt ga
-    else if (spread <= 1.0) algoLimit *= 0.8;  // Hơi mỏng -> Giảm 20%
-    else if (spread <= 2.0) algoLimit *= 0.5;  // Mỏng -> Giảm 50%
-    else algoLimit *= 0.2;                     // Quá mỏng -> Chỉ cho đánh 20% size
+    if (spread <= 0.5) algoLimit *= 1.0;       
+    else if (spread <= 1.0) algoLimit *= 0.8;  
+    else if (spread <= 2.0) algoLimit *= 0.5;  
+    else algoLimit *= 0.2;                     
 
     // 4. HỆ SỐ PHẠT THỊ TRƯỜNG CHẾT (DEAD MARKET PENALTY)
-    if (txPerSec < 1) algoLimit *= 0.3;      // Dưới 1 lệnh/giây -> Order book rỗng
-    else if (txPerSec < 3) algoLimit *= 0.6; // Dưới 3 lệnh/giây -> Rất nguy hiểm
+    if (txPerSec < 1) algoLimit *= 0.3;      // Dưới 1 lệnh/giây -> Rất nguy hiểm
+    else if (txPerSec < 3) algoLimit *= 0.6; 
 
     algoLimit = Math.round(algoLimit);
 
