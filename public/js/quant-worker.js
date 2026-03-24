@@ -91,24 +91,30 @@ setInterval(() => {
     }
 
     // --- F. TÍNH ALGO LIMIT (CHUẨN QUANT THỰC CHIẾN - CHỐNG TRƯỢT GIÁ) ---
-    let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60; // Tốc độ nền 60s
+    // [FIX LỖI DEAD] 1. Đo lường chính xác khoảng thời gian thực tế đang có
+    let timeSpan = 1;
+    if (hist60s.length > 1) {
+        timeSpan = (hist60s[hist60s.length - 1].t - hist60s[0].t) / 1000;
+    }
+    if (timeSpan < 1) timeSpan = 1;
     
-    let algoLimit = 0;
+    // Tốc độ nền thực tế (Chống lỗi chia cứng 60 gây ép ALGO Limit)
+    let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / timeSpan; 
+    
+    // [FIX LỖI DEAD] 2. Mặc định dùng công thức cũ để chống 0 khi vừa mở Chart
+    let algoLimit = currentSpeed * 0.15; 
+    
+    // Khi đã có đủ dữ liệu (> 5 lệnh), Bật giáp chống Cá voi
     if (hist60s.length > 5) {
-        // 1. TÌM LỆNH TRUNG BÌNH CỦA "DÂN THƯỜNG" (TRIMMED MEAN)
-        // Sắp xếp các lệnh trong 60s qua từ nhỏ đến lớn
+        // TÌM LỆNH TRUNG BÌNH CỦA "DÂN THƯỜNG" (TRIMMED MEAN)
         let sortedVols = hist60s.map(x => x.v).sort((a,b) => a - b);
-        
-        // CẮT BỎ 5% các lệnh to nhất (Loại trừ Cá Voi làm nhiễu thanh khoản)
         let limitIdx = Math.floor(sortedVols.length * 0.95);
         let normalVols = sortedVols.slice(0, limitIdx > 0 ? limitIdx : 1);
-        
-        // Kích thước lệnh an toàn mà thị trường đang hấp thụ ổn định
         let normalTicket = normalVols.reduce((a, b) => a + b, 0) / normalVols.length;
 
-        // 2. THIẾT LẬP GIỚI HẠN KÉP (DUAL-BOUND)
-        let baseFlowLimit = avgSpeed60s * 0.20; // Limit 1: Không vượt quá 20% tốc độ nền
-        let maxAbsorbLimit = normalTicket * 5;  // Limit 2: Không to gấp 5 lần lệnh trung bình
+        // THIẾT LẬP GIỚI HẠN KÉP (DUAL-BOUND)
+        let baseFlowLimit = avgSpeed60s * 0.25; // Nới lỏng lên 25% cho dễ bơi
+        let maxAbsorbLimit = normalTicket * 5;  // Không được đánh to gấp 5 dân thường
         algoLimit = Math.min(baseFlowLimit, maxAbsorbLimit);
     }
 
@@ -119,7 +125,7 @@ setInterval(() => {
     else algoLimit *= 0.2;                     
 
     // 4. HỆ SỐ PHẠT THỊ TRƯỜNG CHẾT (DEAD MARKET PENALTY)
-    if (txPerSec < 1) algoLimit *= 0.3;      // Dưới 1 lệnh/giây -> Rất nguy hiểm
+    if (txPerSec < 1) algoLimit *= 0.3;      
     else if (txPerSec < 3) algoLimit *= 0.6; 
 
     algoLimit = Math.round(algoLimit);
