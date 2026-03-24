@@ -6463,7 +6463,7 @@ function startRealtimeSync() {
 
     fetchLayer2Data();
     if (typeof layer2Interval !== 'undefined' && layer2Interval) clearInterval(layer2Interval);
-    layer2Interval = setInterval(fetchLayer2Data, 15000); 
+    layer2Interval = setInterval(fetchLayer2Data, 60000); 
 
     connectDirectBinanceWS();
 }
