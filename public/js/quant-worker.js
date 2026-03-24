@@ -72,13 +72,10 @@ setInterval(() => {
     let totalVol15s = buyVol15s + sellVol15s;
     let ofi = totalVol15s > 0 ? ((buyVol15s - sellVol15s) / totalVol15s) : 0;
 
-    // --- E & F. TOÁN HỌC ALGO LIMIT (BẢN CHUẨN QUANT - REAL TICK COUNT) ---
+    // --- E. TÍNH Z-SCORE (Đột biến dòng tiền) ---
     let currentSpeed = speedWindow.reduce((s, x) => s + x.v, 0) / 5; 
+    let txPerSec = speedWindow.length / 5;
     
-    // Đếm chính xác số lượng lệnh thực tế đã khớp trong 5 giây qua
-    let txPerSec = speedWindow.length / 5; 
-
-    // Tính Z-Score (Đo độ đột biến dòng tiền)
     if (!self.speedHist) self.speedHist = [];
     self.speedHist.push(currentSpeed);
     if (self.speedHist.length > 60) self.speedHist.shift();
@@ -93,15 +90,44 @@ setInterval(() => {
         zScore = (currentSpeed - mean) / stdDev;
     }
 
-    // Tính ALGO LIMIT (Dựa trên dòng tiền thực và số lệnh thực)
-    let algoLimit = currentSpeed * 0.15; 
-    if (spread <= 0.5) algoLimit *= 1.0;
-    else if (spread <= 1.5) algoLimit *= 0.8;
-    else if (spread <= 3.0) algoLimit *= 0.5;
-    else algoLimit *= 0.2;
-    
-    // Nếu giao dịch quá thưa thớt (dưới 3 lệnh/giây), phạt giảm 50% thanh khoản thuật toán để tránh dính trấu Cá voi
-    if (txPerSec < 3) algoLimit *= 0.5;
+    // --- F. TÍNH ALGO LIMIT (CHUẨN QUANT THỰC CHIẾN - CHỐNG TRƯỢT GIÁ) ---
+    let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / 60; // Tốc độ nền 60s
+    let txPerSec = speedWindow.length / 5;
+
+    let algoLimit = 0;
+    if (hist60s.length > 5) {
+        // 1. TÌM LỆNH TRUNG BÌNH CỦA "DÂN THƯỜNG" (TRIMMED MEAN)
+        // Sắp xếp các lệnh trong 60s qua từ nhỏ đến lớn
+        let sortedVols = hist60s.map(x => x.v).sort((a,b) => a - b);
+        
+        // CẮT BỎ 5% các lệnh to nhất (Loại trừ Cá Voi làm nhiễu thanh khoản)
+        let limitIdx = Math.floor(sortedVols.length * 0.95);
+        let normalVols = sortedVols.slice(0, limitIdx > 0 ? limitIdx : 1);
+        
+        // Kích thước lệnh an toàn mà thị trường đang hấp thụ ổn định
+        let normalTicket = normalVols.reduce((a, b) => a + b, 0) / normalVols.length;
+
+        // 2. THIẾT LẬP GIỚI HẠN KÉP (DUAL-BOUND)
+        // Limit 1: Không vượt quá 20% tốc độ nền của 60s qua
+        let baseFlowLimit = avgSpeed60s * 0.20; 
+        
+        // Limit 2: Không được đánh 1 lệnh to gấp 5 lần lệnh trung bình của dân thường
+        let maxAbsorbLimit = normalTicket * 5; 
+
+        // Lấy con số nhỏ hơn (An toàn nhất)
+        algoLimit = Math.min(baseFlowLimit, maxAbsorbLimit);
+    }
+
+    // 3. HỆ SỐ PHẠT TRƯỢT GIÁ (SPREAD PENALTY)
+    if (spread <= 0.5) algoLimit *= 1.0;       // Thanh khoản dày -> Bơm tẹt ga
+    else if (spread <= 1.0) algoLimit *= 0.8;  // Hơi mỏng -> Giảm 20%
+    else if (spread <= 2.0) algoLimit *= 0.5;  // Mỏng -> Giảm 50%
+    else algoLimit *= 0.2;                     // Quá mỏng -> Chỉ cho đánh 20% size
+
+    // 4. HỆ SỐ PHẠT THỊ TRƯỜNG CHẾT (DEAD MARKET PENALTY)
+    if (txPerSec < 1) algoLimit *= 0.3;      // Dưới 1 lệnh/giây -> Order book rỗng
+    else if (txPerSec < 3) algoLimit *= 0.6; // Dưới 3 lệnh/giây -> Rất nguy hiểm
+
     algoLimit = Math.round(algoLimit);
 
     // Gửi cục kết quả đã tính xong về lại cho Luồng Chính vẽ UI
