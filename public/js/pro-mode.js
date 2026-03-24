@@ -2245,12 +2245,7 @@ function connectRealtimeChart(t) {
         if (window.activeChartSessionId !== currentSession) return;
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
-        const now = Date.now();
-        // Dọn rác cụm lệnh bị kẹt (Chống treo giao diện nếu ngừng giao dịch)
-        if (window.scCurrentCluster && (now - window.scCurrentCluster.startT >= 1000)) {
-            window.flushSmartTape(window.scCurrentCluster);
-            window.scCurrentCluster = null;
-        }
+        
 
         // [KIẾN TRÚC FIX] Dọn rác Tick bằng 1 nhát chém Splice
         let expireTickIdx = 0;
@@ -2418,7 +2413,20 @@ function connectRealtimeChart(t) {
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
         
     }, 1000);
-
+// ==========================================
+    // 3. CỖ MÁY XẢ BĂNG ĐẠN SMART TAPE (TỐC ĐỘ CAO 150ms)
+    // ==========================================
+    if (window.scTapeInterval) clearInterval(window.scTapeInterval);
+    window.scTapeInterval = setInterval(() => {
+        if (!window.scCurrentCluster) return;
+        
+        // Cứ 150ms (0.15 giây) là in lệnh ra màn hình một lần. Chống khựng, trôi siêu mượt!
+        const nowMs = Date.now();
+        if (nowMs - window.scCurrentCluster.startT >= 150) {
+            window.flushSmartTape(window.scCurrentCluster);
+            window.scCurrentCluster = null;
+        }
+    }, 150);
     chartWs.onopen = () => chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
 
     chartWs.onmessage = (event) => {
