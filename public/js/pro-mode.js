@@ -1104,10 +1104,24 @@ function injectLayout() {
                             </div>
                             
                             <div id="quant-command-center" style="display: flex; flex-direction: column;">
-                                <div class="term-widget" style="border-left: 2px solid var(--term-warn);">
-                                    <div class="term-row">
-                                        <span class="term-lbl">LIVE VERDICT:</span>
-                                        <span id="ai-verdict-badge" style="font-size: 10px; font-weight: 800; color: var(--term-warn);">ĐANG QUÉT...</span>
+                                <div class="term-widget" style="border-left: 2px solid #9945FF; padding: 6px 8px;">
+                                    <div class="term-w-title" style="margin-bottom: 8px; color: #9945FF;">
+                                        <i class="fas fa-layer-group"></i> MULTI-HORIZON VERDICT
+                                    </div>
+                                    
+                                    <div class="term-row" style="margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+                                        <span class="term-lbl" style="color:#00F0FF; font-weight: 800;">HFT (Micro)</span>
+                                        <span id="verdict-hft" class="term-val" style="font-size: 10px; background: rgba(0, 240, 255, 0.1); padding: 2px 4px; border-radius: 2px; color: #00F0FF;">⚡ ĐANG QUÉT TICK...</span>
+                                    </div>
+                                    
+                                    <div class="term-row" style="margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+                                        <span class="term-lbl" style="color:#F0B90B; font-weight: 800;">MFT (Meso)</span>
+                                        <span id="verdict-mft" class="term-val" style="font-size: 10px; background: rgba(240, 185, 11, 0.1); padding: 2px 4px; border-radius: 2px; color: #F0B90B;">⏳ ĐANG PHÂN TÍCH...</span>
+                                    </div>
+                                    
+                                    <div class="term-row" style="margin-bottom: 0;">
+                                        <span class="term-lbl" style="color:#cb55e3; font-weight: 800;">LFT (Macro)</span>
+                                        <span id="verdict-lft" class="term-val" style="font-size: 10px; background: rgba(203, 85, 227, 0.1); padding: 2px 4px; border-radius: 2px; color: #cb55e3;">🔭 CHỜ DỮ LIỆU...</span>
                                     </div>
                                 </div>
 
@@ -2001,11 +2015,16 @@ window.updateCommandCenterUI = function() {
             if (fLbl) fLbl.innerText = `Funding (${fObj.interval}h)`;
 
             let fEl = document.getElementById('cc-funding-val');
-            if (fEl) {
-                fEl.innerHTML = `<span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span><span style="color:#527c82; margin: 0 4px;">/</span><span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span>`;
-            }
+        if (fEl) {
+            fEl.innerHTML = `<span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span><span style="color:#527c82; margin: 0 4px;">/</span><span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span>`;
         }
-    };
+    }
+
+    // Kích hoạt Động cơ Phân tích Quant Multi-Horizon
+    if (typeof window.evaluateQuantVerdict === 'function') {
+        window.evaluateQuantVerdict();
+    }
+};
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
 
@@ -3653,4 +3672,88 @@ window.renderProWatchlist = function(passedSearchTerm) {
     }
 
     wlBody.innerHTML = html;
+};
+
+// =====================================================================
+// 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
+// =====================================================================
+window.evaluateQuantVerdict = function() {
+    // 1. HFT (Micro - Realtime Tick - Tác dụng 1s đến 5m)
+    // Nguồn: Z-Score, Order Flow Imbalance (OFI), Spread, Tick Speed
+    let hftEl = document.getElementById('verdict-hft');
+    if (hftEl && window.quantStats) {
+        let z = window.quantStats.zScore || 0;
+        let ofi = window.quantStats.ofi || 0;
+        let spread = window.quantStats.spread || 0;
+        let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 150); // Mật độ lệnh dày đặc
+
+        if (spread > 1.0) {
+            hftEl.innerHTML = '💀 MẤT THANH KHOẢN (RỦI RO TRƯỢT GIÁ CAO)';
+            hftEl.style.color = '#848e9c'; hftEl.style.background = 'rgba(132, 142, 156, 0.1)';
+        } else if (z > 2.5 && ofi > 0.6) {
+            hftEl.innerHTML = '🚀 BÙNG NỔ LỰC MUA (MOMENTUM SQUEEZE)';
+            hftEl.style.color = '#00F0FF'; hftEl.style.background = 'rgba(0, 240, 255, 0.1)';
+        } else if (z > 2.5 && ofi < -0.6) {
+            hftEl.innerHTML = '🩸 XẢ CHỚP NHOÁNG (FLASH DUMP)';
+            hftEl.style.color = '#FF007F'; hftEl.style.background = 'rgba(255, 0, 127, 0.1)';
+        } else if (isHighSpeed && ofi > 0.3) {
+            hftEl.innerHTML = '🤖 BOT SWEEP GOM HÀNG';
+            hftEl.style.color = '#0ECB81'; hftEl.style.background = 'rgba(14, 203, 129, 0.1)';
+        } else if (isHighSpeed && ofi < -0.3) {
+            hftEl.innerHTML = '🤖 BOT TỈA LỆNH XẢ';
+            hftEl.style.color = '#F6465D'; hftEl.style.background = 'rgba(246, 70, 93, 0.1)';
+        } else {
+            hftEl.innerHTML = '⚖️ TÍCH LŨY TICK (CHOPPING)';
+            hftEl.style.color = '#848e9c'; hftEl.style.background = 'rgba(255, 255, 255, 0.05)';
+        }
+    }
+
+    // 2. MFT (Meso - Khung Trung Hạn - Tác dụng 15m đến 4h)
+    // Nguồn: Funding Rate, Cumulative Volume Delta (CVD) 1h/4h
+    let mftEl = document.getElementById('verdict-mft');
+    if (mftEl) {
+        let fFunding = window.quantStats?.fundingRateObj?.rate || 0;
+        let cvd1hTag = document.getElementById('sm-tag-1h')?.innerText || '';
+        let cvd4hTag = document.getElementById('sm-tag-4h')?.innerText || '';
+        
+        if (fFunding < -0.05 && cvd1hTag === 'BULLISH') {
+            mftEl.innerHTML = '🔥 DẤU HIỆU SHORT SQUEEZE (FEE ÂM)';
+            mftEl.style.color = '#00F0FF'; mftEl.style.background = 'rgba(0, 240, 255, 0.1)';
+        } else if (fFunding > 0.05 && cvd1hTag === 'BEARISH') {
+            mftEl.innerHTML = '🩸 NGUY CƠ LONG CASCADE (FEE CAO)';
+            mftEl.style.color = '#FF007F'; mftEl.style.background = 'rgba(255, 0, 127, 0.1)';
+        } else if (cvd4hTag === 'BULLISH') {
+            mftEl.innerHTML = '📈 ĐỘNG LƯỢNG TĂNG 4H (BULL TREND)';
+            mftEl.style.color = '#0ECB81'; mftEl.style.background = 'rgba(14, 203, 129, 0.1)';
+        } else if (cvd4hTag === 'BEARISH') {
+            mftEl.innerHTML = '📉 ÁP LỰC XẢ 4H (BEAR TREND)';
+            mftEl.style.color = '#F6465D'; mftEl.style.background = 'rgba(246, 70, 93, 0.1)';
+        } else {
+            mftEl.innerHTML = '⚖️ ĐI NGANG TRUNG HẠN (TWAP ALGO)';
+            mftEl.style.color = '#848e9c'; mftEl.style.background = 'rgba(255, 255, 255, 0.05)';
+        }
+    }
+
+    // 3. LFT (Macro - Vĩ mô - Tác dụng Tính bằng Ngày/Tuần)
+    // Nguồn: Lạm phát (Unlock), Hành vi Smart Money/Cá Mập
+    let lftEl = document.getElementById('verdict-lft');
+    if (lftEl) {
+        let smTag = document.getElementById('sm-verdict-badge')?.innerText || '';
+        let unlockStr = document.getElementById('sm-unlock-pct')?.innerText || '100%';
+        let unlockPct = parseFloat(unlockStr);
+
+        if (unlockPct < 30) {
+            lftEl.innerHTML = '⚠️ TOXIC TOKENOMICS (LẠM PHÁT CAO)';
+            lftEl.style.color = '#F6465D'; lftEl.style.background = 'rgba(246, 70, 93, 0.1)';
+        } else if (smTag.includes('CÁ MẬP GOM') && unlockPct > 50) {
+            lftEl.innerHTML = '💎 TÍCH LŨY VĨ MÔ (SMART MONEY IN)';
+            lftEl.style.color = '#0ECB81'; lftEl.style.background = 'rgba(14, 203, 129, 0.1)';
+        } else if (smTag.includes('BOT KIỂM SOÁT')) {
+            lftEl.innerHTML = '🤖 THAO TÚNG GIÁ BỞI MM (RỦI RO)';
+            lftEl.style.color = '#FF007F'; lftEl.style.background = 'rgba(255, 0, 127, 0.1)';
+        } else {
+            lftEl.innerHTML = '⚖️ TRUNG LẬP VĨ MÔ (CHỜ TÍN HIỆU)';
+            lftEl.style.color = '#848e9c'; lftEl.style.background = 'rgba(255, 255, 255, 0.05)';
+        }
+    }
 };
