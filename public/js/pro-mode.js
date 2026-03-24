@@ -2045,9 +2045,17 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
         let contract = t.contract;
         let chainId = t.chainId || t.chain_id || 56;
+        
+        // FIX LỖI 1: Gửi lệnh UNSUBSCRIBE để hủy luồng dữ liệu của khung giờ cũ
+        if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
+            let oldK = contract ? `came@${contract}@${chainId}@kline_${window.oldChartInterval}` : `${sysSymbol}@kline_${window.oldChartInterval}`;
+            chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [oldK], "id": Date.now() }));
+        }
+
+        // ĐĂNG KÝ KHUNG GIỜ MỚI
         if (window.currentChartInterval !== 'tick') {
             let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${sysSymbol}@kline_${window.currentChartInterval}`;
-            chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() }));
+            chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() + 1 }));
         }
         return; // Dừng hàm tại đây, giữ nguyên luồng Live Trade đang chảy!
     }
@@ -2475,7 +2483,14 @@ window.flushSmartTape = function(cluster) {
         if (!data.stream) return;
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
-            let k = data.data.k; let rawTime = k.ot !== undefined ? k.ot : k.t; 
+            let k = data.data.k; 
+            
+            // FIX LỖI 2: Chặn nến bóng ma (không vẽ nếu khoảng thời gian nến k.i khác với khung đang chọn)
+            if (k && k.i && k.i !== window.currentChartInterval) return;
+            // Chặn luôn nếu đang ở chế độ TICK (vì TICK dùng area chart aggTrade chứ ko dùng nến)
+            if (window.currentChartInterval === 'tick') return;
+
+            let rawTime = k.ot !== undefined ? k.ot : k.t; 
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
@@ -2920,10 +2935,13 @@ if (typeof window.startFuturesEngine === 'function') { window.startFuturesEngine
     }, 100); 
 };
 
-// Hàm xử lý Click đổi khung giờ
 window.changeChartInterval = function(interval, btnEl) {
     document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
     btnEl.classList.add('active');
+    
+    // FIX LỖI: Lưu lại khung giờ cũ trước khi đổi
+    window.oldChartInterval = window.currentChartInterval; 
+    
     window.currentChartInterval = interval;
     if (window.currentChartToken) {
         window.openProChart(window.currentChartToken, true); // Gọi lại hàm mở chart (chế độ switch)
