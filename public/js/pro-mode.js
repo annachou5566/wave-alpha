@@ -2040,19 +2040,33 @@ function formatCompactUSD(num) {
 
 
 function connectRealtimeChart(t, isTimeSwitch = false) {
-    // [CÚ PHÁP CHỐNG KHỰNG BINANCE] Đổi khung giờ: KHÔNG ngắt mạng, chỉ đăng ký nến mới
+    let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
+    let contract = t.contract;
+    let chainId = t.chainId || t.chain_id || 56;
+
+    // [CÚ PHÁP CHỐNG KHỰNG] Đổi khung giờ: KHÔNG ngắt mạng
     if (isTimeSwitch && chartWs && chartWs.readyState === 1) { 
-        let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
-        let contract = t.contract;
-        let chainId = t.chainId || t.chain_id || 56;
+        // 1. HỦY ĐĂNG KÝ KHUNG GIỜ CŨ (Để khỏi bị đè nến ma)
+        if (window.lastSubscribedKline) {
+            chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [window.lastSubscribedKline], "id": Date.now() - 1 }));
+        }
+
+        // 2. ĐĂNG KÝ KHUNG GIỜ MỚI
         if (window.currentChartInterval !== 'tick') {
             let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${sysSymbol}@kline_${window.currentChartInterval}`;
             chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() }));
+            window.lastSubscribedKline = newK; // Lưu lại để lần sau hủy
+        } else {
+            window.lastSubscribedKline = null;
         }
-        return; // Dừng hàm tại đây, giữ nguyên luồng Live Trade đang chảy!
+        return; // Dừng hàm tại đây, giữ mạng Live Trades mượt mà!
     }
 
-    if (chartWs) { chartWs.close(); }
+    // Nếu mở Chart mới hoàn toàn
+    if (chartWs) { 
+        chartWs.onclose = null; // Chống lỗi vòng lặp reconnect vô hạn
+        chartWs.close(); 
+    }
 // Khởi tạo Web Worker nếu chưa có
     if (!window.quantWorker) {
         window.quantWorker = new Worker('public/js/quant-worker.js');
@@ -2475,12 +2489,18 @@ window.flushSmartTape = function(cluster) {
         if (!data.stream) return;
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
-            let k = data.data.k; let rawTime = k.ot !== undefined ? k.ot : k.t; 
+            let k = data.data.k; 
+            
+            // [BẢO VỆ TUYỆT ĐỐI] Chỉ nhận nến đúng với khung giờ đang mở
+            let expectedInterval = window.currentChartInterval === 'tick' ? '1s' : window.currentChartInterval;
+            if (k.i && k.i !== expectedInterval) return; // Nến cũ/sai khung giờ -> Vứt bỏ ngay lập tức!
+
+            let rawTime = k.ot !== undefined ? k.ot : k.t; 
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
                 if (tvCandleSeries) tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
-                if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)' });
+                if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)') });
                 if (window.currentChartInterval !== 'tick' && window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
             }
         }
