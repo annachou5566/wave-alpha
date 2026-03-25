@@ -2543,12 +2543,11 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
             (data.data.b || []).forEach(item => { let p = item[0], q = parseFloat(item[1]); if (q === 0) delete window.scLocalOrderBook.bids[p]; else window.scLocalOrderBook.bids[p] = q; });
         }
         
-        // Thay vì chỉ bắt @aggTrade, ta mở rộng bắt luôn @trade (nếu sau này có dùng tới)
-if (data.stream.endsWith('@aggTrade') || data.stream.endsWith('@trade')) {
+        if (data.stream.endsWith('@aggTrade') || data.stream.endsWith('@trade')) {
     let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
     
-    // NẾU m = false LÀ LỆNH MUA (XANH), m = true LÀ LỆNH BÁN (ĐỎ)
-    let isUp = !data.data.m;
+    // BINANCE BỊ LỖI TRƯỜNG "m", QUAY LẠI DÙNG THUẬT TOÁN TICK-TEST
+    let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
     
     window.scLastTradeDir = isUp; window.scLastPrice = p;
     let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
