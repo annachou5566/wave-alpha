@@ -1,163 +1,161 @@
 // =================================================================
-// 🧠 QUANT WORKER V4 - ULTRA-HFT ENGINE (TICK-LEVEL SENSITIVITY)
+// 🧠 QUANT WORKER V5 - INSTITUTIONAL HFT ENGINE
 // =================================================================
 
 let tickHistory = [];
-let speedWindow = [];
-let speedHist = []; 
+let klineData = {}; // K-line buffer cho k.Q (Quote Volume)
+let bookDepth = { bid: 0, ask: 0, spread: 0 }; 
+
+// Z-Score 60 điểm x 5s
+let volumeBuckets = []; 
+let currentBucket = { t: 0, vol: 0 };
 
 self.onmessage = function(e) {
     const msg = e.data;
+    const now = Date.now();
 
-    // 1. Lệnh Khởi tạo / Xóa bộ nhớ khi chuyển Coin
     if (msg.cmd === 'INIT') {
         tickHistory = [];
-        speedWindow = [];
-        speedHist = [];
+        volumeBuckets = [];
+        bookDepth = { bid: 0, ask: 0, spread: 0 };
     }
     
-    // 2. Lệnh Bơm Data từng Tick
+    // Luồng 1: @aggTrade (Khớp lệnh thực tế HFT)
     else if (msg.cmd === 'TICK') {
+        // msg.data: { p: float, q: float, m: bool (true = sell), t: ms }
         tickHistory.push(msg.data); 
-        speedWindow.push({ t: msg.data.t, v: msg.data.v });
+        
+        // Cập nhật Bucket 5s cho Z-Score
+        let bucketTime = Math.floor(now / 5000) * 5000;
+        if (currentBucket.t !== bucketTime) {
+            if (currentBucket.t !== 0) volumeBuckets.push({...currentBucket});
+            currentBucket = { t: bucketTime, vol: 0 };
+            
+            // Dọn rác: Giữ đúng 60 điểm (5 phút) bằng filter (Tuân thủ rule AI)
+            volumeBuckets = volumeBuckets.filter(x => now - x.t <= 300000); 
+        }
+        currentBucket.vol += (msg.data.p * msg.data.q);
+    }
+    
+    // Luồng 2: @bookTicker (Xuyên thấu sổ lệnh - Tính Spread mili-giây)
+    else if (msg.cmd === 'BOOK_TICKER') {
+        let b = Number(msg.data.b);
+        let a = Number(msg.data.a);
+        if (b > 0) {
+            bookDepth.spread = ((a - b) / b) * 100;
+            bookDepth.bidVol = b * Number(msg.data.B);
+            bookDepth.askVol = a * Number(msg.data.A);
+        }
+    }
+
+    // Luồng 3: @kline (Nhận diện Đỉnh FOMO qua Quote Asset)
+    else if (msg.cmd === 'KLINE') {
+        klineData = msg.data; // Cập nhật nến gần nhất (chứa k.Q, k.q)
     }
 };
 
-// 3. Vòng lặp tính toán ngầm siêu tốc (250ms/lần - 4 FPS để cực nhạy với Tick)
+// Vòng lặp HFT (250ms/lần)
 setInterval(() => {
-    if (tickHistory.length === 0) return;
     const now = Date.now();
-
-    // --- DỌN RÁC BỘ NHỚ ---
-    tickHistory = tickHistory.filter(x => now - x.t <= 300000);
-    speedWindow = speedWindow.filter(x => now - x.t <= 3000); // Đo tốc độ gia tốc trong 3 giây cuối 
-
+    
+    // DỌN RÁC BỘ NHỚ (Chỉ giữ 60s cho Tick History để tính CVD/OFI siêu nhạy)
+    tickHistory = tickHistory.filter(x => now - x.t <= 60000);
+    
     if (tickHistory.length === 0) return;
+
+    const hist1s = tickHistory.filter(x => now - x.t <= 1000);
+    const hist15s = tickHistory.filter(x => now - x.t <= 15000);
+    
     const lastPrice = tickHistory[tickHistory.length - 1].p;
 
-    // Phân rã khung thời gian siêu vi mô
-    const hist3s = tickHistory.filter(x => now - x.t <= 3000);  // 3s (Tối thượng cho Tick)
-    const hist15s = tickHistory.filter(x => now - x.t <= 15000);
-    const hist60s = tickHistory.filter(x => now - x.t <= 60000);
-
     // ==========================================
-    // A. TÍNH SPREAD & RỦI RO THANH KHOẢN
+    // A. SPREAD & LIQUIDITY VACUUM (MM RADAR)
     // ==========================================
-    let spread = 0;
-    if (hist15s.length > 3) {
-        let prices = hist15s.map(x => x.p).sort((a,b) => a - b);
-        let p02 = prices[Math.floor(prices.length * 0.02)];
-        let p98 = prices[Math.floor(prices.length * 0.98)];
-        if (p02 > 0) spread = ((p98 - p02) / p02) * 100;
+    let currentSpread = bookDepth.spread;
+    let isLiquidityVacuum = false;
+    // Nếu spread giãn rộng trên 0.5% ở khung tick, MM đang nhấc lệnh
+    if (currentSpread > 0.5 && (bookDepth.bidVol + bookDepth.askVol) < 5000) {
+        isLiquidityVacuum = true; 
     }
 
     // ==========================================
-    // B. VWAP TREND: FAST (3s) CẮT SLOW (15s) 
+    // B. VWAP TREND (60s Halved theo chuẩn Rule)
     // ==========================================
     let trend = 0;
-    if (hist3s.length > 1 && hist15s.length > 5) {
-        let vwapFast = hist3s.reduce((s, x) => s + x.p * x.v, 0) / (hist3s.reduce((s, x) => s + x.v, 0) || 1);
-        let vwapSlow = hist15s.reduce((s, x) => s + x.p * x.v, 0) / (hist15s.reduce((s, x) => s + x.v, 0) || 1);
-        
-        // Độ dốc VWAP cực nhạy.
-        if (vwapSlow > 0 && vwapFast > 0) {
-            trend = ((vwapFast - vwapSlow) / vwapSlow) * 100;
-        }
-    }
+    const midPointTime = now - 30000; // Cắt đôi 60s
+    const vwapRecent = tickHistory.filter(x => x.t >= midPointTime);
+    const vwapOld = tickHistory.filter(x => x.t < midPointTime);
 
-    let drop = 0;
-    if (hist60s.length > 5) {
-        let prices1m = hist60s.map(x => x.p).sort((a,b) => a - b);
-        let peakP99 = prices1m[Math.floor(prices1m.length * 0.99)]; // Đỉnh trong 1 phút qua
-        if (peakP99 > 0) drop = ((lastPrice - peakP99) / peakP99) * 100; 
+    let vwapFast = vwapRecent.reduce((s, x) => s + x.p * x.q, 0) / (vwapRecent.reduce((s, x) => s + x.q, 0) || 1);
+    let vwapSlow = vwapOld.reduce((s, x) => s + x.p * x.q, 0) / (vwapOld.reduce((s, x) => s + x.q, 0) || 1);
+    
+    if (vwapSlow > 0 && vwapFast > 0) {
+        trend = ((vwapFast - vwapSlow) / vwapSlow) * 100;
     }
 
     // ==========================================
-    // C. TAKER DOMINANCE & TOXIC ORDER FLOW (OFI V3 SIÊU NHẠY)
+    // C. DYNAMIC OFI & MICRO CVD
     // ==========================================
-    let buyVol3s = hist3s.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
-    let sellVol3s = hist3s.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
-    let totalVol3s = buyVol3s + sellVol3s;
+    let buyVol15s = 0, sellVol15s = 0;
+    hist15s.forEach(x => {
+        let volUSD = x.p * x.q;
+        if (!x.m) buyVol15s += volUSD; // m = false -> Taker Buy
+        else sellVol15s += volUSD;     // m = true -> Taker Sell
+    });
     
-    let ofi = totalVol3s > 0 ? ((buyVol3s - sellVol3s) / totalVol3s) : 0;
-    let buyDominance = totalVol3s > 0 ? (buyVol3s / totalVol3s) * 100 : 50;
-    
-    let microCVD = hist60s.reduce((s, x) => s + (x.dir ? x.v : -x.v), 0);
-    
-    // TÍNH ĐỘC HẠI (TOXICITY) - Ép ngưỡng trigger xuống thấp nhất
-    let priceTickImpact = 0;
-    if (hist3s.length >= 2) {
-        let firstP3s = hist3s[0].p;
-        priceTickImpact = ((lastPrice - firstP3s) / firstP3s) * 100; 
-        
-        // Trượt giá siêu nhỏ (0.02%) + OFI đồng pha = Khuếch đại mạnh tín hiệu x2.5
-        if (priceTickImpact < -0.02 && ofi < 0) {
-            ofi = ofi * 2.5; 
-        } else if (priceTickImpact > 0.02 && ofi > 0) {
-            ofi = ofi * 2.5;
-        }
-        
-        if (ofi < -1) ofi = -1;
-        if (ofi > 1) ofi = 1;
-    }
+    let totalVol15s = buyVol15s + sellVol15s;
+    let trueOFI = totalVol15s > 0 ? (buyVol15s - sellVol15s) / totalVol15s : 0;
+    let microCVD = buyVol15s - sellVol15s; // USD chênh lệch
 
     // ==========================================
-    // D. Z-SCORE V4 (MÔI TRƯỜNG TICK)
+    // D. INSTITUTIONAL Z-SCORE (60 buckets)
     // ==========================================
-    let currentSpeed = speedWindow.reduce((s, x) => s + x.v, 0) / 3; // USD/s tính trong 3s
-    let txPerSec = speedWindow.length / 3; 
-    
-    speedHist.push(currentSpeed);
-    if (speedHist.length > 20) speedHist.shift(); // Chỉ lưu lịch sử 20 nhịp để Z-score thay đổi tức thời
-
     let zScore = 0;
-    if (speedHist.length >= 5) {
-        let mean = speedHist.reduce((a, b) => a + b, 0) / speedHist.length;
-        let variance = speedHist.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / speedHist.length;
-        let stdDev = Math.sqrt(variance);
+    let currentSpeed1s = hist1s.reduce((s, x) => s + (x.p * x.q), 0);
+    
+    if (volumeBuckets.length >= 12) { // Tối thiểu 1 phút (12 buckets * 5s)
+        let mean = volumeBuckets.reduce((a, b) => a + b.vol, 0) / volumeBuckets.length;
+        let variance = volumeBuckets.reduce((a, b) => a + Math.pow(b.vol - mean, 2), 0) / volumeBuckets.length;
+        let stdDev = Math.max(Math.sqrt(variance), mean * 0.05); // Bảo vệ chia Zero
         
-        // Baseline hạ cực thấp để Z-score nhảy vọt với bất kỳ lệnh xả/bơm nào
-        const baselineStd = Math.max(100, mean * 0.01); 
-        if (stdDev < baselineStd) stdDev = baselineStd; 
-        
-        zScore = (currentSpeed - mean) / stdDev;
+        // Z-score tính tốc độ hiện tại (quy đổi về hệ quy chiếu 5s) so với phân phối chuẩn
+        zScore = ((currentSpeed1s * 5) - mean) / stdDev; 
     }
 
     // ==========================================
-    // E. ALGO LIMIT V4
+    // E. ACTIONABLE ZONES (CỜ TÍN HIỆU GIAO DỊCH)
     // ==========================================
-    let timeSpan = 1;
-    if (hist60s.length > 1) timeSpan = (hist60s[hist60s.length - 1].t - hist60s[0].t) / 1000;
-    if (timeSpan < 1) timeSpan = 1;
-    let avgSpeed60s = hist60s.reduce((s, x) => s + x.v, 0) / timeSpan; 
-    
-    let algoLimit = currentSpeed * 0.25; 
-    
-    if (hist60s.length > 5) {
-        let sortedVols = hist60s.map(x => x.v).sort((a,b) => a - b);
-        let limitIdx = Math.floor(sortedVols.length * 0.85); // Lọc 15% lệnh Cá
-        let normalVols = sortedVols.slice(0, limitIdx > 0 ? limitIdx : 1);
-        let normalTicket = normalVols.reduce((a, b) => a + b, 0) / normalVols.length;
+    let isAbsorption = false;
+    let isDistribution = false;
 
-        let baseFlowLimit = avgSpeed60s * 0.40; 
-        let maxAbsorbLimit = normalTicket * 3;  
-        algoLimit = Math.min(baseFlowLimit, maxAbsorbLimit);
+    // 1. Dấu hiệu gom hàng (Absorption)
+    // CVD âm nặng (Taker bán mạnh) nhưng giá không rơi (trend >= 0) -> Đáy cứng
+    if (trueOFI < -0.6 && microCVD < -10000 && trend > -0.05 && currentSpread < 0.2) {
+        isAbsorption = true;
     }
 
-    if (zScore < 1.0) {
-        if (txPerSec < 1) algoLimit *= 0.2;      
-        else if (txPerSec < 3) algoLimit *= 0.5; 
+    // 2. Dấu hiệu xả đỉnh (Distribution)
+    // FOMO Mua chủ động chiếm > 75% khối lượng (k.Q / k.q), nhưng giá không tăng
+    if (klineData && klineData.q > 0) {
+        let takerBuyRatio = Number(klineData.Q) / Number(klineData.q);
+        if (takerBuyRatio > 0.75 && trueOFI > 0.5 && trend < 0.05) {
+            isDistribution = true;
+        }
     }
 
-    algoLimit = Math.max(20, Math.round(algoLimit)); 
-
-    // BẮN DATA VỀ FRONTEND NGAY LẬP TỨC
+    // POST MESSAGE VỀ TRÌNH DUYỆT (UI Stateless Render)
     self.postMessage({
         cmd: 'STATS_UPDATE',
         stats: { 
-            spread, trend, drop, ofi, zScore, currentSpeed, 
-            algoLimit, avgSpeed60s, buyDominance, microCVD, priceTickImpact 
+            spread: currentSpread.toFixed(3), 
+            trend: trend.toFixed(3), 
+            ofi: trueOFI.toFixed(3), 
+            zScore: zScore.toFixed(2), 
+            microCVD,
+            isLiquidityVacuum,
+            isAbsorption,
+            isDistribution
         }
     });
 
-}, 250); // CHẠY 250ms (4 LẦN/GIÂY) ĐỂ BẮT ĐÚNG NHỊP CỦA HFT
+}, 250);
