@@ -1185,6 +1185,9 @@ function init() {
             renderStats();
             hasCache = true;
             document.getElementById('loading-overlay').style.display = 'none';
+            
+            if (typeof refreshAllViews === 'function') refreshAllViews();
+            
             console.log("Loaded from Cache");
         } catch (e) { console.error(e); }
     }
@@ -1713,11 +1716,9 @@ async function loadFromCloud(isSilent = false) {
 
     } catch (err) {
         console.error("❌ Lỗi tải dữ liệu:", err);
-        if (typeof refreshAllViews === 'function') {
-            refreshAllViews();
-        } else if (typeof renderMarketHealthTable === 'function') {
-            renderMarketHealthTable();
-        }
+        
+        if (typeof refreshAllViews === 'function') refreshAllViews();
+        
     } finally {
         if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
         if (typeof updateAllPrices === 'function') updateAllPrices();
