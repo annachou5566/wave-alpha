@@ -2039,28 +2039,32 @@ function formatCompactUSD(num) {
 
 
 function connectRealtimeChart(t, isTimeSwitch = false) {
+    // --- 1. CHUẨN HÓA TÊN KÊNH CHO ALPHA TOKEN ---
+    let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
+    let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
+    let contract = t.contract;
+    let chainId = t.chainId || t.chain_id || 56;
+    
+    // BIẾN QUAN TRỌNG NHẤT: Định danh chuẩn để Binance không bơ dữ liệu
+    let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
+
     // [CÚ PHÁP CHỐNG KHỰNG BINANCE] Đổi khung giờ: KHÔNG ngắt mạng, chỉ đăng ký nến mới
     if (isTimeSwitch && chartWs && chartWs.readyState === 1) { 
-        let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
-        let contract = t.contract;
-        let chainId = t.chainId || t.chain_id || 56;
-        
-        // FIX LỖI 1: Gửi lệnh UNSUBSCRIBE để hủy luồng dữ liệu của khung giờ cũ
         if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
-            let oldK = contract ? `came@${contract}@${chainId}@kline_${window.oldChartInterval}` : `${sysSymbol}@kline_${window.oldChartInterval}`;
+            let oldK = contract ? `came@${contract}@${chainId}@kline_${window.oldChartInterval}` : `${streamPrefix}@kline_${window.oldChartInterval}`;
             chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [oldK], "id": Date.now() }));
         }
 
-        // ĐĂNG KÝ KHUNG GIỜ MỚI
         if (window.currentChartInterval !== 'tick') {
-            let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${sysSymbol}@kline_${window.currentChartInterval}`;
+            let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
             chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() + 1 }));
         }
         return; // Dừng hàm tại đây, giữ nguyên luồng Live Trade đang chảy!
     }
 
     if (chartWs) { chartWs.close(); }
-// Khởi tạo Web Worker nếu chưa có
+
+    // Khởi tạo Web Worker nếu chưa có
     if (!window.quantWorker) {
         window.quantWorker = new Worker('public/js/quant-worker.js');
         
@@ -2083,6 +2087,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     }
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
+
     // [FIX BÓNG MA] Tạo Session ID dựa trên thời gian thực để khóa luồng dữ liệu
     window.activeChartSessionId = Date.now() + '_' + t.symbol;
     let currentSession = window.activeChartSessionId;
@@ -2170,130 +2175,123 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     };
 
     window.liveTradesQueue = [];
-window.isLiveTradesRendering = false;
+    window.isLiveTradesRendering = false;
 
-window.flushSmartTape = function(cluster) {
-    if (!cluster) return;
-    let filterEl = document.getElementById('sc-fish-filter');
-    if (filterEl && filterEl.value === 'none') return;
-    
-    let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-    let whaleMin = Math.max(15000, currentAvgTicket * 15);
-    let sharkMin = Math.max(5000, currentAvgTicket * 7);
-    let dolphinMin = Math.max(2000, currentAvgTicket * 3);
-
-    let isWhale   = cluster.vol >= whaleMin;
-    let isShark   = cluster.vol >= sharkMin && cluster.vol < whaleMin;
-    let isDolphin = cluster.vol >= dolphinMin && cluster.vol < sharkMin;
-    let isSweep   = cluster.count >= 6 && cluster.vol >= 1000;
-
-    let icon = ''; let fontWeight = 'normal';
-    if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
-    else if (isShark) { icon = '🦈 '; fontWeight = '700'; }
-    else if (isDolphin) { icon = '🐬 '; fontWeight = '600'; }
-    else if (isSweep) { icon = '🤖 '; fontWeight = '600'; }
-
-    let c_up = '#0ECB81'; let c_down = '#F6465D';
-    let c_bg_up = 'transparent'; let c_bg_down = 'transparent';
-    if (isWhale || isShark || isSweep) {
-        c_bg_up = 'rgba(14, 203, 129, 0.15)'; 
-        c_bg_down = 'rgba(246, 70, 93, 0.15)';
-    }
-
-    let row = document.createElement('div');
-    row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:3px 4px; border-bottom:1px solid #1A1F26; background:${cluster.dir ? c_bg_up : c_bg_down}; font-weight:${fontWeight}; font-variant-numeric: tabular-nums; transition: 0.1s;`;
-    let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    row.innerHTML = `
-        <span style="color:${cluster.dir ? c_up : c_down}; flex: 1; text-align: left; overflow: hidden; white-space: nowrap;">${formatPrice(cluster.p)}</span>
-        <span style="color:#eaecef; flex: 1; text-align: center; white-space: nowrap;">${icon}$${formatCompactUSD(cluster.vol)}</span>
-        <span style="color:#707A8A; flex: 1; text-align: right; white-space: nowrap;">${timeStr}</span>
-    `;
-
-    // [CHỐNG GIẬT] Nạp đạn vào hàng đợi thay vì bắn thẳng ra DOM
-    window.liveTradesQueue.push({ el: row, isHighlight: isWhale || isShark, dir: cluster.dir, c_up, c_down, c_bg_up, c_bg_down });
-
-    if (!window.isLiveTradesRendering) {
-        window.isLiveTradesRendering = true;
-        requestAnimationFrame(() => {
-            let tradesBox = document.getElementById('sc-live-trades');
-            if (tradesBox && window.liveTradesQueue.length > 0) {
-                let fragment = document.createDocumentFragment();
-                let items = window.liveTradesQueue.splice(0, window.liveTradesQueue.length);
-                for (let i = items.length - 1; i >= 0; i--) {
-                    fragment.appendChild(items[i].el);
-                    if (items[i].isHighlight) {
-                        items[i].el.style.background = items[i].dir ? items[i].c_up : items[i].c_down;
-                        items[i].el.style.color = '#000000';
-                        setTimeout(() => { 
-                            items[i].el.style.background = items[i].dir ? items[i].c_bg_up : items[i].c_bg_down; 
-                            items[i].el.style.color = ''; 
-                        }, 100);
-                    }
-                }
-                tradesBox.insertBefore(fragment, tradesBox.firstChild);
-                while (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
-            }
-            window.isLiveTradesRendering = false;
-        });
-    }
-
-    // Logic Analytics (Giữ nguyên)
-    if (isDolphin || isShark || isWhale || isSweep) {
-        if (isWhale) { window.scCWhale = (window.scCWhale||0) + 1; let el = document.getElementById('sc-stat-whale'); if(el) el.innerText = window.scCWhale; }
-        else if (isShark) { window.scCShark = (window.scCShark||0) + 1; let el = document.getElementById('sc-stat-shark'); if(el) el.innerText = window.scCShark; }
-        else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
-        else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
-
-        let fishType = isWhale ? 'whale' : (isShark ? 'shark' : (isDolphin ? 'dolphin' : 'sweep'));
-        let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
-        if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
-        let markerColor = cluster.dir ? (window.currentTheme === 'trad' ? '#0ECB81' : '#2af592') : (window.currentTheme === 'trad' ? '#F6465D' : '#cb55e3');
-
-        window.scChartMarkers.push({
-            time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
-            color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg,
-            fishType: fishType
-        });
-        if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+    window.flushSmartTape = function(cluster) {
+        if (!cluster) return;
+        let filterEl = document.getElementById('sc-fish-filter');
+        if (filterEl && filterEl.value === 'none') return;
         
-        if (isWhale || isShark) {
-            if (cluster.dir) window.quantStats.whaleBuyVol += cluster.vol;
-            else window.quantStats.whaleSellVol += cluster.vol;
-            window.logToSniperTape(cluster.dir, cluster.vol, isWhale ? '🐋 VOI' : '🦈 MẬP', cluster.p);
+        let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+        let whaleMin = Math.max(15000, currentAvgTicket * 15);
+        let sharkMin = Math.max(5000, currentAvgTicket * 7);
+        let dolphinMin = Math.max(2000, currentAvgTicket * 3);
+
+        let isWhale   = cluster.vol >= whaleMin;
+        let isShark   = cluster.vol >= sharkMin && cluster.vol < whaleMin;
+        let isDolphin = cluster.vol >= dolphinMin && cluster.vol < sharkMin;
+        let isSweep   = cluster.count >= 6 && cluster.vol >= 1000;
+
+        let icon = ''; let fontWeight = 'normal';
+        if (isWhale) { icon = '🐋 '; fontWeight = '800'; }
+        else if (isShark) { icon = '🦈 '; fontWeight = '700'; }
+        else if (isDolphin) { icon = '🐬 '; fontWeight = '600'; }
+        else if (isSweep) { icon = '🤖 '; fontWeight = '600'; }
+
+        let c_up = '#0ECB81'; let c_down = '#F6465D';
+        let c_bg_up = 'transparent'; let c_bg_down = 'transparent';
+        if (isWhale || isShark || isSweep) {
+            c_bg_up = 'rgba(14, 203, 129, 0.15)'; 
+            c_bg_down = 'rgba(246, 70, 93, 0.15)';
         }
-        else if (isSweep) {
-            if (cluster.dir) window.quantStats.botSweepBuy++;
-            else window.quantStats.botSweepSell++;
-            window.logToSniperTape(cluster.dir, cluster.vol, '🤖 SWEEP', cluster.p);
+
+        let row = document.createElement('div');
+        row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:3px 4px; border-bottom:1px solid #1A1F26; background:${cluster.dir ? c_bg_up : c_bg_down}; font-weight:${fontWeight}; font-variant-numeric: tabular-nums; transition: 0.1s;`;
+        let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        row.innerHTML = `
+            <span style="color:${cluster.dir ? c_up : c_down}; flex: 1; text-align: left; overflow: hidden; white-space: nowrap;">${formatPrice(cluster.p)}</span>
+            <span style="color:#eaecef; flex: 1; text-align: center; white-space: nowrap;">${icon}$${formatCompactUSD(cluster.vol)}</span>
+            <span style="color:#707A8A; flex: 1; text-align: right; white-space: nowrap;">${timeStr}</span>
+        `;
+
+        window.liveTradesQueue.push({ el: row, isHighlight: isWhale || isShark, dir: cluster.dir, c_up, c_down, c_bg_up, c_bg_down });
+
+        if (!window.isLiveTradesRendering) {
+            window.isLiveTradesRendering = true;
+            requestAnimationFrame(() => {
+                let tradesBox = document.getElementById('sc-live-trades');
+                if (tradesBox && window.liveTradesQueue.length > 0) {
+                    let fragment = document.createDocumentFragment();
+                    let items = window.liveTradesQueue.splice(0, window.liveTradesQueue.length);
+                    for (let i = items.length - 1; i >= 0; i--) {
+                        fragment.appendChild(items[i].el);
+                        if (items[i].isHighlight) {
+                            items[i].el.style.background = items[i].dir ? items[i].c_up : items[i].c_down;
+                            items[i].el.style.color = '#000000';
+                            setTimeout(() => { 
+                                items[i].el.style.background = items[i].dir ? items[i].c_bg_up : items[i].c_bg_down; 
+                                items[i].el.style.color = ''; 
+                            }, 100);
+                        }
+                    }
+                    tradesBox.insertBefore(fragment, tradesBox.firstChild);
+                    while (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
+                }
+                window.isLiveTradesRendering = false;
+            });
         }
-        else if (isDolphin) {
-            window.logToSniperTape(cluster.dir, cluster.vol, '🐬 HEO', cluster.p);
-        }
-    }
-};
+
+        if (isDolphin || isShark || isWhale || isSweep) {
+            if (isWhale) { window.scCWhale = (window.scCWhale||0) + 1; let el = document.getElementById('sc-stat-whale'); if(el) el.innerText = window.scCWhale; }
+            else if (isShark) { window.scCShark = (window.scCShark||0) + 1; let el = document.getElementById('sc-stat-shark'); if(el) el.innerText = window.scCShark; }
+            else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
+            else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
+
+            let fishType = isWhale ? 'whale' : (isShark ? 'shark' : (isDolphin ? 'dolphin' : 'sweep'));
+            let textMsg = icon + '$' + formatCompactUSD(cluster.vol);
+            if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
+            let markerColor = cluster.dir ? (window.currentTheme === 'trad' ? '#0ECB81' : '#2af592') : (window.currentTheme === 'trad' ? '#F6465D' : '#cb55e3');
+
+            window.scChartMarkers.push({
+                time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', 
+                color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg,
+                fishType: fishType
+            });
+            if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            
+            if (isWhale || isShark) {
+                if (cluster.dir) window.quantStats.whaleBuyVol += cluster.vol;
+                else window.quantStats.whaleSellVol += cluster.vol;
+                window.logToSniperTape(cluster.dir, cluster.vol, isWhale ? '🐋 VOI' : '🦈 MẬP', cluster.p);
+            }
+            else if (isSweep) {
+                if (cluster.dir) window.quantStats.botSweepBuy++;
+                else window.quantStats.botSweepSell++;
+                window.logToSniperTape(cluster.dir, cluster.vol, '🤖 SWEEP', cluster.p);
+            }
+            else if (isDolphin) {
+                window.logToSniperTape(cluster.dir, cluster.vol, '🐬 HEO', cluster.p);
+            }
+        }
+    };
 
     try { chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
-    let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
-    let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
-    let contract = t.contract;
-    let chainId = t.chainId || t.chain_id || 56;
-    
-    let depthStream = rawId ? `alpha_${rawId}usdt@fulldepth@500ms` : `${sysSymbol}@fulldepth@500ms`;
+    // --- 2. ĐĂNG KÝ HÀNG LOẠT BẰNG STREAM PREFIX CHUẨN ---
     let params = [
-        rawId ? `alpha_${rawId}usdt@aggTrade` : `${sysSymbol}@aggTrade`,
+        `${streamPrefix}@aggTrade`,
         'came@allTokens@ticker24',
-        depthStream,
-        `${sysSymbol}@kline_1m`,
-        `${sysSymbol}@kline_5m`,
-        `${sysSymbol}@kline_15m`,
-        `${sysSymbol}@kline_1h`
+        `${streamPrefix}@fulldepth@500ms`,
+        `${streamPrefix}@kline_1m`,
+        `${streamPrefix}@kline_5m`,
+        `${streamPrefix}@kline_15m`,
+        `${streamPrefix}@kline_1h`
     ];
     window.scActivePriceLines = []; 
     
     if (window.currentChartInterval !== 'tick') {
         if (contract) params.push(`came@${contract}@${chainId}@kline_${window.currentChartInterval}`);
-        else params.push(`${sysSymbol}@kline_${window.currentChartInterval}`);
+        else params.push(`${streamPrefix}@kline_${window.currentChartInterval}`);
     }
 
    // ==========================================
