@@ -2064,38 +2064,27 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
 
     if (chartWs) { chartWs.close(); }
 
+    // Khởi tạo Web Worker nếu chưa có
     if (!window.quantWorker) {
-    window.quantWorker = new Worker('public/js/quant-worker.js');
-
-    // Bắt lỗi cấp độ cấu trúc của file Worker
-    window.quantWorker.onerror = function(error) {
-        console.error("🚨 FATAL WORKER ERROR:", error.message, "Line:", error.lineno);
-    };
-
-    window.quantWorker.onmessage = function(e) {
-        // Bắt và in ra lỗi logic bên trong vòng lặp tính toán
-        if (e.data.cmd === 'WORKER_ERROR') {
-            console.error("🚨 LOGIC WORKER CRASH:", e.data.message);
-            console.error(e.data.stack);
-            return;
-        }
-
-        if (e.data.cmd === 'STATS_UPDATE') {
-            let s = e.data.stats;
-            window.quantStats.spread = s.spread;
-            window.quantStats.trend = s.trend;
-            window.quantStats.drop = s.drop;
-            window.quantStats.ofi = s.ofi;
-            window.quantStats.zScore = s.zScore;
-            window.quantStats.currentSpeed = s.currentSpeed;
-            window.quantStats.algoLimit = s.algoLimit;
-            window.quantStats.avgSpeed60s = s.avgSpeed60s;
-            window.quantStats.buyDominance = s.buyDominance;
-            window.quantStats.microCVD = s.microCVD;
-            window.quantStats.priceTickImpact = s.priceTickImpact; 
-        }
-    };
-}
+        window.quantWorker = new Worker('public/js/quant-worker.js');
+        
+        // Lắng nghe kết quả từ Worker trả về
+        window.quantWorker.onmessage = function(e) {
+            if (e.data.cmd === 'STATS_UPDATE') {
+                let s = e.data.stats;
+                window.quantStats.spread = s.spread;
+                window.quantStats.trend = s.trend;
+                window.quantStats.drop = s.drop;
+                window.quantStats.ofi = s.ofi;
+                window.quantStats.zScore = s.zScore;
+                window.quantStats.currentSpeed = s.currentSpeed;
+                window.quantStats.algoLimit = s.algoLimit;
+                window.quantStats.avgSpeed60s = s.avgSpeed60s;
+                window.quantStats.buyDominance = s.buyDominance;
+                window.quantStats.microCVD = s.microCVD;
+            }
+        };
+    }
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
 
