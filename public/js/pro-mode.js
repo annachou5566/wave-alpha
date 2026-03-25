@@ -1793,27 +1793,23 @@ window.updateCommandCenterUI = function() {
         }
     }
 
-// [UI/UX NÂNG CẤP] Cập nhật thanh OFI Power Meter động
+// [UI/UX NÂNG CẤP] Cập nhật thanh OFI Power Meter theo Taker Buy Dominance
     let ofiBarBuy = document.getElementById('cc-ofi-bar-buy');
     let ofiBarSell = document.getElementById('cc-ofi-bar-sell');
     if (ofiBarBuy && ofiBarSell) {
-        let currentOFI = window.quantStats.ofi || 0; 
-        
-        // Quy đổi OFI (-1.0 đến +1.0) thành phần trăm (0% đến 100%)
-        // Nếu OFI = +1 (Mua tuyệt đối) -> buyPct = 100%, sellPct = 0%
-        // Nếu OFI = 0 (Cân bằng) -> buyPct = 50%, sellPct = 50%
-        let buyPct = ((currentOFI + 1) / 2) * 100;
+        // Dùng biến mới siêu chính xác từ Worker
+        let buyPct = window.quantStats.buyDominance || 50;
         let sellPct = 100 - buyPct;
         
         ofiBarBuy.style.width = `${buyPct}%`;
         ofiBarSell.style.width = `${sellPct}%`;
         
-        // Hiệu ứng "Tia chớp" khi có áp đảo lực (vượt ngưỡng 75%)
-        ofiBarBuy.style.background = buyPct >= 75 ? '#00F0FF' : '#0ECB81'; 
-        ofiBarBuy.style.boxShadow = buyPct >= 75 ? '0 0 5px #00F0FF' : 'none';
+        // Hiệu ứng "Tia chớp" khi Fomo Mua vọt ngưỡng 70%
+        ofiBarBuy.style.background = buyPct >= 70 ? '#00F0FF' : '#0ECB81'; 
+        ofiBarBuy.style.boxShadow = buyPct >= 70 ? '0 0 5px #00F0FF' : 'none';
 
-        ofiBarSell.style.background = sellPct >= 75 ? '#FF007F' : '#F6465D';
-        ofiBarSell.style.boxShadow = sellPct >= 75 ? '0 0 5px #FF007F' : 'none';
+        ofiBarSell.style.background = sellPct >= 70 ? '#FF007F' : '#F6465D';
+        ofiBarSell.style.boxShadow = sellPct >= 70 ? '0 0 5px #FF007F' : 'none';
     }
     
     // --- 3. HỒ SƠ DÒNG TIỀN ---
@@ -2068,7 +2064,6 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         // Lắng nghe kết quả từ Worker trả về
         window.quantWorker.onmessage = function(e) {
             if (e.data.cmd === 'STATS_UPDATE') {
-                // Nhận Data và gán thẳng vào biến quantStats của hệ thống
                 let s = e.data.stats;
                 window.quantStats.spread = s.spread;
                 window.quantStats.trend = s.trend;
@@ -2078,6 +2073,8 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
                 window.quantStats.currentSpeed = s.currentSpeed;
                 window.quantStats.algoLimit = s.algoLimit;
                 window.quantStats.avgSpeed60s = s.avgSpeed60s;
+                window.quantStats.buyDominance = s.buyDominance;
+                window.quantStats.microCVD = s.microCVD;
             }
         };
     }
