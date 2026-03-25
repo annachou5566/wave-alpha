@@ -2545,7 +2545,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         
         if (data.stream.endsWith('@aggTrade')) {
             let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
-            let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
+            let isUp = !data.data.m;
             window.scLastTradeDir = isUp; window.scLastPrice = p;
             let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
             let nowT = Date.now();
