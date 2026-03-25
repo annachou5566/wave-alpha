@@ -32,10 +32,18 @@ self.onmessage = function(e) {
         currentBucket.vol += (msg.data.v || (msg.data.p * msg.data.q));
     }
     else if (msg.cmd === 'BOOK_TICKER') {
-        let b = Number(msg.data.b);
-        let a = Number(msg.data.a);
-        if (b > 0) {
-            bookDepth.spread = ((a - b) / b) * 100;
+        let b = Number(msg.data.b); // Best Bid
+        let a = Number(msg.data.a); // Best Ask
+        
+        if (b > 0 && a > b) {
+            let rawSpread = ((a - b) / b) * 100;
+            
+            if (rawSpread < 10) {
+                bookDepth.spread = rawSpread;
+            }
+        } 
+        else if (b > 0 && a === b) {
+            bookDepth.spread = 0; 
         }
     }
 };
