@@ -1142,16 +1142,19 @@ function injectLayout() {
                                         </div>
                                     </div>
 
-                                    <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #3B82F6; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-                                        <div class="term-w-title" style="color: #3B82F6; margin-bottom: auto;">BINANCE NET FLOW</div>
-                                        <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
-                                            <div class="term-row"><span class="term-lbl">5 Phút</span><span id="cc-api-nf-5m" class="term-val">...</span></div>
-                                            <div class="term-row"><span class="term-lbl">1 Giờ</span><span id="cc-api-nf-1h" class="term-val">...</span></div>
-                                            <div class="term-row"><span class="term-lbl">4 Giờ</span><span id="cc-api-nf-4h" class="term-val">...</span></div>
-                                            <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">24 Giờ</span><span id="cc-api-nf-24h" class="term-val">...</span></div>
-                                        </div>
-                                    </div>
-                                </div> 
+                                    <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #00F0FF; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+    <div class="term-w-title" style="color: #00F0FF; margin-bottom: auto;" title="Lực Mua/Bán chủ động trên Orderbook (Realtime)">
+        <i class="fas fa-water"></i> CEX TAKER FLOW
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
+        <div class="term-row"><span class="term-lbl">Nến 1 Phút</span><span id="cc-cex-nf-1m" class="term-val">...</span></div>
+        <div class="term-row"><span class="term-lbl">Nến 5 Phút</span><span id="cc-cex-nf-5m" class="term-val">...</span></div>
+        <div class="term-row"><span class="term-lbl">Nến 15 Phút</span><span id="cc-cex-nf-15m" class="term-val">...</span></div>
+        <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;">
+            <span class="term-lbl">Nến 1 Giờ</span><span id="cc-cex-nf-1h" class="term-val">...</span>
+        </div>
+    </div>
+</div>
                                 
                                 <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
                                     <div class="term-widget" style="margin-bottom: 0;">
@@ -2280,7 +2283,11 @@ window.flushSmartTape = function(cluster) {
     let params = [
         rawId ? `alpha_${rawId}usdt@aggTrade` : `${sysSymbol}@aggTrade`,
         'came@allTokens@ticker24',
-        depthStream
+        depthStream,
+        `${sysSymbol}@kline_1m`,
+        `${sysSymbol}@kline_5m`,
+        `${sysSymbol}@kline_15m`,
+        `${sysSymbol}@kline_1h`
     ];
     window.scActivePriceLines = []; 
     
@@ -2481,7 +2488,20 @@ window.flushSmartTape = function(cluster) {
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
             let k = data.data.k; 
-            
+            // --- BỔ SUNG LÕI QUANT: TÍNH CEX NET FLOW REALTIME TỪ KLINE ---
+            // Lọc các khung giờ ta cần đo Net Flow
+            if (['1m', '5m', '15m', '1h'].includes(k.i)) {
+                let totalQuote = parseFloat(k.q); // Tổng Volume (USD)
+                let takerBuyQuote = parseFloat(k.Q); // Volume Mua Chủ Động (USD)
+                let netFlow = (2 * takerBuyQuote) - totalQuote; // Công thức: Mua - Bán
+                
+                let nfEl = document.getElementById(`cc-cex-nf-${k.i}`);
+                if (nfEl) {
+                    let color = netFlow >= 0 ? 'var(--term-up)' : 'var(--term-down)';
+                    let sign = netFlow >= 0 ? '+' : '-';
+                    nfEl.innerHTML = `<span style="color:${color}">${sign}$${formatCompactUSD(Math.abs(netFlow))}</span>`;
+                }
+            }
             // FIX LỖI 2: Chặn nến bóng ma (không vẽ nếu khoảng thời gian nến k.i khác với khung đang chọn)
             if (k && k.i && k.i !== window.currentChartInterval) return;
             // Chặn luôn nếu đang ở chế độ TICK (vì TICK dùng area chart aggTrade chứ ko dùng nến)
@@ -3165,11 +3185,7 @@ window.updateSmartMoneyRadar = function(apiData) {
         return `<span style="color:${color}">${sign}$${formatCompactUSD(Math.abs(n))}</span>`;
     };
 
-    // Bơm dữ liệu từ Binance API vào Data Flow (Command Center)
-    safeSet('cc-api-nf-5m', fmtNetFlow(d.volume5mNetBinance));
-    safeSet('cc-api-nf-1h', fmtNetFlow(d.volume1hNetBinance));
-    safeSet('cc-api-nf-4h', fmtNetFlow(d.volume4hNetBinance));
-    safeSet('cc-api-nf-24h', fmtNetFlow(d.volume24hNetBinance));
+    
     // --- LẤY DATA GỐC TỪ CHART ĐANG MỞ ĐỂ ĐỒNG BỘ TUYỆT ĐỐI ---
     let t_chart = window.currentChartToken || {};
 
