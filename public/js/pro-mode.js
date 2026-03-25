@@ -1156,7 +1156,7 @@ function injectLayout() {
     </div>
 </div>
                                 
-                                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
+                              </div>  <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
                                     <div class="term-widget" style="margin-bottom: 0;">
                                         <div class="term-w-title">DÒNG TIỀN (60s)</div>
                                         <div class="term-row"><span class="term-lbl">Avg Ticket</span><span id="cc-avg-ticket" class="term-val">🦐 $0</span></div>
