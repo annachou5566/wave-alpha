@@ -2280,6 +2280,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     // --- 2. ĐĂNG KÝ HÀNG LOẠT BẰNG STREAM PREFIX CHUẨN ---
     let params = [
         `${streamPrefix}@aggTrade`,
+        `${streamPrefix}@bookTicker`,
         'came@allTokens@ticker24',
         `${streamPrefix}@fulldepth@500ms`,
         `${streamPrefix}@kline_1m`,
@@ -2483,6 +2484,16 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         if (window.activeChartSessionId !== currentSession) return;
         const data = JSON.parse(event.data);
         if (!data.stream) return;
+
+        // --- BỔ SUNG NHÁNH NÀY CHO WOKER V5 ĐỂ ĐO SPREAD ---
+        if (data.stream.endsWith('@bookTicker')) {
+            if (window.quantWorker) {
+                window.quantWorker.postMessage({
+                    cmd: 'BOOK_TICKER',
+                    data: data.data
+                });
+            }
+        }
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
             let k = data.data.k; 
