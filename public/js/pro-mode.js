@@ -1143,9 +1143,9 @@ function injectLayout() {
                                     </div>
 
                                     <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #00F0FF; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-    <div class="term-w-title" style="color: #00F0FF; margin-bottom: auto;" title="Lực Mua/Bán chủ động trên Orderbook (Realtime)">
-        <i class="fas fa-water"></i> CEX TAKER FLOW
-    </div>
+    <div class="term-w-title" style="color: #00F0FF; margin-bottom: auto;" title="Tổng khối lượng và xu hướng của nến hiện tại">
+    <i class="fas fa-chart-bar"></i> CANDLE VOLUME
+</div>
     <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
         <div class="term-row"><span class="term-lbl">Nến 1 Phút</span><span id="cc-cex-nf-1m" class="term-val">...</span></div>
         <div class="term-row"><span class="term-lbl">Nến 5 Phút</span><span id="cc-cex-nf-5m" class="term-val">...</span></div>
@@ -2486,18 +2486,22 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
             let k = data.data.k; 
-            // --- BỔ SUNG LÕI QUANT: TÍNH CEX NET FLOW REALTIME TỪ KLINE ---
-            // Lọc các khung giờ ta cần đo Net Flow
+            // --- BỔ SUNG LÕI QUANT: TÍNH CANDLE VOLUME REALTIME TỪ KLINE ---
+            // Lọc các khung giờ ta cần đo
             if (['1m', '5m', '15m', '1h'].includes(k.i)) {
                 let totalQuote = parseFloat(k.q); // Tổng Volume (USD)
-                let takerBuyQuote = parseFloat(k.Q); // Volume Mua Chủ Động (USD)
-                let netFlow = (2 * takerBuyQuote) - totalQuote; // Công thức: Mua - Bán
+                let openPrice = parseFloat(k.o);  // Giá mở cửa
+                let closePrice = parseFloat(k.c); // Giá đóng cửa
+                
+                // Xác định nến Tăng (Xanh) hay Giảm (Đỏ)
+                let isUpCandle = closePrice >= openPrice;
                 
                 let nfEl = document.getElementById(`cc-cex-nf-${k.i}`);
                 if (nfEl) {
-                    let color = netFlow >= 0 ? 'var(--term-up)' : 'var(--term-down)';
-                    let sign = netFlow >= 0 ? '+' : '-';
-                    nfEl.innerHTML = `<span style="color:${color}">${sign}$${formatCompactUSD(Math.abs(netFlow))}</span>`;
+                    let color = isUpCandle ? 'var(--term-up)' : 'var(--term-down)';
+                    let icon = isUpCandle ? '▲' : '▼';
+                    // Hiển thị Tổng Volume kèm icon hướng nến
+                    nfEl.innerHTML = `<span style="color:${color}">${icon} $${formatCompactUSD(totalQuote)}</span>`;
                 }
             }
             // FIX LỖI 2: Chặn nến bóng ma (không vẽ nếu khoảng thời gian nến k.i khác với khung đang chọn)
