@@ -168,5 +168,12 @@ setInterval(() => {
             priceTickImpact // Gửi thêm biến mới cho Frontend xử lý cảnh báo
         }
     });
-
+} catch (err) {
+        // Bắt lỗi crash và gửi ra ngoài để in log
+        self.postMessage({
+            cmd: 'WORKER_ERROR',
+            message: err.message,
+            stack: err.stack
+        });
+    }
 }, 1000);
