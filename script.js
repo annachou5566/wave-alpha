@@ -1640,11 +1640,8 @@ async function loadFromCloud(isSilent = false) {
     } catch (e) { console.warn("⚠️ Bỏ qua lỗi Config:", e); }
 
     try {
-        const res = await fetch("data/competition-history.json?t=" + Date.now(), {
-            headers: { 'X-Wave-Source': 'web-client' }
-        });
-        const jsonRes = await res.json();
-        const serverData = jsonRes.data || jsonRes; 
+        const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
+        const serverData = await res.json(); 
 
         let tempRunning = [], tempHistory = [], tempAll = [];
         let seenDbIds = new Set(); // <-- THÊM BỘ LỌC CHỐNG TRÙNG LẶP
@@ -1713,11 +1710,6 @@ async function loadFromCloud(isSilent = false) {
 
     } catch (err) {
         console.error("❌ Lỗi tải dữ liệu:", err);
-        if (typeof refreshAllViews === 'function') {
-            refreshAllViews();
-        } else if (typeof renderMarketHealthTable === 'function') {
-            renderMarketHealthTable();
-        }
     } finally {
         if(!isSilent && document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
         if (typeof updateAllPrices === 'function') updateAllPrices();
