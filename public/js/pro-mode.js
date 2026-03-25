@@ -2543,16 +2543,20 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
             (data.data.b || []).forEach(item => { let p = item[0], q = parseFloat(item[1]); if (q === 0) delete window.scLocalOrderBook.bids[p]; else window.scLocalOrderBook.bids[p] = q; });
         }
         
-        if (data.stream.endsWith('@aggTrade')) {
-            let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
-            let isUp = !data.data.m;
-            window.scLastTradeDir = isUp; window.scLastPrice = p;
-            let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
-            let nowT = Date.now();
+        // Thay vì chỉ bắt @aggTrade, ta mở rộng bắt luôn @trade (nếu sau này có dùng tới)
+if (data.stream.endsWith('@aggTrade') || data.stream.endsWith('@trade')) {
+    let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
+    
+    // NẾU m = false LÀ LỆNH MUA (XANH), m = true LÀ LỆNH BÁN (ĐỎ)
+    let isUp = !data.data.m;
+    
+    window.scLastTradeDir = isUp; window.scLastPrice = p;
+    let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
+    let nowT = Date.now();
 
-            window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
-// Bắn đạn sang cho Worker tính toán ngầm
-            window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
+    window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
+    // Bắn đạn sang cho Worker tính toán ngầm
+    window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
             // [CHỐNG SẬP CPU FINAL BOSS] Throttling giới hạn Render Canvas tối đa 6 FPS (150ms/lần)
             // Thay vì vẽ 200 lần/giây theo tốc độ của Binance, giờ Chart chỉ vẽ những gì mượt mà nhất.
             if (window.currentChartInterval === 'tick') {
