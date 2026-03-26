@@ -2351,7 +2351,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     // --- 2. ĐĂNG KÝ HÀNG LOẠT BẰNG STREAM PREFIX CHUẨN ---
     let params = [
         `${streamPrefix}@aggTrade`,
-        `${streamPrefix}@bookTicker`,
+        `${streamPrefix}@bookTicker`, // <--- PHẢI THÊM DÒNG NÀY VÀO ĐÂY
         'came@allTokens@ticker24',
         `${streamPrefix}@fulldepth@500ms`,
         `${streamPrefix}@kline_1m`,
