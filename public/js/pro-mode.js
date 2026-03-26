@@ -2069,17 +2069,18 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         window.quantWorker = new Worker('public/js/quant-worker.js');
         
         // Lắng nghe kết quả từ Worker trả về
-        window.quantWorker.onmessage = function(e) {
-            if (e.data.cmd === 'STATS_UPDATE') {
-                // 1. Đồng bộ toàn bộ số liệu lượng tử (Lấy luôn cả flags)
-                window.quantStats = e.data.stats;
-                
-                // 2. ÉP NÃO BỘ AI PHÂN TÍCH VÀ ĐỔI CHỮ NGAY LẬP TỨC MỖI 250ms
-                if (typeof window.evaluateQuantVerdict === 'function') {
-                    window.evaluateQuantVerdict();
-                }
+window.quantWorker.onmessage = function(e) {
+if (e.data.cmd === 'STATS_UPDATE') {
+// 1. DÙNG OBJECT.ASSIGN ĐỂ HỢP NHẤT (MERGE) DATA
+// Chống ghi đè làm mất dữ liệu Cá Voi/Cá Mập và dữ liệu Phái Sinh (Funding, Liq)
+Object.assign(window.quantStats, e.data.stats);
+
+            // 2. ÉP NÃO BỘ AI PHÂN TÍCH VÀ ĐỔI CHỮ NGAY LẬP TỨC MỖI 250ms
+            if (typeof window.evaluateQuantVerdict === 'function') {
+                window.evaluateQuantVerdict();
             }
-        };
+        }
+    };
     }
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
