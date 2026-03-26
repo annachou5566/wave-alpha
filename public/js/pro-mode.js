@@ -1662,32 +1662,41 @@ window.tapeRenderQueue = [];
 window.isTapeRendering = false;
 
 window.logToSniperTape = function(isBuy, vol, type, price) {
-    if (vol < 500 && !type.includes('BOT')) return;
-    const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊');
-    if (isWhaleOrShark) window.playProPing();
+let isLiq = type.includes('CHÁY');
+if (vol < 500 && !type.includes('BOT') && !isLiq) return;
 
-    const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-    const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
-    const heatRatio = Math.min(1, vol / heatMaxThreshold); 
-    const opacity = 0.03 + (heatRatio * 0.27); 
-    const color = isBuy ? '#0ECB81' : '#F6465D';
-    const baseRgb = isBuy ? '14, 203, 129' : '246, 70, 93';
-    const bg = `rgba(${baseRgb}, ${opacity})`;
-    const action = isBuy ? 'BUY' : 'SELL';
-    
-    const entry = document.createElement('div');
-    const fontWt = heatRatio > 0.6 ? '900' : (heatRatio > 0.3 ? '800' : '600');
-    entry.dataset.tapeType = isWhaleOrShark ? (type.includes('VOI') ? 'whale' : 'shark') : 'bot';
-    entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${heatRatio > 0.6 ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); gap: 4px; font-weight: ${fontWt}; transition: background 0.8s ease;`;
-    
-    let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
-    const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊') || isLiq;
+if (isWhaleOrShark) window.playProPing();
 
-    entry.innerHTML = `
-        <span style="color:${color}; font-weight:800; width: 35%; ${glow}">${type} ${action}</span>
-        <span style="color:#eaecef; font-weight:bold; width: 45%; text-align: center;">$${formatCompactUSD(vol)} @ ${formatPrice(price)}</span>
-        <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
-    `;
+const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
+const heatRatio = Math.min(1, vol / heatMaxThreshold); 
+const opacity = 0.03 + (heatRatio * 0.27); 
+
+let color = isBuy ? '#0ECB81' : '#F6465D';
+let baseRgb = isBuy ? '14, 203, 129' : '246, 70, 93';
+
+if (type.includes('CHÁY LONG')) { color = '#FF007F'; baseRgb = '255, 0, 127'; } 
+else if (type.includes('CHÁY SHORT')) { color = '#00F0FF'; baseRgb = '0, 240, 255'; }
+
+const bg = `rgba(${baseRgb}, ${isLiq ? 0.35 : opacity})`;
+const action = isLiq ? '' : (isBuy ? 'BUY' : 'SELL');
+
+const entry = document.createElement('div');
+const fontWt = (heatRatio > 0.6 || isLiq) ? '900' : (heatRatio > 0.3 ? '800' : '600');
+
+// Ép lệnh thanh lý vào nhóm 'whale' để nó đâm thủng mọi bộ lọc (bất chấp đang chọn TỪ CÁ MẬP)
+entry.dataset.tapeType = isLiq ? 'whale' : (isWhaleOrShark ? (type.includes('VOI') ? 'whale' : 'shark') : 'bot');
+entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${(heatRatio > 0.6 || isLiq) ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); gap: 4px; font-weight: ${fontWt}; transition: background 0.8s ease;`;
+
+let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
+const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+entry.innerHTML = `
+    <span style="color:${color}; font-weight:800; width: 35%; ${glow}">${type} ${action}</span>
+    <span style="color:#eaecef; font-weight:bold; width: 45%; text-align: center;">$${formatCompactUSD(vol)} @ ${formatPrice(price)}</span>
+    <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
+`;
     
     const filterEl = document.getElementById('cc-tape-filter');
     const currentFilter = filterEl ? filterEl.value : 'all';
