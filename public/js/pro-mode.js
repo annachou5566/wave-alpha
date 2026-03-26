@@ -3754,43 +3754,72 @@ window.renderProWatchlist = function(passedSearchTerm) {
 // =====================================================================
 // 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
 // =====================================================================
+// Biến toàn cục để khóa tín hiệu HFT trong 5 giây (Để ở ngoài hàm)
+window.hftLockTime = 0;
+window.hftLockedHtml = '';
+window.hftLockedCss = '';
+
 window.evaluateQuantVerdict = function() {
-    // 1. HFT (Micro - Realtime Tick - Tác dụng 1s đến 5m)
+    // ========================================================
+    // 1. HFT (Micro - Realtime Tick) - ĐÃ LẮP BỘ NHỚ ĐỆM 5 GIÂY
+    // ========================================================
     let hftEl = document.getElementById('verdict-hft');
     if (hftEl && window.quantStats) {
-        let flags = window.quantStats.flags || {}; // BẮT LẤY CỜ TỪ WORKER
         let z = window.quantStats.zScore || 0;
         let ofi = window.quantStats.ofi || 0;
         let spread = window.quantStats.spread || 0;
         let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 150);
 
+        let now = Date.now();
+        let isUrgent = false;
+        let newHtml = '';
+        let newCss = '';
+
         if (spread > 1.0) {
-            hftEl.innerHTML = '💀 MẤT THANH KHOẢN (RỦI RO TRƯỢT GIÁ CAO)';
-            hftEl.style.cssText = 'font-size: 10px; background: rgba(132, 142, 156, 0.1); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
-        } else if (flags.zoneAbsorptionBottom) { // DÙNG TÍN HIỆU LƯU ẢNH 5S
-            hftEl.innerHTML = '🟢 BẮT ĐÁY: CÁ VOI ĐỠ GIÁ (ABSORPTION)';
-            hftEl.style.cssText = 'font-size: 10px; background: rgba(14, 203, 129, 0.15); padding: 2px 4px; border-radius: 2px; color: #0ECB81; border: 1px solid #0ECB81;';
-        } else if (flags.zoneDistributionTop) { // DÙNG TÍN HIỆU LƯU ẢNH 5S
-            hftEl.innerHTML = '🔴 CẠN KIỆT: PHÂN PHỐI ĐỈNH (DISTRIBUTION)';
-            hftEl.style.cssText = 'font-size: 10px; background: rgba(246, 70, 93, 0.15); padding: 2px 4px; border-radius: 2px; color: #F6465D; border: 1px solid #F6465D;';
-        } else if (flags.washTrading) {
-            hftEl.innerHTML = '🟡 BƠM XẢ ẢO (WASH TRADING)';
-            hftEl.style.cssText = 'font-size: 10px; background: rgba(240, 185, 11, 0.15); padding: 2px 4px; border-radius: 2px; color: #F0B90B; border: 1px solid #F0B90B;';
+            isUrgent = true;
+            newHtml = '💀 MẤT THANH KHOẢN (RỦI RO CAO)';
+            newCss = 'font-size: 10px; background: rgba(132, 142, 156, 0.1); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
         } else if (z > 2.5 && ofi > 0.6) {
-            hftEl.innerHTML = '🚀 BÙNG NỔ LỰC MUA (MOMENTUM SQUEEZE)';
-            hftEl.style.cssText = 'font-size: 10px; background: rgba(0, 240, 255, 0.1); padding: 2px 4px; border-radius: 2px; color: #00F0FF;';
+            isUrgent = true;
+            newHtml = '🚀 BÙNG NỔ LỰC MUA (MOMENTUM SQUEEZE)';
+            newCss = 'font-size: 10px; background: rgba(0, 240, 255, 0.1); padding: 2px 4px; border-radius: 2px; color: #00F0FF;';
         } else if (z > 2.5 && ofi < -0.6) {
-            hftEl.innerHTML = '🩸 XẢ CHỚP NHOÁNG (FLASH DUMP)';
-            hftEl.style.cssText = 'font-size: 10px; background: rgba(255, 0, 127, 0.1); padding: 2px 4px; border-radius: 2px; color: #FF007F;';
+            isUrgent = true;
+            newHtml = '🩸 XẢ CHỚP NHOÁNG (FLASH DUMP)';
+            newCss = 'font-size: 10px; background: rgba(255, 0, 127, 0.1); padding: 2px 4px; border-radius: 2px; color: #FF007F;';
+        } else if (isHighSpeed && ofi > 0.3) {
+            isUrgent = true;
+            newHtml = '🤖 BOT SWEEP GOM HÀNG';
+            newCss = 'font-size: 10px; background: rgba(14, 203, 129, 0.1); padding: 2px 4px; border-radius: 2px; color: #0ECB81;';
+        } else if (isHighSpeed && ofi < -0.3) {
+            isUrgent = true;
+            newHtml = '🤖 BOT TỈA LỆNH XẢ';
+            newCss = 'font-size: 10px; background: rgba(246, 70, 93, 0.1); padding: 2px 4px; border-radius: 2px; color: #F6465D;';
+        }
+
+        // BỘ KHÓA TRẠNG THÁI (LƯU ẢNH 5 GIÂY)
+        if (isUrgent) {
+            window.hftLockTime = now;
+            window.hftLockedHtml = newHtml;
+            window.hftLockedCss = newCss;
+            hftEl.innerHTML = newHtml;
+            hftEl.style.cssText = newCss;
         } else {
-            hftEl.innerHTML = '⚖️ TÍCH LŨY TICK (CHOPPING)';
-            hftEl.style.cssText = 'font-size: 10px; background: rgba(255, 255, 255, 0.05); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
+            if (now - window.hftLockTime < 5000) {
+                // Nếu chưa hết 5 giây -> Ép hiển thị lại chữ cảnh báo cũ để bạn kịp đọc
+                hftEl.innerHTML = window.hftLockedHtml;
+                hftEl.style.cssText = window.hftLockedCss;
+            } else {
+                // Sau 5 giây bình yên mới cho phép trở về trạng thái Tích lũy
+                hftEl.innerHTML = '⚖️ TÍCH LŨY TICK (CHOPPING)';
+                hftEl.style.cssText = 'font-size: 10px; background: rgba(255, 255, 255, 0.05); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
+            }
         }
     }
 
-
+    // ========================================================
     // 2. MFT (Meso - Khung Trung Hạn - Tác dụng 15m đến 4h)
-    // Nguồn: Funding Rate, Cumulative Volume Delta (CVD) 1h/4h
+    // ========================================================
     let mftEl = document.getElementById('verdict-mft');
     if (mftEl) {
         let fFunding = window.quantStats?.fundingRateObj?.rate || 0;
@@ -3815,8 +3844,9 @@ window.evaluateQuantVerdict = function() {
         }
     }
 
+    // ========================================================
     // 3. LFT (Macro - Vĩ mô - Tác dụng Tính bằng Ngày/Tuần)
-    // Nguồn: Lạm phát (Unlock), Hành vi Smart Money/Cá Mập
+    // ========================================================
     let lftEl = document.getElementById('verdict-lft');
     if (lftEl) {
         let smTag = document.getElementById('sm-verdict-badge')?.innerText || '';
