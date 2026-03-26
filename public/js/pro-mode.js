@@ -3754,21 +3754,23 @@ window.renderProWatchlist = function(passedSearchTerm) {
 // =====================================================================
 // 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
 // =====================================================================
-// Biến toàn cục để khóa tín hiệu HFT trong 5 giây (Để ở ngoài hàm)
+// Biến toàn cục để khóa tín hiệu HFT trong 5 giây
 window.hftLockTime = 0;
 window.hftLockedHtml = '';
 window.hftLockedCss = '';
 
 window.evaluateQuantVerdict = function() {
     // ========================================================
-    // 1. HFT (Micro - Realtime Tick) - ĐÃ LẮP BỘ NHỚ ĐỆM 5 GIÂY
+    // 1. HFT (Micro - Realtime Tick) - ĐÃ SỬA BUG & TĂNG ĐỘ NHẠY
     // ========================================================
     let hftEl = document.getElementById('verdict-hft');
     if (hftEl && window.quantStats) {
-        let z = window.quantStats.zScore || 0;
+        let z = window.quantStats.zScore || 0; 
         let ofi = window.quantStats.ofi || 0;
         let spread = window.quantStats.spread || 0;
-        let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 150);
+        
+        // CŨ: 150 lệnh. MỚI: 60 lệnh (Tương đương 12 lệnh/giây là Bot đã quét rất gắt rồi)
+        let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 60); 
 
         let now = Date.now();
         let isUrgent = false;
@@ -3779,25 +3781,33 @@ window.evaluateQuantVerdict = function() {
             isUrgent = true;
             newHtml = '💀 MẤT THANH KHOẢN (RỦI RO CAO)';
             newCss = 'font-size: 10px; background: rgba(132, 142, 156, 0.1); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
-        } else if (z > 2.5 && ofi > 0.6) {
+        } 
+        // Z-Score dương: Lực MUA đột biến (Hạ tiêu chuẩn từ 2.5 xuống 1.8, OFI từ 0.6 xuống 0.3)
+        else if (z > 1.8 && ofi > 0.3) { 
             isUrgent = true;
             newHtml = '🚀 BÙNG NỔ LỰC MUA (MOMENTUM SQUEEZE)';
             newCss = 'font-size: 10px; background: rgba(0, 240, 255, 0.1); padding: 2px 4px; border-radius: 2px; color: #00F0FF;';
-        } else if (z > 2.5 && ofi < -0.6) {
+        } 
+        // Z-Score ÂM: Lực BÁN đột biến (Đã fix lỗi Toán học, hạ ngưỡng)
+        else if (z < -1.8 && ofi < -0.3) { 
             isUrgent = true;
             newHtml = '🩸 XẢ CHỚP NHOÁNG (FLASH DUMP)';
             newCss = 'font-size: 10px; background: rgba(255, 0, 127, 0.1); padding: 2px 4px; border-radius: 2px; color: #FF007F;';
-        } else if (isHighSpeed && ofi > 0.3) {
+        } 
+        // Nhận diện Bot gom hàng (Hạ OFI xuống 0.15)
+        else if (isHighSpeed && ofi > 0.15) { 
             isUrgent = true;
             newHtml = '🤖 BOT SWEEP GOM HÀNG';
             newCss = 'font-size: 10px; background: rgba(14, 203, 129, 0.1); padding: 2px 4px; border-radius: 2px; color: #0ECB81;';
-        } else if (isHighSpeed && ofi < -0.3) {
+        } 
+        // Nhận diện Bot xả hàng
+        else if (isHighSpeed && ofi < -0.15) {
             isUrgent = true;
             newHtml = '🤖 BOT TỈA LỆNH XẢ';
             newCss = 'font-size: 10px; background: rgba(246, 70, 93, 0.1); padding: 2px 4px; border-radius: 2px; color: #F6465D;';
         }
 
-        // BỘ KHÓA TRẠNG THÁI (LƯU ẢNH 5 GIÂY)
+        // BỘ KHÓA TRẠNG THÁI (LƯU ẢNH 5 GIÂY CHO CÁC TÍN HIỆU KHẨN CẤP)
         if (isUrgent) {
             window.hftLockTime = now;
             window.hftLockedHtml = newHtml;
@@ -3805,12 +3815,13 @@ window.evaluateQuantVerdict = function() {
             hftEl.innerHTML = newHtml;
             hftEl.style.cssText = newCss;
         } else {
+            // Nếu chưa qua 5 giây, giữ nguyên trạng thái cảnh báo cũ
             if (now - window.hftLockTime < 5000) {
-                // Nếu chưa hết 5 giây -> Ép hiển thị lại chữ cảnh báo cũ để bạn kịp đọc
                 hftEl.innerHTML = window.hftLockedHtml;
                 hftEl.style.cssText = window.hftLockedCss;
-            } else {
-                // Sau 5 giây bình yên mới cho phép trở về trạng thái Tích lũy
+            } 
+            // Vượt qua 5 giây bình yên -> Trả về tích lũy
+            else {
                 hftEl.innerHTML = '⚖️ TÍCH LŨY TICK (CHOPPING)';
                 hftEl.style.cssText = 'font-size: 10px; background: rgba(255, 255, 255, 0.05); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
             }
