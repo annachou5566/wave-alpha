@@ -1,15 +1,15 @@
 /**
  * =================================================================
- * 🧠 QUANT WORKER V5.1 - ULTRA-HFT ENGINE (UI-COMPATIBLE FIX)
+ * 🧠 QUANT WORKER V5.2 - ULTRA-HFT ENGINE (ANTI-GLITCH)
  * =================================================================
  * Giữ nguyên kiến trúc Zero-GC, Welford EMA và Cont-Stoikov OFI đẳng cấp.
- * Tái cấu trúc Output Schema để tương thích 100% với giao diện UI.
+ * Đã khôi phục bộ khiên chắn dữ liệu rác (Spread Anti-Glitch) từ bản V6.
  */
 
 const ALPHA_1S = 2 / (10 + 1);
 const ALPHA_3S = 2 / (30 + 1);
 const ALPHA_15S = 2 / (150 + 1);
-const ALPHA_60S = 2 / (600 + 1); // Cho các chỉ số dài hạn
+const ALPHA_60S = 2 / (600 + 1); 
 
 let state = {
     lastBid: 0, lastAsk: 0, 
@@ -24,7 +24,6 @@ let state = {
     
     microCVD: 0, lastPrice: 0,
     
-    // Các biến Zero-GC để giả lập lại dữ liệu hiển thị cho UI
     maxPrice5m: 0,
     emaPriceFast: 0, 
     emaPriceSlow: 0,
@@ -67,18 +66,27 @@ self.onmessage = function(e) {
     if (msg.cmd === 'INIT') {
         initEngine();
     } 
-    // FIX 1: Hỗ trợ cả 2 chuẩn BOOKTICKER và BOOK_TICKER từ UI gửi qua
     else if (msg.cmd === 'BOOKTICKER' || msg.cmd === 'BOOK_TICKER') {
         const b = parseFloat(msg.data.b); 
-        const B = parseFloat(msg.data.B); 
+        const B = parseFloat(msg.data.B) || 0; 
         const a = parseFloat(msg.data.a); 
-        const A = parseFloat(msg.data.A); 
+        const A = parseFloat(msg.data.A) || 0; 
+
+        // ========================================================
+        // 🛡️ BỘ LỌC KHIÊN CHẮN (ANTI-GLITCH FILTER)
+        // Bỏ qua ngay lập tức nếu Binance gửi dữ liệu rác, giá âm, 
+        // giá Ask < Bid, hoặc Spread đột biến > 10%
+        // ========================================================
+        if (!b || !a || b <= 0 || a < b) return; 
+        
+        let rawSpread = ((a - b) / b) * 100;
+        if (rawSpread > 10) return; // Chặn Spread tào lao
 
         const totalDepth = B + A;
         state.microPrice = totalDepth > 0 ? (b * A + a * B) / totalDepth : (b + a) / 2;
         state.midPrice = (b + a) / 2;
 
-        state.spread = b > 0 ? ((a - b) / b) * 100 : 0;
+        state.spread = rawSpread;
         let spStats = updateMetrics(state.spread, state.emaSpread, state.varSpread, ALPHA_3S);
         state.emaSpread = spStats.e; 
         state.varSpread = spStats.v;
@@ -129,30 +137,24 @@ self.onmessage = function(e) {
         let zBuy = state.varTakerBuy > 0 ? (currentBuy - state.emaTakerBuy) / Math.sqrt(state.varTakerBuy) : 0;
         let zSell = state.varTakerSell > 0 ? (currentSell - state.emaTakerSell) / Math.sqrt(state.varTakerSell) : 0;
 
-        // Tính Z-Score chung cho UI
         state.zScore = isBuy ? zBuy : -zSell;
 
-        // Tính Buy Dominance cho UI
         let totalEMA = state.emaTakerBuy + state.emaTakerSell;
         state.buyDominance = totalEMA > 0 ? (state.emaTakerBuy / totalEMA) * 100 : 50;
 
-        // Tính Algo Limit (Bộ lọc cá voi bằng EMA Speed) - Zero GC
         let baseLimit = state.emaSpeed60s * 0.4;
         state.algoLimit = Math.max(20, Math.round(baseLimit));
 
-        // Tính Trend (VWAP Surrogate) - Zero GC
         state.emaPriceFast = state.emaPriceFast === 0 ? p : state.emaPriceFast * (1 - ALPHA_3S) + p * ALPHA_3S;
         state.emaPriceSlow = state.emaPriceSlow === 0 ? p : state.emaPriceSlow * (1 - ALPHA_60S) + p * ALPHA_60S;
         state.trend = state.emaPriceSlow > 0 ? ((state.emaPriceFast - state.emaPriceSlow) / state.emaPriceSlow) * 100 : 0;
 
-        // Tính Drop (Giảm giá trị dần để tránh lưu trữ mảng)
         if (p > state.maxPrice5m) state.maxPrice5m = p;
         state.drop = state.maxPrice5m > 0 ? ((p - state.maxPrice5m) / state.maxPrice5m) * 100 : 0;
 
         state.flags.zoneAbsorptionBottom = (zSell > 3.0 && p >= state.lastPrice && state.ofi3s > 0);
         state.flags.zoneDistributionTop = (zBuy > 4.0 && p <= state.lastPrice && state.microPrice < state.midPrice && state.ofi3s < 0);
         
-        // FIX 2: Đã sửa lại lỗi rớt dòng ngoặc ở đây
         state.flags.washTrading = ((zBuy > 2.0 || zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice);
 
         state.lastPrice = p;
@@ -162,7 +164,6 @@ self.onmessage = function(e) {
     }
 };
 
-// FIX 3: Vòng lặp HFT trả ĐÚNG và ĐỦ các biến mà UI mong đợi
 setInterval(() => {
     self.postMessage({
         cmd: 'STATS_UPDATE',
@@ -181,9 +182,6 @@ setInterval(() => {
         }
     });
     
-    // Reset speed đếm trong một tick
     state.currentSpeed = 0;
-    
-    // Tự động suy giảm maxPrice để tạo cơ chế Drop 5m mà không dùng mảng Array (Tránh Leak Memory)
     state.maxPrice5m = state.maxPrice5m * 0.9999; 
 }, 250);
