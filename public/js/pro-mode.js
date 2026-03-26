@@ -2151,7 +2151,6 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
                 }
             }
         };
-    }
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
 
