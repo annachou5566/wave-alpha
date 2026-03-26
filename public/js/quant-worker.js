@@ -185,9 +185,7 @@ self.onmessage = function(e) {
         // MM RADAR: WASH TRADING
         // Khối lượng lệnh lớn bất thường (Z-Score cao) NHƯNG Dòng tiền thực (Micro CVD) bị triệt tiêu
         // và Giá hoàn toàn bất động.
-        if ((zBuy > 2.0 |
-
-| zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice) {
+        if ((zBuy > 2.0 || zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice) {
             state.flags.washTrading = true;
         } else {
             state.flags.washTrading = false;
