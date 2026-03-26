@@ -1,9 +1,10 @@
 /**
  * =================================================================
- * 🧠 QUANT WORKER V5.2 - ULTRA-HFT ENGINE (ANTI-GLITCH)
+ * 🧠 QUANT WORKER V5.3 - ULTRA-HFT ENGINE (ANTI-GLITCH + SIGNAL HOLD)
  * =================================================================
  * Giữ nguyên kiến trúc Zero-GC, Welford EMA và Cont-Stoikov OFI đẳng cấp.
- * Đã khôi phục bộ khiên chắn dữ liệu rác (Spread Anti-Glitch) từ bản V6.
+ * Đã khôi phục bộ khiên chắn dữ liệu rác (Spread Anti-Glitch).
+ * ĐÃ THÊM: Bộ nhớ đệm giữ tín hiệu (Signal Persistence) 5 giây cho UI.
  */
 
 const ALPHA_1S = 2 / (10 + 1);
@@ -38,7 +39,9 @@ let state = {
     flags: {
         liquidityVacuum: false, spoofingDetected: false,
         washTrading: false, zoneAbsorptionBottom: false, zoneDistributionTop: false
-    }
+    },
+    // Bộ đếm thời gian giữ tín hiệu để UI không bị chớp tắt quá nhanh
+    timers: { absorption: 0, distribution: 0, wash: 0, vacuum: 0 }
 };
 
 function initEngine() {
@@ -51,6 +54,7 @@ function initEngine() {
         liquidityVacuum: false, spoofingDetected: false, 
         washTrading: false, zoneAbsorptionBottom: false, zoneDistributionTop: false 
     };
+    state.timers = { absorption: 0, distribution: 0, wash: 0, vacuum: 0 };
 }
 
 function updateMetrics(val, ema, variance, alpha) {
@@ -72,11 +76,7 @@ self.onmessage = function(e) {
         const a = parseFloat(msg.data.a); 
         const A = parseFloat(msg.data.A) || 0; 
 
-        // ========================================================
         // 🛡️ BỘ LỌC KHIÊN CHẮN (ANTI-GLITCH FILTER)
-        // Bỏ qua ngay lập tức nếu Binance gửi dữ liệu rác, giá âm, 
-        // giá Ask < Bid, hoặc Spread đột biến > 10%
-        // ========================================================
         if (!b || !a || b <= 0 || a < b) return; 
         
         let rawSpread = ((a - b) / b) * 100;
@@ -112,7 +112,15 @@ self.onmessage = function(e) {
         state.lastBidVol = B; state.lastAskVol = A;
 
         let spreadZScore = state.varSpread > 0 ? (state.spread - state.emaSpread) / Math.sqrt(state.varSpread) : 0;
-        state.flags.liquidityVacuum = (spreadZScore > 3.0 && totalDepth < state.emaDepth * 0.5);
+        
+        // Cập nhật thanh khoản bốc hơi (Cũng giữ 5 giây)
+        const now = Date.now();
+        if (spreadZScore > 3.0 && totalDepth < state.emaDepth * 0.5) {
+            state.flags.liquidityVacuum = true;
+            state.timers.vacuum = now;
+        } else if (now - state.timers.vacuum > 5000) {
+            state.flags.liquidityVacuum = false;
+        }
     }
     else if (msg.cmd === 'TICK') {
         const vUSD = parseFloat(msg.data.v) || (parseFloat(msg.data.p) * parseFloat(msg.data.q)); 
@@ -152,10 +160,34 @@ self.onmessage = function(e) {
         if (p > state.maxPrice5m) state.maxPrice5m = p;
         state.drop = state.maxPrice5m > 0 ? ((p - state.maxPrice5m) / state.maxPrice5m) * 100 : 0;
 
-        state.flags.zoneAbsorptionBottom = (zSell > 3.0 && p >= state.lastPrice && state.ofi3s > 0);
-        state.flags.zoneDistributionTop = (zBuy > 4.0 && p <= state.lastPrice && state.microPrice < state.midPrice && state.ofi3s < 0);
+        // ========================================================
+        // 🚨 RADAR BẮT ĐỈNH/ĐÁY VỚI BỘ NHỚ ĐỆM (5 GIÂY)
+        // ========================================================
+        const now = Date.now();
+
+        // 🟢 VÙNG BẮT ĐÁY (ABSORPTION ZONE)
+        if (zSell > 3.0 && p >= state.lastPrice && state.ofi3s > 0) {
+            state.flags.zoneAbsorptionBottom = true;
+            state.timers.absorption = now; // Bật đồng hồ 5 giây
+        } else if (now - state.timers.absorption > 5000) {
+            state.flags.zoneAbsorptionBottom = false; // Sau 5 giây mới tắt
+        }
+
+        // 🔴 VÙNG ĐỈNH FOMO (DISTRIBUTION ZONE)
+        if (zBuy > 4.0 && p <= state.lastPrice && state.microPrice < state.midPrice && state.ofi3s < 0) {
+            state.flags.zoneDistributionTop = true;
+            state.timers.distribution = now;
+        } else if (now - state.timers.distribution > 5000) {
+            state.flags.zoneDistributionTop = false;
+        }
         
-        state.flags.washTrading = ((zBuy > 2.0 || zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice);
+        // 🟡 WASH TRADING
+        if ((zBuy > 2.0 || zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice) {
+            state.flags.washTrading = true;
+            state.timers.wash = now;
+        } else if (now - state.timers.wash > 5000) {
+            state.flags.washTrading = false;
+        }
 
         state.lastPrice = p;
     }
