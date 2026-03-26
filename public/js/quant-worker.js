@@ -174,28 +174,35 @@ function evaluateStoryteller(now) {
     }
 
     // =======================================================
-    // 3. EXHAUSTED & STOP-HUNT
-    if (!signal.text) {
-        let isSharpDrop = state.drop <= -0.6;
-        let isPanicSpeed = speed > (avgSpeed * 1.5);
-        let isVacuum = state.liquidityVacuum;
-        let isSilence = state.emaTakerBuy <= (state.emaTakerSell * 2);
+// 3. 🪫 SELLING EXHAUSTION & 🪝 STOP-HUNT (FIXED TIME-SCALE)
+let isSharpDrop = state.drop <= -0.6;
 
-        let isExhausted = isSharpDrop && isPanicSpeed && isVacuum && isSilence;
+// [HOTFIX] Quy đổi speed 250ms ra hệ quy chiếu 1 giây để so sánh công bằng
+let projectedSpeed1s = speed * 4; 
+let isPanicSpeed = projectedSpeed1s > (avgSpeed * 1.5);
 
-        if (isExhausted && now > state.lockUntil.exhausted) {
-            state.lockUntil.exhausted = now + LOCK_DUR;
-            state.lockUntil.flashDump = 0; 
-            signal = { text: '🪫 EXHAUSTED (Cạn Kiệt)', color: '#000000', bgColor: '#f1c40f' }; 
-        }
+// Khi đang có nhịp rũ mạnh và gia tốc xả hoảng loạn (Như logic V6 cũ)
+if (isSharpDrop && isPanicSpeed) {
+    
+    // Cùng lúc đó, kiểm tra xem lực mua đã đảo chiều ập vào chưa (Buy > Sell * 2)
+    let isBuyReversal = state.emaTakerBuy > (state.emaTakerSell * 2) && (z > 1.5 || activeOFI > 0.3);
 
-        let isStopHunt = (now <= state.lockUntil.exhausted + 2000) && (z > 2.0 || activeOFI > 0.4); 
-        
-        if (isStopHunt && now > state.lockUntil.stopHunt) {
-            state.lockUntil.stopHunt = now + LOCK_DUR;
-            signal = { text: '🪝 STOP-HUNT REVERSAL', color: '#ffffff', bgColor: '#8e44ad' };
-        }
+    // Phân nhánh A: Giá đi ngang và dòng tiền mua ập vào -> Báo Stop-Hunt
+    if (isBuyReversal && now > state.lockUntil.stopHunt) {
+        state.lockUntil.stopHunt = now + LOCK_DUR;
+        state.lockUntil.exhausted = 0; // Tắt cạn kiệt
+        state.lockUntil.flashDump = 0; // Hủy cờ Xả
+        signal = { text: '🪝 STOP-HUNT REVERSAL', color: '#ffffff', bgColor: '#8e44ad' };
     }
+    
+    // Phân nhánh B: Giá dừng lại, đi ngang hướng lên nhẹ nhưng chưa có lực mua ép đảo 
+    // VÀ phía dưới đang là vùng chân không (Vacuum) -> Báo Exhausted đúng chuẩn!
+    else if (!isBuyReversal && state.liquidityVacuum && now > state.lockUntil.exhausted) {
+        state.lockUntil.exhausted = now + LOCK_DUR;
+        state.lockUntil.flashDump = 0; // Hủy cờ Xả
+        signal = { text: '🪫 EXHAUSTED (Cạn Kiệt)', color: '#000000', bgColor: '#f1c40f' }; 
+    }
+}
 
     // =======================================================
     // 4. PERSISTENCE (GIỮ TÍN HIỆU UI CHỐNG CHỚP NHÁY)
