@@ -2306,33 +2306,41 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
 
         // ========================================================
-        // THÊM MỚI: BẮN MARKER BẮT ĐỈNH/ĐÁY TỪ WORKER LÊN BẢNG CHART
         // ========================================================
-        let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-        if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
-            let flags = window.quantStats.flags;
-            let timeSec = Math.floor(Date.now() / 1000);
-            
-            // Kiểm tra marker cuối cùng để không bị in đè chồng chéo liên tục
-            let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
-            let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
+// THÊM MỚI: BẮN MARKER BẮT ĐỈNH/ĐÁY TỪ WORKER LÊN BẢNG CHART
+// ========================================================
+let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
+let flags = window.quantStats.flags;
+let timeSec = Math.floor(Date.now() / 1000);
 
-            if (canDraw) {
-                if (flags.zoneAbsorptionBottom) {
-                    window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🟢 ĐÁY (CÁ ĐỠ)', fishType: 'whale' });
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                } 
-                else if (flags.zoneDistributionTop) {
-                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🔴 ĐỈNH (CẠN KIỆT)', fishType: 'whale' });
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                }
-                else if (flags.washTrading) {
-                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'circle', text: '🟡 WASH TRADE', fishType: 'bot' });
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                }
+        let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
+        let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
+
+        if (canDraw) {
+            // Ưu tiên 1: Stop-Hunt và Exhausted (Kế thừa xuất sắc từ hệ thống cũ)
+            if (flags.stopHunt) {
+                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            } 
+            else if (flags.exhausted) {
+                let markerText = flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED';
+                let markerColor = flags.wallHit ? '#F0B90B' : '#848e9c';
+                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
+            // Ưu tiên 2: Các tín hiệu vi mô khác (Iceberg, Spoofing...)
+            else if (flags.icebergAbsorption) {
+                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'whale' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
+            else if (flags.spoofingDetected) {
+                window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ SPOOFING WALL' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
         }
-        // ========================================================
+    }
+    // ========================================================
 
         // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm) ---
         let algoEl = document.getElementById('sc-algo-limit');
@@ -2350,40 +2358,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        // --- PHÁT HIỆN ICEBERG & STOP-HUNT ---
-        if (window.quantStats.drop <= -0.6 && window.quantStats.currentSpeed > ((window.quantStats.avgSpeed60s || 0) * 1.5)) {
-            let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-            if (activeSeries) {
-                let lastTick = window.scTickHistory[window.scTickHistory.length - 1];
-                if (lastTick) {
-                    let timeSec = Math.floor(lastTick.t / 1000);
-                    let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
-                    if (!lastMarker || !lastMarker.text.includes('DUMP') || (timeSec - lastMarker.time > 15)) {
-                        let hitWall = false;
-                        let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-                        let wallThreshold = Math.max(10000, currentAvgTicket * 15);
-                        if (window.scLocalOrderBook && window.scLocalOrderBook.bids) {
-                            for (let p in window.scLocalOrderBook.bids) {
-                                let price = parseFloat(p); let valUSD = price * window.scLocalOrderBook.bids[p];
-                                if (valUSD >= wallThreshold) {
-                                    let diff = Math.abs(window.scLastPrice - price) / price;
-                                    if (diff <= 0.002) { hitWall = true; break; } 
-                                }
-                            }
-                        }
-                        let recentTicks = window.scTickHistory.filter(x => now - x.t <= 5000);
-                        let recentBuyVol = recentTicks.filter(x => x.dir).reduce((s, x) => s + x.v, 0);
-                        let recentSellVol = recentTicks.filter(x => !x.dir).reduce((s, x) => s + x.v, 0);
-                        let markerText = '🪫 EXHAUSTED'; let markerColor = '#848e9c'; 
-                        if (hitWall) { markerText = '🛡️ WALL HIT'; markerColor = '#F0B90B'; } 
-                        else if (recentBuyVol > recentSellVol * 2 && recentBuyVol > currentAvgTicket * 10) { markerText = '🪝 STOP-HUNT'; markerColor = '#00F0FF'; }
-
-                        window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
-                        if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                    }
-                }
-            }
-        }
+        
 
         // --- BẢN ĐỒ TƯỜNG THANH KHOẢN (HEATMAP) ---
         if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
