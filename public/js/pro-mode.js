@@ -2339,19 +2339,24 @@ let timeSec = Math.floor(Date.now() / 1000);
                 window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
-            // Ưu tiên 2: Các tín hiệu vi mô khác (Iceberg 2 chiều, Spoofing...)
-else if (flags.bullishIceberg || flags.icebergAbsorption) {
-window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'whale' });
-if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-}
-else if (flags.bearishIceberg) {
-window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 TƯỜNG SẮP VỠ', fishType: 'whale' });
-if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-}
-else if (flags.spoofingDetected) {
-                window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ SPOOFING WALL' });
-                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-            }
+            // Ưu tiên 2: Các tín hiệu vi mô khác (Iceberg 2 chiều, Spoofing 2 chiều)
+                else if (flags.bullishIceberg || flags.icebergAbsorption) {
+                    window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'whale' });
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                }
+                else if (flags.bearishIceberg) {
+                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 TƯỜNG SẮP VỠ', fishType: 'whale' });
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                }
+                // [KIỂM TRA CHỖ NÀY] Đã tách 2 loại Tường Ảo chưa?
+                else if (flags.spoofingBuyWall) {
+                    window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO' });
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                }
+                else if (flags.spoofingSellWall) {
+                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO' });
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                }
         }
     }
     // ========================================================
