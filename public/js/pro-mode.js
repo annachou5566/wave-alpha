@@ -2068,20 +2068,91 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     if (!window.quantWorker) {
         window.quantWorker = new Worker('public/js/quant-worker.js');
         
-        // Lắng nghe kết quả từ Worker trả về
+        // =================================================================
+        // 🧠 UI ADAPTER: Xử lý dữ liệu từ Lõi Pure HFT Worker
+        // =================================================================
         window.quantWorker.onmessage = function(e) {
             if (e.data.cmd === 'STATS_UPDATE') {
                 let s = e.data.stats;
-                window.quantStats.spread = s.spread;
-                window.quantStats.trend = s.trend;
-                window.quantStats.drop = s.drop;
-                window.quantStats.ofi = s.ofi;
-                window.quantStats.zScore = s.zScore;
-                window.quantStats.currentSpeed = s.currentSpeed;
-                window.quantStats.algoLimit = s.algoLimit;
-                window.quantStats.avgSpeed60s = s.avgSpeed60s;
-                window.quantStats.buyDominance = s.buyDominance;
-                window.quantStats.microCVD = s.microCVD;
+                let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
+
+                // 1. TẠO BỘ NHỚ LỊCH SỬ CHO FRONTEND (CHỈ TẠO 1 LẦN)
+                if (!window.UI_STATE) window.UI_STATE = {};
+                if (!window.UI_STATE[sym]) {
+                    window.UI_STATE[sym] = { priceHistory: [], cumVol: 0, cumVolPrice: 0, vwap: 0, lastTime: 0, avgSpeed: 0 };
+                }
+                let uiState = window.UI_STATE[sym];
+                let now = Date.now();
+
+                // 2. FRONTEND TỰ TÍNH VWAP VÀ DROP 5M (Giải phóng Worker)
+                if (s.lastPrice > 0 && s.speed > 0) {
+                    let tickVol = s.speed * 0.25; // Speed là usd/s, Worker gửi 250ms (0.25s) 1 lần
+                    uiState.cumVol += tickVol;
+                    uiState.cumVolPrice += (s.lastPrice * tickVol);
+                    uiState.vwap = uiState.cumVolPrice / uiState.cumVol;
+
+                    // Lưu 1 giá trị mỗi giây vào lịch sử 5 phút (300 giây)
+                    if (now - uiState.lastTime >= 1000) {
+                        uiState.priceHistory.push(s.lastPrice);
+                        if (uiState.priceHistory.length > 300) uiState.priceHistory.shift();
+                        uiState.lastTime = now;
+                    }
+                }
+
+                let vwapDist = uiState.vwap > 0 ? ((s.lastPrice - uiState.vwap) / uiState.vwap) * 100 : 0;
+                let drop5m = 0;
+                if (uiState.priceHistory.length > 0) {
+                    let p5m = uiState.priceHistory[0];
+                    drop5m = ((s.lastPrice - p5m) / p5m) * 100;
+                }
+
+                // 3. ĐÓNG GÓI CHUẨN ĐẦU VÀO CHO GIAO DIỆN (quantStats)
+                window.quantStats.spread = s.spread || 0;
+                window.quantStats.trend = vwapDist; // Gắn VWAP vào Trend
+                window.quantStats.drop = drop5m;    // Gắn Drop 5m
+                window.quantStats.ofi = s.ofi3s || 0; // Dùng mô hình OFI Cont-Stoikov mới
+                window.quantStats.currentSpeed = s.speed || 0;
+                window.quantStats.microCVD = s.microCVD || 0;
+
+                // Tính Z-Score động lượng trên UI
+                uiState.avgSpeed = uiState.avgSpeed * 0.95 + s.speed * 0.05; // EMA 60s
+                let uiZScore = uiState.avgSpeed > 0 ? (s.speed - uiState.avgSpeed) / (uiState.avgSpeed * 0.5) : 0;
+                window.quantStats.zScore = uiZScore;
+                window.quantStats.avgSpeed60s = uiState.avgSpeed;
+
+                // Quy đổi OFI ra Dominance cho thanh màu (từ -1->1 thành 0->100%)
+                let dom = 50 + (window.quantStats.ofi * 50);
+                window.quantStats.buyDominance = Math.max(0, Math.min(100, dom));
+
+                // 4. VẼ CỜ (MARKERS) LÊN CHART TRADINGVIEW KHI CÓ THAO TÚNG
+                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+                if (activeSeries && s.flags && window.scChartMarkers) {
+                    let timeSec = Math.floor(now / 1000);
+                    let newMarker = null;
+
+                    // Kiểm tra các cờ từ Lõi HFT
+                    if (s.flags.absorb) {
+                        newMarker = { time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🟢 HẤP THỤ (BẮT ĐÁY)', fishType: 'whale' };
+                    } else if (s.flags.dist) {
+                        newMarker = { time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🔴 FOMO XẢ (PHÂN PHỐI)', fishType: 'whale' };
+                    } else if (s.flags.vacuum) {
+                        newMarker = { time: timeSec, position: 'aboveBar', color: '#B000FF', shape: 'circle', text: '🟣 RÚT LIQUIDITY (BẪY)' };
+                    } else if (s.flags.wash) {
+                        newMarker = { time: timeSec, position: 'inBar', color: '#cb55e3', shape: 'circle', text: '🤖 WASH TRADE' };
+                    }
+
+                    // Nếu có cờ, vẽ lên chart
+                    if (newMarker) {
+                        let lastM = window.scChartMarkers[window.scChartMarkers.length - 1];
+                        // Tránh vẽ đè chữ liên tục (cách nhau 2 giây mới vẽ 1 cái cùng loại)
+                        if (!lastM || (timeSec - lastM.time > 2)) { 
+                            window.scChartMarkers.push(newMarker);
+                            if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                            // Gọi hàm vẽ gốc của hệ thống để render
+                            if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
+                        }
+                    }
+                }
             }
         };
     }
