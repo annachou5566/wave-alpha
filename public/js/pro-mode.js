@@ -3760,26 +3760,28 @@ window.hftLockedCss = '';
 window.evaluateQuantVerdict = function() {
 if (!window.quantStats) return;
 
-// Bọc trong requestAnimationFrame để thực thi Stateless DOM Updates mượt mà, zero-lag.
+// Sử dụng requestAnimationFrame để cập nhật DOM không trạng thái (Stateless), mượt mà và Zero-lag
 requestAnimationFrame(() => {
     // ========================================================
-    // 1. HFT (MICRO) - LẤY TRỰC TIẾP TỪ WORKER (SIGNAL PERSISTENCE)
+    // 1. HFT (MICRO): Lấy trực tiếp từ Storyteller Engine của Worker
     // ========================================================
     let hftEl = document.getElementById('verdict-hft');
-    if (hftEl && window.quantStats.hftVerdict) {
-        let v = window.quantStats.hftVerdict;
-        // Chỉ update DOM khi thực sự có thay đổi từ Engine khóa tín hiệu
-        if (hftEl.innerHTML !== v.html) {
-            hftEl.innerHTML = v.html;
-            hftEl.style.cssText = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
+    if (hftEl) {
+        if (window.quantStats.hftVerdict) {
+            let v = window.quantStats.hftVerdict;
+            // Chỉ chạm vào DOM khi có sự thay đổi (tiết kiệm CPU)
+            if (hftEl.innerHTML !== v.html) {
+                hftEl.innerHTML = v.html;
+                hftEl.style.cssText = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
+            }
+        } else {
+            hftEl.innerHTML = "⚡ ĐANG KHỞI ĐỘNG TICK...";
+            hftEl.style.cssText = "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;";
         }
-    } else if (hftEl && !window.quantStats.hftVerdict) {
-        hftEl.innerHTML = "⚡ ĐANG KHỞI ĐỘNG TICK...";
-        hftEl.style.cssText = "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;";
     }
 
     // ========================================================
-    // 2. MFT (MESO) - TÍCH HỢP SPOT + PHÁI SINH + LIQUIDATIONS
+    // 2. MFT (MESO): Spot CVD + Futures Funding & Liquidations
     // ========================================================
     let mftEl = document.getElementById('verdict-mft');
     if (mftEl) {
@@ -3791,20 +3793,17 @@ requestAnimationFrame(() => {
         let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText : '';
         
         let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN (TWAP ALGO)';
-        let mftColor = '#848e9c';
-        let mftBg = 'rgba(255, 255, 255, 0.05)';
+        let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
 
-        // Logic 1: Short Squeeze (Diệt Short - Liquidation lệch chuẩn hoặc Funding Âm kết hợp lực mua Spot 1H)
-        if ((fFunding < -0.05 && cvd1hTag === 'BULLISH') || (liqShort > 5000 && liqShort > liqLong * 2)) {
+        // Logic Short Squeeze & Long Cascade
+        if ((fFunding < -0.005 && cvd1hTag === 'BULLISH') || (liqShort > liqLong * 1.5 && liqShort > 5000)) {
             mftMsg = '🔥 SHORT SQUEEZE (DIỆT SHORT / FEE ÂM)';
             mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)';
         } 
-        // Logic 2: Long Cascade (Rũ đòn bẩy Long - Liquidation lệch chuẩn hoặc Funding Dương kết hợp lực bán Spot 1H)
-        else if ((fFunding > 0.05 && cvd1hTag === 'BEARISH') || (liqLong > 5000 && liqLong > liqShort * 2)) {
+        else if ((fFunding > 0.005 && cvd1hTag === 'BEARISH') || (liqLong > liqShort * 1.5 && liqLong > 5000)) {
             mftMsg = '🩸 LONG CASCADE (RŨ LONG / FEE CAO)';
             mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)';
         } 
-        // Logic 3: Dò Trend 4H từ Smart Money CVD
         else if (cvd4hTag === 'BULLISH') {
             mftMsg = '📈 ĐỘNG LƯỢNG TĂNG 4H (BULL TREND)';
             mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)';
@@ -3820,28 +3819,26 @@ requestAnimationFrame(() => {
     }
 
     // ========================================================
-    // 3. LFT (MACRO) - CHÉO DỮ LIỆU SMART MONEY & TOKENOMICS
+    // 3. LFT (MACRO): Smart Money & Tokenomics (FDV/MCAP)
     // ========================================================
     let lftEl = document.getElementById('verdict-lft');
     if (lftEl) {
         let smBadge = document.getElementById('sm-verdict-badge');
         let smTag = smBadge ? smBadge.innerText : '';
-        
         let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%';
         let unlockPct = parseFloat(unlockStr) || 100;
 
         let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ (CHỜ TÍN HIỆU)';
-        let lftColor = '#848e9c';
-        let lftBg = 'rgba(255, 255, 255, 0.05)';
+        let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
 
         if (unlockPct < 30) {
             lftMsg = '⚠️ TOXIC TOKENOMICS (LẠM PHÁT CAO)';
             lftColor = '#F6465D'; lftBg = 'rgba(246, 70, 93, 0.1)';
-        } else if (smTag.includes('CÁ MẬP GOM') && unlockPct >= 50) {
-            lftMsg = '💎 TÍCH LŨY VĨ MÔ (SMART MONEY IN)';
+        } else if (smTag.includes('CÁ MẬP GOM') || (smTag.includes('BULLISH') && unlockPct >= 50)) {
+            lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)';
             lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)';
-        } else if (smTag.includes('BOT KIỂM SOÁT')) {
-            lftMsg = '🤖 THAO TÚNG GIÁ BỞI MM (RỦI RO)';
+        } else if (smTag.includes('BOT KIỂM SOÁT') || (smTag.includes('BEARISH') && unlockPct >= 50)) {
+            lftMsg = '🤖 THAO TÚNG GIÁ BỞI MM (MACRO BEAR)';
             lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)';
         }
 
@@ -3851,4 +3848,4 @@ requestAnimationFrame(() => {
         }
     }
 });
-    };
+};
