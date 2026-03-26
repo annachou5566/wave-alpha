@@ -161,28 +161,31 @@ self.onmessage = function(e) {
         state.drop = state.maxPrice5m > 0 ? ((p - state.maxPrice5m) / state.maxPrice5m) * 100 : 0;
 
         // ========================================================
-        // 🚨 RADAR BẮT ĐỈNH/ĐÁY VỚI BỘ NHỚ ĐỆM (5 GIÂY)
+        // 🚨 RADAR BẮT ĐỈNH/ĐÁY VỚI BỘ NHỚ ĐỆM (5 GIÂY) - ĐÃ TĂNG ĐỘ NHẠY
         // ========================================================
         const now = Date.now();
 
-        // 🟢 VÙNG BẮT ĐÁY (ABSORPTION ZONE)
-        if (zSell > 3.0 && p >= state.lastPrice && state.ofi3s > 0) {
+        // 🟢 VÙNG BẮT ĐÁY (ABSORPTION ZONE) - Đỡ giá
+        // Hạ Z-Score từ 3.0 xuống 2.0, nới lỏng OFI
+        if (zSell > 2.0 && p >= state.lastPrice && state.ofi3s > -0.2) {
             state.flags.zoneAbsorptionBottom = true;
-            state.timers.absorption = now; // Bật đồng hồ 5 giây
+            state.timers.absorption = now; 
         } else if (now - state.timers.absorption > 5000) {
-            state.flags.zoneAbsorptionBottom = false; // Sau 5 giây mới tắt
+            state.flags.zoneAbsorptionBottom = false; 
         }
 
-        // 🔴 VÙNG ĐỈNH FOMO (DISTRIBUTION ZONE)
-        if (zBuy > 4.0 && p <= state.lastPrice && state.microPrice < state.midPrice && state.ofi3s < 0) {
+        // 🔴 VÙNG ĐỈNH FOMO (DISTRIBUTION ZONE) - Bắt đỉnh
+        // Hạ Z-Score từ 4.0 xuống 2.5, nới lỏng OFI
+        if (zBuy > 2.5 && p <= state.lastPrice && state.ofi3s < 0.2) {
             state.flags.zoneDistributionTop = true;
             state.timers.distribution = now;
         } else if (now - state.timers.distribution > 5000) {
             state.flags.zoneDistributionTop = false;
         }
         
-        // 🟡 WASH TRADING
-        if ((zBuy > 2.0 || zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice) {
+        // 🟡 WASH TRADING (Bơm xả ảo)
+        // Hạ Z-Score từ 2.0 xuống 1.5
+        if ((zBuy > 1.5 || zSell > 1.5) && Math.abs(state.microCVD) < vUSD * 0.2 && p === state.lastPrice) {
             state.flags.washTrading = true;
             state.timers.wash = now;
         } else if (now - state.timers.wash > 5000) {
