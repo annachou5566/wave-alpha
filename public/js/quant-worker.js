@@ -113,76 +113,101 @@ function computeMultiLevelOFI(bids, asks) {
 
 // Động cơ Kể chuyện Market Maker (Storyteller)
 function evaluateStoryteller(now) {
-    let z = state.zScore;
-    let buyDom = state.buyDominance;
-    let accel = state.accel;
-    
-    // Dùng Multi-level OFI (Cont-Stoikov 5-cấp) nếu có, nếu không thì dùng rawOFI (1-cấp)
-    let activeOFI = state.multiLevelOFI !== 0 ? state.multiLevelOFI : state.rawOFI;
-    
-    let speed = state.currentSpeed;
-    let avgSpeed = state.emaSpeed60s;
+let z = state.zScore;
+let buyDom = state.buyDominance;
+let accel = state.accel;
+let velocity = state.midPrice - state.prevMid; // THÊM MỚI: Vận tốc giá để xác định xu hướng ngắn hạn
 
-    let pace = "[🚶 CHẬM]";
-    if (speed > avgSpeed * 3 && avgSpeed > 1000) pace = "[⚡ KÍCH ĐỘNG]";
-    else if (speed > avgSpeed * 1.5 && avgSpeed > 1000) pace = "[🔥 SÔI ĐỘNG]";
+let activeOFI = state.multiLevelOFI !== 0 ? state.multiLevelOFI : state.rawOFI;
+let speed = state.currentSpeed;
+let avgSpeed = state.emaSpeed60s;
 
-    let signal = { text: '', color: '', bgColor: '' };
+let pace = "[🚶 CHẬM]";
+if (speed > avgSpeed * 3 && avgSpeed > 1000) pace = "[⚡ KÍCH ĐỘNG]";
+else if (speed > avgSpeed * 1.5 && avgSpeed > 1000) pace = "[🔥 SÔI ĐỘNG]";
 
-    // 1. Flash Dump (Kết hợp Z-Score, Dom, OFI âm và Gia tốc âm)
-    if ((buyDom < 35 || z < -2.0) && activeOFI < -0.15 && accel < -1e-6 && now > state.lockUntil.flashDump) {
-        state.lockUntil.flashDump = now + LOCK_DUR;
-        signal = { text: 'Flash Dump', color: '#FF007F', bgColor: 'rgba(255, 0, 127, 0.15)' };
-    }
-    // 2. Market Pump
-    else if ((buyDom > 65 || z > 2.0) && activeOFI > 0.15 && accel > 1e-6 && now > state.lockUntil.marketPump) {
-        state.lockUntil.marketPump = now + LOCK_DUR;
-        signal = { text: 'Market Pump', color: '#00F0FF', bgColor: 'rgba(0, 240, 255, 0.15)' };
-    }
-    // Giữ tín hiệu Lock
-    else if (now <= state.lockUntil.flashDump) {
+let signal = { text: '', color: '', bgColor: '' };
+
+// =======================================================
+// 1. FLASH DUMP (Xả tháo cống)
+// Điều kiện: Lực bán áp đảo + OFI âm + Giá ĐANG GIẢM THẬT SỰ (velocity < 0)
+let isDumping = (buyDom < 35 || z < -2.0) && activeOFI < -0.15 && velocity < 0;
+
+// BỘ LỌC CHỐNG RŨ HÀNG: Nếu Trend đang TĂNG mạnh, đòi hỏi lực xả phải tàn bạo hơn mới gọi là Dump
+if (isDumping && state.trend > 0.1 && (z > -3.0 || activeOFI > -0.4)) {
+    isDumping = false; 
+}
+
+if (isDumping && now > state.lockUntil.flashDump) {
+    state.lockUntil.flashDump = now + LOCK_DUR;
+    state.lockUntil.marketPump = 0; // KICK-OUT: Hủy ngay lock của Pump (nếu có) để báo động đỏ
+    signal = { text: 'Flash Dump', color: '#FF007F', bgColor: 'rgba(255, 0, 127, 0.15)' };
+}
+
+// =======================================================
+// 2. MARKET PUMP (Bơm giá)
+// Điều kiện: Lực mua áp đảo + OFI dương + Giá ĐANG TĂNG THẬT SỰ (velocity > 0)
+let isPumping = (buyDom > 65 || z > 2.0) && activeOFI > 0.15 && velocity > 0;
+
+// BỘ LỌC CHỐNG TÍN HIỆU LÁO (Bắt dao rơi / Sóng hồi ngắn):
+// Nếu Trend đang CẮM ĐẦU (< -0.1), đòi hỏi lực mua cực khủng (Z>3, OFI>0.4) mới là Pump thật.
+if (isPumping && state.trend < -0.1 && (z < 3.0 || activeOFI < 0.4)) {
+    isPumping = false; // Bác bỏ cú giật nảy yếu ớt
+}
+
+if (isPumping && now > state.lockUntil.marketPump) {
+    state.lockUntil.marketPump = now + LOCK_DUR;
+    state.lockUntil.flashDump = 0; // KICK-OUT: Hủy ngay lock của Dump (nếu có)
+    signal = { text: 'Market Pump', color: '#00F0FF', bgColor: 'rgba(0, 240, 255, 0.15)' };
+}
+
+// =======================================================
+// 3. XỬ LÝ KHÓA TÍN HIỆU (PERSISTENCE)
+if (!signal.text) {
+    if (now <= state.lockUntil.flashDump) {
         signal = { text: 'Flash Dump (Active)', color: '#FF007F', bgColor: 'rgba(255, 0, 127, 0.15)' };
     }
     else if (now <= state.lockUntil.marketPump) {
         signal = { text: 'Market Pump (Active)', color: '#00F0FF', bgColor: 'rgba(0, 240, 255, 0.15)' };
     }
+}
 
-    // 3. Phân tích vi mô: Cực kỳ hiệu quả nhờ thuật toán Cont-Stoikov K=5
-    if (!signal.text) {
-        // Spoofing: Order Flow Imbalance lớn nhưng giá không nhúc nhích (gia tốc = 0)
-        if (Math.abs(activeOFI) > 0.5 && Math.abs(accel) < 1e-8 && now > state.lockUntil.spoofing) {
-            state.lockUntil.spoofing = now + LOCK_DUR;
-            signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
-        }
-        // Iceberg: Volume khớp lệnh khủng (Z-score cao) nhưng giá bị chặn lại
-        else if (Math.abs(z) > 2.0 && Math.abs(accel) < 1e-8 && now > state.lockUntil.iceberg) {
-            state.lockUntil.iceberg = now + LOCK_DUR;
-            signal = { text: 'Iceberg Absorption', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
-        }
-        else if (now <= state.lockUntil.spoofing) {
-            signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
-        }
-        else if (now <= state.lockUntil.iceberg) {
-            signal = { text: 'Iceberg Absorption', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
-        }
+// =======================================================
+// 4. PHÂN TÍCH VI MÔ (Spoofing / Iceberg)
+if (!signal.text) {
+    if (Math.abs(activeOFI) > 0.5 && Math.abs(accel) < 1e-8 && now > state.lockUntil.spoofing) {
+        state.lockUntil.spoofing = now + LOCK_DUR;
+        signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
     }
-
-    // 4. Tín hiệu nền (Background State)
-    if (!signal.text) {
-        if (buyDom < 45 || state.trend < -0.1) {
-            signal = { text: 'Áp lực Bán', color: '#F6465D', bgColor: 'rgba(246, 70, 93, 0.15)' };
-        } else if (buyDom > 55 || state.trend > 0.1) {
-            signal = { text: 'Lực Mua Chủ Động', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
-        } else {
-            signal = { text: 'Giằng Co (Sideo)', color: '#848e9c', bgColor: 'rgba(255, 255, 255, 0.05)' };
-        }
+    else if (Math.abs(z) > 2.0 && Math.abs(accel) < 1e-8 && now > state.lockUntil.iceberg) {
+        state.lockUntil.iceberg = now + LOCK_DUR;
+        signal = { text: 'Iceberg Absorption', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
     }
+    else if (now <= state.lockUntil.spoofing) {
+        signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+    }
+    else if (now <= state.lockUntil.iceberg) {
+        signal = { text: 'Iceberg Absorption', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
+    }
+}
 
-    state.hftVerdict = {
-        html: `<b style="opacity:0.8; margin-right:4px;">${pace}</b> ${signal.text}`,
-        color: signal.color,
-        bg: signal.bgColor
-    };
+// =======================================================
+// 5. TÍN HIỆU NỀN TẢNG
+if (!signal.text) {
+    if (buyDom < 45 || state.trend < -0.1) {
+        signal = { text: 'Áp lực Bán', color: '#F6465D', bgColor: 'rgba(246, 70, 93, 0.15)' };
+    } else if (buyDom > 55 || state.trend > 0.1) {
+        signal = { text: 'Lực Mua Chủ Động', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
+    } else {
+        signal = { text: 'Giằng Co (Sideo)', color: '#848e9c', bgColor: 'rgba(255, 255, 255, 0.05)' };
+    }
+}
+
+state.hftVerdict = {
+    html: `<b style="opacity:0.8; margin-right:4px;">${pace}</b> ${signal.text}`,
+    color: signal.color,
+    bg: signal.bgColor
+};
 }
 
 self.onmessage = function(e) {
