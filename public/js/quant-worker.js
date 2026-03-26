@@ -34,6 +34,7 @@ let state = {
     
     // Động lượng Micro CVD
     microCVD: 0, lastPrice: 0,
+    zScore: 0, // [FIX] Thêm biến lưu trữ Momentum Z-Score
     
     // Cờ kích hoạt giao dịch (Actionable Flags)
     flags: {
@@ -159,6 +160,10 @@ self.onmessage = function(e) {
         // Tính Z-Score động lượng cấp độ tick
         let zBuy = state.varTakerBuy > 0? (currentBuy - state.emaTakerBuy) / Math.sqrt(state.varTakerBuy) : 0;
         let zSell = state.varTakerSell > 0? (currentSell - state.emaTakerSell) / Math.sqrt(state.varTakerSell) : 0;
+        
+        // [FIX] Lưu Momentum mạnh nhất vào State để gửi ra ngoài Frontend
+        state.zScore = zBuy > zSell ? zBuy : -zSell;
+
 
         // ==========================================
         // 5. RADAR THAO TÚNG & XÁC ĐỊNH VÙNG HÀNH ĐỘNG
@@ -223,6 +228,7 @@ setInterval(() => {
             spread: state.spread,
             ofi3s: state.ofi3s,
             microCVD: state.microCVD,
+            zScore: state.zScore, // [FIX] Bắn Z-Score thật về Frontend
             flags: state.flags
         }
     });
