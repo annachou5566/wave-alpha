@@ -1652,3 +1652,16 @@ body.overlay-active {
     background: linear-gradient(to top, rgba(240, 185, 11, 0.05), transparent);
     pointer-events: none;
 }
+
+/* =========================================================
+   FIX FONT TIẾNG VIỆT CHO PANEL MULTI-HORIZON VERDICT
+   ========================================================= */
+
+/* 1. Kế thừa font chuẩn của Terminal cho các Text được AI render */
+#verdict-hft, 
+#verdict-mft, 
+#verdict-lft {
+    font-family: inherit !important; /* Lấy đúng font của thẻ cha đang dùng */
+    line-height: 1.4 !important;
+    letter-spacing: 0.3px !important;
+}
