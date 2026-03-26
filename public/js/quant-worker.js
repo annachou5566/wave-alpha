@@ -34,7 +34,6 @@ let state = {
     
     // Động lượng Micro CVD
     microCVD: 0, lastPrice: 0,
-    zScore: 0, // [FIX] Thêm biến lưu trữ Momentum Z-Score
     
     // Cờ kích hoạt giao dịch (Actionable Flags)
     flags: {
@@ -82,7 +81,7 @@ self.onmessage = function(e) {
         initEngine();
     } 
     // Xử lý dữ liệu Orderbook cấp độ Tick (@bookTicker)
-    else if (msg.cmd === 'BOOK_TICKER') {
+    else if (msg.cmd === 'BOOKTICKER') {
         // Đảm bảo tuân thủ Schema: Ép kiểu Float an toàn từ String của Binance
         const b = parseFloat(msg.data.b); // Giá Bid tốt nhất
         const B = parseFloat(msg.data.B); // Lượng Bid
@@ -160,10 +159,6 @@ self.onmessage = function(e) {
         // Tính Z-Score động lượng cấp độ tick
         let zBuy = state.varTakerBuy > 0? (currentBuy - state.emaTakerBuy) / Math.sqrt(state.varTakerBuy) : 0;
         let zSell = state.varTakerSell > 0? (currentSell - state.emaTakerSell) / Math.sqrt(state.varTakerSell) : 0;
-        
-        // [FIX] Lưu Momentum mạnh nhất vào State để gửi ra ngoài Frontend
-        state.zScore = zBuy > zSell ? zBuy : -zSell;
-
 
         // ==========================================
         // 5. RADAR THAO TÚNG & XÁC ĐỊNH VÙNG HÀNH ĐỘNG
@@ -190,7 +185,9 @@ self.onmessage = function(e) {
         // MM RADAR: WASH TRADING
         // Khối lượng lệnh lớn bất thường (Z-Score cao) NHƯNG Dòng tiền thực (Micro CVD) bị triệt tiêu
         // và Giá hoàn toàn bất động.
-        if ((zBuy > 2.0 || zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice) {
+        if ((zBuy > 2.0 |
+
+| zSell > 2.0) && Math.abs(state.microCVD) < vUSD * 0.1 && p === state.lastPrice) {
             state.flags.washTrading = true;
         } else {
             state.flags.washTrading = false;
@@ -228,7 +225,6 @@ setInterval(() => {
             spread: state.spread,
             ofi3s: state.ofi3s,
             microCVD: state.microCVD,
-            zScore: state.zScore, // [FIX] Bắn Z-Score thật về Frontend
             flags: state.flags
         }
     });
