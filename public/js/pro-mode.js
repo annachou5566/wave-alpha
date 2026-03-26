@@ -2071,18 +2071,13 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         // Lắng nghe kết quả từ Worker trả về
         window.quantWorker.onmessage = function(e) {
             if (e.data.cmd === 'STATS_UPDATE') {
-                let s = e.data.stats;
-                window.quantStats.spread = s.spread;
-                window.quantStats.trend = s.trend;
-                window.quantStats.drop = s.drop;
-                window.quantStats.ofi = s.ofi;
-                window.quantStats.zScore = s.zScore;
-                window.quantStats.currentSpeed = s.currentSpeed;
-                window.quantStats.algoLimit = s.algoLimit;
-                window.quantStats.avgSpeed60s = s.avgSpeed60s;
-                window.quantStats.buyDominance = s.buyDominance;
-                window.quantStats.microCVD = s.microCVD;
-                window.quantStats.flags = s.flags;
+                // 1. Đồng bộ toàn bộ số liệu lượng tử (Lấy luôn cả flags)
+                window.quantStats = e.data.stats;
+                
+                // 2. ÉP NÃO BỘ AI PHÂN TÍCH VÀ ĐỔI CHỮ NGAY LẬP TỨC MỖI 250ms
+                if (typeof window.evaluateQuantVerdict === 'function') {
+                    window.evaluateQuantVerdict();
+                }
             }
         };
     }
@@ -3759,78 +3754,42 @@ window.hftLockTime = 0;
 window.hftLockedHtml = '';
 window.hftLockedCss = '';
 
+// =====================================================================
+// 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
+// =====================================================================
 window.evaluateQuantVerdict = function() {
-    // ========================================================
-    // 1. HFT (Micro - Realtime Tick) - ĐÃ SỬA BUG & TĂNG ĐỘ NHẠY
-    // ========================================================
+    // 1. HFT (Micro - Realtime Tick - Tác dụng 1s đến 5m)
+    // Nguồn: Z-Score, Order Flow Imbalance (OFI), Spread, Tick Speed
     let hftEl = document.getElementById('verdict-hft');
     if (hftEl && window.quantStats) {
-        let z = window.quantStats.zScore || 0; 
+        let z = window.quantStats.zScore || 0;
         let ofi = window.quantStats.ofi || 0;
         let spread = window.quantStats.spread || 0;
-        
-        // CŨ: 150 lệnh. MỚI: 60 lệnh (Tương đương 12 lệnh/giây là Bot đã quét rất gắt rồi)
-        let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 60); 
-
-        let now = Date.now();
-        let isUrgent = false;
-        let newHtml = '';
-        let newCss = '';
+        let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 150); // Mật độ lệnh dày đặc
 
         if (spread > 1.0) {
-            isUrgent = true;
-            newHtml = '💀 MẤT THANH KHOẢN (RỦI RO CAO)';
-            newCss = 'font-size: 10px; background: rgba(132, 142, 156, 0.1); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
-        } 
-        // Z-Score dương: Lực MUA đột biến (Hạ tiêu chuẩn từ 2.5 xuống 1.8, OFI từ 0.6 xuống 0.3)
-        else if (z > 1.8 && ofi > 0.3) { 
-            isUrgent = true;
-            newHtml = '🚀 BÙNG NỔ LỰC MUA (MOMENTUM SQUEEZE)';
-            newCss = 'font-size: 10px; background: rgba(0, 240, 255, 0.1); padding: 2px 4px; border-radius: 2px; color: #00F0FF;';
-        } 
-        // Z-Score ÂM: Lực BÁN đột biến (Đã fix lỗi Toán học, hạ ngưỡng)
-        else if (z < -1.8 && ofi < -0.3) { 
-            isUrgent = true;
-            newHtml = '🩸 XẢ CHỚP NHOÁNG (FLASH DUMP)';
-            newCss = 'font-size: 10px; background: rgba(255, 0, 127, 0.1); padding: 2px 4px; border-radius: 2px; color: #FF007F;';
-        } 
-        // Nhận diện Bot gom hàng (Hạ OFI xuống 0.15)
-        else if (isHighSpeed && ofi > 0.15) { 
-            isUrgent = true;
-            newHtml = '🤖 BOT SWEEP GOM HÀNG';
-            newCss = 'font-size: 10px; background: rgba(14, 203, 129, 0.1); padding: 2px 4px; border-radius: 2px; color: #0ECB81;';
-        } 
-        // Nhận diện Bot xả hàng
-        else if (isHighSpeed && ofi < -0.15) {
-            isUrgent = true;
-            newHtml = '🤖 BOT TỈA LỆNH XẢ';
-            newCss = 'font-size: 10px; background: rgba(246, 70, 93, 0.1); padding: 2px 4px; border-radius: 2px; color: #F6465D;';
-        }
-
-        // BỘ KHÓA TRẠNG THÁI (LƯU ẢNH 5 GIÂY CHO CÁC TÍN HIỆU KHẨN CẤP)
-        if (isUrgent) {
-            window.hftLockTime = now;
-            window.hftLockedHtml = newHtml;
-            window.hftLockedCss = newCss;
-            hftEl.innerHTML = newHtml;
-            hftEl.style.cssText = newCss;
+            hftEl.innerHTML = '💀 MẤT THANH KHOẢN (RỦI RO TRƯỢT GIÁ CAO)';
+            hftEl.style.color = '#848e9c'; hftEl.style.background = 'rgba(132, 142, 156, 0.1)';
+        } else if (z > 2.5 && ofi > 0.6) {
+            hftEl.innerHTML = '🚀 BÙNG NỔ LỰC MUA (MOMENTUM SQUEEZE)';
+            hftEl.style.color = '#00F0FF'; hftEl.style.background = 'rgba(0, 240, 255, 0.1)';
+        } else if (z > 2.5 && ofi < -0.6) {
+            hftEl.innerHTML = '🩸 XẢ CHỚP NHOÁNG (FLASH DUMP)';
+            hftEl.style.color = '#FF007F'; hftEl.style.background = 'rgba(255, 0, 127, 0.1)';
+        } else if (isHighSpeed && ofi > 0.3) {
+            hftEl.innerHTML = '🤖 BOT SWEEP GOM HÀNG';
+            hftEl.style.color = '#0ECB81'; hftEl.style.background = 'rgba(14, 203, 129, 0.1)';
+        } else if (isHighSpeed && ofi < -0.3) {
+            hftEl.innerHTML = '🤖 BOT TỈA LỆNH XẢ';
+            hftEl.style.color = '#F6465D'; hftEl.style.background = 'rgba(246, 70, 93, 0.1)';
         } else {
-            // Nếu chưa qua 5 giây, giữ nguyên trạng thái cảnh báo cũ
-            if (now - window.hftLockTime < 5000) {
-                hftEl.innerHTML = window.hftLockedHtml;
-                hftEl.style.cssText = window.hftLockedCss;
-            } 
-            // Vượt qua 5 giây bình yên -> Trả về tích lũy
-            else {
-                hftEl.innerHTML = '⚖️ TÍCH LŨY TICK (CHOPPING)';
-                hftEl.style.cssText = 'font-size: 10px; background: rgba(255, 255, 255, 0.05); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
-            }
+            hftEl.innerHTML = '⚖️ TÍCH LŨY TICK (CHOPPING)';
+            hftEl.style.color = '#848e9c'; hftEl.style.background = 'rgba(255, 255, 255, 0.05)';
         }
     }
 
-    // ========================================================
     // 2. MFT (Meso - Khung Trung Hạn - Tác dụng 15m đến 4h)
-    // ========================================================
+    // Nguồn: Funding Rate, Cumulative Volume Delta (CVD) 1h/4h
     let mftEl = document.getElementById('verdict-mft');
     if (mftEl) {
         let fFunding = window.quantStats?.fundingRateObj?.rate || 0;
@@ -3855,9 +3814,8 @@ window.evaluateQuantVerdict = function() {
         }
     }
 
-    // ========================================================
     // 3. LFT (Macro - Vĩ mô - Tác dụng Tính bằng Ngày/Tuần)
-    // ========================================================
+    // Nguồn: Lạm phát (Unlock), Hành vi Smart Money/Cá Mập
     let lftEl = document.getElementById('verdict-lft');
     if (lftEl) {
         let smTag = document.getElementById('sm-verdict-badge')?.innerText || '';
