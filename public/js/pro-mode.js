@@ -2082,6 +2082,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
                 window.quantStats.avgSpeed60s = s.avgSpeed60s;
                 window.quantStats.buyDominance = s.buyDominance;
                 window.quantStats.microCVD = s.microCVD;
+                window.quantStats.flags = s.flags;
             }
         };
     }
@@ -2308,6 +2309,35 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
 
         // Tối ưu hóa Garbage Collection bằng Filter (V8 Engine xử lý siêu tốc)
         window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
+
+        // ========================================================
+        // THÊM MỚI: BẮN MARKER BẮT ĐỈNH/ĐÁY TỪ WORKER LÊN BẢNG CHART
+        // ========================================================
+        let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+        if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
+            let flags = window.quantStats.flags;
+            let timeSec = Math.floor(Date.now() / 1000);
+            
+            // Kiểm tra marker cuối cùng để không bị in đè chồng chéo liên tục
+            let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
+            let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
+
+            if (canDraw) {
+                if (flags.zoneAbsorptionBottom) {
+                    window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🟢 ĐÁY (CÁ ĐỠ)', fishType: 'whale' });
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                } 
+                else if (flags.zoneDistributionTop) {
+                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🔴 ĐỈNH (CẠN KIỆT)', fishType: 'whale' });
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                }
+                else if (flags.washTrading) {
+                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'circle', text: '🟡 WASH TRADE', fishType: 'bot' });
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                }
+            }
+        }
+        // ========================================================
 
         // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm) ---
         let algoEl = document.getElementById('sc-algo-limit');
@@ -3726,34 +3756,38 @@ window.renderProWatchlist = function(passedSearchTerm) {
 // =====================================================================
 window.evaluateQuantVerdict = function() {
     // 1. HFT (Micro - Realtime Tick - Tác dụng 1s đến 5m)
-    // Nguồn: Z-Score, Order Flow Imbalance (OFI), Spread, Tick Speed
     let hftEl = document.getElementById('verdict-hft');
     if (hftEl && window.quantStats) {
+        let flags = window.quantStats.flags || {}; // BẮT LẤY CỜ TỪ WORKER
         let z = window.quantStats.zScore || 0;
         let ofi = window.quantStats.ofi || 0;
         let spread = window.quantStats.spread || 0;
-        let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 150); // Mật độ lệnh dày đặc
+        let isHighSpeed = (window.scSpeedWindow && window.scSpeedWindow.length > 150);
 
         if (spread > 1.0) {
             hftEl.innerHTML = '💀 MẤT THANH KHOẢN (RỦI RO TRƯỢT GIÁ CAO)';
-            hftEl.style.color = '#848e9c'; hftEl.style.background = 'rgba(132, 142, 156, 0.1)';
+            hftEl.style.cssText = 'font-size: 10px; background: rgba(132, 142, 156, 0.1); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
+        } else if (flags.zoneAbsorptionBottom) { // DÙNG TÍN HIỆU LƯU ẢNH 5S
+            hftEl.innerHTML = '🟢 BẮT ĐÁY: CÁ VOI ĐỠ GIÁ (ABSORPTION)';
+            hftEl.style.cssText = 'font-size: 10px; background: rgba(14, 203, 129, 0.15); padding: 2px 4px; border-radius: 2px; color: #0ECB81; border: 1px solid #0ECB81;';
+        } else if (flags.zoneDistributionTop) { // DÙNG TÍN HIỆU LƯU ẢNH 5S
+            hftEl.innerHTML = '🔴 CẠN KIỆT: PHÂN PHỐI ĐỈNH (DISTRIBUTION)';
+            hftEl.style.cssText = 'font-size: 10px; background: rgba(246, 70, 93, 0.15); padding: 2px 4px; border-radius: 2px; color: #F6465D; border: 1px solid #F6465D;';
+        } else if (flags.washTrading) {
+            hftEl.innerHTML = '🟡 BƠM XẢ ẢO (WASH TRADING)';
+            hftEl.style.cssText = 'font-size: 10px; background: rgba(240, 185, 11, 0.15); padding: 2px 4px; border-radius: 2px; color: #F0B90B; border: 1px solid #F0B90B;';
         } else if (z > 2.5 && ofi > 0.6) {
             hftEl.innerHTML = '🚀 BÙNG NỔ LỰC MUA (MOMENTUM SQUEEZE)';
-            hftEl.style.color = '#00F0FF'; hftEl.style.background = 'rgba(0, 240, 255, 0.1)';
+            hftEl.style.cssText = 'font-size: 10px; background: rgba(0, 240, 255, 0.1); padding: 2px 4px; border-radius: 2px; color: #00F0FF;';
         } else if (z > 2.5 && ofi < -0.6) {
             hftEl.innerHTML = '🩸 XẢ CHỚP NHOÁNG (FLASH DUMP)';
-            hftEl.style.color = '#FF007F'; hftEl.style.background = 'rgba(255, 0, 127, 0.1)';
-        } else if (isHighSpeed && ofi > 0.3) {
-            hftEl.innerHTML = '🤖 BOT SWEEP GOM HÀNG';
-            hftEl.style.color = '#0ECB81'; hftEl.style.background = 'rgba(14, 203, 129, 0.1)';
-        } else if (isHighSpeed && ofi < -0.3) {
-            hftEl.innerHTML = '🤖 BOT TỈA LỆNH XẢ';
-            hftEl.style.color = '#F6465D'; hftEl.style.background = 'rgba(246, 70, 93, 0.1)';
+            hftEl.style.cssText = 'font-size: 10px; background: rgba(255, 0, 127, 0.1); padding: 2px 4px; border-radius: 2px; color: #FF007F;';
         } else {
             hftEl.innerHTML = '⚖️ TÍCH LŨY TICK (CHOPPING)';
-            hftEl.style.color = '#848e9c'; hftEl.style.background = 'rgba(255, 255, 255, 0.05)';
+            hftEl.style.cssText = 'font-size: 10px; background: rgba(255, 255, 255, 0.05); padding: 2px 4px; border-radius: 2px; color: #848e9c;';
         }
     }
+
 
     // 2. MFT (Meso - Khung Trung Hạn - Tác dụng 15m đến 4h)
     // Nguồn: Funding Rate, Cumulative Volume Delta (CVD) 1h/4h
