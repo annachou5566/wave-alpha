@@ -41,28 +41,29 @@ let state = {
     hftVerdict: null,
     
     // Khóa tín hiệu độc lập
-    lockUntil: {
-        flashDump: 0,
-        marketPump: 0,
-        spoofing: 0,
-        iceberg: 0,
-        bearishIceberg: 0, // Tường sắp vỡ
-        bullishIceberg: 0, // Đỡ giá thật
-        exhausted: 0,
-        stopHunt: 0
-    }
+    lockUntil: {
+        flashDump: 0,
+        marketPump: 0,
+        spoofingBuyWall: 0,  // Tách Tường Mua Ảo
+        spoofingSellWall: 0, // Tách Tường Bán Ảo
+        iceberg: 0,
+        bearishIceberg: 0, // Tường sắp vỡ
+        bullishIceberg: 0, // Đỡ giá thật
+        exhausted: 0,
+        stopHunt: 0
+    }
 };
 
 function initEngine() {
-    for (let key in state) {
-        if (typeof state[key] === 'number') state[key] = 0;
-    }
-    state.minPrice5m = 9999999999;
-    state.algoLimit = 20;
-    state.buyDominance = 50;
-    state.liquidityVacuum = false;
-    state.hftVerdict = null;
-    state.lockUntil = { flashDump: 0, marketPump: 0, spoofing: 0, iceberg: 0, bearishIceberg: 0, bullishIceberg: 0, exhausted: 0, stopHunt: 0 };
+    for (let key in state) {
+        if (typeof state[key] === 'number') state[key] = 0;
+    }
+    state.minPrice5m = 9999999999;
+    state.algoLimit = 20;
+    state.buyDominance = 50;
+    state.liquidityVacuum = false;
+    state.hftVerdict = null;
+    state.lockUntil = { flashDump: 0, marketPump: 0, spoofingBuyWall: 0, spoofingSellWall: 0, iceberg: 0, bearishIceberg: 0, bullishIceberg: 0, exhausted: 0, stopHunt: 0 };
     
     for(let i=0; i<K_LEVELS; i++) {
         prevBidP[i] = 0; prevBidQ[i] = 0;
@@ -142,13 +143,17 @@ function evaluateStoryteller(now) {
             signal = { text: '🧊 BEARISH ICEBERG (Sắp Vỡ)', color: '#ffffff', bgColor: '#F6465D' }; 
         } else {
             state.lockUntil.bullishIceberg = now + LOCK_DUR;
-            signal = { text: '🧊 BULLISH ICEBERG (Đỡ Giá)', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
-        }
-    }
-    else if (Math.abs(activeOFI) > 0.6 && isPriceStalled && now > state.lockUntil.spoofing) {
-        state.lockUntil.spoofing = now + LOCK_DUR;
-        signal = { text: '⚠️ SPOOFING WALL', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
-    }
+            signal = { text: '🧊 BULLISH ICEBERG (Đỡ Giá)', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
+        }
+    }
+    else if (activeOFI > 0.6 && isPriceStalled && now > state.lockUntil.spoofingBuyWall) {
+        state.lockUntil.spoofingBuyWall = now + LOCK_DUR;
+        signal = { text: '⚠️ TƯỜNG MUA ẢO', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+    }
+    else if (activeOFI < -0.6 && isPriceStalled && now > state.lockUntil.spoofingSellWall) {
+        state.lockUntil.spoofingSellWall = now + LOCK_DUR;
+        signal = { text: '⚠️ TƯỜNG BÁN ẢO', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+    }
 
     // =======================================================
     // 2. FLASH DUMP & MARKET PUMP
@@ -208,11 +213,13 @@ if (isSharpDrop && isPanicSpeed) {
     // 4. PERSISTENCE (GIỮ TÍN HIỆU UI CHỐNG CHỚP NHÁY)
     if (!signal.text) {
         if (now <= state.lockUntil.bearishIceberg) {
-            signal = { text: '🧊 BEARISH ICEBERG (Active)', color: '#ffffff', bgColor: '#F6465D' };
-        } else if (now <= state.lockUntil.bullishIceberg) {
-            signal = { text: '🧊 BULLISH ICEBERG (Active)', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
-        } else if (now <= state.lockUntil.spoofing) {
-            signal = { text: '⚠️ SPOOFING WALL (Active)', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+            signal = { text: '🧊 BEARISH ICEBERG (Active)', color: '#ffffff', bgColor: '#F6465D' };
+        } else if (now <= state.lockUntil.bullishIceberg) {
+            signal = { text: '🧊 BULLISH ICEBERG (Active)', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
+        } else if (now <= state.lockUntil.spoofingBuyWall) {
+            signal = { text: '⚠️ TƯỜNG MUA ẢO (Active)', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+        } else if (now <= state.lockUntil.spoofingSellWall) {
+            signal = { text: '⚠️ TƯỜNG BÁN ẢO (Active)', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
         } else if (now <= state.lockUntil.stopHunt) {
             signal = { text: '🪝 STOP-HUNT (Active)', color: '#ffffff', bgColor: '#8e44ad' };
         } else if (now <= state.lockUntil.exhausted) {
@@ -351,10 +358,11 @@ setInterval(() => {
     const now = Date.now();
     evaluateStoryteller(now); 
 
-    // Bảng Ánh Xạ: Truyền đầy đủ 2 thái cực Iceberg lên UI
+    // Bảng Ánh Xạ: Truyền đầy đủ 2 thái cực Iceberg và Spoofing lên UI
 const legacyFlags = {
 liquidityVacuum: state.liquidityVacuum,
-spoofingDetected: now <= state.lockUntil.spoofing,
+spoofingBuyWall: now <= state.lockUntil.spoofingBuyWall,   // Truyền cờ Tường Mua Ảo
+spoofingSellWall: now <= state.lockUntil.spoofingSellWall, // Truyền cờ Tường Bán Ảo
 bullishIceberg: now <= state.lockUntil.bullishIceberg, // Cờ Xanh (Đỡ giá thật)
 bearishIceberg: now <= state.lockUntil.bearishIceberg, // Cờ Đỏ (Tường sắp vỡ)
 icebergAbsorption: now <= state.lockUntil.bullishIceberg, // Giữ tương thích ngược
