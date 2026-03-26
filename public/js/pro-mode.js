@@ -3760,16 +3760,17 @@ window.hftLockedCss = '';
 window.evaluateQuantVerdict = function() {
 if (!window.quantStats) return;
 
-// Sử dụng requestAnimationFrame để cập nhật DOM không trạng thái (Stateless), mượt mà và Zero-lag
+// Stateless DOM Updates: Zero-lag Rendering
 requestAnimationFrame(() => {
+    let q = window.quantStats;
+
     // ========================================================
-    // 1. HFT (MICRO): Lấy trực tiếp từ Storyteller Engine của Worker
+    // 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1
     // ========================================================
     let hftEl = document.getElementById('verdict-hft');
     if (hftEl) {
-        if (window.quantStats.hftVerdict) {
-            let v = window.quantStats.hftVerdict;
-            // Chỉ chạm vào DOM khi có sự thay đổi (tiết kiệm CPU)
+        if (q.hftVerdict) {
+            let v = q.hftVerdict;
             if (hftEl.innerHTML !== v.html) {
                 hftEl.innerHTML = v.html;
                 hftEl.style.cssText = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
@@ -3781,37 +3782,74 @@ requestAnimationFrame(() => {
     }
 
     // ========================================================
-    // 2. MFT (MESO): Spot CVD + Futures Funding & Liquidations
+    // 2. MFT (MESO): DYNAMIC NORMALIZED MATRIX [-1.0 đến +1.0]
     // ========================================================
     let mftEl = document.getElementById('verdict-mft');
     if (mftEl) {
-        let fFunding = window.quantStats.fundingRateObj ? window.quantStats.fundingRateObj.rate : 0;
-        let liqLong = window.quantStats.longLiq || 0;
-        let liqShort = window.quantStats.shortLiq || 0;
+        // A. Trích xuất Dữ liệu Futures
+        let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
+        let liqLong = q.longLiq || 0;
+        let liqShort = q.shortLiq || 0;
+        let totalLiq = liqLong + liqShort;
         
-        let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText : '';
-        let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText : '';
+        // B. Trích xuất Dữ liệu Spot CVD
+        let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
+        let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
+
+        // C. Chấm điểm Spot CVD (Thang -1.0 đến 1.0)
+        let spotScore = 0;
+        if (cvd1hTag.includes('BULLISH')) spotScore += 0.5;
+        else if (cvd1hTag.includes('BEARISH')) spotScore -= 0.5;
         
-        let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN (TWAP ALGO)';
+        if (cvd4hTag.includes('BULLISH')) spotScore += 0.5;
+        else if (cvd4hTag.includes('BEARISH')) spotScore -= 0.5;
+
+        // D. Chấm điểm Futures (Thang -1.0 đến 1.0) & Nhận diện Token
+        let futuresScore = 0;
+        let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0; // State Check cực kỳ quan trọng
+        
+        if (hasFutures) {
+            // Đánh giá Funding Rate (Âm -> Bullish Squeeze, Dương -> Bearish)
+            if (fFunding < -0.005) futuresScore += 0.5;
+            else if (fFunding > 0.005) futuresScore -= 0.5;
+
+            // Đánh giá Liquidations (Rũ Short -> Squeeze Up, Rũ Long -> Cascade Down)
+            if (totalLiq > 5000) {
+                let liqRatio = liqShort / totalLiq;
+                if (liqRatio > 0.65) futuresScore += 0.5;
+                else if (liqRatio < 0.35) futuresScore -= 0.5;
+            }
+        }
+
+        // E. Lõi Lượng Tử: TÍNH TỔNG ĐIỂM BẰNG MA TRẬN TRỌNG SỐ
+        let finalMftScore = 0;
+        if (hasFutures) {
+            // Token có Phái sinh: Phái sinh dẫn dắt (60%), Spot hỗ trợ (40%)
+            finalMftScore = (spotScore * 0.4) + (futuresScore * 0.6);
+        } else {
+            // Token Không Phái sinh (Spot-only): Trả 100% quyền lực về Spot CVD
+            finalMftScore = spotScore * 1.0; 
+        }
+
+        // F. Ánh xạ Điểm Số ra Giao diện UI
+        let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN';
         let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
 
-        // Logic Short Squeeze & Long Cascade
-        if ((fFunding < -0.005 && cvd1hTag === 'BULLISH') || (liqShort > liqLong * 1.5 && liqShort > 5000)) {
-            mftMsg = '🔥 SHORT SQUEEZE (DIỆT SHORT / FEE ÂM)';
+        if (finalMftScore >= 0.6) {
+            mftMsg = hasFutures ? '🔥 SHORT SQUEEZE (STRONG BUY)' : '🔥 LỰC MUA CỰC MẠNH (STRONG BUY)';
             mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)';
-        } 
-        else if ((fFunding > 0.005 && cvd1hTag === 'BEARISH') || (liqLong > liqShort * 1.5 && liqLong > 5000)) {
-            mftMsg = '🩸 LONG CASCADE (RŨ LONG / FEE CAO)';
-            mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)';
-        } 
-        else if (cvd4hTag === 'BULLISH') {
-            mftMsg = '📈 ĐỘNG LƯỢNG TĂNG 4H (BULL TREND)';
+        } else if (finalMftScore >= 0.25) {
+            mftMsg = '📈 ĐỘNG LƯỢNG TĂNG (BUY)';
             mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)';
-        } else if (cvd4hTag === 'BEARISH') {
-            mftMsg = '📉 ÁP LỰC XẢ 4H (BEAR TREND)';
+        } else if (finalMftScore <= -0.6) {
+            mftMsg = hasFutures ? '🩸 LONG CASCADE (STRONG SELL)' : '🩸 LỰC XẢ CỰC MẠNH (STRONG SELL)';
+            mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)';
+        } else if (finalMftScore <= -0.25) {
+            mftMsg = '📉 ÁP LỰC GIẢM (SELL)';
             mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)';
         }
 
+        // Chỉ render nếu có thay đổi
         if (mftEl.innerText !== mftMsg) {
             mftEl.innerHTML = mftMsg;
             mftEl.style.cssText = `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;`;
@@ -3819,26 +3857,37 @@ requestAnimationFrame(() => {
     }
 
     // ========================================================
-    // 3. LFT (MACRO): Smart Money & Tokenomics (FDV/MCAP)
+    // 3. LFT (MACRO): NORMALIZED SCORING CHO SMART MONEY
     // ========================================================
     let lftEl = document.getElementById('verdict-lft');
     if (lftEl) {
         let smBadge = document.getElementById('sm-verdict-badge');
-        let smTag = smBadge ? smBadge.innerText : '';
+        let smTag = smBadge ? smBadge.innerText.toUpperCase() : '';
         let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%';
         let unlockPct = parseFloat(unlockStr) || 100;
 
-        let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ (CHỜ TÍN HIỆU)';
+        // Điểm Smart Money (-1.0 đến 1.0)
+        let smScore = 0;
+        if (smTag.includes('CÁ MẬP GOM') || smTag.includes('BULLISH')) smScore = 1.0;
+        else if (smTag.includes('BOT KIỂM SOÁT') || smTag.includes('BEARISH') || smTag.includes('XẢ')) smScore = -1.0;
+
+        // Điểm Tokenomics (-1.0 đến 1.0)
+        let tokenomicsScore = 0;
+        if (unlockPct < 30) tokenomicsScore = -1.0; // Rủi ro pha loãng cao
+        else if (unlockPct >= 50) tokenomicsScore = 0.5;
+        else if (unlockPct >= 80) tokenomicsScore = 1.0; // Khá an toàn
+
+        // Tích lũy vĩ mô: Smart Money cầm trịch 75%, Tokenomics 25%
+        let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
+
+        let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ';
         let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
 
-        if (unlockPct < 30) {
-            lftMsg = '⚠️ TOXIC TOKENOMICS (LẠM PHÁT CAO)';
-            lftColor = '#F6465D'; lftBg = 'rgba(246, 70, 93, 0.1)';
-        } else if (smTag.includes('CÁ MẬP GOM') || (smTag.includes('BULLISH') && unlockPct >= 50)) {
+        if (finalLftScore >= 0.5) {
             lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)';
             lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)';
-        } else if (smTag.includes('BOT KIỂM SOÁT') || (smTag.includes('BEARISH') && unlockPct >= 50)) {
-            lftMsg = '🤖 THAO TÚNG GIÁ BỞI MM (MACRO BEAR)';
+        } else if (finalLftScore <= -0.5) {
+            lftMsg = '⚠️ RỦI RO PHÂN PHỐI (MACRO BEAR)';
             lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)';
         }
 
