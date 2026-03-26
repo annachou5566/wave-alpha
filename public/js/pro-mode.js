@@ -2065,89 +2065,91 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     if (chartWs) { chartWs.close(); }
 
     // =================================================================
-        // 🧠 UI ADAPTER: Xử lý dữ liệu từ Lõi Pure HFT Worker (FINAL FIX)
-        // =================================================================
-        window.quantWorker.onmessage = function(e) {
-            if (e.data.cmd === 'STATS_UPDATE') {
-                let s = e.data.stats;
-                let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
+    // 🧠 UI ADAPTER: Xử lý dữ liệu từ Lõi Pure HFT Worker (FINAL FIX)
+    // =================================================================
+    
+    // [FIX CRASH 1] Khởi tạo Worker nếu chưa có, tránh lỗi undefined
+    if (!window.quantWorker) {
+        window.quantWorker = new Worker('public/js/quant-worker.js');
+    }
 
-                if (!window.UI_STATE) window.UI_STATE = {};
-                if (!window.UI_STATE[sym]) {
-                    window.UI_STATE[sym] = { priceHistory: [], cumVol: 0, cumVolPrice: 0, vwap: 0, lastTime: 0, avgSpeed: 0 };
+    window.quantWorker.onmessage = function(e) {
+        if (e.data.cmd === 'STATS_UPDATE') {
+            let s = e.data.stats;
+            let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
+
+            if (!window.UI_STATE) window.UI_STATE = {};
+            if (!window.UI_STATE[sym]) {
+                window.UI_STATE[sym] = { priceHistory: [], cumVol: 0, cumVolPrice: 0, vwap: 0, lastTime: 0, avgSpeed: 0 };
+            }
+            let uiState = window.UI_STATE[sym];
+            let now = Date.now();
+            
+            let lastP = window.scLastPrice || 0; 
+            let currentSpeed = window.scSpeedWindow ? (window.scSpeedWindow.length > 0 ? window.scSpeedWindow.reduce((a, b) => a + b.v, 0) / 5 : 0) : 0;
+
+            if (lastP > 0) {
+                if (currentSpeed > 0) {
+                    let tickVol = currentSpeed * 0.25; 
+                    uiState.cumVol += tickVol;
+                    uiState.cumVolPrice += (lastP * tickVol);
                 }
-                let uiState = window.UI_STATE[sym];
-                let now = Date.now();
-                
-                // LẤY GIÁ TRỊ TRỰC TIẾP TỪ RAM CỦA GIAO DIỆN (Vì Worker không cấp nữa)
-                let lastP = window.scLastPrice || 0; 
-                let currentSpeed = window.scSpeedWindow ? (window.scSpeedWindow.length > 0 ? window.scSpeedWindow.reduce((a, b) => a + b.v, 0) / 5 : 0) : 0;
+                if (uiState.cumVol > 0) uiState.vwap = uiState.cumVolPrice / uiState.cumVol;
 
-                // 1. TÍNH VWAP & LỊCH SỬ GIÁ Ở FRONTEND
-                if (lastP > 0) {
-                    if (currentSpeed > 0) {
-                        let tickVol = currentSpeed * 0.25; 
-                        uiState.cumVol += tickVol;
-                        uiState.cumVolPrice += (lastP * tickVol);
-                    }
-                    if (uiState.cumVol > 0) uiState.vwap = uiState.cumVolPrice / uiState.cumVol;
-
-                    // Lưu lịch sử mỗi giây
-                    if (now - uiState.lastTime >= 1000) {
-                        uiState.priceHistory.push(lastP);
-                        if (uiState.priceHistory.length > 300) uiState.priceHistory.shift();
-                        uiState.lastTime = now;
-                    }
+                if (now - uiState.lastTime >= 1000) {
+                    uiState.priceHistory.push(lastP);
+                    // [FIX GC 1] Thay shift() bằng slice() để chống nghẽn Event Loop
+                    if (uiState.priceHistory.length > 300) uiState.priceHistory = uiState.priceHistory.slice(-300);
+                    uiState.lastTime = now;
                 }
+            }
 
-                // 2. TÍNH DROP VÀ VWAP TREND
-                let vwapDist = uiState.vwap > 0 ? ((lastP - uiState.vwap) / uiState.vwap) * 100 : 0;
-                let drop5m = 0;
-                if (uiState.priceHistory.length > 0) {
-                    let p5m = uiState.priceHistory[0]; 
-                    drop5m = ((lastP - p5m) / p5m) * 100;
-                }
+            let vwapDist = uiState.vwap > 0 ? ((lastP - uiState.vwap) / uiState.vwap) * 100 : 0;
+            let drop5m = 0;
+            if (uiState.priceHistory.length > 0) {
+                let p5m = uiState.priceHistory[0]; 
+                drop5m = ((lastP - p5m) / p5m) * 100;
+            }
 
-                // 3. ĐÓNG GÓI VÀO BIẾN GLOBAL CHO BẢNG BÊN PHẢI HIỂN THỊ
-                if (!window.quantStats) window.quantStats = {};
-                window.quantStats.spread = s.spread || 0;
-                window.quantStats.trend = vwapDist; 
-                window.quantStats.drop = drop5m;    
-                window.quantStats.ofi = s.ofi3s || 0;
-                window.quantStats.microCVD = s.microCVD || 0;
+            if (!window.quantStats) window.quantStats = {};
+            window.quantStats.spread = s.spread || 0;
+            window.quantStats.trend = vwapDist; 
+            window.quantStats.drop = drop5m;    
+            window.quantStats.ofi = s.ofi3s || 0;
+            window.quantStats.microCVD = s.microCVD || 0;
 
-                uiState.avgSpeed = uiState.avgSpeed * 0.95 + currentSpeed * 0.05;
-                let uiZScore = uiState.avgSpeed > 0 ? (currentSpeed - uiState.avgSpeed) / (uiState.avgSpeed * 0.5) : 0;
-                
-                window.quantStats.zScore = uiZScore;
-                window.quantStats.avgSpeed60s = uiState.avgSpeed;
-                window.quantStats.currentSpeed = currentSpeed;
+            uiState.avgSpeed = uiState.avgSpeed * 0.95 + currentSpeed * 0.05;
+            
+            // [FIX DESYNC] Lấy Z-Score chuẩn HFT từ Worker, không tự chế bừa
+            window.quantStats.zScore = s.zScore || 0;
+            window.quantStats.avgSpeed60s = uiState.avgSpeed;
+            window.quantStats.currentSpeed = currentSpeed;
 
-                let dom = 50 + ((s.ofi3s || 0) * 50);
-                window.quantStats.buyDominance = Math.max(0, Math.min(100, dom));
+            let dom = 50 + ((s.ofi3s || 0) * 50);
+            window.quantStats.buyDominance = Math.max(0, Math.min(100, dom));
 
-                // 4. VẼ MARKERS THAO TÚNG LÊN CHART TRADINGVIEW
-                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
-                if (activeSeries && s.flags && window.scChartMarkers) {
-                    let timeSec = Math.floor(now / 1000);
-                    let newMarker = null;
+            let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+            if (activeSeries && s.flags && window.scChartMarkers) {
+                let timeSec = Math.floor(now / 1000);
+                let newMarker = null;
 
-                    if (s.flags.zoneAbsorptionBottom) newMarker = { time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🟢 HẤP THỤ (BẮT ĐÁY)', fishType: 'whale' };
-                    else if (s.flags.zoneDistributionTop) newMarker = { time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🔴 FOMO XẢ', fishType: 'whale' };
-                    else if (s.flags.liquidityVacuum) newMarker = { time: timeSec, position: 'aboveBar', color: '#B000FF', shape: 'circle', text: '🟣 RÚT LIQUIDITY', fishType: 'whale' };
-                    else if (s.flags.washTrading) newMarker = { time: timeSec, position: 'inBar', color: '#cb55e3', shape: 'circle', text: '🤖 WASH TRADE', fishType: 'whale' };
+                if (s.flags.zoneAbsorptionBottom) newMarker = { time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🟢 HẤP THỤ (BẮT ĐÁY)', fishType: 'whale' };
+                else if (s.flags.zoneDistributionTop) newMarker = { time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🔴 FOMO XẢ', fishType: 'whale' };
+                else if (s.flags.liquidityVacuum) newMarker = { time: timeSec, position: 'aboveBar', color: '#B000FF', shape: 'circle', text: '🟣 RÚT LIQUIDITY', fishType: 'whale' };
+                else if (s.flags.washTrading) newMarker = { time: timeSec, position: 'inBar', color: '#cb55e3', shape: 'circle', text: '🤖 WASH TRADE', fishType: 'whale' };
 
-                    if (newMarker) {
-                        let lastM = window.scChartMarkers[window.scChartMarkers.length - 1];
-                        if (!lastM || (timeSec - lastM.time > 2)) { 
-                            window.scChartMarkers.push(newMarker);
-                            if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                            if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
-                        }
+                if (newMarker) {
+                    let lastM = window.scChartMarkers[window.scChartMarkers.length - 1];
+                    if (!lastM || (timeSec - lastM.time > 2)) { 
+                        window.scChartMarkers.push(newMarker);
+                        // [FIX GC 2] Cắt mảng sạch sẽ bằng Slice thay vì Shift
+                        if (window.scChartMarkers.length > 50) window.scChartMarkers = window.scChartMarkers.slice(-50);
+                        if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
                     }
                 }
             }
-        };
+        }
+    };
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
 
@@ -2622,20 +2624,18 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         }
         
         if (data.stream.endsWith('@aggTrade') || data.stream.endsWith('@trade')) {
-    let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
-    
-    // BINANCE BỊ LỖI TRƯỜNG "m", QUAY LẠI DÙNG THUẬT TOÁN TICK-TEST
-    let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
-    
-    window.scLastTradeDir = isUp; window.scLastPrice = p;
-    let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
-    let nowT = Date.now();
+            let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
+            
+            let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
+            
+            window.scLastTradeDir = isUp; window.scLastPrice = p;
+            let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
+            let nowT = Date.now();
 
-    window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
-    // Bắn đạn sang cho Worker tính toán ngầm
-    window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
-            // [CHỐNG SẬP CPU FINAL BOSS] Throttling giới hạn Render Canvas tối đa 6 FPS (150ms/lần)
-            // Thay vì vẽ 200 lần/giây theo tốc độ của Binance, giờ Chart chỉ vẽ những gì mượt mà nhất.
+            window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
+            // Bắn đạn sang cho Worker tính toán ngầm
+            window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
+            
             if (window.currentChartInterval === 'tick') {
                 if (nowT - (window.lastChartRender || 0) > 150) {
                     window.lastChartRender = nowT;
@@ -2671,11 +2671,9 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
 
             window.scTradeCount++; window.scTotalVol += valUSD; window.scNetFlow += isUp ? valUSD : -valUSD;
             
-            // Mảng Speed cố định 500 phần tử (rất nhẹ, O(N) không đáng kể)
-            if (window.scSpeedWindow.length > 500) window.scSpeedWindow.shift(); 
+            // [FIX GC 3] Xóa dòng shift() gây thắt cổ chai CPU. Mảng sẽ tự được dọn dẹp bằng filter trong scCalcInterval
             window.scSpeedWindow.push({ t: nowT, v: valUSD });
         }
-    };
             
     chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000); } };
 }
