@@ -2346,7 +2346,7 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
             else if (flags.bearishIceberg) {
-                window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 TƯỜNG SẮP VỠ', fishType: 'whale' });
+                window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 ICEBERG ĐÈ GIÁ', fishType: 'whale' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
             
