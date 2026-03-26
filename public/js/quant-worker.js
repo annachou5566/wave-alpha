@@ -197,24 +197,46 @@ function evaluateStoryteller(now) {
     }
 
     // =======================================================
-    // 6. PHÂN TÍCH VI MÔ (Spoofing / Iceberg)
-    if (!signal.text) {
-        if (Math.abs(activeOFI) > 0.5 && Math.abs(accel) < 1e-8 && now > state.lockUntil.spoofing) {
-            state.lockUntil.spoofing = now + LOCK_DUR;
-            signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
-        }
-        else if (Math.abs(z) > 2.0 && Math.abs(accel) < 1e-8 && now > state.lockUntil.iceberg) {
-            state.lockUntil.iceberg = now + LOCK_DUR;
-            signal = { text: 'Iceberg Absorption', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
-        }
-        else if (now <= state.lockUntil.spoofing) {
-            signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
-        }
-        else if (now <= state.lockUntil.iceberg) {
-            signal = { text: 'Iceberg Absorption', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
+// 6. PHÂN TÍCH VI MÔ SMART ICEBERG & SPOOFING
+if (!signal.text) {
+let isVolumeSpike = Math.abs(z) > 2.0;
+let isPriceStalled = Math.abs(accel) < 1e-8;
+
+    // A. XỬ LÝ SPOOFING WALL (Tường Ảo)
+    if (Math.abs(activeOFI) > 0.6 && isPriceStalled && now > state.lockUntil.spoofing) {
+        state.lockUntil.spoofing = now + LOCK_DUR;
+        signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+    }
+    
+    // B. XỬ LÝ SMART ICEBERG (Phân biệt Bullish vs Bearish)
+    else if (isVolumeSpike && isPriceStalled && now > state.lockUntil.iceberg) {
+        state.lockUntil.iceberg = now + LOCK_DUR;
+        
+        // Nếu dòng tiền đang XẢ MẠNH (OFI âm, Dom < 45) mà giá đứng im -> Tường Mua đang bị bào mòn chờ bục
+        if (activeOFI < -0.2 || buyDom < 45) {
+            // Tắt cờ Iceberg cũ để không bị in Marker lên chart
+            state.liquidityVacuum = true; // Ép hệ thống hiểu là cạn thanh khoản đỡ
+            signal = { text: '🧊 TƯỜNG SẮP VỠ (Né!)', color: '#ffffff', bgColor: '#F6465D' }; // Màu đỏ cảnh báo
+        } 
+        // Nếu dòng tiền đang MUA GOM (OFI dương, Dom > 50) mà giá đứng im -> Cá mập đang kê Iceberg đỡ giá thật
+        else {
+            signal = { text: '🧊 ICEBERG ĐỠ GIÁ', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' }; // Màu xanh an toàn
         }
     }
-
+    
+    // C. GIỮ TÍN HIỆU UI (Persistence)
+    else if (now <= state.lockUntil.spoofing) {
+        signal = { text: 'Spoofing Wall', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+    }
+    else if (now <= state.lockUntil.iceberg) {
+        // Giữ lại trạng thái của Tường Vỡ hay Iceberg dựa vào flow hiện tại
+        if (activeOFI < -0.2 || buyDom < 45) {
+            signal = { text: '🧊 TƯỜNG SẮP VỠ (Active)', color: '#ffffff', bgColor: '#F6465D' };
+        } else {
+            signal = { text: '🧊 ICEBERG (Active)', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
+        }
+    }
+}
     // =======================================================
     // 7. TÍN HIỆU NỀN TẢNG
     if (!signal.text) {
