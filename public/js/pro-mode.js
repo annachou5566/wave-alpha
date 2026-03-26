@@ -2072,17 +2072,28 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         window.quantWorker.onmessage = function(e) {
             if (e.data.cmd === 'STATS_UPDATE') {
                 let s = e.data.stats;
-                window.quantStats.spread = s.spread;
-                window.quantStats.trend = s.trend;
-                window.quantStats.drop = s.drop;
-                window.quantStats.ofi = s.ofi;
-                window.quantStats.zScore = s.zScore;
-                window.quantStats.currentSpeed = s.currentSpeed;
-                window.quantStats.algoLimit = s.algoLimit;
-                window.quantStats.avgSpeed60s = s.avgSpeed60s;
-                window.quantStats.buyDominance = s.buyDominance;
-                window.quantStats.microCVD = s.microCVD;
-                window.quantStats.flags = s.flags;
+                
+                // --- CẬP NHẬT TRẠNG THÁI VÀO HỆ THỐNG ---
+                window.quantStats = s; // Gán toàn bộ stats mới để đồng bộ hệ thống
+
+                // --- BƠM DỮ LIỆU THÔ VÀO BẢNG MONITOR ĐỂ KIỂM CHỨNG ---
+                const monitor = document.getElementById('quant-raw-monitor');
+                if (monitor) {
+                    monitor.innerHTML = `
+                        <div style="color:#00F0FF; border-bottom:1px solid #333; padding-bottom:4px; margin-bottom:6px; font-weight:800; font-size:11px;">⚡ QUANTUM ENGINE LIVE</div>
+                        <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:4px; font-size:10px; font-family:var(--font-num);">
+                            <span style="color:#527c82">Spread:</span><span style="color:#FFF; text-align:right;">${s.spread.toFixed(4)}%</span>
+                            <span style="color:#527c82">Z-Score:</span><span style="color:${Math.abs(s.zScore) > 2 ? '#FF007F' : '#0ECB81'}; text-align:right;">${s.zScore.toFixed(2)}</span>
+                            <span style="color:#527c82">OFI 3s:</span><span style="color:${s.ofi > 0 ? '#0ECB81' : '#F6465D'}; text-align:right;">${s.ofi.toFixed(2)}</span>
+                            <span style="color:#527c82">CVD Mic:</span><span style="color:#FFF; text-align:right;">$${Math.round(s.microCVD)}</span>
+                            <span style="color:#527c82">Trend:</span><span style="color:#FFF; text-align:right;">${s.trend.toFixed(3)}%</span>
+                            <span style="color:#527c82">Algo Lmt:</span><span style="color:#F0B90B; text-align:right;">$${Math.round(s.algoLimit)}</span>
+                        </div>
+                        <div style="margin-top:6px; font-size:8.5px; color:#527c82; border-top:1px solid #222; padding-top:4px;">
+                            Flags: <span style="color:#848e9c">${JSON.stringify(s.flags).replace(/[{""}]/g, '').replace(/,/g, ' | ')}</span>
+                        </div>
+                    `;
+                }
             }
         };
     }
@@ -2746,6 +2757,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
     container.innerHTML = `
         <div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
         
+        <div id="quant-raw-monitor" style="position: absolute; top: 50px; right: 10px; width: 190px; background: rgba(11, 14, 20, 0.95); border: 1px solid #1A1F26; padding: 10px; font-family: var(--font-num), monospace; z-index: 100; pointer-events: none; border-radius: 4px; border-left: 3px solid #00F0FF; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+            <div style="color:#527c82; font-size:10px; text-align:center;">⏳ ĐANG KẾT NỐI QUANT WORKER...</div>
+        </div>
+
         <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
             <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span>
             <span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span>
