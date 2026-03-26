@@ -2064,71 +2064,69 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
 
     if (chartWs) { chartWs.close(); }
 
-    // Lắng nghe kết quả từ Worker trả về (ĐÃ CẬP NHẬT UI ADAPTER)
+    // =================================================================
+        // 🧠 UI ADAPTER: Xử lý dữ liệu từ Lõi Pure HFT Worker (FINAL FIX)
+        // =================================================================
         window.quantWorker.onmessage = function(e) {
             if (e.data.cmd === 'STATS_UPDATE') {
                 let s = e.data.stats;
                 let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
 
-                // Khởi tạo bộ nhớ UI_STATE cho token hiện tại (chỉ tạo 1 lần)
                 if (!window.UI_STATE) window.UI_STATE = {};
                 if (!window.UI_STATE[sym]) {
                     window.UI_STATE[sym] = { priceHistory: [], cumVol: 0, cumVolPrice: 0, vwap: 0, lastTime: 0, avgSpeed: 0 };
                 }
                 let uiState = window.UI_STATE[sym];
                 let now = Date.now();
-                let lastP = window.scLastPrice || 0; // Lấy giá hiện tại từ Cache
+                
+                // LẤY GIÁ TRỊ TRỰC TIẾP TỪ RAM CỦA GIAO DIỆN (Vì Worker không cấp nữa)
+                let lastP = window.scLastPrice || 0; 
+                let currentSpeed = window.scSpeedWindow ? (window.scSpeedWindow.length > 0 ? window.scSpeedWindow.reduce((a, b) => a + b.v, 0) / 5 : 0) : 0;
 
-                // 1. TÍNH VWAP & LỊCH SỬ GIÁ Ở FRONTEND (MIỄN LÀ CÓ GIÁ HỢP LỆ)
+                // 1. TÍNH VWAP & LỊCH SỬ GIÁ Ở FRONTEND
                 if (lastP > 0) {
-                    // Cập nhật VWAP nếu có giao dịch trong nhịp này (Tốc độ > 0)
-                    let currentSpeed = window.scSpeedWindow ? (window.scSpeedWindow.length > 0 ? window.scSpeedWindow.reduce((a, b) => a + b.v, 0) / 5 : 0) : 0;
-                    
                     if (currentSpeed > 0) {
-                        let tickVol = currentSpeed * 0.25; // Ước lượng vol trong 250ms
+                        let tickVol = currentSpeed * 0.25; 
                         uiState.cumVol += tickVol;
                         uiState.cumVolPrice += (lastP * tickVol);
                     }
                     if (uiState.cumVol > 0) uiState.vwap = uiState.cumVolPrice / uiState.cumVol;
 
-                    // Lưu lịch sử giá mỗi 1 giây (để tính Drop 5 phút)
+                    // Lưu lịch sử mỗi giây
                     if (now - uiState.lastTime >= 1000) {
                         uiState.priceHistory.push(lastP);
-                        if (uiState.priceHistory.length > 300) uiState.priceHistory.shift(); // Giữ tối đa 300 giây (5 phút)
+                        if (uiState.priceHistory.length > 300) uiState.priceHistory.shift();
                         uiState.lastTime = now;
                     }
                 }
 
-                // 2. TÍNH KHOẢNG CÁCH (TREND & DROP)
+                // 2. TÍNH DROP VÀ VWAP TREND
                 let vwapDist = uiState.vwap > 0 ? ((lastP - uiState.vwap) / uiState.vwap) * 100 : 0;
                 let drop5m = 0;
                 if (uiState.priceHistory.length > 0) {
-                    let p5m = uiState.priceHistory[0]; // Giá trị cũ nhất (cách đây tới đa 5 phút)
+                    let p5m = uiState.priceHistory[0]; 
                     drop5m = ((lastP - p5m) / p5m) * 100;
                 }
 
-                // 3. ĐÓNG GÓI DỮ LIỆU ĐỂ HÀM updateCommandCenterUI ĐỌC
+                // 3. ĐÓNG GÓI VÀO BIẾN GLOBAL CHO BẢNG BÊN PHẢI HIỂN THỊ
                 if (!window.quantStats) window.quantStats = {};
                 window.quantStats.spread = s.spread || 0;
-                window.quantStats.trend = vwapDist; // Đây chính là biến hiển thị VWAP trên UI
-                window.quantStats.drop = drop5m;    // Đây chính là biến hiển thị Drop (5m) trên UI
+                window.quantStats.trend = vwapDist; 
+                window.quantStats.drop = drop5m;    
                 window.quantStats.ofi = s.ofi3s || 0;
                 window.quantStats.microCVD = s.microCVD || 0;
 
-                // Tính Z-Score động lượng thô cho UI
-                let actSpeed = window.scSpeedWindow ? (window.scSpeedWindow.length > 0 ? window.scSpeedWindow.reduce((a, b) => a + b.v, 0) / 5 : 0) : 0;
-                uiState.avgSpeed = uiState.avgSpeed * 0.95 + actSpeed * 0.05;
-                let uiZScore = uiState.avgSpeed > 0 ? (actSpeed - uiState.avgSpeed) / (uiState.avgSpeed * 0.5) : 0;
+                uiState.avgSpeed = uiState.avgSpeed * 0.95 + currentSpeed * 0.05;
+                let uiZScore = uiState.avgSpeed > 0 ? (currentSpeed - uiState.avgSpeed) / (uiState.avgSpeed * 0.5) : 0;
                 
                 window.quantStats.zScore = uiZScore;
                 window.quantStats.avgSpeed60s = uiState.avgSpeed;
-                window.quantStats.currentSpeed = actSpeed;
+                window.quantStats.currentSpeed = currentSpeed;
 
-                // Cập nhật thanh OFI Dominance
                 let dom = 50 + ((s.ofi3s || 0) * 50);
                 window.quantStats.buyDominance = Math.max(0, Math.min(100, dom));
 
-                // 4. VẼ MARKERS THAO TÚNG LÊN BIỂU ĐỒ (Dựa vào Flags từ Worker)
+                // 4. VẼ MARKERS THAO TÚNG LÊN CHART TRADINGVIEW
                 let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
                 if (activeSeries && s.flags && window.scChartMarkers) {
                     let timeSec = Math.floor(now / 1000);
@@ -2141,7 +2139,6 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
 
                     if (newMarker) {
                         let lastM = window.scChartMarkers[window.scChartMarkers.length - 1];
-                        // Rate limit: 2 giây mới cho vẽ 1 lần để tránh bị lag biểu đồ
                         if (!lastM || (timeSec - lastM.time > 2)) { 
                             window.scChartMarkers.push(newMarker);
                             if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
