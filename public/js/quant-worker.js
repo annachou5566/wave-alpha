@@ -344,18 +344,22 @@ setInterval(() => {
     const now = Date.now();
     evaluateStoryteller(now); 
 
-    // Bảng Ánh Xạ: Tránh vẽ Cờ Xanh (Iceberg Đỡ Giá) khi bị Tường Ảo dụ dỗ
-    const legacyFlags = {
-        liquidityVacuum: state.liquidityVacuum, 
-        spoofingDetected: now <= state.lockUntil.spoofing,
-        icebergAbsorption: now <= state.lockUntil.bullishIceberg, // CHỈ VẼ CỜ CHART KHI LÀ BULLISH ICEBERG
-        zoneAbsorptionBottom: false,
-        zoneDistributionTop: false, 
-        washTrading: false,
-        exhausted: now <= state.lockUntil.exhausted, 
-        stopHunt: now <= state.lockUntil.stopHunt,   
-        wallHit: !state.liquidityVacuum              
-    };
+    // Bảng Ánh Xạ: Truyền đầy đủ 2 thái cực Iceberg lên UI
+const legacyFlags = {
+liquidityVacuum: state.liquidityVacuum,
+spoofingDetected: now <= state.lockUntil.spoofing,
+bullishIceberg: now <= state.lockUntil.bullishIceberg, // Cờ Xanh (Đỡ giá thật)
+bearishIceberg: now <= state.lockUntil.bearishIceberg, // Cờ Đỏ (Tường sắp vỡ)
+icebergAbsorption: now <= state.lockUntil.bullishIceberg, // Giữ tương thích ngược
+zoneAbsorptionBottom: false,
+zoneDistributionTop: false,
+washTrading: false,
+exhausted: now <= state.lockUntil.exhausted,
+stopHunt: now <= state.lockUntil.stopHunt,
+
+wallHit: !state.liquidityVacuum
+
+};
 
     self.postMessage({
         cmd: 'STATS_UPDATE',
