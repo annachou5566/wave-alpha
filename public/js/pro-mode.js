@@ -2328,35 +2328,41 @@ let timeSec = Math.floor(Date.now() / 1000);
         let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
 
         if (canDraw) {
-            // Ưu tiên 1: Stop-Hunt và Exhausted (Kế thừa xuất sắc từ hệ thống cũ)
-            if (flags.stopHunt) {
-                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' });
-                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-            } 
-            else if (flags.exhausted) {
-                let markerText = flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED';
-                let markerColor = flags.wallHit ? '#F0B90B' : '#848e9c';
-                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
+// Ưu tiên 1: Stop-Hunt và Exhausted
+if (flags.stopHunt) {
+window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' });
+if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+}
+else if (flags.exhausted) {
+let markerText = flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED';
+let markerColor = flags.wallHit ? '#F0B90B' : '#848e9c';
+window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
+if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+}
+
+            // Ưu tiên 2: Iceberg (Bắt đúng Tường Xanh / Tường Đỏ)
+            else if (flags.bullishIceberg || flags.icebergAbsorption) {
+                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'whale' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
-            // Ưu tiên 2: Các tín hiệu vi mô khác (Iceberg 2 chiều, Spoofing 2 chiều)
-                else if (flags.bullishIceberg || flags.icebergAbsorption) {
-                    window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'whale' });
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                }
-                else if (flags.bearishIceberg) {
-                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 TƯỜNG SẮP VỠ', fishType: 'whale' });
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                }
-                // [KIỂM TRA CHỖ NÀY] Đã tách 2 loại Tường Ảo chưa?
-                else if (flags.spoofingBuyWall) {
-                    window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO' });
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                }
-                else if (flags.spoofingSellWall) {
-                    window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO' });
-                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-                }
+            else if (flags.bearishIceberg) {
+                window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 TƯỜNG SẮP VỠ', fishType: 'whale' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
+            
+            // Ưu tiên 3: Spoofing (Đã tách Tường Mua Ảo và Tường Bán Ảo)
+            else if (flags.spoofingBuyWall) {
+                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
+            else if (flags.spoofingSellWall) {
+                window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
+            else if (flags.spoofingDetected) { // Fallback chống sập nếu Worker cũ chưa load
+                window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ SPOOFING WALL' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
         }
     }
     // ========================================================
