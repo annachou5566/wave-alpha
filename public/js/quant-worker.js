@@ -81,7 +81,7 @@ self.onmessage = function(e) {
         initEngine();
     } 
     // Xử lý dữ liệu Orderbook cấp độ Tick (@bookTicker)
-    else if (msg.cmd === 'BOOKTICKER') {
+    else if (msg.cmd === 'BOOK_TICKER') {
         // Đảm bảo tuân thủ Schema: Ép kiểu Float an toàn từ String của Binance
         const b = parseFloat(msg.data.b); // Giá Bid tốt nhất
         const B = parseFloat(msg.data.B); // Lượng Bid
