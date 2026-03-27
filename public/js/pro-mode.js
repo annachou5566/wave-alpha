@@ -1628,11 +1628,10 @@ window.currentChartToken = null;
 let chartWs = null;
 let isReconnecting = false;
 // --- BỘ NHỚ COMMAND CENTER ---
-window.quantStats = { 
-    whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0,
-    longLiq: 0, shortLiq: 0, fundingRateObj: null, hftVerdict: null
-};
+window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
 
+// --- BỘ NHỚ COMMAND CENTER MỞ RỘNG ---
+window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0 };
 
 // 🔊 CÔNG TẮC VÀ TRÌNH PHÁT ÂM THANH
 window.isProSoundOn = true; 
@@ -2029,7 +2028,11 @@ window.updateCommandCenterUI = function() {
         }
     }
 
-    };
+    // Kích hoạt Động cơ Phân tích Quant Multi-Horizon
+    if (typeof window.evaluateQuantVerdict === 'function') {
+        window.evaluateQuantVerdict();
+    }
+};
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
 
@@ -2077,11 +2080,16 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         // Lắng nghe kết quả từ Worker trả về
 window.quantWorker.onmessage = function(e) {
 if (e.data.cmd === 'STATS_UPDATE') {
+// 1. DÙNG OBJECT.ASSIGN ĐỂ HỢP NHẤT (MERGE) DATA
+// Chống ghi đè làm mất dữ liệu Cá Voi/Cá Mập và dữ liệu Phái Sinh (Funding, Liq)
 Object.assign(window.quantStats, e.data.stats);
-// [P2 FIX] Đã XÓA lệnh gọi evaluateQuantVerdict ở đây để tránh gọi 2 lần/250ms.
-// Hàm này sẽ tự động được gọi 1 lần duy nhất bên trong vòng lặp cập nhật UI.
-}
-};
+
+            // 2. ÉP NÃO BỘ AI PHÂN TÍCH VÀ ĐỔI CHỮ NGAY LẬP TỨC MỖI 250ms
+            if (typeof window.evaluateQuantVerdict === 'function') {
+                window.evaluateQuantVerdict();
+            }
+        }
+    };
     }
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
@@ -2320,44 +2328,17 @@ let timeSec = Math.floor(Date.now() / 1000);
         let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
 
         if (canDraw) {
-        // ==========================================
-        // [T3 FIX] TÍNH TOÁN VÙNG SQUEEZE TRỰC TIẾP
-        // ==========================================
-        let liqLong = window.quantStats.longLiq || 0;
-        let liqShort = window.quantStats.shortLiq || 0;
-        let isSqueeze = false;
-
-        // SHORT SQUEEZE: Diệt Short (Cháy Short > 5k$ + Lực mua bùng nổ)
-        if (liqShort > 5000 && flags.stopHunt) {
-            window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🔥 SHORT SQUEEZE' });
-            isSqueeze = true;
-            // Reset thanh lý để không báo trùng
-            window.quantStats.shortLiq = 0; 
-        } 
-        // LONG SQUEEZE: Rũ Long (Cháy Long > 5k$ + Cạn kiệt lực đỡ)
-        else if (liqLong > 5000 && flags.exhausted) {
-            window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#FF007F', shape: 'arrowDown', text: '🩸 LONG SQUEEZE' });
-            isSqueeze = true;
-            window.quantStats.longLiq = 0;
-        }
-        
-        if (isSqueeze && window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-
-        // ==========================================
-        // NẾU KHÔNG CÓ SQUEEZE -> CHẠY CÁC CỜ BÌNH THƯỜNG
-        // ==========================================
-        if (!isSqueeze) {
-            // Ưu tiên 1: Stop-Hunt và Exhausted
-            if (flags.stopHunt) {
-                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' });
-                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-            }
-            else if (flags.exhausted) {
-                let markerText = flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED';
-                let markerColor = flags.wallHit ? '#F0B90B' : '#848e9c';
-                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
-                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-            }
+// Ưu tiên 1: Stop-Hunt và Exhausted
+if (flags.stopHunt) {
+window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' });
+if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+}
+else if (flags.exhausted) {
+let markerText = flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED';
+let markerColor = flags.wallHit ? '#F0B90B' : '#848e9c';
+window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
+if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+}
 
             // Ưu tiên 2: Iceberg (Bắt đúng Tường Xanh / Tường Đỏ)
             else if (flags.bullishIceberg || flags.icebergAbsorption) {
@@ -2369,7 +2350,7 @@ let timeSec = Math.floor(Date.now() / 1000);
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
             
-            // Ưu tiên 3: Spoofing (Tường Mua Ảo / Tường Bán Ảo)
+            // Ưu tiên 3: Spoofing (Đã tách Tường Mua Ảo và Tường Bán Ảo)
             else if (flags.spoofingBuyWall) {
                 window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
@@ -2378,12 +2359,13 @@ let timeSec = Math.floor(Date.now() / 1000);
                 window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
-            else if (flags.spoofingDetected) { // Fallback
+            else if (flags.spoofingDetected) { // Fallback chống sập nếu Worker cũ chưa load
                 window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ SPOOFING WALL' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
-        } 
+        }
     }
+    // ========================================================
 
         // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm) ---
         let algoEl = document.getElementById('sc-algo-limit');
@@ -2506,8 +2488,6 @@ let timeSec = Math.floor(Date.now() / 1000);
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
         
-        // [CHỈ GỌI HÀM PHÂN TÍCH AI DUY NHẤT 1 LẦN Ở ĐÂY - CHỐNG TỐN CPU]
-        if (typeof window.evaluateQuantVerdict === 'function') window.evaluateQuantVerdict();
     }, 1000);
 // ==========================================
     // 3. CỖ MÁY XẢ BĂNG ĐẠN SMART TAPE (TỐC ĐỘ CAO 150ms)
@@ -2779,10 +2759,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.scCurrentCluster = null; // Cắt đứt cụm lệnh (Smart Tape) đang tính dở của token cũ
 
         // DÁN ĐOẠN RESET VÀO ĐÚNG CHỖ NÀY:
-        if (!window.quantStats) window.quantStats = {};
-        Object.assign(window.quantStats, { 
-            whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 
-        });
+        window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
         let tape = document.getElementById('cc-sniper-tape');
         if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
     }
@@ -3030,11 +3007,6 @@ window.changeChartInterval = function(interval, btnEl) {
 };
 
 window.closeProChart = function() {
-// [P1 FIX] Giết Worker cũ để giải phóng 100% RAM và CPU
-if (window.quantWorker) {
-window.quantWorker.terminate();
-window.quantWorker = null;
-}
     if (typeof window.stopFuturesEngine === 'function') window.stopFuturesEngine();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
     const overlay = document.getElementById('super-chart-overlay');
@@ -3777,45 +3749,36 @@ window.renderProWatchlist = function(passedSearchTerm) {
 // =====================================================================
 // 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
 // =====================================================================
-// [T2 FIX] BỘ ĐỆM CACHE CHỐNG GIẬT LAG UI (ZERO-REFLOW)
-const _verdictCache = { hft_html: null, hft_color: null, hft_bg: null };
-let _verdictRafPending = false;
+// Biến toàn cục để khóa tín hiệu HFT trong 5 giây
+window.hftLockTime = 0;
+window.hftLockedHtml = '';
+window.hftLockedCss = '';
 
+// =====================================================================
+// 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
+// =====================================================================
 window.evaluateQuantVerdict = function() {
-    if (!window.quantStats) return;
+if (!window.quantStats) return;
+
+// Stateless DOM Updates: Zero-lag Rendering
+requestAnimationFrame(() => {
     let q = window.quantStats;
 
     // ========================================================
-    // 1. HFT (MICRO): DOM RENDERING VỚI CACHE & RAF (ZERO-LAG)
+    // 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1
     // ========================================================
-    let newHtml = q.hftVerdict ? q.hftVerdict.html : "⚡ ĐANG KHỞI ĐỘNG TICK...";
-    let newBg = q.hftVerdict ? q.hftVerdict.bg : "rgba(0, 240, 255, 0.1)";
-    let newColor = q.hftVerdict ? q.hftVerdict.color : "#00F0FF";
-
-    // Chỉ khi nào chữ, màu chữ hoặc màu nền thực sự đổi thì mới kích hoạt vẽ lại
-    let isChanged = (newHtml !== _verdictCache.hft_html || newColor !== _verdictCache.hft_color || newBg !== _verdictCache.hft_bg);
-
-    if (isChanged && !_verdictRafPending) {
-        _verdictRafPending = true;
-        
-        // Chỉ bọc RAF ở khâu cập nhật DOM cuối cùng (Khâu tốn tài nguyên nhất)
-        requestAnimationFrame(() => {
-            let hftEl = document.getElementById('verdict-hft');
-            if (hftEl) {
-                hftEl.innerHTML = newHtml;
-                
-                if (q.hftVerdict) {
-                    hftEl.style.cssText = `font-size: 9.5px; background: ${newBg}; padding: 3px 6px; border-radius: 3px; color: ${newColor}; border: 1px solid ${newColor}; white-space: nowrap;`;
-                } else {
-                    hftEl.style.cssText = "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;";
-                }
+    let hftEl = document.getElementById('verdict-hft');
+    if (hftEl) {
+        if (q.hftVerdict) {
+            let v = q.hftVerdict;
+            if (hftEl.innerHTML !== v.html) {
+                hftEl.innerHTML = v.html;
+                hftEl.style.cssText = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
             }
-            
-            _verdictCache.hft_html = newHtml;
-            _verdictCache.hft_color = newColor;
-            _verdictCache.hft_bg = newBg;
-            _verdictRafPending = false;
-        });
+        } else {
+            hftEl.innerHTML = "⚡ ĐANG KHỞI ĐỘNG TICK...";
+            hftEl.style.cssText = "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;";
+        }
     }
 
     // ========================================================
@@ -3823,14 +3786,17 @@ window.evaluateQuantVerdict = function() {
     // ========================================================
     let mftEl = document.getElementById('verdict-mft');
     if (mftEl) {
+        // A. Trích xuất Dữ liệu Futures
         let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
         let liqLong = q.longLiq || 0;
         let liqShort = q.shortLiq || 0;
         let totalLiq = liqLong + liqShort;
         
+        // B. Trích xuất Dữ liệu Spot CVD
         let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
         let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
 
+        // C. Chấm điểm Spot CVD (Thang -1.0 đến 1.0)
         let spotScore = 0;
         if (cvd1hTag.includes('BULLISH')) spotScore += 0.5;
         else if (cvd1hTag.includes('BEARISH')) spotScore -= 0.5;
@@ -3838,13 +3804,16 @@ window.evaluateQuantVerdict = function() {
         if (cvd4hTag.includes('BULLISH')) spotScore += 0.5;
         else if (cvd4hTag.includes('BEARISH')) spotScore -= 0.5;
 
+        // D. Chấm điểm Futures (Thang -1.0 đến 1.0) & Nhận diện Token
         let futuresScore = 0;
-        let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0; 
+        let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0; // State Check cực kỳ quan trọng
         
         if (hasFutures) {
+            // Đánh giá Funding Rate (Âm -> Bullish Squeeze, Dương -> Bearish)
             if (fFunding < -0.005) futuresScore += 0.5;
             else if (fFunding > 0.005) futuresScore -= 0.5;
 
+            // Đánh giá Liquidations (Rũ Short -> Squeeze Up, Rũ Long -> Cascade Down)
             if (totalLiq > 5000) {
                 let liqRatio = liqShort / totalLiq;
                 if (liqRatio > 0.65) futuresScore += 0.5;
@@ -3852,13 +3821,17 @@ window.evaluateQuantVerdict = function() {
             }
         }
 
+        // E. Lõi Lượng Tử: TÍNH TỔNG ĐIỂM BẰNG MA TRẬN TRỌNG SỐ
         let finalMftScore = 0;
         if (hasFutures) {
+            // Token có Phái sinh: Phái sinh dẫn dắt (60%), Spot hỗ trợ (40%)
             finalMftScore = (spotScore * 0.4) + (futuresScore * 0.6);
         } else {
+            // Token Không Phái sinh (Spot-only): Trả 100% quyền lực về Spot CVD
             finalMftScore = spotScore * 1.0; 
         }
 
+        // F. Ánh xạ Điểm Số ra Giao diện UI
         let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN';
         let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
 
@@ -3876,6 +3849,7 @@ window.evaluateQuantVerdict = function() {
             mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)';
         }
 
+        // Chỉ render nếu có thay đổi
         if (mftEl.innerText !== mftMsg) {
             mftEl.innerHTML = mftMsg;
             mftEl.style.cssText = `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;`;
@@ -3892,15 +3866,18 @@ window.evaluateQuantVerdict = function() {
         let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%';
         let unlockPct = parseFloat(unlockStr) || 100;
 
+        // Điểm Smart Money (-1.0 đến 1.0)
         let smScore = 0;
         if (smTag.includes('CÁ MẬP GOM') || smTag.includes('BULLISH')) smScore = 1.0;
         else if (smTag.includes('BOT KIỂM SOÁT') || smTag.includes('BEARISH') || smTag.includes('XẢ')) smScore = -1.0;
 
+        // Điểm Tokenomics (-1.0 đến 1.0)
         let tokenomicsScore = 0;
-        if (unlockPct < 30) tokenomicsScore = -1.0; 
+        if (unlockPct < 30) tokenomicsScore = -1.0; // Rủi ro pha loãng cao
         else if (unlockPct >= 50) tokenomicsScore = 0.5;
-        else if (unlockPct >= 80) tokenomicsScore = 1.0; 
+        else if (unlockPct >= 80) tokenomicsScore = 1.0; // Khá an toàn
 
+        // Tích lũy vĩ mô: Smart Money cầm trịch 75%, Tokenomics 25%
         let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
 
         let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ';
@@ -3919,4 +3896,5 @@ window.evaluateQuantVerdict = function() {
             lftEl.style.cssText = `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;`;
         }
     }
+});
 };
