@@ -2693,13 +2693,26 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
     window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
             // [CHỐNG SẬP CPU FINAL BOSS] Throttling giới hạn Render Canvas tối đa 6 FPS (150ms/lần)
             // Thay vì vẽ 200 lần/giây theo tốc độ của Binance, giờ Chart chỉ vẽ những gì mượt mà nhất.
-            if (window.currentChartInterval === 'tick') {
+            // [SỬA LỖI]: Cho phép cả khung 'tick' và '1s' chạy vào để vẽ realtime
+            if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
                 if (nowT - (window.lastChartRender || 0) > 150) {
                     window.lastChartRender = nowT;
-                    if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
-                    if (tvLineSeries) tvLineSeries.update({ time: timeSec, value: p });
+                    
                     let isTrad = window.currentTheme === 'trad';
-                    if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)') });
+                    let volColor = isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
+
+                    if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
+
+                    // Khung TICK thì vẽ đường Line
+                    if (window.currentChartInterval === 'tick' && tvLineSeries) {
+                        tvLineSeries.update({ time: timeSec, value: p });
+                    } 
+                    // Khung 1S thì vẽ nến Candlestick
+                    else if (window.currentChartInterval === '1s' && tvCandleSeries) {
+                        tvCandleSeries.update({ time: timeSec, open: p, high: p, low: p, close: p });
+                    }
+
+                    if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: volColor });
                 }
             }
 
