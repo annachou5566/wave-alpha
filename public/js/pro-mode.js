@@ -1627,11 +1627,16 @@ window.currentChartToken = null;
 // ==========================================
 let chartWs = null;
 let isReconnecting = false;
-// --- BỘ NHỚ COMMAND CENTER ---
-window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
-
-// --- BỘ NHỚ COMMAND CENTER MỞ RỘNG ---
-window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0 };
+window.quantStats = {
+    whaleBuyVol: 0, whaleSellVol: 0,
+    botSweepBuy: 0, botSweepSell: 0,
+    priceTrend: 0,          // Giữ lại field không bị mất
+    trend: 0, drop: 0, spread: 0,
+    ofi: 0, zScore: 0, buyDominance: 50,
+    longLiq: 0, shortLiq: 0,
+    fundingRateObj: null,
+    hftVerdict: null
+};
 
 // 🔊 CÔNG TẮC VÀ TRÌNH PHÁT ÂM THANH
 window.isProSoundOn = true; 
@@ -1751,6 +1756,34 @@ window.filterSniperTape = function() {
     });
 };
 
+// =========================================================
+// [TARGET-3] ĐỘNG CƠ NHẬN DIỆN SQUEEZE (BƠM / XẢ THANH LÝ)
+// =========================================================
+const SQUEEZE_LIQ_THRESHOLD = 10000; // $10k liquidation tối thiểu
+function computeSqueezeZone() {
+    if (!window.quantStats) return { confirmed: false };
+    const liqLong  = window.quantStats.longLiq  || 0;
+    const liqShort = window.quantStats.shortLiq || 0;
+    const flags    = window.quantStats.flags    || {};
+    const ofi      = window.quantStats.ofi      || 0;
+    const zScore   = window.quantStats.zScore   || 0;
+
+    let confirmed = false; let side = null; let strength = 0;
+
+    if (liqLong > SQUEEZE_LIQ_THRESHOLD && flags.stopHunt && ofi > 0.2) {
+        confirmed = true; side = 'short';
+        strength = Math.min(1, (liqLong / (SQUEEZE_LIQ_THRESHOLD * 5)) * (ofi + 0.2) * (zScore > 1.5 ? 1.3 : 1));
+    } else if (liqShort > SQUEEZE_LIQ_THRESHOLD && flags.exhausted && ofi < -0.2) {
+        confirmed = true; side = 'long';
+        strength = Math.min(1, (liqShort / (SQUEEZE_LIQ_THRESHOLD * 5)) * (Math.abs(ofi) + 0.2));
+    }
+    window.quantStats.squeezeZone = { confirmed, side, strength };
+    return window.quantStats.squeezeZone;
+}
+
+// =========================================================
+// HÀM CẬP NHẬT GIAO DIỆN CHÍNH
+// =========================================================
 window.updateCommandCenterUI = function() {
     if (!document.getElementById('quant-command-center')) return;
 
@@ -1780,11 +1813,10 @@ window.updateCommandCenterUI = function() {
         let z = window.quantStats.zScore || 0;
         let ofi = window.quantStats.ofi || 0;
         
-        // Hiển thị OFI và Z-Score trực quan
         let ofiText = ofi >= 0 ? `+${ofi.toFixed(2)}` : `${ofi.toFixed(2)}`;
         let zText = `Z:${z.toFixed(1)}`;
         
-        if (z > 3.0) { // Đột biến cực mạnh (Chỉ 0.3% thời gian xảy ra)
+        if (z > 3.0) { 
             if (ofi > 0.5) {
                 algoStatus.innerHTML = `🚀 ĐỘT BIẾN MUA [${zText} | OFI ${ofiText}]`;
                 algoStatus.style.color = '#00F0FF'; algoBox.style.borderLeftColor = '#00F0FF';
@@ -1805,18 +1837,15 @@ window.updateCommandCenterUI = function() {
         }
     }
 
-// [UI/UX NÂNG CẤP] Cập nhật thanh OFI Power Meter theo Taker Buy Dominance
     let ofiBarBuy = document.getElementById('cc-ofi-bar-buy');
     let ofiBarSell = document.getElementById('cc-ofi-bar-sell');
     if (ofiBarBuy && ofiBarSell) {
-        // Dùng biến mới siêu chính xác từ Worker
         let buyPct = window.quantStats.buyDominance || 50;
         let sellPct = 100 - buyPct;
         
         ofiBarBuy.style.width = `${buyPct}%`;
         ofiBarSell.style.width = `${sellPct}%`;
         
-        // Hiệu ứng "Tia chớp" khi Fomo Mua vọt ngưỡng 70%
         ofiBarBuy.style.background = buyPct >= 70 ? '#00F0FF' : '#0ECB81'; 
         ofiBarBuy.style.boxShadow = buyPct >= 70 ? '0 0 5px #00F0FF' : 'none';
 
@@ -1864,13 +1893,13 @@ window.updateCommandCenterUI = function() {
     const wBuy = window.quantStats.whaleBuyVol || 0;
     const wSell = window.quantStats.whaleSellVol || 0;
     const totalWhale = wBuy + wSell;
-    let buyPct = 50, sellPct = 50;
-    if (totalWhale > 0) { buyPct = (wBuy / totalWhale) * 100; sellPct = (wSell / totalWhale) * 100; }
+    let smBuyPct = 50, smSellPct = 50;
+    if (totalWhale > 0) { smBuyPct = (wBuy / totalWhale) * 100; smSellPct = (wSell / totalWhale) * 100; }
     
     let barBuy = document.getElementById('cc-whale-bar-buy');
     let barSell = document.getElementById('cc-whale-bar-sell');
-    if(barBuy) barBuy.style.width = `${buyPct}%`; 
-    if(barSell) barSell.style.width = `${sellPct}%`;
+    if(barBuy) barBuy.style.width = `${smBuyPct}%`; 
+    if(barSell) barSell.style.width = `${smSellPct}%`;
     
     let volBuy = document.getElementById('cc-whale-vol-buy');
     if(volBuy) volBuy.innerText = 'B: $' + formatCompactUSD(wBuy);
@@ -1879,72 +1908,69 @@ window.updateCommandCenterUI = function() {
     
     let ratioTxt = document.getElementById('cc-whale-ratio');
     if(ratioTxt) {
-        ratioTxt.innerText = `${buyPct.toFixed(0)}% BUY`;
-        ratioTxt.style.color = buyPct > 50 ? '#0ECB81' : '#F6465D';
+        ratioTxt.innerText = `${smBuyPct.toFixed(0)}% BUY`;
+        ratioTxt.style.color = smBuyPct > 50 ? '#0ECB81' : '#F6465D';
     }
 
-
-// =========================================================
+    // =========================================================
     // 6. 🧠 SUPER QUANT AI VERDICT V3 (CROSS-MARKET & MM TRACKER)
     // =========================================================
     const verdictEl = document.getElementById('ai-verdict-badge');
     if (verdictEl) {
-        // 1. Dữ liệu Spot & Hành vi giao dịch
         let _vTrend = window.quantStats.trend || 0;
-        let _vDrop = window.quantStats.drop || 0;
         let _vWBuy = window.quantStats.whaleBuyVol || 0;
         let _vWSell = window.quantStats.whaleSellVol || 0;
         let _vTotalW = _vWBuy + _vWSell;
         let _vSPct = _vTotalW > 0 ? (_vWSell / _vTotalW) * 100 : 50;
-        let _vBPct = _vTotalW > 0 ? (_vWBuy / _vTotalW) * 100 : 50;
         let _vWNet = _vWBuy - _vWSell;
-        let _vRNet = (window.scNetFlow || 0) - _vWNet;
         
-        let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
         let txPerSec = window.scSpeedWindow ? (window.scSpeedWindow.length / 5) : 0;
-        let spread = window.quantStats.spread || 0;
         let zScore = window.quantStats.zScore || 0;
         let ofi = window.quantStats.ofi || 0;
-        // ==========================================
-        // TÍNH TOÁN NGƯỠNG ĐỘNG (ADAPTIVE THRESHOLDS)
-        // ==========================================
+
         let t_chart = window.currentChartToken || {};
-        let dailyTx = t_chart.tx_count || 86400; // Tránh chia 0
+        let dailyTx = t_chart.tx_count || 86400; 
         let dailyVol = t_chart.volume?.daily_total || 1000000;
         
-        // Baseline 24h của chính token này
         let normalTxPerSec = dailyTx / 86400; 
         let normalAvgTicket = dailyVol / dailyTx;
 
-        // Các biến điều kiện siêu việt:
-        let isCrazyFast = txPerSec > Math.max(3, normalTxPerSec * 4); // Tốc độ x4 lần bình thường (min 3)
-        let isRetailTicket = avgTicket < Math.max(100, normalAvgTicket * 0.3); // Size lệnh < 30% bình thường
-        let isHeavyDump = _vWNet < -(Math.max(10000, normalAvgTicket * 20)); // Xả cực mạnh so với thanh khoản của nó
+        let isCrazyFast = txPerSec > Math.max(3, normalTxPerSec * 4);
+        let isRetailTicket = avgTicket < Math.max(100, normalAvgTicket * 0.3);
+        let isHeavyDump = _vWNet < -(Math.max(10000, normalAvgTicket * 20));
 
-        // 2. Dữ liệu Futures (Nếu có)
         let hasFutures = document.getElementById('cc-futures-status')?.innerText === '🟢 ACTIVE';
         let fFunding = window.quantStats.fundingRateObj ? window.quantStats.fundingRateObj.rate : 0;
         let liqLong = window.quantStats.longLiq || 0;
         let liqShort = window.quantStats.shortLiq || 0;
         
-        // 3. Tính toán Spoofing
+        // 3. Tính toán Spoofing (Đã nâng cấp hỗ trợ Map)
         let sBids = 0, sAsks = 0;
         if (window.scLocalOrderBook && window.scLastPrice > 0) {
             let pLimitDown = window.scLastPrice * 0.99;
             let pLimitUp = window.scLastPrice * 1.01;
-            if (window.scLocalOrderBook.bids) {
-                for (let p in window.scLocalOrderBook.bids) { if (parseFloat(p) >= pLimitDown) sBids += parseFloat(p) * window.scLocalOrderBook.bids[p]; }
+            
+            let bBook = window.scLocalOrderBook.bids;
+            let aBook = window.scLocalOrderBook.asks;
+
+            if (bBook) {
+                if (bBook instanceof Map) {
+                    for (let [p, v] of bBook) { if (parseFloat(p) >= pLimitDown) sBids += parseFloat(p) * v; }
+                } else {
+                    for (let p in bBook) { if (parseFloat(p) >= pLimitDown) sBids += parseFloat(p) * bBook[p]; }
+                }
             }
-            if (window.scLocalOrderBook.asks) {
-                for (let p in window.scLocalOrderBook.asks) { if (parseFloat(p) <= pLimitUp) sAsks += parseFloat(p) * window.scLocalOrderBook.asks[p]; }
+            if (aBook) {
+                if (aBook instanceof Map) {
+                    for (let [p, v] of aBook) { if (parseFloat(p) <= pLimitUp) sAsks += parseFloat(p) * v; }
+                } else {
+                    for (let p in aBook) { if (parseFloat(p) <= pLimitUp) sAsks += parseFloat(p) * aBook[p]; }
+                }
             }
         }
         let isSpoofBids = (sAsks > 0 && sBids > sAsks * 4) && (_vTrend < -0.1) && (!isCrazyFast);
         let isSpoofAsks = (sBids > 0 && sAsks > sBids * 4) && (_vTrend > 0.1) && (!isCrazyFast);
 
-        // ====================================================
-        // NHÁNH A: CÓ PHÁI SINH (ĐÁNH LIÊN THỊ TRƯỜNG)
-        // ====================================================
         if (hasFutures) {
             if (zScore > 2.5 && ofi > 0.6 && liqShort > 5000) {
                 verdictEl.innerText = '🔥 SHORT SQUEEZE (DIỆT SHORT)';
@@ -1970,11 +1996,7 @@ window.updateCommandCenterUI = function() {
                 verdictEl.innerText = '⚖️ TÍCH LŨY / CHOPPING';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.05); color: #848e9c; border: 1px solid rgba(255,255,255,0.1);';
             }
-        }
-        // ====================================================
-        // NHÁNH B: KHÔNG CÓ PHÁI SINH (BẮT BÀI MARKET MAKER)
-        // ====================================================
-        else {
+        } else {
             if (txPerSec < 0.5 && spread > 1.0) {
                 verdictEl.innerText = '💀 ILLIQUID (THIẾU THANH KHOẢN)';
                 verdictEl.style.cssText = 'font-size: 9px; font-weight: 800; padding: 3px 6px; border-radius: 3px; background: rgba(132, 142, 156, 0.2); color: #848e9c; border: 1px solid #848e9c;';
@@ -2001,38 +2023,63 @@ window.updateCommandCenterUI = function() {
             }
         }
     }
+    
     // --- 7. BỘ ĐẾM NGƯỢC FUNDING RATE ---
-        if (window.quantStats && window.quantStats.fundingRateObj) {
-            let fObj = window.quantStats.fundingRateObj;
-            let remain = fObj.nextTime - Date.now();
-            
-            let countdownStr = "";
-            if (remain > 0) {
-                let hrs = String(Math.floor(remain / (1000 * 60 * 60))).padStart(2, '0');
-                let mins = String(Math.floor((remain % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
-                let secs = String(Math.floor((remain % (1000 * 60)) / 1000)).padStart(2, '0');
-                countdownStr = `${hrs}:${mins}:${secs}`;
-            } else {
-                countdownStr = "00:00:00";
-            }
+    if (window.quantStats && window.quantStats.fundingRateObj) {
+        let fObj = window.quantStats.fundingRateObj;
+        let remain = fObj.nextTime - Date.now();
+        
+        let countdownStr = "";
+        if (remain > 0) {
+            let hrs = String(Math.floor(remain / (1000 * 60 * 60))).padStart(2, '0');
+            let mins = String(Math.floor((remain % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+            let secs = String(Math.floor((remain % (1000 * 60)) / 1000)).padStart(2, '0');
+            countdownStr = `${hrs}:${mins}:${secs}`;
+        } else {
+            countdownStr = "00:00:00";
+        }
 
-            let sign = fObj.rate > 0 ? '+' : '';
-            let color = fObj.rate > 0.01 ? '#F6465D' : (fObj.rate < -0.01 ? '#00F0FF' : '#eaecef');
-            
-            let fLbl = document.getElementById('cc-funding-lbl');
-            if (fLbl) fLbl.innerText = `Funding (${fObj.interval}h)`;
+        let sign = fObj.rate > 0 ? '+' : '';
+        let color = fObj.rate > 0.01 ? '#F6465D' : (fObj.rate < -0.01 ? '#00F0FF' : '#eaecef');
+        
+        let fLbl = document.getElementById('cc-funding-lbl');
+        if (fLbl) fLbl.innerText = `Funding (${fObj.interval}h)`;
 
-            let fEl = document.getElementById('cc-funding-val');
+        let fEl = document.getElementById('cc-funding-val');
         if (fEl) {
             fEl.innerHTML = `<span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span><span style="color:#527c82; margin: 0 4px;">/</span><span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span>`;
         }
     }
 
-    // Kích hoạt Động cơ Phân tích Quant Multi-Horizon
+    // =========================================================
+    // KÍCH HOẠT MARKER SQUEEZE TRÊN CHART VÀ RENDER QUANT ENGINE
+    // =========================================================
+    let sq = computeSqueezeZone();
+    if (sq.confirmed && window.scChartMarkers) {
+        let currentTime = Date.now();
+        // Chống Spam Mũi Tên: Mỗi 10 giây mới in 1 mũi tên Squeeze lên Chart
+        if (!window._lastSqueezeMarkerTime || currentTime - window._lastSqueezeMarkerTime > 10000) {
+            const markerTime = Math.floor(currentTime / 1000);
+            const sqMarker = {
+                time: markerTime,
+                position: sq.side === 'short' ? 'belowBar' : 'aboveBar',
+                color: sq.side === 'short' ? '#00F0FF' : '#FF007F',
+                shape: sq.side === 'short' ? 'arrowUp' : 'arrowDown',
+                text: sq.side === 'short' ? '🔥SQ' : '🩸SQ',
+                fishType: 'whale', // Đè lên mọi filter để luôn hiển thị
+                size: 2
+            };
+            window.scChartMarkers.push(sqMarker);
+            if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
+            window._lastSqueezeMarkerTime = currentTime;
+        }
+    }
+
     if (typeof window.evaluateQuantVerdict === 'function') {
         window.evaluateQuantVerdict();
     }
 };
+
 // Kỹ thuật che URL gốc
 function _getWSA() { return String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109); }
 
@@ -2077,20 +2124,19 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     if (!window.quantWorker) {
         window.quantWorker = new Worker('public/js/quant-worker.js');
         
-        // Lắng nghe kết quả từ Worker trả về
-window.quantWorker.onmessage = function(e) {
-if (e.data.cmd === 'STATS_UPDATE') {
-// 1. DÙNG OBJECT.ASSIGN ĐỂ HỢP NHẤT (MERGE) DATA
-// Chống ghi đè làm mất dữ liệu Cá Voi/Cá Mập và dữ liệu Phái Sinh (Funding, Liq)
-Object.assign(window.quantStats, e.data.stats);
+       // Lắng nghe kết quả từ Worker trả về
+    window.quantWorker.onmessage = function(e) {
+        if (e.data.cmd === 'STATS_UPDATE') {
+            // 1. DÙNG OBJECT.ASSIGN ĐỂ HỢP NHẤT (MERGE) DATA
+            // Chống ghi đè làm mất dữ liệu Cá Voi/Cá Mập và dữ liệu Phái Sinh (Funding, Liq)
+            Object.assign(window.quantStats, e.data.stats);
 
-            // 2. ÉP NÃO BỘ AI PHÂN TÍCH VÀ ĐỔI CHỮ NGAY LẬP TỨC MỖI 250ms
-            if (typeof window.evaluateQuantVerdict === 'function') {
-                window.evaluateQuantVerdict();
-            }
+            // [ĐÃ XÓA] Phần 2: Đã loại bỏ việc gọi evaluateQuantVerdict() ở đây để giảm tải CPU.
+            // Việc phân tích và đổi chữ sẽ được gom lại chạy 1 lần duy nhất bên trong hàm updateCommandCenterUI().
         }
     };
-    }
+    } // (Dấu ngoặc này đóng cho khối lệnh bọc bên ngoài của bạn, cứ giữ nguyên nhé)
+    
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
 
@@ -2390,9 +2436,17 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
-                for (let p in orderMap) {
-                    let price = parseFloat(p); let valUSD = price * orderMap[p];
-                    if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk });
+                // [BƯỚC 8 - TỐI ƯU RAM] Đọc dữ liệu từ Map để vẽ Heatmap
+                if (orderMap instanceof Map) {
+                    for (let [p, vol] of orderMap) {
+                        let price = parseFloat(p); let valUSD = price * vol;
+                        if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk });
+                    }
+                } else {
+                    for (let p in orderMap) {
+                        let price = parseFloat(p); let valUSD = price * orderMap[p];
+                        if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk });
+                    }
                 }
                 return walls.sort((a, b) => b.v - a.v).slice(0, 5); 
             };
@@ -2578,9 +2632,21 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
         
         if (data.stream && data.stream.includes('@fulldepth') && data.data) {
             let currentSym = data.data.s || 'UNKNOWN';
-            if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) window.scLocalOrderBook = { sym: currentSym, asks: {}, bids: {} };
-            (data.data.a || []).forEach(item => { let p = item[0], q = parseFloat(item[1]); if (q === 0) delete window.scLocalOrderBook.asks[p]; else window.scLocalOrderBook.asks[p] = q; });
-            (data.data.b || []).forEach(item => { let p = item[0], q = parseFloat(item[1]); if (q === 0) delete window.scLocalOrderBook.bids[p]; else window.scLocalOrderBook.bids[p] = q; });
+            // [BƯỚC 8 - TỐI ƯU RAM] Khởi tạo bằng Map thay vì Object
+            if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
+                window.scLocalOrderBook = { sym: currentSym, asks: new Map(), bids: new Map() };
+            }
+            // Cập nhật sổ lệnh thần tốc với cơ chế của Map (.set, .delete)
+            (data.data.a || []).forEach(item => { 
+                let p = item[0], q = parseFloat(item[1]); 
+                if (q === 0) window.scLocalOrderBook.asks.delete(p); 
+                else window.scLocalOrderBook.asks.set(p, q); 
+            });
+            (data.data.b || []).forEach(item => { 
+                let p = item[0], q = parseFloat(item[1]); 
+                if (q === 0) window.scLocalOrderBook.bids.delete(p); 
+                else window.scLocalOrderBook.bids.set(p, q); 
+            });
         }
         
         if (data.stream.endsWith('@aggTrade') || data.stream.endsWith('@trade')) {
@@ -3007,6 +3073,12 @@ window.changeChartInterval = function(interval, btnEl) {
 };
 
 window.closeProChart = function() {
+    // ---- [THÊM MỚI] ĐOẠN NÀY LÀ ĐỂ FIX RÒ RỈ BỘ NHỚ ----
+    if (window.quantWorker) {
+        window.quantWorker.terminate();
+        window.quantWorker = null;
+    }
+
     if (typeof window.stopFuturesEngine === 'function') window.stopFuturesEngine();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
     const overlay = document.getElementById('super-chart-overlay');
@@ -3745,156 +3817,153 @@ window.renderProWatchlist = function(passedSearchTerm) {
 
     wlBody.innerHTML = html;
 };
+// =====================================================================
+// [TARGET-2] ZERO-LAG DOM CACHE SYSTEM (Nâng cấp hỗ trợ màu sắc CSS)
+// =====================================================================
+const _verdictCache = {
+    hft_html: null, hft_css: null,
+    mft_html: null, mft_css: null,
+    lft_html: null, lft_css: null
+};
+let _verdictRafPending = false;
+
+function scheduleVerdictRender(hft, mft, lft) {
+    // Chỉ render nếu HTML hoặc CSS có sự thay đổi
+    const hftChanged = hft && (hft.html !== _verdictCache.hft_html || hft.css !== _verdictCache.hft_css);
+    const mftChanged = mft && (mft.html !== _verdictCache.mft_html || mft.css !== _verdictCache.mft_css);
+    const lftChanged = lft && (lft.html !== _verdictCache.lft_html || lft.css !== _verdictCache.lft_css);
+
+    if (!hftChanged && !mftChanged && !lftChanged) return;
+    if (_verdictRafPending) return;
+    
+    _verdictRafPending = true;
+    requestAnimationFrame(() => {
+        _verdictRafPending = false;
+        
+        if (hftChanged && hft) {
+            const el = document.getElementById('verdict-hft');
+            if (el) { el.innerHTML = hft.html; el.style.cssText = hft.css; }
+            _verdictCache.hft_html = hft.html; _verdictCache.hft_css = hft.css;
+        }
+        if (mftChanged && mft) {
+            const el = document.getElementById('verdict-mft');
+            if (el) { el.innerHTML = mft.html; el.style.cssText = mft.css; }
+            _verdictCache.mft_html = mft.html; _verdictCache.mft_css = mft.css;
+        }
+        if (lftChanged && lft) {
+            const el = document.getElementById('verdict-lft');
+            if (el) { el.innerHTML = lft.html; el.style.cssText = lft.css; }
+            _verdictCache.lft_html = lft.html; _verdictCache.lft_css = lft.css;
+        }
+    });
+}
 
 // =====================================================================
 // 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
 // =====================================================================
-// Biến toàn cục để khóa tín hiệu HFT trong 5 giây
 window.hftLockTime = 0;
 window.hftLockedHtml = '';
 window.hftLockedCss = '';
 
-// =====================================================================
-// 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
-// =====================================================================
 window.evaluateQuantVerdict = function() {
-if (!window.quantStats) return;
-
-// Stateless DOM Updates: Zero-lag Rendering
-requestAnimationFrame(() => {
+    if (!window.quantStats) return;
     let q = window.quantStats;
 
-    // ========================================================
-    // 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1
-    // ========================================================
-    let hftEl = document.getElementById('verdict-hft');
-    if (hftEl) {
-        if (q.hftVerdict) {
-            let v = q.hftVerdict;
-            if (hftEl.innerHTML !== v.html) {
-                hftEl.innerHTML = v.html;
-                hftEl.style.cssText = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
-            }
-        } else {
-            hftEl.innerHTML = "⚡ ĐANG KHỞI ĐỘNG TICK...";
-            hftEl.style.cssText = "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;";
+    // --- 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1 ---
+    let hftObj = { 
+        html: "⚡ ĐANG KHỞI ĐỘNG TICK...", 
+        css: "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;" 
+    };
+    if (q.hftVerdict) {
+        let v = q.hftVerdict;
+        hftObj.html = v.html;
+        hftObj.css = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
+    }
+
+    // --- 2. MFT (MESO): DYNAMIC NORMALIZED MATRIX ---
+    // Đọc DOM 1 lần duy nhất ở ngoài (Chống layout thrashing)
+    let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
+    let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
+
+    let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
+    let liqLong = q.longLiq || 0;
+    let liqShort = q.shortLiq || 0;
+    let totalLiq = liqLong + liqShort;
+
+    let spotScore = 0;
+    if (cvd1hTag.includes('BULLISH')) spotScore += 0.5;
+    else if (cvd1hTag.includes('BEARISH')) spotScore -= 0.5;
+    
+    if (cvd4hTag.includes('BULLISH')) spotScore += 0.5;
+    else if (cvd4hTag.includes('BEARISH')) spotScore -= 0.5;
+
+    let futuresScore = 0;
+    let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0;
+    if (hasFutures) {
+        if (fFunding < -0.005) futuresScore += 0.5;
+        else if (fFunding > 0.005) futuresScore -= 0.5;
+        if (totalLiq > 5000) {
+            let liqRatio = liqShort / totalLiq;
+            if (liqRatio > 0.65) futuresScore += 0.5;
+            else if (liqRatio < 0.35) futuresScore -= 0.5;
         }
     }
 
-    // ========================================================
-    // 2. MFT (MESO): DYNAMIC NORMALIZED MATRIX [-1.0 đến +1.0]
-    // ========================================================
-    let mftEl = document.getElementById('verdict-mft');
-    if (mftEl) {
-        // A. Trích xuất Dữ liệu Futures
-        let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
-        let liqLong = q.longLiq || 0;
-        let liqShort = q.shortLiq || 0;
-        let totalLiq = liqLong + liqShort;
-        
-        // B. Trích xuất Dữ liệu Spot CVD
-        let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
-        let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
+    let finalMftScore = hasFutures ? (spotScore * 0.4) + (futuresScore * 0.6) : (spotScore * 1.0);
 
-        // C. Chấm điểm Spot CVD (Thang -1.0 đến 1.0)
-        let spotScore = 0;
-        if (cvd1hTag.includes('BULLISH')) spotScore += 0.5;
-        else if (cvd1hTag.includes('BEARISH')) spotScore -= 0.5;
-        
-        if (cvd4hTag.includes('BULLISH')) spotScore += 0.5;
-        else if (cvd4hTag.includes('BEARISH')) spotScore -= 0.5;
+    let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN';
+    let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
+    if (finalMftScore >= 0.6) {
+        mftMsg = hasFutures ? '🔥 SHORT SQUEEZE (STRONG BUY)' : '🔥 LỰC MUA CỰC MẠNH (STRONG BUY)';
+        mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)';
+    } else if (finalMftScore >= 0.25) {
+        mftMsg = '📈 ĐỘNG LƯỢNG TĂNG (BUY)';
+        mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)';
+    } else if (finalMftScore <= -0.6) {
+        mftMsg = hasFutures ? '🩸 LONG CASCADE (STRONG SELL)' : '🩸 LỰC XẢ CỰC MẠNH (STRONG SELL)';
+        mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)';
+    } else if (finalMftScore <= -0.25) {
+        mftMsg = '📉 ÁP LỰC GIẢM (SELL)';
+        mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)';
+    }
+    
+    let mftObj = {
+        html: mftMsg,
+        css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;`
+    };
 
-        // D. Chấm điểm Futures (Thang -1.0 đến 1.0) & Nhận diện Token
-        let futuresScore = 0;
-        let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0; // State Check cực kỳ quan trọng
-        
-        if (hasFutures) {
-            // Đánh giá Funding Rate (Âm -> Bullish Squeeze, Dương -> Bearish)
-            if (fFunding < -0.005) futuresScore += 0.5;
-            else if (fFunding > 0.005) futuresScore -= 0.5;
+    // --- 3. LFT (MACRO): NORMALIZED SCORING CHO SMART MONEY ---
+    let smBadge = document.getElementById('sm-verdict-badge');
+    let smTag = smBadge ? smBadge.innerText.toUpperCase() : '';
+    let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%';
+    let unlockPct = parseFloat(unlockStr) || 100;
 
-            // Đánh giá Liquidations (Rũ Short -> Squeeze Up, Rũ Long -> Cascade Down)
-            if (totalLiq > 5000) {
-                let liqRatio = liqShort / totalLiq;
-                if (liqRatio > 0.65) futuresScore += 0.5;
-                else if (liqRatio < 0.35) futuresScore -= 0.5;
-            }
-        }
+    let smScore = 0;
+    if (smTag.includes('CÁ MẬP GOM') || smTag.includes('BULLISH')) smScore = 1.0;
+    else if (smTag.includes('BOT KIỂM SOÁT') || smTag.includes('BEARISH') || smTag.includes('XẢ')) smScore = -1.0;
 
-        // E. Lõi Lượng Tử: TÍNH TỔNG ĐIỂM BẰNG MA TRẬN TRỌNG SỐ
-        let finalMftScore = 0;
-        if (hasFutures) {
-            // Token có Phái sinh: Phái sinh dẫn dắt (60%), Spot hỗ trợ (40%)
-            finalMftScore = (spotScore * 0.4) + (futuresScore * 0.6);
-        } else {
-            // Token Không Phái sinh (Spot-only): Trả 100% quyền lực về Spot CVD
-            finalMftScore = spotScore * 1.0; 
-        }
+    let tokenomicsScore = 0;
+    if (unlockPct < 30) tokenomicsScore = -1.0;
+    else if (unlockPct >= 50) tokenomicsScore = 0.5;
+    else if (unlockPct >= 80) tokenomicsScore = 1.0;
 
-        // F. Ánh xạ Điểm Số ra Giao diện UI
-        let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN';
-        let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
+    let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
 
-        if (finalMftScore >= 0.6) {
-            mftMsg = hasFutures ? '🔥 SHORT SQUEEZE (STRONG BUY)' : '🔥 LỰC MUA CỰC MẠNH (STRONG BUY)';
-            mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)';
-        } else if (finalMftScore >= 0.25) {
-            mftMsg = '📈 ĐỘNG LƯỢNG TĂNG (BUY)';
-            mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)';
-        } else if (finalMftScore <= -0.6) {
-            mftMsg = hasFutures ? '🩸 LONG CASCADE (STRONG SELL)' : '🩸 LỰC XẢ CỰC MẠNH (STRONG SELL)';
-            mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)';
-        } else if (finalMftScore <= -0.25) {
-            mftMsg = '📉 ÁP LỰC GIẢM (SELL)';
-            mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)';
-        }
-
-        // Chỉ render nếu có thay đổi
-        if (mftEl.innerText !== mftMsg) {
-            mftEl.innerHTML = mftMsg;
-            mftEl.style.cssText = `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;`;
-        }
+    let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ';
+    let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
+    if (finalLftScore >= 0.5) {
+        lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)';
+        lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)';
+    } else if (finalLftScore <= -0.5) {
+        lftMsg = '⚠️ RỦI RO PHÂN PHỐI (MACRO BEAR)';
+        lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)';
     }
 
-    // ========================================================
-    // 3. LFT (MACRO): NORMALIZED SCORING CHO SMART MONEY
-    // ========================================================
-    let lftEl = document.getElementById('verdict-lft');
-    if (lftEl) {
-        let smBadge = document.getElementById('sm-verdict-badge');
-        let smTag = smBadge ? smBadge.innerText.toUpperCase() : '';
-        let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%';
-        let unlockPct = parseFloat(unlockStr) || 100;
+    let lftObj = {
+        html: lftMsg,
+        css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;`
+    };
 
-        // Điểm Smart Money (-1.0 đến 1.0)
-        let smScore = 0;
-        if (smTag.includes('CÁ MẬP GOM') || smTag.includes('BULLISH')) smScore = 1.0;
-        else if (smTag.includes('BOT KIỂM SOÁT') || smTag.includes('BEARISH') || smTag.includes('XẢ')) smScore = -1.0;
-
-        // Điểm Tokenomics (-1.0 đến 1.0)
-        let tokenomicsScore = 0;
-        if (unlockPct < 30) tokenomicsScore = -1.0; // Rủi ro pha loãng cao
-        else if (unlockPct >= 50) tokenomicsScore = 0.5;
-        else if (unlockPct >= 80) tokenomicsScore = 1.0; // Khá an toàn
-
-        // Tích lũy vĩ mô: Smart Money cầm trịch 75%, Tokenomics 25%
-        let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
-
-        let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ';
-        let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
-
-        if (finalLftScore >= 0.5) {
-            lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)';
-            lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)';
-        } else if (finalLftScore <= -0.5) {
-            lftMsg = '⚠️ RỦI RO PHÂN PHỐI (MACRO BEAR)';
-            lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)';
-        }
-
-        if (lftEl.innerText !== lftMsg) {
-            lftEl.innerHTML = lftMsg;
-            lftEl.style.cssText = `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;`;
-        }
-    }
-});
+    // Truyền toàn bộ dữ liệu vào Rendering Engine
+    scheduleVerdictRender(hftObj, mftObj, lftObj);
 };
