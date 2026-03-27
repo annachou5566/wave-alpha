@@ -2761,7 +2761,7 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
         }
     };
             
-    chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 3000); } };
+    chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => connectRealtimeChart(window.currentChartToken), 30000); } };
 }
 
 
