@@ -2690,9 +2690,24 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
 
     window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
     // Bắn đạn sang cho Worker tính toán ngầm
+            // Bắn đạn sang cho Worker tính toán ngầm
             window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
 
-            // [HFT OPTIMIZED]: Cho phép cả khung 'tick' và '1s' chạy vào để cập nhật phụ trợ
+            // [NẶN NẾN 1S TỪ TICK]: Tính toán High/Low liên tục để nến có thân và râu chuẩn
+            if (window.currentChartInterval === '1s') {
+                if (!window.liveCandle1s || window.liveCandle1s.time !== timeSec) {
+                    // Nếu sang giây mới -> Khởi tạo nến mới
+                    window.liveCandle1s = { time: timeSec, open: p, high: p, low: p, close: p, vol: q };
+                } else {
+                    // Cập nhật đỉnh/đáy/đóng cửa trong cùng 1 giây
+                    window.liveCandle1s.high = Math.max(window.liveCandle1s.high, p);
+                    window.liveCandle1s.low = Math.min(window.liveCandle1s.low, p);
+                    window.liveCandle1s.close = p;
+                    window.liveCandle1s.vol += q; // Tích lũy volume
+                }
+            }
+
+            // [CHỐNG SẬP CPU FINAL BOSS] Throttling giới hạn Render Canvas tối đa 6 FPS (150ms/lần)
             if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
                 if (nowT - (window.lastChartRender || 0) > 150) {
                     window.lastChartRender = nowT;
@@ -2700,16 +2715,18 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                     let isTrad = window.currentTheme === 'trad';
                     let volColor = isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
-                    // 1. Cả Tick và 1s đều cần Heatmap nhảy liên tục
                     if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
 
-                    // 2. CHỈ vẽ đường Line nếu đang ở khung TICK
+                    // Khung TICK thì vẽ đường Line
                     if (window.currentChartInterval === 'tick' && tvLineSeries) {
                         tvLineSeries.update({ time: timeSec, value: p });
+                        if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: volColor });
                     } 
-                    
-                    // 3. Cập nhật Volume Realtime cho cả 2 khung
-                    if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: q, color: volColor });
+                    // Khung 1S thì vẽ nến Candlestick bằng bộ nặn nến chuẩn
+                    else if (window.currentChartInterval === '1s' && tvCandleSeries && window.liveCandle1s) {
+                        tvCandleSeries.update(window.liveCandle1s);
+                        if (tvVolumeSeries) tvVolumeSeries.update({ time: timeSec, value: window.liveCandle1s.vol, color: volColor });
+                    }
                 }
             }
 
