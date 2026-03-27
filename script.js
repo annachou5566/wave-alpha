@@ -6603,7 +6603,7 @@ setInterval(() => {
     if (sonar && window.FULL_MARKET_DATA && Object.keys(window.FULL_MARKET_DATA).length > 0) {
         sonar.updateData(window.FULL_MARKET_DATA);
     }
-}, 3000);
+}, 10000);
 
 document.addEventListener('DOMContentLoaded', startRealtimeSync);
 
