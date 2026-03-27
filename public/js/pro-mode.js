@@ -2506,6 +2506,8 @@ let timeSec = Math.floor(Date.now() / 1000);
         if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
         
+        // [CHỈ GỌI HÀM PHÂN TÍCH AI DUY NHẤT 1 LẦN Ở ĐÂY - CHỐNG TỐN CPU]
+        if (typeof window.evaluateQuantVerdict === 'function') window.evaluateQuantVerdict();
     }, 1000);
 // ==========================================
     // 3. CỖ MÁY XẢ BĂNG ĐẠN SMART TAPE (TỐC ĐỘ CAO 150ms)
