@@ -353,7 +353,29 @@ self.onmessage = function(e) {
 
         let totalEMA = state.emaTakerBuy + state.emaTakerSell;
         state.buyDominance = totalEMA > 0 ? (state.emaTakerBuy / totalEMA) * 100 : 50;
-        state.algoLimit = Math.max(20, Math.round(state.emaSpeed60s * 0.4));
+
+        // =======================================================
+        // [DYNAMIC EMA CLAMP] TÍNH TOÁN ALGO LIMIT CHỐNG TRƯỢT GIÁ (SLIPPAGE)
+        // =======================================================
+        // 1. Tính toán Trung bình thực tế (Biến ẩn emaTickVol)
+        if (!state.emaTickVol) { 
+            state.emaTickVol = vUSD; // Khởi tạo mốc trung bình thực tế bằng lệnh đầu tiên
+        } else {
+            // Tự động tạo Trần/Sàn dựa trên trung bình thực (Gấp 5 lần và chia 5 lần)
+            let upperBound = state.emaTickVol * 5; 
+            let lowerBound = Math.max(10, state.emaTickVol / 5); 
+
+            // Cắt gọt lệnh (Chặn Cá Voi và Rác)
+            let clampedVol = Math.min(Math.max(vUSD, lowerBound), upperBound);
+
+            // Tính Trung bình động lũy thừa (EMA) thực tế
+            state.emaTickVol = (clampedVol * 0.02) + (state.emaTickVol * 0.98);
+        }
+
+        // 2. Chốt số Algo Limit an toàn cho User Swap (Hệ số 80%)
+        // Ví dụ: Market Maker đang đi lệnh 1000$ -> Giao diện sẽ báo Algo Limit là 800$ để User đi lệnh không bị quét trượt giá.
+        state.algoLimit = Math.max(20, Math.round(state.emaTickVol * 0.8));
+        // =======================================================
 
         state.emaPriceFast = state.emaPriceFast === 0 ? p : state.emaPriceFast * (1 - ALPHA_3S) + p * ALPHA_3S;
         state.emaPriceSlow = state.emaPriceSlow === 0 ? p : state.emaPriceSlow * (1 - ALPHA_60S) + p * ALPHA_60S;
