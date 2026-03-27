@@ -1403,5 +1403,52 @@
             </div>
         </div>
     </div>
+                        <style>
+    @keyframes run-marquee {
+        0% { transform: translateX(100vw); }
+        100% { transform: translateX(-100%); }
+    }
+    .animate-marquee {
+        /* Chạy 15 giây/vòng, số 2 ở cuối nghĩa là lặp đúng 2 lần */
+        animation: run-marquee 15s linear 2; 
+    }
+    #system-notice-marquee {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(240, 185, 11, 0.95);
+        color: #000;
+        font-size: 13px;
+        font-weight: 800;
+        z-index: 999999;
+        overflow: hidden;
+        padding: 6px 0;
+        pointer-events: none; /* User vẫn click xuyên qua được, không bị vướng */
+    }
+</style>
+
+<div id="system-notice-marquee">
+    <div id="marquee-text" style="white-space: nowrap; transform: translateX(100vw);">
+        ⚠️ Dữ liệu lịch sử và dự đoán volume đang được nâng cấp. Hệ thống Real-time (Live Chart) vẫn hoạt động bình thường!
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const marqueeContainer = document.getElementById('system-notice-marquee');
+        const marqueeText = document.getElementById('marquee-text');
+        
+        if (marqueeContainer && marqueeText) {
+            // Kích hoạt animation chạy
+            marqueeText.classList.add('animate-marquee');
+            
+            // Lắng nghe: Khi animation chạy xong 2 vòng, tự động xóa luôn thẻ HTML cho nhẹ máy
+            marqueeText.addEventListener('animationend', () => {
+                marqueeContainer.remove();
+            });
+        }
+    });
+</script>
 </body>
 </html>
