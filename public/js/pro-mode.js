@@ -3213,7 +3213,7 @@ function injectSmartMoneyTab() {
 
             <div class="term-widget" style="border-left: 2px solid #3B82F6; margin-top: 4px;">
                 <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span>🏦 DÒNG TIỀN BINANCE CEX</span>
+                    <span>🏦 DÒNG TIỀN BINANCE DEX</span>
                     <span id="sm-bn-traders" style="color:#00F0FF; font-size: 8.5px; font-family:var(--font-num); font-weight:700;">-- Traders | -- KYC</span>
                 </div>
                 <div class="term-row"><span class="term-lbl">Net Flow (4H)</span><span id="sm-bn-netflow-4h" class="term-val">$--</span></div>
