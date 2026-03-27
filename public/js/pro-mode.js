@@ -2342,9 +2342,12 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     ];
     window.scActivePriceLines = []; 
     
+    // [FIX LỖI NHẢY CHART] Kiểm tra để không đăng ký trùng lặp nếu khung chart đang chọn đã nằm trong danh sách mặc định ở trên
     if (window.currentChartInterval !== 'tick') {
-        if (contract) params.push(`came@${contract}@${chainId}@kline_${window.currentChartInterval}`);
-        else params.push(`${streamPrefix}@kline_${window.currentChartInterval}`);
+        let targetKline = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
+        if (!params.includes(targetKline)) {
+            params.push(targetKline);
+        }
     }
 
    // ==========================================
@@ -2576,36 +2579,55 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
             let k = data.data.k; 
-            // --- BỔ SUNG LÕI QUANT: TÍNH CANDLE VOLUME REALTIME TỪ KLINE ---
-            // Lọc các khung giờ ta cần đo
+            
+            // --- CẬP NHẬT WIDGET DATA FLOW BÊN PHẢI ---
             if (['1m', '5m', '15m', '1h'].includes(k.i)) {
                 let totalQuote = parseFloat(k.q); // Tổng Volume (USD)
                 let openPrice = parseFloat(k.o);  // Giá mở cửa
                 let closePrice = parseFloat(k.c); // Giá đóng cửa
-                
-                // Xác định nến Tăng (Xanh) hay Giảm (Đỏ)
                 let isUpCandle = closePrice >= openPrice;
                 
                 let nfEl = document.getElementById(`cc-cex-nf-${k.i}`);
                 if (nfEl) {
                     let color = isUpCandle ? 'var(--term-up)' : 'var(--term-down)';
                     let icon = isUpCandle ? '▲' : '▼';
-                    // Hiển thị Tổng Volume kèm icon hướng nến
                     nfEl.innerHTML = `<span style="color:${color}">${icon} $${formatCompactUSD(totalQuote)}</span>`;
                 }
             }
-            // FIX LỖI 2: Chặn nến bóng ma (không vẽ nếu khoảng thời gian nến k.i khác với khung đang chọn)
-            if (k && k.i && k.i !== window.currentChartInterval) return;
-            // Chặn luôn nếu đang ở chế độ TICK (vì TICK dùng area chart aggTrade chứ ko dùng nến)
+
+            // --- BẮT BỆNH VÀ CẬP NHẬT BIỂU ĐỒ CHART CHÍNH ---
+            if (k && k.i && k.i !== window.currentChartInterval) return; // Chặn nếu khác khung
             if (window.currentChartInterval === 'tick') return;
 
-            let rawTime = k.ot !== undefined ? k.ot : k.t; 
+            let rawTime = k.t; // Dùng k.t (Thời gian mở nến chuẩn của Binance)
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
-                if (tvCandleSeries) tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
-                if (tvVolumeSeries) tvVolumeSeries.update({ time: candleTime, value: parseFloat(k.v), color: isUpCandle ? 'rgba(42, 245, 146, 0.5)' : 'rgba(203, 85, 227, 0.5)' });
-                if (window.currentChartInterval !== 'tick' && window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
+                
+                // Đồng bộ Theme Màu Sắc
+                let isTrad = window.currentTheme === 'trad';
+                let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
+
+                if (tvCandleSeries) {
+                    tvCandleSeries.update({ 
+                        time: candleTime, 
+                        open: parseFloat(k.o), high: parseFloat(k.h), 
+                        low: parseFloat(k.l), close: parseFloat(k.c) 
+                    });
+                }
+                
+                if (tvVolumeSeries) {
+                    // [SỬA LỖI TẠI ĐÂY]: Dùng k.q (Quote Volume USD) thay cho k.v
+                    tvVolumeSeries.update({ 
+                        time: candleTime, 
+                        value: parseFloat(k.q), 
+                        color: volColor 
+                    });
+                }
+                
+                if (window.tvHeatmapLayer) {
+                    window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
+                }
             }
         }
         
