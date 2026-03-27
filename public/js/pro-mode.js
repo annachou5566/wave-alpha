@@ -2080,16 +2080,11 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         // Lắng nghe kết quả từ Worker trả về
 window.quantWorker.onmessage = function(e) {
 if (e.data.cmd === 'STATS_UPDATE') {
-// 1. DÙNG OBJECT.ASSIGN ĐỂ HỢP NHẤT (MERGE) DATA
-// Chống ghi đè làm mất dữ liệu Cá Voi/Cá Mập và dữ liệu Phái Sinh (Funding, Liq)
 Object.assign(window.quantStats, e.data.stats);
-
-            // 2. ÉP NÃO BỘ AI PHÂN TÍCH VÀ ĐỔI CHỮ NGAY LẬP TỨC MỖI 250ms
-            if (typeof window.evaluateQuantVerdict === 'function') {
-                window.evaluateQuantVerdict();
-            }
-        }
-    };
+// [P2 FIX] Đã XÓA lệnh gọi evaluateQuantVerdict ở đây để tránh gọi 2 lần/250ms.
+// Hàm này sẽ tự động được gọi 1 lần duy nhất bên trong vòng lặp cập nhật UI.
+}
+};
     }
     // Gửi lệnh Clear Data cũ cho Worker
     window.quantWorker.postMessage({ cmd: 'INIT' });
@@ -2328,17 +2323,44 @@ let timeSec = Math.floor(Date.now() / 1000);
         let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
 
         if (canDraw) {
-// Ưu tiên 1: Stop-Hunt và Exhausted
-if (flags.stopHunt) {
-window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' });
-if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-}
-else if (flags.exhausted) {
-let markerText = flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED';
-let markerColor = flags.wallHit ? '#F0B90B' : '#848e9c';
-window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
-if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
-}
+        // ==========================================
+        // [T3 FIX] TÍNH TOÁN VÙNG SQUEEZE TRỰC TIẾP
+        // ==========================================
+        let liqLong = window.quantStats.longLiq || 0;
+        let liqShort = window.quantStats.shortLiq || 0;
+        let isSqueeze = false;
+
+        // SHORT SQUEEZE: Diệt Short (Cháy Short > 5k$ + Lực mua bùng nổ)
+        if (liqShort > 5000 && flags.stopHunt) {
+            window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🔥 SHORT SQUEEZE' });
+            isSqueeze = true;
+            // Reset thanh lý để không báo trùng
+            window.quantStats.shortLiq = 0; 
+        } 
+        // LONG SQUEEZE: Rũ Long (Cháy Long > 5k$ + Cạn kiệt lực đỡ)
+        else if (liqLong > 5000 && flags.exhausted) {
+            window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#FF007F', shape: 'arrowDown', text: '🩸 LONG SQUEEZE' });
+            isSqueeze = true;
+            window.quantStats.longLiq = 0;
+        }
+        
+        if (isSqueeze && window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+
+        // ==========================================
+        // NẾU KHÔNG CÓ SQUEEZE -> CHẠY CÁC CỜ BÌNH THƯỜNG
+        // ==========================================
+        if (!isSqueeze) {
+            // Ưu tiên 1: Stop-Hunt và Exhausted
+            if (flags.stopHunt) {
+                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
+            else if (flags.exhausted) {
+                let markerText = flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED';
+                let markerColor = flags.wallHit ? '#F0B90B' : '#848e9c';
+                window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: markerColor, shape: 'arrowUp', text: markerText });
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
 
             // Ưu tiên 2: Iceberg (Bắt đúng Tường Xanh / Tường Đỏ)
             else if (flags.bullishIceberg || flags.icebergAbsorption) {
@@ -2350,7 +2372,7 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
             
-            // Ưu tiên 3: Spoofing (Đã tách Tường Mua Ảo và Tường Bán Ảo)
+            // Ưu tiên 3: Spoofing (Tường Mua Ảo / Tường Bán Ảo)
             else if (flags.spoofingBuyWall) {
                 window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
@@ -2359,13 +2381,12 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                 window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
-            else if (flags.spoofingDetected) { // Fallback chống sập nếu Worker cũ chưa load
+            else if (flags.spoofingDetected) { // Fallback
                 window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ SPOOFING WALL' });
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
-        }
+        } 
     }
-    // ========================================================
 
         // --- CẬP NHẬT UI ALGO LIMIT (Dữ liệu toán học đã được Worker tính ngầm) ---
         let algoEl = document.getElementById('sc-algo-limit');
@@ -3007,6 +3028,11 @@ window.changeChartInterval = function(interval, btnEl) {
 };
 
 window.closeProChart = function() {
+// [P1 FIX] Giết Worker cũ để giải phóng 100% RAM và CPU
+if (window.quantWorker) {
+window.quantWorker.terminate();
+window.quantWorker = null;
+}
     if (typeof window.stopFuturesEngine === 'function') window.stopFuturesEngine();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
     const overlay = document.getElementById('super-chart-overlay');
@@ -3757,6 +3783,10 @@ window.hftLockedCss = '';
 // =====================================================================
 // 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
 // =====================================================================
+// [T2 FIX] BỘ ĐỆM CACHE CHỐNG GIẬT LAG UI (ZERO-REFLOW)
+const _verdictCache = { hft_html: null, hft_color: null, hft_bg: null };
+let _verdictRafPending = false;
+
 window.evaluateQuantVerdict = function() {
 if (!window.quantStats) return;
 
@@ -3765,21 +3795,39 @@ requestAnimationFrame(() => {
     let q = window.quantStats;
 
     // ========================================================
-    // 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1
-    // ========================================================
-    let hftEl = document.getElementById('verdict-hft');
-    if (hftEl) {
-        if (q.hftVerdict) {
-            let v = q.hftVerdict;
-            if (hftEl.innerHTML !== v.html) {
-                hftEl.innerHTML = v.html;
-                hftEl.style.cssText = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
+// [T2 FIX] HFT (MICRO): DOM RENDERING VỚI CACHE & RAF (ZERO-LAG)
+// ========================================================
+let newHtml = q.hftVerdict ? q.hftVerdict.html : "⚡ ĐANG KHỞI ĐỘNG TICK...";
+let newBg = q.hftVerdict ? q.hftVerdict.bg : "rgba(0, 240, 255, 0.1)";
+let newColor = q.hftVerdict ? q.hftVerdict.color : "#00F0FF";
+
+// Chỉ khi nào chữ, màu chữ hoặc màu nền thực sự đổi thì mới kích hoạt vẽ lại
+let isChanged = (newHtml !== _verdictCache.hft_html || newColor !== _verdictCache.hft_color || newBg !== _verdictCache.hft_bg);
+
+if (isChanged && !_verdictRafPending) {
+    _verdictRafPending = true;
+    
+    // Gom toàn bộ thao tác vẽ DOM vào chung 1 Frame của Card màn hình (GPU)
+    requestAnimationFrame(() => {
+        let hftEl = document.getElementById('verdict-hft');
+        if (hftEl) {
+            hftEl.innerHTML = newHtml;
+            
+            // Giữ nguyên chuẩn format CSS mà bạn đã thiết kế
+            if (q.hftVerdict) {
+                hftEl.style.cssText = `font-size: 9.5px; background: ${newBg}; padding: 3px 6px; border-radius: 3px; color: ${newColor}; border: 1px solid ${newColor}; white-space: nowrap;`;
+            } else {
+                hftEl.style.cssText = "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;";
             }
-        } else {
-            hftEl.innerHTML = "⚡ ĐANG KHỞI ĐỘNG TICK...";
-            hftEl.style.cssText = "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;";
         }
-    }
+        
+        // Lưu lại kết quả vào não bộ Cache để tick sau đem ra so sánh
+        _verdictCache.hft_html = newHtml;
+        _verdictCache.hft_color = newColor;
+        _verdictCache.hft_bg = newBg;
+        _verdictRafPending = false;
+    });
+}
 
     // ========================================================
     // 2. MFT (MESO): DYNAMIC NORMALIZED MATRIX [-1.0 đến +1.0]
