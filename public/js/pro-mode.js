@@ -2579,10 +2579,14 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
             let k = data.data.k; 
+            if (!k) return; // An toàn: Chặn lỗi nếu cục data bị rỗng
             
             // --- CẬP NHẬT WIDGET DATA FLOW BÊN PHẢI ---
             if (['1m', '5m', '15m', '1h'].includes(k.i)) {
-                let totalQuote = parseFloat(k.q); // Tổng Volume (USD)
+                // [FIX LỖI $NaN TẠI ĐÂY]: Ưu tiên k.q (Binance), nếu không có thì lấy k.v (DEX)
+                let totalQuote = parseFloat(k.q !== undefined ? k.q : (k.v || 0)); 
+                if (isNaN(totalQuote)) totalQuote = 0; // Chặn đứng chữ NaN
+                
                 let openPrice = parseFloat(k.o);  // Giá mở cửa
                 let closePrice = parseFloat(k.c); // Giá đóng cửa
                 let isUpCandle = closePrice >= openPrice;
@@ -2596,7 +2600,7 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
 
             // --- BẮT BỆNH VÀ CẬP NHẬT BIỂU ĐỒ CHART CHÍNH ---
-            if (k && k.i && k.i !== window.currentChartInterval) return; // Chặn nếu khác khung
+            if (k.i !== window.currentChartInterval) return; // Chặn nếu khác khung
             if (window.currentChartInterval === 'tick') return;
 
             let rawTime = k.t; // Dùng k.t (Thời gian mở nến chuẩn của Binance)
@@ -2617,10 +2621,13 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                 }
                 
                 if (tvVolumeSeries) {
-                    // [SỬA LỖI TẠI ĐÂY]: Dùng k.q (Quote Volume USD) thay cho k.v
+                    // [FIX LỖI $NaN CHO BIỂU ĐỒ CHART]: Chống sập biểu đồ khi Volume bị lỗi
+                    let volValue = parseFloat(k.q !== undefined ? k.q : (k.v || 0));
+                    if (isNaN(volValue)) volValue = 0;
+                    
                     tvVolumeSeries.update({ 
                         time: candleTime, 
-                        value: parseFloat(k.q), 
+                        value: volValue, 
                         color: volColor 
                     });
                 }
