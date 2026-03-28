@@ -102,20 +102,27 @@ Trả về sổ lệnh hiển thị (UI Orders). `levels` = 5, 10, 20. `interval
 **8. Full Depth (`<symbol>@fulldepth@<interval>`)**
 Trả về TOÀN BỘ độ sâu sổ lệnh (Bao gồm API bot orders). Rất nặng, dùng để soi "Tường cản giá" (Bid/Ask Walls).
 
+
 ### NHÓM 4.4. KLINES (Nến Lịch sử Thời gian thực)
 
-**9. CEX Limit Klines (`<symbol>@kline_<interval>`)**
-Interval: `1m`, `5m`, `15m`, `1h`, `1d`...
-* `k.c`, `k.o`, `k.h`, `k.l`: Close, Open, High, Low
-* `k.v`: Volume (Base Asset - Số lượng Token)
-* `k.q`: Quote Asset Volume (Khối lượng tính bằng USD).
-* `k.V`: Taker Buy Base Asset Volume (Lượng Mua Chủ Động - Bằng Token).
-* **`k.Q`: Taker Buy Quote Asset Volume (Lượng Mua Chủ Động - TÍNH BẰNG USD). -> BIẾN SỐ SÁT THỦ ĐỂ ĐO ĐỘ FOMO MUA.**
-* `k.x`: Is Kline Complete? (`true` khi đóng nến).
+**9. Standard Symbol Klines (`<symbol>@kline_<interval>`)**
+Luồng nến tiêu chuẩn dựa trên cặp giao dịch.
+* **Interval hỗ trợ:** `1m`, `3m`, `5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `6h`, `8h`, `12h`, `1d`, `3d`, `1w`, `1M`.
+* **Schema chi tiết:**
+  * `k.c`, `k.o`, `k.h`, `k.l`: Close, Open, High, Low
+  * `k.v`: Volume (Base Asset - Số lượng Token)
+  * `k.q`: Quote Asset Volume (Khối lượng tính bằng USD).
+  * `k.V`: Taker Buy Base Asset Volume (Lượng Mua Chủ Động - Bằng Token).
+  * **`k.Q`: Taker Buy Quote Asset Volume (Lượng Mua Chủ Động - TÍNH BẰNG USD). -> BIẾN SỐ SÁT THỦ ĐỂ ĐO ĐỘ FOMO MUA.**
+  * `k.x`: Is Kline Complete? (`true` khi đóng nến).
 
-**10. DEX On-chain Klines (`came@<ContractAddress>@<ChainID>@kline_<interval>`)**
-Dùng để vẽ nến riêng biệt cho khối lượng quét ngoài Blockchain.
-* Schema `k` rút gọn: `c`, `h`, `l`, `o`, `v` (Volume), `ct` (Close Time), `ot` (Open Time).
+**10. Web3 Contract Klines (`came@<ContractAddress>@<ChainID>@kline_<interval>`)**
+Luồng nến theo dõi thông qua địa chỉ Smart Contract và Chain ID (Định dạng Web3).
+* **Interval hỗ trợ:** `1s`, `1m`, `5m`, `15m`, `1h`, `4h`, `1d`. (Lưu ý: Hỗ trợ nến siêu ngắn `1s` nhưng tối đa chỉ đến `1d`).
+* **Schema `k` rút gọn:** * `c`, `h`, `l`, `o`: Close, High, Low, Open
+  * `v`: Volume (Số lượng token)
+  * `ot`: Open Time
+  * `ct`: Close Time
 
 ---
 
