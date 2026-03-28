@@ -3903,7 +3903,8 @@ function encodeFlagsBitmask(flags) {
            (flags.wallHit              ? 256  : 0) |
            (flags.washTrading          ? 512  : 0) |
            (flags.zoneAbsorptionBottom ? 1024 : 0) |
-           (flags.zoneDistributionTop  ? 2048 : 0);
+           (flags.zoneDistributionTop  ? 2048 : 0) |
+           (flags.spotTop              ? 4096 : 0); // [V12] Hỗ trợ cờ Spot Top
 }
 
 function scheduleVerdictRender(hft, mft, lft, flags) {
@@ -3952,10 +3953,30 @@ window.hftLockedCss = '';
 window.evaluateQuantVerdict = function() {
     if (!window.quantStats) return;
     let q = window.quantStats;
+    let flags = q.flags || {};
+
+    // --- [V12 FRAMEWORK HỢP LƯU] ĐỊNH TUYẾN LẠI TÍN HIỆU HFT (SUPPRESSION RULES) ---
+    if (q.hftVerdict) {
+        let wBuy = q.whaleBuyVol || 0;
+        let wSell = q.whaleSellVol || 0;
+        let ofi = q.ofi || 0;
+        let trend = q.trend || 0;
+
+        // LỚP 1: GIẤU TÍN HIỆU BÁN -> ĐỔI THÀNH MM MARKUP (Đẩy Giá)
+        if ((flags.spoofingSellWall || flags.bearishIceberg) && ofi > 0.2 && wBuy > wSell && trend > 0) {
+            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[⚡ ĐẨY]</b> 🚀 MM MARKUP (NAM CHÂM HÚT GIÁ)`;
+            q.hftVerdict.color = '#00F0FF'; q.hftVerdict.bg = 'rgba(0, 240, 255, 0.15)';
+        }
+        // LỚP 2: GIẤU TÍN HIỆU MUA -> ĐỔI THÀNH MM MARKDOWN (Xả Hàng)
+        else if (flags.spoofingBuyWall && ofi < -0.2 && wSell > wBuy && trend < 0) {
+            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[🩸 XẢ]</b> 🩸 MM MARKDOWN (TƯỜNG ĐỠ ẢO)`;
+            q.hftVerdict.color = '#FF007F'; q.hftVerdict.bg = 'rgba(255, 0, 127, 0.15)';
+        }
+    }
 
     // --- 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1 ---
     let hftObj = { 
-        html: "⚡ ĐANG KHỞI ĐỘNG TICK...", 
+        html: "⚡ ĐANG KHỞI ĐỘNG TICK...",
         css: "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;" 
     };
     if (q.hftVerdict) {
