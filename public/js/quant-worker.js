@@ -65,10 +65,11 @@ let state = {
         spoofingBuyWall: 0,  
         spoofingSellWall: 0, 
         iceberg: 0,
-        bearishIceberg: 0, 
+       bearishIceberg: 0, 
         bullishIceberg: 0, 
         exhausted: 0,
-        stopHunt: 0
+        stopHunt: 0,
+        spotTop: 0 
     }
 };
 
@@ -83,7 +84,7 @@ function initEngine() {
     state.liquidityVacuum = false;
     state.hftVerdict = null;
     state._hadTickThisInterval = false;
-    state.lockUntil = { flashDump: 0, marketPump: 0, spoofingBuyWall: 0, spoofingSellWall: 0, iceberg: 0, bearishIceberg: 0, bullishIceberg: 0, exhausted: 0, stopHunt: 0 };
+    state.lockUntil = { flashDump: 0, marketPump: 0, spoofingBuyWall: 0, spoofingSellWall: 0, iceberg: 0, bearishIceberg: 0, bullishIceberg: 0, exhausted: 0, stopHunt: 0, spotTop: 0 };
     
     for(let i=0; i<K_LEVELS; i++) {
         prevBidP[i] = 0; prevBidQ[i] = 0;
@@ -149,13 +150,13 @@ function evaluateStoryteller(now) {
 
     let signal = { text: '', color: '', bgColor: '' };
 
-    // =======================================================
     // 1. TÍN HIỆU ƯU TIÊN TỐI CAO: MICRO-STRUCTURE (Iceberg/Spoofing)
     let isVolumeSpike = Math.abs(z) > 2.0;
     
-    // [V9 FIX] Normalize accel theo price để scale đúng cho mọi coin (BTC hay Meme)
+    // [V9 FIX] Normalize accel theo price
     const accelNorm = state.midPrice > 0 ? Math.abs(accel) / state.midPrice : Math.abs(accel);
-    let isPriceStalled = accelNorm < 5e-7;
+    // [V12 LỖ HỔNG #2] Guard bằng isVolumeSpike để chống nhiễu accelNorm trên Meme coin
+    let isPriceStalled = isVolumeSpike && (accelNorm < 5e-7);
 
     if (isVolumeSpike && isPriceStalled && now > state.lockUntil.iceberg) {
         state.lockUntil.iceberg = now + LOCK_DUR;
@@ -176,9 +177,17 @@ function evaluateStoryteller(now) {
         state.lockUntil.spoofingBuyWall = now + LOCK_DUR;
         signal = { text: '⚠️ TƯỜNG MUA ẢO', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
     }
-    else if (activeOFI < -0.6 && isPriceStalled && now > state.lockUntil.spoofingSellWall) {
+   else if (activeOFI < -0.6 && isPriceStalled && now > state.lockUntil.spoofingSellWall) {
         state.lockUntil.spoofingSellWall = now + LOCK_DUR;
         signal = { text: '⚠️ TƯỜNG BÁN ẢO', color: '#F0B90B', bgColor: 'rgba(240, 185, 11, 0.15)' };
+    }
+    
+    // [V12 LỖ HỔNG #3] Bắt đỉnh Spot (Tường mua ảo để Xả ngầm)
+    let isSpoofingBuy = activeOFI > 0.6 && isPriceStalled;
+    let isWhaleDumping = state.emaTakerSell > (state.emaTakerBuy * 1.5);
+    if (z > 3.0 && isSpoofingBuy && isWhaleDumping && now > state.lockUntil.spotTop) {
+        state.lockUntil.spotTop = now + 10000; // Cooldown 10s
+        signal = { text: '🩸 ĐỈNH CỤC BỘ (XẢ NGẦM)', color: '#FF007F', bgColor: 'rgba(255, 0, 127, 0.15)' };
     }
 
     // =======================================================
@@ -321,15 +330,15 @@ self.onmessage = function(e) {
                 if (p < scanLimitP) break; 
                 
                 let usdValue = p * q;
-                let wallThreshold = Math.max(10000, state.algoLimit * 15);
+                // [V12 LỖ HỔNG #1] Scale threshold động theo đặc thù token (Floor $500 cho Meme)
+                let wallThreshold = Math.max(500, state.emaTickVol * 5);
                 if (usdValue >= wallThreshold) {
                     hasWall = true;
                     break;
                 }
             }
-            if (!state.liquidityVacuum) {
-                state.liquidityVacuum = !hasWall;
-            }
+            // Chỉ cập nhật trạng thái vacuum dựa trên wall hiện tại (Bỏ hàm if thừa)
+            state.liquidityVacuum = !hasWall;
         }
     }
     else if (msg.cmd === 'BOOK_TICKER' || msg.cmd === 'BOOKTICKER') {
@@ -476,7 +485,8 @@ setInterval(() => {
         washTrading: false,
         exhausted: now <= state.lockUntil.exhausted,
         stopHunt: now <= state.lockUntil.stopHunt,
-        wallHit: !state.liquidityVacuum
+        wallHit: !state.liquidityVacuum,
+        spotTop: now <= state.lockUntil.spotTop // [V12 LỖ HỔNG #3] Xuất cờ Spot Top
     };
 
     // --- REPLACE ---
