@@ -35,7 +35,15 @@ let state = {
     emaMid: 0, // [NEW V9] EMA-smoothed mid price lọc nhiễu
     emaAccel: 0,
     spread: 0, emaSpread: 0, varSpread: 0,
+    // --- REPLACE ---
     liquidityVacuum: false, 
+    
+    // [V12 T3 & T4] Advanced Math State
+    hawkesLiqLong: 0, hawkesLiqShort: 0, // Hawkes Process Intensity
+    vpinBucketVol: 0, vpinToxVol: 0, vpin: 0, // VPIN 2.0 Toxicity
+    obiDecay: 0, // OBI Decay
+    kalmanGain: 0.2, // 1D Kalman Filter Constant
+    _emaTickVolInit: false, // QEM Init Flag
     
     // Cont-Stoikov Variables
     ofiMean: 0, ofiVar: 0, rawOFI: 0, multiLevelOFI: 0,
@@ -267,9 +275,21 @@ self.onmessage = function(e) {
     const msg = e.data;
     const now = Date.now();
 
+    // --- REPLACE ---
     if (msg.cmd === 'INIT') {
         initEngine();
     } 
+    else if (msg.cmd === 'LIQ_EVENT') {
+        // [V12 T3] Nhận sự kiện Force Order, kích thích Hawkes Intensity
+        const vUSD = Number(msg.data.v);
+        const HAWKES_JUMP = 0.1;
+        const LIQ_SCALE = 20000; // Chuẩn hóa từ PDF
+        const jump = (vUSD / LIQ_SCALE) * HAWKES_JUMP;
+        
+        if (msg.data.dir === 'SELL') state.hawkesLiqLong += jump; 
+        else state.hawkesLiqShort += jump;
+        return;
+    }
     else if (msg.cmd === 'DEPTH' || msg.cmd === 'FULLDEPTH' || msg.type === 'depthUpdate') {
         const bids = msg.data.bids;
         const asks = msg.data.asks;
@@ -338,10 +358,13 @@ self.onmessage = function(e) {
         const _snapPrevMid = state.prevMid;
         const _snapPrevPrevMid = state.prevPrevMid;
 
+        // --- REPLACE ---
         const _prevM = _snapPrevMid || smoothMid;
         const _prevPM = _snapPrevPrevMid || smoothMid;
         
-        state.accel = smoothMid - 2 * _prevM + _prevPM;
+        let rawAccel = smoothMid - 2 * _prevM + _prevPM;
+        // [V12 T4] 1D Kalman Filter lọc nhiễu gia tốc (O(1))
+        state.accel = state.accel + state.kalmanGain * (rawAccel - state.accel);
         
         // Cập nhật state dựa trên snapshot
         state.prevPrevMid = _snapPrevMid === 0 ? smoothMid : _snapPrevMid;
@@ -355,8 +378,13 @@ self.onmessage = function(e) {
         if (a < prevAskP[0]) e_ask = A;
         else if (a === prevAskP[0]) e_ask = A - prevAskQ[0];
         
+        // --- REPLACE ---
         let totalD = B + A;
         state.rawOFI = (e_bid - e_ask) / (totalD > 0 ? totalD : 1);
+        
+        // [V12 T4] OBI Half-life Decay (Phân rã sổ lệnh)
+        const ALPHA_OBI = 0.05;
+        state.obiDecay = state.obiDecay * (1 - ALPHA_OBI) + state.rawOFI * ALPHA_OBI;
     }
     else if (msg.cmd === 'TICK') {
         const vUSD = Number(msg.data.v) || (Number(msg.data.p) * Number(msg.data.q)); 
@@ -382,22 +410,41 @@ self.onmessage = function(e) {
         let zSell = state.varTakerSell > 0 ? (currentSell - state.emaTakerSell) / Math.sqrt(state.varTakerSell) : 0;
         state.zScore = isBuy ? zBuy : -zSell;
 
+        // --- REPLACE ---
         let totalEMA = state.emaTakerBuy + state.emaTakerSell;
         state.buyDominance = totalEMA > 0 ? (state.emaTakerBuy / totalEMA) * 100 : 50;
 
+        // [V12 T4] Thuật toán VPIN 2.0 (Volume-Synchronized Probability of Informed Trading)
+        const VPIN_BUCKET = 20000;
+        state.vpinBucketVol += vUSD;
+        if (isBuy) state.vpinToxVol += vUSD; else state.vpinToxVol -= vUSD;
+        
+        if (state.vpinBucketVol >= VPIN_BUCKET) {
+            let currentVpin = Math.abs(state.vpinToxVol) / state.vpinBucketVol;
+            state.vpin = state.vpin * 0.9 + currentVpin * 0.1; // Làm mượt với Alpha = 0.1
+            state.vpinBucketVol = 0; state.vpinToxVol = 0;
+        }
+
         // =======================================================
-        // [DYNAMIC EMA CLAMP] TÍNH TOÁN ALGO LIMIT CHỐNG TRƯỢT GIÁ (SLIPPAGE)
+        // [V12 T5] QEM ALGO LIMIT & REGIME-AWARE MULTIPLIER
         // =======================================================
-        if (!state.emaTickVol) { 
+        if (!state._emaTickVolInit) { 
             state.emaTickVol = vUSD;
+            state._emaTickVolInit = true; // [T1-b] Sửa lỗi Falsy-init
         } else {
-            let upperBound = state.emaTickVol * 5; 
-            let lowerBound = Math.max(10, state.emaTickVol / 5); 
+            let upperBound = state.emaTickVol * 1.5; // Biên kẹp QEM (Nhỏ hơn V9 để an toàn)
+            let lowerBound = Math.max(10, state.emaTickVol * 0.5); 
             let clampedVol = Math.min(Math.max(vUSD, lowerBound), upperBound);
             state.emaTickVol = (clampedVol * 0.02) + (state.emaTickVol * 0.98);
         }
 
-        state.algoLimit = Math.max(20, Math.round(state.emaTickVol * 0.8));
+        // Bảng hệ số Regime Multiplier (O(1) Inline, không dùng Object)
+        let regimeMulti = state.liquidityVacuum ? 1.5 
+                        : (now <= state.lockUntil.iceberg ? 0.4 
+                        : (now <= state.lockUntil.flashDump ? 0.3 
+                        : (now <= state.lockUntil.stopHunt ? 0.6 : 0.8)));
+        
+        state.algoLimit = Math.max(20, Math.round(state.emaTickVol * regimeMulti));
         // =======================================================
 
         state.emaPriceFast = state.emaPriceFast === 0 ? p : state.emaPriceFast * (1 - ALPHA_3S) + p * ALPHA_3S;
@@ -432,9 +479,18 @@ setInterval(() => {
         wallHit: !state.liquidityVacuum
     };
 
+    // --- REPLACE ---
+    // [V12 T3] Tính toán SqueezeZone cục bộ từ Hawkes Intensity
+    let squeezeZone = { confirmed: false, side: null, strength: 0 };
+    if (state.hawkesLiqLong > 0.5 && state.multiLevelOFI > 0.2) squeezeZone = { confirmed: true, side: 'short', strength: Math.min(1, state.hawkesLiqLong) };
+    else if (state.hawkesLiqShort > 0.5 && state.multiLevelOFI < -0.2) squeezeZone = { confirmed: true, side: 'long', strength: Math.min(1, state.hawkesLiqShort) };
+
     self.postMessage({
         cmd: 'STATS_UPDATE',
         stats: { 
+            squeezeZone: squeezeZone,
+            vpin: state.vpin || 0,
+            obiDecay: state.obiDecay || 0,
             spread: state.spread || 0,
             trend: state.trend || 0,
             drop: state.drop || 0,
@@ -458,4 +514,9 @@ setInterval(() => {
         if(state.minPrice5m < 999999) state.minPrice5m = state.minPrice5m * 1.0001; 
         state._hadTickThisInterval = false; // Reset cờ
     }
+
+    const HAWKES_DECAY = Math.exp(-0.25 / 10);
+    state.hawkesLiqLong *= HAWKES_DECAY; 
+    state.hawkesLiqShort *= HAWKES_DECAY;
+    
 }, 250);
