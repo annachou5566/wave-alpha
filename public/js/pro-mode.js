@@ -3782,6 +3782,11 @@ window.startFuturesEngine = async function(symbol) {
                         updateAllDOM('cc-liq-short', `💥 Liq S: $${formatCompactUSD(window.quantStats.shortLiq)}`, null);
                     }
 
+                    // [V12 T3] Forward sự kiện Thanh Lý (Force Order) vào Worker để tính toán Hawkes Intensity
+                    if (window.quantWorker) {
+                        window.quantWorker.postMessage({ cmd: 'LIQ_EVENT', data: { v: valUSD, dir: order.S, p: parseFloat(order.p) } });
+                    }
+
                     if (valUSD > 1000 && typeof window.logToSniperTape === 'function') {
                         window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
                     }
@@ -3874,7 +3879,7 @@ window.renderProWatchlist = function(passedSearchTerm) {
     wlBody.innerHTML = html;
 };
 // =====================================================================
-// [TARGET-2] ZERO-LAG DOM CACHE SYSTEM (Nâng cấp hỗ trợ màu sắc CSS)
+// [TARGET-2] ZERO-LAG DOM CACHE SYSTEM & BITMASK (Nâng cấp chuẩn 2026)
 // =====================================================================
 const _verdictCache = {
     hft_html: null, hft_css: null,
@@ -3882,19 +3887,42 @@ const _verdictCache = {
     lft_html: null, lft_css: null
 };
 let _verdictRafPending = false;
+let _legacyFlagsBitmaskCache = -1; // -1 = uninitialized
 
-function scheduleVerdictRender(hft, mft, lft) {
-    // Chỉ render nếu HTML hoặc CSS có sự thay đổi
+// [V12 T2] Bitmask encoding O(1) so sánh 12 legacyFlags
+function encodeFlagsBitmask(flags) {
+    if (!flags) return 0;
+    return (flags.liquidityVacuum      ? 1    : 0) |
+           (flags.spoofingBuyWall      ? 2    : 0) |
+           (flags.spoofingSellWall     ? 4    : 0) |
+           (flags.bullishIceberg       ? 8    : 0) |
+           (flags.bearishIceberg       ? 16   : 0) |
+           (flags.icebergAbsorption    ? 32   : 0) |
+           (flags.exhausted            ? 64   : 0) |
+           (flags.stopHunt             ? 128  : 0) |
+           (flags.wallHit              ? 256  : 0) |
+           (flags.washTrading          ? 512  : 0) |
+           (flags.zoneAbsorptionBottom ? 1024 : 0) |
+           (flags.zoneDistributionTop  ? 2048 : 0);
+}
+
+function scheduleVerdictRender(hft, mft, lft, flags) {
+    // Chỉ render nếu HTML, CSS hoặc trạng thái các cờ (Bitmask) thực sự thay đổi
     const hftChanged = hft && (hft.html !== _verdictCache.hft_html || hft.css !== _verdictCache.hft_css);
     const mftChanged = mft && (mft.html !== _verdictCache.mft_html || mft.css !== _verdictCache.mft_css);
     const lftChanged = lft && (lft.html !== _verdictCache.lft_html || lft.css !== _verdictCache.lft_css);
+    
+    const newBitmask = encodeFlagsBitmask(flags);
+    const flagsChanged = newBitmask !== _legacyFlagsBitmaskCache;
 
-    if (!hftChanged && !mftChanged && !lftChanged) return;
+    if (!hftChanged && !mftChanged && !lftChanged && !flagsChanged) return;
     if (_verdictRafPending) return;
     
     _verdictRafPending = true;
     requestAnimationFrame(() => {
         _verdictRafPending = false;
+        
+        if (flagsChanged) _legacyFlagsBitmaskCache = newBitmask; // Update cache cờ tĩnh
         
         if (hftChanged && hft) {
             const el = document.getElementById('verdict-hft');
@@ -4020,6 +4048,6 @@ window.evaluateQuantVerdict = function() {
         css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;`
     };
 
-    // Truyền toàn bộ dữ liệu vào Rendering Engine
-    scheduleVerdictRender(hftObj, mftObj, lftObj);
+    // [V12 T2] Truyền thêm q.flags vào Rendering Engine để chạy Bitmask Check
+    scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);
 };
