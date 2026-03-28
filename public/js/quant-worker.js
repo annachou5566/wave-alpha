@@ -1,6 +1,6 @@
 /**
  * =================================================================
- * 🧠 QUANT WORKER V9.0 - APEX HFT ENGINE (AUDIT APPROVED)
+ * 🧠 QUANT WORKER V12.0 - APEX HFT ENGINE (AUDIT APPROVED)
  * =================================================================
  * - Welford EMA (Zero-GC) với Clamp chống trôi số thực (Floating-point drift).
  * - Multi-Level OFI (Cont-Stoikov K=5) kẹp Guard 1e-12 chống NaN.
@@ -8,6 +8,9 @@
  * - Lọc nhiễu Gia tốc (EMA smoothed MidPrice) & Fix Order-of-operations.
  * - Normalized Acceleration Threshold (Scale theo mọi price level).
  * - Cờ chống Decay vô lý khi thị trường illiquid (_hadTickThisInterval).
+ * - [V12 FIX] Guard Clause chống corrupt Welford khi thanh khoản rỗng.
+ * - [V12 FIX] Snapshot Accel Order-of-ops bug.
+ * - [V12 FIX] Cross-reset lockUntil bug.
  */
 
 const ALPHA_1S = 2 / (10 + 1); 
@@ -16,6 +19,9 @@ const ALPHA_15S = 2 / (150 + 1);
 const ALPHA_60S = 2 / (600 + 1); 
 const LOCK_DUR = 5000;
 const K_LEVELS = 5;
+
+// [V12 FIX] Lọc dust trade chống chia 0
+const MIN_LIQUIDITY_THRESHOLD = 1e-8; 
 
 // ZERO-GC BUFFERS CHO CONT-STOIKOV K=5 (Không sinh rác bộ nhớ)
 const prevBidP = new Float64Array(K_LEVELS);
@@ -114,7 +120,8 @@ function computeMultiLevelOFI(bids, asks) {
         prevAskP[i] = ap; prevAskQ[i] = aq;
     }
     
-    return totalLiquidity > 0 ? (ofi / totalLiquidity) : 0;
+    // [V12 FIX] Trả về null khi thanh khoản rỗng (illiquid) để guard Welford
+    return totalLiquidity > MIN_LIQUIDITY_THRESHOLD ? (ofi / totalLiquidity) : null;
 }
 
 // Động cơ Kể chuyện Market Maker (Storyteller & Micro-structure)
@@ -144,9 +151,10 @@ function evaluateStoryteller(now) {
 
     if (isVolumeSpike && isPriceStalled && now > state.lockUntil.iceberg) {
         state.lockUntil.iceberg = now + LOCK_DUR;
-        state.lockUntil.flashDump = 0; 
-        state.lockUntil.exhausted = 0; 
-        state.lockUntil.marketPump = 0;
+        // [V12 FIX] Chỉ reset khi cờ đã thực sự hết hạn, chống cross-reset bug
+        if (now > state.lockUntil.flashDump)  state.lockUntil.flashDump = 0; 
+        if (now > state.lockUntil.exhausted)  state.lockUntil.exhausted = 0; 
+        if (now > state.lockUntil.marketPump) state.lockUntil.marketPump = 0;
         
         if (activeOFI < -0.2 || buyDom < 45) {
             state.lockUntil.bearishIceberg = now + LOCK_DUR;
@@ -173,8 +181,9 @@ function evaluateStoryteller(now) {
 
         if (isDumping && now > state.lockUntil.flashDump) {
             state.lockUntil.flashDump = now + LOCK_DUR;
-            state.lockUntil.marketPump = 0;
-            state.lockUntil.exhausted = 0; 
+            // [V12 FIX]
+            if (now > state.lockUntil.marketPump) state.lockUntil.marketPump = 0;
+            if (now > state.lockUntil.exhausted)  state.lockUntil.exhausted = 0; 
             signal = { text: '🩸 FLASH DUMP', color: '#FF007F', bgColor: 'rgba(255, 0, 127, 0.15)' };
         }
 
@@ -183,7 +192,8 @@ function evaluateStoryteller(now) {
 
         if (isPumping && now > state.lockUntil.marketPump) {
             state.lockUntil.marketPump = now + LOCK_DUR;
-            state.lockUntil.flashDump = 0; 
+            // [V12 FIX]
+            if (now > state.lockUntil.flashDump) state.lockUntil.flashDump = 0; 
             signal = { text: '🚀 MARKET PUMP', color: '#00F0FF', bgColor: 'rgba(0, 240, 255, 0.15)' };
         }
     }
@@ -199,13 +209,15 @@ function evaluateStoryteller(now) {
 
         if (isBuyReversal && now > state.lockUntil.stopHunt) {
             state.lockUntil.stopHunt = now + LOCK_DUR;
-            state.lockUntil.exhausted = 0; 
-            state.lockUntil.flashDump = 0; 
+            // [V12 FIX]
+            if (now > state.lockUntil.exhausted) state.lockUntil.exhausted = 0; 
+            if (now > state.lockUntil.flashDump) state.lockUntil.flashDump = 0; 
             signal = { text: '🪝 STOP-HUNT REVERSAL', color: '#ffffff', bgColor: '#8e44ad' };
         }
         else if (!isBuyReversal && state.liquidityVacuum && now > state.lockUntil.exhausted) {
             state.lockUntil.exhausted = now + LOCK_DUR;
-            state.lockUntil.flashDump = 0; 
+            // [V12 FIX]
+            if (now > state.lockUntil.flashDump) state.lockUntil.flashDump = 0; 
             signal = { text: '🪫 EXHAUSTED (Cạn Kiệt)', color: '#000000', bgColor: '#f1c40f' }; 
         }
     }
@@ -263,12 +275,21 @@ self.onmessage = function(e) {
         const asks = msg.data.asks;
         if (bids && asks && bids.length > 0 && asks.length > 0) {
             let rawMultiOFI = computeMultiLevelOFI(bids, asks);
-            let ofiStats = updateWelford(rawMultiOFI, state.ofiMean, state.ofiVar, ALPHA_15S);
-            state.ofiMean = ofiStats.e;
-            state.ofiVar = ofiStats.v;
-            // [V9 FIX] Cập nhật guard 1e-12 chống chia cho 0 hoặc sinh NaN
-            state.multiLevelOFI = state.ofiVar > 1e-12 ? (rawMultiOFI - state.ofiMean) / Math.sqrt(state.ofiVar) : 0;
-            state.multiLevelOFI = Math.max(-1, Math.min(1, state.multiLevelOFI));
+            
+            // [V12 FIX] OFI Guard: Chống corrupt khi book cạn
+            if (rawMultiOFI !== null) {
+                let ofiStats = updateWelford(rawMultiOFI, state.ofiMean, state.ofiVar, ALPHA_15S);
+                state.ofiMean = ofiStats.e;
+                state.ofiVar = ofiStats.v;
+                state.multiLevelOFI = state.ofiVar > 1e-12 ? (rawMultiOFI - state.ofiMean) / Math.sqrt(state.ofiVar) : 0;
+                state.multiLevelOFI = Math.max(-1, Math.min(1, state.multiLevelOFI));
+                
+                // Nếu đang vacuum mà có thanh khoản lại -> tắt vacuum
+                if (state.liquidityVacuum && Math.abs(rawMultiOFI) > 0) state.liquidityVacuum = false;
+            } else {
+                state.multiLevelOFI = 0;
+                state.liquidityVacuum = true;
+            }
 
             let hasWall = false;
             let currentP = state.lastPrice > 0 ? state.lastPrice : Number(bids[0][0]);
@@ -286,7 +307,9 @@ self.onmessage = function(e) {
                     break;
                 }
             }
-            state.liquidityVacuum = !hasWall;
+            if (!state.liquidityVacuum) {
+                state.liquidityVacuum = !hasWall;
+            }
         }
     }
     else if (msg.cmd === 'BOOK_TICKER' || msg.cmd === 'BOOKTICKER') {
@@ -310,10 +333,18 @@ self.onmessage = function(e) {
         state.emaMid = state.emaMid === 0 ? state.midPrice : state.emaMid * (1 - ALPHA_MID) + state.midPrice * ALPHA_MID;
         
         const smoothMid = state.emaMid;
-        state.accel = smoothMid - 2 * (state.prevMid || smoothMid) + (state.prevPrevMid || smoothMid);
         
-        // Gán prevPrevMid TRƯỚC khi gán prevMid
-        state.prevPrevMid = state.prevMid === 0 ? smoothMid : state.prevMid;
+        // [V12 FIX] Snapshot biến cũ để tính toán accel đúng luồng thời gian
+        const _snapPrevMid = state.prevMid;
+        const _snapPrevPrevMid = state.prevPrevMid;
+
+        const _prevM = _snapPrevMid || smoothMid;
+        const _prevPM = _snapPrevPrevMid || smoothMid;
+        
+        state.accel = smoothMid - 2 * _prevM + _prevPM;
+        
+        // Cập nhật state dựa trên snapshot
+        state.prevPrevMid = _snapPrevMid === 0 ? smoothMid : _snapPrevMid;
         state.prevMid = smoothMid;
 
         let B = Number(msg.data.B) || 0; 
@@ -357,23 +388,15 @@ self.onmessage = function(e) {
         // =======================================================
         // [DYNAMIC EMA CLAMP] TÍNH TOÁN ALGO LIMIT CHỐNG TRƯỢT GIÁ (SLIPPAGE)
         // =======================================================
-        // 1. Tính toán Trung bình thực tế (Biến ẩn emaTickVol)
         if (!state.emaTickVol) { 
-            state.emaTickVol = vUSD; // Khởi tạo mốc trung bình thực tế bằng lệnh đầu tiên
+            state.emaTickVol = vUSD;
         } else {
-            // Tự động tạo Trần/Sàn dựa trên trung bình thực (Gấp 5 lần và chia 5 lần)
             let upperBound = state.emaTickVol * 5; 
             let lowerBound = Math.max(10, state.emaTickVol / 5); 
-
-            // Cắt gọt lệnh (Chặn Cá Voi và Rác)
             let clampedVol = Math.min(Math.max(vUSD, lowerBound), upperBound);
-
-            // Tính Trung bình động lũy thừa (EMA) thực tế
             state.emaTickVol = (clampedVol * 0.02) + (state.emaTickVol * 0.98);
         }
 
-        // 2. Chốt số Algo Limit an toàn cho User Swap (Hệ số 80%)
-        // Ví dụ: Market Maker đang đi lệnh 1000$ -> Giao diện sẽ báo Algo Limit là 800$ để User đi lệnh không bị quét trượt giá.
         state.algoLimit = Math.max(20, Math.round(state.emaTickVol * 0.8));
         // =======================================================
 
