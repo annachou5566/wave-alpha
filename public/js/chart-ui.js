@@ -308,6 +308,7 @@ window.updateCommandCenterUI = function() {
         }
     }
     
+    // THAY THẾ TOÀN BỘ KHỐI CODE XỬ LÝ FUNDING BẰNG ĐOẠN SAU:
     if (window.quantStats && window.quantStats.fundingRateObj) {
         let fObj = window.quantStats.fundingRateObj; let remain = fObj.nextTime - Date.now();
         let countdownStr = "";
@@ -321,6 +322,21 @@ window.updateCommandCenterUI = function() {
         let sign = fObj.rate > 0 ? '+' : ''; let color = fObj.rate > 0.01 ? '#F6465D' : (fObj.rate < -0.01 ? '#00F0FF' : '#eaecef');
         let fLbl = document.getElementById('cc-funding-lbl'); if (fLbl) fLbl.innerText = `Funding (${fObj.interval}h)`;
         let fEl = document.getElementById('cc-funding-val'); if (fEl) fEl.innerHTML = `<span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span><span style="color:#527c82; margin: 0 4px;">/</span><span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span>`;
+    } else {
+        // Trường hợp Token không có Futures: Reset UI Funding
+        let fLbl = document.getElementById('cc-funding-lbl'); if (fLbl) fLbl.innerText = `Funding Rate`;
+        let fEl = document.getElementById('cc-funding-val'); if (fEl) fEl.innerHTML = `--%`;
+    }
+
+    // Tính toán và hiển thị Open Interest (OI)
+    let oiEl = document.getElementById('cc-oi-val');
+    if (oiEl) {
+        if (window.quantStats && window.quantStats.openInterest && window.scLastPrice) {
+            let oiUSD = window.quantStats.openInterest * window.scLastPrice; // Đổi Số coin (Coi) thành Tiền (USD)
+            oiEl.innerText = '$' + window.formatCompactUSD(oiUSD);
+        } else {
+            oiEl.innerText = '$--';
+        }
     }
 // CẬP NHẬT TRẠNG THÁI FUTURES & THANH LÝ
     let fStatusEl = document.getElementById('cc-futures-status');
@@ -486,7 +502,12 @@ window.openProChart = function(t, isTimeSwitch = false) {
         let tradesBox = document.getElementById('sc-live-trades');
         if (tradesBox) tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
         window.scCurrentCluster = null; 
-        window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+    window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+    let fStatus = document.getElementById('cc-futures-status'); if(fStatus) { fStatus.innerText = '⏳ ĐANG DÒ...'; fStatus.style.color = '#F0B90B'; }
+    let oiElUI = document.getElementById('cc-oi-val'); if(oiElUI) oiElUI.innerText = '$--';
+    let fundVal = document.getElementById('cc-funding-val'); if(fundVal) fundVal.innerText = '--%';
+    let liqLEl = document.getElementById('cc-liq-long'); if(liqLEl) liqLEl.innerText = '🩸 Liq L: $0';
+    let liqSEl = document.getElementById('cc-liq-short'); if(liqSEl) liqSEl.innerText = '💥 Liq S: $0';
         let tape = document.getElementById('cc-sniper-tape');
         if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
         
