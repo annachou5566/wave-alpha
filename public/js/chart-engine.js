@@ -1,206 +1,520 @@
-/**
- * =================================================================
- * ⚙️ CHART ENGINE V1.0 - DECOUPLED DATA LAYER
- * =================================================================
- * Nhiệm vụ:
- * - Quản lý State của OHLCV, Volume, EMA...
- * - Xử lý data từ REST API (Lịch sử) và WebSocket (Realtime).
- * - Giao tiếp với Controller/View thông qua CustomEvent Bus.
- * - HOÀN TOÀN KHÔNG CHẠM VÀO DOM HAY LIGHTWEIGHT-CHARTS.
- */
+// ==========================================
+// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET
+// ==========================================
 
-(function(window) {
-    'use strict';
+window.chartWs = null;
+window.liquidationWs = null;
+window.futuresDataInterval = null;
+window.isReconnecting = false;
+window.currentChartToken = null; 
 
-    class ChartEngineCore {
-        constructor() {
-            this.currentSymbol = null;
-            this.currentInterval = '1m';
-            
-            // Data Store
-            this.candleData = [];
-            this.volumeData = [];
-            this.latestCandle = null;
-            
-            // Listeners
-            this._setupEventListeners();
+window.quantStats = {
+    whaleBuyVol: 0, whaleSellVol: 0,
+    botSweepBuy: 0, botSweepSell: 0,
+    priceTrend: 0,
+    trend: 0, drop: 0, spread: 0,
+    ofi: 0, zScore: 0, buyDominance: 50,
+    longLiq: 0, shortLiq: 0,
+    fundingRateObj: null,
+    hftVerdict: null
+};
+
+window.connectRealtimeChart = function(t, isTimeSwitch = false) {
+    let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
+    let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
+    let contract = t.contract;
+    let chainId = t.chainId || t.chain_id || 56;
+    let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
+
+    if (isTimeSwitch && window.chartWs && window.chartWs.readyState === 1) { 
+        if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
+            let oldK = contract ? `came@${contract}@${chainId}@kline_${window.oldChartInterval}` : `${streamPrefix}@kline_${window.oldChartInterval}`;
+            window.chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [oldK], "id": Date.now() }));
         }
-
-        // ==========================================
-        // 1. EVENT BUS SETUP (Lắng nghe lệnh từ pro-mode.js)
-        // ==========================================
-        _setupEventListeners() {
-            // Lắng nghe lệnh khởi tạo/đổi symbol
-            document.addEventListener('ENGINE_LOAD_SYMBOL', (e) => {
-                const { symbol, interval } = e.detail;
-                this.loadSymbol(symbol, interval);
-            });
-
-            // Lắng nghe stream KLINE từ WebSocket master
-            document.addEventListener('WS_KLINE_STREAM', (e) => {
-                this.processRealtimeKline(e.detail);
-            });
-
-            // Lắng nghe stream TICK từ WebSocket master (Để build nến realtime sub-second)
-            document.addEventListener('WS_TICK_STREAM', (e) => {
-                this.aggregateTickToCandle(e.detail);
-            });
+        if (window.currentChartInterval !== 'tick') {
+            let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
+            window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() + 1 }));
         }
-
-        // ==========================================
-        // 2. CORE LOGIC: NẠP DỮ LIỆU LỊCH SỬ
-        // ==========================================
-        async loadSymbol(symbol, interval = '1m') {
-            if (!symbol) return;
-            
-            this.currentSymbol = symbol;
-            this.currentInterval = interval;
-            this.clearData();
-
-            try {
-                // TODO: Thay URL này bằng endpoint chuẩn của Binance Alpha / Backend của bạn
-                const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=1000`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                this._parseHistoricalData(data);
-
-                // Thông báo cho View biết data đã sẵn sàng để vẽ lần đầu
-                document.dispatchEvent(new CustomEvent('ENGINE_DATA_READY', {
-                    detail: {
-                        candles: this.candleData,
-                        volumes: this.volumeData
-                    }
-                }));
-
-            } catch (error) {
-                console.error('[ChartEngine] Lỗi fetch lịch sử:', error);
-            }
-        }
-
-        _parseHistoricalData(rawKlines) {
-            this.candleData = [];
-            this.volumeData = [];
-
-            for (let i = 0; i < rawKlines.length; i++) {
-                const k = rawKlines[i];
-                const time = k[0] / 1000; // LightweightCharts dùng timestamp giây
-                const open = parseFloat(k[1]);
-                const high = parseFloat(k[2]);
-                const low = parseFloat(k[3]);
-                const close = parseFloat(k[4]);
-                const volume = parseFloat(k[5]);
-
-                const candle = { time, open, high, low, close };
-                this.candleData.push(candle);
-
-                const color = close >= open ? 'rgba(14, 203, 129, 0.5)' : 'rgba(246, 70, 93, 0.5)';
-                this.volumeData.push({ time, value: volume, color });
-                
-                if (i === rawKlines.length - 1) {
-                    this.latestCandle = { ...candle, volume };
-                }
-            }
-        }
-
-        // ==========================================
-        // 3. CORE LOGIC: XỬ LÝ DỮ LIỆU REALTIME
-        // ==========================================
-        processRealtimeKline(msg) {
-            if (!msg.k || msg.s !== this.currentSymbol) return;
-
-            const k = msg.k;
-            const time = k.t / 1000;
-            const open = parseFloat(k.o);
-            const high = parseFloat(k.h);
-            const low = parseFloat(k.l);
-            const close = parseFloat(k.c);
-            const volume = parseFloat(k.v);
-
-            this.latestCandle = { time, open, high, low, close, volume };
-
-            // Thông báo cho View update cây nến hiện tại
-            this._broadcastUpdate(this.latestCandle);
-        }
-
-        aggregateTickToCandle(tick) {
-            // Bỏ qua nếu sai Token
-            if (tick.s !== this.currentSymbol) return;
-
-            const price = parseFloat(tick.p);
-            const vol = parseFloat(tick.q);
-            const nowTime = Math.floor(Date.now() / 1000); // Lấy mốc thời gian theo giây hiện tại
-
-            // 1. NẾU CHƯA CÓ NẾN NÀO (Khung Tick/1s trắng trơn) -> Khởi tạo cây nến đầu tiên
-            if (!this.latestCandle) {
-                this.latestCandle = {
-                    time: nowTime,
-                    open: price,
-                    high: price,
-                    low: price,
-                    close: price,
-                    volume: vol
-                };
-            } 
-            // 2. NẾU BƯỚC SANG GIÂY MỚI -> Chốt nến cũ, vẽ cây nến mới tiếp theo
-            else if (nowTime > this.latestCandle.time) {
-                this.latestCandle = {
-                    time: nowTime,
-                    open: this.latestCandle.close, // Mở cửa bằng giá đóng của giây trước
-                    high: Math.max(this.latestCandle.close, price),
-                    low: Math.min(this.latestCandle.close, price),
-                    close: price,
-                    volume: vol
-                };
-            } 
-            // 3. NẾU VẪN TRONG CÙNG 1 GIÂY -> Cập nhật đỉnh/đáy/đóng cửa liên tục
-            else {
-                if (price > this.latestCandle.high) this.latestCandle.high = price;
-                if (price < this.latestCandle.low) this.latestCandle.low = price;
-                this.latestCandle.close = price;
-                this.latestCandle.volume += vol;
-            }
-
-            // Bắn lệnh ép UI vẽ ngay lập tức
-            this._broadcastUpdate(this.latestCandle);
-        }
-
-        _broadcastUpdate(candleObj) {
-            const color = candleObj.close >= candleObj.open ? 'rgba(14, 203, 129, 0.8)' : 'rgba(246, 70, 93, 0.8)';
-            
-            document.dispatchEvent(new CustomEvent('ENGINE_CANDLE_UPDATED', {
-                detail: {
-                    candle: {
-                        time: candleObj.time,
-                        open: candleObj.open,
-                        high: candleObj.high,
-                        low: candleObj.low,
-                        close: candleObj.close
-                    },
-                    volume: {
-                        time: candleObj.time,
-                        value: candleObj.volume,
-                        color: color
-                    }
-                }
-            }));
-        }
-
-        // ==========================================
-        // 4. TIỆN ÍCH & CLEANUP
-        // ==========================================
-        getLatestTime() {
-            return this.latestCandle ? this.latestCandle.time : null;
-        }
-
-        clearData() {
-            this.candleData = [];
-            this.volumeData = [];
-            this.latestCandle = null;
-        }
+        return; 
     }
 
-    // Expose ra Global Scope
-    window.ChartEngine = new ChartEngineCore();
+    if (window.chartWs) { window.chartWs.close(); }
 
-})(window);
+    if (!window.quantWorker) {
+        window.quantWorker = new Worker('public/js/quant-worker.js');
+        window.quantWorker.onmessage = function(e) {
+            if (e.data.cmd === 'STATS_UPDATE') {
+                Object.assign(window.quantStats, e.data.stats);
+            }
+        };
+    }
+    
+    window.quantWorker.postMessage({ cmd: 'INIT' });
+    window.activeChartSessionId = Date.now() + '_' + t.symbol;
+    let currentSession = window.activeChartSessionId;
+
+    if (!window.AlphaChartState) window.AlphaChartState = {};
+    let sym = t.symbol || 'UNKNOWN';
+
+    if (!window.AlphaChartState[sym]) {
+        window.AlphaChartState[sym] = {
+            speedWindow: [], netFlow: 0, whaleCount: 0, totalVol: 0, tradeCount: 0,
+            tickHistory: [], chartMarkers: [], lastPrice: parseFloat(t.price) || 0, lastTradeDir: undefined,
+            cWhale: 0, cShark: 0, cDolphin: 0, cSweep: 0
+        };
+    }
+
+    let cache = window.AlphaChartState[sym];
+    window.scSpeedWindow = cache.speedWindow; window.scNetFlow = cache.netFlow; 
+    window.scWhaleCount = cache.whaleCount; window.scTotalVol = cache.totalVol; 
+    window.scTradeCount = cache.tradeCount; window.scLastPrice = cache.lastPrice; 
+    window.scLastTradeDir = cache.lastTradeDir; window.scTickHistory = cache.tickHistory; 
+    window.scChartMarkers = cache.chartMarkers;
+    window.scCWhale = cache.cWhale || 0;
+    window.scCShark = cache.cShark || 0;
+    window.scCDolphin = cache.cDolphin || 0;
+    window.scCSweep = cache.cSweep || 0;
+    window.quantStats = cache.quantStats || { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+    window.scCurrentCluster = null;
+
+    try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
+
+    let params = [
+        `${streamPrefix}@aggTrade`,
+        `${streamPrefix}@bookTicker`,
+        'came@allTokens@ticker24',
+        `${streamPrefix}@fulldepth@500ms`,
+        `${streamPrefix}@kline_1m`,
+        `${streamPrefix}@kline_5m`,
+        `${streamPrefix}@kline_15m`,
+        `${streamPrefix}@kline_1h`
+    ];
+    window.scActivePriceLines = []; 
+    
+    if (window.currentChartInterval !== 'tick') {
+        let targetKline = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
+        if (!params.includes(targetKline)) params.push(targetKline);
+    }
+
+    if (window.scCalcInterval) clearInterval(window.scCalcInterval);
+    window.scCalcInterval = setInterval(() => {
+        if (window.activeChartSessionId !== currentSession) return;
+        if (!window.scTickHistory || window.scTickHistory.length === 0) return;
+        
+        const now = Date.now();
+        window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
+
+        let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
+        if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
+            let flags = window.quantStats.flags;
+            let timeSec = Math.floor(Date.now() / 1000);
+            let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];
+            let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
+
+            if (canDraw) {
+                if (flags.stopHunt) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' }); }
+                else if (flags.exhausted) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: flags.wallHit ? '#F0B90B' : '#848e9c', shape: 'arrowUp', text: flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED' }); }
+                else if (flags.bullishIceberg || flags.icebergAbsorption) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'whale' }); }
+                else if (flags.bearishIceberg) { window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 ICEBERG ĐÈ GIÁ', fishType: 'whale' }); }
+                else if (flags.spoofingBuyWall) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO' }); }
+                else if (flags.spoofingSellWall) { window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO' }); }
+                if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+            }
+        }
+
+        let algoEl = document.getElementById('sc-algo-limit');
+        if (algoEl && window.quantStats.algoLimit !== undefined) {
+            let algoLmt = window.quantStats.algoLimit;
+            let limitText = `< $${window.formatCompactUSD(algoLmt)}`;
+            let limitColor = '#0ECB81'; let bgColor = 'rgba(14,203,129,0.1)'; let bdColor = 'rgba(14,203,129,0.3)';
+            if (algoLmt < 10 || algoLmt < 50) { 
+                limitColor = '#F6465D'; limitText = algoLmt < 10 ? '💀 DEAD' : limitText; 
+                bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
+            } else if (algoLmt <= 200) { 
+                limitColor = '#F0B90B'; bgColor = 'rgba(240,185,11,0.1)'; bdColor = 'rgba(240,185,11,0.3)';
+            }
+            algoEl.innerHTML = `ALGO LIMIT: ${limitText}`;
+            algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
+        }
+
+        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
+            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+            const processWalls = (orderMap, isAsk) => {
+                let walls = [];
+                if (orderMap instanceof Map) {
+                    for (let [p, vol] of orderMap) { let price = parseFloat(p); let valUSD = price * vol; if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk }); }
+                } else {
+                    for (let p in orderMap) { let price = parseFloat(p); let valUSD = price * orderMap[p]; if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk }); }
+                }
+                return walls.sort((a, b) => b.v - a.v).slice(0, 5); 
+            };
+
+            let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
+            if (!window.scActivePriceLines) window.scActivePriceLines = [];
+            
+            if (window.tvHeatmapLayer) { 
+                for (let i = 0; i < newWalls.length; i++) {
+                    let wall = newWalls[i];
+                    let lineColor = ''; let thickness = 1;
+                    let isTrad = window.currentTheme === 'trad';
+                    if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
+                    else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
+                    else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
+                    else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
+
+                    if (i < window.scActivePriceLines.length) { window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); } 
+                    else {
+                        let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
+                        window.scActivePriceLines.push(priceLine);
+                    }
+                }
+                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); }
+            }
+        }
+
+        let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
+        if (window.AlphaChartState && window.AlphaChartState[sym]) {
+            Object.assign(window.AlphaChartState[sym], {
+                netFlow: window.scNetFlow, whaleCount: window.scWhaleCount, totalVol: window.scTotalVol,
+                tradeCount: window.scTradeCount, lastPrice: window.scLastPrice, lastTradeDir: window.scLastTradeDir,
+                speedWindow: window.scSpeedWindow, tickHistory: window.scTickHistory, chartMarkers: window.scChartMarkers,
+                cWhale: window.scCWhale, cShark: window.scCShark, cDolphin: window.scCDolphin, cSweep: window.scCSweep, quantStats: window.quantStats
+            });
+        }
+
+        window.scSpeedWindow = window.scSpeedWindow.filter(x => now - x.t <= 5000);
+
+        if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
+        if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
+        
+    }, 1000);
+
+    if (window.scTapeInterval) clearInterval(window.scTapeInterval);
+    window.scTapeInterval = setInterval(() => {
+        if (!window.scCurrentCluster) return;
+        const nowMs = Date.now();
+        if (nowMs - window.scCurrentCluster.startT >= 150) {
+            window.flushSmartTape(window.scCurrentCluster);
+            window.scCurrentCluster = null;
+        }
+    }, 150);
+
+    window.chartWs.onopen = () => window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
+
+    window.chartWs.onmessage = (event) => {
+        if (window.activeChartSessionId !== currentSession) return;
+        const data = JSON.parse(event.data);
+        if (!data.stream) return;
+
+        if (data.stream.endsWith('@bookTicker')) {
+            if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'BOOK_TICKER', data: data.data });
+        }
+
+        if (data.e === 'kline' || data.stream.includes('@kline_')) {
+            let k = data.data.k; 
+            if (!k) return; 
+            
+            if (['1m', '5m', '15m', '1h'].includes(k.i)) {
+                let totalQuote = parseFloat(k.q !== undefined ? k.q : (k.v || 0)); 
+                if (isNaN(totalQuote)) totalQuote = 0; 
+                let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
+                let nfEl = document.getElementById(`cc-cex-nf-${k.i}`);
+                if (nfEl) {
+                    let color = isUpCandle ? 'var(--term-up)' : 'var(--term-down)';
+                    let icon = isUpCandle ? '▲' : '▼';
+                    nfEl.innerHTML = `<span style="color:${color}">${icon} $${window.formatCompactUSD(totalQuote)}</span>`;
+                }
+            }
+
+            if (k.i !== window.currentChartInterval) return; 
+            if (window.currentChartInterval === 'tick') return;
+
+            let rawTime = k.t; 
+            if (rawTime) {
+                let candleTime = Math.floor(rawTime / 1000);
+                let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
+                let isTrad = window.currentTheme === 'trad';
+                let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
+
+                if (window.tvCandleSeries) {
+                    window.tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
+                }
+                if (window.tvVolumeSeries) {
+                    let volValue = parseFloat(k.q !== undefined ? k.q : (k.v || 0));
+                    if (isNaN(volValue)) volValue = 0;
+                    window.tvVolumeSeries.update({ time: candleTime, value: volValue, color: volColor });
+                }
+                if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
+            }
+        }
+        
+        if (data.stream && data.stream.includes('@fulldepth') && data.data) {
+            let currentSym = data.data.s || 'UNKNOWN';
+            if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
+                window.scLocalOrderBook = { sym: currentSym, asks: new Map(), bids: new Map() };
+            }
+            (data.data.a || []).forEach(item => { 
+                let p = item[0], q = parseFloat(item[1]); 
+                if (q === 0) window.scLocalOrderBook.asks.delete(p); else window.scLocalOrderBook.asks.set(p, q); 
+            });
+            (data.data.b || []).forEach(item => { 
+                let p = item[0], q = parseFloat(item[1]); 
+                if (q === 0) window.scLocalOrderBook.bids.delete(p); else window.scLocalOrderBook.bids.set(p, q); 
+            });
+        }
+        
+        if (data.stream.endsWith('@aggTrade') || data.stream.endsWith('@trade')) {
+            let p = parseFloat(data.data.p), q = parseFloat(data.data.q);
+            let isUp = p > window.scLastPrice ? true : (p < window.scLastPrice ? false : (window.scLastTradeDir ?? true));
+            
+            window.scLastTradeDir = isUp; window.scLastPrice = p;
+            let valUSD = p * q, timeSec = Math.floor(data.data.T / 1000);
+            let nowT = Date.now();
+
+            window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
+            window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
+
+            if (window.currentChartInterval === '1s') {
+                if (!window.liveCandle1s || window.liveCandle1s.time !== timeSec) {
+                    window.liveCandle1s = { time: timeSec, open: p, high: p, low: p, close: p, vol: q };
+                } else {
+                    window.liveCandle1s.high = Math.max(window.liveCandle1s.high, p);
+                    window.liveCandle1s.low = Math.min(window.liveCandle1s.low, p);
+                    window.liveCandle1s.close = p;
+                    window.liveCandle1s.vol += q;
+                }
+            }
+
+            if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
+                if (nowT - (window.lastChartRender || 0) > 150) {
+                    window.lastChartRender = nowT;
+                    let isTrad = window.currentTheme === 'trad';
+                    let volColor = isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
+
+                    if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
+
+                    if (window.currentChartInterval === 'tick' && window.tvLineSeries) {
+                        window.tvLineSeries.update({ time: timeSec, value: p });
+                        if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: q, color: volColor });
+                    } 
+                    else if (window.currentChartInterval === '1s' && window.tvCandleSeries && window.liveCandle1s) {
+                        window.tvCandleSeries.update(window.liveCandle1s);
+                        if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: window.liveCandle1s.vol, color: volColor });
+                    }
+                }
+            }
+
+            if (!window.isRenderingPrice) {
+                window.isRenderingPrice = true;
+                requestAnimationFrame(() => {
+                    let priceEl = document.getElementById('sc-live-price');
+                    if (priceEl) {
+                        priceEl.innerText = '$' + window.formatPrice(window.scLastPrice);
+                        priceEl.className = 'sc-live-price ' + (window.scLastTradeDir ? 'price-up' : 'price-down');
+                    }
+                    window.isRenderingPrice = false;
+                });
+            }
+
+            if (!window.scCurrentCluster) {
+                window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
+            } else {
+                if (window.scCurrentCluster.dir === isUp && (nowT - window.scCurrentCluster.startT < 1000)) {
+                    window.scCurrentCluster.vol += valUSD; window.scCurrentCluster.count += 1; window.scCurrentCluster.p = p; 
+                } else {
+                    window.flushSmartTape(window.scCurrentCluster);
+                    window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
+                }
+            }
+
+            window.scTradeCount++; window.scTotalVol += valUSD; window.scNetFlow += isUp ? valUSD : -valUSD;
+            if (window.scSpeedWindow.length > 500) window.scSpeedWindow.shift(); 
+            window.scSpeedWindow.push({ t: nowT, v: valUSD });
+        }
+    };
+            
+    window.chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => window.connectRealtimeChart(window.currentChartToken), 30000); } };
+};
+
+window.fetchBinanceHistory = async function(t, interval, isArea = false) {
+    try {
+        let limit = isArea ? 100 : 300; 
+        let contract = t.contract || '';
+        let chainId = t.chain_id || t.chainId || 56;
+        if (!contract) return []; 
+        let apiUrl = `https://alpha-realtime.onrender.com/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
+        
+        const res = await fetch(apiUrl);
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (data.length === 0) return [];
+
+        return data.map(d => {
+            let isUp = d.close >= d.open;
+            return {
+                time: d.time, 
+                open: d.open, high: d.high, low: d.low, close: d.close,
+                volValue: d.volume, 
+                volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
+                value: isArea ? d.close : undefined
+            };
+        });
+    } catch (e) { return []; }
+};
+
+window.startFuturesEngine = async function(symbol) {
+    window.stopFuturesEngine();
+    if (!symbol) return;
+    window.activeFuturesSession = symbol.toUpperCase();
+    let currentSession = window.activeFuturesSession;
+    let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '');
+    let fSymbol = cleanSymbol + 'USDT';
+    let streamSymbol = fSymbol.toLowerCase();
+
+    if (!window.quantStats) window.quantStats = {};
+    window.quantStats.longLiq = 0; window.quantStats.shortLiq = 0; window.quantStats.fundingRateObj = null; window.quantStats.fundingInterval = null;
+
+    const fetchWithTimeout = async (url) => {
+        const controller = new AbortController(); const id = setTimeout(() => controller.abort(), 4000);
+        try { const response = await fetch(url, { signal: controller.signal }); clearTimeout(id); if (!response.ok) throw new Error(`HTTP ${response.status}`); return await response.json(); } catch (err) { clearTimeout(id); throw err; }
+    };
+
+    const fetchRestData = async () => {
+        if (window.activeFuturesSession !== currentSession) return false;
+        try {
+            if (!window.quantStats.fundingInterval) {
+                try { let fInfo = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/fundingInfo`); let sInfo = fInfo.find(x => x.symbol === fSymbol); window.quantStats.fundingInterval = sInfo ? sInfo.fundingIntervalHours : 8; } catch(e) { window.quantStats.fundingInterval = 8; }
+            }
+            let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
+            if (window.activeFuturesSession !== currentSession) return false;
+
+            if (fundData && fundData.lastFundingRate) {
+                window.quantStats.fundingRateObj = { rate: parseFloat(fundData.lastFundingRate) * 100, nextTime: fundData.nextFundingTime, interval: window.quantStats.fundingInterval };
+            }
+            return true;
+        } catch (err) { return false; }
+    };
+
+    let hasFutures = await fetchRestData();
+    if (hasFutures && window.activeFuturesSession === currentSession) {
+        window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
+        const connectForceOrderWS = () => {
+            if (window.activeFuturesSession !== currentSession) return;
+            window.liquidationWs = new WebSocket(`wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`);
+            window.liquidationWs.onmessage = (event) => {
+                if (window.activeFuturesSession !== currentSession) return;
+                const data = JSON.parse(event.data);
+                if (data.e === 'forceOrder' && data.o) {
+                    let order = data.o; let valUSD = parseFloat(order.p) * parseFloat(order.q); let isLongLiq = (order.S === 'SELL');
+                    if (isLongLiq) { window.quantStats.longLiq += valUSD; } else { window.quantStats.shortLiq += valUSD; }
+                    if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'LIQ_EVENT', data: { v: valUSD, dir: order.S, p: parseFloat(order.p) } });
+                    if (valUSD > 1000 && typeof window.logToSniperTape === 'function') window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
+                }
+            };
+            window.liquidationWs.onclose = () => { if (window.activeFuturesSession === currentSession) setTimeout(() => connectForceOrderWS(), 3000); };
+        };
+        connectForceOrderWS();
+    }
+};
+
+window.stopFuturesEngine = function() {
+    window.activeFuturesSession = null;
+    if (window.futuresDataInterval) { clearInterval(window.futuresDataInterval); window.futuresDataInterval = null; }
+    if (window.liquidationWs) { window.liquidationWs.close(); window.liquidationWs = null; }
+};
+
+window.computeSqueezeZone = function() {
+    if (!window.quantStats) return { confirmed: false };
+    const liqLong  = window.quantStats.longLiq  || 0;
+    const liqShort = window.quantStats.shortLiq || 0;
+    const flags    = window.quantStats.flags    || {};
+    const ofi      = window.quantStats.ofi      || 0;
+    const zScore   = window.quantStats.zScore   || 0;
+    const SQUEEZE_LIQ_THRESHOLD = 10000;
+    let confirmed = false; let side = null; let strength = 0;
+
+    if (liqLong > SQUEEZE_LIQ_THRESHOLD && flags.stopHunt && ofi > 0.2) {
+        confirmed = true; side = 'short'; strength = Math.min(1, (liqLong / (SQUEEZE_LIQ_THRESHOLD * 5)) * (ofi + 0.2) * (zScore > 1.5 ? 1.3 : 1));
+    } else if (liqShort > SQUEEZE_LIQ_THRESHOLD && flags.exhausted && ofi < -0.2) {
+        confirmed = true; side = 'long'; strength = Math.min(1, (liqShort / (SQUEEZE_LIQ_THRESHOLD * 5)) * (Math.abs(ofi) + 0.2));
+    }
+    window.quantStats.squeezeZone = { confirmed, side, strength };
+    return window.quantStats.squeezeZone;
+};
+
+const _verdictCache = { hft_html: null, hft_css: null, mft_html: null, mft_css: null, lft_html: null, lft_css: null };
+let _verdictRafPending = false; let _legacyFlagsBitmaskCache = -1;
+
+function encodeFlagsBitmask(flags) {
+    if (!flags) return 0;
+    return (flags.liquidityVacuum ? 1 : 0) | (flags.spoofingBuyWall ? 2 : 0) | (flags.spoofingSellWall ? 4 : 0) | (flags.bullishIceberg ? 8 : 0) | (flags.bearishIceberg ? 16 : 0) | (flags.icebergAbsorption ? 32 : 0) | (flags.exhausted ? 64 : 0) | (flags.stopHunt ? 128 : 0) | (flags.wallHit ? 256 : 0) | (flags.washTrading ? 512 : 0) | (flags.zoneAbsorptionBottom ? 1024 : 0) | (flags.zoneDistributionTop ? 2048 : 0) | (flags.spotTop ? 4096 : 0);
+}
+
+function scheduleVerdictRender(hft, mft, lft, flags) {
+    const hftChanged = hft && (hft.html !== _verdictCache.hft_html || hft.css !== _verdictCache.hft_css);
+    const mftChanged = mft && (mft.html !== _verdictCache.mft_html || mft.css !== _verdictCache.mft_css);
+    const lftChanged = lft && (lft.html !== _verdictCache.lft_html || lft.css !== _verdictCache.lft_css);
+    const newBitmask = encodeFlagsBitmask(flags); const flagsChanged = newBitmask !== _legacyFlagsBitmaskCache;
+
+    if (!hftChanged && !mftChanged && !lftChanged && !flagsChanged) return;
+    if (_verdictRafPending) return;
+    _verdictRafPending = true;
+    requestAnimationFrame(() => {
+        _verdictRafPending = false;
+        if (flagsChanged) _legacyFlagsBitmaskCache = newBitmask;
+        if (hftChanged && hft) { let el = document.getElementById('verdict-hft'); if (el) { el.innerHTML = hft.html; el.style.cssText = hft.css; } _verdictCache.hft_html = hft.html; _verdictCache.hft_css = hft.css; }
+        if (mftChanged && mft) { let el = document.getElementById('verdict-mft'); if (el) { el.innerHTML = mft.html; el.style.cssText = mft.css; } _verdictCache.mft_html = mft.html; _verdictCache.mft_css = mft.css; }
+        if (lftChanged && lft) { let el = document.getElementById('verdict-lft'); if (el) { el.innerHTML = lft.html; el.style.cssText = lft.css; } _verdictCache.lft_html = lft.html; _verdictCache.lft_css = lft.css; }
+    });
+}
+
+window.evaluateQuantVerdict = function() {
+    if (!window.quantStats) return;
+    let q = window.quantStats; let flags = q.flags || {};
+    if (q.hftVerdict) {
+        let wBuy = q.whaleBuyVol || 0; let wSell = q.whaleSellVol || 0; let ofi = q.ofi || 0; let trend = q.trend || 0;
+        if ((flags.spoofingSellWall || flags.bearishIceberg) && ofi > 0.2 && wBuy > wSell && trend > 0) {
+            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[⚡ ĐẨY]</b> 🚀 MM MARKUP`; q.hftVerdict.color = '#00F0FF'; q.hftVerdict.bg = 'rgba(0, 240, 255, 0.15)';
+        } else if (flags.spoofingBuyWall && ofi < -0.2 && wSell > wBuy && trend < 0) {
+            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[🩸 XẢ]</b> 🩸 MM MARKDOWN`; q.hftVerdict.color = '#FF007F'; q.hftVerdict.bg = 'rgba(255, 0, 127, 0.15)';
+        }
+    }
+    let hftObj = { html: "⚡ ĐANG KHỞI ĐỘNG TICK...", css: "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;" };
+    if (q.hftVerdict) { let v = q.hftVerdict; hftObj.html = v.html; hftObj.css = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`; }
+    
+    // (Giữ nguyên toàn bộ logic LFT và MFT cũ của bạn)
+    let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
+    let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
+    let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
+    let liqLong = q.longLiq || 0; let liqShort = q.shortLiq || 0; let totalLiq = liqLong + liqShort;
+
+    let spotScore = 0;
+    if (cvd1hTag.includes('BULLISH')) spotScore += 0.5; else if (cvd1hTag.includes('BEARISH')) spotScore -= 0.5;
+    if (cvd4hTag.includes('BULLISH')) spotScore += 0.5; else if (cvd4hTag.includes('BEARISH')) spotScore -= 0.5;
+
+    let futuresScore = 0; let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0;
+    if (hasFutures) {
+        if (fFunding < -0.005) futuresScore += 0.5; else if (fFunding > 0.005) futuresScore -= 0.5;
+        if (totalLiq > 5000) { let liqRatio = liqShort / totalLiq; if (liqRatio > 0.65) futuresScore += 0.5; else if (liqRatio < 0.35) futuresScore -= 0.5; }
+    }
+
+    let finalMftScore = hasFutures ? (spotScore * 0.4) + (futuresScore * 0.6) : (spotScore * 1.0);
+    let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN'; let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
+    if (finalMftScore >= 0.6) { mftMsg = hasFutures ? '🔥 SHORT SQUEEZE (STRONG BUY)' : '🔥 LỰC MUA CỰC MẠNH'; mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)'; } 
+    else if (finalMftScore >= 0.25) { mftMsg = '📈 ĐỘNG LƯỢNG TĂNG (BUY)'; mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)'; } 
+    else if (finalMftScore <= -0.6) { mftMsg = hasFutures ? '🩸 LONG CASCADE (STRONG SELL)' : '🩸 LỰC XẢ CỰC MẠNH'; mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)'; } 
+    else if (finalMftScore <= -0.25) { mftMsg = '📉 ÁP LỰC GIẢM (SELL)'; mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)'; }
+    let mftObj = { html: mftMsg, css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;` };
+
+    let smBadge = document.getElementById('sm-verdict-badge'); let smTag = smBadge ? smBadge.innerText.toUpperCase() : '';
+    let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%'; let unlockPct = parseFloat(unlockStr) || 100;
+    let smScore = 0; if (smTag.includes('CÁ MẬP GOM') || smTag.includes('BULLISH')) smScore = 1.0; else if (smTag.includes('BOT KIỂM SOÁT') || smTag.includes('BEARISH') || smTag.includes('XẢ')) smScore = -1.0;
+    let tokenomicsScore = 0; if (unlockPct < 30) tokenomicsScore = -1.0; else if (unlockPct >= 50) tokenomicsScore = 0.5; else if (unlockPct >= 80) tokenomicsScore = 1.0;
+    let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
+    let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ'; let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
+    if (finalLftScore >= 0.5) { lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)'; lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)'; } 
+    else if (finalLftScore <= -0.5) { lftMsg = '⚠️ RỦI RO PHÂN PHỐI (MACRO BEAR)'; lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)'; }
+    let lftObj = { html: lftMsg, css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;` };
+
+    scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);
+};
