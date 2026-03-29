@@ -1,5 +1,5 @@
 const DATA_URL = '/data/market-data.json';
-let allTokens = [];
+window.allTokens = [];
 let currentPage = 1;
 let rowsPerPage = 20;
 let pinnedTokens = JSON.parse(localStorage.getItem('alpha_pins')) || [];
@@ -1198,7 +1198,7 @@ async function fetchMarketData() {
         if (!res.ok) return;
         const json = await res.json();
         const rawList = json.data || json.tokens || []; 
-        allTokens = rawList.map(item => unminifyToken(item));
+        window.allTokens = rawList.map(item => unminifyToken(item));
 
         let rawTime = json.meta ? json.meta.u : (json.last_updated || "");
         if (rawTime) {
@@ -1390,24 +1390,47 @@ window.changeRowsPerPage = function() {
     if (select) { rowsPerPage = parseInt(select.value); currentPage = 1; renderTable(); }
 };
 
+window.pendingMarketUpdates = {};
+window.isMarketUpdateScheduled = false;
+
 window.updateAlphaMarketUI = function(serverData) {
     if (document.getElementById('alpha-market-view') && document.getElementById('alpha-market-view').style.display === 'none') return;
     if (serverData['_STATS']) window.MARKET_VOL_HISTORY = serverData['_STATS'];
 
+    // 1. GOM DATA: Nhét tất cả dữ liệu WebSocket đến vào bộ đệm thay vì render ngay
+    Object.keys(serverData).forEach(key => {
+        if (key !== '_STATS') {
+            window.pendingMarketUpdates[key] = { ...(window.pendingMarketUpdates[key] || {}), ...serverData[key] };
+        }
+    });
+
+    // 2. KÍCH HOẠT NHỊP 3 GIÂY: Nếu chưa có lịch render, hẹn 3s sau chạy
+    if (!window.isMarketUpdateScheduled) {
+        window.isMarketUpdateScheduled = true;
+        setTimeout(() => {
+            window.applyMarketUpdatesThrottled();
+            window.isMarketUpdateScheduled = false;
+        }, 3000); // <-- 3000ms là 3 giây
+    }
+};
+
+window.applyMarketUpdatesThrottled = function() {
+    let updates = window.pendingMarketUpdates;
+    window.pendingMarketUpdates = {}; // Xả bộ đệm
+    
     let hasUpdates = false;
-    let maxVolDaily = Math.max(...allTokens.map(t => {
+    let maxVolDaily = Math.max(...window.allTokens.map(t => {
         const isStock = t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on'));
         return isStock ? 0 : (t.volume?.daily_total || 0);
     })) || 1;
 
-    Object.keys(serverData).forEach(key => {
-        if (key === '_STATS') return;
-        let liveItem = serverData[key];
+    Object.keys(updates).forEach(key => {
+        let liveItem = updates[key];
         let tokenKey = key.replace('ALPHA_', ''); 
         if (liveItem.alphaId) tokenKey = liveItem.alphaId.replace('ALPHA_', '');
         else if (!key.startsWith('ALPHA_')) tokenKey = liveItem.symbol || key;
 
-        let targetToken = allTokens.find(t => (t.alphaId && t.alphaId.replace('ALPHA_','') === tokenKey) || (t.id && t.id.replace('ALPHA_','') === tokenKey) || t.symbol === tokenKey);
+        let targetToken = window.allTokens.find(t => (t.alphaId && t.alphaId.replace('ALPHA_','') === tokenKey) || (t.id && t.id.replace('ALPHA_','') === tokenKey) || t.symbol === tokenKey);
 
         if (targetToken) {
             hasUpdates = true;
@@ -1462,38 +1485,30 @@ window.updateAlphaMarketUI = function(serverData) {
 
         let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
         if (r24El && liveItem.r24 !== undefined) r24El.innerText = '$' + formatCompactNum(liveItem.r24);
-
         let liqEl = document.getElementById(`alpha-liq-${tokenKey}`);
         if (liqEl && liveItem.l !== undefined) liqEl.innerText = '$' + formatCompactNum(liveItem.l);
-
         let txEl = document.getElementById(`alpha-tx-${tokenKey}`);
         if (txEl && liveItem.tx !== undefined) txEl.innerText = formatInt(liveItem.tx);
-
         let volTotEl = document.getElementById(`alpha-vol-tot-${tokenKey}`);
         if (volTotEl && liveItem.v && liveItem.v.dt !== undefined) volTotEl.innerText = '$' + formatCompactNum(liveItem.v.dt);
-
         let volLimEl = document.getElementById(`alpha-vol-lim-${tokenKey}`);
         if (volLimEl && liveItem.v && liveItem.v.dl !== undefined) volLimEl.innerText = '$' + formatCompactNum(liveItem.v.dl);
-
         let volChainEl = document.getElementById(`alpha-vol-chain-${tokenKey}`);
         if (volChainEl && targetToken) volChainEl.innerText = '$' + formatCompactNum(targetToken.volume.daily_onchain);
-
         let mcEl = document.getElementById(`alpha-mc-${tokenKey}`);
         if (mcEl && liveItem.mc !== undefined) mcEl.innerText = '$' + formatCompactNum(liveItem.mc);
-
         let holdEl = document.getElementById(`alpha-hold-${tokenKey}`);
         if (holdEl && liveItem.h !== undefined) holdEl.innerText = formatInt(liveItem.h);
         
         let barEl = document.getElementById(`alpha-bar-${tokenKey}`);
         if (barEl && targetToken) {
             let volPct = ((targetToken.volume.daily_total || 0) / maxVolDaily) * 100;
-            volPct = Math.min(100, Math.max(0, volPct)); 
-            barEl.style.width = `${volPct}%`;
+            barEl.style.width = `${Math.min(100, Math.max(0, volPct))}%`;
         }
     });
 
     if (hasUpdates) {
-        const freshStats = calculateMarketStats(allTokens);
+        const freshStats = calculateMarketStats(window.allTokens);
         renderMarketHUD(freshStats); 
         updateSummary(); 
         if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist(); 
