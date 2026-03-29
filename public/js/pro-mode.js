@@ -3247,6 +3247,241 @@ window.updateSmartMoneyRadar = function(apiData) {
 };
 
 // 4. Lệnh Gọi Fetch Data
+
+// =====================================================================
+// [TARGET-2] ZERO-LAG DOM CACHE SYSTEM & BITMASK (Nâng cấp chuẩn 2026)
+// =====================================================================
+const _verdictCache = {
+    hft_html: null, hft_css: null,
+    mft_html: null, mft_css: null,
+    lft_html: null, lft_css: null
+};
+let _verdictRafPending = false;
+let _legacyFlagsBitmaskCache = -1; // -1 = uninitialized
+
+// [V12 T2] Bitmask encoding O(1) so sánh 12 legacyFlags
+function encodeFlagsBitmask(flags) {
+    if (!flags) return 0;
+    return (flags.liquidityVacuum      ? 1    : 0) |
+           (flags.spoofingBuyWall      ? 2    : 0) |
+           (flags.spoofingSellWall     ? 4    : 0) |
+           (flags.bullishIceberg       ? 8    : 0) |
+           (flags.bearishIceberg       ? 16   : 0) |
+           (flags.icebergAbsorption    ? 32   : 0) |
+           (flags.exhausted            ? 64   : 0) |
+           (flags.stopHunt             ? 128  : 0) |
+           (flags.wallHit              ? 256  : 0) |
+           (flags.washTrading          ? 512  : 0) |
+           (flags.zoneAbsorptionBottom ? 1024 : 0) |
+           (flags.zoneDistributionTop  ? 2048 : 0) |
+           (flags.spotTop              ? 4096 : 0); // [V12] Hỗ trợ cờ Spot Top
+}
+
+function scheduleVerdictRender(hft, mft, lft, flags) {
+    // Chỉ render nếu HTML, CSS hoặc trạng thái các cờ (Bitmask) thực sự thay đổi
+    const hftChanged = hft && (hft.html !== _verdictCache.hft_html || hft.css !== _verdictCache.hft_css);
+    const mftChanged = mft && (mft.html !== _verdictCache.mft_html || mft.css !== _verdictCache.mft_css);
+    const lftChanged = lft && (lft.html !== _verdictCache.lft_html || lft.css !== _verdictCache.lft_css);
+    
+    const newBitmask = encodeFlagsBitmask(flags);
+    const flagsChanged = newBitmask !== _legacyFlagsBitmaskCache;
+
+    if (!hftChanged && !mftChanged && !lftChanged && !flagsChanged) return;
+    if (_verdictRafPending) return;
+    
+    _verdictRafPending = true;
+    requestAnimationFrame(() => {
+        _verdictRafPending = false;
+        
+        if (flagsChanged) _legacyFlagsBitmaskCache = newBitmask; // Update cache cờ tĩnh
+        
+        if (hftChanged && hft) {
+            const el = document.getElementById('verdict-hft');
+            if (el) { el.innerHTML = hft.html; el.style.cssText = hft.css; }
+            _verdictCache.hft_html = hft.html; _verdictCache.hft_css = hft.css;
+        }
+        if (mftChanged && mft) {
+            const el = document.getElementById('verdict-mft');
+            if (el) { el.innerHTML = mft.html; el.style.cssText = mft.css; }
+            _verdictCache.mft_html = mft.html; _verdictCache.mft_css = mft.css;
+        }
+        if (lftChanged && lft) {
+            const el = document.getElementById('verdict-lft');
+            if (el) { el.innerHTML = lft.html; el.style.cssText = lft.css; }
+            _verdictCache.lft_html = lft.html; _verdictCache.lft_css = lft.css;
+        }
+    });
+}
+
+// =====================================================================
+// 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
+// =====================================================================
+window.hftLockTime = 0;
+window.hftLockedHtml = '';
+window.hftLockedCss = '';
+
+window.evaluateQuantVerdict = function() {
+    if (!window.quantStats) return;
+    let q = window.quantStats;
+    let flags = q.flags || {};
+
+    // --- [V12 FRAMEWORK HỢP LƯU] ĐỊNH TUYẾN LẠI TÍN HIỆU HFT (SUPPRESSION RULES) ---
+    if (q.hftVerdict) {
+        let wBuy = q.whaleBuyVol || 0;
+        let wSell = q.whaleSellVol || 0;
+        let ofi = q.ofi || 0;
+        let trend = q.trend || 0;
+
+        // LỚP 1: GIẤU TÍN HIỆU BÁN -> ĐỔI THÀNH MM MARKUP (Đẩy Giá)
+        if ((flags.spoofingSellWall || flags.bearishIceberg) && ofi > 0.2 && wBuy > wSell && trend > 0) {
+            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[⚡ ĐẨY]</b> 🚀 MM MARKUP (NAM CHÂM HÚT GIÁ)`;
+            q.hftVerdict.color = '#00F0FF'; q.hftVerdict.bg = 'rgba(0, 240, 255, 0.15)';
+        }
+        // LỚP 2: GIẤU TÍN HIỆU MUA -> ĐỔI THÀNH MM MARKDOWN (Xả Hàng)
+        else if (flags.spoofingBuyWall && ofi < -0.2 && wSell > wBuy && trend < 0) {
+            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[🩸 XẢ]</b> 🩸 MM MARKDOWN (TƯỜNG ĐỠ ẢO)`;
+            q.hftVerdict.color = '#FF007F'; q.hftVerdict.bg = 'rgba(255, 0, 127, 0.15)';
+        }
+    }
+
+    // --- 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1 ---
+    let hftObj = { 
+        html: "⚡ ĐANG KHỞI ĐỘNG TICK...",
+        css: "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;" 
+    };
+    if (q.hftVerdict) {
+        let v = q.hftVerdict;
+        hftObj.html = v.html;
+        hftObj.css = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
+    }
+
+    // --- 2. MFT (MESO): DYNAMIC NORMALIZED MATRIX ---
+    // Đọc DOM 1 lần duy nhất ở ngoài (Chống layout thrashing)
+    let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
+    let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
+
+    let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
+    let liqLong = q.longLiq || 0;
+    let liqShort = q.shortLiq || 0;
+    let totalLiq = liqLong + liqShort;
+
+    let spotScore = 0;
+    if (cvd1hTag.includes('BULLISH')) spotScore += 0.5;
+    else if (cvd1hTag.includes('BEARISH')) spotScore -= 0.5;
+    
+    if (cvd4hTag.includes('BULLISH')) spotScore += 0.5;
+    else if (cvd4hTag.includes('BEARISH')) spotScore -= 0.5;
+
+    let futuresScore = 0;
+    let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0;
+    if (hasFutures) {
+        if (fFunding < -0.005) futuresScore += 0.5;
+        else if (fFunding > 0.005) futuresScore -= 0.5;
+        if (totalLiq > 5000) {
+            let liqRatio = liqShort / totalLiq;
+            if (liqRatio > 0.65) futuresScore += 0.5;
+            else if (liqRatio < 0.35) futuresScore -= 0.5;
+        }
+    }
+
+    let finalMftScore = hasFutures ? (spotScore * 0.4) + (futuresScore * 0.6) : (spotScore * 1.0);
+
+    let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN';
+    let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
+    if (finalMftScore >= 0.6) {
+        mftMsg = hasFutures ? '🔥 SHORT SQUEEZE (STRONG BUY)' : '🔥 LỰC MUA CỰC MẠNH (STRONG BUY)';
+        mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)';
+    } else if (finalMftScore >= 0.25) {
+        mftMsg = '📈 ĐỘNG LƯỢNG TĂNG (BUY)';
+        mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)';
+    } else if (finalMftScore <= -0.6) {
+        mftMsg = hasFutures ? '🩸 LONG CASCADE (STRONG SELL)' : '🩸 LỰC XẢ CỰC MẠNH (STRONG SELL)';
+        mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)';
+    } else if (finalMftScore <= -0.25) {
+        mftMsg = '📉 ÁP LỰC GIẢM (SELL)';
+        mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)';
+    }
+    
+    let mftObj = {
+        html: mftMsg,
+        css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;`
+    };
+
+    // --- 3. LFT (MACRO): NORMALIZED SCORING CHO SMART MONEY ---
+    let smBadge = document.getElementById('sm-verdict-badge');
+    let smTag = smBadge ? smBadge.innerText.toUpperCase() : '';
+    let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%';
+    let unlockPct = parseFloat(unlockStr) || 100;
+
+    let smScore = 0;
+    if (smTag.includes('CÁ MẬP GOM') || smTag.includes('BULLISH')) smScore = 1.0;
+    else if (smTag.includes('BOT KIỂM SOÁT') || smTag.includes('BEARISH') || smTag.includes('XẢ')) smScore = -1.0;
+
+    let tokenomicsScore = 0;
+    if (unlockPct < 30) tokenomicsScore = -1.0;
+    else if (unlockPct >= 50) tokenomicsScore = 0.5;
+    else if (unlockPct >= 80) tokenomicsScore = 1.0;
+
+    let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
+
+    let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ';
+    let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
+    if (finalLftScore >= 0.5) {
+        lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)';
+        lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)';
+    } else if (finalLftScore <= -0.5) {
+        lftMsg = '⚠️ RỦI RO PHÂN PHỐI (MACRO BEAR)';
+        lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)';
+    }
+
+    let lftObj = {
+        html: lftMsg,
+        css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;`
+    };
+
+    // [V12 T2] Truyền thêm q.flags vào Rendering Engine để chạy Bitmask Check
+    scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);
+};
+// =====================================================================
+// RADAR SMART MONEY & MARKET (ĐẶT CUỐI FILE PRO-MODE.JS)
+// =====================================================================
+window.formatCompactUSD = function(num) {
+    if (num === 0) return '0'; let absNum = Math.abs(num);
+    if (absNum >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+    if (absNum >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+    if (absNum >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+    return num.toFixed(2);
+};
+
+window.injectSmartMoneyTab = function() {
+    const sidePanel = document.getElementById('sc-panel-content');
+    if (!sidePanel || document.getElementById('tab-smartmoney')) return;
+    const newTabContent = document.createElement('div');
+    newTabContent.id = 'tab-smartmoney'; newTabContent.className = 'sc-tab-content';
+    newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
+    
+    // (Sao chép y nguyên cục chuỗi HTML dài ngoằng chứa #tab-smartmoney của bạn vào đây)
+    newTabContent.innerHTML = `
+        <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#EAECEF; font-size: 11px; flex-shrink: 0;">
+            <i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 5px;"></i> RADAR SMART MONEY (PRO)
+        </div>
+        `;
+    sidePanel.appendChild(newTabContent);
+}
+
+// Bắt sự kiện mỗi khi nhấn Mở Chart -> Gọi Smart Money
+const oldOpenProChart = window.openProChart;
+window.openProChart = function(t, isTimeSwitch = false) {
+    if (typeof oldOpenProChart === 'function') oldOpenProChart(t, isTimeSwitch);
+    if (!isTimeSwitch) {
+        setTimeout(() => {
+            window.injectSmartMoneyTab();
+            if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+            if (typeof window.fetchFuturesSentiment === 'function') window.fetchFuturesSentiment(t.symbol);
+        }, 100);
+    }
+};
+
 window.fetchSmartMoneyData = async function(contract, chainId) {
     if (!contract) return;
     
@@ -3594,198 +3829,4 @@ window.renderProWatchlist = function(passedSearchTerm) {
     }
 
     wlBody.innerHTML = html;
-};
-// =====================================================================
-// [TARGET-2] ZERO-LAG DOM CACHE SYSTEM & BITMASK (Nâng cấp chuẩn 2026)
-// =====================================================================
-const _verdictCache = {
-    hft_html: null, hft_css: null,
-    mft_html: null, mft_css: null,
-    lft_html: null, lft_css: null
-};
-let _verdictRafPending = false;
-let _legacyFlagsBitmaskCache = -1; // -1 = uninitialized
-
-// [V12 T2] Bitmask encoding O(1) so sánh 12 legacyFlags
-function encodeFlagsBitmask(flags) {
-    if (!flags) return 0;
-    return (flags.liquidityVacuum      ? 1    : 0) |
-           (flags.spoofingBuyWall      ? 2    : 0) |
-           (flags.spoofingSellWall     ? 4    : 0) |
-           (flags.bullishIceberg       ? 8    : 0) |
-           (flags.bearishIceberg       ? 16   : 0) |
-           (flags.icebergAbsorption    ? 32   : 0) |
-           (flags.exhausted            ? 64   : 0) |
-           (flags.stopHunt             ? 128  : 0) |
-           (flags.wallHit              ? 256  : 0) |
-           (flags.washTrading          ? 512  : 0) |
-           (flags.zoneAbsorptionBottom ? 1024 : 0) |
-           (flags.zoneDistributionTop  ? 2048 : 0) |
-           (flags.spotTop              ? 4096 : 0); // [V12] Hỗ trợ cờ Spot Top
-}
-
-function scheduleVerdictRender(hft, mft, lft, flags) {
-    // Chỉ render nếu HTML, CSS hoặc trạng thái các cờ (Bitmask) thực sự thay đổi
-    const hftChanged = hft && (hft.html !== _verdictCache.hft_html || hft.css !== _verdictCache.hft_css);
-    const mftChanged = mft && (mft.html !== _verdictCache.mft_html || mft.css !== _verdictCache.mft_css);
-    const lftChanged = lft && (lft.html !== _verdictCache.lft_html || lft.css !== _verdictCache.lft_css);
-    
-    const newBitmask = encodeFlagsBitmask(flags);
-    const flagsChanged = newBitmask !== _legacyFlagsBitmaskCache;
-
-    if (!hftChanged && !mftChanged && !lftChanged && !flagsChanged) return;
-    if (_verdictRafPending) return;
-    
-    _verdictRafPending = true;
-    requestAnimationFrame(() => {
-        _verdictRafPending = false;
-        
-        if (flagsChanged) _legacyFlagsBitmaskCache = newBitmask; // Update cache cờ tĩnh
-        
-        if (hftChanged && hft) {
-            const el = document.getElementById('verdict-hft');
-            if (el) { el.innerHTML = hft.html; el.style.cssText = hft.css; }
-            _verdictCache.hft_html = hft.html; _verdictCache.hft_css = hft.css;
-        }
-        if (mftChanged && mft) {
-            const el = document.getElementById('verdict-mft');
-            if (el) { el.innerHTML = mft.html; el.style.cssText = mft.css; }
-            _verdictCache.mft_html = mft.html; _verdictCache.mft_css = mft.css;
-        }
-        if (lftChanged && lft) {
-            const el = document.getElementById('verdict-lft');
-            if (el) { el.innerHTML = lft.html; el.style.cssText = lft.css; }
-            _verdictCache.lft_html = lft.html; _verdictCache.lft_css = lft.css;
-        }
-    });
-}
-
-// =====================================================================
-// 🧠 SUPER QUANT AI: ĐỘNG CƠ PHÂN TÍCH ĐA KHUNG THỜI GIAN (HFT - MFT - LFT)
-// =====================================================================
-window.hftLockTime = 0;
-window.hftLockedHtml = '';
-window.hftLockedCss = '';
-
-window.evaluateQuantVerdict = function() {
-    if (!window.quantStats) return;
-    let q = window.quantStats;
-    let flags = q.flags || {};
-
-    // --- [V12 FRAMEWORK HỢP LƯU] ĐỊNH TUYẾN LẠI TÍN HIỆU HFT (SUPPRESSION RULES) ---
-    if (q.hftVerdict) {
-        let wBuy = q.whaleBuyVol || 0;
-        let wSell = q.whaleSellVol || 0;
-        let ofi = q.ofi || 0;
-        let trend = q.trend || 0;
-
-        // LỚP 1: GIẤU TÍN HIỆU BÁN -> ĐỔI THÀNH MM MARKUP (Đẩy Giá)
-        if ((flags.spoofingSellWall || flags.bearishIceberg) && ofi > 0.2 && wBuy > wSell && trend > 0) {
-            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[⚡ ĐẨY]</b> 🚀 MM MARKUP (NAM CHÂM HÚT GIÁ)`;
-            q.hftVerdict.color = '#00F0FF'; q.hftVerdict.bg = 'rgba(0, 240, 255, 0.15)';
-        }
-        // LỚP 2: GIẤU TÍN HIỆU MUA -> ĐỔI THÀNH MM MARKDOWN (Xả Hàng)
-        else if (flags.spoofingBuyWall && ofi < -0.2 && wSell > wBuy && trend < 0) {
-            q.hftVerdict.html = `<b style="opacity:0.8; margin-right:4px;">[🩸 XẢ]</b> 🩸 MM MARKDOWN (TƯỜNG ĐỠ ẢO)`;
-            q.hftVerdict.color = '#FF007F'; q.hftVerdict.bg = 'rgba(255, 0, 127, 0.15)';
-        }
-    }
-
-    // --- 1. HFT (MICRO): Giữ nguyên logic tối ưu từ Worker V7.1 ---
-    let hftObj = { 
-        html: "⚡ ĐANG KHỞI ĐỘNG TICK...",
-        css: "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;" 
-    };
-    if (q.hftVerdict) {
-        let v = q.hftVerdict;
-        hftObj.html = v.html;
-        hftObj.css = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`;
-    }
-
-    // --- 2. MFT (MESO): DYNAMIC NORMALIZED MATRIX ---
-    // Đọc DOM 1 lần duy nhất ở ngoài (Chống layout thrashing)
-    let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
-    let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
-
-    let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
-    let liqLong = q.longLiq || 0;
-    let liqShort = q.shortLiq || 0;
-    let totalLiq = liqLong + liqShort;
-
-    let spotScore = 0;
-    if (cvd1hTag.includes('BULLISH')) spotScore += 0.5;
-    else if (cvd1hTag.includes('BEARISH')) spotScore -= 0.5;
-    
-    if (cvd4hTag.includes('BULLISH')) spotScore += 0.5;
-    else if (cvd4hTag.includes('BEARISH')) spotScore -= 0.5;
-
-    let futuresScore = 0;
-    let hasFutures = Math.abs(fFunding) > 0 || totalLiq > 0;
-    if (hasFutures) {
-        if (fFunding < -0.005) futuresScore += 0.5;
-        else if (fFunding > 0.005) futuresScore -= 0.5;
-        if (totalLiq > 5000) {
-            let liqRatio = liqShort / totalLiq;
-            if (liqRatio > 0.65) futuresScore += 0.5;
-            else if (liqRatio < 0.35) futuresScore -= 0.5;
-        }
-    }
-
-    let finalMftScore = hasFutures ? (spotScore * 0.4) + (futuresScore * 0.6) : (spotScore * 1.0);
-
-    let mftMsg = '⚖️ ĐI NGANG TRUNG HẠN';
-    let mftColor = '#848e9c'; let mftBg = 'rgba(255, 255, 255, 0.05)';
-    if (finalMftScore >= 0.6) {
-        mftMsg = hasFutures ? '🔥 SHORT SQUEEZE (STRONG BUY)' : '🔥 LỰC MUA CỰC MẠNH (STRONG BUY)';
-        mftColor = '#00F0FF'; mftBg = 'rgba(0, 240, 255, 0.1)';
-    } else if (finalMftScore >= 0.25) {
-        mftMsg = '📈 ĐỘNG LƯỢNG TĂNG (BUY)';
-        mftColor = '#0ECB81'; mftBg = 'rgba(14, 203, 129, 0.1)';
-    } else if (finalMftScore <= -0.6) {
-        mftMsg = hasFutures ? '🩸 LONG CASCADE (STRONG SELL)' : '🩸 LỰC XẢ CỰC MẠNH (STRONG SELL)';
-        mftColor = '#FF007F'; mftBg = 'rgba(255, 0, 127, 0.1)';
-    } else if (finalMftScore <= -0.25) {
-        mftMsg = '📉 ÁP LỰC GIẢM (SELL)';
-        mftColor = '#F6465D'; mftBg = 'rgba(246, 70, 93, 0.1)';
-    }
-    
-    let mftObj = {
-        html: mftMsg,
-        css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${mftColor}; background: ${mftBg}; white-space: nowrap;`
-    };
-
-    // --- 3. LFT (MACRO): NORMALIZED SCORING CHO SMART MONEY ---
-    let smBadge = document.getElementById('sm-verdict-badge');
-    let smTag = smBadge ? smBadge.innerText.toUpperCase() : '';
-    let unlockStr = document.getElementById('sm-unlock-pct') ? document.getElementById('sm-unlock-pct').innerText : '100%';
-    let unlockPct = parseFloat(unlockStr) || 100;
-
-    let smScore = 0;
-    if (smTag.includes('CÁ MẬP GOM') || smTag.includes('BULLISH')) smScore = 1.0;
-    else if (smTag.includes('BOT KIỂM SOÁT') || smTag.includes('BEARISH') || smTag.includes('XẢ')) smScore = -1.0;
-
-    let tokenomicsScore = 0;
-    if (unlockPct < 30) tokenomicsScore = -1.0;
-    else if (unlockPct >= 50) tokenomicsScore = 0.5;
-    else if (unlockPct >= 80) tokenomicsScore = 1.0;
-
-    let finalLftScore = (smScore * 0.75) + (tokenomicsScore * 0.25);
-
-    let lftMsg = '⚖️ TRUNG LẬP VĨ MÔ';
-    let lftColor = '#848e9c'; let lftBg = 'rgba(255, 255, 255, 0.05)';
-    if (finalLftScore >= 0.5) {
-        lftMsg = '💎 TÍCH LŨY VĨ MÔ (MACRO BULL)';
-        lftColor = '#0ECB81'; lftBg = 'rgba(14, 203, 129, 0.1)';
-    } else if (finalLftScore <= -0.5) {
-        lftMsg = '⚠️ RỦI RO PHÂN PHỐI (MACRO BEAR)';
-        lftColor = '#FF007F'; lftBg = 'rgba(255, 0, 127, 0.1)';
-    }
-
-    let lftObj = {
-        html: lftMsg,
-        css: `font-size: 10px; padding: 2px 4px; border-radius: 2px; color: ${lftColor}; background: ${lftBg}; white-space: nowrap;`
-    };
-
-    // [V12 T2] Truyền thêm q.flags vào Rendering Engine để chạy Bitmask Check
-    scheduleVerdictRender(hftObj, mftObj, lftObj, q.flags);
 };
