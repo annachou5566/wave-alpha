@@ -1,11 +1,24 @@
-# Áp dụng cho toàn bộ website
 /*
-  Cache-Control: public, max-age=0, must-revalidate
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://cdn.socket.io https://telegram.org https://www.googletagmanager.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://nbstream.binance.com wss://fstream.binance.com https://fapi.binance.com https://www.google-analytics.com; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; frame-ancestors 'none';
 
-# (Tùy chọn) Nếu sau này bạn tách file ảnh ra riêng folder /assets
-# Bạn có thể cho phép cache ảnh để web tải nhanh hơn:
-# /assets/*
-#   Cache-Control: public, max-age=31536000, immutable
+# ---------------------------------------------------
+# TỐI ƯU HÓA CACHE (TĂNG TỐC ĐỘ TẢI TRANG)
+# ---------------------------------------------------
+
+# 1. Các file tĩnh nặng -> Cache tối đa 1 năm để web load siêu tốc
+/public/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/style.css
+  Cache-Control: public, max-age=31536000, immutable
+/script.js
+  Cache-Control: public, max-age=31536000, immutable
+
+# 2. Các file HTML -> Không bao giờ cache để user luôn nhận được bản cập nhật mới
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
