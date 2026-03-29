@@ -1,1 +1,4 @@
 .env
+# Ignore backup files
+*_bak*
+*_backup*
