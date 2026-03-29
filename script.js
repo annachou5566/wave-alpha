@@ -30,24 +30,6 @@ function formatCurrency(input) {
     input.value = parseInt(value, 10).toLocaleString('en-US');
 }
 
-function requireBotToken() {
-    let currentToken = TELE_BOT_CONFIG.token;
-    if (!currentToken) {
-
-        let input = prompt("⚠️ CHƯA CÓ TOKEN BOT!\n\nVui lòng dán Token BotFather vào đây");
-        if (input && input.trim() !== "") {
-            localStorage.setItem('WAVE_TELE_TOKEN', input.trim());
-            alert("✅ Đã lưu Token vào máy!");
-            return true;
-        } else {
-            alert("❌ Bạn chưa nhập Token nên không thể gửi tin nhắn Telegram.");
-            return false;
-        }
-    }
-    return true;
-}
-
-
 async function sendTelePhoto(comp, newTarget) {
     
 
@@ -180,12 +162,10 @@ async function sendTelePhoto(comp, newTarget) {
         formData.append('reply_markup', JSON.stringify(replyMarkup));
 
         const response = await fetch(`/api/telegram?method=sendPhoto`, {
-    method: 'POST',
-    body: formData
-});
             method: 'POST',
             body: formData
         });
+
 
         const result = await response.json();
         if (result.ok) {
