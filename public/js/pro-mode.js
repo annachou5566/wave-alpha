@@ -2170,7 +2170,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
     window.scCurrentCluster = null;
 
     window.applyFishFilter = function() {
-        let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+        let activeSeries = window.ChartUI ? window.ChartUI.candleSeries : null;
         if (!activeSeries) return;
         let filterEl = document.getElementById('sc-fish-filter');
         let fVal = filterEl ? filterEl.value : 'sweep';
@@ -2366,7 +2366,7 @@ function connectRealtimeChart(t, isTimeSwitch = false) {
         // ========================================================
 // THÊM MỚI: BẮN MARKER BẮT ĐỈNH/ĐÁY TỪ WORKER LÊN BẢNG CHART
 // ========================================================
-let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+let activeSeries = window.ChartUI ? window.ChartUI.candleSeries : null;
 if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
 let flags = window.quantStats.flags;
 let timeSec = Math.floor(Date.now() / 1000);
@@ -2488,7 +2488,7 @@ if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
                 let volThreshold = Math.max(10000, currentAvgTicket * 15);
                 let isTrad = window.currentTheme === 'trad';
                 let timeSec = window.scCurrentCluster ? window.scCurrentCluster.timeSec : Math.floor(now / 1000);
-                let activeSeries = window.currentChartInterval === 'tick' ? tvLineSeries : tvCandleSeries;
+                let activeSeries = window.ChartUI ? window.ChartUI.candleSeries : null;
 
                 if (activeSeries) {
                     if (sellVol3s > buyVol3s * 3 && sellVol3s > volThreshold && priceDiffPct < 0.05) {
