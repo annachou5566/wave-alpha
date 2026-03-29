@@ -1640,7 +1640,7 @@ async function loadFromCloud(isSilent = false) {
     } catch (e) { console.warn("⚠️ Bỏ qua lỗi Config:", e); }
 
     try {
-        const res = await fetch("https://alpha-realtime.onrender.com/api/competition-data");
+        const res = await fetch("/api/competition-data");
         const serverData = await res.json(); 
 
         let tempRunning = [], tempHistory = [], tempAll = [];
