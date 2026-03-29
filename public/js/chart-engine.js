@@ -124,27 +124,45 @@
         }
 
         aggregateTickToCandle(tick) {
-            if (!this.latestCandle || tick.s !== this.currentSymbol) return;
+            // Bỏ qua nếu sai Token
+            if (tick.s !== this.currentSymbol) return;
 
             const price = parseFloat(tick.p);
             const vol = parseFloat(tick.q);
+            const nowTime = Math.floor(Date.now() / 1000); // Lấy mốc thời gian theo giây hiện tại
 
-            // Update đỉnh đáy và giá đóng cửa tạm thời
-            let isUpdated = false;
-            if (price > this.latestCandle.high) { this.latestCandle.high = price; isUpdated = true; }
-            if (price < this.latestCandle.low) { this.latestCandle.low = price; isUpdated = true; }
-            
-            if (price !== this.latestCandle.close) {
+            // 1. NẾU CHƯA CÓ NẾN NÀO (Khung Tick/1s trắng trơn) -> Khởi tạo cây nến đầu tiên
+            if (!this.latestCandle) {
+                this.latestCandle = {
+                    time: nowTime,
+                    open: price,
+                    high: price,
+                    low: price,
+                    close: price,
+                    volume: vol
+                };
+            } 
+            // 2. NẾU BƯỚC SANG GIÂY MỚI -> Chốt nến cũ, vẽ cây nến mới tiếp theo
+            else if (nowTime > this.latestCandle.time) {
+                this.latestCandle = {
+                    time: nowTime,
+                    open: this.latestCandle.close, // Mở cửa bằng giá đóng của giây trước
+                    high: Math.max(this.latestCandle.close, price),
+                    low: Math.min(this.latestCandle.close, price),
+                    close: price,
+                    volume: vol
+                };
+            } 
+            // 3. NẾU VẪN TRONG CÙNG 1 GIÂY -> Cập nhật đỉnh/đáy/đóng cửa liên tục
+            else {
+                if (price > this.latestCandle.high) this.latestCandle.high = price;
+                if (price < this.latestCandle.low) this.latestCandle.low = price;
                 this.latestCandle.close = price;
-                isUpdated = true;
+                this.latestCandle.volume += vol;
             }
 
-            this.latestCandle.volume += vol;
-
-            // Bắn event với tần suất cao (sub-second)
-            if (isUpdated) {
-                this._broadcastUpdate(this.latestCandle);
-            }
+            // Bắn lệnh ép UI vẽ ngay lập tức
+            this._broadcastUpdate(this.latestCandle);
         }
 
         _broadcastUpdate(candleObj) {
