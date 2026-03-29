@@ -1194,7 +1194,12 @@ let lastDataUpdateTime = "Waiting...";
 
 async function fetchMarketData() {
     try {
-        const res = await fetch(DATA_URL + '?t=' + Date.now(), { method: 'GET', headers: { 'X-Wave-Source': 'web-client' } });
+        const res = await fetch(DATA_URL + '?t=' + Date.now(), { 
+            method: 'GET', 
+            headers: { 
+                'X-Wave-Token': 'wV8#mK9$zL2@pQ5*xN1!kasudaohfbkwe289'
+            } 
+        });
         if (!res.ok) return;
         const json = await res.json();
         const rawList = json.data || json.tokens || []; 
