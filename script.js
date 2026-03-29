@@ -17,14 +17,7 @@ function fmtNum(num) {
 }
 const fmt = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
 
-const TELE_BOT_CONFIG = {
 
-    get token() {
-        return localStorage.getItem('WAVE_TELE_TOKEN'); 
-    },
-
-    chatId: '-1003355713341' 
-};
 
 function formatCurrency(input) {
     let value = input.value.replace(/[^0-9]/g, '');
@@ -58,9 +51,7 @@ function requireBotToken() {
 async function sendTelePhoto(comp, newTarget) {
     
 
-    if (!requireBotToken()) return;
-    const token = TELE_BOT_CONFIG.token;
-    const chatId = TELE_BOT_CONFIG.chatId;
+    const chatId = '-1003355713341';
 
 
     const cardWrapper = document.querySelector(`.card-wrapper[data-id="${comp.db_id}"]`);
@@ -188,7 +179,10 @@ async function sendTelePhoto(comp, newTarget) {
         };
         formData.append('reply_markup', JSON.stringify(replyMarkup));
 
-        const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        const response = await fetch(`/api/telegram?method=sendPhoto`, {
+    method: 'POST',
+    body: formData
+});
             method: 'POST',
             body: formData
         });
@@ -5789,10 +5783,7 @@ async function sendFeedbackToDb() {
 
 
 
-const TELE_CONFIG = {
-    get token() { return localStorage.getItem('WAVE_TELE_TOKEN'); },
-    chatId: '-1003355713341' 
-};
+
 
 
 window.addEventListener('load', () => {
@@ -5809,14 +5800,7 @@ function closeAdmin() {
 }
 
 
-window.saveTokenFromUI = function() {
-    const inputToken = document.getElementById('bot-token-input').value.trim();
-    if (!inputToken) return alert("❌ Token is empty!");
-    
-    localStorage.setItem('WAVE_TELE_TOKEN', inputToken);
-    alert("✅ Token saved to this device!");
-    checkTokenStatus();
-}
+
 
 function checkTokenStatus() {
     const statusText = document.getElementById('token-status');
@@ -5831,7 +5815,7 @@ function checkTokenStatus() {
 
 
 window.sendReportFromUI = async function() {
-    if (!TELE_CONFIG.token) return alert("⚠️ Token missing! Please save token first.");
+    
 
     let name = document.getElementById('report-name').value;
     let vol = document.getElementById('report-vol').value;
@@ -5851,13 +5835,13 @@ window.sendReportFromUI = async function() {
 👉 <a href="https://t.me/WaveAlphaSignal_bot/miniapp">Open Wave Alpha Terminal</a>
     `;
 
-    const url = `https://api.telegram.org/bot${TELE_CONFIG.token}/sendMessage`;
+    const url = `/api/telegram?method=sendMessage`;
     try {
         const res = await fetch(url, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                chat_id: TELE_CONFIG.chatId,
+                chat_id: '-1003355713341',
                 text: msg,
                 parse_mode: 'HTML',
                 disable_web_page_preview: true
