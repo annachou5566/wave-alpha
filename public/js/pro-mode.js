@@ -8,9 +8,7 @@ let sortConfig = { key: null, dir: null };
 let currentFilter = 'ALL';
 let filterPoints = false;
 
-
 document.addEventListener('DOMContentLoaded', () => {
-    
     if (!document.querySelector('meta[name="referrer"]')) {
         const meta = document.createElement('meta');
         meta.name = "referrer";
@@ -25,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(link);
     }
 
-    // --- BƠM CSS CHO RWA VÀ BACKGROUND CHART ---
     if (!document.getElementById('wave-alpha-custom-styles')) {
         const style = document.createElement('style');
         style.id = 'wave-alpha-custom-styles';
@@ -40,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .active-rwa { background: rgba(240, 185, 11, 0.15) !important; color: #F0B90B !important; border-color: #F0B90B !important; }
             .excl-rwa-badge { font-size:0.6rem; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; margin-left:8px; color:#aaa; font-weight:normal; letter-spacing:0; font-family:var(--font-main);}
             
-            /* CSS CHO BIỂU ĐỒ 14 NGÀY Ở GIỮA */
             .daily-mid-chart { display: flex; align-items: flex-end; justify-content: space-between; height: 65px; margin: 15px 0 10px 0; gap: 4px; }
             .daily-mid-bar { flex: 1; border-radius: 3px 3px 0 0; position: relative; transition: all 0.2s ease; min-width: 8px;}
             .daily-mid-bar.up { background: linear-gradient(to top, rgba(14,203,129,0.2), rgba(14,203,129,0.9)); border-top: 1px solid #0ecb81; }
@@ -48,55 +44,24 @@ document.addEventListener('DOMContentLoaded', () => {
             .daily-mid-bar.today { background: linear-gradient(to top, rgba(240,185,11,0.2), #F0B90B); border-top: 2px solid #fff; box-shadow: 0 -2px 10px rgba(240,185,11,0.4); }
             .daily-mid-bar:hover { filter: brightness(1.3); cursor: pointer; }
             
-            /* HOVER TOOLTIP XỊN SÒ */
             .chart-tooltip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #2b3139; color: #fff; padding: 4px 6px; font-size: 10px; font-family: var(--font-num); border-radius: 4px; white-space: nowrap; pointer-events: none; margin-bottom: 6px; z-index: 10; border: 1px solid #474d57; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
             .chart-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -4px; border-width: 4px; border-style: solid; border-color: #474d57 transparent transparent transparent; }
             .daily-mid-bar:hover .chart-tooltip { display: block; }
             
-            /* HIỆU ỨNG NHẤP NHÁY CHO TRẠM TRACKING */
             @keyframes pulse-dot { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(14,203,129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14,203,129, 0); } }
             
-            /* ÉP THANH TOOLBAR CHỌN GIỜ LUÔN NỔI LÊN VÀ RESPONSIVE TỐT TRÊN MOBILE */
-            .sc-toolbar {
-                display: flex !important;
-                flex-wrap: wrap;
-                align-items: center;
-                gap: 4px;
-                padding: 8px 15px;
-                background: #111418;
-                border-bottom: 1px solid rgba(255,255,255,0.05);
-                z-index: 999;
-            }
-            /* ĐẢM BẢO KHU VỰC CHART KHÔNG NUỐT TOOLBAR */
-            .sc-chart-main {
-                display: flex !important;
-                flex-direction: column !important;
-                height: 100%;
-                overflow: hidden;
-            }
+            .sc-toolbar { display: flex !important; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px 15px; background: #111418; border-bottom: 1px solid rgba(255,255,255,0.05); z-index: 999; }
+            .sc-chart-main { display: flex !important; flex-direction: column !important; height: 100%; overflow: hidden; }
 
-            /* CSS CHO NÚT CHỌN KHUNG GIỜ */
-            .sc-time-btn { 
-                background: transparent; 
-                border: none; 
-                color: #848e9c; 
-                font-size: 11px; 
-                cursor: pointer; 
-                padding: 4px 8px; 
-                border-radius: 3px; 
-                transition: 0.2s;
-                font-family: var(--font-main);
-            }
+            .sc-time-btn { background: transparent; border: none; color: #848e9c; font-size: 11px; cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: 0.2s; font-family: var(--font-main); }
             .sc-time-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
             .sc-time-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; font-weight: bold; }
 
-            /* HỆ THỐNG MÀU THEME ĐỘNG */
             .theme-cyber .price-up { color: #2af592 !important; transition: color 0.3s; }
             .theme-cyber .price-down { color: #cb55e3 !important; transition: color 0.3s; }
             .theme-trad .price-up { color: #0ECB81 !important; transition: color 0.3s; }
             .theme-trad .price-down { color: #F6465D !important; transition: color 0.3s; }
 
-            /* DATA FLOW WIDGETS (COCKPIT STYLE) */
             .df-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
             .df-box { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 10px 8px; display: flex; flex-direction: column; justify-content: center; }
             .df-label { font-size: 9px; color: #527c82; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; white-space: nowrap; letter-spacing: 0.5px;}
@@ -104,43 +69,30 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.head.appendChild(style);
     }
-if (!document.getElementById('wave-alpha-pro-chart-styles')) {
+    
+    if (!document.getElementById('wave-alpha-pro-chart-styles')) {
         const proChartStyle = document.createElement('style');
         proChartStyle.id = 'wave-alpha-pro-chart-styles';
         proChartStyle.innerHTML = `
-            /* BẢN SẮC BLOOMBERG TERMINAL (THỰC CHIẾN) */
             :root { 
-                --term-bg: #000000;         /* Đen tuyệt đối */
-                --term-panel: #0B0E14;      /* Xám nền Panel */
-                --term-border: #1A1F26;     /* Viền cực mảnh */
-                --term-text: #EAECEF;       /* Trắng sáng */
-                --term-dim: #707A8A;        /* Xám mờ cho Label */
-                --term-up: #0ECB81;         /* Xanh Mua */
-                --term-down: #F6465D;       /* Đỏ Bán */
-                --term-warn: #F0B90B;       /* Vàng Cảnh báo */
+                --term-bg: #000000; --term-panel: #0B0E14; --term-border: #1A1F26; --term-text: #EAECEF; 
+                --term-dim: #707A8A; --term-up: #0ECB81; --term-down: #F6465D; --term-warn: #F0B90B; 
             }
-            
-            /* TẮT TOÀN BỘ BÓNG ĐỔ VÀ HOẠT ẢNH RÁC */
             #super-chart-overlay * { text-shadow: none !important; box-shadow: none !important; }
             #super-chart-overlay { height: 100dvh !important; padding-bottom: 0; box-sizing: border-box; background: var(--term-bg); font-family: var(--font-main); }
             
-            /* LAYOUT CHÍNH */
             .sc-topbar { display: flex; justify-content: space-between; align-items: center; padding: 6px 15px; background: var(--term-panel); border-bottom: 1px solid var(--term-border); height: 42px; flex-shrink: 0; }
             .sc-body { display: flex; flex: 1; overflow: hidden; width: 100%; }
             .sc-chart-area { flex: 1; display: flex; flex-direction: column; background: var(--term-bg); overflow: hidden; }
             .sc-stats-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 15px; background: var(--term-panel); border-bottom: 1px solid var(--term-border); }
             .sc-side-panel { width: 340px; background: var(--term-bg); display: flex; flex-direction: column; border-left: 1px solid var(--term-border); z-index: 2;}
             
-            /* TOP BAR METRICS */
             .sc-price-box { display: flex; align-items: baseline; gap: 10px; margin-right: 15px; }
             .sc-metrics-compact { display: flex; gap: 20px; align-items: center; }
             .sc-mc-item { display: flex; flex-direction: column; align-items: flex-end; }
             .sc-mc-item span { font-size: 9.5px; color: var(--term-dim); font-weight: 600; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px;}
             .sc-mc-item strong { font-size: 13px; color: var(--term-text); font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
             
-            /* ========================================= */
-            /* BỘ KHUNG LAYOUT TERMINAL BÊN PHẢI (MỚI) */
-            /* ========================================= */
             .sc-right-container { display: flex; height: 100%; background: var(--term-bg); border-left: 1px solid var(--term-border); z-index: 2; flex-shrink: 0; }
             .sc-panel-content { width: 340px; height: 100%; background: var(--term-bg); display: flex; flex-direction: column; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-x: hidden; overflow-y: hidden; }
             .sc-panel-content.collapsed { width: 0px !important; }
@@ -163,30 +115,18 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
             .sc-tab-content { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 10px; background: var(--term-bg);}
             .sc-tab-content.active { display: flex !important; }
             
-            /* ========================================= */
-            /* BỘ CLASS WIDGET MỚI DÀNH CHO COMMAND CENTER */
-            /* ========================================= */
-            /* [FIX NHẢY KHUNG] Thêm overflow: hidden để khóa cứng biên giới hộp */
             .term-widget { background: var(--term-panel); border: 1px solid var(--term-border); border-radius: 2px; padding: 8px; margin-bottom: 6px; overflow: hidden; }
-            
             .term-w-title { font-size: 9px; color: var(--term-dim); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px; white-space: nowrap; gap: 4px; overflow: hidden; }
             .term-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; gap: 4px; }
             .term-lbl { font-size: 9px; color: var(--term-dim); overflow: hidden; text-overflow: ellipsis; }
-            
-            /* [FIX NHẢY KHUNG] Thêm ép chữ tự thu gọn bằng dấu ... nếu quá dài */
             .term-val { font-size: 11px; font-weight: 700; color: var(--term-text); font-family: var(--font-num); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; text-align: right;}
             
-            /* CUỘN TAPE */
             #sc-live-trades::-webkit-scrollbar { width: 4px; }
             #sc-live-trades::-webkit-scrollbar-thumb { background: #2B3139; border-radius: 0; }
             #sc-live-trades::-webkit-scrollbar-track { background: var(--term-bg); }
 
-            /* MOBILE RESPONSIVE CÓ KHÓA CUỘN (SCROLL BLEEDING FIX) */
             @media (max-width: 991px) {
-                /* 1. KHOÁ CHẾT NỀN TRANG WEB BÊN DƯỚI */
                 body.overlay-active { overflow: hidden !important; }
-                
-                /* 2. CÁC STYLE PHẦN BIỂU ĐỒ BÊN TRÊN (GIỮ NGUYÊN CỦA BẠN) */
                 .sc-body { flex-direction: column !important; min-height: 0 !important; flex: 1 1 auto !important; }
                 .sc-topbar { padding: 6px 10px; }
                 .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid var(--term-border); }
@@ -198,7 +138,6 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
                 .sc-mc-item span { font-size: 8px; margin-bottom: 0; }
                 .sc-mc-item strong { font-size: 10.5px; }
                 
-                /* 3. BỘ KHUNG PANEL BÊN DƯỚI KÈM THUỐC TRỊ LỖI CUỘN */
                 .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1 1 auto; border-left: none; min-height: 0 !important; }
                 .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; flex-shrink: 0; }
                 .sc-sidebar-icon { border-left: none !important; border-bottom: 2px solid transparent; }
@@ -208,15 +147,7 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
                 .sc-panel-content { width: 100% !important; flex: 1 1 auto !important; min-height: 0 !important; transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
                 .sc-panel-content.collapsed { height: 0px !important; flex: none !important; }
                 
-                .sc-tab-content { 
-                    flex: 1 1 auto !important; 
-                    min-height: 0 !important; 
-                    overflow-y: auto !important; 
-                    overflow-x: hidden !important;
-                    overscroll-behavior: contain !important; /* Ngăn cuộn lây lan ra ngoài (Scroll Bleeding) */
-                    -webkit-overflow-scrolling: touch !important; /* Vuốt mượt có quán tính trên iOS */
-                    padding-bottom: 30px !important; 
-                }
+                .sc-tab-content { flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; overscroll-behavior: contain !important; -webkit-overflow-scrolling: touch !important; padding-bottom: 30px !important; }
             }
         `;
         document.head.appendChild(proChartStyle);
@@ -234,7 +165,6 @@ if (!document.getElementById('wave-alpha-pro-chart-styles')) {
     initMarket();
     setupEvents();
 });
-
 
 function calculateMarketStats(tokensToCalc) {
     let stats = {
@@ -260,7 +190,6 @@ function calculateMarketStats(tokensToCalc) {
         } else if (status === 'DELISTED' || status === 'PRE_DELISTED') {
             stats.countDelisted++;
         } else if (isStock) {
-            // NẾU LÀ CHỨNG KHOÁN -> BỎ QUA KHỎI STATS CHUNG
         } else {
             stats.countActive++;
             const v = t.volume || {};
@@ -499,15 +428,11 @@ function renderTableRows(tbody) {
     }
 }
 
-
 function renderMarketHUD(stats) {
     const view = document.getElementById('alpha-market-view');
     if (!view || !view.querySelector('.alpha-container')) return;
     const container = view.querySelector('.alpha-container'); 
     
-    // =======================================================
-    // 1. MARQUEE TICKER CHO RWA
-    // =======================================================
     let rwaTokens = allTokens.filter(t => t.stockState === 1 || t.stockState === true || (t.symbol && t.symbol.endsWith('on')));
     rwaTokens.sort((a, b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
     
@@ -551,12 +476,9 @@ function renderMarketHUD(stats) {
         }
     }
 
-    // =======================================================
-    // 2. CHUẨN BỊ LOGIC DỮ LIỆU CHUNG (FIX LỖI FORMAT SỐ TỶ B)
-    // =======================================================
     const formatNumK = (num) => {
-        if(num >= 1000000000) return (num/1000000000).toFixed(2) + 'B'; // Đã thêm Tỷ (B)
-        if(num >= 1000000) return (num/1000000).toFixed(2) + 'M'; // Triệu (M)
+        if(num >= 1000000000) return (num/1000000000).toFixed(2) + 'B'; 
+        if(num >= 1000000) return (num/1000000).toFixed(2) + 'M'; 
         if(num >= 1000) return (num/1000).toFixed(0) + 'K';
         return num || 0;
     };
@@ -610,7 +532,6 @@ function renderMarketHUD(stats) {
         `;
     };
 
-    // --- FIX TOP 10: CHỮ ÔM SÁT THANH BAR ---
     const renderRow = (t, idx, type) => {
         if (!t) return '';
         let barHtml = '', volDisplay = 0, pctWidth = 0;
@@ -661,7 +582,6 @@ function renderMarketHUD(stats) {
         `;
     };
 
-// --- CHART REAL 100%: LẤY TỪ BACKEND ---
     let volHistory = window.MARKET_VOL_HISTORY || [];
     let yRolling = volHistory.length > 0 ? (volHistory[volHistory.length - 1].rolling || 0) : 0;
     
@@ -676,10 +596,7 @@ function renderMarketHUD(stats) {
     let yDaily = volHistory.length > 0 ? (volHistory[volHistory.length - 1].daily || 0) : 0;
     let yDailyText = yDaily > 0 ? `Yesterday: $${formatCompactNum(yDaily)}` : '--';
 
-    // XÓA FAKE DATA, CHỈ LẤY DATA THẬT
     let chartData = [...volHistory].slice(-13);
-
-    
     chartData.push({ date: 'Today', daily: stats.alphaDailyTotal });
     let maxDailyChart = Math.max(...chartData.map(d => d.daily || 0), 1);
     
@@ -699,10 +616,6 @@ function renderMarketHUD(stats) {
         </div>`;
     }).join('');
 
-
-    // =======================================================
-    // 3. TẠO KHUNG HUD (FIX CÂN ĐỐI CHIỀU CAO THẺ 1)
-    // =======================================================
     let hud = document.getElementById('market-hud');
     if (!hud) {
         hud = document.createElement('div');
@@ -799,9 +712,6 @@ function renderMarketHUD(stats) {
         }
     }
 
-    // =======================================================
-    // 4. TIÊM MÁU VÀO XƯƠNG
-    // =======================================================
     const pctActive = stats.totalScan > 0 ? (stats.countActive / stats.totalScan) * 100 : 0;
     const pctSpot = stats.totalScan > 0 ? (stats.countSpot / stats.totalScan) * 100 : 0;
     const pctDelist = stats.totalScan > 0 ? (stats.countDelisted / stats.totalScan) * 100 : 0;
@@ -858,9 +768,7 @@ function renderMarketHUD(stats) {
 window.showTooltip = function(e, el) {
     const t = document.getElementById('hud-tooltip');
     if(t && el.dataset.symbol) {
-        
         const { symbol, total, limit, chain } = el.dataset;
-
         t.style.display = 'block';
         t.innerHTML = `
             <div style="color:#fff; font-size:16px; font-weight:bold; margin-bottom:6px; border-bottom:1px solid #333; padding-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
@@ -894,11 +802,6 @@ window.hideTooltip = function() {
     const t = document.getElementById('hud-tooltip');
     if(t) t.style.display = 'none';
 };
-
-
-// =======================================================
-// GIAO DIỆN VÀ LOGIC CHÍNH
-// =======================================================
 
 function injectLayout() {
     document.getElementById('alpha-tab-nav')?.remove();
@@ -953,7 +856,6 @@ function injectLayout() {
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_total')">TOTAL</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_limit')">LIMIT</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.daily_onchain')">ON-CHAIN</th>
-                            
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('volume.rolling_24h')">VOL 24H</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('tx_count')">TXs</th>
                             <th class="text-end cursor-pointer" onclick="window.pluginSort('liquidity')">LIQ</th>
@@ -1002,16 +904,16 @@ function injectLayout() {
                         </div>
                         
                         <div class="sc-metrics-compact">
-    <div class="sc-mc-item"><span>VOL(24H)</span><strong id="sc-top-vol">$--</strong></div>
-    <div class="sc-mc-item"><span>LIQ</span><strong id="sc-top-liq">$--</strong></div>
-    <div class="sc-mc-item"><span>MCAP</span><strong id="sc-top-mc">$--</strong></div>
-    <div class="sc-mc-item"><span>FDV</span><strong id="sc-top-fdv">$--</strong></div> <div class="sc-mc-item"><span>HOLD</span><strong id="sc-top-hold">--</strong></div>
-    <div class="sc-mc-item"><span>TXs</span><strong id="sc-top-tx">--</strong></div>
-</div>
+                            <div class="sc-mc-item"><span>VOL(24H)</span><strong id="sc-top-vol">$--</strong></div>
+                            <div class="sc-mc-item"><span>LIQ</span><strong id="sc-top-liq">$--</strong></div>
+                            <div class="sc-mc-item"><span>MCAP</span><strong id="sc-top-mc">$--</strong></div>
+                            <div class="sc-mc-item"><span>FDV</span><strong id="sc-top-fdv">$--</strong></div> 
+                            <div class="sc-mc-item"><span>HOLD</span><strong id="sc-top-hold">--</strong></div>
+                            <div class="sc-mc-item"><span>TXs</span><strong id="sc-top-tx">--</strong></div>
+                        </div>
                     </div>
                     
-
-<div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center; flex-wrap:wrap;">
+                    <div class="sc-toolbar" style="display:flex; gap:4px; padding:6px 15px; background:#1e2329; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center; flex-wrap:wrap;">
                         <div style="display:flex; gap:4px; align-items:center;">
                             <button class="sc-time-btn" onclick="window.changeChartInterval('tick', this)">Tick</button>
                             <span style="color:#2b3139; margin:0 2px;">|</span>
@@ -1025,7 +927,6 @@ function injectLayout() {
                         </div>
                         
                         <div style="margin-left: auto; display:flex; align-items:center; gap:4px; font-family:var(--font-num); flex-wrap: wrap; justify-content: flex-end;">
-                            
                             <div style="display:flex; gap:6px; align-items:center; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
                                 <div style="display:flex; align-items:center; gap:4px; color:#527c82; font-size:10px; font-weight:700; font-family:var(--font-main);">
                                     <i class="fas fa-filter"></i>
@@ -1053,13 +954,11 @@ function injectLayout() {
                                     <option value="trad">CLASSIC</option>
                                 </select>
                             </div>
-                            
                         </div>
                     </div>
                     
                     <div id="sc-chart-container" style="flex:1; position: relative; overflow: hidden;">
                         <div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
-                        
                         <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 15px; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; color: #848e9c; font-size: 12px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
                             <span id="tp-symbol" style="color:#eaecef; font-weight:800; font-size:15px;">---</span>
                             <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span>
@@ -1069,10 +968,9 @@ function injectLayout() {
                             <span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
                         </div>
                     </div>
+                </div> 
 
-
-                    
-                </div> <div class="sc-right-container" id="sc-right-container">
+                <div class="sc-right-container" id="sc-right-container">
                     <div class="sc-panel-content" id="sc-panel-content">
                         <div id="tab-watchlist" class="sc-tab-content" style="padding: 0; display: none;">
                             <div class="sc-panel-title" style="padding: 10px 15px; margin: 0; background: #12151A; display:flex; justify-content:space-between; align-items:center;">
@@ -1082,8 +980,7 @@ function injectLayout() {
                             <div style="display:flex; justify-content:space-between; font-size:9px; color:#5e6673; padding: 6px 15px; font-weight:800; background: #0B0E11; border-top: 1px solid #1A1F26; border-bottom: 1px solid #1A1F26; letter-spacing: 0.5px;">
                                 <span style="width:45%">TOKEN</span><span style="width:30%; text-align:right;">GIÁ</span><span style="width:25%; text-align:right;">24H%</span>
                             </div>
-                            <div id="sc-watchlist-body" style="flex:1; overflow-y:auto; background: var(--term-bg);">
-                                </div>
+                            <div id="sc-watchlist-body" style="flex:1; overflow-y:auto; background: var(--term-bg);"></div>
                         </div>
 
                         <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex;">
@@ -1108,17 +1005,14 @@ function injectLayout() {
                                     <div class="term-w-title" style="margin-bottom: 8px; color: #9945FF;">
                                         <i class="fas fa-layer-group"></i> MULTI-HORIZON VERDICT
                                     </div>
-                                    
                                     <div class="term-row" style="margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
                                         <span class="term-lbl" style="color:#00F0FF; font-weight: 800;">HFT (Micro)</span>
                                         <span id="verdict-hft" class="term-val" style="font-size: 10px; background: rgba(0, 240, 255, 0.1); padding: 2px 4px; border-radius: 2px; color: #00F0FF;">⚡ ĐANG QUÉT TICK...</span>
                                     </div>
-                                    
                                     <div class="term-row" style="margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
                                         <span class="term-lbl" style="color:#F0B90B; font-weight: 800;">MFT (Meso)</span>
                                         <span id="verdict-mft" class="term-val" style="font-size: 10px; background: rgba(240, 185, 11, 0.1); padding: 2px 4px; border-radius: 2px; color: #F0B90B;">⏳ ĐANG PHÂN TÍCH...</span>
                                     </div>
-                                    
                                     <div class="term-row" style="margin-bottom: 0;">
                                         <span class="term-lbl" style="color:#cb55e3; font-weight: 800;">LFT (Macro)</span>
                                         <span id="verdict-lft" class="term-val" style="font-size: 10px; background: rgba(203, 85, 227, 0.1); padding: 2px 4px; border-radius: 2px; color: #cb55e3;">🔭 CHỜ DỮ LIỆU...</span>
@@ -1143,26 +1037,26 @@ function injectLayout() {
                                     </div>
 
                                     <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #00F0FF; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-    <div class="term-w-title" style="color: #00F0FF; margin-bottom: auto;" title="Tổng khối lượng và xu hướng của nến hiện tại">
-    <i class="fas fa-chart-bar"></i> CANDLE VOLUME
-</div>
-    <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
-        <div class="term-row"><span class="term-lbl">Nến 1 Phút</span><span id="cc-cex-nf-1m" class="term-val">...</span></div>
-        <div class="term-row"><span class="term-lbl">Nến 5 Phút</span><span id="cc-cex-nf-5m" class="term-val">...</span></div>
-        <div class="term-row"><span class="term-lbl">Nến 15 Phút</span><span id="cc-cex-nf-15m" class="term-val">...</span></div>
-        <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;">
-            <span class="term-lbl">Nến 1 Giờ</span><span id="cc-cex-nf-1h" class="term-val">...</span>
-        </div>
-    </div>
-</div>
-                                
-                              </div>  <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
+                                        <div class="term-w-title" style="color: #00F0FF; margin-bottom: auto;" title="Tổng khối lượng và xu hướng của nến hiện tại">
+                                            <i class="fas fa-chart-bar"></i> CANDLE VOLUME
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; justify-content: flex-end;">
+                                            <div class="term-row"><span class="term-lbl">Nến 1 Phút</span><span id="cc-cex-nf-1m" class="term-val">...</span></div>
+                                            <div class="term-row"><span class="term-lbl">Nến 5 Phút</span><span id="cc-cex-nf-5m" class="term-val">...</span></div>
+                                            <div class="term-row"><span class="term-lbl">Nến 15 Phút</span><span id="cc-cex-nf-15m" class="term-val">...</span></div>
+                                            <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;">
+                                                <span class="term-lbl">Nến 1 Giờ</span><span id="cc-cex-nf-1h" class="term-val">...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>  
+
+                                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
                                     <div class="term-widget" style="margin-bottom: 0;">
                                         <div class="term-w-title">DÒNG TIỀN (60s)</div>
                                         <div class="term-row"><span class="term-lbl">Avg Ticket</span><span id="cc-avg-ticket" class="term-val">🦐 $0</span></div>
                                         <div class="term-row"><span class="term-lbl">VWAP</span><span id="cc-vwap-trend" class="term-val">0.00%</span></div>
                                     </div>
-
                                     <div class="term-widget" style="margin-bottom: 0;">
                                         <div class="term-w-title">RỦI RO THANH KHOẢN</div>
                                         <div class="term-row"><span class="term-lbl">Spread</span><span id="cc-spread-val" class="term-val" style="color:var(--term-up);">0.00%</span></div>
@@ -1184,19 +1078,19 @@ function injectLayout() {
                                 </div>
 
                                 <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
-    <span style="display:flex; align-items:center; gap:6px;">
-        SNIPER TAPE 
-        <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;"><option value="all">ALL</option><option value="whale">WHALE</option><option value="shark">SHARK+</option></select>
-        <i id="cc-sound-icon" class="fas fa-volume-up" style="color:#0ECB81; cursor:pointer; font-size:11px; transition:0.2s;" onclick="window.toggleProSound()" title="Bật/Tắt Âm Cảnh Báo"></i>
-    </span>
-    <span style="display:flex; width: 55%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
-        <span style="width: 65%; text-align: center;">SIZE & GIÁ</span>
-        <span style="width: 35%; text-align: right;">TIME</span>
-    </span>
-</div>
-<div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px;">
-    <div style="font-size: 11px; color: var(--term-dim); text-align: center; margin-top: 50px; font-style: italic;">Đang quét...</div>
-</div>
+                                    <span style="display:flex; align-items:center; gap:6px;">
+                                        SNIPER TAPE 
+                                        <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;"><option value="all">ALL</option><option value="whale">WHALE</option><option value="shark">SHARK+</option></select>
+                                        <i id="cc-sound-icon" class="fas fa-volume-up" style="color:#0ECB81; cursor:pointer; font-size:11px; transition:0.2s;" onclick="window.toggleProSound()" title="Bật/Tắt Âm Cảnh Báo"></i>
+                                    </span>
+                                    <span style="display:flex; width: 55%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
+                                        <span style="width: 65%; text-align: center;">SIZE & GIÁ</span>
+                                        <span style="width: 35%; text-align: right;">TIME</span>
+                                    </span>
+                                </div>
+                                <div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px;">
+                                    <div style="font-size: 11px; color: var(--term-dim); text-align: center; margin-top: 50px; font-style: italic;">Đang quét...</div>
+                                </div>
 
                                 <div class="term-widget" style="margin-bottom: 0;">
                                     <div class="term-w-title">FUTURES <span id="cc-futures-status" style="color: var(--term-warn);">⏳ ĐANG DÒ...</span></div>
@@ -1218,12 +1112,11 @@ function injectLayout() {
                         <button class="sc-sidebar-icon" data-title="Smart Money" onclick="window.toggleProSidePanel('smartmoney', this)"><i class="fas fa-microscope"></i></button>
                     </div>
                 </div>
-                </div>
             </div>
+        </div>
     `;
     
     tabNav.insertAdjacentElement('afterend', marketView);
-
     document.body.appendChild(document.getElementById('super-chart-overlay'));
 
     let lastScrollY = window.scrollY;
@@ -1337,7 +1230,7 @@ window.togglePin = (symbol) => {
     else pinnedTokens.push(symbol);
     localStorage.setItem('alpha_pins', JSON.stringify(pinnedTokens));
     renderTable();
-    if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist(); // Cập nhật Watchlist ngay lập tức
+    if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist();
 };
 
 function formatNum(n) { return (!n) ? '0' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n); }
@@ -1567,14 +1460,7 @@ window.updateAlphaMarketUI = function(serverData) {
             changeEl.className = chg >= 0 ? 'text-green' : 'text-red';
         }
 
-        if (window.currentChartSymbol) {
-            let chartSym = window.currentChartSymbol.toUpperCase();
-            let tKey = tokenKey.toUpperCase();
-            let targetSym = targetToken && targetToken.symbol ? targetToken.symbol.toUpperCase() : '';
-            let isMatching = (tKey === chartSym || targetSym === chartSym || tKey.includes(chartSym) || chartSym.includes(tKey));
-        }
-
-        let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
+        let r24El = document.getElementById(`alpha-vol-r24-${tokenKey}`);
         if (r24El && liveItem.r24 !== undefined) r24El.innerText = '$' + formatCompactNum(liveItem.r24);
 
         let liqEl = document.getElementById(`alpha-liq-${tokenKey}`);
@@ -1610,49 +1496,335 @@ window.updateAlphaMarketUI = function(serverData) {
         const freshStats = calculateMarketStats(allTokens);
         renderMarketHUD(freshStats); 
         updateSummary(); 
-        if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist(); // Update Watchlist Realtime
+        if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist(); 
     }
 };
 
+// =====================================================================
+// KHU VỰC RADAR SMART MONEY & HỆ THỐNG GỌI MỞ BẢNG CHART MỚI
+// =====================================================================
 
-// =====================================================================
-// RADAR SMART MONEY & MARKET (ĐẶT CUỐI FILE PRO-MODE.JS)
-// =====================================================================
-window.formatCompactUSD = function(num) {
-    if (num === 0) return '0'; let absNum = Math.abs(num);
+function formatCompactUSD(num) {
+    if (num === 0) return '0';
+    let absNum = Math.abs(num);
     if (absNum >= 1e9) return (num / 1e9).toFixed(2) + 'B';
     if (absNum >= 1e6) return (num / 1e6).toFixed(2) + 'M';
     if (absNum >= 1e3) return (num / 1e3).toFixed(2) + 'K';
     return num.toFixed(2);
-};
+}
 
-window.injectSmartMoneyTab = function() {
+function injectSmartMoneyTab() {
     const sidePanel = document.getElementById('sc-panel-content');
     if (!sidePanel || document.getElementById('tab-smartmoney')) return;
+
     const newTabContent = document.createElement('div');
-    newTabContent.id = 'tab-smartmoney'; newTabContent.className = 'sc-tab-content';
+    newTabContent.id = 'tab-smartmoney';
+    newTabContent.className = 'sc-tab-content';
     newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
     
-    // (Sao chép y nguyên cục chuỗi HTML dài ngoằng chứa #tab-smartmoney của bạn vào đây)
     newTabContent.innerHTML = `
         <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#EAECEF; font-size: 11px; flex-shrink: 0;">
             <i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 5px;"></i> RADAR SMART MONEY (PRO)
         </div>
-        `;
+        
+        <div id="sm-scroll-area" style="flex: 1; overflow-y: auto; padding: 10px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
+            
+            <div class="term-widget" style="border-left: 2px solid #F6465D;">
+                <div class="term-w-title">RỦI RO HỆ THỐNG & TOKENOMICS</div>
+                <div class="term-row" style="margin-bottom: 6px;">
+                    <span class="term-lbl">Ví Top 10 Hold:</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-top10-pct" class="term-val">--%</span>
+                        <span id="sm-top10-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
+                </div>
+                <div class="term-row" style="margin-bottom: 6px;">
+                    <span class="term-lbl">Áp lực xả (Dump CEX):</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-bn-avg-buy" class="term-val">$--</span>
+                        <span id="sm-dump-risk-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
+                </div>
+                <div class="term-row" style="margin-bottom: 6px;">
+                    <span class="term-lbl">Mở khóa (MC/FDV):</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-unlock-pct" class="term-val">--%</span>
+                        <span id="sm-unlock-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
+                </div>
+                <div class="term-row">
+                    <span class="term-lbl">Sức đỡ Thanh khoản:</span>
+                    <div style="display:flex; align-items:center; gap: 6px;">
+                        <span id="sm-liq-ratio" class="term-val">--%</span>
+                        <span id="sm-liq-badge" style="font-size:8.5px; font-weight:700; padding:2px 4px; border-radius:3px;">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="term-w-title" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>💎 TỔ HỢP VÍ (ON-CHAIN)</span>
+                <span id="sm-verdict-badge" style="font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 3px; background: transparent; border: 1px solid #444;">-- Đang quét --</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; margin-bottom: 6px;">
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #0ECB81; padding: 6px;">
+                    <div class="term-w-title">Smart Money</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-smart">0 ví</span><span class="term-val" id="sm-pct-smart" style="color: #0ECB81;">--%</span></div>
+                </div>
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #F0B90B; padding: 6px;">
+                    <div class="term-w-title">KOLs / Pro</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-kol">0 ví</span><span class="term-val" id="sm-pct-kol" style="color: #F0B90B;">--%</span></div>
+                </div>
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #848e9c; padding: 6px;">
+                    <div class="term-w-title">New Wallets</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-new">0 ví</span><span class="term-val" id="sm-pct-new">--%</span></div>
+                </div>
+                <div class="term-widget" style="margin-bottom: 0; border-left: 2px solid #FF007F; padding: 6px;">
+                    <div class="term-w-title">Sniper/Bundler</div>
+                    <div class="term-row"><span class="term-lbl" id="sm-cnt-sniper">0 ví</span><span class="term-val" id="sm-pct-sniper" style="color: #FF007F;">--%</span></div>
+                </div>
+            </div>
+
+            <div class="term-widget" style="border-left: 2px solid #3B82F6; margin-top: 4px;">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span>🏦 DÒNG TIỀN BINANCE DEX</span>
+                    <span id="sm-bn-traders" style="color:#00F0FF; font-size: 8.5px; font-family:var(--font-num); font-weight:700;">-- Traders | -- KYC</span>
+                </div>
+                <div class="term-row"><span class="term-lbl">Net Flow (4H)</span><span id="sm-bn-netflow-4h" class="term-val">$--</span></div>
+                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">Net Flow (24H)</span><span id="sm-bn-netflow-24h" class="term-val">$--</span></div>
+            </div>
+
+            <div class="term-w-title" style="margin-top: 8px; margin-bottom: 4px;">⚖️ ĐỘNG LƯỢNG MUA/BÁN (CVD)</div>
+            
+            <div class="term-widget" style="margin-bottom: 6px; padding: 6px 8px;">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 8.5px;">Khung 1 Giờ</span>
+                    <span id="sm-tag-1h" style="font-weight:bold; padding:2px 4px; border-radius:3px; font-size: 8px;">--</span>
+                </div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0;">
+                    <div id="sm-bar-1h-buy" style="height:100%; width:50%; background:var(--term-up); transition:0.3s;"></div>
+                    <div id="sm-bar-1h-sell" style="height:100%; width:50%; background:var(--term-down); transition:0.3s;"></div>
+                </div>
+                <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-1h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-1h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
+            </div>
+
+            <div class="term-widget" style="margin-bottom: 0; padding: 6px 8px;">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 8.5px;">Khung 4 Giờ</span>
+                    <span id="sm-tag-4h" style="font-weight:bold; padding:2px 4px; border-radius:3px; font-size: 8px;">--</span>
+                </div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0;">
+                    <div id="sm-bar-4h-buy" style="height:100%; width:50%; background:var(--term-up); transition:0.3s;"></div>
+                    <div id="sm-bar-4h-sell" style="height:100%; width:50%; background:var(--term-down); transition:0.3s;"></div>
+                </div>
+                <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-4h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-4h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
+            </div>
+
+            <div class="term-widget" style="border-left: 2px solid #9945FF; margin-top: 6px; margin-bottom: 20px; padding: 8px;" id="sm-futures-sentiment-box">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #9945FF;"><i class="fas fa-satellite-dish"></i> VỊ THẾ CÁ MẬP (FUTURES)</span>
+                    <span id="sm-fs-status" style="color:var(--term-warn); font-size: 8.5px;">⏳ Đang tải...</span>
+                </div>
+
+                <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Tiền (Margin)</span><span id="sm-fs-pos-ratio" class="term-val">--% L / --% S</span></div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
+                    <div id="sm-fs-pos-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                    <div id="sm-fs-pos-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+                </div>
+
+                <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Người (Traders)</span><span id="sm-fs-acc-ratio" class="term-val">--% L / --% S</span></div>
+                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
+                    <div id="sm-fs-acc-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                    <div id="sm-fs-acc-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+                </div>
+
+                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-bottom: 0;">
+                    <span class="term-lbl">Taker Volume (5m)</span>
+                    <div style="text-align:right;">
+                        <div style="font-size: 10px; color: var(--term-up); font-weight: 800; font-family: var(--font-num);">Buy: <span id="sm-fs-taker-buy">$--</span></div>
+                        <div style="font-size: 10px; color: var(--term-down); font-weight: 800; font-family: var(--font-num);">Sell: <span id="sm-fs-taker-sell">$--</span></div>
+                    </div>
+                </div>
+            </div>
+
+        </div> `;
     sidePanel.appendChild(newTabContent);
 }
 
-// Bắt sự kiện mỗi khi nhấn Mở Chart -> Gọi Smart Money
-const oldOpenProChart = window.openProChart;
-window.openProChart = function(t, isTimeSwitch = false) {
-    if (typeof oldOpenProChart === 'function') oldOpenProChart(t, isTimeSwitch);
-    if (!isTimeSwitch) {
-        setTimeout(() => {
-            window.injectSmartMoneyTab();
-            if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
-            if (typeof window.fetchFuturesSentiment === 'function') window.fetchFuturesSentiment(t.symbol);
-        }, 100);
+window.updateSmartMoneyRadar = function(apiData) {
+    if (!apiData || !apiData.data) return;
+    const d = apiData.data;
+
+    const safeSet = (id, val, color) => {
+        let el = document.getElementById(id);
+        if (el) { el.innerHTML = val; if (color) el.style.color = color; }
+    };
+
+    const fmtUsd = (val) => val && !isNaN(val) ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
+    const fmtPrice = (val) => val && !isNaN(val) ? parseFloat(val).toPrecision(5) : '--';
+
+    const fmtNetFlow = (val) => {
+        let n = parseFloat(val || 0);
+        if (isNaN(n) || n === 0) return '<span style="color:var(--term-dim)">$0</span>';
+        let color = n >= 0 ? 'var(--term-up)' : 'var(--term-down)';
+        let sign = n >= 0 ? '+' : '-';
+        return `<span style="color:${color}">${sign}$${formatCompactUSD(Math.abs(n))}</span>`;
+    };
+
+    let t_chart = window.currentChartToken || {};
+
+    let top10Pct = parseFloat(d.top10HoldersPercentage || 0);
+    safeSet('sm-top10-pct', top10Pct.toFixed(1) + '%');
+    let top10Badge = document.getElementById('sm-top10-badge');
+    if (top10Badge) {
+        if (top10Pct >= 80) {
+            top10Badge.innerText = 'Thao túng cao';
+            top10Badge.style.background = 'rgba(246, 70, 93, 0.2)'; top10Badge.style.color = '#F6465D';
+        } else if (top10Pct >= 40) {
+            top10Badge.innerText = 'Cảnh giác (CEX Hold)';
+            top10Badge.style.background = 'rgba(240, 185, 11, 0.2)'; top10Badge.style.color = '#F0B90B';
+        } else {
+            top10Badge.innerText = 'An toàn';
+            top10Badge.style.background = 'rgba(14, 203, 129, 0.2)'; top10Badge.style.color = '#0ECB81';
+        }
     }
+
+    let currentPrice = Number(t_chart.price) || parseFloat(d.price || 0);
+    let avgBuy = parseFloat(d.bnAvgBuyPrice || 0);
+    safeSet('sm-bn-avg-buy', '$' + fmtPrice(avgBuy));
+    let dumpBadge = document.getElementById('sm-dump-risk-badge');
+    if (dumpBadge && avgBuy > 0 && currentPrice > 0) {
+        let pnlPct = ((currentPrice - avgBuy) / avgBuy) * 100;
+        if (pnlPct > 50) {
+            dumpBadge.innerText = `Lãi to (+${pnlPct.toFixed(0)}%)`;
+            dumpBadge.style.background = 'rgba(246, 70, 93, 0.2)'; dumpBadge.style.color = '#F6465D';
+        } else if (pnlPct < -20) {
+            dumpBadge.innerText = `Cắt lỗ (${pnlPct.toFixed(0)}%)`;
+            dumpBadge.style.background = 'rgba(240, 185, 11, 0.2)'; dumpBadge.style.color = '#F0B90B';
+        } else {
+            dumpBadge.innerText = `Tích lũy`;
+            dumpBadge.style.background = 'rgba(14, 203, 129, 0.2)'; dumpBadge.style.color = '#0ECB81';
+        }
+    }
+
+    let mc = Number(t_chart.market_cap) || Number(d.marketCap) || 0;
+    let maxSup = Number(d.allChainMaxSupply) || Number(d.totalSupply) || Number(d.maxSupply);
+    let fdv = maxSup > 0 ? (currentPrice * maxSup) : (Number(d.fdv) || mc);
+    if (fdv < mc) fdv = mc;
+    let unlockPct = fdv > 0 ? (mc / fdv) * 100 : 100;
+    if (unlockPct > 100) unlockPct = 100;
+
+    let topFdvEl = document.getElementById('sc-top-fdv');
+    if (topFdvEl) topFdvEl.innerText = '$' + formatCompactNum(fdv);
+
+    safeSet('sm-unlock-pct', unlockPct.toFixed(1) + '%');
+    let unlockBadge = document.getElementById('sm-unlock-badge');
+    if (unlockBadge) {
+        if (unlockPct < 30) {
+            unlockBadge.innerText = 'Lạm phát cực cao';
+            unlockBadge.style.background = 'rgba(246, 70, 93, 0.2)'; unlockBadge.style.color = '#F6465D';
+        } else if (unlockPct < 70) {
+            unlockBadge.innerText = 'Mở khóa trung bình';
+            unlockBadge.style.background = 'rgba(240, 185, 11, 0.2)'; unlockBadge.style.color = '#F0B90B';
+        } else {
+            unlockBadge.innerText = 'Lưu thông tốt';
+            unlockBadge.style.background = 'rgba(14, 203, 129, 0.2)'; unlockBadge.style.color = '#0ECB81';
+        }
+    }
+
+    let currentTokenLiq = t_chart.liquidity ? t_chart.liquidity : 0;
+    let liq = Number(currentTokenLiq) || Number(d.liquidity) || 0;
+    let liqRatio = mc > 0 ? (liq / mc) * 100 : 0;
+    safeSet('sm-liq-ratio', liqRatio.toFixed(2) + '%');
+    let liqBadge = document.getElementById('sm-liq-badge');
+    if (liqBadge) {
+        if (liq <= 0) {
+            liqBadge.innerText = 'Đang dò Pool...';
+            liqBadge.style.background = 'rgba(255, 255, 255, 0.1)'; liqBadge.style.color = '#848e9c';
+        } else if (liqRatio < 1) {
+            liqBadge.innerText = 'Kém (Dễ trượt giá)';
+            liqBadge.style.background = 'rgba(246, 70, 93, 0.2)'; liqBadge.style.color = '#F6465D';
+        } else if (liqRatio < 5) {
+            liqBadge.innerText = 'Chấp nhận được';
+            liqBadge.style.background = 'rgba(240, 185, 11, 0.2)'; liqBadge.style.color = '#F0B90B';
+        } else {
+            liqBadge.innerText = 'Dày & Khỏe';
+            liqBadge.style.background = 'rgba(14, 203, 129, 0.2)'; liqBadge.style.color = '#0ECB81';
+        }
+    }
+
+    let smartPct = parseFloat(d.holdersSmartMoneyPercent || d.smartMoneyHoldingPercent || 0);
+    safeSet('sm-pct-smart', smartPct > 0 ? (smartPct * 1).toFixed(2) + '%' : '0.00%');
+    safeSet('sm-cnt-smart', d.smartMoneyHolders || '0');
+    
+    let kolProPct = parseFloat(d.kolHoldingPercent || 0) + parseFloat(d.proHoldingPercent || 0);
+    safeSet('sm-pct-kol', kolProPct > 0 ? (kolProPct * 1).toFixed(2) + '%' : '0.00%');
+    safeSet('sm-cnt-kol', parseInt(d.kolHolders || 0) + parseInt(d.proHolders || 0));
+    
+    let newPct = parseFloat(d.newWalletHoldingPercent || 0);
+    safeSet('sm-pct-new', newPct > 0 ? (newPct * 1).toFixed(2) + '%' : '0.00%');
+    safeSet('sm-cnt-new', d.newWalletHolders || '0');
+    
+    let sniperPct = parseFloat(d.sniperHoldingPercent || 0) + parseFloat(d.bundlerHoldingPercent || 0);
+    safeSet('sm-pct-sniper', sniperPct > 0 ? (sniperPct * 1).toFixed(2) + '%' : '0.00%');
+    safeSet('sm-cnt-sniper', d.bundlerHolders || '0');
+
+    let verdictEl = document.getElementById('sm-verdict-badge');
+    if (verdictEl) {
+        if (smartPct + kolProPct > 1) {
+            verdictEl.innerText = 'CÁ MẬP GOM';
+            verdictEl.style.color = '#0ECB81'; verdictEl.style.border = '1px solid rgba(14, 203, 129, 0.5)'; verdictEl.style.background = 'rgba(14, 203, 129, 0.1)';
+        } else if (sniperPct > 5) {
+            verdictEl.innerText = 'BOT KIỂM SOÁT';
+            verdictEl.style.color = '#FF007F'; verdictEl.style.border = '1px solid rgba(255, 0, 127, 0.5)'; verdictEl.style.background = 'rgba(255, 0, 127, 0.1)';
+        } else if (newPct > 10) {
+            verdictEl.innerText = 'FOMO RETAIL';
+            verdictEl.style.color = '#F0B90B'; verdictEl.style.border = '1px solid rgba(240, 185, 11, 0.5)'; verdictEl.style.background = 'rgba(240, 185, 11, 0.1)';
+        } else {
+            verdictEl.innerText = 'KHÔNG CÓ TAY TO';
+            verdictEl.style.color = '#848e9c'; verdictEl.style.border = '1px solid #444'; verdictEl.style.background = 'transparent';
+        }
+    }
+
+    let fShort = (n) => n ? new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(n) : '0';
+    safeSet('sm-bn-traders', `${fShort(d.bnTraders)} Traders <span style="color:#527c82">|</span> ${fShort(d.bnUniqueHolders || d.kycHolderCount)} KYC`);
+    
+    let net4h = parseFloat(d.volume4hNetBinance || 0);
+    safeSet('sm-bn-netflow-4h', (net4h >= 0 ? '+' : '') + fmtUsd(Math.abs(net4h)), net4h >= 0 ? '#0ECB81' : '#F6465D');
+
+    let net24h = parseFloat(d.volume24hNetBinance || 0);
+    safeSet('sm-bn-netflow-24h', (net24h >= 0 ? '+' : '') + fmtUsd(Math.abs(net24h)), net24h >= 0 ? '#0ECB81' : '#F6465D');
+
+    const updateCVDBar = (timeKey, buyVol, sellVol) => {
+        let total = buyVol + sellVol;
+        let buyPct = total > 0 ? (buyVol / total) * 100 : 50;
+        let sellPct = total > 0 ? (sellVol / total) * 100 : 50;
+        
+        let barBuy = document.getElementById(`sm-bar-${timeKey}-buy`);
+        let barSell = document.getElementById(`sm-bar-${timeKey}-sell`);
+        if (barBuy) barBuy.style.width = buyPct + '%';
+        if (barSell) barSell.style.width = sellPct + '%';
+        
+        safeSet(`sm-txt-${timeKey}-buy`, buyPct.toFixed(1) + '%');
+        safeSet(`sm-txt-${timeKey}-sell`, sellPct.toFixed(1) + '%');
+
+        let tagEl = document.getElementById(`sm-tag-${timeKey}`);
+        if (tagEl) {
+            if (buyPct > 65) {
+                tagEl.innerText = 'BULLISH';
+                tagEl.style.background = 'rgba(14, 203, 129, 0.2)'; tagEl.style.color = '#0ECB81';
+            } else if (sellPct > 65) {
+                tagEl.innerText = 'BEARISH';
+                tagEl.style.background = 'rgba(246, 70, 93, 0.2)'; tagEl.style.color = '#F6465D';
+            } else {
+                tagEl.innerText = 'SIDEO';
+                tagEl.style.background = 'rgba(255, 255, 255, 0.1)'; tagEl.style.color = '#848e9c';
+            }
+        }
+    };
+
+    updateCVDBar('1h', parseFloat(d.volume1hBuy || 0), parseFloat(d.volume1hSell || 0));
+    updateCVDBar('4h', parseFloat(d.volume4hBuy || 0), parseFloat(d.volume4hSell || 0));
 };
 
 window.fetchSmartMoneyData = async function(contract, chainId) {
@@ -1665,8 +1837,6 @@ window.fetchSmartMoneyData = async function(contract, chainId) {
 
     try {
         let url = `https://alpha-realtime.onrender.com/api/smart-money?chainId=${chainId || 56}&contractAddress=${contract}`;
-        console.log("📡 Đang lấy dữ liệu Smart Money từ:", url);
-        
         let res = await fetch(url);
         let json = await res.json();
         
@@ -1677,45 +1847,32 @@ window.fetchSmartMoneyData = async function(contract, chainId) {
             if (titleEl) titleEl.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#F6465D; margin-right: 5px;"></i> API TRẢ VỀ RỖNG`;
         }
     } catch(e) {
-        console.error("❌ Lỗi Fetch Data:", e);
         if (titleEl) titleEl.innerHTML = `<i class="fas fa-wifi" style="color:#F6465D; margin-right: 5px;"></i> LỖI KẾT NỐI MẠNG`;
     }
 };
 
-// 🚀 ENGINE: HÚT DỮ LIỆU TÂM LÝ TAY TO PHÁI SINH TỪ BINANCE
 window.fetchFuturesSentiment = async function(symbol) {
     if (!symbol) return;
-    // Chuẩn hóa tên symbol cho API Binance Futures (ví dụ: BTCUSDT)
     let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '') + 'USDT';
-
     const box = document.getElementById('sm-futures-sentiment-box');
     if (!box) return;
 
-    // =======================================================
-    // [FIX BÓNG MA DỮ LIỆU] Tẩy trắng toàn bộ UI về mặc định ngay khi bấm sang Coin mới
-    // =======================================================
     document.getElementById('sm-fs-status').innerText = '⏳ Đang tải...';
     document.getElementById('sm-fs-status').style.color = 'var(--term-warn)';
-    
     document.getElementById('sm-fs-pos-ratio').innerText = '--% L / --% S';
     document.getElementById('sm-fs-pos-long').style.width = '50%';
     document.getElementById('sm-fs-pos-short').style.width = '50%';
-    
     document.getElementById('sm-fs-acc-ratio').innerText = '--% L / --% S';
     document.getElementById('sm-fs-acc-long').style.width = '50%';
     document.getElementById('sm-fs-acc-short').style.width = '50%';
-    
     document.getElementById('sm-fs-taker-buy').innerText = '$--';
     document.getElementById('sm-fs-taker-sell').innerText = '$--';
-    // =======================================================
 
     try {
-        // Gắn timeout để không bị treo web nếu Binance lag
         const fetchTimeout = (url) => Promise.race([
             fetch(url), new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000))
         ]);
 
-        // Gọi 3 API cùng lúc (Song song) để tối ưu tốc độ
         const [posRes, accRes, takerRes] = await Promise.all([
             fetchTimeout(`https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=${cleanSymbol}&period=5m&limit=1`),
             fetchTimeout(`https://fapi.binance.com/futures/data/topLongShortAccountRatio?symbol=${cleanSymbol}&period=5m&limit=1`),
@@ -1726,11 +1883,9 @@ window.fetchFuturesSentiment = async function(symbol) {
         const accData = await accRes.json();
         const takerData = await takerRes.json();
 
-        // Cập nhật Trạng thái thành công
         document.getElementById('sm-fs-status').innerText = '🟢 ĐÃ ĐỒNG BỘ';
         document.getElementById('sm-fs-status').style.color = '#0ECB81';
 
-        // 1. Tỷ lệ Tiền (Khối lượng Vị thế Long/Short của Cá mập)
         if (posData && posData.length > 0) {
             let longPct = parseFloat(posData[0].longAccount) * 100;
             let shortPct = parseFloat(posData[0].shortAccount) * 100;
@@ -1739,7 +1894,6 @@ window.fetchFuturesSentiment = async function(symbol) {
             document.getElementById('sm-fs-pos-short').style.width = `${shortPct}%`;
         }
 
-        // 2. Tỷ lệ Người (Số lượng tài khoản Cá mập Long/Short)
         if (accData && accData.length > 0) {
             let longPct = parseFloat(accData[0].longAccount) * 100;
             let shortPct = parseFloat(accData[0].shortAccount) * 100;
@@ -1748,7 +1902,6 @@ window.fetchFuturesSentiment = async function(symbol) {
             document.getElementById('sm-fs-acc-short').style.width = `${shortPct}%`;
         }
 
-        // 3. Khối lượng khớp chủ động (Bọn nó đang Market Buy hay Market Sell)
         if (takerData && takerData.length > 0) {
             let buyVol = parseFloat(takerData[0].buyVol);
             let sellVol = parseFloat(takerData[0].sellVol);
@@ -1757,249 +1910,19 @@ window.fetchFuturesSentiment = async function(symbol) {
         }
 
     } catch(e) {
-        console.warn(`[Smart Money] Không có dữ liệu Futures cho ${cleanSymbol}`);
         document.getElementById('sm-fs-status').innerText = '🚫 KHÔNG CÓ DATA';
         document.getElementById('sm-fs-status').style.color = '#848e9c';
     }
 };
-// 5. Móc Hàm vào Lệnh Mở Chart
+
 const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
-    oldOpenProChart(t, isTimeSwitch);
+    if (typeof oldOpenProChart === 'function') oldOpenProChart(t, isTimeSwitch);
     if (!isTimeSwitch) {
         setTimeout(() => {
             injectSmartMoneyTab();
             window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
-            
-            // GỌI HÀM VỪA TẠO Ở ĐÂY ĐỂ NÓ CHẠY CÙNG LÚC!
             window.fetchFuturesSentiment(t.symbol);
-            
         }, 100);
     }
-};
-
-// =========================================================
-// 🚀 CỖ MÁY PHÁI SINH TỔNG HỢP (BẢN FINAL V5 - CHỐNG BÓNG MA)
-// =========================================================
-let liquidationWs = null;
-let futuresDataInterval = null;
-
-// Hàm cập nhật an toàn mọi ngóc ngách của giao diện
-function updateAllDOM(id, text, color) {
-    let elements = document.querySelectorAll(`[id="${id}"]`);
-    elements.forEach(el => {
-        if (text !== null) el.innerText = text;
-        if (color !== null) el.style.color = color;
-    });
-}
-
-window.startFuturesEngine = async function(symbol) {
-    window.stopFuturesEngine();
-    if (!symbol) return;
-
-    window.activeFuturesSession = symbol.toUpperCase();
-    let currentSession = window.activeFuturesSession;
-
-    let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '');
-    let fSymbol = cleanSymbol + 'USDT';
-    let streamSymbol = fSymbol.toLowerCase();
-
-    // Chỉ báo "ĐANG DÒ" DUY NHẤT LÚC MỚI BẤM SANG COIN MỚI
-    updateAllDOM('cc-futures-status', '⏳ ĐANG DÒ...', '#F0B90B');
-    updateAllDOM('cc-oi-val', '$--', null);
-    updateAllDOM('cc-funding-lbl', 'Funding Rate', null);
-    updateAllDOM('cc-funding-val', '--%', '#eaecef');
-
-    if (!window.quantStats) window.quantStats = {};
-    window.quantStats.longLiq = 0;
-    window.quantStats.shortLiq = 0;
-    window.quantStats.fundingRateObj = null; 
-    window.quantStats.fundingInterval = null; // Biến lưu trữ Khung giờ thu phí
-
-    const fetchWithTimeout = async (url) => {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 4000);
-        try {
-            const response = await fetch(url, { signal: controller.signal });
-            clearTimeout(id);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return await response.json();
-        } catch (err) {
-            clearTimeout(id);
-            throw err;
-        }
-    };
-
-    const fetchRestData = async () => {
-        if (window.activeFuturesSession !== currentSession) return false;
-        try {
-            // 1. CHỈ GỌI API TÌM KHUNG GIỜ FUNDING 1 LẦN DUY NHẤT
-            if (!window.quantStats.fundingInterval) {
-                try {
-                    let fInfo = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/fundingInfo`);
-                    let sInfo = fInfo.find(x => x.symbol === fSymbol);
-                    window.quantStats.fundingInterval = sInfo ? sInfo.fundingIntervalHours : 8;
-                } catch(e) { window.quantStats.fundingInterval = 8; }
-            }
-
-            // 2. CẬP NHẬT CHỈ SỐ RATE HIỆN TẠI
-            let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
-            if (window.activeFuturesSession !== currentSession) return false;
-
-            updateAllDOM('cc-futures-status', '🟢 ACTIVE', '#0ECB81');
-
-            if (fundData && fundData.lastFundingRate) {
-                window.quantStats.fundingRateObj = {
-                    rate: parseFloat(fundData.lastFundingRate) * 100,
-                    nextTime: fundData.nextFundingTime,
-                    interval: window.quantStats.fundingInterval
-                };
-            }
-
-            // 3. CẬP NHẬT OPEN INTEREST
-            try {
-                let oiData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
-                if (window.activeFuturesSession !== currentSession) return false;
-
-                let currentPrice = window.scLastPrice || (window.currentChartToken ? parseFloat(window.currentChartToken.price) : 0);
-                let oiUsd = parseFloat(oiData.openInterest) * currentPrice;
-                if (oiUsd > 0) updateAllDOM('cc-oi-val', '$' + formatCompactUSD(oiUsd), null);
-            } catch(oiErr) {}
-            return true;
-
-        } catch (err) {
-            if (window.activeFuturesSession !== currentSession) return false;
-            updateAllDOM('cc-futures-status', '🚫 NO FUTURES', '#848e9c');
-            updateAllDOM('cc-oi-val', 'N/A', null);
-            updateAllDOM('cc-funding-lbl', 'Funding Rate', null);
-            updateAllDOM('cc-funding-val', 'N/A', '#848e9c');
-            return false;
-        }
-    };
-
-    let hasFutures = await fetchRestData();
-    
-    // NẾU CÓ PHÁI SINH -> BẬT VÒNG LẶP VÀ WEBSOCKET
-    if (hasFutures && window.activeFuturesSession === currentSession) {
-        futuresDataInterval = setInterval(() => {
-            if (window.activeFuturesSession === currentSession) fetchRestData();
-        }, 15000);
-
-        const connectForceOrderWS = () => {
-            if (window.activeFuturesSession !== currentSession) return;
-            
-            let wsUrl = `wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`;
-            liquidationWs = new WebSocket(wsUrl);
-
-            liquidationWs.onmessage = (event) => {
-                if (window.activeFuturesSession !== currentSession) return;
-                const data = JSON.parse(event.data);
-                if (data.e === 'forceOrder' && data.o) {
-                    let order = data.o;
-                    let valUSD = parseFloat(order.p) * parseFloat(order.q);
-                    let isLongLiq = (order.S === 'SELL');
-
-                    if (isLongLiq) {
-                        window.quantStats.longLiq += valUSD;
-                        updateAllDOM('cc-liq-long', `🩸 Liq L: $${formatCompactUSD(window.quantStats.longLiq)}`, null);
-                    } else {
-                        window.quantStats.shortLiq += valUSD;
-                        updateAllDOM('cc-liq-short', `💥 Liq S: $${formatCompactUSD(window.quantStats.shortLiq)}`, null);
-                    }
-
-                    // [V12 T3] Forward sự kiện Thanh Lý (Force Order) vào Worker để tính toán Hawkes Intensity
-                    if (window.quantWorker) {
-                        window.quantWorker.postMessage({ cmd: 'LIQ_EVENT', data: { v: valUSD, dir: order.S, p: parseFloat(order.p) } });
-                    }
-
-                    if (valUSD > 1000 && typeof window.logToSniperTape === 'function') {
-                        window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
-                    }
-                }
-            };
-
-            liquidationWs.onclose = () => {
-                // SILENT RECONNECT: Nối cáp ngầm, không reset UI gây chớp tắt
-                if (window.activeFuturesSession === currentSession) {
-                    setTimeout(() => connectForceOrderWS(), 3000);
-                }
-            };
-        };
-        
-        connectForceOrderWS();
-    }
-};
-
-window.stopFuturesEngine = function() {
-    window.activeFuturesSession = null;
-    if (futuresDataInterval) { clearInterval(futuresDataInterval); futuresDataInterval = null; }
-    if (liquidationWs) { liquidationWs.close(); liquidationWs = null; }
-};
-// HÀM: Bơm dữ liệu Token Yêu thích vào Watchlist Sidebar (Nâng cấp Hybrid)
-window.renderProWatchlist = function(passedSearchTerm) {
-    const wlBody = document.getElementById('sc-watchlist-body');
-    if (!wlBody) return;
-    
-    // [FIX LỖI MẤT KẾT QUẢ] Luôn ưu tiên đọc giá trị đang gõ trong ô Search để không bị Reset khi Server update giá Real-time
-    let searchInput = document.getElementById('wl-search');
-    let searchTerm = typeof passedSearchTerm === 'string' ? passedSearchTerm : (searchInput ? searchInput.value : '');
-
-    let tokensToRender = [];
-    let isSearching = searchTerm && searchTerm.trim().length > 0;
-    let isShowingSuggested = false;
-
-    if (isSearching) {
-        // [CHẾ ĐỘ TÌM KIẾM]: Lọc toàn thị trường nhưng cắt đúng 50 con đầu tiên để chống lag CPU
-        let term = searchTerm.trim().toLowerCase();
-        tokensToRender = allTokens.filter(t => (t.symbol && t.symbol.toLowerCase().includes(term)) || (t.contract && t.contract.toLowerCase().includes(term))).slice(0, 50);
-    } else {
-        // [CHẾ ĐỘ MẶC ĐỊNH]: Lấy hàng đã Pin
-        let pinned = JSON.parse(localStorage.getItem('alpha_pins')) || [];
-        tokensToRender = allTokens.filter(t => pinned.includes(t.symbol));
-
-        // Nếu chưa Pin con nào, tự động nhét Top 20 Trending Volume vào làm gợi ý
-        if (tokensToRender.length === 0) {
-            isShowingSuggested = true;
-            let sortedByVol = [...allTokens].sort((a,b) => (b.volume?.daily_total || 0) - (a.volume?.daily_total || 0));
-            tokensToRender = sortedByVol.slice(0, 20);
-        }
-    }
-
-    let html = '';
-    
-    if (isShowingSuggested) {
-        html += '<div style="padding:6px 15px; font-size:8.5px; color:#F0B90B; font-weight:800; background:rgba(240,185,11,0.05); border-bottom:1px solid #1A1F26; text-align:center;">CHƯA CÓ WATCHLIST - GỢI Ý TOP 20 TRENDING</div>';
-    }
-
-    tokensToRender.forEach(t => {
-        let sym = t.symbol;
-        let isPinned = (JSON.parse(localStorage.getItem('alpha_pins')) || []).includes(sym);
-        let isUp = (t.change_24h || 0) >= 0;
-        let colorClass = isUp ? 'text-green' : 'text-red';
-        let sign = isUp ? '+' : '';
-        let priceStr = formatPrice(t.price);
-        
-        let pinIconColor = isPinned ? '#F0B90B' : '#474d57';
-
-        html += `
-            <div class="wl-item" onclick="window.openProChart(allTokens.find(x => x.symbol === '${sym}'))">
-                <div class="wl-sym" style="width: 45%;">
-                    <i class="fas fa-star" style="color:${pinIconColor}; font-size:10px; margin-right:6px; transition:0.2s;" 
-                       onmouseover="this.style.color='#F0B90B'" 
-                       onmouseout="this.style.color='${pinIconColor}'"
-                       onclick="event.stopPropagation(); window.togglePin('${sym}'); window.renderProWatchlist();"></i>
-                    <img src="${t.icon || 'assets/tokens/default.png'}" onerror="this.src='assets/tokens/default.png'">
-                    ${sym}
-                </div>
-                <div class="wl-price" style="width: 30%;">$${priceStr}</div>
-                <div class="wl-chg ${colorClass}" style="width: 25%;">${sign}${parseFloat(t.change_24h||0).toFixed(2)}%</div>
-            </div>
-        `;
-    });
-
-    if (tokensToRender.length === 0 && isSearching) {
-        html = '<div style="text-align:center; padding:30px 10px; color:#5e6673; font-style:italic; font-size: 11px;">Không tìm thấy token nào trùng khớp.</div>';
-    }
-
-    wlBody.innerHTML = html;
 };
