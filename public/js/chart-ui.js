@@ -322,7 +322,27 @@ window.updateCommandCenterUI = function() {
         let fLbl = document.getElementById('cc-funding-lbl'); if (fLbl) fLbl.innerText = `Funding (${fObj.interval}h)`;
         let fEl = document.getElementById('cc-funding-val'); if (fEl) fEl.innerHTML = `<span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span><span style="color:#527c82; margin: 0 4px;">/</span><span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span>`;
     }
-
+// CẬP NHẬT TRẠNG THÁI FUTURES & THANH LÝ
+    let fStatusEl = document.getElementById('cc-futures-status');
+    if (fStatusEl) {
+        let hasFutures = window.quantStats && window.quantStats.fundingRateObj != null;
+        if (hasFutures) {
+            fStatusEl.innerText = '🟢 ACTIVE';
+            fStatusEl.style.color = '#0ECB81';
+        } else if (window.activeFuturesSession) {
+            fStatusEl.innerText = '🟡 CHỜ DATA...';
+            fStatusEl.style.color = '#F0B90B';
+        } else {
+            fStatusEl.innerText = '🔴 NO FUTURES';
+            fStatusEl.style.color = '#848e9c';
+        }
+    }
+    
+    let liqLongEl = document.getElementById('cc-liq-long');
+    if (liqLongEl) liqLongEl.innerText = `🩸 Liq L: $${window.formatCompactUSD((window.quantStats && window.quantStats.longLiq) ? window.quantStats.longLiq : 0)}`;
+    
+    let liqShortEl = document.getElementById('cc-liq-short');
+    if (liqShortEl) liqShortEl.innerText = `💥 Liq S: $${window.formatCompactUSD((window.quantStats && window.quantStats.shortLiq) ? window.quantStats.shortLiq : 0)}`;
     let sq = window.computeSqueezeZone ? window.computeSqueezeZone() : { confirmed: false };
     if (sq.confirmed && window.scChartMarkers) {
         let currentTime = Date.now();
@@ -469,6 +489,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
         let tape = document.getElementById('cc-sniper-tape');
         if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
+        
+        // -----> GỌI SMART MONEY VÀ FUTURES Ở ĐÂY <-----
+        setTimeout(() => {
+            if (typeof window.injectSmartMoneyTab === 'function') window.injectSmartMoneyTab();
+            if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+            if (typeof window.fetchFuturesSentiment === 'function') window.fetchFuturesSentiment(t.symbol);
+        }, 100);
     }
 
     setTimeout(() => {
