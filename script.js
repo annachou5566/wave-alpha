@@ -6472,8 +6472,7 @@ async function fetchLayer2Data() {
     try {
         const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
         const res = await fetch(antiCacheUrl, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json', 'x-api-key': REALTIME_API_KEY }
+            method: 'GET' 
         });
         const json = await res.json();
         let actualData = json.data ? json.data : json; 
