@@ -33,19 +33,15 @@ class CompetitionRadar {
     }
 
    async fetchData() {
-        try {
-            const res = await fetch(COMPETITION_API_URL + '?t=' + Date.now(), {
-                method: 'GET',
-                headers: { 
-                'X-Wave-Token': 'wV8#mK9$zL2@pQ5*xN1!kasudaohfbkwe289'
-            }
-            });
-            
-            if (!res.ok) throw new Error("Err: " + res.status);
-            this.data = await res.json();
-        } catch (e) { console.error(e); }
+    try {
+        const res = await fetch(COMPETITION_API_URL + '?t=' + Date.now());
+        
+        if (!res.ok) throw new Error("Err: " + res.status);
+        this.data = await res.json();
+    } catch (e) { 
+        console.error(e); 
     }
-
+}
     updateRealtimeStats(externalList) {
         if (!externalList || !Array.isArray(externalList)) return;
 
