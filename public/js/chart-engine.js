@@ -342,7 +342,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         let contract = t.contract || '';
         let chainId = t.chain_id || t.chainId || 56;
         if (!contract) return []; 
-        let apiUrl = `https://alpha-realtime.onrender.com/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
+        let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
         if (!res.ok) return [];
