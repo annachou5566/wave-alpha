@@ -3065,7 +3065,7 @@ function calculateAiTarget(c, isHistory = false) {
 
 
     let now = new Date();
-    let todayStr = now.toLocaleDateString('en-CA'); 
+    let todayStr = now.toISOString().split('T')[0]; 
     let isFinalDay = (c.end === todayStr);
 
     let unlockTime = new Date();
@@ -4131,7 +4131,7 @@ function renderHistoryList(c) {
 
 
     let now = new Date();
-    let todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    let todayStr = now.toISOString().split('T')[0]; 
 
 
 
