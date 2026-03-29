@@ -315,40 +315,28 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                     window.isRenderingPrice = false;
                 });
             }
-
-            if (!window.scCurrentCluster) {
-                window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
-            } else {
-                if (window.scCurrentCluster.dir === isUp && (nowT - window.scCurrentCluster.startT < 1000)) {
-                    window.scCurrentCluster.vol += valUSD; window.scCurrentCluster.count += 1; window.scCurrentCluster.p = p; 
-                } else {
-                    window.flushSmartTape(window.scCurrentCluster);
-                    window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
-                }
-            }
-
-            window.scTradeCount++; window.scTotalVol += valUSD; window.scNetFlow += isUp ? valUSD : -valUSD;
-            if (window.scSpeedWindow.length > 500) window.scSpeedWindow.shift(); 
-            window.scSpeedWindow.push({ t: nowT, v: valUSD });
-        }
-    };
-            
-    window.chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => window.connectRealtimeChart(window.currentChartToken), 30000); } };
-};
-
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
+    let limit = isArea ? 100 : 300; 
+    let contract = t.contract || '';
+    let chainId = t.chain_id || t.chainId || 56;
+    let symbol = (t.symbol || '').toUpperCase() + 'USDT'; // Chuẩn bị symbol cho Binance (VD: BTCUSDT)
+
     try {
-        let limit = isArea ? 100 : 300; 
-        let contract = t.contract || '';
-        let chainId = t.chain_id || t.chainId || 56;
-        if (!contract) return []; 
+        if (!contract) throw new Error("Không có contract"); 
         let apiUrl = `https://alpha-realtime.onrender.com/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
-        const res = await fetch(apiUrl);
-        if (!res.ok) return [];
-        const data = await res.json();
-        if (data.length === 0) return [];
+        // Cài đặt mốc thời gian: Nếu server Render lag quá 3 giây -> Hủy gọi để chuyển sang Binance
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
 
+        const res = await fetch(apiUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) throw new Error(`Render HTTP Lỗi ${res.status}`);
+        const data = await res.json();
+        if (!data || data.length === 0) throw new Error("Render trả về dữ liệu rỗng");
+
+        // Format dữ liệu từ Render
         return data.map(d => {
             let isUp = d.close >= d.open;
             return {
@@ -359,7 +347,45 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
                 value: isArea ? d.close : undefined
             };
         });
-    } catch (e) { return []; }
+
+    } catch (e) {
+        // ========================================================
+        // 🚀 SERVER RENDER QUÁ TẢI/SẬP -> FALLBACK SANG BINANCE API
+        // ========================================================
+        console.warn(`⚠️ Render Server gián đoạn. Tự động chuyển qua Binance API cho: ${symbol}`);
+
+        try {
+            // Sử dụng fapi (Binance Futures Public API) - Hoàn toàn không cần API Key
+            let binanceUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+            
+            const binanceRes = await fetch(binanceUrl);
+            if (!binanceRes.ok) return [];
+            
+            const bData = await binanceRes.json();
+
+            // Format dữ liệu mảng thô của Binance thành Format của TradingView
+            return bData.map(k => {
+                let dTime = Math.floor(k[0] / 1000); // Đổi từ ms sang giây
+                let dOpen = parseFloat(k[1]);
+                let dHigh = parseFloat(k[2]);
+                let dLow = parseFloat(k[3]);
+                let dClose = parseFloat(k[4]);
+                let dVol = parseFloat(k[5]);
+                let isUp = dClose >= dOpen;
+
+                return {
+                    time: dTime, 
+                    open: dOpen, high: dHigh, low: dLow, close: dClose,
+                    volValue: dVol, 
+                    volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
+                    value: isArea ? dClose : undefined
+                };
+            });
+        } catch (err) {
+            console.error("Binance API Fallback cũng thất bại:", err);
+            return [];
+        }
+    }
 };
 
 window.startFuturesEngine = async function(symbol) {
