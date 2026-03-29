@@ -36,9 +36,9 @@ class CompetitionRadar {
         try {
             const res = await fetch(COMPETITION_API_URL + '?t=' + Date.now(), {
                 method: 'GET',
-                headers: {
-                    'X-Wave-Source': 'web-client' 
-                }
+                headers: { 
+                'X-Wave-Token': 'wV8#mK9$zL2@pQ5*xN1!kasudaohfbkwe289'
+            }
             });
             
             if (!res.ok) throw new Error("Err: " + res.status);
