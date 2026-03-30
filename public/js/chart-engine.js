@@ -11,12 +11,10 @@ window.currentChartToken = null;
 window.quantStats = {
     whaleBuyVol: 0, whaleSellVol: 0,
     botSweepBuy: 0, botSweepSell: 0,
-    priceTrend: 0,
-    trend: 0, drop: 0, spread: 0,
+    priceTrend: 0, trend: 0, drop: 0, spread: 0,
     ofi: 0, zScore: 0, buyDominance: 50,
     longLiq: 0, shortLiq: 0,
-    fundingRateObj: null,
-    hftVerdict: null
+    fundingRateObj: null, hftVerdict: null
 };
 
 window.connectRealtimeChart = function(t, isTimeSwitch = false) {
@@ -24,6 +22,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
     let contract = t.contractAddress || t.contract || '';
     let chainId = String(t.chainId || t.chain_id || 56);
+    
     if (contract && chainId !== "501" && chainId !== "784") {
         contract = contract.toLowerCase(); 
     }
@@ -79,30 +78,25 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     window.scCSweep = cache.cSweep || 0;
     window.quantStats = cache.quantStats || { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
     window.scCurrentCluster = null;
+    window.scActivePriceLines = []; 
 
     try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
-    let params = [
-        `${streamPrefix}@aggTrade`,
-        `${streamPrefix}@bookTicker`,
-        'came@allTokens@ticker24',
-        `${streamPrefix}@fulldepth@500ms`
-    ];
-    window.scActivePriceLines = []; 
-    
+    // PHÂN LUỒNG WEBSOCKET TÙY THEO LOẠI TOKEN
+    let params = [];
     if (contract) {
-        // Luồng Klines dành riêng cho token Web3/DEX
         params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
         if (window.currentChartInterval !== 'tick') {
-            let targetKline = `came@${contract}@${chainId}@kline_${window.currentChartInterval}`;
-            if (!params.includes(targetKline)) params.push(targetKline);
+            let tk = `came@${contract}@${chainId}@kline_${window.currentChartInterval}`;
+            if (!params.includes(tk)) params.push(tk);
         }
-    } else {
-        // Luồng Klines cho token CEX thông thường
+    } 
+    params.push(`${streamPrefix}@aggTrade`, `${streamPrefix}@bookTicker`, 'came@allTokens@ticker24', `${streamPrefix}@fulldepth@500ms`);
+    if (!contract) {
         params.push(`${streamPrefix}@kline_1m`, `${streamPrefix}@kline_5m`, `${streamPrefix}@kline_15m`, `${streamPrefix}@kline_1h`);
         if (window.currentChartInterval !== 'tick') {
-            let targetKline = `${streamPrefix}@kline_${window.currentChartInterval}`;
-            if (!params.includes(targetKline)) params.push(targetKline);
+            let tk = `${streamPrefix}@kline_${window.currentChartInterval}`;
+            if (!params.includes(tk)) params.push(tk);
         }
     }
 
@@ -111,12 +105,12 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         if (window.activeChartSessionId !== currentSession) return;
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
-    const now = Date.now();
-    window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
-    
-    if (window.scTickHistory.length > 3000) {
-        window.scTickHistory = window.scTickHistory.slice(-3000);
-    }
+        const now = Date.now();
+        window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
+        
+        if (window.scTickHistory.length > 3000) {
+            window.scTickHistory = window.scTickHistory.slice(-3000);
+        }
 
         let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
         if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
@@ -223,7 +217,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     window.chartWsReconnectDelay = window.chartWsReconnectDelay || 1000;
     
     window.chartWs.onopen = () => {
-        window.chartWsReconnectDelay = 1000; // Reset khi thành công
+        window.chartWsReconnectDelay = 1000; 
         window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
     };
 
@@ -237,17 +231,18 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         }
 
         // ==========================================
-        // XỬ LÝ NẾN (HỖ TRỢ CẢ CEX LẪN WEB3 DEX)
+        // XỬ LÝ NẾN (HỖ TRỢ CẢ CEX VÀ WEB3 DEX)
         // ==========================================
-        if (data.e === 'kline' || data.stream.includes('@kline_')) {
+        if (data.e === 'kline' || data.stream.includes('kline_')) {
             let k = data.data.k || data.data; 
             if (!k) return; 
             
-            let streamInterval = data.stream.split('kline_')[1];
-            let klineInterval = k.i || streamInterval;
+            let streamParts = data.stream.split('kline_');
+            let klineInterval = k.i || streamParts[streamParts.length - 1];
             let currentClose = parseFloat(k.c);
-            
-            // [VÁ LỖI DEX]: Cập nhật Live Price trực tiếp từ nến vì DEX không có luồng @aggTrade
+            let currentVol = parseFloat(k.q !== undefined ? k.q : (k.v || 0));
+
+            // Cập nhật Live Price trực tiếp từ nến (Bắt buộc cho Web3 vì không có aggTrade)
             window.scLastPrice = currentClose;
             if (!window.isRenderingPrice) {
                 window.isRenderingPrice = true;
@@ -277,7 +272,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             if (klineInterval !== window.currentChartInterval) return; 
             if (window.currentChartInterval === 'tick') return;
 
-            let rawTime = k.t || k.ot; // DEX dùng OpenTime (ot)
+            let rawTime = k.t || k.ot; // Web3 trả về biến ot (OpenTime) thay vì t
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = currentClose >= parseFloat(k.o);
@@ -288,16 +283,15 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                     window.tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: currentClose });
                 }
                 if (window.tvVolumeSeries) {
-                    let volValue = parseFloat(k.q !== undefined ? k.q : (k.v || 0));
-                    if (isNaN(volValue)) volValue = 0;
-                    window.tvVolumeSeries.update({ time: candleTime, value: volValue, color: volColor });
+                    if (isNaN(currentVol)) currentVol = 0;
+                    window.tvVolumeSeries.update({ time: candleTime, value: currentVol, color: volColor });
                 }
                 if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: currentClose });
             }
         }
         
         // ==========================================
-        // XỬ LÝ DEPTH & TAPE (CEX)
+        // XỬ LÝ LỆNH KHỚP & ORDERBOOK (CHỈ CÓ Ở CEX)
         // ==========================================
         if (data.stream && data.stream.includes('@fulldepth') && data.data) {
             let currentSym = data.data.s || 'UNKNOWN';
@@ -323,7 +317,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             let nowT = Date.now();
 
             window.scTickHistory.push({ t: nowT, p: p, q: q, v: valUSD, dir: isUp });
-            window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
+            if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'TICK', data: { t: nowT, p: p, q: q, v: valUSD, dir: isUp } });
 
             if (window.currentChartInterval === '1s') {
                 if (!window.liveCandle1s || window.liveCandle1s.time !== timeSec) {
@@ -355,13 +349,25 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                 }
             }
 
+            if (!window.isRenderingPrice) {
+                window.isRenderingPrice = true;
+                requestAnimationFrame(() => {
+                    let priceEl = document.getElementById('sc-live-price');
+                    if (priceEl && typeof window.formatPrice === 'function') {
+                        priceEl.innerText = '$' + window.formatPrice(p);
+                        priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
+                    }
+                    window.isRenderingPrice = false;
+                });
+            }
+
             if (!window.scCurrentCluster) {
                 window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
             } else {
                 if (window.scCurrentCluster.dir === isUp && (nowT - window.scCurrentCluster.startT < 1000)) {
                     window.scCurrentCluster.vol += valUSD; window.scCurrentCluster.count += 1; window.scCurrentCluster.p = p; 
                 } else {
-                    window.flushSmartTape(window.scCurrentCluster);
+                    if (typeof window.flushSmartTape === 'function') window.flushSmartTape(window.scCurrentCluster);
                     window.scCurrentCluster = { dir: isUp, vol: valUSD, count: 1, startT: nowT, timeSec: timeSec, p: p, t: data.data.T };
                 }
             }
@@ -380,8 +386,11 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             window.chartWsReconnectDelay = Math.min(window.chartWsReconnectDelay * 2, 30000);
         } 
     };
+};
 
-}; // <============= ĐÂY LÀ DẤU NGOẶC CHỐT HẠ ĐỂ SỬA LỖI =============>
+// ==========================================
+// CÁC HÀM TIỆN ÍCH & API
+// ==========================================
 
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
@@ -392,7 +401,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
             contract = contract.toLowerCase();
         }
         
-        if (!contract) return []; // CEX sẽ không đi qua API Web3 này
+        if (!contract) return []; // An toàn nếu không tìm thấy contract
         
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
@@ -401,7 +410,6 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         const data = await res.json();
         if (!data || data.length === 0) return [];
 
-        // ÉP KIỂU SỐ THỰC CHUẨN LIGHTWEIGHT CHARTS
         return data.map(d => {
             let o = parseFloat(d.open), c = parseFloat(d.close);
             let isUp = c >= o;
@@ -417,6 +425,19 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
             };
         });
     } catch (e) { return []; }
+};
+
+// VÁ LỖI GỌI API SMART MONEY CHO DEX
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    if (typeof args[0] === 'string' && args[0].includes('/api/smart-money')) {
+        if (window.currentChartToken) {
+            let c = window.currentChartToken.contractAddress || window.currentChartToken.contract || '';
+            let cid = window.currentChartToken.chainId || window.currentChartToken.chain_id || 56;
+            args[0] = `/api/smart-money?contractAddress=${c}&chainId=${cid}`;
+        }
+    }
+    return originalFetch.apply(this, args);
 };
 
 window.startFuturesEngine = async function(symbol) {
