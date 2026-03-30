@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (V4 - CSP BYPASS)
+// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (V5 - FINAL CSP BYPASS)
 // ==========================================
 
 window.chartWs = null;
@@ -7,6 +7,9 @@ window.liquidationWs = null;
 window.futuresDataInterval = null;
 window.isReconnecting = false;
 window.currentChartToken = null; 
+
+// Đổi Base URL về thẳng Render để không bị CSP chặn và không bị 404 Proxy
+const RENDER_BASE_URL = "https://alpha-realtime.onrender.com";
 
 window.quantStats = {
     whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0,
@@ -25,8 +28,8 @@ window.getSmartTokenContext = async function(t) {
     if (!chainId || !contract) {
         if (!window._binanceTokenListCache) {
             try {
-                // ĐÃ SỬA: Gọi API nội bộ của Render để không bị lỗi CSP Blocked
-                let res = await fetch("/api/token-list");
+                // 👉 GỌI VỀ RENDER ĐỂ BYPASS CSP CỦA BINANCE
+                let res = await fetch(`${RENDER_BASE_URL}/api/token-list`);
                 let json = await res.json();
                 if (json.success) window._binanceTokenListCache = json.data;
             } catch(e) {}
@@ -201,7 +204,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
                     if (i < window.scActivePriceLines.length) { 
-                        // ĐÃ SỬA: Chống Crash applyOptions
+                        // CHỐNG CRASH: Kiểm tra có hàm applyOptions
                         if (window.scActivePriceLines[i] && typeof window.scActivePriceLines[i].applyOptions === 'function') {
                             window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
                         }
@@ -211,7 +214,6 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     }
                 }
                 for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { 
-                    // ĐÃ SỬA: Chống Crash applyOptions
                     if (window.scActivePriceLines[i] && typeof window.scActivePriceLines[i].applyOptions === 'function') {
                         window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
                     }
@@ -421,7 +423,9 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         let chainId = smartCtx.chainId;
         
         if (!contract) return []; 
-        let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
+        
+        // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
+        let apiUrl = `${RENDER_BASE_URL}/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
         if (!res.ok) return [];
@@ -446,7 +450,8 @@ window.fetch = async function(...args) {
     if (typeof args[0] === 'string' && args[0].includes('/api/smart-money')) {
         if (window.currentChartToken) {
             let smartCtx = await window.getSmartTokenContext(window.currentChartToken);
-            args[0] = `/api/smart-money?contractAddress=${smartCtx.contract}&chainId=${smartCtx.chainId}`;
+            // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
+            args[0] = `${RENDER_BASE_URL}/api/smart-money?contractAddress=${smartCtx.contract}&chainId=${smartCtx.chainId}`;
         }
     }
     return originalFetch.apply(this, args);
@@ -474,20 +479,23 @@ window.startFuturesEngine = async function(symbol) {
         try {
             if (!window.quantStats.fundingInterval) {
                 try { 
-                    let fInfo = await fetchWithTimeout(`/api/binance-fapi?endpoint=/fapi/v1/fundingInfo`); 
+                    // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
+                    let fInfo = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/fundingInfo`); 
                     let sInfo = fInfo.find(x => x.symbol === fSymbol); 
                     window.quantStats.fundingInterval = sInfo ? sInfo.fundingIntervalHours : 8; 
                 } catch(e) { window.quantStats.fundingInterval = 8; }
             }
             
-            let fundData = await fetchWithTimeout(`/api/binance-fapi?endpoint=/fapi/v1/premiumIndex&symbol=${fSymbol}`);
+            // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
+            let fundData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/premiumIndex&symbol=${fSymbol}`);
             if (window.activeFuturesSession !== currentSession) return false;
             if (fundData && fundData.lastFundingRate) {
                 window.quantStats.fundingRateObj = { rate: parseFloat(fundData.lastFundingRate) * 100, nextTime: fundData.nextFundingTime, interval: window.quantStats.fundingInterval };
             }
             
             try {
-                let oiData = await fetchWithTimeout(`/api/binance-fapi?endpoint=/fapi/v1/openInterest&symbol=${fSymbol}`);
+                // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
+                let oiData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/openInterest&symbol=${fSymbol}`);
                 if (window.activeFuturesSession === currentSession && oiData && oiData.openInterest) {
                     window.quantStats.openInterest = parseFloat(oiData.openInterest);
                 }
