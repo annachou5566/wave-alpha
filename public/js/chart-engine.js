@@ -199,7 +199,12 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         }
     }, 150);
 
-    window.chartWs.onopen = () => window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
+    window.chartWsReconnectDelay = window.chartWsReconnectDelay || 1000;
+    
+    window.chartWs.onopen = () => {
+        window.chartWsReconnectDelay = 1000; // Reset khi thành công
+        window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
+    };
 
     window.chartWs.onmessage = (event) => {
         if (window.activeChartSessionId !== currentSession) return;
@@ -333,8 +338,14 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         }
     };
             
-    window.chartWs.onclose = () => { if (document.getElementById('super-chart-overlay').classList.contains('active')) { setTimeout(() => window.connectRealtimeChart(window.currentChartToken), 30000); } };
-};
+    window.chartWs.onclose = () => { 
+        let overlay = document.getElementById('super-chart-overlay');
+        if (overlay && overlay.classList.contains('active')) { 
+            const jitter = Math.random() * 1000;
+            setTimeout(() => window.connectRealtimeChart(window.currentChartToken), window.chartWsReconnectDelay + jitter);
+            window.chartWsReconnectDelay = Math.min(window.chartWsReconnectDelay * 2, 30000);
+        } 
+    };
 
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
@@ -406,9 +417,20 @@ window.startFuturesEngine = async function(symbol) {
     let hasFutures = await fetchRestData();
     if (hasFutures && window.activeFuturesSession === currentSession) {
         window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
+        
+        // 1. THÊM BIẾN QUẢN LÝ THỜI GIAN CHỜ (BACKOFF)
+        let liqReconnectDelay = 1000; // Bắt đầu đợi 1 giây
+        const MAX_LIQ_DELAY = 30000; // Tối đa đợi 30 giây
+
         const connectForceOrderWS = () => {
             if (window.activeFuturesSession !== currentSession) return;
             window.liquidationWs = new WebSocket(`wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`);
+            
+            // 2. RESET THỜI GIAN CHỜ KHI KẾT NỐI THÀNH CÔNG
+            window.liquidationWs.onopen = () => {
+                liqReconnectDelay = 1000;
+            };
+
             window.liquidationWs.onmessage = (event) => {
                 if (window.activeFuturesSession !== currentSession) return;
                 const data = JSON.parse(event.data);
@@ -419,7 +441,15 @@ window.startFuturesEngine = async function(symbol) {
                     if (valUSD > 1000 && typeof window.logToSniperTape === 'function') window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
                 }
             };
-            window.liquidationWs.onclose = () => { if (window.activeFuturesSession === currentSession) setTimeout(() => connectForceOrderWS(), 3000); };
+
+            // 3. THUẬT TOÁN EXPONENTIAL BACKOFF + JITTER (Độ lệch ngẫu nhiên)
+            window.liquidationWs.onclose = () => { 
+                if (window.activeFuturesSession === currentSession) {
+                    const jitter = Math.random() * 1000; // Lệch ngẫu nhiên 0-1s để tránh trùng lặp
+                    setTimeout(() => connectForceOrderWS(), liqReconnectDelay + jitter);
+                    liqReconnectDelay = Math.min(liqReconnectDelay * 2, MAX_LIQ_DELAY); // Nhân đôi thời gian chờ
+                } 
+            };
         };
         connectForceOrderWS();
     }
