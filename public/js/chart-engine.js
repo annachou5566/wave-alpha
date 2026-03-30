@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (SMART MULTI-CHAIN)
+// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (SMART MULTI-CHAIN V2)
 // ==========================================
 
 window.chartWs = null;
@@ -9,32 +9,48 @@ window.isReconnecting = false;
 window.currentChartToken = null; 
 
 window.quantStats = {
-    whaleBuyVol: 0, whaleSellVol: 0,
-    botSweepBuy: 0, botSweepSell: 0,
+    whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0,
     priceTrend: 0, trend: 0, drop: 0, spread: 0,
     ofi: 0, zScore: 0, buyDominance: 50,
-    longLiq: 0, shortLiq: 0,
-    fundingRateObj: null, hftVerdict: null
+    longLiq: 0, shortLiq: 0, fundingRateObj: null, hftVerdict: null
 };
 
-// 🧠 HÀM THÔNG MINH: TỰ ĐỘNG CHUẨN HÓA DỮ LIỆU TOKEN TỪ BACKEND
-window.getSmartTokenContext = function(t) {
+// 🧠 BỘ NÃO ĐA CHUỖI TỰ ĐỘNG CHUẨN HÓA DỮ LIỆU 
+window._binanceTokenListCache = null;
+window.getSmartTokenContext = async function(t) {
     let alphaId = (t.alphaId || t.id || '').toUpperCase();
     let contract = t.contractAddress || t.contract || '';
     let chainId = t.chainId || t.chain_id;
 
-    // Nếu UI truyền thiếu, tự động móc nối với Global Data từ API để lấy lại gốc gác
+    // 1. Tự động lấy danh sách gốc của Binance để soi nếu thiếu chainId
     if (!chainId || !contract) {
-        let globalSource = window.competitionDataCache || window.GLOBAL_MARKET || {}; // Tìm trong RAM của UI
-        if (globalSource[alphaId]) {
-            if (!contract) contract = globalSource[alphaId].contractAddress || globalSource[alphaId].contract || '';
-            if (!chainId) chainId = globalSource[alphaId].chainId || globalSource[alphaId].chain_id;
+        if (!window._binanceTokenListCache) {
+            try {
+                let res = await fetch("https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list");
+                let json = await res.json();
+                if (json.success) window._binanceTokenListCache = json.data;
+            } catch(e) {}
+        }
+        if (window._binanceTokenListCache) {
+            let found = window._binanceTokenListCache.find(x => 
+                (x.alphaId && x.alphaId.toUpperCase() === alphaId) || 
+                (x.symbol && t.symbol && x.symbol.toUpperCase() === t.symbol.toUpperCase())
+            );
+            if (found) {
+                if (!contract) contract = found.contractAddress;
+                if (!chainId) chainId = found.chainId;
+            }
         }
     }
 
-    chainId = String(chainId || "56"); // Fallback an toàn cuối cùng
+    // Tự gán ngược lại để lưu bộ nhớ đệm cho lần sau
+    t.contractAddress = contract;
+    t.chainId = chainId;
+
+    chainId = String(chainId || "56"); 
     
-    // 💡 SỬA LỖI TRON/SOLANA: Chỉ lowerCase đối với địa chỉ EVM (Bắt đầu bằng 0x)
+    // 2. BẢO VỆ CÁC MẠNG NON-EVM (TRON, SOLANA): 
+    // Chỉ viết thường nếu địa chỉ bắt đầu bằng 0x (Mạng EVM: BSC, Base, ETH, Arb, Op...)
     if (contract && contract.startsWith('0x')) {
         contract = contract.toLowerCase(); 
     }
@@ -42,13 +58,14 @@ window.getSmartTokenContext = function(t) {
     return { contract, chainId };
 };
 
-window.connectRealtimeChart = function(t, isTimeSwitch = false) {
+// ĐÃ CHUYỂN THÀNH ASYNC ĐỂ CHỜ LẤY THÔNG TIN CHUỖI
+window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
     let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
 
-    // Gọi bộ não thông minh để lấy đúng Contract và Chain
-    let smartCtx = window.getSmartTokenContext(t);
+    // GỌI BỘ NÃO XỬ LÝ CHUỖI
+    let smartCtx = await window.getSmartTokenContext(t);
     let contract = smartCtx.contract;
     let chainId = smartCtx.chainId;
 
@@ -64,7 +81,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         return; 
     }
 
-    if (window.chartWs) { window.chartWs.close(); }
+    if (window.chartWs) window.chartWs.close();
 
     if (!window.quantWorker) {
         window.quantWorker = new Worker('public/js/quant-worker.js');
@@ -94,17 +111,14 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     window.scTradeCount = cache.tradeCount; window.scLastPrice = cache.lastPrice; 
     window.scLastTradeDir = cache.lastTradeDir; window.scTickHistory = cache.tickHistory; 
     window.scChartMarkers = cache.chartMarkers;
-    window.scCWhale = cache.cWhale || 0;
-    window.scCShark = cache.cShark || 0;
-    window.scCDolphin = cache.cDolphin || 0;
-    window.scCSweep = cache.cSweep || 0;
+    window.scCWhale = cache.cWhale || 0; window.scCShark = cache.cShark || 0;
+    window.scCDolphin = cache.cDolphin || 0; window.scCSweep = cache.cSweep || 0;
     window.quantStats = cache.quantStats || { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
     window.scCurrentCluster = null;
     window.scActivePriceLines = []; 
 
     try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
-    // ĐĂNG KÝ WEBSOCKET (WEB3 DEX vs CEX)
     let params = [];
     if (contract) {
         params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
@@ -155,8 +169,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             let limitText = `< $${window.formatCompactUSD(algoLmt)}`;
             let limitColor = '#0ECB81'; let bgColor = 'rgba(14,203,129,0.1)'; let bdColor = 'rgba(14,203,129,0.3)';
             if (algoLmt < 10 || algoLmt < 50) { 
-                limitColor = '#F6465D'; limitText = algoLmt < 10 ? '💀 DEAD' : limitText; 
-                bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
+                limitColor = '#F6465D'; limitText = algoLmt < 10 ? '💀 DEAD' : limitText; bgColor = 'rgba(246,70,93,0.1)'; bdColor = 'rgba(246,70,93,0.3)';
             } else if (algoLmt <= 200) { 
                 limitColor = '#F0B90B'; bgColor = 'rgba(240,185,11,0.1)'; bdColor = 'rgba(240,185,11,0.3)';
             }
@@ -245,7 +258,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         }
 
         // ==========================================
-        // XỬ LÝ NẾN (HỖ TRỢ DEX k.ot & CHỐT GIÁ)
+        // XỬ LÝ NẾN REALTIME
         // ==========================================
         if (data.e === 'kline' || data.stream.includes('kline_')) {
             let k = data.data.k || data.data; 
@@ -256,7 +269,6 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             let currentClose = parseFloat(k.c);
             let currentVol = parseFloat(k.q !== undefined ? k.q : (k.v || 0));
 
-            // Cập nhật Live Price (Cứu cánh cho DEX vì không có @aggTrade)
             window.scLastPrice = currentClose;
             if (!window.isRenderingPrice) {
                 window.isRenderingPrice = true;
@@ -286,7 +298,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             if (klineInterval !== window.currentChartInterval) return; 
             if (window.currentChartInterval === 'tick') return;
 
-            let rawTime = k.t || k.ot; // Web3 dùng ot
+            let rawTime = k.t || k.ot; 
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = currentClose >= parseFloat(k.o);
@@ -304,9 +316,6 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             }
         }
         
-        // ==========================================
-        // XỬ LÝ LỆNH KHỚP (CHỈ DÀNH CHO CEX)
-        // ==========================================
         if (data.stream && data.stream.includes('@fulldepth') && data.data) {
             let currentSym = data.data.s || 'UNKNOWN';
             if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
@@ -402,20 +411,15 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     };
 };
 
-// ==========================================
-// THÔNG MINH LẤY DỮ LIỆU LỊCH SỬ NẾN
-// ==========================================
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
         
-        // Gọi bộ não thông minh
-        let smartCtx = window.getSmartTokenContext(t);
+        let smartCtx = await window.getSmartTokenContext(t);
         let contract = smartCtx.contract;
         let chainId = smartCtx.chainId;
         
-        if (!contract) return []; // Không có contract thì API chịu thua
-        
+        if (!contract) return []; 
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
@@ -427,11 +431,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
             let o = parseFloat(d.open), c = parseFloat(d.close);
             let isUp = c >= o;
             return {
-                time: parseInt(d.time), 
-                open: o, 
-                high: parseFloat(d.high), 
-                low: parseFloat(d.low), 
-                close: c,
+                time: parseInt(d.time), open: o, high: parseFloat(d.high), low: parseFloat(d.low), close: c,
                 volValue: parseFloat(d.volume), 
                 volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
                 value: isArea ? c : undefined
@@ -440,23 +440,17 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     } catch (e) { return []; }
 };
 
-// ==========================================
-// VÁ API SMART MONEY THÔNG MINH
-// ==========================================
 const originalFetch = window.fetch;
 window.fetch = async function(...args) {
     if (typeof args[0] === 'string' && args[0].includes('/api/smart-money')) {
         if (window.currentChartToken) {
-            let smartCtx = window.getSmartTokenContext(window.currentChartToken);
+            let smartCtx = await window.getSmartTokenContext(window.currentChartToken);
             args[0] = `/api/smart-money?contractAddress=${smartCtx.contract}&chainId=${smartCtx.chainId}`;
         }
     }
     return originalFetch.apply(this, args);
 };
 
-// ==========================================
-// FUTURES & AI QUANT ENGINE
-// ==========================================
 window.startFuturesEngine = async function(symbol) {
     window.stopFuturesEngine();
     if (!symbol) return;
@@ -497,6 +491,7 @@ window.startFuturesEngine = async function(symbol) {
                     window.quantStats.openInterest = parseFloat(oiData.openInterest);
                 }
             } catch(e) { window.quantStats.openInterest = 0; }
+
             return true;
         } catch (err) { return false; }
     };
