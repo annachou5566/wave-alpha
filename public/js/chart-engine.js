@@ -392,17 +392,43 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
 // CÁC HÀM TIỆN ÍCH & API
 // ==========================================
 
+// BỘ RADAR TÌM CHUỖI NẾU UI TRUYỀN THIẾU
+async function autoDetectChainId(t) {
+    if (t.chainId || t.chain_id) return String(t.chainId || t.chain_id);
+    if (t.chain) {
+        const cMap = {'bsc': 56, 'bnb': 56, 'eth': 1, 'base': 8453, 'arb': 42161, 'op': 10, 'polygon': 137, 'sol': 501};
+        return String(cMap[String(t.chain).toLowerCase()] || 56);
+    }
+    // Nếu mất sạch dữ liệu, tự động móc vào API nội bộ để tìm lại gốc gác
+    try {
+        let res = await fetch('/api/competition-data');
+        let data = await res.json();
+        for (let key in data) {
+            let token = data[key];
+            if ((token.contract || '').toLowerCase() === (t.contractAddress || t.contract || '').toLowerCase()) {
+                t.alphaId = token.alphaId || key;
+                return String(token.chainId || token.chain_id || 56);
+            }
+        }
+    } catch(e) {}
+    return "56"; // Đường cùng mới dùng BSC
+}
+
+// HÀM LẤY LỊCH SỬ ĐÃ ĐƯỢC LẮP RADAR
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
         let contract = t.contractAddress || t.contract || ''; 
-        let chainId = String(t.chainId || t.chain_id || 56);
+        
+        // Gọi Radar dò tìm Chain ID chuẩn xác
+        let chainId = await autoDetectChainId(t);
+        t.chainId = chainId; // Lưu ngược lại cho các luồng khác dùng
+        
         if (contract && chainId !== "501" && chainId !== "784") {
             contract = contract.toLowerCase();
         }
         
-        if (!contract) return []; // An toàn nếu không tìm thấy contract
-        
+        if (!contract) return []; 
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
@@ -414,11 +440,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
             let o = parseFloat(d.open), c = parseFloat(d.close);
             let isUp = c >= o;
             return {
-                time: parseInt(d.time), 
-                open: o, 
-                high: parseFloat(d.high), 
-                low: parseFloat(d.low), 
-                close: c,
+                time: parseInt(d.time), open: o, high: parseFloat(d.high), low: parseFloat(d.low), close: c,
                 volValue: parseFloat(d.volume), 
                 volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
                 value: isArea ? c : undefined
