@@ -22,8 +22,11 @@ window.quantStats = {
 window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
-    let contract = t.contract;
-    let chainId = t.chainId || t.chain_id || 56;
+    let contract = t.contractAddress || t.contract || '';
+    let chainId = String(t.chainId || t.chain_id || 56);
+    if (contract && chainId !== "501" && chainId !== "784") {
+        contract = contract.toLowerCase(); 
+    }
     let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
 
     if (isTimeSwitch && window.chartWs && window.chartWs.readyState === 1) { 
@@ -83,17 +86,24 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         `${streamPrefix}@aggTrade`,
         `${streamPrefix}@bookTicker`,
         'came@allTokens@ticker24',
-        `${streamPrefix}@fulldepth@500ms`,
-        `${streamPrefix}@kline_1m`,
-        `${streamPrefix}@kline_5m`,
-        `${streamPrefix}@kline_15m`,
-        `${streamPrefix}@kline_1h`
+        `${streamPrefix}@fulldepth@500ms`
     ];
     window.scActivePriceLines = []; 
     
-    if (window.currentChartInterval !== 'tick') {
-        let targetKline = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
-        if (!params.includes(targetKline)) params.push(targetKline);
+    if (contract) {
+        // Luồng Klines dành riêng cho token Web3/DEX
+        params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
+        if (window.currentChartInterval !== 'tick') {
+            let targetKline = `came@${contract}@${chainId}@kline_${window.currentChartInterval}`;
+            if (!params.includes(targetKline)) params.push(targetKline);
+        }
+    } else {
+        // Luồng Klines cho token CEX thông thường
+        params.push(`${streamPrefix}@kline_1m`, `${streamPrefix}@kline_5m`, `${streamPrefix}@kline_15m`, `${streamPrefix}@kline_1h`);
+        if (window.currentChartInterval !== 'tick') {
+            let targetKline = `${streamPrefix}@kline_${window.currentChartInterval}`;
+            if (!params.includes(targetKline)) params.push(targetKline);
+        }
     }
 
     if (window.scCalcInterval) clearInterval(window.scCalcInterval);
@@ -227,14 +237,17 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         }
 
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
-            let k = data.data.k; 
+            let k = data.data.k || data.data; // Web3 Klines không có wrapper 'k'
             if (!k) return; 
             
-            if (['1m', '5m', '15m', '1h'].includes(k.i)) {
+            let streamInterval = data.stream.split('kline_')[1];
+            let klineInterval = k.i || streamInterval; // Lấy interval từ tên stream nếu API không trả về
+            
+            if (['1m', '5m', '15m', '1h'].includes(klineInterval)) {
                 let totalQuote = parseFloat(k.q !== undefined ? k.q : (k.v || 0)); 
                 if (isNaN(totalQuote)) totalQuote = 0; 
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
-                let nfEl = document.getElementById(`cc-cex-nf-${k.i}`);
+                let nfEl = document.getElementById(`cc-cex-nf-${klineInterval}`);
                 if (nfEl) {
                     let color = isUpCandle ? 'var(--term-up)' : 'var(--term-down)';
                     let icon = isUpCandle ? '▲' : '▼';
@@ -242,10 +255,10 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                 }
             }
 
-            if (k.i !== window.currentChartInterval) return; 
+            if (klineInterval !== window.currentChartInterval) return; 
             if (window.currentChartInterval === 'tick') return;
 
-            let rawTime = k.t; 
+            let rawTime = k.t || k.ot; 
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
@@ -363,8 +376,11 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
-        let contract = t.contract || '';
-        let chainId = t.chain_id || t.chainId || 56;
+        let contract = t.contractAddress || t.contract || '';
+        let chainId = String(t.chainId || t.chain_id || 56);
+        if (contract && chainId !== "501" && chainId !== "784") {
+            contract = contract.toLowerCase();
+        }
         if (!contract) return []; 
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
