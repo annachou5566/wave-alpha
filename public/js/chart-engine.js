@@ -29,7 +29,7 @@ window.getSmartTokenContext = async function(t) {
         if (!window._binanceTokenListCache) {
             try {
                 // 👉 GỌI VỀ RENDER ĐỂ BYPASS CSP CỦA BINANCE
-                let res = await fetch(`${RENDER_BASE_URL}/api/token-list`);
+                let res = await fetch("/api/token-list");
                 let json = await res.json();
                 if (json.success) window._binanceTokenListCache = json.data;
             } catch(e) {}
@@ -425,7 +425,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         if (!contract) return []; 
         
         // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
-        let apiUrl = `${RENDER_BASE_URL}/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
+        let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
         if (!res.ok) return [];
@@ -451,7 +451,7 @@ window.fetch = async function(...args) {
         if (window.currentChartToken) {
             let smartCtx = await window.getSmartTokenContext(window.currentChartToken);
             // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
-            args[0] = `${RENDER_BASE_URL}/api/smart-money?contractAddress=${smartCtx.contract}&chainId=${smartCtx.chainId}`;
+            args[0] = `/api/smart-money?contractAddress=${smartCtx.contract}&chainId=${smartCtx.chainId}`;
         }
     }
     return originalFetch.apply(this, args);
