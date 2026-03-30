@@ -26,9 +26,13 @@ export async function onRequest(context) {
         let response = await cache.match(cacheKey);
 
         if (!response) {
-            // Lấy API Key từ biến môi trường của Cloudflare (Không hardcode)
-            const renderApiKey = env.RENDER_API_KEY || 'WaveAlpha_S3cur3_P@ssw0rd_5566'; // Tạm thời để string nếu bạn chưa kịp tạo biến env
-            
+            const renderApiKey = env.RENDER_API_KEY;
+if (!renderApiKey) {
+    return new Response(JSON.stringify({ error: "Server misconfigured: Missing API Key" }), { 
+        status: 500, 
+        headers: { "Access-Control-Allow-Origin": allowedOrigin } 
+    });
+}
             const upstream = `https://alpha-realtime.onrender.com/api/market-data`;
             const upstreamResponse = await fetch(upstream, {
                 headers: { 'x-api-key': renderApiKey }
