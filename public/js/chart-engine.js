@@ -386,27 +386,34 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
-        let contract = t.contractAddress || t.contract || '';
+        let contract = t.contractAddress || t.contract || ''; 
         let chainId = String(t.chainId || t.chain_id || 56);
         if (contract && chainId !== "501" && chainId !== "784") {
             contract = contract.toLowerCase();
         }
-        if (!contract) return []; 
+        
+        if (!contract) return []; // CEX sẽ không đi qua API Web3 này
+        
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
         if (!res.ok) return [];
         const data = await res.json();
-        if (data.length === 0) return [];
+        if (!data || data.length === 0) return [];
 
+        // ÉP KIỂU SỐ THỰC CHUẨN LIGHTWEIGHT CHARTS
         return data.map(d => {
-            let isUp = d.close >= d.open;
+            let o = parseFloat(d.open), c = parseFloat(d.close);
+            let isUp = c >= o;
             return {
-                time: d.time, 
-                open: d.open, high: d.high, low: d.low, close: d.close,
-                volValue: d.volume, 
+                time: parseInt(d.time), 
+                open: o, 
+                high: parseFloat(d.high), 
+                low: parseFloat(d.low), 
+                close: c,
+                volValue: parseFloat(d.volume), 
                 volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
-                value: isArea ? d.close : undefined
+                value: isArea ? c : undefined
             };
         });
     } catch (e) { return []; }
