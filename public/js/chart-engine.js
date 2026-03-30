@@ -166,13 +166,18 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                     else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
                     else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
-                    if (i < window.scActivePriceLines.length) { window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); } 
-                    else {
-                        let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
-                        window.scActivePriceLines.push(priceLine);
+                    if (i < window.scActivePriceLines.length) { 
+                        if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
+                    } else {
+                        if (window.tvHeatmapLayer) {
+                            let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
+                            if (priceLine) window.scActivePriceLines.push(priceLine);
+                        }
                     }
                 }
-                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); }
+                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { 
+                    if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
+                }
             }
         }
 
