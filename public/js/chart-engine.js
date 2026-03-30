@@ -358,6 +358,8 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         } 
     };
 
+}; // <============= ĐÂY LÀ DẤU NGOẶC CHỐT HẠ ĐỂ SỬA LỖI =============>
+
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
@@ -435,15 +437,13 @@ window.startFuturesEngine = async function(symbol) {
     if (hasFutures && window.activeFuturesSession === currentSession) {
         window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
         
-        // 1. THÊM BIẾN QUẢN LÝ THỜI GIAN CHỜ (BACKOFF)
-        let liqReconnectDelay = 1000; // Bắt đầu đợi 1 giây
-        const MAX_LIQ_DELAY = 30000; // Tối đa đợi 30 giây
+        let liqReconnectDelay = 1000; 
+        const MAX_LIQ_DELAY = 30000; 
 
         const connectForceOrderWS = () => {
             if (window.activeFuturesSession !== currentSession) return;
             window.liquidationWs = new WebSocket(`wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`);
             
-            // 2. RESET THỜI GIAN CHỜ KHI KẾT NỐI THÀNH CÔNG
             window.liquidationWs.onopen = () => {
                 liqReconnectDelay = 1000;
             };
@@ -459,12 +459,11 @@ window.startFuturesEngine = async function(symbol) {
                 }
             };
 
-            // 3. THUẬT TOÁN EXPONENTIAL BACKOFF + JITTER (Độ lệch ngẫu nhiên)
             window.liquidationWs.onclose = () => { 
                 if (window.activeFuturesSession === currentSession) {
-                    const jitter = Math.random() * 1000; // Lệch ngẫu nhiên 0-1s để tránh trùng lặp
+                    const jitter = Math.random() * 1000; 
                     setTimeout(() => connectForceOrderWS(), liqReconnectDelay + jitter);
-                    liqReconnectDelay = Math.min(liqReconnectDelay * 2, MAX_LIQ_DELAY); // Nhân đôi thời gian chờ
+                    liqReconnectDelay = Math.min(liqReconnectDelay * 2, MAX_LIQ_DELAY); 
                 } 
             };
         };
@@ -537,7 +536,6 @@ window.evaluateQuantVerdict = function() {
     let hftObj = { html: "⚡ ĐANG KHỞI ĐỘNG TICK...", css: "font-size: 9.5px; background: rgba(0, 240, 255, 0.1); padding: 3px 6px; border-radius: 3px; color: #00F0FF; border: 1px solid rgba(0, 240, 255, 0.2); white-space: nowrap;" };
     if (q.hftVerdict) { let v = q.hftVerdict; hftObj.html = v.html; hftObj.css = `font-size: 9.5px; background: ${v.bg}; padding: 3px 6px; border-radius: 3px; color: ${v.color}; border: 1px solid ${v.color}; white-space: nowrap;`; }
     
-    // (Giữ nguyên toàn bộ logic LFT và MFT cũ của bạn)
     let cvd1hTag = document.getElementById('sm-tag-1h') ? document.getElementById('sm-tag-1h').innerText.toUpperCase() : '';
     let cvd4hTag = document.getElementById('sm-tag-4h') ? document.getElementById('sm-tag-4h').innerText.toUpperCase() : '';
     let fFunding = q.fundingRateObj ? q.fundingRateObj.rate : (q.fundingRate || 0);
