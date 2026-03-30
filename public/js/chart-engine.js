@@ -167,16 +167,18 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                     else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
                     if (i < window.scActivePriceLines.length) { 
-                        if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
-                    } else {
-                        if (window.tvHeatmapLayer) {
-                            let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
-                            if (priceLine) window.scActivePriceLines.push(priceLine);
+                        if (window.scActivePriceLines[i]) {
+                            window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
                         }
+                    } else {
+                        let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
+                        if (priceLine) window.scActivePriceLines.push(priceLine);
                     }
                 }
                 for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { 
-                    if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
+                    if (window.scActivePriceLines[i]) {
+                        window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
+                    }
                 }
             }
         }
