@@ -1,9 +1,13 @@
 export async function onRequest(context) {
-    const { request } = context;
+    const { request, env } = context;
     const url = new URL(request.url);
 
-    // 1. Chỉ định CORS an toàn
-    const ALLOWED_ORIGINS = ['https://wave-alpha.pages.dev', 'http://localhost:8788'];
+    // 1. Chỉ định CORS an toàn tuyệt đối
+    const ALLOWED_ORIGINS = [
+        'https://wave-alpha.pages.dev',
+        'http://localhost:8788',
+        'http://localhost:3000'
+    ];
     const origin = request.headers.get('Origin') || '';
     const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
 
@@ -31,17 +35,22 @@ export async function onRequest(context) {
     }
 
     try {
-        // 3. KÍCH HOẠT CACHE - Cứu tinh của lỗi Cold Start Render.com
+        // 3. KÍCH HOẠT CACHE
         const cache = caches.default;
-        // Gom các tham số lại thành 1 khóa cache (ví dụ: BTC-15m)
-        const cacheKey = new Request(url.toString(), request);
+        // [BẢO MẬT] Chỉ dùng URL thuần làm khóa cache, không dùng request object
+        const cacheKey = new Request(url.toString());
         let response = await cache.match(cacheKey);
 
         if (!response) {
-            // Đứng từ Cloudflare gọi ngầm về Render.com (Giấu hoàn toàn Render khỏi user)
+            // Đứng từ Cloudflare gọi ngầm về Render.com
             const upstream = `https://alpha-realtime.onrender.com/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
             
-            const upstreamResponse = await fetch(upstream);
+            // [BẢO MẬT] Lấy API Key từ Cloudflare Variables và đính kèm vào Header
+            const renderApiKey = env.RENDER_API_KEY;
+            const upstreamResponse = await fetch(upstream, {
+                headers: { 'x-api-key': renderApiKey || '' }
+            });
+
             if (!upstreamResponse.ok) throw new Error("Upstream failed");
 
             // Sao chép response từ Render về
