@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (SMART MULTI-CHAIN V2)
+// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (PURE DYNAMIC V3)
 // ==========================================
 
 window.chartWs = null;
@@ -15,14 +15,14 @@ window.quantStats = {
     longLiq: 0, shortLiq: 0, fundingRateObj: null, hftVerdict: null
 };
 
-// 🧠 BỘ NÃO ĐA CHUỖI TỰ ĐỘNG CHUẨN HÓA DỮ LIỆU 
+// 🧠 BỘ NÃO DYNAMIC: HỌC Y HỆT PYTHON BOT (KHÔNG GÁN CỨNG BẤT KỲ CHAIN NÀO)
 window._binanceTokenListCache = null;
 window.getSmartTokenContext = async function(t) {
     let alphaId = (t.alphaId || t.id || '').toUpperCase();
     let contract = t.contractAddress || t.contract || '';
     let chainId = t.chainId || t.chain_id;
 
-    // 1. Tự động lấy danh sách gốc của Binance để soi nếu thiếu chainId
+    // Nếu UI thiếu chainId, gọi trực tiếp API Tổng của Binance để lấy (Giống Bot Python)
     if (!chainId || !contract) {
         if (!window._binanceTokenListCache) {
             try {
@@ -43,28 +43,28 @@ window.getSmartTokenContext = async function(t) {
         }
     }
 
-    // Tự gán ngược lại để lưu bộ nhớ đệm cho lần sau
     t.contractAddress = contract;
     t.chainId = chainId;
 
-    chainId = String(chainId || "56"); 
+    let finalChainId = String(chainId || "56"); 
+    let cleanAddr = String(contract || '');
     
-    // 2. BẢO VỆ CÁC MẠNG NON-EVM (TRON, SOLANA): 
-    // Chỉ viết thường nếu địa chỉ bắt đầu bằng 0x (Mạng EVM: BSC, Base, ETH, Arb, Op...)
-    if (contract && contract.startsWith('0x')) {
-        contract = contract.toLowerCase(); 
+    // Thuật toán chuẩn từ Python: no_lower_chains = ["CT_501", "CT_784", "CT_195"]
+    const no_lower_chains = ["CT_501", "CT_784", "501", "784", "CT_195", "195"];
+    if (!no_lower_chains.includes(finalChainId)) {
+        cleanAddr = cleanAddr.toLowerCase(); 
     }
 
-    return { contract, chainId };
+    return { contract: cleanAddr, chainId: finalChainId };
 };
 
-// ĐÃ CHUYỂN THÀNH ASYNC ĐỂ CHỜ LẤY THÔNG TIN CHUỖI
+// KHỞI ĐỘNG WEBSOCKET REALTIME
 window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
     let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
 
-    // GỌI BỘ NÃO XỬ LÝ CHUỖI
+    // ĐỌC THÔNG SỐ CHUẨN TỪ BỘ NÃO DYNAMIC
     let smartCtx = await window.getSmartTokenContext(t);
     let contract = smartCtx.contract;
     let chainId = smartCtx.chainId;
