@@ -394,23 +394,29 @@ window.startFuturesEngine = async function(symbol) {
         if (window.activeFuturesSession !== currentSession) return false;
         try {
             if (!window.quantStats.fundingInterval) {
-                try { let fInfo = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/fundingInfo`); let sInfo = fInfo.find(x => x.symbol === fSymbol); window.quantStats.fundingInterval = sInfo ? sInfo.fundingIntervalHours : 8; } catch(e) { window.quantStats.fundingInterval = 8; }
+                try { 
+                    let fInfo = await fetchWithTimeout(`/api/binance-fapi?endpoint=/fapi/v1/fundingInfo`); 
+                    let sInfo = fInfo.find(x => x.symbol === fSymbol); 
+                    window.quantStats.fundingInterval = sInfo ? sInfo.fundingIntervalHours : 8; 
+                } catch(e) { window.quantStats.fundingInterval = 8; }
             }
-            let fundData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${fSymbol}`);
-    if (window.activeFuturesSession !== currentSession) return false;
+            
+            let fundData = await fetchWithTimeout(`/api/binance-fapi?endpoint=/fapi/v1/premiumIndex&symbol=${fSymbol}`);
+            
+            if (window.activeFuturesSession !== currentSession) return false;
 
-    if (fundData && fundData.lastFundingRate) {
-        window.quantStats.fundingRateObj = { rate: parseFloat(fundData.lastFundingRate) * 100, nextTime: fundData.nextFundingTime, interval: window.quantStats.fundingInterval };
-    }
-    
-    try {
-        let oiData = await fetchWithTimeout(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${fSymbol}`);
-        if (window.activeFuturesSession === currentSession && oiData && oiData.openInterest) {
-            window.quantStats.openInterest = parseFloat(oiData.openInterest);
-        }
-    } catch(e) { window.quantStats.openInterest = 0; }
+            if (fundData && fundData.lastFundingRate) {
+                window.quantStats.fundingRateObj = { rate: parseFloat(fundData.lastFundingRate) * 100, nextTime: fundData.nextFundingTime, interval: window.quantStats.fundingInterval };
+            }
+            
+            try {
+                let oiData = await fetchWithTimeout(`/api/binance-fapi?endpoint=/fapi/v1/openInterest&symbol=${fSymbol}`);
+                if (window.activeFuturesSession === currentSession && oiData && oiData.openInterest) {
+                    window.quantStats.openInterest = parseFloat(oiData.openInterest);
+                }
+            } catch(e) { window.quantStats.openInterest = 0; }
 
-    return true;
+            return true;
         } catch (err) { return false; }
     };
 
