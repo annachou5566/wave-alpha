@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (PURE DYNAMIC V3)
+// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (V4 - CSP BYPASS)
 // ==========================================
 
 window.chartWs = null;
@@ -15,18 +15,18 @@ window.quantStats = {
     longLiq: 0, shortLiq: 0, fundingRateObj: null, hftVerdict: null
 };
 
-// 🧠 BỘ NÃO DYNAMIC: HỌC Y HỆT PYTHON BOT (KHÔNG GÁN CỨNG BẤT KỲ CHAIN NÀO)
+// 🧠 BỘ NÃO DYNAMIC: LẤY MASTER LIST TỪ RENDER (LÁCH LUẬT CSP TRÌNH DUYỆT)
 window._binanceTokenListCache = null;
 window.getSmartTokenContext = async function(t) {
     let alphaId = (t.alphaId || t.id || '').toUpperCase();
     let contract = t.contractAddress || t.contract || '';
     let chainId = t.chainId || t.chain_id;
 
-    // Nếu UI thiếu chainId, gọi trực tiếp API Tổng của Binance để lấy (Giống Bot Python)
     if (!chainId || !contract) {
         if (!window._binanceTokenListCache) {
             try {
-                let res = await fetch("https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list");
+                // ĐÃ SỬA: Gọi API nội bộ của Render để không bị lỗi CSP Blocked
+                let res = await fetch("/api/token-list");
                 let json = await res.json();
                 if (json.success) window._binanceTokenListCache = json.data;
             } catch(e) {}
@@ -49,7 +49,7 @@ window.getSmartTokenContext = async function(t) {
     let finalChainId = String(chainId || "56"); 
     let cleanAddr = String(contract || '');
     
-    // Thuật toán chuẩn từ Python: no_lower_chains = ["CT_501", "CT_784", "CT_195"]
+    // Thuật toán Case-sensitive bảo vệ TRON/SOLANA (Python Match)
     const no_lower_chains = ["CT_501", "CT_784", "501", "784", "CT_195", "195"];
     if (!no_lower_chains.includes(finalChainId)) {
         cleanAddr = cleanAddr.toLowerCase(); 
@@ -58,13 +58,11 @@ window.getSmartTokenContext = async function(t) {
     return { contract: cleanAddr, chainId: finalChainId };
 };
 
-// KHỞI ĐỘNG WEBSOCKET REALTIME
 window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
     let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
 
-    // ĐỌC THÔNG SỐ CHUẨN TỪ BỘ NÃO DYNAMIC
     let smartCtx = await window.getSmartTokenContext(t);
     let contract = smartCtx.contract;
     let chainId = smartCtx.chainId;
@@ -203,14 +201,20 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
                     if (i < window.scActivePriceLines.length) { 
-                        if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
+                        // ĐÃ SỬA: Chống Crash applyOptions
+                        if (window.scActivePriceLines[i] && typeof window.scActivePriceLines[i].applyOptions === 'function') {
+                            window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
+                        }
                     } else {
                         let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
                         if (priceLine) window.scActivePriceLines.push(priceLine);
                     }
                 }
                 for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { 
-                    if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
+                    // ĐÃ SỬA: Chống Crash applyOptions
+                    if (window.scActivePriceLines[i] && typeof window.scActivePriceLines[i].applyOptions === 'function') {
+                        window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
+                    }
                 }
             }
         }
@@ -257,9 +261,6 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'BOOK_TICKER', data: data.data });
         }
 
-        // ==========================================
-        // XỬ LÝ NẾN REALTIME
-        // ==========================================
         if (data.e === 'kline' || data.stream.includes('kline_')) {
             let k = data.data.k || data.data; 
             if (!k) return; 
