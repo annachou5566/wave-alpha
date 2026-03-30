@@ -101,8 +101,12 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         if (window.activeChartSessionId !== currentSession) return;
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
-        const now = Date.now();
-        window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
+    const now = Date.now();
+    window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
+    
+    if (window.scTickHistory.length > 3000) {
+        window.scTickHistory = window.scTickHistory.slice(-3000);
+    }
 
         let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
         if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
