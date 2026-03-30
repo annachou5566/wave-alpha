@@ -236,19 +236,38 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'BOOK_TICKER', data: data.data });
         }
 
+        // ==========================================
+        // XỬ LÝ NẾN (HỖ TRỢ CẢ CEX LẪN WEB3 DEX)
+        // ==========================================
         if (data.e === 'kline' || data.stream.includes('@kline_')) {
-            let k = data.data.k || data.data; // Web3 Klines không có wrapper 'k'
+            let k = data.data.k || data.data; 
             if (!k) return; 
             
             let streamInterval = data.stream.split('kline_')[1];
-            let klineInterval = k.i || streamInterval; // Lấy interval từ tên stream nếu API không trả về
+            let klineInterval = k.i || streamInterval;
+            let currentClose = parseFloat(k.c);
             
+            // [VÁ LỖI DEX]: Cập nhật Live Price trực tiếp từ nến vì DEX không có luồng @aggTrade
+            window.scLastPrice = currentClose;
+            if (!window.isRenderingPrice) {
+                window.isRenderingPrice = true;
+                requestAnimationFrame(() => {
+                    let priceEl = document.getElementById('sc-live-price');
+                    if (priceEl && typeof window.formatPrice === 'function') {
+                        let isUp = currentClose >= parseFloat(k.o);
+                        priceEl.innerText = '$' + window.formatPrice(currentClose);
+                        priceEl.className = 'sc-live-price ' + (isUp ? 'price-up' : 'price-down');
+                    }
+                    window.isRenderingPrice = false;
+                });
+            }
+
             if (['1m', '5m', '15m', '1h'].includes(klineInterval)) {
                 let totalQuote = parseFloat(k.q !== undefined ? k.q : (k.v || 0)); 
                 if (isNaN(totalQuote)) totalQuote = 0; 
-                let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
+                let isUpCandle = currentClose >= parseFloat(k.o);
                 let nfEl = document.getElementById(`cc-cex-nf-${klineInterval}`);
-                if (nfEl) {
+                if (nfEl && typeof window.formatCompactUSD === 'function') {
                     let color = isUpCandle ? 'var(--term-up)' : 'var(--term-down)';
                     let icon = isUpCandle ? '▲' : '▼';
                     nfEl.innerHTML = `<span style="color:${color}">${icon} $${window.formatCompactUSD(totalQuote)}</span>`;
@@ -258,25 +277,28 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             if (klineInterval !== window.currentChartInterval) return; 
             if (window.currentChartInterval === 'tick') return;
 
-            let rawTime = k.t || k.ot; 
+            let rawTime = k.t || k.ot; // DEX dùng OpenTime (ot)
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
-                let isUpCandle = parseFloat(k.c) >= parseFloat(k.o);
+                let isUpCandle = currentClose >= parseFloat(k.o);
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
                 if (window.tvCandleSeries) {
-                    window.tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c) });
+                    window.tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: currentClose });
                 }
                 if (window.tvVolumeSeries) {
                     let volValue = parseFloat(k.q !== undefined ? k.q : (k.v || 0));
                     if (isNaN(volValue)) volValue = 0;
                     window.tvVolumeSeries.update({ time: candleTime, value: volValue, color: volColor });
                 }
-                if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: parseFloat(k.c) });
+                if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: currentClose });
             }
         }
         
+        // ==========================================
+        // XỬ LÝ DEPTH & TAPE (CEX)
+        // ==========================================
         if (data.stream && data.stream.includes('@fulldepth') && data.data) {
             let currentSym = data.data.s || 'UNKNOWN';
             if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
@@ -331,18 +353,6 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                         if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: window.liveCandle1s.vol, color: volColor });
                     }
                 }
-            }
-
-            if (!window.isRenderingPrice) {
-                window.isRenderingPrice = true;
-                requestAnimationFrame(() => {
-                    let priceEl = document.getElementById('sc-live-price');
-                    if (priceEl) {
-                        priceEl.innerText = '$' + window.formatPrice(window.scLastPrice);
-                        priceEl.className = 'sc-live-price ' + (window.scLastTradeDir ? 'price-up' : 'price-down');
-                    }
-                    window.isRenderingPrice = false;
-                });
             }
 
             if (!window.scCurrentCluster) {
