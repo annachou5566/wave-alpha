@@ -1,40 +1,10 @@
-    const SUPABASE_URL = 'https://akbcpryqjigndzpuoany.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrYmNwcnlxamlnbmR6cHVvYW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwODg0NTEsImV4cCI6MjA4MDY2NDQ1MX0.p1lBHZ12fzyIrKiSL7DXv7VH74cq3QcU7TtBCJQBH9M';
-    const REALTIME_API_URL = '/api/market-data';
-window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let layer2Interval = null;
-let wsSocket = null;            
-let isRealtimeActive = false; 
-const PREDICT_FEE = 100;
-let accSettings = JSON.parse(localStorage.getItem('wave_settings')) || [];
-let siteConfig = {};
-let userProfile = {};
-let currentUser = null;
-let mySonarGalaxy = null;
-function fmtNum(num) {
-    if (num === null || num === undefined || isNaN(num)) return "0";
-    return parseFloat(num).toLocaleString('en-US', { maximumFractionDigits: 0 });
-}
-const fmt = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
-
-
-
-function formatCurrency(input) {
-    let value = input.value.replace(/[^0-9]/g, '');
-    
-    if (value === "") {
-        input.value = "";
-        return;
-    }
-    
-    input.value = parseInt(value, 10).toLocaleString('en-US');
-}
+    // ==========================================
+// FILE: script.js (Main Logic)
+// Chú ý: Cấu hình Supabase và các hàm format (fmtNum...) đã được chuyển sang supabase-config.js và core-utils.js
+// ==========================================
 
 async function sendTelePhoto(comp, newTarget) {
-    
-
     const chatId = '-1003355713341';
-
 
     const cardWrapper = document.querySelector(`.card-wrapper[data-id="${comp.db_id}"]`);
     if (!cardWrapper) {
@@ -43,22 +13,17 @@ async function sendTelePhoto(comp, newTarget) {
     }
     const cardElement = cardWrapper.querySelector('.tour-card');
 
-
     const cleanNum = (val) => {
         if (!val) return 0;
         return parseFloat(val.toString().replace(/,/g, '').trim()) || 0;
     };
 
-
-
     let currentPrice = (comp.market_analysis && comp.market_analysis.price) ? comp.market_analysis.price : (comp.cachedPrice || 0);
     
-
     let priceStr = "---";
     if (currentPrice > 0) {
         priceStr = '$' + currentPrice.toLocaleString('en-US', { maximumFractionDigits: 4 });
     }
-
 
     let qty = cleanNum(comp.rewardQty);
     let rewardVal = qty * currentPrice;
@@ -68,13 +33,11 @@ async function sendTelePhoto(comp, newTarget) {
         rewardHtml += ` <span style="color:#0ECB81; font-size:0.8em; font-weight:bold;">${valStr}</span>`;
     }
 
-
     let statsGrid = cardElement.querySelector('.card-stats-grid');
     let oldRewardHTML = "", oldPriceHTML = "";
     let priceEl, rewardEl;
 
     if (statsGrid) {
-
         rewardEl = statsGrid.children[1].querySelector('.stat-val');
         if (rewardEl) {
             oldRewardHTML = rewardEl.innerHTML;
@@ -89,12 +52,10 @@ async function sendTelePhoto(comp, newTarget) {
         }
     }
 
-
     cardElement.classList.add('snapshot-mode');
     showToast("📸 Snapping...", "info");
 
     try {
-
         const canvas = await html2canvas(cardElement, {
             scale: 2,
             useCORS: true,
@@ -112,18 +73,13 @@ async function sendTelePhoto(comp, newTarget) {
 
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 
-
         let rewardMsg = rewardVal > 0 ? `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(rewardVal)}` : '---';
         
         let changeText = "";
         let currVal = cleanNum(newTarget); 
 
-
         let history = comp.history ? [...comp.history] : [];
         history.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-
-
 
         if (history.length >= 2) {
             let prevVal = cleanNum(history[history.length - 2].target);
@@ -149,7 +105,6 @@ async function sendTelePhoto(comp, newTarget) {
 👇 <b>Tap to Open Wave Alpha Mini App</b>
         `.trim();
 
-
         const formData = new FormData();
         formData.append('chat_id', chatId);
         formData.append('photo', blob, 'update.png');
@@ -161,11 +116,11 @@ async function sendTelePhoto(comp, newTarget) {
         };
         formData.append('reply_markup', JSON.stringify(replyMarkup));
 
+        // Đoạn fetch đã được dọn dẹp lỗi cú pháp
         const response = await fetch(`/api/telegram?method=sendPhoto`, {
             method: 'POST',
             body: formData
         });
-
 
         const result = await response.json();
         if (result.ok) {
@@ -179,7 +134,6 @@ async function sendTelePhoto(comp, newTarget) {
         console.error("Tele Photo Error:", e);
         showToast("❌ Failed: " + e.message, "error");
     } finally {
-
         cardElement.classList.remove('snapshot-mode');
         if (rewardEl && oldRewardHTML) rewardEl.innerHTML = oldRewardHTML;
         if (priceEl && oldPriceHTML) {
@@ -188,15 +142,6 @@ async function sendTelePhoto(comp, newTarget) {
         }
     }
 }
-
-
-
-
-let tokenVolHistory = {}; 
-const SAFETY_WINDOW = 10; 
-let currentFilterDate = null;
-
-let currentLang = localStorage.getItem('wave_lang') || 'en';
 
 
 
