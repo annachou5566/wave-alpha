@@ -1,12 +1,14 @@
 export async function onRequest(context) {
-    const { request } = context;
+    const { request, env } = context;
     const origin = request.headers.get('Origin') || '';
     
-    // 1. Mở khóa CORS
-    let allowedOrigin = 'https://wave-alpha.pages.dev';
-    if (origin.endsWith('.github.dev') || origin.endsWith('idx.google.com') || origin.startsWith('http://localhost')) {
-        allowedOrigin = origin;
-    }
+    // 1. Mở khóa CORS an toàn tuyệt đối
+    const ALLOWED_ORIGINS = [
+        'https://wave-alpha.pages.dev',
+        'http://localhost:8788',
+        'http://localhost:3000'
+    ];
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
 
     if (request.method === "OPTIONS") {
         return new Response(null, {
@@ -22,13 +24,20 @@ export async function onRequest(context) {
 
     try {
         const cache = caches.default;
-        const cacheKey = new Request(request.url, request);
+        // [BẢO MẬT] Chỉ dùng URL thuần làm khóa cache, không dùng request object
+        const cacheKey = new Request(request.url);
         let response = await cache.match(cacheKey);
 
         if (!response) {
             // Lấy dữ liệu từ Render.com
             const upstream = `https://alpha-realtime.onrender.com/api/competition-data`;
-            const upstreamResponse = await fetch(upstream);
+            
+            // [BẢO MẬT] Lấy API Key từ Cloudflare Variables và đính kèm vào Header
+            const renderApiKey = env.RENDER_API_KEY;
+            const upstreamResponse = await fetch(upstream, {
+                headers: { 'x-api-key': renderApiKey || '' }
+            });
+            
             if (!upstreamResponse.ok) throw new Error("Render is down");
 
             const headers = new Headers(upstreamResponse.headers);
