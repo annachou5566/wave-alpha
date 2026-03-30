@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET
+// 🚀 FILE: chart-engine.js - LÕI XỬ LÝ DỮ LIỆU & WEBSOCKET (SMART MULTI-CHAIN)
 // ==========================================
 
 window.chartWs = null;
@@ -17,16 +17,40 @@ window.quantStats = {
     fundingRateObj: null, hftVerdict: null
 };
 
+// 🧠 HÀM THÔNG MINH: TỰ ĐỘNG CHUẨN HÓA DỮ LIỆU TOKEN TỪ BACKEND
+window.getSmartTokenContext = function(t) {
+    let alphaId = (t.alphaId || t.id || '').toUpperCase();
+    let contract = t.contractAddress || t.contract || '';
+    let chainId = t.chainId || t.chain_id;
+
+    // Nếu UI truyền thiếu, tự động móc nối với Global Data từ API để lấy lại gốc gác
+    if (!chainId || !contract) {
+        let globalSource = window.competitionDataCache || window.GLOBAL_MARKET || {}; // Tìm trong RAM của UI
+        if (globalSource[alphaId]) {
+            if (!contract) contract = globalSource[alphaId].contractAddress || globalSource[alphaId].contract || '';
+            if (!chainId) chainId = globalSource[alphaId].chainId || globalSource[alphaId].chain_id;
+        }
+    }
+
+    chainId = String(chainId || "56"); // Fallback an toàn cuối cùng
+    
+    // 💡 SỬA LỖI TRON/SOLANA: Chỉ lowerCase đối với địa chỉ EVM (Bắt đầu bằng 0x)
+    if (contract && contract.startsWith('0x')) {
+        contract = contract.toLowerCase(); 
+    }
+
+    return { contract, chainId };
+};
+
 window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
-    let contract = t.contractAddress || t.contract || '';
-    let chainId = String(t.chainId || t.chain_id || 56);
-    
-    if (contract && chainId !== "501" && chainId !== "784") {
-        contract = contract.toLowerCase(); 
-    }
     let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
+
+    // Gọi bộ não thông minh để lấy đúng Contract và Chain
+    let smartCtx = window.getSmartTokenContext(t);
+    let contract = smartCtx.contract;
+    let chainId = smartCtx.chainId;
 
     if (isTimeSwitch && window.chartWs && window.chartWs.readyState === 1) { 
         if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
@@ -45,9 +69,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     if (!window.quantWorker) {
         window.quantWorker = new Worker('public/js/quant-worker.js');
         window.quantWorker.onmessage = function(e) {
-            if (e.data.cmd === 'STATS_UPDATE') {
-                Object.assign(window.quantStats, e.data.stats);
-            }
+            if (e.data.cmd === 'STATS_UPDATE') Object.assign(window.quantStats, e.data.stats);
         };
     }
     
@@ -82,7 +104,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
 
     try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
-    // PHÂN LUỒNG WEBSOCKET TÙY THEO LOẠI TOKEN
+    // ĐĂNG KÝ WEBSOCKET (WEB3 DEX vs CEX)
     let params = [];
     if (contract) {
         params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
@@ -107,10 +129,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         
         const now = Date.now();
         window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
-        
-        if (window.scTickHistory.length > 3000) {
-            window.scTickHistory = window.scTickHistory.slice(-3000);
-        }
+        if (window.scTickHistory.length > 3000) window.scTickHistory = window.scTickHistory.slice(-3000);
 
         let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
         if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
@@ -171,18 +190,14 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
                     else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
                     if (i < window.scActivePriceLines.length) { 
-                        if (window.scActivePriceLines[i]) {
-                            window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
-                        }
+                        if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
                     } else {
                         let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
                         if (priceLine) window.scActivePriceLines.push(priceLine);
                     }
                 }
                 for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { 
-                    if (window.scActivePriceLines[i]) {
-                        window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
-                    }
+                    if (window.scActivePriceLines[i]) window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
                 }
             }
         }
@@ -215,7 +230,6 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
     }, 150);
 
     window.chartWsReconnectDelay = window.chartWsReconnectDelay || 1000;
-    
     window.chartWs.onopen = () => {
         window.chartWsReconnectDelay = 1000; 
         window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": params, "id": 1 }));
@@ -231,7 +245,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         }
 
         // ==========================================
-        // XỬ LÝ NẾN (HỖ TRỢ CẢ CEX VÀ WEB3 DEX)
+        // XỬ LÝ NẾN (HỖ TRỢ DEX k.ot & CHỐT GIÁ)
         // ==========================================
         if (data.e === 'kline' || data.stream.includes('kline_')) {
             let k = data.data.k || data.data; 
@@ -242,7 +256,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             let currentClose = parseFloat(k.c);
             let currentVol = parseFloat(k.q !== undefined ? k.q : (k.v || 0));
 
-            // Cập nhật Live Price trực tiếp từ nến (Bắt buộc cho Web3 vì không có aggTrade)
+            // Cập nhật Live Price (Cứu cánh cho DEX vì không có @aggTrade)
             window.scLastPrice = currentClose;
             if (!window.isRenderingPrice) {
                 window.isRenderingPrice = true;
@@ -272,7 +286,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
             if (klineInterval !== window.currentChartInterval) return; 
             if (window.currentChartInterval === 'tick') return;
 
-            let rawTime = k.t || k.ot; // Web3 trả về biến ot (OpenTime) thay vì t
+            let rawTime = k.t || k.ot; // Web3 dùng ot
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = currentClose >= parseFloat(k.o);
@@ -291,7 +305,7 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
         }
         
         // ==========================================
-        // XỬ LÝ LỆNH KHỚP & ORDERBOOK (CHỈ CÓ Ở CEX)
+        // XỬ LÝ LỆNH KHỚP (CHỈ DÀNH CHO CEX)
         // ==========================================
         if (data.stream && data.stream.includes('@fulldepth') && data.data) {
             let currentSym = data.data.s || 'UNKNOWN';
@@ -389,46 +403,19 @@ window.connectRealtimeChart = function(t, isTimeSwitch = false) {
 };
 
 // ==========================================
-// CÁC HÀM TIỆN ÍCH & API
+// THÔNG MINH LẤY DỮ LIỆU LỊCH SỬ NẾN
 // ==========================================
-
-// BỘ RADAR TÌM CHUỖI NẾU UI TRUYỀN THIẾU
-async function autoDetectChainId(t) {
-    if (t.chainId || t.chain_id) return String(t.chainId || t.chain_id);
-    if (t.chain) {
-        const cMap = {'bsc': 56, 'bnb': 56, 'eth': 1, 'base': 8453, 'arb': 42161, 'op': 10, 'polygon': 137, 'sol': 501};
-        return String(cMap[String(t.chain).toLowerCase()] || 56);
-    }
-    // Nếu mất sạch dữ liệu, tự động móc vào API nội bộ để tìm lại gốc gác
-    try {
-        let res = await fetch('/api/competition-data');
-        let data = await res.json();
-        for (let key in data) {
-            let token = data[key];
-            if ((token.contract || '').toLowerCase() === (t.contractAddress || t.contract || '').toLowerCase()) {
-                t.alphaId = token.alphaId || key;
-                return String(token.chainId || token.chain_id || 56);
-            }
-        }
-    } catch(e) {}
-    return "56"; // Đường cùng mới dùng BSC
-}
-
-// HÀM LẤY LỊCH SỬ ĐÃ ĐƯỢC LẮP RADAR
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
-        let contract = t.contractAddress || t.contract || ''; 
         
-        // Gọi Radar dò tìm Chain ID chuẩn xác
-        let chainId = await autoDetectChainId(t);
-        t.chainId = chainId; // Lưu ngược lại cho các luồng khác dùng
+        // Gọi bộ não thông minh
+        let smartCtx = window.getSmartTokenContext(t);
+        let contract = smartCtx.contract;
+        let chainId = smartCtx.chainId;
         
-        if (contract && chainId !== "501" && chainId !== "784") {
-            contract = contract.toLowerCase();
-        }
+        if (!contract) return []; // Không có contract thì API chịu thua
         
-        if (!contract) return []; 
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
@@ -440,7 +427,11 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
             let o = parseFloat(d.open), c = parseFloat(d.close);
             let isUp = c >= o;
             return {
-                time: parseInt(d.time), open: o, high: parseFloat(d.high), low: parseFloat(d.low), close: c,
+                time: parseInt(d.time), 
+                open: o, 
+                high: parseFloat(d.high), 
+                low: parseFloat(d.low), 
+                close: c,
                 volValue: parseFloat(d.volume), 
                 volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
                 value: isArea ? c : undefined
@@ -449,19 +440,23 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     } catch (e) { return []; }
 };
 
-// VÁ LỖI GỌI API SMART MONEY CHO DEX
+// ==========================================
+// VÁ API SMART MONEY THÔNG MINH
+// ==========================================
 const originalFetch = window.fetch;
 window.fetch = async function(...args) {
     if (typeof args[0] === 'string' && args[0].includes('/api/smart-money')) {
         if (window.currentChartToken) {
-            let c = window.currentChartToken.contractAddress || window.currentChartToken.contract || '';
-            let cid = window.currentChartToken.chainId || window.currentChartToken.chain_id || 56;
-            args[0] = `/api/smart-money?contractAddress=${c}&chainId=${cid}`;
+            let smartCtx = window.getSmartTokenContext(window.currentChartToken);
+            args[0] = `/api/smart-money?contractAddress=${smartCtx.contract}&chainId=${smartCtx.chainId}`;
         }
     }
     return originalFetch.apply(this, args);
 };
 
+// ==========================================
+// FUTURES & AI QUANT ENGINE
+// ==========================================
 window.startFuturesEngine = async function(symbol) {
     window.stopFuturesEngine();
     if (!symbol) return;
@@ -491,9 +486,7 @@ window.startFuturesEngine = async function(symbol) {
             }
             
             let fundData = await fetchWithTimeout(`/api/binance-fapi?endpoint=/fapi/v1/premiumIndex&symbol=${fSymbol}`);
-            
             if (window.activeFuturesSession !== currentSession) return false;
-
             if (fundData && fundData.lastFundingRate) {
                 window.quantStats.fundingRateObj = { rate: parseFloat(fundData.lastFundingRate) * 100, nextTime: fundData.nextFundingTime, interval: window.quantStats.fundingInterval };
             }
@@ -504,7 +497,6 @@ window.startFuturesEngine = async function(symbol) {
                     window.quantStats.openInterest = parseFloat(oiData.openInterest);
                 }
             } catch(e) { window.quantStats.openInterest = 0; }
-
             return true;
         } catch (err) { return false; }
     };
@@ -512,18 +504,12 @@ window.startFuturesEngine = async function(symbol) {
     let hasFutures = await fetchRestData();
     if (hasFutures && window.activeFuturesSession === currentSession) {
         window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
-        
-        let liqReconnectDelay = 1000; 
-        const MAX_LIQ_DELAY = 30000; 
+        let liqReconnectDelay = 1000; const MAX_LIQ_DELAY = 30000; 
 
         const connectForceOrderWS = () => {
             if (window.activeFuturesSession !== currentSession) return;
             window.liquidationWs = new WebSocket(`wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`);
-            
-            window.liquidationWs.onopen = () => {
-                liqReconnectDelay = 1000;
-            };
-
+            window.liquidationWs.onopen = () => { liqReconnectDelay = 1000; };
             window.liquidationWs.onmessage = (event) => {
                 if (window.activeFuturesSession !== currentSession) return;
                 const data = JSON.parse(event.data);
@@ -534,7 +520,6 @@ window.startFuturesEngine = async function(symbol) {
                     if (valUSD > 1000 && typeof window.logToSniperTape === 'function') window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
                 }
             };
-
             window.liquidationWs.onclose = () => { 
                 if (window.activeFuturesSession === currentSession) {
                     const jitter = Math.random() * 1000; 
