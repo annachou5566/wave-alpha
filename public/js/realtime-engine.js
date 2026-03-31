@@ -1,18 +1,9 @@
-// 🚀 HYBRID REALTIME ENGINE (BẢN TỐI ƯU HIỆU SUẤT & CHỐNG TRÀN RAM)
-
+// 🚀 HYBRID REALTIME ENGINE (BẢN FIX TÊN BIẾN MỚI)
 // ========================================================
 
 window.caToAlphaIdCache = window.caToAlphaIdCache || {};
-window.WAVE_BINANCE_WS_CORE = window.WAVE_BINANCE_WS_CORE || null;
+window.WAVE_BINANCE_WS_CORE = window.WAVE_BINANCE_WS_CORE || null; // TÊN MỚI HOÀN TOÀN
 window.FULL_MARKET_DATA = {}; 
-
-// [CẢI TIẾN]: Đưa các biến quản lý vòng lặp và bộ đệm ra Global để dễ kiểm soát, chống đẻ thêm rác
-let isRealtimeActive = false;
-let layer2Interval = null;
-let wsReconnectTimer = null;
-let clientPriceBuffer = {};
-let bufferProcessInterval = null;
-let wsRetryCount = 0; // Đếm số lần thử kết nối lại
 
 function startRealtimeSync() {
     console.log("🟢 Khởi động Hybrid Engine!");
@@ -28,7 +19,7 @@ function startRealtimeSync() {
 async function fetchLayer2Data() {
     if (document.hidden) return; 
     try {
-        const antiCacheUrl = `${typeof REALTIME_API_URL !== 'undefined' ? REALTIME_API_URL : '/api/market-data'}?t=${Date.now()}`;
+        const antiCacheUrl = `${REALTIME_API_URL}?t=${Date.now()}`;
         const res = await fetch(antiCacheUrl, {
             method: 'GET' 
         });
@@ -46,37 +37,25 @@ async function fetchLayer2Data() {
 
             if (typeof applyLayer2Data === 'function') applyLayer2Data(volDataOnly);
         }
-    } catch (e) { 
-        console.error("Lỗi đồng bộ Layer2:", e); 
-    }
+    } catch (e) { console.error("Lỗi đồng bộ Layer2:", e); }
 }
 
 function connectDirectBinanceWS() {
-    // 1. [CẢI TIẾN]: Dọn dẹp kết nối và timer cũ trước khi tạo mới
-    if (window.WAVE_BINANCE_WS_CORE && window.WAVE_BINANCE_WS_CORE.readyState !== WebSocket.CLOSED) {
-        window.WAVE_BINANCE_WS_CORE.close();
-    }
-    if (wsReconnectTimer) {
-        clearTimeout(wsReconnectTimer);
-        wsReconnectTimer = null;
-    }
+    if (window.WAVE_BINANCE_WS_CORE) window.WAVE_BINANCE_WS_CORE.close();
 
     const wsUrl = String.fromCharCode(119,115,115,58,47,47,110,98,115,116,114,101,97,109,46,98,105,110,97,110,99,101,46,99,111,109,47,119,51,119,47,119,115,97,47,115,116,114,101,97,109);
     window.WAVE_BINANCE_WS_CORE = new WebSocket(wsUrl);
 
     window.WAVE_BINANCE_WS_CORE.onopen = () => {
         console.log("🟢 [CLIENT] Đã kết nối thẳng Binance WS!");
-        wsRetryCount = 0; // Reset biến đếm khi kết nối thành công
-
-        // 2. [CẢI TIẾN]: Reset buffer cũ để tránh làm sai số liệu tính toán của Quant
-        clientPriceBuffer = {};
-
         window.WAVE_BINANCE_WS_CORE.send(JSON.stringify({
             "method": "SUBSCRIBE",
             "params": ["came@allTokens@ticker24"],
             "id": 999
         }));
     };
+
+    let clientPriceBuffer = {};
 
     window.WAVE_BINANCE_WS_CORE.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -101,35 +80,23 @@ function connectDirectBinanceWS() {
         }
     };
 
-    // 3. [CẢI TIẾN]: Chỉ tạo Interval 1 LẦN DUY NHẤT để quét Buffer, không đẻ thêm vòng lặp khi Reconnect
-    if (!bufferProcessInterval) {
-        bufferProcessInterval = setInterval(() => {
-            if (Object.keys(clientPriceBuffer).length > 0 && !document.hidden) {
-                if (typeof applyLayer2Data === 'function') applyLayer2Data(clientPriceBuffer, true);
-                clientPriceBuffer = {};
-            }
-        }, 1000);
-    }
+    setInterval(() => {
+        if (Object.keys(clientPriceBuffer).length > 0 && !document.hidden) {
+            if (typeof applyLayer2Data === 'function') applyLayer2Data(clientPriceBuffer, true);
+            clientPriceBuffer = {};
+        }
+    }, 1000);
 
-    // 4. [CẢI TIẾN]: Xử lý Reconnect với Exponential Backoff (1s -> 2s -> 4s -> max 30s) tránh bị ban IP
     window.WAVE_BINANCE_WS_CORE.onclose = () => {
-        let delay = Math.min(1000 * Math.pow(2, wsRetryCount), 30000); 
-        if (wsRetryCount === 0) delay = 3000; // Giữ nguyên mức 3s cho lần rớt mạng đầu tiên theo đúng thiết kế của bạn
-        
-        console.warn(`🔴 [CLIENT] Mất kết nối WS. Thử lại sau ${delay/1000}s...`);
-        wsRetryCount++;
-        wsReconnectTimer = setTimeout(connectDirectBinanceWS, delay);
+        setTimeout(connectDirectBinanceWS, 3000);
     };
 }
 
 function applyLayer2Data(serverData, forceApply = false) {
     if (!serverData || Object.keys(serverData).length === 0) return;
-    if (typeof isHeaderTooltipOpen !== 'undefined' && isHeaderTooltipOpen && !forceApply) { 
-        if(typeof pendingRealtimeServerData !== 'undefined') pendingRealtimeServerData = serverData; 
-        return; 
-    }
+    if (isHeaderTooltipOpen && !forceApply) { pendingRealtimeServerData = serverData; return; }
 
-    if (typeof compList !== 'undefined' && compList && compList.length > 0) {
+    if (compList && compList.length > 0) {
         compList.forEach(c => {
             let alphaId = c.alphaId || (c.data && c.data.alphaId) || `ALPHA_${c.db_id}`;
             const liveItem = serverData[alphaId];
@@ -160,18 +127,13 @@ function applyLayer2Data(serverData, forceApply = false) {
         });
     }
 
-    if(typeof alphaMarketCache === 'undefined') window.alphaMarketCache = {};
-
     Object.keys(serverData).forEach(key => {
         let liveItem = serverData[key];
         let symbol = liveItem.symbol || key.replace('ALPHA_', ''); 
         if (!alphaMarketCache[symbol]) alphaMarketCache[symbol] = {};
-        if (liveItem.p) alphaMarketCache[symbol].price = liveItem.p;
-        if (liveItem.v) { 
-            alphaMarketCache[symbol].daily_total = liveItem.v.dt; 
-            alphaMarketCache[symbol].daily_limit = liveItem.v.dl; 
-        }
-        if (liveItem.tx) alphaMarketCache[symbol].tx_count = liveItem.tx;
+        alphaMarketCache[symbol].price = liveItem.p;
+        if(liveItem.v) { alphaMarketCache[symbol].daily_total = liveItem.v.dt; alphaMarketCache[symbol].daily_limit = liveItem.v.dl; }
+        alphaMarketCache[symbol].tx_count = liveItem.tx;
     });
 
     if (typeof window.updateAlphaMarketUI === 'function') {
