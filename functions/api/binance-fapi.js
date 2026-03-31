@@ -2,12 +2,13 @@ export async function onRequest(context) {
     const { request } = context;
     const url = new URL(request.url);
 
-    // 1. Mở khóa CORS an toàn
+    // 1. Mở khóa CORS an toàn (Chỉ định rõ domain)
+    const ALLOWED_ORIGINS = ['https://wave-alpha.pages.dev', 'http://localhost:8788', 'http://localhost:3000'];
     const origin = request.headers.get('Origin') || '';
-    let allowedOrigin = 'https://wave-alpha.pages.dev';
-    if (origin.endsWith('.github.dev') || origin.endsWith('idx.google.com') || origin.startsWith('http://localhost')) {
-        allowedOrigin = origin;
-    }
+    
+    // Chỉ cho phép Github Codespace nếu domain chứa username của bạn để tránh bypass
+    const isSafeDev = origin.endsWith('.github.dev') && origin.includes('annachou5566'); 
+    let allowedOrigin = (ALLOWED_ORIGINS.includes(origin) || isSafeDev) ? origin : ALLOWED_ORIGINS[0];
 
     if (request.method === "OPTIONS") {
         return new Response(null, {
@@ -21,42 +22,68 @@ export async function onRequest(context) {
         });
     }
 
-    // 2. Lấy đường dẫn API người dùng muốn gọi
+    // 2. Lấy và Validate endpoint để chống SSRF
     const endpoint = url.searchParams.get('endpoint');
     const symbol = url.searchParams.get('symbol');
     
-    if (!endpoint) {
-        return new Response(JSON.stringify({ error: "Missing endpoint" }), { status: 400 });
+    // Whitelist các endpoint hợp lệ được phép gọi lên Binance
+    const ALLOWED_ENDPOINTS = [
+        '/fapi/v1/klines', 
+        '/fapi/v1/ticker/24hr', 
+        '/fapi/v1/ticker/price', 
+        '/fapi/v1/premiumIndex',
+        '/fapi/v1/depth',
+        '/fapi/v1/trades',
+        '/fapi/v2/ticker/price',
+        '/fapi/v1/exchangeInfo'
+    ];
+
+    if (!endpoint || !ALLOWED_ENDPOINTS.includes(endpoint)) {
+        return new Response(JSON.stringify({ error: "Invalid or blocked endpoint" }), { status: 403 });
     }
 
     try {
         const cache = caches.default;
-        const cacheKey = new Request(request.url, request);
+        // Bỏ bớt Request headers khi làm cache key để tránh miss cache không đáng có
+        const cacheKey = new Request(url.toString(), { method: 'GET' });
         let response = await cache.match(cacheKey);
 
         if (!response) {
-            // Lắp ráp URL để gọi ngầm lên Binance
-            let targetUrl = `https://fapi.binance.com${endpoint}`;
+            // 3. Lắp ráp URL an toàn bằng URL object thay vì cộng chuỗi
+            let targetUrl = new URL(`https://fapi.binance.com${endpoint}`);
+            
             if (symbol) {
-                targetUrl += `?symbol=${symbol}`;
+                // Validate symbol: Chỉ cho phép chữ hoa và số, độ dài 2-20 ký tự
+                if (!/^[A-Z0-9]{2,20}$/.test(symbol)) {
+                    return new Response(JSON.stringify({ error: "Invalid symbol format" }), { status: 400 });
+                }
+                targetUrl.searchParams.set('symbol', symbol);
             }
 
-            const upstreamResponse = await fetch(targetUrl);
+            const upstreamResponse = await fetch(targetUrl.toString());
             if (!upstreamResponse.ok) throw new Error(`Binance API error`);
 
             const headers = new Headers(upstreamResponse.headers);
             headers.set("Access-Control-Allow-Origin", allowedOrigin);
             headers.set("Vary", "Origin");
             
-            // Kích hoạt Cache 15 giây (Bảo vệ dự án khỏi lệnh cấm của Binance)
-            headers.set('Cache-Control', 'public, s-maxage=15, max-age=15');
+            // 4. Kích hoạt Cache 15 giây + stale-while-revalidate (30s) chống thundering herd
+            headers.set('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=30');
 
             response = new Response(upstreamResponse.body, { headers });
             context.waitUntil(cache.put(cacheKey, response.clone()));
         } else {
-            // Cập nhật CORS nếu lấy từ Cache
-            response = new Response(response.body, response);
-            response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+            // 5. Fix lỗi Cache Body "already read": Clone response trước khi modify header
+            const cachedClone = response.clone();
+            const newHeaders = new Headers(cachedClone.headers);
+            newHeaders.set("Access-Control-Allow-Origin", allowedOrigin);
+            newHeaders.set("Vary", "Origin");
+            
+            response = new Response(cachedClone.body, {
+                status: cachedClone.status,
+                statusText: cachedClone.statusText,
+                headers: newHeaders
+            });
         }
 
         return response;
