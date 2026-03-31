@@ -2,8 +2,17 @@ function formatCompact(num) {
     return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(num);
 }
 
+function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
-let globalTooltipInstances = []; 
+let globalTooltipInstances = [];
 
 let lastTooltipOpenTime = 0; 
 let isHeaderTooltipOpen = false;
@@ -439,18 +448,20 @@ async function loadFromCloud(isSilent = false) {
 
 
         const fixUrl = (url) => {
-            if (!url) return '';
-
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                return 'https://' + url;
+            if (!url) return '#';
+            try {
+                let finalUrl = url.startsWith('http') ? url : 'https://' + url;
+                const parsed = new URL(finalUrl);
+                if (!['http:', 'https:'].includes(parsed.protocol)) return '#';
+                return parsed.href;
+            } catch {
+                return '#';
             }
-            return url;
         };
 
-        if(siteConfig.x) c.innerHTML += `<a href="${fixUrl(siteConfig.x)}" target="_blank" class="social-btn"><i class="fab fa-twitter"></i></a>`;
-        if(siteConfig.tele) c.innerHTML += `<a href="${fixUrl(siteConfig.tele)}" target="_blank" class="social-btn"><i class="fab fa-telegram-plane"></i></a>`;
-        if(siteConfig.yt) c.innerHTML += `<a href="${fixUrl(siteConfig.yt)}" target="_blank" class="social-btn"><i class="fab fa-youtube"></i></a>`;
-
+        if(siteConfig.x) c.innerHTML += `<a href="${escHtml(fixUrl(siteConfig.x))}" target="_blank" class="social-btn"><i class="fab fa-twitter"></i></a>`;
+        if(siteConfig.tele) c.innerHTML += `<a href="${escHtml(fixUrl(siteConfig.tele))}" target="_blank" class="social-btn"><i class="fab fa-telegram-plane"></i></a>`;
+        if(siteConfig.yt) c.innerHTML += `<a href="${escHtml(fixUrl(siteConfig.yt))}" target="_blank" class="social-btn"><i class="fab fa-youtube"></i></a>`;
 
         const brandImg = document.getElementById('nav-brand-img');
         const brandText = document.getElementById('nav-brand-text');
@@ -1090,8 +1101,8 @@ fullHtml += `
                 <div class="token-text">
 
                                 <div class="token-title d-flex align-items-center">
-                                    ${c.name}
-                                    <span onclick="event.stopPropagation(); let tk = allTokens.find(x => x.contract && x.contract.toLowerCase() === '${c.contract_address || c.contract || ''}'.toLowerCase()); if(tk) { window.openProChart(tk); } else { alert('Đang đồng bộ dữ liệu Chart, vui lòng thử lại sau vài giây!'); }" 
+                                    ${escHtml(c.name)}
+                                    <span onclick="event.stopPropagation(); let tk = allTokens.find(x => x.contract && x.contract.toLowerCase() === '${c.contract_address || c.contract || ''}'.toLowerCase()); if(tk) { window.openProChart(tk); } else { alert('Đang đồng bộ dữ liệu Chart, vui lòng thử lại sau vài giây!'); }"
                                           title="Mở Biểu Đồ Pro" 
                                           style="margin-left:8px; color:#00F0FF; font-size:0.9rem; cursor:pointer; transition:0.2s; text-shadow: 0 0 5px rgba(0,240,255,0.4);" 
                                           onmouseover="this.style.transform='scale(1.2)'" 
@@ -1619,7 +1630,7 @@ thead.innerHTML = `
                     ${chainBadge}
                 </div>
                 <div class="token-info-col" style="text-align:left;">
-                    <div class="token-name-row"><span class="token-name-text" style="font-weight:700">${c.name}</span>${badgeHtml}</div>
+                    <div class="token-name-row"><span class="token-name-text" style="font-weight:700">${escHtml(c.name)}</span>${badgeHtml}</div>
                     ${contractHtml}
                     ${multiTokenHtml}
                 </div></div>`;
