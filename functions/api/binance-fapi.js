@@ -25,8 +25,11 @@ export async function onRequest(context) {
     // 2. Lấy và Validate endpoint để chống SSRF
     const endpoint = url.searchParams.get('endpoint');
     const symbol = url.searchParams.get('symbol');
+    // Lấy thêm 2 tham số mới dành cho API thống kê
+    const period = url.searchParams.get('period'); 
+    const limit = url.searchParams.get('limit');   
     
-    // Whitelist các endpoint hợp lệ được phép gọi lên Binance
+    // Whitelist các endpoint hợp lệ được phép gọi lên Binance (Đã thêm 4 API Futures mới)
     const ALLOWED_ENDPOINTS = [
         '/fapi/v1/klines', 
         '/fapi/v1/ticker/24hr', 
@@ -35,7 +38,12 @@ export async function onRequest(context) {
         '/fapi/v1/depth',
         '/fapi/v1/trades',
         '/fapi/v2/ticker/price',
-        '/fapi/v1/exchangeInfo'
+        '/fapi/v1/exchangeInfo',
+        // --- CÁC ENDPOINT MỚI ---
+        '/fapi/v1/openInterest',
+        '/futures/data/topLongShortPositionRatio',
+        '/futures/data/topLongShortAccountRatio',
+        '/futures/data/takerlongshortRatio'
     ];
 
     if (!endpoint || !ALLOWED_ENDPOINTS.includes(endpoint)) {
@@ -60,8 +68,24 @@ export async function onRequest(context) {
                 targetUrl.searchParams.set('symbol', symbol);
             }
 
+            // Gắn thêm period nếu có (có filter chống mã độc)
+            if (period) {
+                if (!/^(1m|5m|15m|30m|1h|2h|4h|6h|12h|1d)$/.test(period)) {
+                    return new Response(JSON.stringify({ error: "Invalid period format" }), { status: 400 });
+                }
+                targetUrl.searchParams.set('period', period);
+            }
+
+            // Gắn thêm limit nếu có (có filter ép kiểu số)
+            if (limit) {
+                if (isNaN(parseInt(limit))) {
+                    return new Response(JSON.stringify({ error: "Invalid limit format" }), { status: 400 });
+                }
+                targetUrl.searchParams.set('limit', parseInt(limit));
+            }
+
             const upstreamResponse = await fetch(targetUrl.toString());
-            if (!upstreamResponse.ok) throw new Error(`Binance API error`);
+            if (!upstreamResponse.ok) throw new Error(`Binance API error: ${upstreamResponse.status}`);
 
             const headers = new Headers(upstreamResponse.headers);
             headers.set("Access-Control-Allow-Origin", allowedOrigin);
