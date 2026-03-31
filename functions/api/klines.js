@@ -9,7 +9,10 @@ export async function onRequest(context) {
         'http://localhost:3000'
     ];
     const origin = request.headers.get('Origin') || '';
-    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    
+    // Cho phép Github Codespace nếu domain chứa username của bạn để tránh bypass
+    const isSafeDev = origin.endsWith('.github.dev') && origin.includes('annachou5566'); 
+    const allowedOrigin = (ALLOWED_ORIGINS.includes(origin) || isSafeDev) ? origin : ALLOWED_ORIGINS[0];
 
     // Xử lý OPTIONS request
     if (request.method === "OPTIONS") {
@@ -37,17 +40,22 @@ export async function onRequest(context) {
     try {
         // 3. KÍCH HOẠT CACHE
         const cache = caches.default;
-        // [BẢO MẬT] Chỉ dùng URL thuần làm khóa cache, không dùng request object
-        const cacheKey = new Request(url.toString());
+        // [BẢO MẬT] Bỏ bớt Request headers khi làm cache key để tránh miss cache không đáng có
+        const cacheKey = new Request(url.toString(), { method: 'GET' });
         let response = await cache.match(cacheKey);
 
         if (!response) {
             // Đứng từ Cloudflare gọi ngầm về Render.com
-            const upstream = `https://alpha-realtime.onrender.com/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
+            // [BẢO MẬT] Dùng URLSearchParams để build URL, chống Parameter Injection
+            const upstreamUrl = new URL('https://alpha-realtime.onrender.com/api/klines');
+            upstreamUrl.searchParams.set('contract', contract);
+            if (chainId) upstreamUrl.searchParams.set('chainId', chainId);
+            if (interval) upstreamUrl.searchParams.set('interval', interval);
+            if (limit) upstreamUrl.searchParams.set('limit', limit);
             
-            // [BẢO MẬT] Lấy API Key từ Cloudflare Variables và đính kèm vào Header
+            // Lấy API Key từ Cloudflare Variables và đính kèm vào Header
             const renderApiKey = env.RENDER_API_KEY;
-            const upstreamResponse = await fetch(upstream, {
+            const upstreamResponse = await fetch(upstreamUrl.toString(), {
                 headers: { 'x-api-key': renderApiKey || '' }
             });
 
@@ -58,17 +66,25 @@ export async function onRequest(context) {
             headers.set("Access-Control-Allow-Origin", allowedOrigin);
             headers.set("Vary", "Origin");
             
-            // Lệnh cho Cloudflare: "Nhớ kết quả này trong 60 giây"
-            headers.set('Cache-Control', 'public, s-maxage=60, max-age=60');
+            // Lệnh cho Cloudflare: Thêm stale-while-revalidate để cứu Render server khỏi Thundering Herd
+            headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
 
             response = new Response(upstreamResponse.body, { headers });
             
             // Lưu vào bộ nhớ đệm
             context.waitUntil(cache.put(cacheKey, response.clone()));
         } else {
-            // Nếu có cache, cập nhật lại CORS cho đúng origin
-            response = new Response(response.body, response);
-            response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+            // Fix lỗi Cache Body "already read": Clone response trước khi modify header
+            const cachedClone = response.clone();
+            const newHeaders = new Headers(cachedClone.headers);
+            newHeaders.set("Access-Control-Allow-Origin", allowedOrigin);
+            newHeaders.set("Vary", "Origin");
+            
+            response = new Response(cachedClone.body, {
+                status: cachedClone.status,
+                statusText: cachedClone.statusText,
+                headers: newHeaders
+            });
         }
 
         return response;
