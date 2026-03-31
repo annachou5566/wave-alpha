@@ -28,7 +28,7 @@ function startRealtimeSync() {
 async function fetchLayer2Data() {
     if (document.hidden) return; 
     try {
-        const antiCacheUrl = `${window.REALTIME_API_URL || ''}?t=${Date.now()}`;
+        const antiCacheUrl = `${typeof REALTIME_API_URL !== 'undefined' ? REALTIME_API_URL : '/api/market-data'}?t=${Date.now()}`;
         const res = await fetch(antiCacheUrl, {
             method: 'GET' 
         });
