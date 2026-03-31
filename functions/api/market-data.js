@@ -1,12 +1,12 @@
 export async function onRequest(context) {
     const { request, env } = context;
-    const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
 
-    // 1. CORS an toàn tuyệt đối
-    const ALLOWED_ORIGINS = ['https://wave-alpha.pages.dev', 'http://localhost:8788', 'http://localhost:3000'];
-    const isSafeDev = origin.endsWith('.github.dev') && origin.includes('annachou5566');
-    const allowedOrigin = (ALLOWED_ORIGINS.includes(origin) || isSafeDev) ? origin : ALLOWED_ORIGINS[0];
+    // Trả lại CORS nguyên gốc của bạn, không chế cháo
+    let allowedOrigin = 'https://wave-alpha.pages.dev';
+    if (origin.endsWith('.github.dev') || origin.endsWith('idx.google.com') || origin.startsWith('http://localhost')) {
+        allowedOrigin = origin;
+    }
 
     if (request.method === "OPTIONS") {
         return new Response(null, {
@@ -22,8 +22,7 @@ export async function onRequest(context) {
 
     try {
         const cache = caches.default;
-        // Bỏ request object để làm key thuần túy, tăng tỷ lệ Hit Cache
-        const cacheKey = new Request(url.toString(), { method: 'GET' });
+        const cacheKey = new Request(request.url, request);
         let response = await cache.match(cacheKey);
 
         if (!response) {
@@ -34,7 +33,6 @@ export async function onRequest(context) {
                     headers: { "Access-Control-Allow-Origin": allowedOrigin } 
                 });
             }
-            
             const upstream = `https://alpha-realtime.onrender.com/api/market-data`;
             const upstreamResponse = await fetch(upstream, {
                 headers: { 'x-api-key': renderApiKey }
@@ -45,24 +43,17 @@ export async function onRequest(context) {
             const headers = new Headers(upstreamResponse.headers);
             headers.set("Access-Control-Allow-Origin", allowedOrigin);
             headers.set("Vary", "Origin");
-            
-            // 2. Chống bão request sập server bằng stale-while-revalidate
+            // Fix đúng 1 chỗ: Thêm stale-while-revalidate để cứu Render server
             headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=20'); 
 
             response = new Response(upstreamResponse.body, { headers });
             context.waitUntil(cache.put(cacheKey, response.clone()));
         } else {
-            // 3. Clone body để tránh lỗi "ReadableStream already consumed"
+            // Fix đúng 1 chỗ: Clone body để tránh rỗng data
             const cachedClone = response.clone();
             const newHeaders = new Headers(cachedClone.headers);
             newHeaders.set("Access-Control-Allow-Origin", allowedOrigin);
-            newHeaders.set("Vary", "Origin");
-            
-            response = new Response(cachedClone.body, {
-                status: cachedClone.status,
-                statusText: cachedClone.statusText,
-                headers: newHeaders
-            });
+            response = new Response(cachedClone.body, { headers: newHeaders });
         }
         return response;
     } catch (e) {
