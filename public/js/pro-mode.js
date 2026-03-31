@@ -1888,7 +1888,6 @@ window.fetchFuturesSentiment = async function(symbol) {
             fetch(url), new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000))
         ]);
 
-        // ĐÃ SỬA: Gọi API qua Proxy Cloudflare
         const [posRes, accRes, takerRes] = await Promise.all([
             fetchTimeout(`/api/binance-fapi?endpoint=/futures/data/topLongShortPositionRatio&symbol=${cleanSymbol}&period=5m&limit=1`),
             fetchTimeout(`/api/binance-fapi?endpoint=/futures/data/topLongShortAccountRatio&symbol=${cleanSymbol}&period=5m&limit=1`),
@@ -1898,6 +1897,8 @@ window.fetchFuturesSentiment = async function(symbol) {
         const posData = await posRes.json();
         const accData = await accRes.json();
         const takerData = await takerRes.json();
+
+        if (posData.error || accData.error) throw new Error("API Error");
 
         document.getElementById('sm-fs-status').innerText = '🟢 ĐÃ ĐỒNG BỘ';
         document.getElementById('sm-fs-status').style.color = '#0ECB81';
@@ -1924,14 +1925,13 @@ window.fetchFuturesSentiment = async function(symbol) {
             document.getElementById('sm-fs-taker-buy').innerText = '$' + formatCompactUSD(buyVol);
             document.getElementById('sm-fs-taker-sell').innerText = '$' + formatCompactUSD(sellVol);
         }
-
     } catch(e) {
         document.getElementById('sm-fs-status').innerText = '🚫 KHÔNG CÓ DATA';
         document.getElementById('sm-fs-status').style.color = '#848e9c';
     }
 };
 
-// HÀM MỚI: Lấy dữ liệu Funding Rate & Open Interest cho Command Center
+// --- HÀM LẤY DATA CHO COMMAND CENTER ---
 window.fetchCommandCenterFutures = async function(symbol) {
     if (!symbol) return;
     let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '') + 'USDT';
@@ -1939,8 +1939,6 @@ window.fetchCommandCenterFutures = async function(symbol) {
     const statusEl = document.getElementById('cc-futures-status');
     const oiEl = document.getElementById('cc-oi-val');
     const fundEl = document.getElementById('cc-funding-val');
-    const liqLongEl = document.getElementById('cc-liq-long');
-    const liqShortEl = document.getElementById('cc-liq-short');
 
     if (statusEl) {
         statusEl.innerText = '⏳ ĐANG TẢI...';
@@ -1952,7 +1950,6 @@ window.fetchCommandCenterFutures = async function(symbol) {
             fetch(url), new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000))
         ]);
 
-        // ĐÃ SỬA: Gọi API qua Proxy Cloudflare
         const [oiRes, fundRes] = await Promise.all([
             fetchTimeout(`/api/binance-fapi?endpoint=/fapi/v1/openInterest&symbol=${cleanSymbol}`),
             fetchTimeout(`/api/binance-fapi?endpoint=/fapi/v1/premiumIndex&symbol=${cleanSymbol}`)
@@ -1960,6 +1957,9 @@ window.fetchCommandCenterFutures = async function(symbol) {
 
         const oiData = await oiRes.json();
         const fundData = await fundRes.json();
+
+        // Kiểm tra nếu Proxy báo lỗi (Token không có trên Futures)
+        if (oiData.error || fundData.error) throw new Error("API Proxy Error");
 
         if (statusEl) {
             statusEl.innerText = '🟢 LIVE';
@@ -1979,10 +1979,6 @@ window.fetchCommandCenterFutures = async function(symbol) {
                 fundEl.style.color = fRate >= 0 ? '#0ECB81' : '#F6465D';
             }
         }
-
-        if (liqLongEl) liqLongEl.innerHTML = '🩸 Liq L: <span style="color:#5e6673">WSS Req</span>';
-        if (liqShortEl) liqShortEl.innerHTML = '💥 Liq S: <span style="color:#5e6673">WSS Req</span>';
-
     } catch (e) {
         if (statusEl) {
             statusEl.innerText = '🚫 SPOT ONLY';
@@ -1996,6 +1992,7 @@ window.fetchCommandCenterFutures = async function(symbol) {
     }
 };
 
+// --- HÀM MỞ CHART ĐÃ ĐƯỢC CHÈN LỆNH KÍCH HOẠT ---
 const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
     if (typeof oldOpenProChart === 'function') oldOpenProChart(t, isTimeSwitch);
@@ -2004,7 +2001,8 @@ window.openProChart = function(t, isTimeSwitch = false) {
             injectSmartMoneyTab();
             window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
             window.fetchFuturesSentiment(t.symbol);
-            window.fetchCommandCenterFutures(t.symbol); // Đã thêm hàm gọi Command Center
+            // ĐÂY CHÍNH LÀ ĐIỂM QUYẾT ĐỊNH KÍCH HOẠT LẤY SỐ LIỆU:
+            window.fetchCommandCenterFutures(t.symbol); 
         }, 100);
     }
 };
