@@ -1,12 +1,12 @@
 export async function onRequest(context) {
     const { request, env } = context;
+    const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
 
-    // CORS an toàn
-    let allowedOrigin = 'https://wave-alpha.pages.dev';
-    if (origin.endsWith('.github.dev') || origin.endsWith('idx.google.com') || origin.startsWith('http://localhost')) {
-        allowedOrigin = origin;
-    }
+    // 1. CORS an toàn tuyệt đối
+    const ALLOWED_ORIGINS = ['https://wave-alpha.pages.dev', 'http://localhost:8788', 'http://localhost:3000'];
+    const isSafeDev = origin.endsWith('.github.dev') && origin.includes('annachou5566');
+    const allowedOrigin = (ALLOWED_ORIGINS.includes(origin) || isSafeDev) ? origin : ALLOWED_ORIGINS[0];
 
     if (request.method === "OPTIONS") {
         return new Response(null, {
@@ -22,17 +22,19 @@ export async function onRequest(context) {
 
     try {
         const cache = caches.default;
-        const cacheKey = new Request(request.url, request);
+        // Bỏ request object để làm key thuần túy, tăng tỷ lệ Hit Cache
+        const cacheKey = new Request(url.toString(), { method: 'GET' });
         let response = await cache.match(cacheKey);
 
         if (!response) {
             const renderApiKey = env.RENDER_API_KEY;
-if (!renderApiKey) {
-    return new Response(JSON.stringify({ error: "Server misconfigured: Missing API Key" }), { 
-        status: 500, 
-        headers: { "Access-Control-Allow-Origin": allowedOrigin } 
-    });
-}
+            if (!renderApiKey) {
+                return new Response(JSON.stringify({ error: "Server misconfigured: Missing API Key" }), { 
+                    status: 500, 
+                    headers: { "Access-Control-Allow-Origin": allowedOrigin } 
+                });
+            }
+            
             const upstream = `https://alpha-realtime.onrender.com/api/market-data`;
             const upstreamResponse = await fetch(upstream, {
                 headers: { 'x-api-key': renderApiKey }
@@ -43,13 +45,24 @@ if (!renderApiKey) {
             const headers = new Headers(upstreamResponse.headers);
             headers.set("Access-Control-Allow-Origin", allowedOrigin);
             headers.set("Vary", "Origin");
-            headers.set('Cache-Control', 'public, s-maxage=10, max-age=10'); // Cache 10s vì data này cần real-time
+            
+            // 2. Chống bão request sập server bằng stale-while-revalidate
+            headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=20'); 
 
             response = new Response(upstreamResponse.body, { headers });
             context.waitUntil(cache.put(cacheKey, response.clone()));
         } else {
-            response = new Response(response.body, response);
-            response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+            // 3. Clone body để tránh lỗi "ReadableStream already consumed"
+            const cachedClone = response.clone();
+            const newHeaders = new Headers(cachedClone.headers);
+            newHeaders.set("Access-Control-Allow-Origin", allowedOrigin);
+            newHeaders.set("Vary", "Origin");
+            
+            response = new Response(cachedClone.body, {
+                status: cachedClone.status,
+                statusText: cachedClone.statusText,
+                headers: newHeaders
+            });
         }
         return response;
     } catch (e) {
