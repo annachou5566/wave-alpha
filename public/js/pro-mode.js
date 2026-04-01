@@ -2144,7 +2144,13 @@ window.fetchCommandCenterFutures = async function(symbol) {
         const oiData = await oiRes.json();
         const fundData = await fundRes.json();
 
+        // Khởi tạo biến lưu trữ nếu chưa có
+        if (!window.quantStats) window.quantStats = {};
+
         if (oiData && oiData.openInterest) {
+            // LƯU VÀO BIẾN TOÀN CỤC CHO CHART-UI DÙNG
+            window.quantStats.openInterest = parseFloat(oiData.openInterest); 
+            
             const price = parseFloat(fundData.markPrice || 0);
             const oiUsd = parseFloat(oiData.openInterest) * price;
             if (oiEl) oiEl.innerText = '$' + formatCompactUSD(oiUsd);
@@ -2152,6 +2158,14 @@ window.fetchCommandCenterFutures = async function(symbol) {
 
         if (fundData && fundData.lastFundingRate) {
             const fRate = parseFloat(fundData.lastFundingRate) * 100;
+            
+            // LƯU VÀO BIẾN TOÀN CỤC ĐỂ CHART-UI CHẠY COUNTDOWN
+            window.quantStats.fundingRateObj = {
+                rate: fRate,
+                nextTime: parseInt(fundData.nextFundingTime || Date.now() + 28800000),
+                interval: 8
+            };
+
             if (fundEl) {
                 fundEl.innerText = fRate.toFixed(4) + '%';
                 fundEl.style.color = fRate >= 0 ? '#0ECB81' : '#F6465D';
