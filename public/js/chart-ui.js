@@ -484,7 +484,12 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         document.getElementById('sc-top-mc').innerText = '$' + window.formatCompactNum(t.market_cap);
         document.getElementById('sc-top-liq').innerText = '$' + window.formatCompactNum(t.liquidity);
+        
         document.getElementById('sc-top-vol').innerText = '$' + window.formatCompactNum(t.volume?.daily_total || 0);
+        
+        let el24hVol = document.getElementById('sc-top-vol-24h');
+        if (el24hVol) el24hVol.innerText = '$' + window.formatCompactNum(t.volume?.rolling_24h || 0);
+        
         document.getElementById('sc-top-hold').innerText = window.formatInt(t.holders);
         document.getElementById('sc-top-tx').innerText = window.formatInt(t.tx_count);
     }
