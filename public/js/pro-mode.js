@@ -1756,7 +1756,7 @@ function injectFuturesTab() {
 
                 <div style="border-top: 1px dashed var(--term-border); padding-top: 8px; margin-bottom: 8px;">
                     <div class="term-w-title" style="font-size: 9px; margin-bottom: 4px;"><i class="fas fa-list-ul"></i> TAPE THANH LÝ (REALTIME)</div>
-                    <div id="fut-liq-tape" style="height: 120px; overflow-y: hidden; display: flex; flex-direction: column; background: #0b0e11; border: 1px solid var(--term-border); border-radius: 2px;">
+                    <div id="fut-liq-tape" style="height: 180px; overflow-y: auto; display: flex; flex-direction: column; background: #0b0e11; border: 1px solid var(--term-border); border-radius: 2px;">
                         <div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập bị luộc...</div>
                     </div>
                 </div>
