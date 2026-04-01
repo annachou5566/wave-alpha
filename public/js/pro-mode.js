@@ -1753,6 +1753,14 @@ function injectFuturesTab() {
                     <span class="term-lbl">Short Bị Cháy (Liq S)</span>
                     <span id="fut-liq-short" class="term-val" style="color: #00F0FF;">$0</span>
                 </div>
+
+                <div style="border-top: 1px dashed var(--term-border); padding-top: 8px; margin-bottom: 8px;">
+                    <div class="term-w-title" style="font-size: 9px; margin-bottom: 4px;"><i class="fas fa-list-ul"></i> TAPE THANH LÝ (REALTIME)</div>
+                    <div id="fut-liq-tape" style="height: 120px; overflow-y: hidden; display: flex; flex-direction: column; background: #0b0e11; border: 1px solid var(--term-border); border-radius: 2px;">
+                        <div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập bị luộc...</div>
+                    </div>
+                </div>
+
                 <div style="text-align: center; border-top: 1px dashed var(--term-border); padding-top: 8px;">
                     <span id="fut-ai-verdict" style="font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #848e9c;">⚖️ ĐANG PHÂN TÍCH...</span>
                 </div>
