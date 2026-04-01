@@ -39,6 +39,59 @@ window.playProPing = function() {
 
 window.logToSniperTape = function(isBuy, vol, type, price) {
     let isLiq = type.includes('CHÁY');
+    
+    // ----------------------------------------------------
+    // 1. XỬ LÝ RIÊNG CHO LỆNH THANH LÝ (LIQUIDATION TAPE)
+    // ----------------------------------------------------
+    if (isLiq) {
+        if (!window.quantStats) window.quantStats = {};
+        
+        // Cộng dồn khối lượng (Fix lỗi hiện $0)
+        if (type.includes('LONG')) {
+            window.quantStats.longLiq = (window.quantStats.longLiq || 0) + vol;
+        } else if (type.includes('SHORT')) {
+            window.quantStats.shortLiq = (window.quantStats.shortLiq || 0) + vol;
+        }
+
+        // Render dòng hiển thị vào Tape Thanh Lý
+        const liqTape = document.getElementById('fut-liq-tape');
+        if (liqTape) {
+            // Xóa chữ "Đang rình cá mập..." nếu có lệnh đầu tiên
+            if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
+            
+            // Cháy Long -> Đỏ (Phe mua bị bóp chết). Cháy Short -> Xanh (Phe bán bị bóp chết)
+            const lColor = type.includes('LONG') ? '#FF007F' : '#00F0FF'; 
+            const lBg = type.includes('LONG') ? 'rgba(255, 0, 127, 0.15)' : 'rgba(0, 240, 255, 0.15)';
+            const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const lEntry = document.createElement('div');
+            lEntry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 10px; padding: 4px 6px; border-bottom: 1px solid var(--term-border); background: ${lBg}; font-family: var(--font-num); transition: 0.3s;`;
+            
+            let lIcon = type.includes('LONG') ? '🩸' : '💥';
+            let lAction = type.includes('LONG') ? 'LIQ L' : 'LIQ S';
+            
+            lEntry.innerHTML = `
+                <span style="color:${lColor}; font-weight:800; width: 35%; text-shadow: 0 0 5px ${lColor};">${lIcon} ${lAction}</span>
+                <span style="color:#eaecef; font-weight:bold; width: 45%; text-align: center;">$${window.formatCompactUSD(vol)} @ ${window.formatPrice(price)}</span>
+                <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
+            `;
+            
+            // Chèn lệnh mới lên đầu
+            liqTape.prepend(lEntry);
+            
+            // Hiệu ứng chớp nháy highlight
+            lEntry.style.background = lColor;
+            lEntry.style.color = '#000';
+            setTimeout(() => { lEntry.style.background = lBg; lEntry.style.color = ''; }, 150);
+
+            // Giữ tối đa 30 lệnh gần nhất để không giật lag
+            while (liqTape.children.length > 30) liqTape.removeChild(liqTape.lastChild);
+        }
+    }
+
+    // ----------------------------------------------------
+    // 2. XỬ LÝ CHUNG CHO SNIPER TAPE (Bên tab Data Flow)
+    // ----------------------------------------------------
     if (vol < 500 && !type.includes('BOT') && !isLiq) return;
 
     const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊') || isLiq;
