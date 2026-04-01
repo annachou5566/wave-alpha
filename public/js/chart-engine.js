@@ -578,21 +578,38 @@ window.startFuturesEngine = async function(symbol) {
     const fetchRestData = async (isInitial = false) => {
         if (window.activeFuturesSession !== currentSession) return false;
         try {
-            // Lấy 100 lệnh cháy gần nhất làm vốn mồi (Chỉ gọi 1 lần khi mở Chart)
+            // Lấy 100 lệnh cháy gần nhất làm vốn mồi (Bọc encodeURIComponent để Proxy hiểu đúng lệnh)
             if (isInitial) {
                 try {
-                    let forceData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/allForceOrders&symbol=${fSymbol}&limit=100`);
+                    let endpoint100 = encodeURIComponent(`/fapi/v1/allForceOrders?symbol=${fSymbol}&limit=100`);
+                    let forceData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=${endpoint100}`);
+                    
                     if (window.activeFuturesSession === currentSession && Array.isArray(forceData)) {
                         let initLongLiq = 0; let initShortLiq = 0;
+                        
+                        // Sắp xếp lệnh từ cũ đến mới để Tape chạy tự nhiên từ dưới lên
+                        forceData.sort((a, b) => a.time - b.time);
+                        
                         forceData.forEach(order => {
-                            let valUSD = parseFloat(order.averagePrice || order.price || 0) * parseFloat(order.executedQty || order.origQty || 0);
-                            // Binance: order.side === 'SELL' nghĩa là lệnh mua bị ép đóng (Cháy Long)
-                            if (order.side === 'SELL') initLongLiq += valUSD; else initShortLiq += valUSD;
+                            let p = parseFloat(order.averagePrice || order.price || 0);
+                            let q = parseFloat(order.executedQty || order.origQty || 0);
+                            let valUSD = p * q;
+                            let isLongLiq = (order.side === 'SELL'); // S: SELL -> Long bị cháy
+                            
+                            if (isLongLiq) initLongLiq += valUSD; else initShortLiq += valUSD;
+                            
+                            // Đổ lệnh vào bảng với THỜI GIAN LỊCH SỬ CHÍNH XÁC
+                            if (typeof window.logToSniperTape === 'function') {
+                                window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', p, order.time);
+                            }
                         });
                         
-                        // Cộng dồn vào số Realtime đã chạy nãy giờ
+                        // Cộng thẳng 100 lệnh mồi vào tổng thể
                         window.quantStats.longLiq += initLongLiq;
                         window.quantStats.shortLiq += initShortLiq;
+                        
+                        // Cập nhật giao diện ngay lập tức
+                        if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
                     }
                 } catch(e) { console.error("Lỗi lấy vốn mồi thanh lý:", e); }
             }
@@ -605,14 +622,16 @@ window.startFuturesEngine = async function(symbol) {
                 } catch(e) { window.quantStats.fundingInterval = 8; }
             }
             
-            let fundData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/premiumIndex&symbol=${fSymbol}`);
+            let endpointFund = encodeURIComponent(`/fapi/v1/premiumIndex?symbol=${fSymbol}`);
+            let fundData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=${endpointFund}`);
             if (window.activeFuturesSession !== currentSession) return false;
             if (fundData && fundData.lastFundingRate) {
                 window.quantStats.fundingRateObj = { rate: parseFloat(fundData.lastFundingRate) * 100, nextTime: fundData.nextFundingTime, interval: window.quantStats.fundingInterval };
             }
             
             try {
-                let oiData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/openInterest&symbol=${fSymbol}`);
+                let endpointOI = encodeURIComponent(`/fapi/v1/openInterest?symbol=${fSymbol}`);
+                let oiData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=${endpointOI}`);
                 if (window.activeFuturesSession === currentSession && oiData && oiData.openInterest) {
                     window.quantStats.openInterest = parseFloat(oiData.openInterest);
                 }
