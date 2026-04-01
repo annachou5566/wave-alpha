@@ -575,44 +575,11 @@ window.startFuturesEngine = async function(symbol) {
         try { const response = await fetch(url, { signal: controller.signal }); clearTimeout(id); if (!response.ok) throw new Error(`HTTP ${response.status}`); return await response.json(); } catch (err) { clearTimeout(id); throw err; }
     };
 
-    const fetchRestData = async (isInitial = false) => {
+    const fetchRestData = async () => {
         if (window.activeFuturesSession !== currentSession) return false;
         try {
-            // Lấy 100 lệnh cháy gần nhất làm vốn mồi (Bọc encodeURIComponent để Proxy hiểu đúng lệnh)
-            if (isInitial) {
-                try {
-                    let endpoint100 = encodeURIComponent(`/fapi/v1/allForceOrders?symbol=${fSymbol}&limit=100`);
-                    let forceData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=${endpoint100}`);
-                    
-                    if (window.activeFuturesSession === currentSession && Array.isArray(forceData)) {
-                        let initLongLiq = 0; let initShortLiq = 0;
-                        
-                        // Sắp xếp lệnh từ cũ đến mới để Tape chạy tự nhiên từ dưới lên
-                        forceData.sort((a, b) => a.time - b.time);
-                        
-                        forceData.forEach(order => {
-                            let p = parseFloat(order.averagePrice || order.price || 0);
-                            let q = parseFloat(order.executedQty || order.origQty || 0);
-                            let valUSD = p * q;
-                            let isLongLiq = (order.side === 'SELL'); // S: SELL -> Long bị cháy
-                            
-                            if (isLongLiq) initLongLiq += valUSD; else initShortLiq += valUSD;
-                            
-                            // Đổ lệnh vào bảng với THỜI GIAN LỊCH SỬ CHÍNH XÁC
-                            if (typeof window.logToSniperTape === 'function') {
-                                window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', p, order.time);
-                            }
-                        });
-                        
-                        // Cộng thẳng 100 lệnh mồi vào tổng thể
-                        window.quantStats.longLiq += initLongLiq;
-                        window.quantStats.shortLiq += initShortLiq;
-                        
-                        // Cập nhật giao diện ngay lập tức
-                        if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
-                    }
-                } catch(e) { console.error("Lỗi lấy vốn mồi thanh lý:", e); }
-            }
+            // Đã xóa bỏ phần gọi API allForceOrders vì Binance đã khai tử tính năng này từ 2021.
+            // Số liệu thanh lý giờ đây sẽ chỉ được đếm Realtime thông qua Websocket.
 
             if (!window.quantStats.fundingInterval) {
                 try { 
@@ -641,13 +608,12 @@ window.startFuturesEngine = async function(symbol) {
         } catch (err) { return false; }
     };
 
-    // Gọi lần đầu với cờ isInitial = true để mồi thanh lý, sau đó lặp lại ngầm mỗi 15s để lấy Funding
-    fetchRestData(true).then(hasFutures => {
+    // Gọi lần đầu để lấy Funding/OI, sau đó lặp lại ngầm mỗi 15s
+    fetchRestData().then(hasFutures => {
         if (hasFutures && window.activeFuturesSession === currentSession) {
-            window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(false); }, 15000);
+            window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
         }
     });
-};
 
 window.stopFuturesEngine = function() {
     window.activeFuturesSession = null;
