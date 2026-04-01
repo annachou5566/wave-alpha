@@ -1437,28 +1437,6 @@
         pointer-events: none; /* User vẫn click xuyên qua được, không bị vướng */
     }
 </style>
-
-<div id="system-notice-marquee">
-    <div id="marquee-text" style="white-space: nowrap; transform: translateX(100vw);">
-        ⚠️ Dữ liệu giải đấu và dự đoán volume đang được nâng cấp. Hệ thống tick Real-time (Live Chart) vẫn hoạt động!
-    </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const marqueeContainer = document.getElementById('system-notice-marquee');
-        const marqueeText = document.getElementById('marquee-text');
-        
-        if (marqueeContainer && marqueeText) {
-            // Kích hoạt animation chạy
-            marqueeText.classList.add('animate-marquee');
-            
-            // Lắng nghe: Khi animation chạy xong 2 vòng, tự động xóa luôn thẻ HTML cho nhẹ máy
-            marqueeText.addEventListener('animationend', () => {
-                marqueeContainer.remove();
-            });
-        }
-    });
 </script>
 </body>
 </html>
