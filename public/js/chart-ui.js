@@ -322,11 +322,8 @@ window.updateCommandCenterUI = function() {
         } else { countdownStr = "00:00:00"; }
 
         let sign = fObj.rate > 0 ? '+' : ''; let color = fObj.rate > 0.01 ? '#F6465D' : (fObj.rate < -0.01 ? '#00F0FF' : '#eaecef');
-        let fLbl = document.getElementById('fut-funding-lbl'); if (fLbl) fLbl.innerText = `Funding (${fObj.interval}h)`;
+        let fLbl = document.getElementById('fut-funding-lbl'); if (fLbl) fLbl.innerText = `Funding (${fObj.interval || 8}h)`;
         let fEl = document.getElementById('fut-funding-val'); if (fEl) fEl.innerHTML = `<span style="font-family:var(--font-num); color:#848e9c">${countdownStr}</span><span style="color:#527c82; margin: 0 4px;">/</span><span style="color:${color}">${sign}${fObj.rate.toFixed(4)}%</span>`;
-    } else {
-        let fLbl = document.getElementById('fut-funding-lbl'); if (fLbl) fLbl.innerText = `Funding Rate`;
-        let fEl = document.getElementById('fut-funding-val'); if (fEl) fEl.innerHTML = `--%`;
     }
 
     // --- UPDATE OPEN INTEREST REALTIME ---
@@ -334,9 +331,7 @@ window.updateCommandCenterUI = function() {
     if (oiEl) {
         if (window.quantStats && window.quantStats.openInterest && window.scLastPrice) {
             let oiUSD = window.quantStats.openInterest * window.scLastPrice; 
-            oiEl.innerText = '$' + window.formatCompactUSD(oiUSD);
-        } else {
-            oiEl.innerText = '$--';
+            if (window.formatCompactUSD) oiEl.innerText = '$' + window.formatCompactUSD(oiUSD);
         }
     }
 
