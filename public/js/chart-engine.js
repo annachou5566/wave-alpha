@@ -123,10 +123,12 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let params = [];
     if (contract) {
         params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
-        if (window.currentChartInterval !== 'tick') {
-            let tk = `came@${contract}@${chainId}@kline_${window.currentChartInterval}`;
-            if (!params.includes(tk)) params.push(tk);
-        }
+        
+        // 💡 FIX TICK DEX: Ép tải stream 1s để làm dữ liệu tick giả lập
+        let targetInterval = window.currentChartInterval === 'tick' ? '1s' : window.currentChartInterval;
+        let tk = `came@${contract}@${chainId}@kline_${targetInterval}`;
+        if (!params.includes(tk)) params.push(tk);
+    }
     } 
     params.push(`${streamPrefix}@aggTrade`, `${streamPrefix}@bookTicker`, 'came@allTokens@ticker24', `${streamPrefix}@fulldepth@500ms`);
     if (!contract) {
@@ -298,10 +300,30 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            if (klineInterval !== window.currentChartInterval) return; 
-            if (window.currentChartInterval === 'tick') return;
+            // 💡 FIX TICK DEX: Chấp nhận kline 1s lọt qua nếu đang bật chart Tick
+            let isTickFallback = (window.currentChartInterval === 'tick' && klineInterval === '1s');
+            
+            if (klineInterval !== window.currentChartInterval && !isTickFallback) return; 
 
-            let rawTime = k.t || k.ot; 
+            // HIJACK LUỒNG 1S BƠM VÀO TICK CHART
+            if (isTickFallback) {
+                let nowT = Date.now();
+                if (nowT - (window.lastChartRender || 0) > 150) {
+                    window.lastChartRender = nowT;
+                    let timeSec = Math.floor(nowT / 1000);
+                    let isUpCandle = currentClose >= parseFloat(k.o);
+                    let isTrad = window.currentTheme === 'trad';
+                    let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
+                    
+                    if (window.tvLineSeries) window.tvLineSeries.update({ time: timeSec, value: currentClose });
+                    if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: currentVol, color: volColor });
+                }
+                return; // Xử lý xong Tick thì thoát, không vẽ nến nữa
+            }
+            
+            if (window.currentChartInterval === 'tick') return; // Chốt chặn an toàn
+
+            let rawTime = k.t || k.ot;
             if (rawTime) {
                 let candleTime = Math.floor(rawTime / 1000);
                 let isUpCandle = currentClose >= parseFloat(k.o);
