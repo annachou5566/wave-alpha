@@ -41,20 +41,32 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     let isLiq = type.includes('CHÁY');
     
     // ----------------------------------------------------
-    // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES (BẮT 100% LỆNH)
+    // 1. XỬ LÝ RIÊNG CHO LỆNH THANH LÝ (LIQUIDATION TAPE)
     // ----------------------------------------------------
     if (isLiq) {
         const liqTape = document.getElementById('fut-liq-tape');
         if (liqTape) {
             if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
             
+            // --- BẮT ĐẦU TÍNH TOÁN HEATMAP ---
+            const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+            const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
+            const heatRatio = Math.min(1, vol / heatMaxThreshold); 
+            // Độ sáng nền từ 5% (lệnh rác) đến 55% (lệnh to)
+            const opacity = 0.05 + (heatRatio * 0.5); 
+            
             const lColor = type.includes('LONG') ? '#FF007F' : '#00F0FF'; 
-            const lBg = type.includes('LONG') ? 'rgba(255, 0, 127, 0.15)' : 'rgba(0, 240, 255, 0.15)';
+            const lBg = type.includes('LONG') ? `rgba(255, 0, 127, ${opacity})` : `rgba(0, 240, 255, ${opacity})`;
             const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             const lEntry = document.createElement('div');
-            lEntry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 10px; padding: 4px 6px; border-bottom: 1px solid var(--term-border); background: ${lBg}; font-family: var(--font-num); transition: 0.3s;`;
-            
+            // Đánh dấu viền trái rõ nét nếu là lệnh cá mập bị luộc (heatRatio > 0.6)
+            const borderLeft = heatRatio > 0.6 ? `4px solid ${lColor}` : 'none';
+            const fontWeight = heatRatio > 0.6 ? '900' : '600';
+
+            lEntry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; padding: 4px 6px; border-bottom: 1px solid var(--term-border); border-left: ${borderLeft}; background: ${lBg}; font-family: var(--font-num); transition: 0.3s; font-weight: ${fontWeight};`;
+            // --- KẾT THÚC TÍNH TOÁN HEATMAP ---
+
             let lIcon = type.includes('LONG') ? '🩸' : '💥';
             let lAction = type.includes('LONG') ? 'LIQ L' : 'LIQ S';
             
@@ -65,9 +77,14 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
             `;
             
             liqTape.prepend(lEntry);
-            lEntry.style.background = lColor; lEntry.style.color = '#000';
+            
+            // Hiệu ứng chớp nháy highlight
+            lEntry.style.background = lColor;
+            lEntry.style.color = '#000';
             setTimeout(() => { lEntry.style.background = lBg; lEntry.style.color = ''; }, 150);
-            while (liqTape.children.length > 30) liqTape.removeChild(liqTape.lastChild);
+
+            // TĂNG GIỚI HẠN: Giữ tối đa 50 lệnh gần nhất (thay vì 30) để bạn cuộn xem lịch sử dễ hơn
+            while (liqTape.children.length > 50) liqTape.removeChild(liqTape.lastChild);
         }
     }
 
