@@ -64,7 +64,6 @@ window.getSmartTokenContext = async function(t) {
 window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
-    let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
 
     let smartCtx = await window.getSmartTokenContext(t);
     let contract = smartCtx.contract;
@@ -121,6 +120,8 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
     let params = [];
+    
+    // 1. XỬ LÝ NẾN (KLINE) NẾU CÓ CONTRACT
     if (contract) {
         params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
         if (window.currentChartInterval !== 'tick') {
@@ -128,12 +129,36 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             if (!params.includes(tk)) params.push(tk);
         }
     } 
-    params.push(`${streamPrefix}@aggTrade`, `${streamPrefix}@bookTicker`, 'came@allTokens@ticker24', `${streamPrefix}@fulldepth@500ms`);
-    if (!contract) {
-        params.push(`${streamPrefix}@kline_1m`, `${streamPrefix}@kline_5m`, `${streamPrefix}@kline_15m`, `${streamPrefix}@kline_1h`);
-        if (window.currentChartInterval !== 'tick') {
-            let tk = `${streamPrefix}@kline_${window.currentChartInterval}`;
-            if (!params.includes(tk)) params.push(tk);
+
+    // 2. LUÔN LẤY TICKER 24H CHO TẤT CẢ
+    params.push('came@allTokens@ticker24');
+
+    // 3. XỬ LÝ LIVE TRADE (CHỖ NÀY LÀ QUAN TRỌNG NHẤT)
+    if (rawId) {
+        // Nếu là token DEX (có rawId), đăng ký nhận data cho cả USDT và USDC
+        const possibleQuotes = ['usdt', 'usdc'];
+        possibleQuotes.forEach(quote => {
+            let dexStream = `alpha_${rawId}${quote}`;
+            params.push(`${dexStream}@aggTrade`, `${dexStream}@bookTicker`, `${dexStream}@fulldepth@500ms`);
+            
+            // Lấy nến dự phòng nếu không có contract
+            if (!contract) {
+                params.push(`${dexStream}@kline_1m`, `${dexStream}@kline_5m`, `${dexStream}@kline_15m`, `${dexStream}@kline_1h`);
+                if (window.currentChartInterval !== 'tick') {
+                    let tk = `${dexStream}@kline_${window.currentChartInterval}`;
+                    if (!params.includes(tk)) params.push(tk);
+                }
+            }
+        });
+    } else {
+        // Nếu là token CEX bình thường, giữ nguyên logic cũ
+        params.push(`${streamPrefix}@aggTrade`, `${streamPrefix}@bookTicker`, `${streamPrefix}@fulldepth@500ms`);
+        if (!contract) {
+            params.push(`${streamPrefix}@kline_1m`, `${streamPrefix}@kline_5m`, `${streamPrefix}@kline_15m`, `${streamPrefix}@kline_1h`);
+            if (window.currentChartInterval !== 'tick') {
+                let tk = `${streamPrefix}@kline_${window.currentChartInterval}`;
+                if (!params.includes(tk)) params.push(tk);
+            }
         }
     }
 
