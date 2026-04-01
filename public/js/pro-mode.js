@@ -1617,12 +1617,23 @@ function injectSmartMoneyTab() {
                     <span class="term-lbl">Price Trend (<span id="sm-dex-tf-lbl">24H</span>)</span>
                     <span id="sm-dex-trend" class="term-val">--%</span>
                 </div>
-                <div class="term-row" style="margin-bottom: 4px;">
-                    <span class="term-lbl">Binance Vol</span>
-                    <span id="sm-dex-vol" class="term-val">$--</span>
+                
+                <div class="term-w-title" style="margin-top: 6px; margin-bottom: 4px; font-size: 8px;">📊 VOLUME BREAKDOWN (BINANCE VS OTHERS)</div>
+                <div class="term-row" style="margin-bottom: 2px;">
+                    <span class="term-lbl">Total DEX Vol</span>
+                    <span id="sm-dex-vol-total" class="term-val">$--</span>
                 </div>
-                <div class="term-row" style="margin-bottom: 8px;">
-                    <span class="term-lbl">Net Flow</span>
+                <div style="display:flex; height:5px; border-radius:2px; overflow:hidden; background:var(--term-border); margin-bottom: 4px;">
+                    <div id="sm-dex-bar-binance" style="height:100%; width:0%; background:#F0B90B; transition:0.3s;" title="Binance Vol"></div>
+                    <div id="sm-dex-bar-other" style="height:100%; width:0%; background:#9945FF; transition:0.3s;" title="Other DEX Vol"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 6px; font-family: var(--font-num); font-weight: 700;">
+                    <span style="color:#F0B90B;">🔶 Bin: <span id="sm-dex-vol-binance">$--</span></span>
+                    <span style="color:#9945FF;">🟣 Other: <span id="sm-dex-vol-other">$--</span></span>
+                </div>
+
+                <div class="term-row" style="margin-bottom: 8px; border-top: 1px dashed var(--term-border); padding-top: 6px;">
+                    <span class="term-lbl">Net Flow (Binance)</span>
                     <span id="sm-dex-netflow" class="term-val">$--</span>
                 </div>
 
@@ -1727,9 +1738,21 @@ window.renderBinanceDexTab = function(tf) {
     let trendSign = trendVal >= 0 ? '+' : '';
     safeSet('sm-dex-trend', `${trendSign}${trendVal.toFixed(2)}%`, trendColor);
 
-    // 2. Volume Binance DEX
-    let volVal = parseFloat(d[`volume${tfKey}Binance`] || 0);
-    safeSet('sm-dex-vol', fmtUsd(volVal));
+    // 2. VOLUME BREAKDOWN (Tổng DEX so với Binance DEX)
+    let totalVol = parseFloat(d[`volume${tfKey}`] || 0); // Lấy tổng vol web3
+    let binanceVol = parseFloat(d[`volume${tfKey}Binance`] || 0); // Lấy vol của riêng binance
+    let otherVol = Math.max(0, totalVol - binanceVol); // Phần còn lại
+    
+    safeSet('sm-dex-vol-total', fmtUsd(totalVol));
+    safeSet('sm-dex-vol-binance', fmtUsd(binanceVol));
+    safeSet('sm-dex-vol-other', fmtUsd(otherVol));
+
+    // Tính % chiều dài cho thanh Progress Bar
+    let binancePct = totalVol > 0 ? (binanceVol / totalVol) * 100 : 0;
+    let otherPct = totalVol > 0 ? (otherVol / totalVol) * 100 : 0;
+    
+    document.getElementById('sm-dex-bar-binance').style.width = binancePct + '%';
+    document.getElementById('sm-dex-bar-other').style.width = otherPct + '%';
 
     // 3. Net Flow
     let netFlow = parseFloat(d[`volume${tfKey}NetBinance`] || 0);
@@ -1737,17 +1760,17 @@ window.renderBinanceDexTab = function(tf) {
     let netSign = netFlow >= 0 ? '+' : '-';
     safeSet('sm-dex-netflow', `${netSign}${fmtUsd(Math.abs(netFlow))}`, netColor);
 
-    // 4. Mua / Bán
+    // 4. Cán Cân Mua / Bán
     let buyVol = parseFloat(d[`volume${tfKey}BuyBinance`] || 0);
     let sellVol = parseFloat(d[`volume${tfKey}SellBinance`] || 0);
     let buyCnt = d[`count${tfKey}BuyBinance`] || 0;
     let sellCnt = d[`count${tfKey}SellBinance`] || 0;
 
-    let totalVol = buyVol + sellVol;
-    let buyPct = totalVol > 0 ? (buyVol / totalVol) * 100 : 50;
-    let sellPct = totalVol > 0 ? (sellVol / totalVol) * 100 : 50;
+    let totalBuySell = buyVol + sellVol;
+    let buyPct = totalBuySell > 0 ? (buyVol / totalBuySell) * 100 : 50;
+    let sellPct = totalBuySell > 0 ? (sellVol / totalBuySell) * 100 : 50;
 
-    // Kéo thanh Progress Bar
+    // Kéo thanh Progress Bar Mua/Bán
     document.getElementById('sm-dex-bar-buy').style.width = buyPct + '%';
     document.getElementById('sm-dex-bar-sell').style.width = sellPct + '%';
 
