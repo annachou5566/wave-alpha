@@ -37,35 +37,34 @@ window.playProPing = function() {
     } catch(e) {}
 };
 
-window.logToSniperTape = function(isBuy, vol, type, price) {
+window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
     let isLiq = type.includes('CHÁY');
     
+    // Nếu có truyền timestamp (từ API lịch sử) thì lấy giờ đó, không thì lấy giờ hiện tại (Realtime)
+    let dateObj = timestamp ? new Date(timestamp) : new Date();
+    const timeStr = dateObj.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
     // ----------------------------------------------------
-    // 1. XỬ LÝ RIÊNG CHO LỆNH THANH LÝ (LIQUIDATION TAPE)
+    // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES (BẮT 100% LỆNH)
     // ----------------------------------------------------
     if (isLiq) {
         const liqTape = document.getElementById('fut-liq-tape');
         if (liqTape) {
             if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
             
-            // --- BẮT ĐẦU TÍNH TOÁN HEATMAP ---
             const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
             const heatRatio = Math.min(1, vol / heatMaxThreshold); 
-            // Độ sáng nền từ 5% (lệnh rác) đến 55% (lệnh to)
             const opacity = 0.05 + (heatRatio * 0.5); 
             
             const lColor = type.includes('LONG') ? '#FF007F' : '#00F0FF'; 
             const lBg = type.includes('LONG') ? `rgba(255, 0, 127, ${opacity})` : `rgba(0, 240, 255, ${opacity})`;
-            const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             const lEntry = document.createElement('div');
-            // Đánh dấu viền trái rõ nét nếu là lệnh cá mập bị luộc (heatRatio > 0.6)
             const borderLeft = heatRatio > 0.6 ? `4px solid ${lColor}` : 'none';
             const fontWeight = heatRatio > 0.6 ? '900' : '600';
 
             lEntry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; padding: 4px 6px; border-bottom: 1px solid var(--term-border); border-left: ${borderLeft}; background: ${lBg}; font-family: var(--font-num); transition: 0.3s; font-weight: ${fontWeight};`;
-            // --- KẾT THÚC TÍNH TOÁN HEATMAP ---
 
             let lIcon = type.includes('LONG') ? '🩸' : '💥';
             let lAction = type.includes('LONG') ? 'LIQ L' : 'LIQ S';
@@ -78,12 +77,13 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
             
             liqTape.prepend(lEntry);
             
-            // Hiệu ứng chớp nháy highlight
-            lEntry.style.background = lColor;
-            lEntry.style.color = '#000';
-            setTimeout(() => { lEntry.style.background = lBg; lEntry.style.color = ''; }, 150);
+            // Hiệu ứng chớp nháy (Chỉ nháy nếu là realtime, historical thì thôi cho đỡ giật mắt)
+            if (!timestamp) {
+                lEntry.style.background = lColor;
+                lEntry.style.color = '#000';
+                setTimeout(() => { lEntry.style.background = lBg; lEntry.style.color = ''; }, 150);
+            }
 
-            // TĂNG GIỚI HẠN: Giữ tối đa 50 lệnh gần nhất (thay vì 30) để bạn cuộn xem lịch sử dễ hơn
             while (liqTape.children.length > 50) liqTape.removeChild(liqTape.lastChild);
         }
     }
@@ -91,14 +91,11 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     // ----------------------------------------------------
     // 2. LỌC DỮ LIỆU CHO SNIPER TAPE (TRÁNH BỊ SPAM NHIỄU)
     // ----------------------------------------------------
-    // Lệnh thanh lý DƯỚI 1000$ thì không cho vào Sniper Tape
     if (isLiq && vol < 1000) return; 
-
-    // Lệnh trade bình thường (Không phải cháy, không phải sweep) DƯỚI 500$ thì bỏ qua
     if (!isLiq && vol < 500 && !type.includes('BOT')) return;
 
     const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊') || isLiq;
-    if (isWhaleOrShark) window.playProPing();
+    if (isWhaleOrShark && !timestamp) window.playProPing(); // Đừng ping âm thanh cho lệnh lịch sử
 
     const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
     const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
@@ -120,7 +117,6 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${(heatRatio > 0.6 || isLiq) ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); gap: 4px; font-weight: ${fontWt}; transition: background 0.8s ease;`;
 
     let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
-    const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     entry.innerHTML = `
         <span style="color:${color}; font-weight:800; width: 35%; ${glow}">${type} ${action}</span>
@@ -145,7 +141,7 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
                 const items = window.tapeRenderQueue.splice(0, window.tapeRenderQueue.length);
                 for (let i = items.length - 1; i >= 0; i--) {
                     fragment.insertBefore(items[i].entry, fragment.firstChild);
-                    if (items[i].isWhaleOrShark) {
+                    if (items[i].isWhaleOrShark && !timestamp) { // Chỉ chớp sáng nếu là lệnh realtime
                         items[i].entry.style.background = items[i].isBuy ? 'rgba(14, 203, 129, 0.55)' : 'rgba(246, 70, 93, 0.55)';
                         setTimeout(() => { items[i].entry.style.background = items[i].bg; items[i].entry.style.textShadow = 'none'; }, 150);
                     }
