@@ -1111,6 +1111,7 @@ function injectLayout() {
                         <button class="sc-sidebar-icon active" data-title="Live Trades" onclick="window.toggleProSidePanel('trades', this)"><i class="fas fa-bolt"></i></button>
                         <button class="sc-sidebar-icon" data-title="Data Flow" onclick="window.toggleProSidePanel('info', this)"><i class="fas fa-wave-square"></i></button>
                         <button class="sc-sidebar-icon" data-title="Smart Money" onclick="window.toggleProSidePanel('smartmoney', this)"><i class="fas fa-microscope"></i></button>
+                        <button class="sc-sidebar-icon" data-title="Derivatives" onclick="window.toggleProSidePanel('futures', this)"><i class="fas fa-fire"></i></button>
                     </div>
                 </div>
             </div>
@@ -1706,6 +1707,97 @@ function injectSmartMoneyTab() {
     sidePanel.appendChild(newTabContent);
 }
 
+function injectFuturesTab() {
+    const sidePanel = document.getElementById('sc-panel-content');
+    if (!sidePanel || document.getElementById('tab-futures')) return;
+
+    const newTabContent = document.createElement('div');
+    newTabContent.id = 'tab-futures';
+    newTabContent.className = 'sc-tab-content';
+    newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
+    
+    newTabContent.innerHTML = `
+        <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#9945FF; font-size: 11px; flex-shrink: 0; display:flex; justify-content:space-between; align-items:center;">
+            <span><i class="fas fa-fire" style="margin-right: 5px;"></i> DERIVATIVES RADAR</span>
+            <span id="fut-live-status" style="font-size:8.5px; color:var(--term-warn);">⏳ Waiting...</span>
+        </div>
+        
+        <div style="flex: 1; overflow-y: auto; padding: 10px;">
+            
+            <div class="term-widget" style="border-left: 2px solid #F0B90B; margin-bottom: 8px;">
+                <div class="term-w-title"><i class="fas fa-burn"></i> SỨC NÓNG (MARKET HEAT)</div>
+                <div class="term-row" style="margin-bottom: 6px;">
+                    <span class="term-lbl">Open Interest (OI)</span>
+                    <span id="fut-oi-val" class="term-val" style="font-size: 14px; color: #F0B90B;">$--</span>
+                </div>
+                <div class="term-row">
+                    <span class="term-lbl" id="fut-funding-lbl">Funding Rate</span>
+                    <span id="fut-funding-val" class="term-val">--%</span>
+                </div>
+            </div>
+
+            <div class="term-widget" style="border-left: 2px solid #9945FF; margin-bottom: 8px;">
+                <div class="term-w-title" style="display:flex; justify-content:space-between;">
+                    <span><i class="fas fa-balance-scale"></i> VỊ THẾ (LONG/SHORT)</span>
+                    <span title="Tỷ lệ 5 Phút">5M</span>
+                </div>
+                
+                <div style="margin-bottom: 8px;">
+                    <div class="term-row" style="margin-bottom: 2px;">
+                        <span class="term-lbl" style="color: #848e9c;">Retail (Theo số người)</span>
+                        <span id="fut-acc-ratio" class="term-val">--% L / --% S</span>
+                    </div>
+                    <div style="display:flex; height:5px; border-radius:2px; overflow:hidden; background:var(--term-border);">
+                        <div id="fut-acc-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                        <div id="fut-acc-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="term-row" style="margin-bottom: 2px;">
+                        <span class="term-lbl" style="color: #EAECEF; font-weight:bold;">Whales (Theo lượng tiền)</span>
+                        <span id="fut-pos-ratio" class="term-val">--% L / --% S</span>
+                    </div>
+                    <div style="display:flex; height:5px; border-radius:2px; overflow:hidden; background:var(--term-border);">
+                        <div id="fut-pos-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                        <div id="fut-pos-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+                    </div>
+                </div>
+                <div id="fut-divergence-alert" style="margin-top: 8px; font-size: 9px; text-align: center; padding: 4px; border-radius: 3px; display: none;"></div>
+            </div>
+
+            <div class="term-widget" style="border-left: 2px solid #3B82F6; margin-bottom: 8px;">
+                <div class="term-w-title"><i class="fas fa-gavel"></i> LỆNH THỊ TRƯỜNG (TAKER CVD)</div>
+                <div style="display:flex; height:5px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 6px 0;">
+                    <div id="fut-taker-buy-bar" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
+                    <div id="fut-taker-sell-bar" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; font-family: var(--font-num); font-weight: 700;">
+                    <span style="color: var(--term-up);">B: <span id="fut-taker-buy">$--</span></span>
+                    <span style="color: var(--term-down);">S: <span id="fut-taker-sell">$--</span></span>
+                </div>
+            </div>
+
+            <div class="term-widget" style="border-left: 2px solid #FF007F;">
+                <div class="term-w-title"><i class="fas fa-skull-crossbones"></i> THANH LÝ & DỰ BÁO</div>
+                <div class="term-row" style="margin-bottom: 4px;">
+                    <span class="term-lbl">Long Bị Cháy (Liq L)</span>
+                    <span id="fut-liq-long" class="term-val" style="color: #F6465D;">$0</span>
+                </div>
+                <div class="term-row" style="margin-bottom: 8px;">
+                    <span class="term-lbl">Short Bị Cháy (Liq S)</span>
+                    <span id="fut-liq-short" class="term-val" style="color: #00F0FF;">$0</span>
+                </div>
+                <div style="text-align: center; border-top: 1px dashed var(--term-border); padding-top: 8px;">
+                    <span id="fut-ai-verdict" style="font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #848e9c;">⚖️ ĐANG PHÂN TÍCH...</span>
+                </div>
+            </div>
+
+        </div>
+    `;
+    sidePanel.appendChild(newTabContent);
+}
+
 // Biến lưu trữ data hiện tại để chuyển tab không cần gọi lại API
 window.currentSmartMoneyData = null; 
 
@@ -2118,9 +2210,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
     if (!isTimeSwitch) {
         setTimeout(() => {
             injectSmartMoneyTab();
+            injectFuturesTab(); // <--- THÊM DÒNG NÀY
+            
             window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
             window.fetchFuturesSentiment(t.symbol);
-            // ĐÂY CHÍNH LÀ ĐIỂM QUYẾT ĐỊNH KÍCH HOẠT LẤY SỐ LIỆU:
             window.fetchCommandCenterFutures(t.symbol); 
         }, 100);
     }
