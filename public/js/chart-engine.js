@@ -614,6 +614,7 @@ window.startFuturesEngine = async function(symbol) {
             window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
         }
     });
+};
 
 window.stopFuturesEngine = function() {
     window.activeFuturesSession = null;
