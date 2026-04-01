@@ -41,18 +41,13 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     let isLiq = type.includes('CHÁY');
     
     // ----------------------------------------------------
-    // 1. XỬ LÝ RIÊNG CHO LỆNH THANH LÝ (LIQUIDATION TAPE)
+    // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES (BẮT 100% LỆNH)
     // ----------------------------------------------------
     if (isLiq) {
-        // XÓA PHẦN CỘNG DỒN Ở ĐÂY VÌ CHART-ENGINE ĐÃ LO PHẦN ĐÓ RỒI
-
-        // Render dòng hiển thị vào Tape Thanh Lý
         const liqTape = document.getElementById('fut-liq-tape');
         if (liqTape) {
-            // Xóa chữ "Đang rình cá mập..." nếu có lệnh đầu tiên
             if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
             
-            // Cháy Long -> Đỏ. Cháy Short -> Xanh
             const lColor = type.includes('LONG') ? '#FF007F' : '#00F0FF'; 
             const lBg = type.includes('LONG') ? 'rgba(255, 0, 127, 0.15)' : 'rgba(0, 240, 255, 0.15)';
             const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -69,23 +64,21 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
                 <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
             `;
             
-            // Chèn lệnh mới lên đầu
             liqTape.prepend(lEntry);
-            
-            // Hiệu ứng chớp nháy highlight
-            lEntry.style.background = lColor;
-            lEntry.style.color = '#000';
+            lEntry.style.background = lColor; lEntry.style.color = '#000';
             setTimeout(() => { lEntry.style.background = lBg; lEntry.style.color = ''; }, 150);
-
-            // Giữ tối đa 30 lệnh gần nhất
             while (liqTape.children.length > 30) liqTape.removeChild(liqTape.lastChild);
         }
     }
 
     // ----------------------------------------------------
-    // 2. XỬ LÝ CHUNG CHO SNIPER TAPE BÊN TAB LIVE TRADES
+    // 2. LỌC DỮ LIỆU CHO SNIPER TAPE (TRÁNH BỊ SPAM NHIỄU)
     // ----------------------------------------------------
-    if (vol < 500 && !type.includes('BOT') && !isLiq) return;
+    // Lệnh thanh lý DƯỚI 1000$ thì không cho vào Sniper Tape
+    if (isLiq && vol < 1000) return; 
+
+    // Lệnh trade bình thường (Không phải cháy, không phải sweep) DƯỚI 500$ thì bỏ qua
+    if (!isLiq && vol < 500 && !type.includes('BOT')) return;
 
     const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊') || isLiq;
     if (isWhaleOrShark) window.playProPing();
@@ -382,12 +375,20 @@ window.updateCommandCenterUI = function() {
     }
 
     // --- UPDATE THANH LÝ (LIQUIDATION) ---
-    let liqLongEl = document.getElementById('fut-liq-long');
-    if (liqLongEl) liqLongEl.innerText = `$${window.formatCompactUSD((window.quantStats && window.quantStats.longLiq) ? window.quantStats.longLiq : 0)}`;
+    // Cập nhật lên Tab Futures Mới (Khắc phục lỗi 0$)
+    let futLiqLongEl = document.getElementById('fut-liq-long');
+    if (futLiqLongEl) futLiqLongEl.innerText = `$${window.formatCompactUSD((window.quantStats && window.quantStats.longLiq) ? window.quantStats.longLiq : 0)}`;
     
-    let liqShortEl = document.getElementById('fut-liq-short');
-    if (liqShortEl) liqShortEl.innerText = `$${window.formatCompactUSD((window.quantStats && window.quantStats.shortLiq) ? window.quantStats.shortLiq : 0)}`;
+    let futLiqShortEl = document.getElementById('fut-liq-short');
+    if (futLiqShortEl) futLiqShortEl.innerText = `$${window.formatCompactUSD((window.quantStats && window.quantStats.shortLiq) ? window.quantStats.shortLiq : 0)}`;
 
+    // Cập nhật cho bảng Data Flow cũ (Nếu bạn chưa xóa thẻ cũ)
+    let ccLiqLongEl = document.getElementById('cc-liq-long');
+    if (ccLiqLongEl) ccLiqLongEl.innerText = `🩸 Liq L: $${window.formatCompactUSD((window.quantStats && window.quantStats.longLiq) ? window.quantStats.longLiq : 0)}`;
+    
+    let ccLiqShortEl = document.getElementById('cc-liq-short');
+    if (ccLiqShortEl) ccLiqShortEl.innerText = `💥 Liq S: $${window.formatCompactUSD((window.quantStats && window.quantStats.shortLiq) ? window.quantStats.shortLiq : 0)}`;
+    
     let sq = window.computeSqueezeZone ? window.computeSqueezeZone() : { confirmed: false };
     if (sq.confirmed && window.scChartMarkers) {
         let currentTime = Date.now();
