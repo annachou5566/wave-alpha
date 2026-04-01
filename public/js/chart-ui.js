@@ -44,14 +44,7 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
     // 1. XỬ LÝ RIÊNG CHO LỆNH THANH LÝ (LIQUIDATION TAPE)
     // ----------------------------------------------------
     if (isLiq) {
-        if (!window.quantStats) window.quantStats = {};
-        
-        // Cộng dồn khối lượng (Fix lỗi hiện $0)
-        if (type.includes('LONG')) {
-            window.quantStats.longLiq = (window.quantStats.longLiq || 0) + vol;
-        } else if (type.includes('SHORT')) {
-            window.quantStats.shortLiq = (window.quantStats.shortLiq || 0) + vol;
-        }
+        // XÓA PHẦN CỘNG DỒN Ở ĐÂY VÌ CHART-ENGINE ĐÃ LO PHẦN ĐÓ RỒI
 
         // Render dòng hiển thị vào Tape Thanh Lý
         const liqTape = document.getElementById('fut-liq-tape');
@@ -59,7 +52,7 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
             // Xóa chữ "Đang rình cá mập..." nếu có lệnh đầu tiên
             if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
             
-            // Cháy Long -> Đỏ (Phe mua bị bóp chết). Cháy Short -> Xanh (Phe bán bị bóp chết)
+            // Cháy Long -> Đỏ. Cháy Short -> Xanh
             const lColor = type.includes('LONG') ? '#FF007F' : '#00F0FF'; 
             const lBg = type.includes('LONG') ? 'rgba(255, 0, 127, 0.15)' : 'rgba(0, 240, 255, 0.15)';
             const timeStr = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -84,13 +77,13 @@ window.logToSniperTape = function(isBuy, vol, type, price) {
             lEntry.style.color = '#000';
             setTimeout(() => { lEntry.style.background = lBg; lEntry.style.color = ''; }, 150);
 
-            // Giữ tối đa 30 lệnh gần nhất để không giật lag
+            // Giữ tối đa 30 lệnh gần nhất
             while (liqTape.children.length > 30) liqTape.removeChild(liqTape.lastChild);
         }
     }
 
     // ----------------------------------------------------
-    // 2. XỬ LÝ CHUNG CHO SNIPER TAPE (Bên tab Data Flow)
+    // 2. XỬ LÝ CHUNG CHO SNIPER TAPE BÊN TAB LIVE TRADES
     // ----------------------------------------------------
     if (vol < 500 && !type.includes('BOT') && !isLiq) return;
 
