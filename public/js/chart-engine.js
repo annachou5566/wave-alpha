@@ -526,8 +526,54 @@ window.startFuturesEngine = async function(symbol) {
     let streamSymbol = fSymbol.toLowerCase();
 
     if (!window.quantStats) window.quantStats = {};
-    window.quantStats.longLiq = 0; window.quantStats.shortLiq = 0; window.quantStats.fundingRateObj = null; window.quantStats.fundingInterval = null;
+    window.quantStats.longLiq = 0; window.quantStats.shortLiq = 0; 
+    window.quantStats.fundingRateObj = null; window.quantStats.fundingInterval = null;
 
+    // =========================================================
+    // 1. KẾT NỐI WEBSOCKET THANH LÝ NGAY LẬP TỨC (KHÔNG CHỜ API)
+    // =========================================================
+    let liqReconnectDelay = 1000; const MAX_LIQ_DELAY = 30000; 
+
+    const connectForceOrderWS = () => {
+        if (window.activeFuturesSession !== currentSession) return;
+        // Kết nối thẳng tới máy chủ Binance, không dính dáng đến Proxy hay CORS
+        window.liquidationWs = new WebSocket(`wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`);
+        window.liquidationWs.onopen = () => { liqReconnectDelay = 1000; };
+        
+        window.liquidationWs.onmessage = (event) => {
+            if (window.activeFuturesSession !== currentSession) return;
+            const data = JSON.parse(event.data);
+            if (data.e === 'forceOrder' && data.o) {
+                let order = data.o; 
+                let valUSD = parseFloat(order.p) * parseFloat(order.q); 
+                let isLongLiq = (order.S === 'SELL'); // S: SELL -> Long bị sàn ép bán -> Cháy Long
+                
+                // Cộng dồn tiền thanh lý vào biến toàn cục ngay lập tức
+                if (isLongLiq) { window.quantStats.longLiq += valUSD; } else { window.quantStats.shortLiq += valUSD; }
+                if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'LIQ_EVENT', data: { v: valUSD, dir: order.S, p: parseFloat(order.p) } });
+                
+                // Bắn sự kiện ra UI (Tape Thanh Lý) - Không bị chặn bởi limit 1000$ nữa
+                if (typeof window.logToSniperTape === 'function') {
+                    window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
+                }
+            }
+        };
+        
+        window.liquidationWs.onclose = () => { 
+            if (window.activeFuturesSession === currentSession) {
+                const jitter = Math.random() * 1000; 
+                setTimeout(() => connectForceOrderWS(), liqReconnectDelay + jitter);
+                liqReconnectDelay = Math.min(liqReconnectDelay * 2, MAX_LIQ_DELAY); 
+            } 
+        };
+    };
+    
+    // KÍCH HOẠT WEBSOCKET THANH LÝ NGAY LẬP TỨC!
+    connectForceOrderWS();
+
+    // =========================================================
+    // 2. CHẠY API LẤY DỮ LIỆU TĨNH (FUNDING/OI) Ở BACKGROUND
+    // =========================================================
     const fetchWithTimeout = async (url) => {
         const controller = new AbortController(); const id = setTimeout(() => controller.abort(), 4000);
         try { const response = await fetch(url, { signal: controller.signal }); clearTimeout(id); if (!response.ok) throw new Error(`HTTP ${response.status}`); return await response.json(); } catch (err) { clearTimeout(id); throw err; }
@@ -538,14 +584,12 @@ window.startFuturesEngine = async function(symbol) {
         try {
             if (!window.quantStats.fundingInterval) {
                 try { 
-                    // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
                     let fInfo = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/fundingInfo`); 
                     let sInfo = fInfo.find(x => x.symbol === fSymbol); 
                     window.quantStats.fundingInterval = sInfo ? sInfo.fundingIntervalHours : 8; 
                 } catch(e) { window.quantStats.fundingInterval = 8; }
             }
             
-            // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
             let fundData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/premiumIndex&symbol=${fSymbol}`);
             if (window.activeFuturesSession !== currentSession) return false;
             if (fundData && fundData.lastFundingRate) {
@@ -553,49 +597,22 @@ window.startFuturesEngine = async function(symbol) {
             }
             
             try {
-                // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
                 let oiData = await fetchWithTimeout(`${RENDER_BASE_URL}/api/binance-fapi?endpoint=/fapi/v1/openInterest&symbol=${fSymbol}`);
                 if (window.activeFuturesSession === currentSession && oiData && oiData.openInterest) {
                     window.quantStats.openInterest = parseFloat(oiData.openInterest);
                 }
-            } catch(e) { window.quantStats.openInterest = 0; }
+            } catch(e) {}
 
             return true;
         } catch (err) { return false; }
     };
 
-    let hasFutures = await fetchRestData();
-    if (hasFutures && window.activeFuturesSession === currentSession) {
-        window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
-        let liqReconnectDelay = 1000; const MAX_LIQ_DELAY = 30000; 
-
-        const connectForceOrderWS = () => {
-            if (window.activeFuturesSession !== currentSession) return;
-            window.liquidationWs = new WebSocket(`wss://fstream.binance.com/ws/${streamSymbol}@forceOrder`);
-            window.liquidationWs.onopen = () => { liqReconnectDelay = 1000; };
-            window.liquidationWs.onmessage = (event) => {
-                if (window.activeFuturesSession !== currentSession) return;
-                const data = JSON.parse(event.data);
-                if (data.e === 'forceOrder' && data.o) {
-                    let order = data.o; let valUSD = parseFloat(order.p) * parseFloat(order.q); let isLongLiq = (order.S === 'SELL');
-                    if (isLongLiq) { window.quantStats.longLiq += valUSD; } else { window.quantStats.shortLiq += valUSD; }
-                    if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'LIQ_EVENT', data: { v: valUSD, dir: order.S, p: parseFloat(order.p) } });
-                    
-                    if (typeof window.logToSniperTape === 'function') {
-                        window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
-                    }
-                }
-            };
-            window.liquidationWs.onclose = () => { 
-                if (window.activeFuturesSession === currentSession) {
-                    const jitter = Math.random() * 1000; 
-                    setTimeout(() => connectForceOrderWS(), liqReconnectDelay + jitter);
-                    liqReconnectDelay = Math.min(liqReconnectDelay * 2, MAX_LIQ_DELAY); 
-                } 
-            };
-        };
-        connectForceOrderWS();
-    }
+    // Chạy ngầm, không block luồng WebSocket
+    fetchRestData().then(hasFutures => {
+        if (hasFutures && window.activeFuturesSession === currentSession) {
+            window.futuresDataInterval = setInterval(() => { if (window.activeFuturesSession === currentSession) fetchRestData(); }, 15000);
+        }
+    });
 };
 
 window.stopFuturesEngine = function() {
