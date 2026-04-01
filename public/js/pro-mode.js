@@ -904,7 +904,8 @@ function injectLayout() {
                         </div>
                         
                         <div class="sc-metrics-compact">
-                            <div class="sc-mc-item"><span>VOL(24H)</span><strong id="sc-top-vol">$--</strong></div>
+                            <div class="sc-mc-item"><span>DAILY VOL</span><strong id="sc-top-vol">$--</strong></div>
+                            <div class="sc-mc-item"><span>24H VOL</span><strong id="sc-top-vol-24h" style="color: #F0B90B;">$--</strong></div>
                             <div class="sc-mc-item"><span>LIQ</span><strong id="sc-top-liq">$--</strong></div>
                             <div class="sc-mc-item"><span>MCAP</span><strong id="sc-top-mc">$--</strong></div>
                             <div class="sc-mc-item"><span>FDV</span><strong id="sc-top-fdv">$--</strong></div> 
