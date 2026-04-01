@@ -1600,13 +1600,41 @@ function injectSmartMoneyTab() {
                 </div>
             </div>
 
-            <div class="term-widget" style="border-left: 2px solid #3B82F6; margin-top: 4px;">
-                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="term-widget" style="border-left: 2px solid #3B82F6; margin-top: 4px;" id="sm-dex-widget">
+                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span>🏦 DÒNG TIỀN BINANCE DEX</span>
                     <span id="sm-bn-traders" style="color:#00F0FF; font-size: 8.5px; font-family:var(--font-num); font-weight:700;">-- Traders | -- KYC</span>
                 </div>
-                <div class="term-row"><span class="term-lbl">Net Flow (4H)</span><span id="sm-bn-netflow-4h" class="term-val">$--</span></div>
-                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 4px; margin-top: 2px;"><span class="term-lbl">Net Flow (24H)</span><span id="sm-bn-netflow-24h" class="term-val">$--</span></div>
+                
+                <div style="display: flex; gap: 4px; margin-bottom: 8px;" id="sm-dex-tabs">
+                    <button class="sc-time-btn" onclick="window.switchDexTab('5m', this)">5M</button>
+                    <button class="sc-time-btn" onclick="window.switchDexTab('1h', this)">1H</button>
+                    <button class="sc-time-btn" onclick="window.switchDexTab('4h', this)">4H</button>
+                    <button class="sc-time-btn active" onclick="window.switchDexTab('24h', this)">24H</button>
+                </div>
+
+                <div class="term-row" style="margin-bottom: 4px;">
+                    <span class="term-lbl">Price Trend (<span id="sm-dex-tf-lbl">24H</span>)</span>
+                    <span id="sm-dex-trend" class="term-val">--%</span>
+                </div>
+                <div class="term-row" style="margin-bottom: 4px;">
+                    <span class="term-lbl">Binance Vol</span>
+                    <span id="sm-dex-vol" class="term-val">$--</span>
+                </div>
+                <div class="term-row" style="margin-bottom: 8px;">
+                    <span class="term-lbl">Net Flow</span>
+                    <span id="sm-dex-netflow" class="term-val">$--</span>
+                </div>
+
+                <div class="term-w-title" style="margin-bottom: 4px; font-size: 8px;">⚖️ CÁN CÂN MUA / BÁN (BINANCE)</div>
+                <div style="display:flex; height:5px; border-radius:2px; overflow:hidden; background:var(--term-border); margin-bottom: 4px;">
+                    <div id="sm-dex-bar-buy" style="height:100%; width:50%; background:var(--term-up); transition:0.3s;"></div>
+                    <div id="sm-dex-bar-sell" style="height:100%; width:50%; background:var(--term-down); transition:0.3s;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 2px; font-family: var(--font-num); font-weight: 700;">
+                    <span style="color:var(--term-up);">🟢 <span id="sm-dex-buy-cnt">--</span> Lệnh / <span id="sm-dex-buy-vol">$--</span></span>
+                    <span style="color:var(--term-down);">🔴 <span id="sm-dex-sell-cnt">--</span> Lệnh / <span id="sm-dex-sell-vol">$--</span></span>
+                </div>
             </div>
 
             <div class="term-w-title" style="margin-top: 8px; margin-bottom: 4px;">⚖️ ĐỘNG LƯỢNG MUA/BÁN (CVD)</div>
@@ -1665,6 +1693,70 @@ function injectSmartMoneyTab() {
         </div> `;
     sidePanel.appendChild(newTabContent);
 }
+
+// Biến lưu trữ data hiện tại để chuyển tab không cần gọi lại API
+window.currentSmartMoneyData = null; 
+
+window.switchDexTab = function(tf, btn) {
+    // 1. Đổi màu nút Tab đang được chọn
+    const tabs = document.querySelectorAll('#sm-dex-tabs .sc-time-btn');
+    tabs.forEach(t => t.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+
+    // 2. Render lại dữ liệu theo mốc thời gian mới
+    window.renderBinanceDexTab(tf);
+};
+
+window.renderBinanceDexTab = function(tf) {
+    const d = window.currentSmartMoneyData;
+    if(!d) return;
+
+    const safeSet = (id, val, color) => {
+        let el = document.getElementById(id);
+        if (el) { el.innerHTML = val; if (color) el.style.color = color; }
+    };
+    const fmtUsd = (val) => val && !isNaN(val) ? '$' + formatCompactUSD(parseFloat(val)) : '$0';
+    
+    // Cập nhật Nhãn thời gian
+    let tfKey = tf === '24h' ? '24h' : (tf === '4h' ? '4h' : (tf === '1h' ? '1h' : '5m'));
+    document.getElementById('sm-dex-tf-lbl').innerText = tf.toUpperCase();
+
+    // 1. Trend Giá
+    let trendVal = parseFloat(d[`percentChange${tfKey}`] || 0);
+    let trendColor = trendVal >= 0 ? 'var(--term-up)' : 'var(--term-down)';
+    let trendSign = trendVal >= 0 ? '+' : '';
+    safeSet('sm-dex-trend', `${trendSign}${trendVal.toFixed(2)}%`, trendColor);
+
+    // 2. Volume Binance DEX
+    let volVal = parseFloat(d[`volume${tfKey}Binance`] || 0);
+    safeSet('sm-dex-vol', fmtUsd(volVal));
+
+    // 3. Net Flow
+    let netFlow = parseFloat(d[`volume${tfKey}NetBinance`] || 0);
+    let netColor = netFlow >= 0 ? 'var(--term-up)' : 'var(--term-down)';
+    let netSign = netFlow >= 0 ? '+' : '-';
+    safeSet('sm-dex-netflow', `${netSign}${fmtUsd(Math.abs(netFlow))}`, netColor);
+
+    // 4. Mua / Bán
+    let buyVol = parseFloat(d[`volume${tfKey}BuyBinance`] || 0);
+    let sellVol = parseFloat(d[`volume${tfKey}SellBinance`] || 0);
+    let buyCnt = d[`count${tfKey}BuyBinance`] || 0;
+    let sellCnt = d[`count${tfKey}SellBinance`] || 0;
+
+    let totalVol = buyVol + sellVol;
+    let buyPct = totalVol > 0 ? (buyVol / totalVol) * 100 : 50;
+    let sellPct = totalVol > 0 ? (sellVol / totalVol) * 100 : 50;
+
+    // Kéo thanh Progress Bar
+    document.getElementById('sm-dex-bar-buy').style.width = buyPct + '%';
+    document.getElementById('sm-dex-bar-sell').style.width = sellPct + '%';
+
+    // Đổ text số lượng
+    safeSet('sm-dex-buy-cnt', buyCnt);
+    safeSet('sm-dex-sell-cnt', sellCnt);
+    safeSet('sm-dex-buy-vol', fmtUsd(buyVol));
+    safeSet('sm-dex-sell-vol', fmtUsd(sellVol));
+};
 
 window.updateSmartMoneyRadar = function(apiData) {
     if (!apiData || !apiData.data) return;
@@ -1804,12 +1896,15 @@ window.updateSmartMoneyRadar = function(apiData) {
     let fShort = (n) => n ? new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(n) : '0';
     safeSet('sm-bn-traders', `${fShort(d.bnTraders)} Traders <span style="color:#527c82">|</span> ${fShort(d.bnUniqueHolders || d.kycHolderCount)} KYC`);
     
-    let net4h = parseFloat(d.volume4hNetBinance || 0);
-    safeSet('sm-bn-netflow-4h', (net4h >= 0 ? '+' : '') + fmtUsd(Math.abs(net4h)), net4h >= 0 ? '#0ECB81' : '#F6465D');
+    // --- BẮT ĐẦU CẬP NHẬT TAB BINANCE DEX MỚI ---
+    window.currentSmartMoneyData = d; // Lưu data vào biến toàn cục
 
-    let net24h = parseFloat(d.volume24hNetBinance || 0);
-    safeSet('sm-bn-netflow-24h', (net24h >= 0 ? '+' : '') + fmtUsd(Math.abs(net24h)), net24h >= 0 ? '#0ECB81' : '#F6465D');
-
+    // Tìm xem người dùng đang xem Tab nào (mặc định là 24h) để render đúng tab đó
+    const activeBtn = document.querySelector('#sm-dex-tabs .sc-time-btn.active');
+    const activeTf = activeBtn ? activeBtn.innerText.toLowerCase() : '24h';
+    window.renderBinanceDexTab(activeTf);
+    // --- KẾT THÚC CẬP NHẬT TAB BINANCE DEX MỚI ---
+    
     const updateCVDBar = (timeKey, buyVol, sellVol) => {
         let total = buyVol + sellVol;
         let buyPct = total > 0 ? (buyVol / total) * 100 : 50;
