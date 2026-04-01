@@ -123,19 +123,36 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let params = [];
     if (contract) {
         params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
-        
-        // 💡 FIX TICK DEX: Ép tải stream 1s để làm dữ liệu tick giả lập
+        // Ép tải luồng 1s nếu người dùng đang ở chart Tick
         let targetInterval = window.currentChartInterval === 'tick' ? '1s' : window.currentChartInterval;
         let tk = `came@${contract}@${chainId}@kline_${targetInterval}`;
         if (!params.includes(tk)) params.push(tk);
-    }
     } 
-    params.push(`${streamPrefix}@aggTrade`, `${streamPrefix}@bookTicker`, 'came@allTokens@ticker24', `${streamPrefix}@fulldepth@500ms`);
-    if (!contract) {
-        params.push(`${streamPrefix}@kline_1m`, `${streamPrefix}@kline_5m`, `${streamPrefix}@kline_15m`, `${streamPrefix}@kline_1h`);
-        if (window.currentChartInterval !== 'tick') {
-            let tk = `${streamPrefix}@kline_${window.currentChartInterval}`;
-            if (!params.includes(tk)) params.push(tk);
+
+    params.push('came@allTokens@ticker24');
+
+    if (rawId) {
+        // Quét cả USDT và USDC cho hàng DEX
+        const possibleQuotes = ['usdt', 'usdc'];
+        possibleQuotes.forEach(quote => {
+            let dexStream = `alpha_${rawId}${quote}`;
+            params.push(`${dexStream}@aggTrade`, `${dexStream}@bookTicker`, `${dexStream}@fulldepth@500ms`);
+            if (!contract) {
+                params.push(`${dexStream}@kline_1m`, `${dexStream}@kline_5m`, `${dexStream}@kline_15m`, `${dexStream}@kline_1h`);
+                let targetInterval = window.currentChartInterval === 'tick' ? '1s' : window.currentChartInterval;
+                let tk = `${dexStream}@kline_${targetInterval}`;
+                if (!params.includes(tk)) params.push(tk);
+            }
+        });
+    } else {
+        // Hàng CEX bình thường
+        params.push(`${streamPrefix}@aggTrade`, `${streamPrefix}@bookTicker`, `${streamPrefix}@fulldepth@500ms`);
+        if (!contract) {
+            params.push(`${streamPrefix}@kline_1m`, `${streamPrefix}@kline_5m`, `${streamPrefix}@kline_15m`, `${streamPrefix}@kline_1h`);
+            if (window.currentChartInterval !== 'tick') {
+                let tk = `${streamPrefix}@kline_${window.currentChartInterval}`;
+                if (!params.includes(tk)) params.push(tk);
+            }
         }
     }
 
@@ -300,12 +317,11 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            // 💡 FIX TICK DEX: Chấp nhận kline 1s lọt qua nếu đang bật chart Tick
+            // --- BẮT ĐẦU ĐOẠN FAKE TICK CHO DEX ---
             let isTickFallback = (window.currentChartInterval === 'tick' && klineInterval === '1s');
             
             if (klineInterval !== window.currentChartInterval && !isTickFallback) return; 
 
-            // HIJACK LUỒNG 1S BƠM VÀO TICK CHART
             if (isTickFallback) {
                 let nowT = Date.now();
                 if (nowT - (window.lastChartRender || 0) > 150) {
@@ -318,10 +334,11 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     if (window.tvLineSeries) window.tvLineSeries.update({ time: timeSec, value: currentClose });
                     if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: currentVol, color: volColor });
                 }
-                return; // Xử lý xong Tick thì thoát, không vẽ nến nữa
+                return; 
             }
             
-            if (window.currentChartInterval === 'tick') return; // Chốt chặn an toàn
+            if (window.currentChartInterval === 'tick') return; 
+            // --- KẾT THÚC ĐOẠN FAKE TICK ---
 
             let rawTime = k.t || k.ot;
             if (rawTime) {
