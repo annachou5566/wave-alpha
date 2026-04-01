@@ -278,6 +278,26 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
         const data = JSON.parse(event.data);
         if (!data.stream) return;
 
+        // --- 💡 BẮT ĐẦU: TỰ ĐỘNG CẬP NHẬT ĐÚNG CẶP USDT/USDC ---
+        if (window.currentChartToken) {
+            let actualStream = data.stream.toUpperCase();
+            
+            // Binance trả về luồng nào (USDC/USDT), ta lấy luồng đó
+            if (actualStream.includes("USDC@") || actualStream.includes("USDT@")) {
+                let quote = actualStream.includes("USDC@") ? "USDC" : "USDT";
+                let symbolEl = document.getElementById('sc-coin-symbol');
+                let realPairName = `${window.currentChartToken.symbol.toUpperCase()}/${quote}`;
+                
+                // Nếu tên trên web đang bị sai, lập tức sửa lại cho đúng
+                if (symbolEl && symbolEl.innerText !== realPairName) {
+                    symbolEl.innerText = realPairName;
+                    symbolEl.style.color = "#0ECB81"; // Đổi màu xanh nhẹ báo hiệu đã nhận chuẩn cặp
+                    setTimeout(() => symbolEl.style.color = "", 1000); 
+                }
+            }
+        }
+        // --- KẾT THÚC ĐOẠN TỰ ĐỘNG ĐỔI TÊN ---
+
         if (data.stream.endsWith('@bookTicker')) {
             if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'BOOK_TICKER', data: data.data });
         }
