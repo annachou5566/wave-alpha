@@ -580,7 +580,10 @@ window.startFuturesEngine = async function(symbol) {
                     let order = data.o; let valUSD = parseFloat(order.p) * parseFloat(order.q); let isLongLiq = (order.S === 'SELL');
                     if (isLongLiq) { window.quantStats.longLiq += valUSD; } else { window.quantStats.shortLiq += valUSD; }
                     if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'LIQ_EVENT', data: { v: valUSD, dir: order.S, p: parseFloat(order.p) } });
-                    if (valUSD > 1000 && typeof window.logToSniperTape === 'function') window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
+                    
+                    if (typeof window.logToSniperTape === 'function') {
+                        window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
+                    }
                 }
             };
             window.liquidationWs.onclose = () => { 
