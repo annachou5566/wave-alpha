@@ -1093,15 +1093,7 @@ function injectLayout() {
                                     <div style="font-size: 11px; color: var(--term-dim); text-align: center; margin-top: 50px; font-style: italic;">Đang quét...</div>
                                 </div>
 
-                                <div class="term-widget" style="margin-bottom: 0;">
-                                    <div class="term-w-title">FUTURES <span id="cc-futures-status" style="color: var(--term-warn);">⏳ ĐANG DÒ...</span></div>
-                                    <div class="term-row"><span class="term-lbl">Open Interest</span><span id="cc-oi-val" class="term-val">$--</span></div>
-                                    <div class="term-row"><span class="term-lbl" id="cc-funding-lbl">Funding Rate</span><span id="cc-funding-val" class="term-val">--%</span></div>
-                                    <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-top: 4px;">
-                                        <span id="cc-liq-long" style="color:var(--term-down); font-size:9.5px; font-weight:700; font-family:var(--font-num);">🩸 Liq L: $0</span>
-                                        <span id="cc-liq-short" style="color:var(--term-up); font-size:9.5px; font-weight:700; font-family:var(--font-num);">💥 Liq S: $0</span>
-                                    </div>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -1675,34 +1667,7 @@ function injectSmartMoneyTab() {
                 </div>
                 <div class="term-row" style="margin-bottom: 0;"><span id="sm-txt-4h-buy" style="color:var(--term-up); font-size: 9px;">--%</span><span id="sm-txt-4h-sell" style="color:var(--term-down); font-size: 9px;">--%</span></div>
             </div>
-
-            <div class="term-widget" style="border-left: 2px solid #9945FF; margin-top: 6px; margin-bottom: 20px; padding: 8px;" id="sm-futures-sentiment-box">
-                <div class="term-w-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="color: #9945FF;"><i class="fas fa-satellite-dish"></i> VỊ THẾ CÁ MẬP (FUTURES)</span>
-                    <span id="sm-fs-status" style="color:var(--term-warn); font-size: 8.5px;">⏳ Đang tải...</span>
-                </div>
-
-                <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Tiền (Margin)</span><span id="sm-fs-pos-ratio" class="term-val">--% L / --% S</span></div>
-                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
-                    <div id="sm-fs-pos-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
-                    <div id="sm-fs-pos-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
-                </div>
-
-                <div class="term-row" style="margin-bottom: 2px;"><span class="term-lbl">Tỷ lệ Người (Traders)</span><span id="sm-fs-acc-ratio" class="term-val">--% L / --% S</span></div>
-                <div style="display:flex; height:4px; border-radius:2px; overflow:hidden; background:var(--term-border); margin: 4px 0 8px 0;">
-                    <div id="sm-fs-acc-long" style="height:100%; width:50%; background:var(--term-up); transition:0.5s;"></div>
-                    <div id="sm-fs-acc-short" style="height:100%; width:50%; background:var(--term-down); transition:0.5s;"></div>
-                </div>
-
-                <div class="term-row" style="border-top: 1px solid var(--term-border); padding-top: 6px; margin-bottom: 0;">
-                    <span class="term-lbl">Taker Volume (5m)</span>
-                    <div style="text-align:right;">
-                        <div style="font-size: 10px; color: var(--term-up); font-weight: 800; font-family: var(--font-num);">Buy: <span id="sm-fs-taker-buy">$--</span></div>
-                        <div style="font-size: 10px; color: var(--term-down); font-weight: 800; font-family: var(--font-num);">Sell: <span id="sm-fs-taker-sell">$--</span></div>
-                    </div>
-                </div>
-            </div>
-
+             </div>
         </div> `;
     sidePanel.appendChild(newTabContent);
 }
@@ -2080,19 +2045,11 @@ window.fetchSmartMoneyData = async function(contract, chainId) {
 window.fetchFuturesSentiment = async function(symbol) {
     if (!symbol) return;
     let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '') + 'USDT';
-    const box = document.getElementById('sm-futures-sentiment-box');
+    const box = document.getElementById('tab-futures');
     if (!box) return;
 
-    document.getElementById('sm-fs-status').innerText = '⏳ Đang tải...';
-    document.getElementById('sm-fs-status').style.color = 'var(--term-warn)';
-    document.getElementById('sm-fs-pos-ratio').innerText = '--% L / --% S';
-    document.getElementById('sm-fs-pos-long').style.width = '50%';
-    document.getElementById('sm-fs-pos-short').style.width = '50%';
-    document.getElementById('sm-fs-acc-ratio').innerText = '--% L / --% S';
-    document.getElementById('sm-fs-acc-long').style.width = '50%';
-    document.getElementById('sm-fs-acc-short').style.width = '50%';
-    document.getElementById('sm-fs-taker-buy').innerText = '$--';
-    document.getElementById('sm-fs-taker-sell').innerText = '$--';
+    document.getElementById('fut-live-status').innerText = '⏳ Đang tải...';
+    document.getElementById('fut-live-status').style.color = 'var(--term-warn)';
 
     try {
         const fetchTimeout = (url) => Promise.race([
@@ -2111,50 +2068,68 @@ window.fetchFuturesSentiment = async function(symbol) {
 
         if (posData.error || accData.error) throw new Error("API Error");
 
-        document.getElementById('sm-fs-status').innerText = '🟢 ĐÃ ĐỒNG BỘ';
-        document.getElementById('sm-fs-status').style.color = '#0ECB81';
+        document.getElementById('fut-live-status').innerText = '🟢 LIVE TỪ BINANCE';
+        document.getElementById('fut-live-status').style.color = '#0ECB81';
+
+        let posL = 50, accL = 50;
 
         if (posData && posData.length > 0) {
-            let longPct = parseFloat(posData[0].longAccount) * 100;
+            posL = parseFloat(posData[0].longAccount) * 100;
             let shortPct = parseFloat(posData[0].shortAccount) * 100;
-            document.getElementById('sm-fs-pos-ratio').innerText = `${longPct.toFixed(1)}% L / ${shortPct.toFixed(1)}% S`;
-            document.getElementById('sm-fs-pos-long').style.width = `${longPct}%`;
-            document.getElementById('sm-fs-pos-short').style.width = `${shortPct}%`;
+            document.getElementById('fut-pos-ratio').innerText = `${posL.toFixed(1)}% L / ${shortPct.toFixed(1)}% S`;
+            document.getElementById('fut-pos-long').style.width = `${posL}%`;
+            document.getElementById('fut-pos-short').style.width = `${shortPct}%`;
         }
 
         if (accData && accData.length > 0) {
-            let longPct = parseFloat(accData[0].longAccount) * 100;
+            accL = parseFloat(accData[0].longAccount) * 100;
             let shortPct = parseFloat(accData[0].shortAccount) * 100;
-            document.getElementById('sm-fs-acc-ratio').innerText = `${longPct.toFixed(1)}% L / ${shortPct.toFixed(1)}% S`;
-            document.getElementById('sm-fs-acc-long').style.width = `${longPct}%`;
-            document.getElementById('sm-fs-acc-short').style.width = `${shortPct}%`;
+            document.getElementById('fut-acc-ratio').innerText = `${accL.toFixed(1)}% L / ${shortPct.toFixed(1)}% S`;
+            document.getElementById('fut-acc-long').style.width = `${accL}%`;
+            document.getElementById('fut-acc-short').style.width = `${shortPct}%`;
+        }
+        
+        // KIỂM TRA PHÂN KỲ TÂM LÝ (DIVERGENCE TRAP)
+        let divAlert = document.getElementById('fut-divergence-alert');
+        if (divAlert) {
+            let divDiff = accL - posL;
+            if (divDiff >= 15) { // Retail Long > Whales Long
+                divAlert.style.display = 'block';
+                divAlert.innerText = '⚠️ BẪY FOMO: Đám đông Long, Cá Mập Short!';
+                divAlert.style.color = '#F6465D'; divAlert.style.background = 'rgba(246, 70, 93, 0.2)';
+            } else if (divDiff <= -15) { // Retail Short > Whales Short
+                divAlert.style.display = 'block';
+                divAlert.innerText = '⚠️ BẪY SỢ HÃI: Đám đông Short, Cá Mập Long!';
+                divAlert.style.color = '#0ECB81'; divAlert.style.background = 'rgba(14, 203, 129, 0.2)';
+            } else {
+                divAlert.style.display = 'none';
+            }
         }
 
         if (takerData && takerData.length > 0) {
             let buyVol = parseFloat(takerData[0].buyVol);
             let sellVol = parseFloat(takerData[0].sellVol);
-            document.getElementById('sm-fs-taker-buy').innerText = '$' + formatCompactUSD(buyVol);
-            document.getElementById('sm-fs-taker-sell').innerText = '$' + formatCompactUSD(sellVol);
+            document.getElementById('fut-taker-buy').innerText = '$' + formatCompactUSD(buyVol);
+            document.getElementById('fut-taker-sell').innerText = '$' + formatCompactUSD(sellVol);
+            
+            let totalTaker = buyVol + sellVol;
+            let buyPct = totalTaker > 0 ? (buyVol / totalTaker) * 100 : 50;
+            let sellPct = totalTaker > 0 ? (sellVol / totalTaker) * 100 : 50;
+            document.getElementById('fut-taker-buy-bar').style.width = `${buyPct}%`;
+            document.getElementById('fut-taker-sell-bar').style.width = `${sellPct}%`;
         }
     } catch(e) {
-        document.getElementById('sm-fs-status').innerText = '🚫 KHÔNG CÓ DATA';
-        document.getElementById('sm-fs-status').style.color = '#848e9c';
+        document.getElementById('fut-live-status').innerText = '🚫 KHÔNG CÓ DATA';
+        document.getElementById('fut-live-status').style.color = '#848e9c';
     }
 };
 
-// --- HÀM LẤY DATA CHO COMMAND CENTER ---
 window.fetchCommandCenterFutures = async function(symbol) {
     if (!symbol) return;
     let cleanSymbol = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/USDT$/, '') + 'USDT';
 
-    const statusEl = document.getElementById('cc-futures-status');
-    const oiEl = document.getElementById('cc-oi-val');
-    const fundEl = document.getElementById('cc-funding-val');
-
-    if (statusEl) {
-        statusEl.innerText = '⏳ ĐANG TẢI...';
-        statusEl.style.color = '#F0B90B';
-    }
+    const oiEl = document.getElementById('fut-oi-val');
+    const fundEl = document.getElementById('fut-funding-val');
 
     try {
         const fetchTimeout = (url) => Promise.race([
@@ -2168,14 +2143,6 @@ window.fetchCommandCenterFutures = async function(symbol) {
 
         const oiData = await oiRes.json();
         const fundData = await fundRes.json();
-
-        // Kiểm tra nếu Proxy báo lỗi (Token không có trên Futures)
-        if (oiData.error || fundData.error) throw new Error("API Proxy Error");
-
-        if (statusEl) {
-            statusEl.innerText = '🟢 LIVE';
-            statusEl.style.color = '#0ECB81';
-        }
 
         if (oiData && oiData.openInterest) {
             const price = parseFloat(fundData.markPrice || 0);
@@ -2191,15 +2158,8 @@ window.fetchCommandCenterFutures = async function(symbol) {
             }
         }
     } catch (e) {
-        if (statusEl) {
-            statusEl.innerText = '🚫 SPOT ONLY';
-            statusEl.style.color = '#5e6673';
-        }
         if (oiEl) oiEl.innerText = 'N/A';
-        if (fundEl) {
-            fundEl.innerText = 'N/A';
-            fundEl.style.color = '#5e6673';
-        }
+        if (fundEl) { fundEl.innerText = 'N/A'; fundEl.style.color = '#5e6673'; }
     }
 };
 
