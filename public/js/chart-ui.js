@@ -663,7 +663,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     if (window.scTickHistory && window.scTickHistory.length > 0) {
                         window.scTickHistory.forEach(tk => {
                             let tSec = Math.floor(tk.t / 1000);
-                            if (!groupedTicks[tSec]) { groupedTicks[tSec] = { time: tSec, value: tk.p, vol: tk.q, dir: tk.dir }; } else { groupedTicks[tSec].value = tk.p; groupedTicks[tSec].vol += tk.q; groupedTicks[tSec].dir = tk.dir; }
+                            if (!groupedTicks[tSec]) { groupedTicks[tSec] = { time: tSec, value: tk.p, vol: tk.v, dir: tk.dir }; } else { groupedTicks[tSec].value = tk.p; groupedTicks[tSec].vol += tk.v; groupedTicks[tSec].dir = tk.dir; }
                         });
                     }
                     
