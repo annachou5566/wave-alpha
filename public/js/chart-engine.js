@@ -574,7 +574,7 @@ window.startFuturesEngine = async function(symbol) {
                         color: isLongLiq ? '#FF007F' : '#00F0FF',
                         shape: isLongLiq ? 'arrowUp' : 'arrowDown',
                         text: textMsg,
-                        fishType: 'Thanh lý'
+                        fishType: 'liq'
                     });
                     
                     if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
