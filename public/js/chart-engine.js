@@ -566,15 +566,18 @@ window.startFuturesEngine = async function(symbol) {
                 // TÍCH HỢP MỚI: BẮN MARKER THANH LÝ LÊN CHART TRADINGVIEW
                 if (window.scChartMarkers) {
                     let markerTime = Math.floor(Date.now() / 1000);
-                    let textMsg = (isLongLiq ? '🩸 LIQ L ' : '💥 LIQ S ') + '$' + window.formatCompactUSD(valUSD);
+                    
+                    let shortVol = valUSD >= 1e9 ? (valUSD/1e9).toFixed(1) + 'B' : (valUSD >= 1e6 ? (valUSD/1e6).toFixed(1) + 'M' : (valUSD >= 1e3 ? (valUSD/1e3).toFixed(1) + 'K' : valUSD.toFixed(0)));
+                    
+                    let textMsg = (isLongLiq ? '🩸 L $' : '💥 S $') + shortVol;
                     
                     window.scChartMarkers.push({
                         time: markerTime,
-                        position: isLongLiq ? 'belowBar' : 'aboveBar', // Cháy Long nằm dưới, Cháy Short nằm trên
+                        position: isLongLiq ? 'belowBar' : 'aboveBar',
                         color: isLongLiq ? '#FF007F' : '#00F0FF',
                         shape: isLongLiq ? 'arrowUp' : 'arrowDown',
                         text: textMsg,
-                        fishType: 'liq'
+                        fishType: 'liq' 
                     });
                     
                     if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
