@@ -367,9 +367,10 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
-                if (window.tvChart && typeof window.tvChart.updateData === 'function') {
+                // Cập nhật nến cho khung 1m trở lên
+                if (window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
                     window.tvChart.updateData({
-                        timestamp: rawTime, // rawTime là t hoặc ot từ Binance (dạng ms chuẩn KLine)
+                        timestamp: parseInt(k.t), // Binance t đã là ms
                         open: parseFloat(k.o),
                         high: parseFloat(k.h),
                         low: parseFloat(k.l),
@@ -417,20 +418,20 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            // XỬ LÝ VẼ REALTIME CHO KHUNG TICK VÀ 1S
             if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
-                if (nowT - (window.lastChartRender || 0) > 100) { // Tăng tốc độ render lên 100ms
+                if (nowT - (window.lastChartRender || 0) > 100) { // Render mỗi 100ms
                     window.lastChartRender = nowT;
-                    if (window.tvChart) {
+                    
+                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
                         if (window.currentChartInterval === 'tick') {
-                            // KHUNG TICK: Dùng giá hiện tại cho tất cả, Chart Area sẽ nối thành đường
+                            // Tick chart cần truyền p vào tất cả OHLC để nối Line mượt
                             window.tvChart.updateData({
                                 timestamp: nowT,
-                                open: p, high: p, low: p, close: p,
-                                volume: valUSD
+                                open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
+                                volume: parseFloat(valUSD || 0)
                             });
                         } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
-                            // KHUNG 1S: Phải lấy dữ liệu từ liveCandle1s (đã tích lũy OHLC) để vẽ nến
+                            // 1s chart lấy dữ liệu đã gộp để ra cây nến xanh đỏ thực sự
                             window.tvChart.updateData({
                                 timestamp: timeSec * 1000,
                                 open: window.liveCandle1s.open,
