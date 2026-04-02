@@ -532,45 +532,57 @@ document.addEventListener('click', function(e) {
 });
 
 window.applyFishFilter = function() {
-    let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
-    if (!activeSeries) return;
+    if (!window.tvChart) return;
 
-    // Lấy danh sách các checkbox đang được tick
+    // Xóa toàn bộ marker của hệ thống cũ (giữ lại các hình vẽ tay của user)
+    window.tvChart.removeOverlay({ groupId: 'wave_alpha_markers' });
+
     let checkboxes = document.querySelectorAll('.marker-filter-cb');
-    if (checkboxes.length === 0) return; // Nếu UI chưa tải kịp thì thoát
+    if (checkboxes.length === 0) return; 
 
-    // Tạo mảng chứa giá trị của các loại đang được cho phép hiển thị
     let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
-    // Nếu không tick cái nào, hoặc biểu đồ không ở khung 1s/tick -> Ẩn sạch marker
+    // Nếu không tick hoặc biểu đồ không ở khung tick/1s -> Ẩn marker (không làm gì thêm)
     if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
-        try { activeSeries.setMarkers([]); } catch (e) {} return;
+        return;
     }
 
-    // Lọc linh hoạt đa điều kiện
     let filteredMarkers = window.scChartMarkers.filter(m => {
         let type = m.fishType || 'bot';
         if (type === 'sweep') type = 'bot';
-        
         return activeTypes.includes(type);
     });
 
-    let intervalSec = 0;
-    if (window.currentChartInterval === '1m') intervalSec = 60; 
-    else if (window.currentChartInterval === '5m') intervalSec = 300; 
-    else if (window.currentChartInterval === '15m') intervalSec = 900; 
-    else if (window.currentChartInterval === '1h') intervalSec = 3600; 
-    else if (window.currentChartInterval === '4h') intervalSec = 14400; 
-    else if (window.currentChartInterval === '1d') intervalSec = 86400;
-
-    let processedMarkers = filteredMarkers.map(m => { 
-        let newTime = m.time; 
-        if (intervalSec > 0) { newTime = Math.floor(m.time / intervalSec) * intervalSec; } 
-        return { ...m, time: newTime }; 
+    // Vẽ lên KLineChart bằng Annotation
+    filteredMarkers.forEach(m => {
+        window.tvChart.createOverlay({
+            groupId: 'wave_alpha_markers',
+            name: 'simpleAnnotation', // Template mặc định của KLineChart
+            extendData: m.text,
+            points: [{ timestamp: m.time * 1000 }], // Chuyển time từ giây sang milliseconds
+            styles: {
+                symbol: {
+                    type: m.position === 'belowBar' ? 'triangleUp' : 'triangleDown',
+                    color: m.color,
+                    size: 8,
+                    activeSize: 10
+                },
+                text: {
+                    color: m.color,
+                    size: 10,
+                    family: 'var(--font-num)',
+                    weight: '800'
+                }
+            }
+        });
     });
-    processedMarkers.sort((a, b) => a.time - b.time);
-    
-    try { activeSeries.setMarkers(processedMarkers); } catch (e) {}
+};
+
+// Hàm hỗ trợ Xóa hình vẽ của User cho Bước 4 (không xóa Marker cá voi)
+window.clearUserDrawings = function() {
+    if (!window.tvChart) return;
+    window.tvChart.removeOverlay(); // Xóa sạch tất cả
+    window.applyFishFilter();       // Vẽ lại Marker cá voi
 };
 
 window.toggleProSidePanel = function(tabId, btnElement) {
@@ -664,6 +676,16 @@ window.openProChart = function(t, isTimeSwitch = false) {
     container.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
         <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
             <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
+        </div>
+        
+        <div style="position: absolute; right: 65px; top: 10px; z-index: 20; display: flex; gap: 8px; background: rgba(26, 31, 38, 0.85); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+            <button onclick="window.tvChart.createIndicator('MACD', false, {id: 'pane_macd'})" title="Bật MACD" style="background: transparent; border: none; color: #848e9c; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;" onmouseover="this.style.color='#00F0FF'" onmouseout="this.style.color='#848e9c'">MACD</button>
+            <button onclick="window.tvChart.createIndicator('RSI', false, {id: 'pane_rsi'})" title="Bật RSI" style="background: transparent; border: none; color: #848e9c; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s;" onmouseover="this.style.color='#00F0FF'" onmouseout="this.style.color='#848e9c'">RSI</button>
+            <div style="width: 1px; background: rgba(255,255,255,0.1); margin: 0 4px;"></div>
+            <button onclick="window.tvChart.createOverlay('trendLine')" title="Vẽ Trendline" style="background: transparent; border: none; color: #0ECB81; cursor: pointer; font-size: 13px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"><i class="fas fa-chart-line"></i></button>
+            <button onclick="window.tvChart.createOverlay('fibonacciLine')" title="Vẽ Fibonacci" style="background: transparent; border: none; color: #0ECB81; cursor: pointer; font-size: 13px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"><i class="fas fa-align-center"></i></button>
+            <div style="width: 1px; background: rgba(255,255,255,0.1); margin: 0 4px;"></div>
+            <button onclick="window.clearUserDrawings()" title="Xóa tất cả hình vẽ" style="background: transparent; border: none; color: #F6465D; cursor: pointer; font-size: 13px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"><i class="fas fa-trash-alt"></i></button>
         </div>`;
     
     if (!isTimeSwitch) {
