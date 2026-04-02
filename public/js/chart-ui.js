@@ -714,85 +714,59 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
         let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
 
-        window.tvChart = LightweightCharts.createChart(container, {
-            width: w, height: h,
-            layout: { background: { type: 'solid', color: t_bg }, textColor: t_text, fontSize: 11 },
-            grid: { vertLines: { visible: false }, horzLines: { visible: false } },
-            crosshair: { mode: LightweightCharts.CrosshairMode.Normal, vertLine: { color: t_text, labelBackgroundColor: t_down}, horzLine: { color: t_text, labelBackgroundColor: t_down} },
-            timeScale: { borderColor: 'rgba(82, 124, 130, 0.2)', timeVisible: true, secondsVisible: (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') },
-            rightPriceScale: { autoScale: true, scaleMargins: { top: 0.1, bottom: 0.35 }, borderColor: 'rgba(82, 124, 130, 0.2)' }
+        // KHỞI TẠO KLINECHART VÀ GIỮ NGUYÊN TÊN BIẾN tvChart ĐỂ KHÔNG HỎNG CÁC CHỖ KHÁC
+        window.tvChart = klinecharts.init(container, {
+            styles: {
+                grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
+                candle: {
+                    type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
+                    bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
+                    area: { lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.3)' : 'rgba(65, 230, 231, 0.3)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
+                    tooltip: { showRule: 'none' } // Tắt tooltip mặc định của KLine
+                },
+                yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
+                xAxis: { axisLine: { color: 'rgba(255,255,255,0.1)' }, tickText: { color: t_text } }
+            }
         });
 
-        window.tvHeatmapLayer = window.tvChart.addLineSeries({ color: 'transparent', lineWidth: 0, crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false, priceFormat: { type: 'price', precision: prec, minMove: minM } });
+        window.tvChart.setPriceVolumePrecision(prec, 2);
+        window.tvChart.createIndicator('VOL', false, { height: 80 });
 
-        if (window.currentChartInterval === 'tick') {
-            window.tvLineSeries = window.tvChart.addAreaSeries({ lineColor: t_line, topColor: isTrad ? 'rgba(0, 240, 255, 0.3)' : 'rgba(65, 230, 231, 0.3)', bottomColor: 'rgba(0,0,0,0)', lineWidth: 2, priceFormat: { type: 'price', precision: prec, minMove: minM } });
-        } else {
-            window.tvCandleSeries = window.tvChart.addCandlestickSeries({ upColor: t_up, downColor: t_down, borderDownColor: t_down, borderUpColor: t_up, wickDownColor: t_down, wickUpColor: t_up, priceFormat: { type: 'price', precision: prec, minMove: minM } });
-        }
+        new ResizeObserver(entries => { 
+            if (entries.length === 0 || entries[0].target !== container) return; 
+            window.tvChart.resize(); 
+        }).observe(container);
 
-        window.tvVolumeSeries = window.tvChart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol_scale' });
-        window.tvChart.priceScale('vol_scale').applyOptions({ scaleMargins: { top: 0.7, bottom: 0 }, visible: false });
-
-        new ResizeObserver(entries => { if (entries.length === 0 || entries[0].target !== container) return; const newRect = entries[0].contentRect; if (newRect.width > 0 && newRect.height > 0) window.tvChart.applyOptions({ height: Math.max(0, newRect.height - 5), width: newRect.width }); }).observe(container);
-
-        const tooltipEl = document.getElementById('sc-custom-tooltip'); const tpV = document.getElementById('tp-v'); 
-        window.tvChart.subscribeCrosshairMove((param) => {
+        const tooltipEl = document.getElementById('sc-custom-tooltip'); const tpV = document.getElementById('tp-v');
+        window.tvChart.subscribeAction('onCrosshairChange', (param) => {
             if (tooltipEl) tooltipEl.style.display = 'flex';
-            if (param.point === undefined || !param.time || param.point.x < 0 || param.point.y < 0) return; 
+            if (!param || param.dataIndex === undefined) return;
 
-            let dataPoint, ohlc, volume;
+            const dataList = window.tvChart.getDataList();
+            const ohlc = dataList[param.dataIndex];
+            if (!ohlc) return;
+
             const tpoWrap = document.getElementById('tp-o-wrap'); const tphWrap = document.getElementById('tp-h-wrap'); const tplWrap = document.getElementById('tp-l-wrap'); const tpcWrap = document.getElementById('tp-c-wrap');
             
             if (window.currentChartInterval === 'tick') {
-                if (window.tvLineSeries) dataPoint = param.seriesData.get(window.tvLineSeries);
-                if (dataPoint) {
-                    if (tpoWrap) tpoWrap.style.display = 'none'; if (tphWrap) tphWrap.style.display = 'none'; if (tplWrap) tplWrap.style.display = 'none';
-                    if (tpcWrap) tpcWrap.innerHTML = `Price <span id="tp-c" style="color:#00F0FF;">${window.formatPrice(dataPoint.value)}</span>`;
-                }
-                if (window.tvVolumeSeries) { volume = param.seriesData.get(window.tvVolumeSeries); if (tpV) tpV.innerText = window.formatCompactUSD(volume ? volume.value : 0); }
+                if (tpoWrap) tpoWrap.style.display = 'none'; if (tphWrap) tphWrap.style.display = 'none'; if (tplWrap) tplWrap.style.display = 'none';
+                if (tpcWrap) tpcWrap.innerHTML = `Price <span id="tp-c" style="color:#00F0FF;">${window.formatPrice(ohlc.close)}</span>`;
             } else {
-                if (window.tvCandleSeries) ohlc = param.seriesData.get(window.tvCandleSeries);
-                if (ohlc) {
-                    if (tpoWrap) tpoWrap.style.display = 'inline'; if (tphWrap) tphWrap.style.display = 'inline'; if (tplWrap) tplWrap.style.display = 'inline';
-                    if (tpcWrap && !tpcWrap.innerHTML.startsWith('C')) tpcWrap.innerHTML = `C <span id="tp-c">--</span>`;
-                    const elO = document.getElementById('tp-o'); const elH = document.getElementById('tp-h'); const elL = document.getElementById('tp-l'); const elC = document.getElementById('tp-c');
-                    if (elO) elO.innerText = window.formatPrice(ohlc.open); if (elH) elH.innerText = window.formatPrice(ohlc.high); if (elL) elL.innerText = window.formatPrice(ohlc.low);
-                    if (elC) { elC.innerText = window.formatPrice(ohlc.close); elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; }
-                }
-                if (window.tvVolumeSeries) { volume = param.seriesData.get(window.tvVolumeSeries); if (tpV) tpV.innerText = window.formatCompactUSD(volume ? volume.value : 0); }
+                if (tpoWrap) tpoWrap.style.display = 'inline'; if (tphWrap) tphWrap.style.display = 'inline'; if (tplWrap) tplWrap.style.display = 'inline';
+                if (tpcWrap && !tpcWrap.innerHTML.startsWith('C')) tpcWrap.innerHTML = `C <span id="tp-c">--</span>`;
+                const elO = document.getElementById('tp-o'); const elH = document.getElementById('tp-h'); const elL = document.getElementById('tp-l'); const elC = document.getElementById('tp-c');
+                if (elO) elO.innerText = window.formatPrice(ohlc.open); if (elH) elH.innerText = window.formatPrice(ohlc.high); if (elL) elL.innerText = window.formatPrice(ohlc.low);
+                if (elC) { elC.innerText = window.formatPrice(ohlc.close); elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; }
             }
+            if (tpV) tpV.innerText = window.formatCompactUSD(ohlc.volume || 0);
         });
 
         if (typeof window.fetchBinanceHistory === 'function') {
             window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-                if (window.currentChartInterval === 'tick') {
-                    let tickData = []; let volData = []; let isTrad = window.currentTheme === 'trad';
-                    let groupedTicks = {};
-                    if (window.scTickHistory && window.scTickHistory.length > 0) {
-                        window.scTickHistory.forEach(tk => {
-                            let tSec = Math.floor(tk.t / 1000);
-                            if (!groupedTicks[tSec]) { groupedTicks[tSec] = { time: tSec, value: tk.p, vol: tk.v, dir: tk.dir }; } else { groupedTicks[tSec].value = tk.p; groupedTicks[tSec].vol += tk.v; groupedTicks[tSec].dir = tk.dir; }
-                        });
-                    }
-                    
-                    Object.values(groupedTicks).sort((a,b) => a.time - b.time).forEach(d => {
-                        tickData.push({ time: d.time, value: d.value });
-                        volData.push({ time: d.time, value: d.vol, color: d.dir ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)') });
-                    });
-
-                    if (tickData.length > 0) {
-                        if (window.tvHeatmapLayer) window.tvHeatmapLayer.setData(tickData);
-                        if (window.tvLineSeries) window.tvLineSeries.setData(tickData);
-                        if (window.tvVolumeSeries) window.tvVolumeSeries.setData(volData);
-                    } else if (histData.length > 0) {
-                        let apiHeatData = histData.map(d => ({ time: d.time, value: d.close || d.value }));
-                        if (window.tvHeatmapLayer) window.tvHeatmapLayer.setData(apiHeatData);
-                        if (window.tvLineSeries) window.tvLineSeries.setData(histData);
-                        let apiVolData = histData.map(d => ({ time: d.time, value: d.volValue, color: d.volColor }));
-                        if (window.tvVolumeSeries) window.tvVolumeSeries.setData(apiVolData);
-                    }
-                } 
+                // KLineChart xử lý Data gộp gọn gàng
+                if (histData.length > 0) {
+                    window.tvChart.applyNewData(histData);
+                }
                 else if (histData.length > 0) {
                     if (window.tvHeatmapLayer) { let heatData = histData.map(d => ({ time: d.time, value: d.close })); window.tvHeatmapLayer.setData(heatData); }
                     if (window.tvCandleSeries) {

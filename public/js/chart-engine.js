@@ -367,14 +367,16 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
-                if (window.tvCandleSeries) {
-                    window.tvCandleSeries.update({ time: candleTime, open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: currentClose });
+                if (window.tvChart && typeof window.tvChart.updateData === 'function') {
+                    window.tvChart.updateData({
+                        timestamp: rawTime, // rawTime là t hoặc ot từ Binance (dạng ms chuẩn KLine)
+                        open: parseFloat(k.o),
+                        high: parseFloat(k.h),
+                        low: parseFloat(k.l),
+                        close: currentClose,
+                        volume: isNaN(currentVol) ? 0 : currentVol
+                    });
                 }
-                if (window.tvVolumeSeries) {
-                    if (isNaN(currentVol)) currentVol = 0;
-                    window.tvVolumeSeries.update({ time: candleTime, value: currentVol, color: volColor });
-                }
-                if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: candleTime, value: currentClose });
             }
         }
         
@@ -418,18 +420,21 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
                 if (nowT - (window.lastChartRender || 0) > 150) {
                     window.lastChartRender = nowT;
-                    let isTrad = window.currentTheme === 'trad';
-                    let volColor = isUp ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
-
-                    if (window.tvHeatmapLayer) window.tvHeatmapLayer.update({ time: timeSec, value: p });
-
-                    if (window.currentChartInterval === 'tick' && window.tvLineSeries) {
-                        window.tvLineSeries.update({ time: timeSec, value: p });
-                        if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: valUSD, color: volColor });
-                    } 
-                    else if (window.currentChartInterval === '1s' && window.tvCandleSeries && window.liveCandle1s) {
-                        window.tvCandleSeries.update(window.liveCandle1s);
-                        if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: window.liveCandle1s.vol, color: volColor });
+                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
+                        let targetTimestamp = window.currentChartInterval === 'tick' ? nowT : timeSec * 1000;
+                        if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                            window.tvChart.updateData({
+                                timestamp: targetTimestamp,
+                                open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close,
+                                volume: window.liveCandle1s.vol
+                            });
+                        } else {
+                            window.tvChart.updateData({
+                                timestamp: targetTimestamp,
+                                open: p, high: p, low: p, close: p,
+                                volume: valUSD
+                            });
+                        }
                     }
                 }
             }
@@ -492,13 +497,13 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         if (!data || data.length === 0) return [];
 
         return data.map(d => {
-            let o = parseFloat(d.open), c = parseFloat(d.close);
-            let isUp = c >= o;
             return {
-                time: parseInt(d.time), open: o, high: parseFloat(d.high), low: parseFloat(d.low), close: c,
-                volValue: parseFloat(d.volume), 
-                volColor: isUp ? (window.currentTheme === 'trad' ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (window.currentTheme === 'trad' ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)'),
-                value: isArea ? c : undefined
+                timestamp: parseInt(d.time), // KLineChart bắt buộc dùng ms
+                open: parseFloat(d.open),
+                high: parseFloat(d.high),
+                low: parseFloat(d.low),
+                close: parseFloat(d.close),
+                volume: parseFloat(d.volume)
             };
         });
     } catch (e) { return []; }
