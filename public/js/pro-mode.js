@@ -934,12 +934,12 @@ function injectLayout() {
                             <div style="display:flex; gap:6px; align-items:center; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
                                 <div style="display:flex; align-items:center; gap:4px; color:#527c82; font-size:10px; font-weight:700; font-family:var(--font-main);">
                                     <i class="fas fa-filter"></i>
-                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 80px; text-overflow: ellipsis;">
-                                        <option value="sweep">TẤT CẢ BOT</option>
-                                        <option value="dolphin">TỪ CÁ HEO</option>
-                                        <option value="shark" selected>TỪ CÁ MẬP</option>
-                                        <option value="whale">CHỈ CÁ VOI</option>
-                                        <option value="none" style="color:var(--term-dim)">🚫 ẨN TẤT CẢ</option>
+                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 95px; text-overflow: ellipsis;">
+                                        <option value="sweep">🌊 TẤT CẢ (+BOT)</option>
+                                        <option value="dolphin">🐬 ẨN BOT (TỪ HEO)</option>
+                                        <option value="shark" selected>🦈 ẨN BOT (TỪ MẬP)</option>
+                                        <option value="whale">🐋 CHỈ CÁ VOI</option>
+                                        <option value="none" style="color:var(--term-dim)">🚫 ẨN MARKER</option>
                                     </select>
                                 </div>
                             </div>
@@ -1084,7 +1084,11 @@ function injectLayout() {
                                 <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
                                     <span style="display:flex; align-items:center; gap:6px;">
                                         SNIPER TAPE 
-                                        <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;"><option value="all">ALL</option><option value="whale">WHALE</option><option value="shark">SHARK+</option></select>
+                                        <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;">
+                                            <option value="all">🌊 TẤT CẢ (+BOT)</option>
+                                            <option value="shark" selected>🦈 ẨN BOT (TỪ MẬP)</option>
+                                            <option value="whale">🐋 CHỈ CÁ VOI</option>
+                                        </select>
                                         <i id="cc-sound-icon" class="fas fa-volume-up" style="color:#0ECB81; cursor:pointer; font-size:11px; transition:0.2s;" onclick="window.toggleProSound()" title="Bật/Tắt Âm Cảnh Báo"></i>
                                     </span>
                                     <span style="display:flex; width: 55%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
