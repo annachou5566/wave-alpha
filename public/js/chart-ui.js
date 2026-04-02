@@ -45,18 +45,13 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
     const timeStr = dateObj.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
     // ----------------------------------------------------
-    // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES (BẮT 100% LỆNH)
+    // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES
     // ----------------------------------------------------
     if (isLiq) {
-        // FIX LỖI 2: Chống dội lệnh (Spam Duplicate) từ Binance WebSocket
         let liqSig = `${type}_${price}_${vol}`;
         let nowMs = Date.now();
         if (!window.lastLiqEvent) window.lastLiqEvent = { sig: '', time: 0 };
-        
-        // Nếu lệnh y hệt (cùng loại, cùng giá, cùng volume) xuất hiện trong vòng 2 giây -> Bỏ qua
-        if (window.lastLiqEvent.sig === liqSig && (nowMs - window.lastLiqEvent.time < 2000)) {
-            return; 
-        }
+        if (window.lastLiqEvent.sig === liqSig && (nowMs - window.lastLiqEvent.time < 2000)) return; 
         window.lastLiqEvent = { sig: liqSig, time: nowMs };
 
         const liqTape = document.getElementById('fut-liq-tape');
@@ -88,7 +83,6 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
             
             liqTape.prepend(lEntry);
             
-            // Hiệu ứng chớp nháy (Chỉ nháy nếu là realtime, historical thì thôi cho đỡ giật mắt)
             if (!timestamp) {
                 lEntry.style.background = lColor;
                 lEntry.style.color = '#000';
@@ -99,14 +93,21 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
         }
     }
 
-    // ----------------------------------------------------
-    // 2. LỌC DỮ LIỆU CHO SNIPER TAPE (TRÁNH BỊ SPAM NHIỄU)
-    // ----------------------------------------------------
     if (isLiq && vol < 1000) return; 
     if (!isLiq && vol < 500 && !type.includes('BOT')) return;
 
-    const isWhaleOrShark = type.includes('VOI') || type.includes('MẬP') || type.includes('🧊') || isLiq;
-    if (isWhaleOrShark && !timestamp) window.playProPing(); // Đừng ping âm thanh cho lệnh lịch sử
+    // ----------------------------------------------------
+    // 2. PHÂN LOẠI CHÍNH XÁC TAG CHO BỘ LỌC TAPE
+    // ----------------------------------------------------
+    let tapeType = 'bot'; // Mặc định tất cả thuật toán, wash trade, sweep là bot
+    if (isLiq) tapeType = 'liq';
+    else if (type.includes('VOI')) tapeType = 'whale';
+    else if (type.includes('MẬP')) tapeType = 'shark';
+    else if (type.includes('HEO')) tapeType = 'dolphin';
+
+    // Chỉ cá voi, cá mập và thanh lý mới phát ra âm thanh và phát sáng
+    const isGlowFish = (tapeType === 'whale' || tapeType === 'shark' || tapeType === 'liq');
+    if (isGlowFish && !timestamp) window.playProPing();
 
     const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
     const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
@@ -124,10 +125,11 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
     const entry = document.createElement('div');
     const fontWt = (heatRatio > 0.6 || isLiq) ? '900' : (heatRatio > 0.3 ? '800' : '600');
 
-    entry.dataset.tapeType = isLiq ? 'liq' : (isWhaleOrShark ? (type.includes('VOI') ? 'whale' : (type.includes('HEO') ? 'dolphin' : 'shark')) : 'bot');
+    // GÁN NHÃN ĐÃ ĐƯỢC CHUẨN HÓA Ở TRÊN
+    entry.dataset.tapeType = tapeType; 
     entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${(heatRatio > 0.6 || isLiq) ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); gap: 4px; font-weight: ${fontWt}; transition: background 0.8s ease;`;
 
-    let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
+    let glow = isGlowFish ? `text-shadow: 0 0 5px ${color};` : '';
 
     entry.innerHTML = `
         <span style="color:${color}; font-weight:800; width: 35%; ${glow}">${type} ${action}</span>
@@ -135,16 +137,16 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
         <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
     `;
     
-    // Kiểm tra xem user đang tick những ô nào để quyết định ẩn/hiện ngay từ đầu
+    // KIỂM TRA CHECKBOX ĐỂ ẨN HIỆN NGAY TỪ LÚC TẠO LỆNH MỚI
     let checkboxes = document.querySelectorAll('.tape-filter-cb');
     if (checkboxes.length > 0) {
         let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        if (!activeTypes.includes(entry.dataset.tapeType)) {
+        if (!activeTypes.includes(tapeType)) {
             entry.style.display = 'none';
         }
     }
 
-    window.tapeRenderQueue.push({ entry, isWhaleOrShark, isBuy, bg });
+    window.tapeRenderQueue.push({ entry, isGlowFish, isBuy, bg });
 
     if (!window.isTapeRendering) {
         window.isTapeRendering = true;
@@ -156,7 +158,7 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
                 const items = window.tapeRenderQueue.splice(0, window.tapeRenderQueue.length);
                 for (let i = items.length - 1; i >= 0; i--) {
                     fragment.insertBefore(items[i].entry, fragment.firstChild);
-                    if (items[i].isWhaleOrShark && !timestamp) { // Chỉ chớp sáng nếu là lệnh realtime
+                    if (items[i].isGlowFish && !timestamp) { 
                         items[i].entry.style.background = items[i].isBuy ? 'rgba(14, 203, 129, 0.55)' : 'rgba(246, 70, 93, 0.55)';
                         setTimeout(() => { items[i].entry.style.background = items[i].bg; items[i].entry.style.textShadow = 'none'; }, 150);
                     }
