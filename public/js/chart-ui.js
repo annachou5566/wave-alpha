@@ -48,6 +48,17 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
     // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES (BẮT 100% LỆNH)
     // ----------------------------------------------------
     if (isLiq) {
+        // FIX LỖI 2: Chống dội lệnh (Spam Duplicate) từ Binance WebSocket
+        let liqSig = `${type}_${price}_${vol}`;
+        let nowMs = Date.now();
+        if (!window.lastLiqEvent) window.lastLiqEvent = { sig: '', time: 0 };
+        
+        // Nếu lệnh y hệt (cùng loại, cùng giá, cùng volume) xuất hiện trong vòng 2 giây -> Bỏ qua
+        if (window.lastLiqEvent.sig === liqSig && (nowMs - window.lastLiqEvent.time < 2000)) {
+            return; 
+        }
+        window.lastLiqEvent = { sig: liqSig, time: nowMs };
+
         const liqTape = document.getElementById('fut-liq-tape');
         if (liqTape) {
             if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
@@ -561,6 +572,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
         
         let tape = document.getElementById('cc-sniper-tape');
         if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
+        
+        // FIX LỖI 1: Tự động Clear sạch Tape Thanh Lý của token cũ
+        let liqTape = document.getElementById('fut-liq-tape');
+        if(liqTape) liqTape.innerHTML = '<div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập bị luộc...</div>';
+        window.lastLiqEvent = null; // Reset luôn bộ nhớ chống lặp lệnh
         
         // -----> GỌI SMART MONEY VÀ FUTURES Ở ĐÂY <-----
         setTimeout(() => {
