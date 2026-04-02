@@ -547,6 +547,15 @@ window.startFuturesEngine = async function(symbol) {
                 let valUSD = parseFloat(order.p) * parseFloat(order.q); 
                 let isLongLiq = (order.S === 'SELL'); // SELL = Long bị cháy
                 
+                // 🛑 CHẶN LỖI LẶP LỆNH NGAY TỪ CỬA NGÕ WEBSOCKET
+                let liqSig = `${order.S}_${order.p}_${order.q}`;
+                let nowMs = Date.now();
+                if (!window.lastRootLiqEvent) window.lastRootLiqEvent = { sig: '', time: 0 };
+                if (window.lastRootLiqEvent.sig === liqSig && (nowMs - window.lastRootLiqEvent.time < 2000)) {
+                    return; // Bị trùng -> Chặn đứng luôn, không cho vẽ chart hay cộng tiền
+                }
+                window.lastRootLiqEvent = { sig: liqSig, time: nowMs };
+
                 if (isLongLiq) { window.quantStats.longLiq += valUSD; } else { window.quantStats.shortLiq += valUSD; }
                 if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'LIQ_EVENT', data: { v: valUSD, dir: order.S, p: parseFloat(order.p) } });
                 
