@@ -347,12 +347,14 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 if (nowT - (window.lastChartRender || 0) > 150) {
                     window.lastChartRender = nowT;
                     let timeSec = Math.floor(nowT / 1000);
-                    let isUpCandle = currentClose >= parseFloat(k.o);
-                    let isTrad = window.currentTheme === 'trad';
-                    let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
                     
-                    if (window.tvLineSeries) window.tvLineSeries.update({ time: timeSec, value: currentClose });
-                    if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: currentVol, color: volColor });
+                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
+                        window.tvChart.updateData({
+                            timestamp: timeSec * 1000,
+                            open: currentClose, high: currentClose, low: currentClose, close: currentClose,
+                            volume: currentVol
+                        });
+                    }
                 }
                 return; 
             }
@@ -424,12 +426,13 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     
                     if (window.tvChart && typeof window.tvChart.updateData === 'function') {
                         if (window.currentChartInterval === 'tick') {
-                            // Tick chart cần truyền p vào tất cả OHLC để nối Line mượt
+                            // Gom nến tròn giây (timeSec * 1000) để không đẻ ra 10 nến/giây làm chart chạy loạn xạ
                             window.tvChart.updateData({
-                                timestamp: nowT,
+                                timestamp: timeSec * 1000,
                                 open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
                                 volume: parseFloat(valUSD || 0)
                             });
+                        
                         } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
                             // 1s chart lấy dữ liệu đã gộp để ra cây nến xanh đỏ thực sự
                             window.tvChart.updateData({
@@ -487,15 +490,14 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
     try {
         let limit = isArea ? 100 : 300; 
-        
         let smartCtx = await window.getSmartTokenContext(t);
         let contract = smartCtx.contract;
         let chainId = smartCtx.chainId;
-        
         if (!contract) return []; 
         
-        // CẬP NHẬT RENDER URL ĐỂ VƯỢT CSP
-        let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${interval}&limit=${limit}`;
+        // QUAN TRỌNG: Ép interval tick thành 1s để API Binance không bị báo lỗi 400
+        let apiInterval = interval === 'tick' ? '1s' : interval;
+        let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${apiInterval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
         if (!res.ok) return [];
@@ -505,10 +507,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         return data.map(d => {
             return {
                 timestamp: parseInt(d.time), // KLineChart bắt buộc dùng ms
-                open: parseFloat(d.open),
-                high: parseFloat(d.high),
-                low: parseFloat(d.low),
-                close: parseFloat(d.close),
+                open: parseFloat(d.open), high: parseFloat(d.high), low: parseFloat(d.low), close: parseFloat(d.close),
                 volume: parseFloat(d.volume)
             };
         });

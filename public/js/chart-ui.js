@@ -670,7 +670,12 @@ window.openProChart = function(t, isTimeSwitch = false) {
     }
 
     const container = document.getElementById('sc-chart-container');
-    if (window.tvChart) { window.tvChart.remove(); window.tvChart = null; window.tvLineSeries = null; window.tvCandleSeries = null; window.tvVolumeSeries = null; }
+    
+    // TIÊU DIỆT KLINECHART CŨ CHUẨN XÁC ĐỂ KHÔNG BỊ TREO KHI ĐỔI KHUNG
+    if (window.tvChart) { 
+        try { klinecharts.dispose(container); } catch(e) {} 
+        window.tvChart = null; 
+    }
     window.scActivePriceLines = [];
     
     container.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
@@ -736,11 +741,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
         let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
 
-        // 1. DỌN SẠCH BIỂU ĐỒ CŨ TRƯỚC KHI VẼ MỚI
-        if (window.tvChart && typeof window.tvChart.destroy === 'function') {
-            window.tvChart.destroy();
-            window.tvChart = null;
-        }
+        
 
         // 2. KHỞI TẠO KLINECHART
         window.tvChart = klinecharts.init(container, {
@@ -840,6 +841,9 @@ window.closeProChart = function() {
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) { overlay.classList.remove('active'); document.body.classList.remove('overlay-active'); }
     if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
-    if (window.tvChart) { window.tvChart.remove(); window.tvChart = null; window.tvLineSeries = null; window.tvVolumeSeries = null; window.tvCandleSeries = null; }
+    if (window.tvChart) { 
+        try { klinecharts.dispose('sc-chart-container'); } catch(e) {}
+        window.tvChart = null; 
+    }
     window.currentChartToken = null; 
 };
