@@ -441,18 +441,23 @@ window.applyFishFilter = function() {
     let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
     if (!activeSeries) return;
     let filterEl = document.getElementById('sc-fish-filter');
-    let fVal = filterEl ? filterEl.value : 'sweep';
+    let fVal = filterEl ? filterEl.value : 'all'; // Mặc định là hiện tất cả
 
     if (fVal === 'none' || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
         try { activeSeries.setMarkers([]); } catch (e) {} return;
     }
 
     let filteredMarkers = window.scChartMarkers.filter(m => {
-        if (!m.fishType) return true; 
-        if (fVal === 'whale' && m.fishType === 'whale') return true;
-        if (fVal === 'shark' && (m.fishType === 'whale' || m.fishType === 'shark')) return true;
-        if (fVal === 'dolphin' && (m.fishType === 'whale' || m.fishType === 'shark' || m.fishType === 'dolphin')) return true;
-        if (fVal === 'sweep') return true;
+        // Gom chung mọi thứ không phải Cá (Iceberg, StopHunt, Sweep) vào 1 hệ quy chiếu là 'bot'
+        let type = m.fishType || 'bot'; 
+        if (type === 'sweep') type = 'bot';
+
+        // Phân loại logic hiển thị
+        if (fVal === 'all') return true;
+        if (fVal === 'fish_only' && (type === 'whale' || type === 'shark' || type === 'dolphin')) return true;
+        if (fVal === 'bot_only' && type === 'bot') return true;
+        if (fVal === 'whale_only' && type === 'whale') return true;
+        
         return false;
     });
 
