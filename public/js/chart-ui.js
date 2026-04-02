@@ -730,21 +730,46 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if (priceVal < 1) { prec = 6; minM = 0.000001; } if (priceVal < 0.1) { prec = 8; minM = 0.00000001; } if (priceVal < 0.0001) { prec = 10; minM = 0.0000000001; }
 
         let isTrad = window.currentTheme === 'trad';
-        let t_bg = isTrad ? '#111418' : '#0f1a1c'; let t_text = isTrad ? '#848e9c' : '#527c82'; let t_line = isTrad ? '#00F0FF' : '#41e6e7'; let t_up = isTrad ? '#0ECB81' : '#2af592'; let t_down = isTrad ? '#F6465D' : '#cb55e3';
-        
-        let overlayElem = document.getElementById('super-chart-overlay');
-        if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
-        let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
+        let t_bg = isTrad ? '#111418' : '#0f1a1c'; 
+        let t_text = isTrad ? '#848e9c' : '#527c82'; 
+        let t_line = isTrad ? '#00F0FF' : '#41e6e7'; 
+        let t_up = isTrad ? '#0ECB81' : '#2af592'; 
+        let t_down = isTrad ? '#F6465D' : '#cb55e3';
 
-        // KHỞI TẠO KLINECHART VÀ GIỮ NGUYÊN TÊN BIẾN tvChart ĐỂ KHÔNG HỎNG CÁC CHỖ KHÁC
+        // KHỞI TẠO KLINECHART VỚI ĐẦY ĐỦ CẤU TRÚC
         window.tvChart = klinecharts.init(container, {
             styles: {
-                grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
+                grid: { 
+                    horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, 
+                    vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } 
+                },
                 candle: {
+                    // CHỈ CÓ TICK MỚI DÙNG AREA, 1S TRỞ LÊN LÀ CANDLE
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
-                    bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
-                    area: { lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.3)' : 'rgba(65, 230, 231, 0.3)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    tooltip: { showRule: 'none' } // Tắt tooltip mặc định của KLine
+                    bar: { 
+                        upColor: t_up, 
+                        downColor: t_down, 
+                        noChangeColor: t_text, 
+                        upBorderColor: t_up, 
+                        downBorderColor: t_down, 
+                        upWickColor: t_up, 
+                        downWickColor: t_down 
+                    },
+                    area: {
+                        lineSize: 2,
+                        lineColor: t_line,
+                        backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }]
+                    },
+                    priceMark: {
+                        last: {
+                            show: true,
+                            upColor: t_up,
+                            downColor: t_down,
+                            noChangeColor: t_text,
+                            line: { show: true, dashValue: [4, 4] }
+                        }
+                    },
+                    tooltip: { showRule: 'none' } 
                 },
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
                 xAxis: { axisLine: { color: 'rgba(255,255,255,0.1)' }, tickText: { color: t_text } }
@@ -817,11 +842,28 @@ window.openProChart = function(t, isTimeSwitch = false) {
 };
 
 window.changeChartInterval = function(interval, btnEl) {
+    if (window.currentChartInterval === interval) return;
+
     document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
-    btnEl.classList.add('active');
+    if (btnEl) btnEl.classList.add('active');
+
     window.oldChartInterval = window.currentChartInterval; 
     window.currentChartInterval = interval;
-    if (window.currentChartToken) window.openProChart(window.currentChartToken, true);
+
+    // QUAN TRỌNG: Xóa trắng dữ liệu chart cũ để KLineChart nạp lại từ đầu
+    if (window.tvChart) {
+        window.tvChart.applyNewData([]); 
+    }
+
+    // Đóng và kết nối lại WebSocket cho khung mới
+    if (window.chartWs) {
+        window.chartWs.close();
+    }
+
+    if (window.currentChartToken) {
+        // Gọi lại openProChart để khởi tạo lại Style (Area cho Tick hoặc Candle cho 1s+)
+        window.openProChart(window.currentChartToken, true);
+    }
 };
 
 window.closeProChart = function() {

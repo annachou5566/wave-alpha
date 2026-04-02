@@ -417,22 +417,27 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
+            // XỬ LÝ VẼ REALTIME CHO KHUNG TICK VÀ 1S
             if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
-                if (nowT - (window.lastChartRender || 0) > 150) {
+                if (nowT - (window.lastChartRender || 0) > 100) { // Tăng tốc độ render lên 100ms
                     window.lastChartRender = nowT;
-                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
-                        let targetTimestamp = window.currentChartInterval === 'tick' ? nowT : timeSec * 1000;
-                        if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                    if (window.tvChart) {
+                        if (window.currentChartInterval === 'tick') {
+                            // KHUNG TICK: Dùng giá hiện tại cho tất cả, Chart Area sẽ nối thành đường
                             window.tvChart.updateData({
-                                timestamp: targetTimestamp,
-                                open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close,
-                                volume: window.liveCandle1s.vol
-                            });
-                        } else {
-                            window.tvChart.updateData({
-                                timestamp: targetTimestamp,
+                                timestamp: nowT,
                                 open: p, high: p, low: p, close: p,
                                 volume: valUSD
+                            });
+                        } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                            // KHUNG 1S: Phải lấy dữ liệu từ liveCandle1s (đã tích lũy OHLC) để vẽ nến
+                            window.tvChart.updateData({
+                                timestamp: timeSec * 1000,
+                                open: window.liveCandle1s.open,
+                                high: window.liveCandle1s.high,
+                                low: window.liveCandle1s.low,
+                                close: window.liveCandle1s.close,
+                                volume: window.liveCandle1s.vol
                             });
                         }
                     }
