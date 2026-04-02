@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .sc-mc-item { flex: 0 0 auto; }
                 .sc-mc-item span { font-size: 8.5px; margin-bottom: 0; }
                 .sc-mc-item strong { font-size: 10.5px; font-variant-numeric: tabular-nums; }
-                #tab-info .term-w-title:first-child, #tab-smartmoney .term-w-title:first-child, #tab-futures .term-w-title:first-child { position: sticky; top: 0; z-index: 10; background: #12151A; padding: 12px 15px !important; font-size: 13px !important; line-height: 1.5 !important; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; width: 100%; box-sizing: border-box; white-space: normal; }
+                
                 
                 .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1 1 auto; border-left: none; min-height: 0 !important; }
                 .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; flex-shrink: 0; }
@@ -977,8 +977,8 @@ function injectLayout() {
                 <div class="sc-right-container" id="sc-right-container">
                     <div class="sc-panel-content" id="sc-panel-content">
                         <div id="tab-watchlist" class="sc-tab-content" style="padding: 0; display: none;">
-                            <div class="sc-panel-title" style="padding: 10px 15px; margin: 0; background: #12151A; display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size: 11px; color:#eaecef;"><i class="fas fa-list" style="color:#F0B90B; margin-right: 5px;"></i> WATCHLIST</div>
+                            <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
+                                <div style="display:flex; align-items:center;"><i class="fas fa-list" style="color:#F0B90B; margin-right: 6px; font-size: 13px;"></i> WATCHLIST</div>
                                 <input type="text" id="wl-search" placeholder="Tìm token..." onkeyup="window.renderProWatchlist(this.value)" autocomplete="off" style="background:rgba(255,255,255,0.05); border:1px solid #2b3139; color:#eaecef; font-size:10px; padding:3px 8px; border-radius:2px; width:120px; outline:none; font-family:var(--font-main);">
                             </div>
                             <div style="display:flex; justify-content:space-between; font-size:9px; color:#5e6673; padding: 6px 15px; font-weight:800; background: #0B0E11; border-top: 1px solid #1A1F26; border-bottom: 1px solid #1A1F26; letter-spacing: 0.5px;">
@@ -988,8 +988,8 @@ function injectLayout() {
                         </div>
 
                         <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex;">
-                            <div class="sc-panel-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329;">
-                                <i class="fas fa-bolt" style="color:#00F0FF; margin-right: 5px;"></i> LIVE TRADES
+                            <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
+                                <div style="display:flex; align-items:center;"><i class="fas fa-bolt" style="color:#00F0FF; margin-right: 6px; font-size: 13px;"></i> LIVE TRADES</div>
                             </div>
                             <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; padding: 6px 15px; font-weight:700; background: #0B0E11;">
                                 <span>GIÁ</span><span>KL ($)</span><span>TIME</span>
@@ -999,12 +999,12 @@ function injectLayout() {
                             </div>
                         </div>
 
-                        <div id="tab-info" class="sc-tab-content" style="padding: 10px; display: none; flex-direction: column; height: 100%; overflow-y: auto;">
-                            <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
-                                <i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 5px;"></i> ALPHA FLOW
+                        <div id="tab-info" class="sc-tab-content" style="padding: 0; display: none; flex-direction: column; height: 100%; overflow-y: auto;">
+                            <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
+                                <div style="display:flex; align-items:center;"><i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 6px; font-size: 13px;"></i> ALPHA FLOW</div>
                             </div>
                             
-                            <div id="quant-command-center" style="display: flex; flex-direction: column;">
+                            <div id="quant-command-center" style="display: flex; flex-direction: column; padding: 10px;">
                                 <div class="term-widget" style="border-left: 2px solid #9945FF; padding: 6px 8px;">
                                     <div class="term-w-title" style="margin-bottom: 8px; color: #9945FF;">
                                         <i class="fas fa-layer-group"></i> MULTI-HORIZON VERDICT
@@ -1535,8 +1535,8 @@ function injectSmartMoneyTab() {
     newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
     
     newTabContent.innerHTML = `
-        <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#EAECEF; font-size: 11px; flex-shrink: 0;">
-            <i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 5px;"></i> ON-CHAIN DEX
+        <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
+            <div style="display:flex; align-items:center;"><i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 6px; font-size: 13px;"></i> ON-CHAIN DEX</div>
         </div>
         
         <div id="sm-scroll-area" style="flex: 1; overflow-y: auto; padding: 10px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
@@ -1685,9 +1685,9 @@ function injectFuturesTab() {
     newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
     
     newTabContent.innerHTML = `
-        <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#9945FF; font-size: 11px; flex-shrink: 0; display:flex; justify-content:space-between; align-items:center;">
-            <span><i class="fas fa-fire" style="margin-right: 5px;"></i> FUTURE RADAR</span>
-            <span id="fut-live-status" style="font-size:8.5px; color:var(--term-warn);">⏳ Waiting...</span>
+        <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
+            <div style="display:flex; align-items:center; color:#9945FF;"><i class="fas fa-fire" style="margin-right: 6px; font-size: 13px;"></i> FUTURE RADAR</div>
+            <span id="fut-live-status" style="font-size:9px; color:var(--term-warn);">⏳ Waiting...</span>
         </div>
         
         <div style="flex: 1; overflow-y: auto; padding: 10px;">
