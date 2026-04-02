@@ -1688,3 +1688,11 @@ body.overlay-active {
 
 /* Ẩn Checkbox Mặc Định */
 .sc-filter-menu input[type="checkbox"] { display: none; }
+/* Nút bấm mở Menu */
+.sc-filter-btn { background: transparent; border: none; color: #527c82; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; outline: none; transition: 0.2s; font-family: var(--font-main) !important; padding: 6px 10px; border-radius: 4px; }
+.sc-filter-btn:hover { color: #eaecef; background: rgba(255, 255, 255, 0.05); }
+.sc-filter-btn.active { color: #00F0FF; background: rgba(0, 240, 255, 0.05); }
+
+/* Label Tương Tác bên trong Menu */
+.sc-filter-menu label { font-family: var(--font-main) !important; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: #eaecef; cursor: pointer; padding: 6px 8px; border-radius: 4px; transition: 0.2s; font-weight: 600; white-space: nowrap; margin: 0; }
+.sc-filter-menu label:hover { background: rgba(255,255,255,0.05); }
