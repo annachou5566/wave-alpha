@@ -151,26 +151,31 @@ function evaluateStoryteller(now) {
     let signal = { text: '', color: '', bgColor: '' };
 
     // 1. TÍN HIỆU ƯU TIÊN TỐI CAO: MICRO-STRUCTURE (Iceberg/Spoofing)
-    let isVolumeSpike = Math.abs(z) > 2.0;
+    // FIX: Tăng độ khó Z-Score lên 3.0 để chống nhiễu
+    let isVolumeSpike = Math.abs(z) > 3.0;
     
-    // [V9 FIX] Normalize accel theo price
     const accelNorm = state.midPrice > 0 ? Math.abs(accel) / state.midPrice : Math.abs(accel);
-    // [V12 LỖ HỔNG #2] Guard bằng isVolumeSpike để chống nhiễu accelNorm trên Meme coin
-    let isPriceStalled = isVolumeSpike && (accelNorm < 5e-7);
+    // FIX: Ép gia tốc giá phải nhỏ hơn nữa (3e-7) để đảm bảo giá đang bị chặn đứng hoàn toàn
+    let isPriceStalled = isVolumeSpike && (accelNorm < 3e-7);
 
     if (isVolumeSpike && isPriceStalled && now > state.lockUntil.iceberg) {
-        state.lockUntil.iceberg = now + LOCK_DUR;
-        // [V12 FIX] Chỉ reset khi cờ đã thực sự hết hạn, chống cross-reset bug
+        // FIX: Tăng thời gian Cooldown lên 20 giây để không bị chớp nháy spam liên tục
+        state.lockUntil.iceberg = now + 20000;
+        
         if (now > state.lockUntil.flashDump)  state.lockUntil.flashDump = 0; 
         if (now > state.lockUntil.exhausted)  state.lockUntil.exhausted = 0; 
         if (now > state.lockUntil.marketPump) state.lockUntil.marketPump = 0;
         
-        if (activeOFI < -0.2 || buyDom < 45) {
-            state.lockUntil.bearishIceberg = now + LOCK_DUR;
-            signal = { text: '🧊 BEARISH ICEBERG (Sắp Vỡ)', color: '#ffffff', bgColor: '#F6465D' }; 
-        } else {
-            state.lockUntil.bullishIceberg = now + LOCK_DUR;
-            signal = { text: '🧊 BULLISH ICEBERG (Đỡ Giá)', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' };
+        // FIX LOGIC NGƯỢC:
+        // Đám đông XẢ mạnh (OFI <-0.3) nhưng Giá không giảm -> CÓ TƯỜNG LIMIT MUA ĐỠ GIÁ (Bullish Iceberg)
+        if (activeOFI < -0.3 || buyDom < 40) {
+            state.lockUntil.bullishIceberg = now + 20000;
+            signal = { text: '🧊 BULLISH ICEBERG (Đỡ Giá)', color: '#0ECB81', bgColor: 'rgba(14, 203, 129, 0.15)' }; 
+        } 
+        // Đám đông MUA mạnh (OFI > 0.3) nhưng Giá không tăng -> CÓ TƯỜNG LIMIT BÁN ĐÈ GIÁ (Bearish Iceberg)
+        else if (activeOFI > 0.3 || buyDom > 60) {
+            state.lockUntil.bearishIceberg = now + 20000;
+            signal = { text: '🧊 BEARISH ICEBERG (Đè Giá)', color: '#ffffff', bgColor: '#F6465D' };
         }
     }
     else if (activeOFI > 0.6 && isPriceStalled && now > state.lockUntil.spoofingBuyWall) {
