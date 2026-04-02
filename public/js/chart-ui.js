@@ -124,7 +124,7 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
     const entry = document.createElement('div');
     const fontWt = (heatRatio > 0.6 || isLiq) ? '900' : (heatRatio > 0.3 ? '800' : '600');
 
-    entry.dataset.tapeType = isLiq ? 'whale' : (isWhaleOrShark ? (type.includes('VOI') ? 'whale' : 'shark') : 'bot');
+    entry.dataset.tapeType = isLiq ? 'liq' : (isWhaleOrShark ? (type.includes('VOI') ? 'whale' : (type.includes('HEO') ? 'dolphin' : 'shark')) : 'bot');
     entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${(heatRatio > 0.6 || isLiq) ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); gap: 4px; font-weight: ${fontWt}; transition: background 0.8s ease;`;
 
     let glow = isWhaleOrShark ? `text-shadow: 0 0 5px ${color};` : '';
@@ -135,10 +135,14 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
         <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
     `;
     
-    const filterEl = document.getElementById('cc-tape-filter');
-    const currentFilter = filterEl ? filterEl.value : 'all';
-    if (currentFilter === 'whale' && entry.dataset.tapeType !== 'whale') entry.style.display = 'none';
-    else if (currentFilter === 'shark' && entry.dataset.tapeType === 'bot') entry.style.display = 'none';
+    // Kiểm tra xem user đang tick những ô nào để quyết định ẩn/hiện ngay từ đầu
+    let checkboxes = document.querySelectorAll('.tape-filter-cb');
+    if (checkboxes.length > 0) {
+        let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        if (!activeTypes.includes(entry.dataset.tapeType)) {
+            entry.style.display = 'none';
+        }
+    }
 
     window.tapeRenderQueue.push({ entry, isWhaleOrShark, isBuy, bg });
 
