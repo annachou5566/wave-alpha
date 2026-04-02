@@ -452,11 +452,12 @@ window.applyFishFilter = function() {
         let type = m.fishType || 'bot'; 
         if (type === 'sweep') type = 'bot';
 
-        // Phân loại logic hiển thị cực kỳ rành mạch:
+        // Phân loại logic hiển thị khớp 100% với 6 tùy chọn của bạn:
         if (fVal === 'all') return true;
         if (fVal === 'fish_liq' && (type === 'whale' || type === 'shark' || type === 'dolphin' || type === 'liq')) return true;
         if (fVal === 'fish_only' && (type === 'whale' || type === 'shark' || type === 'dolphin')) return true;
         if (fVal === 'bot_only' && type === 'bot') return true;
+        if (fVal === 'liq_only' && type === 'liq') return true; // <-- Xử lý mục CHỈ THANH LÝ
         
         return false;
     });
