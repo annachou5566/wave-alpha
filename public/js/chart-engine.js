@@ -406,12 +406,12 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 
             if (window.currentChartInterval === '1s') {
                 if (!window.liveCandle1s || window.liveCandle1s.time !== timeSec) {
-                    window.liveCandle1s = { time: timeSec, open: p, high: p, low: p, close: p, vol: q };
+                    window.liveCandle1s = { time: timeSec, open: p, high: p, low: p, close: p, vol: valUSD };
                 } else {
                     window.liveCandle1s.high = Math.max(window.liveCandle1s.high, p);
                     window.liveCandle1s.low = Math.min(window.liveCandle1s.low, p);
                     window.liveCandle1s.close = p;
-                    window.liveCandle1s.vol += q;
+                    window.liveCandle1s.vol += valUSD;
                 }
             }
 
@@ -425,7 +425,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 
                     if (window.currentChartInterval === 'tick' && window.tvLineSeries) {
                         window.tvLineSeries.update({ time: timeSec, value: p });
-                        if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: q, color: volColor });
+                        if (window.tvVolumeSeries) window.tvVolumeSeries.update({ time: timeSec, value: valUSD, color: volColor });
                     } 
                     else if (window.currentChartInterval === '1s' && window.tvCandleSeries && window.liveCandle1s) {
                         window.tvCandleSeries.update(window.liveCandle1s);
