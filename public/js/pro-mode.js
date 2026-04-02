@@ -132,11 +132,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid var(--term-border); }
                 .sc-stats-row { padding: 6px 10px; gap: 8px; }
                 .sc-price-box { flex-direction: column; align-items: flex-start; gap: 0px; margin-right: 5px; justify-content: center;}
-                .sc-price-box #sc-live-price { font-size: 20px !important; }
-                .sc-price-box #sc-change-24h { font-size: 11px !important; }
-                .sc-metrics-compact { width: 100%; justify-content: space-between; gap: 2px; overflow: hidden; padding-bottom: 0;}
-                .sc-mc-item span { font-size: 8px; margin-bottom: 0; }
-                .sc-mc-item strong { font-size: 10.5px; }
+                .sc-price-box #sc-live-price { font-size: 20px !important; min-width: 90px; font-variant-numeric: tabular-nums; }
+                .sc-price-box #sc-change-24h { font-size: 11px !important; font-variant-numeric: tabular-nums; }
+                .sc-metrics-compact { width: 100%; justify-content: flex-start; gap: 12px; overflow-x: auto; padding-bottom: 5px; flex-wrap: nowrap; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+                .sc-metrics-compact::-webkit-scrollbar { display: none; }
+                .sc-mc-item { flex: 0 0 auto; }
+                .sc-mc-item span { font-size: 8.5px; margin-bottom: 0; }
+                .sc-mc-item strong { font-size: 10.5px; font-variant-numeric: tabular-nums; }
+                #tab-info .term-w-title:first-child, #tab-smartmoney .term-w-title:first-child, #tab-futures .term-w-title:first-child { position: sticky; top: 0; z-index: 10; background: #12151A; padding: 10px 0 5px 0 !important; white-space: normal; }
                 
                 .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1 1 auto; border-left: none; min-height: 0 !important; }
                 .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; flex-shrink: 0; }
@@ -998,7 +1001,7 @@ function injectLayout() {
 
                         <div id="tab-info" class="sc-tab-content" style="padding: 10px; display: none; flex-direction: column; height: 100%; overflow-y: auto;">
                             <div class="term-w-title" style="margin-bottom: 8px; color:#EAECEF; font-size: 11px;">
-                                <i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 5px;"></i> COMMAND CENTER (PRO)
+                                <i class="fas fa-wave-square" style="color:var(--term-warn); margin-right: 5px;"></i> ALPHA FLOW
                             </div>
                             
                             <div id="quant-command-center" style="display: flex; flex-direction: column;">
@@ -1101,9 +1104,9 @@ function injectLayout() {
                     <div class="sc-icon-sidebar">
                         <button class="sc-sidebar-icon" data-title="Watchlist" onclick="window.toggleProSidePanel('watchlist', this)"><i class="fas fa-list"></i></button>
                         <button class="sc-sidebar-icon active" data-title="Live Trades" onclick="window.toggleProSidePanel('trades', this)"><i class="fas fa-bolt"></i></button>
-                        <button class="sc-sidebar-icon" data-title="Data Flow" onclick="window.toggleProSidePanel('info', this)"><i class="fas fa-wave-square"></i></button>
-                        <button class="sc-sidebar-icon" data-title="Smart Money" onclick="window.toggleProSidePanel('smartmoney', this)"><i class="fas fa-microscope"></i></button>
-                        <button class="sc-sidebar-icon" data-title="Derivatives" onclick="window.toggleProSidePanel('futures', this)"><i class="fas fa-fire"></i></button>
+                        <button class="sc-sidebar-icon" data-title="Alpha Flow" onclick="window.toggleProSidePanel('info', this)"><i class="fas fa-wave-square"></i></button>
+                        <button class="sc-sidebar-icon" data-title="On-chain Dex" onclick="window.toggleProSidePanel('smartmoney', this)"><i class="fas fa-microscope"></i></button>
+                        <button class="sc-sidebar-icon" data-title="Future Radar" onclick="window.toggleProSidePanel('futures', this)"><i class="fas fa-fire"></i></button>
                     </div>
                 </div>
             </div>
@@ -1533,7 +1536,7 @@ function injectSmartMoneyTab() {
     
     newTabContent.innerHTML = `
         <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#EAECEF; font-size: 11px; flex-shrink: 0;">
-            <i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 5px;"></i> RADAR SMART MONEY (PRO)
+            <i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 5px;"></i> ON-CHAIN DEX
         </div>
         
         <div id="sm-scroll-area" style="flex: 1; overflow-y: auto; padding: 10px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
@@ -1683,7 +1686,7 @@ function injectFuturesTab() {
     
     newTabContent.innerHTML = `
         <div class="term-w-title" style="padding: 10px 15px 5px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; color:#9945FF; font-size: 11px; flex-shrink: 0; display:flex; justify-content:space-between; align-items:center;">
-            <span><i class="fas fa-fire" style="margin-right: 5px;"></i> DERIVATIVES RADAR</span>
+            <span><i class="fas fa-fire" style="margin-right: 5px;"></i> FUTURE RADAR</span>
             <span id="fut-live-status" style="font-size:8.5px; color:var(--term-warn);">⏳ Waiting...</span>
         </div>
         
