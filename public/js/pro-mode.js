@@ -2237,13 +2237,29 @@ const oldOpenProChart = window.openProChart;
 window.openProChart = function(t, isTimeSwitch = false) {
     if (typeof oldOpenProChart === 'function') oldOpenProChart(t, isTimeSwitch);
     if (!isTimeSwitch) {
+        // Dọn dẹp tiến trình cập nhật của Token cũ (nếu có)
+        if (window.proChartApiInterval) clearInterval(window.proChartApiInterval);
+
         setTimeout(() => {
             injectSmartMoneyTab();
-            injectFuturesTab(); // <--- THÊM DÒNG NÀY
+            injectFuturesTab();
             
+            // Lần 1: Gọi ngay lập tức khi vừa mở Chart
             window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
             window.fetchFuturesSentiment(t.symbol);
             window.fetchCommandCenterFutures(t.symbol); 
+
+            // Lần 2 trở đi: Lặp lại tự động mỗi 3 phút (180,000 ms)
+            window.proChartApiInterval = setInterval(() => {
+                // Kiểm tra an toàn: Nếu chart đã bị ẩn thì không gọi API nữa
+                const overlay = document.getElementById('super-chart-overlay');
+                if (!overlay || !overlay.classList.contains('active')) return;
+
+                window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+                window.fetchFuturesSentiment(t.symbol);
+                window.fetchCommandCenterFutures(t.symbol);
+            }, 180000);
+
         }, 100);
     }
 };
