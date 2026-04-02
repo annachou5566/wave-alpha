@@ -932,6 +932,7 @@ function injectLayout() {
                         
                         <div style="margin-left: auto; display:flex; align-items:center; gap:4px; font-family:var(--font-num); flex-wrap: wrap; justify-content: flex-end;">
                             <div style="display:flex; gap:6px; align-items:center; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
+                                <div style="display:flex; align-items:center; gap:6px; font-family:var(--font-main); flex-wrap: wrap;">
                                 <div class="sc-filter-wrapper">
                                     <button class="sc-filter-btn" id="sc-filter-btn" onclick="window.toggleMarkerFilterMenu(event)">
                                         <i class="fas fa-filter"></i> LỌC MARKER <i class="fas fa-chevron-down" style="font-size: 9px; margin-left: 2px;"></i>
@@ -959,6 +960,7 @@ function injectLayout() {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
                             <div style="display:flex; gap:6px; font-size:11px; font-weight:700; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
                                 <span title="Cá Voi" style="color:#cb55e3; display:flex; gap:2px; align-items:center;">🐋 <span id="sc-stat-whale">0</span></span>
