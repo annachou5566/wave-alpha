@@ -437,29 +437,48 @@ window.changeTheme = function() {
     }
 };
 
+window.toggleMarkerFilterMenu = function(e) {
+    if(e) e.stopPropagation();
+    let menu = document.getElementById('sc-filter-menu');
+    let btn = document.getElementById('sc-filter-btn');
+    if(menu) {
+        menu.classList.toggle('show');
+        if (btn) btn.classList.toggle('active', menu.classList.contains('show'));
+    }
+};
+
+// Tự động đóng menu khi click ra ngoài
+document.addEventListener('click', function(e) {
+    let menu = document.getElementById('sc-filter-menu');
+    let btn = document.getElementById('sc-filter-btn');
+    if (menu && menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn) {
+        menu.classList.remove('show');
+        if (btn) btn.classList.remove('active');
+    }
+});
+
 window.applyFishFilter = function() {
     let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
     if (!activeSeries) return;
-    let filterEl = document.getElementById('sc-fish-filter');
-    let fVal = filterEl ? filterEl.value : 'all'; // Mặc định là hiện tất cả
 
-    if (fVal === 'none' || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
+    // Lấy danh sách các checkbox đang được tick
+    let checkboxes = document.querySelectorAll('.marker-filter-cb');
+    if (checkboxes.length === 0) return; // Nếu UI chưa tải kịp thì thoát
+
+    // Tạo mảng chứa giá trị của các loại đang được cho phép hiển thị
+    let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+    // Nếu không tick cái nào, hoặc biểu đồ không ở khung 1s/tick -> Ẩn sạch marker
+    if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
         try { activeSeries.setMarkers([]); } catch (e) {} return;
     }
 
+    // Lọc linh hoạt đa điều kiện
     let filteredMarkers = window.scChartMarkers.filter(m => {
-        // Gom chung các hành vi thuật toán vào tag 'bot'
-        let type = m.fishType || 'bot'; 
+        let type = m.fishType || 'bot';
         if (type === 'sweep') type = 'bot';
-
-        // Phân loại logic hiển thị khớp 100% với 6 tùy chọn của bạn:
-        if (fVal === 'all') return true;
-        if (fVal === 'fish_liq' && (type === 'whale' || type === 'shark' || type === 'dolphin' || type === 'liq')) return true;
-        if (fVal === 'fish_only' && (type === 'whale' || type === 'shark' || type === 'dolphin')) return true;
-        if (fVal === 'bot_only' && type === 'bot') return true;
-        if (fVal === 'liq_only' && type === 'liq') return true; // <-- Xử lý mục CHỈ THANH LÝ
         
-        return false;
+        return activeTypes.includes(type);
     });
 
     let intervalSec = 0;
