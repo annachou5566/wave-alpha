@@ -934,17 +934,31 @@ function injectLayout() {
                             <div style="display:flex; gap:6px; align-items:center; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
                                 <div class="sc-filter-wrapper">
                                     <button class="sc-filter-btn" id="sc-filter-btn" onclick="window.toggleMarkerFilterMenu(event)">
-                                        <i class="fas fa-filter"></i> LỌC MARKER <i class="fas fa-chevron-down" style="font-size: 8px; margin-left: 2px;"></i>
+                                        <i class="fas fa-filter"></i> LỌC MARKER <i class="fas fa-chevron-down" style="font-size: 9px; margin-left: 2px;"></i>
                                     </button>
                                     <div class="sc-filter-menu" id="sc-filter-menu">
-                                        <label><input type="checkbox" class="marker-filter-cb" value="whale" checked onchange="window.applyFishFilter()"> 🐋 Cá Voi</label>
-                                        <label><input type="checkbox" class="marker-filter-cb" value="shark" checked onchange="window.applyFishFilter()"> 🦈 Cá Mập</label>
-                                        <label><input type="checkbox" class="marker-filter-cb" value="dolphin" checked onchange="window.applyFishFilter()"> 🐬 Cá Heo</label>
-                                        <label><input type="checkbox" class="marker-filter-cb" value="bot" checked onchange="window.applyFishFilter()"> 🤖 Bot / Thuật Toán</label>
-                                        <label><input type="checkbox" class="marker-filter-cb" value="liq" checked onchange="window.applyFishFilter()"> 💥 Lệnh Thanh Lý</label>
+                                        <div class="marker-filter-item">
+                                            <input type="checkbox" class="marker-filter-cb" id="mf-whale" value="whale" checked onchange="window.applyFishFilter()">
+                                            <label for="mf-whale">🐋 Cá Voi</label>
+                                        </div>
+                                        <div class="marker-filter-item">
+                                            <input type="checkbox" class="marker-filter-cb" id="mf-shark" value="shark" checked onchange="window.applyFishFilter()">
+                                            <label for="mf-shark">🦈 Cá Mập</label>
+                                        </div>
+                                        <div class="marker-filter-item">
+                                            <input type="checkbox" class="marker-filter-cb" id="mf-dolphin" value="dolphin" checked onchange="window.applyFishFilter()">
+                                            <label for="mf-dolphin">🐬 Cá Heo</label>
+                                        </div>
+                                        <div class="marker-filter-item">
+                                            <input type="checkbox" class="marker-filter-cb" id="mf-bot" value="bot" checked onchange="window.applyFishFilter()">
+                                            <label for="mf-bot">🤖 Bot / Thuật Toán</label>
+                                        </div>
+                                        <div class="marker-filter-item">
+                                            <input type="checkbox" class="marker-filter-cb" id="mf-liq" value="liq" checked onchange="window.applyFishFilter()">
+                                            <label for="mf-liq">💥 Thanh Lý</label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
                             <div style="display:flex; gap:6px; font-size:11px; font-weight:700; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
                                 <span title="Cá Voi" style="color:#cb55e3; display:flex; gap:2px; align-items:center;">🐋 <span id="sc-stat-whale">0</span></span>
