@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .sc-mc-item { flex: 0 0 auto; }
                 .sc-mc-item span { font-size: 8.5px; margin-bottom: 0; }
                 .sc-mc-item strong { font-size: 10.5px; font-variant-numeric: tabular-nums; }
-                #tab-info .term-w-title:first-child, #tab-smartmoney .term-w-title:first-child, #tab-futures .term-w-title:first-child { position: sticky; top: 0; z-index: 10; background: #12151A; padding: 10px 0 5px 0 !important; white-space: normal; }
+                #tab-info .term-w-title:first-child, #tab-smartmoney .term-w-title:first-child, #tab-futures .term-w-title:first-child { position: sticky; top: 0; z-index: 10; background: #12151A; padding: 12px 15px !important; font-size: 13px !important; line-height: 1.5 !important; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; width: 100%; box-sizing: border-box; white-space: normal; }
                 
                 .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1 1 auto; border-left: none; min-height: 0 !important; }
                 .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; flex-shrink: 0; }
