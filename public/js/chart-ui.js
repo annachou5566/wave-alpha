@@ -441,35 +441,41 @@ window.applyFishFilter = function() {
     let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
     if (!activeSeries) return;
     let filterEl = document.getElementById('sc-fish-filter');
-    let fVal = filterEl ? filterEl.value : 'fish_liq'; 
+    let fVal = filterEl ? filterEl.value : 'all'; // Mặc định là hiện tất cả
 
     if (fVal === 'none' || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
         try { activeSeries.setMarkers([]); } catch (e) {} return;
     }
 
     let filteredMarkers = window.scChartMarkers.filter(m => {
+        // Gom chung các hành vi thuật toán vào tag 'bot'
         let type = m.fishType || 'bot'; 
         if (type === 'sweep') type = 'bot';
 
-        let isFish = (type === 'whale' || type === 'shark' || type === 'dolphin');
-        let isBot = (type === 'bot');
-        let isLiq = (type === 'liq');
-
-        // Logic phối hợp cực kỳ rành mạch:
+        // Phân loại logic hiển thị cực kỳ rành mạch:
         if (fVal === 'all') return true;
-        if (fVal === 'fish_liq' && (isFish || isLiq)) return true; // Trader view: Phân tích hành vi Tay To & Bão Thanh lý (Ẩn nhiễu Bot)
-        if (fVal === 'fish_only' && isFish) return true;
-        if (fVal === 'bot_only' && isBot) return true;
-        if (fVal === 'liq_only' && isLiq) return true;
+        if (fVal === 'fish_liq' && (type === 'whale' || type === 'shark' || type === 'dolphin' || type === 'liq')) return true;
+        if (fVal === 'fish_only' && (type === 'whale' || type === 'shark' || type === 'dolphin')) return true;
+        if (fVal === 'bot_only' && type === 'bot') return true;
         
         return false;
     });
 
     let intervalSec = 0;
-    if (window.currentChartInterval === '1m') intervalSec = 60; else if (window.currentChartInterval === '5m') intervalSec = 300; else if (window.currentChartInterval === '15m') intervalSec = 900; else if (window.currentChartInterval === '1h') intervalSec = 3600; else if (window.currentChartInterval === '4h') intervalSec = 14400; else if (window.currentChartInterval === '1d') intervalSec = 86400;
+    if (window.currentChartInterval === '1m') intervalSec = 60; 
+    else if (window.currentChartInterval === '5m') intervalSec = 300; 
+    else if (window.currentChartInterval === '15m') intervalSec = 900; 
+    else if (window.currentChartInterval === '1h') intervalSec = 3600; 
+    else if (window.currentChartInterval === '4h') intervalSec = 14400; 
+    else if (window.currentChartInterval === '1d') intervalSec = 86400;
 
-    let processedMarkers = filteredMarkers.map(m => { let newTime = m.time; if (intervalSec > 0) { newTime = Math.floor(m.time / intervalSec) * intervalSec; } return { ...m, time: newTime }; });
+    let processedMarkers = filteredMarkers.map(m => { 
+        let newTime = m.time; 
+        if (intervalSec > 0) { newTime = Math.floor(m.time / intervalSec) * intervalSec; } 
+        return { ...m, time: newTime }; 
+    });
     processedMarkers.sort((a, b) => a.time - b.time);
+    
     try { activeSeries.setMarkers(processedMarkers); } catch (e) {}
 };
 
