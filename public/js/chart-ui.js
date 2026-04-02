@@ -418,7 +418,7 @@ window.updateCommandCenterUI = function() {
         let currentTime = Date.now();
         if (!window._lastSqueezeMarkerTime || currentTime - window._lastSqueezeMarkerTime > 10000) {
             const markerTime = Math.floor(currentTime / 1000);
-            const sqMarker = { time: markerTime, position: sq.side === 'short' ? 'belowBar' : 'aboveBar', color: sq.side === 'short' ? '#00F0FF' : '#FF007F', shape: sq.side === 'short' ? 'arrowUp' : 'arrowDown', text: sq.side === 'short' ? '🔥SQ' : '🩸SQ', fishType: 'whale', size: 2 };
+            const sqMarker = { time: markerTime, position: sq.side === 'short' ? 'belowBar' : 'aboveBar', color: sq.side === 'short' ? '#00F0FF' : '#FF007F', shape: sq.side === 'short' ? 'arrowUp' : 'arrowDown', text: sq.side === 'short' ? '🔥SQ' : '🩸SQ', fishType: 'liq', size: 2 };
             window.scChartMarkers.push(sqMarker);
             if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
             window._lastSqueezeMarkerTime = currentTime;
