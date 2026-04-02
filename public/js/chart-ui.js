@@ -795,6 +795,10 @@ window.closeProChart = function() {
     if (window.quantWorker) { window.quantWorker.terminate(); window.quantWorker = null; }
     if (typeof window.stopFuturesEngine === 'function') window.stopFuturesEngine();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
+    
+    // TẮT LUỒNG CẬP NHẬT API SMART MONEY VÀ FUTURES ĐỂ GIẢI PHÓNG RAM
+    if (window.proChartApiInterval) { clearInterval(window.proChartApiInterval); window.proChartApiInterval = null; }
+
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) { overlay.classList.remove('active'); document.body.classList.remove('overlay-active'); }
     if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
