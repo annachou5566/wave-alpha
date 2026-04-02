@@ -173,12 +173,12 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             let canDraw = !lastMarker || (timeSec - lastMarker.time > 5);
 
             if (canDraw) {
-                if (flags.stopHunt) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT' }); }
-                else if (flags.exhausted) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: flags.wallHit ? '#F0B90B' : '#848e9c', shape: 'arrowUp', text: flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED' }); }
-                else if (flags.bullishIceberg || flags.icebergAbsorption) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'whale' }); }
-                else if (flags.bearishIceberg) { window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 ICEBERG ĐÈ GIÁ', fishType: 'whale' }); }
-                else if (flags.spoofingBuyWall) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO' }); }
-                else if (flags.spoofingSellWall) { window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO' }); }
+                if (flags.stopHunt) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#00F0FF', shape: 'arrowUp', text: '🪝 STOP-HUNT', fishType: 'bot' }); }
+                else if (flags.exhausted) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: flags.wallHit ? '#F0B90B' : '#848e9c', shape: 'arrowUp', text: flags.wallHit ? '🛡️ WALL HIT' : '🪫 EXHAUSTED', fishType: 'bot' }); }
+                else if (flags.bullishIceberg || flags.icebergAbsorption) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#0ECB81', shape: 'arrowUp', text: '🧊 ICEBERG ĐỠ GIÁ', fishType: 'bot' }); }
+                else if (flags.bearishIceberg) { window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F6465D', shape: 'arrowDown', text: '🧊 ICEBERG ĐÈ GIÁ', fishType: 'bot' }); }
+                else if (flags.spoofingBuyWall) { window.scChartMarkers.push({ time: timeSec, position: 'belowBar', color: '#F0B90B', shape: 'arrowUp', text: '⚠️ TƯỜNG MUA ẢO', fishType: 'bot' }); }
+                else if (flags.spoofingSellWall) { window.scChartMarkers.push({ time: timeSec, position: 'aboveBar', color: '#F0B90B', shape: 'arrowDown', text: '⚠️ TƯỜNG BÁN ẢO', fishType: 'bot' }); }
                 if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
             }
         }
