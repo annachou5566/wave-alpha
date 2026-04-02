@@ -1101,14 +1101,36 @@ function injectLayout() {
                                 </div>
 
                                 <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="display:flex; align-items:center; gap:6px;">
+                                    <span style="display:flex; align-items:center; gap:4px;">
                                         SNIPER TAPE 
-                                        <select id="cc-tape-filter" onchange="window.filterSniperTape()" style="background:transparent; color:var(--term-warn); border:none; font-size:9px; outline:none; cursor:pointer; font-weight:800;">
-                                            <option value="all">🌊 TẤT CẢ (+BOT)</option>
-                                            <option value="shark" selected>🦈 ẨN BOT (TỪ MẬP)</option>
-                                            <option value="whale">🐋 CHỈ CÁ VOI</option>
-                                        </select>
-                                        <i id="cc-sound-icon" class="fas fa-volume-up" style="color:#0ECB81; cursor:pointer; font-size:11px; transition:0.2s;" onclick="window.toggleProSound()" title="Bật/Tắt Âm Cảnh Báo"></i>
+                                        <div class="sc-filter-wrapper">
+                                            <button class="sc-filter-btn" id="tape-filter-btn" onclick="window.toggleTapeFilterMenu(event)" style="padding: 2px 6px; font-size: 9px; background: rgba(255,255,255,0.05);">
+                                                <i class="fas fa-filter"></i> <i class="fas fa-chevron-down" style="font-size: 8px;"></i>
+                                            </button>
+                                            <div class="sc-filter-menu" id="tape-filter-menu" style="top: calc(100% + 5px); left: 0; right: auto; min-width: 155px;">
+                                                <div class="marker-filter-item">
+                                                    <input type="checkbox" class="tape-filter-cb" id="tf-whale" value="whale" checked onchange="window.filterSniperTape()">
+                                                    <label for="tf-whale">🐋 Cá Voi</label>
+                                                </div>
+                                                <div class="marker-filter-item">
+                                                    <input type="checkbox" class="tape-filter-cb" id="tf-shark" value="shark" checked onchange="window.filterSniperTape()">
+                                                    <label for="tf-shark">🦈 Cá Mập</label>
+                                                </div>
+                                                <div class="marker-filter-item">
+                                                    <input type="checkbox" class="tape-filter-cb" id="tf-dolphin" value="dolphin" checked onchange="window.filterSniperTape()">
+                                                    <label for="tf-dolphin">🐬 Cá Heo</label>
+                                                </div>
+                                                <div class="marker-filter-item">
+                                                    <input type="checkbox" class="tape-filter-cb" id="tf-bot" value="bot" checked onchange="window.filterSniperTape()">
+                                                    <label for="tf-bot">🤖 Bot / Thuật Toán</label>
+                                                </div>
+                                                <div class="marker-filter-item">
+                                                    <input type="checkbox" class="tape-filter-cb" id="tf-liq" value="liq" checked onchange="window.filterSniperTape()">
+                                                    <label for="tf-liq">💥 Thanh Lý</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <i id="cc-sound-icon" class="fas fa-volume-up" style="color:#0ECB81; cursor:pointer; font-size:11px; transition:0.2s; margin-left: 2px;" onclick="window.toggleProSound()" title="Bật/Tắt Âm Cảnh Báo"></i>
                                     </span>
                                     <span style="display:flex; width: 55%; font-size: 8px; color: var(--term-dim); justify-content: flex-end;">
                                         <span style="width: 65%; text-align: center;">SIZE & GIÁ</span>
@@ -1118,7 +1140,6 @@ function injectLayout() {
                                 <div id="cc-sniper-tape" style="background: var(--term-bg); border: 1px solid var(--term-border); border-radius: 2px; padding: 4px; height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px;">
                                     <div style="font-size: 11px; color: var(--term-dim); text-align: center; margin-top: 50px; font-style: italic;">Đang quét...</div>
                                 </div>
-
                                 
                             </div>
                         </div>
