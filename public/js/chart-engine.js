@@ -553,6 +553,24 @@ window.startFuturesEngine = async function(symbol) {
                 if (typeof window.logToSniperTape === 'function') {
                     window.logToSniperTape(!isLongLiq, valUSD, isLongLiq ? '🩸 CHÁY LONG' : '🔥 CHÁY SHORT', parseFloat(order.p));
                 }
+
+                // TÍCH HỢP MỚI: BẮN MARKER THANH LÝ LÊN CHART TRADINGVIEW
+                if (window.scChartMarkers) {
+                    let markerTime = Math.floor(Date.now() / 1000);
+                    let textMsg = (isLongLiq ? '🩸 LIQ L ' : '💥 LIQ S ') + '$' + window.formatCompactUSD(valUSD);
+                    
+                    window.scChartMarkers.push({
+                        time: markerTime,
+                        position: isLongLiq ? 'belowBar' : 'aboveBar', // Cháy Long nằm dưới, Cháy Short nằm trên
+                        color: isLongLiq ? '#FF007F' : '#00F0FF',
+                        shape: isLongLiq ? 'arrowUp' : 'arrowDown',
+                        text: textMsg,
+                        fishType: 'whale' // Xem như Whale để không bị mất khi lọc
+                    });
+                    
+                    if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
+                    if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
+                }
             }
         };
         
