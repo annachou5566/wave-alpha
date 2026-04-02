@@ -934,12 +934,12 @@ function injectLayout() {
                             <div style="display:flex; gap:6px; align-items:center; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03);">
                                 <div style="display:flex; align-items:center; gap:4px; color:#527c82; font-size:10px; font-weight:700; font-family:var(--font-main);">
                                     <i class="fas fa-filter"></i>
-                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 95px; text-overflow: ellipsis;">
-                                        <option value="sweep">🌊 TẤT CẢ (+BOT)</option>
-                                        <option value="dolphin">🐬 ẨN BOT (TỪ HEO)</option>
-                                        <option value="shark" selected>🦈 ẨN BOT (TỪ MẬP)</option>
-                                        <option value="whale">🐋 CHỈ CÁ VOI</option>
-                                        <option value="none" style="color:var(--term-dim)">🚫 ẨN MARKER</option>
+                                    <select id="sc-fish-filter" onchange="window.applyFishFilter()" style="background:transparent; color:#527c82; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 105px; text-overflow: ellipsis;">
+                                        <option value="all">🌊 HIỆN TẤT CẢ</option>
+                                        <option value="fish_only" selected>🐟 CHỈ HIỆN CÁ (Ẩn Bot)</option>
+                                        <option value="bot_only">🤖 CHỈ HIỆN BOT (Ẩn Cá)</option>
+                                        <option value="whale_only">🐋 CHỈ HIỆN CÁ VOI</option>
+                                        <option value="none" style="color:var(--term-dim)">🚫 ẨN TẤT CẢ</option>
                                     </select>
                                 </div>
                             </div>
