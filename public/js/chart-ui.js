@@ -165,15 +165,52 @@ window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
     }
 };
 
+window.toggleTapeFilterMenu = function(e) {
+    if(e) e.stopPropagation();
+    let menu = document.getElementById('tape-filter-menu');
+    let btn = document.getElementById('tape-filter-btn');
+    if(menu) {
+        menu.classList.toggle('show');
+        if (btn) btn.classList.toggle('active', menu.classList.contains('show'));
+    }
+};
+
+// Đè lại hàm click ra ngoài để đóng cả 2 menu (Menu Chart lớn và Menu Tape nhỏ)
+document.addEventListener('click', function(e) {
+    let menu1 = document.getElementById('sc-filter-menu');
+    let btn1 = document.getElementById('sc-filter-btn');
+    if (menu1 && menu1.classList.contains('show') && !menu1.contains(e.target) && e.target !== btn1) {
+        menu1.classList.remove('show');
+        if (btn1) btn1.classList.remove('active');
+    }
+    
+    let menu2 = document.getElementById('tape-filter-menu');
+    let btn2 = document.getElementById('tape-filter-btn');
+    if (menu2 && menu2.classList.contains('show') && !menu2.contains(e.target) && e.target !== btn2) {
+        menu2.classList.remove('show');
+        if (btn2) btn2.classList.remove('active');
+    }
+});
+
 window.filterSniperTape = function() {
-    const fVal = document.getElementById('cc-tape-filter').value;
+    let checkboxes = document.querySelectorAll('.tape-filter-cb');
+    if (checkboxes.length === 0) return;
+    
+    // Lấy danh sách các loại đang được Tick
+    let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+
     const tape = document.getElementById('cc-sniper-tape');
     if (!tape) return;
+    
     Array.from(tape.children).forEach(child => {
         if (!child.dataset.tapeType) return; 
-        if (fVal === 'all') child.style.display = 'flex';
-        else if (fVal === 'whale') child.style.display = child.dataset.tapeType === 'whale' ? 'flex' : 'none';
-        else if (fVal === 'shark') child.style.display = (child.dataset.tapeType === 'whale' || child.dataset.tapeType === 'shark') ? 'flex' : 'none';
+        
+        // Hiện lên nếu Loại của dòng đó nằm trong danh sách đang Tick
+        if (activeTypes.includes(child.dataset.tapeType)) {
+            child.style.display = 'flex';
+        } else {
+            child.style.display = 'none';
+        }
     });
 };
 
