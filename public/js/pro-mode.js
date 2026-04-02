@@ -1100,7 +1100,7 @@ function injectLayout() {
                                     </div>
                                 </div>
 
-                                <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+                                <div class="term-w-title" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center; overflow: visible !important;">
                                     <span style="display:flex; align-items:center; gap:4px;">
                                         SNIPER TAPE 
                                         <div class="sc-filter-wrapper">
