@@ -304,7 +304,11 @@ window.flushSmartTape = function(cluster) {
         else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
 
         let fishType = isWhale ? 'whale' : (isShark ? 'shark' : (isDolphin ? 'dolphin' : 'bot'));
-        let textMsg = icon + '$' + window.formatCompactUSD(cluster.vol);
+        
+        // RÚT GỌN SỐ: Chỉ lấy 1 chữ số thập phân (Ví dụ 7.89K -> 7.8K)
+        let shortVol = cluster.vol >= 1e9 ? (cluster.vol/1e9).toFixed(1) + 'B' : (cluster.vol >= 1e6 ? (cluster.vol/1e6).toFixed(1) + 'M' : (cluster.vol >= 1e3 ? (cluster.vol/1e3).toFixed(1) + 'K' : cluster.vol.toFixed(0)));
+        let textMsg = icon + '$' + shortVol;
+        
         if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
         let markerColor = cluster.dir ? (window.currentTheme === 'trad' ? '#0ECB81' : '#2af592') : (window.currentTheme === 'trad' ? '#F6465D' : '#cb55e3');
 
