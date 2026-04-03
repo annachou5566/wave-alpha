@@ -1709,8 +1709,15 @@
         const legDiv = document.getElementById('wa-html-legend');
         if (!legDiv) return;
         
-        // 🚀 Đẩy bảng chỉ báo tụt xuống để né OHLC (Màn hình nhỏ đẩy 95px, to đẩy 65px)
-        legDiv.style.top = window.innerWidth <= 768 ? '95px' : '65px';
+        // 🚀 CHÌA KHÓA NẰM Ở ĐÂY: Gỡ bỏ position: absolute để nó không bị "ghim" vào góc trái
+        legDiv.style.position = 'relative'; 
+        legDiv.style.top = 'auto';
+        legDiv.style.left = 'auto';
+        legDiv.style.marginTop = '8px'; // Cách OHLC 8px cho thoáng
+
+        // Ép OHLC tự rớt dòng nếu màn hình Tablet bị hẹp
+        const ohlcBox = document.getElementById('sc-custom-tooltip');
+        if (ohlcBox) ohlcBox.style.flexWrap = 'wrap';
         
         legDiv.innerHTML = '';
         
@@ -1723,8 +1730,8 @@
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // Giao diện tinh gọn, mờ nhẹ, không làm vướng mắt
-            item.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px; pointer-events: none; width: max-content; margin-bottom: 4px;';
+            // Thêm flex-wrap để nếu số dài quá nó tự rớt dòng trong hộp
+            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px; pointer-events: none; width: max-content; margin-bottom: 4px;';
             if (ind.visible === false) item.style.opacity = '0.4';
 
             const nameSpan = document.createElement('span');
@@ -1733,7 +1740,7 @@
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
-            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400;';
+            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px;';
 
             item.appendChild(nameSpan);
             item.appendChild(valSpan);
