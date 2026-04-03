@@ -755,7 +755,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
     
     // 1. DỌN SẠCH UI RÁC BÊN TRONG CHART
     container.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
-        <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+        <div id="sc-custom-tooltip" style="position: absolute; top: 35px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
             <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
         </div>`;
     
@@ -819,18 +819,19 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     tooltip: { 
                         showRule: 'always', 
                         showType: 'standard',
-                        custom: () => [] // Giấu data nến mặc định
+                        custom: () => [] 
                     }
                 },
-                // 🛑 LÔI 3 NÚT QUẢN LÝ CHỈ BÁO RA MÀN HÌNH (DÙNG ICON HỆ THỐNG) 🛑
+                // 🛑 SỬA TẠI ĐÂY: Bỏ marginTop, khai báo đủ 4 trạng thái icon Unicode
                 indicator: {
                     tooltip: {
                         showRule: 'always', showType: 'standard',
-                        text: { marginTop: 30, color: t_text, size: 11, family: 'var(--font-num)' },
+                        text: { color: t_text, size: 11, family: 'var(--font-num)' },
                         icons: [
-                            { id: 'visible', position: 'left', marginLeft: 8, marginTop: 30, icon: '👁', fontFamily: 'system-ui, sans-serif', size: 14, color: t_text, activeColor: t_up, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'setting', position: 'left', marginLeft: 8, marginTop: 30, icon: '⚙', fontFamily: 'system-ui, sans-serif', size: 14, color: t_text, activeColor: t_line, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'close', position: 'left', marginLeft: 8, marginTop: 30, icon: '✖', fontFamily: 'system-ui, sans-serif', size: 14, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' }
+                            { id: 'visible', position: 'left', marginLeft: 8, marginTop: 6, icon: '👁', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_up, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'invisible', position: 'left', marginLeft: 8, marginTop: 6, icon: '⊘', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'setting', position: 'left', marginLeft: 8, marginTop: 6, icon: '⚙', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_line, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'close', position: 'left', marginLeft: 8, marginTop: 6, icon: '✖', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' }
                         ]
                     }
                 },
