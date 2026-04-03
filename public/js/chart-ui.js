@@ -747,13 +747,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
     const container = document.getElementById('sc-chart-container');
     
-    // TIÊU DIỆT KLINECHART CŨ CHUẨN XÁC ĐỂ KHÔNG BỊ TREO KHI ĐỔI KHUNG
     if (window.tvChart) { 
         try { klinecharts.dispose(container); } catch(e) {} 
         window.tvChart = null; 
     }
     window.scActivePriceLines = [];
     
+    // 1. DỌN SẠCH UI RÁC BÊN TRONG CHART
     container.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
         <div id="sc-custom-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
             <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
@@ -775,12 +775,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
         let tape = document.getElementById('cc-sniper-tape');
         if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
         
-        // FIX LỖI 1: Tự động Clear sạch Tape Thanh Lý của token cũ
         let liqTape = document.getElementById('fut-liq-tape');
         if(liqTape) liqTape.innerHTML = '<div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập bị luộc...</div>';
-        window.lastLiqEvent = null; // Reset luôn bộ nhớ chống lặp lệnh
+        window.lastLiqEvent = null; 
         
-        // -----> GỌI SMART MONEY VÀ FUTURES Ở ĐÂY <-----
         setTimeout(() => {
             if (typeof window.injectSmartMoneyTab === 'function') window.injectSmartMoneyTab();
             if (typeof window.injectFuturesTab === 'function') window.injectFuturesTab();
@@ -793,24 +791,21 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
     setTimeout(() => {
         const rect = container.getBoundingClientRect();
-        const w = rect.width > 0 ? rect.width : window.innerWidth * 0.75;
-        const h = (rect.height > 0 ? rect.height : window.innerHeight * 0.7);
-
         let priceVal = parseFloat(t.price) || 1;
-        let prec = 4; let minM = 0.0001;
-        if (priceVal < 1) { prec = 6; minM = 0.000001; } if (priceVal < 0.1) { prec = 8; minM = 0.00000001; } if (priceVal < 0.0001) { prec = 10; minM = 0.0000000001; }
+        let prec = 4;
+        if (priceVal < 1) prec = 6; if (priceVal < 0.1) prec = 8; if (priceVal < 0.0001) prec = 10;
 
         let isTrad = window.currentTheme === 'trad';
-        let t_bg = isTrad ? '#111418' : '#0f1a1c'; let t_text = isTrad ? '#848e9c' : '#527c82'; let t_line = isTrad ? '#00F0FF' : '#41e6e7'; let t_up = isTrad ? '#0ECB81' : '#2af592'; let t_down = isTrad ? '#F6465D' : '#cb55e3';
+        let t_text = isTrad ? '#848e9c' : '#527c82'; let t_line = isTrad ? '#00F0FF' : '#41e6e7'; let t_up = isTrad ? '#0ECB81' : '#2af592'; let t_down = isTrad ? '#F6465D' : '#cb55e3';
         
         let overlayElem = document.getElementById('super-chart-overlay');
         if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
         let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
 
-        // Đăng ký Chỉ báo từ file chart-indicators.js
-        if (typeof window.registerWaveIndicators === 'function') window.registerWaveIndicators();
+        // 🚀 TIÊM THUẬT TOÁN 15 CHỈ BÁO VÀO KLINECHART TRƯỚC KHI VẼ
+        if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
 
-        // 2. KHỞI TẠO KLINECHART (ĐÃ TÍCH HỢP QUẢN LÝ CHỈ BÁO)
+        // 2. KHỞI TẠO KLINECHART (KÈM TOOLTIP MENU CHỈ BÁO)
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
@@ -823,12 +818,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     },
                     tooltip: { showRule: 'none' }
                 },
-                
-                // 🛑 LÔI 3 NÚT QUẢN LÝ CHỈ BÁO RA ÁNH SÁNG (Dịch xuống 30px để không đè giá) 🛑
+                // 🛑 LÔI 3 NÚT QUẢN LÝ CHỈ BÁO RA MÀN HÌNH 🛑
                 indicator: {
                     tooltip: {
-                        showRule: 'always',
-                        showType: 'standard',
+                        showRule: 'always', showType: 'standard',
                         text: { marginTop: 30, color: t_text, size: 11, family: 'var(--font-num)' },
                         icons: [
                             { id: 'visible', position: 'left', marginLeft: 8, marginTop: 30, icon: '\ue903', fontFamily: 'klinecharts', size: 14, color: t_text, activeColor: t_up, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
@@ -842,31 +835,18 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // 🛑 LẮNG NGHE SỰ KIỆN KHI NGƯỜI DÙNG BẤM NÚT ⚙️ CÀI ĐẶT HOẶC ❌ XÓA 🛑
+        // 🛑 LẮNG NGHE SỰ KIỆN CLICK NÚT TRÊN BIỂU ĐỒ 🛑
         window.tvChart.subscribeAction('onTooltipIconClick', (params) => {
-            if (params.iconId === 'setting') {
-                if (typeof window.openIndicatorSettings === 'function') {
-                    window.openIndicatorSettings(params.indicator, params.paneId);
-                }
-            } else if (params.iconId === 'close') {
-                // Xóa khỏi bộ nhớ tạm để nó không tự hồi sinh khi đổi khung thời gian
-                if (window.scActiveIndicators) {
-                    window.scActiveIndicators = window.scActiveIndicators.filter(x => !(x.name === params.indicator.name && x.paneId === params.paneId));
-                }
+            if (params.iconId === 'setting' && window.WaveIndicatorAPI) {
+                window.WaveIndicatorAPI.openSettings(params.indicator, params.paneId);
+            } else if (params.iconId === 'close' && window.WaveIndicatorAPI) {
+                window.WaveIndicatorAPI.remove(params.indicator.name);
             }
         });
 
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
 
-        // PHỤC HỒI CÁC CHỈ BÁO TỪ BỘ NHỚ (KHI ĐỔI KHUNG THỜI GIAN)
-        if (window.scActiveIndicators && window.scActiveIndicators.length > 0) {
-            window.scActiveIndicators.forEach(ind => {
-                try { window.tvChart.createIndicator(ind.name, ind.isStack, { id: ind.paneId }); } catch(e){}
-            });
-        }
-
-        // Lắng nghe đổi size trình duyệt
         new ResizeObserver(entries => { if (entries.length === 0 || entries[0].target !== container) return; window.tvChart.resize(); }).observe(container);
 
         // 3. TOOLTIP HIỂN THỊ GIÁ
@@ -896,7 +876,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if (typeof window.fetchBinanceHistory === 'function') {
             window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
                 if (histData && histData.length > 0) {
-                    window.tvChart.applyNewData(histData); // Nạp 1 phát ăn ngay cho KLineChart
+                    window.tvChart.applyNewData(histData);
+                }
+                
+                // 🚀 ĐÁNH THỨC GIAO DIỆN UI VÀ PHỤC HỒI CHỈ BÁO
+                if (window.WaveIndicatorAPI) {
+                    window.WaveIndicatorAPI.initUI();
+                    window.WaveIndicatorAPI.restore();
                 }
                 
                 if (typeof window.connectRealtimeChart === 'function') { window.connectRealtimeChart(t, isTimeSwitch); }
@@ -904,7 +890,6 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 
                 setTimeout(() => {
                     if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
-                    if (typeof window.initExpertUI === 'function') window.initExpertUI();
                     let flowEl = document.getElementById('sc-stat-net-flow');
                     if (flowEl && window.scNetFlow !== undefined) { flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + window.formatCompactUSD(Math.abs(window.scNetFlow)); flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F'; }
                 }, 200);
