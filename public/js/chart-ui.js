@@ -753,7 +753,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
     }
     window.scActivePriceLines = [];
     
-    // 1. DỌN SẠCH UI RÁC BÊN TRONG CHART
+    // 1. DỌN SẠCH UI RÁC BÊN TRONG CHART VÀ ĐẨY THANH GIÁ XUỐNG DƯỚI (top: 35px)
     container.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
         <div id="sc-custom-tooltip" style="position: absolute; top: 35px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
             <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
@@ -805,7 +805,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         // 🚀 TIÊM THUẬT TOÁN 15 CHỈ BÁO VÀO KLINECHART TRƯỚC KHI VẼ
         if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
 
-        // 2. KHỞI TẠO KLINECHART (KÈM TOOLTIP MENU CHỈ BÁO)
+        // 2. KHỞI TẠO KLINECHART (ĐẨY CÁC NÚT QUA BÊN PHẢI THEO Ý BẠN)
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
@@ -816,22 +816,19 @@ window.openProChart = function(t, isTimeSwitch = false) {
                         lineSize: 2, lineColor: t_line,
                         backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }]
                     },
-                    tooltip: { 
-                        showRule: 'always', 
-                        showType: 'standard',
-                        custom: () => [] 
-                    }
+                    tooltip: { showRule: 'always', showType: 'standard', custom: () => [] }
                 },
-                // 🛑 SỬA TẠI ĐÂY: Bỏ marginTop, khai báo đủ 4 trạng thái icon Unicode
                 indicator: {
                     tooltip: {
                         showRule: 'always', showType: 'standard',
-                        text: { color: t_text, size: 11, family: 'var(--font-num)' },
+                        // ĐƯA MỌI THỨ VỀ ĐÚNG TỌA ĐỘ GỐC (marginTop: 6) ĐỂ KHÔNG BỊ LỖI CLICK
+                        text: { marginTop: 6, color: t_text, size: 11, family: 'var(--font-num)' },
                         icons: [
-                            { id: 'visible', position: 'left', marginLeft: 8, marginTop: 6, icon: '👁', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_up, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'invisible', position: 'left', marginLeft: 8, marginTop: 6, icon: '⊘', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'setting', position: 'left', marginLeft: 8, marginTop: 6, icon: '⚙', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_line, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'close', position: 'left', marginLeft: 8, marginTop: 6, icon: '✖', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' }
+                            // 🚀 ĐẨY NÚT SANG PHẢI (position: 'right') & DÙNG ICON EMOJI HỆ THỐNG CHỐNG LỖI FONT
+                            { id: 'visible', position: 'right', marginRight: 10, marginTop: 6, icon: '👁', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_up, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'invisible', position: 'right', marginRight: 10, marginTop: 6, icon: '⊘', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'setting', position: 'right', marginRight: 10, marginTop: 6, icon: '⚙', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_line, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'close', position: 'right', marginRight: 10, marginTop: 6, icon: '✖', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' }
                         ]
                     }
                 },
@@ -840,12 +837,20 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // 🛑 LẮNG NGHE SỰ KIỆN CLICK NÚT TRÊN BIỂU ĐỒ 🛑
+        // 🛑 LẮNG NGHE SỰ KIỆN CLICK NÚT TRÊN BIỂU ĐỒ VÀ GỌI ĐÚNG TÊN HÀM TRONG CHART-INDICATORS CỦA BẠN 🛑
         window.tvChart.subscribeAction('onTooltipIconClick', (params) => {
-            if (params.iconId === 'setting' && window.WaveIndicatorAPI) {
-                window.WaveIndicatorAPI.openSettings(params.indicator, params.paneId);
-            } else if (params.iconId === 'close' && window.WaveIndicatorAPI) {
-                window.WaveIndicatorAPI.remove(params.indicator.name);
+            if (params.iconId === 'setting') {
+                if (typeof window.WaveIndicatorAPI !== 'undefined' && typeof window.WaveIndicatorAPI.openSettings === 'function') {
+                    window.WaveIndicatorAPI.openSettings(params.indicator, params.paneId);
+                } else if (typeof window.openIndicatorSettings === 'function') {
+                     // Fallback nếu API đóng gói bị lỗi
+                    window.openIndicatorSettings(params.indicator, params.paneId);
+                }
+            } else if (params.iconId === 'close') {
+                if (window.tvChart) window.tvChart.removeIndicator(params.paneId, params.indicator.name);
+                if (window.scActiveIndicators) {
+                    window.scActiveIndicators = window.scActiveIndicators.filter(x => !(x.name === params.indicator.name && x.paneId === params.paneId));
+                }
             }
         });
 
