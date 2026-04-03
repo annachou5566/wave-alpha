@@ -1616,42 +1616,110 @@
   }
 
   // ══════════════════════════════════════════════════════
-  // SECTION 7: PUBLIC API
-  // Exposed on window.WaveIndicatorAPI for external use
+  // SECTION 7: PUBLIC API (TÍCH HỢP BẢNG ĐIỀU KHIỂN HTML LEGEND)
   // ══════════════════════════════════════════════════════
 
   global.WaveIndicatorAPI = {
     version:  WAVE_ALPHA_VERSION,
     registry: INDICATOR_REGISTRY,
-
-    /** Register all custom indicators with klinecharts */
-    register:  global.registerWaveIndicators,
-
-    /** Init all UI elements (modals, topbar) */
-    initUI:    global.initExpertUI,
-
-    /** Add an indicator by name */
-    add:       global.addIndicatorToChart,
-
-    /** Remove an indicator by name */
-    remove:    global.removeIndicatorFromChart,
-
-    /** Open indicator settings for a given indicator instance + pane */
-    openSettings: global.openIndicatorSettings,
-
-    /** Restore persisted indicators after chart load */
-    restore:   global.restoreIndicators,
-
-    /** Get list of currently active indicators */
-    getActive: function () { return global.scActiveIndicators.slice(); },
-
-    /** Clear localStorage state */
-    clearState: function () {
-      global.scActiveIndicators = [];
-      try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    register: global.registerWaveIndicators,
+    
+    initUI: function() {
+        global.initExpertUI();
+        // Bơm CSS cực ngầu cho HTML Legend
+        if (!document.getElementById('wa-legend-css')) {
+            const style = document.createElement('style'); style.id = 'wa-legend-css';
+            style.innerHTML = `
+                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 4px; transition: 0.2s; cursor: pointer; }
+                .wa-leg-item:hover { background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); }
+                .wa-leg-actions { display: none; gap: 10px; color: #848e9c; margin-left: 10px; }
+                .wa-leg-item:hover .wa-leg-actions { display: flex; }
+                .wa-leg-actions i { transition: 0.2s; font-size: 12px; }
+                .wa-leg-actions i:hover { color: #EAECEF; transform: scale(1.2); }
+            `;
+            document.head.appendChild(style);
+        }
     },
+
+    add: function(name) {
+        global.addIndicatorToChart(name);
+        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100); // Vẽ lại Bảng
+    },
+
+    remove: function(name) {
+        global.removeIndicatorFromChart(name);
+        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100); // Vẽ lại Bảng
+    },
+
+    openSettings: global.openIndicatorSettings,
+    restore: global.restoreIndicators,
+    
+    // --- LÕI ĐIỀU KHIỂN HTML LEGEND CHỐNG LỖI CANVAS ---
+    openSettingsByName: function(name) {
+        const ind = global.scActiveIndicators.find(i => i.name === name);
+        if (ind) global.WaveIndicatorAPI.openSettings({ name: ind.name, calcParams: ind.params }, ind.paneId);
+    },
+
+    toggleVisible: function(name) {
+        if (!window.tvChart) return;
+        const ind = global.scActiveIndicators.find(i => i.name === name);
+        if (ind) {
+            ind.visible = ind.visible === false ? true : false;
+            window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
+            saveIndicatorState();
+            global.WaveIndicatorAPI.renderLegend();
+        }
+    },
+
+    renderLegend: function() {
+        const legDiv = document.getElementById('wa-html-legend');
+        if (!legDiv) return;
+        let html = '';
+        
+        // Chỉ vẽ HTML Legend cho các chỉ báo Main Pane (Bị Canvas khóa click)
+        global.scActiveIndicators.filter(i => i.isStack).forEach(ind => {
+            const meta = INDICATOR_REGISTRY.find(m => m.name === ind.name);
+            const title = meta ? meta.shortName : ind.name;
+            const pStr = ind.params && ind.params.length ? ` (${ind.params.join(', ')})` : '';
+            const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
+            const isHidden = ind.visible === false;
+            
+            html += `
+                <div class="wa-leg-item" id="wa-leg-${ind.name}">
+                    <span style="color: ${color}; opacity: ${isHidden ? 0.4 : 1};" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')">${title}${pStr}</span>
+                    <span id="wa-val-${ind.name}" style="color: #EAECEF; font-weight: 400; opacity: ${isHidden ? 0.4 : 1};"></span>
+                    <div class="wa-leg-actions">
+                        <i class="fas ${isHidden ? 'fa-eye-slash' : 'fa-eye'}" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')"></i>
+                        <i class="fas fa-cog" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')"></i>
+                        <i class="fas fa-times" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')" style="color: #F6465D;"></i>
+                    </div>
+                </div>
+            `;
+        });
+        legDiv.innerHTML = html;
+        legDiv.style.display = global.scActiveIndicators.some(i => i.isStack) ? 'flex' : 'none';
+    },
+
+    updateLegendValues: function(indicatorDataDict) {
+        if (!indicatorDataDict || !indicatorDataDict.candle_pane) return;
+        const mainPaneData = indicatorDataDict.candle_pane;
+        
+        global.scActiveIndicators.filter(i => i.isStack).forEach(ind => {
+            const vals = mainPaneData[ind.name];
+            const valEl = document.getElementById(`wa-val-${ind.name}`);
+            if (vals && valEl && ind.visible !== false) {
+                // Nhặt 3 thông số đầu tiên ra in lên màn hình
+                let str = Object.values(vals)
+                    .filter(v => typeof v === 'number')
+                    .map(v => window.formatPrice ? window.formatPrice(v) : v.toFixed(4))
+                    .slice(0, 3).join('  ');
+                valEl.innerText = str;
+            } else if (valEl) {
+                valEl.innerText = '';
+            }
+        });
+    }
   };
 
-  console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] chart-indicators.js loaded ✅');
-
+  console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] Indicator Core initialized with DOM Legend.');
 })(window);

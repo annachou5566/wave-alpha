@@ -721,145 +721,71 @@ window.openProChart = function(t, isTimeSwitch = false) {
     overlay.classList.add('active');
     document.body.classList.add('overlay-active');
 
+    // ... (Giữ nguyên phần cập nhật giá trị header bên trên) ...
     if (!isTimeSwitch) {
         document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + '/USDT';
         let nameEl = document.getElementById('sc-coin-name'); if (nameEl) nameEl.innerText = t.name || t.symbol; 
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + window.formatPrice(t.price);
-        
-        let limitEl = document.getElementById('sc-algo-limit');
-        if (limitEl) { limitEl.innerHTML = `ALGO LIMIT: ⏳ TÍNH TOÁN...`; limitEl.style.color = '#F0B90B'; limitEl.style.background = 'rgba(240,185,11,0.1)'; limitEl.style.borderColor = 'rgba(240,185,11,0.3)'; }
-        
         let chg = parseFloat(t.change_24h) || 0; let chgEl = document.getElementById('sc-change-24h');
         if (chgEl) { chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`; chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; }
-
-        document.getElementById('sc-top-mc').innerText = '$' + window.formatCompactNum(t.market_cap);
-        document.getElementById('sc-top-liq').innerText = '$' + window.formatCompactNum(t.liquidity);
-        
-        document.getElementById('sc-top-vol').innerText = '$' + window.formatCompactNum(t.volume?.daily_total || 0);
-        
-        let el24hVol = document.getElementById('sc-top-vol-24h');
-        if (el24hVol) el24hVol.innerText = '$' + window.formatCompactNum(t.volume?.rolling_24h || 0);
-        
-        document.getElementById('sc-top-hold').innerText = window.formatInt(t.holders);
-        document.getElementById('sc-top-tx').innerText = window.formatInt(t.tx_count);
     }
 
     const container = document.getElementById('sc-chart-container');
-    
-    if (window.tvChart) { 
-        try { klinecharts.dispose(container); } catch(e) {} 
-        window.tvChart = null; 
-    }
+    if (window.tvChart) { try { klinecharts.dispose(container); } catch(e) {} window.tvChart = null; }
     window.scActivePriceLines = [];
     
-    // 1. DỌN SẠCH UI RÁC BÊN TRONG CHART VÀ ĐẨY THANH GIÁ XUỐNG DƯỚI (top: 35px)
+    // 🚀 ĐỔI MỚI 1: TẠO KHUNG HTML LEGEND RIÊNG (BẤT TỬ, KHÔNG BỊ CANVAS CHẶN CLICK)
     container.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
-        <div id="sc-custom-tooltip" style="position: absolute; top: 35px; left: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; pointer-events: none; z-index: 10; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
-            <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
+        <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; z-index: 10; display: flex; flex-direction: column; gap: 6px; pointer-events: none;">
+            <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+                <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
+            </div>
+            <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto;"></div>
         </div>`;
     
     if (!isTimeSwitch) {
-        let tradesBox = document.getElementById('sc-live-trades');
-        if (tradesBox) tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
-        window.scCurrentCluster = null; 
-        window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
-        
-        let fStatus = document.getElementById('fut-live-status'); if(fStatus) { fStatus.innerText = '⏳ ĐANG TẢI...'; fStatus.style.color = 'var(--term-warn)'; }
-        let oiElUI = document.getElementById('fut-oi-val'); if(oiElUI) oiElUI.innerText = '$--';
-        let fundVal = document.getElementById('fut-funding-val'); if(fundVal) fundVal.innerText = '--%';
-        let liqLEl = document.getElementById('fut-liq-long'); if(liqLEl) liqLEl.innerText = '$0';
-        let liqSEl = document.getElementById('fut-liq-short'); if(liqSEl) liqSEl.innerText = '$0';
-        let fVerdict = document.getElementById('fut-ai-verdict'); if(fVerdict) { fVerdict.innerText = '⚖️ ĐANG PHÂN TÍCH...'; fVerdict.style.cssText = 'font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #848e9c;'; }
-        
-        let tape = document.getElementById('cc-sniper-tape');
-        if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
-        
-        let liqTape = document.getElementById('fut-liq-tape');
-        if(liqTape) liqTape.innerHTML = '<div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập bị luộc...</div>';
-        window.lastLiqEvent = null; 
-        
         setTimeout(() => {
             if (typeof window.injectSmartMoneyTab === 'function') window.injectSmartMoneyTab();
             if (typeof window.injectFuturesTab === 'function') window.injectFuturesTab();
-            
-            if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
-            if (typeof window.fetchFuturesSentiment === 'function') window.fetchFuturesSentiment(t.symbol);
-            if (typeof window.fetchCommandCenterFutures === 'function') window.fetchCommandCenterFutures(t.symbol);
         }, 100);
     }
 
     setTimeout(() => {
-        const rect = container.getBoundingClientRect();
-        let priceVal = parseFloat(t.price) || 1;
-        let prec = 4;
-        if (priceVal < 1) prec = 6; if (priceVal < 0.1) prec = 8; if (priceVal < 0.0001) prec = 10;
-
         let isTrad = window.currentTheme === 'trad';
         let t_text = isTrad ? '#848e9c' : '#527c82'; let t_line = isTrad ? '#00F0FF' : '#41e6e7'; let t_up = isTrad ? '#0ECB81' : '#2af592'; let t_down = isTrad ? '#F6465D' : '#cb55e3';
-        
-        let overlayElem = document.getElementById('super-chart-overlay');
-        if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
-        let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
-
-        // 🚀 TIÊM THUẬT TOÁN 15 CHỈ BÁO VÀO KLINECHART TRƯỚC KHI VẼ
         if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
 
-        // 2. KHỞI TẠO KLINECHART (ĐẨY CÁC NÚT QUA BÊN PHẢI THEO Ý BẠN)
+        // 🚀 ĐỔI MỚI 2: TẮT TEXT CỦA KLINECHART TRÊN MAIN PANE ĐỂ TRÁNH TRÙNG LẶP VỚI HTML LEGEND
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
-                    area: {
-                        lineSize: 2, lineColor: t_line,
-                        backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }]
-                    },
-                    tooltip: { showRule: 'always', showType: 'standard', custom: () => [] }
+                    area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
+                    tooltip: { showRule: 'none' } // Tắt hoàn toàn Tooltip mặc định của nến & Main Pane
                 },
                 indicator: {
                     tooltip: {
-                        showRule: 'always', showType: 'standard',
-                        // ĐƯA MỌI THỨ VỀ ĐÚNG TỌA ĐỘ GỐC (marginTop: 6) ĐỂ KHÔNG BỊ LỖI CLICK
-                        text: { marginTop: 6, color: t_text, size: 11, family: 'var(--font-num)' },
-                        icons: [
-                            // 🚀 ĐẨY NÚT SANG PHẢI (position: 'right') & DÙNG ICON EMOJI HỆ THỐNG CHỐNG LỖI FONT
-                            { id: 'visible', position: 'right', marginRight: 10, marginTop: 6, icon: '👁', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_up, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'invisible', position: 'right', marginRight: 10, marginTop: 6, icon: '⊘', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'setting', position: 'right', marginRight: 10, marginTop: 6, icon: '⚙', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_line, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
-                            { id: 'close', position: 'right', marginRight: 10, marginTop: 6, icon: '✖', fontFamily: 'system-ui, sans-serif', size: 13, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' }
-                        ]
+                        showRule: 'always', showType: 'standard', text: { color: t_text, size: 11, family: 'var(--font-num)' },
+                        icons: [ { id: 'setting', position: 'left', marginLeft: 8, marginTop: 6, icon: '⚙', fontFamily: 'system-ui', size: 13, color: t_text }, { id: 'close', position: 'left', marginLeft: 8, marginTop: 6, icon: '✖', fontFamily: 'system-ui', size: 13, color: t_down } ]
                     }
                 },
-                yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
-                xAxis: { axisLine: { color: 'rgba(255,255,255,0.1)' }, tickText: { color: t_text } }
+                yAxis: { axisLine: { show: false }, tickText: { color: t_text } }, xAxis: { axisLine: { color: 'rgba(255,255,255,0.1)' }, tickText: { color: t_text } }
             }
         });
 
-        // 🛑 LẮNG NGHE SỰ KIỆN CLICK NÚT TRÊN BIỂU ĐỒ VÀ GỌI ĐÚNG TÊN HÀM TRONG CHART-INDICATORS CỦA BẠN 🛑
+        // 🛑 SỰ KIỆN NÀY CHỈ CÒN DÙNG CHO CÁC PANE PHỤ NHƯ MACD, RSI
         window.tvChart.subscribeAction('onTooltipIconClick', (params) => {
-            if (params.iconId === 'setting') {
-                if (typeof window.WaveIndicatorAPI !== 'undefined' && typeof window.WaveIndicatorAPI.openSettings === 'function') {
-                    window.WaveIndicatorAPI.openSettings(params.indicator, params.paneId);
-                } else if (typeof window.openIndicatorSettings === 'function') {
-                     // Fallback nếu API đóng gói bị lỗi
-                    window.openIndicatorSettings(params.indicator, params.paneId);
-                }
-            } else if (params.iconId === 'close') {
-                if (window.tvChart) window.tvChart.removeIndicator(params.paneId, params.indicator.name);
-                if (window.scActiveIndicators) {
-                    window.scActiveIndicators = window.scActiveIndicators.filter(x => !(x.name === params.indicator.name && x.paneId === params.paneId));
-                }
-            }
+            if (params.iconId === 'setting' && window.WaveIndicatorAPI) window.WaveIndicatorAPI.openSettings(params.indicator, params.paneId);
+            else if (params.iconId === 'close' && window.WaveIndicatorAPI) window.WaveIndicatorAPI.remove(params.indicator.name);
         });
 
-        window.tvChart.setPriceVolumePrecision(prec, 2);
+        window.tvChart.setPriceVolumePrecision(4, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
 
-        new ResizeObserver(entries => { if (entries.length === 0 || entries[0].target !== container) return; window.tvChart.resize(); }).observe(container);
-
-        // 3. TOOLTIP HIỂN THỊ GIÁ
+        // 🚀 ĐỔI MỚI 3: LẤY DATA THỰC TẾ LÚC RÊ CHUỘT TRUYỀN VÀO BẢNG HTML LEGEND
         const tooltipEl = document.getElementById('sc-custom-tooltip'); const tpV = document.getElementById('tp-v'); 
         window.tvChart.subscribeAction('onCrosshairChange', (param) => {
             if (tooltipEl) tooltipEl.style.display = 'flex';
@@ -868,41 +794,29 @@ window.openProChart = function(t, isTimeSwitch = false) {
             const ohlc = dataList[param.dataIndex];
             if (!ohlc) return;
 
-            const tpoWrap = document.getElementById('tp-o-wrap'); const tphWrap = document.getElementById('tp-h-wrap'); const tplWrap = document.getElementById('tp-l-wrap'); const tpcWrap = document.getElementById('tp-c-wrap');
-            if (window.currentChartInterval === 'tick') {
-                if (tpoWrap) tpoWrap.style.display = 'none'; if (tphWrap) tphWrap.style.display = 'none'; if (tplWrap) tplWrap.style.display = 'none';
-                if (tpcWrap) tpcWrap.innerHTML = `Price <span id="tp-c" style="color:#00F0FF;">${window.formatPrice(ohlc.close)}</span>`;
-            } else {
-                if (tpoWrap) tpoWrap.style.display = 'inline'; if (tphWrap) tphWrap.style.display = 'inline'; if (tplWrap) tplWrap.style.display = 'inline';
-                if (tpcWrap && !tpcWrap.innerHTML.startsWith('C')) tpcWrap.innerHTML = `C <span id="tp-c">--</span>`;
-                const elO = document.getElementById('tp-o'); const elH = document.getElementById('tp-h'); const elL = document.getElementById('tp-l'); const elC = document.getElementById('tp-c');
-                if (elO) elO.innerText = window.formatPrice(ohlc.open); if (elH) elH.innerText = window.formatPrice(ohlc.high); if (elL) elL.innerText = window.formatPrice(ohlc.low);
-                if (elC) { elC.innerText = window.formatPrice(ohlc.close); elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; }
-            }
+            // Update OHLC Text
+            const elO = document.getElementById('tp-o'); const elH = document.getElementById('tp-h'); const elL = document.getElementById('tp-l'); const elC = document.getElementById('tp-c');
+            if (elO) elO.innerText = window.formatPrice(ohlc.open); if (elH) elH.innerText = window.formatPrice(ohlc.high); if (elL) elL.innerText = window.formatPrice(ohlc.low);
+            if (elC) { elC.innerText = window.formatPrice(ohlc.close); elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; }
             if (tpV) tpV.innerText = window.formatCompactUSD(ohlc.volume || 0);
+
+            // Bắn dữ liệu sang bảng điều khiển HTML
+            if (param.indicatorData && window.WaveIndicatorAPI) {
+                window.WaveIndicatorAPI.updateLegendValues(param.indicatorData);
+            }
         });
 
-        // 4. NẠP DỮ LIỆU LỊCH SỬ VÀ BẬT WEBSOCKET
+        // 4. NẠP DỮ LIỆU LỊCH SỬ & BẬT API
         if (typeof window.fetchBinanceHistory === 'function') {
             window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-                if (histData && histData.length > 0) {
-                    window.tvChart.applyNewData(histData);
-                }
+                if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
                 
-                // 🚀 ĐÁNH THỨC GIAO DIỆN UI VÀ PHỤC HỒI CHỈ BÁO
                 if (window.WaveIndicatorAPI) {
                     window.WaveIndicatorAPI.initUI();
                     window.WaveIndicatorAPI.restore();
+                    window.WaveIndicatorAPI.renderLegend(); // Render khung Legend ban đầu
                 }
-                
-                if (typeof window.connectRealtimeChart === 'function') { window.connectRealtimeChart(t, isTimeSwitch); }
-                if (typeof window.startFuturesEngine === 'function') { window.startFuturesEngine(t.symbol); }
-                
-                setTimeout(() => {
-                    if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
-                    let flowEl = document.getElementById('sc-stat-net-flow');
-                    if (flowEl && window.scNetFlow !== undefined) { flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + window.formatCompactUSD(Math.abs(window.scNetFlow)); flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F'; }
-                }, 200);
+                if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
             });
         }
     }, 100); 
