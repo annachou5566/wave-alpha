@@ -1700,43 +1700,44 @@
             const isHidden = ind.visible === false;
             
             const item = document.createElement('div');
-            item.className = 'wa-leg-item';
+            // Bắt buộc flex-wrap và đổ nền đen mờ để tách biệt hẳn với Canvas
+            item.style.cssText = 'display: flex !important; align-items: center !important; gap: 8px !important; font-size: 11px !important; font-family: var(--font-num) !important; font-weight: 600 !important; background: rgba(0,0,0,0.6) !important; padding: 6px 10px !important; border-radius: 6px !important; pointer-events: auto !important; flex-wrap: wrap !important; width: max-content !important; margin-bottom: 4px !important; border: 1px solid rgba(255,255,255,0.05) !important;';
             if (isHidden) item.style.opacity = '0.4';
 
-            // 🚀 FIX: NGĂN KLINECHARTS CƯỚP SỰ KIỆN CLICK/TOUCH
-            ['mousedown', 'touchstart', 'pointerdown'].forEach(evt => {
-                item.addEventListener(evt, e => e.stopPropagation());
+            // 🚀 CÁCH LY SỰ KIỆN: KHÓA KHÔNG CHO KLINECHARTS CƯỚP THAO TÁC CHẠM
+            ['touchstart', 'mousedown', 'pointerdown'].forEach(evt => {
+                item.addEventListener(evt, e => e.stopPropagation(), { passive: false });
             });
 
             const nameSpan = document.createElement('span');
-            nameSpan.style.color = color;
-            nameSpan.style.cursor = 'pointer';
+            nameSpan.style.cssText = `color: ${color} !important; cursor: pointer !important; padding-right: 4px !important;`;
             nameSpan.textContent = title + pStr;
-            nameSpan.addEventListener('click', () => global.WaveIndicatorAPI.openSettingsByName(ind.name));
+            nameSpan.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.openSettingsByName(ind.name); });
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
-            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; margin-left: 5px; pointer-events: none;';
+            valSpan.style.cssText = 'color: #EAECEF !important; font-weight: 400 !important; pointer-events: none !important; display: flex !important; align-items: center !important; flex-wrap: wrap !important;';
 
             const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'wa-leg-actions';
+            // Ép flex hiển thị 100%, đẩy sang phải, cấm co rút
+            actionsDiv.style.cssText = 'display: flex !important; gap: 8px !important; margin-left: auto !important; flex-shrink: 0 !important; align-items: center !important; opacity: 1 !important; visibility: visible !important;';
+
+            // Gắn viền trắng mờ và nền xám để nút HIỆN RÕ RÀNG ra mặt
+            const btnCss = 'display: flex !important; align-items: center !important; justify-content: center !important; width: 26px !important; height: 26px !important; background: rgba(255,255,255,0.12) !important; border: 1px solid rgba(255,255,255,0.3) !important; border-radius: 4px !important; color: #FFF !important; font-size: 14px !important; cursor: pointer !important; padding: 0 !important; margin: 0 !important; touch-action: manipulation !important; flex-shrink: 0 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important;';
 
             const eyeBtn = document.createElement('button');
-            eyeBtn.className = 'wa-leg-btn eye';
-            eyeBtn.title = 'Ẩn/Hiện';
-            eyeBtn.textContent = isHidden ? '⊘' : '👁'; 
+            eyeBtn.style.cssText = btnCss;
+            eyeBtn.innerHTML = isHidden ? '⊘' : '👁'; 
             eyeBtn.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.toggleVisible(ind.name); });
 
             const cogBtn = document.createElement('button');
-            cogBtn.className = 'wa-leg-btn cog';
-            cogBtn.title = 'Cài đặt';
-            cogBtn.textContent = '⚙';
+            cogBtn.style.cssText = btnCss;
+            cogBtn.innerHTML = '⚙';
             cogBtn.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.openSettingsByName(ind.name); });
 
             const delBtn = document.createElement('button');
-            delBtn.className = 'wa-leg-btn del';
-            delBtn.title = 'Xóa';
-            delBtn.textContent = '✕';
+            delBtn.style.cssText = btnCss;
+            delBtn.innerHTML = '✕';
             delBtn.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.remove(ind.name); });
 
             actionsDiv.appendChild(eyeBtn);
