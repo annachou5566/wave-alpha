@@ -809,6 +809,8 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
+                
+                // 🛑 SỬA TẠI ĐÂY: Bật Tooltip của nến lên, nhưng dùng hàm custom() để xóa sạch chữ O H L C mặc định
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
@@ -816,8 +818,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
                         lineSize: 2, lineColor: t_line,
                         backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }]
                     },
-                    tooltip: { showRule: 'none' }
+                    tooltip: { 
+                        showRule: 'always', 
+                        showType: 'standard',
+                        custom: () => [] // Bí quyết: Trả về mảng rỗng để giấu data nến, nhường chỗ cho Indicator
+                    }
                 },
+                
                 // 🛑 LÔI 3 NÚT QUẢN LÝ CHỈ BÁO RA MÀN HÌNH 🛑
                 indicator: {
                     tooltip: {
