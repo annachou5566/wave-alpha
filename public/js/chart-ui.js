@@ -807,7 +807,8 @@ window.openProChart = function(t, isTimeSwitch = false) {
         if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
         let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
 
-        
+        // Đăng ký Chỉ báo từ file chart-indicators.js
+        if (typeof window.registerWaveIndicators === 'function') window.registerWaveIndicators();
 
         // 2. KHỞI TẠO KLINECHART
         window.tvChart = klinecharts.init(container, {
@@ -868,6 +869,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 
                 setTimeout(() => {
                     if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
+                    if (typeof window.initExpertUI === 'function') window.initExpertUI();
                     let flowEl = document.getElementById('sc-stat-net-flow');
                     if (flowEl && window.scNetFlow !== undefined) { flowEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + window.formatCompactUSD(Math.abs(window.scNetFlow)); flowEl.style.color = window.scNetFlow >= 0 ? '#00F0FF' : '#FF007F'; }
                 }, 200);
@@ -914,98 +916,3 @@ window.closeProChart = function() {
     window.currentChartToken = null; 
 };
 
-// ==========================================
-// 🚀 HỆ THỐNG QUẢN LÝ CHỈ BÁO (EXPERT UI)
-// ==========================================
-
-window.initExpertUI = function() {
-    // 1. TẠO CỬA SỔ MODAL TÌM KIẾM CHỈ BÁO (DOM INJECTION)
-    if (!document.getElementById('sc-indicator-modal')) {
-        const modalHtml = `
-        <div id="sc-indicator-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; backdrop-filter: blur(5px); justify-content: center; align-items: center;">
-            <div style="background: #1e2329; width: 600px; max-width: 90%; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.9); display: flex; flex-direction: column; overflow: hidden;">
-                <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
-                    <h5 style="margin: 0; color: #EAECEF; font-size: 16px; font-weight: 700;"><i class="fas fa-wave-square" style="color: #00F0FF; margin-right: 8px;"></i> Các chỉ báo & Chiến lược</h5>
-                    <button onclick="document.getElementById('sc-indicator-modal').style.display='none'" style="background: transparent; border: none; color: #848e9c; cursor: pointer; font-size: 16px; transition: 0.2s;" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'"><i class="fas fa-times"></i></button>
-                </div>
-                <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <div style="position: relative;">
-                        <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #848e9c;"></i>
-                        <input type="text" placeholder="Tìm kiếm chỉ báo..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px 12px 8px 35px; color: #EAECEF; outline: none; font-size: 13px;">
-                    </div>
-                </div>
-                <div style="display: flex; height: 350px;">
-                    <div style="width: 180px; background: rgba(0,0,0,0.15); border-right: 1px solid rgba(255,255,255,0.05); padding: 10px 0;">
-                        <div style="padding: 10px 20px; color: #EAECEF; cursor: pointer; font-size: 13px; font-weight: 600; border-left: 3px solid #00F0FF; background: rgba(0,240,255,0.05);">Chỉ báo Mặc định</div>
-                        <div style="padding: 10px 20px; color: #848e9c; font-size: 13px; font-weight: 600; border-left: 3px solid transparent; cursor: pointer;">Độc quyền Wave Alpha <i class="fas fa-lock" style="font-size: 10px; margin-left: 5px; color: #F6465D;"></i></div>
-                    </div>
-                    <div style="flex: 1; padding: 10px 20px; overflow-y: auto;">
-                        <div onclick="window.addIndicatorToChart('MACD')" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; border-radius: 6px;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                            <div style="color: #EAECEF; font-size: 14px; font-weight: 600;">MACD</div>
-                            <div style="color: #848e9c; font-size: 11px;">Moving Average Convergence Divergence</div>
-                        </div>
-                        <div onclick="window.addIndicatorToChart('RSI')" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; border-radius: 6px;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                            <div style="color: #EAECEF; font-size: 14px; font-weight: 600;">RSI</div>
-                            <div style="color: #848e9c; font-size: 11px;">Relative Strength Index</div>
-                        </div>
-                        <div onclick="window.addIndicatorToChart('EMA')" style="padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; border-radius: 6px;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                            <div style="color: #EAECEF; font-size: 14px; font-weight: 600;">EMA</div>
-                            <div style="color: #848e9c; font-size: 11px;">Đường Trung bình Động Lũy thừa</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-        const div = document.createElement('div');
-        div.innerHTML = modalHtml;
-        document.body.appendChild(div.firstElementChild);
-    }
-
-    // 2. GẮN NÚT VÀO TOPBAR (TÌM CLASS CỦA NÚT CHỌN KHUNG GIỜ ĐỂ ĐỨNG KẾ BÊN)
-    if (!document.getElementById('btn-fx-indicator')) {
-        let timeBtnLists = document.querySelectorAll('.sc-time-btn');
-        if (timeBtnLists.length > 0) {
-            // Lấy cái container bọc các nút thời gian
-            let topbarContainer = timeBtnLists[0].parentElement;
-            let fxBtnHtml = `
-                <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 10px;"></div>
-                
-                <button id="btn-fx-indicator" class="btn btn-sm" onclick="window.openIndicatorModal()" style="background: transparent; color: #848e9c; border: none; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 5px; transition: 0.2s;" onmouseover="this.style.color='#00F0FF'" onmouseout="this.style.color='#848e9c'">
-                    <i class="fas fa-wave-square"></i> Chỉ báo
-                </button>
-                
-                <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 10px;"></div>
-                
-                <button onclick="window.tvChart.createOverlay('trendLine')" title="Vẽ Trendline" style="background: transparent; border: none; color: #848e9c; cursor: pointer; font-size: 13px; transition: 0.2s;" onmouseover="this.style.color='#0ECB81'" onmouseout="this.style.color='#848e9c'"><i class="fas fa-chart-line"></i></button>
-                <button onclick="window.tvChart.createOverlay('fibonacciLine')" title="Vẽ Fibonacci" style="background: transparent; border: none; color: #848e9c; cursor: pointer; font-size: 13px; transition: 0.2s;" onmouseover="this.style.color='#0ECB81'" onmouseout="this.style.color='#848e9c'"><i class="fas fa-align-center"></i></button>
-                <button onclick="window.clearUserDrawings()" title="Xóa hình vẽ" style="background: transparent; border: none; color: #848e9c; cursor: pointer; font-size: 13px; transition: 0.2s;" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'"><i class="fas fa-trash-alt"></i></button>
-            `;
-            topbarContainer.insertAdjacentHTML('beforeend', fxBtnHtml);
-        }
-    }
-};
-
-// 3. CÁC HÀM XỬ LÝ SỰ KIỆN CLICK
-window.openIndicatorModal = function() {
-    let modal = document.getElementById('sc-indicator-modal');
-    if (modal) modal.style.display = 'flex';
-};
-
-window.addIndicatorToChart = function(indName) {
-    if (!window.tvChart) return;
-    document.getElementById('sc-indicator-modal').style.display = 'none'; // Tắt Modal đi
-    try {
-        if (indName === 'EMA') {
-            window.tvChart.createIndicator('EMA', true, { id: 'candle_pane' }); // Chèn lên nến
-        } else {
-            window.tvChart.createIndicator(indName, false, { id: 'pane_' + indName.toLowerCase() }); // Chèn xuống dưới
-        }
-    } catch (e) {}
-};
-
-// Đánh thức hệ thống UI này mỗi khi mở Chart lên
-const originalOpenChart = window.openProChart;
-window.openProChart = function(t, isTimeSwitch = false) {
-    originalOpenChart(t, isTimeSwitch);
-    setTimeout(window.initExpertUI, 500); // Chờ KLineChart nạp xong 0.5s rồi mới gắn Menu vào
-};
