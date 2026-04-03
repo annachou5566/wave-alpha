@@ -1615,141 +1615,243 @@
     }
   }
 
-  // ══════════════════════════════════════════════════════
-  // SECTION 7: PUBLIC API (FIX PATCH V9 - ĐÃ SỬA LỖI CLICK & SỐ LIỆU)
-  // ══════════════════════════════════════════════════════
+  // ==========================================
+// 🚀 FILE: chart-indicators.js
+// 📦 WAVE ALPHA — THƯ VIỆN CHỈ BÁO & UI PRO (BẢN FIX DỨT ĐIỂM)
+// ==========================================
 
-  // Mapping nhãn hiển thị cho gọn trên Legend
+(function (global) {
+  'use strict';
+
+  const WAVE_ALPHA_VERSION = '2.0.1';
+  const LS_KEY = 'wave_alpha_indicators_state';
+
+  // ── SECTION 1: CẤU HÌNH MÀU SẮC ────────────────
+  const COLOR = {
+    cyan: '#00F0FF',
+    green: '#0ECB81',
+    red: '#F6465D',
+    white: '#EAECEF',
+    muted: '#848e9c'
+  };
+
+  // ── SECTION 2: MATH HELPERS ──────────────────
+  const MathH = {
+    tp: (k) => (k.high + k.low + k.close) / 3,
+    rma: (data, period, valFn) => {
+      let res = []; let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        let val = valFn(data[i], i > 0 ? data[i - 1] : null);
+        if (i < period) { sum += val; res.push(i === period - 1 ? sum / period : null); }
+        else { res.push((res[i - 1] * (period - 1) + val) / period); }
+      }
+      return res;
+    }
+  };
+
+  // ── SECTION 3: INDICATOR REGISTRY ─────────────
+  const INDICATOR_REGISTRY = [
+    {
+      name: 'VWAP_BANDS', shortName: 'VWAP Pro',
+      category: 'wave_alpha', isStack: true,
+      defaultParams: [1, 2, 0], // SD1, SD2, Anchor(0:Day)
+      paramLabels: ['Dải 1 (SD)', 'Dải 2 (SD)', 'Anchor (0=D/1=W/2=M)'],
+      colors: [COLOR.gold, COLOR.cyan, COLOR.white, COLOR.cyan, COLOR.gold]
+    },
+    {
+        name: 'EMA', shortName: 'EMA', category: 'trend', isStack: true, builtIn: true,
+        defaultParams: [9, 21, 50], paramLabels: ['EMA 1', 'EMA 2', 'EMA 3']
+    },
+    {
+        name: 'MACD', shortName: 'MACD', category: 'oscillator', isStack: false, builtIn: true,
+        defaultParams: [12, 26, 9], paramLabels: ['Fast', 'Slow', 'Signal']
+    }
+    // Thêm các chỉ báo khác vào đây theo cùng cấu trúc...
+  ];
+
   const LEGEND_LABELS = {
     VWAP_BANDS: { vwap: 'V', upper1: 'U1', upper2: 'U2', lower1: 'L1', lower2: 'L2' },
     EMA: { ema1: 'E1', ema2: 'E2', ema3: 'E3' },
     BOLL: { mid: 'MB', upper: 'UB', lower: 'LB' }
   };
 
+  // ── SECTION 4: REGISTER INDICATORS ────────────
+  global.registerWaveIndicators = function() {
+    if (!window.klinecharts) return;
+    window.klinecharts.registerIndicator({
+      name: 'VWAP_BANDS', shortName: 'VWAP', series: 'price',
+      calcParams: [1, 2, 0],
+      figures: [
+        { key: 'upper2', title: 'UB2: ', type: 'line' },
+        { key: 'upper1', title: 'UB1: ', type: 'line' },
+        { key: 'vwap', title: 'VWAP: ', type: 'line' },
+        { key: 'lower1', title: 'LB1: ', type: 'line' },
+        { key: 'lower2', title: 'LB2: ', type: 'line' }
+      ],
+      calc: (data, ind) => {
+        const [m1, m2, anchor] = ind.calcParams;
+        let cV = 0, cVP = 0, cVPSq = 0;
+        return data.map((k, i) => {
+          let reset = false;
+          if (i === 0) reset = true;
+          else {
+            const d = new Date(k.timestamp); const pd = new Date(data[i-1].timestamp);
+            if (anchor === 0) reset = Math.floor(k.timestamp/86400000) !== Math.floor(data[i-1].timestamp/86400000);
+            else if (anchor === 1) reset = d.getUTCDay() === 1 && pd.getUTCDay() !== 1;
+            else reset = d.getUTCMonth() !== pd.getUTCMonth();
+          }
+          if (reset) { cV = 0; cVP = 0; cVPSq = 0; }
+          const tp = MathH.tp(k); const v = k.volume || 0;
+          cV += v; cVP += tp * v; cVPSq += v * tp * tp;
+          if (cV === 0) return {};
+          const vwap = cVP / cV;
+          const sd = Math.sqrt(Math.max(0, (cVPSq / cV) - (vwap * vwap)));
+          return { upper2: vwap + sd * m2, upper1: vwap + sd * m1, vwap, lower1: vwap - sd * m1, lower2: vwap - sd * m2 };
+        });
+      }
+    });
+  };
+
+  // ── SECTION 5: UI & EVENT HANDLERS ─────────────
+  
+  global.scActiveIndicators = loadIndicatorState();
+
+  global.addIndicatorToChart = function(name) {
+    const meta = INDICATOR_REGISTRY.find(i => i.name === name);
+    if (!meta || !window.tvChart) return;
+    const paneId = meta.isStack ? 'candle_pane' : 'pane_' + name.toLowerCase();
+    try {
+        window.tvChart.createIndicator(name, meta.isStack, { id: paneId });
+        if (!global.scActiveIndicators.find(i => i.name === name)) {
+            global.scActiveIndicators.push({ name, isStack: meta.isStack, paneId, params: meta.defaultParams, visible: true });
+            saveIndicatorState();
+        }
+        global.WaveIndicatorAPI.renderLegend();
+    } catch(e) { console.error(e); }
+  };
+
+  global.removeIndicatorFromChart = function(name) {
+    const ind = global.scActiveIndicators.find(i => i.name === name);
+    if (ind && window.tvChart) {
+        window.tvChart.removeIndicator(ind.paneId, name);
+        global.scActiveIndicators = global.scActiveIndicators.filter(i => i.name !== name);
+        saveIndicatorState();
+        global.WaveIndicatorAPI.renderLegend();
+    }
+  };
+
+  global.openIndicatorSettings = function(indicator, paneId) {
+    const meta = INDICATOR_REGISTRY.find(i => i.name === indicator.name);
+    const modal = document.getElementById('sc-ind-settings-modal');
+    if (!modal || !meta) return;
+
+    document.getElementById('sc-ind-settings-title').innerText = "⚙️ " + meta.shortName;
+    const body = document.getElementById('sc-ind-settings-body');
+    body.innerHTML = '';
+
+    const params = indicator.calcParams || meta.defaultParams;
+    params.forEach((v, i) => {
+        const label = meta.paramLabels[i] || `Tham số ${i+1}`;
+        body.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:${COLOR.muted};font-size:13px;">${label}:</span>
+            <input type="number" step="any" id="wa-p-${i}" value="${v}" style="width:80px;background:#000;border:1px solid #333;color:#fff;text-align:center;">
+        </div>`;
+    });
+
+    document.getElementById('sc-ind-btn-save').onclick = () => {
+        const newParams = params.map((_, i) => parseFloat(document.getElementById(`wa-p-${i}`).value) || 0);
+        window.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId);
+        const active = global.scActiveIndicators.find(x => x.name === indicator.name);
+        if (active) active.params = newParams;
+        saveIndicatorState();
+        modal.style.display = 'none';
+        global.WaveIndicatorAPI.renderLegend();
+    };
+    modal.style.display = 'flex';
+  };
+
+  function saveIndicatorState() { localStorage.setItem(LS_KEY, JSON.stringify(global.scActiveIndicators)); }
+  function loadIndicatorState() { 
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch(e) { return []; }
+  }
+
+  // ── SECTION 7: PUBLIC API (BẢN FIX LEGEND & CLICK) ──
   global.WaveIndicatorAPI = {
-    version:  WAVE_ALPHA_VERSION,
-    registry: INDICATOR_REGISTRY,
     register: global.registerWaveIndicators,
-    
     initUI: function() {
-        global.initExpertUI();
-        // Bơm CSS Legend
-        if (!document.getElementById('wa-legend-css')) {
-            const style = document.createElement('style'); style.id = 'wa-legend-css';
-            style.innerHTML = `
-                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 4px; pointer-events: auto !important; }
-                .wa-leg-actions { display: flex; gap: 10px; margin-left: 10px; }
-                .wa-leg-actions i { cursor: pointer; transition: 0.2s; color: #848e9c; font-size: 12px; }
-                .wa-leg-actions i:hover { color: #00F0FF; transform: scale(1.2); }
+        if (!document.getElementById('wa-leg-css')) {
+            const s = document.createElement('style'); s.id = 'wa-leg-css';
+            s.innerHTML = `
+                .wa-leg-item { display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px; pointer-events:auto !important; }
+                .wa-leg-actions { display:flex; gap:10px; margin-left:10px; }
+                .wa-leg-actions i { cursor:pointer; color:#848e9c; font-size:12px; transition:0.2s; }
+                .wa-leg-actions i:hover { color:#00F0FF; transform:scale(1.2); }
             `;
-            document.head.appendChild(style);
+            document.head.appendChild(s);
         }
     },
 
     renderLegend: function() {
         const legDiv = document.getElementById('wa-html-legend');
         if (!legDiv) return;
-        legDiv.innerHTML = ''; // Xóa trắng nội dung cũ
+        legDiv.innerHTML = '';
 
-        const activeInMain = global.scActiveIndicators.filter(i => i.isStack);
-        
-        activeInMain.forEach(ind => {
+        global.scActiveIndicators.filter(i => i.isStack).forEach(ind => {
             const meta = INDICATOR_REGISTRY.find(m => m.name === ind.name);
             const isHidden = ind.visible === false;
 
-            // 1. Tạo Container cho từng dòng chỉ báo
             const item = document.createElement('div');
             item.className = 'wa-leg-item';
             if (isHidden) item.style.opacity = '0.4';
 
-            // 2. Tên chỉ báo (Click để mở Settings luôn cho tiện)
-            const titleSpan = document.createElement('span');
-            titleSpan.style.color = (meta && meta.colors) ? meta.colors[0] : '#00F0FF';
-            titleSpan.style.cursor = 'pointer';
-            titleSpan.textContent = (meta ? meta.shortName : ind.name) + (ind.params.length ? `(${ind.params.join(',')})` : '');
-            titleSpan.addEventListener('click', () => this.openSettingsByName(ind.name));
+            const title = document.createElement('span');
+            title.style.color = COLOR.cyan;
+            title.style.cursor = 'pointer';
+            title.textContent = (meta ? meta.shortName : ind.name) + (ind.params?.length ? `(${ind.params.join(',')})` : '');
+            title.addEventListener('click', () => this.openSettingsByName(ind.name));
 
-            // 3. Vùng hiển thị giá trị (Số liệu nhảy khi hover)
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
-            valSpan.style.color = '#EAECEF';
-            valSpan.style.fontWeight = '400';
-            valSpan.style.marginLeft = '5px';
+            valSpan.style.cssText = 'color:#EAECEF;font-weight:400;margin-left:5px;';
 
-            // 4. Nhóm nút chức năng
             const actions = document.createElement('div');
             actions.className = 'wa-leg-actions';
 
-            // Nút Ẩn/Hiện
-            const eyeIcon = document.createElement('i');
-            eyeIcon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
-            eyeIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleVisible(ind.name);
-            });
+            const eye = document.createElement('i');
+            eye.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+            eye.onclick = (e) => { e.stopPropagation(); this.toggleVisible(ind.name); };
 
-            // Nút Cài đặt (Bánh răng)
-            const cogIcon = document.createElement('i');
-            cogIcon.className = 'fas fa-cog';
-            cogIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.openSettingsByName(ind.name);
-            });
+            const cog = document.createElement('i');
+            cog.className = 'fas fa-cog';
+            cog.onclick = (e) => { e.stopPropagation(); this.openSettingsByName(ind.name); };
 
-            // Nút Xóa (Dấu X)
-            const delIcon = document.createElement('i');
-            delIcon.className = 'fas fa-times';
-            delIcon.style.color = '#F6465D';
-            delIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.remove(ind.name);
-            });
+            const del = document.createElement('i');
+            del.className = 'fas fa-times'; del.style.color = COLOR.red;
+            del.onclick = (e) => { e.stopPropagation(); this.remove(ind.name); };
 
-            actions.appendChild(eyeIcon);
-            actions.appendChild(cogIcon);
-            actions.appendChild(delIcon);
-
-            item.appendChild(titleSpan);
-            item.appendChild(valSpan);
-            item.appendChild(actions);
+            actions.appendChild(eye); actions.appendChild(cog); actions.appendChild(del);
+            item.appendChild(title); item.appendChild(valSpan); item.appendChild(actions);
             legDiv.appendChild(item);
         });
-
-        legDiv.style.display = activeInMain.length ? 'flex' : 'none';
     },
 
-    // 🚀 HÀM QUAN TRỌNG: Lấy số liệu từ result[dataIndex] thay vì param rỗng
     updateLegendValues: function(dataIndex) {
-        if (!window.tvChart || !window.tvChart.getIndicators) return;
-
+        if (!window.tvChart) return;
         global.scActiveIndicators.filter(i => i.isStack).forEach(ind => {
-            const valEl = document.getElementById(`wa-val-${ind.name}`);
-            if (!valEl || ind.visible === false) { if(valEl) valEl.innerText = ''; return; }
-
+            const el = document.getElementById(`wa-val-${ind.name}`);
+            if (!el || ind.visible === false) return;
             try {
-                // Truy cập trực tiếp instance của chỉ báo trên chart
                 const instances = window.tvChart.getIndicators({ name: ind.name, paneId: ind.paneId });
-                if (!instances || !instances.length) return;
-
-                const result = instances[0].result;
-                const pointData = result[dataIndex];
-                if (!pointData) return;
-
+                if (!instances.length) return;
+                const data = instances[0].result[dataIndex];
+                if (!data) return;
                 const labels = LEGEND_LABELS[ind.name] || {};
-                
-                // Lọc bỏ các thuộc tính internal (bắt đầu bằng _) và lấy tối đa 4 số
-                let html = Object.entries(pointData)
+                el.innerHTML = Object.entries(data)
                     .filter(([k, v]) => typeof v === 'number' && !k.startsWith('_'))
                     .slice(0, 4)
-                    .map(([k, v]) => {
-                        const lbl = labels[k] || k;
-                        const valStr = v >= 1 ? v.toFixed(2) : v.toFixed(5);
-                        return `<span style="color:#848e9c;font-size:10px;">${lbl}:</span> ${valStr}`;
-                    })
+                    .map(([k, v]) => `<span style="color:#848e9c;font-size:10px;">${labels[k]||k}:</span> ${v >= 1 ? v.toFixed(2) : v.toFixed(5)}`)
                     .join(' <span style="color:#2f3640;margin:0 2px;">|</span> ');
-                
-                valEl.innerHTML = html;
-            } catch (e) { valEl.innerText = ''; }
+            } catch(e) {}
         });
     },
 
@@ -1761,17 +1863,23 @@
     toggleVisible: function(name) {
         const ind = global.scActiveIndicators.find(i => i.name === name);
         if (ind && window.tvChart) {
-            ind.visible = (ind.visible !== false) ? false : true;
+            ind.visible = ind.visible !== false ? false : true;
             window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
-            if (global.saveIndicatorState) global.saveIndicatorState();
+            saveIndicatorState();
             this.renderLegend();
         }
     },
 
-    add: function(name) { global.addIndicatorToChart(name); this.renderLegend(); },
-    remove: function(name) { global.removeIndicatorFromChart(name); this.renderLegend(); },
-    restore: global.restoreIndicators
+    add: global.addIndicatorToChart,
+    remove: global.removeIndicatorFromChart,
+    restore: function() {
+        if (!window.tvChart) return;
+        global.scActiveIndicators.forEach(ind => {
+            try { window.tvChart.createIndicator(ind.name, ind.isStack, { id: ind.paneId }); } catch(e) {}
+        });
+        this.renderLegend();
+    }
   };
 
-  console.log('[Wave Alpha] API Fixed with dataIndex support.');
+  console.log('[Wave Alpha] Indicator Library 2.0.1 Ready.');
 })(window);
