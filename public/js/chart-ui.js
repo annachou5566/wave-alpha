@@ -534,15 +534,19 @@ document.addEventListener('click', function(e) {
 window.applyFishFilter = function() {
     if (!window.tvChart) return;
 
-    // Xóa toàn bộ marker của hệ thống cũ (giữ lại các hình vẽ tay của user)
-    window.tvChart.removeOverlay({ groupId: 'wave_alpha_markers' });
+    // 1. DỌN DẸP AN TOÀN: Xóa marker cũ bằng mảng ID cụ thể để không gây lỗi KLineChart
+    if (!window.waveMarkerIds) window.waveMarkerIds = [];
+    window.waveMarkerIds.forEach(id => {
+        try { window.tvChart.removeOverlay(id); } catch(e) {}
+    });
+    window.waveMarkerIds = [];
 
+    // Kiểm tra UI Checkbox
     let checkboxes = document.querySelectorAll('.marker-filter-cb');
     if (checkboxes.length === 0) return; 
 
     let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
-    // Nếu không tick hoặc biểu đồ không ở khung tick/1s -> Ẩn marker (không làm gì thêm)
     if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
         return;
     }
@@ -553,32 +557,52 @@ window.applyFishFilter = function() {
         return activeTypes.includes(type);
     });
 
-    // Vẽ lên KLineChart bằng Annotation
-    filteredMarkers.forEach(m => {
-        window.tvChart.createOverlay({
-            groupId: 'wave_alpha_markers',
-            name: 'simpleAnnotation', 
-            extendData: m.text,
-            points: [{ timestamp: m.time * 1000 }], 
-            styles: {
-                // CHÌA KHÓA: Phải cung cấp position để KLineChart biết vẽ ở trên hay dưới nến
-                position: m.position === 'belowBar' ? 'bottom' : 'top',
-                symbol: {
-                    type: m.position === 'belowBar' ? 'triangleUp' : 'triangleDown',
-                    color: m.color,
-                    size: 8,
-                    activeSize: 10
-                },
-                text: {
-                    color: m.color,
-                    size: 10,
-                    family: 'var(--font-num)',
-                    weight: '800',
-                    marginTop: 4,
-                    marginBottom: 4
+    // 2. TÌM TỌA ĐỘ Y (MỨC GIÁ) ĐỂ NEO MARKER VÀO NẾN
+    let chartData = window.tvChart.getDataList();
+
+    filteredMarkers.forEach((m, idx) => {
+        let targetTs = m.time * 1000;
+        
+        // Tìm cây nến tương ứng với thời gian của Marker
+        let candle = chartData.find(d => d.timestamp === targetTs);
+        
+        // Nếu mạng lag nến chưa kịp đổ về, neo tạm vào nến cuối cùng trên chart
+        if (!candle && chartData.length > 0) {
+            candle = chartData[chartData.length - 1];
+        }
+
+        // 3. VẼ MARKER VỚI ĐẦY ĐỦ TỌA ĐỘ (X, Y)
+        if (candle) {
+            let yPrice = m.position === 'belowBar' ? candle.low : candle.high;
+            let overlayId = 'marker_' + targetTs + '_' + idx;
+            
+            // Lưu ID lại để lần sau xóa
+            window.waveMarkerIds.push(overlayId);
+
+            window.tvChart.createOverlay({
+                id: overlayId,
+                name: 'simpleAnnotation', 
+                extendData: m.text,
+                points: [{ timestamp: targetTs, value: yPrice }], // ĐÃ BỔ SUNG TRỤC Y (value)
+                styles: {
+                    position: m.position === 'belowBar' ? 'bottom' : 'top',
+                    symbol: {
+                        type: m.position === 'belowBar' ? 'triangleUp' : 'triangleDown',
+                        color: m.color,
+                        size: 8,
+                        activeSize: 10
+                    },
+                    text: {
+                        color: m.color,
+                        size: 10,
+                        family: 'var(--font-num)',
+                        weight: '800',
+                        marginTop: 4,
+                        marginBottom: 4
+                    }
                 }
-            }
-        });
+            });
+        }
     });
 };
 
