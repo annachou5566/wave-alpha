@@ -1490,45 +1490,42 @@
       (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
-      // Tách riêng try-catch cho createIndicator để retry không bị ảnh hưởng bởi overrideIndicator
-      try {
-        global.tvChart.createIndicator(indName, isStack, { id: paneId });
-      } catch (err) {
-        if (retries > 0) {
-          setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
-        } else {
-          console.error('[Wave Alpha] createIndicator failed for', indName, err);
-        }
-        return; // Dừng hẳn — không đăng ký state nếu createIndicator thất bại
-      }
-
-      // createIndicator thành công — dùng setTimeout để đảm bảo KLineCharts
-      // đã hoàn tất việc khởi tạo indicator trước khi gọi overrideIndicator
-      if (isStack) {
-        setTimeout(function () {
-          try {
-            if (global.tvChart) {
-              global.tvChart.overrideIndicator({
-                name: indName,
-                styles: { tooltip: { showRule: 'none' } }
-              }, paneId);
+        // Tách riêng try-catch cho createIndicator
+        try {
+            global.tvChart.createIndicator(indName, isStack, { id: paneId });
+        } catch (err) {
+            if (retries > 0) {
+                setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
+            } else {
+                console.error('[Wave Alpha] createIndicator failed for', indName, err);
             }
-          } catch (e) {
-            console.warn('[Wave Alpha] overrideIndicator failed for', indName, e);
-          }
-        }, 50);
-      }
+            return; // Dừng, không đi tiếp nếu lỗi
+        }
 
-      // Đăng ký vào state — luôn chạy sau khi createIndicator thành công
-      if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
-        global.scActiveIndicators.push({
-          name:    indName,
-          isStack: isStack,
-          paneId:  paneId,
-          params:  params,
-        });
-        saveIndicatorState();
-      }
+        // 🚀 BÍ QUYẾT: Khóa hoàn toàn Tooltip (chữ + nút gốc) của mọi chỉ báo
+        setTimeout(function () {
+            try {
+                if (global.tvChart) {
+                    global.tvChart.overrideIndicator({
+                        name: indName,
+                        styles: { tooltip: { showRule: 'none' } } // Tắt vĩnh viễn trên Canvas
+                    }, paneId);
+                }
+            } catch (e) {
+                console.warn('[Wave Alpha] overrideIndicator failed for', indName, e);
+            }
+        }, 50);
+
+        // Đăng ký state
+        if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
+            global.scActiveIndicators.push({
+                name:    indName,
+                isStack: isStack,
+                paneId:  paneId,
+                params:  params,
+            });
+            saveIndicatorState();
+        }
     }
     attempt(3);
   };
@@ -1638,13 +1635,6 @@
     saved.forEach(function (entry) {
       global.addIndicatorToChart(entry.name, { paneId: entry.paneId, params: entry.params });
     });
-    // Sau khi tất cả indicators được restore, dựng lại HTML legend
-    // Delay > RETRY_DELAY_MS(300) * 3 lần retry + setTimeout override(50ms) = ~600ms
-    setTimeout(function () {
-      if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
-        global.WaveIndicatorAPI.renderLegend();
-      }
-    }, 600);
     console.log('[Wave Alpha] ✅ Restored', saved.length, 'indicators from storage');
   };
 
@@ -1697,7 +1687,7 @@
 
     add: function(name) {
         if (typeof global.addIndicatorToChart === 'function') global.addIndicatorToChart(name);
-        // 200ms > 50ms (override timeout) để đảm bảo overrideIndicator chạy trước renderLegend
+        // Tăng lên 200ms để đảm bảo overrideIndicator(50ms) ở Bước 1 đã chạy xong
         setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 200);
     },
 
@@ -1752,7 +1742,7 @@
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // 1. SỬA pointer-events thành auto để có thể bấm được nút
+            // Mở pointer-events: auto để chuột có thể click được vào nút
             item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 0; pointer-events: auto;';
             if (ind.visible === false) item.style.opacity = '0.4';
 
@@ -1760,18 +1750,20 @@
             nameSpan.style.cssText = `color: ${color};`;
             nameSpan.textContent = title + pStr;
 
-            // 2. BỔ SUNG HTML BỘ NÚT (Sử dụng trực tiếp API bạn đã viết)
+            // 🚀 BƠM BỘ NÚT VÀO CUSTOM HTML
             const actionSpan = document.createElement('span');
+            // Mặc định tàng hình (opacity: 0), chỉ hiện khi hover chuột vào dòng để giao diện gọn gàng
             actionSpan.style.cssText = 'display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; margin-left: 4px;';
             
             const eyeIcon = ind.visible === false ? '👁️‍🗨️' : '👁️';
+            // Gọi thẳng API bạn đã viết sẵn
             actionSpan.innerHTML = `
                 <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')">${eyeIcon}</i>
                 <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')">⚙️</i>
                 <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')">❌</i>
             `;
 
-            // Hover chuột vào dòng sẽ hiện nút, rời chuột sẽ ẩn đi (giữ đúng tiêu chí gọn gàng của bạn)
+            // Bắt sự kiện hover cho từng hàng chỉ báo
             item.addEventListener('mouseenter', () => actionSpan.style.opacity = '1');
             item.addEventListener('mouseleave', () => actionSpan.style.opacity = '0');
 
@@ -1780,7 +1772,7 @@
             valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px;';
 
             item.appendChild(nameSpan);
-            item.appendChild(actionSpan); // Nhét bộ nút vào giữa tên và số liệu
+            item.appendChild(actionSpan); // Nhét bộ nút vào giữa Tên và Số liệu
             item.appendChild(valSpan);
             legDiv.appendChild(item);
         });
