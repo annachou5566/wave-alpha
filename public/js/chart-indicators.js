@@ -1633,14 +1633,18 @@
     initUI: function() {
         if (typeof global.initExpertUI === 'function') global.initExpertUI();
         
-        // 🚀 FIX: DÙNG CSS ĐỂ BUTTON LUÔN CÓ WIDTH VÀ HIỂN THỊ ĐƯỢC KỂ CẢ KHI KHÔNG CÓ FONT
         if (!document.getElementById('wa-legend-css')) {
             const style = document.createElement('style'); style.id = 'wa-legend-css';
             style.innerHTML = `
-                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); background: rgba(0,0,0,0.25); padding: 3px 8px; border-radius: 4px; pointer-events: auto !important; }
-                .wa-leg-actions { display: flex; gap: 6px; margin-left: 6px; }
-                /* Dùng <button> thay vì <i> để không bao giờ bị width=0 */
-                .wa-leg-btn { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: transparent; border: none; border-radius: 3px; color: #848e9c; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; transition: color .15s, background .15s; }
+                /* Thêm flex-wrap: wrap để rơi xuống dòng nếu số quá dài */
+                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); background: rgba(0,0,0,0.25); padding: 3px 8px; border-radius: 4px; pointer-events: auto !important; flex-wrap: wrap; }
+                
+                /* Thêm flex-shrink: 0; và margin-left: auto; */
+                .wa-leg-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+                
+                /* Thêm flex-shrink: 0; bảo vệ từng nút */
+                .wa-leg-btn { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: transparent; border: none; border-radius: 3px; color: #848e9c; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; transition: color .15s, background .15s; flex-shrink: 0; }
+                
                 .wa-leg-btn:hover { background: rgba(255,255,255,0.08); }
                 .wa-leg-btn.eye:hover { color: #00F0FF; }
                 .wa-leg-btn.cog:hover { color: #F0B90B; }
@@ -1699,6 +1703,11 @@
             item.className = 'wa-leg-item';
             if (isHidden) item.style.opacity = '0.4';
 
+            // 🚀 FIX: NGĂN KLINECHARTS CƯỚP SỰ KIỆN CLICK/TOUCH
+            ['mousedown', 'touchstart', 'pointerdown'].forEach(evt => {
+                item.addEventListener(evt, e => e.stopPropagation());
+            });
+
             const nameSpan = document.createElement('span');
             nameSpan.style.color = color;
             nameSpan.style.cursor = 'pointer';
@@ -1712,7 +1721,6 @@
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'wa-leg-actions';
 
-            // 🚀 FIX: SỬ DỤNG EMOJI UNICODE & THẺ BUTTON CHỐNG TÀNG HÌNH
             const eyeBtn = document.createElement('button');
             eyeBtn.className = 'wa-leg-btn eye';
             eyeBtn.title = 'Ẩn/Hiện';
