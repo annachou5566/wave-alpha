@@ -1151,27 +1151,33 @@
 
       card.innerHTML = [
         '<div style="display:flex; justify-content:space-between; align-items:flex-start;">',
-          '<span style="color:' + (isWave ? COLOR.cyan : COLOR.white) + '; font-size:13px; font-weight:700;">',
+          '<span style="color:' + (isWave ? COLOR.cyan : COLOR.white) + '; font-size:13px; font-weight:700; display:flex; align-items:center;">',
             ind.shortName, waveTag, badge,
           '</span>',
           isActive
-            ? '<button class="wa-remove-btn" data-name="' + ind.name + '" ' +
+            ? '<div style="display:flex; gap:14px; align-items:center;">' +
+              '<button class="wa-settings-btn" data-name="' + ind.name + '" ' +
+              'title="Cài đặt" style="background:transparent; border:none; ' +
+              'color:' + COLOR.muted + '; cursor:pointer; font-size:15px; padding:4px; margin:-4px; ' +
+              'line-height:1; transition:color .15s; touch-action:manipulation;" onmouseover="this.style.color=\'' + COLOR.gold + '\'" ' +
+              'onmouseout="this.style.color=\'' + COLOR.muted + '\'">⚙</button>' +
+              '<button class="wa-remove-btn" data-name="' + ind.name + '" ' +
               'title="Xóa khỏi chart" style="background:transparent; border:none; ' +
-              'color:' + COLOR.muted + '; cursor:pointer; font-size:13px; padding:0 2px; ' +
-              'line-height:1; transition:color .15s;" onmouseover="this.style.color=\'' + COLOR.red + '\'" ' +
-              'onmouseout="this.style.color=\'' + COLOR.muted + '\'">✕</button>'
+              'color:' + COLOR.muted + '; cursor:pointer; font-size:14px; padding:4px; margin:-4px; ' +
+              'line-height:1; transition:color .15s; touch-action:manipulation;" onmouseover="this.style.color=\'' + COLOR.red + '\'" ' +
+              'onmouseout="this.style.color=\'' + COLOR.muted + '\'">✕</button>' +
+              '</div>'
             : '',
         '</div>',
         '<div style="color:' + COLOR.muted + '; font-size:11px; line-height:1.4;">' + ind.description + '</div>',
       ].join('');
 
-      // Click to add
+      // Ngăn ấn nhầm khi bấm nút Setting/Delete
       card.addEventListener('click', function (e) {
-        if (e.target.closest('.wa-remove-btn')) return;
+        if (e.target.closest('.wa-remove-btn') || e.target.closest('.wa-settings-btn')) return;
         global.addIndicatorToChart(ind.name);
       });
 
-      // Hover
       card.addEventListener('mouseenter', function () {
         if (!isActive) card.style.borderColor = COLOR.borderHover;
         card.style.background = isActive ? COLOR.cyanMid : 'rgba(255,255,255,0.05)';
@@ -1184,13 +1190,42 @@
       list.appendChild(card);
     });
 
-    // Remove buttons
+    // ==========================================
+    // LẮNG NGHE SỰ KIỆN: XÓA CHỈ BÁO
+    // ==========================================
     list.querySelectorAll('.wa-remove-btn').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
+      const removeInd = function(e) {
+        e.stopPropagation(); e.preventDefault();
         const name = btn.dataset.name;
         global.removeIndicatorFromChart(name);
-      });
+      };
+      btn.addEventListener('click', removeInd);
+      btn.addEventListener('touchend', removeInd, { passive: false });
+    });
+
+    // ==========================================
+    // LẮNG NGHE SỰ KIỆN: MỞ CÀI ĐẶT
+    // ==========================================
+    list.querySelectorAll('.wa-settings-btn').forEach(function (btn) {
+      const openSettings = function(e) {
+        e.stopPropagation(); e.preventDefault();
+        const name = btn.dataset.name;
+        
+        // Đóng bảng Menu để hiển thị bảng Cài đặt
+        const modal = document.getElementById('sc-indicator-modal');
+        if (modal) modal.style.display = 'none';
+
+        if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.openSettingsByName === 'function') {
+            global.WaveIndicatorAPI.openSettingsByName(name);
+        } else {
+            const ind = global.scActiveIndicators.find(i => i.name === name);
+            if (ind && typeof global.openIndicatorSettings === 'function') {
+                global.openIndicatorSettings({ name: ind.name, calcParams: ind.params }, ind.paneId);
+            }
+        }
+      };
+      btn.addEventListener('click', openSettings);
+      btn.addEventListener('touchend', openSettings, { passive: false });
     });
   }
 
