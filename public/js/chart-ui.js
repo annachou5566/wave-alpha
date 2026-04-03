@@ -534,7 +534,7 @@ document.addEventListener('click', function(e) {
 window.applyFishFilter = function() {
     if (!window.tvChart) return;
 
-    // 1. DỌN DẸP AN TOÀN: Xóa marker cũ bằng mảng ID cụ thể để không gây lỗi KLineChart
+    // 1. DỌN DẸP AN TOÀN: Xóa marker cũ
     if (!window.waveMarkerIds) window.waveMarkerIds = [];
     window.waveMarkerIds.forEach(id => {
         try { window.tvChart.removeOverlay(id); } catch(e) {}
@@ -547,7 +547,7 @@ window.applyFishFilter = function() {
 
     let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
-    // Chỉ hiển thị Marker ở khung Tick và 1s
+    // Chỉ vẽ khi bật Tick hoặc 1s
     if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
         return;
     }
@@ -558,55 +558,67 @@ window.applyFishFilter = function() {
         return activeTypes.includes(type);
     });
 
-    // 2. TÌM TỌA ĐỘ Y (MỨC GIÁ) ĐỂ NEO MARKER VÀO NẾN
+    // 2. TÌM TỌA ĐỘ Y VÀ VẼ MARKER "PRO MODE"
     let chartData = window.tvChart.getDataList();
 
     filteredMarkers.forEach((m, idx) => {
         let targetTs = m.time * 1000;
-        
-        // Tìm cây nến tương ứng với thời gian của Marker
         let candle = chartData.find(d => d.timestamp === targetTs);
         
-        // Nếu mạng lag nến chưa kịp đổ về, neo tạm vào nến cuối cùng trên chart
+        // Neo tạm vào nến cuối nếu mạng lag
         if (!candle && chartData.length > 0) {
             candle = chartData[chartData.length - 1];
         }
 
-        // 3. VẼ MARKER VỚI TỌA ĐỘ (X, Y) VÀ GIAO DIỆN TRONG SUỐT (KHÔNG KHUNG VIỀN)
         if (candle) {
-            let yPrice = m.position === 'belowBar' ? candle.low : candle.high;
-            let overlayId = 'marker_' + targetTs + '_' + idx;
+            // Xác định cực kỳ rõ ràng: BUY (dưới) hay SELL (trên)
+            let isBuy = m.position === 'belowBar'; 
             
-            // Lưu ID lại để lần sau xóa
+            // Lấy giá chuẩn xác: Dưới thì neo vào Low, Trên thì neo vào High
+            // (Lưu ý: Khung tick thì High = Low = Close nên nó sẽ tự động dính sát vào đường Line)
+            let yPrice = isBuy ? candle.low : candle.high;
+            
+            let overlayId = 'marker_' + targetTs + '_' + idx;
             window.waveMarkerIds.push(overlayId);
 
+            // 3. VẼ LÊN CHART VỚI STYLE CYBERPUNK TRONG SUỐT
             window.tvChart.createOverlay({
                 id: overlayId,
                 name: 'simpleAnnotation', 
                 extendData: m.text,
                 points: [{ timestamp: targetTs, value: yPrice }], 
                 styles: {
-                    position: m.position === 'belowBar' ? 'bottom' : 'top',
+                    // Căn chỉnh vị trí Dưới/Trên
+                    position: isBuy ? 'bottom' : 'top',
                     
-                    // GIAO DIỆN TÀNG HÌNH: Tắt nét đứt và khung nền
-                    line: { show: false, size: 0 },
-                    area: { color: 'rgba(0,0,0,0)' },
-                    
-                    symbol: {
-                        type: m.position === 'belowBar' ? 'triangleUp' : 'triangleDown',
-                        color: m.color,
-                        size: 8,
-                        activeSize: 10,
-                        activeColor: m.color
+                    // --- THIẾT KẾ XÓA PHÔNG NỀN & NÉT ĐỨT ---
+                    line: { 
+                        show: false, // Tắt đường chỉ nét đứt
+                        size: 0      // Tắt viền box
                     },
+                    area: { 
+                        color: 'rgba(0,0,0,0)' // Nền trong suốt 100%
+                    },
+                    
+                    // --- THIẾT KẾ MŨI TÊN CHỈ BÁO ---
+                    symbol: {
+                        type: isBuy ? 'triangleUp' : 'triangleDown',
+                        color: m.color,
+                        size: 6,           // Kích thước mũi tên vừa vặn, không thô
+                        activeSize: 8,
+                        activeColor: '#FFF' // Sáng lên màu trắng khi di chuột vào
+                    },
+                    
+                    // --- THIẾT KẾ FONT CHỮ ---
                     text: {
                         color: m.color,
                         size: 10,
                         family: 'var(--font-num)',
-                        weight: '800',
-                        marginTop: 4,
-                        marginBottom: 4,
-                        shadowColor: 'rgba(0,0,0,0)' // Tắt bóng mờ
+                        weight: 'bold',
+                        // Căn lề cực kỳ quan trọng để Text không đè vào Mũi tên
+                        marginTop: isBuy ? 2 : 6,
+                        marginBottom: isBuy ? 6 : 2,
+                        shadowColor: 'rgba(0,0,0,0)' // Bỏ viền bóng mờ chữ cho sắc nét
                     }
                 }
             });
