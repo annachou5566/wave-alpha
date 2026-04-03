@@ -293,11 +293,11 @@
     {
       name: 'RSI',
       shortName: 'RSI',
-      description: 'Relative Strength Index — xác định vùng quá mua/quá bán',
+      description: 'Relative Strength Index — hiển thị 3 đường Nhanh/Vừa/Chậm',
       category: 'oscillator',
       isStack: false,
-      defaultParams: [14],
-      paramLabels: ['Period'],
+      defaultParams: [6, 12, 24], 
+      paramLabels: ['RSI Nhanh', 'RSI Vừa', 'RSI Chậm'],
       builtIn: true,
     },
     {
@@ -1707,6 +1707,25 @@
 
     renderLegend: function() {
         const legDiv = document.getElementById('wa-html-legend');
+        const ohlcBox = document.getElementById('sc-custom-tooltip');
+        
+        // 🚀 TỰ ĐỘNG NẮN LẠI BỐ CỤC OHLC VÀ LEGEND (CHỐNG ĐÈ NHAU 100%)
+        if (legDiv && ohlcBox) {
+            const parent = legDiv.parentElement;
+            if (parent) { 
+                parent.style.display = 'flex'; 
+                parent.style.flexDirection = 'column'; 
+                parent.style.gap = '6px'; 
+            }
+            // Gỡ bỏ position absolute cũ gây lỗi đè
+            legDiv.style.position = 'relative'; 
+            legDiv.style.top = 'auto'; 
+            legDiv.style.left = 'auto';
+            
+            // Đóng khung OHLC cho đồng bộ với Legend
+            ohlcBox.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 10px; background: rgba(22, 26, 30, 0.85); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); width: max-content; max-width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 9999;';
+        }
+
         if (!legDiv) return;
         legDiv.innerHTML = '';
         
@@ -1717,56 +1736,22 @@
             const title = meta ? meta.shortName : ind.name;
             const pStr = ind.params && ind.params.length ? ` (${ind.params.join(', ')})` : '';
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
-            const isHidden = ind.visible === false;
             
             const item = document.createElement('div');
-            // 🚀 UI MỚI: Bọc khung chắc chắn, chống đè bẹp, hiển thị 100%
-            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(22, 26, 30, 0.85); padding: 5px 8px; border-radius: 6px; pointer-events: auto; border: 1px solid rgba(255,255,255,0.1); width: max-content; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 9999;';
-            if (isHidden) item.style.opacity = '0.4';
-
-            // 🚀 BẮT BUỘC: Khóa thao tác vuốt/chạm để không bị Canvas nuốt sự kiện
-            const stopEvt = (e) => e.stopPropagation();
-            item.addEventListener('touchstart', stopEvt, { passive: false });
-            item.addEventListener('mousedown', stopEvt);
+            // Giao diện tinh gọn: Chỉ hiện Tên và Số liệu, bỏ 3 nút thao tác
+            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(22, 26, 30, 0.85); padding: 5px 8px; border-radius: 6px; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); width: max-content; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 9999;';
+            if (ind.visible === false) item.style.opacity = '0.4';
 
             const nameSpan = document.createElement('span');
-            nameSpan.style.cssText = `color: ${color}; cursor: pointer; display: flex; align-items: center; padding-right: 4px;`;
+            nameSpan.style.cssText = `color: ${color}; display: flex; align-items: center; padding-right: 4px;`;
             nameSpan.textContent = title + pStr;
-            nameSpan.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.openSettingsByName(ind.name); });
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
             valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px; pointer-events: none;';
 
-            const actionsDiv = document.createElement('div');
-            actionsDiv.style.cssText = 'display: flex; gap: 6px; margin-left: auto; align-items: center; flex-shrink: 0;';
-
-            // 🚀 TẠO NÚT SIÊU NHẠY CHO TABLET
-            const createBtn = (icon, title, onClick) => {
-                const btn = document.createElement('button');
-                btn.title = title;
-                btn.innerHTML = icon;
-                btn.style.cssText = 'display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; color: #FFF; font-size: 14px; cursor: pointer; padding: 0; touch-action: manipulation; flex-shrink: 0;';
-                
-                const fireAction = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onClick();
-                };
-                
-                // Bắt cả touchend và click để thiết bị nào cũng ăn
-                btn.addEventListener('touchend', fireAction, { passive: false });
-                btn.addEventListener('click', fireAction);
-                return btn;
-            };
-
-            actionsDiv.appendChild(createBtn(isHidden ? '⊘' : '👁', 'Ẩn/Hiện', () => global.WaveIndicatorAPI.toggleVisible(ind.name)));
-            actionsDiv.appendChild(createBtn('⚙', 'Cài đặt', () => global.WaveIndicatorAPI.openSettingsByName(ind.name)));
-            actionsDiv.appendChild(createBtn('✕', 'Xóa', () => global.WaveIndicatorAPI.remove(ind.name)));
-
             item.appendChild(nameSpan);
             item.appendChild(valSpan);
-            item.appendChild(actionsDiv);
             legDiv.appendChild(item);
         });
         
