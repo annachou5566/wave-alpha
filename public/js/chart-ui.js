@@ -801,13 +801,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    tooltip: { showRule: 'none' } // Tắt tooltip Candle
-                },
-                // 🚀 THÊM ĐOẠN NÀY ĐỂ TẮT CHỮ CHỈ BÁO TRÊN CANVAS CỦA KLINECHARTS
-                indicator: {
                     tooltip: { showRule: 'none' }
                 },
-                yAxis: { axisLine: { show: false }, tickText: { color: t_text } }, xAxis: { axisLine: { color: 'rgba(255,255,255,0.1)' }, tickText: { color: t_text } }
+                /* XÓA KHỐI indicator: { tooltip: { showRule: 'none' } } Ở ĐÂY ĐI */
+                yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
             }
         });
 
