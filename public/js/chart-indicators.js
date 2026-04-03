@@ -1490,30 +1490,44 @@
       (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
+      // Tách riêng try-catch cho createIndicator để retry không bị ảnh hưởng bởi overrideIndicator
       try {
         global.tvChart.createIndicator(indName, isStack, { id: paneId });
-
-        // 🚀 FIX LỖI ĐÈ CHỮ: Chỉ tắt chữ của chỉ báo nếu nó nằm chung khung với OHLC
-        if (isStack) {
-            global.tvChart.overrideIndicator({ name: indName, styles: { tooltip: { showRule: 'none' } } }, paneId);
-        }
-
-        // Register in state
-        if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
-          global.scActiveIndicators.push({
-            name:    indName,
-            isStack: isStack,
-            paneId:  paneId,
-            params:  params,
-          });
-          saveIndicatorState();
-        }
       } catch (err) {
         if (retries > 0) {
           setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
         } else {
           console.error('[Wave Alpha] createIndicator failed for', indName, err);
         }
+        return; // Dừng hẳn — không đăng ký state nếu createIndicator thất bại
+      }
+
+      // createIndicator thành công — dùng setTimeout để đảm bảo KLineCharts
+      // đã hoàn tất việc khởi tạo indicator trước khi gọi overrideIndicator
+      if (isStack) {
+        setTimeout(function () {
+          try {
+            if (global.tvChart) {
+              global.tvChart.overrideIndicator({
+                name: indName,
+                styles: { tooltip: { showRule: 'none' } }
+              }, paneId);
+            }
+          } catch (e) {
+            console.warn('[Wave Alpha] overrideIndicator failed for', indName, e);
+          }
+        }, 50);
+      }
+
+      // Đăng ký vào state — luôn chạy sau khi createIndicator thành công
+      if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
+        global.scActiveIndicators.push({
+          name:    indName,
+          isStack: isStack,
+          paneId:  paneId,
+          params:  params,
+        });
+        saveIndicatorState();
       }
     }
     attempt(3);
@@ -1624,6 +1638,13 @@
     saved.forEach(function (entry) {
       global.addIndicatorToChart(entry.name, { paneId: entry.paneId, params: entry.params });
     });
+    // Sau khi tất cả indicators được restore, dựng lại HTML legend
+    // Delay > RETRY_DELAY_MS(300) * 3 lần retry + setTimeout override(50ms) = ~600ms
+    setTimeout(function () {
+      if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
+        global.WaveIndicatorAPI.renderLegend();
+      }
+    }, 600);
     console.log('[Wave Alpha] ✅ Restored', saved.length, 'indicators from storage');
   };
 
@@ -1676,7 +1697,8 @@
 
     add: function(name) {
         if (typeof global.addIndicatorToChart === 'function') global.addIndicatorToChart(name);
-        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100);
+        // 200ms > 50ms (override timeout) để đảm bảo overrideIndicator chạy trước renderLegend
+        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 200);
     },
 
     remove: function(name) {
