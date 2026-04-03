@@ -534,20 +534,57 @@ document.addEventListener('click', function(e) {
 window.applyFishFilter = function() {
     if (!window.tvChart) return;
 
-    // 1. DỌN DẸP AN TOÀN: Xóa marker cũ
+    // 🚀 BƯỚC ĐỘT PHÁ: Đăng ký Template "cyberMarker" độc quyền cho Wave Alpha (Chỉ chạy 1 lần)
+    // Tự vẽ trực tiếp lên Canvas, dẹp bỏ hoàn toàn simpleAnnotation mặc định
+    if (!window.isCyberMarkerRegistered && typeof klinecharts.registerOverlay === 'function') {
+        klinecharts.registerOverlay({
+            name: 'cyberMarker',
+            needDefaultPointFigure: false,
+            needDefaultXAxisFigure: false,
+            needDefaultYAxisFigure: false,
+            createPointFigures: ({ overlay, coordinates }) => {
+                if (!coordinates || coordinates.length === 0) return [];
+                let data = overlay.extendData;
+                let isBuy = data.isBuy; // Phân biệt mặt trên hay mặt dưới nến
+                
+                return [
+                    {
+                        type: 'text',
+                        attrs: {
+                            x: coordinates[0].x,
+                            // Tọa độ Y: Buy (mặt dưới) thì lùi xuống 10px, Sell (mặt trên) thì đẩy lên 10px
+                            y: coordinates[0].y + (isBuy ? 10 : -10), 
+                            text: (isBuy ? '▲ ' : '▼ ') + data.text,
+                            align: 'center',
+                            baseline: isBuy ? 'top' : 'bottom' // Treo chữ sao cho không đè vào nến
+                        },
+                        ignoreEvent: true, // Xuyên qua chuột, không làm kẹt biểu đồ
+                        styles: {
+                            color: data.color,
+                            size: 11,
+                            family: 'var(--font-num), sans-serif',
+                            weight: '800'
+                        }
+                    }
+                ];
+            }
+        });
+        window.isCyberMarkerRegistered = true;
+    }
+
+    // 1. DỌN SẠCH AN TOÀN
     if (!window.waveMarkerIds) window.waveMarkerIds = [];
     window.waveMarkerIds.forEach(id => {
         try { window.tvChart.removeOverlay(id); } catch(e) {}
     });
     window.waveMarkerIds = [];
 
-    // Kiểm tra UI Checkbox
+    // Kiểm tra bộ lọc
     let checkboxes = document.querySelectorAll('.marker-filter-cb');
     if (checkboxes.length === 0) return; 
 
     let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
-    // Chỉ vẽ khi bật Tick hoặc 1s
     if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
         return;
     }
@@ -558,69 +595,34 @@ window.applyFishFilter = function() {
         return activeTypes.includes(type);
     });
 
-    // 2. TÌM TỌA ĐỘ Y VÀ VẼ MARKER "PRO MODE"
+    // 2. TÌM NẾN VÀ VẼ MARKER BẰNG TEMPLATE MỚI
     let chartData = window.tvChart.getDataList();
 
     filteredMarkers.forEach((m, idx) => {
         let targetTs = m.time * 1000;
         let candle = chartData.find(d => d.timestamp === targetTs);
         
-        // Neo tạm vào nến cuối nếu mạng lag
         if (!candle && chartData.length > 0) {
             candle = chartData[chartData.length - 1];
         }
 
         if (candle) {
-            // Xác định cực kỳ rõ ràng: BUY (dưới) hay SELL (trên)
             let isBuy = m.position === 'belowBar'; 
-            
-            // Lấy giá chuẩn xác: Dưới thì neo vào Low, Trên thì neo vào High
-            // (Lưu ý: Khung tick thì High = Low = Close nên nó sẽ tự động dính sát vào đường Line)
             let yPrice = isBuy ? candle.low : candle.high;
-            
             let overlayId = 'marker_' + targetTs + '_' + idx;
+            
             window.waveMarkerIds.push(overlayId);
 
-            // 3. VẼ LÊN CHART VỚI STYLE CYBERPUNK TRONG SUỐT
+            // GỌI TEMPLATE 'cyberMarker' VỪA TẠO Ở TRÊN
             window.tvChart.createOverlay({
                 id: overlayId,
-                name: 'simpleAnnotation', 
-                extendData: m.text,
-                points: [{ timestamp: targetTs, value: yPrice }], 
-                styles: {
-                    // Căn chỉnh vị trí Dưới/Trên
-                    position: isBuy ? 'bottom' : 'top',
-                    
-                    // --- THIẾT KẾ XÓA PHÔNG NỀN & NÉT ĐỨT ---
-                    line: { 
-                        show: false, // Tắt đường chỉ nét đứt
-                        size: 0      // Tắt viền box
-                    },
-                    area: { 
-                        color: 'rgba(0,0,0,0)' // Nền trong suốt 100%
-                    },
-                    
-                    // --- THIẾT KẾ MŨI TÊN CHỈ BÁO ---
-                    symbol: {
-                        type: isBuy ? 'triangleUp' : 'triangleDown',
-                        color: m.color,
-                        size: 6,           // Kích thước mũi tên vừa vặn, không thô
-                        activeSize: 8,
-                        activeColor: '#FFF' // Sáng lên màu trắng khi di chuột vào
-                    },
-                    
-                    // --- THIẾT KẾ FONT CHỮ ---
-                    text: {
-                        color: m.color,
-                        size: 10,
-                        family: 'var(--font-num)',
-                        weight: 'bold',
-                        // Căn lề cực kỳ quan trọng để Text không đè vào Mũi tên
-                        marginTop: isBuy ? 2 : 6,
-                        marginBottom: isBuy ? 6 : 2,
-                        shadowColor: 'rgba(0,0,0,0)' // Bỏ viền bóng mờ chữ cho sắc nét
-                    }
-                }
+                name: 'cyberMarker', 
+                extendData: {
+                    isBuy: isBuy,
+                    text: m.text,
+                    color: m.color
+                },
+                points: [{ timestamp: targetTs, value: yPrice }]
             });
         }
     });
