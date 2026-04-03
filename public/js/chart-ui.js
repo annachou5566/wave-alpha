@@ -535,7 +535,7 @@ window.applyFishFilter = function() {
     if (!window.tvChart) return;
 
     try {
-        // 🚀 BƯỚC 1: TẠO TEMPLATE ĐỘC QUYỀN VỚI HÀNG RÀO BẢO VỆ CHỐNG CRASH
+        // 🚀 TẠO TEMPLATE ĐỘC QUYỀN VỚI HÀNG RÀO BẢO VỆ CHỐNG CRASH
         if (!window.isCyberMarkerRegistered && window.klinecharts && typeof window.klinecharts.registerOverlay === 'function') {
             window.klinecharts.registerOverlay({
                 name: 'cyberMarker',
@@ -545,13 +545,11 @@ window.applyFishFilter = function() {
                 createPointFigures: ({ overlay, coordinates }) => {
                     if (!coordinates || coordinates.length === 0) return [];
                     
-                    // BẢO VỆ 1: Xử lý an toàn nếu dữ liệu cũ kẹt lại là String thay vì Object
                     let data = overlay.extendData || {};
                     let textVal = typeof data === 'string' ? data : (data.text || '');
                     let isBuy = data.isBuy === true; 
-                    let colorVal = data.color || '#00F0FF'; // Cấp màu dự phòng nếu thiếu
+                    let colorVal = data.color || '#00F0FF'; 
                     
-                    // BẢO VỆ 2: Làm tròn số để chữ đứng im, không bị rung giật (Jitter)
                     let pixelX = Math.round(coordinates[0].x);
                     let pixelY = Math.round(coordinates[0].y) + (isBuy ? 8 : -8); 
                     
@@ -569,9 +567,17 @@ window.applyFishFilter = function() {
                             styles: {
                                 color: colorVal,
                                 size: 11,
-                                family: 'Arial, "Segoe UI", Roboto, sans-serif', // Font hệ thống an toàn nhất
-                                weight: 'bold'
-                                // KLineChart V9 mặc định KHÔNG có hộp nền nếu ta chỉ dùng type: 'text'
+                                family: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                                weight: 'bold',
+                                
+                                // 👇 ĐÃ TRẢ LẠI ĐOẠN CODE TRIỆT TIÊU KHUNG XANH Ở ĐÂY 👇
+                                backgroundColor: 'transparent',
+                                borderColor: 'transparent',
+                                borderSize: 0,
+                                paddingLeft: 0,
+                                paddingRight: 0,
+                                paddingTop: 0,
+                                paddingBottom: 0
                             }
                         }
                     ];
@@ -580,7 +586,7 @@ window.applyFishFilter = function() {
             window.isCyberMarkerRegistered = true;
         }
 
-        // Kiểm tra checkbox giao diện an toàn
+        // Kiểm tra checkbox giao diện
         let checkboxes = document.querySelectorAll('.marker-filter-cb');
         if (checkboxes.length === 0) return; 
 
@@ -589,7 +595,7 @@ window.applyFishFilter = function() {
         if (!window.activeWaveMarkers) window.activeWaveMarkers = {};
         let newActiveMarkers = {};
 
-        // Nếu tắt filter hoặc ở khung ngày/giờ -> Xóa mượt mà
+        // Nếu tắt filter hoặc ở khung lớn -> Xóa mượt mà
         if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
             for (let oldId in window.activeWaveMarkers) {
                 try { window.tvChart.removeOverlay(oldId); } catch(e) {}
@@ -605,7 +611,6 @@ window.applyFishFilter = function() {
             return activeTypes.includes(type);
         });
 
-        // BẢO VỆ 3: Đảm bảo chart có nến trước khi vẽ
         let chartData = window.tvChart.getDataList();
         if (!chartData || chartData.length === 0) return;
 
@@ -615,7 +620,7 @@ window.applyFishFilter = function() {
             
             newActiveMarkers[overlayId] = true;
 
-            // Thuật toán Smart-Diff: CHỈ VẼ MỚI NẾU CHƯA TỒN TẠI (Chống nhấp nháy cực mạnh)
+            // Thuật toán Smart-Diff: CHỈ VẼ MỚI NẾU CHƯA TỒN TẠI
             if (!window.activeWaveMarkers[overlayId]) {
                 let candle = chartData.find(d => d.timestamp === targetTs);
                 if (!candle) candle = chartData[chartData.length - 1];
@@ -631,12 +636,12 @@ window.applyFishFilter = function() {
                             extendData: { isBuy: isBuy, text: m.text, color: m.color },
                             points: [{ timestamp: targetTs, value: yPrice }]
                         });
-                    } catch(err) {} // Cứu hộ cục bộ
+                    } catch(err) {} 
                 }
             }
         });
 
-        // Dọn dẹp những marker đã tắt checkbox
+        // Dọn dẹp marker cũ
         for (let oldId in window.activeWaveMarkers) {
             if (!newActiveMarkers[oldId]) { 
                 try { window.tvChart.removeOverlay(oldId); } catch(e) {}
