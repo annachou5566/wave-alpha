@@ -165,8 +165,8 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
         window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
         if (window.scTickHistory.length > 3000) window.scTickHistory = window.scTickHistory.slice(-3000);
 
-        let activeSeries = window.currentChartInterval === 'tick' ? window.tvLineSeries : window.tvCandleSeries;
-        if (activeSeries && window.quantStats.flags && window.scTickHistory.length > 0) {
+        // Xóa bỏ tàn tích activeSeries của TradingView, thay bằng window.tvChart của KLineChart
+        if (window.tvChart && window.quantStats.flags && window.scTickHistory.length > 0) {
             let flags = window.quantStats.flags;
             let timeSec = Math.floor(Date.now() / 1000);
             let lastMarker = window.scChartMarkers[window.scChartMarkers.length - 1];

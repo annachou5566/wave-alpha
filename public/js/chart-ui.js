@@ -557,10 +557,12 @@ window.applyFishFilter = function() {
     filteredMarkers.forEach(m => {
         window.tvChart.createOverlay({
             groupId: 'wave_alpha_markers',
-            name: 'simpleAnnotation', // Template mặc định của KLineChart
+            name: 'simpleAnnotation', 
             extendData: m.text,
-            points: [{ timestamp: m.time * 1000 }], // Chuyển time từ giây sang milliseconds
+            points: [{ timestamp: m.time * 1000 }], 
             styles: {
+                // CHÌA KHÓA: Phải cung cấp position để KLineChart biết vẽ ở trên hay dưới nến
+                position: m.position === 'belowBar' ? 'bottom' : 'top',
                 symbol: {
                     type: m.position === 'belowBar' ? 'triangleUp' : 'triangleDown',
                     color: m.color,
@@ -571,7 +573,9 @@ window.applyFishFilter = function() {
                     color: m.color,
                     size: 10,
                     family: 'var(--font-num)',
-                    weight: '800'
+                    weight: '800',
+                    marginTop: 4,
+                    marginBottom: 4
                 }
             }
         });
