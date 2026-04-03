@@ -1707,26 +1707,11 @@
 
     renderLegend: function() {
         const legDiv = document.getElementById('wa-html-legend');
-        const ohlcBox = document.getElementById('sc-custom-tooltip');
-        
-        // 🚀 TỰ ĐỘNG NẮN LẠI BỐ CỤC OHLC VÀ LEGEND (CHỐNG ĐÈ NHAU 100%)
-        if (legDiv && ohlcBox) {
-            const parent = legDiv.parentElement;
-            if (parent) { 
-                parent.style.display = 'flex'; 
-                parent.style.flexDirection = 'column'; 
-                parent.style.gap = '6px'; 
-            }
-            // Gỡ bỏ position absolute cũ gây lỗi đè
-            legDiv.style.position = 'relative'; 
-            legDiv.style.top = 'auto'; 
-            legDiv.style.left = 'auto';
-            
-            // Đóng khung OHLC cho đồng bộ với Legend
-            ohlcBox.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 10px; background: rgba(22, 26, 30, 0.85); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); width: max-content; max-width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 9999;';
-        }
-
         if (!legDiv) return;
+        
+        // 🚀 Đẩy bảng chỉ báo tụt xuống để né OHLC (Màn hình nhỏ đẩy 95px, to đẩy 65px)
+        legDiv.style.top = window.innerWidth <= 768 ? '95px' : '65px';
+        
         legDiv.innerHTML = '';
         
         const activeStack = global.scActiveIndicators.filter(i => i.isStack);
@@ -1738,17 +1723,17 @@
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // Giao diện tinh gọn: Chỉ hiện Tên và Số liệu, bỏ 3 nút thao tác
-            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(22, 26, 30, 0.85); padding: 5px 8px; border-radius: 6px; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); width: max-content; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 9999;';
+            // Giao diện tinh gọn, mờ nhẹ, không làm vướng mắt
+            item.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px; pointer-events: none; width: max-content; margin-bottom: 4px;';
             if (ind.visible === false) item.style.opacity = '0.4';
 
             const nameSpan = document.createElement('span');
-            nameSpan.style.cssText = `color: ${color}; display: flex; align-items: center; padding-right: 4px;`;
+            nameSpan.style.cssText = `color: ${color};`;
             nameSpan.textContent = title + pStr;
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
-            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px; pointer-events: none;';
+            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400;';
 
             item.appendChild(nameSpan);
             item.appendChild(valSpan);
