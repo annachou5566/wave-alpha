@@ -371,8 +371,12 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 
                 // Cập nhật nến cho khung 1m trở lên
                 if (window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
+                    
+                    let rawTk = parseInt(k.t || k.ot);
+                    let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
+
                     window.tvChart.updateData({
-                        timestamp: parseInt(k.t), // Binance t đã là ms
+                        timestamp: correctTk, // Đã chuẩn hoá 100% về mili-giây
                         open: parseFloat(k.o),
                         high: parseFloat(k.h),
                         low: parseFloat(k.l),
@@ -495,7 +499,6 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         let chainId = smartCtx.chainId;
         if (!contract) return []; 
         
-        // QUAN TRỌNG: Ép interval tick thành 1s để API Binance không bị báo lỗi 400
         let apiInterval = interval === 'tick' ? '1s' : interval;
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${apiInterval}&limit=${limit}`;
         
@@ -505,8 +508,12 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         if (!data || data.length === 0) return [];
 
         return data.map(d => {
+            // 🛑 FIX LỖI 1970 TẠI ĐÂY: Nếu là giây (10 số) thì nhân 1000 thành mili-giây
+            let rawTs = parseInt(d.time || d.t || d[0]);
+            let correctTs = rawTs < 100000000000 ? rawTs * 1000 : rawTs;
+
             return {
-                timestamp: parseInt(d.time), // KLineChart bắt buộc dùng ms
+                timestamp: correctTs, 
                 open: parseFloat(d.open), high: parseFloat(d.high), low: parseFloat(d.low), close: parseFloat(d.close),
                 volume: parseFloat(d.volume)
             };
