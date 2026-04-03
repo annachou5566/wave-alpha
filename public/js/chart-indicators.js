@@ -1708,30 +1708,30 @@
     renderLegend: function() {
         const legDiv = document.getElementById('wa-html-legend');
         if (!legDiv) return;
-        
-        // 🚀 CHÌA KHÓA NẰM Ở ĐÂY: Gỡ bỏ position: absolute để nó không bị "ghim" vào góc trái
-        legDiv.style.position = 'relative'; 
-        legDiv.style.top = 'auto';
-        legDiv.style.left = 'auto';
-        legDiv.style.marginTop = '8px'; // Cách OHLC 8px cho thoáng
 
-        // Ép OHLC tự rớt dòng nếu màn hình Tablet bị hẹp
-        const ohlcBox = document.getElementById('sc-custom-tooltip');
-        if (ohlcBox) ohlcBox.style.flexWrap = 'wrap';
-        
         legDiv.innerHTML = '';
         
         const activeStack = global.scActiveIndicators.filter(i => i.isStack);
         
         activeStack.forEach(ind => {
+            // 🚀 BÍ QUYẾT Ở ĐÂY: Khóa họng KLineCharts, không cho nó tự vẽ số liệu chìm xuống mặt Canvas nữa
+            if (window.tvChart) {
+                try {
+                    window.tvChart.overrideIndicator({ 
+                        name: ind.name, 
+                        styles: { tooltip: { showRule: 'none' } } 
+                    }, ind.paneId);
+                } catch(e) {}
+            }
+
             const meta = INDICATOR_REGISTRY.find(m => m.name === ind.name);
             const title = meta ? meta.shortName : ind.name;
             const pStr = ind.params && ind.params.length ? ` (${ind.params.join(', ')})` : '';
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // Thêm flex-wrap để nếu số dài quá nó tự rớt dòng trong hộp
-            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px; pointer-events: none; width: max-content; margin-bottom: 4px;';
+            // Giao diện tinh gọn, nằm ngoan ngoãn ngay dưới OHLC, không có nút vướng víu
+            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 0; pointer-events: none;';
             if (ind.visible === false) item.style.opacity = '0.4';
 
             const nameSpan = document.createElement('span');
