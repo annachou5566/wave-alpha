@@ -1616,10 +1616,9 @@
   }
 
   // ══════════════════════════════════════════════════════
-  // SECTION 7: PUBLIC API (TÍCH HỢP BẢNG ĐIỀU KHIỂN HTML LEGEND)
+  // SECTION 7: PUBLIC API (BẢN FIX TÀNG HÌNH NÚT BUTTON + UNICODE)
   // ══════════════════════════════════════════════════════
 
-  // Thêm bộ từ điển để rút gọn tên thông số trên màn hình (VD: upper1 thành U1)
   const LEGEND_LABELS = {
     VWAP_BANDS: { vwap: 'V', upper1: 'U1', upper2: 'U2', lower1: 'L1', lower2: 'L2' },
     EMA: { ema1: 'E1', ema2: 'E2', ema3: 'E3' },
@@ -1634,16 +1633,18 @@
     initUI: function() {
         if (typeof global.initExpertUI === 'function') global.initExpertUI();
         
-        // Bơm CSS cực ngầu cho HTML Legend
+        // 🚀 FIX: DÙNG CSS ĐỂ BUTTON LUÔN CÓ WIDTH VÀ HIỂN THỊ ĐƯỢC KỂ CẢ KHI KHÔNG CÓ FONT
         if (!document.getElementById('wa-legend-css')) {
             const style = document.createElement('style'); style.id = 'wa-legend-css';
             style.innerHTML = `
-                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 4px; transition: 0.2s; pointer-events: auto !important; }
-                .wa-leg-item:hover { background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); }
-                /* SỬA LỖI Ở ĐÂY: Hiển thị nút luôn (display: flex), không dùng display: none nữa */
-                .wa-leg-actions { display: flex; gap: 10px; color: #848e9c; margin-left: 10px; }
-                .wa-leg-actions i { transition: 0.2s; font-size: 12px; cursor: pointer; }
-                .wa-leg-actions i:hover { color: #00F0FF; transform: scale(1.2); }
+                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); background: rgba(0,0,0,0.25); padding: 3px 8px; border-radius: 4px; pointer-events: auto !important; }
+                .wa-leg-actions { display: flex; gap: 6px; margin-left: 6px; }
+                /* Dùng <button> thay vì <i> để không bao giờ bị width=0 */
+                .wa-leg-btn { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; background: transparent; border: none; border-radius: 3px; color: #848e9c; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; transition: color .15s, background .15s; }
+                .wa-leg-btn:hover { background: rgba(255,255,255,0.08); }
+                .wa-leg-btn.eye:hover { color: #00F0FF; }
+                .wa-leg-btn.cog:hover { color: #F0B90B; }
+                .wa-leg-btn.del:hover { color: #F6465D; }
             `;
             document.head.appendChild(style);
         }
@@ -1651,21 +1652,19 @@
 
     add: function(name) {
         if (typeof global.addIndicatorToChart === 'function') global.addIndicatorToChart(name);
-        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100); // Vẽ lại Bảng
+        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100);
     },
 
     remove: function(name) {
         if (typeof global.removeIndicatorFromChart === 'function') global.removeIndicatorFromChart(name);
-        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100); // Vẽ lại Bảng
+        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100);
     },
 
     openSettings: global.openIndicatorSettings,
     restore: global.restoreIndicators,
     
-    // --- LÕI ĐIỀU KHIỂN HTML LEGEND CHỐNG LỖI CANVAS ---
     openSettingsByName: function(name) {
         const ind = global.scActiveIndicators.find(i => i.name === name);
-        // Gọi thẳng hàm gốc để chắc chắn ăn lệnh Setting
         if (ind && typeof global.openIndicatorSettings === 'function') {
             global.openIndicatorSettings({ name: ind.name, calcParams: ind.params }, ind.paneId);
         }
@@ -1689,7 +1688,6 @@
         
         const activeStack = global.scActiveIndicators.filter(i => i.isStack);
         
-        // Dùng document.createElement để trình duyệt không bị "rớt" sự kiện click
         activeStack.forEach(ind => {
             const meta = INDICATOR_REGISTRY.find(m => m.name === ind.name);
             const title = meta ? meta.shortName : ind.name;
@@ -1709,30 +1707,33 @@
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
-            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; pointer-events: none;';
+            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; margin-left: 5px; pointer-events: none;';
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'wa-leg-actions';
 
-            const eyeIcon = document.createElement('i');
-            eyeIcon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
-            eyeIcon.title = 'Ẩn/Hiện';
-            eyeIcon.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.toggleVisible(ind.name); });
+            // 🚀 FIX: SỬ DỤNG EMOJI UNICODE & THẺ BUTTON CHỐNG TÀNG HÌNH
+            const eyeBtn = document.createElement('button');
+            eyeBtn.className = 'wa-leg-btn eye';
+            eyeBtn.title = 'Ẩn/Hiện';
+            eyeBtn.textContent = isHidden ? '⊘' : '👁'; 
+            eyeBtn.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.toggleVisible(ind.name); });
 
-            const cogIcon = document.createElement('i');
-            cogIcon.className = 'fas fa-cog';
-            cogIcon.title = 'Cài đặt';
-            cogIcon.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.openSettingsByName(ind.name); });
+            const cogBtn = document.createElement('button');
+            cogBtn.className = 'wa-leg-btn cog';
+            cogBtn.title = 'Cài đặt';
+            cogBtn.textContent = '⚙';
+            cogBtn.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.openSettingsByName(ind.name); });
 
-            const delIcon = document.createElement('i');
-            delIcon.className = 'fas fa-times';
-            delIcon.title = 'Xóa';
-            delIcon.style.color = '#F6465D';
-            delIcon.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.remove(ind.name); });
+            const delBtn = document.createElement('button');
+            delBtn.className = 'wa-leg-btn del';
+            delBtn.title = 'Xóa';
+            delBtn.textContent = '✕';
+            delBtn.addEventListener('click', (e) => { e.stopPropagation(); global.WaveIndicatorAPI.remove(ind.name); });
 
-            actionsDiv.appendChild(eyeIcon);
-            actionsDiv.appendChild(cogIcon);
-            actionsDiv.appendChild(delIcon);
+            actionsDiv.appendChild(eyeBtn);
+            actionsDiv.appendChild(cogBtn);
+            actionsDiv.appendChild(delBtn);
 
             item.appendChild(nameSpan);
             item.appendChild(valSpan);
@@ -1744,7 +1745,6 @@
         legDiv.style.display = activeStack.length ? 'flex' : 'none';
     },
 
-    // SỬA: Dùng dataIndex để lấy đúng dữ liệu hiển thị (Không dùng param.indicatorDataDict rỗng nữa)
     updateLegendValues: function(dataIndex) {
         if (!window.tvChart || !window.tvChart.getIndicators) return;
         
@@ -1754,7 +1754,6 @@
             if (ind.visible === false) { valEl.innerHTML = ''; return; }
 
             try {
-                // Tự móc data chuẩn từ KLineChart v9
                 const instances = window.tvChart.getIndicators({ name: ind.name, paneId: ind.paneId });
                 if (!instances || instances.length === 0) return;
                 
@@ -1766,7 +1765,6 @@
 
                 const labels = LEGEND_LABELS[ind.name] || {};
                 
-                // Nhặt 3 thông số đầu tiên ra in lên màn hình
                 let html = Object.entries(data)
                     .filter(([k, v]) => typeof v === 'number' && !k.startsWith('_'))
                     .slice(0, 3)
@@ -1784,5 +1782,5 @@
     }
   };
 
-  console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] Indicator Core initialized with DOM Legend.');
+  console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] Indicator Core initialized with Button/Unicode Fix.');
 })(window);
