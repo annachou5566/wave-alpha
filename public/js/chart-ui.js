@@ -547,6 +547,7 @@ window.applyFishFilter = function() {
 
     let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
+    // Chỉ hiển thị Marker ở khung Tick và 1s
     if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
         return;
     }
@@ -571,7 +572,7 @@ window.applyFishFilter = function() {
             candle = chartData[chartData.length - 1];
         }
 
-        // 3. VẼ MARKER VỚI ĐẦY ĐỦ TỌA ĐỘ (X, Y)
+        // 3. VẼ MARKER VỚI TỌA ĐỘ (X, Y) VÀ GIAO DIỆN TRONG SUỐT (KHÔNG KHUNG VIỀN)
         if (candle) {
             let yPrice = m.position === 'belowBar' ? candle.low : candle.high;
             let overlayId = 'marker_' + targetTs + '_' + idx;
@@ -583,14 +584,20 @@ window.applyFishFilter = function() {
                 id: overlayId,
                 name: 'simpleAnnotation', 
                 extendData: m.text,
-                points: [{ timestamp: targetTs, value: yPrice }], // ĐÃ BỔ SUNG TRỤC Y (value)
+                points: [{ timestamp: targetTs, value: yPrice }], 
                 styles: {
                     position: m.position === 'belowBar' ? 'bottom' : 'top',
+                    
+                    // GIAO DIỆN TÀNG HÌNH: Tắt nét đứt và khung nền
+                    line: { show: false, size: 0 },
+                    area: { color: 'rgba(0,0,0,0)' },
+                    
                     symbol: {
                         type: m.position === 'belowBar' ? 'triangleUp' : 'triangleDown',
                         color: m.color,
                         size: 8,
-                        activeSize: 10
+                        activeSize: 10,
+                        activeColor: m.color
                     },
                     text: {
                         color: m.color,
@@ -598,7 +605,8 @@ window.applyFishFilter = function() {
                         family: 'var(--font-num)',
                         weight: '800',
                         marginTop: 4,
-                        marginBottom: 4
+                        marginBottom: 4,
+                        shadowColor: 'rgba(0,0,0,0)' // Tắt bóng mờ
                     }
                 }
             });
