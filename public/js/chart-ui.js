@@ -735,19 +735,44 @@ window.openProChart = function(t, isTimeSwitch = false) {
     if (window.tvChart) { try { klinecharts.dispose(container); } catch(e) {} window.tvChart = null; }
     window.scActivePriceLines = [];
     
-    // 🚀 ĐỔI MỚI 1: TẠO KHUNG HTML LEGEND RIÊNG (BẤT TỬ, KHÔNG BỊ CANVAS CHẶN CLICK)
-    container.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; z-index: 2; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); pointer-events: none; letter-spacing: 2px;">WAVE ALPHA</div>
-        <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; z-index: 10; display: flex; flex-direction: column; gap: 6px; pointer-events: none;">
-            <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+    // 🚀 BƯỚC 1: TẠO WRAPPER ĐỂ TÁCH LEGEND RA KHỎI CANVAS
+    let wrapper = document.getElementById('sc-chart-wrapper');
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.id = 'sc-chart-wrapper';
+        wrapper.style.cssText = 'position:relative; width:100%; height:100%;';
+        container.parentNode.insertBefore(wrapper, container);
+        wrapper.appendChild(container);
+    }
+
+    container.innerHTML = ''; // Để trống hoàn toàn container
+
+    // 🚀 BƯỚC 2: TẠO LEGEND LÀ SIBLING (NGANG HÀNG VỚI CANVAS - FIX LỖI CLICK)
+    let legendOverlay = document.getElementById('sc-main-tooltip');
+    if (!legendOverlay) {
+        legendOverlay = document.createElement('div');
+        legendOverlay.id = 'sc-main-tooltip';
+        legendOverlay.style.cssText = 'position:absolute; top:10px; left:10px; z-index:100; display:flex; flex-direction:column; gap:6px; pointer-events:none;';
+        
+        legendOverlay.innerHTML = `
+            <div style="font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px; position: absolute; top: 15px; left: 5px; z-index: -1;">WAVE ALPHA</div>
+            <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); pointer-events: none;">
                 <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
             </div>
             <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto;"></div>
-        </div>`;
-    
+        `;
+        wrapper.appendChild(legendOverlay);
+    }
+
+    // Tái lập các Box dữ liệu phía dưới (Giữ lại logic cũ của bác)
     if (!isTimeSwitch) {
+        let tradesBox = document.getElementById('sc-live-trades');
+        if (tradesBox) tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
+        
         setTimeout(() => {
             if (typeof window.injectSmartMoneyTab === 'function') window.injectSmartMoneyTab();
             if (typeof window.injectFuturesTab === 'function') window.injectFuturesTab();
+            if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
         }, 100);
     }
 
@@ -786,23 +811,42 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.tvChart.createIndicator('VOL', false, { height: 80 });
 
         // 🚀 ĐỔI MỚI 3: LẤY DATA THỰC TẾ LÚC RÊ CHUỘT TRUYỀN VÀO BẢNG HTML LEGEND
-        const tooltipEl = document.getElementById('sc-custom-tooltip'); const tpV = document.getElementById('tp-v'); 
+        const tooltipEl = document.getElementById('sc-custom-tooltip'); 
+        const tpV = document.getElementById('tp-v'); 
+
         window.tvChart.subscribeAction('onCrosshairChange', (param) => {
+            // 1. Kiểm tra tính hợp lệ của dữ liệu
+            if (!param || param.dataIndex === undefined || param.dataIndex < 0) {
+                // Nếu chuột rời khỏi chart, có thể ẩn tooltip nếu muốn
+                // if (tooltipEl) tooltipEl.style.display = 'none';
+                return;
+            }
+
             if (tooltipEl) tooltipEl.style.display = 'flex';
-            if (!param || param.dataIndex === undefined) return;
+
             const dataList = window.tvChart.getDataList();
             const ohlc = dataList[param.dataIndex];
             if (!ohlc) return;
 
-            // Update OHLC Text
-            const elO = document.getElementById('tp-o'); const elH = document.getElementById('tp-h'); const elL = document.getElementById('tp-l'); const elC = document.getElementById('tp-c');
-            if (elO) elO.innerText = window.formatPrice(ohlc.open); if (elH) elH.innerText = window.formatPrice(ohlc.high); if (elL) elL.innerText = window.formatPrice(ohlc.low);
-            if (elC) { elC.innerText = window.formatPrice(ohlc.close); elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; }
+            // 2. Cập nhật dữ liệu nến (OHLCV) lên HTML
+            const elO = document.getElementById('tp-o'); 
+            const elH = document.getElementById('tp-h'); 
+            const elL = document.getElementById('tp-l'); 
+            const elC = document.getElementById('tp-c');
+            
+            if (elO) elO.innerText = window.formatPrice(ohlc.open); 
+            if (elH) elH.innerText = window.formatPrice(ohlc.high); 
+            if (elL) elL.innerText = window.formatPrice(ohlc.low);
+            if (elC) { 
+                elC.innerText = window.formatPrice(ohlc.close); 
+                elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; 
+            }
             if (tpV) tpV.innerText = window.formatCompactUSD(ohlc.volume || 0);
 
-            // Bắn dữ liệu sang bảng điều khiển HTML
-            if (param.indicatorData && window.WaveIndicatorAPI) {
-                window.WaveIndicatorAPI.updateLegendValues(param.indicatorData);
+            // 3. 🛑 SỬA TẠI ĐÂY: Truyền dataIndex thay vì indicatorData
+            // Hàm này sẽ giúp bảng HTML Legend tự tra cứu dữ liệu VWAP/EMA chuẩn xác
+            if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.updateLegendValues === 'function') {
+                window.WaveIndicatorAPI.updateLegendValues(param.dataIndex);
             }
         });
 

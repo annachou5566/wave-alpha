@@ -1616,8 +1616,15 @@
   }
 
   // ══════════════════════════════════════════════════════
-  // SECTION 7: PUBLIC API (TÍCH HỢP BẢNG ĐIỀU KHIỂN HTML LEGEND)
+  // SECTION 7: PUBLIC API (FIX PATCH V9 - ĐÃ SỬA LỖI CLICK & SỐ LIỆU)
   // ══════════════════════════════════════════════════════
+
+  // Mapping nhãn hiển thị cho gọn trên Legend
+  const LEGEND_LABELS = {
+    VWAP_BANDS: { vwap: 'V', upper1: 'U1', upper2: 'U2', lower1: 'L1', lower2: 'L2' },
+    EMA: { ema1: 'E1', ema2: 'E2', ema3: 'E3' },
+    BOLL: { mid: 'MB', upper: 'UB', lower: 'LB' }
+  };
 
   global.WaveIndicatorAPI = {
     version:  WAVE_ALPHA_VERSION,
@@ -1626,100 +1633,145 @@
     
     initUI: function() {
         global.initExpertUI();
-        // Bơm CSS cực ngầu cho HTML Legend
+        // Bơm CSS Legend
         if (!document.getElementById('wa-legend-css')) {
             const style = document.createElement('style'); style.id = 'wa-legend-css';
             style.innerHTML = `
-                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 4px; transition: 0.2s; cursor: pointer; }
-                .wa-leg-item:hover { background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); }
-                .wa-leg-actions { display: none; gap: 10px; color: #848e9c; margin-left: 10px; }
-                .wa-leg-item:hover .wa-leg-actions { display: flex; }
-                .wa-leg-actions i { transition: 0.2s; font-size: 12px; }
-                .wa-leg-actions i:hover { color: #EAECEF; transform: scale(1.2); }
+                .wa-leg-item { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 4px; pointer-events: auto !important; }
+                .wa-leg-actions { display: flex; gap: 10px; margin-left: 10px; }
+                .wa-leg-actions i { cursor: pointer; transition: 0.2s; color: #848e9c; font-size: 12px; }
+                .wa-leg-actions i:hover { color: #00F0FF; transform: scale(1.2); }
             `;
             document.head.appendChild(style);
-        }
-    },
-
-    add: function(name) {
-        global.addIndicatorToChart(name);
-        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100); // Vẽ lại Bảng
-    },
-
-    remove: function(name) {
-        global.removeIndicatorFromChart(name);
-        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100); // Vẽ lại Bảng
-    },
-
-    openSettings: global.openIndicatorSettings,
-    restore: global.restoreIndicators,
-    
-    // --- LÕI ĐIỀU KHIỂN HTML LEGEND CHỐNG LỖI CANVAS ---
-    openSettingsByName: function(name) {
-        const ind = global.scActiveIndicators.find(i => i.name === name);
-        if (ind) global.WaveIndicatorAPI.openSettings({ name: ind.name, calcParams: ind.params }, ind.paneId);
-    },
-
-    toggleVisible: function(name) {
-        if (!window.tvChart) return;
-        const ind = global.scActiveIndicators.find(i => i.name === name);
-        if (ind) {
-            ind.visible = ind.visible === false ? true : false;
-            window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
-            saveIndicatorState();
-            global.WaveIndicatorAPI.renderLegend();
         }
     },
 
     renderLegend: function() {
         const legDiv = document.getElementById('wa-html-legend');
         if (!legDiv) return;
-        let html = '';
+        legDiv.innerHTML = ''; // Xóa trắng nội dung cũ
+
+        const activeInMain = global.scActiveIndicators.filter(i => i.isStack);
         
-        // Chỉ vẽ HTML Legend cho các chỉ báo Main Pane (Bị Canvas khóa click)
-        global.scActiveIndicators.filter(i => i.isStack).forEach(ind => {
+        activeInMain.forEach(ind => {
             const meta = INDICATOR_REGISTRY.find(m => m.name === ind.name);
-            const title = meta ? meta.shortName : ind.name;
-            const pStr = ind.params && ind.params.length ? ` (${ind.params.join(', ')})` : '';
-            const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             const isHidden = ind.visible === false;
-            
-            html += `
-                <div class="wa-leg-item" id="wa-leg-${ind.name}">
-                    <span style="color: ${color}; opacity: ${isHidden ? 0.4 : 1};" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')">${title}${pStr}</span>
-                    <span id="wa-val-${ind.name}" style="color: #EAECEF; font-weight: 400; opacity: ${isHidden ? 0.4 : 1};"></span>
-                    <div class="wa-leg-actions">
-                        <i class="fas ${isHidden ? 'fa-eye-slash' : 'fa-eye'}" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')"></i>
-                        <i class="fas fa-cog" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')"></i>
-                        <i class="fas fa-times" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')" style="color: #F6465D;"></i>
-                    </div>
-                </div>
-            `;
+
+            // 1. Tạo Container cho từng dòng chỉ báo
+            const item = document.createElement('div');
+            item.className = 'wa-leg-item';
+            if (isHidden) item.style.opacity = '0.4';
+
+            // 2. Tên chỉ báo (Click để mở Settings luôn cho tiện)
+            const titleSpan = document.createElement('span');
+            titleSpan.style.color = (meta && meta.colors) ? meta.colors[0] : '#00F0FF';
+            titleSpan.style.cursor = 'pointer';
+            titleSpan.textContent = (meta ? meta.shortName : ind.name) + (ind.params.length ? `(${ind.params.join(',')})` : '');
+            titleSpan.addEventListener('click', () => this.openSettingsByName(ind.name));
+
+            // 3. Vùng hiển thị giá trị (Số liệu nhảy khi hover)
+            const valSpan = document.createElement('span');
+            valSpan.id = `wa-val-${ind.name}`;
+            valSpan.style.color = '#EAECEF';
+            valSpan.style.fontWeight = '400';
+            valSpan.style.marginLeft = '5px';
+
+            // 4. Nhóm nút chức năng
+            const actions = document.createElement('div');
+            actions.className = 'wa-leg-actions';
+
+            // Nút Ẩn/Hiện
+            const eyeIcon = document.createElement('i');
+            eyeIcon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+            eyeIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleVisible(ind.name);
+            });
+
+            // Nút Cài đặt (Bánh răng)
+            const cogIcon = document.createElement('i');
+            cogIcon.className = 'fas fa-cog';
+            cogIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openSettingsByName(ind.name);
+            });
+
+            // Nút Xóa (Dấu X)
+            const delIcon = document.createElement('i');
+            delIcon.className = 'fas fa-times';
+            delIcon.style.color = '#F6465D';
+            delIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.remove(ind.name);
+            });
+
+            actions.appendChild(eyeIcon);
+            actions.appendChild(cogIcon);
+            actions.appendChild(delIcon);
+
+            item.appendChild(titleSpan);
+            item.appendChild(valSpan);
+            item.appendChild(actions);
+            legDiv.appendChild(item);
         });
-        legDiv.innerHTML = html;
-        legDiv.style.display = global.scActiveIndicators.some(i => i.isStack) ? 'flex' : 'none';
+
+        legDiv.style.display = activeInMain.length ? 'flex' : 'none';
     },
 
-    updateLegendValues: function(indicatorDataDict) {
-        if (!indicatorDataDict || !indicatorDataDict.candle_pane) return;
-        const mainPaneData = indicatorDataDict.candle_pane;
-        
+    // 🚀 HÀM QUAN TRỌNG: Lấy số liệu từ result[dataIndex] thay vì param rỗng
+    updateLegendValues: function(dataIndex) {
+        if (!window.tvChart || !window.tvChart.getIndicators) return;
+
         global.scActiveIndicators.filter(i => i.isStack).forEach(ind => {
-            const vals = mainPaneData[ind.name];
             const valEl = document.getElementById(`wa-val-${ind.name}`);
-            if (vals && valEl && ind.visible !== false) {
-                // Nhặt 3 thông số đầu tiên ra in lên màn hình
-                let str = Object.values(vals)
-                    .filter(v => typeof v === 'number')
-                    .map(v => window.formatPrice ? window.formatPrice(v) : v.toFixed(4))
-                    .slice(0, 3).join('  ');
-                valEl.innerText = str;
-            } else if (valEl) {
-                valEl.innerText = '';
-            }
+            if (!valEl || ind.visible === false) { if(valEl) valEl.innerText = ''; return; }
+
+            try {
+                // Truy cập trực tiếp instance của chỉ báo trên chart
+                const instances = window.tvChart.getIndicators({ name: ind.name, paneId: ind.paneId });
+                if (!instances || !instances.length) return;
+
+                const result = instances[0].result;
+                const pointData = result[dataIndex];
+                if (!pointData) return;
+
+                const labels = LEGEND_LABELS[ind.name] || {};
+                
+                // Lọc bỏ các thuộc tính internal (bắt đầu bằng _) và lấy tối đa 4 số
+                let html = Object.entries(pointData)
+                    .filter(([k, v]) => typeof v === 'number' && !k.startsWith('_'))
+                    .slice(0, 4)
+                    .map(([k, v]) => {
+                        const lbl = labels[k] || k;
+                        const valStr = v >= 1 ? v.toFixed(2) : v.toFixed(5);
+                        return `<span style="color:#848e9c;font-size:10px;">${lbl}:</span> ${valStr}`;
+                    })
+                    .join(' <span style="color:#2f3640;margin:0 2px;">|</span> ');
+                
+                valEl.innerHTML = html;
+            } catch (e) { valEl.innerText = ''; }
         });
-    }
+    },
+
+    openSettingsByName: function(name) {
+        const ind = global.scActiveIndicators.find(i => i.name === name);
+        if (ind) global.openIndicatorSettings({ name: ind.name, calcParams: ind.params }, ind.paneId);
+    },
+
+    toggleVisible: function(name) {
+        const ind = global.scActiveIndicators.find(i => i.name === name);
+        if (ind && window.tvChart) {
+            ind.visible = (ind.visible !== false) ? false : true;
+            window.tvChart.overrideIndicator({ name: ind.name, visible: ind.visible }, ind.paneId);
+            if (global.saveIndicatorState) global.saveIndicatorState();
+            this.renderLegend();
+        }
+    },
+
+    add: function(name) { global.addIndicatorToChart(name); this.renderLegend(); },
+    remove: function(name) { global.removeIndicatorFromChart(name); this.renderLegend(); },
+    restore: global.restoreIndicators
   };
 
-  console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] Indicator Core initialized with DOM Legend.');
+  console.log('[Wave Alpha] API Fixed with dataIndex support.');
 })(window);
