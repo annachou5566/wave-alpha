@@ -1687,13 +1687,12 @@
 
     add: function(name) {
         if (typeof global.addIndicatorToChart === 'function') global.addIndicatorToChart(name);
-        // Tăng lên 200ms để đảm bảo overrideIndicator(50ms) ở Bước 1 đã chạy xong
         setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 200);
     },
 
     remove: function(name) {
         if (typeof global.removeIndicatorFromChart === 'function') global.removeIndicatorFromChart(name);
-        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 100);
+        setTimeout(() => global.WaveIndicatorAPI.renderLegend(), 200);
     },
 
     openSettings: global.openIndicatorSettings,
@@ -1742,7 +1741,7 @@
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // Mở pointer-events: auto để chuột có thể click được vào nút
+            // Mở pointer-events: auto để click được nút
             item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 0; pointer-events: auto;';
             if (ind.visible === false) item.style.opacity = '0.4';
 
@@ -1750,29 +1749,28 @@
             nameSpan.style.cssText = `color: ${color};`;
             nameSpan.textContent = title + pStr;
 
-            // 🚀 BƠM BỘ NÚT VÀO CUSTOM HTML
-            const actionSpan = document.createElement('span');
-            // Mặc định tàng hình (opacity: 0), chỉ hiện khi hover chuột vào dòng để giao diện gọn gàng
-            actionSpan.style.cssText = 'display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; margin-left: 4px;';
+            // --- BẮT ĐẦU ĐOẠN TẠO NÚT BẰNG HTML ---
+            const btnSpan = document.createElement('span');
+            btnSpan.style.cssText = 'display: inline-flex; gap: 6px; margin-left: 4px; opacity: 0; transition: opacity 0.2s;';
+            
+            // Hiện nút khi trỏ chuột vào dòng để nhìn gọn gàng
+            item.onmouseenter = () => btnSpan.style.opacity = '1';
+            item.onmouseleave = () => btnSpan.style.opacity = '0';
             
             const eyeIcon = ind.visible === false ? '👁️‍🗨️' : '👁️';
-            // Gọi thẳng API bạn đã viết sẵn
-            actionSpan.innerHTML = `
-                <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')">${eyeIcon}</i>
-                <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')">⚙️</i>
-                <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')">❌</i>
+            btnSpan.innerHTML = `
+                <i style="cursor:pointer; font-style:normal" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')">${eyeIcon}</i>
+                <i style="cursor:pointer; font-style:normal" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')">⚙️</i>
+                <i style="cursor:pointer; font-style:normal" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')">❌</i>
             `;
-
-            // Bắt sự kiện hover cho từng hàng chỉ báo
-            item.addEventListener('mouseenter', () => actionSpan.style.opacity = '1');
-            item.addEventListener('mouseleave', () => actionSpan.style.opacity = '0');
+            // --- KẾT THÚC ĐOẠN TẠO NÚT ---
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
             valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px;';
 
             item.appendChild(nameSpan);
-            item.appendChild(actionSpan); // Nhét bộ nút vào giữa Tên và Số liệu
+            item.appendChild(btnSpan); // Nhét bộ nút vào giữa Tên và Số liệu
             item.appendChild(valSpan);
             legDiv.appendChild(item);
         });
