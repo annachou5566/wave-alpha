@@ -810,7 +810,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         // Đăng ký Chỉ báo từ file chart-indicators.js
         if (typeof window.registerWaveIndicators === 'function') window.registerWaveIndicators();
 
-        // 2. KHỞI TẠO KLINECHART
+        // 2. KHỞI TẠO KLINECHART (ĐÃ TÍCH HỢP QUẢN LÝ CHỈ BÁO)
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
@@ -823,13 +823,48 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     },
                     tooltip: { showRule: 'none' }
                 },
+                
+                // 🛑 LÔI 3 NÚT QUẢN LÝ CHỈ BÁO RA ÁNH SÁNG (Dịch xuống 30px để không đè giá) 🛑
+                indicator: {
+                    tooltip: {
+                        showRule: 'always',
+                        showType: 'standard',
+                        text: { marginTop: 30, color: t_text, size: 11, family: 'var(--font-num)' },
+                        icons: [
+                            { id: 'visible', position: 'left', marginLeft: 8, marginTop: 30, icon: '\ue903', fontFamily: 'klinecharts', size: 14, color: t_text, activeColor: t_up, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'setting', position: 'left', marginLeft: 8, marginTop: 30, icon: '\ue902', fontFamily: 'klinecharts', size: 14, color: t_text, activeColor: t_line, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' },
+                            { id: 'close', position: 'left', marginLeft: 8, marginTop: 30, icon: '\ue901', fontFamily: 'klinecharts', size: 14, color: t_text, activeColor: t_down, backgroundColor: 'transparent', activeBackgroundColor: 'transparent' }
+                        ]
+                    }
+                },
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
                 xAxis: { axisLine: { color: 'rgba(255,255,255,0.1)' }, tickText: { color: t_text } }
             }
         });
 
+        // 🛑 LẮNG NGHE SỰ KIỆN KHI NGƯỜI DÙNG BẤM NÚT ⚙️ CÀI ĐẶT HOẶC ❌ XÓA 🛑
+        window.tvChart.subscribeAction('onTooltipIconClick', (params) => {
+            if (params.iconId === 'setting') {
+                if (typeof window.openIndicatorSettings === 'function') {
+                    window.openIndicatorSettings(params.indicator, params.paneId);
+                }
+            } else if (params.iconId === 'close') {
+                // Xóa khỏi bộ nhớ tạm để nó không tự hồi sinh khi đổi khung thời gian
+                if (window.scActiveIndicators) {
+                    window.scActiveIndicators = window.scActiveIndicators.filter(x => !(x.name === params.indicator.name && x.paneId === params.paneId));
+                }
+            }
+        });
+
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
+
+        // PHỤC HỒI CÁC CHỈ BÁO TỪ BỘ NHỚ (KHI ĐỔI KHUNG THỜI GIAN)
+        if (window.scActiveIndicators && window.scActiveIndicators.length > 0) {
+            window.scActiveIndicators.forEach(ind => {
+                try { window.tvChart.createIndicator(ind.name, ind.isStack, { id: ind.paneId }); } catch(e){}
+            });
+        }
 
         // Lắng nghe đổi size trình duyệt
         new ResizeObserver(entries => { if (entries.length === 0 || entries[0].target !== container) return; window.tvChart.resize(); }).observe(container);

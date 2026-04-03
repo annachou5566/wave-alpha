@@ -34,8 +34,9 @@ window.registerWaveIndicators = function() {
             let cumVol = 0; let cumVolPrice = 0; let cumVolPriceSq = 0;
 
             return dataList.map((kLineData, i) => {
-                const currentDay = new Date(kLineData.timestamp).getDate();
-                const prevDay = i > 0 ? new Date(dataList[i - 1].timestamp).getDate() : currentDay;
+                // SỬ DỤNG GIỜ UTC CHUẨN ĐỂ RESET VWAP (00:00 UTC)
+                const currentDay = new Date(kLineData.timestamp).getUTCDate();
+                const prevDay = i > 0 ? new Date(dataList[i - 1].timestamp).getUTCDate() : currentDay;
 
                 if (currentDay !== prevDay) { cumVol = 0; cumVolPrice = 0; cumVolPriceSq = 0; }
 
@@ -60,10 +61,9 @@ window.registerWaveIndicators = function() {
     console.log("🟢 Đã tải thành công Thư viện Chỉ báo Wave Alpha");
 };
 
-
 // 2. GIAO DIỆN UI TÌM KIẾM & QUẢN LÝ CHỈ BÁO
 window.initExpertUI = function() {
-    // Inject Modal
+    // Inject Modal (Thư viện)
     if (!document.getElementById('sc-indicator-modal')) {
         const modalHtml = `
         <div id="sc-indicator-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; backdrop-filter: blur(5px); justify-content: center; align-items: center;">
@@ -109,7 +109,26 @@ window.initExpertUI = function() {
         document.body.appendChild(div.firstElementChild);
     }
 
-    // Inject Topbar Button
+    // Inject Bảng Cài Đặt Thông Số (Settings Modal)
+    if (!document.getElementById('sc-ind-settings-modal')) {
+        const setHtml = `
+        <div id="sc-ind-settings-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 999999; backdrop-filter: blur(5px); justify-content: center; align-items: center;">
+            <div style="background: #1e2329; width: 320px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.9); overflow: hidden;">
+                <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                    <h5 id="sc-ind-settings-title" style="margin: 0; color: #EAECEF; font-size: 15px; font-weight: 700;">⚙️ Cài đặt</h5>
+                    <button onclick="document.getElementById('sc-ind-settings-modal').style.display='none'" style="background: transparent; border: none; color: #848e9c; cursor: pointer; font-size: 16px; transition: 0.2s;" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="sc-ind-settings-body" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+                    </div>
+                <div style="padding: 15px 20px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end;">
+                    <button id="sc-ind-btn-save" style="background: #00F0FF; color: #000; border: none; padding: 6px 20px; border-radius: 4px; font-weight: 800; font-size: 13px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.opacity='0.8'">LƯU LẠI</button>
+                </div>
+            </div>
+        </div>`;
+        const div2 = document.createElement('div'); div2.innerHTML = setHtml; document.body.appendChild(div2.firstElementChild);
+    }
+
+    // Inject Topbar Button (Menu ƒx và công cụ vẽ)
     if (!document.getElementById('btn-fx-indicator')) {
         let timeBtnLists = document.querySelectorAll('.sc-time-btn');
         if (timeBtnLists.length > 0) {
@@ -127,6 +146,9 @@ window.initExpertUI = function() {
     }
 };
 
+// 3. LOGIC XỬ LÝ CLICK VÀ BỘ NHỚ
+if (!window.scActiveIndicators) window.scActiveIndicators = [];
+
 window.openIndicatorModal = function() {
     let modal = document.getElementById('sc-indicator-modal');
     if (modal) modal.style.display = 'flex';
@@ -136,10 +158,51 @@ window.addIndicatorToChart = function(indName) {
     if (!window.tvChart) return;
     document.getElementById('sc-indicator-modal').style.display = 'none'; 
     try {
-        if (indName === 'EMA' || indName === 'VWAP_BANDS') {
-            window.tvChart.createIndicator(indName, true, { id: 'candle_pane' }); 
-        } else {
-            window.tvChart.createIndicator(indName, false, { id: 'pane_' + indName.toLowerCase() }); 
+        let isStack = (indName === 'EMA' || indName === 'VWAP_BANDS');
+        let paneId = isStack ? 'candle_pane' : 'pane_' + indName.toLowerCase();
+        
+        window.tvChart.createIndicator(indName, isStack, { id: paneId }); 
+        
+        // Ghi nhớ vào bộ tạm để đổi khung giờ không bị mất
+        if (!window.scActiveIndicators.find(x => x.name === indName)) {
+            window.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId });
         }
     } catch (e) {}
+};
+
+// Logic: Đọc thông số và vẽ ra cửa sổ Cài Đặt (Settings)
+window.openIndicatorSettings = function(indicator, paneId) {
+    let modal = document.getElementById('sc-ind-settings-modal');
+    let title = document.getElementById('sc-ind-settings-title');
+    let body = document.getElementById('sc-ind-settings-body');
+    let btnSave = document.getElementById('sc-ind-btn-save');
+
+    if (!modal || !title || !body || !btnSave) return;
+
+    title.innerText = "⚙️ " + (indicator.shortName || indicator.name);
+    body.innerHTML = ''; 
+
+    let currentParams = indicator.calcParams || [];
+    currentParams.forEach((val, idx) => {
+        body.innerHTML += `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #848e9c; font-size: 13px; font-weight: 600;">Thông số ${idx + 1}:</span>
+                <input type="number" step="any" id="sc-ind-param-${idx}" value="${val}" style="width: 100px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 5px 10px; color: #EAECEF; outline: none; font-size: 13px; text-align: center; font-family: var(--font-num);">
+            </div>
+        `;
+    });
+
+    btnSave.onclick = function() {
+        let newParams = [];
+        currentParams.forEach((_, idx) => {
+            let input = document.getElementById(`sc-ind-param-${idx}`);
+            if (input) newParams.push(parseFloat(input.value) || 0);
+        });
+
+        // Ra lệnh KLineChart vẽ lại
+        window.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId);
+        modal.style.display = 'none'; 
+    };
+
+    modal.style.display = 'flex'; 
 };
