@@ -721,67 +721,79 @@ window.openProChart = function(t, isTimeSwitch = false) {
     overlay.classList.add('active');
     document.body.classList.add('overlay-active');
 
-    // ... (Giữ nguyên phần cập nhật giá trị header bên trên) ...
     if (!isTimeSwitch) {
         document.getElementById('sc-coin-symbol').innerText = (t.symbol || 'UNKNOWN') + '/USDT';
         let nameEl = document.getElementById('sc-coin-name'); if (nameEl) nameEl.innerText = t.name || t.symbol; 
         document.getElementById('sc-coin-logo').src = t.icon || 'assets/tokens/default.png';
         document.getElementById('sc-live-price').innerText = '$' + window.formatPrice(t.price);
+        
+        let limitEl = document.getElementById('sc-algo-limit');
+        if (limitEl) { limitEl.innerHTML = `ALGO LIMIT: ⏳ TÍNH TOÁN...`; limitEl.style.color = '#F0B90B'; limitEl.style.background = 'rgba(240,185,11,0.1)'; limitEl.style.borderColor = 'rgba(240,185,11,0.3)'; }
+        
         let chg = parseFloat(t.change_24h) || 0; let chgEl = document.getElementById('sc-change-24h');
         if (chgEl) { chgEl.innerText = `(${(chg >= 0 ? '+' : '')}${chg.toFixed(2)}%)`; chgEl.style.color = chg >= 0 ? '#00F0FF' : '#FF007F'; }
+
+        document.getElementById('sc-top-mc').innerText = '$' + window.formatCompactNum(t.market_cap);
+        document.getElementById('sc-top-liq').innerText = '$' + window.formatCompactNum(t.liquidity);
+        document.getElementById('sc-top-vol').innerText = '$' + window.formatCompactNum(t.volume?.daily_total || 0);
+        
+        let el24hVol = document.getElementById('sc-top-vol-24h');
+        if (el24hVol) el24hVol.innerText = '$' + window.formatCompactNum(t.volume?.rolling_24h || 0);
+        document.getElementById('sc-top-hold').innerText = window.formatInt(t.holders);
+        document.getElementById('sc-top-tx').innerText = window.formatInt(t.tx_count);
     }
 
     const container = document.getElementById('sc-chart-container');
     if (window.tvChart) { try { klinecharts.dispose(container); } catch(e) {} window.tvChart = null; }
     window.scActivePriceLines = [];
     
-    // 🚀 BƯỚC 1: TẠO WRAPPER ĐỂ TÁCH LEGEND RA KHỎI CANVAS
-    let wrapper = document.getElementById('sc-chart-wrapper');
-    if (!wrapper) {
-        wrapper = document.createElement('div');
-        wrapper.id = 'sc-chart-wrapper';
-        wrapper.style.cssText = 'position:relative; width:100%; height:100%;';
-        container.parentNode.insertBefore(wrapper, container);
-        wrapper.appendChild(container);
-    }
+    // XÓA SẠCH VÀ KHÔNG DÙNG WRAPPER (Để giữ nguyên cấu trúc CSS Flexbox của bạn)
+    container.innerHTML = ''; 
 
-    container.innerHTML = ''; // Để trống hoàn toàn container
-
-    // 🚀 BƯỚC 2: TẠO LEGEND LÀ SIBLING (NGANG HÀNG VỚI CANVAS - FIX LỖI CLICK)
-    let legendOverlay = document.getElementById('sc-main-tooltip');
-    if (!legendOverlay) {
-        legendOverlay = document.createElement('div');
-        legendOverlay.id = 'sc-main-tooltip';
-        legendOverlay.style.cssText = 'position:absolute; top:10px; left:10px; z-index:100; display:flex; flex-direction:column; gap:6px; pointer-events:none;';
-        
-        legendOverlay.innerHTML = `
-            <div style="font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px; position: absolute; top: 15px; left: 5px; z-index: -1;">WAVE ALPHA</div>
-            <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); pointer-events: none;">
-                <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
-            </div>
-            <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto;"></div>
-        `;
-        wrapper.appendChild(legendOverlay);
-    }
-
-    // Tái lập các Box dữ liệu phía dưới (Giữ lại logic cũ của bác)
     if (!isTimeSwitch) {
         let tradesBox = document.getElementById('sc-live-trades');
         if (tradesBox) tradesBox.innerHTML = '<div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>';
+        window.scCurrentCluster = null; 
+        window.quantStats = { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
+        
+        let fStatus = document.getElementById('fut-live-status'); if(fStatus) { fStatus.innerText = '⏳ ĐANG TẢI...'; fStatus.style.color = 'var(--term-warn)'; }
+        let oiElUI = document.getElementById('fut-oi-val'); if(oiElUI) oiElUI.innerText = '$--';
+        let fundVal = document.getElementById('fut-funding-val'); if(fundVal) fundVal.innerText = '--%';
+        let liqLEl = document.getElementById('fut-liq-long'); if(liqLEl) liqLEl.innerText = '$0';
+        let liqSEl = document.getElementById('fut-liq-short'); if(liqSEl) liqSEl.innerText = '$0';
+        let fVerdict = document.getElementById('fut-ai-verdict'); if(fVerdict) { fVerdict.innerText = '⚖️ ĐANG PHÂN TÍCH...'; fVerdict.style.cssText = 'font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #848e9c;'; }
+        
+        let tape = document.getElementById('cc-sniper-tape');
+        if(tape) tape.innerHTML = '<div style="font-size: 11px; color: #527c82; text-align: center; margin-top: 50px; font-style:italic;">Đang quét...</div>';
+        
+        let liqTape = document.getElementById('fut-liq-tape');
+        if(liqTape) liqTape.innerHTML = '<div style="font-size: 10px; color: #527c82; text-align: center; margin-top: 45px; font-style:italic;">Đang rình cá mập bị luộc...</div>';
+        window.lastLiqEvent = null; 
         
         setTimeout(() => {
             if (typeof window.injectSmartMoneyTab === 'function') window.injectSmartMoneyTab();
             if (typeof window.injectFuturesTab === 'function') window.injectFuturesTab();
             if (typeof window.fetchSmartMoneyData === 'function') window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
+            if (typeof window.fetchFuturesSentiment === 'function') window.fetchFuturesSentiment(t.symbol);
+            if (typeof window.fetchCommandCenterFutures === 'function') window.fetchCommandCenterFutures(t.symbol);
         }, 100);
     }
 
     setTimeout(() => {
+        let priceVal = parseFloat(t.price) || 1;
+        let prec = 4;
+        if (priceVal < 1) prec = 6; if (priceVal < 0.1) prec = 8; if (priceVal < 0.0001) prec = 10;
+
         let isTrad = window.currentTheme === 'trad';
         let t_text = isTrad ? '#848e9c' : '#527c82'; let t_line = isTrad ? '#00F0FF' : '#41e6e7'; let t_up = isTrad ? '#0ECB81' : '#2af592'; let t_down = isTrad ? '#F6465D' : '#cb55e3';
+        
+        let overlayElem = document.getElementById('super-chart-overlay');
+        if(overlayElem) { overlayElem.classList.remove('theme-cyber', 'theme-trad'); overlayElem.classList.add('theme-' + window.currentTheme); }
+        let themeSel = document.getElementById('sc-theme-select'); if(themeSel) themeSel.value = window.currentTheme;
+
         if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
 
-        // 🚀 ĐỔI MỚI 2: TẮT TEXT CỦA KLINECHART TRÊN MAIN PANE ĐỂ TRÁNH TRÙNG LẶP VỚI HTML LEGEND
+        // 1. KHỞI TẠO CHART TRƯỚC (ĐỂ NÓ TẠO CANVAS)
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
@@ -789,7 +801,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    tooltip: { showRule: 'none' } // Tắt hoàn toàn Tooltip mặc định của nến & Main Pane
+                    tooltip: { showRule: 'none' } // Tắt tooltip candle để hiển thị HTML Legend
                 },
                 indicator: {
                     tooltip: {
@@ -801,56 +813,52 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // 🛑 SỰ KIỆN NÀY CHỈ CÒN DÙNG CHO CÁC PANE PHỤ NHƯ MACD, RSI
+        // 2. GẮN DOM LEGEND LÊN TRÊN CÙNG SAU KHI INIT XONG (Chống Canvas nuốt click)
+        let legendOverlay = document.createElement('div');
+        legendOverlay.id = 'sc-main-tooltip';
+        legendOverlay.style.cssText = 'position:absolute; top:10px; left:10px; z-index:100; display:flex; flex-direction:column; gap:6px; pointer-events:none;';
+        legendOverlay.innerHTML = `
+            <div style="font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px; position: absolute; top: 15px; left: 5px; z-index: -1;">WAVE ALPHA</div>
+            <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8); pointer-events: none;">
+                <span id="tp-o-wrap">O <span id="tp-o" style="color:#eaecef;">--</span></span><span id="tp-h-wrap">H <span id="tp-h" style="color:#eaecef;">--</span></span><span id="tp-l-wrap">L <span id="tp-l" style="color:#eaecef;">--</span></span><span id="tp-c-wrap">C <span id="tp-c" style="color:#eaecef;">--</span></span><span>Vol <span id="tp-v" style="color:#eaecef;">--</span></span>
+            </div>
+            <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto;"></div>
+        `;
+        container.appendChild(legendOverlay);
+
+        // Nút click cho các indicator ở Pane phụ (MACD, RSI)
         window.tvChart.subscribeAction('onTooltipIconClick', (params) => {
             if (params.iconId === 'setting' && window.WaveIndicatorAPI) window.WaveIndicatorAPI.openSettings(params.indicator, params.paneId);
             else if (params.iconId === 'close' && window.WaveIndicatorAPI) window.WaveIndicatorAPI.remove(params.indicator.name);
         });
 
-        window.tvChart.setPriceVolumePrecision(4, 2);
+        // Set lại độ chia thập phân chuẩn của bạn
+        window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
 
-        // 🚀 ĐỔI MỚI 3: LẤY DATA THỰC TẾ LÚC RÊ CHUỘT TRUYỀN VÀO BẢNG HTML LEGEND
+        // Cập nhật DOM Legend khi Hover
         const tooltipEl = document.getElementById('sc-custom-tooltip'); 
         const tpV = document.getElementById('tp-v'); 
-
         window.tvChart.subscribeAction('onCrosshairChange', (param) => {
-            // 1. Kiểm tra tính hợp lệ của dữ liệu
-            if (!param || param.dataIndex === undefined || param.dataIndex < 0) {
-                // Nếu chuột rời khỏi chart, có thể ẩn tooltip nếu muốn
-                // if (tooltipEl) tooltipEl.style.display = 'none';
-                return;
-            }
-
+            if (!param || param.dataIndex === undefined || param.dataIndex < 0) return;
             if (tooltipEl) tooltipEl.style.display = 'flex';
 
             const dataList = window.tvChart.getDataList();
             const ohlc = dataList[param.dataIndex];
             if (!ohlc) return;
 
-            // 2. Cập nhật dữ liệu nến (OHLCV) lên HTML
-            const elO = document.getElementById('tp-o'); 
-            const elH = document.getElementById('tp-h'); 
-            const elL = document.getElementById('tp-l'); 
-            const elC = document.getElementById('tp-c');
-            
-            if (elO) elO.innerText = window.formatPrice(ohlc.open); 
-            if (elH) elH.innerText = window.formatPrice(ohlc.high); 
-            if (elL) elL.innerText = window.formatPrice(ohlc.low);
-            if (elC) { 
-                elC.innerText = window.formatPrice(ohlc.close); 
-                elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; 
-            }
+            const elO = document.getElementById('tp-o'); const elH = document.getElementById('tp-h'); const elL = document.getElementById('tp-l'); const elC = document.getElementById('tp-c');
+            if (elO) elO.innerText = window.formatPrice(ohlc.open); if (elH) elH.innerText = window.formatPrice(ohlc.high); if (elL) elL.innerText = window.formatPrice(ohlc.low);
+            if (elC) { elC.innerText = window.formatPrice(ohlc.close); elC.style.color = ohlc.close >= ohlc.open ? '#0ECB81' : '#F6465D'; }
             if (tpV) tpV.innerText = window.formatCompactUSD(ohlc.volume || 0);
 
-            // 3. 🛑 SỬA TẠI ĐÂY: Truyền dataIndex thay vì indicatorData
-            // Hàm này sẽ giúp bảng HTML Legend tự tra cứu dữ liệu VWAP/EMA chuẩn xác
+            // Truyền trực tiếp dataIndex xuống hệ thống API chuẩn xác của bạn
             if (window.WaveIndicatorAPI && typeof window.WaveIndicatorAPI.updateLegendValues === 'function') {
                 window.WaveIndicatorAPI.updateLegendValues(param.dataIndex);
             }
         });
 
-        // 4. NẠP DỮ LIỆU LỊCH SỬ & BẬT API
+        // Nạp Data
         if (typeof window.fetchBinanceHistory === 'function') {
             window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
                 if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
@@ -858,7 +866,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 if (window.WaveIndicatorAPI) {
                     window.WaveIndicatorAPI.initUI();
                     window.WaveIndicatorAPI.restore();
-                    window.WaveIndicatorAPI.renderLegend(); // Render khung Legend ban đầu
+                    window.WaveIndicatorAPI.renderLegend();
                 }
                 if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
             });
