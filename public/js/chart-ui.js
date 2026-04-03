@@ -534,8 +534,7 @@ document.addEventListener('click', function(e) {
 window.applyFishFilter = function() {
     if (!window.tvChart) return;
 
-    // 🚀 BƯỚC ĐỘT PHÁ: Đăng ký Template "cyberMarker" độc quyền cho Wave Alpha (Chỉ chạy 1 lần)
-    // Tự vẽ trực tiếp lên Canvas, dẹp bỏ hoàn toàn simpleAnnotation mặc định
+    // 🚀 BƯỚC ĐỘT PHÁ: Đăng ký Template "cyberMarker"
     if (!window.isCyberMarkerRegistered && typeof klinecharts.registerOverlay === 'function') {
         klinecharts.registerOverlay({
             name: 'cyberMarker',
@@ -545,25 +544,33 @@ window.applyFishFilter = function() {
             createPointFigures: ({ overlay, coordinates }) => {
                 if (!coordinates || coordinates.length === 0) return [];
                 let data = overlay.extendData;
-                let isBuy = data.isBuy; // Phân biệt mặt trên hay mặt dưới nến
+                let isBuy = data.isBuy; 
                 
                 return [
                     {
                         type: 'text',
                         attrs: {
                             x: coordinates[0].x,
-                            // Tọa độ Y: Buy (mặt dưới) thì lùi xuống 10px, Sell (mặt trên) thì đẩy lên 10px
-                            y: coordinates[0].y + (isBuy ? 10 : -10), 
+                            y: coordinates[0].y + (isBuy ? 5 : -5), 
                             text: (isBuy ? '▲ ' : '▼ ') + data.text,
                             align: 'center',
-                            baseline: isBuy ? 'top' : 'bottom' // Treo chữ sao cho không đè vào nến
+                            baseline: isBuy ? 'top' : 'bottom' 
                         },
-                        ignoreEvent: true, // Xuyên qua chuột, không làm kẹt biểu đồ
+                        ignoreEvent: true, 
                         styles: {
                             color: data.color,
-                            size: 11,
+                            size: 10,
                             family: 'var(--font-num), sans-serif',
-                            weight: '800'
+                            weight: 'bold',
+                            
+                            // 🛑 ĐÂY LÀ CHÌA KHÓA TRIỆT TIÊU KHUNG XANH DƯƠNG MẶC ĐỊNH 🛑
+                            backgroundColor: 'transparent', // Nền hoàn toàn trong suốt
+                            borderColor: 'transparent',     // Không có viền
+                            borderSize: 0,                  // Độ dày viền = 0
+                            paddingLeft: 0,
+                            paddingRight: 0,
+                            paddingTop: 0,
+                            paddingBottom: 0
                         }
                     }
                 ];
@@ -613,7 +620,6 @@ window.applyFishFilter = function() {
             
             window.waveMarkerIds.push(overlayId);
 
-            // GỌI TEMPLATE 'cyberMarker' VỪA TẠO Ở TRÊN
             window.tvChart.createOverlay({
                 id: overlayId,
                 name: 'cyberMarker', 
