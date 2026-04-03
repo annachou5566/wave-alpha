@@ -534,119 +534,119 @@ document.addEventListener('click', function(e) {
 window.applyFishFilter = function() {
     if (!window.tvChart) return;
 
-    // 🚀 BƯỚC 1: ĐĂNG KÝ TEMPLATE "cyberMarker" VỚI THUẬT TOÁN CHỐNG GIẬT PIXEL
-    if (!window.isCyberMarkerRegistered && typeof klinecharts.registerOverlay === 'function') {
-        klinecharts.registerOverlay({
-            name: 'cyberMarker',
-            needDefaultPointFigure: false,
-            needDefaultXAxisFigure: false,
-            needDefaultYAxisFigure: false,
-            createPointFigures: ({ overlay, coordinates }) => {
-                if (!coordinates || coordinates.length === 0) return [];
-                let data = overlay.extendData;
-                let isBuy = data.isBuy; 
-                
-                // 🛑 BÍ QUYẾT CHỐNG GIẬT (1): LÀM TRÒN TỌA ĐỘ 
-                // Tránh lỗi Canvas render lơ lửng ở nửa pixel gây rung lắc chữ khi chart chạy
-                let pixelX = Math.round(coordinates[0].x);
-                let pixelY = Math.round(coordinates[0].y) + (isBuy ? 10 : -10); 
-                
-                return [
-                    {
-                        type: 'text',
-                        attrs: {
-                            x: pixelX,
-                            y: pixelY, 
-                            text: (isBuy ? '▲ ' : '▼ ') + data.text,
-                            align: 'center',
-                            baseline: isBuy ? 'top' : 'bottom' 
-                        },
-                        ignoreEvent: true, 
-                        styles: {
-                            color: data.color,
-                            size: 11,
-                            // 🛑 BÍ QUYẾT FONT ĐẸP: Ghi đích danh font chữ sắc nét
-                            family: 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                            weight: '800',
-                            backgroundColor: 'transparent', 
-                            borderColor: 'transparent',     
-                            borderSize: 0,                  
-                            paddingLeft: 0, paddingRight: 0, paddingTop: 0, paddingBottom: 0
+    try {
+        // 🚀 BƯỚC 1: TẠO TEMPLATE ĐỘC QUYỀN VỚI HÀNG RÀO BẢO VỆ CHỐNG CRASH
+        if (!window.isCyberMarkerRegistered && window.klinecharts && typeof window.klinecharts.registerOverlay === 'function') {
+            window.klinecharts.registerOverlay({
+                name: 'cyberMarker',
+                needDefaultPointFigure: false,
+                needDefaultXAxisFigure: false,
+                needDefaultYAxisFigure: false,
+                createPointFigures: ({ overlay, coordinates }) => {
+                    if (!coordinates || coordinates.length === 0) return [];
+                    
+                    // BẢO VỆ 1: Xử lý an toàn nếu dữ liệu cũ kẹt lại là String thay vì Object
+                    let data = overlay.extendData || {};
+                    let textVal = typeof data === 'string' ? data : (data.text || '');
+                    let isBuy = data.isBuy === true; 
+                    let colorVal = data.color || '#00F0FF'; // Cấp màu dự phòng nếu thiếu
+                    
+                    // BẢO VỆ 2: Làm tròn số để chữ đứng im, không bị rung giật (Jitter)
+                    let pixelX = Math.round(coordinates[0].x);
+                    let pixelY = Math.round(coordinates[0].y) + (isBuy ? 8 : -8); 
+                    
+                    return [
+                        {
+                            type: 'text',
+                            attrs: {
+                                x: pixelX,
+                                y: pixelY, 
+                                text: (isBuy ? '▲ ' : '▼ ') + textVal,
+                                align: 'center',
+                                baseline: isBuy ? 'top' : 'bottom' 
+                            },
+                            ignoreEvent: true, 
+                            styles: {
+                                color: colorVal,
+                                size: 11,
+                                family: 'Arial, "Segoe UI", Roboto, sans-serif', // Font hệ thống an toàn nhất
+                                weight: 'bold'
+                                // KLineChart V9 mặc định KHÔNG có hộp nền nếu ta chỉ dùng type: 'text'
+                            }
                         }
-                    }
-                ];
+                    ];
+                }
+            });
+            window.isCyberMarkerRegistered = true;
+        }
+
+        // Kiểm tra checkbox giao diện an toàn
+        let checkboxes = document.querySelectorAll('.marker-filter-cb');
+        if (checkboxes.length === 0) return; 
+
+        let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+        if (!window.activeWaveMarkers) window.activeWaveMarkers = {};
+        let newActiveMarkers = {};
+
+        // Nếu tắt filter hoặc ở khung ngày/giờ -> Xóa mượt mà
+        if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
+            for (let oldId in window.activeWaveMarkers) {
+                try { window.tvChart.removeOverlay(oldId); } catch(e) {}
+            }
+            window.activeWaveMarkers = {};
+            return;
+        }
+
+        // Lọc dữ liệu an toàn
+        let filteredMarkers = (window.scChartMarkers || []).filter(m => {
+            let type = m.fishType || 'bot';
+            if (type === 'sweep') type = 'bot';
+            return activeTypes.includes(type);
+        });
+
+        // BẢO VỆ 3: Đảm bảo chart có nến trước khi vẽ
+        let chartData = window.tvChart.getDataList();
+        if (!chartData || chartData.length === 0) return;
+
+        filteredMarkers.forEach((m, idx) => {
+            let targetTs = m.time * 1000;
+            let overlayId = 'marker_' + targetTs + '_' + idx;
+            
+            newActiveMarkers[overlayId] = true;
+
+            // Thuật toán Smart-Diff: CHỈ VẼ MỚI NẾU CHƯA TỒN TẠI (Chống nhấp nháy cực mạnh)
+            if (!window.activeWaveMarkers[overlayId]) {
+                let candle = chartData.find(d => d.timestamp === targetTs);
+                if (!candle) candle = chartData[chartData.length - 1];
+
+                if (candle) {
+                    let isBuy = m.position === 'belowBar'; 
+                    let yPrice = isBuy ? candle.low : candle.high;
+
+                    try {
+                        window.tvChart.createOverlay({
+                            id: overlayId,
+                            name: 'cyberMarker', 
+                            extendData: { isBuy: isBuy, text: m.text, color: m.color },
+                            points: [{ timestamp: targetTs, value: yPrice }]
+                        });
+                    } catch(err) {} // Cứu hộ cục bộ
+                }
             }
         });
-        window.isCyberMarkerRegistered = true;
-    }
 
-    // Lấy trạng thái của các nút Checkbox
-    let checkboxes = document.querySelectorAll('.marker-filter-cb');
-    if (checkboxes.length === 0) return; 
-
-    let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-
-    // 🛑 BÍ QUYẾT CHỐNG GIẬT (2): THUẬT TOÁN SMART-DIFF
-    // Chỉ tạo marker CHƯA TỒN TẠI, không xóa rồi vẽ lại liên tục
-    if (!window.activeWaveMarkers) window.activeWaveMarkers = {};
-    let newActiveMarkers = {};
-
-    // Nếu tắt hết các nút lọc, xóa sạch marker trên chart và thoát
-    if (activeTypes.length === 0 || (window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s')) {
+        // Dọn dẹp những marker đã tắt checkbox
         for (let oldId in window.activeWaveMarkers) {
-            try { window.tvChart.removeOverlay(oldId); } catch(e) {}
-        }
-        window.activeWaveMarkers = {};
-        return;
-    }
-
-    let filteredMarkers = window.scChartMarkers.filter(m => {
-        let type = m.fishType || 'bot';
-        if (type === 'sweep') type = 'bot';
-        return activeTypes.includes(type);
-    });
-
-    let chartData = window.tvChart.getDataList();
-
-    filteredMarkers.forEach((m, idx) => {
-        let targetTs = m.time * 1000;
-        let overlayId = 'marker_' + targetTs + '_' + idx;
-        
-        // Ghi nhận marker này cần được hiển thị
-        newActiveMarkers[overlayId] = true;
-
-        // CHỈ TẠO MỚI NẾU MARKER NÀY CHƯA TỪNG ĐƯỢC VẼ (CHỐNG NHẤP NHÁY)
-        if (!window.activeWaveMarkers[overlayId]) {
-            let candle = chartData.find(d => d.timestamp === targetTs);
-            if (!candle && chartData.length > 0) candle = chartData[chartData.length - 1];
-
-            if (candle) {
-                let isBuy = m.position === 'belowBar'; 
-                let yPrice = isBuy ? candle.low : candle.high;
-
-                window.tvChart.createOverlay({
-                    id: overlayId,
-                    name: 'cyberMarker', 
-                    extendData: {
-                        isBuy: isBuy,
-                        text: m.text,
-                        color: m.color
-                    },
-                    points: [{ timestamp: targetTs, value: yPrice }]
-                });
+            if (!newActiveMarkers[oldId]) { 
+                try { window.tvChart.removeOverlay(oldId); } catch(e) {}
             }
         }
-    });
+        window.activeWaveMarkers = newActiveMarkers;
 
-    // 3. TÌM VÀ XÓA NHỮNG MARKER CŨ MÀ USER ĐÃ BỎ CHECKBOX
-    for (let oldId in window.activeWaveMarkers) {
-        if (!newActiveMarkers[oldId]) { // Nếu ID cũ không có trong danh sách mới
-            try { window.tvChart.removeOverlay(oldId); } catch(e) {}
-        }
+    } catch (error) {
+        console.error("🔴 Đã chặn được lỗi Crash tại applyFishFilter:", error);
     }
-
-    // Cập nhật lại bộ nhớ cho vòng lặp tiếp theo
-    window.activeWaveMarkers = newActiveMarkers;
 };
 
 // Hàm hỗ trợ Xóa hình vẽ của User cho Bước 4 (không xóa Marker cá voi)
