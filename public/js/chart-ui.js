@@ -803,10 +803,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
                     tooltip: { showRule: 'none' }
                 },
-                // ✅ Thêm lại cấu hình tắt tooltip mặc định của KLineCharts cho indicator
-                indicator: { 
-                    tooltip: { showRule: 'none' } 
-                },
+                /* XÓA KHỐI indicator: { tooltip: { showRule: 'none' } } Ở ĐÂY ĐI */
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
             }
         });

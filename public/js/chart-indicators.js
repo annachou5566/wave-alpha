@@ -1730,19 +1730,35 @@
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // Giao diện tinh gọn, nằm ngoan ngoãn ngay dưới OHLC, không có nút vướng víu
-            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 0; pointer-events: none;';
+            // 1. SỬA pointer-events thành auto để có thể bấm được nút
+            item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 0; pointer-events: auto;';
             if (ind.visible === false) item.style.opacity = '0.4';
 
             const nameSpan = document.createElement('span');
             nameSpan.style.cssText = `color: ${color};`;
             nameSpan.textContent = title + pStr;
 
+            // 2. BỔ SUNG HTML BỘ NÚT (Sử dụng trực tiếp API bạn đã viết)
+            const actionSpan = document.createElement('span');
+            actionSpan.style.cssText = 'display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; margin-left: 4px;';
+            
+            const eyeIcon = ind.visible === false ? '👁️‍🗨️' : '👁️';
+            actionSpan.innerHTML = `
+                <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')">${eyeIcon}</i>
+                <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')">⚙️</i>
+                <i style="cursor:pointer; font-style:normal; font-size: 11px;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')">❌</i>
+            `;
+
+            // Hover chuột vào dòng sẽ hiện nút, rời chuột sẽ ẩn đi (giữ đúng tiêu chí gọn gàng của bạn)
+            item.addEventListener('mouseenter', () => actionSpan.style.opacity = '1');
+            item.addEventListener('mouseleave', () => actionSpan.style.opacity = '0');
+
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
             valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px;';
 
             item.appendChild(nameSpan);
+            item.appendChild(actionSpan); // Nhét bộ nút vào giữa tên và số liệu
             item.appendChild(valSpan);
             legDiv.appendChild(item);
         });
