@@ -969,32 +969,31 @@ window.openProChart = function(t, isTimeSwitch = false) {
         });
         window._chartResizeObserver.observe(container);
 
-        // [FIX 1.2] Áp dụng màu Chart và Grid từ LocalStorage khi khởi tạo
+        // [FIX 1.2] Áp dụng màu Chart, Grid VÀ Viền Nến từ LocalStorage khi khởi tạo
         const ws = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
         
-        // Cài màu nền cho DIV container
         const chartContainer = document.getElementById('sc-chart-container');
         if (chartContainer) chartContainer.style.background = ws.colBg || '#1e2329';
 
         if (ws.colUp || ws.showGrid === false || ws.colBg) {
+            const ub = ws.colUp || t_up;
+            const ubd = ws.colUpBd || ub;
+            const db = ws.colDown || t_down;
+            const dbd = ws.colDownBd || db;
+
             window.tvChart.setStyles({
-                watermark: {
-                    show: true,
-                    text: 'WAVE ALPHA',
-                    color: 'rgba(255, 255, 255, 0.05)',
-                    size: 48,
-                    family: 'system-ui, sans-serif',
-                    weight: '800'
-                },
                 grid: { 
                     horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }, 
                     vertical: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' } 
                 },
                 candle: { bar: { 
-                    upColor: ws.colUp || t_up, downColor: ws.colDown || t_down, 
-                    upBorderColor: ws.colUp || t_up, downBorderColor: ws.colDown || t_down, 
-                    upWickColor: ws.colUp || t_up, downWickColor: ws.colDown || t_down 
-                }}
+                    upColor: ub, downColor: db, 
+                    upBorderColor: ubd, downBorderColor: dbd, 
+                    upWickColor: ubd, downWickColor: dbd 
+                }},
+                watermark: {
+                    show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, family: 'system-ui, sans-serif', weight: '800'
+                }
             });
         }
 

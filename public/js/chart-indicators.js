@@ -1442,43 +1442,45 @@
         </button>
             <div id="wa-chart-cfg-menu" style="display:none; position:absolute; top:calc(100% + 6px); right:0;
                  background:${COLOR.bg}; border:1px solid ${COLOR.border}; border-radius:10px;
-                 padding:14px 16px; min-width:230px; z-index:20000; box-shadow:0 12px 32px rgba(0,0,0,0.8);">
-                <div style="font-size:10px; font-weight:800; color:${COLOR.muted}; letter-spacing:1.2px; margin-bottom:12px;">CÀI ĐẶT BIỂU ĐỒ</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="color:${COLOR.white}; font-size:12px;">Đường Grid</span>
+                 padding:16px; min-width:270px; z-index:20000; box-shadow:0 16px 40px rgba(0,0,0,0.9);">
+                
+                <div style="font-size:10px; font-weight:800; color:${COLOR.muted}; letter-spacing:1.2px; margin-bottom:14px;">⚙️ TÙY CHỈNH MÀU SẮC</div>
+                
+                <div style="display:grid; grid-template-columns: 80px 75px 26px 26px; align-items:center; gap:8px; margin-bottom:16px;">
+                    <span style="color:${COLOR.muted}; font-size:10px; text-align:right; grid-column:3" title="Màu Thân Nến">THÂN</span>
+                    <span style="color:${COLOR.muted}; font-size:10px; text-align:right; grid-column:4" title="Màu Viền Nến">VIỀN</span>
+
+                    <span style="color:${COLOR.white};font-size:12px;">📈 Nến Tăng</span>
+                    <input type="text" id="wa-hex-up" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none;" onchange="window.waCsSync('up', this.value); window.waCsApply()">
+                    <input type="color" id="wa-color-up" title="Màu Thân" style="width:26px;height:24px;border:1px solid ${COLOR.border};border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-up').value=this.value; window.waCsApply()">
+                    <input type="color" id="wa-color-up-bd" title="Màu Viền" style="width:26px;height:24px;border:1px solid ${COLOR.border};border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="window.waCsApply()">
+
+                    <span style="color:${COLOR.white};font-size:12px;">📉 Nến Giảm</span>
+                    <input type="text" id="wa-hex-down" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none;" onchange="window.waCsSync('down', this.value); window.waCsApply()">
+                    <input type="color" id="wa-color-down" title="Màu Thân" style="width:26px;height:24px;border:1px solid ${COLOR.border};border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-down').value=this.value; window.waCsApply()">
+                    <input type="color" id="wa-color-down-bd" title="Màu Viền" style="width:26px;height:24px;border:1px solid ${COLOR.border};border-radius:4px;cursor:pointer;background:transparent;padding:1px;" oninput="window.waCsApply()">
+
+                    <span style="color:${COLOR.white};font-size:12px;">🖼️ Màu Nền</span>
+                    <input type="text" id="wa-hex-bg" maxlength="11" style="width:100%; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none;" onchange="window.waCsSync('bg', this.value); window.waCsApply()">
+                    <input type="color" id="wa-color-bg" title="Màu Nền" style="width:26px;height:24px;border:1px solid ${COLOR.border};border-radius:4px;cursor:pointer;background:transparent;padding:1px; grid-column: 3 / span 2;" oninput="document.getElementById('wa-hex-bg').value=this.value; window.waCsApply()">
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid ${COLOR.border};">
+                    <span style="color:${COLOR.white}; font-size:12px;">Đường Lưới (Grid)</span>
                     <div id="wa-grid-toggle" onclick="window.waCsToggleGrid()" data-on="1" style="width:36px; height:20px; background:#00F0FF; border-radius:34px; cursor:pointer; position:relative; transition:.2s;">
                         <div id="wa-grid-knob" style="position:absolute; right:2px; top:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s;"></div>
                     </div>
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <span style="color:${COLOR.white};font-size:12px;">🕯️ Nến Tăng</span>
-                <div style="display:flex; gap:6px; align-items:center;">
-                    <input type="text" id="wa-hex-up" value="#0ECB81" maxlength="7" style="width:60px; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none; font-family:monospace;" onchange="document.getElementById('wa-color-up').value = this.value.length === 7 ? this.value : '#0ECB81'; window.waCsApply()">
-                    <input type="color" id="wa-color-up" value="#0ECB81" style="width:28px;height:24px;border:1px solid ${COLOR.border};border-radius:5px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-up').value = this.value; window.waCsApply()">
+
+                <div style="font-size:10px; color:${COLOR.muted}; margin-bottom:8px; font-weight:600;">🎨 BỘ MÀU CHUYÊN NGHIỆP:</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
+                    <button onclick="window.waCsSetTheme('#0ECB81','#0ECB81','#F6465D','#F6465D','#1e2329')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🌊 Wave Alpha</button>
+                    <button onclick="window.waCsSetTheme('transparent','#FFFFFF','#FFFFFF','#FFFFFF','#131722')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🐼 Trắng Đen</button>
+                    <button onclick="window.waCsSetTheme('#00F0FF','#00F0FF','#F0B90B','#F0B90B','#0d1117')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🤖 Cyberpunk</button>
+                    <button onclick="window.waCsSetTheme('#089981','#089981','#F23645','#F23645','#ffffff')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.bg}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">☀️ Light Mode</button>
                 </div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <span style="color:${COLOR.white};font-size:12px;">🕯️ Nến Giảm</span>
-                <div style="display:flex; gap:6px; align-items:center;">
-                    <input type="text" id="wa-hex-down" value="#F6465D" maxlength="7" style="width:60px; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none; font-family:monospace;" onchange="document.getElementById('wa-color-down').value = this.value.length === 7 ? this.value : '#F6465D'; window.waCsApply()">
-                    <input type="color" id="wa-color-down" value="#F6465D" style="width:28px;height:24px;border:1px solid ${COLOR.border};border-radius:5px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-down').value = this.value; window.waCsApply()">
-                </div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <span style="color:${COLOR.white};font-size:12px;">🖼️ Màu Nền</span>
-                <div style="display:flex; gap:6px; align-items:center;">
-                    <input type="text" id="wa-hex-bg" value="#161a1e" maxlength="7" style="width:60px; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none; font-family:monospace;" onchange="document.getElementById('wa-color-bg').value = this.value.length === 7 ? this.value : '#161a1e'; window.waCsApply()">
-                    <input type="color" id="wa-color-bg" value="#161a1e" style="width:28px;height:24px;border:1px solid ${COLOR.border};border-radius:5px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-bg').value = this.value; window.waCsApply()">
-                </div>
-            </div>
-                <div style="font-size:10px; color:${COLOR.muted}; margin-bottom:7px; font-weight:600;">Nền có sẵn:</div>
-                <div style="display:flex; gap:7px; flex-wrap:wrap;">
-                    ${[
-                        ['#161a1e','Wave Alpha'],['#131722','TradingView'],
-                        ['#0d1117','GitHub Dark'],['#1a1a2e','Navy'],
-                        ['#0f0f0f','Pure Black'],['#FFFFFF','Sáng']
-                    ].map(c => `<div title="${c[1]}" onclick="window.waCsSetBg('${c[0]}')" style="width:24px; height:24px; background:${c[0]}; border-radius:5px; cursor:pointer; border:1px solid rgba(255,255,255,0.18); transition:transform .15s; flex-shrink:0;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`).join('')}
-                </div>
+
+                <button onclick="window.waCsSetTheme('#0ECB81','#0ECB81','#F6465D','#F6465D','#1e2329', true)" style="width:100%; background:transparent; border:1px dashed ${COLOR.muted}; color:${COLOR.muted}; border-radius:6px; padding:8px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='${COLOR.white}'" onmouseout="this.style.background='transparent'; this.style.color='${COLOR.muted}'">↩ KHÔI PHỤC MẶC ĐỊNH</button>
             </div>
           </div>
 
@@ -1542,20 +1544,24 @@
             menuCfg.addEventListener('click', function(e) { e.stopPropagation(); });
             document.addEventListener('click', function() { menuCfg.style.display = 'none'; });
 
-            // Load setting cũ nếu có (Đồng bộ cả Color Picker và Text Hex)
+            // Load setting cũ (Có thêm màu Viền)
             const saved = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
             
-            const cUp = saved.colUp || COLOR.green;
-            document.getElementById('wa-color-up').value = cUp;
-            document.getElementById('wa-hex-up').value = cUp;
+            const ub = saved.colUp || COLOR.green;
+            const ubd = saved.colUpBd || ub;
+            document.getElementById('wa-hex-up').value = ub;
+            if(ub !== 'transparent') document.getElementById('wa-color-up').value = ub;
+            document.getElementById('wa-color-up-bd').value = ubd;
             
-            const cDown = saved.colDown || COLOR.red;
-            document.getElementById('wa-color-down').value = cDown;
-            document.getElementById('wa-hex-down').value = cDown;
+            const db = saved.colDown || COLOR.red;
+            const dbd = saved.colDownBd || db;
+            document.getElementById('wa-hex-down').value = db;
+            if(db !== 'transparent') document.getElementById('wa-color-down').value = db;
+            document.getElementById('wa-color-down-bd').value = dbd;
             
-            const cBg = saved.colBg || COLOR.bgDark;
-            document.getElementById('wa-color-bg').value = cBg;
-            document.getElementById('wa-hex-bg').value = cBg;
+            const bg = saved.colBg || COLOR.bgDark;
+            document.getElementById('wa-hex-bg').value = bg;
+            document.getElementById('wa-color-bg').value = bg;
             
             if (saved.showGrid === false) {
                 document.getElementById('wa-grid-toggle').dataset.on = '0';
@@ -1574,6 +1580,67 @@
             tog.style.background = nowOn ? '#00F0FF' : '#374151';
             if (knob) { knob.style.right = nowOn ? '2px' : 'auto'; knob.style.left = nowOn ? 'auto' : '2px'; }
             window.waCsApply();
+        };
+
+        // Hàm thay đổi các bộ chủ đề (Themes)
+        window.waCsSetTheme = function(ub, ubd, db, dbd, bg, isReset = false) {
+            document.getElementById('wa-hex-up').value = ub;
+            if(ub !== 'transparent') document.getElementById('wa-color-up').value = ub;
+            document.getElementById('wa-color-up-bd').value = ubd;
+            
+            document.getElementById('wa-hex-down').value = db;
+            if(db !== 'transparent') document.getElementById('wa-color-down').value = db;
+            document.getElementById('wa-color-down-bd').value = dbd;
+
+            document.getElementById('wa-hex-bg').value = bg;
+            document.getElementById('wa-color-bg').value = bg;
+
+            window.waCsApply();
+        };
+
+        // Hàm đồng bộ text hex với bảng màu
+        window.waCsSync = function(type, val) {
+            if (type === 'up') {
+                if (val !== 'transparent') document.getElementById('wa-color-up').value = val;
+                document.getElementById('wa-color-up-bd').value = val;
+            } else if (type === 'down') {
+                if (val !== 'transparent') document.getElementById('wa-color-down').value = val;
+                document.getElementById('wa-color-down-bd').value = val;
+            } else if (type === 'bg') {
+                document.getElementById('wa-color-bg').value = val;
+            }
+        };
+
+        // Hàm Apply: Lưu và Vẽ lại biểu đồ với Viền nến
+        window.waCsApply = function() {
+            const ub   = document.getElementById('wa-hex-up').value;
+            const ubd  = document.getElementById('wa-color-up-bd').value;
+            const db   = document.getElementById('wa-hex-down').value;
+            const dbd  = document.getElementById('wa-color-down-bd').value;
+            const bg   = document.getElementById('wa-hex-bg').value;
+            const showGrid = document.getElementById('wa-grid-toggle').dataset.on === '1';
+
+            localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: ub, colUpBd: ubd, colDown: db, colDownBd: dbd, colBg: bg }));
+
+            const chartContainer = document.getElementById('sc-chart-container');
+            if (chartContainer) chartContainer.style.background = bg;
+
+            if (window.tvChart) {
+                window.tvChart.setStyles({
+                    grid: {
+                        horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
+                        vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
+                    },
+                    candle: { bar: {
+                        upColor: ub, downColor: db, noChangeColor: '#848e9c',
+                        upBorderColor: ubd, downBorderColor: dbd,
+                        upWickColor: ubd, downWickColor: dbd
+                    }},
+                    watermark: {
+                        show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
+                    }
+                });
+            }
         };
 
         window.waCsApply = function() {
