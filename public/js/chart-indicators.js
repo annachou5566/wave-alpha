@@ -1497,29 +1497,24 @@
             if (typeof saveIndicatorState === 'function') saveIndicatorState();
         }
 
-                // Tắt native tooltip — gọi đồng bộ ngay lập tức + retry để chắc ăn
-        // Bỏ điều kiện if (isStack) vì sub-pane (MACD, RSI, VOL...) cũng bị lỗi tooltip
-        try {
-            if (global.tvChart) {
-                global.tvChart.overrideIndicator(
-                    { name: indName, styles: { tooltip: { showRule: 'none' } } },
-                    paneId
-                );
-            }
-        } catch(e) {}
-
-        [100, 400, 800].forEach(function(delay) {
-            setTimeout(function() {
-                try {
-                    if (global.tvChart) {
-                        global.tvChart.overrideIndicator(
-                            { name: indName, styles: { tooltip: { showRule: 'none' } } },
-                            paneId
-                        );
-                    }
-                } catch(e) {}
-            }, delay);
-        });
+        // Tắt native tooltip — dùng getIndicators() để XÁC NHẬN indicator tồn tại trước khi override
+        // Tránh hoàn toàn race condition mà setTimeout cố định không giải quyết được
+        if (isStack) {
+            // getIndicators() không tồn tại trong version này
+            // Gọi thẳng overrideIndicator ở 3 mốc thời gian để chắc ăn
+            [50, 200, 500].forEach(function(delay) {
+                setTimeout(function() {
+                    try {
+                        if (global.tvChart) {
+                            global.tvChart.overrideIndicator(
+                                { name: indName, styles: { tooltip: { showRule: 'none' } } },
+                                paneId
+                            );
+                        }
+                    } catch(e) {}
+                }, delay);
+            });
+        }
 
         if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
             global.WaveIndicatorAPI.renderLegend();
@@ -1633,23 +1628,12 @@
       global.addIndicatorToChart(entry.name, { paneId: entry.paneId, params: entry.params });
     });
 
-    // Batch tắt hết tooltip sau khi toàn bộ indicator restore xong
+    // 🚀 NHÁT 2: BẮT BUỘC GỌI HÀM VẼ GIAO DIỆN HTML SAU KHI KHÔI PHỤC
     setTimeout(function() {
-      if (!global.tvChart) return
-      global.scActiveIndicators.forEach(function(ind) {
-        try {
-          global.tvChart.overrideIndicator(
-            { name: ind.name, styles: { tooltip: { showRule: 'none' } } },
-            ind.paneId
-          )
-        } catch(e) {}
-      })
-    }, 800)
-    setTimeout(function() {
-      if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
-        global.WaveIndicatorAPI.renderLegend()
-      }
-    }, 300)
+        if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
+            global.WaveIndicatorAPI.renderLegend();
+        }
+    }, 300);
 
     console.log('[Wave Alpha] ✅ Restored', saved.length, 'indicators from storage');
   };

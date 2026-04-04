@@ -804,10 +804,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
                     tooltip: { showRule: 'none' } // Chỉ tắt tooltip OHLC mặc định
                 },
-                yAxis: { axisLine: { show: false }, tickText: { color: ttext } },
-        indicator: { tooltip: { showRule: 'none' } },
-      }
-    });
+                yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
+            }
+        });
 
       
 
@@ -843,7 +842,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                         </div>
                     </div>
 
-                    <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 2px; margin-left: 2px; pointer-events: auto;"></div>
+                    <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 2px; margin-left: 2px;"></div>
                 </div>
             </div>
         `;
@@ -859,7 +858,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.tvChart.setPriceVolumePrecision(prec, 2);
         
         // 🚀 BÍ QUYẾT: Bật lại chữ cho biểu đồ Volume (Do ta đã lỡ tắt sạch toàn cầu ở trên)
-         window.tvChart.createIndicator({ name: 'VOL', styles: { tooltip: { showRule: 'none' } } }, false, { height: 80 })
+        window.tvChart.createIndicator({ name: 'VOL', styles: { tooltip: { showRule: 'always' } } }, false, { height: 80 });
 
         // 3. SỰ KIỆN RÊ CHUỘT
         window.tvChart.subscribeAction('onCrosshairChange', function(param) {
