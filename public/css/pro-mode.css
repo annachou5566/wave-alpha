@@ -1696,3 +1696,36 @@ body.overlay-active {
 /* Label Tương Tác bên trong Menu */
 .sc-filter-menu label { font-family: var(--font-main) !important; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: #eaecef; cursor: pointer; padding: 6px 8px; border-radius: 4px; transition: 0.2s; font-weight: 600; white-space: nowrap; margin: 0; }
 .sc-filter-menu label:hover { background: rgba(255,255,255,0.05); }
+
+/* ==========================================
+   WAVE ALPHA - PRO DRAWING TOOLBAR (V4)
+   ========================================== */
+#super-chart-overlay .chart-container,
+#sc-chart-container {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    overflow: visible !important;
+}
+
+#sc-chart-container > div:not(.wa-pro-sidebar) {
+    flex: 1;
+    width: calc(100% - 52px) !important; /* Trừ đi độ rộng của Sidebar */
+}
+
+/* Giao diện Toolbar cố định bên trái */
+.wa-pro-sidebar { width: 52px; min-width: 52px; height: 100%; background-color: #161A1E; border-right: 1px solid #2b3139; display: flex; flex-direction: column; align-items: center; padding: 10px 0; box-sizing: border-box; z-index: 100; }
+.wa-group { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 6px; }
+.wa-btn { width: 36px; height: 36px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
+.wa-btn:hover { background-color: #2b3139; color: #EAECEF; }
+.wa-btn.active { background-color: rgba(0, 240, 255, 0.15); color: #00F0FF; }
+.wa-has-menu::after { content: ''; position: absolute; right: 4px; bottom: 4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); }
+.wa-menu { position: absolute; left: 50px; top: 0; background-color: #161A1E; border: 1px solid #2b3139; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); display: none; flex-direction: column; width: 210px; padding: 6px 0; z-index: 9999; }
+.wa-group:hover .wa-menu { display: flex; }
+.wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; font-family: var(--font-main); cursor: pointer; display: flex; align-items: center; }
+.wa-menu-item:hover { background-color: #2b3139; color: #00F0FF; }
+.wa-menu-item.active { color: #00F0FF; }
+.wa-divider { width: 24px; height: 1px; background-color: #2b3139; margin: 10px 0; }
+.wa-drawing-mode canvas { cursor: crosshair !important; }
