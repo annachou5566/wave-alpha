@@ -801,23 +801,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    tooltip: { showRule: 'none' }
+                    tooltip: { showRule: 'none' } // <-- Chỉ tắt duy nhất chữ OHLC mặc định của nến
                 },
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
             }
         });
 
-        // 🚀 DIỆT TẬN GỐC CHỮ MẶC ĐỊNH CỦA KLINECHARTS BẰNG SETSTYLES
-        window.tvChart.setStyles({
-            indicator: {
-                tooltip: {
-                    showRule: 'none',     // Cấm hiển thị
-                    showName: false,      // Tắt tên
-                    showParams: false,    // Tắt thông số
-                    text: { size: 0, color: 'transparent' } // Ép tàng hình 
-                }
-            }
-        });
+       
 
         // 2. ÉP LỚP KÍNH CƯỜNG LỰC LÊN TRÊN CÙNG ĐỂ CHỨA LEGEND VÀ NÚT BẤM
         const customUI = document.createElement('div');

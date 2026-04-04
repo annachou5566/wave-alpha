@@ -1473,61 +1473,34 @@
    * @param {Object} [options]  — optional overrides: { params, paneId }
    */
   global.addIndicatorToChart = function (indName, options) {
-    if (!global.tvChart) {
-      console.warn('[Wave Alpha] tvChart not ready');
-      return;
-    }
-
+    if (!global.tvChart) return;
     const modal = document.getElementById('sc-indicator-modal');
     if (modal) modal.style.display = 'none';
 
-    // Find metadata
     const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
     const isStack = meta ? meta.isStack : false;
-    const paneId  = (options && options.paneId) ||
-      (isStack ? 'candle_pane' : 'pane_' + indName.toLowerCase());
-    const params  = (options && options.params) ||
-      (meta ? meta.defaultParams.slice() : []);
+    const paneId  = (options && options.paneId) || (isStack ? 'candle_pane' : 'pane_' + indName.toLowerCase());
+    const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
         try {
-            // Thay vì gọi tên thường, ta tiêm thẳng lệnh Tàng hình (showRule: none) ngay từ lúc khởi tạo
+            // 🚀 BÍ QUYẾT: Chỉ tàng hình chữ Canvas đối với các chỉ báo đè lên nến (isStack = true)
+            // Còn RSI, Volume, MACD (isStack = false) thì thả rông cho nó tự hiện bình thường
+            let hideStyles = { tooltip: { showRule: 'none', showName: false, showParams: false, text: { size: 0, color: 'transparent' } } };
+            
             global.tvChart.createIndicator({
                 name: indName,
-                styles: isStack ? { tooltip: { showRule: 'none' } } : {}
+                styles: isStack ? hideStyles : {}
             }, isStack, { id: paneId });
+            
         } catch (err) {
-            if (retries > 0) {
-                setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
-            } else {
-                console.error('[Wave Alpha] createIndicator failed for', indName, err);
-            }
+            if (retries > 0) setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
             return; 
         }
 
-        // 🚀 BÍ QUYẾT: Khóa hoàn toàn Tooltip (chữ + nút gốc) của mọi chỉ báo
-        setTimeout(function () {
-            try {
-                if (global.tvChart) {
-                    global.tvChart.overrideIndicator({
-                        name: indName,
-                        styles: { tooltip: { showRule: 'none' } } // Tắt vĩnh viễn trên Canvas
-                    }, paneId);
-                }
-            } catch (e) {
-                console.warn('[Wave Alpha] overrideIndicator failed for', indName, e);
-            }
-        }, 50);
-
-        // Đăng ký state
         if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
-            global.scActiveIndicators.push({
-                name:    indName,
-                isStack: isStack,
-                paneId:  paneId,
-                params:  params,
-            });
-            saveIndicatorState();
+            global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params });
+            if(typeof saveIndicatorState === 'function') saveIndicatorState();
         }
     }
     attempt(3);
@@ -1729,18 +1702,17 @@
     renderLegend: function() {
         const legDiv = document.getElementById('wa-html-legend');
         if (!legDiv) return;
-
         legDiv.innerHTML = '';
         
         const activeStack = global.scActiveIndicators.filter(i => i.isStack);
         
         activeStack.forEach(ind => {
-            // 🚀 BÍ QUYẾT Ở ĐÂY: Khóa họng KLineCharts, không cho nó tự vẽ số liệu chìm xuống mặt Canvas nữa
+            // Ép tàng hình lại một lần nữa phòng hờ KLineCharts tự reset style
             if (window.tvChart) {
                 try {
                     window.tvChart.overrideIndicator({ 
                         name: ind.name, 
-                        styles: { tooltip: { showRule: 'none' } } 
+                        styles: { tooltip: { showRule: 'none', showName: false, showParams: false, text: { size: 0, color: 'transparent' } } } 
                     }, ind.paneId);
                 } catch(e) {}
             }
@@ -1751,7 +1723,6 @@
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // Mở pointer-events: auto để click được nút
             item.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 0; pointer-events: auto;';
             if (ind.visible === false) item.style.opacity = '0.4';
 
@@ -1759,11 +1730,8 @@
             nameSpan.style.cssText = `color: ${color};`;
             nameSpan.textContent = title + pStr;
 
-            // --- BẮT ĐẦU ĐOẠN TẠO NÚT BẰNG HTML ---
             const btnSpan = document.createElement('span');
             btnSpan.style.cssText = 'display: inline-flex; gap: 6px; margin-left: 4px; opacity: 0; transition: opacity 0.2s;';
-            
-            // Hiện nút khi trỏ chuột vào dòng để nhìn gọn gàng
             item.onmouseenter = () => btnSpan.style.opacity = '1';
             item.onmouseleave = () => btnSpan.style.opacity = '0';
             
@@ -1773,7 +1741,6 @@
                 <i style="cursor:pointer; font-style:normal" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')">⚙️</i>
                 <i style="cursor:pointer; font-style:normal" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')">❌</i>
             `;
-            // --- KẾT THÚC ĐOẠN TẠO NÚT ---
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
