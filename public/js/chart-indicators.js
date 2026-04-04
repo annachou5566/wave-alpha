@@ -1396,6 +1396,50 @@
             onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'">⛶</button>
 
           <!-- Screenshot -->
+          <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 4px;"></div>
+          <div style="position:relative;">
+            <button id="btn-wa-chart-cfg" title="Cài đặt biểu đồ"
+              style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
+                     font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 8px;
+                     border-radius:6px; font-weight:600; transition:.15s;"
+              onmouseover="this.style.color='${COLOR.gold}'; this.style.background='rgba(240,185,11,0.07)'"
+              onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'">
+              ⚙ <span class="wa-label">Chart</span>
+            </button>
+            <div id="wa-chart-cfg-menu" style="display:none; position:absolute; top:calc(100% + 6px); right:0;
+                 background:${COLOR.bg}; border:1px solid ${COLOR.border}; border-radius:10px;
+                 padding:14px 16px; min-width:230px; z-index:20000; box-shadow:0 12px 32px rgba(0,0,0,0.8);">
+                <div style="font-size:10px; font-weight:800; color:${COLOR.muted}; letter-spacing:1.2px; margin-bottom:12px;">CÀI ĐẶT BIỂU ĐỒ</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span style="color:${COLOR.white}; font-size:12px;">Đường Grid</span>
+                    <div id="wa-grid-toggle" onclick="window.waCsToggleGrid()" data-on="1" style="width:36px; height:20px; background:#00F0FF; border-radius:34px; cursor:pointer; position:relative; transition:.2s;">
+                        <div id="wa-grid-knob" style="position:absolute; right:2px; top:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s;"></div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="color:${COLOR.white}; font-size:12px;">🕯️ Nến Tăng</span>
+                    <input type="color" id="wa-color-up" value="#0ECB81" style="width:38px; height:24px; border:1px solid ${COLOR.border}; border-radius:5px; cursor:pointer; background:transparent; padding:1px;" oninput="window.waCsApply()">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="color:${COLOR.white}; font-size:12px;">🕯️ Nến Giảm</span>
+                    <input type="color" id="wa-color-down" value="#F6465D" style="width:38px; height:24px; border:1px solid ${COLOR.border}; border-radius:5px; cursor:pointer; background:transparent; padding:1px;" oninput="window.waCsApply()">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <span style="color:${COLOR.white}; font-size:12px;">🖼️ Màu Nền</span>
+                    <input type="color" id="wa-color-bg" value="#161a1e" style="width:38px; height:24px; border:1px solid ${COLOR.border}; border-radius:5px; cursor:pointer; background:transparent; padding:1px;" oninput="window.waCsApply()">
+                </div>
+                <div style="font-size:10px; color:${COLOR.muted}; margin-bottom:7px; font-weight:600;">Nền có sẵn:</div>
+                <div style="display:flex; gap:7px; flex-wrap:wrap;">
+                    ${[
+                        ['#161a1e','Wave Alpha'],['#131722','TradingView'],
+                        ['#0d1117','GitHub Dark'],['#1a1a2e','Navy'],
+                        ['#0f0f0f','Pure Black'],['#FFFFFF','Sáng']
+                    ].map(c => `<div title="${c[1]}" onclick="window.waCsSetBg('${c[0]}')" style="width:24px; height:24px; background:${c[0]}; border-radius:5px; cursor:pointer; border:1px solid rgba(255,255,255,0.18); transition:transform .15s; flex-shrink:0;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></div>`).join('')}
+                </div>
+            </div>
+          </div>
+
+          <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 4px;"></div>
           <button id="btn-wa-screenshot" title="Chụp ảnh chart"
             style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
                    font-size:13px; padding:4px 8px; border-radius:6px; transition:.15s;"
@@ -1432,16 +1476,85 @@
         // Screenshot
         document.getElementById('btn-wa-screenshot').addEventListener('click', function () {
           if (global.tvChart && typeof global.tvChart.getConvertPictureUrl === 'function') {
-            const url = global.tvChart.getConvertPictureUrl(true, 'jpeg', '#1e2329');
+            const savedSettings = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
+            const currentBgColor = savedSettings.colBg || '#1e2329';
+            
+            const url = global.tvChart.getConvertPictureUrl(true, 'jpeg', currentBgColor);
             const a   = document.createElement('a');
             a.href     = url;
             a.download = 'wave-alpha-chart-' + Date.now() + '.jpg';
             a.click();
           }
         });
-      }
-    }
-  };
+
+        // Xử lý mở/đóng menu Cài đặt Chart
+        const btnCfg = document.getElementById('btn-wa-chart-cfg');
+        const menuCfg = document.getElementById('wa-chart-cfg-menu');
+        if (btnCfg && menuCfg) {
+            btnCfg.addEventListener('click', function(e) {
+                e.stopPropagation();
+                menuCfg.style.display = menuCfg.style.display === 'none' ? 'block' : 'none';
+            });
+            menuCfg.addEventListener('click', function(e) { e.stopPropagation(); });
+            document.addEventListener('click', function() { menuCfg.style.display = 'none'; });
+
+            // Load setting cũ nếu có
+            const saved = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
+            document.getElementById('wa-color-up').value   = saved.colUp   || COLOR.green;
+            document.getElementById('wa-color-down').value = saved.colDown || COLOR.red;
+            document.getElementById('wa-color-bg').value   = saved.colBg   || COLOR.bgDark;
+            
+            if (saved.showGrid === false) {
+                document.getElementById('wa-grid-toggle').dataset.on = '0';
+                document.getElementById('wa-grid-toggle').style.background = '#374151';
+                document.getElementById('wa-grid-knob').style.right = 'auto';
+                document.getElementById('wa-grid-knob').style.left = '2px';
+            }
+        }
+
+        window.waCsToggleGrid = function() {
+            const tog = document.getElementById('wa-grid-toggle');
+            const knob = document.getElementById('wa-grid-knob');
+            if (!tog) return;
+            const nowOn = tog.dataset.on !== '1';
+            tog.dataset.on = nowOn ? '1' : '0';
+            tog.style.background = nowOn ? '#00F0FF' : '#374151';
+            if (knob) { knob.style.right = nowOn ? '2px' : 'auto'; knob.style.left = nowOn ? 'auto' : '2px'; }
+            window.waCsApply();
+        };
+
+        window.waCsApply = function() {
+            const up   = document.getElementById('wa-color-up').value;
+            const down = document.getElementById('wa-color-down').value;
+            const bg   = document.getElementById('wa-color-bg').value;
+            const showGrid = document.getElementById('wa-grid-toggle').dataset.on === '1';
+
+            localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: up, colDown: down, colBg: bg }));
+
+            if (window.tvChart) {
+                window.tvChart.setStyles({
+                    grid: {
+                        horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
+                        vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
+                    },
+                    candle: { bar: {
+                        upColor: up, downColor: down, noChangeColor: '#848e9c',
+                        upBorderColor: up, downBorderColor: down,
+                        upWickColor: up, downWickColor: down
+                    }},
+                    background: bg
+                });
+            }
+        };
+
+        window.waCsSetBg = function(color) {
+            document.getElementById('wa-color-bg').value = color;
+            window.waCsApply();
+        };
+
+      } 
+    } 
+  }; 
 
   // ══════════════════════════════════════════════════════
   // SECTION 6: EVENT HANDLERS & STATE MANAGEMENT
@@ -1544,9 +1657,21 @@
     title.textContent = '⚙️ ' + (indicator.shortName || indicator.name);
     body.innerHTML = '';
 
-    const currentParams = indicator.calcParams || [];
-    const labels        = (meta && meta.paramLabels) || [];
-    const defaults      = (meta && meta.defaultParams) || [];
+    // [FIX] Fallback về registry defaults nếu undefined/rỗng
+    const rawParams = indicator.calcParams;
+    const currentParams = (rawParams && rawParams.length > 0) 
+        ? rawParams 
+        : (meta && meta.defaultParams ? [...meta.defaultParams] : []);
+    const labels = meta && meta.paramLabels ? meta.paramLabels : [];
+    const defaults = meta && meta.defaultParams ? meta.defaultParams : [];
+
+    // [FIX] VOL và built-in không có params -> hiện thông báo thay vì crash
+    if (currentParams.length === 0) {
+        body.innerHTML = `<div style="color:${COLOR.muted}; font-size:13px; text-align:center; padding:20px 0;">Chỉ báo này không có thông số để cài đặt.</div>`;
+        modal.style.display = 'flex';
+        return; 
+    }
+
 
     // Build param inputs
     currentParams.forEach(function (val, idx) {

@@ -679,19 +679,54 @@ window.clearUserDrawings = function() {
 };
 
 window.toggleProSidePanel = function(tabId, btnElement) {
+    // [FIX] Inject CSS transition 1 lần duy nhất để tạo animation
+    if (!document.getElementById('wa-panel-transition')) {
+        const s = document.createElement('style');
+        s.id = 'wa-panel-transition';
+        s.textContent = `
+            #sc-panel-content {
+                transition: width 0.22s cubic-bezier(0.4,0,0.2,1),
+                            min-width 0.22s cubic-bezier(0.4,0,0.2,1),
+                            opacity 0.2s ease;
+                overflow: hidden;
+            }
+            #sc-panel-content.collapsed {
+                width: 0 !important;
+                min-width: 0 !important;
+                opacity: 0;
+                pointer-events: none;
+            }
+        `;
+        document.head.appendChild(s);
+    }
+
     const panelContent = document.getElementById('sc-panel-content');
     const allBtns = document.querySelectorAll('.sc-sidebar-icon');
     const allTabs = document.querySelectorAll('.sc-tab-content');
 
-    if (btnElement && btnElement.classList.contains('active')) { panelContent.classList.toggle('collapsed'); return; }
-    if (panelContent.classList.contains('collapsed')) { panelContent.classList.remove('collapsed'); }
+    // [FIX] Gọi resize SAU khi transition xong (240ms)
+    const doResize = function() {
+        setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 240);
+    };
+
+    if (btnElement && btnElement.classList.contains('active')) {
+        panelContent.classList.toggle('collapsed');
+        doResize();
+        return;
+    }
+    
+    if (panelContent.classList.contains('collapsed')) {
+        panelContent.classList.remove('collapsed');
+    }
 
     allBtns.forEach(btn => btn.classList.remove('active'));
     if (btnElement) btnElement.classList.add('active');
 
     allTabs.forEach(tab => { tab.style.display = 'none'; tab.classList.remove('active'); });
-    let targetTab = document.getElementById('tab-' + tabId);
+    const targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) { targetTab.style.display = 'flex'; targetTab.classList.add('active'); }
+    
+    doResize();
 };
 
 window.renderProWatchlist = function(passedSearchTerm) {
@@ -890,22 +925,25 @@ window.openProChart = function(t, isTimeSwitch = false) {
             } 
             else if (data.iconId === 'setting') {
                 if (typeof window.openIndicatorSettings === 'function') {
-                    // 🚀 TRÍCH XUẤT THÔNG SỐ TRỰC TIẾP TỪ CANVAS (Hỗ trợ VOL và mọi chỉ báo)
-                    let calcParams = [];
+                    let calcParams;
+                    // Bước 1: Thử lấy trực tiếp từ canvas
                     try {
                         const instances = window.tvChart.getIndicators({ name: indName, paneId: paneId });
-                        if (instances && instances.length > 0) {
-                            calcParams = instances[0].calcParams || [];
-                        }
+                        if (instances && instances.length > 0) calcParams = instances[0].calcParams;
                     } catch(e) {}
                     
-                    window.openIndicatorSettings({ 
-                        name: indName, 
-                        shortName: indName, 
-                        calcParams: calcParams 
-                    }, paneId);
+                    // Bước 2: Fallback -> lấy từ state scActiveIndicators
+                    if (!calcParams || calcParams.length === 0) {
+                        const stateEntry = (window.scActiveIndicators || []).find(x => x.name === indName);
+                        if (stateEntry && stateEntry.params && stateEntry.params.length > 0) {
+                            calcParams = stateEntry.params;
+                        }
+                    }
+                    
+                    // Bước 3: Truyền vào modal (openIndicatorSettings tự fallback về defaults nếu vẫn rỗng)
+                    window.openIndicatorSettings({ name: indName, shortName: indName, calcParams: calcParams }, paneId);
                 }
-            } 
+            }
             else if (data.iconId === 'close') {
                 if (typeof window.removeIndicatorFromChart === 'function') {
                     window.removeIndicatorFromChart(indName);
@@ -923,6 +961,30 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
+
+        // [FIX] Tự động resize chart khi container thay đổi kích thước
+        if (window._chartResizeObserver) window._chartResizeObserver.disconnect();
+        window._chartResizeObserver = new ResizeObserver(function() {
+            if (window.tvChart) window.tvChart.resize();
+        });
+        window._chartResizeObserver.observe(container);
+
+        // [FIX] Áp dụng màu Chart và Grid từ LocalStorage khi khởi tạo
+        const ws = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
+        if (ws.colUp || ws.showGrid === false || ws.colBg) {
+            window.tvChart.setStyles({
+                grid: { 
+                    horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }, 
+                    vertical: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' } 
+                },
+                candle: { bar: { 
+                    upColor: ws.colUp || t_up, downColor: ws.colDown || t_down, 
+                    upBorderColor: ws.colUp || t_up, downBorderColor: ws.colDown || t_down, 
+                    upWickColor: ws.colUp || t_up, downWickColor: ws.colDown || t_down 
+                }},
+                background: ws.colBg || '#1e2329'
+            });
+        }
 
         // 3. SỰ KIỆN RÊ CHUỘT
         window.tvChart.subscribeAction('onCrosshairChange', function(param) {
@@ -986,6 +1048,12 @@ window.changeChartInterval = function(interval, btnEl) {
 };
 
 window.closeProChart = function() {
+    // [FIX] Ngắt ResizeObserver khi đóng chart để chống tràn RAM
+    if (window._chartResizeObserver) {
+        window._chartResizeObserver.disconnect();
+        window._chartResizeObserver = null;
+    }
+    
     if (window.quantWorker) { window.quantWorker.terminate(); window.quantWorker = null; }
     if (typeof window.stopFuturesEngine === 'function') window.stopFuturesEngine();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
@@ -997,7 +1065,7 @@ window.closeProChart = function() {
     if (overlay) { overlay.classList.remove('active'); document.body.classList.remove('overlay-active'); }
     if (window.chartWs) { window.chartWs.close(); window.chartWs = null; }
     if (window.tvChart) { 
-        try { klinecharts.dispose('sc-chart-container'); } catch(e) {}
+        try { klinecharts.dispose(document.getElementById('sc-chart-container')); } catch(e) {}
         window.tvChart = null; 
     }
     window.currentChartToken = null; 
