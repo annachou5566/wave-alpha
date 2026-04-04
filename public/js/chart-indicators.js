@@ -1472,55 +1472,31 @@
    * @param {string} indName
    * @param {Object} [options]  — optional overrides: { params, paneId }
    */
-  global.addIndicatorToChart = function (indName, options) {
+ global.addIndicatorToChart = function (indName, options) {
     if (!global.tvChart) return;
     const modal = document.getElementById('sc-indicator-modal');
     if (modal) modal.style.display = 'none';
 
-    const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
+    const meta    = INDICATOR_REGISTRY.find(x => x.name === indName);
     const isStack = meta ? meta.isStack : false;
     const paneId  = (options && options.paneId) || (isStack ? 'candle_pane' : 'pane_' + indName.toLowerCase());
-    const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
-    function attempt(retries) {
-        try {
-            // PHẢI dùng string thuần — object form throw lỗi với custom indicators
-            global.tvChart.createIndicator(indName, isStack, { id: paneId });
-        } catch (err) {
-            if (retries > 0) setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
-            return;
+    try {
+        global.tvChart.createIndicator({
+            name: indName,
+            // Đóng/Mở mắt hiển thị Icon tương ứng
+            createTooltipDataSource: function({ indicator, defaultStyles }) {
+                const icons = defaultStyles.tooltip.icons;
+                const eyeIcon = indicator.visible ? icons[1] : icons[0];
+                return { icons: [eyeIcon, icons[2], icons[3]] };
+            }
+        }, isStack, { id: paneId });
+        
+        if (!global.scActiveIndicators.find(x => x.name === indName)) {
+            global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: meta.defaultParams, visible: true });
+            if(typeof saveIndicatorState === 'function') saveIndicatorState();
         }
-
-        // Push state — chỉ chạy khi createIndicator thành công
-        if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
-            global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params });
-            if (typeof saveIndicatorState === 'function') saveIndicatorState();
-        }
-
-        // Tắt native tooltip — dùng getIndicators() để XÁC NHẬN indicator tồn tại trước khi override
-        // Tránh hoàn toàn race condition mà setTimeout cố định không giải quyết được
-        if (isStack) {
-            // getIndicators() không tồn tại trong version này
-            // Gọi thẳng overrideIndicator ở 3 mốc thời gian để chắc ăn
-            [50, 200, 500].forEach(function(delay) {
-                setTimeout(function() {
-                    try {
-                        if (global.tvChart) {
-                            global.tvChart.overrideIndicator(
-                                { name: indName, styles: { tooltip: { showRule: 'none' } } },
-                                paneId
-                            );
-                        }
-                    } catch(e) {}
-                }, delay);
-            });
-        }
-
-        if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
-            global.WaveIndicatorAPI.renderLegend();
-        }
-    }
-    attempt(3);
+    } catch (err) { console.error('[Wave Alpha] createIndicator error:', err); }
   };
 
   /**
@@ -1717,109 +1693,13 @@
     },
 
     renderLegend: function() {
-        const legDiv = document.getElementById('wa-html-legend');
-        if (!legDiv) return;
-        legDiv.innerHTML = '';
-        
-        const activeStack = global.scActiveIndicators.filter(i => i.isStack);
-        if (activeStack.length === 0) {
-            legDiv.style.display = 'none';
-            return;
-        }
-        legDiv.style.display = 'flex';
-        
-        activeStack.forEach(ind => {
-            const meta = INDICATOR_REGISTRY.find(m => m.name === ind.name);
-            const title = meta ? meta.shortName : ind.name;
-            const pStr = ind.params && ind.params.length ? ` (${ind.params.join(',')})` : '';
-            const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
-            
-            const item = document.createElement('div');
-            // DÙNG CSS GRID ÉP CHẾT TRÊN 1 HÀNG
-            item.style.cssText = `
-                display: grid;
-                grid-template-columns: auto auto 1fr;
-                align-items: center;
-                column-gap: 8px;
-                width: fit-content;
-                max-width: 100%;
-                white-space: nowrap;
-                overflow: hidden;
-                font-size: 11px;
-                font-family: var(--font-num);
-                font-weight: 600;
-                padding: 2px 6px;
-                border-radius: 4px;
-                background: rgba(22, 26, 30, 0.7);
-                transition: background 0.15s;
-                pointer-events: auto;
-            `;
-            if (ind.visible === false) item.style.opacity = '0.4';
-
-            const nameSpan = document.createElement('span');
-            nameSpan.style.cssText = `color: ${color}; flex-shrink: 0;`;
-            nameSpan.textContent = title + pStr;
-
-            const btnSpan = document.createElement('span');
-            btnSpan.style.cssText = 'display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0;';
-            
-            item.onmouseenter = () => { btnSpan.style.opacity = '1'; item.style.background = 'rgba(255,255,255,0.08)'; };
-            item.onmouseleave = () => { btnSpan.style.opacity = '0'; item.style.background = 'rgba(22, 26, 30, 0.7)'; };
-            
-            const eyeIcon = ind.visible === false ? '👁️‍🗨️' : '👁️';
-            btnSpan.innerHTML = `
-                <span style="cursor:pointer; color:#848e9c; font-size:11px;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='#848e9c'">${eyeIcon}</span>
-                <span style="cursor:pointer; color:#848e9c; font-size:11px;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')" onmouseover="this.style.color='#F0B90B'" onmouseout="this.style.color='#848e9c'">⚙️</span>
-                <span style="cursor:pointer; color:#848e9c; font-size:11px;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'">✕</span>
-            `;
-
-            const valSpan = document.createElement('span');
-            valSpan.id = `wa-val-${ind.name}`;
-            // min-width: 0 ĐỂ GRID KHÔNG BỊ TRÀN
-            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; display: flex; align-items: center; gap: 6px;';
-            valSpan.innerHTML = '—';
-
-            item.appendChild(nameSpan);
-            item.appendChild(btnSpan); 
-            item.appendChild(valSpan);
-            legDiv.appendChild(item);
-        });
+        // Đã chuyển sang dùng Native Tooltip của KLineCharts, không cần DOM render nữa.
+        return; 
     },
 
     updateLegendValues: function(dataIndex) {
-        if (!window.tvChart || !window.tvChart.getIndicators) return;
-        
-        global.scActiveIndicators.filter(i => i.isStack).forEach(ind => {
-            const valEl = document.getElementById(`wa-val-${ind.name}`);
-            if (!valEl) return;
-            if (ind.visible === false) { valEl.innerHTML = ''; return; }
-
-            try {
-                const instances = window.tvChart.getIndicators({ name: ind.name, paneId: ind.paneId });
-                if (!instances || instances.length === 0) return;
-                
-                const result = instances[0].result;
-                if (!result) return;
-                
-                const data = result[dataIndex];
-                if (!data || typeof data !== 'object') return;
-
-                const labels = LEGEND_LABELS[ind.name] || {};
-                
-                let html = Object.entries(data)
-                    .filter(([k, v]) => typeof v === 'number' && !k.startsWith('_'))
-                    .slice(0, 3)
-                    .map(([k, v]) => {
-                        const lbl = labels[k] || k;
-                        const valStr = v >= 1 ? v.toFixed(2) : v.toFixed(5);
-                        return `<span style="color:#848e9c;font-size:10px;">${lbl}:</span> ${valStr}`;
-                    }).join(' <span style="margin:0 4px;color:#5e6673;">|</span> ');
-                
-                valEl.innerHTML = html;
-            } catch (e) {
-                valEl.innerHTML = '';
-            }
-        });
+        // KLineCharts Native tự động cập nhật số liệu khi crosshair change.
+        return;
     }
   };
 
