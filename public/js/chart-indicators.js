@@ -1500,25 +1500,20 @@
         // Tắt native tooltip — dùng getIndicators() để XÁC NHẬN indicator tồn tại trước khi override
         // Tránh hoàn toàn race condition mà setTimeout cố định không giải quyết được
         if (isStack) {
-            var overrideTries = 0;
-            function tryOverride() {
-                if (overrideTries++ > 8) return; // Tối đa ~800ms
-                try {
-                    var insts = global.tvChart.getIndicators({ name: indName, paneId: paneId });
-                    if (insts && insts.length > 0) {
-                        // Indicator đã tồn tại trong KLineCharts registry → override an toàn
-                        global.tvChart.overrideIndicator(
-                            { name: indName, styles: { tooltip: { showRule: 'none' } } },
-                            paneId
-                        );
-                    } else {
-                        setTimeout(tryOverride, 100);
-                    }
-                } catch(e) {
-                    setTimeout(tryOverride, 100);
-                }
-            }
-            setTimeout(tryOverride, 50);
+            // getIndicators() không tồn tại trong version này
+            // Gọi thẳng overrideIndicator ở 3 mốc thời gian để chắc ăn
+            [50, 200, 500].forEach(function(delay) {
+                setTimeout(function() {
+                    try {
+                        if (global.tvChart) {
+                            global.tvChart.overrideIndicator(
+                                { name: indName, styles: { tooltip: { showRule: 'none' } } },
+                                paneId
+                            );
+                        }
+                    } catch(e) {}
+                }, delay);
+            });
         }
 
         if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
