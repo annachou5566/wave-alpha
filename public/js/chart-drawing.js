@@ -1,13 +1,13 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — ADVANCED FLOATING TOOLBAR
-// Version: 3.0.0 | Perfect Pro UI/UX + Extensions
+// Version: 3.1.0 | Instant Feedback + Pro UX
 // ==========================================
 
 (function (global) {
   'use strict';
 
-  const VERSION = '3.0.0';
+  const VERSION = '3.1.0';
   const LS_KEY  = 'wa_drawing_v3';
 
   // ======================================================
@@ -17,18 +17,14 @@
       const kc = global.klinecharts;
       if (!kc || typeof kc.registerOverlay !== 'function') return;
 
-      // 1. VĂN BẢN (TEXT) - Hỗ trợ sửa chữ qua extendData
+      // 1. VĂN BẢN (TEXT)
       kc.registerOverlay({
           name: 'customText', totalStep: 2,
           needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
           createPointFigures: function({ coordinates, overlay }) {
               if (coordinates.length === 0) return [];
               const txt = (overlay.extendData && overlay.extendData.text) ? overlay.extendData.text : 'Gõ chữ vào đây...';
-              return [{
-                  type: 'text',
-                  attrs: { x: coordinates[0].x, y: coordinates[0].y, text: txt, baseline: 'bottom' },
-                  ignoreEvent: false
-              }];
+              return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: txt, baseline: 'bottom' }, ignoreEvent: false }];
           }
       });
 
@@ -158,14 +154,14 @@
   const PRESETS = ['#00F0FF','#F0B90B','#0ECB81','#F6465D','#EAECEF','#848e9c','#cb55e3','#FF8C00'];
   const DS = {
     stroke: '#00F0FF', fill: 'rgba(0,240,255,0.12)',
-    lineSize: 2, lineStyle: 'solid', text: 'Gõ chữ...',
+    lineSize: 2, lineStyle: 'solid', text: 'Gõ chú thích...',
     active: 'pointer', count: 0,
     panelVis: true, collapsed: false, panelX: 20, panelY: 80, inited: false,
     selectedOverlayId: null 
   };
 
   // ======================================================
-  // 🎨 CSS CHO GIAO DIỆN
+  // 🎨 CSS CHO GIAO DIỆN VÀ CON TRỎ CHUỘT
   // ======================================================
   function injectCSS() {
     if (document.getElementById('wa-draw-css')) return;
@@ -213,6 +209,9 @@
       .wa-pp-sel { flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#fff; padding:6px; font-size:11px; outline:none; }
       .wa-pp-text { width:100%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#fff; padding:6px 8px; font-size:12px; outline:none; }
       .wa-pp-btn { flex:1; padding:6px; background:rgba(0,240,255,0.1); color:#00F0FF; border:1px solid rgba(0,240,255,0.3); border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; }
+      
+      /* PHẢN HỒI CON TRỎ CHUỘT CROSSHAIR NGAY LẬP TỨC */
+      .wa-drawing-mode canvas { cursor: crosshair !important; }
     `;
     document.head.appendChild(s);
   }
@@ -250,7 +249,7 @@
     const dots = PRESETS.map(c => `<div class="wa-pp-dot" style="background:${c};" onclick="WaveDrawingAPI._preset('${c}')"></div>`).join('');
     return `
       <div id="wa-ft-props">
-        <div style="font-size:12px; font-weight:bold; color:#00F0FF; margin-bottom:4px;" id="wa-pp-nm">—</div>
+        <div style="font-size:11px; color:#848e9c; margin-bottom:2px;" id="wa-pp-nm">—</div>
         
         <input type="text" id="wa-pp-textinput" class="wa-pp-text" placeholder="Nhập văn bản hiển thị..." oninput="WaveDrawingAPI._textIn(this.value)" style="display:none;">
 
@@ -274,7 +273,7 @@
   }
 
   // ======================================================
-  // 🎮 CHỨC NĂNG HOẠT ĐỘNG CHÍNH
+  // 🎮 KÍCH HOẠT CÔNG CỤ VẼ TỨC THÌ (0ms DELAY)
   // ======================================================
   function activate(toolId) {
     const tool = TOOL_MAP[toolId];
@@ -282,21 +281,32 @@
     DS.active = toolId;
     const isAction = (toolId === 'pointer' || toolId === 'eraser');
 
+    // Đổi màu Nút bấm ngay lập tức
     document.querySelectorAll('.wa-fb[data-grp]').forEach(b => b.classList.remove('wa-act'));
     document.querySelectorAll('.wa-fi').forEach(i => i.classList.toggle('wa-act', i.dataset.tool === toolId));
     
+    // Gắn tool đang kích hoạt làm icon chính của Group
     const grpBtn = document.getElementById('wa-fg-' + tool.groupId);
-    if (grpBtn) { grpBtn.classList.add('wa-act'); grpBtn.childNodes[0].textContent = tool.icon; }
+    if (grpBtn) { 
+        grpBtn.classList.add('wa-act'); 
+        grpBtn.childNodes[0].nodeValue = tool.icon; 
+        grpBtn.dataset.tool = toolId;
+    }
 
     const props = document.getElementById('wa-ft-props');
     const txtInput = document.getElementById('wa-pp-textinput');
+    const chartContainer = document.getElementById('sc-chart-container');
     
     if (isAction) {
         props.classList.remove('wa-show');
+        if (chartContainer) chartContainer.classList.remove('wa-drawing-mode'); // Tắt con trỏ Crosshair
     } else {
         props.classList.add('wa-show');
-        document.getElementById('wa-pp-nm').textContent = tool.name;
-        // Hiện ô nhập Text nếu chọn công cụ Văn bản
+        // Thông báo phản hồi UI cực xịn
+        document.getElementById('wa-pp-nm').innerHTML = `<span style="color:#00F0FF; font-weight:bold;">Đang vẽ:</span> ${tool.name} <br><span style="font-size:10px;">(Click biểu đồ)</span>`;
+        
+        if (chartContainer) chartContainer.classList.add('wa-drawing-mode'); // Ép con trỏ Crosshair ngay lập tức
+        
         if (toolId === 'customText') {
             txtInput.style.display = 'block';
             txtInput.value = DS.text;
@@ -305,31 +315,36 @@
         }
     }
 
-    if (global.tvChart) global.tvChart.cancelDrawing();
-
-    if (!isAction) {
-      setTimeout(() => {
-        if (!global.tvChart) return;
-        const styles = {
-            line: { color: DS.stroke, size: DS.lineSize, style: DS.lineStyle },
-            polygon: { color: tool.fill ? DS.fill : 'transparent', style: 'fill', borderColor: DS.stroke, borderSize: DS.lineSize },
-            text: { color: DS.stroke, size: 14 }
-        };
-        // Đính kèm text vào extendData để customText overlay có thể đọc được
-        global.tvChart.createOverlay({ name: tool.overlay, lock: false, visible: true, styles: styles, extendData: { text: DS.text } });
-      }, 50);
+    // Gửi lệnh xuống KLineCharts mà KHÔNG CẦN SETTIMEOUT
+    if (global.tvChart) {
+        global.tvChart.cancelDrawing(); // Dọn rác
+        if (!isAction) {
+            const styles = {
+                line: { color: DS.stroke, size: DS.lineSize, style: DS.lineStyle },
+                polygon: { color: tool.fill ? DS.fill : 'transparent', style: 'fill', borderColor: DS.stroke, borderSize: DS.lineSize },
+                text: { color: DS.stroke, size: 14 }
+            };
+            global.tvChart.createOverlay({ name: tool.overlay, lock: false, visible: true, styles: styles, extendData: { text: DS.text } });
+        }
     }
   }
 
+  // ======================================================
+  // 🎯 XỬ LÝ SỰ KIỆN BIỂU ĐỒ (END DRAW, CLICK OVERLAY)
+  // ======================================================
   function subscribeChartEvents() {
     let poll = setInterval(() => {
       if (!global.tvChart) return;
       clearInterval(poll);
 
-      // Khi vẽ xong 1 hình, tự động trả về con trỏ chuột
-      global.tvChart.subscribeAction('onDrawEnd', () => { setTimeout(() => activate('pointer'), 100); });
+      // Vẽ xong -> Trả lại con trỏ chuột thường
+      global.tvChart.subscribeAction('onDrawEnd', () => { 
+          const chartContainer = document.getElementById('sc-chart-container');
+          if (chartContainer) chartContainer.classList.remove('wa-drawing-mode');
+          setTimeout(() => activate('pointer'), 50); 
+      });
 
-      // Khi Click vào 1 hình đã vẽ -> Load thông số lên bảng Properties
+      // Click vào hình -> Mở bảng setting để sửa
       global.tvChart.subscribeAction('onOverlayClick', (params) => {
           if (DS.active === 'eraser') {
               global.tvChart.removeOverlay({ id: params.overlay.id });
@@ -338,7 +353,7 @@
               DS.selectedOverlayId = params.overlay.id;
               const props = document.getElementById('wa-ft-props');
               props.classList.add('wa-show');
-              document.getElementById('wa-pp-nm').textContent = "Đang chọn Hình vẽ";
+              document.getElementById('wa-pp-nm').innerHTML = `<span style="color:#F0B90B; font-weight:bold;">Đang chọn:</span> Hình đã vẽ`;
               
               if (params.overlay.name === 'customText') {
                   document.getElementById('wa-pp-textinput').style.display = 'block';
@@ -353,7 +368,7 @@
 
   function inject() {
     if (document.getElementById('wa-ft')) return;
-    registerProTools();
+    registerProTools(); // Kích hoạt bộ não toán học
 
     const container = document.getElementById('sc-chart-container');
     if (!container) { setTimeout(inject, 500); return; }
@@ -368,7 +383,7 @@
 
     syncPropsUI();
     
-    // Kéo thả
+    // Kéo thả mượt mà
     let ox=0, oy=0, drag=false;
     const grip = document.getElementById('wa-ft-grip');
     grip.onmousedown = (e) => { if(e.target.id!=='wa-ft-collapse') { drag=true; ox=e.clientX-div.offsetLeft; oy=e.clientY-div.offsetTop; } };
@@ -400,9 +415,31 @@
         localStorage.setItem(LS_KEY, JSON.stringify(DS));
     },
     _collapse: function() { DS.collapsed = !DS.collapsed; document.getElementById('wa-ft').classList.toggle('wa-collapsed', DS.collapsed); document.getElementById('wa-ft-collapse').innerHTML = DS.collapsed ? '□' : '—'; },
-    _grpClick: function(e, id) { e.stopPropagation(); const g = GROUPS.find(x=>x.id===id); if(g.tools.length===1) { activate(g.tools[0].id); return; } const fly=document.getElementById('wa-fly-'+id); if(fly.classList.contains('wa-open')){fly.classList.remove('wa-open');activate(g.tools[0].id);}else{document.querySelectorAll('.wa-fly').forEach(f=>f.classList.remove('wa-open'));fly.classList.add('wa-open');_flyOpen=id;} },
-    _grpHover: function(e, id) { if(_flyOpen && _flyOpen!==id) { document.querySelectorAll('.wa-fly').forEach(f=>f.classList.remove('wa-open')); document.getElementById('wa-fly-'+id).classList.add('wa-open'); _flyOpen=id; } },
-    _toolClick: function(id, e) { e.stopPropagation(); document.querySelectorAll('.wa-fly').forEach(f=>f.classList.remove('wa-open')); _flyOpen=null; activate(id); },
+    
+    // FIX LOGIC CLICK VÀO NÚT BẤM CHÍNH (Kích hoạt ngay, không cần vào flyout)
+    _grpClick: function(e, id) { 
+        e.stopPropagation(); 
+        document.querySelectorAll('.wa-fly').forEach(f=>f.classList.remove('wa-open')); 
+        const btn = document.getElementById('wa-fg-'+id);
+        activate(btn.dataset.tool); // Kích hoạt ngay lập tức công cụ đang ghim ở nút này
+    },
+    
+    _grpHover: function(e, id) { 
+        const g = GROUPS.find(x=>x.id===id);
+        if(g.tools.length > 1) { // Chỉ mở Flyout nếu có nhiều hơn 1 công cụ
+            document.querySelectorAll('.wa-fly').forEach(f=>f.classList.remove('wa-open')); 
+            document.getElementById('wa-fly-'+id).classList.add('wa-open'); 
+            _flyOpen=id; 
+        }
+    },
+    
+    _toolClick: function(id, e) { 
+        e.stopPropagation(); 
+        document.querySelectorAll('.wa-fly').forEach(f=>f.classList.remove('wa-open')); 
+        _flyOpen=null; 
+        activate(id); 
+    },
+    
     _strokeIn: function(v) { DS.stroke=v; syncPropsUI(); },
     _fillIn: function(v) { DS.fill = v.replace('#',''); DS.fill='rgba('+parseInt(DS.fill.slice(0,2),16)+','+parseInt(DS.fill.slice(2,4),16)+','+parseInt(DS.fill.slice(4,6),16)+',0.15)'; syncPropsUI(); },
     _textIn: function(v) { DS.text = v; },
@@ -410,7 +447,6 @@
     _szIn: function(v) { DS.lineSize = parseInt(v); },
     _lsIn: function(v) { DS.lineStyle = v; },
     
-    // Cập nhật lại hình đang được chọn trên chart
     _applyToSelected: function() {
         if (!global.tvChart || !DS.selectedOverlayId) return;
         global.tvChart.overrideOverlay({
@@ -422,7 +458,7 @@
                 text: { color: DS.stroke, size: 14 }
             }
         });
-        activate('pointer'); // Trả về con trỏ
+        activate('pointer');
     },
 
     undo: function() { if(global.tvChart && global.tvChart.undoOverlay) global.tvChart.undoOverlay(); },
@@ -433,7 +469,6 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(WaveDrawingAPI.init, 500));
   else setTimeout(WaveDrawingAPI.init, 500);
 
-  // Hook để vẽ lại thanh công cụ mỗi khi đổi token
   const origOpen = global.openProChart;
   if (origOpen) {
       global.openProChart = function() {
