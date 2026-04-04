@@ -1770,12 +1770,30 @@
             valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px;';
 
             item.appendChild(nameSpan);
-            item.appendChild(btnSpan); // Nhét bộ nút vào giữa Tên và Số liệu
+            item.appendChild(btnSpan); 
             item.appendChild(valSpan);
             legDiv.appendChild(item);
         });
         
-        legDiv.style.display = activeStack.length ? 'flex' : 'none';
+        // 🚀 CẬP NHẬT LOGIC ẨN/HIỆN NÚT TOGGLE VÀ SỐ LƯỢNG CHỈ BÁO
+        const toggleBtn = document.getElementById('wa-ind-toggle');
+        const toggleText = document.getElementById('wa-ind-toggle-text');
+        
+        if (activeStack.length > 0) {
+            // Hiện nút toggle và cập nhật số lượng
+            if (toggleBtn) toggleBtn.style.display = 'flex';
+            if (toggleText) toggleText.innerText = `Chỉ báo (${activeStack.length})`;
+            
+            // Hiện danh sách (nếu đang ở trạng thái mở)
+            const icon = document.getElementById('wa-ind-toggle-icon');
+            if (icon && icon.innerText === '▼') {
+                legDiv.style.display = 'flex';
+            }
+        } else {
+            // Ẩn sạch sẽ nếu không có chỉ báo nào
+            if (toggleBtn) toggleBtn.style.display = 'none';
+            legDiv.style.display = 'none';
+        }
     },
 
     updateLegendValues: function(dataIndex) {

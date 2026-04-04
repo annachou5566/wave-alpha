@@ -810,27 +810,64 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         // 2. ÉP LỚP KÍNH CƯỜNG LỰC LÊN TRÊN CÙNG ĐỂ CHỨA LEGEND VÀ NÚT BẤM
         const customUI = document.createElement('div');
-        // Pointer-events: none để xuyên thao tác vuốt/kéo xuống chart bên dưới. Z-index 9999 để đè lên Canvas.
         customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;';
         
+        // Lấy thông tin động của Token hiện tại
+        let symStr = (t.symbol || 'UNKNOWN').toUpperCase() + 'USDT';
+        let tfStr = window.currentChartInterval.toUpperCase();
+        let exchangeStr = 'Wave Alpha'; // Hoặc Binance tùy nguồn
+
         customUI.innerHTML = `
             <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
             
-            <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 8px; max-width: 90%;">
+            <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 6px; max-width: 95%; pointer-events: none;">
                 
-                <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 12px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(30, 35, 41, 0.65); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); width: fit-content; backdrop-filter: blur(4px);">
-                    <span>O <span id="tp-o" style="color:#848e9c">--</span></span>
-                    <span>H <span id="tp-h" style="color:#0ECB81">--</span></span>
-                    <span>L <span id="tp-l" style="color:#F6465D">--</span></span>
-                    <span>C <span id="tp-c">--</span></span>
-                    <span>Vol <span id="tp-v" style="color:#848e9c">--</span></span>
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: rgba(30, 35, 41, 0.4); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px); width: fit-content; pointer-events: auto;">
+                    
+                    <div style="display: flex; align-items: center; gap: 8px; font-family: var(--font-main);">
+                        <span id="chart-legend-sym" style="color: #EAECEF; font-size: 13px; font-weight: 800; letter-spacing: 0.5px;">${symStr}</span>
+                        <span id="chart-legend-tf" style="color: #848e9c; font-size: 12px; font-weight: 700;">${tfStr}</span>
+                        <span style="color: #5e6673; font-size: 11px; font-weight: 600;">${exchangeStr}</span>
+                    </div>
+
+                    <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.15);"></div>
+
+                    <div id="sc-custom-tooltip" style="display: flex; gap: 10px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600;">
+                        <span>O <span id="tp-o" style="color:#848e9c">--</span></span>
+                        <span>H <span id="tp-h" style="color:#0ECB81">--</span></span>
+                        <span>L <span id="tp-l" style="color:#F6465D">--</span></span>
+                        <span>C <span id="tp-c">--</span></span>
+                        <span>Vol <span id="tp-v" style="color:#848e9c">--</span></span>
+                    </div>
                 </div>
 
-                <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto; margin-left: 2px;"></div>
+                <div style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto; width: fit-content; margin-left: 2px;">
+                    
+                    <div id="wa-ind-toggle" style="display: none; align-items: center; gap: 6px; cursor: pointer; color: #848e9c; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; user-select: none; transition: 0.2s;" onmouseover="this.style.color='#EAECEF'; this.style.background='rgba(255,255,255,0.05)';" onmouseout="this.style.color='#848e9c'; this.style.background='transparent';">
+                        <span id="wa-ind-toggle-icon" style="font-size: 9px;">▼</span>
+                        <span id="wa-ind-toggle-text">Chỉ báo (0)</span>
+                    </div>
+                    
+                    <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 2px; padding-left: 6px;"></div>
+                
+                </div>
 
             </div>
         `;
         container.appendChild(customUI);
+
+        // Logic xử lý click gập/mở menu chỉ báo
+        document.getElementById('wa-ind-toggle').onclick = function() {
+            let legendBox = document.getElementById('wa-html-legend');
+            let icon = document.getElementById('wa-ind-toggle-icon');
+            if (legendBox.style.display === 'none') {
+                legendBox.style.display = 'flex';
+                icon.innerText = '▼';
+            } else {
+                legendBox.style.display = 'none';
+                icon.innerText = '▶';
+            }
+        };
 
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
@@ -880,6 +917,10 @@ window.changeChartInterval = function(interval, btnEl) {
 
     window.oldChartInterval = window.currentChartInterval; 
     window.currentChartInterval = interval;
+
+    // THÊM DÒNG NÀY VÀO: Cập nhật chữ trên Header Chart
+    let tfEl = document.getElementById('chart-legend-tf');
+    if (tfEl) tfEl.innerText = interval.toUpperCase();
 
     // Ngắt Data Realtime cũ
     if (window.chartWs) {
