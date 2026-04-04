@@ -1479,54 +1479,31 @@
 
     const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
     const isStack = meta ? meta.isStack : false;
-    
-    // ✅ CHUẨN XÁC: Đảm bảo paneId của biểu đồ chính luôn là 'candle_pane'
     const paneId  = (options && options.paneId) || (isStack ? 'candle_pane' : 'pane_' + indName.toLowerCase());
     const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
-        try {
-            // 🚀 BÍ QUYẾT: Chỉ báo phụ (RSI, MACD) thì BẬT LẠI chữ. Chỉ báo chính (EMA) thì kệ nó.
-            let customStyles = {};
-            if (!isStack) customStyles = { tooltip: { showRule: 'always' } };
+        // ÉP TÀNG HÌNH TRỰC TIẾP LÚC KHỞI TẠO ĐỂ TRÁNH LỖI TIMING
+        const createOptions = { id: paneId };
+        if (isStack) {
+            createOptions.styles = { tooltip: { showRule: 'none' } };
+        }
 
-            global.tvChart.createIndicator({ 
-                name: indName,
-                styles: customStyles
-            }, isStack, { id: paneId });
-            
+        try {
+            global.tvChart.createIndicator({ name: indName }, isStack, createOptions);
         } catch (err) {
             if (retries > 0) setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
             return; 
         }
 
-        // 🚀 CHÌA KHÓA VÀNG: Đợi 50ms cho KLineCharts đăng ký xong mới ép tàng hình
-        if (isStack) {
-            setTimeout(function() {
-                try {
-                    global.tvChart.overrideIndicator({
-                        name: indName,
-                        // Tắt native tooltip CHỈ của indicator NÀY
-                        styles: { tooltip: { showRule: 'none' } }
-                    }, paneId); // ✅ BẮT BUỘC có tham số paneId (candle_pane) ở đây
-                } catch (e) {
-                    console.warn('[Wave Alpha] overrideIndicator failed:', e);
-                }
-            }, 50);
-        }
-
-        // Lưu state
         if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
             global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params });
             if(typeof saveIndicatorState === 'function') saveIndicatorState();
         }
-        
-        // Render lại HTML
-        setTimeout(function() {
-            if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
-                global.WaveIndicatorAPI.renderLegend();
-            }
-        }, 200);
+
+        if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
+            global.WaveIndicatorAPI.renderLegend();
+        }
     }
     attempt(3);
   };
@@ -1730,47 +1707,68 @@
         legDiv.innerHTML = '';
         
         const activeStack = global.scActiveIndicators.filter(i => i.isStack);
+        if (activeStack.length === 0) {
+            legDiv.style.display = 'none';
+            return;
+        }
+        legDiv.style.display = 'flex';
         
         activeStack.forEach(ind => {
             const meta = INDICATOR_REGISTRY.find(m => m.name === ind.name);
             const title = meta ? meta.shortName : ind.name;
-            const pStr = ind.params && ind.params.length ? ` (${ind.params.join(', ')})` : '';
+            const pStr = ind.params && ind.params.length ? ` (${ind.params.join(',')})` : '';
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // 🚀 ÉP THẲNG HÀNG: flex-wrap: nowrap
-            item.style.cssText = 'display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 6px; border-radius: 4px; pointer-events: auto; width: fit-content; transition: background 0.15s; background: rgba(22,26,30,0.6);';
+            // DÙNG CSS GRID ÉP CHẾT TRÊN 1 HÀNG
+            item.style.cssText = `
+                display: grid;
+                grid-template-columns: auto auto 1fr;
+                align-items: center;
+                column-gap: 8px;
+                width: fit-content;
+                max-width: 100%;
+                white-space: nowrap;
+                overflow: hidden;
+                font-size: 11px;
+                font-family: var(--font-num);
+                font-weight: 600;
+                padding: 2px 6px;
+                border-radius: 4px;
+                background: rgba(22, 26, 30, 0.7);
+                transition: background 0.15s;
+                pointer-events: auto;
+            `;
             if (ind.visible === false) item.style.opacity = '0.4';
 
             const nameSpan = document.createElement('span');
-            nameSpan.style.cssText = `color: ${color}; white-space: nowrap;`;
+            nameSpan.style.cssText = `color: ${color}; flex-shrink: 0;`;
             nameSpan.textContent = title + pStr;
 
             const btnSpan = document.createElement('span');
-            btnSpan.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.2s;';
+            btnSpan.style.cssText = 'display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0;';
             
             item.onmouseenter = () => { btnSpan.style.opacity = '1'; item.style.background = 'rgba(255,255,255,0.08)'; };
-            item.onmouseleave = () => { btnSpan.style.opacity = '0'; item.style.background = 'rgba(22,26,30,0.6)'; };
+            item.onmouseleave = () => { btnSpan.style.opacity = '0'; item.style.background = 'rgba(22, 26, 30, 0.7)'; };
             
             const eyeIcon = ind.visible === false ? '👁️‍🗨️' : '👁️';
             btnSpan.innerHTML = `
-                <span style="cursor:pointer; color:#848e9c;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='#848e9c'">${eyeIcon}</span>
-                <span style="cursor:pointer; color:#848e9c;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')" onmouseover="this.style.color='#F0B90B'" onmouseout="this.style.color='#848e9c'">⚙️</span>
-                <span style="cursor:pointer; color:#848e9c;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'">✕</span>
+                <span style="cursor:pointer; color:#848e9c; font-size:11px;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='#848e9c'">${eyeIcon}</span>
+                <span style="cursor:pointer; color:#848e9c; font-size:11px;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')" onmouseover="this.style.color='#F0B90B'" onmouseout="this.style.color='#848e9c'">⚙️</span>
+                <span style="cursor:pointer; color:#848e9c; font-size:11px;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'">✕</span>
             `;
 
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
-            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px; white-space: nowrap;';
+            // min-width: 0 ĐỂ GRID KHÔNG BỊ TRÀN
+            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; display: flex; align-items: center; gap: 6px;';
+            valSpan.innerHTML = '—';
 
-            // Xếp đúng chuẩn: TÊN -> NÚT -> SỐ LIỆU
             item.appendChild(nameSpan);
             item.appendChild(btnSpan); 
             item.appendChild(valSpan);
             legDiv.appendChild(item);
         });
-        
-        legDiv.style.display = activeStack.length ? 'flex' : 'none';
     },
 
     updateLegendValues: function(dataIndex) {
