@@ -814,7 +814,18 @@ window.openProChart = function(t, isTimeSwitch = false) {
         container.style.position = 'relative'; 
         window.tvChart = klinecharts.init(container, {
             styles: {
-                grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
+                // 🚀 1. LẤY LẠI MÀU NỀN VÀ MÀU CHỮ TỪ FILE CŨ
+                layout: { 
+                    background: { color: t_bg }, 
+                    textColor: t_text 
+                },
+                
+                // 🚀 2. TẮT SẠCH KHUNG LƯỚI
+                grid: { 
+                    show: false, 
+                    horizontal: { show: false }, 
+                    vertical: { show: false } 
+                },
                 
                 // 🚀 TÍCH HỢP OHLC VÀO TOOLTIP CỦA NẾN
                 candle: {
