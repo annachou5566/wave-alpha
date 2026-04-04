@@ -1,581 +1,976 @@
-// =========================================================================
+// ==========================================
 // 🎨 FILE: chart-drawing.js
-// 📦 WAVE ALPHA — ADVANCED FLOATING TOOLBAR (PRO VERSION)
-// Date: 2026-04-04 | Version: 4.0.0
-// Description: Drawing toolbar chuyên nghiệp cho KLineCharts v9
-// =========================================================================
+// 📦 WAVE ALPHA — FLOATING DRAWING TOOLBAR
+// Version: 2.0.0 | KLineCharts Native + Advanced
+// ==========================================
 
 (function (global) {
-    'use strict';
-  
-    const VERSION = '4.0.0';
-    const LS_KEY  = 'wa_drawing_v3';
-  
-    // ======================================================
-    // 🧠 TRẠNG THÁI (STATE)
-    // ======================================================
-    const DS = {
-      stroke: '#00F0FF',
-      fill: 'rgba(0,240,255,0.12)',
-      lineSize: 2,
-      lineStyle: 'solid',
-      text: 'Gõ chú thích...',
-      active: 'pointer',
-      panelVis: true,
-      collapsed: false,
-      panelX: 20,
-      panelY: 80,
-      selectedOverlayId: null,
-      allVis: true,
-      allLocked: false,
-      drawingStep: 0,
-      drawingTotalStep: 0
-    };
-  
-    const PRESETS = ['#00F0FF', '#F0B90B', '#0ECB81', '#F6465D', '#EAECEF', '#848e9c', '#cb55e3', '#FF8C00'];
-  
-    // ======================================================
-    // 🧮 BỘ NÃO: ĐĂNG KÝ CÔNG CỤ VẼ CHUYÊN NGHIỆP
-    // ======================================================
-    function registerProTools() {
-        const kc = global.klinecharts;
-        if (!kc || typeof kc.registerOverlay !== 'function') return;
-  
-        // 1. VĂN BẢN (TEXT)
-        kc.registerOverlay({
-            name: 'customText', totalStep: 2,
-            needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-            createPointFigures: function({ coordinates, overlay }) {
-                if (coordinates.length === 0) return [];
-                const txt = (overlay.extendData && overlay.extendData.text) ? overlay.extendData.text : DS.text;
-                return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: txt, baseline: 'bottom' }, ignoreEvent: false }];
-            }
-        });
-  
-        // 2. SÓNG ELLIOTT (5 Bước - 6 Điểm)
-        kc.registerOverlay({
-            name: 'elliottImpulseWave', totalStep: 6,
-            needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-            createPointFigures: function({ coordinates }) {
-                let figures = [];
-                let tags = ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)'];
-                
-                // Vẽ đoạn thẳng với màu độc lập
-                for (let i = 0; i < coordinates.length - 1; i++) { 
-                    const isImpulse = (i % 2 === 0); // 0->1, 2->3, 4->5
-                    figures.push({ 
-                        type: 'line', 
-                        attrs: { coordinates: [coordinates[i], coordinates[i + 1]] },
-                        styles: { color: isImpulse ? '#0ECB81' : '#F6465D' }
-                    });
-                }
-                // Text label
-                coordinates.forEach((c, i) => { 
-                    figures.push({ type: 'text', ignoreEvent: true, attrs: { x: c.x, y: c.y - 10, text: tags[i], baseline: 'bottom' }}); 
-                });
-                return figures;
-            }
-        });
-  
-        // 3. SÓNG ĐIỀU CHỈNH ABC (4 Điểm)
-        kc.registerOverlay({
-            name: 'elliottCorrectiveWave', totalStep: 4,
-            needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-            createPointFigures: function({ coordinates }) {
-                let figures = [];
-                let tags = ['(0)', '(A)', '(B)', '(C)'];
-                let colors = ['#F0B90B', 'rgba(255,255,255,0.4)', '#F0B90B']; // A, B, C
-                
-                for (let i = 0; i < coordinates.length - 1; i++) { 
-                    figures.push({ 
-                        type: 'line', 
-                        attrs: { coordinates: [coordinates[i], coordinates[i + 1]] },
-                        styles: { color: colors[i] }
-                    }); 
-                }
-                coordinates.forEach((c, i) => { 
-                    figures.push({ type: 'text', ignoreEvent: true, attrs: { x: c.x, y: c.y - 10, text: tags[i], baseline: 'bottom' }}); 
-                });
-                return figures;
-            }
-        });
-  
-        // 4. MẪU HÌNH XABCD (Harmonic - 5 Điểm)
-        kc.registerOverlay({
-            name: 'xabcd', totalStep: 5,
-            needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-            createPointFigures: function({ coordinates }) {
-                let figures = [];
-                let tags = ['X', 'A', 'B', 'C', 'D'];
-                
-                // Lines
-                for (let i = 0; i < coordinates.length - 1; i++) { 
-                    figures.push({ type: 'line', attrs: { coordinates: [coordinates[i], coordinates[i + 1]] }}); 
-                }
-                // Polygons (Tô nền 2 tam giác)
-                if (coordinates.length >= 3) figures.push({ type: 'polygon', attrs: { coordinates: [coordinates[0], coordinates[1], coordinates[2]] }, styles: { style: 'fill' }});
-                if (coordinates.length >= 4) figures.push({ type: 'polygon', attrs: { coordinates: [coordinates[1], coordinates[2], coordinates[3]] }, styles: { style: 'fill' }});
-                if (coordinates.length >= 5) figures.push({ type: 'polygon', attrs: { coordinates: [coordinates[2], coordinates[3], coordinates[4]] }, styles: { style: 'fill' }});
-                
-                // Labels & Text (Với Fibonacci Ratio)
-                coordinates.forEach((c, i) => { 
-                    figures.push({ type: 'text', ignoreEvent: true, attrs: { x: c.x, y: c.y - 10, text: tags[i], baseline: 'bottom' }, styles: { weight: 'bold' }}); 
-                });
-                return figures;
-            }
-        });
-  
-        // 5. FIBONACCI MỞ RỘNG (Extension - 3 Điểm)
-        kc.registerOverlay({
-            name: 'fibonacciExtension', totalStep: 4,
-            needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-            createPointFigures: function({ coordinates, bounding }) {
-                if (coordinates.length < 3) return [];
-                const p1 = coordinates[0], p2 = coordinates[1], p3 = coordinates[2];
-                const diff = p1.y - p2.y; 
-                const ratios = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618];
-                let figures = [];
-                
-                ratios.forEach(r => {
-                    const y = p3.y - (diff * r);
-                    const isGolden = (r === 0.618 || r === 1 || r === 1.618);
-                    
-                    figures.push({ 
-                        type: 'line', 
-                        attrs: { coordinates: [{ x: 0, y }, { x: bounding.width, y }] },
-                        styles: { style: isGolden ? 'dashed' : 'solid', size: isGolden ? DS.lineSize + 1 : DS.lineSize }
-                    });
-                    figures.push({ type: 'text', ignoreEvent: true, attrs: { x: bounding.width - 50, y: y - 4, text: `${(r*100).toFixed(1)}%`, baseline: 'bottom' }});
-                });
-                
-                figures.push({ type: 'line', attrs: { coordinates: [p1, p2] }, styles: { style: 'dashed', color: 'rgba(255,255,255,0.5)' } });
-                figures.push({ type: 'line', attrs: { coordinates: [p2, p3] }, styles: { style: 'dashed', color: 'rgba(255,255,255,0.5)' } });
-                return figures;
-            }
-        });
-    }
-  
-    // ======================================================
-    // 📚 DANH MỤC CÔNG CỤ VẼ
-    // ======================================================
-    const GROUPS = [
+  'use strict';
+
+  const VERSION = '2.0.0';
+  const LS_KEY  = 'wa_drawing_v2';
+
+  // ======================================================
+  // SECTION 1: NATIVE OVERLAY REGISTRY
+  // CHI dung cac overlay KLineCharts ho tro 100% native.
+  // Khong co overlay ao — khong bao gio bi loi.
+  // ======================================================
+
+  const GROUPS = [
+    {
+      id: 'cursor', label: 'Con Tro', icon: '\u2B21',
+      tools: [
+        { id:'pointer', name:'Chon / Di chuyen', overlay:null,     icon:'\u2196', key:'V',  pts:0, desc:'Chon va di chuyen hinh ve' },
+        { id:'eraser',  name:'Xoa hinh ve',        overlay:null,     icon:'\u232B', key:'E',  pts:0, desc:'Nhap len hinh ve de xoa' },
+      ]
+    },
+    {
+      id: 'lines', label: 'Duong Ke', icon: '\u2571',
+      tools: [
+        { id:'segment',                name:'Xu huong (Trend Line)',   overlay:'segment',                icon:'\u2571', key:'L', pts:2, desc:'Doan thang 2 diem — cong cu ve co ban nhat' },
+        { id:'ray',                    name:'Tia 1 chieu (Ray)',        overlay:'ray',                    icon:'\u2192',         pts:2, desc:'Bat dau tu diem A, keo dai vo han ve 1 phia' },
+        { id:'straightLine',           name:'Duong thang 2 chieu',     overlay:'straightLine',           icon:'\u2194',         pts:2, desc:'Keo dai vo han ca 2 phia' },
+        { id:'arrow',                  name:'Mui ten (Arrow)',          overlay:'arrow',                  icon:'\u2197',         pts:2, desc:'Doan thang co dau mui ten' },
+        { id:'horizontalStraightLine', name:'Ngang vo han (H-Line)',    overlay:'horizontalStraightLine', icon:'\u2500', key:'H', pts:1, desc:'Duong ngang keo dai vo han — xac dinh vung ho tro/khang cu' },
+        { id:'horizontalRayLine',      name:'Tia ngang 1 chieu',        overlay:'horizontalRayLine',      icon:'\u27F6',         pts:2, desc:'Duong ngang keo dai ve 1 phia' },
+        { id:'horizontalSegment',      name:'Doan ngang (H-Segment)',   overlay:'horizontalSegment',      icon:'\u22A2',         pts:2, desc:'Doan ngang co gioi han 2 dau' },
+        { id:'verticalStraightLine',   name:'Doc vo han (V-Line)',      overlay:'verticalStraightLine',   icon:'\u2502', key:'/', pts:1, desc:'Duong doc vo han — danh dau thoi diem quan trong' },
+        { id:'verticalRayLine',        name:'Tia doc 1 chieu',          overlay:'verticalRayLine',        icon:'\u2191',         pts:2, desc:'Duong doc keo dai 1 chieu' },
+        { id:'verticalSegment',        name:'Doan doc (V-Segment)',     overlay:'verticalSegment',        icon:'\u22A5',         pts:2, desc:'Doan doc co gioi han 2 dau' },
+        { id:'priceLine',              name:'Nhan gia (Price Line)',    overlay:'priceLine',              icon:'$',              pts:1, desc:'Duong ngang co gan nhan gia cu the' },
+      ]
+    },
+    {
+      id: 'channels', label: 'Kenh Gia', icon: '\u27F0',
+      tools: [
+        { id:'priceChannelLine',     name:'Kenh xu huong (Channel)',      overlay:'priceChannelLine',     icon:'\u27F0', pts:3, desc:'3 diem — kenh song song theo xu huong' },
+        { id:'parallelStraightLine', name:'Song song vo han (Pitchfork)', overlay:'parallelStraightLine', icon:'\u2BFF', pts:3, desc:'3 diem — 2 duong song song keo dai vo han' },
+      ]
+    },
+    {
+      id: 'fibonacci', label: 'Fibonacci', icon: '\u03D5',
+      tools: [
+        { id:'fibonacciLine',               name:'Fib Retracement (Hoi quy)',       overlay:'fibonacciLine',               icon:'\u2131', key:'F', pts:2, desc:'2 diem — cac muc 23.6 / 38.2 / 50 / 61.8 / 78.6%' },
+        { id:'fibonacciSegment',            name:'Fib Segment',                     overlay:'fibonacciSegment',            icon:'Fs',              pts:2, desc:'2 diem — Fibonacci tinh tren doan thang' },
+        { id:'fibExtension',                name:'Fib Extension (Mo rong)',         overlay:'fibExtension',                icon:'Fe',              pts:3, desc:'3 diem — muc 127.2 / 161.8 / 200 / 261.8%' },
+        { id:'fibonacciSpiral',             name:'Fib Spiral (Xoan oc phi)',        overlay:'fibonacciSpiral',             icon:'\uD83C\uDF00',    pts:2, desc:'2 diem — xoan oc dua tren ty le vang 1.618' },
+        { id:'fibonacciSpeedResistanceFan', name:'Fib Speed & Resistance Fan',      overlay:'fibonacciSpeedResistanceFan', icon:'Ff',              pts:2, desc:'2 diem — quat khang cu / ho tro Fibonacci' },
+        { id:'fibonacciCircle',             name:'Fib Circle (Vong tron)',          overlay:'fibonacciCircle',             icon:'\u25C9',          pts:2, desc:'2 diem — cac vong tron theo ty le Fibonacci' },
+        { id:'fibonacciTimeZone',           name:'Fib Time Zone (Vung thoi gian)',  overlay:'fibonacciTimeZone',           icon:'\u23F1',          pts:2, desc:'2 diem — phan chia vung thoi gian theo Fibonacci' },
+      ]
+    },
+    {
+      id: 'gann', label: 'Gann', icon: '\u210A',
+      tools: [
+        { id:'gannBox',    name:'Gann Box (Hop)',  overlay:'gannBox',    icon:'\u229E', pts:2, desc:'2 diem — hop Gann voi cac goc 1x1, 2x1, 1x2...' },
+        { id:'gannFan',    name:'Gann Fan (Quat)', overlay:'gannFan',    icon:'\u22A0', pts:2, desc:'2 diem — quat 8 goc co dien cua W.D. Gann' },
+        { id:'gannSquare', name:'Gann Square',     overlay:'gannSquare', icon:'\u229F', pts:2, desc:'2 diem — hinh vuong Gann voi luoi noi tam' },
+      ]
+    },
+    {
+      id: 'elliott', label: 'Song Elliott', icon:'\u301C',
+      tools: [
+        { id:'waveElliott',            name:'Impulse 1-2-3-4-5 (Song day)',       overlay:'waveElliott',            icon:'\u301C',  pts:6, desc:'6 diem — motive wave 5 buoc theo ly thuyet Elliott' },
+        { id:'waveABC',                name:'Corrective A-B-C (Song dieu chinh)', overlay:'waveABC',                icon:'\u223F',  pts:4, desc:'4 diem — song zigzag 3 buoc dieu chinh' },
+        { id:'elliottTriangleWave',    name:'Triangle A-B-C-D-E (Tam giac)',      overlay:'elliottTriangleWave',    icon:'\u25B3',  pts:5, desc:'5 diem — song tam giac Elliott 5 canh' },
+        { id:'elliottDoubleComboWave', name:'Double Combo W-X-Y',                 overlay:'elliottDoubleComboWave', icon:'\u223F\u223F', pts:7, desc:'7 diem — song kep phuc tap W-X-Y' },
+        { id:'elliottTripleComboWave', name:'Triple Combo W-X-Y-X-Z',             overlay:'elliottTripleComboWave', icon:'\u2261',  pts:9, desc:'9 diem — song ba W-X-Y-X-Z' },
+      ]
+    },
+    {
+      id: 'harmonic', label: 'Harmonic', icon: 'X',
+      tools: [
+        { id:'xabcd',       name:'XABCD Harmonic (Gartley/Bat/Crab)', overlay:'xabcd',       icon:'XABCD', pts:5, fill:true, desc:'5 diem — Gartley / Butterfly / Bat / Crab pattern' },
+        { id:'abcd',        name:'ABCD Pattern',                      overlay:'abcd',        icon:'ABCD',  pts:4, fill:true, desc:'4 diem — AB=CD harmonic pattern' },
+        { id:'threedrives', name:'Three Drives Pattern',              overlay:'threedrives', icon:'3D',    pts:7, desc:'7 diem — Three Drives reversal (3 dinh/day dong bien)' },
+      ]
+    },
+    {
+      id: 'shapes', label: 'Hinh Ve', icon: '\u25A1',
+      tools: [
+        { id:'rect',         name:'Hinh chu nhat (Rectangle)', overlay:'rect',         icon:'\u25AD', key:'R', pts:2, fill:true, desc:'2 diem — vung to mau, dung de danh dau vung cung/cau' },
+        { id:'circle',       name:'Hinh tron (Circle)',        overlay:'circle',       icon:'\u25CB',          pts:2, fill:true, desc:'2 diem — hinh tron to mau' },
+        { id:'triangle',     name:'Tam giac (Triangle)',       overlay:'triangle',     icon:'\u25B3',          pts:3, fill:true, desc:'3 diem — tam giac to mau' },
+        { id:'parallelogram',name:'Binh hanh (Parallelogram)', overlay:'parallelogram',icon:'\u25B1',          pts:3, fill:true, desc:'3 diem — hinh binh hanh to mau' },
+      ]
+    },
+    {
+      id: 'text', label: 'Chu Thich', icon: 'T',
+      tools: [
+        { id:'customText', name:'Van ban (Text Label)', overlay:'customText', icon:'T', key:'T', pts:2, desc:'2 diem — them chu thich van ban tieng Viet len chart' },
+        { id:'note',       name:'Ghi chu (Note)',       overlay:'note',       icon:'\uD83D\uDCDD',   pts:1, desc:'1 diem — ghi chu co nen mau va vien' },
+      ]
+    },
+  ];
+
+  // Flat map toolId -> tool (kem groupId)
+  const TOOL_MAP = Object.create(null);
+  GROUPS.forEach(function (g) {
+    g.tools.forEach(function (t) {
+      TOOL_MAP[t.id] = Object.assign({ groupId: g.id }, t);
+    });
+  });
+
+  // --- BẮT ĐẦU THÊM MỚI: ĐĂNG KÝ CÁC CÔNG CỤ ADVANCED CHUẨN PRO ---
+  function registerAdvancedOverlays() {
+    var kc = global.klinecharts;
+    if (!kc || typeof kc.registerOverlay !== 'function') return;
+
+    var advancedOverlays = [
       {
-        id: 'cursor', label: 'Con Trỏ', icon: '⬡',
-        tools: [
-          { id:'pointer', name:'Chọn / Di chuyển', shortcut: 'V', overlay:null, icon:'↖', pts:0, desc:'Chọn và di chuyển hình vẽ trên biểu đồ' },
-          { id:'eraser',  name:'Xóa hình vẽ', shortcut: 'E', overlay:null, icon:'⌫', pts:0, desc:'Nhấp vào hình vẽ để xóa nhanh' },
-        ]
+        name: 'waveElliott', totalStep: 6,
+        createPointFigures: function (ref) {
+          var coords = ref.coordinates || [];
+          var figs = [];
+          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          var labels = ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)'];
+          coords.forEach(function(pt, i) {
+            figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 15, text: labels[i], align: 'center', baseline: 'bottom' }, ignoreEvent: true });
+          });
+          return figs;
+        }
       },
       {
-        id: 'lines', label: 'Đường Kẻ', icon: '╱',
-        tools: [
-          { id:'segment',                name:'Đường xu hướng', shortcut: 'T', overlay:'segment',                icon:'╱', pts:2, desc:'Đoạn thẳng 2 điểm cơ bản' },
-          { id:'horizontalStraightLine', name:'Đường ngang', shortcut: 'H', overlay:'horizontalStraightLine', icon:'─', pts:1, desc:'Xác định vùng hỗ trợ/kháng cự' },
-          { id:'rayLine',                name:'Tia 1 chiều (Ray)', overlay:'rayLine', icon:'→', pts:2, desc:'Bắt đầu từ điểm A, kéo dài vô hạn' },
-          { id:'arrow',                  name:'Mũi tên (Arrow)', overlay:'arrow', icon:'↗', pts:2, desc:'Đoạn thẳng có mũi tên chỉ hướng' },
-        ]
+        name: 'waveABC', totalStep: 4,
+        createPointFigures: function (ref) {
+          var coords = ref.coordinates || [];
+          var figs = [];
+          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          var labels = ['(0)', '(A)', '(B)', '(C)'];
+          coords.forEach(function(pt, i) {
+            figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 15, text: labels[i], align: 'center', baseline: 'bottom' }, ignoreEvent: true });
+          });
+          return figs;
+        }
       },
       {
-        id: 'fibonacci', label: 'Fibonacci', icon: '⚏',
-        tools: [
-          { id:'fibonacciLine',      name:'Fib Thoái lui', shortcut: 'F', overlay:'fibonacciLine', icon:'⚏', pts:2, desc:'Các mức 23.6 / 38.2 / 50 / 61.8%' },
-          { id:'fibonacciExtension', name:'Fib Mở rộng', overlay:'fibonacciExtension', icon:'📈', pts:3, desc:'3 điểm — Mức 127.2 / 161.8 / 261.8%' },
-        ]
+        name: 'xabcd', totalStep: 5,
+        createPointFigures: function (ref) {
+          var coords = ref.coordinates || [];
+          var figs = [];
+          if (coords.length >= 3) {
+            figs.push({ type: 'polygon', attrs: { coordinates: [coords[0], coords[1], coords[2]] } });
+          }
+          if (coords.length >= 5) {
+            figs.push({ type: 'polygon', attrs: { coordinates: [coords[2], coords[3], coords[4]] } });
+          }
+          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          var labels = ['X', 'A', 'B', 'C', 'D'];
+          coords.forEach(function(pt, i) {
+            figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 10, text: labels[i], align: 'center' }, ignoreEvent: true });
+          });
+          return figs;
+        }
       },
       {
-        id: 'patterns', label: 'Mẫu Hình', icon: '〰',
-        tools: [
-          { id:'elliottImpulseWave',    name:'Sóng Elliott (5 Bước)', overlay:'elliottImpulseWave', icon:'〰', pts:6, desc:'6 điểm — Sóng đẩy 1-2-3-4-5' },
-          { id:'elliottCorrectiveWave', name:'Sóng Điều chỉnh (A-B-C)', overlay:'elliottCorrectiveWave', icon:'∿', pts:4, desc:'4 điểm — Sóng điều chỉnh A-B-C' },
-          { id:'xabcd',                 name:'Mẫu hình XABCD Harmonic', overlay:'xabcd', icon:'X', pts:5, desc:'5 điểm — Bat / Gartley / Crab' },
-        ]
+        name: 'abcd', totalStep: 4,
+        createPointFigures: function (ref) {
+          var coords = ref.coordinates || [];
+          var figs = [];
+          if (coords.length >= 3) figs.push({ type: 'polygon', attrs: { coordinates: [coords[0], coords[1], coords[2]] } });
+          if (coords.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [coords[1], coords[2], coords[3]] } });
+          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          var labels = ['A', 'B', 'C', 'D'];
+          coords.forEach(function(pt, i) {
+            figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 10, text: labels[i], align: 'center' }, ignoreEvent: true });
+          });
+          return figs;
+        }
       },
       {
-        id: 'shapes', label: 'Hình Khối & Chữ', icon: '▭',
-        tools: [
-          { id:'rect',       name:'Hình chữ nhật', overlay:'rect', icon:'▭', pts:2, fill:true, desc:'Đánh dấu vùng Cung/Cầu' },
-          { id:'circle',     name:'Hình tròn', overlay:'circle', icon:'○', pts:2, fill:true, desc:'Vòng tròn khoanh vùng giá' },
-          { id:'customText', name:'Văn bản (Text)', overlay:'customText', icon:'T', pts:2, fill:false, desc:'Viết chữ và ghi chú lên biểu đồ' },
-        ]
+        name: 'fibExtension', totalStep: 3,
+        createPointFigures: function (ref) {
+          var coords = ref.coordinates || [];
+          var bounding = ref.bounding;
+          var figs = [];
+          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: [coords[0], coords[1]] } });
+          if (coords.length > 2) figs.push({ type: 'line', attrs: { coordinates: [coords[1], coords[2]] }, styles: { style: 'dashed' } });
+          
+          if (coords.length === 3) {
+            var diffY = coords[0].y - coords[1].y;
+            var startY = coords[2].y;
+            var levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236];
+            levels.forEach(function(l) {
+              var y = startY - (diffY * l);
+              figs.push({ type: 'line', attrs: { coordinates: [{ x: coords[2].x, y: y }, { x: bounding.width, y: y }] } });
+              figs.push({ type: 'text', attrs: { x: coords[2].x + 5, y: y - 5, text: 'Fib ' + l, baseline: 'bottom' }, ignoreEvent: true });
+            });
+          }
+          return figs;
+        }
       },
+      {
+        name: 'customText', totalStep: 2,
+        createPointFigures: function (ref) {
+          var coords = ref.coordinates || [];
+          if (coords.length === 0) return [];
+          var txtInput = document.getElementById('wa-txt-input');
+          var textValue = (txtInput && txtInput.value.trim() !== '') ? txtInput.value : 'Văn bản...';
+          return [{ type: 'text', attrs: { x: coords[0].x, y: coords[0].y, text: textValue } }];
+        }
+      }
     ];
-  
-    const TOOL_MAP = Object.create(null);
-    GROUPS.forEach(g => g.tools.forEach(t => TOOL_MAP[t.id] = Object.assign({ groupId: g.id }, t)));
-  
-    // ======================================================
-    // 🎨 CSS CHO GIAO DIỆN VÀ CON TRỎ CHUỘT
-    // ======================================================
-    function injectCSS() {
-      if (document.getElementById('wa-draw-css')) return;
-      const s = document.createElement('style');
-      s.id = 'wa-draw-css';
-      s.textContent = `
-        :root { --wa-bg: rgba(18, 22, 28, 0.97); --wa-brd: rgba(255,255,255,0.08); --wa-cyan: #00F0FF; --wa-text: #EAECEF; --wa-gray: #848e9c; }
-        #wa-ft { position:absolute; top:80px; left:20px; z-index:9000; display:flex; font-family: 'Inter', system-ui, sans-serif; transition:opacity .2s, transform .2s; }
-        #wa-ft.wa-hidden { opacity:0; pointer-events:none; transform:scale(0.9); }
-        
-        /* Toolbar chính */
-        #wa-tb { width: 44px; display:flex; flex-direction:column; border-radius:14px; background:var(--wa-bg); border:1px solid var(--wa-brd); box-shadow:0 16px 56px rgba(0,0,0,0.8); backdrop-filter:blur(18px); user-select:none; }
-        #wa-ft.wa-collapsed #wa-tb-body, #wa-ft.wa-collapsed #wa-tb-actions { display:none!important; }
-        #wa-ft.wa-collapsed #wa-tb { border-radius:30px; }
-        
-        #wa-ft-grip { display:flex; align-items:center; justify-content:center; padding:8px 0; cursor:move; border-bottom:1px solid var(--wa-brd); }
-        #wa-ft-collapse { background:transparent; color:var(--wa-gray); border:none; cursor:pointer; font-size:16px; transition:0.2s; }
-        #wa-ft-collapse:hover { color:#fff; }
-        
-        #wa-tb-body { display:flex; flex-direction:column; padding:6px; gap:4px; }
-        .wa-btn { width:32px; height:32px; border-radius:8px; background:transparent; color:var(--wa-gray); border:1px solid transparent; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.15s; position:relative; }
-        .wa-btn:hover { background:rgba(255,255,255,0.08); color:var(--wa-text); }
-        .wa-btn.wa-act { background:rgba(0,240,255,0.15); color:var(--wa-cyan); border-color:rgba(0,240,255,0.4); box-shadow: 0 0 10px rgba(0,240,255,0.2); }
-        
-        /* Sub-panel (Thay cho hover menu) */
-        #wa-subpanel { position:absolute; left:50px; top:0; background:var(--wa-bg); border:1px solid var(--wa-brd); border-radius:12px; padding:8px; display:none; flex-direction:column; gap:4px; width: max-content; box-shadow:0 8px 32px rgba(0,0,0,0.8); }
-        #wa-subpanel.wa-open { display:flex; }
-        .wa-sub-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--wa-text); transition:0.15s; }
-        .wa-sub-item:hover { background:rgba(255,255,255,0.08); }
-        .wa-sub-icon { width:20px; text-align:center; font-size:14px; }
-        .wa-sub-text { display:flex; flex-direction:column; }
-        .wa-sub-name { font-size:11px; font-weight:600; }
-        .wa-sub-desc { font-size:10px; color:var(--wa-gray); margin-top:2px; }
-        .wa-pts-badge { position:absolute; bottom:2px; right:2px; font-size:8px; background:var(--wa-gray); color:#000; padding:0 3px; border-radius:4px; font-weight:bold; }
-        .wa-key-badge { margin-left:auto; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:9px; color:var(--wa-gray); }
-  
-        /* Properties Panel */
-        #wa-props { position:absolute; left:50px; top:50px; background:var(--wa-bg); border:1px solid var(--wa-brd); border-radius:12px; padding:12px; display:none; flex-direction:column; gap:10px; width: 220px; box-shadow:0 8px 32px rgba(0,0,0,0.8); }
-        #wa-props.wa-show { display:flex; }
-        .wa-row { display:flex; align-items:center; gap:8px; justify-content:space-between; }
-        .wa-lbl { font-size:11px; color:var(--wa-gray); }
-        .wa-picker { position:relative; width:24px; height:24px; border-radius:6px; overflow:hidden; border:1px solid rgba(255,255,255,0.2); }
-        .wa-picker input { position:absolute; width:200%; height:200%; top:-50%; left:-50%; cursor:pointer; }
-        .wa-picker div { width:100%; height:100%; pointer-events:none; }
-        .wa-dot { width:16px; height:16px; border-radius:4px; cursor:pointer; border:1px solid rgba(255,255,255,0.2); }
-        .wa-input { flex:1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:#fff; padding:6px; font-size:11px; outline:none; }
-        
-        #wa-tb-actions { display:flex; flex-direction:column; padding:6px; border-top:1px solid var(--wa-brd); gap:4px; }
-        
-        /* Trạng thái Canvas & Toast */
-        .wa-drawing-mode canvas { cursor: crosshair !important; }
-        .wa-eraser-mode canvas { cursor: cell !important; }
-        
-        #wa-toast { position:fixed; bottom:20px; right:20px; background:rgba(14,203,129,0.2); border:1px solid #0ECB81; color:#fff; padding:8px 16px; border-radius:8px; font-size:12px; transform:translateX(150%); transition:0.3s ease; z-index:9999; }
-        #wa-toast.wa-show { transform:translateX(0); }
-      `;
-      document.head.appendChild(s);
+
+    advancedOverlays.forEach(function(ov) {
+      try { kc.registerOverlay(ov); } catch(e) {}
+    });
+  }
+  // --- KẾT THÚC THÊM MỚI ---
+
+  // ======================================================
+  // SECTION 2: DRAWING STATE
+  // ======================================================
+
+  const PRESETS = [
+    '#00F0FF','#F0B90B','#0ECB81','#F6465D',
+    '#EAECEF','#848e9c','#cb55e3','#FF8C00',
+  ];
+
+  const DS = {
+    stroke:    '#00F0FF',
+    fill:      'rgba(0,240,255,0.12)',
+    lineSize:  2,
+    lineStyle: 'solid',
+    textSize:  13,
+    active:    'pointer',
+    allVis:    true,
+    count:     0,
+    panelVis:  true,
+    collapsed: false,
+    panelX:    20,
+    panelY:    80,
+    inited:    false,
+  };
+
+  // ======================================================
+  // SECTION 3: CSS
+  // ======================================================
+
+  function injectCSS() {
+    if (document.getElementById('wa-draw-css')) return;
+    const s = document.createElement('style');
+    s.id = 'wa-draw-css';
+    s.textContent = [
+      '#sc-chart-container{position:relative!important;overflow:hidden;}',
+
+      // Floating toolbar
+      '#wa-ft{',
+        'position:absolute;top:80px;left:20px;z-index:9000;',
+        'display:flex;flex-direction:column;',
+        'border-radius:14px;',
+        'background:rgba(10,14,20,0.96);',
+        'border:1px solid rgba(255,255,255,0.09);',
+        'box-shadow:0 16px 56px rgba(0,0,0,0.8),0 2px 8px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);',
+        'backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);',
+        'user-select:none;',
+        'transition:opacity .2s ease,transform .2s ease;',
+        'max-height:calc(100% - 32px);overflow:hidden;',
+      '}',
+      '#wa-ft.wa-hidden{opacity:0;pointer-events:none;transform:scale(0.88);}',
+      '#wa-ft.wa-collapsed{border-radius:50px;}',
+      '#wa-ft.wa-collapsed #wa-ft-body,#wa-ft.wa-collapsed #wa-ft-props{display:none!important;}',
+      '#wa-ft.wa-collapsed #wa-ft-grip{border-radius:50px;padding:7px 12px;}',
+
+      // Grip
+      '#wa-ft-grip{display:flex;align-items:center;gap:5px;padding:7px 8px 6px;cursor:move;border-radius:14px 14px 0 0;background:rgba(255,255,255,0.025);border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}',
+      '#wa-ft-grip-dots{display:flex;flex-direction:column;gap:2.5px;flex-shrink:0;padding:0 1px;}',
+      '#wa-ft-grip-dots span{display:flex;gap:2.5px;}',
+      '#wa-ft-grip-dots i{width:2.5px;height:2.5px;border-radius:50%;background:rgba(255,255,255,0.18);display:block;}',
+      '#wa-ft-grip-label{font-size:9px;font-weight:800;color:rgba(255,255,255,0.18);letter-spacing:1.8px;text-transform:uppercase;flex:1;pointer-events:none;}',
+      '#wa-ft-collapse{width:20px;height:20px;border:none;background:transparent;color:rgba(255,255,255,0.2);cursor:pointer;border-radius:5px;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;flex-shrink:0;padding:0;outline:none;line-height:1;}',
+      '#wa-ft-collapse:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);}',
+
+      // Body
+      '#wa-ft-body{display:flex;flex-direction:column;padding:6px 5px 4px;gap:1px;overflow-y:auto;overflow-x:visible;scrollbar-width:none;min-width:40px;}',
+      '#wa-ft-body::-webkit-scrollbar{display:none;}',
+
+      // Group
+      '.wa-fg{position:relative;display:flex;justify-content:center;}',
+      '.wa-fsep{height:1px;background:rgba(255,255,255,0.06);margin:3px 4px;}',
+
+      // Tool button
+      '.wa-fb{width:30px;height:30px;border:1px solid transparent;border-radius:8px;background:transparent;color:rgba(255,255,255,0.28);font-size:11.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s,color .1s,border-color .1s;flex-shrink:0;position:relative;outline:none;padding:0;line-height:1;white-space:nowrap;}',
+      '.wa-fb:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.1);}',
+      '.wa-fb.wa-act{background:rgba(0,240,255,0.14);color:#00F0FF;border-color:rgba(0,240,255,0.4);}',
+      '.wa-fb.wa-hafly::after{content:"";position:absolute;bottom:3px;right:3px;width:3px;height:3px;border-right:1.5px solid rgba(255,255,255,0.22);border-bottom:1.5px solid rgba(255,255,255,0.22);pointer-events:none;}',
+      '.wa-fb.wa-act.wa-hafly::after{border-color:rgba(0,240,255,0.45);}',
+
+      // Tooltip
+      '.wa-ftip{position:absolute;left:38px;top:50%;transform:translateY(-50%);background:rgba(7,10,15,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:5px 10px;font-size:11px;color:#c8cdd4;white-space:nowrap;pointer-events:none;z-index:10000;opacity:0;transition:opacity .15s .2s;box-shadow:0 4px 16px rgba(0,0,0,0.6);}',
+      '.wa-fb:hover .wa-ftip{opacity:1;}',
+
+      // Flyout
+      '.wa-fly{position:absolute;left:38px;top:-4px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:6px 5px;min-width:240px;z-index:10001;box-shadow:0 16px 48px rgba(0,0,0,0.85);display:none;flex-direction:column;gap:1px;pointer-events:all;}',
+      '.wa-fly.wa-open{display:flex;}',
+      '.wa-fly-hd{font-size:9px;font-weight:800;color:rgba(255,255,255,0.16);text-transform:uppercase;letter-spacing:1.3px;padding:3px 8px 7px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:2px;}',
+      '.wa-fi{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;cursor:pointer;color:rgba(255,255,255,0.44);font-size:11.5px;transition:background .1s,color .1s;}',
+      '.wa-fi:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.88);}',
+      '.wa-fi.wa-act{background:rgba(0,240,255,0.09);color:#00F0FF;}',
+      '.wa-fi-ic{font-size:13px;width:20px;text-align:center;flex-shrink:0;}',
+      '.wa-fi-info{flex:1;min-width:0;}',
+      '.wa-fi-nm{display:block;}',
+      '.wa-fi-ds{display:block;font-size:9.5px;color:rgba(255,255,255,0.18);margin-top:1.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.wa-fi-pts{font-size:9px;color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:1px 5px;flex-shrink:0;font-family:monospace;}',
+      '.wa-fi-key{font-size:9px;color:rgba(0,240,255,0.6);background:rgba(0,240,255,0.07);border:1px solid rgba(0,240,255,0.15);border-radius:4px;padding:1px 5px;flex-shrink:0;font-family:monospace;}',
+
+      // Bottom actions
+      '#wa-ft-actions{display:flex;align-items:center;justify-content:center;gap:3px;padding:5px 5px 7px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;}',
+      '.wa-fa{width:26px;height:26px;border:1px solid transparent;border-radius:7px;background:transparent;color:rgba(255,255,255,0.28);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;outline:none;padding:0;position:relative;}',
+      '.wa-fa:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.75);}',
+      '.wa-fa.wa-red:hover{background:rgba(246,70,93,0.1);color:#F6465D;border-color:rgba(246,70,93,0.3);}',
+      '.wa-fa.wa-cyan:hover{background:rgba(0,240,255,0.1);color:#00F0FF;border-color:rgba(0,240,255,0.3);}',
+      '.wa-fa-badge{position:absolute;top:-2px;right:-2px;background:#F6465D;color:#fff;font-size:7px;font-weight:900;min-width:12px;height:12px;border-radius:6px;display:none;align-items:center;justify-content:center;padding:0 2px;line-height:1;pointer-events:none;}',
+
+      // Properties strip
+      '#wa-ft-props{display:none;flex-direction:column;gap:8px;padding:9px 10px 10px;border-top:1px solid rgba(255,255,255,0.06);min-width:205px;flex-shrink:0;}',
+      '#wa-ft-props.wa-show{display:flex;}',
+      '.wa-pp-nm{font-size:11px;font-weight:800;color:#00F0FF;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '.wa-pp-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}',
+      '.wa-pp-lbl{font-size:10px;color:rgba(255,255,255,0.24);flex-shrink:0;}',
+      '.wa-pp-clr{position:relative;width:20px;height:20px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.18);cursor:pointer;overflow:hidden;flex-shrink:0;transition:border-color .12s;}',
+      '.wa-pp-clr:hover{border-color:rgba(255,255,255,0.5);}',
+      '.wa-pp-sw{width:100%;height:100%;border-radius:3px;}',
+      '.wa-pp-clr input[type=color]{position:absolute;opacity:0;width:200%;height:200%;top:-50%;left:-50%;cursor:pointer;border:none;padding:0;}',
+      '.wa-pp-dot{width:14px;height:14px;border-radius:3.5px;cursor:pointer;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);transition:transform .1s,box-shadow .1s;}',
+      '.wa-pp-dot:hover{transform:scale(1.3);}',
+      '.wa-pp-sel{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;color:rgba(255,255,255,0.7);font-size:11px;padding:4px 6px;cursor:pointer;outline:none;transition:border-color .12s;min-width:60px;}',
+      '.wa-pp-sel:hover,.wa-pp-sel:focus{border-color:rgba(0,240,255,0.4);}',
+      '.wa-pp-btn{flex:1;padding:5px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.45);font-size:10px;cursor:pointer;transition:all .12s;white-space:nowrap;text-align:center;}',
+      '.wa-pp-btn:hover{border-color:rgba(0,240,255,0.4);color:#00F0FF;background:rgba(0,240,255,0.06);}',
+      '.wa-pp-cancel{display:none;}',
+      '.wa-pp-cancel.wa-show{display:block;}',
+      '.wa-pp-cancel:hover{border-color:rgba(246,70,93,0.4)!important;color:#F6465D!important;background:rgba(246,70,93,0.06)!important;}',
+
+      // Drawing cursor
+      '.wa-drawing-mode canvas{cursor:crosshair!important;}',
+    ].join('');
+
+    document.head.appendChild(s);
+  }
+
+  // ======================================================
+  // SECTION 4: HTML BUILDER
+  // ======================================================
+
+  function buildHTML() {
+    // Grip
+    let h = '<div id="wa-ft-grip">';
+    h += '<div id="wa-ft-grip-dots"><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span></div>';
+    h += '<span id="wa-ft-grip-label">DRAW</span>';
+    h += '<button id="wa-ft-collapse" onclick="WaveDrawingAPI._collapse()">&#8212;</button>';
+    h += '</div>';
+
+    // Body
+    h += '<div id="wa-ft-body">';
+    GROUPS.forEach(function (g, gi) {
+      if (gi > 0) h += '<div class="wa-fsep"></div>';
+      var rep = g.tools[0];
+      var hasFly = g.tools.length > 1;
+      h += '<div class="wa-fg" data-grp="' + g.id + '">';
+      h += '<button class="wa-fb' + (hasFly ? ' wa-hafly' : '') + '"';
+      h += ' id="wa-fg-' + g.id + '"';
+      h += ' data-grp="' + g.id + '" data-tool="' + rep.id + '"';
+      h += ' onclick="WaveDrawingAPI._grpClick(event,\'' + g.id + '\')"';
+      h += ' onmouseenter="WaveDrawingAPI._grpHover(event,\'' + g.id + '\')">';
+      h += rep.icon;
+      h += '<span class="wa-ftip">' + g.label + '</span>';
+      h += '</button>';
+      if (hasFly) h += buildFlyHTML(g);
+      h += '</div>';
+    });
+    h += '</div>'; // #wa-ft-body
+
+    // Properties strip
+    h += buildPropsHTML();
+
+    // Bottom actions
+    h += '<div id="wa-ft-actions">';
+    h += '<button class="wa-fa" onclick="WaveDrawingAPI.undo()" title="Undo (Ctrl+Z)">\u21A9</button>';
+    h += '<button class="wa-fa" onclick="WaveDrawingAPI.redo()" title="Redo (Ctrl+Y)">\u21AA</button>';
+    h += '<button class="wa-fa wa-cyan" id="wa-fa-vis" onclick="WaveDrawingAPI.toggleVis()" title="An/Hien hinh ve">\uD83D\uDC41</button>';
+    h += '<button class="wa-fa wa-red" id="wa-fa-del" onclick="WaveDrawingAPI.deleteAll()" title="Xoa tat ca">\uD83D\uDDD1<span class="wa-fa-badge" id="wa-fa-badge"></span></button>';
+    h += '</div>';
+
+    return h;
+  }
+
+  function buildFlyHTML(g) {
+    var h = '<div class="wa-fly" id="wa-fly-' + g.id + '">';
+    h += '<div class="wa-fly-hd">' + g.label + '</div>';
+    g.tools.forEach(function (t) {
+      var pts = t.pts  ? '<span class="wa-fi-pts">' + t.pts + 'pt</span>' : '';
+      var key = t.key  ? '<span class="wa-fi-key">' + t.key + '</span>' : '';
+      h += '<div class="wa-fi" data-tool="' + t.id + '"';
+      h += ' onclick="WaveDrawingAPI._toolClick(\'' + t.id + '\',event)">';
+      h += '<span class="wa-fi-ic">' + t.icon + '</span>';
+      h += '<span class="wa-fi-info">';
+      h += '<span class="wa-fi-nm">' + t.name + '</span>';
+      h += '<span class="wa-fi-ds">' + (t.desc || '') + '</span>';
+      h += '</span>' + pts + key + '</div>';
+    });
+    h += '</div>';
+    return h;
+  }
+
+  function buildPropsHTML() {
+    var dots = PRESETS.map(function (c) {
+      return '<div class="wa-pp-dot" style="background:' + c + ';" onclick="WaveDrawingAPI._preset(\'' + c + '\')" title="' + c + '"></div>';
+    }).join('');
+
+    var h = '<div id="wa-ft-props">';
+    h += '<div class="wa-pp-nm" id="wa-pp-nm">—</div>';
+
+    // Color row
+    h += '<div class="wa-pp-row">';
+    h += '<span class="wa-pp-lbl">Mau:</span>';
+    h += '<div class="wa-pp-clr" title="Mau duong / vien">';
+    h += '<div class="wa-pp-sw" id="wa-sw-stroke" style="background:#00F0FF;"></div>';
+    h += '<input type="color" id="wa-ci-stroke" value="#00F0FF" oninput="WaveDrawingAPI._strokeIn(this.value)">';
+    h += '</div>';
+    h += '<span class="wa-pp-lbl">Nen:</span>';
+    h += '<div class="wa-pp-clr" title="Mau nen (fill)">';
+    h += '<div class="wa-pp-sw" id="wa-sw-fill" style="background:rgba(0,240,255,.12);"></div>';
+    h += '<input type="color" id="wa-ci-fill" value="#00f0ff" oninput="WaveDrawingAPI._fillIn(this.value)">';
+    h += '</div>';
+    h += '</div>';
+
+    // Presets
+    h += '<div class="wa-pp-row">' + dots + '</div>';
+
+    // Line settings
+    h += '<div class="wa-pp-row">';
+    h += '<span class="wa-pp-lbl">Net:</span>';
+    h += '<select class="wa-pp-sel" id="wa-sel-sz" onchange="WaveDrawingAPI._szIn(this.value)">';
+    h += '<option value="1">1px</option><option value="2" selected>2px</option><option value="3">3px</option><option value="4">4px</option><option value="5">5px</option>';
+    h += '</select>';
+    h += '<select class="wa-pp-sel" id="wa-sel-ls" onchange="WaveDrawingAPI._lsIn(this.value)">';
+    h += '<option value="solid">\u2500\u2500\u2500</option><option value="dashed">- - -</option><option value="dotted">\u00B7\u00B7\u00B7</option>';
+    h += '</select>';
+    h += '</div>';
+
+    // Custom Text Input (Vùng nhập liệu Tiếng Việt ẩn/hiện)
+    h += '<div class="wa-pp-row" id="wa-txt-row" style="display:none; width:100%; margin-top:4px;">';
+    h += '<input type="text" id="wa-txt-input" placeholder="Nhập chữ Tiếng Việt vào đây..." style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; color:#00F0FF; font-size:11px; padding:6px 8px; outline:none; transition:border-color .12s;" onfocus="this.style.borderColor=\'#00F0FF\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.08)\'">';
+    h += '</div>';
+
+    // Buttons
+    h += '<div class="wa-pp-row">';
+    h += '<button class="wa-pp-btn" style="flex:1.5" onclick="WaveDrawingAPI._applyAll()">\u2726 Ap dung tat ca</button>';
+    h += '<button class="wa-pp-btn wa-pp-cancel" id="wa-pp-cancel" onclick="WaveDrawingAPI._cancelDraw()">\u2715 Huy ve</button>';
+    h += '</div>';
+
+    h += '</div>'; // #wa-ft-props
+    return h;
+  }
+
+  // ======================================================
+  // SECTION 5: INJECT & DRAG
+  // ======================================================
+
+  var _reinjectTimer = null;
+
+  function inject() {
+    clearTimeout(_reinjectTimer);
+    _reinjectTimer = null;
+
+    var container = document.getElementById('sc-chart-container');
+    if (!container) { _reinjectTimer = setTimeout(inject, 600); return; }
+    if (document.getElementById('wa-ft')) return;
+
+    container.style.position = 'relative';
+
+    var div = document.createElement('div');
+    div.id = 'wa-ft';
+    div.innerHTML = buildHTML();
+    container.appendChild(div);
+
+    div.style.left = DS.panelX + 'px';
+    div.style.top  = DS.panelY + 'px';
+
+    if (!DS.panelVis) div.classList.add('wa-hidden');
+    if (DS.collapsed) {
+      div.classList.add('wa-collapsed');
+      var cb = document.getElementById('wa-ft-collapse');
+      if (cb) cb.innerHTML = '&#9635;';
     }
-  
-    // ======================================================
-    // 🏗️ XÂY DỰNG GIAO DIỆN HTML
-    // ======================================================
-    function buildHTML() {
-      // Toolbar chính
-      let h = `<div id="wa-tb">
-                <div id="wa-ft-grip"><button id="wa-ft-collapse" onclick="WaveDrawingAPI._collapse()">≡</button></div>
-                <div id="wa-tb-body">`;
-      
-      GROUPS.forEach(g => {
-        const isMulti = g.tools.length > 1;
-        const mainTool = g.tools[0];
-        h += `<button class="wa-btn" id="wa-grp-${g.id}" onclick="WaveDrawingAPI._openSubPanel('${g.id}', event)">
-                ${mainTool.icon}
-                ${isMulti ? `<span style="position:absolute; bottom:2px; right:2px; font-size:6px;">▶</span>` : ''}
-              </button>`;
-      });
-  
-      h += `</div><div id="wa-tb-actions">
-              <button class="wa-btn" onclick="WaveDrawingAPI.undo()" title="Undo (Ctrl+Z)">↩</button>
-              <button class="wa-btn" onclick="WaveDrawingAPI.toggleVis()" title="Ẩn/Hiện">👁</button>
-              <button class="wa-btn" onclick="WaveDrawingAPI.toggleLock()" title="Khóa/Mở Khóa">🔒</button>
-              <button class="wa-btn" style="color:#F6465D" onclick="WaveDrawingAPI.deleteAll()" title="Xóa tất cả">🗑</button>
-            </div></div>`;
-  
-      // Sub-Panel động
-      h += `<div id="wa-subpanel"></div>`;
-  
-      // Properties Panel
-      const dots = PRESETS.map(c => `<div class="wa-dot" style="background:${c};" onclick="WaveDrawingAPI._preset('${c}')"></div>`).join('');
-      h += `<div id="wa-props">
-              <div class="wa-row" style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px;">
-                <span id="wa-prop-title" style="font-weight:bold; font-size:12px; color:#00F0FF;">Thuộc tính</span>
-                <span id="wa-prop-step" style="font-size:10px; color:#F0B90B;"></span>
-              </div>
-              <input type="text" id="wa-prop-txt" class="wa-input" placeholder="Nhập văn bản..." oninput="WaveDrawingAPI._textIn(this.value)" style="display:none;">
-              <div class="wa-row">
-                <span class="wa-lbl">Nét:</span><div class="wa-picker"><div id="wa-sw-str"></div><input type="color" oninput="WaveDrawingAPI._strokeIn(this.value)"></div>
-                <span class="wa-lbl">Nền:</span><div class="wa-picker"><div id="wa-sw-fil"></div><input type="color" oninput="WaveDrawingAPI._fillIn(this.value)"></div>
-              </div>
-              <div class="wa-row" style="gap:4px;">${dots}</div>
-              <div class="wa-row">
-                <select class="wa-input" id="wa-sel-sz" onchange="WaveDrawingAPI._szIn(this.value)"><option value="1">1px</option><option value="2">2px</option><option value="3">3px</option></select>
-                <select class="wa-input" id="wa-sel-ls" onchange="WaveDrawingAPI._lsIn(this.value)"><option value="solid">Liền</option><option value="dashed">Đứt</option><option value="dotted">Chấm</option></select>
-              </div>
-              <div class="wa-row">
-                <button class="wa-input" style="background:rgba(0,240,255,0.1); color:#00F0FF;" onclick="WaveDrawingAPI._applyToSelected()">Áp dụng</button>
-                <button class="wa-input" style="background:rgba(255,255,255,0.1);" onclick="WaveDrawingAPI._cloneSelected()">Nhân bản</button>
-              </div>
-            </div>`;
-  
-      h += `<div id="wa-toast"></div>`;
-      return h;
+
+    syncPropsUI();
+    showProps(TOOL_MAP[DS.active]);
+    updateBadge();
+    setupDrag(div, document.getElementById('wa-ft-grip'));
+
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('#wa-ft')) closeFlyouts();
+    }, true);
+
+    subscribeChartEvents();
+    DS.inited = true;
+  }
+
+  function setupDrag(panel, grip) {
+    if (!grip) return;
+    var ox = 0, oy = 0, dragging = false;
+
+    grip.addEventListener('mousedown', function (e) {
+      if (e.target.id === 'wa-ft-collapse') return;
+      dragging = true;
+      ox = e.clientX - panel.offsetLeft;
+      oy = e.clientY - panel.offsetTop;
+      panel.style.transition = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      var c = document.getElementById('sc-chart-container');
+      if (!c) return;
+      var nx = Math.max(0, Math.min(e.clientX - ox, c.clientWidth  - (panel.offsetWidth  || 40)));
+      var ny = Math.max(0, Math.min(e.clientY - oy, c.clientHeight - (panel.offsetHeight || 200)));
+      panel.style.left = nx + 'px';
+      panel.style.top  = ny + 'px';
+      DS.panelX = nx; DS.panelY = ny;
+    });
+
+    document.addEventListener('mouseup', function () {
+      if (dragging) { dragging = false; panel.style.transition = ''; saveSettings(); }
+    });
+  }
+
+  // ======================================================
+  // SECTION 6: TOOL ACTIVATION
+  // ======================================================
+
+  function activate(toolId) {
+    var tool = TOOL_MAP[toolId];
+    if (!tool) return;
+    DS.active = toolId;
+    var isAction = (!tool.overlay || toolId === 'pointer' || toolId === 'eraser');
+
+    // Highlight
+    document.querySelectorAll('.wa-fb[data-grp]').forEach(function (b) { b.classList.remove('wa-act'); });
+    document.querySelectorAll('.wa-fi').forEach(function (i) { i.classList.toggle('wa-act', i.dataset.tool === toolId); });
+    var grpBtn = document.getElementById('wa-fg-' + tool.groupId);
+    if (grpBtn) {
+      grpBtn.classList.add('wa-act');
+      if (grpBtn.childNodes[0]) grpBtn.childNodes[0].textContent = tool.icon;
     }
-  
-    // ======================================================
-    // 🎮 KÍCH HOẠT CÔNG CỤ (0ms DELAY)
-    // ======================================================
-    function activate(toolId) {
-      const tool = TOOL_MAP[toolId];
-      if (!tool) return;
-      DS.active = toolId;
-      DS.drawingStep = 0;
-      DS.drawingTotalStep = tool.pts;
-      
-      const isAction = (toolId === 'pointer' || toolId === 'eraser');
-  
-      // UI Update
-      document.querySelectorAll('.wa-btn[id^="wa-grp-"]').forEach(b => b.classList.remove('wa-act'));
-      const grpBtn = document.getElementById('wa-grp-' + tool.groupId);
-      if (grpBtn) { 
-          grpBtn.classList.add('wa-act');
-          grpBtn.innerHTML = `${tool.icon} ${GROUPS.find(g=>g.id===tool.groupId).tools.length>1 ? '<span style="position:absolute; bottom:2px; right:2px; font-size:6px;">▶</span>' : ''}`;
+
+    // Cursor
+    var c = document.getElementById('sc-chart-container');
+    if (c) c.classList.toggle('wa-drawing-mode', !isAction);
+
+    showProps(tool);
+    _cancelPending();
+
+    if (toolId === 'eraser') { _eraserMode = true; hideCancelBtn(); return; }
+    _eraserMode = false;
+    if (isAction) { hideCancelBtn(); return; }
+
+    // Start drawing overlay
+    setTimeout(function () {
+      if (!global.tvChart) return;
+      try {
+        global.tvChart.createOverlay({ name: tool.overlay, lock: false, visible: true, styles: buildStyles(tool) });
+        showCancelBtn();
+      } catch (err) {
+        _tryRegister(tool);
       }
-      document.getElementById('wa-subpanel').classList.remove('wa-open');
-  
-      const props = document.getElementById('wa-props');
-      const chartContainer = document.getElementById('sc-chart-container');
-      
-      if (chartContainer) {
-          chartContainer.classList.remove('wa-drawing-mode', 'wa-eraser-mode');
-          if (toolId === 'eraser') chartContainer.classList.add('wa-eraser-mode');
-          else if (!isAction) chartContainer.classList.add('wa-drawing-mode');
-      }
-  
-      if (isAction) {
-          props.classList.remove('wa-show');
-          if (global.tvChart) global.tvChart.cancelDrawing();
-      } else {
-          props.classList.add('wa-show');
-          document.getElementById('wa-prop-title').innerText = tool.name;
-          document.getElementById('wa-prop-step').innerText = `Click để vẽ (0/${tool.pts})`;
-          document.getElementById('wa-prop-txt').style.display = (toolId === 'customText') ? 'block' : 'none';
-          document.getElementById('wa-prop-txt').value = DS.text;
-  
-          // Gửi lệnh vẽ tới KLineCharts
-          if (global.tvChart) {
-              global.tvChart.cancelDrawing();
-              const styles = {
-                  line: { color: DS.stroke, size: DS.lineSize, style: DS.lineStyle },
-                  polygon: { color: tool.fill ? DS.fill : 'transparent', style: 'fill', borderColor: DS.stroke, borderSize: DS.lineSize },
-                  text: { color: DS.stroke, size: 12, family: 'Inter' }
-              };
-              global.tvChart.createOverlay({ name: tool.overlay, lock: false, visible: true, styles, extendData: { text: DS.text } });
-          }
-      }
-    }
-  
-    // ======================================================
-    // 🎯 EVENTS & UX (KLineCharts, Keyboard, Drag)
-    // ======================================================
-    function subscribeEvents() {
-      let poll = setInterval(() => {
-        if (!global.tvChart) return;
-        clearInterval(poll);
-  
-        // Tiến trình vẽ
-        global.tvChart.subscribeAction('onDrawing', (params) => {
-            DS.drawingStep++;
-            const stepTxt = document.getElementById('wa-prop-step');
-            if (stepTxt) stepTxt.innerText = `Bước ${DS.drawingStep}/${DS.drawingTotalStep}`;
-        });
-  
-        // Vẽ xong
-        global.tvChart.subscribeAction('onDrawEnd', (params) => { 
-            const chartContainer = document.getElementById('sc-chart-container');
-            if (chartContainer) chartContainer.classList.remove('wa-drawing-mode');
-            showToast(`✓ Đã vẽ ${TOOL_MAP[DS.active].name}`);
-            setTimeout(() => activate('pointer'), 50); 
-        });
-  
-        // Tương tác Overlay (Click)
-        global.tvChart.subscribeAction('onOverlayClick', (params) => {
-            if (DS.active === 'eraser') {
-                global.tvChart.removeOverlay({ id: params.overlay.id });
-                showToast(`Đã xóa hình vẽ`);
-                activate('pointer');
-            } else {
-                DS.selectedOverlayId = params.overlay.id;
-                document.getElementById('wa-props').classList.add('wa-show');
-                document.getElementById('wa-prop-title').innerText = 'Chỉnh sửa Hình';
-                document.getElementById('wa-prop-step').innerText = '';
-                
-                if (params.overlay.name === 'customText') {
-                    document.getElementById('wa-prop-txt').style.display = 'block';
-                    document.getElementById('wa-prop-txt').value = params.overlay.extendData?.text || '';
-                } else {
-                    document.getElementById('wa-prop-txt').style.display = 'none';
-                }
+    }, 50);
+  }
+
+  var _registered = {};
+  function _tryRegister(tool) {
+    var kc = global.klinecharts;
+    if (!kc || typeof kc.registerOverlay !== 'function') return;
+    var name = tool.overlay;
+    if (!_registered[name]) {
+      _registered[name] = true;
+      try {
+        kc.registerOverlay({
+          name: name,
+          totalStep: tool.pts || 2,
+          createPointFigures: function (ref) {
+            var coords = ref.coordinates || [];
+            if (coords.length < 2) return [];
+            var figs = [];
+            for (var i = 0; i < coords.length - 1; i++) {
+              figs.push({ type: 'line', attrs: { coordinates: [coords[i], coords[i+1]] } });
             }
+            return figs;
+          }
         });
-      }, 500);
-  
-      // Drag UI (Giới hạn trong viewport)
-      const ft = document.getElementById('wa-ft');
-      const grip = document.getElementById('wa-ft-grip');
-      let drag = false, ox = 0, oy = 0;
-      
-      grip.onmousedown = (e) => { 
-          if(e.target.id!=='wa-ft-collapse') { drag = true; ox = e.clientX - ft.offsetLeft; oy = e.clientY - ft.offsetTop; } 
-      };
-      document.onmousemove = (e) => { 
-          if(drag) { 
-              let nx = e.clientX - ox, ny = e.clientY - oy;
-              // Snap to edge
-              if(nx < 20) nx = 20; if(ny < 20) ny = 20;
-              if(nx > window.innerWidth - 60) nx = window.innerWidth - 60;
-              if(ny > window.innerHeight - 200) ny = window.innerHeight - 200;
-              
-              ft.style.left = nx + 'px'; ft.style.top = ny + 'px'; 
-              DS.panelX = nx; DS.panelY = ny; 
-          }
-      };
-      document.onmouseup = () => { if(drag){ drag = false; localStorage.setItem(LS_KEY, JSON.stringify(DS)); }};
-  
-      // Đóng subpanel khi click ngoài
-      document.addEventListener('click', e => { 
-          if (!e.target.closest('#wa-tb') && !e.target.closest('#wa-subpanel')) {
-              document.getElementById('wa-subpanel').classList.remove('wa-open');
-          }
+      } catch (e) {}
+    }
+    try {
+      global.tvChart.createOverlay({ name: name, lock: false, visible: true, styles: buildStyles(tool) });
+      showCancelBtn();
+    } catch (e2) {
+      // Final fallback: segment
+      try { global.tvChart.createOverlay({ name: 'segment', lock: false, visible: true, styles: buildStyles(tool) }); showCancelBtn(); } catch (e3) {}
+    }
+  }
+
+  function _cancelPending() {
+    if (!global.tvChart) return;
+    try { if (typeof global.tvChart.cancelDrawing === 'function') global.tvChart.cancelDrawing(); } catch (e) {}
+  }
+
+  var _eraserMode = false;
+
+  // ======================================================
+  // SECTION 7: PROPERTIES BAR
+  // ======================================================
+
+  function showProps(tool) {
+    var bar = document.getElementById('wa-ft-props');
+    if (!bar) return;
+    var show = !!(tool && tool.id !== 'pointer' && tool.id !== 'eraser');
+    bar.classList.toggle('wa-show', show);
+    var nm = document.getElementById('wa-pp-nm');
+    if (nm) nm.textContent = tool ? tool.name : '\u2014';
+
+    // Logic hiển thị ô nhập Text
+    var txtRow = document.getElementById('wa-txt-row');
+    if (txtRow) {
+      if (tool && tool.id === 'customText') {
+        txtRow.style.display = 'flex';
+        setTimeout(function() { document.getElementById('wa-txt-input').focus(); }, 100);
+      } else {
+        txtRow.style.display = 'none';
+      }
+    }
+  }
+
+  function syncPropsUI() {
+    var ci = document.getElementById('wa-ci-stroke');
+    var sw = document.getElementById('wa-sw-stroke');
+    var fs = document.getElementById('wa-sw-fill');
+    var sz = document.getElementById('wa-sel-sz');
+    var ls = document.getElementById('wa-sel-ls');
+    if (ci) ci.value = toHex6(DS.stroke);
+    if (sw) sw.style.background = DS.stroke;
+    if (fs) fs.style.background = DS.fill;
+    if (sz) sz.value = DS.lineSize;
+    if (ls) ls.value = DS.lineStyle;
+  }
+
+  function showCancelBtn() { var b = document.getElementById('wa-pp-cancel'); if (b) b.classList.add('wa-show'); }
+  function hideCancelBtn()  { var b = document.getElementById('wa-pp-cancel'); if (b) b.classList.remove('wa-show'); }
+
+  function updateBadge() {
+    var badge = document.getElementById('wa-fa-badge');
+    if (!badge) return;
+    badge.textContent = DS.count;
+    badge.style.display = DS.count > 0 ? 'flex' : 'none';
+  }
+
+  // ======================================================
+  // SECTION 8: CHART EVENTS
+  // ======================================================
+
+  function subscribeChartEvents() {
+    var attempts = 0;
+    var poll = setInterval(function () {
+      if (!global.tvChart || ++attempts > 30) { clearInterval(poll); return; }
+      clearInterval(poll);
+
+      try { global.tvChart.subscribeAction('onDrawEnd', function () {
+        DS.count++; updateBadge(); hideCancelBtn();
+        setTimeout(function () { activate('pointer'); }, 0);
+      }); } catch (e) {}
+
+      try { global.tvChart.subscribeAction('onOverlayRemove', function () {
+        if (DS.count > 0) DS.count--; updateBadge();
+      }); } catch (e) {}
+
+      try { global.tvChart.subscribeAction('onOverlayClick', function (params) {
+        if (_eraserMode && params && params.overlay) {
+          try { global.tvChart.removeOverlay({ id: params.overlay.id }); } catch (e) {}
+          _eraserMode = false;
+          activate('pointer');
+        }
+      }); } catch (e) {}
+    }, 400);
+  }
+
+  // ======================================================
+  // SECTION 9: KEYBOARD
+  // ======================================================
+
+  function onKey(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    var ov = document.getElementById('super-chart-overlay');
+    if (!ov || !ov.classList.contains('active')) return;
+
+    if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); WaveDrawingAPI.undo(); return; }
+    if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); WaveDrawingAPI.redo(); return; }
+    if (e.key === 'Escape') { WaveDrawingAPI._cancelDraw(); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && DS.active === 'pointer') {
+      if (global.tvChart) { try { global.tvChart.removeOverlay(); } catch (ex) {} } return;
+    }
+    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+      Object.values(TOOL_MAP).forEach(function (t) {
+        if (t.key && e.key.toUpperCase() === t.key.toUpperCase()) { e.preventDefault(); activate(t.id); }
       });
-  
-      // Phím tắt (Keyboard Shortcuts)
-      document.addEventListener('keydown', (e) => {
-          // Bỏ qua nếu đang gõ text input
-          if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-          
-          if (e.key === 'v' || e.key === 'V' || e.key === 'Escape') activate('pointer');
-          if (e.key === 'e' || e.key === 'E') activate('eraser');
-          if (e.key === 't' || e.key === 'T') activate('segment');
-          if (e.key === 'h' || e.key === 'H') activate('horizontalStraightLine');
-          if (e.key === 'f' || e.key === 'F') activate('fibonacciLine');
-          if ((e.key === 'Delete' || e.key === 'Backspace') && DS.selectedOverlayId && DS.active === 'pointer') {
-              global.tvChart.removeOverlay({ id: DS.selectedOverlayId });
-              document.getElementById('wa-props').classList.remove('wa-show');
-              DS.selectedOverlayId = null;
-              showToast('Đã xóa hình được chọn');
-          }
-          if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) WaveDrawingAPI.undo();
-      });
     }
-  
-    function syncPropsUI() {
-      document.getElementById('wa-sw-str').style.background = DS.stroke;
-      document.getElementById('wa-sw-fil').style.background = DS.fill;
-      document.getElementById('wa-sel-sz').value = DS.lineSize;
-      document.getElementById('wa-sel-ls').value = DS.lineStyle;
+  }
+
+  // ======================================================
+  // FLYOUT
+  // ======================================================
+
+  var _flyOpen = null;
+
+  function closeFlyouts() {
+    document.querySelectorAll('.wa-fly.wa-open').forEach(function (f) { f.classList.remove('wa-open'); });
+    _flyOpen = null;
+  }
+
+  function openFlyout(groupId) {
+    closeFlyouts();
+    var fly = document.getElementById('wa-fly-' + groupId);
+    if (!fly) return;
+    var grpBtn = document.getElementById('wa-fg-' + groupId);
+    var container = document.getElementById('sc-chart-container');
+    if (grpBtn && container) {
+      var btnTop = grpBtn.getBoundingClientRect().top - container.getBoundingClientRect().top;
+      var flyH   = fly.offsetHeight || 200;
+      var maxTop = container.clientHeight - flyH - 8;
+      fly.style.top = Math.max(4, Math.min(btnTop, maxTop)) + 'px';
     }
-  
-    function showToast(msg) {
-        const toast = document.getElementById('wa-toast');
-        if(!toast) return;
-        toast.innerText = msg;
-        toast.classList.add('wa-show');
-        setTimeout(() => toast.classList.remove('wa-show'), 1500);
-    }
-  
-    // ======================================================
-    // 🔌 PUBLIC API
-    // ======================================================
-    global.WaveDrawingAPI = {
-      init: function() { 
-          injectCSS(); 
-          Object.assign(DS, JSON.parse(localStorage.getItem(LS_KEY)||'{}')); 
-          
-          if (!document.getElementById('wa-ft')) {
-              registerProTools();
-              const container = document.getElementById('sc-chart-container');
-              if (!container) { setTimeout(WaveDrawingAPI.init, 500); return; }
-  
-              const div = document.createElement('div');
-              div.id = 'wa-ft';
-              div.innerHTML = buildHTML();
-              container.appendChild(div);
-  
-              div.style.left = DS.panelX + 'px'; div.style.top = DS.panelY + 'px';
-              if (!DS.panelVis) div.classList.add('wa-hidden');
-  
-              syncPropsUI();
-              subscribeEvents();
-          }
-      },
-      
-      _collapse: function() { 
-          DS.collapsed = !DS.collapsed; 
-          document.getElementById('wa-ft').classList.toggle('wa-collapsed', DS.collapsed); 
-      },
-      
-      _openSubPanel: function(groupId, e) {
-          e.stopPropagation();
-          const g = GROUPS.find(x => x.id === groupId);
-          const panel = document.getElementById('wa-subpanel');
-          
-          if(g.tools.length === 1) {
-              panel.classList.remove('wa-open');
-              activate(g.tools[0].id);
-              return;
-          }
-  
-          let html = '';
-          g.tools.forEach(t => {
-              html += `<div class="wa-sub-item" onclick="WaveDrawingAPI.setTool('${t.id}')">
-                          <span class="wa-sub-icon">${t.icon}</span>
-                          <div class="wa-sub-text">
-                              <span class="wa-sub-name">${t.name}</span>
-                              <span class="wa-sub-desc">${t.desc}</span>
-                          </div>
-                          ${t.shortcut ? `<span class="wa-key-badge">${t.shortcut}</span>` : ''}
-                       </div>`;
-          });
-          panel.innerHTML = html;
-          panel.style.top = document.getElementById('wa-grp-' + groupId).offsetTop + 'px';
-          panel.classList.add('wa-open');
-      },
-  
-      setTool: function(toolId) { activate(toolId); },
-      
-      _strokeIn: function(v) { DS.stroke = v; syncPropsUI(); },
-      _fillIn: function(v) { 
-          DS.fill = v.replace('#',''); 
-          DS.fill = `rgba(${parseInt(DS.fill.slice(0,2),16)},${parseInt(DS.fill.slice(2,4),16)},${parseInt(DS.fill.slice(4,6),16)},0.15)`; 
-          syncPropsUI(); 
-      },
-      _textIn: function(v) { DS.text = v; },
-      _preset: function(v) { this._strokeIn(v); this._fillIn(v); },
-      _szIn: function(v) { DS.lineSize = parseInt(v); },
-      _lsIn: function(v) { DS.lineStyle = v; },
-      
-      _applyToSelected: function() {
-          if (!global.tvChart || !DS.selectedOverlayId) return;
-          global.tvChart.overrideOverlay({
-              id: DS.selectedOverlayId,
-              extendData: { text: DS.text },
-              styles: {
-                  line: { color: DS.stroke, size: DS.lineSize, style: DS.lineStyle },
-                  polygon: { color: DS.fill, style: 'fill', borderColor: DS.stroke, borderSize: DS.lineSize },
-                  text: { color: DS.stroke, size: 12, family: 'Inter' }
-              }
-          });
-          showToast('Đã cập nhật hình vẽ');
-      },
-  
-      _cloneSelected: function() { /* Logic clone tùy vào klinecharts version, hiện cần lấy thông tin data từ getOverlayById */ showToast('Tính năng nhân bản đang cập nhật'); },
-  
-      undo: function() { if(global.tvChart && global.tvChart.undoOverlay) { global.tvChart.undoOverlay(); showToast('Đã hoàn tác'); } },
-      toggleVis: function() { DS.allVis = !DS.allVis; if(global.tvChart) global.tvChart.overrideOverlay({visible: DS.allVis}); },
-      toggleLock: function() { DS.allLocked = !DS.allLocked; if(global.tvChart) global.tvChart.overrideOverlay({lock: DS.allLocked}); showToast(DS.allLocked ? 'Đã khóa tất cả' : 'Đã mở khóa'); },
-      deleteAll: function() { if(global.tvChart && confirm('Bạn có chắc chắn muốn xóa tất cả hình vẽ?')) { global.tvChart.removeAllOverlay(); showToast('Đã xóa toàn bộ'); document.getElementById('wa-props').classList.remove('wa-show'); } }
+    fly.classList.add('wa-open');
+    _flyOpen = groupId;
+  }
+
+  // ======================================================
+  // SECTION 10: PERSISTENCE
+  // ======================================================
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        stroke: DS.stroke, fill: DS.fill,
+        lineSize: DS.lineSize, lineStyle: DS.lineStyle,
+        panelX: DS.panelX, panelY: DS.panelY,
+        collapsed: DS.collapsed, panelVis: DS.panelVis,
+      }));
+    } catch (e) {}
+  }
+
+  function loadSettings() {
+    try {
+      var s = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+      if (s.stroke)    DS.stroke    = s.stroke;
+      if (s.fill)      DS.fill      = s.fill;
+      if (s.lineSize)  DS.lineSize  = +s.lineSize || 2;
+      if (s.lineStyle) DS.lineStyle = s.lineStyle;
+      if (s.panelX !== undefined) DS.panelX = +s.panelX;
+      if (s.panelY !== undefined) DS.panelY = +s.panelY;
+      if (s.collapsed !== undefined) DS.collapsed = !!s.collapsed;
+      if (s.panelVis  !== undefined) DS.panelVis  = !!s.panelVis;
+    } catch (e) {}
+  }
+
+  // ======================================================
+  // STYLE HELPERS
+  // ======================================================
+
+  function buildStyles(tool) {
+    var fill = !!(tool && tool.fill);
+    return {
+      line:    { color: DS.stroke, size: DS.lineSize, style: DS.lineStyle },
+      text:    { color: DS.stroke, size: DS.textSize, family: '"Segoe UI",Arial,sans-serif', weight: '600' },
+      polygon: { color: fill ? DS.fill : 'transparent', style: 'fill', borderColor: DS.stroke, borderSize: DS.lineSize, borderStyle: DS.lineStyle },
+      arc:     { color: DS.stroke, size: DS.lineSize, style: DS.lineStyle },
     };
-  
-    // Khởi tạo tự động
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(WaveDrawingAPI.init, 500));
-    else setTimeout(WaveDrawingAPI.init, 500);
-  
-  })(window);
+  }
+
+  function toHex6(c) {
+    if (!c) return '#00F0FF';
+    if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
+    if (/^#[0-9a-fA-F]{3}$/.test(c)) { var s = c.slice(1); return '#'+s[0]+s[0]+s[1]+s[1]+s[2]+s[2]; }
+    var cv = document.createElement('canvas'); cv.width = cv.height = 1;
+    var cx = cv.getContext('2d'); cx.fillStyle = c; cx.fillRect(0,0,1,1);
+    var d = cx.getImageData(0,0,1,1).data;
+    return '#' + [d[0],d[1],d[2]].map(function(x){return x.toString(16).padStart(2,'0');}).join('');
+  }
+
+  function hexAlpha(h, a) {
+    h = h.replace('#','');
+    if (h.length===3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    return 'rgba('+parseInt(h.slice(0,2),16)+','+parseInt(h.slice(2,4),16)+','+parseInt(h.slice(4,6),16)+','+a+')';
+  }
+
+  // ======================================================
+  // SECTION 11: PUBLIC API
+  // ======================================================
+
+  global.WaveDrawingAPI = {
+    version: VERSION,
+
+    init: function () {
+      injectCSS();
+      loadSettings();
+      registerAdvancedOverlays(); // Kích hoạt thuật toán Pro Toán Học
+      inject();
+      document.addEventListener('keydown', onKey);
+      _watchReinit();
+    },
+
+    reinject: function () {
+      var el = document.getElementById('wa-ft');
+      if (el) el.remove();
+      DS.inited = false;
+      setTimeout(inject, 350);
+    },
+
+    /** Goi tu nut bam tren Topbar — bat/tat floating panel */
+    toggle: function () {
+      var panel = document.getElementById('wa-ft');
+      if (!panel) { inject(); DS.panelVis = true; saveSettings(); return; }
+      DS.panelVis = !DS.panelVis;
+      panel.classList.toggle('wa-hidden', !DS.panelVis);
+      saveSettings();
+      // Sync topbar button
+      var btn = document.getElementById('sc-draw-toggle-btn');
+      if (btn) btn.classList.toggle('active', DS.panelVis);
+    },
+
+    // HTML onclick handlers
+    _collapse: function () {
+      var panel = document.getElementById('wa-ft');
+      var btn   = document.getElementById('wa-ft-collapse');
+      if (!panel) return;
+      DS.collapsed = !DS.collapsed;
+      panel.classList.toggle('wa-collapsed', DS.collapsed);
+      if (btn) btn.innerHTML = DS.collapsed ? '&#9635;' : '&#8212;';
+      saveSettings();
+    },
+
+    _grpClick: function (event, groupId) {
+      event.stopPropagation();
+      var g = GROUPS.find(function (x) { return x.id === groupId; });
+      if (!g) return;
+      if (g.tools.length === 1) { closeFlyouts(); activate(g.tools[0].id); return; }
+      var fly = document.getElementById('wa-fly-' + groupId);
+      if (fly && fly.classList.contains('wa-open')) { closeFlyouts(); activate(g.tools[0].id); }
+      else { openFlyout(groupId); }
+    },
+
+    _grpHover: function (event, groupId) {
+      if (_flyOpen && _flyOpen !== groupId) openFlyout(groupId);
+    },
+
+    _toolClick: function (toolId, event) {
+      if (event) event.stopPropagation();
+      closeFlyouts();
+      activate(toolId);
+    },
+
+    _cancelDraw: function () {
+      _cancelPending();
+      hideCancelBtn();
+      activate('pointer');
+    },
+
+    _strokeIn: function (val) {
+      DS.stroke = val;
+      var sw = document.getElementById('wa-sw-stroke');
+      if (sw) sw.style.background = val;
+      saveSettings();
+    },
+
+    _fillIn: function (val) {
+      DS.fill = hexAlpha(val, 0.15);
+      var sw = document.getElementById('wa-sw-fill');
+      if (sw) sw.style.background = DS.fill;
+      saveSettings();
+    },
+
+    _preset: function (hex) {
+      DS.stroke = hex;
+      DS.fill   = hexAlpha(hex, 0.12);
+      var ci = document.getElementById('wa-ci-stroke');
+      var sw = document.getElementById('wa-sw-stroke');
+      var fs = document.getElementById('wa-sw-fill');
+      if (ci) ci.value = toHex6(hex);
+      if (sw) sw.style.background = hex;
+      if (fs) fs.style.background = DS.fill;
+      saveSettings();
+    },
+
+    _szIn: function (val) { DS.lineSize = parseInt(val) || 2; saveSettings(); },
+    _lsIn: function (val) { DS.lineStyle = val; saveSettings(); },
+
+    _applyAll: function () {
+      if (!global.tvChart) return;
+      try { global.tvChart.overrideOverlay({ styles: buildStyles({ fill: true }) }); } catch (e) {}
+    },
+
+    undo: function () {
+      if (!global.tvChart) return;
+      try {
+        if (typeof global.tvChart.undoOverlay === 'function') global.tvChart.undoOverlay();
+        else global.tvChart.removeOverlay();
+        if (DS.count > 0) DS.count--;
+        updateBadge();
+      } catch (e) {}
+    },
+
+    redo: function () {
+      if (!global.tvChart) return;
+      try {
+        if (typeof global.tvChart.redoOverlay === 'function') { global.tvChart.redoOverlay(); DS.count++; updateBadge(); }
+      } catch (e) {}
+    },
+
+    toggleVis: function () {
+      if (!global.tvChart) return;
+      DS.allVis = !DS.allVis;
+      try { global.tvChart.overrideOverlay({ visible: DS.allVis }); } catch (e) {}
+      var btn = document.getElementById('wa-fa-vis');
+      if (btn) { btn.title = DS.allVis ? 'An tat ca hinh ve' : 'Hien tat ca hinh ve'; btn.innerHTML = DS.allVis ? '\uD83D\uDC41' : '\uD83D\uDEAB'; }
+    },
+
+    deleteAll: function () {
+      if (!global.tvChart) return;
+      if (!confirm('Xoa tat ca hinh ve tren chart?\n(Khong the hoan tac)')) return;
+      try {
+        if (typeof global.tvChart.removeAllOverlay === 'function') global.tvChart.removeAllOverlay();
+        else global.tvChart.removeOverlay();
+      } catch (e) {}
+      DS.count = 0; updateBadge();
+      if (typeof global.applyFishFilter === 'function') setTimeout(global.applyFishFilter, 100);
+    },
+
+    getState:  function () { return Object.assign({}, DS); },
+    getGroups: function () { return GROUPS; },
+  };
+
+  // Đảm bảo gắn cứng vào window để HTML button KHÔNG bao giờ báo lỗi undefined
+  window.WaveDrawingAPI = global.WaveDrawingAPI;
+
+  // ======================================================
+  // REINIT WATCHER
+  // ======================================================
+
+  function _watchReinit() {
+    new MutationObserver(function () {
+      var c = document.getElementById('sc-chart-container');
+      if (c && !document.getElementById('wa-ft') && DS.panelVis) {
+        clearTimeout(_reinjectTimer);
+        _reinjectTimer = setTimeout(inject, 420);
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  // AUTO-INIT
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(WaveDrawingAPI.init, 500); });
+  } else {
+    setTimeout(WaveDrawingAPI.init, 500);
+  }
+
+  console.log('[Wave Alpha Drawing v' + VERSION + ' PRO] Floating toolbar module loaded.');
+
+})(window);
