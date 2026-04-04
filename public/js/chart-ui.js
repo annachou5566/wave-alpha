@@ -816,15 +816,18 @@ window.openProChart = function(t, isTimeSwitch = false) {
         customUI.innerHTML = `
             <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
             
-            <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 6px;">
-                <div id="sc-custom-tooltip" style="display: flex; gap: 8px; color: #848e9c; font-size: 10.5px; font-family: var(--font-num); font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
-                    <span>O <span id="tp-o">--</span></span>
-                    <span>H <span id="tp-h">--</span></span>
-                    <span>L <span id="tp-l">--</span></span>
+            <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 8px; max-width: 90%;">
+                
+                <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 12px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600; background: rgba(30, 35, 41, 0.65); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); width: fit-content; backdrop-filter: blur(4px);">
+                    <span>O <span id="tp-o" style="color:#848e9c">--</span></span>
+                    <span>H <span id="tp-h" style="color:#0ECB81">--</span></span>
+                    <span>L <span id="tp-l" style="color:#F6465D">--</span></span>
                     <span>C <span id="tp-c">--</span></span>
-                    <span>Vol <span id="tp-v">--</span></span>
+                    <span>Vol <span id="tp-v" style="color:#848e9c">--</span></span>
                 </div>
-                <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto;"></div>
+
+                <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto; margin-left: 2px;"></div>
+
             </div>
         `;
         container.appendChild(customUI);
