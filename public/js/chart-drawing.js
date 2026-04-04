@@ -1,13 +1,13 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — FLOATING DRAWING TOOLBAR
-// Version: 3.1.0 | KLineCharts Advanced Fixed
+// Version: 3.2.0 | Fix UI Overflow & Elliott Math
 // ==========================================
 
 (function (global) {
   'use strict';
 
-  const VERSION = '3.1.0';
+  const VERSION = '3.2.0';
   const LS_KEY  = 'wa_drawing_v3';
 
   // ======================================================
@@ -68,11 +68,11 @@
     {
       id: 'elliott', label: 'Song Elliott', icon:'\u301C',
       tools: [
-        { id:'waveElliott',            name:'Impulse 1-2-3-4-5 (Song day)',       overlay:'waveElliott',            icon:'\u301C',  pts:6, desc:'6 diem — motive wave 5 buoc' },
-        { id:'waveABC',                name:'Corrective A-B-C (Song dieu chinh)', overlay:'waveABC',                icon:'\u223F',  pts:4, desc:'4 diem — song zigzag 3 buoc' },
-        { id:'elliottTriangleWave',    name:'Triangle A-B-C-D-E (Tam giac)',      overlay:'elliottTriangleWave',    icon:'\u25B3',  pts:5, desc:'5 diem — song tam giac Elliott' },
-        { id:'elliottDoubleComboWave', name:'Double Combo W-X-Y',                 overlay:'elliottDoubleComboWave', icon:'\u223F\u223F', pts:7, desc:'7 diem — song kep phuc tap' },
-        { id:'elliottTripleComboWave', name:'Triple Combo W-X-Y-X-Z',             overlay:'elliottTripleComboWave', icon:'\u2261',  pts:9, desc:'9 diem — song ba' },
+        { id:'waveElliott',            name:'Impulse 1-2-3-4-5',          overlay:'waveElliott',            icon:'\u301C',  pts:6, desc:'6 diem — Motive wave 5 buoc' },
+        { id:'waveABC',                name:'Corrective A-B-C',           overlay:'waveABC',                icon:'\u223F',  pts:4, desc:'4 diem — Song zigzag 3 buoc' },
+        { id:'elliottTriangleWave',    name:'Triangle A-B-C-D-E',         overlay:'elliottTriangleWave',    icon:'\u25B3',  pts:6, desc:'6 diem — Song tam giac Elliott' },
+        { id:'elliottDoubleComboWave', name:'Double Combo W-X-Y',         overlay:'elliottDoubleComboWave', icon:'\u223F\u223F', pts:4, desc:'4 diem — Song kep phuc tap' },
+        { id:'elliottTripleComboWave', name:'Triple Combo W-X-Y-X-Z',     overlay:'elliottTripleComboWave', icon:'\u2261',  pts:6, desc:'6 diem — Song ba phuc tap' },
       ]
     },
     {
@@ -95,7 +95,6 @@
     {
       id: 'text', label: 'Chu Thich', icon: 'T',
       tools: [
-        // FIX QUAN TRỌNG: Text phải là pts: 1 (Click 1 phát là ăn luôn)
         { id:'customText', name:'Van ban (Text Label)', overlay:'customText', icon:'T', key:'T', pts:1, desc:'1 diem — Them chu thich van ban len chart' },
         { id:'note',       name:'Ghi chu (Note)',       overlay:'note',       icon:'\uD83D\uDCDD',   pts:1, desc:'1 diem — ghi chu co nen mau va vien' },
       ]
@@ -109,38 +108,34 @@
     });
   });
 
-  // FIX QUAN TRỌNG: Đăng ký Thuật toán nâng cao chuẩn KLineCharts v9
+  // FIX QUAN TRONG: Đăng ký Toán học (Đã fix lỗi sai số đếm điểm Elliott và Fix Text ảo)
   function registerAdvancedOverlays() {
     var kc = global.klinecharts;
     if (!kc || typeof kc.registerOverlay !== 'function') return;
 
+    // Hàm Factory tạo Sóng Elliott chuẩn, chống sai số điểm
+    function getElliott(name, totalStep, labels) {
+      return {
+        name: name, totalStep: totalStep, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function (ref) {
+          var c = ref.coordinates || [];
+          var figs = [];
+          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
+          c.forEach(function(pt, i) {
+            if (labels[i]) figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 15, text: labels[i], align: 'center', baseline: 'bottom' }, ignoreEvent: true });
+          });
+          return figs;
+        }
+      };
+    }
+
     var advancedOverlays = [
-      {
-        name: 'waveElliott', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || [];
-          var figs = [];
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          var labels = ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)'];
-          c.forEach(function(pt, i) {
-            figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 15, text: labels[i], align: 'center', baseline: 'bottom' }, ignoreEvent: true });
-          });
-          return figs;
-        }
-      },
-      {
-        name: 'waveABC', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || [];
-          var figs = [];
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          var labels = ['(0)', '(A)', '(B)', '(C)'];
-          c.forEach(function(pt, i) {
-            figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 15, text: labels[i], align: 'center', baseline: 'bottom' }, ignoreEvent: true });
-          });
-          return figs;
-        }
-      },
+      getElliott('waveElliott', 6, ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)']),
+      getElliott('waveABC', 4, ['(0)', '(A)', '(B)', '(C)']),
+      getElliott('elliottTriangleWave', 6, ['(0)', '(A)', '(B)', '(C)', '(D)', '(E)']),
+      getElliott('elliottDoubleComboWave', 4, ['(0)', '(W)', '(X)', '(Y)']),
+      getElliott('elliottTripleComboWave', 6, ['(0)', '(W)', '(X)', '(Y)', '(X)', '(Z)']),
+      
       {
         name: 'xabcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
@@ -197,9 +192,14 @@
         createPointFigures: function (ref) {
           var c = ref.coordinates || [];
           if (c.length === 0) return [];
-          var txtInput = document.getElementById('wa-txt-input');
-          var textValue = (txtInput && txtInput.value.trim() !== '') ? txtInput.value : 'Văn bản...';
-          return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: textValue, baseline: 'bottom' } }];
+          
+          // FIX QUAN TRONG: Khóa chặt nội dung Text vào instance hiện tại để không bị lỗi khi sửa ô input khác
+          if (ref.overlay.extendData === undefined || ref.overlay.extendData === null) {
+            var txtInput = document.getElementById('wa-txt-input');
+            ref.overlay.extendData = (txtInput && txtInput.value.trim() !== '') ? txtInput.value : 'Văn bản...';
+          }
+          
+          return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: ref.overlay.extendData, baseline: 'bottom' } }];
         }
       }
     ];
@@ -235,7 +235,7 @@
   };
 
   // ======================================================
-  // SECTION 3: CSS INJECTION (Gộp chung 1 file)
+  // SECTION 3: CSS INJECTION (Đã gỡ overflow: hidden)
   // ======================================================
 
   function injectCSS() {
@@ -244,7 +244,10 @@
     s.id = 'wa-draw-css';
     s.textContent = [
       '#sc-chart-container{position:relative!important;overflow:hidden;}',
-      '#wa-ft{position:absolute;top:80px;left:20px;z-index:9000;display:flex;flex-direction:column;border-radius:14px;background:rgba(10,14,20,0.96);border:1px solid rgba(255,255,255,0.09);box-shadow:0 16px 56px rgba(0,0,0,0.8),0 2px 8px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);user-select:none;transition:opacity .2s ease,transform .2s ease;max-height:calc(100% - 32px);overflow:hidden;}',
+      
+      /* FIX LỖI CHE MENU: overflow: visible thay cho hidden */
+      '#wa-ft{position:absolute;top:80px;left:20px;z-index:9000;display:flex;flex-direction:column;border-radius:14px;background:rgba(10,14,20,0.96);border:1px solid rgba(255,255,255,0.09);box-shadow:0 16px 56px rgba(0,0,0,0.8),0 2px 8px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);user-select:none;transition:opacity .2s ease,transform .2s ease;max-height:calc(100% - 32px);overflow:visible;}',
+      
       '#wa-ft.wa-hidden{opacity:0;pointer-events:none;transform:scale(0.88);}',
       '#wa-ft.wa-collapsed{border-radius:50px;}',
       '#wa-ft.wa-collapsed #wa-ft-body,#wa-ft.wa-collapsed #wa-ft-props{display:none!important;}',
@@ -279,7 +282,10 @@
       '.wa-fi-ds{display:block;font-size:9.5px;color:rgba(255,255,255,0.18);margin-top:1.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       '.wa-fi-pts{font-size:9px;color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:1px 5px;flex-shrink:0;font-family:monospace;}',
       '.wa-fi-key{font-size:9px;color:rgba(0,240,255,0.6);background:rgba(0,240,255,0.07);border:1px solid rgba(0,240,255,0.15);border-radius:4px;padding:1px 5px;flex-shrink:0;font-family:monospace;}',
-      '#wa-ft-actions{display:flex;align-items:center;justify-content:center;gap:3px;padding:5px 5px 7px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;}',
+      
+      /* Giữ lại bo góc tròn ở thanh Bottom Action vì ta đã gỡ overflow hidden ở thẻ cha */
+      '#wa-ft-actions{display:flex;align-items:center;justify-content:center;gap:3px;padding:5px 5px 7px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;border-radius:0 0 14px 14px;}',
+      
       '.wa-fa{width:26px;height:26px;border:1px solid transparent;border-radius:7px;background:transparent;color:rgba(255,255,255,0.28);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;outline:none;padding:0;position:relative;}',
       '.wa-fa:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.75);}',
       '.wa-fa.wa-red:hover{background:rgba(246,70,93,0.1);color:#F6465D;border-color:rgba(246,70,93,0.3);}',
@@ -380,9 +386,9 @@
     h += '<select class="wa-pp-sel" id="wa-sel-ls" onchange="WaveDrawingAPI._lsIn(this.value)"><option value="solid">\u2500\u2500\u2500</option><option value="dashed">- - -</option><option value="dotted">\u00B7\u00B7\u00B7</option></select>';
     h += '</div>';
     
-    // FIX QUAN TRONG: Input nhap Text Tieng Viet
+    // TextBox Input
     h += '<div class="wa-pp-row" id="wa-txt-row" style="display:none; width:100%; margin-top:4px;">';
-    h += '<input type="text" id="wa-txt-input" placeholder="Nhập văn bản vào đây trước khi vẽ..." style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; color:#00F0FF; font-size:11px; padding:6px 8px; outline:none; transition:border-color .12s;" onfocus="this.style.borderColor=\'#00F0FF\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.08)\'">';
+    h += '<input type="text" id="wa-txt-input" placeholder="Nhập văn bản vào đây trước khi click chart..." style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; color:#00F0FF; font-size:11px; padding:6px 8px; outline:none; transition:border-color .12s;" onfocus="this.style.borderColor=\'#00F0FF\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.08)\'">';
     h += '</div>';
 
     h += '<div class="wa-pp-row">';
@@ -695,7 +701,6 @@
     init: function () {
       injectCSS();
       loadSettings();
-      // Chạy đăng ký thuật toán ngay lúc init để đảm bảo KLineCharts đã nhận diện
       registerAdvancedOverlays(); 
       inject();
       document.addEventListener('keydown', onKey);
@@ -841,7 +846,6 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
 
-  // Khởi chạy khi DOM và klinecharts đã sẵn sàng
   var initAttempts = 0;
   function tryInit() {
     if (global.klinecharts) {
