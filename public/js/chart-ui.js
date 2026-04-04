@@ -812,13 +812,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         // 1. KHỞI TẠO CHART 100% NATIVE KLINECHARTS
         container.style.position = 'relative'; 
-        container.style.backgroundColor = t_bg; // 🚀 CHỈ ĐỔ MÀU NỀN TRỰC TIẾP LÊN CONTAINER LÀ XONG!
-
         window.tvChart = klinecharts.init(container, {
             styles: {
-                // 🚀 XÓA SẠCH CÁI DÒNG LAYOUT GÂY LỖI SẬP CHART ĐI, CHỈ CẦN TẮT GRID Ở ĐÂY:
-                grid: { show: false },
+                grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
                 
+                // 🚀 TÍCH HỢP OHLC VÀO TOOLTIP CỦA NẾN
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
