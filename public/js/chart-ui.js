@@ -817,7 +817,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         let tfStr = window.currentChartInterval.toUpperCase();
 
         customUI.innerHTML = `
-            <div style="position: absolute; bottom: 20px; right: 20px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.04); letter-spacing: 2px; pointer-events: none;">WAVE ALPHA</div>
+            <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
             
             <div style="position: absolute; top: 10px; left: 10px; z-index: 999; display: flex; align-items: center; gap: 6px; pointer-events: auto;">
                 
@@ -826,7 +826,6 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 </div>
 
                 <div id="wa-master-content" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: rgba(22, 26, 30, 0.7); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px);">
-                    
                     <div style="display: flex; align-items: center; gap: 6px; font-family: var(--font-main);">
                         <span id="chart-legend-sym" style="color: #EAECEF; font-size: 13px; font-weight: 800;">${symStr}</span>
                         <span id="chart-legend-tf" style="color: #848e9c; font-size: 12px; font-weight: 700;">${tfStr}</span>
@@ -844,13 +843,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 </div>
             </div>
 
-            <div style="position: absolute; bottom: 20px; left: 10px; z-index: 998; pointer-events: auto;">
-                <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px;"></div>
-            </div>
+            <div id="wa-html-legend" style="position: absolute !important; top: auto !important; bottom: 180px !important; left: 10px !important; z-index: 998; pointer-events: auto; display: flex; flex-direction: column; gap: 4px;"></div>
         `;
         container.appendChild(customUI);
 
-        // 🚀 LOGIC ẨN/HIỆN THANH NGANG
+        // 🚀 LOGIC ẨN/HIỆN THANH NGANG TRÊN CÙNG
         document.getElementById('wa-master-btn').onclick = function() {
             let content = document.getElementById('wa-master-content');
             let icon = document.getElementById('wa-master-icon');
