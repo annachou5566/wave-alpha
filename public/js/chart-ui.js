@@ -855,16 +855,16 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     }
                 },
                 
-                // 🚀 BỘ ICON CHỈ BÁO DÙNG KÝ TỰ UNICODE SIÊU CHUẨN
+                // 🚀 ICON CHỈ BÁO BẰNG UNICODE (KHÔNG CẦN LOAD FONT)
                 indicator: {
                     tooltip: {
                         showRule: 'always',    
                         showType: 'standard',  
                         icons: [
-                            { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 7, paddingLeft: 2, paddingRight: 2, icon: '\u25CF', fontFamily: 'Arial, sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 7, paddingLeft: 2, paddingRight: 2, icon: '\u25CB', fontFamily: 'Arial, sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, paddingLeft: 2, paddingRight: 2, icon: '\u2699', fontFamily: 'Arial, sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, paddingLeft: 2, paddingRight: 2, icon: '\u2715', fontFamily: 'Arial, sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
+                            { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◉', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                            { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◎', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
+                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
                         ]
                     }
                 },
