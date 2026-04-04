@@ -820,9 +820,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
         customUI.innerHTML = `
             <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
             
-            <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 6px; max-width: 95%; pointer-events: none;">
+            <div id="sc-main-tooltip" style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: 95%; pointer-events: none; z-index: 10;">
                 
-                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: rgba(30, 35, 41, 0.4); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px); width: fit-content; pointer-events: auto;">
+                <div style="position: relative; z-index: 12; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: rgba(30, 35, 41, 0.4); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px); width: fit-content; pointer-events: auto;">
                     
                     <div style="display: flex; align-items: center; gap: 8px; font-family: var(--font-main);">
                         <span id="chart-legend-sym" style="color: #EAECEF; font-size: 13px; font-weight: 800; letter-spacing: 0.5px;">${symStr}</span>
@@ -832,7 +832,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
                     <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.15);"></div>
 
-                    <div id="sc-custom-tooltip" style="display: flex; gap: 10px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600;">
+                    <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 10px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600;">
                         <span>O <span id="tp-o" style="color:#848e9c">--</span></span>
                         <span>H <span id="tp-h" style="color:#0ECB81">--</span></span>
                         <span>L <span id="tp-l" style="color:#F6465D">--</span></span>
@@ -841,14 +841,14 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     </div>
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 4px; pointer-events: auto; width: fit-content; margin-left: 2px;">
+                <div style="position: relative; z-index: 11; margin-top: 6px; margin-left: 4px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; width: fit-content;">
                     
-                    <div id="wa-ind-toggle" style="display: none; align-items: center; gap: 6px; cursor: pointer; color: #848e9c; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; user-select: none; transition: 0.2s;" onmouseover="this.style.color='#EAECEF'; this.style.background='rgba(255,255,255,0.05)';" onmouseout="this.style.color='#848e9c'; this.style.background='transparent';">
+                    <div id="wa-ind-toggle" style="display: none; align-items: center; gap: 6px; cursor: pointer; color: #848e9c; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; user-select: none; transition: 0.2s; background: rgba(0,0,0,0.2);" onmouseover="this.style.color='#EAECEF'; this.style.background='rgba(255,255,255,0.1)';" onmouseout="this.style.color='#848e9c'; this.style.background='rgba(0,0,0,0.2)';">
                         <span id="wa-ind-toggle-icon" style="font-size: 9px;">▼</span>
                         <span id="wa-ind-toggle-text">Chỉ báo (0)</span>
                     </div>
                     
-                    <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 2px; padding-left: 6px;"></div>
+                    <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 3px; padding-left: 2px;"></div>
                 
                 </div>
 
