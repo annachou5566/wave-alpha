@@ -793,7 +793,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
 
-        // 1. KHỞI TẠO CHART (Để nó tạo Canvas trước)
+        // 1. KHỞI TẠO CHART 
+        // Ép vị trí của container gốc thành relative để legendDiv bám vào đúng chuẩn
+        container.style.position = 'relative';
+
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
@@ -801,13 +804,15 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    tooltip: { showRule: 'none' } // <-- Chỉ tắt duy nhất chữ OHLC mặc định của nến
+                    
+                    // ✅ ĐÚNG: Chỉ tắt tooltip mặc định của NẾN
+                    tooltip: { showRule: 'none' } 
                 },
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
             }
         });
 
-       
+      
 
         // 2. ÉP LỚP KÍNH CƯỜNG LỰC LÊN TRÊN CÙNG ĐỂ CHỨA LEGEND VÀ NÚT BẤM
         const customUI = document.createElement('div');

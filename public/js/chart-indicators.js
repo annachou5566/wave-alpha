@@ -1479,29 +1479,46 @@
 
     const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
     const isStack = meta ? meta.isStack : false;
+    
+    // ✅ CHUẨN XÁC: Đảm bảo paneId của biểu đồ chính luôn là 'candle_pane'
     const paneId  = (options && options.paneId) || (isStack ? 'candle_pane' : 'pane_' + indName.toLowerCase());
     const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
         try {
-            // 🚀 BÍ QUYẾT: Chỉ tàng hình chữ Canvas đối với các chỉ báo đè lên nến (isStack = true)
-            // Còn RSI, Volume, MACD (isStack = false) thì thả rông cho nó tự hiện bình thường
-            let hideStyles = { tooltip: { showRule: 'none', showName: false, showParams: false, text: { size: 0, color: 'transparent' } } };
-            
-            global.tvChart.createIndicator({
-                name: indName,
-                styles: isStack ? hideStyles : {}
-            }, isStack, { id: paneId });
-            
+            // Khởi tạo bình thường, KHÔNG éo style tàng hình ở đây
+            global.tvChart.createIndicator({ name: indName }, isStack, { id: paneId });
         } catch (err) {
             if (retries > 0) setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
             return; 
+        }
+
+        // 🚀 CHÌA KHÓA VÀNG: Đợi 50ms cho KLineCharts đăng ký xong mới ép tàng hình
+        if (isStack) {
+            setTimeout(function() {
+                try {
+                    global.tvChart.overrideIndicator({
+                        name: indName,
+                        // Tắt native tooltip CHỈ của indicator NÀY
+                        styles: { tooltip: { showRule: 'none' } }
+                    }, paneId); // ✅ BẮT BUỘC có tham số paneId (candle_pane) ở đây
+                } catch (e) {
+                    console.warn('[Wave Alpha] overrideIndicator failed:', e);
+                }
+            }, 50);
         }
 
         if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
             global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params });
             if(typeof saveIndicatorState === 'function') saveIndicatorState();
         }
+
+        // Render HTML legend sau khi override chạy xong
+        setTimeout(function() {
+            if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
+                global.WaveIndicatorAPI.renderLegend();
+            }
+        }, 200);
     }
     attempt(3);
   };
