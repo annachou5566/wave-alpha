@@ -816,7 +816,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
                 
-                // 🚀 TÍCH HỢP OHLC VÀO BÊN TRONG TOOLTIP CỦA CANDE 
+                // 🚀 TÍCH HỢP OHLC VÀO BÊN TRONG TOOLTIP CỦA CANDLE 
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
@@ -824,24 +824,29 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     tooltip: { 
                         showRule: 'always',
                         showType: 'standard',
-                        // Cấu trúc tùy chỉnh để hiển thị trên 1 hàng ngang: QUQUSDT 1D | O ... H ...
+                        // Ép cứng CSS để không bao giờ bị co chữ
+                        text: { size: 12, family: 'var(--font-num), sans-serif', weight: 600, color: '#848e9c', marginLeft: 10, marginTop: 8, marginRight: 0, marginBottom: 0 },
+                        
                         custom: function(calcData) {
-                            const kLineData = calcData.current;
-                            if (!kLineData) return [];
+                            // LƯU LẠI NẾN CUỐI: Chống hiện tượng co giật/mất chữ khi đưa chuột ra ngoài
+                            if (calcData.current) window.lastOHLC = calcData.current;
+                            const kLineData = window.lastOHLC || calcData.default || { open: 0, high: 0, low: 0, close: 0, volume: 0 };
+                            
                             const sym = (t.symbol || 'UNKNOWN').toUpperCase() + 'USDT';
                             const tf = window.currentChartInterval.toUpperCase();
-                            const volStr = kLineData.volume >= 1e6 ? (kLineData.volume/1e6).toFixed(2)+'M' : (kLineData.volume >= 1e3 ? (kLineData.volume/1e3).toFixed(2)+'K' : kLineData.volume.toFixed(0));
+                            const volStr = kLineData.volume >= 1e9 ? (kLineData.volume/1e9).toFixed(2)+'B' : (kLineData.volume >= 1e6 ? (kLineData.volume/1e6).toFixed(2)+'M' : (kLineData.volume >= 1e3 ? (kLineData.volume/1e3).toFixed(2)+'K' : (kLineData.volume || 0).toFixed(0)));
                             
+                            // PHỐI MÀU CỰC KỲ CHUYÊN NGHIỆP TRÊN 1 HÀNG
                             return [
-                                { title: '', value: `${sym} ${tf} |`, color: '#EAECEF' },
-                                { title: ' O', value: kLineData.open.toFixed(prec), color: '#848e9c' },
-                                { title: ' H', value: kLineData.high.toFixed(prec), color: '#0ECB81' },
-                                { title: ' L', value: kLineData.low.toFixed(prec), color: '#F6465D' },
-                                { title: ' C', value: kLineData.close.toFixed(prec), color: kLineData.close >= kLineData.open ? '#0ECB81' : '#F6465D' },
-                                { title: ' V', value: volStr, color: '#848e9c' }
+                                { title: '', value: `${sym} ${tf}`, color: '#EAECEF' },
+                                { title: '', value: '  |  ', color: 'rgba(255,255,255,0.15)' }, // Vạch ngăn cách
+                                { title: 'O ', value: kLineData.open.toFixed(prec), color: '#848e9c' },
+                                { title: '  H ', value: kLineData.high.toFixed(prec), color: '#0ECB81' },
+                                { title: '  L ', value: kLineData.low.toFixed(prec), color: '#F6465D' },
+                                { title: '  C ', value: kLineData.close.toFixed(prec), color: kLineData.close >= kLineData.open ? '#0ECB81' : '#F6465D' },
+                                { title: '  V ', value: volStr, color: '#848e9c' }
                             ];
-                        },
-                        text: { size: 12, family: 'var(--font-num), sans-serif', weight: 600, color: '#848e9c', marginLeft: 10, marginTop: 8, marginRight: 0, marginBottom: 0 }
+                        }
                     }
                 },
                 
@@ -862,26 +867,46 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // ĐĂNG KÝ CLICK ICON (Mắt, Cài đặt, Xóa)
+        // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
         window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
+            const indName = data.indicatorName;
+            const paneId = data.paneId;
+
             if (data.iconId === 'visible') {
-                window.tvChart.overrideIndicator({ name: data.indicatorName, visible: true }, data.paneId);
-                let ind = window.scActiveIndicators?.find(x => x.name === data.indicatorName);
+                window.tvChart.overrideIndicator({ name: indName, visible: true }, paneId);
+                let ind = window.scActiveIndicators?.find(x => x.name === indName);
                 if (ind) ind.visible = true;
-            } else if (data.iconId === 'invisible') {
-                window.tvChart.overrideIndicator({ name: data.indicatorName, visible: false }, data.paneId);
-                let ind = window.scActiveIndicators?.find(x => x.name === data.indicatorName);
+            } 
+            else if (data.iconId === 'invisible') {
+                window.tvChart.overrideIndicator({ name: indName, visible: false }, paneId);
+                let ind = window.scActiveIndicators?.find(x => x.name === indName);
                 if (ind) ind.visible = false;
-            } else if (data.iconId === 'setting') {
+            } 
+            else if (data.iconId === 'setting') {
                 if (typeof window.openIndicatorSettings === 'function') {
-                    const entry = window.scActiveIndicators?.find(x => x.name === data.indicatorName);
-                    if (entry) window.openIndicatorSettings({ name: data.indicatorName, shortName: data.indicatorName, calcParams: entry.params }, data.paneId);
+                    // 🚀 TRÍCH XUẤT THÔNG SỐ TRỰC TIẾP TỪ CANVAS (Hỗ trợ VOL và mọi chỉ báo)
+                    let calcParams = [];
+                    try {
+                        const instances = window.tvChart.getIndicators({ name: indName, paneId: paneId });
+                        if (instances && instances.length > 0) {
+                            calcParams = instances[0].calcParams || [];
+                        }
+                    } catch(e) {}
+                    
+                    window.openIndicatorSettings({ 
+                        name: indName, 
+                        shortName: indName, 
+                        calcParams: calcParams 
+                    }, paneId);
                 }
-            } else if (data.iconId === 'close') {
+            } 
+            else if (data.iconId === 'close') {
                 if (typeof window.removeIndicatorFromChart === 'function') {
-                    window.removeIndicatorFromChart(data.indicatorName);
-                }
+                    window.removeIndicatorFromChart(indName);
+                } 
+                // Fallback nếu người dùng bấm X xóa chỉ báo VOL mặc định
+                try { window.tvChart.removeIndicator(paneId, indName); } catch(e){}
             }
         });
 
