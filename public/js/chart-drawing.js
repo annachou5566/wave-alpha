@@ -690,7 +690,107 @@
     if (h.length===3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
     return 'rgba('+parseInt(h.slice(0,2),16)+','+parseInt(h.slice(2,4),16)+','+parseInt(h.slice(4,6),16)+','+a+')';
   }
+// ======================================================
+  // BỘ NÃO TOÁN HỌC: ĐĂNG KÝ CÁC CÔNG CỤ PRO
+  // ======================================================
+  function registerProTools() {
+      const kc = global.klinecharts;
+      if (!kc || typeof kc.registerOverlay !== 'function') return;
 
+      // 🌊 1. SÓNG ELLIOTT (5 Bước)
+      kc.registerOverlay({
+          name: 'elliottImpulseWave', totalStep: 6,
+          needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+          createPointFigures: function({ coordinates }) {
+              let lines = [], texts = [];
+              let tags = ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)'];
+              for (let i = 0; i < coordinates.length - 1; i++) { lines.push({ coordinates: [coordinates[i], coordinates[i + 1]] }); }
+              coordinates.forEach((c, i) => { texts.push({ x: c.x, y: c.y, text: tags[i], baseline: 'bottom' }); });
+              return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+          }
+      });
+
+      // 🦇 2. MẪU HÌNH XABCD (Harmonic)
+      kc.registerOverlay({
+          name: 'xabcd', totalStep: 5,
+          needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+          createPointFigures: function({ coordinates }) {
+              let lines = [], texts = [], polygons = [];
+              let tags = ['X', 'A', 'B', 'C', 'D'];
+              for (let i = 0; i < coordinates.length - 1; i++) { lines.push({ coordinates: [coordinates[i], coordinates[i + 1]] }); }
+              if (coordinates.length >= 3) polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] });
+              if (coordinates.length >= 4) polygons.push({ coordinates: [coordinates[1], coordinates[2], coordinates[3]] });
+              if (coordinates.length >= 5) polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] });
+              coordinates.forEach((c, i) => { texts.push({ x: c.x, y: c.y, text: tags[i], baseline: 'bottom' }); });
+              return [
+                  { type: 'polygon', attrs: polygons, styles: { style: 'fill' } },
+                  { type: 'line', attrs: lines },
+                  { type: 'text', ignoreEvent: true, attrs: texts }
+              ];
+          }
+      });
+
+      // ⚡ 3. MẪU HÌNH ABCD
+      kc.registerOverlay({
+          name: 'abcd', totalStep: 4,
+          needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+          createPointFigures: function({ coordinates }) {
+              let lines = [], texts = [], polygons = [];
+              let tags = ['A', 'B', 'C', 'D'];
+              for (let i = 0; i < coordinates.length - 1; i++) { lines.push({ coordinates: [coordinates[i], coordinates[i + 1]] }); }
+              if (coordinates.length >= 3) polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] });
+              if (coordinates.length >= 4) polygons.push({ coordinates: [coordinates[1], coordinates[2], coordinates[3]] });
+              coordinates.forEach((c, i) => { texts.push({ x: c.x, y: c.y, text: tags[i], baseline: 'bottom' }); });
+              return [
+                  { type: 'polygon', attrs: polygons, styles: { style: 'fill' } },
+                  { type: 'line', attrs: lines },
+                  { type: 'text', ignoreEvent: true, attrs: texts }
+              ];
+          }
+      });
+
+      // 📈 4. FIBONACCI MỞ RỘNG (Extension)
+      kc.registerOverlay({
+          name: 'fibonacciExtension', totalStep: 4,
+          needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+          createPointFigures: function({ coordinates, bounding }) {
+              if (coordinates.length < 3) return [];
+              const p1 = coordinates[0], p2 = coordinates[1], p3 = coordinates[2];
+              const diff = p1.y - p2.y; 
+              const ratios = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618];
+              let lines = [], texts = [];
+              ratios.forEach(r => {
+                  const y = p3.y - (diff * r);
+                  lines.push({ coordinates: [{ x: 0, y }, { x: bounding.width, y }] });
+                  texts.push({ x: 0, y: y - 2, text: `Fib ${r}`, baseline: 'bottom' });
+              });
+              lines.push({ coordinates: [p1, p2] });
+              lines.push({ coordinates: [p2, p3] });
+              return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+          }
+      });
+
+      // 🔲 5. GANN BOX
+      kc.registerOverlay({
+          name: 'gannBox', totalStep: 3,
+          needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+          createPointFigures: function({ coordinates }) {
+              if (coordinates.length < 2) return [];
+              const p1 = coordinates[0], p2 = coordinates[1];
+              let lines = [], polygons = [];
+              polygons.push({ coordinates: [p1, {x: p2.x, y: p1.y}, p2, {x: p1.x, y: p2.y}] });
+              lines.push({ coordinates: [p1, p2] });
+              lines.push({ coordinates: [{x: p2.x, y: p1.y}, {x: p1.x, y: p2.y}] });
+              const midX = (p1.x + p2.x)/2; const midY = (p1.y + p2.y)/2;
+              lines.push({ coordinates: [{x: midX, y: p1.y}, {x: midX, y: p2.y}] });
+              lines.push({ coordinates: [{x: p1.x, y: midY}, {x: p2.x, y: midY}] });
+              return [
+                  { type: 'polygon', attrs: polygons, styles: { style: 'fill' } },
+                  { type: 'line', attrs: lines }
+              ];
+          }
+      });
+  }
   // ======================================================
   // SECTION 11: PUBLIC API
   // ======================================================
@@ -701,6 +801,7 @@
     init: function () {
       injectCSS();
       loadSettings();
+      registerProTools(); // <--- ĐÁNH THỨC BỘ NÃO Ở ĐÂY
       inject();
       document.addEventListener('keydown', onKey);
       _watchReinit();
