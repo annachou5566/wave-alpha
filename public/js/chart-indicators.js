@@ -1262,6 +1262,8 @@
         #wa-ind-modal-box { width: 96vw !important; max-height: 92vh !important; }
         #wa-ind-list { grid-template-columns: 1fr !important; }
         .wa-label { display: none !important; }
+        /* Thu nhỏ paddings của nút thời gian để vừa vặn hơn khi rớt dòng */
+        .sc-time-btn { padding: 4px 6px !important; font-size: 11px !important; }
       }
     `;
     document.head.appendChild(style);
@@ -1325,12 +1327,21 @@
       const timeBtns = document.querySelectorAll('.sc-time-btn');
       if (timeBtns.length > 0) {
         const container = timeBtns[0].parentElement;
-        // [FIX 2.1] Ép container thành thanh cuộn ngang mượt mà, cấm rớt dòng
-        container.style.display = 'flex';
-        container.style.flexWrap = 'nowrap';
-        container.style.overflowX = 'auto';
-        container.style.scrollbarWidth = 'none'; // Ẩn thanh cuộn
         
+        // [FIX LỖI 1 & 2] Khôi phục overflow để Menu Cài Đặt không bị cắt tàng hình.
+        // Chuyển sang dùng flex-wrap để các cụm rớt dòng thông minh, gọn gàng.
+        container.style.display = 'flex';
+        container.style.flexWrap = 'wrap';
+        container.style.overflow = 'visible'; 
+        
+        // Tác động lên cả thẻ cha (Chứa cả Lọc Marker) để gom nhóm gọn gàng
+        if (container.parentElement) {
+            container.parentElement.style.display = 'flex';
+            container.parentElement.style.flexWrap = 'wrap';
+            container.parentElement.style.gap = '6px';
+            container.parentElement.style.alignItems = 'center';
+        }
+
         const tbWrap = document.createElement('div');
         tbWrap.style.cssText = 'display:flex; align-items:center; gap:2px; flex-shrink:0;';
         tbWrap.innerHTML = `
@@ -1593,8 +1604,6 @@
    */
  global.addIndicatorToChart = function (indName, options) {
     if (!global.tvChart) return;
-    const modal = document.getElementById('sc-indicator-modal');
-    if (modal) modal.style.display = 'none';
 
     const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
     const isStack = meta ? meta.isStack : false;
