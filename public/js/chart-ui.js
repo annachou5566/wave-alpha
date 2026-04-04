@@ -815,53 +815,51 @@ window.openProChart = function(t, isTimeSwitch = false) {
         // Lấy thông tin động
         let symStr = (t.symbol || 'UNKNOWN').toUpperCase() + 'USDT';
         let tfStr = window.currentChartInterval.toUpperCase();
-        let exchangeStr = 'Wave Alpha';
 
         customUI.innerHTML = `
-            <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
+            <div style="position: absolute; bottom: 20px; right: 20px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.04); letter-spacing: 2px; pointer-events: none;">WAVE ALPHA</div>
             
-            <div style="position: absolute; top: 10px; left: 10px; z-index: 999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: 90%;">
+            <div style="position: absolute; top: 10px; left: 10px; z-index: 999; display: flex; align-items: center; gap: 6px; pointer-events: auto;">
                 
-                <div style="display: flex; align-items: center; gap: 10px; background: #161A1E; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: auto; width: fit-content; user-select: none;">
-                    
-                    <span id="chart-legend-sym" style="color: #EAECEF; font-size: 13px; font-weight: 800; letter-spacing: 0.5px;">${symStr}</span>
-                    <span id="chart-legend-tf" style="color: #848e9c; font-size: 12px; font-weight: 700;">${tfStr}</span>
-                    <span style="color: #5e6673; font-size: 11px; font-weight: 600;">${exchangeStr}</span>
-                    
-                    <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.15); margin: 0 4px;"></div>
-                    
-                    <div id="wa-master-btn" style="cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 4px; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
-                        <span id="wa-master-icon" style="color: #848e9c; font-size: 11px;">▼</span>
-                    </div>
+                <div id="wa-master-btn" style="cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: rgba(22, 26, 30, 0.7); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px); transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(22, 26, 30, 0.7)'">
+                    <span id="wa-master-icon" style="color: #848e9c; font-size: 10px;">◀</span>
                 </div>
 
-                <div id="wa-master-content" style="display: flex; flex-direction: column; gap: 6px; pointer-events: auto; transition: all 0.2s;">
+                <div id="wa-master-content" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: rgba(22, 26, 30, 0.7); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px);">
                     
-                    <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 10px; background: rgba(22, 26, 30, 0.8); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600; width: fit-content; backdrop-filter: blur(4px);">
+                    <div style="display: flex; align-items: center; gap: 6px; font-family: var(--font-main);">
+                        <span id="chart-legend-sym" style="color: #EAECEF; font-size: 13px; font-weight: 800;">${symStr}</span>
+                        <span id="chart-legend-tf" style="color: #848e9c; font-size: 12px; font-weight: 700;">${tfStr}</span>
+                    </div>
+
+                    <div style="width: 1px; height: 12px; background: rgba(255,255,255,0.15);"></div>
+
+                    <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 10px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600;">
                         <span>O <span id="tp-o" style="color:#848e9c">--</span></span>
                         <span>H <span id="tp-h" style="color:#0ECB81">--</span></span>
                         <span>L <span id="tp-l" style="color:#F6465D">--</span></span>
                         <span>C <span id="tp-c">--</span></span>
                         <span>Vol <span id="tp-v" style="color:#848e9c">--</span></span>
                     </div>
-
-                    <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 3px; padding-left: 2px;"></div>
                 </div>
+            </div>
 
+            <div style="position: absolute; bottom: 20px; left: 10px; z-index: 998; pointer-events: auto;">
+                <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px;"></div>
             </div>
         `;
         container.appendChild(customUI);
 
-        // 🚀 LOGIC JS: Lắng nghe sự kiện Click vào mũi tên để gập/mở Lãnh thổ 2
+        // 🚀 LOGIC ẨN/HIỆN THANH NGANG
         document.getElementById('wa-master-btn').onclick = function() {
             let content = document.getElementById('wa-master-content');
             let icon = document.getElementById('wa-master-icon');
             if (content.style.display === 'none') {
                 content.style.display = 'flex';
-                icon.innerText = '▼';
+                icon.innerText = '◀'; // Trạng thái mở
             } else {
                 content.style.display = 'none';
-                icon.innerText = '▶';
+                icon.innerText = '▶'; // Trạng thái gập
             }
         };
 
