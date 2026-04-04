@@ -816,7 +816,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
                 
-                // 🚀 TÍCH HỢP OHLC VÀO NATIVE TOOLTIP (CHỐNG CO GIẬT CHỮ & CÓ ĐỦ MÀU)
+                // 🚀 TÍCH HỢP OHLC VÀO TOOLTIP CỦA NẾN
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
@@ -826,14 +826,15 @@ window.openProChart = function(t, isTimeSwitch = false) {
                         showType: 'standard',
                         custom: function(calcData) {
                             if (calcData.current) window.lastOHLC = calcData.current;
-                            const kLineData = window.lastOHLC || calcData.default || { open: 0, high: 0, low: 0, close: 0, volume: 0 };
-                            
+                            const kLineData = window.lastOHLC || calcData.default;
+                            if (!kLineData) return [];
+
                             const sym = (t.symbol || 'UNKNOWN').toUpperCase() + 'USDT';
                             const tf = window.currentChartInterval.toUpperCase();
                             const volStr = kLineData.volume >= 1e9 ? (kLineData.volume/1e9).toFixed(2)+'B' : (kLineData.volume >= 1e6 ? (kLineData.volume/1e6).toFixed(2)+'M' : (kLineData.volume >= 1e3 ? (kLineData.volume/1e3).toFixed(2)+'K' : (kLineData.volume || 0).toFixed(0)));
                             const isUp = kLineData.close >= kLineData.open;
 
-                            // TRUYỀN MÀU THEO OBJECT ĐỂ CANVAS NHẬN DIỆN
+                            // 🎯 CẤU TRÚC OBJECT MỚI GIÚP CANVAS NHẬN MÀU
                             return [
                                 { title: { text: `${sym} ${tf}  |`, color: '#EAECEF' }, value: '' },
                                 { title: { text: ' O ', color: '#848e9c' }, value: { text: kLineData.open.toFixed(prec), color: '#848e9c' } },
@@ -845,7 +846,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                         },
                         text: { 
                             size: 12, 
-                            // KHÔNG DÙNG VAR() CỦA CSS ĐỂ CHỐNG LỖI TỰ ĐỘNG TEO CHỮ
+                            // 🚀 BÍ QUYẾT TRỊ BỆNH CO CHỮ: Ghi thẳng tên Font, tuyệt đối không dùng var()
                             family: 'Arial, "Segoe UI", sans-serif', 
                             weight: 600, 
                             color: '#848e9c', 
@@ -854,7 +855,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     }
                 },
                 
-                // 🚀 BỘ ICON CHỈ BÁO BẰNG KÝ TỰ UNICODE CHUẨN
+                // 🚀 BỘ ICON CHỈ BÁO DÙNG KÝ TỰ UNICODE SIÊU CHUẨN
                 indicator: {
                     tooltip: {
                         showRule: 'always',    
@@ -871,7 +872,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // 🚀 BẮT SỰ KIỆN CLICK ICON (ĐÃ FIX LỖI CLICK VOL MẶC ĐỊNH KHÔNG CÓ PHẢN HỒI)
+        // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
         window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
             const indName = data.indicatorName;
@@ -889,82 +890,39 @@ window.openProChart = function(t, isTimeSwitch = false) {
             } 
             else if (data.iconId === 'setting') {
                 if (typeof window.openIndicatorSettings === 'function') {
-                    // Lấy Params trực tiếp từ Canvas thay vì mảng HTML cũ để VOL nhận diện được
+                    // 🚀 TRÍCH XUẤT THÔNG SỐ TRỰC TIẾP TỪ CANVAS (Hỗ trợ VOL và mọi chỉ báo)
                     let calcParams = [];
                     try {
                         const instances = window.tvChart.getIndicators({ name: indName, paneId: paneId });
-                        if (instances && instances.length > 0) { calcParams = instances[0].calcParams || []; }
+                        if (instances && instances.length > 0) {
+                            calcParams = instances[0].calcParams || [];
+                        }
                     } catch(e) {}
                     
-                    window.openIndicatorSettings({ name: indName, shortName: indName, calcParams: calcParams }, paneId);
+                    window.openIndicatorSettings({ 
+                        name: indName, 
+                        shortName: indName, 
+                        calcParams: calcParams 
+                    }, paneId);
                 }
             } 
             else if (data.iconId === 'close') {
-                if (typeof window.removeIndicatorFromChart === 'function') window.removeIndicatorFromChart(indName);
+                if (typeof window.removeIndicatorFromChart === 'function') {
+                    window.removeIndicatorFromChart(indName);
+                } 
+                // Fallback nếu người dùng bấm X xóa chỉ báo VOL mặc định
                 try { window.tvChart.removeIndicator(paneId, indName); } catch(e){}
             }
         });
 
-        // 2. TẠO HTML THANH CÔNG CỤ VẼ & LOGO 
+        // 2. CHỈ TẠO LỚP KÍNH HTML CHỨA ĐÚNG LOGO WATERMARK (ĐÃ XÓA SẠCH HTML LEGEND RÁC)
         const customUI = document.createElement('div');
         customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;';
-        customUI.innerHTML = `
-            <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
-            
-            <div style="position: absolute; top: 50px; left: 10px; z-index: 999; display: flex; flex-direction: column; gap: 4px; pointer-events: auto; background: rgba(22, 26, 30, 0.8); padding: 6px 4px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px);">
-                <style>
-                    .wa-draw-btn { width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 4px; color: #848e9c; transition: 0.2s; font-size: 16px; }
-                    .wa-draw-btn:hover { background: rgba(255,255,255,0.1); color: #00F0FF; }
-                    .wa-draw-btn.active { background: rgba(0,240,255,0.15); color: #00F0FF; }
-                    .wa-draw-divider { width: 20px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px auto; }
-                </style>
-
-                <div class="wa-draw-btn" title="Xóa toàn bộ bản vẽ" onclick="window.WaveAlphaUI.clearDrawings()">🗑️</div>
-                <div class="wa-draw-divider"></div>
-                <div class="wa-draw-btn" title="Đường xu hướng (Trendline)" onclick="window.WaveAlphaUI.startDrawing('rayLine', this)">📈</div>
-                <div class="wa-draw-btn" title="Đường ngang (Hỗ trợ/Kháng cự)" onclick="window.WaveAlphaUI.startDrawing('horizontalRayLine', this)">➖</div>
-                <div class="wa-draw-btn" title="Vùng giá (Hình chữ nhật)" onclick="window.WaveAlphaUI.startDrawing('rect', this)">🔲</div>
-                <div class="wa-draw-btn" title="Fibonacci Thoái lui" onclick="window.WaveAlphaUI.startDrawing('fibonacciLine', this)">𝔽</div>
-                <div class="wa-draw-btn" title="Sóng Elliott (5 sóng)" onclick="window.WaveAlphaUI.startDrawing('fiveWaves', this)">〰️</div>
-                <div class="wa-draw-divider"></div>
-                <div class="wa-draw-btn" title="Chụp ảnh biểu đồ" onclick="window.WaveAlphaUI.takeScreenshot()">📸</div>
-            </div>
-        `;
+        customUI.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>`;
         container.appendChild(customUI);
 
-        // 🚀 BỘ NÃO ĐIỀU KHIỂN CÔNG CỤ VẼ & CHỤP ẢNH
-        window.WaveAlphaUI = {
-            currentDrawMode: null,
-            startDrawing: function(overlayName, btnElement) {
-                if (!window.tvChart) return;
-                if (this.currentDrawMode === overlayName) {
-                    window.tvChart.overrideOverlay({ groupId: 'drawing', visible: true });
-                    this.resetButtons();
-                    this.currentDrawMode = null;
-                    return;
-                }
-                this.resetButtons();
-                btnElement.classList.add('active');
-                this.currentDrawMode = overlayName;
-                window.tvChart.createOverlay(overlayName);
-            },
-            resetButtons: function() { document.querySelectorAll('.wa-draw-btn').forEach(b => b.classList.remove('active')); },
-            clearDrawings: function() { if (!window.tvChart) return; window.tvChart.removeOverlay(); this.resetButtons(); this.currentDrawMode = null; },
-            takeScreenshot: function() {
-                if (!window.tvChart) return;
-                const picUrl = window.tvChart.getConvertPictureUrl(true, 'jpeg', '#0B0E11');
-                const link = document.createElement('a');
-                link.download = `WaveAlpha_${(window.currentChartToken||'CHART').toUpperCase()}_${window.currentChartInterval}.jpeg`;
-                link.href = picUrl;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        };
-        
-        window.tvChart.subscribeAction('onOverlayPointChange', function(data) {
-            if(data && data.overlay && window.WaveAlphaUI.currentDrawMode) { setTimeout(() => window.WaveAlphaUI.resetButtons(), 500); }
-        });
+        window.tvChart.setPriceVolumePrecision(prec, 2);
+        window.tvChart.createIndicator('VOL', false, { height: 80 });
 
         // 3. SỰ KIỆN RÊ CHUỘT
         window.tvChart.subscribeAction('onCrosshairChange', function(param) {
