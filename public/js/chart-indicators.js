@@ -1369,7 +1369,7 @@
         tbWrap.innerHTML = `
           <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 8px;"></div>
 
-          <button onclick="if(typeof window.toggleDrawingToolbar === 'function') window.toggleDrawingToolbar();" title="Mở bộ công cụ vẽ"
+          <button onclick="event.stopPropagation(); if(window.WaveDrawingAPI) window.WaveDrawingAPI.toggle();" title="Mở bộ công cụ vẽ"
             style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
                    font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 8px;
                    border-radius:6px; font-weight:600; transition:.15s;"
