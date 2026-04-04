@@ -2244,11 +2244,6 @@ window.openProChart = function(t, isTimeSwitch = false) {
             injectSmartMoneyTab();
             injectFuturesTab();
             
-            // ---> THÊM 2 DÒNG NÀY ĐỂ KÍCH HOẠT THANH CÔNG CỤ VẼ PRO V4 <---
-            if (window.WaveDrawingAPI && typeof window.WaveDrawingAPI.init === 'function') {
-                window.WaveDrawingAPI.init();
-            }
-            
             // Lần 1: Gọi ngay lập tức khi vừa mở Chart
             window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
             window.fetchFuturesSentiment(t.symbol);
