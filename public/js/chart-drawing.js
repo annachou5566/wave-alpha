@@ -1,16 +1,18 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — FLAT DRAWING PANEL
-// Version: 4.1.0 | Universal Toggle (No Button Fix Needed)
+// Version: 5.0.0 | AUTO-HOOK BUTTON (Cắm là chạy)
 // ==========================================
 
 (function (global) {
     'use strict';
 
-    // 1. BƠM THUẬT TOÁN CHO CÁC CÔNG CỤ VẼ NÂNG CAO
+    // ====================================================
+    // 1. BƠM THUẬT TOÁN CHO CÁC CÔNG CỤ VẼ NÂNG CAO (PRO)
+    // ====================================================
     function registerWaveOverlays() {
         const kc = global.klinecharts;
-        if (!kc) return;
+        if (!kc || typeof kc.registerOverlay !== 'function') return;
 
         // 🌊 Sóng Elliott (5 Bước - 6 Điểm)
         kc.registerOverlay({
@@ -73,69 +75,46 @@
             }
         });
 
-        // 📝 Text (Hỗ trợ tiếng Việt có dấu)
+        // 📝 Text (Ghi chú tiếng Việt)
         kc.registerOverlay({
             name: 'waveText', totalStep: 2,
             needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
             createPointFigures: function({ coordinates, overlay }) {
                 if (coordinates.length === 0) return [];
-                const txt = (overlay.extendData && overlay.extendData.text) ? overlay.extendData.text : 'Văn bản...';
+                const txt = (overlay.extendData && overlay.extendData.text) ? overlay.extendData.text : 'Ghi chú...';
                 return [{ type: 'text', attrs: { x: coordinates[0].x, y: coordinates[0].y, text: txt, baseline: 'bottom' }, ignoreEvent: false }];
             }
         });
     }
 
-    // 2. GIAO DIỆN BẢNG PHẲNG (KHÔNG XỔ MENU)
+    // ====================================================
+    // 2. TẠO GIAO DIỆN BẢNG CÔNG CỤ PHẲNG
+    // ====================================================
     function injectFlatToolbar() {
         if (document.getElementById('wa-flat-draw-panel')) return;
-        registerWaveOverlays();
+        registerWaveOverlays(); // Chạy thuật toán trước khi gắn UI
 
         const style = document.createElement('style');
         style.innerHTML = `
-            #wa-flat-draw-panel {
-                position: absolute; top: 60px; left: 20px; width: 230px;
-                background: rgba(18, 22, 28, 0.98); border: 1px solid rgba(255,255,255,0.1);
-                border-radius: 12px; z-index: 10000; display: none; flex-direction: column;
-                box-shadow: 0 16px 40px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
-                user-select: none;
-            }
-            .wa-fd-header {
-                padding: 10px; cursor: move; display: flex; justify-content: space-between;
-                align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08);
-                background: rgba(255,255,255,0.03); border-radius: 12px 12px 0 0;
-            }
+            #wa-flat-draw-panel { position: absolute; top: 70px; left: 20px; width: 230px; background: rgba(18, 22, 28, 0.98); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; z-index: 10000; display: none; flex-direction: column; box-shadow: 0 16px 40px rgba(0,0,0,0.8); backdrop-filter: blur(10px); user-select: none; }
+            .wa-fd-header { padding: 10px; cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); border-radius: 12px 12px 0 0; }
             .wa-fd-title { font-size: 11px; font-weight: 800; color: #00F0FF; letter-spacing: 1px; pointer-events: none; }
             .wa-fd-close { background: transparent; color: #848e9c; border: none; cursor: pointer; font-size: 16px; line-height: 1; }
             .wa-fd-close:hover { color: #F6465D; }
             .wa-fd-body { padding: 10px; display: flex; flex-direction: column; gap: 12px; max-height: 65vh; overflow-y: auto; }
-            
             .wa-fd-group-title { font-size: 10px; color: #848e9c; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
             .wa-fd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-            
-            .wa-fd-btn {
-                background: rgba(255,255,255,0.04); border: 1px solid transparent; border-radius: 6px;
-                color: #eaecef; font-size: 16px; height: 38px; display: flex; align-items: center;
-                justify-content: center; cursor: pointer; transition: 0.15s; position: relative;
-            }
+            .wa-fd-btn { background: rgba(255,255,255,0.04); border: 1px solid transparent; border-radius: 6px; color: #eaecef; font-size: 16px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.15s; position: relative; }
             .wa-fd-btn:hover { background: rgba(255,255,255,0.1); }
             .wa-fd-btn.active { background: rgba(0,240,255,0.15); color: #00F0FF; border-color: rgba(0,240,255,0.4); }
-            
-            /* Tooltip tên công cụ */
-            .wa-fd-btn::after {
-                content: attr(data-name); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
-                background: #000; color: #fff; font-size: 10px; padding: 4px 6px; border-radius: 4px;
-                white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.2s; border: 1px solid rgba(255,255,255,0.1);
-            }
+            .wa-fd-btn::after { content: attr(data-name); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #000; color: #fff; font-size: 10px; padding: 4px 6px; border-radius: 4px; white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.2s; border: 1px solid rgba(255,255,255,0.1); }
             .wa-fd-btn:hover::after { opacity: 1; bottom: 120%; }
-
             .wa-fd-input { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 6px; font-size: 12px; margin-bottom: 8px; display: none; outline: none; }
             .wa-fd-input:focus { border-color: #00F0FF; }
-
             .wa-fd-colors { display: flex; gap: 8px; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; margin-top: 4px;}
             .wa-fd-color-btn { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.1s;}
             .wa-fd-color-btn:hover { transform: scale(1.2); }
             .wa-fd-color-btn.active { border-color: #fff; }
-
             .wa-fd-footer { padding: 10px; display: flex; gap: 6px; border-top: 1px solid rgba(255,255,255,0.08); }
             .wa-fd-action { flex: 1; padding: 6px; background: rgba(255,255,255,0.05); color: #848e9c; border: none; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: bold; }
             .wa-fd-action:hover { background: rgba(255,255,255,0.1); color: #fff;}
@@ -148,8 +127,7 @@
         global.waCurrentDrawText = 'Ghi chú...';
 
         const toolsHTML = `
-            <input type="text" id="wa-fd-text-input" class="wa-fd-input" placeholder="Nhập tiếng Việt có dấu..." oninput="window.waCurrentDrawText = this.value; window.waUpdateDrawData();">
-
+            <input type="text" id="wa-fd-text-input" class="wa-fd-input" placeholder="Gõ tiếng Việt vô tư..." oninput="window.waCurrentDrawText = this.value; window.waUpdateDrawData();">
             <div class="wa-fd-group-title">Đường & Tia</div>
             <div class="wa-fd-grid">
                 <button class="wa-fd-btn" data-tool="segment" data-name="Trendline">📏</button>
@@ -157,21 +135,18 @@
                 <button class="wa-fd-btn" data-tool="horizontalStraightLine" data-name="Đường Ngang">➖</button>
                 <button class="wa-fd-btn" data-tool="verticalStraightLine" data-name="Đường Dọc">│</button>
             </div>
-            
             <div class="wa-fd-group-title">Fibonacci & Kênh</div>
             <div class="wa-fd-grid">
                 <button class="wa-fd-btn" data-tool="fibonacciLine" data-name="Fib Thoái lui">📐</button>
                 <button class="wa-fd-btn" data-tool="waveFibExt" data-name="Fib Mở rộng">📈</button>
                 <button class="wa-fd-btn" data-tool="priceChannelLine" data-name="Kênh song song">🟰</button>
             </div>
-
             <div class="wa-fd-group-title">Mẫu Hình (Pro)</div>
             <div class="wa-fd-grid">
-                <button class="wa-fd-btn" data-tool="waveElliott" data-name="Sóng Elliott (5)">🌊</button>
+                <button class="wa-fd-btn" data-tool="waveElliott" data-name="Sóng Elliott (5 Bước)">🌊</button>
                 <button class="wa-fd-btn" data-tool="waveABC" data-name="Sóng ABC">∿</button>
                 <button class="wa-fd-btn" data-tool="waveXABCD" data-name="Harmonic XABCD">🦇</button>
             </div>
-
             <div class="wa-fd-group-title">Hình Khối & Chữ</div>
             <div class="wa-fd-grid">
                 <button class="wa-fd-btn" data-tool="rect" data-name="Hình chữ nhật">▭</button>
@@ -179,7 +154,6 @@
                 <button class="wa-fd-btn" data-tool="triangle" data-name="Tam giác">🔺</button>
                 <button class="wa-fd-btn" data-tool="waveText" data-name="Viết Chữ">T</button>
             </div>
-
             <div class="wa-fd-colors">
                 <span style="font-size:11px; color:#848e9c; font-weight:bold;">MÀU:</span>
                 ${colors.map(c => `<div class="wa-fd-color-btn ${c==='#00F0FF'?'active':''}" style="background:${c};" onclick="window.waSetDrawColor('${c}', this)"></div>`).join('')}
@@ -195,7 +169,7 @@
             </div>
             <div class="wa-fd-body">${toolsHTML}</div>
             <div class="wa-fd-footer">
-                <button class="wa-fd-action" onclick="window.waDrawAction('pointer')">↖ Con trỏ</button>
+                <button class="wa-fd-action" onclick="window.waDrawAction('pointer')">↖ Hủy Vẽ</button>
                 <button class="wa-fd-action red" onclick="window.waDrawAction('clear')">🗑 Xóa sạch</button>
             </div>
         `;
@@ -207,16 +181,9 @@
         let isDragging = false, offsetX, offsetY;
         header.onmousedown = (e) => {
             if(e.target.tagName === 'BUTTON') return;
-            isDragging = true;
-            offsetX = e.clientX - panel.offsetLeft;
-            offsetY = e.clientY - panel.offsetTop;
+            isDragging = true; offsetX = e.clientX - panel.offsetLeft; offsetY = e.clientY - panel.offsetTop;
         };
-        document.onmousemove = (e) => {
-            if (isDragging) {
-                panel.style.left = (e.clientX - offsetX) + 'px';
-                panel.style.top = (e.clientY - offsetY) + 'px';
-            }
-        };
+        document.onmousemove = (e) => { if (isDragging) { panel.style.left = (e.clientX - offsetX) + 'px'; panel.style.top = (e.clientY - offsetY) + 'px'; } };
         document.onmouseup = () => { isDragging = false; };
 
         // Logic Click nút công cụ
@@ -226,27 +193,22 @@
                 this.classList.add('active');
                 
                 const toolName = this.dataset.tool;
-                
-                // Ẩn/Hiện ô nhập chữ
                 const textInput = document.getElementById('wa-fd-text-input');
-                if (toolName === 'waveText') {
-                    textInput.style.display = 'block';
-                    textInput.focus();
-                } else {
-                    textInput.style.display = 'none';
-                }
+                if (toolName === 'waveText') { textInput.style.display = 'block'; textInput.focus(); } 
+                else { textInput.style.display = 'none'; }
 
                 window.waDrawAction(toolName);
             };
         });
     }
 
-    // 3. XỬ LÝ LỆNH VẼ VỚI KLINECHARTS (0 DELAY)
+    // ====================================================
+    // 3. LOGIC KÍCH HOẠT VẼ KLINECHARTS (KHÔNG DELAY)
+    // ====================================================
     global.waSetDrawColor = function(colorHex, btnElement) {
         global.waCurrentDrawColor = colorHex;
         document.querySelectorAll('.wa-fd-color-btn').forEach(b => b.classList.remove('active'));
         btnElement.classList.add('active');
-        
         const activeBtn = document.querySelector('.wa-fd-btn.active');
         if(activeBtn) window.waDrawAction(activeBtn.dataset.tool);
     };
@@ -261,7 +223,7 @@
         const chartContainer = document.getElementById('sc-chart-container');
 
         if (actionName === 'clear') {
-            if(confirm('Xóa toàn bộ hình vẽ trên biểu đồ?')) global.tvChart.removeAllOverlay();
+            if(confirm('Bạn có chắc muốn xóa toàn bộ hình vẽ?')) global.tvChart.removeAllOverlay();
             return;
         }
         
@@ -292,14 +254,13 @@
         if(chartContainer) chartContainer.style.cursor = 'crosshair';
     };
 
-    // 4. CHÌA KHÓA VẠN NĂNG (Bao bọc TẤT CẢ các tên hàm mở bảng vẽ)
-    // Dù file chart-indicators của bạn gọi tên gì, nó cũng sẽ trúng đích!
+    // ====================================================
+    // 4. "AI" TỰ ĐỘNG VÁ LỖI NÚT BẤM (BUTTON HIJACKER)
+    // Cắm cái này vào là không bao giờ sợ lỗi bấm không lên!
+    // ====================================================
     global.universalDrawToggle = function() {
         let panel = document.getElementById('wa-flat-draw-panel');
-        if (!panel) {
-            injectFlatToolbar();
-            panel = document.getElementById('wa-flat-draw-panel');
-        }
+        if (!panel) { injectFlatToolbar(); panel = document.getElementById('wa-flat-draw-panel'); }
         if (panel.style.display === 'none' || panel.style.display === '') {
             panel.style.display = 'flex';
         } else {
@@ -308,11 +269,58 @@
         }
     };
 
-    // CÁC BÍ DANH (ALIASES) ĐỂ CHỐNG LỖI NÚT BẤM CŨ
-    global.toggleDrawingToolbar = global.universalDrawToggle;
-    global.WaveDrawingAPI = { toggle: global.universalDrawToggle };
+    function autoFixDrawingButton() {
+        // Tìm nút có chữ "Vẽ" hoặc icon cây bút
+        let drawBtn = document.getElementById('btn-wa-draw');
+        if (!drawBtn) {
+            const btns = Array.from(document.querySelectorAll('button'));
+            drawBtn = btns.find(b => b.innerText.includes('Vẽ') || b.innerHTML.includes('✏️'));
+        }
 
-    // Tự động nhúng UI sau khi tải trang
+        // Nếu người dùng vô tình xóa mất nút luôn rồi -> Tự động sinh ra nút mới!
+        if (!drawBtn) {
+            const indBtn = document.getElementById('btn-fx-indicator');
+            if (indBtn && indBtn.parentNode) {
+                drawBtn = document.createElement('button');
+                drawBtn.id = 'btn-wa-draw';
+                drawBtn.title = "Công cụ vẽ";
+                drawBtn.innerHTML = '✏️ <span class="wa-label" style="font-size:11px; margin-left:3px;">Vẽ</span>';
+                drawBtn.style.cssText = "background:transparent; color:#848e9c; border:none; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 8px; border-radius:6px; font-weight:600; transition:.15s;";
+                indBtn.parentNode.insertBefore(drawBtn, indBtn);
+                
+                const sep = document.createElement('div');
+                sep.style.cssText = "width:1px; height:18px; background:rgba(255,255,255,0.08); margin:0 4px;";
+                indBtn.parentNode.insertBefore(sep, indBtn);
+            }
+        }
+
+        // Ép nút đó phải gọi đúng hàm hiển thị bảng Vẽ
+        if (drawBtn) {
+            const newBtn = drawBtn.cloneNode(true);
+            if (drawBtn.parentNode) drawBtn.parentNode.replaceChild(newBtn, drawBtn);
+            
+            // Xóa mọi lỗi lầm cũ, tiêm hàm xịn vào:
+            newBtn.onclick = function(e) {
+                e.preventDefault(); e.stopPropagation();
+                global.universalDrawToggle();
+            };
+            
+            // Trang trí hover cho đẹp
+            newBtn.onmouseover = function() { this.style.color = '#00F0FF'; this.style.background = 'rgba(0,240,255,0.1)'; };
+            newBtn.onmouseout = function() { this.style.color = '#848e9c'; this.style.background = 'transparent'; };
+            return true;
+        }
+        return false;
+    }
+
+    // Liên tục quét tìm nút vẽ cho đến khi Web tải xong
+    let fixInterval = setInterval(() => {
+        if (document.getElementById('sc-chart-container') && autoFixDrawingButton()) {
+            clearInterval(fixInterval);
+        }
+    }, 500);
+
+    // Chuẩn bị sẵn giao diện ngầm
     setTimeout(injectFlatToolbar, 1000);
 
 })(window);
