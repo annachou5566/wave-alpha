@@ -1584,6 +1584,12 @@
 
         // Hàm thay đổi các bộ chủ đề (Themes)
         window.waCsSetTheme = function(ub, ubd, db, dbd, bg, isReset = false) {
+            // Chuẩn hóa: thêm # nếu thiếu (bỏ qua transparent)
+            var norm = function(c) {
+                return (c && c !== 'transparent' && c !== 'rgba(0,0,0,0)' && c.charAt(0) !== '#') ? '#' + c : c;
+            };
+            ub = norm(ub); ubd = norm(ubd); db = norm(db); dbd = norm(dbd); bg = norm(bg);
+
             document.getElementById('wa-hex-up').value = ub;
             if(ub !== 'transparent') document.getElementById('wa-color-up').value = ub;
             document.getElementById('wa-color-up-bd').value = ubd;
@@ -1600,14 +1606,20 @@
 
         // Hàm đồng bộ text hex với bảng màu
         window.waCsSync = function(type, val) {
+            // Thêm # nếu thiếu để color input nhận được
+            var norm = function(c) {
+                return (c && c !== 'transparent' && c !== 'rgba(0,0,0,0)' && c.charAt(0) !== '#') ? '#' + c : c;
+            };
+            var nVal = norm(val);
+
             if (type === 'up') {
-                if (val !== 'transparent') document.getElementById('wa-color-up').value = val;
-                document.getElementById('wa-color-up-bd').value = val;
+                if (val !== 'transparent') document.getElementById('wa-color-up').value = nVal;
+                document.getElementById('wa-color-up-bd').value = nVal;
             } else if (type === 'down') {
-                if (val !== 'transparent') document.getElementById('wa-color-down').value = val;
-                document.getElementById('wa-color-down-bd').value = val;
+                if (val !== 'transparent') document.getElementById('wa-color-down').value = nVal;
+                document.getElementById('wa-color-down-bd').value = nVal;
             } else if (type === 'bg') {
-                document.getElementById('wa-color-bg').value = val;
+                document.getElementById('wa-color-bg').value = nVal;
             }
         };
 
@@ -1650,35 +1662,7 @@
             }
         };
 
-        window.waCsApply = function() {
-            // [FIX] Lấy màu từ ô Text thay vì bảng màu, cho phép nhập tự do
-            const up   = document.getElementById('wa-hex-up').value;
-            const down = document.getElementById('wa-hex-down').value;
-            const bg   = document.getElementById('wa-hex-bg').value;
-            const showGrid = document.getElementById('wa-grid-toggle').dataset.on === '1';
-
-            localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: up, colDown: down, colBg: bg }));
-
-            const chartContainer = document.getElementById('sc-chart-container');
-            if (chartContainer) chartContainer.style.background = bg;
-
-            if (window.tvChart) {
-                window.tvChart.setStyles({
-                  watermark: {
-                        show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
-                    },
-                    grid: {
-                        horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
-                        vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
-                    },
-                    candle: { bar: {
-                        upColor: up, downColor: down, noChangeColor: '#848e9c',
-                        upBorderColor: up, downBorderColor: down,
-                        upWickColor: up, downWickColor: down
-                    }}
-                });
-            }
-        };
+        
 
         window.waCsSetBg = function(color) {
             // [FIX] Đồng bộ cả 2 ô khi chọn preset nền có sẵn
