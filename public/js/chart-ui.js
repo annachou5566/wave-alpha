@@ -969,8 +969,13 @@ window.openProChart = function(t, isTimeSwitch = false) {
         });
         window._chartResizeObserver.observe(container);
 
-        // [FIX] Áp dụng màu Chart và Grid từ LocalStorage khi khởi tạo
+        // [FIX 1.2] Áp dụng màu Chart và Grid từ LocalStorage khi khởi tạo
         const ws = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
+        
+        // Cài màu nền cho DIV container
+        const chartContainer = document.getElementById('sc-chart-container');
+        if (chartContainer) chartContainer.style.background = ws.colBg || '#1e2329';
+
         if (ws.colUp || ws.showGrid === false || ws.colBg) {
             window.tvChart.setStyles({
                 grid: { 
@@ -981,8 +986,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     upColor: ws.colUp || t_up, downColor: ws.colDown || t_down, 
                     upBorderColor: ws.colUp || t_up, downBorderColor: ws.colDown || t_down, 
                     upWickColor: ws.colUp || t_up, downWickColor: ws.colDown || t_down 
-                }},
-                background: ws.colBg || '#1e2329'
+                }}
             });
         }
 

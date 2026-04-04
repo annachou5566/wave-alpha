@@ -1002,7 +1002,7 @@
     return `
     <div id="sc-indicator-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82);
          z-index:99999; backdrop-filter:blur(6px); justify-content:center; align-items:center;">
-      <div id="wa-ind-modal-box" style="background:${COLOR.bg}; width:640px; max-width:92vw;
+      <div id="wa-ind-modal-box" style="background:${COLOR.bg}; width:640px; height:520px; max-width:92vw;
            max-height:86vh; border-radius:14px; border:1px solid ${COLOR.border};
            box-shadow:0 20px 60px rgba(0,0,0,0.9); display:flex; flex-direction:column; overflow:hidden;">
 
@@ -1039,7 +1039,7 @@
 
         <!-- List -->
         <div id="wa-ind-list" style="flex:1; overflow-y:auto; padding:10px 14px 14px;
-             display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>
+             display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content: start;"></div>
 
         <!-- Empty state -->
         <div id="wa-ind-empty" style="display:none; flex:1; align-items:center;
@@ -1211,10 +1211,7 @@
         e.stopPropagation(); e.preventDefault();
         const name = btn.dataset.name;
         
-        // Đóng bảng Menu để hiển thị bảng Cài đặt
-        const modal = document.getElementById('sc-indicator-modal');
-        if (modal) modal.style.display = 'none';
-
+        
         if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.openSettingsByName === 'function') {
             global.WaveIndicatorAPI.openSettingsByName(name);
         } else {
@@ -1261,10 +1258,10 @@
         border-color: ${COLOR.cyan} !important;
         outline: none;
       }
-      @media (max-width: 480px) {
+      @media (max-width: 850px) {
         #wa-ind-modal-box { width: 96vw !important; max-height: 92vh !important; }
         #wa-ind-list { grid-template-columns: 1fr !important; }
-        #btn-fx-indicator span.wa-label { display: none; }
+        .wa-label { display: none !important; }
       }
     `;
     document.head.appendChild(style);
@@ -1328,8 +1325,14 @@
       const timeBtns = document.querySelectorAll('.sc-time-btn');
       if (timeBtns.length > 0) {
         const container = timeBtns[0].parentElement;
-        const tbWrap    = document.createElement('div');
-        tbWrap.style.cssText = 'display:flex; align-items:center; gap:2px;';
+        // [FIX 2.1] Ép container thành thanh cuộn ngang mượt mà, cấm rớt dòng
+        container.style.display = 'flex';
+        container.style.flexWrap = 'nowrap';
+        container.style.overflowX = 'auto';
+        container.style.scrollbarWidth = 'none'; // Ẩn thanh cuộn
+        
+        const tbWrap = document.createElement('div');
+        tbWrap.style.cssText = 'display:flex; align-items:center; gap:2px; flex-shrink:0;';
         tbWrap.innerHTML = `
           <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 8px;"></div>
 
@@ -1399,13 +1402,13 @@
           <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 4px;"></div>
           <div style="position:relative;">
             <button id="btn-wa-chart-cfg" title="Cài đặt biểu đồ"
-              style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
-                     font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 8px;
-                     border-radius:6px; font-weight:600; transition:.15s;"
-              onmouseover="this.style.color='${COLOR.gold}'; this.style.background='rgba(240,185,11,0.07)'"
-              onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'">
-              ⚙ <span class="wa-label">Chart</span>
-            </button>
+            style="background:transparent;color:${COLOR.muted};border:none;cursor:pointer;
+                   font-size:13px;padding:4px 8px;border-radius:6px;
+                   display:flex;align-items:center;gap:4px;transition:.15s;font-weight:600;"
+            onmouseover="this.style.color='${COLOR.gold}';this.style.background='rgba(240,185,11,0.08)'"
+            onmouseout="this.style.color='${COLOR.muted}';this.style.background='transparent'">
+            ⚙ <span class="wa-label" style="font-size:11px; margin-left:3px;">Chart</span>
+        </button>
             <div id="wa-chart-cfg-menu" style="display:none; position:absolute; top:calc(100% + 6px); right:0;
                  background:${COLOR.bg}; border:1px solid ${COLOR.border}; border-radius:10px;
                  padding:14px 16px; min-width:230px; z-index:20000; box-shadow:0 12px 32px rgba(0,0,0,0.8);">
@@ -1531,6 +1534,10 @@
 
             localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: up, colDown: down, colBg: bg }));
 
+            // [FIX 1.1] Đổi màu trực tiếp trên thẻ DIV chứa biểu đồ
+            const chartContainer = document.getElementById('sc-chart-container');
+            if (chartContainer) chartContainer.style.background = bg;
+
             if (window.tvChart) {
                 window.tvChart.setStyles({
                     grid: {
@@ -1541,8 +1548,7 @@
                         upColor: up, downColor: down, noChangeColor: '#848e9c',
                         upBorderColor: up, downBorderColor: down,
                         upWickColor: up, downWickColor: down
-                    }},
-                    background: bg
+                    }}
                 });
             }
         };
