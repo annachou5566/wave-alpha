@@ -1381,46 +1381,7 @@
 
           <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 4px;"></div>
 
-          <!-- Drawing tools dropdown -->
-          <div style="position:relative; display:inline-flex; align-items:center;">
-            <button id="btn-wa-draw" title="Công cụ vẽ"
-              style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
-                     font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 6px;
-                     border-radius:6px; font-weight:600; transition:.15s;"
-              onmouseover="this.style.color='${COLOR.cyan}'; this.style.background='rgba(0,240,255,0.07)'"
-              onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'">
-              ✏️ <span class="wa-label" style="font-size:11px; margin-left:3px;">Vẽ</span>
-            </button>
-            
-            <div id="wa-draw-menu" style="display:none; position:absolute; top:calc(100% + 6px); left:0;
-                 background:${COLOR.bg}; border:1px solid ${COLOR.border}; border-radius:10px;
-                 padding:8px; min-width:165px; z-index:20000; box-shadow:0 12px 32px rgba(0,0,0,0.8);">
-                 
-                <div style="font-size:10px; font-weight:800; color:${COLOR.muted}; letter-spacing:1px; margin:4px 8px 8px;">CÔNG CỤ VẼ</div>
-                
-                ${[
-                    ['segment', '📉 Đường xu hướng (Trend)'],
-                    ['horizontalLine', '➖ Đường ngang'],
-                    ['verticalLine', '│ Đường dọc'],
-                    ['rayLine', '↗️ Tia (Ray)'],
-                    ['fibonacciLine', '📐 Fibonacci']
-                ].map(t => `
-                    <div onclick="if(window.tvChart){window.tvChart.createOverlay('${t[0]}');} document.getElementById('wa-draw-menu').style.display='none';" 
-                         style="padding:8px 10px; color:${COLOR.white}; font-size:12px; cursor:pointer; border-radius:5px; transition:0.15s; display:flex; align-items:center; gap:6px;"
-                         onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                         ${t[1]}
-                    </div>
-                `).join('')}
-                
-                <div style="height:1px; background:${COLOR.border}; margin:6px 0;"></div>
-                
-                <div onclick="if(window.tvChart){window.tvChart.removeOverlay();} document.getElementById('wa-draw-menu').style.display='none';" 
-                     style="padding:8px 10px; color:${COLOR.red}; font-size:12px; cursor:pointer; border-radius:5px; transition:0.15s; display:flex; align-items:center; gap:6px;"
-                     onmouseover="this.style.background='rgba(246,70,93,0.1)'" onmouseout="this.style.background='transparent'">
-                     🗑️ Xóa tất cả hình vẽ
-                </div>
-            </div>
-          </div>
+          
 
           <!-- Fullscreen -->
           <button id="btn-wa-fs" title="Toàn màn hình"
@@ -1493,24 +1454,7 @@
         `;
         container.appendChild(tbWrap);
 
-        // Indicator button click
-        document.getElementById('btn-fx-indicator').addEventListener('click', global.openIndicatorModal);
-
-        // Xử lý mở/đóng menu Vẽ (Cập nhật mới)
-        const btnDraw = document.getElementById('btn-wa-draw');
-        const menuDraw = document.getElementById('wa-draw-menu');
-        if (btnDraw && menuDraw) {
-            btnDraw.addEventListener('click', function(e) {
-                e.stopPropagation();
-                // Đóng menu Cài đặt Chart nếu nó đang mở
-                const menuCfg = document.getElementById('wa-chart-cfg-menu');
-                if (menuCfg) menuCfg.style.display = 'none';
-                
-                menuDraw.style.display = menuDraw.style.display === 'none' ? 'block' : 'none';
-            });
-            menuDraw.addEventListener('click', function(e) { e.stopPropagation(); });
-            document.addEventListener('click', function() { menuDraw.style.display = 'none'; });
-        }
+        
 
         // Fullscreen
         document.getElementById('btn-wa-fs').addEventListener('click', function () {
