@@ -973,12 +973,12 @@ window.openProChart = function(t, isTimeSwitch = false) {
         const ws = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
         
         const chartContainer = document.getElementById('sc-chart-container');
-        if (chartContainer) chartContainer.style.background = ws.colBg || '#1e2329';
+        if (chartContainer) chartContainer.style.background = ws.colBg || '#0f1a1c';
 
-        if (ws.colUp || ws.showGrid === false || ws.colBg) {
-            const ub = ws.colUp || t_up;
+        if (ws.colUp || ws.showGrid === false || ws.colBg || !ws.colUp) {
+            const ub = ws.colUp || '#2af592';
             const ubd = ws.colUpBd || ub;
-            const db = ws.colDown || t_down;
+            const db = ws.colDown || '#cb55e3';
             const dbd = ws.colDownBd || db;
 
             // Tự động chuyển mode Hollow (nến rỗng) nếu màu thân nến là transparent

@@ -1474,13 +1474,13 @@
 
                 <div style="font-size:10px; color:${COLOR.muted}; margin-bottom:8px; font-weight:600;">🎨 BỘ MÀU CHUYÊN NGHIỆP:</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
-                    <button onclick="window.waCsSetTheme('#0ECB81','#0ECB81','#F6465D','#F6465D','#1e2329')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🌊 Wave Alpha</button>
+                    <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(42,245,146,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🌊 Wave Alpha</button>
+                    <button onclick="window.waCsSetTheme('#0ECB81','#0ECB81','#F6465D','#F6465D','#111418')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(14,203,129,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🔴🟢 Truyền Thống</button>
                     <button onclick="window.waCsSetTheme('transparent','#FFFFFF','#FFFFFF','#FFFFFF','#131722')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🐼 Trắng Đen</button>
-                    <button onclick="window.waCsSetTheme('#00F0FF','#00F0FF','#F0B90B','#F0B90B','#0d1117')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">🤖 Cyberpunk</button>
                     <button onclick="window.waCsSetTheme('#089981','#089981','#F23645','#F23645','#ffffff')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.bg}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">☀️ Light Mode</button>
                 </div>
 
-                <button onclick="window.waCsSetTheme('#0ECB81','#0ECB81','#F6465D','#F6465D','#1e2329', true)" style="width:100%; background:transparent; border:1px dashed ${COLOR.muted}; color:${COLOR.muted}; border-radius:6px; padding:8px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='${COLOR.white}'" onmouseout="this.style.background='transparent'; this.style.color='${COLOR.muted}'">↩ KHÔI PHỤC MẶC ĐỊNH</button>
+                <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c', true)" style="width:100%; background:transparent; border:1px dashed ${COLOR.muted}; color:${COLOR.muted}; border-radius:6px; padding:8px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='${COLOR.white}'" onmouseout="this.style.background='transparent'; this.style.color='${COLOR.muted}'">↩ KHÔI PHỤC MẶC ĐỊNH</button>
             </div>
           </div>
 
@@ -1544,22 +1544,22 @@
             menuCfg.addEventListener('click', function(e) { e.stopPropagation(); });
             document.addEventListener('click', function() { menuCfg.style.display = 'none'; });
 
-            // Load setting cũ (Có thêm màu Viền)
+            // Load setting cũ (Có thêm màu Viền) - Mặc định là Wave Alpha
             const saved = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
             
-            const ub = saved.colUp || COLOR.green;
+            const ub = saved.colUp || '#2af592';
             const ubd = saved.colUpBd || ub;
             document.getElementById('wa-hex-up').value = ub;
             if(ub !== 'transparent') document.getElementById('wa-color-up').value = ub;
             document.getElementById('wa-color-up-bd').value = ubd;
             
-            const db = saved.colDown || COLOR.red;
+            const db = saved.colDown || '#cb55e3';
             const dbd = saved.colDownBd || db;
             document.getElementById('wa-hex-down').value = db;
             if(db !== 'transparent') document.getElementById('wa-color-down').value = db;
             document.getElementById('wa-color-down-bd').value = dbd;
             
-            const bg = saved.colBg || COLOR.bgDark;
+            const bg = saved.colBg || '#0f1a1c';
             document.getElementById('wa-hex-bg').value = bg;
             document.getElementById('wa-color-bg').value = bg;
             
