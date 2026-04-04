@@ -1,1156 +1,844 @@
-// ==========================================
-// 🎨 FILE: chart-drawing.js
-// 📦 WAVE ALPHA — DRAWING TOOLS ENGINE
-// Version: 2.0.0 | KLineCharts v9 Compatible
-// ==========================================
-// SECTION 1:  TOOL REGISTRY
-// SECTION 2:  DRAWING STATE
-// SECTION 3:  CSS INJECTION
-// SECTION 4:  TOOLBAR HTML BUILDER
-// SECTION 5:  DOM INJECTION
-// SECTION 6:  TOOL ACTIVATION
-// SECTION 7:  OVERLAY STYLE BUILDER
-// SECTION 8:  FLYOUT MANAGEMENT
-// SECTION 9:  KEYBOARD SHORTCUTS
-// SECTION 10: SETTINGS PERSISTENCE
-// SECTION 11: PUBLIC API
-// ==========================================
-
 (function (global) {
   'use strict';
 
-  const WD_VERSION = '2.0.0';
-  const LS_KEY = 'wa_draw_settings_v2';
+  var WD_VERSION = '3.0.0';
+  var LS_KEY = 'wa_draw_settings_v2';
+  var OVERLAY_ID_PREFIX = 'wadr_';
 
-  // ════════════════════════════════════════════
-  // SECTION 1: TOOL REGISTRY
-  // ════════════════════════════════════════════
-
-  /**
-   * TOOL_GROUPS — Nhóm công cụ vẽ, icon dùng ký tự ASCII/Latin
-   * để đảm bảo hiển thị đúng trên mọi OS/font.
-   * overlay: tên KLineCharts built-in overlay (null = chỉ là con trỏ)
-   */
-  const TOOL_GROUPS = [
-
-    // ── 0. Cursor ─────────────────────────────
-    {
-      id: 'cursor', label: 'Con Trỏ', icon: '↖',
-      tools: [
-        { id: 'pointer',  name: 'Con trỏ / Chọn',   overlay: null,           icon: '↖',  key: 'Escape', desc: 'Chọn, di chuyển, chỉnh sửa hình vẽ',   points: 0 },
-        { id: 'eraser',   name: 'Xóa nhanh',         overlay: '__erase__',    icon: 'X',  key: 'E',      desc: 'Click lên hình vẽ để xóa ngay',         points: 0 },
-      ]
-    },
-
-    // ── 1. Lines ──────────────────────────────
-    {
-      id: 'lines', label: 'Đường & Tia', icon: '/',
-      tools: [
-        { id: 'segment',               name: 'Đường xu hướng',        overlay: 'segment',               icon: '/',   key: 'L', desc: '2 điểm — đoạn thẳng',                         points: 2 },
-        { id: 'ray',                   name: 'Tia một chiều',          overlay: 'ray',                   icon: '→',             desc: '2 điểm — kéo dài về 1 phía',                  points: 2 },
-        { id: 'straightLine',          name: 'Đường thẳng 2 chiều',    overlay: 'straightLine',          icon: '↔',             desc: '2 điểm — kéo dài vô hạn 2 chiều',             points: 2 },
-        { id: 'horizontalStraightLine',name: 'Ngang vô hạn',           overlay: 'horizontalStraightLine',icon: '─',   key: 'H', desc: '1 điểm — đường ngang vô hạn',                 points: 1 },
-        { id: 'horizontalRayLine',     name: 'Tia ngang 1 chiều',      overlay: 'horizontalRayLine',     icon: '->', desc: '2 điểm — ngang 1 chiều',                       points: 2 },
-        { id: 'horizontalSegment',     name: 'Đoạn nằm ngang',         overlay: 'horizontalSegment',     icon: '|-', desc: '2 điểm — đoạn ngang có giới hạn',              points: 2 },
-        { id: 'verticalStraightLine',  name: 'Dọc vô hạn',             overlay: 'verticalStraightLine',  icon: '│',   key: 'V', desc: '1 điểm — đường dọc vô hạn',                  points: 1 },
-        { id: 'verticalRayLine',       name: 'Tia dọc 1 chiều',        overlay: 'verticalRayLine',       icon: '↑',             desc: '2 điểm — dọc 1 chiều',                        points: 2 },
-        { id: 'verticalSegment',       name: 'Đoạn thẳng đứng',        overlay: 'verticalSegment',       icon: '⊥',             desc: '2 điểm — đoạn dọc có giới hạn',               points: 2 },
-        { id: 'priceLine',             name: 'Price Line',             overlay: 'priceLine',             icon: '$',             desc: '1 điểm — đường giá có nhãn số',               points: 1 },
-        { id: 'arrow',                 name: 'Mũi tên',                overlay: 'arrow',                 icon: '↗',             desc: '2 điểm — mũi tên có đầu nhọn',                points: 2 },
-      ]
-    },
-
-    // ── 2. Channels ───────────────────────────
-    {
-      id: 'channels', label: 'Kênh Giá', icon: '=',
-      tools: [
-        { id: 'priceChannelLine',   name: 'Price Channel',  overlay: 'priceChannelLine',   icon: '=',  desc: '3 điểm — kênh song song',           points: 3 },
-        { id: 'parallelStraightLine',name: 'Parallel Lines',overlay: 'parallelStraightLine',icon: '≡', desc: '3 điểm — 2 đường song song vô hạn', points: 3 },
-      ]
-    },
-
-    // ── 3. Fibonacci ──────────────────────────
-    {
-      id: 'fibonacci', label: 'Fibonacci', icon: 'F',
-      tools: [
-        { id: 'fibonacciLine',               name: 'Fib Retracement',     overlay: 'fibonacciLine',               icon: 'FR', key: 'F', desc: '2 điểm — hồi quy Fib 23.6% 38.2% 50% 61.8%', points: 2 },
-        { id: 'fibonacciSegment',             name: 'Fib Segment',         overlay: 'fibonacciSegment',             icon: 'FS',          desc: '2 điểm — Fib trên đoạn thẳng',               points: 2 },
-        { id: 'fibonacciExtension',           name: 'Fib Extension',       overlay: 'fibonacciExtension',           icon: 'FE',          desc: '3 điểm — mở rộng Fib 127.2% 161.8% 200%',   points: 3 },
-        { id: 'fibonacciSpiral',              name: 'Fib Spiral',          overlay: 'fibonacciSpiral',              icon: 'F@',          desc: '2 điểm — xoắn ốc Fibonacci',                 points: 2 },
-        { id: 'fibonacciSpeedResistanceFan',  name: 'Fib Fan',             overlay: 'fibonacciSpeedResistanceFan',  icon: 'FF',          desc: '2 điểm — quạt kháng cự Fibonacci',           points: 2 },
-        { id: 'fibTrendExtension',            name: 'Fib Trend Ext.',      overlay: 'fibonacciExtension',           icon: 'FT',          desc: '3 điểm — mở rộng Fib theo xu hướng A→B→C',  points: 3 },
-      ]
-    },
-
-    // ── 4. Gann ───────────────────────────────
-    {
-      id: 'gann', label: 'Gann', icon: 'G',
-      tools: [
-        { id: 'gannBox',    name: 'Gann Box',    overlay: 'gannBox',    icon: 'GB', desc: '2 điểm — hộp Gann 1×1 2×1 1×2', points: 2 },
-        { id: 'gannFan',    name: 'Gann Fan',    overlay: 'gannFan',    icon: 'GF', desc: '2 điểm — quạt Gann 8 góc',      points: 2 },
-        { id: 'gannSquare', name: 'Gann Square', overlay: 'gannSquare', icon: 'GS', desc: '2 điểm — hình vuông Gann',       points: 2 },
-      ]
-    },
-
-    // ── 5. Elliott Wave ───────────────────────
-    {
-      id: 'elliott', label: 'Sóng Elliott', icon: '~',
-      tools: [
-        { id: 'elliottImpulseWave',    name: 'Impulse Wave (1-2-3-4-5)', overlay: 'elliottImpulseWave',    icon: '1-5',  desc: '6 điểm — sóng đẩy 5 bước',      points: 6 },
-        { id: 'elliottCorrectiveWave', name: 'Corrective Wave (A-B-C)',   overlay: 'elliottCorrectiveWave', icon: 'ABC',  desc: '4 điểm — sóng điều chỉnh 3 bước', points: 4 },
-        { id: 'elliottTriangleWave',   name: 'Triangle Wave (A-E)',       overlay: 'elliottTriangleWave',   icon: '/\\/',  desc: '5 điểm — sóng tam giác Elliott',  points: 5 },
-        { id: 'elliottDoubleComboWave',name: 'Double Combo (WXY)',        overlay: 'elliottDoubleComboWave',icon: 'WXY',  desc: '7 điểm — sóng kép W-X-Y',        points: 7 },
-        { id: 'elliottTripleComboWave',name: 'Triple Combo (WXYXZ)',      overlay: 'elliottTripleComboWave',icon: 'WXYZ', desc: '9 điểm — sóng ba W-X-Y-X-Z',     points: 9 },
-      ]
-    },
-
-    // ── 6. Shapes ─────────────────────────────
-    {
-      id: 'shapes', label: 'Hình Vẽ', icon: '□',
-      tools: [
-        { id: 'rect',        name: 'Rectangle',    overlay: 'rect',        icon: '□', key: 'R', desc: '2 điểm — vùng tô màu hình chữ nhật', points: 2, isShape: true },
-        { id: 'circle',      name: 'Circle',       overlay: 'circle',      icon: 'O',           desc: '2 điểm — hình tròn',                  points: 2, isShape: true },
-        { id: 'triangle',    name: 'Triangle',     overlay: 'triangle',    icon: '/\\',           desc: '3 điểm — tam giác bất kỳ',            points: 3, isShape: true },
-        { id: 'parallelogram',name: 'Parallelogram',overlay: 'parallelogram',icon: '▱',          desc: '3 điểm — hình bình hành',             points: 3, isShape: true },
-      ]
-    },
-
-    // ── 7. Harmonic Patterns ──────────────────
-    {
-      id: 'patterns', label: 'Harmonic', icon: 'P',
-      tools: [
-        { id: 'xabcd',        name: 'XABCD Pattern', overlay: 'xabcd',        icon: 'XAB', desc: '5 điểm — Gartley / Butterfly / Bat / Crab', points: 5 },
-        { id: 'abcd',         name: 'ABCD Pattern',  overlay: 'abcd',         icon: 'ABD', desc: '4 điểm — AB=CD harmonic pattern',            points: 4 },
-        { id: 'threedrives',  name: 'Three Drives',  overlay: 'threedrives',  icon: '3D',  desc: '7 điểm — Three Drives reversal pattern',     points: 7 },
-      ]
-    },
-
-    // ── 8. R/R & Projections ──────────────────
-    {
-      id: 'projections', label: 'R/R & Vùng', icon: 'R',
-      tools: [
-        { id: 'longPosition',  name: 'Long Position (R/R)', overlay: 'longPosition',  icon: '↑L', desc: '3 điểm — Entry/Stop/Target Long',   points: 3 },
-        { id: 'shortPosition', name: 'Short Position (R/R)',overlay: 'shortPosition', icon: '↓S', desc: '3 điểm — Entry/Stop/Target Short',  points: 3 },
-        { id: 'priceRange',    name: 'Price Range',         overlay: 'priceRange',    icon: '↕',  desc: '2 điểm — đo khoảng cách giá',       points: 2 },
-        { id: 'dateRangeNote', name: 'Date Range',          overlay: 'dateRangeNote', icon: '[t]', desc: '2 điểm — tô vùng theo thời gian',  points: 2 },
-      ]
-    },
-
-    // ── 9. Text & Labels ──────────────────────
-    {
-      id: 'text', label: 'Chú Thích', icon: 'T',
-      tools: [
-        { id: 'text',    name: 'Text Label', overlay: 'text',    icon: 'T', key: 'T', desc: '1 điểm — nhập text ghi chú trên chart', points: 1 },
-        { id: 'callout', name: 'Callout',    overlay: 'callout', icon: '»',           desc: '2 điểm — bong bóng chú thích',          points: 2 },
-        { id: 'note',    name: 'Note',       overlay: 'note',    icon: 'N',           desc: '1 điểm — ghi chú có khung',             points: 1 },
-      ]
-    },
+  var TOOL_GROUPS = [
+    { id: 'cursor', label: 'Cursor', icon: 'PTR', tools: [
+      { id: 'pointer', name: 'Pointer', overlay: null, icon: 'PTR', key: 'Escape', desc: 'Select mode', points: 0 },
+      { id: 'eraser', name: 'Eraser', overlay: '__erase__', icon: 'DEL', key: 'E', desc: 'Click overlay to remove', points: 0 }
+    ] },
+    { id: 'lines', label: 'Lines', icon: 'LIN', tools: [
+      { id: 'segment', name: 'Trend Line', overlay: 'segment', icon: 'SEG', key: 'L', desc: '2 points', points: 2 },
+      { id: 'ray', name: 'Ray', overlay: 'ray', icon: 'RAY', desc: '2 points', points: 2 },
+      { id: 'straightLine', name: 'Straight Line', overlay: 'straightLine', icon: 'INF', desc: '2 points', points: 2 },
+      { id: 'horizontalStraightLine', name: 'Horizontal Line', overlay: 'horizontalStraightLine', icon: 'H-L', key: 'H', desc: '1 point', points: 1 },
+      { id: 'horizontalRayLine', name: 'Horizontal Ray', overlay: 'horizontalRayLine', icon: 'H-R', desc: '2 points', points: 2 },
+      { id: 'horizontalSegment', name: 'Horizontal Segment', overlay: 'horizontalSegment', icon: 'H-S', desc: '2 points', points: 2 },
+      { id: 'verticalStraightLine', name: 'Vertical Line', overlay: 'verticalStraightLine', icon: 'V-L', key: 'V', desc: '1 point', points: 1 },
+      { id: 'verticalRayLine', name: 'Vertical Ray', overlay: 'verticalRayLine', icon: 'V-R', desc: '2 points', points: 2 },
+      { id: 'verticalSegment', name: 'Vertical Segment', overlay: 'verticalSegment', icon: 'V-S', desc: '2 points', points: 2 },
+      { id: 'priceLine', name: 'Price Line', overlay: 'priceLine', icon: 'P-L', desc: '1 point', points: 1 },
+      { id: 'arrow', name: 'Arrow', overlay: 'arrow', icon: 'ARR', desc: '2 points', points: 2 }
+    ] },
+    { id: 'channels', label: 'Channels', icon: 'CHN', tools: [
+      { id: 'priceChannelLine', name: 'Price Channel', overlay: 'priceChannelLine', icon: 'PCH', desc: '3 points', points: 3 },
+      { id: 'parallelStraightLine', name: 'Parallel Line', overlay: 'parallelStraightLine', icon: 'PAR', desc: '3 points', points: 3 }
+    ] },
+    { id: 'fibonacci', label: 'Fibonacci', icon: 'FIB', tools: [
+      { id: 'fibonacciLine', name: 'Fib Retracement', overlay: 'fibonacciLine', icon: 'FR', key: 'F', desc: '2 points', points: 2 },
+      { id: 'fibonacciSegment', name: 'Fib Segment', overlay: 'fibonacciSegment', icon: 'FS', desc: '2 points', points: 2 },
+      { id: 'fibonacciExtension', name: 'Fib Extension', overlay: 'fibonacciExtension', icon: 'FE', desc: '3 points', points: 3 },
+      { id: 'fibonacciSpiral', name: 'Fib Spiral', overlay: 'fibonacciSpiral', icon: 'FSP', desc: '2 points', points: 2 },
+      { id: 'fibonacciSpeedResistanceFan', name: 'Fib Fan', overlay: 'fibonacciSpeedResistanceFan', icon: 'FF', desc: '2 points', points: 2 },
+      { id: 'fibTrendExtension', name: 'Fib Trend Ext', overlay: 'fibonacciExtension', icon: 'FTE', desc: '3 points', points: 3 }
+    ] },
+    { id: 'gann', label: 'Gann', icon: 'GAN', tools: [
+      { id: 'gannBox', name: 'Gann Box', overlay: 'gannBox', icon: 'GB', desc: '2 points', points: 2 },
+      { id: 'gannFan', name: 'Gann Fan', overlay: 'gannFan', icon: 'GF', desc: '2 points', points: 2 },
+      { id: 'gannSquare', name: 'Gann Square', overlay: 'gannSquare', icon: 'GS', desc: '2 points', points: 2 }
+    ] },
+    { id: 'elliott', label: 'Elliott', icon: 'EWT', tools: [
+      { id: 'elliottImpulseWave', name: 'Impulse Wave', overlay: 'elliottImpulseWave', icon: 'E15', desc: '6 points', points: 6 },
+      { id: 'elliottCorrectiveWave', name: 'Corrective Wave', overlay: 'elliottCorrectiveWave', icon: 'EAB', desc: '4 points', points: 4 },
+      { id: 'elliottTriangleWave', name: 'Triangle Wave', overlay: 'elliottTriangleWave', icon: 'ETR', desc: '5 points', points: 5 },
+      { id: 'elliottDoubleComboWave', name: 'Double Combo', overlay: 'elliottDoubleComboWave', icon: 'EDC', desc: '7 points', points: 7 },
+      { id: 'elliottTripleComboWave', name: 'Triple Combo', overlay: 'elliottTripleComboWave', icon: 'ETC', desc: '9 points', points: 9 }
+    ] },
+    { id: 'shapes', label: 'Shapes', icon: 'SHP', tools: [
+      { id: 'rect', name: 'Rectangle', overlay: 'rect', icon: 'REC', key: 'R', desc: '2 points', points: 2, isShape: true },
+      { id: 'circle', name: 'Circle', overlay: 'circle', icon: 'CIR', desc: '2 points', points: 2, isShape: true },
+      { id: 'triangle', name: 'Triangle', overlay: 'triangle', icon: 'TRI', desc: '3 points', points: 3, isShape: true },
+      { id: 'parallelogram', name: 'Parallelogram', overlay: 'parallelogram', icon: 'PLG', desc: '3 points', points: 3, isShape: true }
+    ] },
+    { id: 'patterns', label: 'Patterns', icon: 'PAT', tools: [
+      { id: 'xabcd', name: 'XABCD', overlay: 'xabcd', icon: 'XAB', desc: '5 points', points: 5 },
+      { id: 'abcd', name: 'ABCD', overlay: 'abcd', icon: 'ABCD', desc: '4 points', points: 4 },
+      { id: 'threedrives', name: 'Three Drives', overlay: 'threedrives', icon: '3DRV', desc: '7 points', points: 7 }
+    ] },
+    { id: 'projections', label: 'Risk', icon: 'RR', tools: [
+      { id: 'longPosition', name: 'Long Position', overlay: 'longPosition', icon: 'LONG', desc: '3 points', points: 3 },
+      { id: 'shortPosition', name: 'Short Position', overlay: 'shortPosition', icon: 'SHRT', desc: '3 points', points: 3 },
+      { id: 'priceRange', name: 'Price Range', overlay: 'priceRange', icon: 'PRG', desc: '2 points', points: 2 },
+      { id: 'dateRangeNote', name: 'Date Range', overlay: 'dateRangeNote', icon: 'DRG', desc: '2 points', points: 2 }
+    ] },
+    { id: 'text', label: 'Text', icon: 'TXT', tools: [
+      { id: 'text', name: 'Text', overlay: 'text', icon: 'TXT', key: 'T', desc: '1 point', points: 1 },
+      { id: 'callout', name: 'Callout', overlay: 'callout', icon: 'CAL', desc: '2 points', points: 2 },
+      { id: 'note', name: 'Note', overlay: 'note', icon: 'NOTE', desc: '1 point', points: 1 }
+    ] }
   ];
 
-  // Flat lookup map: toolId → DrawTool
-  const TOOL_MAP = {};
-  TOOL_GROUPS.forEach(function (g) {
-    g.tools.forEach(function (t) {
-      TOOL_MAP[t.id] = Object.assign({ groupId: g.id }, t);
+  var TOOL_MAP = {};
+  var PRESET_COLORS = ['#00F0FF', '#F0B90B', '#0ECB81', '#F6465D', '#EAECEF', '#848e9c', '#cb55e3', '#FF8C00'];
+  var KNOWN_NATIVE_OVERLAYS = new Set([
+    'segment', 'ray', 'straightLine', 'horizontalStraightLine', 'horizontalRayLine', 'horizontalSegment',
+    'verticalStraightLine', 'verticalRayLine', 'verticalSegment', 'priceLine', 'arrow',
+    'priceChannelLine', 'parallelStraightLine', 'fibonacciLine', 'fibonacciSegment', 'fibonacciExtension',
+    'fibonacciSpiral', 'fibonacciSpeedResistanceFan', 'gannBox', 'gannFan', 'gannSquare',
+    'elliottImpulseWave', 'elliottCorrectiveWave', 'elliottTriangleWave', 'elliottDoubleComboWave',
+    'elliottTripleComboWave', 'rect', 'circle', 'triangle', 'parallelogram',
+    'xabcd', 'abcd', 'threedrives', 'longPosition', 'shortPosition', 'priceRange',
+    'dateRangeNote', 'text', 'callout', 'note'
+  ]);
+
+  var STATE = {
+    activeTool: 'pointer',
+    color: '#00F0FF',
+    fillColor: 'rgba(0,240,255,0.12)',
+    lineSize: 2,
+    lineStyle: 'solid',
+    textSize: 13,
+    allVisible: true,
+    drawCount: 0,
+    isDrawing: false,
+    pendingOverlayId: null,
+    idCounter: 1,
+    historyStack: [],
+    flyoutOpenId: null,
+    initialized: false,
+    registeredFallbacks: {},
+    overlayIdSet: {},
+    undoStack: [],
+    refs: {
+      container: null,
+      toolbar: null,
+      props: null,
+      badge: null,
+      visBtn: null,
+      strokeInput: null,
+      fillInput: null,
+      strokeSwatch: null,
+      fillSwatch: null,
+      sizeSel: null,
+      styleSel: null,
+      cancelBtn: null,
+      toolName: null
+    },
+    observer: null,
+    openWrapTimer: null,
+    syncTimer: null,
+    keyHandlerBound: false,
+    docClickBound: false,
+    containerObserver: null
+  };
+
+  TOOL_GROUPS.forEach(function (group) {
+    group.tools.forEach(function (tool) {
+      TOOL_MAP[tool.id] = tool;
+      tool.groupId = group.id;
     });
   });
 
-  /**
-   * KLineCharts v9 built-in overlay names.
-   * FIX: abcd, threedrives đã được thêm vào (trước bị thiếu → trigger register lại).
-   * Ref: https://klinecharts.com/en-US/guide/overlay
-   */
-  const KC_NATIVE = new Set([
-    'segment', 'ray', 'straightLine',
-    'horizontalStraightLine', 'horizontalRayLine', 'horizontalSegment',
-    'verticalStraightLine', 'verticalRayLine', 'verticalSegment',
-    'priceLine', 'arrow',
-    'priceChannelLine', 'parallelStraightLine',
-    'fibonacciLine', 'fibonacciSegment', 'fibonacciExtension',
-    'fibonacciSpiral', 'fibonacciSpeedResistanceFan',
-    'gannBox', 'gannFan', 'gannSquare',
-    'elliottImpulseWave', 'elliottCorrectiveWave', 'elliottTriangleWave',
-    'elliottDoubleComboWave', 'elliottTripleComboWave',
-    'rect', 'circle', 'triangle', 'parallelogram',
-    'xabcd', 'abcd', 'threedrives',
-    'longPosition', 'shortPosition',
-    'text', 'callout',
-  ]);
-  // Các overlay sau không có trong KLC built-in — sẽ fallback về 'segment':
-  // note, dateRangeNote, priceRange, cypher, headshoulders
-
-  // ════════════════════════════════════════════
-  // SECTION 2: DRAWING STATE
-  // ════════════════════════════════════════════
-
-  const DS = {
-    activeTool: 'pointer',
-    color:      '#00F0FF',
-    fillColor:  'rgba(0,240,255,0.12)',
-    lineSize:   2,
-    lineStyle:  'solid',   // 'solid' | 'dashed' | 'dotted'
-    textSize:   13,
-    allVisible: true,
-    drawCount:  0,
-    isDrawing:  false,
-    flyoutOpenId: null,
-    initialized:  false,
-    // State management (FIX: đây là những field bị thiếu trong v1)
-    _history:   [],        // stack các ID đã vẽ xong — dùng cho undo
-    _pendingId: null,      // ID overlay đang vẽ dở (chưa onDrawEnd)
-    _idCounter: 1,         // counter tạo ID duy nhất cho mỗi overlay
-  };
-
-  // ════════════════════════════════════════════
-  // SECTION 3: CSS INJECTION
-  // ════════════════════════════════════════════
+  function safeGetChart() { return global.tvChart || null; }
+  function isInputLike(el) {
+    if (!el) return false;
+    var tag = (el.tagName || '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || !!el.isContentEditable;
+  }
+  function normalizeHex(color) {
+    if (!color || typeof color !== 'string') return '00f0ff';
+    var c = color.trim().replace('#', '');
+    if (/^[0-9a-f]{6}$/i.test(c)) return c.toLowerCase();
+    if (/^[0-9a-f]{3}$/i.test(c)) return (c[0] + c[0] + c[1] + c[1] + c[2] + c[2]).toLowerCase();
+    return '00f0ff';
+  }
+  function rgbaFromHex(hex, alpha) {
+    var h = normalizeHex(hex);
+    return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16) + ',' + alpha + ')';
+  }
 
   function injectCSS() {
     if (document.getElementById('wa-drawing-css')) return;
-    const style = document.createElement('style');
+    var css = '' +
+      '#sc-chart-container{position:relative!important;}' +
+      '#wa-drawing-toolbar{position:absolute;left:0;top:0;width:36px;height:100%;z-index:300;display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:1px;background:rgba(14,18,24,.96);border-right:1px solid rgba(255,255,255,.07);backdrop-filter:blur(8px);overflow:hidden;overflow-y:auto;box-sizing:border-box;}' +
+      '#wa-drawing-toolbar::-webkit-scrollbar{display:none;}' +
+      '.wa-dt-group{position:relative;width:100%;display:flex;justify-content:center;flex-shrink:0;}' +
+      '.wa-dt-sep{width:22px;height:1px;background:rgba(255,255,255,.07);margin:3px 0;flex-shrink:0;}' +
+      '.wa-dt-spacer{flex:1;}' +
+      '.wa-dt-btn{width:30px;height:30px;border:1px solid transparent;border-radius:6px;background:transparent;color:#5a6475;font-family:"Segoe UI","Segoe UI Symbol",Arial,sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;padding:0;}' +
+      '.wa-dt-btn:hover{background:rgba(255,255,255,.07);color:#c8cdd4;border-color:rgba(255,255,255,.1);}' +
+      '.wa-dt-btn.active{background:rgba(0,240,255,.14);color:#00F0FF;border-color:rgba(0,240,255,.35);}' +
+      '.wa-dt-btn.has-flyout:after{content:"";position:absolute;right:2px;bottom:2px;width:4px;height:4px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;opacity:.6;}' +
+      '.wa-dt-tip{position:absolute;left:38px;top:50%;transform:translateY(-50%);background:rgba(10,14,20,.97);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4px 10px;font-size:11px;color:#c8cdd4;white-space:nowrap;pointer-events:none;z-index:10000;opacity:0;}' +
+      '.wa-dt-btn:hover .wa-dt-tip{opacity:1;}' +
+      '.wa-dt-badge{position:absolute;top:1px;right:1px;background:#00F0FF;color:#000;font-size:7px;font-weight:900;min-width:11px;height:11px;border-radius:5px;padding:0 2px;display:none;align-items:center;justify-content:center;line-height:1;}' +
+      '.wa-flyout{position:absolute;left:38px;top:-2px;display:none;flex-direction:column;gap:1px;min-width:240px;z-index:9999;background:#0d1117;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:6px 5px;box-shadow:0 14px 44px rgba(0,0,0,.75);}' +
+      '.wa-flyout.open{display:flex;}' +
+      '.wa-flyout-header{font-size:9px;font-weight:800;color:#3a434f;letter-spacing:1.2px;padding:4px 10px 7px;border-bottom:1px solid rgba(255,255,255,.05);}' +
+      '.wa-flyout-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;cursor:pointer;color:#7a8694;font-size:11.5px;}' +
+      '.wa-flyout-item:hover{background:rgba(255,255,255,.06);color:#d4dae2;}' +
+      '.wa-flyout-item.active{background:rgba(0,240,255,.09);color:#00F0FF;}' +
+      '.wa-flyout-icon{font-size:10px;font-weight:700;width:34px;text-align:center;border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:2px 0;background:rgba(255,255,255,.05);}' +
+      '.wa-flyout-desc{font-size:9.5px;color:#3a434f;}' +
+      '#wa-drawing-props{position:absolute;top:8px;left:44px;right:8px;height:36px;display:none;align-items:center;gap:6px;padding:0 12px;z-index:295;background:rgba(10,14,20,.97);border:1px solid rgba(255,255,255,.1);border-radius:9px;box-shadow:0 6px 22px rgba(0,0,0,.6);}' +
+      '#wa-drawing-props.show{display:flex;}' +
+      '.wa-dp-tool-name{font-size:11px;font-weight:700;color:#00F0FF;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+      '.wa-dp-sep{width:1px;height:20px;background:rgba(255,255,255,.08);}' +
+      '.wa-dp-lbl{font-size:10px;color:#4a5460;}' +
+      '.wa-dp-color-box{position:relative;width:22px;height:22px;border-radius:5px;border:1.5px solid rgba(255,255,255,.15);overflow:hidden;}' +
+      '.wa-dp-color-box input{position:absolute;opacity:0;inset:-50%;cursor:pointer;}' +
+      '.wa-dp-preset{width:14px;height:14px;border-radius:3px;cursor:pointer;border:1px solid rgba(255,255,255,.12);}' +
+      '.wa-dp-sel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:5px;color:#c8cdd4;font-size:11px;padding:3px 5px;}' +
+      '.wa-dp-btn{padding:3px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#7a8694;font-size:10.5px;cursor:pointer;}' +
+      '.wa-dp-btn.accent{background:rgba(0,240,255,.1);border-color:rgba(0,240,255,.3);color:#00F0FF;}' +
+      '.wa-dp-btn.red:hover{border-color:rgba(246,70,93,.4);color:#F6465D;}' +
+      '.wa-chart-drawing-mode canvas{cursor:crosshair!important;}';
+    var style = document.createElement('style');
     style.id = 'wa-drawing-css';
-    style.textContent = `
-      /* Ensure chart container is relative for absolute positioning */
-      #sc-chart-container { position: relative !important; }
-
-      /* ══ DRAWING TOOLBAR — left strip ══════════════════════════ */
-      #wa-drawing-toolbar {
-        position: absolute; left: 0; top: 0;
-        width: 36px; height: 100%; z-index: 300;
-        display: flex; flex-direction: column; align-items: center;
-        padding: 6px 0; gap: 1px;
-        background: rgba(14, 18, 24, 0.96);
-        border-right: 1px solid rgba(255,255,255,0.07);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        overflow: hidden; overflow-y: auto;
-        scrollbar-width: none; user-select: none;
-        box-sizing: border-box;
-      }
-      #wa-drawing-toolbar::-webkit-scrollbar { display: none; }
-
-      .wa-dt-group {
-        position: relative; width: 100%;
-        display: flex; justify-content: center; flex-shrink: 0;
-      }
-      .wa-dt-sep {
-        width: 22px; height: 1px;
-        background: rgba(255,255,255,0.07);
-        margin: 3px 0; flex-shrink: 0; align-self: center;
-      }
-      .wa-dt-spacer { flex: 1; }
-
-      /* ── Tool Button ────────────────────────────────────────── */
-      .wa-dt-btn {
-        width: 30px; height: 30px;
-        border: 1px solid transparent; border-radius: 6px;
-        background: transparent;
-        color: #5a6475;
-        /* FIX: font-family đảm bảo icon ASCII hiển thị đúng trên mọi OS */
-        font-family: 'Segoe UI', 'Segoe UI Symbol', 'Helvetica Neue', Arial, sans-serif;
-        font-size: 10px; font-weight: 700;
-        line-height: 1; letter-spacing: -0.3px;
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        transition: background 0.13s, color 0.13s, border-color 0.13s;
-        flex-shrink: 0; position: relative;
-        outline: none; padding: 0;
-        overflow: hidden; white-space: nowrap;
-      }
-      .wa-dt-btn:hover {
-        background: rgba(255,255,255,0.07);
-        color: #c8cdd4;
-        border-color: rgba(255,255,255,0.1);
-      }
-      .wa-dt-btn.active {
-        background: rgba(0,240,255,0.14);
-        color: #00F0FF;
-        border-color: rgba(0,240,255,0.35);
-      }
-      /* Chevron nhỏ ở góc → có flyout */
-      .wa-dt-btn.has-flyout::after {
-        content: '';
-        position: absolute; bottom: 3px; right: 3px;
-        width: 3px; height: 3px;
-        border-right: 1.5px solid currentColor;
-        border-bottom: 1.5px solid currentColor;
-        opacity: 0.45; pointer-events: none;
-      }
-
-      /* ── Tooltip ──────────────────────────────────────────────── */
-      .wa-dt-tip {
-        position: absolute; left: 38px; top: 50%;
-        transform: translateY(-50%);
-        background: rgba(10, 14, 20, 0.97);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 6px; padding: 4px 10px;
-        font-size: 11px; color: #c8cdd4;
-        white-space: nowrap; pointer-events: none;
-        z-index: 10000; opacity: 0;
-        transition: opacity 0.15s;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.55);
-      }
-      .wa-dt-btn:hover .wa-dt-tip { opacity: 1; }
-
-      /* ── Draw count badge ─────────────────────────────────────── */
-      .wa-dt-badge {
-        position: absolute; top: 1px; right: 1px;
-        background: #00F0FF; color: #000;
-        font-size: 7px; font-weight: 900;
-        min-width: 11px; height: 11px;
-        border-radius: 5px; padding: 0 2px;
-        display: none; align-items: center; justify-content: center;
-        pointer-events: none; line-height: 1;
-      }
-
-      /* ══ FLYOUT SUB-MENU ════════════════════════════════════════ */
-      .wa-flyout {
-        position: absolute; left: 38px; top: -2px;
-        background: #0d1117;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 10px; padding: 6px 5px;
-        min-width: 240px; z-index: 9999;
-        box-shadow: 0 14px 44px rgba(0,0,0,0.75), 0 2px 8px rgba(0,0,0,0.4);
-        display: none; flex-direction: column; gap: 1px;
-        pointer-events: all;
-      }
-      .wa-flyout.open { display: flex; }
-
-      .wa-flyout-header {
-        font-size: 9px; font-weight: 800;
-        color: #3a434f; text-transform: uppercase;
-        letter-spacing: 1.2px; padding: 4px 10px 7px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        margin-bottom: 2px;
-      }
-      .wa-flyout-item {
-        display: flex; align-items: center; gap: 10px;
-        padding: 6px 10px; border-radius: 6px;
-        cursor: pointer; transition: background 0.1s;
-        color: #7a8694; font-size: 11.5px;
-      }
-      .wa-flyout-item:hover  { background: rgba(255,255,255,0.06); color: #d4dae2; }
-      .wa-flyout-item.active { background: rgba(0,240,255,0.09); color: #00F0FF; }
-
-      .wa-flyout-icon {
-        font-size: 11px; font-weight: 700;
-        width: 24px; text-align: center; flex-shrink: 0;
-        font-family: 'Segoe UI', 'Segoe UI Symbol', Arial, sans-serif;
-        overflow: hidden; white-space: nowrap;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 4px; padding: 2px 0;
-        color: #9ba3af;
-      }
-      .wa-flyout-item.active .wa-flyout-icon { color: #00F0FF; border-color: rgba(0,240,255,0.25); }
-
-      .wa-flyout-info { flex: 1; min-width: 0; }
-      .wa-flyout-name { display: block; }
-      .wa-flyout-desc {
-        display: block; font-size: 9.5px; color: #3a434f;
-        margin-top: 1px; white-space: nowrap;
-        overflow: hidden; text-overflow: ellipsis;
-      }
-      .wa-flyout-pts {
-        font-size: 9px; color: #3d4855;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 3px; padding: 1px 5px;
-        flex-shrink: 0; font-family: monospace;
-      }
-      .wa-flyout-key {
-        font-size: 9px; color: #3d4855;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 3px; padding: 1px 5px;
-        flex-shrink: 0; font-family: monospace;
-      }
-
-      /* ══ PROPERTIES BAR — top of chart ═════════════════════════ */
-      #wa-drawing-props {
-        position: absolute; top: 8px; left: 44px; right: 8px;
-        height: 36px;
-        background: rgba(10, 14, 20, 0.97);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 9px;
-        display: none; align-items: center; gap: 6px;
-        padding: 0 12px; z-index: 295;
-        box-shadow: 0 6px 22px rgba(0,0,0,0.6);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        flex-wrap: nowrap; overflow: hidden;
-      }
-      #wa-drawing-props.show { display: flex; }
-
-      .wa-dp-tool-name {
-        font-size: 11px; font-weight: 700;
-        color: #00F0FF; flex-shrink: 0;
-        max-width: 140px; overflow: hidden; text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .wa-dp-sep  { width: 1px; height: 20px; background: rgba(255,255,255,0.08); flex-shrink: 0; margin: 0 1px; }
-      .wa-dp-lbl  { font-size: 10px; color: #4a5460; flex-shrink: 0; }
-
-      /* Color swatch */
-      .wa-dp-color-box {
-        position: relative; width: 22px; height: 22px;
-        border-radius: 5px; border: 1.5px solid rgba(255,255,255,0.15);
-        cursor: pointer; overflow: hidden; flex-shrink: 0;
-        transition: border-color 0.12s;
-      }
-      .wa-dp-color-box:hover { border-color: rgba(255,255,255,0.4); }
-      .wa-dp-color-box .wa-dp-swatch { width: 100%; height: 100%; border-radius: 3px; }
-      .wa-dp-color-box input[type=color] {
-        position: absolute; opacity: 0;
-        width: 200%; height: 200%; top: -50%; left: -50%;
-        cursor: pointer; border: none; padding: 0;
-      }
-
-      /* Preset color swatches */
-      .wa-dp-preset {
-        width: 14px; height: 14px; border-radius: 3px;
-        cursor: pointer; flex-shrink: 0;
-        border: 1px solid rgba(255,255,255,0.12);
-        transition: transform 0.12s, border-color 0.12s;
-      }
-      .wa-dp-preset:hover { transform: scale(1.3); border-color: rgba(255,255,255,0.5); }
-
-      /* Select dropdown */
-      .wa-dp-sel {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 5px; color: #c8cdd4;
-        font-size: 11px; padding: 3px 5px;
-        cursor: pointer; outline: none;
-        transition: border-color 0.12s; flex-shrink: 0;
-      }
-      .wa-dp-sel:hover, .wa-dp-sel:focus { border-color: rgba(0,240,255,0.4); }
-
-      /* Action buttons in props bar */
-      .wa-dp-btn {
-        padding: 3px 10px; border-radius: 5px;
-        border: 1px solid rgba(255,255,255,0.08);
-        background: transparent; color: #7a8694;
-        font-size: 10.5px; cursor: pointer;
-        transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
-      }
-      .wa-dp-btn:hover       { border-color: rgba(0,240,255,0.4); color: #00F0FF; background: rgba(0,240,255,0.06); }
-      .wa-dp-btn.red:hover   { border-color: rgba(246,70,93,0.4); color: #F6465D; background: rgba(246,70,93,0.06); }
-      .wa-dp-btn.accent      { background: rgba(0,240,255,0.1); border-color: rgba(0,240,255,0.3); color: #00F0FF; }
-
-      /* Crosshair khi đang vẽ */
-      .wa-chart-drawing-mode canvas { cursor: crosshair !important; }
-    `;
+    style.textContent = css;
     document.head.appendChild(style);
   }
 
-  // ════════════════════════════════════════════
-  // SECTION 4: TOOLBAR HTML BUILDER
-  // ════════════════════════════════════════════
-
-  const PRESET_COLORS = ['#00F0FF', '#F0B90B', '#0ECB81', '#F6465D', '#EAECEF', '#848e9c', '#cb55e3', '#FF8C00'];
+  function buildFlyout(group) {
+    var html = '<div class="wa-flyout" id="wa-flyout-' + group.id + '"><div class="wa-flyout-header">' + group.label + '</div>';
+    for (var i = 0; i < group.tools.length; i++) {
+      var tool = group.tools[i];
+      html += '<div class="wa-flyout-item" data-tool="' + tool.id + '">' +
+        '<span class="wa-flyout-icon">' + tool.icon + '</span>' +
+        '<span class="wa-flyout-info"><span class="wa-flyout-name">' + tool.name + '</span><span class="wa-flyout-desc">' + tool.desc + '</span></span>' +
+        '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
 
   function buildToolbarHTML() {
-    let h = '';
-    TOOL_GROUPS.forEach(function (group, gi) {
-      if (gi > 0) h += '<div class="wa-dt-sep"></div>';
-      const rep = group.tools[0];
-      const hasFly = group.tools.length > 1;
-      h += `<div class="wa-dt-group" data-group="${group.id}">
-  <button class="wa-dt-btn${hasFly ? ' has-flyout' : ''}"
-          id="wa-dtg-${group.id}"
-          data-group="${group.id}"
-          data-tool="${rep.id}"
-          onclick="WaveDrawingAPI.groupClick(event,'${group.id}')"
-          onmouseenter="WaveDrawingAPI.groupHover(event,'${group.id}')">
-    <span class="wa-dt-icon">${rep.icon}</span>
-    <span class="wa-dt-tip">${group.label}</span>
-  </button>
-  ${hasFly ? buildFlyoutHTML(group) : ''}
-</div>`;
-    });
-
-    // Bottom controls
-    h += `
-<div class="wa-dt-spacer"></div>
-<div class="wa-dt-sep"></div>
-<div class="wa-dt-group">
-  <button class="wa-dt-btn" onclick="WaveDrawingAPI.undo()" title="Undo Ctrl+Z">
-    <span class="wa-dt-icon" style="font-size:12px">↩</span>
-    <span class="wa-dt-tip">Undo (Ctrl+Z)</span>
-  </button>
-</div>
-<div class="wa-dt-group">
-  <button class="wa-dt-btn" onclick="WaveDrawingAPI.redo()" title="Redo Ctrl+Y">
-    <span class="wa-dt-icon" style="font-size:12px">↪</span>
-    <span class="wa-dt-tip">Redo (Ctrl+Y)</span>
-  </button>
-</div>
-<div class="wa-dt-sep"></div>
-<div class="wa-dt-group">
-  <button class="wa-dt-btn" id="wa-dt-vis-btn" onclick="WaveDrawingAPI.toggleVisibility()">
-    <span class="wa-dt-icon" style="font-size:12px">◎</span>
-    <span class="wa-dt-tip">Ẩn/Hiện hình vẽ</span>
-  </button>
-</div>
-<div class="wa-dt-group" style="position:relative">
-  <button class="wa-dt-btn" id="wa-dt-del-btn" onclick="WaveDrawingAPI.deleteAll()">
-    <span class="wa-dt-badge" id="wa-dt-badge">0</span>
-    <span class="wa-dt-icon" style="font-size:12px">🗑</span>
-    <span class="wa-dt-tip">Xóa tất cả hình vẽ</span>
-  </button>
-</div>`;
-    return h;
-  }
-
-  function buildFlyoutHTML(group) {
-    let h = `<div class="wa-flyout" id="wa-flyout-${group.id}">
-  <div class="wa-flyout-header">${group.label}</div>`;
-    group.tools.forEach(function (tool) {
-      const pts  = tool.points ? `<span class="wa-flyout-pts">${tool.points}pt</span>` : '';
-      const key  = tool.key    ? `<span class="wa-flyout-key">${tool.key}</span>`       : '';
-      h += `<div class="wa-flyout-item" data-tool="${tool.id}"
-         onclick="WaveDrawingAPI.toolClick('${tool.id}',event)">
-    <span class="wa-flyout-icon">${tool.icon}</span>
-    <span class="wa-flyout-info">
-      <span class="wa-flyout-name">${tool.name}</span>
-      <span class="wa-flyout-desc">${tool.desc}</span>
-    </span>
-    ${pts}${key}
-  </div>`;
-    });
-    h += '</div>';
-    return h;
-  }
-
-  function buildPropsBarHTML() {
-    const presets = PRESET_COLORS.map(function (c) {
-      return `<div class="wa-dp-preset" style="background:${c}" title="${c}" onclick="WaveDrawingAPI.setColor('${c}')"></div>`;
-    }).join('');
-
-    return `<div id="wa-drawing-props">
-  <span class="wa-dp-tool-name" id="wa-dp-toolname">Công cụ vẽ</span>
-  <div class="wa-dp-sep"></div>
-  <span class="wa-dp-lbl">Nét</span>
-  <div class="wa-dp-color-box" title="Màu đường/viền">
-    <div class="wa-dp-swatch" id="wa-dp-stroke-swatch" style="background:#00F0FF"></div>
-    <input type="color" id="wa-dp-stroke-color" value="#00f0ff" oninput="WaveDrawingAPI.onStrokeColor(this.value)">
-  </div>
-  <span class="wa-dp-lbl">Nền</span>
-  <div class="wa-dp-color-box" title="Màu nền fill">
-    <div class="wa-dp-swatch" id="wa-dp-fill-swatch" style="background:rgba(0,240,255,0.12)"></div>
-    <input type="color" id="wa-dp-fill-color" value="#00f0ff" oninput="WaveDrawingAPI.onFillColor(this.value)">
-  </div>
-  <div class="wa-dp-sep"></div>
-  <span class="wa-dp-lbl">Nét</span>
-  <select class="wa-dp-sel" id="wa-dp-size" onchange="WaveDrawingAPI.onLineSize(this.value)">
-    <option value="1">1px</option>
-    <option value="2" selected>2px</option>
-    <option value="3">3px</option>
-    <option value="4">4px</option>
-    <option value="5">5px</option>
-  </select>
-  <select class="wa-dp-sel" id="wa-dp-linestyle" onchange="WaveDrawingAPI.onLineStyle(this.value)">
-    <option value="solid">──</option>
-    <option value="dashed">- -</option>
-    <option value="dotted">···</option>
-  </select>
-  <div class="wa-dp-sep"></div>
-  ${presets}
-  <div class="wa-dp-sep"></div>
-  <button class="wa-dp-btn accent" onclick="WaveDrawingAPI.applyAll()" title="Áp dụng màu/kiểu này cho TẤT CẢ hình vẽ">Áp dụng tất cả</button>
-  <button class="wa-dp-btn red"   onclick="WaveDrawingAPI.deleteAll()">Xóa tất</button>
-  <button class="wa-dp-btn" id="wa-dp-cancel-btn" style="display:none" onclick="WaveDrawingAPI.cancelDraw()">Hủy vẽ</button>
-</div>`;
-  }
-
-  // ════════════════════════════════════════════
-  // SECTION 5: DOM INJECTION
-  // ════════════════════════════════════════════
-
-  let _mutObs = null;
-
-  function inject() {
-    const container = document.getElementById('sc-chart-container');
-    if (!container) { setTimeout(inject, 600); return; }
-    if (document.getElementById('wa-drawing-toolbar')) return;
-
-    container.style.position = 'relative';
-
-    // Toolbar
-    const tb = document.createElement('div');
-    tb.id = 'wa-drawing-toolbar';
-    tb.innerHTML = buildToolbarHTML();
-    container.appendChild(tb);
-
-    // Props bar
-    const pw = document.createElement('div');
-    pw.innerHTML = buildPropsBarHTML();
-    container.appendChild(pw.firstElementChild);
-
-    // Close flyouts on outside click
-    document.addEventListener('click', function (e) {
-      if (!e.target.closest('.wa-dt-group') && !e.target.closest('.wa-flyout')) {
-        closeFlyouts();
-      }
-    }, true);
-
-    DS.initialized = true;
-    updatePropsBar(null);
-    console.log(`WaveDrawing v${WD_VERSION} — toolbar injected.`);
-  }
-
-  function watchForReinit() {
-    const root = document.getElementById('super-chart-overlay') || document.body;
-    if (_mutObs) _mutObs.disconnect();
-    _mutObs = new MutationObserver(function () {
-      const c = document.getElementById('sc-chart-container');
-      if (c && !document.getElementById('wa-drawing-toolbar')) {
-        setTimeout(inject, 350);
-      }
-    });
-    _mutObs.observe(root, { childList: true, subtree: true });
-  }
-
-  // ════════════════════════════════════════════
-  // SECTION 6: TOOL ACTIVATION
-  // ════════════════════════════════════════════
-
-  function activateTool(toolId) {
-    const tool = TOOL_MAP[toolId];
-    if (!tool) return;
-
-    // Hủy overlay đang vẽ dở (nếu có) — FIX: dùng DS._pendingId thay vì ID cứng
-    if (global.tvChart && DS._pendingId) {
-      try { global.tvChart.removeOverlay({ id: DS._pendingId }); } catch (e) {}
-      DS._pendingId = null;
+    var html = '';
+    for (var i = 0; i < TOOL_GROUPS.length; i++) {
+      var group = TOOL_GROUPS[i];
+      if (i > 0) html += '<div class="wa-dt-sep"></div>';
+      var rep = group.tools[0];
+      html += '<div class="wa-dt-group" data-group="' + group.id + '">' +
+        '<button class="wa-dt-btn' + (group.tools.length > 1 ? ' has-flyout' : '') + '" id="wa-dtg-' + group.id + '" data-action="group" data-group="' + group.id + '" data-tool="' + rep.id + '" title="' + group.label + '">' +
+        '<span class="wa-dt-icon">' + rep.icon + '</span><span class="wa-dt-tip">' + group.label + '</span></button>' +
+        (group.tools.length > 1 ? buildFlyout(group) : '') +
+        '</div>';
     }
+    html += '<div class="wa-dt-spacer"></div><div class="wa-dt-sep"></div>' +
+      '<div class="wa-dt-group"><button class="wa-dt-btn" data-action="undo" title="Undo Ctrl+Z"><span class="wa-dt-icon">UND</span><span class="wa-dt-tip">Undo</span></button></div>' +
+      '<div class="wa-dt-group"><button class="wa-dt-btn" data-action="redo" title="Redo Ctrl+Y"><span class="wa-dt-icon">RED</span><span class="wa-dt-tip">Redo</span></button></div>' +
+      '<div class="wa-dt-sep"></div>' +
+      '<div class="wa-dt-group"><button class="wa-dt-btn" id="wa-dt-vis-btn" data-action="visibility" title="Toggle Visibility"><span class="wa-dt-icon">VIS</span><span class="wa-dt-tip">Hide/Show Drawings</span></button></div>' +
+      '<div class="wa-dt-group"><button class="wa-dt-btn" id="wa-dt-del-btn" data-action="delete-all" title="Delete All"><span class="wa-dt-badge" id="wa-dt-badge">0</span><span class="wa-dt-icon">CLR</span><span class="wa-dt-tip">Delete All</span></button></div>';
+    return html;
+  }
 
-    DS.activeTool  = toolId;
-    DS.isDrawing   = (toolId !== 'pointer' && toolId !== 'eraser' && !!tool.overlay);
-
-    // Cập nhật highlight toolbar
-    document.querySelectorAll('.wa-dt-btn[data-group]').forEach(function (b) { b.classList.remove('active'); });
-    document.querySelectorAll('.wa-flyout-item').forEach(function (i) {
-      i.classList.toggle('active', i.dataset.tool === toolId);
-    });
-    const grpBtn = document.getElementById('wa-dtg-' + tool.groupId);
-    if (grpBtn) {
-      grpBtn.classList.add('active');
-      const iconEl = grpBtn.querySelector('.wa-dt-icon');
-      if (iconEl) iconEl.textContent = tool.icon;
+  function buildPropsHTML() {
+    var swatches = '';
+    for (var i = 0; i < PRESET_COLORS.length; i++) {
+      swatches += '<div class="wa-dp-preset" data-action="preset" data-color="' + PRESET_COLORS[i] + '" title="' + PRESET_COLORS[i] + '" style="background:' + PRESET_COLORS[i] + '"></div>';
     }
-
-    updatePropsBar(tool);
-
-    // Cursor crosshair khi đang vẽ
-    const container = document.getElementById('sc-chart-container');
-    if (container) container.classList.toggle('wa-chart-drawing-mode', DS.isDrawing || toolId === 'eraser');
-
-    if (toolId === 'pointer' || toolId === 'eraser') { hideCancelBtn(); return; }
-    if (!tool.overlay || tool.overlay === '__erase__') return;
-
-    // Đảm bảo overlay được hỗ trợ (native hoặc custom đã register)
-    const overlayName = KC_NATIVE.has(tool.overlay) ? tool.overlay : null;
-    const fallbackName = overlayName || 'segment';
-    if (!overlayName) {
-      tryRegisterFallback(tool.overlay, tool);
-    }
-
-    // FIX: tạo ID duy nhất cho mỗi overlay — không dùng 'wadrawing' cứng
-    const oid = 'wadr_' + (DS._idCounter++);
-    DS._pendingId = oid;
-
-    setTimeout(function () {
-      if (!global.tvChart) { DS._pendingId = null; return; }
-
-      // ══════════════════════════════════════════════════════════
-      // FIX QUAN TRỌNG NHẤT:
-      // KLineCharts KHÔNG có subscribeAction('onDrawEnd',...).
-      // Callbacks onDrawEnd / onRemoved PHẢI truyền thẳng vào
-      // object createOverlay — đây là cách duy nhất đúng theo API.
-      // Ref: https://klinecharts.com/en-US/api/instance/createOverlay
-      // ══════════════════════════════════════════════════════════
-      function _onDrawEnd() {
-        DS._history.push(oid);
-        DS._pendingId = null;
-        DS.drawCount++;
-        updateBadge();
-        hideCancelBtn();
-        DS.isDrawing = false;
-        setTimeout(function () { activateTool('pointer'); }, 0);
-        return false; // false = không ngăn hành vi mặc định KLC
-      }
-
-      function _onRemoved() {
-        // Tự động cập nhật count khi overlay bị xóa bằng bất kỳ cách nào
-        const idx = DS._history.indexOf(oid);
-        if (idx !== -1) DS._history.splice(idx, 1);
-        if (DS.drawCount > 0) DS.drawCount--;
-        updateBadge();
-        return false;
-      }
-
-      function _onClick(evt) {
-        // Khi đang ở eraser mode, click vào overlay → xóa ngay
-        if (DS.activeTool === 'eraser' && evt && evt.overlay) {
-          try { global.tvChart.removeOverlay({ id: evt.overlay.id }); } catch (e) {}
-          return true; // true = ngăn event lan ra
-        }
-        return false;
-      }
-
-      try {
-        global.tvChart.createOverlay({
-          id:      oid,
-          name:    fallbackName,
-          lock:    false,
-          visible: true,
-          mode:    'normal',
-          styles:  buildOverlayStyles(tool),
-          onDrawEnd: _onDrawEnd,   // ← đúng vị trí
-          onRemoved: _onRemoved,   // ← tự động sync count
-          onClick:   _onClick,     // ← hỗ trợ eraser
-        });
-        showCancelBtn();           // ← FIX: gọi riêng, không phải property
-      } catch (err) {
-        console.warn('WaveDrawing: createOverlay', fallbackName, 'failed:', err.message);
-        DS._pendingId = null;
-        hideCancelBtn();
-        DS.isDrawing = false;
-      }
-    }, 60);
+    return '<div id="wa-drawing-props">' +
+      '<span class="wa-dp-tool-name" id="wa-dp-toolname">Drawing Tool</span>' +
+      '<div class="wa-dp-sep"></div><span class="wa-dp-lbl">Stroke</span>' +
+      '<div class="wa-dp-color-box"><div class="wa-dp-swatch" id="wa-dp-stroke-swatch" style="background:#00F0FF;width:100%;height:100%"></div><input id="wa-dp-stroke-color" data-action="stroke" type="color" value="#00f0ff"></div>' +
+      '<span class="wa-dp-lbl">Fill</span>' +
+      '<div class="wa-dp-color-box"><div class="wa-dp-swatch" id="wa-dp-fill-swatch" style="background:rgba(0,240,255,0.12);width:100%;height:100%"></div><input id="wa-dp-fill-color" data-action="fill" type="color" value="#00f0ff"></div>' +
+      '<div class="wa-dp-sep"></div>' +
+      '<select id="wa-dp-size" class="wa-dp-sel" data-action="size"><option value="1">1px</option><option value="2" selected>2px</option><option value="3">3px</option><option value="4">4px</option><option value="5">5px</option></select>' +
+      '<select id="wa-dp-linestyle" class="wa-dp-sel" data-action="style"><option value="solid">solid</option><option value="dashed">dashed</option><option value="dotted">dotted</option></select>' +
+      '<div class="wa-dp-sep"></div>' + swatches +
+      '<div class="wa-dp-sep"></div>' +
+      '<button class="wa-dp-btn accent" data-action="apply-all">Apply All</button>' +
+      '<button class="wa-dp-btn red" data-action="delete-all">Delete All</button>' +
+      '<button class="wa-dp-btn" id="wa-dp-cancel-btn" data-action="cancel" style="display:none">Cancel Draw</button>' +
+      '</div>';
   }
 
-  // ════════════════════════════════════════════
-  // SECTION 7: OVERLAY STYLE BUILDER
-  // ════════════════════════════════════════════
-
-  function buildOverlayStyles(tool) {
-    const isShape = !!(tool && tool.isShape);
-    return {
-      line: {
-        color: DS.color, size: DS.lineSize, style: DS.lineStyle,
-      },
-      text: {
-        color: DS.color, size: DS.textSize,
-        family: "'Segoe UI', Arial, sans-serif", weight: 'normal',
-      },
-      polygon: isShape
-        ? { color: DS.fillColor, style: 'fill', borderColor: DS.color, borderSize: DS.lineSize, borderStyle: DS.lineStyle }
-        : { color: 'transparent', style: 'fill', borderColor: DS.color, borderSize: DS.lineSize, borderStyle: DS.lineStyle },
-      arc:  { color: DS.color, size: DS.lineSize, style: DS.lineStyle },
-      rect: isShape
-        ? { color: DS.fillColor, style: 'fill', borderColor: DS.color, borderSize: DS.lineSize }
-        : undefined,
-    };
+  function cacheRefs() {
+    STATE.refs.container = document.getElementById('sc-chart-container');
+    STATE.refs.toolbar = document.getElementById('wa-drawing-toolbar');
+    STATE.refs.props = document.getElementById('wa-drawing-props');
+    STATE.refs.badge = document.getElementById('wa-dt-badge');
+    STATE.refs.visBtn = document.getElementById('wa-dt-vis-btn');
+    STATE.refs.strokeInput = document.getElementById('wa-dp-stroke-color');
+    STATE.refs.fillInput = document.getElementById('wa-dp-fill-color');
+    STATE.refs.strokeSwatch = document.getElementById('wa-dp-stroke-swatch');
+    STATE.refs.fillSwatch = document.getElementById('wa-dp-fill-swatch');
+    STATE.refs.sizeSel = document.getElementById('wa-dp-size');
+    STATE.refs.styleSel = document.getElementById('wa-dp-linestyle');
+    STATE.refs.cancelBtn = document.getElementById('wa-dp-cancel-btn');
+    STATE.refs.toolName = document.getElementById('wa-dp-toolname');
   }
 
-  // Helpers
-  function hexColor(c) {
-    if (!c) return '00F0FF';
-    c = c.trim();
-    if (/^#?[0-9a-fA-F]{6}$/.test(c)) return c.replace('#', '');
-    if (/^#?[0-9a-fA-F]{3}$/.test(c)) {
-      const s = c.replace('#', '');
-      return s[0]+s[0]+s[1]+s[1]+s[2]+s[2];
-    }
-    // rgba → hex via canvas
-    const cvs = document.createElement('canvas'); cvs.width = 1; cvs.height = 1;
-    const ctx = cvs.getContext('2d'); ctx.fillStyle = c; ctx.fillRect(0,0,1,1);
-    const d = ctx.getImageData(0,0,1,1).data;
-    return [d[0],d[1],d[2]].map(function (x) { return x.toString(16).padStart(2,'0'); }).join('');
-  }
-
-  function hexToRgba(hex, alpha) {
-    hex = hex.replace('#','');
-    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-    return 'rgba(' + parseInt(hex.slice(0,2),16) + ',' + parseInt(hex.slice(2,4),16) + ',' + parseInt(hex.slice(4,6),16) + ',' + alpha + ')';
-  }
-
-  // ════════════════════════════════════════════
-  // Props bar helpers
-  // ════════════════════════════════════════════
-
-  function updatePropsBar(tool) {
-    const bar = document.getElementById('wa-drawing-props');
-    if (!bar) return;
-    const nameEl = document.getElementById('wa-dp-toolname');
-    if (nameEl) nameEl.textContent = tool ? tool.name : 'Công cụ vẽ';
-
-    const strokeInput  = document.getElementById('wa-dp-stroke-color');
-    const strokeSwatch = document.getElementById('wa-dp-stroke-swatch');
-    const fillSwatch   = document.getElementById('wa-dp-fill-swatch');
-    if (strokeInput)  strokeInput.value = '#' + hexColor(DS.color);
-    if (strokeSwatch) strokeSwatch.style.background = DS.color;
-    if (fillSwatch)   fillSwatch.style.background   = DS.fillColor;
-
-    const sizeEl  = document.getElementById('wa-dp-size');
-    const styleEl = document.getElementById('wa-dp-linestyle');
-    if (sizeEl)  sizeEl.value  = DS.lineSize;
-    if (styleEl) styleEl.value = DS.lineStyle;
-
-    const show = !!(tool && tool.id !== 'pointer');
-    bar.classList.toggle('show', show);
-  }
-
-  function showCancelBtn() {
-    const b = document.getElementById('wa-dp-cancel-btn');
-    if (b) b.style.display = '';
-  }
-  function hideCancelBtn() {
-    const b = document.getElementById('wa-dp-cancel-btn');
-    if (b) b.style.display = 'none';
-  }
   function updateBadge() {
-    const b = document.getElementById('wa-dt-badge');
-    if (!b) return;
-    b.textContent = DS.drawCount;
-    b.style.display = DS.drawCount > 0 ? 'flex' : 'none';
+    if (!STATE.refs.badge) return;
+    STATE.refs.badge.textContent = String(Math.max(0, STATE.drawCount));
+    STATE.refs.badge.style.display = STATE.drawCount > 0 ? 'flex' : 'none';
   }
 
-  // ════════════════════════════════════════════
-  // SECTION 8: FLYOUT MANAGEMENT
-  // ════════════════════════════════════════════
+  function syncProps() {
+    if (STATE.refs.strokeInput) STATE.refs.strokeInput.value = '#' + normalizeHex(STATE.color);
+    if (STATE.refs.fillInput) STATE.refs.fillInput.value = '#' + normalizeHex(STATE.color);
+    if (STATE.refs.strokeSwatch) STATE.refs.strokeSwatch.style.background = STATE.color;
+    if (STATE.refs.fillSwatch) STATE.refs.fillSwatch.style.background = STATE.fillColor;
+    if (STATE.refs.sizeSel) STATE.refs.sizeSel.value = String(STATE.lineSize);
+    if (STATE.refs.styleSel) STATE.refs.styleSel.value = STATE.lineStyle;
+  }
+
+  function showProps(visible, toolName) {
+    if (!STATE.refs.props) return;
+    STATE.refs.props.classList.toggle('show', !!visible);
+    if (STATE.refs.toolName) STATE.refs.toolName.textContent = toolName || 'Drawing Tool';
+  }
 
   function closeFlyouts() {
-    document.querySelectorAll('.wa-flyout.open').forEach(function (f) { f.classList.remove('open'); });
-    DS.flyoutOpenId = null;
+    var toolbar = STATE.refs.toolbar;
+    if (!toolbar) return;
+    var open = toolbar.querySelectorAll('.wa-flyout.open');
+    for (var i = 0; i < open.length; i++) open[i].classList.remove('open');
+    STATE.flyoutOpenId = null;
   }
 
   function openFlyout(groupId) {
     closeFlyouts();
-    const flyout = document.getElementById('wa-flyout-' + groupId);
-    if (!flyout) return;
-    // Vertical position clamp trong container
-    const grpBtn = document.getElementById('wa-dtg-' + groupId);
-    const container = document.getElementById('sc-chart-container');
-    if (grpBtn && container) {
-      const btnTop  = grpBtn.getBoundingClientRect().top;
-      const cTop    = container.getBoundingClientRect().top;
-      const relTop  = btnTop - cTop;
-      const flyH    = 220;
-      const maxTop  = container.clientHeight - flyH - 8;
-      flyout.style.top = Math.max(4, Math.min(relTop, maxTop)) + 'px';
-    }
-    flyout.classList.add('open');
-    DS.flyoutOpenId = groupId;
+    var fly = document.getElementById('wa-flyout-' + groupId);
+    var btn = document.getElementById('wa-dtg-' + groupId);
+    var container = STATE.refs.container;
+    if (!fly || !btn || !container) return;
+    var relTop = btn.getBoundingClientRect().top - container.getBoundingClientRect().top;
+    var maxTop = Math.max(4, container.clientHeight - fly.offsetHeight - 8);
+    fly.style.top = Math.max(4, Math.min(relTop, maxTop)) + 'px';
+    fly.classList.add('open');
+    STATE.flyoutOpenId = groupId;
   }
 
-  // ════════════════════════════════════════════
-  // SECTION 9: KEYBOARD SHORTCUTS
-  // ════════════════════════════════════════════
-
-  function handleKeydown(e) {
-    // Bỏ qua khi đang gõ trong input
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-    const overlay = document.getElementById('super-chart-overlay');
-    if (!overlay || !overlay.classList.contains('active')) return;
-
-    if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); WaveDrawingAPI.undo();    return; }
-    if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); WaveDrawingAPI.redo(); return; }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && DS.activeTool === 'pointer') {
-      if (global.tvChart) { try { global.tvChart.removeOverlay(); } catch (err) {} }
-      return;
-    }
-    if (e.key === 'Escape') { WaveDrawingAPI.cancelDraw(); return; }
-
-    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
-      Object.values(TOOL_MAP).forEach(function (t) {
-        if (t.key && e.key.toUpperCase() === t.key.toUpperCase()) {
-          e.preventDefault(); activateTool(t.id);
-        }
-      });
-    }
+  function getOverlayStyles(tool) {
+    var isShape = !!(tool && tool.isShape);
+    return {
+      line: { color: STATE.color, size: STATE.lineSize, style: STATE.lineStyle },
+      polygon: { color: isShape ? STATE.fillColor : 'transparent', borderColor: STATE.color, borderSize: STATE.lineSize, borderStyle: STATE.lineStyle },
+      rect: { color: isShape ? STATE.fillColor : 'transparent', borderColor: STATE.color, borderSize: STATE.lineSize, borderStyle: STATE.lineStyle },
+      text: { color: STATE.color, size: STATE.textSize, family: 'Segoe UI, Arial, sans-serif', weight: 'normal' },
+      arc: { color: STATE.color, size: STATE.lineSize, style: STATE.lineStyle }
+    };
   }
 
-  // ════════════════════════════════════════════
-  // SECTION 10: SETTINGS PERSISTENCE
-  // ════════════════════════════════════════════
-
-  function loadSettings() {
-    try {
-      const s = JSON.parse(localStorage.getItem(LS_KEY));
-      if (!s) return;
-      if (s.color)     DS.color     = s.color;
-      if (s.fillColor) DS.fillColor = s.fillColor;
-      if (s.lineSize)  DS.lineSize  = Number(s.lineSize) || 2;
-      if (s.lineStyle) DS.lineStyle = s.lineStyle;
-    } catch (e) {}
+  function setDrawingCursor(enabled) {
+    if (!STATE.refs.container) return;
+    STATE.refs.container.classList.toggle('wa-chart-drawing-mode', !!enabled);
   }
 
   function saveSettings() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({
-        color: DS.color, fillColor: DS.fillColor,
-        lineSize: DS.lineSize, lineStyle: DS.lineStyle,
+        color: STATE.color,
+        fillColor: STATE.fillColor,
+        lineSize: STATE.lineSize,
+        lineStyle: STATE.lineStyle,
+        textSize: STATE.textSize,
+        idCounter: STATE.idCounter
       }));
     } catch (e) {}
   }
 
-  // ════════════════════════════════════════════
-  // Custom overlay fallback registration
-  // ════════════════════════════════════════════
-
-  const _registeredCustom = new Set();
-
-  function tryRegisterFallback(name, tool) {
-    if (_registeredCustom.has(name)) return;
-    const kc = global.klinecharts;
-    if (!kc || typeof kc.registerOverlay !== 'function') return;
-    _registeredCustom.add(name);
+  function loadSettings() {
     try {
-      kc.registerOverlay({
-        name: name,
-        totalStep: (tool && tool.points) ? tool.points + 1 : 3,
-        createPointFigures: function (ref) {
-          const coords = ref.coordinates || [];
-          if (coords.length < 2) return [];
-          const figs = [];
-          for (let i = 0; i < coords.length - 1; i++) {
-            figs.push({ type: 'line', attrs: { coordinates: [coords[i], coords[i+1]] } });
-          }
-          return figs;
-        },
-      });
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.color) STATE.color = parsed.color;
+      if (parsed && parsed.fillColor) STATE.fillColor = parsed.fillColor;
+      if (parsed && parsed.lineSize) STATE.lineSize = parseInt(parsed.lineSize, 10) || 2;
+      if (parsed && parsed.lineStyle) STATE.lineStyle = parsed.lineStyle;
+      if (parsed && parsed.textSize) STATE.textSize = parseInt(parsed.textSize, 10) || 13;
+      if (parsed && parsed.idCounter) STATE.idCounter = Math.max(1, parseInt(parsed.idCounter, 10) || 1);
     } catch (e) {}
   }
 
-  // ════════════════════════════════════════════
-  // SECTION 11: PUBLIC API
-  // ════════════════════════════════════════════
+  function ensureOverlayName(name, tool) {
+    if (!name) return null;
+    if (KNOWN_NATIVE_OVERLAYS.has(name)) return name;
+    if (STATE.registeredFallbacks[name]) return STATE.registeredFallbacks[name];
+    var kc = global.klinecharts;
+    if (kc && typeof kc.registerOverlay === 'function') {
+      try {
+        kc.registerOverlay({
+          name: name,
+          totalStep: (tool && tool.points ? tool.points : 2) + 1,
+          createPointFigures: function (ctx) {
+            var out = [];
+            var coordinates = (ctx && ctx.coordinates) || [];
+            for (var i = 0; i < coordinates.length - 1; i++) {
+              out.push({ type: 'line', attrs: { coordinates: [coordinates[i], coordinates[i + 1]] } });
+            }
+            return out;
+          }
+        });
+        STATE.registeredFallbacks[name] = name;
+        return name;
+      } catch (e) {}
+    }
+    STATE.registeredFallbacks[name] = 'segment';
+    return 'segment';
+  }
 
-  global.WaveDrawingAPI = {
+  function syncFromChart() {
+    var chart = safeGetChart();
+    if (!chart || typeof chart.getOverlays !== 'function') return;
+    try {
+      var overlays = chart.getOverlays() || [];
+      var count = 0;
+      for (var i = 0; i < overlays.length; i++) {
+        var id = overlays[i] && overlays[i].id ? String(overlays[i].id) : '';
+        if (id.indexOf(OVERLAY_ID_PREFIX) === 0) count++;
+      }
+      STATE.drawCount = count;
+      updateBadge();
+    } catch (e) {}
+  }
 
+  function activateTool(toolId) {
+    var tool = TOOL_MAP[toolId];
+    if (!tool) return;
+
+    if (STATE.pendingOverlayId) {
+      var pendingChart = safeGetChart();
+      if (pendingChart && typeof pendingChart.removeOverlay === 'function') {
+        try { pendingChart.removeOverlay({ id: STATE.pendingOverlayId }); } catch (e) {}
+      }
+      STATE.pendingOverlayId = null;
+    }
+
+    STATE.activeTool = toolId;
+    STATE.isDrawing = toolId !== 'pointer' && toolId !== 'eraser' && !!tool.overlay;
+
+    if (STATE.refs.toolbar) {
+      var btns = STATE.refs.toolbar.querySelectorAll('.wa-dt-btn[data-group]');
+      for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+      var items = STATE.refs.toolbar.querySelectorAll('.wa-flyout-item');
+      for (var j = 0; j < items.length; j++) items[j].classList.toggle('active', items[j].getAttribute('data-tool') === toolId);
+      var groupBtn = document.getElementById('wa-dtg-' + tool.groupId);
+      if (groupBtn) {
+        groupBtn.classList.add('active');
+        groupBtn.setAttribute('data-tool', tool.id);
+        var icon = groupBtn.querySelector('.wa-dt-icon');
+        if (icon) icon.textContent = tool.icon;
+      }
+    }
+
+    setDrawingCursor(STATE.isDrawing || toolId === 'eraser');
+    showProps(toolId !== 'pointer' && toolId !== 'eraser', tool.name);
+    if (STATE.refs.cancelBtn) STATE.refs.cancelBtn.style.display = 'none';
+
+    if (toolId === 'pointer' || toolId === 'eraser' || !tool.overlay) return;
+
+    var chart = safeGetChart();
+    if (!chart || typeof chart.createOverlay !== 'function') return;
+
+    var overlayName = ensureOverlayName(tool.overlay, tool);
+    var overlayId = OVERLAY_ID_PREFIX + STATE.idCounter;
+    STATE.idCounter += 1;
+    STATE.pendingOverlayId = overlayId;
+    saveSettings();
+
+    try {
+      chart.createOverlay({
+        id: overlayId,
+        name: overlayName,
+        lock: false,
+        visible: true,
+        mode: 'normal',
+        styles: getOverlayStyles(tool),
+        onDrawEnd: function () {
+          STATE.pendingOverlayId = null;
+          STATE.historyStack.push(overlayId);
+          STATE.overlayIdSet[overlayId] = true;
+          STATE.undoStack = [];
+          STATE.drawCount += 1;
+          STATE.isDrawing = false;
+          updateBadge();
+          if (STATE.refs.cancelBtn) STATE.refs.cancelBtn.style.display = 'none';
+          activateTool('pointer');
+          return false;
+        },
+        onRemoved: function () {
+          delete STATE.overlayIdSet[overlayId];
+          var idx = STATE.historyStack.indexOf(overlayId);
+          if (idx >= 0) STATE.historyStack.splice(idx, 1);
+          if (STATE.drawCount > 0) STATE.drawCount -= 1;
+          updateBadge();
+          if (STATE.pendingOverlayId === overlayId) STATE.pendingOverlayId = null;
+          return false;
+        },
+        onClick: function (evt) {
+          if (STATE.activeTool !== 'eraser') return false;
+          var id = evt && evt.overlay && evt.overlay.id;
+          if (!id) return false;
+          var c = safeGetChart();
+          if (c && typeof c.removeOverlay === 'function') {
+            try { c.removeOverlay({ id: id }); } catch (e) {}
+          }
+          return true;
+        }
+      });
+      if (STATE.refs.cancelBtn) STATE.refs.cancelBtn.style.display = '';
+    } catch (e) {
+      STATE.pendingOverlayId = null;
+      STATE.isDrawing = false;
+      activateTool('pointer');
+    }
+  }
+
+  function handleToolbarClick(e) {
+    var node = e.target && e.target.closest ? e.target.closest('[data-action], .wa-flyout-item') : null;
+    if (!node || !STATE.refs.toolbar || !STATE.refs.toolbar.contains(node)) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (node.classList.contains('wa-flyout-item')) {
+      closeFlyouts();
+      activateTool(node.getAttribute('data-tool'));
+      return;
+    }
+
+    var action = node.getAttribute('data-action');
+    if (action === 'group') { WaveDrawingAPI.groupClick(e, node.getAttribute('data-group')); return; }
+    if (action === 'undo') { WaveDrawingAPI.undo(); return; }
+    if (action === 'redo') { WaveDrawingAPI.redo(); return; }
+    if (action === 'visibility') { WaveDrawingAPI.toggleVisibility(); return; }
+    if (action === 'delete-all') { WaveDrawingAPI.deleteAll(); return; }
+  }
+
+  function handleToolbarMouseOver(e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.wa-dt-btn[data-group]') : null;
+    if (!btn || !STATE.refs.toolbar || !STATE.refs.toolbar.contains(btn)) return;
+    var gid = btn.getAttribute('data-group');
+    if (gid) WaveDrawingAPI.groupHover(e, gid);
+  }
+
+  function handlePropsClick(e) {
+    var node = e.target && e.target.closest ? e.target.closest('[data-action]') : null;
+    if (!node || !STATE.refs.props || !STATE.refs.props.contains(node)) return;
+    var action = node.getAttribute('data-action');
+    if (action === 'preset') { WaveDrawingAPI.setColor(node.getAttribute('data-color')); return; }
+    if (action === 'apply-all') { WaveDrawingAPI.applyAll(); return; }
+    if (action === 'delete-all') { WaveDrawingAPI.deleteAll(); return; }
+    if (action === 'cancel') { WaveDrawingAPI.cancelDraw(); return; }
+  }
+
+  function handlePropsInput(e) {
+    var target = e.target;
+    if (!target || !STATE.refs.props || !STATE.refs.props.contains(target)) return;
+    var action = target.getAttribute('data-action');
+    if (action === 'stroke') WaveDrawingAPI.onStrokeColor(target.value);
+    else if (action === 'fill') WaveDrawingAPI.onFillColor(target.value);
+    else if (action === 'size') WaveDrawingAPI.onLineSize(target.value);
+    else if (action === 'style') WaveDrawingAPI.onLineStyle(target.value);
+  }
+
+  function handleDocClick(e) {
+    if (!STATE.refs.toolbar) return;
+    if (STATE.refs.toolbar.contains(e.target)) return;
+    closeFlyouts();
+  }
+
+  function handleKeydown(e) {
+    if (isInputLike(e.target)) return;
+    var overlay = document.getElementById('super-chart-overlay');
+    if (!overlay || !overlay.classList.contains('active')) return;
+
+    var k = (e.key || '').toLowerCase();
+    if (e.ctrlKey && !e.shiftKey && k === 'z') { e.preventDefault(); WaveDrawingAPI.undo(); return; }
+    if (e.ctrlKey && (k === 'y' || (k === 'z' && e.shiftKey))) { e.preventDefault(); WaveDrawingAPI.redo(); return; }
+    if (k === 'escape') { e.preventDefault(); WaveDrawingAPI.cancelDraw(); return; }
+
+    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+      for (var id in TOOL_MAP) {
+        if (!Object.prototype.hasOwnProperty.call(TOOL_MAP, id)) continue;
+        var t = TOOL_MAP[id];
+        if (t.key && t.key.toLowerCase() === e.key.toLowerCase()) {
+          e.preventDefault();
+          activateTool(t.id);
+          break;
+        }
+      }
+    }
+  }
+
+  function bindEvents() {
+    if (STATE.refs.toolbar && !STATE.refs.toolbar._waBound) {
+      STATE.refs.toolbar.addEventListener('click', handleToolbarClick);
+      STATE.refs.toolbar.addEventListener('mouseover', handleToolbarMouseOver);
+      STATE.refs.toolbar._waBound = true;
+    }
+    if (STATE.refs.props && !STATE.refs.props._waBound) {
+      STATE.refs.props.addEventListener('click', handlePropsClick);
+      STATE.refs.props.addEventListener('input', handlePropsInput);
+      STATE.refs.props.addEventListener('change', handlePropsInput);
+      STATE.refs.props._waBound = true;
+    }
+    if (!STATE.docClickBound) {
+      document.addEventListener('click', handleDocClick, true);
+      STATE.docClickBound = true;
+    }
+    if (!STATE.keyHandlerBound) {
+      document.addEventListener('keydown', handleKeydown);
+      STATE.keyHandlerBound = true;
+    }
+  }
+
+  function injectToolbar() {
+    var container = document.getElementById('sc-chart-container');
+    if (!container) return false;
+    STATE.refs.container = container;
+
+    if (!document.getElementById('wa-drawing-toolbar')) {
+      var toolbar = document.createElement('div');
+      toolbar.id = 'wa-drawing-toolbar';
+      toolbar.innerHTML = buildToolbarHTML();
+      container.appendChild(toolbar);
+    }
+    if (!document.getElementById('wa-drawing-props')) {
+      var wrap = document.createElement('div');
+      wrap.innerHTML = buildPropsHTML();
+      if (wrap.firstElementChild) container.appendChild(wrap.firstElementChild);
+    }
+
+    cacheRefs();
+    bindEvents();
+    syncProps();
+    showProps(false);
+    updateBadge();
+    return true;
+  }
+
+  function setupObservers() {
+    var root = document.getElementById('super-chart-overlay') || document.body;
+    if (!root) return;
+    if (STATE.observer) STATE.observer.disconnect();
+    STATE.observer = new MutationObserver(function () {
+      var c = document.getElementById('sc-chart-container');
+      if (!c) return;
+      if (!document.getElementById('wa-drawing-toolbar') || !document.getElementById('wa-drawing-props')) {
+        injectToolbar();
+      }
+      cacheRefs();
+      syncFromChart();
+    });
+    STATE.observer.observe(root, { childList: true, subtree: true });
+  }
+
+  function wrapOpenProChart() {
+    var fn = global.openProChart;
+    if (typeof fn !== 'function' || fn.__waDrawingWrapped) return;
+    var wrapped = function () {
+      var out;
+      try { out = fn.apply(this, arguments); } finally {
+        setTimeout(function () { WaveDrawingAPI.reinject(); syncFromChart(); }, 450);
+      }
+      return out;
+    };
+    wrapped.__waDrawingWrapped = true;
+    wrapped.__waDrawingOriginal = fn;
+    global.openProChart = wrapped;
+  }
+
+  var WaveDrawingAPI = {
     version: WD_VERSION,
 
-    // ── Init ──────────────────────────────────
     init: function () {
       injectCSS();
       loadSettings();
-      inject();
-      document.addEventListener('keydown', handleKeydown);
-      watchForReinit();
+      injectToolbar();
+      setupObservers();
+      wrapOpenProChart();
+      if (STATE.openWrapTimer) clearInterval(STATE.openWrapTimer);
+      STATE.openWrapTimer = setInterval(wrapOpenProChart, 1200);
+      if (STATE.syncTimer) clearInterval(STATE.syncTimer);
+      STATE.syncTimer = setInterval(syncFromChart, 1500);
+      STATE.initialized = true;
+      syncProps();
+      updateBadge();
+      activateTool('pointer');
     },
 
     reinject: function () {
-      ['wa-drawing-toolbar', 'wa-drawing-props'].forEach(function (id) {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-      });
-      DS.initialized = false;
-      setTimeout(inject, 300);
+      var tb = document.getElementById('wa-drawing-toolbar');
+      var pb = document.getElementById('wa-drawing-props');
+      if (tb && tb.parentNode) tb.parentNode.removeChild(tb);
+      if (pb && pb.parentNode) pb.parentNode.removeChild(pb);
+      injectToolbar();
+      activateTool(STATE.activeTool || 'pointer');
     },
 
-    // ── Event handlers (gọi từ HTML onclick) ──
-
-    // FIX: groupClick chỉ toggle flyout, KHÔNG tự kích hoạt tool khi đóng
     groupClick: function (event, groupId) {
-      event.stopPropagation();
-      const group = TOOL_GROUPS.find(function (g) { return g.id === groupId; });
+      if (event && event.stopPropagation) event.stopPropagation();
+      var group = null;
+      for (var i = 0; i < TOOL_GROUPS.length; i++) {
+        if (TOOL_GROUPS[i].id === groupId) { group = TOOL_GROUPS[i]; break; }
+      }
       if (!group) return;
       if (group.tools.length === 1) {
-        // Nhóm chỉ có 1 tool → kích hoạt ngay
         closeFlyouts();
         activateTool(group.tools[0].id);
         return;
       }
-      const flyout = document.getElementById('wa-flyout-' + groupId);
-      if (flyout && flyout.classList.contains('open')) {
-        // FIX: đóng flyout thôi, không activateTool
-        closeFlyouts();
-      } else {
-        openFlyout(groupId);
-      }
+      var fly = document.getElementById('wa-flyout-' + groupId);
+      if (fly && fly.classList.contains('open')) closeFlyouts();
+      else openFlyout(groupId);
     },
 
     groupHover: function (event, groupId) {
-      // Mở flyout khi hover nếu đang có flyout khác mở
-      if (DS.flyoutOpenId && DS.flyoutOpenId !== groupId) {
-        openFlyout(groupId);
-      }
+      if (STATE.flyoutOpenId && STATE.flyoutOpenId !== groupId) openFlyout(groupId);
     },
 
     toolClick: function (toolId, event) {
-      if (event) event.stopPropagation();
+      if (event && event.stopPropagation) event.stopPropagation();
       closeFlyouts();
       activateTool(toolId);
     },
 
-    // ── Cancel vẽ dở ──────────────────────────
     cancelDraw: function () {
-      // FIX: dùng DS._pendingId thay vì ID cứng 'wadrawing'
-      if (global.tvChart && DS._pendingId) {
-        try { global.tvChart.removeOverlay({ id: DS._pendingId }); } catch (e) {}
+      var chart = safeGetChart();
+      if (chart && STATE.pendingOverlayId && typeof chart.removeOverlay === 'function') {
+        try { chart.removeOverlay({ id: STATE.pendingOverlayId }); } catch (e) {}
       }
-      DS._pendingId = null;
-      DS.isDrawing  = false;
-      hideCancelBtn();
+      STATE.pendingOverlayId = null;
+      STATE.isDrawing = false;
+      if (STATE.refs.cancelBtn) STATE.refs.cancelBtn.style.display = 'none';
       activateTool('pointer');
     },
 
-    // ── Color / Style handlers ─────────────────
+    undo: function () {
+      var chart = safeGetChart();
+      if (!chart) return;
+      if (typeof chart.undoOverlay === 'function') {
+        try { chart.undoOverlay(); syncFromChart(); return; } catch (e) {}
+      }
+      var lastId = STATE.historyStack.pop();
+      if (!lastId) return;
+      STATE.undoStack.push(lastId);
+      if (typeof chart.removeOverlay === 'function') {
+        try { chart.removeOverlay({ id: lastId }); } catch (e) {}
+      }
+      syncFromChart();
+    },
+
+    redo: function () {
+      var chart = safeGetChart();
+      if (!chart) return;
+      if (typeof chart.redoOverlay === 'function') {
+        try { chart.redoOverlay(); syncFromChart(); return; } catch (e) {}
+      }
+    },
+
+    toggleVisibility: function () {
+      var chart = safeGetChart();
+      if (!chart || typeof chart.overrideOverlay !== 'function') return;
+      STATE.allVisible = !STATE.allVisible;
+      try { chart.overrideOverlay({ visible: STATE.allVisible }); } catch (e) {}
+      if (STATE.refs.visBtn) {
+        var icon = STATE.refs.visBtn.querySelector('.wa-dt-icon');
+        var tip = STATE.refs.visBtn.querySelector('.wa-dt-tip');
+        if (icon) icon.textContent = STATE.allVisible ? 'VIS' : 'HID';
+        if (tip) tip.textContent = STATE.allVisible ? 'Hide/Show Drawings' : 'Show All Drawings';
+      }
+    },
+
+    deleteAll: function () {
+      var chart = safeGetChart();
+      if (!chart || typeof chart.removeOverlay !== 'function') return;
+      if (!global.confirm('Delete all drawings from the chart?')) return;
+      try { chart.removeOverlay(); } catch (e) {}
+      STATE.historyStack = [];
+      STATE.undoStack = [];
+      STATE.overlayIdSet = {};
+      STATE.pendingOverlayId = null;
+      STATE.drawCount = 0;
+      updateBadge();
+      if (typeof global.applyFishFilter === 'function') {
+        setTimeout(function () { try { global.applyFishFilter(); } catch (e) {} }, 100);
+      }
+    },
+
+    applyAll: function () {
+      var chart = safeGetChart();
+      if (!chart || typeof chart.overrideOverlay !== 'function') return;
+      var overlays = [];
+      if (typeof chart.getOverlays === 'function') {
+        try { overlays = chart.getOverlays() || []; } catch (e) {}
+      }
+      var styles = getOverlayStyles({ isShape: true });
+      if (overlays.length > 0) {
+        for (var i = 0; i < overlays.length; i++) {
+          var ov = overlays[i];
+          if (!ov || !ov.id) continue;
+          if (String(ov.id).indexOf(OVERLAY_ID_PREFIX) !== 0) continue;
+          try { chart.overrideOverlay({ id: ov.id, styles: styles }); } catch (e) {}
+        }
+      } else {
+        try { chart.overrideOverlay({ styles: styles }); } catch (e) {}
+      }
+    },
+
+    setColor: function (color) {
+      STATE.color = color || '#00F0FF';
+      STATE.fillColor = rgbaFromHex(STATE.color, 0.12);
+      syncProps();
+      saveSettings();
+    },
+
     onStrokeColor: function (val) {
-      DS.color = val;
-      const sw = document.getElementById('wa-dp-stroke-swatch');
-      if (sw) sw.style.background = val;
+      STATE.color = val || STATE.color;
+      if (STATE.refs.strokeSwatch) STATE.refs.strokeSwatch.style.background = STATE.color;
       saveSettings();
     },
 
     onFillColor: function (val) {
-      DS.fillColor = hexToRgba(hexColor(val), 0.15);
-      const sw = document.getElementById('wa-dp-fill-swatch');
-      if (sw) sw.style.background = DS.fillColor;
-      saveSettings();
-    },
-
-    setColor: function (colorHex) {
-      DS.color     = colorHex;
-      DS.fillColor = hexToRgba(hexColor(colorHex), 0.12);
-      const sw  = document.getElementById('wa-dp-stroke-swatch');
-      const inp = document.getElementById('wa-dp-stroke-color');
-      const fsw = document.getElementById('wa-dp-fill-swatch');
-      if (sw)  sw.style.background  = colorHex;
-      if (inp) inp.value = '#' + hexColor(colorHex);
-      if (fsw) fsw.style.background = DS.fillColor;
+      STATE.fillColor = rgbaFromHex(val || STATE.color, 0.15);
+      if (STATE.refs.fillSwatch) STATE.refs.fillSwatch.style.background = STATE.fillColor;
       saveSettings();
     },
 
     onLineSize: function (val) {
-      DS.lineSize = parseInt(val, 10) || 2;
+      STATE.lineSize = parseInt(val, 10) || 2;
       saveSettings();
     },
 
     onLineStyle: function (val) {
-      DS.lineStyle = val;
+      STATE.lineStyle = val || 'solid';
       saveSettings();
     },
 
-    // ── Apply current style to ALL existing overlays ──
-    applyAll: function () {
-      if (!global.tvChart) return;
-      // FIX: dùng getOverlays() để lấy danh sách rồi override từng cái
-      let overlays = [];
-      if (typeof global.tvChart.getOverlays === 'function') {
-        try { overlays = global.tvChart.getOverlays() || []; } catch (e) {}
-      }
-      const styles = buildOverlayStyles({ isShape: true });
-      if (overlays.length > 0) {
-        overlays.forEach(function (ov) {
-          try { global.tvChart.overrideOverlay({ id: ov.id, styles: styles }); } catch (e) {}
-        });
-      } else {
-        // Fallback: override không filter (override tất cả)
-        try { global.tvChart.overrideOverlay({ styles: styles }); } catch (e) {}
-      }
+    getState: function () {
+      return {
+        activeTool: STATE.activeTool,
+        color: STATE.color,
+        fillColor: STATE.fillColor,
+        lineSize: STATE.lineSize,
+        lineStyle: STATE.lineStyle,
+        textSize: STATE.textSize,
+        allVisible: STATE.allVisible,
+        drawCount: STATE.drawCount,
+        isDrawing: STATE.isDrawing,
+        pendingOverlayId: STATE.pendingOverlayId,
+        idCounter: STATE.idCounter,
+        historyStack: STATE.historyStack.slice(),
+        flyoutOpenId: STATE.flyoutOpenId,
+        initialized: STATE.initialized
+      };
     },
 
-    // ── Undo / Redo ───────────────────────────
-    undo: function () {
-      if (!global.tvChart) return;
-      // Thử native undoOverlay trước (nếu KLC version hỗ trợ)
-      if (typeof global.tvChart.undoOverlay === 'function') {
-        try {
-          global.tvChart.undoOverlay();
-          if (DS.drawCount > 0) DS.drawCount--;
-          updateBadge();
-          return;
-        } catch (e) {}
-      }
-      // FIX Fallback: xóa theo history stack — KHÔNG gọi removeOverlay() không tham số
-      if (DS._history.length === 0) return;
-      const lastId = DS._history.pop();
-      try { global.tvChart.removeOverlay({ id: lastId }); } catch (e) {}
-      if (DS.drawCount > 0) DS.drawCount--;
-      updateBadge();
-    },
-
-    redo: function () {
-      if (!global.tvChart) return;
-      if (typeof global.tvChart.redoOverlay === 'function') {
-        try {
-          global.tvChart.redoOverlay();
-          DS.drawCount++;
-          updateBadge();
-        } catch (e) {}
-      }
-    },
-
-    // ── Visibility toggle ─────────────────────
-    toggleVisibility: function () {
-      if (!global.tvChart) return;
-      DS.allVisible = !DS.allVisible;
-      try { global.tvChart.overrideOverlay({ visible: DS.allVisible }); } catch (e) {}
-      const btn = document.getElementById('wa-dt-vis-btn');
-      if (btn) {
-        const icon = btn.querySelector('.wa-dt-icon');
-        const tip  = btn.querySelector('.wa-dt-tip');
-        if (icon) icon.textContent = DS.allVisible ? '◎' : '○';
-        if (tip)  tip.textContent  = DS.allVisible ? 'Ẩn/Hiện hình vẽ' : 'Hiện tất cả hình vẽ';
-      }
-    },
-
-    // ── Delete all ────────────────────────────
-    deleteAll: function () {
-      if (!global.tvChart) return;
-      if (!confirm('Xóa tất cả hình vẽ trên chart?\nKhông thể hoàn tác!')) return;
-      // FIX: removeOverlay() không tham số = xóa tất cả (đúng theo KLC API)
-      try { global.tvChart.removeOverlay(); } catch (e) {}
-      DS.drawCount  = 0;
-      DS._history   = [];
-      DS._pendingId = null;
-      updateBadge();
-      if (typeof global.applyFishFilter === 'function') {
-        setTimeout(global.applyFishFilter, 100);
-      }
-    },
-
-    // ── State accessor ─────────────────────────
-    getState: function () { return Object.assign({}, DS); },
-    getTools: function () { return TOOL_GROUPS; },
+    getTools: function () { return TOOL_GROUPS; }
   };
 
-  // ════════════════════════════════════════════
-  // AUTO-INIT
-  // ════════════════════════════════════════════
+  WaveDrawingAPI.toggleAll = WaveDrawingAPI.toggleVisibility;
+  WaveDrawingAPI.removeAll = WaveDrawingAPI.deleteAll;
 
-  function autoInit() { WaveDrawingAPI.init(); }
+  global.WaveDrawingAPI = WaveDrawingAPI;
+
+  function autoInit() {
+    if (!global.WaveDrawingAPI) return;
+    global.WaveDrawingAPI.init();
+  }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { setTimeout(autoInit, 400); });
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(autoInit, 350); });
   } else {
-    setTimeout(autoInit, 400);
+    setTimeout(autoInit, 350);
   }
-
-  // Hook vào openProChart để re-inject sau khi chart khởi động lại
-  const _origOpen = global.openProChart;
-  Object.defineProperty(global, 'openProChart', {
-    configurable: true,
-    get: function () { return _hookedOpen; },
-    set: function (fn) { _origRef = fn; },
-  });
-  let _origRef = _origOpen;
-  function _hookedOpen() {
-    if (_origRef) _origRef.apply(this, arguments);
-    setTimeout(function () {
-      if (!document.getElementById('wa-drawing-toolbar')) {
-        WaveDrawingAPI.reinject();
-      }
-    }, 500);
-  }
-
-  // Fallback patch sau khi openProChart được set
-  setTimeout(function () {
-    if (typeof global.openProChart === 'function' && global.openProChart !== _hookedOpen) {
-      const orig = global.openProChart;
-      global.openProChart = function () {
-        orig.apply(this, arguments);
-        setTimeout(function () {
-          if (!document.getElementById('wa-drawing-toolbar')) WaveDrawingAPI.reinject();
-        }, 500);
-      };
-    }
-  }, 1000);
-
-  console.log(`Wave Alpha Drawing Tools v${WD_VERSION} — module loaded.`);
-
-}(window));
+})(window);
