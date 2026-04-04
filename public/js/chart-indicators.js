@@ -1326,9 +1326,31 @@
     if (!document.getElementById('btn-fx-indicator')) {
       const timeBtns = document.querySelectorAll('.sc-time-btn');
       if (timeBtns.length > 0) {
+        // [FIX BƯỚC 1] Ép toàn bộ nút trên Topbar nằm sát nhau, xóa khoảng trống thừa
+        if (!document.getElementById('wa-topbar-spacing-fix')) {
+            const style = document.createElement('style');
+            style.id = 'wa-topbar-spacing-fix';
+            style.textContent = `
+                .sc-time-btn { padding: 4px 5px !important; margin: 0 !important; min-width: unset !important; }
+                #btn-fx-indicator, #btn-wa-draw, #btn-wa-fs, #btn-wa-screenshot, #btn-wa-chart-cfg { padding: 4px 6px !important; margin: 0 !important; }
+            `;
+            document.head.appendChild(style);
+        }
+
         const container = timeBtns[0].parentElement;
         
-        // [FIX LỖI 1 & 2] Khôi phục overflow để Menu Cài Đặt không bị cắt tàng hình.
+        // Cấu hình Flexbox bóp sát khoảng cách (gap: 2px)
+        container.style.display = 'flex';
+        container.style.flexWrap = 'wrap';
+        container.style.gap = '2px'; 
+        container.style.overflow = 'visible'; 
+        
+        if (container.parentElement) {
+            container.parentElement.style.display = 'flex';
+            container.parentElement.style.flexWrap = 'wrap';
+            container.parentElement.style.gap = '4px';
+            container.parentElement.style.alignItems = 'center';
+        }
         // Chuyển sang dùng flex-wrap để các cụm rớt dòng thông minh, gọn gàng.
         container.style.display = 'flex';
         container.style.flexWrap = 'wrap';
@@ -1430,18 +1452,27 @@
                         <div id="wa-grid-knob" style="position:absolute; right:2px; top:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:.2s;"></div>
                     </div>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <span style="color:${COLOR.white}; font-size:12px;">🕯️ Nến Tăng</span>
-                    <input type="color" id="wa-color-up" value="#0ECB81" style="width:38px; height:24px; border:1px solid ${COLOR.border}; border-radius:5px; cursor:pointer; background:transparent; padding:1px;" oninput="window.waCsApply()">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="color:${COLOR.white};font-size:12px;">🕯️ Nến Tăng</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="text" id="wa-hex-up" value="#0ECB81" maxlength="7" style="width:60px; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none; font-family:monospace;" onchange="document.getElementById('wa-color-up').value = this.value.length === 7 ? this.value : '#0ECB81'; window.waCsApply()">
+                    <input type="color" id="wa-color-up" value="#0ECB81" style="width:28px;height:24px;border:1px solid ${COLOR.border};border-radius:5px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-up').value = this.value; window.waCsApply()">
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <span style="color:${COLOR.white}; font-size:12px;">🕯️ Nến Giảm</span>
-                    <input type="color" id="wa-color-down" value="#F6465D" style="width:38px; height:24px; border:1px solid ${COLOR.border}; border-radius:5px; cursor:pointer; background:transparent; padding:1px;" oninput="window.waCsApply()">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="color:${COLOR.white};font-size:12px;">🕯️ Nến Giảm</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="text" id="wa-hex-down" value="#F6465D" maxlength="7" style="width:60px; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none; font-family:monospace;" onchange="document.getElementById('wa-color-down').value = this.value.length === 7 ? this.value : '#F6465D'; window.waCsApply()">
+                    <input type="color" id="wa-color-down" value="#F6465D" style="width:28px;height:24px;border:1px solid ${COLOR.border};border-radius:5px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-down').value = this.value; window.waCsApply()">
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                    <span style="color:${COLOR.white}; font-size:12px;">🖼️ Màu Nền</span>
-                    <input type="color" id="wa-color-bg" value="#161a1e" style="width:38px; height:24px; border:1px solid ${COLOR.border}; border-radius:5px; cursor:pointer; background:transparent; padding:1px;" oninput="window.waCsApply()">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <span style="color:${COLOR.white};font-size:12px;">🖼️ Màu Nền</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="text" id="wa-hex-bg" value="#161a1e" maxlength="7" style="width:60px; height:24px; background:rgba(0,0,0,0.4); border:1px solid ${COLOR.border}; border-radius:4px; color:${COLOR.white}; font-size:11px; text-align:center; outline:none; font-family:monospace;" onchange="document.getElementById('wa-color-bg').value = this.value.length === 7 ? this.value : '#161a1e'; window.waCsApply()">
+                    <input type="color" id="wa-color-bg" value="#161a1e" style="width:28px;height:24px;border:1px solid ${COLOR.border};border-radius:5px;cursor:pointer;background:transparent;padding:1px;" oninput="document.getElementById('wa-hex-bg').value = this.value; window.waCsApply()">
                 </div>
+            </div>
                 <div style="font-size:10px; color:${COLOR.muted}; margin-bottom:7px; font-weight:600;">Nền có sẵn:</div>
                 <div style="display:flex; gap:7px; flex-wrap:wrap;">
                     ${[
@@ -1512,11 +1543,20 @@
             menuCfg.addEventListener('click', function(e) { e.stopPropagation(); });
             document.addEventListener('click', function() { menuCfg.style.display = 'none'; });
 
-            // Load setting cũ nếu có
+            // Load setting cũ nếu có (Đồng bộ cả Color Picker và Text Hex)
             const saved = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
-            document.getElementById('wa-color-up').value   = saved.colUp   || COLOR.green;
-            document.getElementById('wa-color-down').value = saved.colDown || COLOR.red;
-            document.getElementById('wa-color-bg').value   = saved.colBg   || COLOR.bgDark;
+            
+            const cUp = saved.colUp || COLOR.green;
+            document.getElementById('wa-color-up').value = cUp;
+            document.getElementById('wa-hex-up').value = cUp;
+            
+            const cDown = saved.colDown || COLOR.red;
+            document.getElementById('wa-color-down').value = cDown;
+            document.getElementById('wa-hex-down').value = cDown;
+            
+            const cBg = saved.colBg || COLOR.bgDark;
+            document.getElementById('wa-color-bg').value = cBg;
+            document.getElementById('wa-hex-bg').value = cBg;
             
             if (saved.showGrid === false) {
                 document.getElementById('wa-grid-toggle').dataset.on = '0';
@@ -1538,14 +1578,14 @@
         };
 
         window.waCsApply = function() {
-            const up   = document.getElementById('wa-color-up').value;
-            const down = document.getElementById('wa-color-down').value;
-            const bg   = document.getElementById('wa-color-bg').value;
+            // [FIX] Lấy màu từ ô Text thay vì bảng màu, cho phép nhập tự do
+            const up   = document.getElementById('wa-hex-up').value;
+            const down = document.getElementById('wa-hex-down').value;
+            const bg   = document.getElementById('wa-hex-bg').value;
             const showGrid = document.getElementById('wa-grid-toggle').dataset.on === '1';
 
             localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: up, colDown: down, colBg: bg }));
 
-            // [FIX 1.1] Đổi màu trực tiếp trên thẻ DIV chứa biểu đồ
             const chartContainer = document.getElementById('sc-chart-container');
             if (chartContainer) chartContainer.style.background = bg;
 
@@ -1565,7 +1605,9 @@
         };
 
         window.waCsSetBg = function(color) {
+            // [FIX] Đồng bộ cả 2 ô khi chọn preset nền có sẵn
             document.getElementById('wa-color-bg').value = color;
+            document.getElementById('wa-hex-bg').value = color;
             window.waCsApply();
         };
 
