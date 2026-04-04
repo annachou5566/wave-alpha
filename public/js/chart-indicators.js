@@ -1454,7 +1454,12 @@
         `;
         container.appendChild(tbWrap);
 
-        
+        document.getElementById('btn-fx-indicator').addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (typeof global.openIndicatorModal === 'function') {
+                global.openIndicatorModal();
+            }
+        });
 
         // Fullscreen
         document.getElementById('btn-wa-fs').addEventListener('click', function () {
