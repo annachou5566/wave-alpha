@@ -1486,8 +1486,15 @@
 
     function attempt(retries) {
         try {
-            // Khởi tạo bình thường, KHÔNG éo style tàng hình ở đây
-            global.tvChart.createIndicator({ name: indName }, isStack, { id: paneId });
+            // 🚀 BÍ QUYẾT: Chỉ báo phụ (RSI, MACD) thì BẬT LẠI chữ. Chỉ báo chính (EMA) thì kệ nó.
+            let customStyles = {};
+            if (!isStack) customStyles = { tooltip: { showRule: 'always' } };
+
+            global.tvChart.createIndicator({ 
+                name: indName,
+                styles: customStyles
+            }, isStack, { id: paneId });
+            
         } catch (err) {
             if (retries > 0) setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
             return; 
@@ -1508,12 +1515,13 @@
             }, 50);
         }
 
+        // Lưu state
         if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
             global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params });
             if(typeof saveIndicatorState === 'function') saveIndicatorState();
         }
-
-        // Render HTML legend sau khi override chạy xong
+        
+        // Render lại HTML
         setTimeout(function() {
             if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
                 global.WaveIndicatorAPI.renderLegend();
@@ -1730,36 +1738,32 @@
             const color = meta && meta.colors ? meta.colors[0] : '#00F0FF';
             
             const item = document.createElement('div');
-            // 🚀 ÉP THẲNG HÀNG: Dùng nowrap và align-items center
-            item.style.cssText = 'display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 6px; border-radius: 4px; pointer-events: auto; width: fit-content; transition: background 0.15s; white-space: nowrap;';
+            // 🚀 ÉP THẲNG HÀNG: flex-wrap: nowrap
+            item.style.cssText = 'display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; font-size: 11px; font-family: var(--font-num); font-weight: 600; padding: 2px 6px; border-radius: 4px; pointer-events: auto; width: fit-content; transition: background 0.15s; background: rgba(22,26,30,0.6);';
             if (ind.visible === false) item.style.opacity = '0.4';
 
-            // 1. TÊN CHỈ BÁO
             const nameSpan = document.createElement('span');
-            nameSpan.style.cssText = `color: ${color};`;
+            nameSpan.style.cssText = `color: ${color}; white-space: nowrap;`;
             nameSpan.textContent = title + pStr;
 
-            // 2. CỤM NÚT TƯƠNG TÁC (Mặc định ẩn, hover mới hiện)
             const btnSpan = document.createElement('span');
             btnSpan.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.2s;';
             
-            // Hover hiệu ứng nền nhẹ để biết đang chĩa chuột vào dòng nào
             item.onmouseenter = () => { btnSpan.style.opacity = '1'; item.style.background = 'rgba(255,255,255,0.08)'; };
-            item.onmouseleave = () => { btnSpan.style.opacity = '0'; item.style.background = 'transparent'; };
+            item.onmouseleave = () => { btnSpan.style.opacity = '0'; item.style.background = 'rgba(22,26,30,0.6)'; };
             
             const eyeIcon = ind.visible === false ? '👁️‍🗨️' : '👁️';
             btnSpan.innerHTML = `
-                <span style="cursor:pointer; font-size:11px; color:#848e9c;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='#848e9c'">${eyeIcon}</span>
-                <span style="cursor:pointer; font-size:11px; color:#848e9c;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')" onmouseover="this.style.color='#F0B90B'" onmouseout="this.style.color='#848e9c'">⚙️</span>
-                <span style="cursor:pointer; font-size:11px; color:#848e9c;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'">✕</span>
+                <span style="cursor:pointer; color:#848e9c;" title="Ẩn/Hiện" onclick="window.WaveIndicatorAPI.toggleVisible('${ind.name}')" onmouseover="this.style.color='#EAECEF'" onmouseout="this.style.color='#848e9c'">${eyeIcon}</span>
+                <span style="cursor:pointer; color:#848e9c;" title="Cài đặt" onclick="window.WaveIndicatorAPI.openSettingsByName('${ind.name}')" onmouseover="this.style.color='#F0B90B'" onmouseout="this.style.color='#848e9c'">⚙️</span>
+                <span style="cursor:pointer; color:#848e9c;" title="Xóa" onclick="window.WaveIndicatorAPI.remove('${ind.name}')" onmouseover="this.style.color='#F6465D'" onmouseout="this.style.color='#848e9c'">✕</span>
             `;
 
-            // 3. CỤM SỐ LIỆU (Liên tục nhấp nháy khi rê chuột)
             const valSpan = document.createElement('span');
             valSpan.id = `wa-val-${ind.name}`;
-            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px;';
+            valSpan.style.cssText = 'color: #EAECEF; font-weight: 400; display: flex; align-items: center; gap: 6px; white-space: nowrap;';
 
-            // Xếp đúng chuẩn TradingView: TÊN -> NÚT -> SỐ LIỆU
+            // Xếp đúng chuẩn: TÊN -> NÚT -> SỐ LIỆU
             item.appendChild(nameSpan);
             item.appendChild(btnSpan); 
             item.appendChild(valSpan);
