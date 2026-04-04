@@ -1,23 +1,23 @@
+// [THÊM MỚI] Bơm font icomoon cho tooltip chuẩn Pro
+(function() {
+  if (document.getElementById('wa-pro-font')) return;
+  const style = document.createElement('style');
+  style.id = 'wa-pro-font';
+  style.textContent = `
+    @font-face {
+      font-family: 'icomoon';
+      src: url('data:font/woff;base64,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') format('woff');
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
+  `;
+  document.head.appendChild(style);
+})();
 // ==========================================
 // 🚀 FILE: chart-ui.js - GIAO DIỆN & TRADINGVIEW
 // ==========================================
 
-// [THÊM MỚI] Bơm font icomoon cho tooltip chuẩn Pro
-(function() {  
-    if (document.getElementById('wa-pro-font')) return;  
-    const style = document.createElement('style');  
-    style.id = 'wa-pro-font';  
-    style.textContent = `    
-        @font-face {      
-            font-family: 'icomoon';      
-            src: url('data:font/woff;base64,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') format('woff');      
-            font-weight: 400;      
-            font-style: normal;      
-            font-display: block;    
-        }  
-    `;  
-    document.head.appendChild(style);
-})();
 
 window.tvChart = null;
 window.tvLineSeries = null; 
@@ -810,27 +810,51 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         if (window.WaveIndicatorAPI) window.WaveIndicatorAPI.register();
 
-        // 1. KHỞI TẠO CHART (BẬT TOOLTIP CHUẨN KLINECHARTS PRO)
-        container.style.position = 'relative';
+        // 1. KHỞI TẠO CHART 100% NATIVE KLINECHARTS
+        container.style.position = 'relative'; 
         window.tvChart = klinecharts.init(container, {
             styles: {
                 grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
+                
+                // 🚀 TÍCH HỢP OHLC VÀO BÊN TRONG TOOLTIP CỦA CANDE 
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    tooltip: { showRule: 'none' } // Tắt OHLC gốc để xài bản tùy chỉnh dưới đây
+                    tooltip: { 
+                        showRule: 'always',
+                        showType: 'standard',
+                        // Cấu trúc tùy chỉnh để hiển thị trên 1 hàng ngang: QUQUSDT 1D | O ... H ...
+                        custom: function(calcData) {
+                            const kLineData = calcData.current;
+                            if (!kLineData) return [];
+                            const sym = (t.symbol || 'UNKNOWN').toUpperCase() + 'USDT';
+                            const tf = window.currentChartInterval.toUpperCase();
+                            const volStr = kLineData.volume >= 1e6 ? (kLineData.volume/1e6).toFixed(2)+'M' : (kLineData.volume >= 1e3 ? (kLineData.volume/1e3).toFixed(2)+'K' : kLineData.volume.toFixed(0));
+                            
+                            return [
+                                { title: '', value: `${sym} ${tf} |`, color: '#EAECEF' },
+                                { title: ' O', value: kLineData.open.toFixed(prec), color: '#848e9c' },
+                                { title: ' H', value: kLineData.high.toFixed(prec), color: '#0ECB81' },
+                                { title: ' L', value: kLineData.low.toFixed(prec), color: '#F6465D' },
+                                { title: ' C', value: kLineData.close.toFixed(prec), color: kLineData.close >= kLineData.open ? '#0ECB81' : '#F6465D' },
+                                { title: ' V', value: volStr, color: '#848e9c' }
+                            ];
+                        },
+                        text: { size: 12, family: 'var(--font-num), sans-serif', weight: 600, color: '#848e9c', marginLeft: 10, marginTop: 8, marginRight: 0, marginBottom: 0 }
+                    }
                 },
-                // 🚀 NATIVE TOOLTIP PRO CỦA KLINECHARTS 
+                
+                // 🚀 ICON CHỈ BÁO BẰNG UNICODE (KHÔNG CẦN LOAD FONT)
                 indicator: {
                     tooltip: {
                         showRule: 'always',    
                         showType: 'standard',  
                         icons: [
-                            { id: 'visible', position: 'middle', marginLeft: 8, marginTop: 6, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 3, paddingRight: 3, paddingBottom: 3, icon: '\ue903', fontFamily: 'icomoon', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'invisible', position: 'middle', marginLeft: 8, marginTop: 6, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 3, paddingRight: 3, paddingBottom: 3, icon: '\ue901', fontFamily: 'icomoon', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
-                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 6, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 3, paddingRight: 3, paddingBottom: 3, icon: '\ue902', fontFamily: 'icomoon', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
-                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 6, marginRight: 0, marginBottom: 0, paddingLeft: 3, paddingTop: 3, paddingRight: 3, paddingBottom: 3, icon: '\ue900', fontFamily: 'icomoon', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
+                            { id: 'visible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◉', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                            { id: 'invisible', position: 'middle', marginLeft: 10, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '◎', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#00F0FF', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(0,240,255,0.1)' },
+                            { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
+                            { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
                         ]
                     }
                 },
@@ -838,7 +862,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // 🚀 BẮT SỰ KIỆN CLICK VÀO CÁC ICON NATIVE ĐÓ
+        // ĐĂNG KÝ CLICK ICON (Mắt, Cài đặt, Xóa)
         window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
             if (data.iconId === 'visible') {
@@ -861,52 +885,14 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // 2. ÉP LỚP KÍNH CƯỜNG LỰC LÊN TRÊN (ĐÃ XÓA KHỐI WA-HTML-LEGEND GÂY LỖI)
+        // 2. CHỈ TẠO LỚP KÍNH HTML CHỨA ĐÚNG LOGO WATERMARK (ĐÃ XÓA SẠCH HTML LEGEND RÁC)
         const customUI = document.createElement('div');
         customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;';
-        
-        let symStr = (t.symbol || 'UNKNOWN').toUpperCase() + 'USDT';
-        let tfStr = window.currentChartInterval.toUpperCase();
-
-        customUI.innerHTML = `
-            <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
-            
-            <div style="position: absolute; top: 10px; left: 10px; z-index: 999; display: flex; align-items: flex-start; gap: 8px; pointer-events: none;">
-                <div id="wa-master-btn" style="pointer-events: auto; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: rgba(22, 26, 30, 0.8); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(4px); transition: 0.2s;">
-                    <span id="wa-master-icon" style="color: #848e9c; font-size: 11px;">▼</span>
-                </div>
-
-                <div id="wa-master-content" style="display: flex; flex-direction: column; gap: 4px;">
-                    <div style="pointer-events: auto; display: flex; align-items: center; gap: 12px; background: rgba(22, 26, 30, 0.8); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px); width: fit-content;">
-                        <div style="display: flex; align-items: center; gap: 6px; font-family: var(--font-main);">
-                            <span style="color: #EAECEF; font-size: 13px; font-weight: 800;">${symStr}</span>
-                            <span id="chart-legend-tf" style="color: #848e9c; font-size: 12px; font-weight: 700;">${tfStr}</span>
-                        </div>
-                        <div style="width: 1px; height: 12px; background: rgba(255,255,255,0.2);"></div>
-                        <div id="sc-custom-tooltip" style="display: flex; gap: 8px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600;">
-                            <span>O <span id="tp-o">--</span></span>
-                            <span>H <span id="tp-h">--</span></span>
-                            <span>L <span id="tp-l">--</span></span>
-                            <span>C <span id="tp-c">--</span></span>
-                            <span>V <span id="tp-v">--</span></span>
-                        </div>
-                    </div>
-                    </div>
-            </div>
-        `;
+        customUI.innerHTML = `<div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>`;
         container.appendChild(customUI);
 
-        document.getElementById('wa-master-btn').onclick = function() {
-            let content = document.getElementById('wa-master-content');
-            let icon = document.getElementById('wa-master-icon');
-            if (content.style.display === 'none') { content.style.display = 'flex'; icon.innerText = '▼'; } 
-            else { content.style.display = 'none'; icon.innerText = '▶'; }
-        };
-
         window.tvChart.setPriceVolumePrecision(prec, 2);
-        
-        // 🚀 BÍ QUYẾT: Bật lại chữ cho biểu đồ Volume (Do ta đã lỡ tắt sạch toàn cầu ở trên)
-        window.tvChart.createIndicator({ name: 'VOL', styles: { tooltip: { showRule: 'always' } } }, false, { height: 80 });
+        window.tvChart.createIndicator('VOL', false, { height: 80 });
 
         // 3. SỰ KIỆN RÊ CHUỘT
         window.tvChart.subscribeAction('onCrosshairChange', function(param) {

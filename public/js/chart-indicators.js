@@ -1477,14 +1477,15 @@
     const modal = document.getElementById('sc-indicator-modal');
     if (modal) modal.style.display = 'none';
 
-    const meta    = INDICATOR_REGISTRY.find(x => x.name === indName);
+    const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
     const isStack = meta ? meta.isStack : false;
     const paneId  = (options && options.paneId) || (isStack ? 'candle_pane' : 'pane_' + indName.toLowerCase());
+    const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     try {
         global.tvChart.createIndicator({
             name: indName,
-            // Đóng/Mở mắt hiển thị Icon tương ứng
+            // Logic đổi icon Mắt mở / Mắt nhắm
             createTooltipDataSource: function({ indicator, defaultStyles }) {
                 const icons = defaultStyles.tooltip.icons;
                 const eyeIcon = indicator.visible ? icons[1] : icons[0];
@@ -1492,8 +1493,8 @@
             }
         }, isStack, { id: paneId });
         
-        if (!global.scActiveIndicators.find(x => x.name === indName)) {
-            global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: meta.defaultParams, visible: true });
+        if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
+            global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params, visible: true });
             if(typeof saveIndicatorState === 'function') saveIndicatorState();
         }
     } catch (err) { console.error('[Wave Alpha] createIndicator error:', err); }
