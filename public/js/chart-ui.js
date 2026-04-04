@@ -817,7 +817,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
         let tfStr = window.currentChartInterval.toUpperCase();
 
         customUI.innerHTML = `
-            <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px;">WAVE ALPHA</div>
+            <div style="position: absolute; bottom: 120px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px; pointer-events: none; z-index: 1;">WAVE ALPHA</div>
             
             <div style="position: absolute; top: 10px; left: 10px; z-index: 999; display: flex; align-items: center; gap: 6px; pointer-events: auto;">
                 
@@ -843,20 +843,22 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 </div>
             </div>
 
-            <div id="wa-html-legend" style="position: absolute !important; top: auto !important; bottom: 180px !important; left: 10px !important; z-index: 998; pointer-events: auto; display: flex; flex-direction: column; gap: 4px;"></div>
+            <div style="position: absolute; bottom: 150px; left: 10px; z-index: 998; pointer-events: auto;">
+                <div id="wa-html-legend" style="display: flex; flex-direction: column; gap: 4px;"></div>
+            </div>
         `;
         container.appendChild(customUI);
 
-        // 🚀 LOGIC ẨN/HIỆN THANH NGANG TRÊN CÙNG
+        // 🚀 LOGIC ẨN/HIỆN THANH NGANG
         document.getElementById('wa-master-btn').onclick = function() {
             let content = document.getElementById('wa-master-content');
             let icon = document.getElementById('wa-master-icon');
             if (content.style.display === 'none') {
                 content.style.display = 'flex';
-                icon.innerText = '◀'; // Trạng thái mở
+                icon.innerText = '◀';
             } else {
                 content.style.display = 'none';
-                icon.innerText = '▶'; // Trạng thái gập
+                icon.innerText = '▶';
             }
         };
 
