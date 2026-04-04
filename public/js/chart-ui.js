@@ -822,6 +822,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         // 2. ÉP LỚP KÍNH CƯỜNG LỰC LÊN TRÊN CÙNG ĐỂ CHỨA LEGEND VÀ NÚT BẤM
         const customUI = document.createElement('div');
+        // Pointer-events: none để xuyên thao tác vuốt/kéo xuống chart bên dưới. Z-index 9999 để đè lên Canvas.
         customUI.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;';
         
         // Lấy thông tin động
@@ -829,27 +830,28 @@ window.openProChart = function(t, isTimeSwitch = false) {
         let tfStr = window.currentChartInterval.toUpperCase();
 
         customUI.innerHTML = `
-            <div style="position: absolute; bottom: 120px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px; pointer-events: none; z-index: 1;">WAVE ALPHA</div>
+            <div style="position: absolute; bottom: 25px; left: 15px; font-family: var(--font-main); font-weight: 800; font-size: 20px; color: rgba(255,255,255,0.06); letter-spacing: 2px; z-index: 1;">WAVE ALPHA</div>
             
-            <div style="position: absolute; top: 10px; left: 10px; z-index: 999; display: flex; align-items: center; gap: 6px; pointer-events: auto;">
+            <div style="position: absolute; top: 10px; left: 10px; z-index: 999; display: flex; align-items: center; gap: 8px; pointer-events: auto;">
                 
-                <div id="wa-master-btn" style="cursor: pointer; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: rgba(22, 26, 30, 0.7); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px); transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(22, 26, 30, 0.7)'">
-                    <span id="wa-master-icon" style="color: #848e9c; font-size: 10px;">◀</span>
+                <div id="wa-master-btn" style="cursor: pointer; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: rgba(22, 26, 30, 0.8); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(4px); transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(22, 26, 30, 0.8)'">
+                    <span id="wa-master-icon" style="color: #848e9c; font-size: 11px;">◀</span>
                 </div>
 
-                <div id="wa-master-content" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: rgba(22, 26, 30, 0.7); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px);">
+                <div id="wa-master-content" style="display: flex; align-items: center; gap: 12px; background: rgba(22, 26, 30, 0.8); padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(4px);">
+                    
                     <div style="display: flex; align-items: center; gap: 6px; font-family: var(--font-main);">
                         <span id="chart-legend-sym" style="color: #EAECEF; font-size: 13px; font-weight: 800;">${symStr}</span>
                         <span id="chart-legend-tf" style="color: #848e9c; font-size: 12px; font-weight: 700;">${tfStr}</span>
                     </div>
 
-                    <div style="width: 1px; height: 12px; background: rgba(255,255,255,0.15);"></div>
+                    <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.2);"></div>
 
-                    <div id="sc-custom-tooltip" style="display: flex; flex-wrap: wrap; gap: 10px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600;">
+                    <div id="sc-custom-tooltip" style="display: flex; gap: 10px; color: #848e9c; font-size: 11px; font-family: var(--font-num); font-weight: 600;">
                         <span>O <span id="tp-o" style="color:#848e9c">--</span></span>
                         <span>H <span id="tp-h" style="color:#0ECB81">--</span></span>
                         <span>L <span id="tp-l" style="color:#F6465D">--</span></span>
-                        <span>C <span id="tp-c">--</span></span>
+                        <span>C <span id="tp-c" style="color:#848e9c">--</span></span>
                         <span>Vol <span id="tp-v" style="color:#848e9c">--</span></span>
                     </div>
                 </div>
@@ -861,7 +863,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
         `;
         container.appendChild(customUI);
 
-        // 🚀 LOGIC ẨN/HIỆN THANH NGANG
+        // ==========================================
+        // SỰ KIỆN CLICK ĐỂ ẨN/HIỆN HÀNG OHLC
+        // ==========================================
         document.getElementById('wa-master-btn').onclick = function() {
             let content = document.getElementById('wa-master-content');
             let icon = document.getElementById('wa-master-icon');
