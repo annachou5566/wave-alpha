@@ -853,7 +853,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 
                 // 🚀 TÍCH HỢP OHLC VÀO TOOLTIP CỦA NẾN
                 candle: {
-                    type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
+                    type: window.currentChartInterval === 'tick' ? 'area' : 'candle_solid',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
                     tooltip: { 
@@ -981,16 +981,22 @@ window.openProChart = function(t, isTimeSwitch = false) {
             const db = ws.colDown || t_down;
             const dbd = ws.colDownBd || db;
 
+            // Tự động chuyển mode Hollow (nến rỗng) nếu màu thân nến là transparent
+            const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
+
             window.tvChart.setStyles({
                 grid: { 
                     horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }, 
                     vertical: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' } 
                 },
-                candle: { bar: { 
-                    upColor: ub, downColor: db, 
-                    upBorderColor: ubd, downBorderColor: dbd, 
-                    upWickColor: ubd, downWickColor: dbd 
-                }},
+                candle: { 
+                    type: window.currentChartInterval === 'tick' ? 'area' : cType,
+                    bar: { 
+                        upColor: ub, downColor: db, 
+                        upBorderColor: ubd, downBorderColor: dbd, 
+                        upWickColor: ubd, downWickColor: dbd 
+                    }
+                },
                 watermark: {
                     show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, family: 'system-ui, sans-serif', weight: '800'
                 }

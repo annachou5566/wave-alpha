@@ -1612,6 +1612,7 @@
         };
 
         // Hàm Apply: Lưu và Vẽ lại biểu đồ với Viền nến
+        // Hàm Apply: Lưu và Vẽ lại biểu đồ với Viền nến
         window.waCsApply = function() {
             const ub   = document.getElementById('wa-hex-up').value;
             const ubd  = document.getElementById('wa-color-up-bd').value;
@@ -1626,16 +1627,22 @@
             if (chartContainer) chartContainer.style.background = bg;
 
             if (window.tvChart) {
+                // Tự động chuyển mode Hollow (nến rỗng) nếu màu thân nến là transparent
+                const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
+
                 window.tvChart.setStyles({
                     grid: {
                         horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
                         vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
                     },
-                    candle: { bar: {
-                        upColor: ub, downColor: db, noChangeColor: '#848e9c',
-                        upBorderColor: ubd, downBorderColor: dbd,
-                        upWickColor: ubd, downWickColor: dbd
-                    }},
+                    candle: { 
+                        type: window.currentChartInterval === 'tick' ? 'area' : cType,
+                        bar: {
+                            upColor: ub, downColor: db, noChangeColor: '#848e9c',
+                            upBorderColor: ubd, downBorderColor: dbd,
+                            upWickColor: ubd, downWickColor: dbd
+                        }
+                    },
                     watermark: {
                         show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
                     }
