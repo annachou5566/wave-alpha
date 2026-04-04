@@ -1630,7 +1630,6 @@
 
   /**
    * Restore all active indicators after chart reload
-   * Called after tvChart is ready and data has loaded
    */
   global.restoreIndicators = function () {
     const saved = loadIndicatorState();
@@ -1638,6 +1637,14 @@
     saved.forEach(function (entry) {
       global.addIndicatorToChart(entry.name, { paneId: entry.paneId, params: entry.params });
     });
+
+    // 🚀 NHÁT 2: BẮT BUỘC GỌI HÀM VẼ GIAO DIỆN HTML SAU KHI KHÔI PHỤC
+    setTimeout(function() {
+        if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
+            global.WaveIndicatorAPI.renderLegend();
+        }
+    }, 300);
+
     console.log('[Wave Alpha] ✅ Restored', saved.length, 'indicators from storage');
   };
 

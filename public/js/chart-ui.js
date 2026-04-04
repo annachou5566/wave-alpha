@@ -796,27 +796,26 @@ window.openProChart = function(t, isTimeSwitch = false) {
         // 1. KHỞI TẠO CHART (Để nó tạo Canvas trước)
         window.tvChart = klinecharts.init(container, {
             styles: {
-                grid: { 
-                    horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, 
-                    vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } 
-                },
+                grid: { horizontal: { color: 'rgba(255,255,255,0.05)', style: 'dashed' }, vertical: { color: 'rgba(255,255,255,0.05)', style: 'dashed' } },
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
                     area: { lineSize: 2, lineColor: t_line, backgroundColor: [{ offset: 0, color: isTrad ? 'rgba(0, 240, 255, 0.2)' : 'rgba(65, 230, 231, 0.2)' }, { offset: 1, color: 'rgba(0,0,0,0)' }] },
-                    // Dòng này tắt chữ O H L C mặc định của nến
-                    tooltip: { showRule: 'none' } 
+                    tooltip: { showRule: 'none' }
                 },
-                
-                // 🚀 THÊM KHỐI NÀY VÀO: ĐỂ TẮT TOÀN BỘ CHỮ CỦA CHỈ BÁO (EMA, VOL, RSI...) MẶC ĐỊNH
-                indicator: { 
-                    tooltip: { showRule: 'none' } 
-                },
+                yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
+            }
+        });
 
-                yAxis: { 
-                    axisLine: { show: false }, 
-                    tickText: { color: t_text } 
-                },
+        // 🚀 DIỆT TẬN GỐC CHỮ MẶC ĐỊNH CỦA KLINECHARTS BẰNG SETSTYLES
+        window.tvChart.setStyles({
+            indicator: {
+                tooltip: {
+                    showRule: 'none',     // Cấm hiển thị
+                    showName: false,      // Tắt tên
+                    showParams: false,    // Tắt thông số
+                    text: { size: 0, color: 'transparent' } // Ép tàng hình 
+                }
             }
         });
 
