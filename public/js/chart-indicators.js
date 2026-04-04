@@ -1483,17 +1483,18 @@
     const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
-        // ÉP TÀNG HÌNH TRỰC TIẾP LÚC KHỞI TẠO ĐỂ TRÁNH LỖI TIMING
-        const createOptions = { id: paneId };
-        if (isStack) {
-            createOptions.styles = { tooltip: { showRule: 'none' } };
-        }
+        // styles phải nằm trong indicator descriptor (tham số 1), không phải paneOptions (tham số 3)
+        // isStack: true  → tắt native tooltip để nhường cho Custom HTML Legend
+        // isStack: false → không truyền styles → giữ nguyên native tooltip của RSI, VOL, MACD
+        const indicatorDesc = isStack
+            ? { name: indName, styles: { tooltip: { showRule: 'none' } } }
+            : { name: indName };
 
         try {
-            global.tvChart.createIndicator({ name: indName }, isStack, createOptions);
+            global.tvChart.createIndicator(indicatorDesc, isStack, { id: paneId });
         } catch (err) {
             if (retries > 0) setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
-            return; 
+            return;
         }
 
         if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
