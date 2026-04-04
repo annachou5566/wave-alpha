@@ -1,19 +1,17 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — FLOATING DRAWING TOOLBAR
-// Version: 2.0.0 | KLineCharts Native + Advanced
+// Version: 3.1.0 | KLineCharts Advanced Fixed
 // ==========================================
 
 (function (global) {
   'use strict';
 
-  const VERSION = '2.0.0';
-  const LS_KEY  = 'wa_drawing_v2';
+  const VERSION = '3.1.0';
+  const LS_KEY  = 'wa_drawing_v3';
 
   // ======================================================
-  // SECTION 1: NATIVE OVERLAY REGISTRY
-  // CHI dung cac overlay KLineCharts ho tro 100% native.
-  // Khong co overlay ao — khong bao gio bi loi.
+  // SECTION 1: NATIVE & ADVANCED OVERLAY REGISTRY
   // ======================================================
 
   const GROUPS = [
@@ -31,10 +29,10 @@
         { id:'ray',                    name:'Tia 1 chieu (Ray)',        overlay:'ray',                    icon:'\u2192',         pts:2, desc:'Bat dau tu diem A, keo dai vo han ve 1 phia' },
         { id:'straightLine',           name:'Duong thang 2 chieu',     overlay:'straightLine',           icon:'\u2194',         pts:2, desc:'Keo dai vo han ca 2 phia' },
         { id:'arrow',                  name:'Mui ten (Arrow)',          overlay:'arrow',                  icon:'\u2197',         pts:2, desc:'Doan thang co dau mui ten' },
-        { id:'horizontalStraightLine', name:'Ngang vo han (H-Line)',    overlay:'horizontalStraightLine', icon:'\u2500', key:'H', pts:1, desc:'Duong ngang keo dai vo han — xac dinh vung ho tro/khang cu' },
+        { id:'horizontalStraightLine', name:'Ngang vo han (H-Line)',    overlay:'horizontalStraightLine', icon:'\u2500', key:'H', pts:1, desc:'Duong ngang keo dai vo han' },
         { id:'horizontalRayLine',      name:'Tia ngang 1 chieu',        overlay:'horizontalRayLine',      icon:'\u27F6',         pts:2, desc:'Duong ngang keo dai ve 1 phia' },
         { id:'horizontalSegment',      name:'Doan ngang (H-Segment)',   overlay:'horizontalSegment',      icon:'\u22A2',         pts:2, desc:'Doan ngang co gioi han 2 dau' },
-        { id:'verticalStraightLine',   name:'Doc vo han (V-Line)',      overlay:'verticalStraightLine',   icon:'\u2502', key:'/', pts:1, desc:'Duong doc vo han — danh dau thoi diem quan trong' },
+        { id:'verticalStraightLine',   name:'Doc vo han (V-Line)',      overlay:'verticalStraightLine',   icon:'\u2502', key:'/', pts:1, desc:'Duong doc vo han' },
         { id:'verticalRayLine',        name:'Tia doc 1 chieu',          overlay:'verticalRayLine',        icon:'\u2191',         pts:2, desc:'Duong doc keo dai 1 chieu' },
         { id:'verticalSegment',        name:'Doan doc (V-Segment)',     overlay:'verticalSegment',        icon:'\u22A5',         pts:2, desc:'Doan doc co gioi han 2 dau' },
         { id:'priceLine',              name:'Nhan gia (Price Line)',    overlay:'priceLine',              icon:'$',              pts:1, desc:'Duong ngang co gan nhan gia cu the' },
@@ -50,45 +48,45 @@
     {
       id: 'fibonacci', label: 'Fibonacci', icon: '\u03D5',
       tools: [
-        { id:'fibonacciLine',               name:'Fib Retracement (Hoi quy)',       overlay:'fibonacciLine',               icon:'\u2131', key:'F', pts:2, desc:'2 diem — cac muc 23.6 / 38.2 / 50 / 61.8 / 78.6%' },
-        { id:'fibonacciSegment',            name:'Fib Segment',                     overlay:'fibonacciSegment',            icon:'Fs',              pts:2, desc:'2 diem — Fibonacci tinh tren doan thang' },
-        { id:'fibExtension',                name:'Fib Extension (Mo rong)',         overlay:'fibExtension',                icon:'Fe',              pts:3, desc:'3 diem — muc 127.2 / 161.8 / 200 / 261.8%' },
-        { id:'fibonacciSpiral',             name:'Fib Spiral (Xoan oc phi)',        overlay:'fibonacciSpiral',             icon:'\uD83C\uDF00',    pts:2, desc:'2 diem — xoan oc dua tren ty le vang 1.618' },
-        { id:'fibonacciSpeedResistanceFan', name:'Fib Speed & Resistance Fan',      overlay:'fibonacciSpeedResistanceFan', icon:'Ff',              pts:2, desc:'2 diem — quat khang cu / ho tro Fibonacci' },
-        { id:'fibonacciCircle',             name:'Fib Circle (Vong tron)',          overlay:'fibonacciCircle',             icon:'\u25C9',          pts:2, desc:'2 diem — cac vong tron theo ty le Fibonacci' },
-        { id:'fibonacciTimeZone',           name:'Fib Time Zone (Vung thoi gian)',  overlay:'fibonacciTimeZone',           icon:'\u23F1',          pts:2, desc:'2 diem — phan chia vung thoi gian theo Fibonacci' },
+        { id:'fibonacciLine',               name:'Fib Retracement (Hoi quy)',       overlay:'fibonacciLine',               icon:'\u2131', key:'F', pts:2, desc:'2 diem — cac muc Fibonacci' },
+        { id:'fibonacciSegment',            name:'Fib Segment',                     overlay:'fibonacciSegment',            icon:'Fs',              pts:2, desc:'2 diem — Fibonacci tren doan thang' },
+        { id:'fibExtension',                name:'Fib Extension (Mo rong)',         overlay:'fibExtension',                icon:'Fe',              pts:3, desc:'3 diem — Mo rong Fibonacci' },
+        { id:'fibonacciSpiral',             name:'Fib Spiral (Xoan oc phi)',        overlay:'fibonacciSpiral',             icon:'\uD83C\uDF00',    pts:2, desc:'2 diem — xoan oc Fibonacci' },
+        { id:'fibonacciSpeedResistanceFan', name:'Fib Speed & Resistance Fan',      overlay:'fibonacciSpeedResistanceFan', icon:'Ff',              pts:2, desc:'2 diem — quat khang cu' },
+        { id:'fibonacciCircle',             name:'Fib Circle (Vong tron)',          overlay:'fibonacciCircle',             icon:'\u25C9',          pts:2, desc:'2 diem — vong tron Fibonacci' },
+        { id:'fibonacciTimeZone',           name:'Fib Time Zone (Vung thoi gian)',  overlay:'fibonacciTimeZone',           icon:'\u23F1',          pts:2, desc:'2 diem — vung thoi gian Fibonacci' },
       ]
     },
     {
       id: 'gann', label: 'Gann', icon: '\u210A',
       tools: [
-        { id:'gannBox',    name:'Gann Box (Hop)',  overlay:'gannBox',    icon:'\u229E', pts:2, desc:'2 diem — hop Gann voi cac goc 1x1, 2x1, 1x2...' },
-        { id:'gannFan',    name:'Gann Fan (Quat)', overlay:'gannFan',    icon:'\u22A0', pts:2, desc:'2 diem — quat 8 goc co dien cua W.D. Gann' },
-        { id:'gannSquare', name:'Gann Square',     overlay:'gannSquare', icon:'\u229F', pts:2, desc:'2 diem — hinh vuong Gann voi luoi noi tam' },
+        { id:'gannBox',    name:'Gann Box (Hop)',  overlay:'gannBox',    icon:'\u229E', pts:2, desc:'2 diem — hop Gann' },
+        { id:'gannFan',    name:'Gann Fan (Quat)', overlay:'gannFan',    icon:'\u22A0', pts:2, desc:'2 diem — quat Gann' },
+        { id:'gannSquare', name:'Gann Square',     overlay:'gannSquare', icon:'\u229F', pts:2, desc:'2 diem — hinh vuong Gann' },
       ]
     },
     {
       id: 'elliott', label: 'Song Elliott', icon:'\u301C',
       tools: [
-        { id:'waveElliott',            name:'Impulse 1-2-3-4-5 (Song day)',       overlay:'waveElliott',            icon:'\u301C',  pts:6, desc:'6 diem — motive wave 5 buoc theo ly thuyet Elliott' },
-        { id:'waveABC',                name:'Corrective A-B-C (Song dieu chinh)', overlay:'waveABC',                icon:'\u223F',  pts:4, desc:'4 diem — song zigzag 3 buoc dieu chinh' },
-        { id:'elliottTriangleWave',    name:'Triangle A-B-C-D-E (Tam giac)',      overlay:'elliottTriangleWave',    icon:'\u25B3',  pts:5, desc:'5 diem — song tam giac Elliott 5 canh' },
-        { id:'elliottDoubleComboWave', name:'Double Combo W-X-Y',                 overlay:'elliottDoubleComboWave', icon:'\u223F\u223F', pts:7, desc:'7 diem — song kep phuc tap W-X-Y' },
-        { id:'elliottTripleComboWave', name:'Triple Combo W-X-Y-X-Z',             overlay:'elliottTripleComboWave', icon:'\u2261',  pts:9, desc:'9 diem — song ba W-X-Y-X-Z' },
+        { id:'waveElliott',            name:'Impulse 1-2-3-4-5 (Song day)',       overlay:'waveElliott',            icon:'\u301C',  pts:6, desc:'6 diem — motive wave 5 buoc' },
+        { id:'waveABC',                name:'Corrective A-B-C (Song dieu chinh)', overlay:'waveABC',                icon:'\u223F',  pts:4, desc:'4 diem — song zigzag 3 buoc' },
+        { id:'elliottTriangleWave',    name:'Triangle A-B-C-D-E (Tam giac)',      overlay:'elliottTriangleWave',    icon:'\u25B3',  pts:5, desc:'5 diem — song tam giac Elliott' },
+        { id:'elliottDoubleComboWave', name:'Double Combo W-X-Y',                 overlay:'elliottDoubleComboWave', icon:'\u223F\u223F', pts:7, desc:'7 diem — song kep phuc tap' },
+        { id:'elliottTripleComboWave', name:'Triple Combo W-X-Y-X-Z',             overlay:'elliottTripleComboWave', icon:'\u2261',  pts:9, desc:'9 diem — song ba' },
       ]
     },
     {
       id: 'harmonic', label: 'Harmonic', icon: 'X',
       tools: [
-        { id:'xabcd',       name:'XABCD Harmonic (Gartley/Bat/Crab)', overlay:'xabcd',       icon:'XABCD', pts:5, fill:true, desc:'5 diem — Gartley / Butterfly / Bat / Crab pattern' },
-        { id:'abcd',        name:'ABCD Pattern',                      overlay:'abcd',        icon:'ABCD',  pts:4, fill:true, desc:'4 diem — AB=CD harmonic pattern' },
-        { id:'threedrives', name:'Three Drives Pattern',              overlay:'threedrives', icon:'3D',    pts:7, desc:'7 diem — Three Drives reversal (3 dinh/day dong bien)' },
+        { id:'xabcd',       name:'XABCD Harmonic (Gartley/Bat/Crab)', overlay:'xabcd',       icon:'XABCD', pts:5, fill:true, desc:'5 diem — Mau hinh Harmonic 5 diem' },
+        { id:'abcd',        name:'ABCD Pattern',                      overlay:'abcd',        icon:'ABCD',  pts:4, fill:true, desc:'4 diem — AB=CD harmonic' },
+        { id:'threedrives', name:'Three Drives Pattern',              overlay:'threedrives', icon:'3D',    pts:7, desc:'7 diem — Three Drives reversal' },
       ]
     },
     {
       id: 'shapes', label: 'Hinh Ve', icon: '\u25A1',
       tools: [
-        { id:'rect',         name:'Hinh chu nhat (Rectangle)', overlay:'rect',         icon:'\u25AD', key:'R', pts:2, fill:true, desc:'2 diem — vung to mau, dung de danh dau vung cung/cau' },
+        { id:'rect',         name:'Hinh chu nhat (Rectangle)', overlay:'rect',         icon:'\u25AD', key:'R', pts:2, fill:true, desc:'2 diem — vung to mau' },
         { id:'circle',       name:'Hinh tron (Circle)',        overlay:'circle',       icon:'\u25CB',          pts:2, fill:true, desc:'2 diem — hinh tron to mau' },
         { id:'triangle',     name:'Tam giac (Triangle)',       overlay:'triangle',     icon:'\u25B3',          pts:3, fill:true, desc:'3 diem — tam giac to mau' },
         { id:'parallelogram',name:'Binh hanh (Parallelogram)', overlay:'parallelogram',icon:'\u25B1',          pts:3, fill:true, desc:'3 diem — hinh binh hanh to mau' },
@@ -97,13 +95,13 @@
     {
       id: 'text', label: 'Chu Thich', icon: 'T',
       tools: [
-        { id:'customText', name:'Van ban (Text Label)', overlay:'customText', icon:'T', key:'T', pts:2, desc:'2 diem — them chu thich van ban tieng Viet len chart' },
+        // FIX QUAN TRỌNG: Text phải là pts: 1 (Click 1 phát là ăn luôn)
+        { id:'customText', name:'Van ban (Text Label)', overlay:'customText', icon:'T', key:'T', pts:1, desc:'1 diem — Them chu thich van ban len chart' },
         { id:'note',       name:'Ghi chu (Note)',       overlay:'note',       icon:'\uD83D\uDCDD',   pts:1, desc:'1 diem — ghi chu co nen mau va vien' },
       ]
     },
   ];
 
-  // Flat map toolId -> tool (kem groupId)
   const TOOL_MAP = Object.create(null);
   GROUPS.forEach(function (g) {
     g.tools.forEach(function (t) {
@@ -111,111 +109,105 @@
     });
   });
 
-  // --- BẮT ĐẦU THÊM MỚI: ĐĂNG KÝ CÁC CÔNG CỤ ADVANCED CHUẨN PRO ---
+  // FIX QUAN TRỌNG: Đăng ký Thuật toán nâng cao chuẩn KLineCharts v9
   function registerAdvancedOverlays() {
     var kc = global.klinecharts;
     if (!kc || typeof kc.registerOverlay !== 'function') return;
 
     var advancedOverlays = [
       {
-        name: 'waveElliott', totalStep: 6,
+        name: 'waveElliott', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
-          var coords = ref.coordinates || [];
+          var c = ref.coordinates || [];
           var figs = [];
-          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
           var labels = ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)'];
-          coords.forEach(function(pt, i) {
+          c.forEach(function(pt, i) {
             figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 15, text: labels[i], align: 'center', baseline: 'bottom' }, ignoreEvent: true });
           });
           return figs;
         }
       },
       {
-        name: 'waveABC', totalStep: 4,
+        name: 'waveABC', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
-          var coords = ref.coordinates || [];
+          var c = ref.coordinates || [];
           var figs = [];
-          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
           var labels = ['(0)', '(A)', '(B)', '(C)'];
-          coords.forEach(function(pt, i) {
+          c.forEach(function(pt, i) {
             figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 15, text: labels[i], align: 'center', baseline: 'bottom' }, ignoreEvent: true });
           });
           return figs;
         }
       },
       {
-        name: 'xabcd', totalStep: 5,
+        name: 'xabcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
-          var coords = ref.coordinates || [];
+          var c = ref.coordinates || [];
           var figs = [];
-          if (coords.length >= 3) {
-            figs.push({ type: 'polygon', attrs: { coordinates: [coords[0], coords[1], coords[2]] } });
-          }
-          if (coords.length >= 5) {
-            figs.push({ type: 'polygon', attrs: { coordinates: [coords[2], coords[3], coords[4]] } });
-          }
-          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          if (c.length >= 3) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2]] }, styles: { style: 'fill' } });
+          if (c.length >= 5) figs.push({ type: 'polygon', attrs: { coordinates: [c[2], c[3], c[4]] }, styles: { style: 'fill' } });
+          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
           var labels = ['X', 'A', 'B', 'C', 'D'];
-          coords.forEach(function(pt, i) {
+          c.forEach(function(pt, i) {
             figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 10, text: labels[i], align: 'center' }, ignoreEvent: true });
           });
           return figs;
         }
       },
       {
-        name: 'abcd', totalStep: 4,
+        name: 'abcd', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
-          var coords = ref.coordinates || [];
+          var c = ref.coordinates || [];
           var figs = [];
-          if (coords.length >= 3) figs.push({ type: 'polygon', attrs: { coordinates: [coords[0], coords[1], coords[2]] } });
-          if (coords.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [coords[1], coords[2], coords[3]] } });
-          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: coords } });
+          if (c.length >= 3) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2]] }, styles: { style: 'fill' } });
+          if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[1], c[2], c[3]] }, styles: { style: 'fill' } });
+          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
           var labels = ['A', 'B', 'C', 'D'];
-          coords.forEach(function(pt, i) {
+          c.forEach(function(pt, i) {
             figs.push({ type: 'text', attrs: { x: pt.x, y: pt.y - 10, text: labels[i], align: 'center' }, ignoreEvent: true });
           });
           return figs;
         }
       },
       {
-        name: 'fibExtension', totalStep: 3,
+        name: 'fibExtension', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
-          var coords = ref.coordinates || [];
+          var c = ref.coordinates || [];
           var bounding = ref.bounding;
           var figs = [];
-          if (coords.length > 1) figs.push({ type: 'line', attrs: { coordinates: [coords[0], coords[1]] } });
-          if (coords.length > 2) figs.push({ type: 'line', attrs: { coordinates: [coords[1], coords[2]] }, styles: { style: 'dashed' } });
-          
-          if (coords.length === 3) {
-            var diffY = coords[0].y - coords[1].y;
-            var startY = coords[2].y;
+          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] } });
+          if (c.length > 2) figs.push({ type: 'line', attrs: { coordinates: [c[1], c[2]] }, styles: { style: 'dashed' } });
+          if (c.length === 3) {
+            var diffY = c[0].y - c[1].y;
+            var startY = c[2].y;
             var levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236];
             levels.forEach(function(l) {
               var y = startY - (diffY * l);
-              figs.push({ type: 'line', attrs: { coordinates: [{ x: coords[2].x, y: y }, { x: bounding.width, y: y }] } });
-              figs.push({ type: 'text', attrs: { x: coords[2].x + 5, y: y - 5, text: 'Fib ' + l, baseline: 'bottom' }, ignoreEvent: true });
+              figs.push({ type: 'line', attrs: { coordinates: [{ x: c[2].x, y: y }, { x: bounding.width, y: y }] } });
+              figs.push({ type: 'text', attrs: { x: c[2].x + 5, y: y - 5, text: 'Fib ' + l, baseline: 'bottom' }, ignoreEvent: true });
             });
           }
           return figs;
         }
       },
       {
-        name: 'customText', totalStep: 2,
+        name: 'customText', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
-          var coords = ref.coordinates || [];
-          if (coords.length === 0) return [];
+          var c = ref.coordinates || [];
+          if (c.length === 0) return [];
           var txtInput = document.getElementById('wa-txt-input');
           var textValue = (txtInput && txtInput.value.trim() !== '') ? txtInput.value : 'Văn bản...';
-          return [{ type: 'text', attrs: { x: coords[0].x, y: coords[0].y, text: textValue } }];
+          return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: textValue, baseline: 'bottom' } }];
         }
       }
     ];
 
     advancedOverlays.forEach(function(ov) {
-      try { kc.registerOverlay(ov); } catch(e) {}
+      try { kc.registerOverlay(ov); } catch(e) { console.warn("Lỗi đăng ký Overlay:", ov.name, e); }
     });
   }
-  // --- KẾT THÚC THÊM MỚI ---
 
   // ======================================================
   // SECTION 2: DRAWING STATE
@@ -243,7 +235,7 @@
   };
 
   // ======================================================
-  // SECTION 3: CSS
+  // SECTION 3: CSS INJECTION (Gộp chung 1 file)
   // ======================================================
 
   function injectCSS() {
@@ -252,26 +244,11 @@
     s.id = 'wa-draw-css';
     s.textContent = [
       '#sc-chart-container{position:relative!important;overflow:hidden;}',
-
-      // Floating toolbar
-      '#wa-ft{',
-        'position:absolute;top:80px;left:20px;z-index:9000;',
-        'display:flex;flex-direction:column;',
-        'border-radius:14px;',
-        'background:rgba(10,14,20,0.96);',
-        'border:1px solid rgba(255,255,255,0.09);',
-        'box-shadow:0 16px 56px rgba(0,0,0,0.8),0 2px 8px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);',
-        'backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);',
-        'user-select:none;',
-        'transition:opacity .2s ease,transform .2s ease;',
-        'max-height:calc(100% - 32px);overflow:hidden;',
-      '}',
+      '#wa-ft{position:absolute;top:80px;left:20px;z-index:9000;display:flex;flex-direction:column;border-radius:14px;background:rgba(10,14,20,0.96);border:1px solid rgba(255,255,255,0.09);box-shadow:0 16px 56px rgba(0,0,0,0.8),0 2px 8px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);user-select:none;transition:opacity .2s ease,transform .2s ease;max-height:calc(100% - 32px);overflow:hidden;}',
       '#wa-ft.wa-hidden{opacity:0;pointer-events:none;transform:scale(0.88);}',
       '#wa-ft.wa-collapsed{border-radius:50px;}',
       '#wa-ft.wa-collapsed #wa-ft-body,#wa-ft.wa-collapsed #wa-ft-props{display:none!important;}',
       '#wa-ft.wa-collapsed #wa-ft-grip{border-radius:50px;padding:7px 12px;}',
-
-      // Grip
       '#wa-ft-grip{display:flex;align-items:center;gap:5px;padding:7px 8px 6px;cursor:move;border-radius:14px 14px 0 0;background:rgba(255,255,255,0.025);border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}',
       '#wa-ft-grip-dots{display:flex;flex-direction:column;gap:2.5px;flex-shrink:0;padding:0 1px;}',
       '#wa-ft-grip-dots span{display:flex;gap:2.5px;}',
@@ -279,27 +256,17 @@
       '#wa-ft-grip-label{font-size:9px;font-weight:800;color:rgba(255,255,255,0.18);letter-spacing:1.8px;text-transform:uppercase;flex:1;pointer-events:none;}',
       '#wa-ft-collapse{width:20px;height:20px;border:none;background:transparent;color:rgba(255,255,255,0.2);cursor:pointer;border-radius:5px;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;flex-shrink:0;padding:0;outline:none;line-height:1;}',
       '#wa-ft-collapse:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);}',
-
-      // Body
       '#wa-ft-body{display:flex;flex-direction:column;padding:6px 5px 4px;gap:1px;overflow-y:auto;overflow-x:visible;scrollbar-width:none;min-width:40px;}',
       '#wa-ft-body::-webkit-scrollbar{display:none;}',
-
-      // Group
       '.wa-fg{position:relative;display:flex;justify-content:center;}',
       '.wa-fsep{height:1px;background:rgba(255,255,255,0.06);margin:3px 4px;}',
-
-      // Tool button
       '.wa-fb{width:30px;height:30px;border:1px solid transparent;border-radius:8px;background:transparent;color:rgba(255,255,255,0.28);font-size:11.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s,color .1s,border-color .1s;flex-shrink:0;position:relative;outline:none;padding:0;line-height:1;white-space:nowrap;}',
       '.wa-fb:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.8);border-color:rgba(255,255,255,0.1);}',
       '.wa-fb.wa-act{background:rgba(0,240,255,0.14);color:#00F0FF;border-color:rgba(0,240,255,0.4);}',
       '.wa-fb.wa-hafly::after{content:"";position:absolute;bottom:3px;right:3px;width:3px;height:3px;border-right:1.5px solid rgba(255,255,255,0.22);border-bottom:1.5px solid rgba(255,255,255,0.22);pointer-events:none;}',
       '.wa-fb.wa-act.wa-hafly::after{border-color:rgba(0,240,255,0.45);}',
-
-      // Tooltip
       '.wa-ftip{position:absolute;left:38px;top:50%;transform:translateY(-50%);background:rgba(7,10,15,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:5px 10px;font-size:11px;color:#c8cdd4;white-space:nowrap;pointer-events:none;z-index:10000;opacity:0;transition:opacity .15s .2s;box-shadow:0 4px 16px rgba(0,0,0,0.6);}',
       '.wa-fb:hover .wa-ftip{opacity:1;}',
-
-      // Flyout
       '.wa-fly{position:absolute;left:38px;top:-4px;background:#0d1117;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:6px 5px;min-width:240px;z-index:10001;box-shadow:0 16px 48px rgba(0,0,0,0.85);display:none;flex-direction:column;gap:1px;pointer-events:all;}',
       '.wa-fly.wa-open{display:flex;}',
       '.wa-fly-hd{font-size:9px;font-weight:800;color:rgba(255,255,255,0.16);text-transform:uppercase;letter-spacing:1.3px;padding:3px 8px 7px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:2px;}',
@@ -312,16 +279,12 @@
       '.wa-fi-ds{display:block;font-size:9.5px;color:rgba(255,255,255,0.18);margin-top:1.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       '.wa-fi-pts{font-size:9px;color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:1px 5px;flex-shrink:0;font-family:monospace;}',
       '.wa-fi-key{font-size:9px;color:rgba(0,240,255,0.6);background:rgba(0,240,255,0.07);border:1px solid rgba(0,240,255,0.15);border-radius:4px;padding:1px 5px;flex-shrink:0;font-family:monospace;}',
-
-      // Bottom actions
       '#wa-ft-actions{display:flex;align-items:center;justify-content:center;gap:3px;padding:5px 5px 7px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;}',
       '.wa-fa{width:26px;height:26px;border:1px solid transparent;border-radius:7px;background:transparent;color:rgba(255,255,255,0.28);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;outline:none;padding:0;position:relative;}',
       '.wa-fa:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.75);}',
       '.wa-fa.wa-red:hover{background:rgba(246,70,93,0.1);color:#F6465D;border-color:rgba(246,70,93,0.3);}',
       '.wa-fa.wa-cyan:hover{background:rgba(0,240,255,0.1);color:#00F0FF;border-color:rgba(0,240,255,0.3);}',
       '.wa-fa-badge{position:absolute;top:-2px;right:-2px;background:#F6465D;color:#fff;font-size:7px;font-weight:900;min-width:12px;height:12px;border-radius:6px;display:none;align-items:center;justify-content:center;padding:0 2px;line-height:1;pointer-events:none;}',
-
-      // Properties strip
       '#wa-ft-props{display:none;flex-direction:column;gap:8px;padding:9px 10px 10px;border-top:1px solid rgba(255,255,255,0.06);min-width:205px;flex-shrink:0;}',
       '#wa-ft-props.wa-show{display:flex;}',
       '.wa-pp-nm{font-size:11px;font-weight:800;color:#00F0FF;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
@@ -340,11 +303,8 @@
       '.wa-pp-cancel{display:none;}',
       '.wa-pp-cancel.wa-show{display:block;}',
       '.wa-pp-cancel:hover{border-color:rgba(246,70,93,0.4)!important;color:#F6465D!important;background:rgba(246,70,93,0.06)!important;}',
-
-      // Drawing cursor
       '.wa-drawing-mode canvas{cursor:crosshair!important;}',
     ].join('');
-
     document.head.appendChild(s);
   }
 
@@ -353,37 +313,29 @@
   // ======================================================
 
   function buildHTML() {
-    // Grip
     let h = '<div id="wa-ft-grip">';
     h += '<div id="wa-ft-grip-dots"><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span></div>';
     h += '<span id="wa-ft-grip-label">DRAW</span>';
     h += '<button id="wa-ft-collapse" onclick="WaveDrawingAPI._collapse()">&#8212;</button>';
     h += '</div>';
 
-    // Body
     h += '<div id="wa-ft-body">';
     GROUPS.forEach(function (g, gi) {
       if (gi > 0) h += '<div class="wa-fsep"></div>';
       var rep = g.tools[0];
       var hasFly = g.tools.length > 1;
       h += '<div class="wa-fg" data-grp="' + g.id + '">';
-      h += '<button class="wa-fb' + (hasFly ? ' wa-hafly' : '') + '"';
-      h += ' id="wa-fg-' + g.id + '"';
-      h += ' data-grp="' + g.id + '" data-tool="' + rep.id + '"';
-      h += ' onclick="WaveDrawingAPI._grpClick(event,\'' + g.id + '\')"';
-      h += ' onmouseenter="WaveDrawingAPI._grpHover(event,\'' + g.id + '\')">';
+      h += '<button class="wa-fb' + (hasFly ? ' wa-hafly' : '') + '" id="wa-fg-' + g.id + '" data-grp="' + g.id + '" data-tool="' + rep.id + '" onclick="WaveDrawingAPI._grpClick(event,\'' + g.id + '\')" onmouseenter="WaveDrawingAPI._grpHover(event,\'' + g.id + '\')">';
       h += rep.icon;
       h += '<span class="wa-ftip">' + g.label + '</span>';
       h += '</button>';
       if (hasFly) h += buildFlyHTML(g);
       h += '</div>';
     });
-    h += '</div>'; // #wa-ft-body
+    h += '</div>';
 
-    // Properties strip
     h += buildPropsHTML();
 
-    // Bottom actions
     h += '<div id="wa-ft-actions">';
     h += '<button class="wa-fa" onclick="WaveDrawingAPI.undo()" title="Undo (Ctrl+Z)">\u21A9</button>';
     h += '<button class="wa-fa" onclick="WaveDrawingAPI.redo()" title="Redo (Ctrl+Y)">\u21AA</button>';
@@ -398,15 +350,11 @@
     var h = '<div class="wa-fly" id="wa-fly-' + g.id + '">';
     h += '<div class="wa-fly-hd">' + g.label + '</div>';
     g.tools.forEach(function (t) {
-      var pts = t.pts  ? '<span class="wa-fi-pts">' + t.pts + 'pt</span>' : '';
-      var key = t.key  ? '<span class="wa-fi-key">' + t.key + '</span>' : '';
-      h += '<div class="wa-fi" data-tool="' + t.id + '"';
-      h += ' onclick="WaveDrawingAPI._toolClick(\'' + t.id + '\',event)">';
+      var pts = t.pts !== undefined ? '<span class="wa-fi-pts">' + t.pts + 'pt</span>' : '';
+      var key = t.key ? '<span class="wa-fi-key">' + t.key + '</span>' : '';
+      h += '<div class="wa-fi" data-tool="' + t.id + '" onclick="WaveDrawingAPI._toolClick(\'' + t.id + '\',event)">';
       h += '<span class="wa-fi-ic">' + t.icon + '</span>';
-      h += '<span class="wa-fi-info">';
-      h += '<span class="wa-fi-nm">' + t.name + '</span>';
-      h += '<span class="wa-fi-ds">' + (t.desc || '') + '</span>';
-      h += '</span>' + pts + key + '</div>';
+      h += '<span class="wa-fi-info"><span class="wa-fi-nm">' + t.name + '</span><span class="wa-fi-ds">' + (t.desc || '') + '</span></span>' + pts + key + '</div>';
     });
     h += '</div>';
     return h;
@@ -419,47 +367,29 @@
 
     var h = '<div id="wa-ft-props">';
     h += '<div class="wa-pp-nm" id="wa-pp-nm">—</div>';
-
-    // Color row
     h += '<div class="wa-pp-row">';
     h += '<span class="wa-pp-lbl">Mau:</span>';
-    h += '<div class="wa-pp-clr" title="Mau duong / vien">';
-    h += '<div class="wa-pp-sw" id="wa-sw-stroke" style="background:#00F0FF;"></div>';
-    h += '<input type="color" id="wa-ci-stroke" value="#00F0FF" oninput="WaveDrawingAPI._strokeIn(this.value)">';
-    h += '</div>';
+    h += '<div class="wa-pp-clr" title="Mau duong / vien"><div class="wa-pp-sw" id="wa-sw-stroke" style="background:#00F0FF;"></div><input type="color" id="wa-ci-stroke" value="#00F0FF" oninput="WaveDrawingAPI._strokeIn(this.value)"></div>';
     h += '<span class="wa-pp-lbl">Nen:</span>';
-    h += '<div class="wa-pp-clr" title="Mau nen (fill)">';
-    h += '<div class="wa-pp-sw" id="wa-sw-fill" style="background:rgba(0,240,255,.12);"></div>';
-    h += '<input type="color" id="wa-ci-fill" value="#00f0ff" oninput="WaveDrawingAPI._fillIn(this.value)">';
+    h += '<div class="wa-pp-clr" title="Mau nen (fill)"><div class="wa-pp-sw" id="wa-sw-fill" style="background:rgba(0,240,255,.12);"></div><input type="color" id="wa-ci-fill" value="#00f0ff" oninput="WaveDrawingAPI._fillIn(this.value)"></div>';
     h += '</div>';
-    h += '</div>';
-
-    // Presets
     h += '<div class="wa-pp-row">' + dots + '</div>';
-
-    // Line settings
     h += '<div class="wa-pp-row">';
     h += '<span class="wa-pp-lbl">Net:</span>';
-    h += '<select class="wa-pp-sel" id="wa-sel-sz" onchange="WaveDrawingAPI._szIn(this.value)">';
-    h += '<option value="1">1px</option><option value="2" selected>2px</option><option value="3">3px</option><option value="4">4px</option><option value="5">5px</option>';
-    h += '</select>';
-    h += '<select class="wa-pp-sel" id="wa-sel-ls" onchange="WaveDrawingAPI._lsIn(this.value)">';
-    h += '<option value="solid">\u2500\u2500\u2500</option><option value="dashed">- - -</option><option value="dotted">\u00B7\u00B7\u00B7</option>';
-    h += '</select>';
+    h += '<select class="wa-pp-sel" id="wa-sel-sz" onchange="WaveDrawingAPI._szIn(this.value)"><option value="1">1px</option><option value="2" selected>2px</option><option value="3">3px</option><option value="4">4px</option><option value="5">5px</option></select>';
+    h += '<select class="wa-pp-sel" id="wa-sel-ls" onchange="WaveDrawingAPI._lsIn(this.value)"><option value="solid">\u2500\u2500\u2500</option><option value="dashed">- - -</option><option value="dotted">\u00B7\u00B7\u00B7</option></select>';
     h += '</div>';
-
-    // Custom Text Input (Vùng nhập liệu Tiếng Việt ẩn/hiện)
+    
+    // FIX QUAN TRONG: Input nhap Text Tieng Viet
     h += '<div class="wa-pp-row" id="wa-txt-row" style="display:none; width:100%; margin-top:4px;">';
-    h += '<input type="text" id="wa-txt-input" placeholder="Nhập chữ Tiếng Việt vào đây..." style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; color:#00F0FF; font-size:11px; padding:6px 8px; outline:none; transition:border-color .12s;" onfocus="this.style.borderColor=\'#00F0FF\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.08)\'">';
+    h += '<input type="text" id="wa-txt-input" placeholder="Nhập văn bản vào đây trước khi vẽ..." style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; color:#00F0FF; font-size:11px; padding:6px 8px; outline:none; transition:border-color .12s;" onfocus="this.style.borderColor=\'#00F0FF\'" onblur="this.style.borderColor=\'rgba(255,255,255,0.08)\'">';
     h += '</div>';
 
-    // Buttons
     h += '<div class="wa-pp-row">';
     h += '<button class="wa-pp-btn" style="flex:1.5" onclick="WaveDrawingAPI._applyAll()">\u2726 Ap dung tat ca</button>';
     h += '<button class="wa-pp-btn wa-pp-cancel" id="wa-pp-cancel" onclick="WaveDrawingAPI._cancelDraw()">\u2715 Huy ve</button>';
     h += '</div>';
-
-    h += '</div>'; // #wa-ft-props
+    h += '</div>';
     return h;
   }
 
@@ -546,7 +476,6 @@
     DS.active = toolId;
     var isAction = (!tool.overlay || toolId === 'pointer' || toolId === 'eraser');
 
-    // Highlight
     document.querySelectorAll('.wa-fb[data-grp]').forEach(function (b) { b.classList.remove('wa-act'); });
     document.querySelectorAll('.wa-fi').forEach(function (i) { i.classList.toggle('wa-act', i.dataset.tool === toolId); });
     var grpBtn = document.getElementById('wa-fg-' + tool.groupId);
@@ -555,7 +484,6 @@
       if (grpBtn.childNodes[0]) grpBtn.childNodes[0].textContent = tool.icon;
     }
 
-    // Cursor
     var c = document.getElementById('sc-chart-container');
     if (c) c.classList.toggle('wa-drawing-mode', !isAction);
 
@@ -566,48 +494,15 @@
     _eraserMode = false;
     if (isAction) { hideCancelBtn(); return; }
 
-    // Start drawing overlay
     setTimeout(function () {
       if (!global.tvChart) return;
       try {
         global.tvChart.createOverlay({ name: tool.overlay, lock: false, visible: true, styles: buildStyles(tool) });
         showCancelBtn();
       } catch (err) {
-        _tryRegister(tool);
+        console.warn("Overlay API Lỗi: ", err);
       }
     }, 50);
-  }
-
-  var _registered = {};
-  function _tryRegister(tool) {
-    var kc = global.klinecharts;
-    if (!kc || typeof kc.registerOverlay !== 'function') return;
-    var name = tool.overlay;
-    if (!_registered[name]) {
-      _registered[name] = true;
-      try {
-        kc.registerOverlay({
-          name: name,
-          totalStep: tool.pts || 2,
-          createPointFigures: function (ref) {
-            var coords = ref.coordinates || [];
-            if (coords.length < 2) return [];
-            var figs = [];
-            for (var i = 0; i < coords.length - 1; i++) {
-              figs.push({ type: 'line', attrs: { coordinates: [coords[i], coords[i+1]] } });
-            }
-            return figs;
-          }
-        });
-      } catch (e) {}
-    }
-    try {
-      global.tvChart.createOverlay({ name: name, lock: false, visible: true, styles: buildStyles(tool) });
-      showCancelBtn();
-    } catch (e2) {
-      // Final fallback: segment
-      try { global.tvChart.createOverlay({ name: 'segment', lock: false, visible: true, styles: buildStyles(tool) }); showCancelBtn(); } catch (e3) {}
-    }
   }
 
   function _cancelPending() {
@@ -629,7 +524,6 @@
     var nm = document.getElementById('wa-pp-nm');
     if (nm) nm.textContent = tool ? tool.name : '\u2014';
 
-    // Logic hiển thị ô nhập Text
     var txtRow = document.getElementById('wa-txt-row');
     if (txtRow) {
       if (tool && tool.id === 'customText') {
@@ -694,7 +588,7 @@
   }
 
   // ======================================================
-  // SECTION 9: KEYBOARD
+  // SECTION 9: KEYBOARD & FLYOUT
   // ======================================================
 
   function onKey(e) {
@@ -715,17 +609,11 @@
     }
   }
 
-  // ======================================================
-  // FLYOUT
-  // ======================================================
-
   var _flyOpen = null;
-
   function closeFlyouts() {
     document.querySelectorAll('.wa-fly.wa-open').forEach(function (f) { f.classList.remove('wa-open'); });
     _flyOpen = null;
   }
-
   function openFlyout(groupId) {
     closeFlyouts();
     var fly = document.getElementById('wa-fly-' + groupId);
@@ -743,7 +631,7 @@
   }
 
   // ======================================================
-  // SECTION 10: PERSISTENCE
+  // SECTION 10: PERSISTENCE & HELPERS
   // ======================================================
 
   function saveSettings() {
@@ -770,10 +658,6 @@
       if (s.panelVis  !== undefined) DS.panelVis  = !!s.panelVis;
     } catch (e) {}
   }
-
-  // ======================================================
-  // STYLE HELPERS
-  // ======================================================
 
   function buildStyles(tool) {
     var fill = !!(tool && tool.fill);
@@ -811,7 +695,8 @@
     init: function () {
       injectCSS();
       loadSettings();
-      registerAdvancedOverlays(); // Kích hoạt thuật toán Pro Toán Học
+      // Chạy đăng ký thuật toán ngay lúc init để đảm bảo KLineCharts đã nhận diện
+      registerAdvancedOverlays(); 
       inject();
       document.addEventListener('keydown', onKey);
       _watchReinit();
@@ -824,19 +709,16 @@
       setTimeout(inject, 350);
     },
 
-    /** Goi tu nut bam tren Topbar — bat/tat floating panel */
     toggle: function () {
       var panel = document.getElementById('wa-ft');
       if (!panel) { inject(); DS.panelVis = true; saveSettings(); return; }
       DS.panelVis = !DS.panelVis;
       panel.classList.toggle('wa-hidden', !DS.panelVis);
       saveSettings();
-      // Sync topbar button
       var btn = document.getElementById('sc-draw-toggle-btn');
       if (btn) btn.classList.toggle('active', DS.panelVis);
     },
 
-    // HTML onclick handlers
     _collapse: function () {
       var panel = document.getElementById('wa-ft');
       var btn   = document.getElementById('wa-ft-collapse');
@@ -947,12 +829,7 @@
     getGroups: function () { return GROUPS; },
   };
 
-  // Đảm bảo gắn cứng vào window để HTML button KHÔNG bao giờ báo lỗi undefined
   window.WaveDrawingAPI = global.WaveDrawingAPI;
-
-  // ======================================================
-  // REINIT WATCHER
-  // ======================================================
 
   function _watchReinit() {
     new MutationObserver(function () {
@@ -964,13 +841,23 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
 
-  // AUTO-INIT
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { setTimeout(WaveDrawingAPI.init, 500); });
-  } else {
-    setTimeout(WaveDrawingAPI.init, 500);
+  // Khởi chạy khi DOM và klinecharts đã sẵn sàng
+  var initAttempts = 0;
+  function tryInit() {
+    if (global.klinecharts) {
+      WaveDrawingAPI.init();
+    } else if (initAttempts < 50) {
+      initAttempts++;
+      setTimeout(tryInit, 100);
+    }
   }
 
-  console.log('[Wave Alpha Drawing v' + VERSION + ' PRO] Floating toolbar module loaded.');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryInit);
+  } else {
+    tryInit();
+  }
+
+  console.log('[Wave Alpha Drawing v' + VERSION + '] Loaded & Fixed.');
 
 })(window);
