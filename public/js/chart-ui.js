@@ -814,20 +814,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
         container.style.position = 'relative'; 
         window.tvChart = klinecharts.init(container, {
             styles: {
-                // 🚀 1. LẤY LẠI MÀU NỀN VÀ MÀU CHỮ TỪ FILE CŨ
-                layout: { 
-                    background: { color: t_bg }, 
-                    textColor: t_text 
-                },
+                layout: { background: { color: t_bg }, textColor: t_text },
                 
-                // 🚀 2. TẮT SẠCH KHUNG LƯỚI
-                grid: { 
-                    show: false, 
-                    horizontal: { show: false }, 
-                    vertical: { show: false } 
-                },
+                grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
                 
-                // 🚀 TÍCH HỢP OHLC VÀO TOOLTIP CỦA NẾN
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
                     bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text, upBorderColor: t_up, downBorderColor: t_down, upWickColor: t_up, downWickColor: t_down },
