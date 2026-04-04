@@ -978,6 +978,14 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         if (ws.colUp || ws.showGrid === false || ws.colBg) {
             window.tvChart.setStyles({
+                watermark: {
+                    show: true,
+                    text: 'WAVE ALPHA',
+                    color: 'rgba(255, 255, 255, 0.05)',
+                    size: 48,
+                    family: 'system-ui, sans-serif',
+                    weight: '800'
+                },
                 grid: { 
                     horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }, 
                     vertical: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' } 

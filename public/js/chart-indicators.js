@@ -1382,47 +1382,45 @@
           <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 4px;"></div>
 
           <!-- Drawing tools dropdown -->
-          <div id="wa-draw-wrap" style="position:relative;">
+          <div style="position:relative; display:inline-flex; align-items:center;">
             <button id="btn-wa-draw" title="Công cụ vẽ"
               style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
-                     font-size:13px; padding:4px 8px; border-radius:6px; transition:.15s;"
-              onmouseover="this.style.color='${COLOR.green}'; this.style.background='rgba(14,203,129,0.07)'"
+                     font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 6px;
+                     border-radius:6px; font-weight:600; transition:.15s;"
+              onmouseover="this.style.color='${COLOR.cyan}'; this.style.background='rgba(0,240,255,0.07)'"
               onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'">
-              ✏️
+              ✏️ <span class="wa-label" style="font-size:11px; margin-left:3px;">Vẽ</span>
             </button>
-            <div id="wa-draw-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0;
-                 background:${COLOR.bg}; border:1px solid ${COLOR.border}; border-radius:8px;
-                 padding:6px; min-width:170px; z-index:10000; box-shadow:0 8px 24px rgba(0,0,0,0.7);">
-              ${[
-                ['trendLine',             'Trendline',            '📈'],
-                ['fibonacciLine',         'Fibonacci',            '🔢'],
-                ['horizontalRayLine',     'Đường ngang',          '➡️'],
-                ['verticalLine',          'Đường dọc',            '⬆️'],
-                ['parallelStraightLine',  'Song song',            '🟰'],
-                ['circle',                'Hình tròn',            '⭕'],
-                ['rect',                  'Hình chữ nhật',        '▭'],
-                ['text',                  'Văn bản',              '💬'],
-                ['arrow',                 'Mũi tên',              '➡'],
-              ].map(function (t) {
-                return `<div class="wa-draw-item" data-overlay="${t[0]}"
-                  style="padding:7px 10px; border-radius:6px; cursor:pointer; font-size:13px;
-                         color:${COLOR.muted}; display:flex; align-items:center; gap:8px;
-                         transition:background .15s, color .15s;"
-                  onmouseover="this.style.background='rgba(14,203,129,0.1)'; this.style.color='${COLOR.white}'"
-                  onmouseout="this.style.background='transparent'; this.style.color='${COLOR.muted}'">
-                  ${t[2]} ${t[1]}
-                </div>`;
-              }).join('')}
+            
+            <div id="wa-draw-menu" style="display:none; position:absolute; top:calc(100% + 6px); left:0;
+                 background:${COLOR.bg}; border:1px solid ${COLOR.border}; border-radius:10px;
+                 padding:8px; min-width:165px; z-index:20000; box-shadow:0 12px 32px rgba(0,0,0,0.8);">
+                 
+                <div style="font-size:10px; font-weight:800; color:${COLOR.muted}; letter-spacing:1px; margin:4px 8px 8px;">CÔNG CỤ VẼ</div>
+                
+                ${[
+                    ['segment', '📉 Đường xu hướng (Trend)'],
+                    ['horizontalLine', '➖ Đường ngang'],
+                    ['verticalLine', '│ Đường dọc'],
+                    ['rayLine', '↗️ Tia (Ray)'],
+                    ['fibonacciLine', '📐 Fibonacci']
+                ].map(t => `
+                    <div onclick="if(window.tvChart){window.tvChart.createOverlay('${t[0]}');} document.getElementById('wa-draw-menu').style.display='none';" 
+                         style="padding:8px 10px; color:${COLOR.white}; font-size:12px; cursor:pointer; border-radius:5px; transition:0.15s; display:flex; align-items:center; gap:6px;"
+                         onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                         ${t[1]}
+                    </div>
+                `).join('')}
+                
+                <div style="height:1px; background:${COLOR.border}; margin:6px 0;"></div>
+                
+                <div onclick="if(window.tvChart){window.tvChart.removeOverlay();} document.getElementById('wa-draw-menu').style.display='none';" 
+                     style="padding:8px 10px; color:${COLOR.red}; font-size:12px; cursor:pointer; border-radius:5px; transition:0.15s; display:flex; align-items:center; gap:6px;"
+                     onmouseover="this.style.background='rgba(246,70,93,0.1)'" onmouseout="this.style.background='transparent'">
+                     🗑️ Xóa tất cả hình vẽ
+                </div>
             </div>
           </div>
-
-          <!-- Clear drawings -->
-          <button title="Xóa tất cả nét vẽ"
-            style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
-                   font-size:13px; padding:4px 8px; border-radius:6px; transition:.15s;"
-            onmouseover="this.style.color='${COLOR.red}'; this.style.background='rgba(246,70,93,0.07)'"
-            onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'"
-            onclick="window.clearUserDrawings()">🗑️</button>
 
           <!-- Fullscreen -->
           <button id="btn-wa-fs" title="Toàn màn hình"
@@ -1496,20 +1494,21 @@
         // Indicator button click
         document.getElementById('btn-fx-indicator').addEventListener('click', global.openIndicatorModal);
 
-        // Drawing dropdown toggle
-        const drawBtn  = document.getElementById('btn-wa-draw');
-        const drawMenu = document.getElementById('wa-draw-menu');
-        drawBtn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          drawMenu.style.display = drawMenu.style.display === 'none' ? 'block' : 'none';
-        });
-        document.addEventListener('click', function () { drawMenu.style.display = 'none'; });
-        drawMenu.querySelectorAll('.wa-draw-item').forEach(function (item) {
-          item.addEventListener('click', function () {
-            if (global.tvChart) global.tvChart.createOverlay(item.dataset.overlay);
-            drawMenu.style.display = 'none';
-          });
-        });
+        // Xử lý mở/đóng menu Vẽ (Cập nhật mới)
+        const btnDraw = document.getElementById('btn-wa-draw');
+        const menuDraw = document.getElementById('wa-draw-menu');
+        if (btnDraw && menuDraw) {
+            btnDraw.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Đóng menu Cài đặt Chart nếu nó đang mở
+                const menuCfg = document.getElementById('wa-chart-cfg-menu');
+                if (menuCfg) menuCfg.style.display = 'none';
+                
+                menuDraw.style.display = menuDraw.style.display === 'none' ? 'block' : 'none';
+            });
+            menuDraw.addEventListener('click', function(e) { e.stopPropagation(); });
+            document.addEventListener('click', function() { menuDraw.style.display = 'none'; });
+        }
 
         // Fullscreen
         document.getElementById('btn-wa-fs').addEventListener('click', function () {
@@ -1591,6 +1590,9 @@
 
             if (window.tvChart) {
                 window.tvChart.setStyles({
+                  watermark: {
+                        show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
+                    },
                     grid: {
                         horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
                         vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
@@ -1646,6 +1648,8 @@
    */
  global.addIndicatorToChart = function (indName, options) {
     if (!global.tvChart) return;
+    
+    // [FIX 1] Mình đã xóa lệnh tắt modal ở đây để người dùng chọn nhiều chỉ báo không bị tắt bảng
 
     const meta    = INDICATOR_REGISTRY.find(function (x) { return x.name === indName; });
     const isStack = meta ? meta.isStack : false;
@@ -1668,6 +1672,16 @@
             if(typeof saveIndicatorState === 'function') saveIndicatorState();
         }
     } catch (err) { console.error('[Wave Alpha] createIndicator error:', err); }
+
+    // [FIX 2] Tự động load lại bảng để chuyển thẻ thành màu xanh & hiện bánh răng cài đặt ngay lập tức
+    const modalEl = document.getElementById('sc-indicator-modal');
+    if (modalEl && modalEl.style.display !== 'none') {
+        const activeTab = document.querySelector('.wa-tab.active');
+        const q = (document.getElementById('wa-ind-search') || {}).value || '';
+        if (typeof renderIndicatorList === 'function') {
+            renderIndicatorList(q, activeTab ? activeTab.dataset.cat : 'all');
+        }
+    }
   };
 
   /**
