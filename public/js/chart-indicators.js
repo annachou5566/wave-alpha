@@ -1483,23 +1483,42 @@
     const params  = (options && options.params) || (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
-        // styles phải nằm trong indicator descriptor (tham số 1), không phải paneOptions (tham số 3)
-        // isStack: true  → tắt native tooltip để nhường cho Custom HTML Legend
-        // isStack: false → không truyền styles → giữ nguyên native tooltip của RSI, VOL, MACD
-        const indicatorDesc = isStack
-            ? { name: indName, styles: { tooltip: { showRule: 'none' } } }
-            : { name: indName };
-
         try {
-            global.tvChart.createIndicator(indicatorDesc, isStack, { id: paneId });
+            // PHẢI dùng string thuần — object form throw lỗi với custom indicators
+            global.tvChart.createIndicator(indName, isStack, { id: paneId });
         } catch (err) {
             if (retries > 0) setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
             return;
         }
 
+        // Push state — chỉ chạy khi createIndicator thành công
         if (!global.scActiveIndicators.find(function (x) { return x.name === indName; })) {
             global.scActiveIndicators.push({ name: indName, isStack: isStack, paneId: paneId, params: params });
-            if(typeof saveIndicatorState === 'function') saveIndicatorState();
+            if (typeof saveIndicatorState === 'function') saveIndicatorState();
+        }
+
+        // Tắt native tooltip — dùng getIndicators() để XÁC NHẬN indicator tồn tại trước khi override
+        // Tránh hoàn toàn race condition mà setTimeout cố định không giải quyết được
+        if (isStack) {
+            var overrideTries = 0;
+            function tryOverride() {
+                if (overrideTries++ > 8) return; // Tối đa ~800ms
+                try {
+                    var insts = global.tvChart.getIndicators({ name: indName, paneId: paneId });
+                    if (insts && insts.length > 0) {
+                        // Indicator đã tồn tại trong KLineCharts registry → override an toàn
+                        global.tvChart.overrideIndicator(
+                            { name: indName, styles: { tooltip: { showRule: 'none' } } },
+                            paneId
+                        );
+                    } else {
+                        setTimeout(tryOverride, 100);
+                    }
+                } catch(e) {
+                    setTimeout(tryOverride, 100);
+                }
+            }
+            setTimeout(tryOverride, 50);
         }
 
         if (global.WaveIndicatorAPI && typeof global.WaveIndicatorAPI.renderLegend === 'function') {
