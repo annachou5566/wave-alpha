@@ -812,11 +812,12 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
         // 1. KHỞI TẠO CHART 100% NATIVE KLINECHARTS
         container.style.position = 'relative'; 
+        container.style.backgroundColor = t_bg; // 🚀 CHỈ ĐỔ MÀU NỀN TRỰC TIẾP LÊN CONTAINER LÀ XONG!
+
         window.tvChart = klinecharts.init(container, {
             styles: {
-                layout: { background: { color: t_bg }, textColor: t_text },
-                
-                grid: { show: false, horizontal: { show: false }, vertical: { show: false } },
+                // 🚀 XÓA SẠCH CÁI DÒNG LAYOUT GÂY LỖI SẬP CHART ĐI, CHỈ CẦN TẮT GRID Ở ĐÂY:
+                grid: { show: false },
                 
                 candle: {
                     type: window.currentChartInterval === 'tick' ? 'area' : 'candle',
