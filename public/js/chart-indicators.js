@@ -1490,16 +1490,19 @@
       (meta ? meta.defaultParams.slice() : []);
 
     function attempt(retries) {
-        // Tách riêng try-catch cho createIndicator
         try {
-            global.tvChart.createIndicator(indName, isStack, { id: paneId });
+            // Thay vì gọi tên thường, ta tiêm thẳng lệnh Tàng hình (showRule: none) ngay từ lúc khởi tạo
+            global.tvChart.createIndicator({
+                name: indName,
+                styles: isStack ? { tooltip: { showRule: 'none' } } : {}
+            }, isStack, { id: paneId });
         } catch (err) {
             if (retries > 0) {
                 setTimeout(function () { attempt(retries - 1); }, RETRY_DELAY_MS);
             } else {
                 console.error('[Wave Alpha] createIndicator failed for', indName, err);
             }
-            return; // Dừng, không đi tiếp nếu lỗi
+            return; 
         }
 
         // 🚀 BÍ QUYẾT: Khóa hoàn toàn Tooltip (chữ + nút gốc) của mọi chỉ báo
