@@ -941,7 +941,18 @@
       .wa-tb-group::after { content: ''; position: absolute; right: 4px; bottom: 6px; border: solid #848E9C; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); pointer-events: none; }
       .wa-tb-menu { position: absolute; left: 100%; top: -6px; padding-left: 8px; display: none; z-index: 1000; }
       .wa-tb-group:hover .wa-tb-menu { display: block; }
-      .wa-tb-menu-inner { background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); width: 230px; padding: 6px 0; display: flex; flex-direction: column; }
+      .wa-tb-menu-inner { 
+          background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
+          width: 230px; padding: 6px 0; display: flex; flex-direction: column; 
+          max-height: 65vh; overflow-y: auto; /* Thêm thanh cuộn khi màn hình nhỏ */
+      }
+      .wa-tb-menu-inner::-webkit-scrollbar { width: 4px; }
+      .wa-tb-menu-inner::-webkit-scrollbar-thumb { background: #2b3139; border-radius: 4px; }
+
+      /* Thu gọn 2 nút Magnet và Trash nằm ngang để tiết kiệm chiều dọc */
+      .wa-bot-actions { display: flex; width: 100%; justify-content: space-evenly; padding: 4px 0; }
+      .wa-bot-actions .wa-tb-btn { width: 20px; height: 24px; margin: 0; }
+      .wa-bot-actions .wa-tb-btn svg { width: 15px; height: 15px; }
       .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
       .wa-menu-item:hover { background: #2b3139; color: #00F0FF; }
 
@@ -988,62 +999,13 @@
     close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
   };
 
+ // Đã gộp thông minh: Lines chung, Fibo chung Gann, Shapes chung Arrows
   const MENUS = [
-    { icon: SVG.line, tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'arrow', n: 'Mũi tên'} ]},
-    { icon: SVG.linesAdv, tools: [ { id: 'extendedLine', n: 'Đường thẳng 2 chiều' }, { id: 'horizontalRay', n: 'Tia ngang' }, { id: 'trendAngle', n: 'Góc xu hướng' }, { id: 'infoLine', n: 'Đường thông tin' }, { id: 'crossLine', n: 'Đường chữ thập' }, { id: 'curvedLine', n: 'Đường cong (Bézier)' } ]},
-    { 
-      id: 'pitchforkFamily',  
-      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`,  
-      tools: [    
-        { id: 'andrewsPitchfork',        n: 'Andrews Pitchfork' },    
-        { id: 'schiffPitchfork',         n: 'Schiff Pitchfork' },    
-        { id: 'modifiedSchiffPitchfork', n: 'Modified Schiff Pitchfork' },    
-        { id: 'insidePitchfork',         n: 'Inside Pitchfork' }
-      ]
-    },
-    { 
-      id: 'fibonacci', 
-      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="20" x2="22" y2="20"/><line x1="2" y1="15" x2="22" y2="15"/><line x1="2" y1="11" x2="22" y2="11"/><line x1="2" y1="8"  x2="22" y2="8"/><line x1="2" y1="6"  x2="22" y2="6"/><text x="2" y="4" style="font-size:8px;fill:currentColor;stroke:none;font-style:italic">φ</text></svg>`, 
-      tools: [ 
-        { id: 'fibRetracement', n: 'Fibonacci Retracement' }, 
-        { id: 'fibExtension',   n: 'Fibonacci Extension' }, 
-        { id: 'fibFan',         n: 'Fibonacci Fan' }, 
-        { id: 'fibArc',         n: 'Fibonacci Arc' }, 
-        { id: 'fibTimeZone',    n: 'Fibonacci Time Zone' }
-      ]
-    },
-    { 
-      id: 'shapesArrows',  
-      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18 L9 12 L14 15 L21 6"/><polyline points="16,6 21,6 21,11"/><rect x="3" y="3" width="7" height="7"/><circle cx="17" cy="17" r="4"/></svg>`,  
-      tools: [    
-        { id: 'highlighter',      n: 'Bút đánh dấu' },    
-        { id: 'arrowMarker',      n: 'Bút đánh dấu mũi tên' },    
-        { id: 'arrow',            n: 'Mũi tên' },    
-        { id: 'arrowUp',          n: 'Mũi tên chỉ lên' },    
-        { id: 'arrowDown',        n: 'Mũi tên chỉ xuống' },    
-        { id: 'rectangle',        n: 'Hình chữ nhật' },    
-        { id: 'rotatedRectangle', n: 'Hình chữ nhật xoay' },    
-        { id: 'parallelogram',    n: 'Hình bình hành' },
-        { id: 'pathShape',        n: 'Đường dẫn' },    
-        { id: 'circle',           n: 'Vòng tròn' },    
-        { id: 'ellipse',          n: 'Hình ellipse' },    
-        { id: 'polyline',         n: 'Polyline (Đường đa đoạn)' },    
-        { id: 'triangle',         n: 'Hình tam giác' },    
-        { id: 'arcShape',         n: 'Hình vòng cung' },    
-        { id: 'curveShape',       n: 'Đường cong' },    
-        { id: 'doubleCurveShape', n: 'Đường cong đôi' }  
-      ]
-    },
-    { 
-      id: 'gann',  
-      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/><line x1="3" y1="21" x2="21" y2="3"/><line x1="3" y1="21" x2="21" y2="9"/><line x1="3" y1="21" x2="21" y2="15"/><line x1="3" y1="21" x2="15" y2="3"/><line x1="3" y1="21" x2="9" y2="3"/></svg>`,  
-      tools: [    
-        { id: 'gannFan',    n: 'Gann Fan' },    
-        { id: 'gannBox',    n: 'Gann Box' },    
-        { id: 'gannSquare', n: 'Gann Square' }
-      ]
-    },
-    { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, tools: [ {id: 'waveElliott', n: 'Sóng Elliott (12345)'}, {id: 'waveABC', n: 'Sóng ABC'}, {id: 'waveTriangle', n: 'Tam giác (ABCDE)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'}, {id: 'headAndShoulders', n: 'Vai Đầu Vai'} ]}
+    { icon: SVG.line, tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'extendedLine', n: 'Đường thẳng 2 chiều'}, {id: 'trendAngle', n: 'Góc xu hướng'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'crossLine', n: 'Đường chữ thập'}, {id: 'infoLine', n: 'Đường thông tin'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'curvedLine', n: 'Đường cong'} ]},
+    { icon: SVG.fibo, tools: [ {id: 'fibRetracement', n: 'Fibonacci Retracement'}, {id: 'fibExtension', n: 'Fibonacci Extension'}, {id: 'fibFan', n: 'Fibonacci Fan'}, {id: 'fibArc', n: 'Fibonacci Arc'}, {id: 'fibTimeZone', n: 'Fibo Time Zone'}, {id: 'gannFan', n: 'Gann Fan'}, {id: 'gannBox', n: 'Gann Box'}, {id: 'gannSquare', n: 'Gann Square'} ]},
+    { icon: SVG.shape, tools: [ {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} ]},
+    { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, tools: [ {id: 'waveElliott', n: 'Sóng Elliott (12345)'}, {id: 'waveABC', n: 'Sóng ABC'}, {id: 'waveTriangle', n: 'Tam giác (ABCDE)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'}, {id: 'headAndShoulders', n: 'Vai Đầu Vai'}, {id: 'threeWaves', n: 'Sóng 3'}, {id: 'fiveWaves', n: 'Sóng 5'}, {id: 'eightWaves', n: 'Sóng 8'}, {id: 'anyWaves', n: 'Sóng tự do'} ]},
+    { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`, tools: [ {id: 'andrewsPitchfork', n: 'Andrews Pitchfork'}, {id: 'schiffPitchfork', n: 'Schiff Pitchfork'}, {id: 'modifiedSchiffPitchfork', n: 'Modified Schiff'}, {id: 'insidePitchfork', n: 'Inside Pitchfork'} ]}
   ];
 
   function buildToolbar() {
@@ -1055,9 +1017,11 @@
       m.tools.forEach(t => html += `<div class="wa-menu-item" data-tool="${t.id}">${t.n}</div>`);
       html += `</div></div></div>`;
     });
-    html += `<div style="width:20px; height:1px; background:#2b3139; margin:8px 0;"></div>
-             <button class="wa-tb-btn" id="wa-btn-magnet" data-tooltip="Bắt điểm (Magnet)">${SVG.magnet}</button>
-             <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xóa tất cả">${SVG.trash}</button>`;
+    html += `<div style="width:24px; height:1px; background:#2b3139; margin:4px 0;"></div>
+             <div class="wa-bot-actions">
+               <button class="wa-tb-btn" id="wa-btn-magnet" data-tooltip="Bắt điểm (Magnet)">${SVG.magnet}</button>
+               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xóa tất cả">${SVG.trash}</button>
+             </div>`;
     return html;
   }
 
