@@ -1,7 +1,7 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026
-// Fix: Lag Observer, Text Realtime Edit, Wave Steps
+// Fix: Bất tử khi đổi khung thời gian & Text gõ ăn ngay
 // ==========================================
 
 (function (global) {
@@ -17,7 +17,7 @@
     lineWidth: 2,
     lineStyle: 'solid',
     textSize: 16,
-    textInput: 'Wave Alpha'
+    textInput: 'Văn bản...'
   };
 
   // ======================================================
@@ -28,7 +28,6 @@
     if (!kc || kc.__wa_extensions_registered) return;
     kc.__wa_extensions_registered = true;
 
-    // --- CÁC HÀM TIỆN ÍCH (UTILS) ---
     function getRotateCoordinate(coordinate, targetCoordinate, angle) {
       const x = (coordinate.x - targetCoordinate.x) * Math.cos(angle) - (coordinate.y - targetCoordinate.y) * Math.sin(angle) + targetCoordinate.x;
       const y = (coordinate.x - targetCoordinate.x) * Math.sin(angle) + (coordinate.y - targetCoordinate.y) * Math.cos(angle) + targetCoordinate.y;
@@ -56,7 +55,6 @@
       return [];
     }
 
-    // --- HÀM TẠO SÓNG (ĐÃ FIX BUG totalStep = points + 1) ---
     function createWave(name, totalStep, labels) {
       return {
         name: name, totalStep: totalStep, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
@@ -72,13 +70,11 @@
     }
 
     var extensions = [
-      // Sóng Custom Wave Alpha (Đã fix cộng thêm 1 step)
       createWave('waveElliott', 7, ['0', '1', '2', '3', '4', '5']), 
       createWave('waveABC', 5, ['0', 'A', 'B', 'C']),                   
       createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']),
       createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
 
-      // 1. ARROW
       {
         name: 'arrow', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
@@ -93,272 +89,129 @@
           return [];
         }
       },
-
-      // 2. CIRCLE
+      { name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { circle: { color: 'rgba(22, 119, 255, 0.15)' } }, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) }, styles: { style: 'stroke_fill' } }; } return []; } },
+      { name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } }, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'stroke_fill' } }]; } return []; } },
       {
-        name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        styles: { circle: { color: 'rgba(22, 119, 255, 0.15)' } },
-        createPointFigures: function({ coordinates }) {
-          if (coordinates.length > 1) {
-            return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) }, styles: { style: 'stroke_fill' } };
-          }
-          return [];
-        }
-      },
-
-      // 3. RECT
-      {
-        name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
-        createPointFigures: function({ coordinates }) {
-          if (coordinates.length > 1) {
-            return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'stroke_fill' } }];
-          }
-          return [];
-        }
-      },
-
-      // 4. PARALLELOGRAM
-      {
-        name: 'parallelogram', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        name: 'parallelogram', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
         createPointFigures: function({ coordinates }) {
           if (coordinates.length === 2) return [{ type: 'line', ignoreEvent: true, attrs: { coordinates } }];
-          if (coordinates.length === 3) {
-            const coordinate = { x: coordinates[0].x + (coordinates[2].x - coordinates[1].x), y: coordinates[2].y };
-            return [{ type: 'polygon', attrs: { coordinates: [coordinates[0], coordinates[1], coordinates[2], coordinate] }, styles: { style: 'stroke_fill' } }];
-          }
-          return [];
+          if (coordinates.length === 3) { const coordinate = { x: coordinates[0].x + (coordinates[2].x - coordinates[1].x), y: coordinates[2].y }; return [{ type: 'polygon', attrs: { coordinates: [coordinates[0], coordinates[1], coordinates[2], coordinate] }, styles: { style: 'stroke_fill' } }]; } return [];
         },
-        performEventPressedMove: function({ points, performPointIndex, performPoint }) {
-          if (performPointIndex < 2) { points[0].price = performPoint.price; points[1].price = performPoint.price; }
-        },
-        performEventMoveForDrawing: function({ currentStep, points, performPoint }) {
-          if (currentStep === 2) points[0].price = performPoint.price;
-        }
+        performEventPressedMove: function({ points, performPointIndex, performPoint }) { if (performPointIndex < 2) { points[0].price = performPoint.price; points[1].price = performPoint.price; } },
+        performEventMoveForDrawing: function({ currentStep, points, performPoint }) { if (currentStep === 2) points[0].price = performPoint.price; }
       },
-
-      // 5. TRIANGLE
-      {
-        name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
-        createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates }, styles: { style: 'stroke_fill' } }]; }
-      },
-
-      // 6. FIBONACCI CIRCLE
+      { name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } }, createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates }, styles: { style: 'stroke_fill' } }]; } },
+      
       {
         name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
           if (coordinates.length > 1) {
-            const radius = getDistance(coordinates[0], coordinates[1]);
-            const circles = [], texts = [];
-            [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => {
-              const r = radius * percent;
-              circles.push({ ...coordinates[0], r });
-              texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` });
-            });
+            const radius = getDistance(coordinates[0], coordinates[1]); const circles = [], texts = [];
+            [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const r = radius * percent; circles.push({ ...coordinates[0], r }); texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` }); });
             return [{ type: 'circle', attrs: circles, styles: { style: 'stroke' } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-          }
-          return [];
+          } return [];
         }
       },
-
-      // 7. FIBONACCI SEGMENT
       {
         name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, overlay, precision }) {
           const lines = [], texts = [];
           if (coordinates.length > 1) {
-            const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x;
-            const yDif = coordinates[0].y - coordinates[1].y;
-            const points = overlay.points;
-            const valueDif = points[0].value - points[1].value;
-            [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => {
-              const y = coordinates[1].y + yDif * percent;
-              const price = (points[1].value + valueDif * percent).toFixed(precision.price);
-              lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
-              texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' });
-            });
-          }
-          return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+            const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x; const yDif = coordinates[0].y - coordinates[1].y; const points = overlay.points; const valueDif = points[0].value - points[1].value;
+            [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => { const y = coordinates[1].y + yDif * percent; const price = (points[1].value + valueDif * percent).toFixed(precision.price); lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); });
+          } return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
-
-      // 8. FIBONACCI SPIRAL
       {
         name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, bounding }) {
           if (coordinates.length > 1) {
-            const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24);
-            const flag = coordinates[1].x > coordinates[0].x ? 0 : 1;
-            const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
+            const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24); const flag = coordinates[1].x > coordinates[0].x ? 0 : 1; const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
             let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3);
-            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle);
-            const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle);
-            const arcs = [
-              { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 },
-              { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI }
-            ];
+            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle); const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle);
+            const arcs = [ { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 }, { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI } ];
             let x = coordinates[0].x - startRadius, y = coordinates[0].y - startRadius;
             for (let i = 2; i < 9; i++) {
-              const r = arcs[i - 2].r + arcs[i - 1].r;
-              let startAngle = 0;
-              switch (i % 4) {
-                case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break;
-                case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break;
-                case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break;
-                case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break;
-              }
-              const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle);
-              arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 });
-            }
-            return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }];
-          }
-          return [];
+              const r = arcs[i - 2].r + arcs[i - 1].r; let startAngle = 0;
+              switch (i % 4) { case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break; case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; }
+              const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle); arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 });
+            } return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }];
+          } return [];
         }
       },
-
-      // 9. FIBONACCI FAN
       {
         name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, bounding }) {
-          const lines1 = [], texts = [];
-          let lines2 = [];
+          const lines1 = [], texts = []; let lines2 = [];
           if (coordinates.length > 1) {
-            const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4;
-            const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20;
-            const xDistance = coordinates[1].x - coordinates[0].x, yDistance = coordinates[1].y - coordinates[0].y;
+            const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4; const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20; const xDistance = coordinates[1].x - coordinates[0].x, yDistance = coordinates[1].y - coordinates[0].y;
             [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0].forEach(percent => {
-              const x = coordinates[1].x - xDistance * percent, y = coordinates[1].y - yDistance * percent;
-              lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] });
-              lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
-              lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding));
-              lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding));
-              texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${percent.toFixed(3)}` });
-              texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${percent.toFixed(3)}` });
+              const x = coordinates[1].x - xDistance * percent, y = coordinates[1].y - yDistance * percent; lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] }); lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
+              lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding)); lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding));
+              texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${percent.toFixed(3)}` }); texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${percent.toFixed(3)}` });
             });
-          }
-          return [{ type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }];
+          } return [{ type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
-
-      // 10. FIBONACCI EXTENSION
       {
         name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, overlay, precision }) {
           const fbLines = [], texts = [];
           if (coordinates.length > 2) {
-            const points = overlay.points;
-            const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y;
-            const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
-            [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => {
-              const y = coordinates[2].y + yDif * percent;
-              const price = (points[2].value + valueDif * percent).toFixed(precision.price);
-              fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] });
-              texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' });
-            });
-          }
-          return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+            const points = overlay.points; const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y; const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
+            [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const y = coordinates[2].y + yDif * percent; const price = (points[2].value + valueDif * percent).toFixed(precision.price); fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] }); texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); });
+          } return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
-
-      // 11. GANN BOX
       {
-        name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
         createPointFigures: function({ coordinates }) {
           if (coordinates.length > 1) {
-            const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4;
-            const xDis = coordinates[1].x - coordinates[0].x;
-            const dashedLines = [
-              { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] },
-              { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] },
-              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] },
-              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] },
-              { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] },
-              { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] },
-              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] },
-              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] }
-            ];
-            const solidLines = [
-              { coordinates: [coordinates[0], coordinates[1]] },
-              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] }
-            ];
-            return [
-              { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] },
-              { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'fill' } },
-              { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } },
-              { type: 'line', attrs: solidLines }
-            ];
-          }
-          return [];
+            const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4; const xDis = coordinates[1].x - coordinates[0].x;
+            const dashedLines = [ { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] }, { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] } ];
+            const solidLines = [ { coordinates: [coordinates[0], coordinates[1]] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] } ];
+            return [ { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] }, { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'fill' } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'line', attrs: solidLines } ];
+          } return [];
         }
       },
-
-      // 12. THREE WAVES
-      { name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       
-      // 13. FIVE WAVES
+      { name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'fiveWaves', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-
-      // 14. EIGHT WAVES
       { name: 'eightWaves', totalStep: 10, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-
-      // 15. ANY WAVES
       { name: 'anyWaves', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
 
-      // 16. ABCD
       {
         name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
-          let acLineCoordinates = [], bdLineCoordinates = [];
-          const tags = ['A', 'B', 'C', 'D'];
-          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
-          if (coordinates.length > 2) {
-            acLineCoordinates = [coordinates[0], coordinates[2]];
-            if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]];
-          }
+          let acLineCoordinates = [], bdLineCoordinates = []; const tags = ['A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
+          if (coordinates.length > 2) { acLineCoordinates = [coordinates[0], coordinates[2]]; if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]]; }
           return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
-
-      // 17. XABCD
       {
-        name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
         createPointFigures: function({ coordinates }) {
-          const dashedLines = [], polygons = [];
-          const tags = ['X', 'A', 'B', 'C', 'D'];
-          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
-          if (coordinates.length > 2) {
-            dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] });
-            polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] });
-            if (coordinates.length > 3) {
-              dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] });
-              if (coordinates.length > 4) {
-                dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] });
-                polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] });
-              }
-            }
-          }
+          const dashedLines = [], polygons = []; const tags = ['X', 'A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
+          if (coordinates.length > 2) { dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] }); polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] }); if (coordinates.length > 3) { dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] }); if (coordinates.length > 4) { dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] }); polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] }); } } }
           return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
 
-      // 18. CUSTOM TEXT (Đã Fix Thành Công)
+      // 🔥 NÂNG CẤP: TEXT TOOL 1-CLICK TỨC THÌ (Ăn ngay chuẩn TV)
       {
-        name: 'customText', totalStep: 2, 
+        name: 'customText', 
+        totalStep: 1, // Đã sửa về 1 click
         needDefaultPointFigure: false, 
-        needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        needDefaultXAxisFigure: false, 
+        needDefaultYAxisFigure: false,
         createPointFigures: function (ref) {
           if (!ref.coordinates || !ref.coordinates.length) return [];
           let t = ref.overlay.extendData;
-          if (t === undefined || t === null) t = window.__WA_TEMP_TEXT__ || 'Văn bản...';
+          if (t === undefined || t === null || t === '') t = 'Văn bản...';
           return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: t, baseline: 'bottom', align: 'center' }, ignoreEvent: false }];
         }
       },
 
-      // 19. HEAD & SHOULDERS (Đã fix 8 steps)
       {
         name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
@@ -366,10 +219,7 @@
           if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] }, styles: { style: 'fill' } });
           if (c.length >= 7) figs.push({ type: 'polygon', attrs: { coordinates: [c[3], c[4], c[5], c[6]] }, styles: { style: 'fill' } });
           if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          ['Left', 'Head', 'Right'].forEach((l, i) => { 
-            let idx = (i===0)?1 : (i===1)?3 : 5;
-            if (c[idx]) figs.push({ type: 'text', attrs: { x: c[idx].x, y: c[idx].y - 15, text: l, align: 'center' }, ignoreEvent: true }); 
-          });
+          ['Left', 'Head', 'Right'].forEach((l, i) => { let idx = (i===0)?1 : (i===1)?3 : 5; if (c[idx]) figs.push({ type: 'text', attrs: { x: c[idx].x, y: c[idx].y - 15, text: l, align: 'center' }, ignoreEvent: true }); });
           return figs;
         }
       }
@@ -456,7 +306,7 @@
   function buildFloatingPropsHTML() {
     return `
       <div class="wa-prop-group" title="Màu nét vẽ"><input type="color" id="wa-prop-line-color" class="wa-prop-color" value="#00F0FF"></div>
-      <div class="wa-prop-group" title="Màu nền (Trong suốt tự động 15%)"><input type="color" id="wa-prop-fill-color" class="wa-prop-color" value="#00F0FF"></div>
+      <div class="wa-prop-group" title="Màu nền"><input type="color" id="wa-prop-fill-color" class="wa-prop-color" value="#00F0FF"></div>
       <div class="wa-prop-group" title="Độ dày nét"><select id="wa-prop-line-size" class="wa-prop-select"><option value="1">1px</option><option value="2">2px</option><option value="3">3px</option></select></div>
       <div class="wa-prop-group" title="Kiểu nét"><select id="wa-prop-line-style" class="wa-prop-select"><option value="solid">▬▬</option><option value="dashed">- - -</option><option value="dotted">. . .</option></select></div>
       <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#2b3139;"></div>
@@ -464,7 +314,7 @@
       <div class="wa-prop-group" title="Cỡ chữ"><select id="wa-prop-text-size" class="wa-prop-select"><option value="12">12px</option><option value="14">14px</option><option value="16">16px</option><option value="18">18px</option><option value="24">24px</option></select></div>
       <div class="wa-prop-group" id="wa-prop-text-wrapper" style="display:none;" title="Nội dung"><input type="text" id="wa-prop-text-input" class="wa-prop-input" placeholder="Nhập văn bản..."></div>
       <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#2b3139;"></div>
-      <button class="wa-prop-btn" id="wa-prop-delete" title="Xóa hình này (Phím Delete/Backspace)">${ICONS.trash}</button>
+      <button class="wa-prop-btn" id="wa-prop-delete" title="Xóa hình này">${ICONS.trash}</button>
     `;
   }
 
@@ -526,7 +376,6 @@
 
       c.classList.add('wa-drawing-mode');
       isEraserMode = false;
-      if (toolId === 'customText') window.__WA_TEMP_TEXT__ = "Văn bản...";
 
       try {
         global.tvChart.createOverlay({
@@ -541,25 +390,37 @@
       } catch (err) {}
     }
 
-    let waitChart = setInterval(() => {
-        if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
-            if (!global.tvChart.__wa_event_bound) {
-                global.tvChart.__wa_event_bound = true;
-                global.tvChart.subscribeAction('onDrawEnd', function() {
-                  executeTool('pointer'); 
-                  document.querySelectorAll('.wa-btn, .wa-menu-item').forEach(el => el.classList.remove('active'));
-                  document.querySelector('[data-tool="pointer"]').classList.add('active');
-                });
-                global.tvChart.subscribeAction('onOverlayClick', function(params) {
-                  if (!params || !params.overlay) { hideFloatingProps(); return; }
-                  if (isEraserMode) { global.tvChart.removeOverlay({ id: params.overlay.id }); return; }
-                  currentSelectedOverlay = params.overlay;
+    if (global.tvChart && typeof global.tvChart.subscribeAction === 'function' && !global.tvChart.__wa_event_bound) {
+        global.tvChart.__wa_event_bound = true;
+        
+        global.tvChart.subscribeAction('onDrawEnd', function(evt) {
+          executeTool('pointer'); 
+          document.querySelectorAll('.wa-btn, .wa-menu-item').forEach(el => el.classList.remove('active'));
+          document.querySelector('[data-tool="pointer"]').classList.add('active');
+
+          // AUTO-FOCUS TEXT TOOL SAU KHI VẼ
+          if (evt && evt.name === 'customText') {
+              currentSelectedOverlay = global.tvChart.getOverlayById(evt.id);
+              if (currentSelectedOverlay) {
                   showFloatingProps();
-                });
-            }
-            clearInterval(waitChart);
-        }
-    }, 500);
+                  setTimeout(() => {
+                      let inputEl = propsBar.querySelector('#wa-prop-text-input');
+                      if (inputEl) {
+                          inputEl.focus();
+                          inputEl.select(); // Bôi đen toàn bộ để gõ chữ mới ăn ngay
+                      }
+                  }, 50);
+              }
+          }
+        });
+
+        global.tvChart.subscribeAction('onOverlayClick', function(params) {
+          if (!params || !params.overlay) { hideFloatingProps(); return; }
+          if (isEraserMode) { global.tvChart.removeOverlay({ id: params.overlay.id }); return; }
+          currentSelectedOverlay = params.overlay;
+          showFloatingProps();
+        });
+    }
 
     if (!global.__wa_keyboard_bound) {
         global.__wa_keyboard_bound = true;
@@ -572,10 +433,11 @@
         });
     }
 
-    const elLineColor = document.getElementById('wa-prop-line-color'), elFillColor = document.getElementById('wa-prop-fill-color');
-    const elTextColor = document.getElementById('wa-prop-text-color'), elLineSize = document.getElementById('wa-prop-line-size');
-    const elLineStyle = document.getElementById('wa-prop-line-style'), elTextSize = document.getElementById('wa-prop-text-size');
-    const elTextInput = document.getElementById('wa-prop-text-input'), elTextWrapper = document.getElementById('wa-prop-text-wrapper');
+    // Dùng querySelector trên propsBar để tránh lỗi tham chiếu DOM cũ khi bị React wipe
+    const elLineColor = propsBar.querySelector('#wa-prop-line-color'), elFillColor = propsBar.querySelector('#wa-prop-fill-color');
+    const elTextColor = propsBar.querySelector('#wa-prop-text-color'), elLineSize = propsBar.querySelector('#wa-prop-line-size');
+    const elLineStyle = propsBar.querySelector('#wa-prop-line-style'), elTextSize = propsBar.querySelector('#wa-prop-text-size');
+    const elTextInput = propsBar.querySelector('#wa-prop-text-input'), elTextWrapper = propsBar.querySelector('#wa-prop-text-wrapper');
 
     function updateSelectedOverlay() {
         if (!currentSelectedOverlay || !global.tvChart) return;
@@ -587,7 +449,6 @@
         globalStyles.lineStyle = elLineStyle.value;
         globalStyles.textSize = parseInt(elTextSize.value);
         
-        // Cập nhật giá trị văn bản realtime
         let newExtendData = currentSelectedOverlay.extendData;
         if(currentSelectedOverlay.name === 'customText') {
             globalStyles.textInput = elTextInput.value;
@@ -606,16 +467,21 @@
     }
 
     [elLineColor, elFillColor, elTextColor, elLineSize, elLineStyle, elTextSize, elTextInput].forEach(el => {
-        el.addEventListener('input', updateSelectedOverlay);
-        el.addEventListener('change', updateSelectedOverlay);
-    });
-
-    document.getElementById('wa-prop-delete').addEventListener('click', () => {
-        if (currentSelectedOverlay && global.tvChart) {
-            global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-            hideFloatingProps();
+        if(el) {
+            el.addEventListener('input', updateSelectedOverlay);
+            el.addEventListener('change', updateSelectedOverlay);
         }
     });
+
+    let btnDelete = propsBar.querySelector('#wa-prop-delete');
+    if (btnDelete) {
+        btnDelete.addEventListener('click', () => {
+            if (currentSelectedOverlay && global.tvChart) {
+                global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+                hideFloatingProps();
+            }
+        });
+    }
 
     function showFloatingProps() {
         if (!currentSelectedOverlay) return;
@@ -627,7 +493,6 @@
         elLineStyle.value = (s.line && s.line.style) ? s.line.style : 'solid';
         elTextSize.value = (s.text && s.text.size) ? s.text.size : 16;
 
-        // Render dữ liệu Text
         if (currentSelectedOverlay.name === 'customText') {
             elTextWrapper.style.display = 'flex';
             elTextInput.value = typeof currentSelectedOverlay.extendData === 'string' ? currentSelectedOverlay.extendData : 'Văn bản...';
@@ -648,45 +513,42 @@
   }
 
   // ======================================================
-  // 5. AUTO-INJECTOR
+  // 5. HỆ THỐNG AUTO-HEAL (TỰ PHỤC HỒI KHI BỊ XÓA DOM)
+  // Giải pháp dứt điểm lỗi mất thanh công cụ khi đổi timeframe
   // ======================================================
-  function autoInjectSystem() {
-    if (global.__wa_observer_started) return;
-    global.__wa_observer_started = true;
+  function ensureUI() {
+    var container = document.getElementById('sc-chart-container');
+    if (!container) return;
 
-    var observer = new MutationObserver(function(mutations, obs) {
-        var container = document.getElementById('sc-chart-container');
-        if (!container) return;
+    var hasCanvas = container.querySelector('canvas');
+    var hasSidebar = container.querySelector('.wa-floating-sidebar');
 
-        var hasCanvas = container.querySelector('canvas');
-        var hasSidebar = container.querySelector('.wa-floating-sidebar');
+    if (hasCanvas && !hasSidebar) {
+        injectCSS();
+        registerProExtensions();
 
-        if (hasCanvas && !hasSidebar) {
-            injectCSS();
-            registerProExtensions();
+        var sidebar = document.createElement('div');
+        sidebar.className = 'wa-floating-sidebar';
+        sidebar.innerHTML = buildHTML();
+        container.appendChild(sidebar);
 
-            var sidebar = document.createElement('div');
-            sidebar.className = 'wa-floating-sidebar';
-            sidebar.innerHTML = buildHTML();
-            container.appendChild(sidebar);
+        var propsBar = document.createElement('div');
+        propsBar.className = 'wa-floating-props';
+        propsBar.id = 'wa-props-bar';
+        propsBar.innerHTML = buildFloatingPropsHTML();
+        container.appendChild(propsBar);
 
-            var propsBar = document.createElement('div');
-            propsBar.className = 'wa-floating-props';
-            propsBar.id = 'wa-props-bar';
-            propsBar.innerHTML = buildFloatingPropsHTML();
-            container.appendChild(propsBar);
-
-            bindEvents(sidebar, propsBar);
-            
-            // CỰC KỲ QUAN TRỌNG: Ngắt theo dõi ngầm để trị dứt điểm tình trạng giật lag FPS khi vẽ
-            obs.disconnect(); 
-        }
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
+        bindEvents(sidebar, propsBar);
+    }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', autoInjectSystem);
-  else autoInjectSystem();
+  // Dùng setInterval quét nhẹ mỗi 500ms thay vì MutationObserver. 
+  // Rất nhẹ, 0 lag, và chắc chắn mọc lại thanh công cụ nếu DOM bị làm mới.
+  if (!global.__wa_auto_heal_started) {
+      global.__wa_auto_heal_started = true;
+      setInterval(ensureUI, 500);
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureUI);
+      else ensureUI();
+  }
 
 })(window);
