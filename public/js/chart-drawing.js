@@ -993,15 +993,325 @@
       },
       { name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { let acLineCoordinates = [], bdLineCoordinates = []; const tags = ['A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { acLineCoordinates = [coordinates[0], coordinates[2]]; if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]]; } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const dashedLines = [], polygons = []; const tags = ['X', 'A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] }); polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] }); if (coordinates.length > 3) { dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] }); if (coordinates.length > 4) { dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] }); polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] }); } } } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      // --- BATCH 7: CHART PATTERNS (Đã fix lỗi cú pháp mảng c[i] & Tối ưu UI/UX) ---
       {
-        name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || []; var figs = [];
-          const faintStyle = { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' }; 
-          if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] }, styles: faintStyle });
-          if (c.length >= 7) figs.push({ type: 'polygon', attrs: { coordinates: [c[3], c[4], c[5], c[6]] }, styles: faintStyle });
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          ['Left', 'Head', 'Right'].forEach((l, i) => { let idx = (i===0)?1 : (i===1)?3 : 5; if (c[idx]) figs.push({ type: 'text', attrs: { x: c[idx].x, y: c[idx].y - 15, text: l, align: 'center' }, ignoreEvent: true }); });
+        name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, LABELS = ['', 'LS', '', 'Head', '', 'RS', ''];
+          function el(A, B) {
+            var dx = B.x-A.x, dy = B.y-A.y;
+            function r(ox, oy, vx, vy) {
+              var ts = [];
+              if (vx > 0.001) ts.push((W-ox)/vx); if (vx < -0.001) ts.push((0-ox)/vx);
+              if (vy > 0.001) ts.push((H-oy)/vy); if (vy < -0.001) ts.push((0-oy)/vy);
+              var t = ts.filter(v => v >= 0).length ? Math.min(...ts.filter(v => v >= 0)) : 0;
+              return { x: ox+vx*t, y: oy+vy*t };
+            }
+            return [r(A.x,A.y,-dx,-dy), r(A.x,A.y,dx,dy)];
+          }
+          var figs = [];
+          for (var i = 0; i < c.length-1; i++) figs.push({ type:'line', attrs:{ coordinates:[c[i],c[i+1]] } });
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var pp = j>0?c[j-1]:c[Math.min(j+1,c.length-1)], pn = j<c.length-1?c[j+1]:c[Math.max(j-1,0)];
+            var above = c[j].y <= (pp.y+pn.y)/2;
+            figs.push({ type:'text', attrs:{ x:c[j].x, y:above?c[j].y-10:c[j].y+10, text:LABELS[j], align:'center', baseline:above?'bottom':'top' }, ignoreEvent:true });
+          }
+          if (c.length >= 5) {
+            var nl = el(c[2], c[4]);
+            figs.push({ type:'line', attrs:{ coordinates:nl }, styles: { style: 'dashed' } }); // Neckline nét đứt
+            figs.push({ type:'text', attrs:{ x:nl[1].x-4, y:nl[1].y-4, text:'Neckline', align:'right', baseline:'bottom' }, ignoreEvent:true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'inverseHeadAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, LABELS = ['', 'LS', '', 'Head', '', 'RS', ''];
+          function el(A, B) {
+            var dx = B.x-A.x, dy = B.y-A.y;
+            function r(ox, oy, vx, vy) {
+              var ts = [];
+              if (vx > 0.001) ts.push((W-ox)/vx); if (vx < -0.001) ts.push((0-ox)/vx);
+              if (vy > 0.001) ts.push((H-oy)/vy); if (vy < -0.001) ts.push((0-oy)/vy);
+              var t = ts.filter(v => v >= 0).length ? Math.min(...ts.filter(v => v >= 0)) : 0;
+              return { x: ox+vx*t, y: oy+vy*t };
+            }
+            return [r(A.x,A.y,-dx,-dy), r(A.x,A.y,dx,dy)];
+          }
+          var figs = [];
+          for (var i = 0; i < c.length-1; i++) figs.push({ type:'line', attrs:{ coordinates:[c[i],c[i+1]] } });
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var pp = j>0?c[j-1]:c[Math.min(j+1,c.length-1)], pn = j<c.length-1?c[j+1]:c[Math.max(j-1,0)];
+            var above = c[j].y <= (pp.y+pn.y)/2;
+            figs.push({ type:'text', attrs:{ x:c[j].x, y:above?c[j].y-10:c[j].y+10, text:LABELS[j], align:'center', baseline:above?'bottom':'top' }, ignoreEvent:true });
+          }
+          if (c.length >= 5) {
+            var nl = el(c[2], c[4]);
+            figs.push({ type:'line', attrs:{ coordinates:nl }, styles: { style: 'dashed' } });
+            figs.push({ type:'text', attrs:{ x:nl[1].x-4, y:nl[1].y-4, text:'Neckline', align:'right', baseline:'bottom' }, ignoreEvent:true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'tripleTop', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, LABELS = ['', 'T1', '', 'T2', '', 'T3', ''];
+          function el(A, B) {
+            var dx = B.x-A.x, dy = B.y-A.y;
+            function r(ox, oy, vx, vy) {
+              var ts = [];
+              if (vx > 0.001) ts.push((W-ox)/vx); if (vx < -0.001) ts.push((0-ox)/vx);
+              if (vy > 0.001) ts.push((H-oy)/vy); if (vy < -0.001) ts.push((0-oy)/vy);
+              var t = ts.filter(v => v >= 0).length ? Math.min(...ts.filter(v => v >= 0)) : 0;
+              return { x: ox+vx*t, y: oy+vy*t };
+            }
+            return [r(A.x,A.y,-dx,-dy), r(A.x,A.y,dx,dy)];
+          }
+          var figs = [];
+          for (var i = 0; i < c.length-1; i++) figs.push({ type:'line', attrs:{ coordinates:[c[i],c[i+1]] } });
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var pp = j>0?c[j-1]:c[Math.min(j+1,c.length-1)], pn = j<c.length-1?c[j+1]:c[Math.max(j-1,0)];
+            var above = c[j].y <= (pp.y+pn.y)/2;
+            figs.push({ type:'text', attrs:{ x:c[j].x, y:above?c[j].y-10:c[j].y+10, text:LABELS[j], align:'center', baseline:above?'bottom':'top' }, ignoreEvent:true });
+          }
+          if (c.length >= 5) {
+            var nl = el(c[2], c[4]);
+            figs.push({ type:'line', attrs:{ coordinates:nl }, styles: { style: 'dashed' } });
+            figs.push({ type:'text', attrs:{ x:nl[1].x-4, y:nl[1].y-4, text:'Neckline', align:'right', baseline:'bottom' }, ignoreEvent:true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'tripleBottom', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, LABELS = ['', 'B1', '', 'B2', '', 'B3', ''];
+          function el(A, B) {
+            var dx = B.x-A.x, dy = B.y-A.y;
+            function r(ox, oy, vx, vy) {
+              var ts = [];
+              if (vx > 0.001) ts.push((W-ox)/vx); if (vx < -0.001) ts.push((0-ox)/vx);
+              if (vy > 0.001) ts.push((H-oy)/vy); if (vy < -0.001) ts.push((0-oy)/vy);
+              var t = ts.filter(v => v >= 0).length ? Math.min(...ts.filter(v => v >= 0)) : 0;
+              return { x: ox+vx*t, y: oy+vy*t };
+            }
+            return [r(A.x,A.y,-dx,-dy), r(A.x,A.y,dx,dy)];
+          }
+          var figs = [];
+          for (var i = 0; i < c.length-1; i++) figs.push({ type:'line', attrs:{ coordinates:[c[i],c[i+1]] } });
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var pp = j>0?c[j-1]:c[Math.min(j+1,c.length-1)], pn = j<c.length-1?c[j+1]:c[Math.max(j-1,0)];
+            var above = c[j].y <= (pp.y+pn.y)/2;
+            figs.push({ type:'text', attrs:{ x:c[j].x, y:above?c[j].y-10:c[j].y+10, text:LABELS[j], align:'center', baseline:above?'bottom':'top' }, ignoreEvent:true });
+          }
+          if (c.length >= 5) {
+            var nl = el(c[2], c[4]);
+            figs.push({ type:'line', attrs:{ coordinates:nl }, styles: { style: 'dashed' } });
+            figs.push({ type:'text', attrs:{ x:nl[1].x-4, y:nl[1].y-4, text:'Neckline', align:'right', baseline:'bottom' }, ignoreEvent:true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'doubleTop', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, LABELS = ['', 'Top 1', '', 'Top 2', ''];
+          var figs = [];
+          for(var i=0; i<c.length-1; i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          for(var j=0; j<c.length; j++){
+            if(!LABELS[j]) continue;
+            var pp = j>0?c[j-1]:c[Math.min(j+1,c.length-1)], pn = j<c.length-1?c[j+1]:c[Math.max(j-1,0)];
+            var above = c[j].y <= (pp.y+pn.y)/2;
+            figs.push({type:'text',attrs:{x:c[j].x,y:above?c[j].y-10:c[j].y+10,text:LABELS[j],align:'center',baseline:above?'bottom':'top'},ignoreEvent:true});
+          }
+          if (c.length >= 3) {
+            figs.push({ type:'line', attrs:{ coordinates:[{x:0,y:c[2].y},{x:W,y:c[2].y}] }, styles: { style: 'dashed' } });
+            figs.push({ type:'text', attrs:{ x:W-4, y:c[2].y-4, text:'Neckline', align:'right', baseline:'bottom' }, ignoreEvent:true });
+            if (c.length >= 4) {
+              var peakAvg = (c[1].y + c[3].y) / 2;
+              var targetY = c[2].y + (c[2].y - peakAvg);
+              figs.push({ type:'line', attrs:{ coordinates:[{x:0,y:targetY},{x:W,y:targetY}] }, styles: { style: 'dashed', color: 'rgba(246, 70, 93, 1)' } });
+              figs.push({ type:'text', attrs:{ x:4, y:targetY+4, text:'Target', align:'left', baseline:'top' }, ignoreEvent:true });
+            }
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'doubleBottom', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, LABELS = ['', 'Bot 1', '', 'Bot 2', ''];
+          var figs = [];
+          for(var i=0; i<c.length-1; i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          for(var j=0; j<c.length; j++){
+            if(!LABELS[j]) continue;
+            var pp = j>0?c[j-1]:c[Math.min(j+1,c.length-1)], pn = j<c.length-1?c[j+1]:c[Math.max(j-1,0)];
+            var above = c[j].y <= (pp.y+pn.y)/2;
+            figs.push({type:'text',attrs:{x:c[j].x,y:above?c[j].y-10:c[j].y+10,text:LABELS[j],align:'center',baseline:above?'bottom':'top'},ignoreEvent:true});
+          }
+          if (c.length >= 3) {
+            figs.push({ type:'line', attrs:{ coordinates:[{x:0,y:c[2].y},{x:W,y:c[2].y}] }, styles: { style: 'dashed' } });
+            figs.push({ type:'text', attrs:{ x:W-4, y:c[2].y+4, text:'Neckline', align:'right', baseline:'top' }, ignoreEvent:true });
+            if (c.length >= 4) {
+              var valleyAvg = (c[1].y + c[3].y) / 2;
+              var targetY = c[2].y - (valleyAvg - c[2].y);
+              figs.push({ type:'line', attrs:{ coordinates:[{x:0,y:targetY},{x:W,y:targetY}] }, styles: { style: 'dashed', color: 'rgba(14, 203, 129, 1)' } });
+              figs.push({ type:'text', attrs:{ x:4, y:targetY-4, text:'Target', align:'left', baseline:'bottom' }, ignoreEvent:true });
+            }
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'threeDrives', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var LABELS = ['', 'D1', 'C1', 'D2', 'C2', 'D3'];
+          var figs = [];
+          for(var i=0; i<c.length-1; i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          for(var j=0; j<c.length; j++){
+            if(!LABELS[j]) continue;
+            var pp = j>0?c[j-1]:c[Math.min(j+1,c.length-1)], pn = j<c.length-1?c[j+1]:c[Math.max(j-1,0)];
+            var above = c[j].y <= (pp.y+pn.y)/2;
+            figs.push({type:'text',attrs:{x:c[j].x,y:above?c[j].y-10:c[j].y+10,text:LABELS[j],align:'center',baseline:above?'bottom':'top'},ignoreEvent:true});
+          }
+          if (c.length >= 6) {
+            figs.push({ type:'line', attrs:{ coordinates:[c[1],c[3],c[5]] }, styles: { style: 'dashed' } });
+            figs.push({ type:'line', attrs:{ coordinates:[c[2],c[4]] }, styles: { style: 'dashed' } });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'symmetricalTriangle', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, PATTERN_NAME = 'Sym △';
+          function el(A,B){var dx=B.x-A.x,dy=B.y-A.y;function r(ox,oy,vx,vy){var ts=[];if(vx>0.001)ts.push((W-ox)/vx);if(vx<-0.001)ts.push((0-ox)/vx);if(vy>0.001)ts.push((H-oy)/vy);if(vy<-0.001)ts.push((0-oy)/vy);var t=ts.filter(v=>v>=0).length?Math.min(...ts.filter(v=>v>=0)):0;return{x:ox+vx*t,y:oy+vy*t};}return[r(A.x,A.y,-dx,-dy),r(A.x,A.y,dx,dy)];}
+          var figs = [];
+          if(c.length === 4) { // Tô màu mờ lòng tam giác khi đủ 4 điểm
+            figs.push({ type: 'polygon', attrs: { coordinates: c }, styles: { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' } });
+          }
+          for(var i=0;i<c.length-1;i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          if(c.length>=3) figs.push({type:'line',attrs:{coordinates:el(c[0],c[2])}, styles: { style: 'dashed' } });
+          if(c.length>=4) figs.push({type:'line',attrs:{coordinates:el(c[1],c[3])}, styles: { style: 'dashed' } });
+          if(c.length>=2){ var cx=(c[0].x+c[c.length-1].x)/2, cy=(c[0].y+c[c.length-1].y)/2; figs.push({type:'text',attrs:{x:cx,y:cy,text:PATTERN_NAME,align:'center',baseline:'middle'},ignoreEvent:true}); }
+          return figs;
+        }
+      },
+      {
+        name: 'ascendingTriangle', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, PATTERN_NAME = 'Asc △';
+          function el(A,B){var dx=B.x-A.x,dy=B.y-A.y;function r(ox,oy,vx,vy){var ts=[];if(vx>0.001)ts.push((W-ox)/vx);if(vx<-0.001)ts.push((0-ox)/vx);if(vy>0.001)ts.push((H-oy)/vy);if(vy<-0.001)ts.push((0-oy)/vy);var t=ts.filter(v=>v>=0).length?Math.min(...ts.filter(v=>v>=0)):0;return{x:ox+vx*t,y:oy+vy*t};}return[r(A.x,A.y,-dx,-dy),r(A.x,A.y,dx,dy)];}
+          var figs = [];
+          if(c.length === 4) figs.push({ type: 'polygon', attrs: { coordinates: c }, styles: { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' } });
+          for(var i=0;i<c.length-1;i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          if(c.length>=3) figs.push({type:'line',attrs:{coordinates:el(c[0],c[2])}, styles: { style: 'dashed' }});
+          if(c.length>=4) figs.push({type:'line',attrs:{coordinates:el(c[1],c[3])}, styles: { style: 'dashed' }});
+          if(c.length>=2){ var cx=(c[0].x+c[c.length-1].x)/2, cy=(c[0].y+c[c.length-1].y)/2; figs.push({type:'text',attrs:{x:cx,y:cy,text:PATTERN_NAME,align:'center',baseline:'middle'},ignoreEvent:true}); }
+          return figs;
+        }
+      },
+      {
+        name: 'descendingTriangle', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, PATTERN_NAME = 'Desc △';
+          function el(A,B){var dx=B.x-A.x,dy=B.y-A.y;function r(ox,oy,vx,vy){var ts=[];if(vx>0.001)ts.push((W-ox)/vx);if(vx<-0.001)ts.push((0-ox)/vx);if(vy>0.001)ts.push((H-oy)/vy);if(vy<-0.001)ts.push((0-oy)/vy);var t=ts.filter(v=>v>=0).length?Math.min(...ts.filter(v=>v>=0)):0;return{x:ox+vx*t,y:oy+vy*t};}return[r(A.x,A.y,-dx,-dy),r(A.x,A.y,dx,dy)];}
+          var figs = [];
+          if(c.length === 4) figs.push({ type: 'polygon', attrs: { coordinates: c }, styles: { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' } });
+          for(var i=0;i<c.length-1;i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          if(c.length>=3) figs.push({type:'line',attrs:{coordinates:el(c[0],c[2])}, styles: { style: 'dashed' }});
+          if(c.length>=4) figs.push({type:'line',attrs:{coordinates:el(c[1],c[3])}, styles: { style: 'dashed' }});
+          if(c.length>=2){ var cx=(c[0].x+c[c.length-1].x)/2, cy=(c[0].y+c[c.length-1].y)/2; figs.push({type:'text',attrs:{x:cx,y:cy,text:PATTERN_NAME,align:'center',baseline:'middle'},ignoreEvent:true}); }
+          return figs;
+        }
+      },
+      {
+        name: 'risingWedge', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, PATTERN_NAME = '↑ Wedge';
+          function el(A,B){var dx=B.x-A.x,dy=B.y-A.y;function r(ox,oy,vx,vy){var ts=[];if(vx>0.001)ts.push((W-ox)/vx);if(vx<-0.001)ts.push((0-ox)/vx);if(vy>0.001)ts.push((H-oy)/vy);if(vy<-0.001)ts.push((0-oy)/vy);var t=ts.filter(v=>v>=0).length?Math.min(...ts.filter(v=>v>=0)):0;return{x:ox+vx*t,y:oy+vy*t};}return[r(A.x,A.y,-dx,-dy),r(A.x,A.y,dx,dy)];}
+          var figs = [];
+          if(c.length === 4) figs.push({ type: 'polygon', attrs: { coordinates: c }, styles: { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' } });
+          for(var i=0;i<c.length-1;i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          if(c.length>=3) figs.push({type:'line',attrs:{coordinates:el(c[0],c[2])}, styles: { style: 'dashed' }});
+          if(c.length>=4) figs.push({type:'line',attrs:{coordinates:el(c[1],c[3])}, styles: { style: 'dashed' }});
+          if(c.length>=2){ var cx=(c[0].x+c[c.length-1].x)/2, cy=(c[0].y+c[c.length-1].y)/2; figs.push({type:'text',attrs:{x:cx,y:cy,text:PATTERN_NAME,align:'center',baseline:'middle'},ignoreEvent:true}); }
+          return figs;
+        }
+      },
+      {
+        name: 'fallingWedge', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, PATTERN_NAME = '↓ Wedge';
+          function el(A,B){var dx=B.x-A.x,dy=B.y-A.y;function r(ox,oy,vx,vy){var ts=[];if(vx>0.001)ts.push((W-ox)/vx);if(vx<-0.001)ts.push((0-ox)/vx);if(vy>0.001)ts.push((H-oy)/vy);if(vy<-0.001)ts.push((0-oy)/vy);var t=ts.filter(v=>v>=0).length?Math.min(...ts.filter(v=>v>=0)):0;return{x:ox+vx*t,y:oy+vy*t};}return[r(A.x,A.y,-dx,-dy),r(A.x,A.y,dx,dy)];}
+          var figs = [];
+          if(c.length === 4) figs.push({ type: 'polygon', attrs: { coordinates: c }, styles: { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' } });
+          for(var i=0;i<c.length-1;i++) figs.push({type:'line',attrs:{coordinates:[c[i],c[i+1]]}});
+          if(c.length>=3) figs.push({type:'line',attrs:{coordinates:el(c[0],c[2])}, styles: { style: 'dashed' }});
+          if(c.length>=4) figs.push({type:'line',attrs:{coordinates:el(c[1],c[3])}, styles: { style: 'dashed' }});
+          if(c.length>=2){ var cx=(c[0].x+c[c.length-1].x)/2, cy=(c[0].y+c[c.length-1].y)/2; figs.push({type:'text',attrs:{x:cx,y:cy,text:PATTERN_NAME,align:'center',baseline:'middle'},ignoreEvent:true}); }
+          return figs;
+        }
+      },
+      {
+        name: 'flagPattern', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var figs = [];
+          figs.push({ type:'line', attrs:{ coordinates:[c[0],c[1]] } }); // Cán cờ
+          if (c.length < 4) {
+            if (c.length >= 3) figs.push({ type:'line', attrs:{ coordinates:[c[1],c[2]] } });
+            return figs;
+          }
+          var P1 = c[1], P2 = c[2], P3 = c[3];
+          var P4 = { x: P1.x + P3.x - P2.x, y: P1.y + P3.y - P2.y };
+          // Lá cờ có nền mờ
+          figs.push({ type:'polygon', attrs:{ coordinates:[P1, P2, P3, P4] }, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.08)' } });
+          var cx = (P1.x+P2.x+P3.x+P4.x)/4, cy = (P1.y+P2.y+P3.y+P4.y)/4;
+          figs.push({ type:'text', attrs:{ x:cx, y:cy, text:'Flag', align:'center', baseline:'middle' }, ignoreEvent:true });
+          return figs;
+        }
+      },
+      {
+        name: 'pennantPattern', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding; if (c.length < 2) return [];
+          var W = b.width, H = b.height, figs = [];
+          figs.push({ type:'line', attrs:{ coordinates:[c[0],c[1]] } }); // Cán cờ
+          if (c.length < 4) {
+            if (c.length >= 3) figs.push({ type:'line', attrs:{ coordinates:[c[1],c[2]] } });
+            return figs;
+          }
+          var P1 = c[1], P2 = c[2], P3 = c[3];
+          function rayFwd(from, to) {
+            var dx = to.x-from.x, dy = to.y-from.y, ts = [];
+            if(dx>0.001) ts.push((W-from.x)/dx); if(dx<-0.001) ts.push((0-from.x)/dx);
+            if(dy>0.001) ts.push((H-from.y)/dy); if(dy<-0.001) ts.push((0-from.y)/dy);
+            var t = ts.filter(v => v>0).length ? Math.min(...ts.filter(v => v>0)) : 1;
+            return {x:from.x+dx*t, y:from.y+dy*t};
+          }
+          // Hình tam giác cờ đuôi nheo có màu nền mờ
+          figs.push({ type:'polygon', attrs:{ coordinates:[P1, rayFwd(P1,P2), rayFwd(P1,P3)] }, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.08)' } });
+          var cx=(P1.x+P2.x+P3.x)/3, cy=(P1.y+P2.y+P3.y)/3;
+          figs.push({ type:'text', attrs:{ x:cx, y:cy, text:'Pennant', align:'center', baseline:'middle' }, ignoreEvent:true });
           return figs;
         }
       },
@@ -1128,7 +1438,26 @@
         // Gộp các Harmonic pattern vào chung menu này
         { id: 'abcd',              n: 'Mô hình ABCD' },
         { id: 'xabcd',             n: 'Mô hình XABCD' },
-        { id: 'headAndShoulders',  n: 'Vai Đầu Vai' }
+        {
+      id: 'chartPatterns',
+      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,18 5,10 8,14 12,6 16,14 19,10 22,18"/><line x1="5" y1="18" x2="19" y2="18"/></svg>`,
+      tools: [
+        { id: 'headAndShoulders',        n: 'Vai Đầu Vai' },
+        { id: 'inverseHeadAndShoulders', n: 'Vai Đầu Vai Ngược' },
+        { id: 'tripleTop',               n: 'Ba Đỉnh' },
+        { id: 'tripleBottom',            n: 'Ba Đáy' },
+        { id: 'doubleTop',               n: 'Hai Đỉnh (Chữ M)' },
+        { id: 'doubleBottom',            n: 'Hai Đáy (Chữ W)' },
+        { id: 'threeDrives',             n: 'Three Drives' },
+        { id: 'symmetricalTriangle',     n: 'Tam Giác Cân' },
+        { id: 'ascendingTriangle',       n: 'Tam Giác Tăng' },
+        { id: 'descendingTriangle',      n: 'Tam Giác Giảm' },
+        { id: 'risingWedge',             n: 'Nêm Tăng' },
+        { id: 'fallingWedge',            n: 'Nêm Giảm' },
+        { id: 'flagPattern',             n: 'Mô hình Cờ (Flag)' },
+        { id: 'pennantPattern',          n: 'Mô hình Pennant' }
+      ]
+    }
       ]
     },
     { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`, tools: [ {id: 'andrewsPitchfork', n: 'Andrews Pitchfork'}, {id: 'schiffPitchfork', n: 'Schiff Pitchfork'}, {id: 'modifiedSchiffPitchfork', n: 'Modified Schiff'}, {id: 'insidePitchfork', n: 'Inside Pitchfork'} ]}
@@ -1320,15 +1649,14 @@
   // 5. PROPS PANEL (WYSIWYG TÙY BIẾN CHO TỪNG LOẠI)
   // ==========================================
   function getToolCategory(name) {
-    // Đưa tất cả hình khối có diện tích vào nhóm shapes để chỉnh Màu nền (Fill) & Viền (Border)
-    const shapes = ['rectangle', 'rotatedRectangle', 'circle', 'ellipse', 'triangle', 'parallelogram', 'gannBox', 'gannSquare', 'arrowUp', 'arrowDown'];
+    const shapes = ['rectangle', 'rotatedRectangle', 'circle', 'ellipse', 'triangle', 'parallelogram', 'gannBox', 'gannSquare', 'arrowUp', 'arrowDown', 'symmetricalTriangle', 'ascendingTriangle', 'descendingTriangle', 'risingWedge', 'fallingWedge', 'flagPattern', 'pennantPattern'];
     if (shapes.includes(name)) return 'shapes';
     
     if (name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT') || name === 'gannFan') return 'fibo';
     if (name === 'customText') return 'text';
-    if (name.startsWith('elliott') || name.includes('abcd') || name === 'headAndShoulders' || name.toLowerCase().includes('wave')) return 'waves';
+    if (name.startsWith('wave') || name.startsWith('elliott') || name.includes('abcd') || name.includes('HeadAndShoulders') || name.includes('Top') || name.includes('Bottom') || name === 'threeDrives') return 'waves';
     
-    return 'lines'; // highlighter, arrow, pathShape, polyline, curveShape... tự động ăn theo cài đặt của nét vẽ (Lines)
+    return 'lines'; 
   }
 
   function renderPanel(overlay) {
