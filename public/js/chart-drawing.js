@@ -1,8 +1,7 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026
-// 100% KLineChart Pro Logic | Floating UI | Draggable
-// Cập nhật thuật toán từ klinecharts/pro/src/extension
+// Fix: Lag Observer, Text Realtime Edit, Wave Steps
 // ==========================================
 
 (function (global) {
@@ -22,14 +21,14 @@
   };
 
   // ======================================================
-  // 2. BỨNG 100% THUẬT TOÁN TỪ REPO PRO (SÓNG, HARMONIC, TEXT...)
+  // 2. BỨNG 100% THUẬT TOÁN TỪ REPO PRO
   // ======================================================
   function registerProExtensions() {
     var kc = global.klinecharts;
     if (!kc || kc.__wa_extensions_registered) return;
     kc.__wa_extensions_registered = true;
 
-    // --- CÁC HÀM TIỆN ÍCH (UTILS) TỪ PRO REPO ---
+    // --- CÁC HÀM TIỆN ÍCH (UTILS) ---
     function getRotateCoordinate(coordinate, targetCoordinate, angle) {
       const x = (coordinate.x - targetCoordinate.x) * Math.cos(angle) - (coordinate.y - targetCoordinate.y) * Math.sin(angle) + targetCoordinate.x;
       const y = (coordinate.x - targetCoordinate.x) * Math.sin(angle) + (coordinate.y - targetCoordinate.y) * Math.cos(angle) + targetCoordinate.y;
@@ -46,28 +45,18 @@
       if (coordinates.length > 1) {
         let coordinate;
         if (coordinates[0].x === coordinates[1].x && coordinates[0].y !== coordinates[1].y) {
-          if (coordinates[0].y < coordinates[1].y) {
-            coordinate = { x: coordinates[0].x, y: bounding.height };
-          } else {
-            coordinate = { x: coordinates[0].x, y: 0 };
-          }
+          coordinate = coordinates[0].y < coordinates[1].y ? { x: coordinates[0].x, y: bounding.height } : { x: coordinates[0].x, y: 0 };
         } else if (coordinates[0].x > coordinates[1].x) {
-          coordinate = {
-            x: 0,
-            y: kc.utils.getLinearYFromCoordinates(coordinates[0], coordinates[1], { x: 0, y: coordinates[0].y })
-          };
+          coordinate = { x: 0, y: kc.utils.getLinearYFromCoordinates(coordinates[0], coordinates[1], { x: 0, y: coordinates[0].y }) };
         } else {
-          coordinate = {
-            x: bounding.width,
-            y: kc.utils.getLinearYFromCoordinates(coordinates[0], coordinates[1], { x: bounding.width, y: coordinates[0].y })
-          };
+          coordinate = { x: bounding.width, y: kc.utils.getLinearYFromCoordinates(coordinates[0], coordinates[1], { x: bounding.width, y: coordinates[0].y }) };
         }
         return { coordinates: [coordinates[0], coordinate] };
       }
       return [];
     }
 
-    // --- CUSTOM WAVES CŨ (Giữ lại để tương thích chart cũ) ---
+    // --- HÀM TẠO SÓNG (ĐÃ FIX BUG totalStep = points + 1) ---
     function createWave(name, totalStep, labels) {
       return {
         name: name, totalStep: totalStep, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
@@ -83,71 +72,58 @@
     }
 
     var extensions = [
-      // Sóng tuỳ chỉnh của Wave Alpha
-      createWave('waveElliott', 6, ['0', '1', '2', '3', '4', '5']), 
-      createWave('waveABC', 4, ['0', 'A', 'B', 'C']),                   
-      createWave('waveTriangle', 6, ['0', 'A', 'B', 'C', 'D', 'E']),
-      createWave('waveWXY', 4, ['0', 'W', 'X', 'Y']),
+      // Sóng Custom Wave Alpha (Đã fix cộng thêm 1 step)
+      createWave('waveElliott', 7, ['0', '1', '2', '3', '4', '5']), 
+      createWave('waveABC', 5, ['0', 'A', 'B', 'C']),                   
+      createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']),
+      createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
 
-      // 1. ARROW (PRO)
+      // 1. ARROW
       {
         name: 'arrow', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
           if (coordinates.length > 1) {
             const flag = coordinates[1].x > coordinates[0].x ? 0 : 1;
             const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
-            let offsetAngle;
-            if (kb) {
-              offsetAngle = Math.atan(kb[0]) + Math.PI * flag;
-            } else {
-              offsetAngle = coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3;
-            }
+            let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3);
             const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y + 4 }, coordinates[1], offsetAngle);
             const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y - 4 }, coordinates[1], offsetAngle);
-            return [
-              { type: 'line', attrs: { coordinates } },
-              { type: 'line', ignoreEvent: true, attrs: { coordinates: [rotateCoordinate1, coordinates[1], rotateCoordinate2] } }
-            ];
+            return [{ type: 'line', attrs: { coordinates } }, { type: 'line', ignoreEvent: true, attrs: { coordinates: [rotateCoordinate1, coordinates[1], rotateCoordinate2] } }];
           }
           return [];
         }
       },
 
-      // 2. CIRCLE (PRO)
+      // 2. CIRCLE
       {
         name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         styles: { circle: { color: 'rgba(22, 119, 255, 0.15)' } },
         createPointFigures: function({ coordinates }) {
           if (coordinates.length > 1) {
-            const radius = getDistance(coordinates[0], coordinates[1]);
-            return { type: 'circle', attrs: { ...coordinates[0], r: radius }, styles: { style: 'stroke_fill' } };
+            return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) }, styles: { style: 'stroke_fill' } };
           }
           return [];
         }
       },
 
-      // 3. RECT (PRO)
+      // 3. RECT
       {
         name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
         createPointFigures: function({ coordinates }) {
           if (coordinates.length > 1) {
-            return [
-              { type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'stroke_fill' } }
-            ];
+            return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'stroke_fill' } }];
           }
           return [];
         }
       },
 
-      // 4. PARALLELOGRAM (PRO)
+      // 4. PARALLELOGRAM
       {
         name: 'parallelogram', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
         createPointFigures: function({ coordinates }) {
-          if (coordinates.length === 2) {
-            return [{ type: 'line', ignoreEvent: true, attrs: { coordinates } }];
-          }
+          if (coordinates.length === 2) return [{ type: 'line', ignoreEvent: true, attrs: { coordinates } }];
           if (coordinates.length === 3) {
             const coordinate = { x: coordinates[0].x + (coordinates[2].x - coordinates[1].x), y: coordinates[2].y };
             return [{ type: 'polygon', attrs: { coordinates: [coordinates[0], coordinates[1], coordinates[2], coordinate] }, styles: { style: 'stroke_fill' } }];
@@ -155,63 +131,49 @@
           return [];
         },
         performEventPressedMove: function({ points, performPointIndex, performPoint }) {
-          if (performPointIndex < 2) {
-            points[0].price = performPoint.price;
-            points[1].price = performPoint.price;
-          }
+          if (performPointIndex < 2) { points[0].price = performPoint.price; points[1].price = performPoint.price; }
         },
         performEventMoveForDrawing: function({ currentStep, points, performPoint }) {
-          if (currentStep === 2) {
-            points[0].price = performPoint.price;
-          }
+          if (currentStep === 2) points[0].price = performPoint.price;
         }
       },
 
-      // 5. TRIANGLE (PRO)
+      // 5. TRIANGLE
       {
         name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
-        createPointFigures: function({ coordinates }) {
-          return [{ type: 'polygon', attrs: { coordinates }, styles: { style: 'stroke_fill' } }];
-        }
+        createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates }, styles: { style: 'stroke_fill' } }]; }
       },
 
-      // 6. FIBONACCI CIRCLE (PRO)
+      // 6. FIBONACCI CIRCLE
       {
         name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
           if (coordinates.length > 1) {
             const radius = getDistance(coordinates[0], coordinates[1]);
-            const percents = [0.236, 0.382, 0.5, 0.618, 0.786, 1];
-            const circles = [];
-            const texts = [];
-            percents.forEach(percent => {
+            const circles = [], texts = [];
+            [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => {
               const r = radius * percent;
               circles.push({ ...coordinates[0], r });
               texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` });
             });
-            return [
-              { type: 'circle', attrs: circles, styles: { style: 'stroke' } },
-              { type: 'text', ignoreEvent: true, attrs: texts }
-            ];
+            return [{ type: 'circle', attrs: circles, styles: { style: 'stroke' } }, { type: 'text', ignoreEvent: true, attrs: texts }];
           }
           return [];
         }
       },
 
-      // 7. FIBONACCI SEGMENT (PRO)
+      // 7. FIBONACCI SEGMENT
       {
         name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, overlay, precision }) {
-          const lines = [];
-          const texts = [];
+          const lines = [], texts = [];
           if (coordinates.length > 1) {
             const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x;
-            const percents = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
             const yDif = coordinates[0].y - coordinates[1].y;
             const points = overlay.points;
             const valueDif = points[0].value - points[1].value;
-            percents.forEach(percent => {
+            [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => {
               const y = coordinates[1].y + yDif * percent;
               const price = (points[1].value + valueDif * percent).toFixed(precision.price);
               lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
@@ -222,7 +184,7 @@
         }
       },
 
-      // 8. FIBONACCI SPIRAL (PRO)
+      // 8. FIBONACCI SPIRAL
       {
         name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, bounding }) {
@@ -230,32 +192,25 @@
             const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24);
             const flag = coordinates[1].x > coordinates[0].x ? 0 : 1;
             const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
-            let offsetAngle;
-            if (kb) {
-              offsetAngle = Math.atan(kb[0]) + Math.PI * flag;
-            } else {
-              offsetAngle = coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3;
-            }
+            let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3);
             const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle);
             const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle);
             const arcs = [
               { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 },
               { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI }
             ];
-            let x = coordinates[0].x - startRadius;
-            let y = coordinates[0].y - startRadius;
+            let x = coordinates[0].x - startRadius, y = coordinates[0].y - startRadius;
             for (let i = 2; i < 9; i++) {
               const r = arcs[i - 2].r + arcs[i - 1].r;
               let startAngle = 0;
               switch (i % 4) {
-                case 0: { startAngle = offsetAngle; x -= arcs[i - 2].r; break; }
-                case 1: { startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; }
-                case 2: { startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; }
-                case 3: { startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; }
+                case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break;
+                case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break;
+                case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break;
+                case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break;
               }
-              const endAngle = startAngle + Math.PI / 2;
               const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle);
-              arcs.push({ ...rotateCoordinate, r, startAngle, endAngle });
+              arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 });
             }
             return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }];
           }
@@ -263,22 +218,18 @@
         }
       },
 
-      // 9. FIBONACCI SPEED RESISTANCE FAN (PRO)
+      // 9. FIBONACCI FAN
       {
         name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, bounding }) {
-          const lines1 = [];
+          const lines1 = [], texts = [];
           let lines2 = [];
-          const texts = [];
           if (coordinates.length > 1) {
             const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4;
             const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20;
-            const xDistance = coordinates[1].x - coordinates[0].x;
-            const yDistance = coordinates[1].y - coordinates[0].y;
-            const percents = [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0];
-            percents.forEach(percent => {
-              const x = coordinates[1].x - xDistance * percent;
-              const y = coordinates[1].y - yDistance * percent;
+            const xDistance = coordinates[1].x - coordinates[0].x, yDistance = coordinates[1].y - coordinates[0].y;
+            [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0].forEach(percent => {
+              const x = coordinates[1].x - xDistance * percent, y = coordinates[1].y - yDistance * percent;
               lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] });
               lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
               lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding));
@@ -291,34 +242,27 @@
         }
       },
 
-      // 10. FIBONACCI EXTENSION (PRO)
+      // 10. FIBONACCI EXTENSION
       {
         name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, overlay, precision }) {
-          const fbLines = [];
-          const texts = [];
+          const fbLines = [], texts = [];
           if (coordinates.length > 2) {
             const points = overlay.points;
-            const valueDif = points[1].value - points[0].value;
-            const yDif = coordinates[1].y - coordinates[0].y;
-            const percents = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+            const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y;
             const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
-            percents.forEach(percent => {
+            [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => {
               const y = coordinates[2].y + yDif * percent;
               const price = (points[2].value + valueDif * percent).toFixed(precision.price);
               fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] });
               texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' });
             });
           }
-          return [
-            { type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } },
-            { type: 'line', attrs: fbLines },
-            { type: 'text', ignoreEvent: true, attrs: texts }
-          ];
+          return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
 
-      // 11. GANN BOX (PRO)
+      // 11. GANN BOX
       {
         name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
@@ -341,20 +285,8 @@
               { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] }
             ];
             return [
-              {
-                type: 'line',
-                attrs: [
-                  { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] },
-                  { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] },
-                  { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] },
-                  { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }
-                ]
-              },
-              {
-                type: 'polygon', ignoreEvent: true,
-                attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] },
-                styles: { style: 'fill' }
-              },
+              { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] },
+              { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'fill' } },
               { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } },
               { type: 'line', attrs: solidLines }
             ];
@@ -363,69 +295,39 @@
         }
       },
 
-      // 12. THREE WAVES (PRO)
-      {
-        name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
-          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
+      // 12. THREE WAVES
+      { name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      
+      // 13. FIVE WAVES
+      { name: 'fiveWaves', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
 
-      // 13. FIVE WAVES (PRO)
-      {
-        name: 'fiveWaves', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
-          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
+      // 14. EIGHT WAVES
+      { name: 'eightWaves', totalStep: 10, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
 
-      // 14. EIGHT WAVES (PRO)
-      {
-        name: 'eightWaves', totalStep: 10, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
-          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
+      // 15. ANY WAVES
+      { name: 'anyWaves', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
 
-      // 15. ANY WAVES (PRO)
-      {
-        name: 'anyWaves', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
-          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-
-      // 16. ABCD (PRO)
+      // 16. ABCD
       {
         name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
-          let acLineCoordinates = [];
-          let bdLineCoordinates = [];
+          let acLineCoordinates = [], bdLineCoordinates = [];
           const tags = ['A', 'B', 'C', 'D'];
           const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
           if (coordinates.length > 2) {
             acLineCoordinates = [coordinates[0], coordinates[2]];
             if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]];
           }
-          return [
-            { type: 'line', attrs: { coordinates } },
-            { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } },
-            { type: 'text', ignoreEvent: true, attrs: texts }
-          ];
+          return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
 
-      // 17. XABCD (PRO)
+      // 17. XABCD
       {
         name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
         createPointFigures: function({ coordinates }) {
-          const dashedLines = [];
-          const polygons = [];
+          const dashedLines = [], polygons = [];
           const tags = ['X', 'A', 'B', 'C', 'D'];
           const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
           if (coordinates.length > 2) {
@@ -439,30 +341,26 @@
               }
             }
           }
-          return [
-            { type: 'line', attrs: { coordinates } },
-            { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } },
-            { type: 'polygon', ignoreEvent: true, attrs: polygons },
-            { type: 'text', ignoreEvent: true, attrs: texts }
-          ];
+          return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
 
-      // --- CÁC CÔNG CỤ TÙY CHỈNH THÊM ---
-      // TRỊ LỖI DẤU CHẤM CỦA TEXT BẰNG MÃ CHUẨN PRO
+      // 18. CUSTOM TEXT (Đã Fix Thành Công)
       {
-        name: 'customText', totalStep: 1, 
-        needDefaultPointFigure: false, // Tuyệt đối không hiển thị dấu chấm
+        name: 'customText', totalStep: 2, 
+        needDefaultPointFigure: false, 
         needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
         createPointFigures: function (ref) {
           if (!ref.coordinates || !ref.coordinates.length) return [];
-          if (ref.overlay.extendData === undefined || ref.overlay.extendData === null) ref.overlay.extendData = window.__WA_TEMP_TEXT__ || 'Văn bản...';
-          return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: ref.overlay.extendData, baseline: 'bottom', align: 'center' }, ignoreEvent: false }];
+          let t = ref.overlay.extendData;
+          if (t === undefined || t === null) t = window.__WA_TEMP_TEXT__ || 'Văn bản...';
+          return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: t, baseline: 'bottom', align: 'center' }, ignoreEvent: false }];
         }
       },
-      // Vai Đầu Vai (Head and Shoulders)
+
+      // 19. HEAD & SHOULDERS (Đã fix 8 steps)
       {
-        name: 'headAndShoulders', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
           var c = ref.coordinates || []; var figs = [];
           if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] }, styles: { style: 'fill' } });
@@ -481,7 +379,7 @@
   }
 
   // ======================================================
-  // 3. BỘ ICON TỐI GIẢN 2026 & DANH SÁCH MENU ĐẦY ĐỦ
+  // 3. GIAO DIỆN & DANH SÁCH MENU ĐẦY ĐỦ
   // ======================================================
   const ICONS = {
     drag: '<svg viewBox="0 0 24 24" fill="none" stroke="#5e6673" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>',
@@ -496,65 +394,19 @@
   };
 
   const MENU_MAP = [
-    { id: 'lines', icon: ICONS.lines, tools: [ 
-      { id: 'segment', name: 'Đường xu hướng (Trendline)' }, 
-      { id: 'rayLine', name: 'Tia (Ray)' }, 
-      { id: 'straightLine', name: 'Đường mở rộng' }, 
-      { id: 'horizontalStraightLine', name: 'Đường ngang' }, 
-      { id: 'verticalStraightLine', name: 'Đường dọc' }, 
-      { id: 'priceChannelLine', name: 'Kênh song song' }, 
-      { id: 'parallelStraightLine', name: 'Pitchfork' },
-      { id: 'arrow', name: 'Mũi tên (Arrow)' }
-    ]},
-    { id: 'fibonacci', icon: ICONS.fibonacci, tools: [ 
-      { id: 'fibonacciLine', name: 'Fibonacci Retracement' }, 
-      { id: 'fibonacciExtension', name: 'Fibonacci Extension' }, 
-      { id: 'fibonacciSpeedResistanceFan', name: 'Fibonacci Quạt' }, 
-      { id: 'fibonacciCircle', name: 'Fibonacci Vòng tròn' }, 
-      { id: 'fibonacciSpiral', name: 'Fibonacci Xoắn ốc' },
-      { id: 'fibonacciSegment', name: 'Fibonacci Phân đoạn' }
-    ]},
-    { id: 'waves', icon: ICONS.waves, tools: [ 
-      { id: 'waveElliott', name: 'Sóng đẩy Elliott (12345)' }, 
-      { id: 'waveABC', name: 'Sóng điều chỉnh (ABC)' }, 
-      { id: 'waveTriangle', name: 'Sóng tam giác (ABCDE)' }, 
-      { id: 'waveWXY', name: 'Sóng WXY' }, 
-      { id: 'threeWaves', name: 'Sóng 3' },
-      { id: 'fiveWaves', name: 'Sóng 5' },
-      { id: 'eightWaves', name: 'Sóng 8' },
-      { id: 'anyWaves', name: 'Vẽ Polyline (Tự do)' }, 
-      { id: 'xabcd', name: 'Mô hình XABCD' }, 
-      { id: 'abcd', name: 'Mô hình ABCD' }, 
-      { id: 'headAndShoulders', name: 'Vai Đầu Vai' } 
-    ]},
-    { id: 'shapes', icon: ICONS.shapes, tools: [ 
-      { id: 'rect', name: 'Hình chữ nhật' }, 
-      { id: 'triangle', name: 'Tam giác' }, 
-      { id: 'circle', name: 'Hình tròn' },
-      { id: 'parallelogram', name: 'Hình bình hành' },
-      { id: 'gannBox', name: 'Hộp Gann (Gann Box)' }
-    ]}
+    { id: 'lines', icon: ICONS.lines, tools: [ { id: 'segment', name: 'Đường xu hướng' }, { id: 'rayLine', name: 'Tia (Ray)' }, { id: 'straightLine', name: 'Đường mở rộng' }, { id: 'horizontalStraightLine', name: 'Đường ngang' }, { id: 'verticalStraightLine', name: 'Đường dọc' }, { id: 'priceChannelLine', name: 'Kênh song song' }, { id: 'parallelStraightLine', name: 'Pitchfork' }, { id: 'arrow', name: 'Mũi tên (Arrow)' } ]},
+    { id: 'fibonacci', icon: ICONS.fibonacci, tools: [ { id: 'fibonacciLine', name: 'Fibonacci Retracement' }, { id: 'fibonacciExtension', name: 'Fibonacci Extension' }, { id: 'fibonacciSpeedResistanceFan', name: 'Fibonacci Quạt' }, { id: 'fibonacciCircle', name: 'Fibonacci Vòng tròn' }, { id: 'fibonacciSpiral', name: 'Fibonacci Xoắn ốc' }, { id: 'fibonacciSegment', name: 'Fibonacci Phân đoạn' } ]},
+    { id: 'waves', icon: ICONS.waves, tools: [ { id: 'waveElliott', name: 'Sóng đẩy Elliott (12345)' }, { id: 'waveABC', name: 'Sóng điều chỉnh (ABC)' }, { id: 'waveTriangle', name: 'Sóng tam giác (ABCDE)' }, { id: 'waveWXY', name: 'Sóng WXY' }, { id: 'threeWaves', name: 'Sóng 3' }, { id: 'fiveWaves', name: 'Sóng 5' }, { id: 'eightWaves', name: 'Sóng 8' }, { id: 'anyWaves', name: 'Vẽ Polyline (Tự do)' }, { id: 'xabcd', name: 'Mô hình XABCD' }, { id: 'abcd', name: 'Mô hình ABCD' }, { id: 'headAndShoulders', name: 'Vai Đầu Vai' } ]},
+    { id: 'shapes', icon: ICONS.shapes, tools: [ { id: 'rect', name: 'Hình chữ nhật' }, { id: 'triangle', name: 'Tam giác' }, { id: 'circle', name: 'Hình tròn' }, { id: 'parallelogram', name: 'Hình bình hành' }, { id: 'gannBox', name: 'Hộp Gann (Gann Box)' } ]}
   ];
 
-  // ======================================================
-  // 4. KIẾN TRÚC GIAO DIỆN NỔI (FLOATING & DRAGGABLE)
-  // ======================================================
   function injectCSS() {
     if (document.getElementById('wa-pro-css')) return;
     const style = document.createElement('style');
     style.id = 'wa-pro-css';
     style.textContent = `
       #sc-chart-container { position: relative !important; overflow: hidden !important; }
-      
-      /* Thanh Công Cụ Nổi (Sidebar) */
-      .wa-floating-sidebar { 
-          position: absolute; top: 60px; left: 16px; z-index: 9999;
-          width: 46px; background-color: rgba(22, 26, 30, 0.95); 
-          border: 1px solid #2b3139; border-radius: 8px; 
-          display: flex; flex-direction: column; align-items: center; 
-          box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(8px);
-          user-select: none;
-      }
+      .wa-floating-sidebar { position: absolute; top: 60px; left: 16px; z-index: 9999; width: 46px; background-color: rgba(22, 26, 30, 0.95); border: 1px solid #2b3139; border-radius: 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(8px); user-select: none; }
       .wa-drag-grip { width: 100%; height: 24px; display: flex; align-items: center; justify-content: center; cursor: grab; border-bottom: 1px solid #2b3139; opacity: 0.7; }
       .wa-drag-grip:active { cursor: grabbing; }
       .wa-drag-grip svg { width: 16px; height: 16px; }
@@ -571,23 +423,15 @@
       .wa-menu-item:hover { background-color: #2b3139; color: #00F0FF; }
       .wa-menu-item.active { color: #00F0FF; }
       .wa-divider { width: 24px; height: 1px; background-color: #2b3139; margin: 6px 0; }
-      
       .wa-drawing-mode canvas { cursor: crosshair !important; }
-
-      /* Thanh Tùy Biến Nổi (Properties Popup) */
-      .wa-floating-props {
-          position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-          background: rgba(18, 20, 24, 0.95); border: 1px solid #2b3139; border-radius: 8px;
-          padding: 8px 12px; display: none; align-items: center; gap: 12px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10001;
-      }
+      .wa-floating-props { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(18, 20, 24, 0.95); border: 1px solid #2b3139; border-radius: 8px; padding: 8px 12px; display: none; align-items: center; gap: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10001; }
       .wa-floating-props.show { display: flex; }
       .wa-prop-group { display: flex; align-items: center; gap: 6px; }
       .wa-prop-color { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #2b3139; cursor: pointer; padding: 0; background: transparent; }
       .wa-prop-color::-webkit-color-swatch-wrapper { padding: 0; }
       .wa-prop-color::-webkit-color-swatch { border: none; border-radius: 4px; }
-      .wa-prop-select { background: #161A1E; color: #EAECEF; border: 1px solid #2b3139; padding: 4px 6px; border-radius: 6px; font-size: 13px; outline: none; cursor: pointer; }
-      .wa-prop-input { background: #161A1E; color: #EAECEF; border: 1px solid #2b3139; padding: 4px 8px; border-radius: 6px; font-size: 13px; outline: none; width: 140px; font-weight: 500; }
+      .wa-prop-select, .wa-prop-input { background: #161A1E; color: #EAECEF; border: 1px solid #2b3139; padding: 4px 6px; border-radius: 6px; font-size: 13px; outline: none; }
+      .wa-prop-input { width: 140px; font-weight: 500; }
       .wa-prop-input:focus { border-color: #00F0FF; }
       .wa-prop-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: 0.2s; width: 26px; height: 26px; border-radius: 6px;}
       .wa-prop-btn svg { width: 18px; height: 18px; }
@@ -597,15 +441,13 @@
   }
 
   function buildHTML() {
-    let html = `<div class="wa-drag-grip">${ICONS.drag}</div><div class="wa-tools-wrapper">`;
-    html += `<div class="wa-group"><button class="wa-btn active" data-tool="pointer" title="Con trỏ chuột">${ICONS.pointer}</button></div>`;
+    let html = `<div class="wa-drag-grip">${ICONS.drag}</div><div class="wa-tools-wrapper"><div class="wa-group"><button class="wa-btn active" data-tool="pointer" title="Con trỏ chuột">${ICONS.pointer}</button></div>`;
     MENU_MAP.forEach(g => {
       html += `<div class="wa-group"><button class="wa-btn wa-has-menu">${g.icon}</button><div class="wa-menu">`;
       g.tools.forEach(t => { html += `<div class="wa-menu-item" data-tool="${t.id}">${t.name}</div>`; });
       html += `</div></div>`;
     });
-    html += `<div class="wa-group"><button class="wa-btn" data-tool="customText" title="Viết chữ (Text)">${ICONS.text}</button></div>`;
-    html += `<div class="wa-divider"></div>`;
+    html += `<div class="wa-group"><button class="wa-btn" data-tool="customText" title="Viết chữ (Text)">${ICONS.text}</button></div><div class="wa-divider"></div>`;
     html += `<div class="wa-group"><button class="wa-btn" data-tool="eraser" title="Cục tẩy (Click vào hình để xóa)">${ICONS.eraser}</button></div>`;
     html += `<div class="wa-group"><button class="wa-btn" data-tool="trash" title="Xóa toàn bộ bản vẽ">${ICONS.trash}</button></div></div>`;
     return html;
@@ -614,59 +456,41 @@
   function buildFloatingPropsHTML() {
     return `
       <div class="wa-prop-group" title="Màu nét vẽ"><input type="color" id="wa-prop-line-color" class="wa-prop-color" value="#00F0FF"></div>
-      <div class="wa-prop-group" title="Màu nền (Tự động trong suốt 15%)"><input type="color" id="wa-prop-fill-color" class="wa-prop-color" value="#00F0FF"></div>
-      <div class="wa-prop-group" title="Độ dày nét">
-          <select id="wa-prop-line-size" class="wa-prop-select"><option value="1">1px</option><option value="2">2px</option><option value="3">3px</option></select>
-      </div>
-      <div class="wa-prop-group" title="Kiểu nét">
-          <select id="wa-prop-line-style" class="wa-prop-select"><option value="solid">▬▬</option><option value="dashed">- - -</option><option value="dotted">. . .</option></select>
-      </div>
+      <div class="wa-prop-group" title="Màu nền (Trong suốt tự động 15%)"><input type="color" id="wa-prop-fill-color" class="wa-prop-color" value="#00F0FF"></div>
+      <div class="wa-prop-group" title="Độ dày nét"><select id="wa-prop-line-size" class="wa-prop-select"><option value="1">1px</option><option value="2">2px</option><option value="3">3px</option></select></div>
+      <div class="wa-prop-group" title="Kiểu nét"><select id="wa-prop-line-style" class="wa-prop-select"><option value="solid">▬▬</option><option value="dashed">- - -</option><option value="dotted">. . .</option></select></div>
       <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#2b3139;"></div>
       <div class="wa-prop-group" title="Màu chữ"><input type="color" id="wa-prop-text-color" class="wa-prop-color" value="#EAECEF"></div>
-      <div class="wa-prop-group" title="Cỡ chữ">
-          <select id="wa-prop-text-size" class="wa-prop-select">
-              <option value="12">12px</option><option value="14">14px</option><option value="16">16px</option><option value="18">18px</option><option value="24">24px</option>
-          </select>
-      </div>
-      <div class="wa-prop-group" id="wa-prop-text-wrapper" style="display:none;" title="Nội dung">
-          <input type="text" id="wa-prop-text-input" class="wa-prop-input" placeholder="Nhập văn bản...">
-      </div>
+      <div class="wa-prop-group" title="Cỡ chữ"><select id="wa-prop-text-size" class="wa-prop-select"><option value="12">12px</option><option value="14">14px</option><option value="16">16px</option><option value="18">18px</option><option value="24">24px</option></select></div>
+      <div class="wa-prop-group" id="wa-prop-text-wrapper" style="display:none;" title="Nội dung"><input type="text" id="wa-prop-text-input" class="wa-prop-input" placeholder="Nhập văn bản..."></div>
       <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#2b3139;"></div>
       <button class="wa-prop-btn" id="wa-prop-delete" title="Xóa hình này (Phím Delete/Backspace)">${ICONS.trash}</button>
     `;
   }
 
   // ======================================================
-  // 5. XỬ LÝ LÕI SỰ KIỆN VẼ, TÙY BIẾN, XÓA & DRAG
+  // 4. XỬ LÝ SỰ KIỆN LÕI
   // ======================================================
   function colorToHex(color) {
       if (!color) return '#00F0FF';
       if (color.startsWith('#')) return color.substring(0, 7);
       let match = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (match) {
-          let r = parseInt(match[1]).toString(16).padStart(2, '0');
-          let g = parseInt(match[2]).toString(16).padStart(2, '0');
-          let b = parseInt(match[3]).toString(16).padStart(2, '0');
-          return `#${r}${g}${b}`;
-      }
+      if (match) return `#${parseInt(match[1]).toString(16).padStart(2,'0')}${parseInt(match[2]).toString(16).padStart(2,'0')}${parseInt(match[3]).toString(16).padStart(2,'0')}`;
       return '#00F0FF';
   }
 
   function hexToRgba(hex, alpha) {
-      let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      return `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${alpha})`;
   }
 
   function bindEvents(sidebar, propsBar) {
     let isEraserMode = false;
-
-    // Logic Kéo thả Toolbar
     let handle = sidebar.querySelector('.wa-drag-grip'), isDragging = false, oX = 0, oY = 0;
+    
     handle.addEventListener('mousedown', (e) => { isDragging = true; oX = e.clientX - sidebar.offsetLeft; oY = e.clientY - sidebar.offsetTop; });
     document.addEventListener('mousemove', (e) => { if (isDragging) { sidebar.style.left = Math.max(0, e.clientX - oX) + 'px'; sidebar.style.top = Math.max(0, e.clientY - oY) + 'px'; }});
     document.addEventListener('mouseup', () => { isDragging = false; });
 
-    // Click công cụ
     sidebar.addEventListener('click', function(e) {
       let targetBtn = e.target.closest('.wa-btn'), targetMenuItem = e.target.closest('.wa-menu-item'), toolId = null;
       if (targetMenuItem) {
@@ -687,7 +511,6 @@
     function executeTool(toolId) {
       if (!global.tvChart) return;
       var c = document.getElementById('sc-chart-container');
-      
       try { global.tvChart.cancelDrawing(); } catch(e) {}
       hideFloatingProps(); 
 
@@ -698,7 +521,6 @@
         }
         return;
       }
-
       if (toolId === 'pointer') { c.classList.remove('wa-drawing-mode'); isEraserMode = false; return; }
       if (toolId === 'eraser') { c.classList.remove('wa-drawing-mode'); isEraserMode = true; return; }
 
@@ -719,24 +541,18 @@
       } catch (err) {}
     }
 
-    // Bắt sự kiện Chart Real-time
     let waitChart = setInterval(() => {
         if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
             if (!global.tvChart.__wa_event_bound) {
                 global.tvChart.__wa_event_bound = true;
-                
                 global.tvChart.subscribeAction('onDrawEnd', function() {
                   executeTool('pointer'); 
                   document.querySelectorAll('.wa-btn, .wa-menu-item').forEach(el => el.classList.remove('active'));
                   document.querySelector('[data-tool="pointer"]').classList.add('active');
                 });
-
                 global.tvChart.subscribeAction('onOverlayClick', function(params) {
                   if (!params || !params.overlay) { hideFloatingProps(); return; }
-                  if (isEraserMode) {
-                    global.tvChart.removeOverlay({ id: params.overlay.id });
-                    return;
-                  }
+                  if (isEraserMode) { global.tvChart.removeOverlay({ id: params.overlay.id }); return; }
                   currentSelectedOverlay = params.overlay;
                   showFloatingProps();
                 });
@@ -745,29 +561,21 @@
         }
     }, 500);
 
-    // PHÍM TẮT XÓA HÌNH
     if (!global.__wa_keyboard_bound) {
         global.__wa_keyboard_bound = true;
         document.addEventListener('keydown', function(e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (currentSelectedOverlay && global.tvChart) {
-                    global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-                    hideFloatingProps();
-                }
+            if ((e.key === 'Delete' || e.key === 'Backspace') && currentSelectedOverlay && global.tvChart) {
+                global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+                hideFloatingProps();
             }
         });
     }
 
-    // CẬP NHẬT TÙY BIẾN REAL-TIME
-    const elLineColor = document.getElementById('wa-prop-line-color');
-    const elFillColor = document.getElementById('wa-prop-fill-color');
-    const elTextColor = document.getElementById('wa-prop-text-color');
-    const elLineSize = document.getElementById('wa-prop-line-size');
-    const elLineStyle = document.getElementById('wa-prop-line-style');
-    const elTextSize = document.getElementById('wa-prop-text-size');
-    const elTextInput = document.getElementById('wa-prop-text-input');
-    const elTextWrapper = document.getElementById('wa-prop-text-wrapper');
+    const elLineColor = document.getElementById('wa-prop-line-color'), elFillColor = document.getElementById('wa-prop-fill-color');
+    const elTextColor = document.getElementById('wa-prop-text-color'), elLineSize = document.getElementById('wa-prop-line-size');
+    const elLineStyle = document.getElementById('wa-prop-line-style'), elTextSize = document.getElementById('wa-prop-text-size');
+    const elTextInput = document.getElementById('wa-prop-text-input'), elTextWrapper = document.getElementById('wa-prop-text-wrapper');
 
     function updateSelectedOverlay() {
         if (!currentSelectedOverlay || !global.tvChart) return;
@@ -778,11 +586,17 @@
         globalStyles.lineWidth = parseInt(elLineSize.value);
         globalStyles.lineStyle = elLineStyle.value;
         globalStyles.textSize = parseInt(elTextSize.value);
-        if(currentSelectedOverlay.name === 'customText') globalStyles.textInput = elTextInput.value;
+        
+        // Cập nhật giá trị văn bản realtime
+        let newExtendData = currentSelectedOverlay.extendData;
+        if(currentSelectedOverlay.name === 'customText') {
+            globalStyles.textInput = elTextInput.value;
+            newExtendData = globalStyles.textInput;
+        }
 
         global.tvChart.overrideOverlay({
             id: currentSelectedOverlay.id,
-            extendData: globalStyles.textInput,
+            extendData: newExtendData,
             styles: {
                 line: { color: globalStyles.lineColor, size: globalStyles.lineWidth, style: globalStyles.lineStyle },
                 text: { color: globalStyles.textColor, size: globalStyles.textSize, family: 'sans-serif', weight: 'bold' },
@@ -805,8 +619,6 @@
 
     function showFloatingProps() {
         if (!currentSelectedOverlay) return;
-        
-        // Đọc giá trị hiện tại của hình để nạp vào Form
         let s = currentSelectedOverlay.styles || {};
         elLineColor.value = colorToHex((s.line && s.line.color) ? s.line.color : globalStyles.lineColor);
         elFillColor.value = colorToHex((s.polygon && s.polygon.color) ? s.polygon.color : globalStyles.fillColor);
@@ -815,9 +627,10 @@
         elLineStyle.value = (s.line && s.line.style) ? s.line.style : 'solid';
         elTextSize.value = (s.text && s.text.size) ? s.text.size : 16;
 
+        // Render dữ liệu Text
         if (currentSelectedOverlay.name === 'customText') {
             elTextWrapper.style.display = 'flex';
-            elTextInput.value = currentSelectedOverlay.extendData || '';
+            elTextInput.value = typeof currentSelectedOverlay.extendData === 'string' ? currentSelectedOverlay.extendData : 'Văn bản...';
         } else {
             elTextWrapper.style.display = 'none';
         }
@@ -835,13 +648,13 @@
   }
 
   // ======================================================
-  // 6. AUTO-INJECTOR (BƠM MÃ ĐÈ TRỰC TIẾP LÊN DOM)
+  // 5. AUTO-INJECTOR
   // ======================================================
   function autoInjectSystem() {
     if (global.__wa_observer_started) return;
     global.__wa_observer_started = true;
 
-    var observer = new MutationObserver(function() {
+    var observer = new MutationObserver(function(mutations, obs) {
         var container = document.getElementById('sc-chart-container');
         if (!container) return;
 
@@ -855,7 +668,7 @@
             var sidebar = document.createElement('div');
             sidebar.className = 'wa-floating-sidebar';
             sidebar.innerHTML = buildHTML();
-            container.appendChild(sidebar); // Nổi tự do phía trên cùng
+            container.appendChild(sidebar);
 
             var propsBar = document.createElement('div');
             propsBar.className = 'wa-floating-props';
@@ -864,6 +677,9 @@
             container.appendChild(propsBar);
 
             bindEvents(sidebar, propsBar);
+            
+            // CỰC KỲ QUAN TRỌNG: Ngắt theo dõi ngầm để trị dứt điểm tình trạng giật lag FPS khi vẽ
+            obs.disconnect(); 
         }
     });
 
