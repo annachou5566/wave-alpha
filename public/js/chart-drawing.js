@@ -266,7 +266,13 @@
       #sc-chart-container { position: relative !important; overflow: hidden !important; }
       
       /* TOOLBAR BÊN TRÁI */
-      .wa-toolbar { position: absolute; top: 60px; left: 16px; z-index: 999; width: 44px; background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; padding: 6px 0; }
+      .wa-toolbar { position: absolute; top: 60px; left: 16px; z-index: 999; width: 44px; background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; padding: 0 0 6px 0; transition: height 0.2s, overflow 0.2s; }
+      .wa-toolbar.collapsed { height: 24px; overflow: hidden; }
+      .wa-drag-grip { width: 100%; height: 24px; display: flex; align-items: center; justify-content: center; cursor: grab; border-bottom: 1px solid transparent; opacity: 0.6; margin-bottom: 4px; background: #2b3139; border-radius: 8px 8px 0 0; }
+      .wa-drag-grip:active { cursor: grabbing; }
+      .wa-drag-grip svg { width: 14px; height: 14px; color: #848E9C; }
+      .wa-drag-grip:hover { opacity: 1; color: #EAECEF; }
+      
       .wa-tb-btn { width: 34px; height: 34px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 2px 0; position: relative; transition: 0.15s; }
       .wa-tb-btn svg { width: 20px; height: 20px; }
       .wa-tb-btn:hover { background: #2b3139; color: #EAECEF; }
@@ -343,7 +349,8 @@
   ];
 
   function buildToolbar() {
-    let html = `<button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột (Esc)">${SVG.ptr}</button>`;
+    let html = `<div class="wa-drag-grip" title="Kéo để di chuyển | Double-click để thu gọn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg></div>
+                <button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột (Esc)">${SVG.ptr}</button>`;
     MENUS.forEach(m => {
       html += `<div class="wa-tb-group"><button class="wa-tb-btn">${m.icon}</button>
                 <div class="wa-tb-menu"><div class="wa-tb-menu-inner">`;
@@ -384,6 +391,30 @@
   function bindCoreEvents(toolbar, panel) {
     const container = document.getElementById('sc-chart-container');
     
+    // --- 1. Bổ sung Tính năng Kéo thả & Thu gọn thanh công cụ ---
+    let handle = toolbar.querySelector('.wa-drag-grip');
+    let isDragging = false, startX, startY, initialX, initialY;
+    
+    if (handle) {
+      handle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX; startY = e.clientY;
+        initialX = toolbar.offsetLeft; initialY = toolbar.offsetTop;
+        document.body.style.userSelect = 'none'; // Chống bôi đen văn bản khi kéo
+      });
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        let dx = e.clientX - startX; let dy = e.clientY - startY;
+        toolbar.style.left = Math.max(0, initialX + dx) + 'px';
+        toolbar.style.top = Math.max(0, initialY + dy) + 'px';
+      });
+      document.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
+      
+      // Double click để ẩn/hiện công cụ
+      handle.addEventListener('dblclick', () => { toolbar.classList.toggle('collapsed'); });
+    }
+
+    // --- 2. Lịch sử Undo / Redo ---
     function saveHistory(action, overlay) {
       if(!overlay) return;
       undoStack.push({ action, overlay: JSON.parse(JSON.stringify(overlay)) });
@@ -411,14 +442,15 @@
       } catch(e) {}
     }
 
-    document.getElementById('wa-btn-undo').onclick = handleUndo;
-    document.getElementById('wa-btn-redo').onclick = handleRedo;
-    document.getElementById('wa-btn-magnet').onclick = function() {
+    // --- 3. SỬA LỖI DOM: Đổi document.get... thành toolbar.query... ---
+    toolbar.querySelector('#wa-btn-undo').onclick = handleUndo;
+    toolbar.querySelector('#wa-btn-redo').onclick = handleRedo;
+    toolbar.querySelector('#wa-btn-magnet').onclick = function() {
       isMagnetMode = !isMagnetMode; this.classList.toggle('active', isMagnetMode);
       showToast(isMagnetMode ? 'Đã bật chế độ Bắt điểm' : 'Đã tắt Bắt điểm');
     };
     
-    document.getElementById('wa-btn-clear').onclick = function() {
+    toolbar.querySelector('#wa-btn-clear').onclick = function() {
       createConfirmModal('Bạn có chắc muốn xóa toàn bộ bản vẽ?', () => {
         if (global.tvChart) {
           // Bắt buộc truyền object rỗng để KLineChart v9 hiểu là xóa TẤT CẢ
@@ -428,15 +460,16 @@
           hidePanel();
           
           // Trả lại trạng thái con trỏ chuột
-          document.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
-          document.querySelector('[data-tool="pointer"]').classList.add('active');
-          document.getElementById('sc-chart-container').classList.remove('wa-drawing-mode');
+          toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+          toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
+          container.classList.remove('wa-drawing-mode');
           
           showToast('Đã xóa sạch bản vẽ');
         }
       });
     };
 
+    // --- 4. Logic Active Menu ---
     toolbar.addEventListener('click', (e) => {
       let menuItem = e.target.closest('.wa-menu-item');
       let btn = e.target.closest('.wa-tb-btn[data-tool]');
