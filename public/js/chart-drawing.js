@@ -1316,10 +1316,19 @@
         }
       },
 
-      // --- BATCH 8: TEXT & ANNOTATIONS (Đã tối ưu 1-Click & Multi-line Text) ---
+      // --- BATCH 8: TEXT & ANNOTATIONS (Đã tối ưu 1-Click, Multi-line Text & HIT-BOX Click) ---
       { 
         name: 'plainText', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var lines = txt.split('\n'); return lines.map((l, i) => ({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i*18, text: l, align: 'left', baseline: 'top' } })); } 
+        createPointFigures: function(ref) { 
+          var c = ref.coordinates || []; if (!c.length) return []; 
+          var txt = ref.overlay.extendData || '...'; var lines = txt.split('\n'); 
+          var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
+          var bw = maxLen * 8 + 8, bh = lines.length * 18 + 8;
+          // Tấm nền tàng hình giúp click trúng chữ 100%
+          var figs = [ { type: 'polygon', attrs: { coordinates: [ { x: c[0].x - 4, y: c[0].y - 4 }, { x: c[0].x + bw, y: c[0].y - 4 }, { x: c[0].x + bw, y: c[0].y + bh }, { x: c[0].x - 4, y: c[0].y + bh } ]}, styles: { style: 'fill', color: 'rgba(0,0,0,0.01)' } } ]; 
+          lines.forEach((l, i) => figs.push({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i*18, text: l, align: 'left', baseline: 'top' } })); 
+          return figs; 
+        } 
       },
       { 
         name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
@@ -1367,7 +1376,14 @@
       },
       { 
         name: 'insertIcon', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '⭐'; return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: icon, align: 'center', baseline: 'middle' } }]; } 
+        createPointFigures: function(ref) { 
+          var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '⭐'; 
+          // Tấm nền tàng hình giúp click trúng Icon 100%
+          return [ 
+            { type: 'polygon', attrs: { coordinates: [ { x: c[0].x - 15, y: c[0].y - 15 }, { x: c[0].x + 15, y: c[0].y - 15 }, { x: c[0].x + 15, y: c[0].y + 15 }, { x: c[0].x - 15, y: c[0].y + 15 } ]}, styles: { style: 'fill', color: 'rgba(0,0,0,0.01)' } },
+            { type: 'text', attrs: { x: c[0].x, y: c[0].y, text: icon, align: 'center', baseline: 'middle' } } 
+          ]; 
+        } 
       }
     ];
 
@@ -1726,9 +1742,17 @@
           global.tvChart.subscribeAction('onDrawEnd', function(data) {
             activateTool('pointer');
             toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
-            let overlayObj = Array.isArray(data) ? data[0] : data;
+            
+            // [FIX LỖI] Ép bóc tách chính xác Object Overlay từ Event của KLineChart v9
+            let overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
             if(!overlayObj) return;
+            
             saveHistory('add', overlayObj); currentSelectedOverlay = overlayObj; renderPanel(currentSelectedOverlay);
+
+            // [TÍNH NĂNG MỚI] Vẽ xong Text tự động nhấp nháy ô nhập liệu
+            if (getToolCategory(overlayObj.name) === 'text') {
+                setTimeout(() => { let t = document.getElementById('wa-prop-txt'); if(t) { t.focus(); t.select(); } }, 50);
+            }
           });
 
           global.tvChart.subscribeAction('onOverlayClick', function(data) {
