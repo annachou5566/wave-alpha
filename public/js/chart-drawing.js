@@ -1,7 +1,7 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026
-// Fix: Bất tử khi đổi khung thời gian & Text gõ ăn ngay
+// Fix: UI Gọn Gàng, Text Realtime 100%, Fibo Đổ Màu
 // ==========================================
 
 (function (global) {
@@ -9,14 +9,14 @@
 
   let currentSelectedOverlay = null;
 
-  // 1. CẤU HÌNH MẶC ĐỊNH CHO HÌNH VẼ MỚI
+  // 1. CẤU HÌNH MẶC ĐỊNH MỎNG & GỌN CHUẨN PRO
   let globalStyles = {
     lineColor: '#00F0FF',
     fillColor: 'rgba(0, 240, 255, 0.15)',
     textColor: '#EAECEF',
-    lineWidth: 2,
+    lineWidth: 1,       // Nét thanh mỏng 1px
     lineStyle: 'solid',
-    textSize: 16,
+    textSize: 12,       // Chữ nhỏ gọn 12px
     textInput: 'Văn bản...'
   };
 
@@ -62,7 +62,7 @@
           var c = ref.coordinates || []; var figs = [];
           if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
           labels.forEach((l, i) => {
-            if (c[i]) figs.push({ type: 'text', attrs: { x: c[i].x, y: c[i].y - 8, text: l, align: 'center', baseline: 'bottom' }, ignoreEvent: true });
+            if (c[i]) figs.push({ type: 'text', attrs: { x: c[i].x, y: c[i].y - 6, text: l, align: 'center', baseline: 'bottom' }, ignoreEvent: true });
           });
           return figs;
         }
@@ -75,20 +75,79 @@
       createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']),
       createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
 
+      // 🔥 NÂNG CẤP: FIBONACCI ĐỔ MÀU CHUYÊN NGHIỆP
       {
-        name: 'arrow', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
+        name: 'fibonacciLine',
+        totalStep: 3,
+        needDefaultPointFigure: true,
+        needDefaultXAxisFigure: true,
+        needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates, bounding, overlay, precision }) {
+          const points = overlay.points;
+          if (coordinates.length === 0) return [];
+          const lines = [], polygons = [], texts = [];
+
           if (coordinates.length > 1) {
-            const flag = coordinates[1].x > coordinates[0].x ? 0 : 1;
-            const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
-            let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3);
-            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y + 4 }, coordinates[1], offsetAngle);
-            const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y - 4 }, coordinates[1], offsetAngle);
-            return [{ type: 'line', attrs: { coordinates } }, { type: 'line', ignoreEvent: true, attrs: { coordinates: [rotateCoordinate1, coordinates[1], rotateCoordinate2] } }];
+            const valueDif = points[0].value - points[1].value;
+            const yDif = coordinates[0].y - coordinates[1].y;
+            const percents = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
+            
+            // Dải màu Fibo chuyên nghiệp
+            const colors = [
+              'rgba(242, 54, 69, 0.15)',   // Đỏ
+              'rgba(255, 152, 0, 0.15)',   // Cam
+              'rgba(255, 235, 59, 0.15)',  // Vàng
+              'rgba(76, 175, 80, 0.15)',   // Xanh lá
+              'rgba(0, 188, 212, 0.15)',   // Xanh dương nhạt
+              'rgba(41, 98, 255, 0.15)'    // Xanh dương đậm
+            ];
+
+            let prevY = null;
+
+            percents.forEach((percent, i) => {
+              const y = coordinates[1].y + yDif * percent;
+              const price = (points[1].value + valueDif * percent).toFixed(precision.price);
+
+              // Đường line chạy ngang toàn màn hình
+              lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: bounding.width, y }] });
+
+              // Text hiển thị % và Giá trị
+              texts.push({
+                x: coordinates[0].x, 
+                y: y - 2,
+                text: `${percent} (${price})`,
+                baseline: 'bottom'
+              });
+
+              // Vẽ hình chữ nhật tô màu giữa các mức Fibo
+              if (prevY !== null && i > 0) {
+                polygons.push({
+                  type: 'polygon',
+                  ignoreEvent: true,
+                  attrs: {
+                    coordinates: [
+                      { x: coordinates[0].x, y: prevY },
+                      { x: bounding.width, y: prevY },
+                      { x: bounding.width, y },
+                      { x: coordinates[0].x, y }
+                    ]
+                  },
+                  styles: { style: 'fill', color: colors[i-1] }
+                });
+              }
+              prevY = y;
+            });
+
+            return [
+              ...polygons, // Render màu nền trước
+              { type: 'line', attrs: lines }, // Line đè lên nền
+              { type: 'text', ignoreEvent: true, attrs: texts } // Text trên cùng
+            ];
           }
           return [];
         }
       },
+
       { name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { circle: { color: 'rgba(22, 119, 255, 0.15)' } }, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) }, styles: { style: 'stroke_fill' } }; } return []; } },
       { name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } }, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'stroke_fill' } }]; } return []; } },
       {
@@ -101,79 +160,6 @@
         performEventMoveForDrawing: function({ currentStep, points, performPoint }) { if (currentStep === 2) points[0].price = performPoint.price; }
       },
       { name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } }, createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates }, styles: { style: 'stroke_fill' } }]; } },
-      
-      {
-        name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          if (coordinates.length > 1) {
-            const radius = getDistance(coordinates[0], coordinates[1]); const circles = [], texts = [];
-            [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const r = radius * percent; circles.push({ ...coordinates[0], r }); texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` }); });
-            return [{ type: 'circle', attrs: circles, styles: { style: 'stroke' } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-          } return [];
-        }
-      },
-      {
-        name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, overlay, precision }) {
-          const lines = [], texts = [];
-          if (coordinates.length > 1) {
-            const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x; const yDif = coordinates[0].y - coordinates[1].y; const points = overlay.points; const valueDif = points[0].value - points[1].value;
-            [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => { const y = coordinates[1].y + yDif * percent; const price = (points[1].value + valueDif * percent).toFixed(precision.price); lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); });
-          } return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-      {
-        name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, bounding }) {
-          if (coordinates.length > 1) {
-            const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24); const flag = coordinates[1].x > coordinates[0].x ? 0 : 1; const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
-            let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3);
-            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle); const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle);
-            const arcs = [ { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 }, { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI } ];
-            let x = coordinates[0].x - startRadius, y = coordinates[0].y - startRadius;
-            for (let i = 2; i < 9; i++) {
-              const r = arcs[i - 2].r + arcs[i - 1].r; let startAngle = 0;
-              switch (i % 4) { case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break; case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; }
-              const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle); arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 });
-            } return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }];
-          } return [];
-        }
-      },
-      {
-        name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, bounding }) {
-          const lines1 = [], texts = []; let lines2 = [];
-          if (coordinates.length > 1) {
-            const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4; const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20; const xDistance = coordinates[1].x - coordinates[0].x, yDistance = coordinates[1].y - coordinates[0].y;
-            [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0].forEach(percent => {
-              const x = coordinates[1].x - xDistance * percent, y = coordinates[1].y - yDistance * percent; lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] }); lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
-              lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding)); lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding));
-              texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${percent.toFixed(3)}` }); texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${percent.toFixed(3)}` });
-            });
-          } return [{ type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-      {
-        name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, overlay, precision }) {
-          const fbLines = [], texts = [];
-          if (coordinates.length > 2) {
-            const points = overlay.points; const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y; const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
-            [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const y = coordinates[2].y + yDif * percent; const price = (points[2].value + valueDif * percent).toFixed(precision.price); fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] }); texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); });
-          } return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-      {
-        name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
-        createPointFigures: function({ coordinates }) {
-          if (coordinates.length > 1) {
-            const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4; const xDis = coordinates[1].x - coordinates[0].x;
-            const dashedLines = [ { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] }, { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] } ];
-            const solidLines = [ { coordinates: [coordinates[0], coordinates[1]] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] } ];
-            return [ { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] }, { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'fill' } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'line', attrs: solidLines } ];
-          } return [];
-        }
-      },
       
       { name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'fiveWaves', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
@@ -197,10 +183,10 @@
         }
       },
 
-      // 🔥 NÂNG CẤP: TEXT TOOL 1-CLICK TỨC THÌ (Ăn ngay chuẩn TV)
+      // 🔥 NÂNG CẤP: TEXT REAL-TIME HOÀN HẢO
       {
         name: 'customText', 
-        totalStep: 1, // Đã sửa về 1 click
+        totalStep: 1, 
         needDefaultPointFigure: false, 
         needDefaultXAxisFigure: false, 
         needDefaultYAxisFigure: false,
@@ -208,7 +194,11 @@
           if (!ref.coordinates || !ref.coordinates.length) return [];
           let t = ref.overlay.extendData;
           if (t === undefined || t === null || t === '') t = 'Văn bản...';
-          return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: t, baseline: 'bottom', align: 'center' }, ignoreEvent: false }];
+          return [{ 
+            type: 'text', 
+            attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: t, baseline: 'bottom', align: 'center' }, 
+            ignoreEvent: false 
+          }];
         }
       },
 
@@ -254,37 +244,38 @@
     if (document.getElementById('wa-pro-css')) return;
     const style = document.createElement('style');
     style.id = 'wa-pro-css';
+    // Đã tùy chỉnh CSS mỏng, gọn, tinh tế hơn
     style.textContent = `
       #sc-chart-container { position: relative !important; overflow: hidden !important; }
-      .wa-floating-sidebar { position: absolute; top: 60px; left: 16px; z-index: 9999; width: 46px; background-color: rgba(22, 26, 30, 0.95); border: 1px solid #2b3139; border-radius: 8px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(8px); user-select: none; }
-      .wa-drag-grip { width: 100%; height: 24px; display: flex; align-items: center; justify-content: center; cursor: grab; border-bottom: 1px solid #2b3139; opacity: 0.7; }
+      .wa-floating-sidebar { position: absolute; top: 60px; left: 16px; z-index: 9999; width: 40px; background-color: rgba(22, 26, 30, 0.85); border: 1px solid #2b3139; border-radius: 6px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.4); backdrop-filter: blur(8px); user-select: none; }
+      .wa-drag-grip { width: 100%; height: 20px; display: flex; align-items: center; justify-content: center; cursor: grab; border-bottom: 1px solid #2b3139; opacity: 0.5; }
       .wa-drag-grip:active { cursor: grabbing; }
-      .wa-drag-grip svg { width: 16px; height: 16px; }
-      .wa-tools-wrapper { padding: 8px 0; width: 100%; display: flex; flex-direction: column; align-items: center;}
-      .wa-group { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 6px; }
-      .wa-btn { width: 34px; height: 34px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
-      .wa-btn svg { width: 20px; height: 20px; }
+      .wa-drag-grip svg { width: 14px; height: 14px; }
+      .wa-tools-wrapper { padding: 4px 0; width: 100%; display: flex; flex-direction: column; align-items: center;}
+      .wa-group { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 4px; }
+      .wa-btn { width: 30px; height: 30px; border-radius: 4px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
+      .wa-btn svg { width: 18px; height: 18px; }
       .wa-btn:hover { background-color: #2b3139; color: #EAECEF; }
       .wa-btn.active { background-color: rgba(0, 240, 255, 0.15); color: #00F0FF; }
-      .wa-has-menu::after { content: ''; position: absolute; right: 3px; bottom: 4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); }
-      .wa-menu { position: absolute; left: 48px; top: 0; background-color: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: none; flex-direction: column; width: 220px; padding: 6px 0; z-index: 10000; }
+      .wa-has-menu::after { content: ''; position: absolute; right: 2px; bottom: 3px; border: solid currentColor; border-width: 0 1px 1px 0; padding: 1px; transform: rotate(-45deg); }
+      .wa-menu { position: absolute; left: 42px; top: 0; background-color: rgba(22, 26, 30, 0.95); border: 1px solid #2b3139; border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display: none; flex-direction: column; width: 190px; padding: 4px 0; z-index: 10000; backdrop-filter: blur(8px); }
       .wa-group:hover .wa-menu { display: flex; }
-      .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; font-weight: 500; font-family: sans-serif; cursor: pointer; transition: 0.15s; }
+      .wa-menu-item { padding: 8px 12px; color: #EAECEF; font-size: 12px; font-weight: 400; cursor: pointer; transition: 0.15s; }
       .wa-menu-item:hover { background-color: #2b3139; color: #00F0FF; }
       .wa-menu-item.active { color: #00F0FF; }
-      .wa-divider { width: 24px; height: 1px; background-color: #2b3139; margin: 6px 0; }
+      .wa-divider { width: 20px; height: 1px; background-color: #2b3139; margin: 4px 0; }
       .wa-drawing-mode canvas { cursor: crosshair !important; }
-      .wa-floating-props { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(18, 20, 24, 0.95); border: 1px solid #2b3139; border-radius: 8px; padding: 8px 12px; display: none; align-items: center; gap: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10001; }
+      .wa-floating-props { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(18, 20, 24, 0.9); border: 1px solid #2b3139; border-radius: 6px; padding: 6px 10px; display: none; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 10001; }
       .wa-floating-props.show { display: flex; }
-      .wa-prop-group { display: flex; align-items: center; gap: 6px; }
-      .wa-prop-color { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #2b3139; cursor: pointer; padding: 0; background: transparent; }
+      .wa-prop-group { display: flex; align-items: center; gap: 4px; }
+      .wa-prop-color { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #2b3139; cursor: pointer; padding: 0; background: transparent; }
       .wa-prop-color::-webkit-color-swatch-wrapper { padding: 0; }
-      .wa-prop-color::-webkit-color-swatch { border: none; border-radius: 4px; }
-      .wa-prop-select, .wa-prop-input { background: #161A1E; color: #EAECEF; border: 1px solid #2b3139; padding: 4px 6px; border-radius: 6px; font-size: 13px; outline: none; }
-      .wa-prop-input { width: 140px; font-weight: 500; }
+      .wa-prop-color::-webkit-color-swatch { border: none; border-radius: 3px; }
+      .wa-prop-select, .wa-prop-input { background: #161A1E; color: #EAECEF; border: 1px solid #2b3139; padding: 2px 4px; border-radius: 4px; font-size: 12px; outline: none; }
+      .wa-prop-input { width: 160px; font-weight: 400; padding: 4px 8px;}
       .wa-prop-input:focus { border-color: #00F0FF; }
-      .wa-prop-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: 0.2s; width: 26px; height: 26px; border-radius: 6px;}
-      .wa-prop-btn svg { width: 18px; height: 18px; }
+      .wa-prop-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: 0.2s; width: 22px; height: 22px; border-radius: 4px;}
+      .wa-prop-btn svg { width: 16px; height: 16px; }
       .wa-prop-btn:hover { background: #2b3139; color: #F6465D; }
     `;
     document.head.appendChild(style);
@@ -309,17 +300,17 @@
       <div class="wa-prop-group" title="Màu nền"><input type="color" id="wa-prop-fill-color" class="wa-prop-color" value="#00F0FF"></div>
       <div class="wa-prop-group" title="Độ dày nét"><select id="wa-prop-line-size" class="wa-prop-select"><option value="1">1px</option><option value="2">2px</option><option value="3">3px</option></select></div>
       <div class="wa-prop-group" title="Kiểu nét"><select id="wa-prop-line-style" class="wa-prop-select"><option value="solid">▬▬</option><option value="dashed">- - -</option><option value="dotted">. . .</option></select></div>
-      <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#2b3139;"></div>
+      <div class="wa-divider" style="width:1px; height:16px; margin:0; background:#2b3139;"></div>
       <div class="wa-prop-group" title="Màu chữ"><input type="color" id="wa-prop-text-color" class="wa-prop-color" value="#EAECEF"></div>
-      <div class="wa-prop-group" title="Cỡ chữ"><select id="wa-prop-text-size" class="wa-prop-select"><option value="12">12px</option><option value="14">14px</option><option value="16">16px</option><option value="18">18px</option><option value="24">24px</option></select></div>
+      <div class="wa-prop-group" title="Cỡ chữ"><select id="wa-prop-text-size" class="wa-prop-select"><option value="10">10px</option><option value="12">12px</option><option value="14">14px</option><option value="16">16px</option><option value="20">20px</option></select></div>
       <div class="wa-prop-group" id="wa-prop-text-wrapper" style="display:none;" title="Nội dung"><input type="text" id="wa-prop-text-input" class="wa-prop-input" placeholder="Nhập văn bản..."></div>
-      <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#2b3139;"></div>
+      <div class="wa-divider" style="width:1px; height:16px; margin:0; background:#2b3139;"></div>
       <button class="wa-prop-btn" id="wa-prop-delete" title="Xóa hình này">${ICONS.trash}</button>
     `;
   }
 
   // ======================================================
-  // 4. XỬ LÝ SỰ KIỆN LÕI
+  // 4. XỬ LÝ SỰ KIỆN LÕI & REAL-TIME
   // ======================================================
   function colorToHex(color) {
       if (!color) return '#00F0FF';
@@ -383,7 +374,7 @@
           extendData: globalStyles.textInput,
           styles: { 
             line: { color: globalStyles.lineColor, size: globalStyles.lineWidth, style: globalStyles.lineStyle }, 
-            text: { color: globalStyles.textColor, size: globalStyles.textSize, weight: 'bold' }, 
+            text: { color: globalStyles.textColor, size: globalStyles.textSize, weight: 'normal' }, // Font normal nhẹ nhàng hơn
             polygon: { color: hexToRgba(globalStyles.fillColor, 0.15), style: 'fill', borderColor: globalStyles.lineColor } 
           }
         });
@@ -398,7 +389,7 @@
           document.querySelectorAll('.wa-btn, .wa-menu-item').forEach(el => el.classList.remove('active'));
           document.querySelector('[data-tool="pointer"]').classList.add('active');
 
-          // AUTO-FOCUS TEXT TOOL SAU KHI VẼ
+          // TỰ ĐỘNG FOCUS KHI VỪA VẼ TEXT XONG
           if (evt && evt.name === 'customText') {
               currentSelectedOverlay = global.tvChart.getOverlayById(evt.id);
               if (currentSelectedOverlay) {
@@ -407,7 +398,7 @@
                       let inputEl = propsBar.querySelector('#wa-prop-text-input');
                       if (inputEl) {
                           inputEl.focus();
-                          inputEl.select(); // Bôi đen toàn bộ để gõ chữ mới ăn ngay
+                          inputEl.select(); // Bôi đen sẵn, gõ là ăn ngay
                       }
                   }, 50);
               }
@@ -433,13 +424,13 @@
         });
     }
 
-    // Dùng querySelector trên propsBar để tránh lỗi tham chiếu DOM cũ khi bị React wipe
     const elLineColor = propsBar.querySelector('#wa-prop-line-color'), elFillColor = propsBar.querySelector('#wa-prop-fill-color');
     const elTextColor = propsBar.querySelector('#wa-prop-text-color'), elLineSize = propsBar.querySelector('#wa-prop-line-size');
     const elLineStyle = propsBar.querySelector('#wa-prop-line-style'), elTextSize = propsBar.querySelector('#wa-prop-text-size');
     const elTextInput = propsBar.querySelector('#wa-prop-text-input'), elTextWrapper = propsBar.querySelector('#wa-prop-text-wrapper');
 
-    function updateSelectedOverlay() {
+    // HÀM UPDATE REALTIME TẤT CẢ CÁC SỰ KIỆN GÕ PHÍM / ĐỔI MÀU
+    function updateSelectedOverlay(e) {
         if (!currentSelectedOverlay || !global.tvChart) return;
         
         globalStyles.lineColor = elLineColor.value;
@@ -460,18 +451,23 @@
             extendData: newExtendData,
             styles: {
                 line: { color: globalStyles.lineColor, size: globalStyles.lineWidth, style: globalStyles.lineStyle },
-                text: { color: globalStyles.textColor, size: globalStyles.textSize, family: 'sans-serif', weight: 'bold' },
+                text: { color: globalStyles.textColor, size: globalStyles.textSize, family: 'sans-serif', weight: 'normal' },
                 polygon: { color: hexToRgba(globalStyles.fillColor, 0.15), borderColor: globalStyles.lineColor, borderSize: globalStyles.lineWidth, borderStyle: globalStyles.lineStyle }
             }
         });
     }
 
-    [elLineColor, elFillColor, elTextColor, elLineSize, elLineStyle, elTextSize, elTextInput].forEach(el => {
+    [elLineColor, elFillColor, elTextColor, elLineSize, elLineStyle, elTextSize].forEach(el => {
         if(el) {
             el.addEventListener('input', updateSelectedOverlay);
             el.addEventListener('change', updateSelectedOverlay);
         }
     });
+
+    // LẮNG NGHE SỰ KIỆN GÕ PHÍM TRỰC TIẾP TRÊN Ô TEXT ĐỂ UPDATE REALTIME
+    if(elTextInput) {
+        elTextInput.addEventListener('input', updateSelectedOverlay);
+    }
 
     let btnDelete = propsBar.querySelector('#wa-prop-delete');
     if (btnDelete) {
@@ -489,9 +485,9 @@
         elLineColor.value = colorToHex((s.line && s.line.color) ? s.line.color : globalStyles.lineColor);
         elFillColor.value = colorToHex((s.polygon && s.polygon.color) ? s.polygon.color : globalStyles.fillColor);
         elTextColor.value = colorToHex((s.text && s.text.color) ? s.text.color : globalStyles.textColor);
-        elLineSize.value = (s.line && s.line.size) ? s.line.size : 2;
+        elLineSize.value = (s.line && s.line.size) ? s.line.size : 1;
         elLineStyle.value = (s.line && s.line.style) ? s.line.style : 'solid';
-        elTextSize.value = (s.text && s.text.size) ? s.text.size : 16;
+        elTextSize.value = (s.text && s.text.size) ? s.text.size : 12;
 
         if (currentSelectedOverlay.name === 'customText') {
             elTextWrapper.style.display = 'flex';
@@ -513,8 +509,7 @@
   }
 
   // ======================================================
-  // 5. HỆ THỐNG AUTO-HEAL (TỰ PHỤC HỒI KHI BỊ XÓA DOM)
-  // Giải pháp dứt điểm lỗi mất thanh công cụ khi đổi timeframe
+  // 5. HỆ THỐNG AUTO-HEAL (CHỐNG MẤT UI KHI ĐỔI TIMEFRAME)
   // ======================================================
   function ensureUI() {
     var container = document.getElementById('sc-chart-container');
@@ -542,8 +537,6 @@
     }
   }
 
-  // Dùng setInterval quét nhẹ mỗi 500ms thay vì MutationObserver. 
-  // Rất nhẹ, 0 lag, và chắc chắn mọc lại thanh công cụ nếu DOM bị làm mới.
   if (!global.__wa_auto_heal_started) {
       global.__wa_auto_heal_started = true;
       setInterval(ensureUI, 500);
