@@ -3,6 +3,7 @@
 // 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026 (MASTERPIECE EDITION)
 // Tech: Vanilla JS, KLineChart v9 API
 // Tối ưu UI/UX mượt mà, Fix Hover Trap, Fix Realtime Text
+// TÍCH HỢP BATCH 1: Lines Nâng Cao (Extended, Info, TrendAngle...)
 // ==========================================
 
 (function (global) {
@@ -60,7 +61,7 @@
   }
 
   // ==========================================
-  // 2. KLINECHART EXTENSIONS (17+ CÔNG CỤ VẼ)
+  // 2. KLINECHART EXTENSIONS (CÔNG CỤ VẼ)
   // ==========================================
   function registerProExtensions() {
     var kc = global.klinecharts;
@@ -75,7 +76,7 @@
         if (c[0].x === c[1].x && c[0].y !== c[1].y) coord = c[0].y < c[1].y ? { x: c[0].x, y: b.height } : { x: c[0].x, y: 0 };
         else if (c[0].x > c[1].x) coord = { x: 0, y: kc.utils.getLinearYFromCoordinates(c[0], c[1], { x: 0, y: c[0].y }) };
         else coord = { x: b.width, y: kc.utils.getLinearYFromCoordinates(c[0], c[1], { x: b.width, y: c[0].y }) };
-        return [{ coordinates: [c[0], coord] }]; // Đã fix: Bọc mảng [] để KLineChart không bị crash
+        return [{ coordinates: [c[0], coord] }];
       } return [];
     }
 
@@ -92,6 +93,135 @@
     }
 
     const extensions = [
+      // --- BATCH 1: LINES NÂNG CAO ---
+      {
+        name: 'extendedLine', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding;
+          if (c.length < 2) return [];
+          var c0 = c[0], c1 = c[1], W = b.width, H = b.height, pts = [];
+          var dx = c1.x - c0.x, dy = c1.y - c0.y;
+          if (Math.abs(dx) < 0.001) {
+            pts = [{ x: c0.x, y: 0 }, { x: c0.x, y: H }];
+          } else if (Math.abs(dy) < 0.001) {
+            pts = [{ x: 0, y: c0.y }, { x: W, y: c0.y }];
+          } else {
+            var m = dy / dx, bi = c0.y - m * c0.x;
+            [{ x: 0, y: bi }, { x: W, y: m * W + bi },
+             { x: -bi / m, y: 0 }, { x: (H - bi) / m, y: H }]
+              .forEach(function(p) {
+                if (p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H) pts.push(p);
+              });
+          }
+          if (pts.length < 2) return [];
+          return [{ type: 'line', attrs: { coordinates: [pts[0], pts[pts.length - 1]] } }];
+        }
+      },
+      {
+        name: 'horizontalRay', totalStep: 2,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding;
+          if (!c.length) return [];
+          return [{ type: 'line', attrs: { coordinates: [c[0], { x: b.width, y: c[0].y }] } }];
+        }
+      },
+      {
+        name: 'trendAngle', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [];
+          if (c.length < 2) return [];
+          var c0 = c[0], c1 = c[1], figs = [];
+          figs.push({ type: 'line', attrs: { coordinates: [c0, c1] } });
+          var dx = c1.x - c0.x, dy = c1.y - c0.y;
+          if (Math.sqrt(dx * dx + dy * dy) < 4) return figs;
+          // canvas angle (y down); chart angle (y up = price up)
+          var canvasRad = Math.atan2(dy, dx);
+          var chartDeg  = (Math.atan2(-dy, dx) * 180 / Math.PI).toFixed(1);
+          var r = 22, startA = Math.min(0, canvasRad), endA = Math.max(0, canvasRad);
+          figs.push({
+            type: 'arc',
+            attrs: { x: c0.x, y: c0.y, r: r, startAngle: startA, endAngle: endA },
+            ignoreEvent: true
+          });
+          var midA = (startA + endA) / 2;
+          var sign = parseFloat(chartDeg) >= 0 ? '+' : '';
+          figs.push({
+            type: 'text',
+            attrs: {
+              x: c0.x + (r + 12) * Math.cos(midA),
+              y: c0.y + (r + 12) * Math.sin(midA),
+              text: sign + chartDeg + '°',
+              align: 'center', baseline: 'middle'
+            },
+            ignoreEvent: true
+          });
+          return figs;
+        }
+      },
+      {
+        name: 'infoLine', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay, prec = ref.precision;
+          if (c.length < 2) return [];
+          var figs = [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var pts = (ov && ov.points) ? ov.points : [];
+          if (pts.length >= 2 && pts[0].value != null && pts[1].value != null) {
+            var delta = pts[1].value - pts[0].value;
+            var pct   = pts[0].value !== 0 ? (delta / Math.abs(pts[0].value) * 100).toFixed(2) : '0.00';
+            var dp    = (prec && prec.price != null) ? prec.price : 4;
+            var sign  = delta >= 0 ? '+' : '';
+            figs.push({
+              type: 'text',
+              attrs: {
+                x: (c[0].x + c[1].x) / 2,
+                y: Math.min(c[0].y, c[1].y) - 10,
+                text: sign + delta.toFixed(dp) + '  (' + sign + pct + '%)',
+                align: 'center', baseline: 'bottom'
+              },
+              ignoreEvent: true
+            });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'crossLine', totalStep: 2,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding;
+          if (!c.length) return [];
+          var p = c[0], W = b.width, H = b.height;
+          return [
+            { type: 'line', attrs: { coordinates: [{ x: 0, y: p.y }, { x: W, y: p.y }] } },
+            { type: 'line', attrs: { coordinates: [{ x: p.x, y: 0 }, { x: p.x, y: H }] } }
+          ];
+        }
+      },
+      {
+        name: 'curvedLine', totalStep: 4,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [];
+          if (c.length < 2) return [];
+          if (c.length === 2) { return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }]; }
+          // Quadratic Bézier: c[0]=start, c[1]=control point, c[2]=end
+          var pts = [], N = 40;
+          for (var i = 0; i <= N; i++) {
+            var t = i / N, mt = 1 - t;
+            pts.push({
+              x: mt * mt * c[0].x + 2 * mt * t * c[1].x + t * t * c[2].x,
+              y: mt * mt * c[0].y + 2 * mt * t * c[1].y + t * t * c[2].y
+            });
+          }
+          return [{ type: 'line', attrs: { coordinates: pts } }];
+        }
+      },
+      
+      // --- WAVES ---
       createWave('waveElliott', 7, ['0', '1', '2', '3', '4', '5']), createWave('waveABC', 5, ['0', 'A', 'B', 'C']),
       createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']), createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
       { name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
@@ -112,7 +242,7 @@
         }
       },
 
-      // SHAPES: Đã fix tô màu, viền mỏng
+      // --- SHAPES ---
       { name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) } }; return []; } },
       { name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }]; return []; } },
       { name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates } }]; } },
@@ -126,11 +256,10 @@
         performEventMoveForDrawing: function({ currentStep, points, performPoint }) { if (currentStep === 2) points[0].price = performPoint.price; }
       },
 
-      // FIBONACCI: Trả lại dải màu chuyên nghiệp
+      // --- FIBONACCI ---
       {
         name: 'fibonacciLine', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, bounding, overlay, precision }) {
-          // Fix triệt để lỗi crash do KLineChart trả về undefined
           const points = overlay?.points; 
           if (!coordinates || coordinates.length < 2 || !points || points.length < 2) return [];
           
@@ -148,8 +277,6 @@
           percents.forEach((p, i) => {
             const y = coordinates[1].y + yDif * p;
             const price = ((points[1].value || 0) + vDif * p).toFixed(pricePrec);
-            
-            // Giới hạn chiều ngang chính xác tới điểm thứ 2, không full màn hình
             const endX = coordinates[1].x; 
             
             lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: endX, y }] });
@@ -191,7 +318,6 @@
               texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${p.toFixed(3)}` });
               texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${p.toFixed(3)}` });
               
-              // Tô màu mảng quạt Fibo
               let endRay = getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding)[0];
               if(endRay && prevCoord && i > 0 && alpha > 0) {
                  polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [coordinates[0], endRay.coordinates[1], prevCoord] }, styles: { style: 'fill', color: colors[i-1].replace('0.15', alpha) } });
@@ -206,8 +332,6 @@
         createPointFigures: function({ coordinates, overlay, precision, bounding }) {
           const fbLines = [], texts = [], polygons = [];
           if (!coordinates || coordinates.length < 2 || !overlay?.points || overlay.points.length < 2) return [];
-          
-          // Chỉ vẽ các mốc Fibo khi đã click đủ 3 điểm
           if (coordinates.length > 2 && overlay.points.length > 2) {
             const points = overlay.points; 
             const valueDif = (points[1].value || 0) - (points[0].value || 0);
@@ -221,8 +345,6 @@
             percents.forEach((p, i) => {
               const y = coordinates[2].y + yDif * p; 
               const price = ((points[2].value || 0) + valueDif * p).toFixed(pricePrec);
-              
-              // Giới hạn chiều dài khung Fibo phụ thuộc đúng vào điểm thứ 3
               const endX = coordinates[2].x;
 
               fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: endX, y }] });
@@ -242,15 +364,14 @@
         }
       },
 
-      // CÁC MÔ HÌNH PHỨC TẠP
+      // --- MÔ HÌNH PHỨC TẠP ---
       { name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4; const xDis = coordinates[1].x - coordinates[0].x; const dashedLines = [ { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] }, { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] } ]; const solidLines = [ { coordinates: [coordinates[0], coordinates[1]] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] } ]; return [ { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] }, { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'line', attrs: solidLines } ]; } return []; } },
       { name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { let acLineCoordinates = [], bdLineCoordinates = []; const tags = ['A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { acLineCoordinates = [coordinates[0], coordinates[2]]; if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]]; } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const dashedLines = [], polygons = []; const tags = ['X', 'A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] }); polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] }); if (coordinates.length > 3) { dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] }); if (coordinates.length > 4) { dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] }); polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] }); } } } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-     {
+      {
         name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
           var c = ref.coordinates || []; var figs = [];
-          // Nền mờ 8% để nhìn xuyên thấu nến
           const faintStyle = { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' }; 
           if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] }, styles: faintStyle });
           if (c.length >= 7) figs.push({ type: 'polygon', attrs: { coordinates: [c[3], c[4], c[5], c[6]] }, styles: faintStyle });
@@ -260,23 +381,16 @@
         }
       },
 
-      // FIX TRIỆT ĐỂ: TEXT REAL-TIME 1 CLICK
+      // --- TEXT ---
       {
         name: 'customText', totalStep: 1, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
         createPointFigures: function (ref) {
           if (!ref.coordinates || !ref.coordinates.length) return [];
-          // Phải luôn là String và có độ dài để kích hoạt Bounding Box (click vào hình để edit)
           let t = ref.overlay.extendData; 
           if (typeof t !== 'string' || t.trim() === '') t = 'Văn bản...';
-          
-          let lines = t.split('\n');
-          let figs = [];
+          let lines = t.split('\n'); let figs = [];
           lines.forEach((line, idx) => {
-            figs.push({ 
-              type: 'text', 
-              attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y + (idx * 16), text: line, baseline: 'bottom', align: 'left' }, 
-              ignoreEvent: false 
-            });
+            figs.push({ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y + (idx * 16), text: line, baseline: 'bottom', align: 'left' }, ignoreEvent: false });
           });
           return figs;
         }
@@ -295,7 +409,6 @@
     style.textContent = `
       #sc-chart-container { position: relative !important; overflow: hidden !important; }
       
-      /* TOOLBAR BÊN TRÁI */
       .wa-toolbar { position: absolute; top: 60px; left: 16px; z-index: 999; width: 44px; background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; padding: 0 0 6px 0; transition: height 0.2s, overflow 0.2s; }
       .wa-toolbar.collapsed { height: 24px; overflow: hidden; }
       .wa-drag-grip { width: 100%; height: 24px; display: flex; align-items: center; justify-content: center; cursor: grab; border-bottom: 1px solid transparent; opacity: 0.6; margin-bottom: 4px; background: #2b3139; border-radius: 8px 8px 0 0; }
@@ -308,24 +421,17 @@
       .wa-tb-btn:hover { background: #2b3139; color: #EAECEF; }
       .wa-tb-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
       
-      /* TOOLTIP KHI HOVER */
       .wa-tb-btn::after { content: attr(data-tooltip); position: absolute; left: 48px; top: 50%; transform: translateY(-50%); background: #1E2329; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; pointer-events: none; opacity: 0; transition: 0.2s; border: 1px solid #2b3139; z-index: 1000; }
       .wa-tb-btn:hover::after { opacity: 1; }
 
-      /* MENU CON - FIX LỖI HOVER TRAP (KHE HỞ BỊ CHẾT) */
       .wa-tb-group { position: relative; width: 100%; display: flex; justify-content: center; }
       .wa-tb-group::after { content: ''; position: absolute; right: 4px; bottom: 6px; border: solid #848E9C; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); pointer-events: none; }
-      .wa-tb-menu { 
-         position: absolute; left: 100%; top: -6px; 
-         padding-left: 8px; /* Đây là cây cầu tàng hình giúp chuột đi ngang không bị sập menu */
-         display: none; z-index: 1000; 
-      }
+      .wa-tb-menu { position: absolute; left: 100%; top: -6px; padding-left: 8px; display: none; z-index: 1000; }
       .wa-tb-group:hover .wa-tb-menu { display: block; }
       .wa-tb-menu-inner { background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); width: 230px; padding: 6px 0; display: flex; flex-direction: column; }
       .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
       .wa-menu-item:hover { background: #2b3139; color: #00F0FF; }
 
-      /* PROPS PANEL BÊN PHẢI (SLIDE IN) */
       .wa-props-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 260px; background: rgba(22, 26, 30, 0.95); border-left: 1px solid #2b3139; box-shadow: -4px 0 24px rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 999; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
       .wa-props-panel.show { transform: translateX(0); }
       .wa-panel-header { padding: 16px; border-bottom: 1px solid #2b3139; display: flex; justify-content: space-between; align-items: center; color: #EAECEF; font-weight: bold; font-size: 14px; }
@@ -347,7 +453,6 @@
       .wa-action-btn:hover { background: #3c4450; }
       .wa-action-btn.delete:hover { background: rgba(246, 70, 93, 0.2); color: #F6465D; }
 
-      /* CONTEXT MENU & TOAST */
       .wa-context-menu { position: fixed; background: #161A1E; border: 1px solid #2b3139; border-radius: 6px; padding: 4px 0; min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.6); z-index: 10000; display: none; }
       .wa-cm-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
       .wa-cm-item:hover { background: #2b3139; color: #00F0FF; }
@@ -361,18 +466,18 @@
   const SVG = {
     ptr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>`,
     line: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="5" r="1.5"/></svg>`,
+    linesAdv: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="17" x2="22" y2="7"/><polyline points="2,17 6,13"/><polyline points="22,7 18,11"/><line x1="2" y1="22" x2="22" y2="22" stroke-dasharray="3 2"/></svg>`,
     fibo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>`,
     shape: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
     text: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M12 4v16"/><path d="M9 20h6"/></svg>`,
     magnet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9a8 8 0 0 1 16 0v4a8 8 0 0 1-16 0V9z"/><path d="M4 13v-2"/><path d="M20 13v-2"/><path d="M8 21v-4"/><path d="M16 21v-4"/></svg>`,
-    undo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>`,
-    redo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg>`,
     trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
     close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
   };
 
   const MENUS = [
     { icon: SVG.line, tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'arrow', n: 'Mũi tên'} ]},
+    { icon: SVG.linesAdv, tools: [ { id: 'extendedLine', n: 'Đường thẳng 2 chiều' }, { id: 'horizontalRay', n: 'Tia ngang' }, { id: 'trendAngle', n: 'Góc xu hướng' }, { id: 'infoLine', n: 'Đường thông tin' }, { id: 'crossLine', n: 'Đường chữ thập' }, { id: 'curvedLine', n: 'Đường cong (Bézier)' } ]},
     { icon: SVG.fibo, tools: [ {id: 'fibonacciLine', n: 'Fibonacci Retracement'}, {id: 'fibonacciExtension', n: 'Fibo Extension'}, {id: 'fibonacciSpeedResistanceFan', n: 'Fibo Fan'}, {id: 'fibonacciCircle', n: 'Fibo Circle'}, {id: 'fibonacciSpiral', n: 'Fibo Spiral'}, {id: 'fibonacciSegment', n: 'Fibo Segment'} ]},
     { icon: SVG.shape, tools: [ {id: 'rect', n: 'Hình chữ nhật'}, {id: 'circle', n: 'Hình tròn'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'gannBox', n: 'Hộp Gann'} ]},
     { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, tools: [ {id: 'waveElliott', n: 'Sóng Elliott (12345)'}, {id: 'waveABC', n: 'Sóng ABC'}, {id: 'waveTriangle', n: 'Tam giác (ABCDE)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'}, {id: 'headAndShoulders', n: 'Vai Đầu Vai'} ]}
@@ -399,7 +504,6 @@
     t.innerText = msg; t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 2000);
   }
 
-  // --- THAY THẾ HÀM NÀY ---
   function createConfirmModal(msg, onConfirm) {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
@@ -408,7 +512,6 @@
     box.innerHTML = `<div style="margin-bottom:20px;font-size:15px;">${msg}</div><div style="display:flex;gap:12px;justify-content:center;"><button id="wa-btn-c-cancel" style="padding:8px 20px;background:#2b3139;border:none;color:#EAECEF;border-radius:4px;cursor:pointer;">Hủy</button><button id="wa-btn-c-ok" style="padding:8px 20px;background:#F6465D;border:none;color:#FFF;border-radius:4px;cursor:pointer;font-weight:bold;">Đồng ý</button></div>`;
     overlay.appendChild(box);
     
-    // LỖI Ở ĐÂY: Quên chèn modal vào giao diện. Đã bổ sung dòng dưới!
     document.getElementById('sc-chart-container').appendChild(overlay);
 
     setTimeout(() => {
@@ -416,20 +519,17 @@
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       };
       box.querySelector('#wa-btn-c-ok').onclick = () => { 
-        // Bắt buộc xóa bảng ngay lập tức khỏi màn hình trước
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-        // Delay nhẹ 50ms rồi mới bắt đầu xóa hình để không bị kẹt UI
         setTimeout(() => onConfirm(), 50); 
       };
     }, 0);
   }
   // ==========================================
-  // 4. EVENTS ENGINE (UNDO, REDO, KEYBOARD)
+  // 4. EVENTS ENGINE (KEYBOARD, TOOLS)
   // ==========================================
   function bindCoreEvents(toolbar, panel) {
     const container = document.getElementById('sc-chart-container');
     
-    // --- 1. Tính năng Kéo thả & Thu gọn (Double Click) ---
     let handle = toolbar.querySelector('.wa-drag-grip');
     let isDragging = false, startX, startY, initialX, initialY;
     
@@ -438,7 +538,7 @@
         isDragging = true;
         startX = e.clientX; startY = e.clientY;
         initialX = toolbar.offsetLeft; initialY = toolbar.offsetTop;
-        document.body.style.userSelect = 'none'; // Chống bôi đen văn bản khi kéo
+        document.body.style.userSelect = 'none'; 
       });
       document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
@@ -447,30 +547,24 @@
         toolbar.style.top = Math.max(0, initialY + dy) + 'px';
       });
       document.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
-      
-      // Double click để ẩn/hiện công cụ
       handle.addEventListener('dblclick', () => { toolbar.classList.toggle('collapsed'); });
     }
 
-    // --- Đã gỡ bỏ tính năng Hoàn tác / Làm lại cho nhẹ mượt ---
-    function saveHistory() {} // Giữ lại hàm rỗng để các sự kiện vẽ không bị crash
+    function saveHistory() {} 
 
-    // --- 3. Gắn sự kiện bằng querySelector ---
     toolbar.querySelector('#wa-btn-magnet').onclick = function() {
       isMagnetMode = !isMagnetMode; this.classList.toggle('active', isMagnetMode);
       showToast(isMagnetMode ? 'Đã bật chế độ Bắt điểm' : 'Đã tắt Bắt điểm');
     };
     
-    // --- THAY THẾ SỰ KIỆN NÚT THÙNG RÁC ---
     toolbar.querySelector('#wa-btn-clear').onclick = function() {
       createConfirmModal('Bạn có chắc muốn xóa toàn bộ bản vẽ?', () => {
         if (global.tvChart) {
-          global.tvChart.removeOverlay(); // KLineChart v9 chỉ cần gọi hàm rỗng là xóa tất cả
+          global.tvChart.removeOverlay(); 
           global.tvChart.cancelDrawing(); 
           undoStack = []; redoStack = []; 
           hidePanel();
           
-          // Trả lại trạng thái con trỏ chuột
           toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
           toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
           container.classList.remove('wa-drawing-mode');
@@ -480,7 +574,6 @@
       });
     };
 
-    // --- 4. Sự kiện click chọn công cụ vẽ ---
     toolbar.addEventListener('click', (e) => {
       let menuItem = e.target.closest('.wa-menu-item');
       let btn = e.target.closest('.wa-tb-btn[data-tool]');
@@ -517,7 +610,7 @@
         } else if (tType === 'fibo') {
           config.styles.line = { color: s.lineColor, size: 1 }; config.extendData = { showLabels: s.showLabels, fillOpacity: s.fillOpacity };
         } else if (toolId === 'customText') {
-          config.extendData = toolStyles.text.textInput || 'Văn bản...'; // Ép kiểu chuỗi để fix lỗi bounding box
+          config.extendData = toolStyles.text.textInput || 'Văn bản...'; 
           config.styles.text = { color: s.textColor, size: s.textSize, weight: 'normal', family: 'sans-serif' };
         }
 
@@ -565,8 +658,6 @@
           if (e.key === 'Delete' || e.key === 'Backspace') {
             if (currentSelectedOverlay && global.tvChart) { saveHistory('delete', currentSelectedOverlay); global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel(); }
           }
-          if (e.ctrlKey && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
-          if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) { e.preventDefault(); handleRedo(); }
         }
       });
     }
@@ -580,7 +671,7 @@
     if(name.startsWith('fibo')) return 'fibo';
     if(name === 'customText') return 'text';
     if(name.startsWith('wave') || name.includes('abcd') || name === 'headAndShoulders') return 'waves';
-    return 'lines';
+    return 'lines'; // Các tools Batch 1 (extendedLine, trendAngle, ...) mặc định rơi vào nhóm 'lines'
   }
 
   function renderPanel(overlay) {
