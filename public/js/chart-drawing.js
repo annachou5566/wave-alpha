@@ -1,7 +1,7 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
-// 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026 (V8 FINAL)
-// Minimalist UI | ZERO DOM Destruction | Auto-Sync
+// 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026 (V9 - FLOATING PRO)
+// Floating UI | Draggable | Zero DOM Destruction | Full Toolset
 // ==========================================
 
 (function (global) {
@@ -116,6 +116,7 @@
   // 3. ICON MINIMALIST VÀ MENU DATA
   // ======================================================
   const ICONS = {
+    drag: '<svg viewBox="0 0 24 24" fill="none" stroke="#5e6673" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>',
     pointer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>',
     lines: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="5" r="1.5"/></svg>',
     fibonacci: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>',
@@ -127,83 +128,98 @@
   };
 
   const MENU_MAP = [
-    { id: 'lines', icon: ICONS.lines, tools: [ { id: 'segment', name: 'Đường xu hướng' }, { id: 'rayLine', name: 'Tia' }, { id: 'straightLine', name: 'Đường thẳng' }, { id: 'horizontalStraightLine', name: 'Đường ngang' }, { id: 'verticalStraightLine', name: 'Đường dọc' } ]},
+    { id: 'lines', icon: ICONS.lines, tools: [ { id: 'segment', name: 'Đường xu hướng (Trendline)' }, { id: 'rayLine', name: 'Tia (Ray)' }, { id: 'straightLine', name: 'Đường mở rộng' }, { id: 'horizontalStraightLine', name: 'Đường ngang' }, { id: 'verticalStraightLine', name: 'Đường dọc' } ]},
     { id: 'fibonacci', icon: ICONS.fibonacci, tools: [ { id: 'fibonacciLine', name: 'Fibonacci Retracement' }, { id: 'fibExtension', name: 'Fibonacci Extension' }, { id: 'fibonacciCircle', name: 'Vòng tròn Fibonacci' } ]},
     { id: 'waves', icon: ICONS.waves, tools: [ { id: 'waveElliott', name: 'Sóng Elliott (12345)' }, { id: 'waveABC', name: 'Sóng điều chỉnh (ABC)' }, { id: 'waveTriangle', name: 'Sóng tam giác (ABCDE)' }, { id: 'waveWXY', name: 'Sóng WXY' }, { id: 'xabcd', name: 'Mô hình XABCD' }, { id: 'abcd', name: 'Mô hình ABCD' }, { id: 'headAndShoulders', name: 'Vai Đầu Vai' } ]},
     { id: 'shapes', icon: ICONS.shapes, tools: [ { id: 'rect', name: 'Hình chữ nhật' }, { id: 'triangle', name: 'Tam giác' }, { id: 'circle', name: 'Hình tròn' } ]}
   ];
 
   // ======================================================
-  // 4. CSS INJECTION (Ép Layout siêu chuẩn)
+  // 4. CSS INJECTION (FLOATING & DRAGGABLE)
   // ======================================================
   function injectCSS() {
-    if (document.getElementById('wa-pro-css')) return;
+    if (document.getElementById('wa-floating-css')) return;
     const style = document.createElement('style');
-    style.id = 'wa-pro-css';
+    style.id = 'wa-floating-css';
     style.textContent = `
-      /* Ép Container thành Flexbox ngang */
-      #sc-chart-container { display: flex !important; flex-direction: row !important; position: relative; overflow: hidden !important; }
+      #sc-chart-container { position: relative !important; overflow: hidden !important; }
       
-      /* CỰC KỲ QUAN TRỌNG: Mọi thẻ div con KHÔNG PHẢI sidebar sẽ tự động nhường 52px */
-      #sc-chart-container > div:not(.wa-pro-sidebar):not(.wa-floating-props) { 
-          flex: 1 1 auto !important; width: auto !important; height: 100% !important; min-width: 0 !important; 
+      /* THANH CÔNG CỤ NỔI (FLOATING TOOLBAR) */
+      .wa-floating-sidebar { 
+          position: absolute; top: 60px; left: 20px; z-index: 9999;
+          width: 46px; background-color: rgba(22, 26, 30, 0.95); 
+          border: 1px solid #2b3139; border-radius: 8px; 
+          display: flex; flex-direction: column; align-items: center; 
+          box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+          user-select: none;
       }
       
-      /* Thanh Sidebar */
-      .wa-pro-sidebar { width: 52px; min-width: 52px; height: 100%; background-color: #121418; border-right: 1px solid #23272E; display: flex; flex-direction: column; align-items: center; padding: 12px 0; z-index: 100; overflow: visible !important; }
+      /* Tay cầm để kéo thả */
+      .wa-drag-grip {
+          width: 100%; height: 24px; display: flex; align-items: center; justify-content: center;
+          cursor: grab; border-bottom: 1px solid #2b3139; opacity: 0.7;
+      }
+      .wa-drag-grip:active { cursor: grabbing; }
+      .wa-drag-grip svg { width: 16px; height: 16px; }
+
+      .wa-tools-wrapper { padding: 8px 0; width: 100%; display: flex; flex-direction: column; align-items: center;}
       .wa-group { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 6px; }
       .wa-btn { width: 34px; height: 34px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
       .wa-btn svg { width: 20px; height: 20px; }
-      .wa-btn:hover { background-color: #23272E; color: #EAECEF; }
+      .wa-btn:hover { background-color: #2b3139; color: #EAECEF; }
       .wa-btn.active { background-color: rgba(0, 240, 255, 0.15); color: #00F0FF; }
       .wa-has-menu::after { content: ''; position: absolute; right: 3px; bottom: 4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); }
       
-      /* Menu Hover */
-      .wa-menu { position: absolute; left: 52px; top: 0; background-color: #161A1E; border: 1px solid #23272E; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: none; flex-direction: column; width: 200px; padding: 6px 0; z-index: 9999; }
+      /* Menu Hover xổ ngang */
+      .wa-menu { position: absolute; left: 48px; top: 0; background-color: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: none; flex-direction: column; width: 200px; padding: 6px 0; z-index: 10000; }
       .wa-group:hover .wa-menu { display: flex; }
       .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; font-weight: 500; font-family: sans-serif; cursor: pointer; transition: 0.15s; }
-      .wa-menu-item:hover { background-color: #23272E; color: #00F0FF; }
+      .wa-menu-item:hover { background-color: #2b3139; color: #00F0FF; }
       .wa-menu-item.active { color: #00F0FF; }
-      .wa-divider { width: 24px; height: 1px; background-color: #23272E; margin: 10px 0; }
+      .wa-divider { width: 24px; height: 1px; background-color: #2b3139; margin: 6px 0; }
       
-      /* Crosshair khi vẽ */
       .wa-drawing-mode canvas { cursor: crosshair !important; }
 
-      /* Thanh Tùy Biến Nổi */
+      /* THANH TÙY BIẾN NỔI KHI CHỌN HÌNH (FLOATING PROPERTIES) */
       .wa-floating-props {
-          position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
-          background: rgba(18, 20, 24, 0.95); border: 1px solid #23272E; border-radius: 8px;
+          position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+          background: rgba(18, 20, 24, 0.95); border: 1px solid #2b3139; border-radius: 8px;
           padding: 8px 14px; display: none; align-items: center; gap: 14px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 9999;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10001;
       }
       .wa-floating-props.show { display: flex; }
       .wa-prop-item { display: flex; align-items: center; gap: 8px; }
-      .wa-prop-color { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #23272E; cursor: pointer; padding: 0; background: transparent;}
+      .wa-prop-color { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #2b3139; cursor: pointer; padding: 0; background: transparent;}
       .wa-prop-color::-webkit-color-swatch-wrapper { padding: 0; }
       .wa-prop-color::-webkit-color-swatch { border: none; border-radius: 4px; }
-      .wa-prop-select { background: #0B0E11; color: #EAECEF; border: 1px solid #23272E; padding: 6px 8px; border-radius: 6px; font-size: 13px; outline: none; cursor: pointer; }
-      .wa-prop-input { background: #0B0E11; color: #00F0FF; border: 1px solid #23272E; padding: 6px 12px; border-radius: 6px; font-size: 14px; outline: none; width: 140px; font-weight: bold; }
+      .wa-prop-select { background: #0B0E11; color: #EAECEF; border: 1px solid #2b3139; padding: 6px 8px; border-radius: 6px; font-size: 13px; outline: none; cursor: pointer; }
+      .wa-prop-input { background: #0B0E11; color: #00F0FF; border: 1px solid #2b3139; padding: 6px 12px; border-radius: 6px; font-size: 14px; outline: none; width: 140px; font-weight: bold;}
+      .wa-prop-input:focus { border-color: #00F0FF; }
       .wa-prop-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: 0.2s; width: 28px; height: 28px; border-radius: 6px;}
       .wa-prop-btn svg { width: 18px; height: 18px; }
-      .wa-prop-btn:hover { background: #23272E; color: #F6465D; }
+      .wa-prop-btn:hover { background: #2b3139; color: #F6465D; }
     `;
     document.head.appendChild(style);
   }
 
   // ======================================================
-  // 5. HTML BUILDER
+  // 5. GIAO DIỆN HTML VÀ LOGIC KÉO THẢ (DRAG)
   // ======================================================
   function buildHTML() {
-    let html = '<div class="wa-group"><button class="wa-btn active" data-tool="pointer" title="Con trỏ chuột">' + ICONS.pointer + '</button></div>';
+    let html = `<div class="wa-drag-grip">${ICONS.drag}</div><div class="wa-tools-wrapper">`;
+    html += '<div class="wa-group"><button class="wa-btn active" data-tool="pointer" title="Con trỏ chuột">' + ICONS.pointer + '</button></div>';
+    
     MENU_MAP.forEach(g => {
       html += `<div class="wa-group"><button class="wa-btn wa-has-menu">${g.icon}</button><div class="wa-menu">`;
       g.tools.forEach(t => { html += `<div class="wa-menu-item" data-tool="${t.id}">${t.name}</div>`; });
       html += `</div></div>`;
     });
+    
     html += `<div class="wa-group"><button class="wa-btn" data-tool="customText" title="Viết chữ (Text)">${ICONS.text}</button></div>`;
     html += `<div class="wa-divider"></div>`;
     html += `<div class="wa-group"><button class="wa-btn" data-tool="eraser" title="Cục tẩy (Click vào hình để xóa)">${ICONS.eraser}</button></div>`;
     html += `<div class="wa-group"><button class="wa-btn" data-tool="trash" title="Xóa toàn bộ bản vẽ">${ICONS.trash}</button></div>`;
+    html += `</div>`;
     return html;
   }
 
@@ -220,9 +236,26 @@
       <div class="wa-prop-item" id="wa-prop-text-wrapper" style="display:none;">
           <input type="text" id="wa-prop-text-input" class="wa-prop-input" placeholder="Nhập văn bản...">
       </div>
-      <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#23272E;"></div>
+      <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#2b3139;"></div>
       <button class="wa-prop-btn" id="wa-prop-delete" title="Xóa hình này (Phím Delete)">${ICONS.trash}</button>
     `;
+  }
+
+  // Hàm kích hoạt kéo thả (Drag and Drop)
+  function makeDraggable(element, handle) {
+    let isDragging = false, offsetX = 0, offsetY = 0;
+    handle.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      offsetX = e.clientX - element.offsetLeft;
+      offsetY = e.clientY - element.offsetTop;
+      element.style.transition = 'none';
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      element.style.left = (e.clientX - offsetX) + 'px';
+      element.style.top = (e.clientY - offsetY) + 'px';
+    });
+    document.addEventListener('mouseup', () => { isDragging = false; });
   }
 
   // ======================================================
@@ -230,6 +263,9 @@
   // ======================================================
   function bindEvents(sidebar, propsBar) {
     let isEraserMode = false;
+
+    // Kéo thả thanh Toolbar
+    makeDraggable(sidebar, sidebar.querySelector('.wa-drag-grip'));
 
     // --- CLICK CÔNG CỤ TRÊN SIDEBAR ---
     sidebar.addEventListener('click', function(e) {
@@ -270,7 +306,6 @@
       c.classList.add('wa-drawing-mode');
       isEraserMode = false;
 
-      // Text Default Setting
       if (toolId === 'customText') window.__WA_TEMP_TEXT__ = "Văn bản...";
 
       try {
@@ -286,10 +321,9 @@
       } catch (err) {}
     }
 
-    // --- BẮT SỰ KIỆN KLINECHARTS BẢO ĐẢM KHÔNG BỊ TRÙNG LẶP ---
+    // --- BẮT SỰ KIỆN KLINECHARTS AN TOÀN ---
     let waitChart = setInterval(() => {
         if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
-            // Chỉ gán sự kiện nếu Instance này chưa được gán
             if (!global.tvChart.__wa_event_bound) {
                 global.tvChart.__wa_event_bound = true;
                 
@@ -387,14 +421,10 @@
         propsBar.classList.remove('show');
         currentSelectedOverlay = null;
     }
-
-    document.getElementById('sc-chart-container').addEventListener('mousedown', (e) => {
-        if (!e.target.closest('.wa-floating-props') && !e.target.closest('.wa-pro-sidebar')) hideFloatingProps();
-    });
   }
 
   // ======================================================
-  // 7. AUTO-INJECTOR: MẮT THẦN (KHÔNG ĐỤNG CHẠM DOM CỦA CHART)
+  // 7. AUTO-INJECTOR: MẮT THẦN (CHỈ BƠM UI NỔI, KHÔNG ĐỤNG DOM CHART)
   // ======================================================
   function autoInjectSystem() {
     if (global.__wa_observer_started) return;
@@ -404,21 +434,21 @@
         var container = document.getElementById('sc-chart-container');
         if (!container) return;
 
-        // Chỉ tìm thẻ div do klinecharts sinh ra, bỏ qua sidebar của chúng ta
-        var klineDiv = container.querySelector('div:not(.wa-pro-sidebar):not(.wa-floating-props)');
-        var hasSidebar = container.querySelector('.wa-pro-sidebar');
+        var hasCanvas = container.querySelector('canvas');
+        var hasSidebar = container.querySelector('.wa-floating-sidebar');
 
-        // Ngay khi phát hiện klinecharts vừa tạo lõi div, ta chèn Sidebar LÊN ĐẦU
-        if (klineDiv && !hasSidebar) {
+        // Bơm thanh công cụ nổi đè lên khi Chart vừa xuất hiện
+        if (hasCanvas && !hasSidebar) {
             injectCSS();
             registerProExtensions();
 
+            // Thanh công cụ chính nổi (Floating)
             var sidebar = document.createElement('div');
-            sidebar.className = 'wa-pro-sidebar';
+            sidebar.className = 'wa-floating-sidebar';
             sidebar.innerHTML = buildHTML();
-            // CHÈN VÀO TRƯỚC KLINECHARTS (Không bọc, không di chuyển DOM)
-            container.insertBefore(sidebar, container.firstChild);
+            container.appendChild(sidebar); // Append thẳng vào cuối, nằm đè lên mọi thứ vì absolute
 
+            // Thanh tuỳ biến nổi
             var propsBar = document.createElement('div');
             propsBar.className = 'wa-floating-props';
             propsBar.id = 'wa-props-bar';
@@ -426,15 +456,13 @@
             container.appendChild(propsBar);
 
             bindEvents(sidebar, propsBar);
-
-            // Ép KLineCharts tự resize lại để lùi 52px nhường chỗ cho Sidebar
-            setTimeout(() => { if (global.tvChart) global.tvChart.resize(); }, 50);
         }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  autoInjectSystem();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', autoInjectSystem);
+  else autoInjectSystem();
 
 })(window);
