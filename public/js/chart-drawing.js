@@ -1633,11 +1633,13 @@
     function openEditor(currentText) {
       if (isUrlTool) {
         var result = window.prompt(urlPromptMsg, currentText || '');
-        if (result !== null && overlayId) chart.modifyOverlay({ id: overlayId, extendData: result });
+        // FIX: Sửa modifyOverlay thành overrideOverlay
+        if (result !== null && overlayId) chart.overrideOverlay({ id: overlayId, extendData: result });
         return;
       }
       openTextEditor(currentText, function(newText) {
-        if (overlayId) chart.modifyOverlay({ id: overlayId, extendData: newText });
+        // FIX: Sửa modifyOverlay thành overrideOverlay
+        if (overlayId) chart.overrideOverlay({ id: overlayId, extendData: newText });
       });
     }
 
