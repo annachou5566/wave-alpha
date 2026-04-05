@@ -1480,10 +1480,19 @@
       {
         name: 'insertImage', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
         createPointFigures: function(ref) {
-          var c = ref.coordinates || [];
+          var c = ref.coordinates || [], ov = ref.overlay;
           if (c.length < 2) return c.length ? [{ type: 'arc', attrs: { x: c[0].x, y: c[0].y, r: 4, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true }] : [];
           var x0 = Math.min(c[0].x, c[1].x), x1 = Math.max(c[0].x, c[1].x), y0 = Math.min(c[0].y, c[1].y), y1 = Math.max(c[0].y, c[1].y);
-          var cxI = (x0 + x1) / 2, bW = x1 - x0, bH = y1 - y0; if (bW < 4 || bH < 4) return [];
+          var bW = x1 - x0, bH = y1 - y0; if (bW < 4 || bH < 4) return [];
+          
+          // NẾU CÓ URL TRONG EXTEND DATA -> VẼ ẢNH THỰC TẾ
+          var url = (ov && ov.extendData && typeof ov.extendData === 'string' && ov.extendData.startsWith('http')) ? ov.extendData : null;
+          if (url) {
+              return [{ type: 'image', attrs: { x: x0, y: y0, width: bW, height: bH, src: url }, ignoreEvent: true }];
+          }
+
+          // NẾU KHÔNG CÓ URL -> VẼ KHUNG PLACEHOLDER MẶC ĐỊNH
+          var cxI = (x0 + x1) / 2;
           var figs = [];
           figs.push({ type: 'polygon', attrs: { coordinates: [ { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.08)' }, ignoreEvent: true });
           figs.push({ type: 'line', attrs: { coordinates: [ { x: x0 + bW * 0.08, y: y1 - bH * 0.14 }, { x: x0 + bW * 0.32, y: (y0+y1)/2 - bH * 0.12 }, { x: x0 + bW * 0.52, y: y1 - bH * 0.14 }, { x: x0 + bW * 0.68, y: y0 + bH * 0.28 }, { x: x1 - bW * 0.08, y: y1 - bH * 0.14 } ]}, ignoreEvent: true });
@@ -1557,6 +1566,11 @@
 
       .wa-props-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 260px; background: rgba(22, 26, 30, 0.95); border-left: 1px solid #2b3139; box-shadow: -4px 0 24px rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 999; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
       .wa-props-panel.show { transform: translateX(0); }
+      .wa-icon-picker { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; background: #0B0E11; border: 1px solid #2b3139; border-radius: 4px; max-height: 120px; overflow-y: auto; }
+      .wa-icon-picker::-webkit-scrollbar { width: 4px; }
+      .wa-icon-picker::-webkit-scrollbar-thumb { background: #2b3139; border-radius: 4px; }
+      .wa-emo { cursor: pointer; font-size: 20px; transition: transform 0.1s; user-select: none; }
+      .wa-emo:hover { transform: scale(1.3); }
       .wa-panel-header { padding: 16px; border-bottom: 1px solid #2b3139; display: flex; justify-content: space-between; align-items: center; color: #EAECEF; font-weight: bold; font-size: 14px; }
       .wa-close-btn { background: none; border: none; color: #848E9C; cursor: pointer; padding: 4px; border-radius: 4px; display:flex; align-items:center; }
       .wa-close-btn:hover { background: #2b3139; color: #F6465D; }
@@ -1819,9 +1833,12 @@
           config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor, s.fillOpacity), borderColor: s.borderColor, borderSize: s.borderWidth };
         } else if (tType === 'fibo') {
           config.styles.line = { color: s.lineColor, size: 1 }; config.extendData = { showLabels: s.showLabels, fillOpacity: s.fillOpacity };
-        } else if (toolId === 'customText') {
-          config.extendData = toolStyles.text.textInput || 'Văn bản...'; 
-          config.styles.text = { color: s.textColor, size: s.textSize, weight: 'normal', family: 'sans-serif' };
+        } else if (tType === 'text') {
+          // Khởi tạo dữ liệu mặc định để kích hoạt khả năng edit cho 13 công cụ Text
+          if (toolId === 'insertIcon') config.extendData = '⭐';
+          else if (toolId === 'insertImage') config.extendData = '';
+          else config.extendData = toolStyles.text.textInput || 'Văn bản...';
+          config.styles.text = { color: s.textColor || '#EAECEF', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
         }
 
         global.tvChart.createOverlay(config);
@@ -1896,19 +1913,43 @@
     let html = ''; let s = overlay.styles || {}; let ext = overlay.extendData || {};
 
     if (cat === 'text') {
-      let txt = typeof ext === 'string' ? ext : (ext.text || 'Văn bản...');
+      let txt = typeof ext === 'string' ? ext : (ext.text || '');
+      if (!txt && overlay.name !== 'insertImage' && overlay.name !== 'insertIcon') txt = 'Văn bản...';
       let c = (s.text && s.text.color) ? colorToHex(s.text.color) : toolStyles.text.textColor;
       let sz = (s.text && s.text.size) ? s.text.size : toolStyles.text.textSize;
-      html += `
-        <div class="wa-control-row"><label>Nội dung (Xuống dòng thoải mái)</label>
-          <textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea></div>
-        <div style="display:flex; gap:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu chữ</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Cỡ chữ</label><select id="wa-prop-s1" class="wa-select">
-            <option value="12" ${sz==12?'selected':''}>12px</option><option value="14" ${sz==14?'selected':''}>14px</option>
-            <option value="16" ${sz==16?'selected':''}>16px</option><option value="20" ${sz==20?'selected':''}>20px</option>
+
+      if (overlay.name === 'insertIcon') {
+         html += `
+         <div class="wa-control-row"><label>Chọn Icon:</label>
+           <div class="wa-icon-picker">
+             ${['⭐','🔥','🚀','💎','🐂','🐻','📌','⚡','✅','❌','💰','📈','📉','🔔','💡','🎯','🏆','⚠️'].map(e=>`<span class="wa-emo">${e}</span>`).join('')}
+           </div>
+           <input type="hidden" id="wa-prop-txt" value="${txt}">
+         </div>`;
+      } else if (overlay.name === 'insertImage') {
+         html += `
+         <div class="wa-control-row"><label>Đường dẫn ảnh (URL):</label>
+           <input type="text" id="wa-prop-txt" class="wa-input" placeholder="https://..." value="${txt}">
+           <div style="font-size:11px;color:#848E9C;margin-top:4px;">Dán link ảnh (VD: .png, .jpg) vào đây. Nhấn Enter để load.</div>
+         </div>`;
+      } else {
+         html += `
+         <div class="wa-control-row"><label>Nội dung (Xuống dòng thoải mái)</label>
+           <textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea>
+         </div>`;
+      }
+      
+      if (overlay.name !== 'insertImage') {
+        html += `
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <div class="wa-control-row" style="flex:1"><label>Màu sắc</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
+          <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
+            <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
+            <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
+            <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
           </select></div>
         </div>`;
+      }
     } else if (cat === 'shapes') {
       let bc = (s.polygon && s.polygon.borderColor) ? colorToHex(s.polygon.borderColor) : toolStyles.shapes.borderColor;
       let fc = (s.polygon && s.polygon.color) ? colorToHex(s.polygon.color) : toolStyles.shapes.fillColor;
@@ -1939,7 +1980,16 @@
 
     body.innerHTML = html;
     panel.classList.add('show');
+body.innerHTML = html;
+    panel.classList.add('show');
 
+    // Bắt sự kiện click cho Emoji Picker
+    body.querySelectorAll('.wa-emo').forEach(el => {
+       el.onclick = function() {
+          document.getElementById('wa-prop-txt').value = this.innerText;
+          updateEngine(); // Tự động load lên chart
+       };
+    });
     const updateEngine = debounce(() => {
       if(!currentSelectedOverlay || !global.tvChart) return;
       let newStyles = { ...currentSelectedOverlay.styles };
