@@ -2244,10 +2244,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
             injectSmartMoneyTab();
             injectFuturesTab();
             
-            // ---> FIX LỖI: GỌI LẠI THANH CÔNG CỤ VẼ SAU KHI CHART RENDER <---
+            // ---> CHÈN CHÍNH XÁC VÀO ĐÂY: Kích hoạt thanh công cụ vẽ <---
             if (window.WaveDrawingAPI && typeof window.WaveDrawingAPI.init === 'function') {
                 window.WaveDrawingAPI.init();
             }
+            // ---> KẾT THÚC CHÈN <---
             
             // Lần 1: Gọi ngay lập tức khi vừa mở Chart
             window.fetchSmartMoneyData(t.contract, t.chainId || t.chain_id || 56);
