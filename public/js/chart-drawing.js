@@ -1423,44 +1423,33 @@
 
  // Đã gộp thông minh: Lines chung, Fibo chung Gann, Shapes chung Arrows
   const MENUS = [
-    { icon: SVG.line, tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'extendedLine', n: 'Đường thẳng 2 chiều'}, {id: 'trendAngle', n: 'Góc xu hướng'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'crossLine', n: 'Đường chữ thập'}, {id: 'infoLine', n: 'Đường thông tin'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'curvedLine', n: 'Đường cong'} ]},
-    { icon: SVG.fibo, tools: [ {id: 'fibRetracement', n: 'Fibonacci Retracement'}, {id: 'fibExtension', n: 'Fibonacci Extension'}, {id: 'fibFan', n: 'Fibonacci Fan'}, {id: 'fibArc', n: 'Fibonacci Arc'}, {id: 'fibTimeZone', n: 'Fibo Time Zone'}, {id: 'gannFan', n: 'Gann Fan'}, {id: 'gannBox', n: 'Gann Box'}, {id: 'gannSquare', n: 'Gann Square'} ]},
-    { icon: SVG.shape, tools: [ {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} ]},
+    { 
+      icon: SVG.line, 
+      tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'extendedLine', n: 'Đường thẳng 2 chiều'}, {id: 'trendAngle', n: 'Góc xu hướng'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'crossLine', n: 'Đường chữ thập'}, {id: 'infoLine', n: 'Đường thông tin'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'curvedLine', n: 'Đường cong'} ]
+    },
+    { 
+      icon: SVG.fibo, 
+      tools: [ {id: 'fibRetracement', n: 'Fibonacci Retracement'}, {id: 'fibExtension', n: 'Fibonacci Extension'}, {id: 'fibFan', n: 'Fibonacci Fan'}, {id: 'fibArc', n: 'Fibonacci Arc'}, {id: 'fibTimeZone', n: 'Fibo Time Zone'}, {id: 'gannFan', n: 'Gann Fan'}, {id: 'gannBox', n: 'Gann Box'}, {id: 'gannSquare', n: 'Gann Square'} ]
+    },
+    { 
+      icon: SVG.shape, 
+      tools: [ {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} ]
+    },
     { 
       id: 'elliottWave',
-      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,19 6,8 10,14 15,4 19,10 22,7"/><text style="font-size:5px;fill:currentColor;stroke:none"><tspan x="3" y="22">0</tspan><tspan x="6" y="7">1</tspan><tspan x="10" y="22">2</tspan><tspan x="15" y="3">3</tspan><tspan x="19" y="22">4</tspan><tspan x="21" y="6">5</tspan></text></svg>`,
-      tools: [
-        { id: 'elliottImpulse',    n: 'Sóng Đẩy Elliott (12345)' },
-        { id: 'elliottCorrection', n: 'Sóng Điều Chỉnh (ABC)' },
-        { id: 'elliottTriangle',   n: 'Sóng Tam Giác (ABCDE)' },
-        { id: 'elliottDouble',     n: 'Sóng Đôi (WXY)' },
-        { id: 'elliottTriple',     n: 'Sóng Ba (WXYXZ)' },
-        // Gộp các Harmonic pattern vào chung menu này
-        { id: 'abcd',              n: 'Mô hình ABCD' },
-        { id: 'xabcd',             n: 'Mô hình XABCD' },
-        {
-      id: 'chartPatterns',
-      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,18 5,10 8,14 12,6 16,14 19,10 22,18"/><line x1="5" y1="18" x2="19" y2="18"/></svg>`,
-      tools: [
-        { id: 'headAndShoulders',        n: 'Vai Đầu Vai' },
-        { id: 'inverseHeadAndShoulders', n: 'Vai Đầu Vai Ngược' },
-        { id: 'tripleTop',               n: 'Ba Đỉnh' },
-        { id: 'tripleBottom',            n: 'Ba Đáy' },
-        { id: 'doubleTop',               n: 'Hai Đỉnh (Chữ M)' },
-        { id: 'doubleBottom',            n: 'Hai Đáy (Chữ W)' },
-        { id: 'threeDrives',             n: 'Three Drives' },
-        { id: 'symmetricalTriangle',     n: 'Tam Giác Cân' },
-        { id: 'ascendingTriangle',       n: 'Tam Giác Tăng' },
-        { id: 'descendingTriangle',      n: 'Tam Giác Giảm' },
-        { id: 'risingWedge',             n: 'Nêm Tăng' },
-        { id: 'fallingWedge',            n: 'Nêm Giảm' },
-        { id: 'flagPattern',             n: 'Mô hình Cờ (Flag)' },
-        { id: 'pennantPattern',          n: 'Mô hình Pennant' }
-      ]
-    }
-      ]
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, 
+      tools: [ {id: 'elliottImpulse', n: 'Sóng Đẩy Elliott (12345)'}, {id: 'elliottCorrection', n: 'Sóng Điều Chỉnh (ABC)'}, {id: 'elliottTriangle', n: 'Sóng Tam Giác (ABCDE)'}, {id: 'elliottDouble', n: 'Sóng Đôi (WXY)'}, {id: 'elliottTriple', n: 'Sóng Ba (WXYXZ)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'} ]
     },
-    { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`, tools: [ {id: 'andrewsPitchfork', n: 'Andrews Pitchfork'}, {id: 'schiffPitchfork', n: 'Schiff Pitchfork'}, {id: 'modifiedSchiffPitchfork', n: 'Modified Schiff'}, {id: 'insidePitchfork', n: 'Inside Pitchfork'} ]}
+    { 
+      id: 'pitchforkFamily',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`, 
+      tools: [ {id: 'andrewsPitchfork', n: 'Andrews Pitchfork'}, {id: 'schiffPitchfork', n: 'Schiff Pitchfork'}, {id: 'modifiedSchiffPitchfork', n: 'Modified Schiff'}, {id: 'insidePitchfork', n: 'Inside Pitchfork'} ]
+    },
+    { 
+      id: 'chartPatterns',
+      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,18 5,10 8,14 12,6 16,14 19,10 22,18"/><line x1="5" y1="18" x2="19" y2="18"/></svg>`, 
+      tools: [ { id: 'headAndShoulders', n: 'Vai Đầu Vai' }, { id: 'inverseHeadAndShoulders', n: 'Vai Đầu Vai Ngược' }, { id: 'tripleTop', n: 'Ba Đỉnh' }, { id: 'tripleBottom', n: 'Ba Đáy' }, { id: 'doubleTop', n: 'Hai Đỉnh (Chữ M)' }, { id: 'doubleBottom', n: 'Hai Đáy (Chữ W)' }, { id: 'threeDrives', n: 'Three Drives' }, { id: 'symmetricalTriangle', n: 'Tam Giác Cân' }, { id: 'ascendingTriangle', n: 'Tam Giác Tăng' }, { id: 'descendingTriangle', n: 'Tam Giác Giảm' }, { id: 'risingWedge', n: 'Nêm Tăng' }, { id: 'fallingWedge', n: 'Nêm Giảm' }, { id: 'flagPattern', n: 'Mô hình Cờ (Flag)' }, { id: 'pennantPattern', n: 'Mô hình Pennant' } ]
+    }
   ];
 
   function buildToolbar() {
