@@ -381,23 +381,214 @@
       { name: 'eightWaves', totalStep: 10, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'anyWaves', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
 
+      // --- BATCH 5: SHAPES & ARROWS (Đã tối ưu Fill Color & Vô hạn điểm neo) ---
       {
-        name: 'arrow', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          if (coordinates.length > 1) {
-            const flag = coordinates[1].x > coordinates[0].x ? 0 : 1; const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
-            let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3);
-            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y + 4 }, coordinates[1], offsetAngle);
-            const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y - 4 }, coordinates[1], offsetAngle);
-            return [{ type: 'line', attrs: { coordinates } }, { type: 'line', ignoreEvent: true, attrs: { coordinates: [rotateCoordinate1, coordinates[1], rotateCoordinate2] } }];
-          } return [];
+        name: 'highlighter', totalStep: Number.MAX_SAFE_INTEGER, // Vẽ vô hạn điểm
+        needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          function smooth(points, seg) {
+            if (points.length < 3) return points.slice();
+            var out = [];
+            for (var i = 0; i < points.length - 1; i++) {
+              var p0 = points[i - 1] || points[i], p1 = points[i], p2 = points[i + 1], p3 = points[i + 2] || p2;
+              for (var j = 0; j < seg; j++) {
+                var t = j / seg, t2 = t * t, t3 = t2 * t;
+                out.push({
+                  x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+                  y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+                });
+              }
+            }
+            out.push(points[points.length - 1]); return out;
+          }
+          var pts = smooth(c, 8); var a = pts[0], z = pts[pts.length - 1];
+          var dx = z.x - a.x, dy = z.y - a.y; var len = Math.sqrt(dx * dx + dy * dy) || 1;
+          var px = -dy / len, py = dx / len; var offs = [-3, -1.5, 0, 1.5, 3]; var figs = [];
+          offs.forEach(function(o) {
+            figs.push({ type: 'line', attrs: { coordinates: pts.map(function(p) { return { x: p.x + px * o, y: p.y + py * o }; }) } });
+          });
+          return figs;
         }
       },
-
-      // --- SHAPES ---
-      { name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) } }; return []; } },
-      { name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }]; return []; } },
-      { name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates } }]; } },
+      {
+        name: 'arrow', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var s = c[0], e = c[1]; var dx = e.x - s.x, dy = e.y - s.y;
+          var len = Math.sqrt(dx * dx + dy * dy); if (len < 2) return [];
+          var ux = dx / len, uy = dy / len; var px = -uy, py = ux;
+          var head = Math.max(8, Math.min(18, len * 0.25)); var wing = head * 0.55;
+          var h1 = { x: e.x - ux * head + px * wing, y: e.y - uy * head + py * wing };
+          var h2 = { x: e.x - ux * head - px * wing, y: e.y - uy * head - py * wing };
+          return [ { type: 'line', attrs: { coordinates: [s, e] } }, { type: 'line', attrs: { coordinates: [h1, e, h2] } } ];
+        }
+      },
+      {
+        name: 'arrowMarker', totalStep: 3, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var s = c[0], e = c[1]; var dx = e.x - s.x, dy = e.y - s.y;
+          var len = Math.sqrt(dx * dx + dy * dy); if (len < 2) return [];
+          var ux = dx / len, uy = dy / len; var px = -uy, py = ux;
+          var head = Math.max(9, Math.min(20, len * 0.28)); var wing = head * 0.65; var shaftOff = 2.5;
+          var h1 = { x: e.x - ux * head + px * wing, y: e.y - uy * head + py * wing };
+          var h2 = { x: e.x - ux * head - px * wing, y: e.y - uy * head - py * wing };
+          function shift(p, o) { return { x: p.x + px * o, y: p.y + py * o }; }
+          return [ { type: 'line', attrs: { coordinates: [shift(s, -shaftOff), shift(e, -shaftOff)] } }, { type: 'line', attrs: { coordinates: [s, e] } }, { type: 'line', attrs: { coordinates: [shift(s, shaftOff), shift(e, shaftOff)] } }, { type: 'line', attrs: { coordinates: [h1, e, h2] } } ];
+        }
+      },
+      {
+        name: 'arrowUp', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var x0 = Math.min(c[0].x, c[1].x), x1 = Math.max(c[0].x, c[1].x);
+          var y0 = Math.min(c[0].y, c[1].y), y1 = Math.max(c[0].y, c[1].y);
+          var mid = (x0 + x1) / 2, w = x1 - x0, h = y1 - y0; if (w < 2 || h < 2) return [];
+          var shaftW = w * 0.34, shoulderY = y0 + h * 0.40;
+          var pts = [ { x: mid, y: y0 }, { x: x1, y: shoulderY }, { x: mid + shaftW / 2, y: shoulderY }, { x: mid + shaftW / 2, y: y1 }, { x: mid - shaftW / 2, y: y1 }, { x: mid - shaftW / 2, y: shoulderY }, { x: x0, y: shoulderY }, { x: mid, y: y0 } ];
+          return [{ type: 'polygon', attrs: { coordinates: pts }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+      {
+        name: 'arrowDown', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var x0 = Math.min(c[0].x, c[1].x), x1 = Math.max(c[0].x, c[1].x);
+          var y0 = Math.min(c[0].y, c[1].y), y1 = Math.max(c[0].y, c[1].y);
+          var mid = (x0 + x1) / 2, w = x1 - x0, h = y1 - y0; if (w < 2 || h < 2) return [];
+          var shaftW = w * 0.34, shoulderY = y1 - h * 0.40;
+          var pts = [ { x: x0, y: shoulderY }, { x: mid - shaftW / 2, y: shoulderY }, { x: mid - shaftW / 2, y: y0 }, { x: mid + shaftW / 2, y: y0 }, { x: mid + shaftW / 2, y: shoulderY }, { x: x1, y: shoulderY }, { x: mid, y: y1 }, { x: x0, y: shoulderY } ];
+          return [{ type: 'polygon', attrs: { coordinates: pts }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+      {
+        name: 'rectangle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var x0 = c[0].x, y0 = c[0].y, x1 = c[1].x, y1 = c[1].y;
+          return [{ type: 'polygon', attrs: { coordinates: [ { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 } ] }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+      {
+        name: 'rotatedRectangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var A = c[0], B = c[1], P = c[2];
+          var dx = B.x - A.x, dy = B.y - A.y; var len = Math.sqrt(dx * dx + dy * dy); if (len < 2) return [];
+          var ux = dx / len, uy = dy / len; var px = -uy, py = ux;
+          var w = (P.x - A.x) * px + (P.y - A.y) * py;
+          var D = { x: A.x + px * w, y: A.y + py * w }, C = { x: B.x + px * w, y: B.y + py * w };
+          return [{ type: 'polygon', attrs: { coordinates: [A, B, C, D] }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+      {
+        name: 'pathShape', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          function smooth(points, seg) {
+            if (points.length < 3) return points.slice();
+            var out = [];
+            for (var i = 0; i < points.length - 1; i++) {
+              var p0 = points[i - 1] || points[i], p1 = points[i], p2 = points[i + 1], p3 = points[i + 2] || p2;
+              for (var j = 0; j < seg; j++) {
+                var t = j / seg, t2 = t * t, t3 = t2 * t;
+                out.push({
+                  x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+                  y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+                });
+              }
+            }
+            out.push(points[points.length - 1]); return out;
+          }
+          return [{ type: 'line', attrs: { coordinates: smooth(c, 10) } }];
+        }
+      },
+      {
+        name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var ctr = c[0], p = c[1];
+          var r = Math.sqrt(Math.pow(p.x - ctr.x, 2) + Math.pow(p.y - ctr.y, 2)); if (r < 2) return [];
+          var pts = [], N = 64;
+          for (var i = 0; i < N; i++) { var a = i / N * Math.PI * 2; pts.push({ x: ctr.x + r * Math.cos(a), y: ctr.y + r * Math.sin(a) }); }
+          return [{ type: 'polygon', attrs: { coordinates: pts }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+      {
+        name: 'ellipse', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var x0 = Math.min(c[0].x, c[1].x), x1 = Math.max(c[0].x, c[1].x);
+          var y0 = Math.min(c[0].y, c[1].y), y1 = Math.max(c[0].y, c[1].y);
+          var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2, ry = (y1 - y0) / 2; if (rx < 2 || ry < 2) return [];
+          var pts = [], N = 64;
+          for (var i = 0; i < N; i++) { var a = i / N * Math.PI * 2; pts.push({ x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) }); }
+          return [{ type: 'polygon', attrs: { coordinates: pts }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+      {
+        name: 'polyline', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (c.length < 2) return []; return [{ type: 'line', attrs: { coordinates: c } }]; }
+      },
+      {
+        name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          return [{ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2]] }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+      {
+        name: 'arcShape', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var A = c[0], B = c[1], C = c[2];
+          var d = 2 * (A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y));
+          if (Math.abs(d) < 0.001) return [{ type: 'line', attrs: { coordinates: [A, B, C] } }];
+          var ux = ((A.x * A.x + A.y * A.y) * (B.y - C.y) + (B.x * B.x + B.y * B.y) * (C.y - A.y) + (C.x * C.x + C.y * C.y) * (A.y - B.y)) / d;
+          var uy = ((A.x * A.x + A.y * A.y) * (C.x - B.x) + (B.x * B.x + B.y * B.y) * (A.x - C.x) + (C.x * C.x + C.y * C.y) * (B.x - A.x)) / d;
+          var O = { x: ux, y: uy }; var r = Math.sqrt(Math.pow(A.x - O.x, 2) + Math.pow(A.y - O.y, 2));
+          function norm(a) { while (a < 0) a += Math.PI * 2; while (a >= Math.PI * 2) a -= Math.PI * 2; return a; }
+          function betweenCCW(x, a, b) { if (b < a) b += Math.PI * 2; if (x < a) x += Math.PI * 2; return x >= a && x <= b; }
+          var a0 = norm(Math.atan2(A.y - O.y, A.x - O.x)), a1 = norm(Math.atan2(B.y - O.y, B.x - O.x)), a2 = norm(Math.atan2(C.y - O.y, C.x - O.x));
+          var ccw = betweenCCW(a1, a0, a2); if (ccw && a2 < a0) a2 += Math.PI * 2; if (!ccw && a2 > a0) a2 -= Math.PI * 2;
+          var pts = [], N = 48;
+          for (var i = 0; i <= N; i++) { var t = i / N; var ang = a0 + (a2 - a0) * t; pts.push({ x: O.x + r * Math.cos(ang), y: O.y + r * Math.sin(ang) }); }
+          return [{ type: 'line', attrs: { coordinates: pts } }];
+        }
+      },
+      {
+        name: 'curveShape', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var pts = [], N = 48;
+          for (var i = 0; i <= N; i++) { var t = i / N, mt = 1 - t; pts.push({ x: mt * mt * c[0].x + 2 * mt * t * c[1].x + t * t * c[2].x, y: mt * mt * c[0].y + 2 * mt * t * c[1].y + t * t * c[2].y }); }
+          return [{ type: 'line', attrs: { coordinates: pts } }];
+        }
+      },
+      {
+        name: 'doubleCurveShape', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var P0 = c[0], P1 = c[1], P2 = c[2];
+          function sample(A, B, C) {
+            var pts = [], N = 48;
+            for (var i = 0; i <= N; i++) { var t = i / N, mt = 1 - t; pts.push({ x: mt * mt * A.x + 2 * mt * t * B.x + t * t * C.x, y: mt * mt * A.y + 2 * mt * t * B.y + t * t * C.y }); }
+            return pts;
+          }
+          var main = sample(P0, P1, P2);
+          if (c.length < 4) return [{ type: 'line', attrs: { coordinates: main } }];
+          var mid = { x: 0.25 * P0.x + 0.5 * P1.x + 0.25 * P2.x, y: 0.25 * P0.y + 0.5 * P1.y + 0.25 * P2.y };
+          var v = { x: c[3].x - mid.x, y: c[3].y - mid.y };
+          var second = main.map(function(p) { return { x: p.x + v.x, y: p.y + v.y }; });
+          return [ { type: 'line', attrs: { coordinates: main } }, { type: 'line', attrs: { coordinates: second } }, { type: 'line', attrs: { coordinates: [main[0], second[0]] } }, { type: 'line', attrs: { coordinates: [main[main.length - 1], second[second.length - 1]] } } ];
+        }
+      },
       {
         name: 'parallelogram', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
@@ -821,7 +1012,28 @@
         { id: 'fibTimeZone',    n: 'Fibonacci Time Zone' }
       ]
     },
-    { icon: SVG.shape, tools: [ {id: 'rect', n: 'Hình chữ nhật'}, {id: 'circle', n: 'Hình tròn'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'} ]},
+    { 
+      id: 'shapesArrows',  
+      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18 L9 12 L14 15 L21 6"/><polyline points="16,6 21,6 21,11"/><rect x="3" y="3" width="7" height="7"/><circle cx="17" cy="17" r="4"/></svg>`,  
+      tools: [    
+        { id: 'highlighter',      n: 'Bút đánh dấu' },    
+        { id: 'arrowMarker',      n: 'Bút đánh dấu mũi tên' },    
+        { id: 'arrow',            n: 'Mũi tên' },    
+        { id: 'arrowUp',          n: 'Mũi tên chỉ lên' },    
+        { id: 'arrowDown',        n: 'Mũi tên chỉ xuống' },    
+        { id: 'rectangle',        n: 'Hình chữ nhật' },    
+        { id: 'rotatedRectangle', n: 'Hình chữ nhật xoay' },    
+        { id: 'parallelogram',    n: 'Hình bình hành' },
+        { id: 'pathShape',        n: 'Đường dẫn' },    
+        { id: 'circle',           n: 'Vòng tròn' },    
+        { id: 'ellipse',          n: 'Hình ellipse' },    
+        { id: 'polyline',         n: 'Polyline (Đường đa đoạn)' },    
+        { id: 'triangle',         n: 'Hình tam giác' },    
+        { id: 'arcShape',         n: 'Hình vòng cung' },    
+        { id: 'curveShape',       n: 'Đường cong' },    
+        { id: 'doubleCurveShape', n: 'Đường cong đôi' }  
+      ]
+    },
     { 
       id: 'gann',  
       icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/><line x1="3" y1="21" x2="21" y2="3"/><line x1="3" y1="21" x2="21" y2="9"/><line x1="3" y1="21" x2="21" y2="15"/><line x1="3" y1="21" x2="15" y2="3"/><line x1="3" y1="21" x2="9" y2="3"/></svg>`,  
@@ -1018,11 +1230,15 @@
   // 5. PROPS PANEL (WYSIWYG TÙY BIẾN CHO TỪNG LOẠI)
   // ==========================================
   function getToolCategory(name) {
-    if(['rect','circle','triangle','parallelogram','gannBox','gannSquare'].includes(name)) return 'shapes'; // Cho Gann Box và Square vào nhóm shapes để chỉnh viền + nền
-    if(name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT') || name === 'gannFan') return 'fibo'; // Cho Gann Fan vào nhóm Fibo để dùng chung thanh chỉnh nền cầu vồng (Fill Opacity)
-    if(name === 'customText') return 'text';
-    if(name.startsWith('wave') || name.includes('abcd') || name === 'headAndShoulders') return 'waves';
-    return 'lines';
+    // Đưa tất cả hình khối có diện tích vào nhóm shapes để chỉnh Màu nền (Fill) & Viền (Border)
+    const shapes = ['rectangle', 'rotatedRectangle', 'circle', 'ellipse', 'triangle', 'parallelogram', 'gannBox', 'gannSquare', 'arrowUp', 'arrowDown'];
+    if (shapes.includes(name)) return 'shapes';
+    
+    if (name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT') || name === 'gannFan') return 'fibo';
+    if (name === 'customText') return 'text';
+    if (name.startsWith('wave') || name.includes('abcd') || name === 'headAndShoulders') return 'waves';
+    
+    return 'lines'; // highlighter, arrow, pathShape, polyline, curveShape... tự động ăn theo cài đặt của nét vẽ (Lines)
   }
 
   function renderPanel(overlay) {
