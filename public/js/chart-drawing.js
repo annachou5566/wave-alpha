@@ -221,6 +221,127 @@
         }
       },
       
+// --- BATCH 2: PITCHFORK FAMILY ---
+      {
+        name: 'andrewsPitchfork', totalStep: 4,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, figs = [];
+          if (c.length < 2) return figs;
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var W = b.width, H = b.height;
+          var P0 = c[0], P1 = c[1], P2 = c[2];
+          var M = { x: (P1.x + P2.x) / 2, y: (P1.y + P2.y) / 2 };
+          var dx = M.x - P0.x, dy = M.y - P0.y;
+          function rayEnd(p) {
+            var ts = [];
+            if (dx > 0.001) ts.push((W - p.x) / dx);
+            if (dx < -0.001) ts.push((0 - p.x) / dx);
+            if (dy > 0.001) ts.push((H - p.y) / dy);
+            if (dy < -0.001) ts.push((0 - p.y) / dy);
+            var t = Math.min.apply(null, ts.filter(function(v) { return v > 0; }));
+            return isFinite(t) ? { x: p.x + dx * t, y: p.y + dy * t } : p;
+          }
+          figs.push({ type: 'line', attrs: { coordinates: [P1, P2] } });           // base P1–P2
+          figs.push({ type: 'line', attrs: { coordinates: [P0, M] } });            // handle
+          figs.push({ type: 'line', attrs: { coordinates: [P0, rayEnd(P0)] } });   // median
+          figs.push({ type: 'line', attrs: { coordinates: [P1, rayEnd(P1)] } });   // upper tine
+          figs.push({ type: 'line', attrs: { coordinates: [P2, rayEnd(P2)] } });   // lower tine
+          return figs;
+        }
+      },
+      {
+        name: 'schiffPitchfork', totalStep: 4,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, figs = [];
+          if (c.length < 2) return figs;
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var W = b.width, H = b.height;
+          var P0 = c[0], P1 = c[1], P2 = c[2];
+          var M  = { x: (P1.x + P2.x) / 2, y: (P1.y + P2.y) / 2 };
+          // Schiff: gốc dịch đến midpoint(P0, M) — cả x lẫn y
+          var HS = { x: (P0.x + M.x) / 2, y: (P0.y + M.y) / 2 };
+          var dx = M.x - HS.x, dy = M.y - HS.y;
+          function rayEnd(p) {
+            var ts = [];
+            if (dx > 0.001) ts.push((W - p.x) / dx);
+            if (dx < -0.001) ts.push((0 - p.x) / dx);
+            if (dy > 0.001) ts.push((H - p.y) / dy);
+            if (dy < -0.001) ts.push((0 - p.y) / dy);
+            var t = Math.min.apply(null, ts.filter(function(v) { return v > 0; }));
+            return isFinite(t) ? { x: p.x + dx * t, y: p.y + dy * t } : p;
+          }
+          figs.push({ type: 'line', attrs: { coordinates: [P1, P2] } });
+          figs.push({ type: 'line', attrs: { coordinates: [HS, M] } });
+          figs.push({ type: 'line', attrs: { coordinates: [HS, rayEnd(HS)] } });
+          figs.push({ type: 'line', attrs: { coordinates: [P1, rayEnd(P1)] } });
+          figs.push({ type: 'line', attrs: { coordinates: [P2, rayEnd(P2)] } });
+          return figs;
+        }
+      },
+      {
+        name: 'modifiedSchiffPitchfork', totalStep: 4,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, figs = [];
+          if (c.length < 2) return figs;
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var W = b.width, H = b.height;
+          var P0 = c[0], P1 = c[1], P2 = c[2];
+          var M  = { x: (P1.x + P2.x) / 2, y: (P1.y + P2.y) / 2 };
+          // Modified Schiff: chỉ dịch Y xuống giữa P0 và M, giữ nguyên X = P0.x
+          var HM = { x: P0.x, y: (P0.y + M.y) / 2 };
+          var dx = M.x - HM.x, dy = M.y - HM.y;
+          function rayEnd(p) {
+            var ts = [];
+            if (dx > 0.001) ts.push((W - p.x) / dx);
+            if (dx < -0.001) ts.push((0 - p.x) / dx);
+            if (dy > 0.001) ts.push((H - p.y) / dy);
+            if (dy < -0.001) ts.push((0 - p.y) / dy);
+            var t = Math.min.apply(null, ts.filter(function(v) { return v > 0; }));
+            return isFinite(t) ? { x: p.x + dx * t, y: p.y + dy * t } : p;
+          }
+          figs.push({ type: 'line', attrs: { coordinates: [P1, P2] } });
+          figs.push({ type: 'line', attrs: { coordinates: [HM, M] } });
+          figs.push({ type: 'line', attrs: { coordinates: [HM, rayEnd(HM)] } });
+          figs.push({ type: 'line', attrs: { coordinates: [P1, rayEnd(P1)] } });
+          figs.push({ type: 'line', attrs: { coordinates: [P2, rayEnd(P2)] } });
+          return figs;
+        }
+      },
+      {
+        name: 'insidePitchfork', totalStep: 4,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, figs = [];
+          if (c.length < 2) return figs;
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          var W = b.width, H = b.height;
+          var P0 = c[0], P1 = c[1], P2 = c[2];
+          // Inside: các tine bắt đầu từ midpoint(P0,P1) và midpoint(P0,P2)
+          var IP1 = { x: (P0.x + P1.x) / 2, y: (P0.y + P1.y) / 2 };
+          var IP2 = { x: (P0.x + P2.x) / 2, y: (P0.y + P2.y) / 2 };
+          var MI  = { x: (IP1.x + IP2.x) / 2, y: (IP1.y + IP2.y) / 2 };
+          var dx = MI.x - P0.x, dy = MI.y - P0.y;
+          function rayEnd(p) {
+            var ts = [];
+            if (dx > 0.001) ts.push((W - p.x) / dx);
+            if (dx < -0.001) ts.push((0 - p.x) / dx);
+            if (dy > 0.001) ts.push((H - p.y) / dy);
+            if (dy < -0.001) ts.push((0 - p.y) / dy);
+            var t = Math.min.apply(null, ts.filter(function(v) { return v > 0; }));
+            return isFinite(t) ? { x: p.x + dx * t, y: p.y + dy * t } : p;
+          }
+          figs.push({ type: 'line', attrs: { coordinates: [IP1, IP2] } });          // base thu hẹp
+          figs.push({ type: 'line', attrs: { coordinates: [P0, MI] } });            // handle
+          figs.push({ type: 'line', attrs: { coordinates: [P0, rayEnd(P0)] } });    // median
+          figs.push({ type: 'line', attrs: { coordinates: [IP1, rayEnd(IP1)] } });  // upper tine
+          figs.push({ type: 'line', attrs: { coordinates: [IP2, rayEnd(IP2)] } });  // lower tine
+          return figs;
+        }
+      },
+
       // --- WAVES ---
       createWave('waveElliott', 7, ['0', '1', '2', '3', '4', '5']), createWave('waveABC', 5, ['0', 'A', 'B', 'C']),
       createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']), createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
@@ -478,6 +599,16 @@
   const MENUS = [
     { icon: SVG.line, tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'arrow', n: 'Mũi tên'} ]},
     { icon: SVG.linesAdv, tools: [ { id: 'extendedLine', n: 'Đường thẳng 2 chiều' }, { id: 'horizontalRay', n: 'Tia ngang' }, { id: 'trendAngle', n: 'Góc xu hướng' }, { id: 'infoLine', n: 'Đường thông tin' }, { id: 'crossLine', n: 'Đường chữ thập' }, { id: 'curvedLine', n: 'Đường cong (Bézier)' } ]},
+    { 
+      id: 'pitchforkFamily',  
+      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`,  
+      tools: [    
+        { id: 'andrewsPitchfork',        name: 'Andrews Pitchfork' },    
+        { id: 'schiffPitchfork',         name: 'Schiff Pitchfork' },    
+        { id: 'modifiedSchiffPitchfork', name: 'Modified Schiff Pitchfork' },    
+        { id: 'insidePitchfork',         name: 'Inside Pitchfork' }
+      ]
+    },
     { icon: SVG.fibo, tools: [ {id: 'fibonacciLine', n: 'Fibonacci Retracement'}, {id: 'fibonacciExtension', n: 'Fibo Extension'}, {id: 'fibonacciSpeedResistanceFan', n: 'Fibo Fan'}, {id: 'fibonacciCircle', n: 'Fibo Circle'}, {id: 'fibonacciSpiral', n: 'Fibo Spiral'}, {id: 'fibonacciSegment', n: 'Fibo Segment'} ]},
     { icon: SVG.shape, tools: [ {id: 'rect', n: 'Hình chữ nhật'}, {id: 'circle', n: 'Hình tròn'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'gannBox', n: 'Hộp Gann'} ]},
     { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, tools: [ {id: 'waveElliott', n: 'Sóng Elliott (12345)'}, {id: 'waveABC', n: 'Sóng ABC'}, {id: 'waveTriangle', n: 'Tam giác (ABCDE)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'}, {id: 'headAndShoulders', n: 'Vai Đầu Vai'} ]}
