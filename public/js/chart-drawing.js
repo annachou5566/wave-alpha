@@ -1576,93 +1576,7 @@
     }, 0);
   }
 
-// ─────────────────────────────────────────────
-  // TEXT EDITOR & WRAPPER (BATCH 8 ARCHITECTURE)
-  // ─────────────────────────────────────────────
-  var USE_NATIVE_PROMPT = false;
 
-  function openTextEditor(currentText, onConfirm) {
-    if (USE_NATIVE_PROMPT) {
-      var result = window.prompt('Nhập nội dung:', currentText || '');
-      if (result !== null) onConfirm(result);
-      return;
-    }
-    var existing = document.getElementById('wa-text-editor');
-    if (existing) existing.remove();
-
-    var backdrop = document.createElement('div');
-    backdrop.id = 'wa-text-editor';
-    backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
-    backdrop.innerHTML = `
-      <div style="background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:20px;width:340px;box-shadow:0 20px 40px rgba(0,0,0,0.7);font-family:Rajdhani,sans-serif;">
-        <div style="font-size:11px;font-weight:700;color:#848e9c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Nhập nội dung</div>
-        <textarea id="wa-te-input" rows="3" style="width:100%;box-sizing:border-box;background:#111418;border:1px solid #2b3139;border-radius:6px;color:#eaecef;font-size:14px;font-family:inherit;padding:8px 10px;resize:vertical;outline:none;" placeholder="Nhập text..."></textarea>
-        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
-          <button id="wa-te-cancel" style="background:transparent;border:1px solid #2b3139;color:#848e9c;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;">Hủy</button>
-          <button id="wa-te-confirm" style="background:#00F0FF;border:none;color:#000;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;">Xác nhận</button>
-        </div>
-      </div>`;
-    document.body.appendChild(backdrop);
-
-    var textarea = document.getElementById('wa-te-input');
-    textarea.value = currentText || '';
-    requestAnimationFrame(function() { textarea.focus(); textarea.select(); });
-
-    function confirm() { var val = textarea.value; backdrop.remove(); onConfirm(val); }
-    function cancel() { backdrop.remove(); }
-
-    document.getElementById('wa-te-confirm').addEventListener('click', confirm);
-    document.getElementById('wa-te-cancel').addEventListener('click', cancel);
-    backdrop.addEventListener('click', function(e) { if (e.target === backdrop) cancel(); });
-    textarea.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); confirm(); }
-      if (e.key === 'Escape') cancel();
-    });
-  }
-
-  var NON_EDITABLE_TOOLS = ['tableAnnotation'];
-  var URL_TOOLS = ['insertImage'];
-
-  function createTextOverlay(chart, toolId, initialData) {
-    if (!chart) return null;
-    var overlayId = null;
-    var isEditable = NON_EDITABLE_TOOLS.indexOf(toolId) === -1;
-    var isUrlTool = URL_TOOLS.indexOf(toolId) !== -1;
-    var urlPromptMsg = isUrlTool ? 'Nhập URL hình ảnh:' : 'Nhập nội dung:';
-
-    function openEditor(currentText) {
-      if (isUrlTool) {
-        var result = window.prompt(urlPromptMsg, currentText || '');
-        // FIX: Sửa modifyOverlay thành overrideOverlay
-        if (result !== null && overlayId) chart.overrideOverlay({ id: overlayId, extendData: result });
-        return;
-      }
-      openTextEditor(currentText, function(newText) {
-        // FIX: Sửa modifyOverlay thành overrideOverlay
-        if (overlayId) chart.overrideOverlay({ id: overlayId, extendData: newText });
-      });
-    }
-
-    var config = {
-      name: toolId, extendData: initialData || '',
-      onDrawEnd: isEditable ? function(event) {
-        if (!overlayId && event && event.overlay) overlayId = event.overlay.id;
-        openEditor((event && event.overlay) ? event.overlay.extendData : '');
-        return false;
-      } : undefined,
-      onDoubleClick: isEditable ? function(event) {
-        if (!overlayId && event && event.overlay) overlayId = event.overlay.id;
-        openEditor((event && event.overlay) ? event.overlay.extendData : '');
-        return false;
-      } : undefined
-    };
-    if (!config.onDrawEnd) delete config.onDrawEnd;
-    if (!config.onDoubleClick) delete config.onDoubleClick;
-
-    var id = chart.createOverlay(config);
-    if (id) overlayId = id;
-    return id;
-  }
 
   // ==========================================
   // 4. EVENTS ENGINE (KEYBOARD, TOOLS)
@@ -1743,11 +1657,13 @@
         let tType = getToolCategory(toolId); let s = toolStyles[tType] || {};
         let config = { name: toolId, lock: false, styles: {} };
         
+        // LUỒNG XỬ LÝ MỚI CHO TEXT (Gắn liền với Bảng Tùy Chỉnh)
         if (tType === 'text') {
             if (toolId === 'insertIcon') config.extendData = '⭐';
             else if (toolId === 'insertImage') config.extendData = '';
             else config.extendData = toolStyles.text.textInput || 'Văn bản...';
-            // Cấu hình màu nền mờ và chữ theo Bảng tùy chỉnh
+            
+            // Ép màu nền mờ và chữ theo Bảng tùy chỉnh (Không dùng hardcode nữa)
             config.styles.text = { color: s.textColor || '#EAECEF', size: s.textSize || 14, family: 'sans-serif' };
             config.styles.polygon = { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)', borderColor: s.textColor || '#00F0FF' };
         }
@@ -1899,13 +1815,7 @@
     body.innerHTML = html;
     panel.classList.add('show');
 
-    // Kích hoạt click cho Bảng Icon
-    body.querySelectorAll('.wa-emo').forEach(el => {
-       el.onclick = function() {
-          document.getElementById('wa-prop-txt').value = this.innerText;
-          updateEngine(); // Tự động load Icon mới lên biểu đồ
-       };
-    });
+    // 1. ĐỊNH NGHĨA UPDATE ENGINE TRƯỚC
     const updateEngine = debounce(() => {
       if(!currentSelectedOverlay || !global.tvChart) return;
       let newStyles = { ...currentSelectedOverlay.styles };
@@ -1937,6 +1847,14 @@
       saveStyles();
       try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
     }, 16);
+
+    // 2. KÍCH HOẠT EVENT CLICK EMOJI (GỌI UPDATE ENGINE Ở TRÊN)
+    body.querySelectorAll('.wa-emo').forEach(el => {
+       el.onclick = function() {
+          document.getElementById('wa-prop-txt').value = this.innerText;
+          updateEngine(); // Bây giờ gọi sẽ không bị lỗi Reference nữa
+       };
+    });
 
     body.querySelectorAll('input, textarea, select').forEach(el => {
       el.addEventListener('input', updateEngine); el.addEventListener('change', updateEngine); el.addEventListener('compositionend', updateEngine);
