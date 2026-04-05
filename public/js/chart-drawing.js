@@ -1316,20 +1316,20 @@
         }
       },
 
-      // --- BATCH 8: Text Annotation Tools ---
-      { name: 'plainText', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: txt, align: 'left', baseline: 'top' }, styles: { color: '#EAECEF', size: 14, family: 'Rajdhani, sans-serif', weight: '600' } }]; } },
-      { name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: 'rgba(0,240,255,0.4)', size: 1, style: 'dashed' } }); } var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y; figs.push({ type: 'text', attrs: { x: tx, y: ty, text: txt, align: 'left', baseline: 'bottom' }, styles: { color: '#00F0FF', size: 13, family: 'Rajdhani, sans-serif', weight: '700' } }); return figs; } },
-      { name: 'note', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var lines = txt.split('\n'); var lh = 16, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(60, maxLen * 7.5 + pd * 2); var bh = lines.length * lh + pd * 2; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + bw, y: y }, { x: x + bw, y: y + bh }, { x: x, y: y + bh } ]}, styles: { style: 'fill', color: 'rgba(240,185,11,0.15)', borderColor: '#F0B90B', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + pd, y: y + pd, text: lines[0], align: 'left', baseline: 'top' }, styles: { color: '#EAECEF', size: 12, family: 'sans-serif' } } ]; } },
-      { name: 'priceNote', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var x = c[0].x, y = c[0].y; var bw = label.length * 7 + 16, bh = 22; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + bw, y: y - bh / 2 }, { x: x + bw, y: y + bh / 2 }, { x: x, y: y + bh / 2 } ]}, styles: { style: 'fill', color: 'rgba(14,203,129,0.2)', borderColor: '#0ECB81', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 8, y: y, text: label, align: 'left', baseline: 'middle' }, styles: { color: '#0ECB81', size: 12, family: 'Rajdhani, sans-serif', weight: '700' } } ]; } },
-      { name: 'pin', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, r = 10; var figs = [ { type: 'circle', attrs: { x: x, y: y - r - 10, r: r }, styles: { style: 'fill', color: '#F0B90B', borderColor: '#fff', borderSize: 1.5 } }, { type: 'line', attrs: { coordinates: [{ x: x, y: y - 10 }, { x: x, y: y }] }, styles: { color: '#F0B90B', size: 2 } } ]; if (txt) { figs.push({ type: 'text', attrs: { x: x + r + 4, y: y - r - 10, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#EAECEF', size: 12 } }); } return figs; } },
-      { name: 'tableAnnotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 160; var y1 = c.length >= 2 ? c[1].y : y0 + 80; var W = Math.abs(x1 - x0) || 160, H = Math.abs(y1 - y0) || 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1); var cols = 2, rows = 3, cw = W / cols, ch = H / rows; var figs = [{ type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'fill', color: 'rgba(22,26,30,0.9)', borderColor: '#2b3139', borderSize: 1 }, ignoreEvent: true }]; for (var ci = 1; ci < cols; ci++) { figs.push({ type: 'line', attrs: { coordinates: [ { x: lx + ci * cw, y: ly }, { x: lx + ci * cw, y: ly + H } ]}, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }); } for (var ri = 1; ri < rows; ri++) { figs.push({ type: 'line', attrs: { coordinates: [ { x: lx, y: ly + ri * ch }, { x: lx + W, y: ly + ri * ch } ]}, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }); } return figs; } },
-      { name: 'annotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: '#00F0FF', size: 1 } }); var tx = c[1].x, ty = c[1].y; var bw = txt.length * 7.5 + 16, bh = 22; figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0,240,255,0.1)', borderColor: '#00F0FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: tx + 8, y: ty, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#00F0FF', size: 12, family: 'Rajdhani, sans-serif', weight: '600' } }); } else { figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: c[0].y, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#00F0FF', size: 12 } }); } return figs; } },
-      { name: 'comment', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var bw = Math.max(80, txt.length * 7 + 20), bh = 30, tail = 8; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh - tail }, { x: x + bw, y: y - bh - tail }, { x: x + bw, y: y - tail }, { x: x + 18, y: y - tail }, { x: x + 10, y: y }, { x: x + 6, y: y - tail }, { x: x, y: y - tail } ]}, styles: { style: 'stroke_fill', color: 'rgba(30,35,42,0.95)', borderColor: '#474d57', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 10, y: y - bh / 2 - tail, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#EAECEF', size: 12 } } ]; } },
-      { name: 'priceLabel', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var label = custom || (priceVal != null ? priceVal.toFixed(dp) : '...'); var x = c[0].x, y = c[0].y, bw = label.length * 7.5 + 20, bh = 20; var arr = 6; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + arr, y: y - bh / 2 }, { x: x + arr + bw, y: y - bh / 2 }, { x: x + arr + bw, y: y + bh / 2 }, { x: x + arr, y: y + bh / 2 } ]}, styles: { style: 'fill', color: '#F6465D' }, ignoreEvent: true }, { type: 'text', attrs: { x: x + arr + 6, y: y, text: label, align: 'left', baseline: 'middle' }, styles: { color: '#fff', size: 11, family: 'Rajdhani, sans-serif', weight: '700' } } ]; } },
-      { name: 'signpost', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y - 40; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], { x: tx, y: ty }] }, styles: { color: '#848e9c', size: 1, style: 'dashed' } }); } var bw = txt.length * 7.5 + 24, bh = 24, notch = 10; var isRight = tx >= c[0].x; var coords = isRight ? [{ x: tx, y: ty }, { x: tx + notch, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty + bh / 2 }, { x: tx + notch, y: ty + bh / 2 }] : [{ x: tx, y: ty }, { x: tx - notch, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty + bh / 2 }, { x: tx - notch, y: ty + bh / 2 }]; figs.push({ type: 'polygon', attrs: { coordinates: coords }, styles: { style: 'fill', color: 'rgba(153,69,255,0.25)', borderColor: '#9945FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: isRight ? tx + notch + 8 : tx - notch - 8, y: ty, text: txt, align: isRight ? 'left' : 'right', baseline: 'middle' }, styles: { color: '#d0aaff', size: 12, family: 'Rajdhani, sans-serif', weight: '700' } }); return figs; } },
-      { name: 'flagMarker', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14; return [ { type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: y - ph }] }, styles: { color: '#F0B90B', size: pw } }, { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - ph }, { x: x + fw, y: y - ph + fh / 2 }, { x: x, y: y - ph + fh } ]}, styles: { style: 'fill', color: '#F0B90B' }, ignoreEvent: true }, ...(txt ? [{ type: 'text', attrs: { x: x + fw + 4, y: y - ph + fh / 2, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#F0B90B', size: 11 } }] : []) ]; } },
-      { name: 'insertImage', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var url = ref.overlay.extendData || ''; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 120; var y1 = c.length >= 2 ? c[1].y : y0 + 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1); var W = Math.abs(x1 - x0) || 120, H = Math.abs(y1 - y0) || 80; var label = url ? '🖼 ' + url.split('/').pop().slice(0, 20) : '🖼 Double-click to set URL'; return [ { type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'stroke_fill', color: 'rgba(0,240,255,0.05)', borderColor: '#2b3139', borderSize: 1, borderStyle: 'dashed' }, ignoreEvent: true }, { type: 'line', attrs: { coordinates: [{ x: lx, y: ly }, { x: lx + W, y: ly + H }] }, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }, { type: 'line', attrs: { coordinates: [{ x: lx + W, y: ly }, { x: lx, y: ly + H }] }, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: lx + W / 2, y: ly + H / 2, text: label, align: 'center', baseline: 'middle' }, styles: { color: '#5E6673', size: 11 } } ]; } },
-      { name: 'insertIcon', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '★'; var x = c[0].x, y = c[0].y; return [{ type: 'text', attrs: { x: x, y: y, text: icon, align: 'center', baseline: 'middle' }, styles: { color: '#F0B90B', size: 22 } }]; } }
+      // --- BATCH 8: TEXT & ANNOTATIONS (Đã gỡ bỏ Hardcode Màu & Thêm Image) ---
+      { name: 'plainText', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: txt, align: 'left', baseline: 'top' } }]; } },
+      { name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { style: 'dashed' } }); } var tx = c.length >= 2 ? c[1].x : c[0].x, ty = c.length >= 2 ? c[1].y : c[0].y; figs.push({ type: 'text', attrs: { x: tx, y: ty, text: txt, align: 'left', baseline: 'bottom' } }); return figs; } },
+      { name: 'note', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y, lines = txt.split('\n'), lh = 16, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(60, maxLen * 7.5 + pd * 2), bh = lines.length * lh + pd * 2; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + bw, y: y }, { x: x + bw, y: y + bh }, { x: x, y: y + bh } ]} }, { type: 'text', attrs: { x: x + pd, y: y + pd, text: lines[0], align: 'left', baseline: 'top' } } ]; } },
+      { name: 'priceNote', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var x = c[0].x, y = c[0].y; var bw = label.length * 7 + 16, bh = 22; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + bw, y: y - bh / 2 }, { x: x + bw, y: y + bh / 2 }, { x: x, y: y + bh / 2 } ]} }, { type: 'text', attrs: { x: x + 8, y: y, text: label, align: 'left', baseline: 'middle' } } ]; } },
+      { name: 'pin', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, r = 10; var figs = [ { type: 'circle', attrs: { x: x, y: y - r - 10, r: r } }, { type: 'line', attrs: { coordinates: [{ x: x, y: y - 10 }, { x: x, y: y }] } } ]; if (txt) { figs.push({ type: 'text', attrs: { x: x + r + 4, y: y - r - 10, text: txt, align: 'left', baseline: 'middle' } }); } return figs; } },
+      { name: 'tableAnnotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 160, y1 = c.length >= 2 ? c[1].y : y0 + 80; var W = Math.abs(x1 - x0) || 160, H = Math.abs(y1 - y0) || 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1), cols = 2, rows = 3, cw = W / cols, ch = H / rows; var figs = [{ type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]} }]; for (var ci = 1; ci < cols; ci++) figs.push({ type: 'line', attrs: { coordinates: [{ x: lx + ci * cw, y: ly }, { x: lx + ci * cw, y: ly + H }] } }); for (var ri = 1; ri < rows; ri++) figs.push({ type: 'line', attrs: { coordinates: [{ x: lx, y: ly + ri * ch }, { x: lx + W, y: ly + ri * ch }] } }); return figs; } },
+      { name: 'annotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] } }); var tx = c[1].x, ty = c[1].y, bw = txt.length * 7.5 + 16, bh = 22; figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]} }); figs.push({ type: 'text', attrs: { x: tx + 8, y: ty, text: txt, align: 'left', baseline: 'middle' } }); } else { figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: c[0].y, text: txt, align: 'left', baseline: 'middle' } }); } return figs; } },
+      { name: 'comment', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y, bw = Math.max(80, txt.length * 7 + 20), bh = 30, tail = 8; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh - tail }, { x: x + bw, y: y - bh - tail }, { x: x + bw, y: y - tail }, { x: x + 18, y: y - tail }, { x: x + 10, y: y }, { x: x + 6, y: y - tail }, { x: x, y: y - tail } ]} }, { type: 'text', attrs: { x: x + 10, y: y - bh / 2 - tail, text: txt, align: 'left', baseline: 'middle' } } ]; } },
+      { name: 'priceLabel', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var label = custom || (priceVal != null ? priceVal.toFixed(dp) : '...'); var x = c[0].x, y = c[0].y, bw = label.length * 7.5 + 20, bh = 20, arr = 6; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + arr, y: y - bh / 2 }, { x: x + arr + bw, y: y - bh / 2 }, { x: x + arr + bw, y: y + bh / 2 }, { x: x + arr, y: y + bh / 2 } ]} }, { type: 'text', attrs: { x: x + arr + 6, y: y, text: label, align: 'left', baseline: 'middle' } } ]; } },
+      { name: 'signpost', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var tx = c.length >= 2 ? c[1].x : c[0].x, ty = c.length >= 2 ? c[1].y : c[0].y - 40; var figs = []; if (c.length >= 2) figs.push({ type: 'line', attrs: { coordinates: [c[0], { x: tx, y: ty }] } }); var bw = txt.length * 7.5 + 24, bh = 24, notch = 10, isRight = tx >= c[0].x; var coords = isRight ? [{ x: tx, y: ty }, { x: tx + notch, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty + bh / 2 }, { x: tx + notch, y: ty + bh / 2 }] : [{ x: tx, y: ty }, { x: tx - notch, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty + bh / 2 }, { x: tx - notch, y: ty + bh / 2 }]; figs.push({ type: 'polygon', attrs: { coordinates: coords } }); figs.push({ type: 'text', attrs: { x: isRight ? tx + notch + 8 : tx - notch - 8, y: ty, text: txt, align: isRight ? 'left' : 'right', baseline: 'middle' } }); return figs; } },
+      { name: 'flagMarker', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14; return [ { type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: y - ph }] } }, { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - ph }, { x: x + fw, y: y - ph + fh / 2 }, { x: x, y: y - ph + fh } ]} }, ...(txt ? [{ type: 'text', attrs: { x: x + fw + 4, y: y - ph + fh / 2, text: txt, align: 'left', baseline: 'middle' } }] : []) ]; } },
+      { name: 'insertImage', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var url = ref.overlay.extendData || ''; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 120, y1 = c.length >= 2 ? c[1].y : y0 + 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1), W = Math.abs(x1 - x0) || 120, H = Math.abs(y1 - y0) || 80; if (url && url.startsWith('http')) return [{ type: 'image', attrs: { x: lx, y: ly, width: W, height: H, src: url } }]; return [ { type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]} }, { type: 'line', attrs: { coordinates: [{ x: lx, y: ly }, { x: lx + W, y: ly + H }] } }, { type: 'line', attrs: { coordinates: [{ x: lx + W, y: ly }, { x: lx, y: ly + H }] } }, { type: 'text', attrs: { x: lx + W / 2, y: ly + H / 2, text: '🖼 Nhập URL', align: 'center', baseline: 'middle' } } ]; } },
+      { name: 'insertIcon', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '⭐'; return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: icon, align: 'center', baseline: 'middle' } }]; } }
     ];
 
     extensions.forEach(e => { try { kc.registerOverlay(e); } catch(err){} });
@@ -1739,35 +1739,28 @@
       if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
       container.classList.add('wa-drawing-mode');
 
-      const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','tableAnnotation','annotation','comment','priceLabel','signpost','flagMarker','insertImage','insertIcon'];
-
-      // ROUTE RIÊNG CHO TEXT & ANNOTATION (Chạy qua kiến trúc Modal mới)
-      if (TEXT_TOOLS.includes(toolId)) {
-        createTextOverlay(global.tvChart, toolId);
-        return;
-      }
-
-      // ROUTE CHO CÁC CÔNG CỤ VẼ THÔNG THƯỜNG CÒN LẠI
       try {
         let tType = getToolCategory(toolId); let s = toolStyles[tType] || {};
         let config = { name: toolId, lock: false, styles: {} };
         
-        if(tType === 'lines' || tType === 'waves') {
+        if (tType === 'text') {
+            if (toolId === 'insertIcon') config.extendData = '⭐';
+            else if (toolId === 'insertImage') config.extendData = '';
+            else config.extendData = toolStyles.text.textInput || 'Văn bản...';
+            // Cấu hình màu nền mờ và chữ theo Bảng tùy chỉnh
+            config.styles.text = { color: s.textColor || '#EAECEF', size: s.textSize || 14, family: 'sans-serif' };
+            config.styles.polygon = { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)', borderColor: s.textColor || '#00F0FF' };
+        }
+        else if (tType === 'lines' || tType === 'waves') {
           config.styles.line = { color: s.lineColor || '#00F0FF', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
         } else if (tType === 'shapes') {
           config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor, s.fillOpacity), borderColor: s.borderColor, borderSize: s.borderWidth };
         } else if (tType === 'fibo') {
           config.styles.line = { color: s.lineColor, size: 1 }; config.extendData = { showLabels: s.showLabels, fillOpacity: s.fillOpacity };
-        } else if (tType === 'text') {
-          // Khởi tạo dữ liệu mặc định để kích hoạt khả năng edit cho 13 công cụ Text
-          if (toolId === 'insertIcon') config.extendData = '⭐';
-          else if (toolId === 'insertImage') config.extendData = '';
-          else config.extendData = toolStyles.text.textInput || 'Văn bản...';
-          config.styles.text = { color: s.textColor || '#EAECEF', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
         }
 
         global.tvChart.createOverlay(config);
-      } catch (err) { showToast('Lỗi khởi tạo. Hệ thống sẽ khôi phục về mặc định.'); }
+      } catch (err) { showToast('Lỗi khởi tạo công cụ.'); }
     }
 
     let waitChart = setInterval(() => {
@@ -1845,12 +1838,8 @@
 
       if (overlay.name === 'insertIcon') {
          html += `
-         <style>
-           .wa-icon-picker { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; background: #0B0E11; border: 1px solid #2b3139; border-radius: 4px; max-height: 120px; overflow-y: auto; }
-           .wa-icon-picker::-webkit-scrollbar { width: 4px; } .wa-icon-picker::-webkit-scrollbar-thumb { background: #2b3139; border-radius: 4px; }
-           .wa-emo { cursor: pointer; font-size: 20px; transition: transform 0.1s; user-select: none; } .wa-emo:hover { transform: scale(1.3); }
-         </style>
-         <div class="wa-control-row"><label>Click để chọn Icon mới:</label>
+         <style>.wa-icon-picker{display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:#0B0E11;border:1px solid #2b3139;border-radius:4px;max-height:120px;overflow-y:auto;} .wa-icon-picker::-webkit-scrollbar{width:4px;} .wa-icon-picker::-webkit-scrollbar-thumb{background:#2b3139;border-radius:4px;} .wa-emo{cursor:pointer;font-size:20px;transition:0.1s;} .wa-emo:hover{transform:scale(1.3);}</style>
+         <div class="wa-control-row"><label>Click để đổi Icon:</label>
            <div class="wa-icon-picker">
              ${['⭐','🔥','🚀','💎','🐂','🐻','📌','⚡','✅','❌','💰','📈','📉','🔔','💡','🎯','🏆','⚠️','💀','👽'].map(e=>`<span class="wa-emo">${e}</span>`).join('')}
            </div>
@@ -1858,9 +1847,8 @@
          </div>`;
       } else if (overlay.name === 'insertImage') {
          html += `
-         <div class="wa-control-row"><label>Đường dẫn ảnh trực tuyến (URL):</label>
+         <div class="wa-control-row"><label>Dán đường dẫn ảnh online (.png, .jpg):</label>
            <input type="text" id="wa-prop-txt" class="wa-input" placeholder="https://..." value="${txt}">
-           <div style="font-size:11px;color:#848E9C;margin-top:4px;">Dán link ảnh (.png, .jpg) vào ô trên. Nhấn ra ngoài hoặc Enter để ảnh hiện lên chart.</div>
          </div>`;
       } else {
          html += `
@@ -1872,11 +1860,11 @@
       if (overlay.name !== 'insertImage') {
         html += `
         <div style="display:flex; gap:8px; margin-top:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu sắc</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
+          <div class="wa-control-row" style="flex:1"><label>Màu nền & Chữ</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
+          <div class="wa-control-row" style="flex:1"><label>Cỡ chữ</label><select id="wa-prop-s1" class="wa-select">
             <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
             <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
-            <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
+            <option value="32" ${sz==32?'selected':''}>32px</option>
           </select></div>
         </div>`;
       }
@@ -1910,24 +1898,12 @@
 
     body.innerHTML = html;
     panel.classList.add('show');
-body.innerHTML = html;
-    panel.classList.add('show');
 
-    // Bắt sự kiện click cho Emoji Picker
+    // Kích hoạt click cho Bảng Icon
     body.querySelectorAll('.wa-emo').forEach(el => {
        el.onclick = function() {
           document.getElementById('wa-prop-txt').value = this.innerText;
-          updateEngine(); // Tự động load lên chart
-       };
-    });
-    body.innerHTML = html;
-    panel.classList.add('show');
-
-    // Bắt sự kiện click cho Bảng Emoji
-    body.querySelectorAll('.wa-emo').forEach(el => {
-       el.onclick = function() {
-          document.getElementById('wa-prop-txt').value = this.innerText;
-          updateEngine(); // Click Icon là tự đổi trên chart luôn
+          updateEngine(); // Tự động load Icon mới lên biểu đồ
        };
     });
     const updateEngine = debounce(() => {
