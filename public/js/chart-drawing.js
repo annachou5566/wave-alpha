@@ -1,7 +1,7 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
-// 📦 WAVE ALPHA — PRO DRAWING ENGINE (V6 ULTIMATE)
-// 100% TradingView Clone | Full Customization | Delete Key
+// 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026
+// Minimalist UI | Zero DOM Destruct | Full Customization
 // ==========================================
 
 (function (global) {
@@ -9,7 +9,7 @@
 
   let currentSelectedOverlay = null;
 
-  // 1. CẤU HÌNH STYLE MẶC ĐỊNH CHO HÌNH VẼ MỚI
+  // 1. CẤU HÌNH STYLE MẶC ĐỊNH
   let globalStyles = {
     lineColor: '#00F0FF',
     fillColor: 'rgba(0, 240, 255, 0.15)',
@@ -19,7 +19,7 @@
   };
 
   // ======================================================
-  // 2. ĐĂNG KÝ TOÀN BỘ THUẬT TOÁN TỪ REPO PRO
+  // 2. ĐĂNG KÝ TOÀN BỘ THUẬT TOÁN (TỪ REPO PRO)
   // ======================================================
   function registerProExtensions() {
     var kc = global.klinecharts;
@@ -40,13 +40,11 @@
     }
 
     var extensions = [
-      // BỘ SÓNG ELLIOTT CHUẨN TOÁN HỌC
-      createWave('waveElliott', 6, ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)']), // Sóng đẩy 5
-      createWave('waveABC', 4, ['(0)', '(A)', '(B)', '(C)']),                   // Sóng điều chỉnh ABC
-      createWave('waveTriangle', 6, ['(0)', '(A)', '(B)', '(C)', '(D)', '(E)']),// Tam giác ABCDE
-      createWave('waveWXY', 4, ['(0)', '(W)', '(X)', '(Y)']),                   // Sóng WXY
+      createWave('waveElliott', 6, ['(0)', '(1)', '(2)', '(3)', '(4)', '(5)']), 
+      createWave('waveABC', 4, ['(0)', '(A)', '(B)', '(C)']),                   
+      createWave('waveTriangle', 6, ['(0)', '(A)', '(B)', '(C)', '(D)', '(E)']),
+      createWave('waveWXY', 4, ['(0)', '(W)', '(X)', '(Y)']),                   
       
-      // HARMONIC
       {
         name: 'xabcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
@@ -83,18 +81,14 @@
           return figs;
         }
       },
-      
-      // TEXT TOOL PRO
       {
         name: 'customText', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
           if (!ref.coordinates || !ref.coordinates.length) return [];
-          if (ref.overlay.extendData === undefined) ref.overlay.extendData = globalStyles.textInput;
+          if (ref.overlay.extendData === undefined || ref.overlay.extendData === null) ref.overlay.extendData = globalStyles.textInput;
           return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: ref.overlay.extendData, baseline: 'bottom', size: 16, weight: 'bold' } }];
         }
       },
-
-      // FIBONACCI EXTENSION
       {
         name: 'fibExtension', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
@@ -118,74 +112,91 @@
   }
 
   // ======================================================
-  // 3. DANH SÁCH MENU BÊN TRÁI
+  // 3. BỘ ICON MINIMALIST 2026 (SIÊU PHẲNG, STROKE 2PX)
   // ======================================================
+  const ICONS = {
+    pointer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>',
+    lines: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="5" r="1.5"/></svg>',
+    fibonacci: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>',
+    waves: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 7 4 13 20 18 8 22 12"/></svg>',
+    shapes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>',
+    text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M12 4v16"/><path d="M9 20h6"/></svg>',
+    eraser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16c-1.5-1.5-1.5-3.5 0-5l7-7c1.5-1.5 3.5-1.5 5 0l5 5c1.5 1.5 1.5 3.5 0 5l-7 7z"/><path d="M15 9l-4 4"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+  };
+
   const MENU_MAP = [
-    { id: 'lines', icon: '📏', tools: [ 
-        { id: 'segment', name: 'Đường xu hướng (Trendline)' }, { id: 'ray', name: 'Tia' }, { id: 'straightLine', name: 'Đường mở rộng' }, 
+    { id: 'lines', icon: ICONS.lines, tools: [ 
+        { id: 'segment', name: 'Đường xu hướng (Trendline)' }, { id: 'rayLine', name: 'Tia (Ray)' }, { id: 'straightLine', name: 'Đường mở rộng' }, 
         { id: 'horizontalStraightLine', name: 'Đường ngang' }, { id: 'verticalStraightLine', name: 'Đường dọc' },
         { id: 'priceChannelLine', name: 'Kênh song song' }, { id: 'parallelStraightLine', name: 'Pitchfork' }
     ]},
-    { id: 'fibonacci', icon: '🌈', tools: [ 
+    { id: 'fibonacci', icon: ICONS.fibonacci, tools: [ 
         { id: 'fibonacciLine', name: 'Fibonacci Retracement' }, { id: 'fibExtension', name: 'Fibonacci Extension' }, 
         { id: 'fibonacciSpeedResistanceFan', name: 'Fibonacci Quạt' }, { id: 'fibonacciCircle', name: 'Fibonacci Vòng tròn' }
     ]},
-    { id: 'waves', icon: '🌊', tools: [ 
+    { id: 'waves', icon: ICONS.waves, tools: [ 
         { id: 'waveElliott', name: 'Sóng đẩy Elliott (12345)' }, { id: 'waveABC', name: 'Sóng điều chỉnh (ABC)' }, 
         { id: 'waveTriangle', name: 'Sóng tam giác (ABCDE)' }, { id: 'waveWXY', name: 'Sóng WXY' },
         { id: 'xabcd', name: 'Mô hình XABCD' }, { id: 'abcd', name: 'Mô hình ABCD' }, { id: 'headAndShoulders', name: 'Vai Đầu Vai' }
     ]},
-    { id: 'shapes', icon: '🟥', tools: [ 
+    { id: 'shapes', icon: ICONS.shapes, tools: [ 
         { id: 'rect', name: 'Hình chữ nhật' }, { id: 'triangle', name: 'Tam giác' }, { id: 'circle', name: 'Hình tròn' }
     ]},
-    { id: 'gann', icon: '🕸️', tools: [ 
-        { id: 'gannBox', name: 'Hộp Gann' }, { id: 'gannFan', name: 'Quạt Gann' }
+    { id: 'annotations', icon: ICONS.text, tools: [ 
+        { id: 'customText', name: 'Ghi chú (Text)' }, { id: 'simpleAnnotation', name: 'Nhãn giá' }
     ]}
   ];
 
   // ======================================================
-  // 4. CSS: SIDEBAR + FLOATING PROPERTIES
+  // 4. CSS: SIDEBAR + FLOATING PROPERTIES (KHÔNG DI CHUYỂN DOM)
   // ======================================================
   function injectCSS() {
     if (document.getElementById('wa-pro-css')) return;
     const style = document.createElement('style');
     style.id = 'wa-pro-css';
     style.textContent = `
-      #sc-chart-container { display: flex !important; flex-direction: row !important; overflow: hidden !important; position: relative; }
-      #sc-chart-container > div:not(.wa-pro-sidebar):not(.wa-floating-props) { flex: 1 !important; width: calc(100% - 52px) !important; min-width: 0 !important; }
+      #sc-chart-container { display: flex !important; flex-direction: row !important; position: relative; overflow: hidden !important; }
       
-      /* Sidebar Trái */
-      .wa-pro-sidebar { width: 52px; min-width: 52px; height: 100%; background-color: #161A1E; border-right: 1px solid #2b3139; display: flex; flex-direction: column; align-items: center; padding: 10px 0; z-index: 100; overflow-y:visible; }
+      /* CỰC KỲ QUAN TRỌNG: Ép KLineCharts tự động thu nhỏ lại để nhường 52px cho Sidebar */
+      #sc-chart-container > div:not(.wa-pro-sidebar):not(.wa-floating-props) { 
+          flex: 1 !important; width: auto !important; height: 100% !important; min-width: 0 !important; 
+      }
+      
+      .wa-pro-sidebar { width: 52px; min-width: 52px; height: 100%; background-color: #121418; border-right: 1px solid #23272E; display: flex; flex-direction: column; align-items: center; padding: 12px 0; z-index: 100; overflow-y:visible; }
       .wa-group { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 6px; }
-      .wa-btn { width: 36px; height: 36px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; font-size:16px;}
-      .wa-btn:hover { background-color: #2b3139; color: #EAECEF; }
+      .wa-btn { width: 34px; height: 34px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
+      .wa-btn svg { width: 20px; height: 20px; }
+      .wa-btn:hover { background-color: #23272E; color: #EAECEF; }
       .wa-btn.active { background-color: rgba(0, 240, 255, 0.15); color: #00F0FF; }
-      .wa-has-menu::after { content: ''; position: absolute; right: 4px; bottom: 4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); }
-      .wa-menu { position: absolute; left: 50px; top: 0; background-color: #161A1E; border: 1px solid #2b3139; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); display: none; flex-direction: column; width: 220px; padding: 6px 0; z-index: 9999; }
+      .wa-has-menu::after { content: ''; position: absolute; right: 3px; bottom: 4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); }
+      .wa-menu { position: absolute; left: 52px; top: 0; background-color: #161A1E; border: 1px solid #23272E; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: none; flex-direction: column; width: 220px; padding: 6px 0; z-index: 9999; }
       .wa-group:hover .wa-menu { display: flex; }
-      .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; font-family: sans-serif; cursor: pointer; }
-      .wa-menu-item:hover { background-color: #2b3139; color: #00F0FF; }
+      .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; font-weight: 500; font-family: sans-serif; cursor: pointer; transition: 0.15s; }
+      .wa-menu-item:hover { background-color: #23272E; color: #00F0FF; }
       .wa-menu-item.active { color: #00F0FF; }
-      .wa-divider { width: 24px; height: 1px; background-color: #2b3139; margin: 10px 0; }
+      .wa-divider { width: 24px; height: 1px; background-color: #23272E; margin: 10px 0; }
       .wa-drawing-mode canvas { cursor: crosshair !important; }
 
       /* Thanh Tùy Biến Nổi (Floating Properties Toolbar) */
       .wa-floating-props {
-          position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-          background: rgba(22, 26, 30, 0.95); border: 1px solid #2b3139; border-radius: 8px;
-          padding: 6px 12px; display: none; align-items: center; gap: 12px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 9999;
+          position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+          background: rgba(18, 20, 24, 0.95); border: 1px solid #23272E; border-radius: 8px;
+          padding: 8px 14px; display: none; align-items: center; gap: 14px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 9999;
       }
       .wa-floating-props.show { display: flex; }
-      .wa-prop-item { display: flex; align-items: center; gap: 6px; }
-      .wa-prop-label { color: #848E9C; font-size: 11px; }
-      .wa-prop-color { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #2b3139; cursor: pointer; padding: 0; overflow: hidden; }
+      .wa-prop-item { display: flex; align-items: center; gap: 8px; }
+      .wa-prop-label { color: #848E9C; font-size: 12px; font-weight: 500;}
+      .wa-prop-color { width: 24px; height: 24px; border-radius: 6px; border: 1px solid #23272E; cursor: pointer; padding: 0; overflow: hidden; background: transparent;}
       .wa-prop-color::-webkit-color-swatch-wrapper { padding: 0; }
-      .wa-prop-color::-webkit-color-swatch { border: none; }
-      .wa-prop-select { background: #0B0E11; color: #EAECEF; border: 1px solid #2b3139; padding: 4px 6px; border-radius: 4px; font-size: 12px; outline: none; }
-      .wa-prop-input { background: #0B0E11; color: #00F0FF; border: 1px solid #2b3139; padding: 4px 8px; border-radius: 4px; font-size: 13px; outline: none; width: 120px; font-weight: bold;}
-      .wa-prop-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; font-size: 14px; padding: 4px; transition: 0.2s; }
-      .wa-prop-btn:hover { color: #F6465D; }
+      .wa-prop-color::-webkit-color-swatch { border: none; border-radius: 4px; }
+      .wa-prop-select { background: #0B0E11; color: #EAECEF; border: 1px solid #23272E; padding: 6px 8px; border-radius: 6px; font-size: 13px; outline: none; cursor: pointer; }
+      .wa-prop-input { background: #0B0E11; color: #00F0FF; border: 1px solid #23272E; padding: 6px 12px; border-radius: 6px; font-size: 14px; outline: none; width: 140px; font-weight: bold; transition: 0.2s;}
+      .wa-prop-input:focus { border-color: #00F0FF; }
+      .wa-prop-btn { background: transparent; border: none; color: #848E9C; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: 0.2s; width: 28px; height: 28px; border-radius: 6px;}
+      .wa-prop-btn svg { width: 18px; height: 18px; }
+      .wa-prop-btn:hover { background: #23272E; color: #F6465D; }
     `;
     document.head.appendChild(style);
   }
@@ -194,30 +205,27 @@
   // 5. GIAO DIỆN HTML CHO SIDEBAR VÀ FLOATING PROPS
   // ======================================================
   function buildHTML() {
-    let html = '<div class="wa-group"><button class="wa-btn active" data-tool="pointer" title="Chọn / Di chuyển">🖱️</button></div>';
+    let html = '<div class="wa-group"><button class="wa-btn active" data-tool="pointer" title="Chọn / Di chuyển">' + ICONS.pointer + '</button></div>';
     MENU_MAP.forEach(g => {
       html += `<div class="wa-group"><button class="wa-btn wa-has-menu">${g.icon}</button><div class="wa-menu">`;
       g.tools.forEach(t => { html += `<div class="wa-menu-item" data-tool="${t.id}">${t.name}</div>`; });
       html += `</div></div>`;
     });
-    html += `<div class="wa-group"><button class="wa-btn" data-tool="customText" title="Ghi chú (Text)">📝</button></div>`;
     html += `<div class="wa-divider"></div>`;
-    html += `<div class="wa-group"><button class="wa-btn" data-tool="eraser" title="Cục tẩy (Click hình để xóa)">🧽</button></div>`;
-    html += `<div class="wa-group"><button class="wa-btn" data-tool="trash" title="Xóa toàn bộ">🗑️</button></div>`;
+    html += `<div class="wa-group"><button class="wa-btn" data-tool="eraser" title="Cục tẩy (Click hình để xóa)">${ICONS.eraser}</button></div>`;
+    html += `<div class="wa-group"><button class="wa-btn" data-tool="trash" title="Xóa toàn bộ">${ICONS.trash}</button></div>`;
     return html;
   }
 
   function buildFloatingPropsHTML() {
     return `
-      <div class="wa-prop-item" title="Màu nét/chữ">
-          <span class="wa-prop-label">Nét:</span>
+      <div class="wa-prop-item" title="Màu viền & chữ">
           <input type="color" id="wa-prop-line-color" class="wa-prop-color" value="#00F0FF">
       </div>
       <div class="wa-prop-item" title="Màu nền">
-          <span class="wa-prop-label">Nền:</span>
-          <input type="color" id="wa-prop-fill-color" class="wa-prop-color" value="#000000">
+          <input type="color" id="wa-prop-fill-color" class="wa-prop-color" value="#00F0FF">
       </div>
-      <div class="wa-prop-item" title="Độ dày">
+      <div class="wa-prop-item" title="Độ dày nét vẽ">
           <select id="wa-prop-line-size" class="wa-prop-select">
               <option value="1">1px</option><option value="2" selected>2px</option><option value="3">3px</option><option value="4">4px</option>
           </select>
@@ -227,17 +235,16 @@
               <option value="solid">▬▬</option><option value="dashed">- - -</option><option value="dotted">. . .</option>
           </select>
       </div>
-      <div class="wa-prop-item" id="wa-prop-text-wrapper" style="display:none;" title="Nhập chữ">
+      <div class="wa-prop-item" id="wa-prop-text-wrapper" style="display:none;" title="Nội dung Text">
           <input type="text" id="wa-prop-text-input" class="wa-prop-input" placeholder="Nhập chữ...">
       </div>
-      <div class="wa-divider" style="width:1px; height:16px; margin:0; background:#2b3139;"></div>
-      <button class="wa-prop-btn" id="wa-prop-delete" title="Xóa hình này (Phím Delete)">🗑️</button>
-      <button class="wa-prop-btn" id="wa-prop-close" title="Đóng" style="color:#848E9C;">✖</button>
+      <div class="wa-divider" style="width:1px; height:20px; margin:0; background:#23272E;"></div>
+      <button class="wa-prop-btn" id="wa-prop-delete" title="Xóa (Phím Delete)">${ICONS.trash}</button>
     `;
   }
 
   // ======================================================
-  // 6. XỬ LÝ LÕI SỰ KIỆN: VẼ, SỬA, XÓA
+  // 6. XỬ LÝ LÕI SỰ KIỆN: VẼ, SỬA, XÓA (REAL-TIME)
   // ======================================================
   function bindEvents(sidebar, propsBar) {
     let isEraserMode = false;
@@ -245,6 +252,7 @@
     // ----- BẮT SỰ KIỆN CLICK SIDEBAR -----
     sidebar.addEventListener('click', function(e) {
       let targetBtn = e.target.closest('.wa-btn'), targetMenuItem = e.target.closest('.wa-menu-item'), toolId = null;
+      
       if (targetMenuItem) {
         toolId = targetMenuItem.getAttribute('data-tool');
         document.querySelectorAll('.wa-btn, .wa-menu-item').forEach(el => el.classList.remove('active'));
@@ -266,10 +274,10 @@
       var c = document.getElementById('sc-chart-container');
       
       try { global.tvChart.cancelDrawing(); } catch(e) {}
-      hideFloatingProps(); // Ẩn thanh công cụ sửa khi chọn vẽ mới
+      hideFloatingProps(); 
 
       if (toolId === 'trash') {
-        if (confirm("Xóa toàn bộ hình vẽ?")) {
+        if (confirm("Bạn có chắc chắn muốn xóa toàn bộ hình vẽ trên biểu đồ?")) {
           global.tvChart.removeOverlay();
           executeTool('pointer');
         }
@@ -282,14 +290,14 @@
       c.classList.add('wa-drawing-mode');
       isEraserMode = false;
 
-      // Tạo hình vẽ mới với Global Styles
+      // THỰC THI LỆNH VẼ MỚI VÀO CHART
       try {
         global.tvChart.createOverlay({
           name: toolId, lock: false,
           extendData: globalStyles.textInput,
           styles: { 
             line: { color: globalStyles.lineColor, size: globalStyles.lineWidth, style: globalStyles.lineStyle }, 
-            text: { color: globalStyles.lineColor, size: 16 }, 
+            text: { color: globalStyles.lineColor, size: 16, weight: 'bold' }, 
             polygon: { color: globalStyles.fillColor, style: 'fill', borderColor: globalStyles.lineColor } 
           }
         });
@@ -311,24 +319,21 @@
                   document.querySelector('[data-tool="pointer"]').classList.add('active');
                 });
 
-                // KHI CLICK VÀO MỘT HÌNH VẼ ĐÃ CÓ
+                // CLICK VÀO MỘT HÌNH VẼ ĐÃ CÓ TRÊN CHART
                 global.tvChart.subscribeAction('onOverlayClick', function(params) {
-                  if (!params || !params.overlay) return;
+                  if (!params || !params.overlay) { hideFloatingProps(); return; }
                   if (isEraserMode) {
                     global.tvChart.removeOverlay({ id: params.overlay.id });
                     return;
                   }
-                  
-                  // Bật chế độ Edit
                   currentSelectedOverlay = params.overlay;
                   showFloatingProps();
                 });
             }
         }, 500);
 
-        // PHÍM TẮT: DELETE VÀ BACKSPACE ĐỂ XÓA HÌNH ĐANG CHỌN
+        // PHÍM TẮT: DELETE / BACKSPACE ĐỂ XÓA HÌNH
         document.addEventListener('keydown', function(e) {
-            // Không xóa nếu đang gõ chữ trong ô input
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 if (currentSelectedOverlay && global.tvChart) {
@@ -339,7 +344,7 @@
         });
     }
 
-    // ----- BẮT SỰ KIỆN THANH TUỲ BIẾN NỔI (PROPERTIES BAR) -----
+    // ----- XỬ LÝ THANH TUỲ BIẾN NỔI (REAL-TIME UPDATE) -----
     const elLineColor = document.getElementById('wa-prop-line-color');
     const elFillColor = document.getElementById('wa-prop-fill-color');
     const elLineSize = document.getElementById('wa-prop-line-size');
@@ -354,12 +359,14 @@
 
     function updateSelectedOverlay() {
         if (!currentSelectedOverlay || !global.tvChart) return;
+        
         globalStyles.lineColor = elLineColor.value;
-        globalStyles.fillColor = hexToRgba(elFillColor.value, 0.15); // Luôn có độ trong suốt 15%
+        globalStyles.fillColor = hexToRgba(elFillColor.value, 0.15); // Tự động làm trong suốt màu nền 15%
         globalStyles.lineWidth = parseInt(elLineSize.value);
         globalStyles.lineStyle = elLineStyle.value;
         if(currentSelectedOverlay.name === 'customText') globalStyles.textInput = elTextInput.value;
 
+        // Cập nhật đè lên KLineCharts Real-time
         global.tvChart.overrideOverlay({
             id: currentSelectedOverlay.id,
             extendData: globalStyles.textInput,
@@ -371,7 +378,6 @@
         });
     }
 
-    // Gắn event khi thay đổi giá trị
     elLineColor.addEventListener('input', updateSelectedOverlay);
     elFillColor.addEventListener('input', updateSelectedOverlay);
     elLineSize.addEventListener('change', updateSelectedOverlay);
@@ -385,17 +391,14 @@
         }
     });
 
-    document.getElementById('wa-prop-close').addEventListener('click', hideFloatingProps);
-
     function showFloatingProps() {
         if (!currentSelectedOverlay) return;
         propsBar.classList.add('show');
         
-        // Hiện ô nhập chữ nếu là công cụ Custom Text
+        // Cập nhật giao diện thanh nổi cho khớp với hình vẽ hiện tại
         if (currentSelectedOverlay.name === 'customText') {
             elTextWrapper.style.display = 'flex';
             elTextInput.value = currentSelectedOverlay.extendData || '';
-            elTextInput.focus();
         } else {
             elTextWrapper.style.display = 'none';
         }
@@ -405,10 +408,17 @@
         propsBar.classList.remove('show');
         currentSelectedOverlay = null;
     }
+    
+    // Nhấp vào Chart (vùng trống) thì ẩn thanh Props
+    document.getElementById('sc-chart-container').addEventListener('mousedown', (e) => {
+        if (!e.target.closest('.wa-floating-props') && !e.target.closest('.wa-pro-sidebar')) {
+            hideFloatingProps();
+        }
+    });
   }
 
   // ======================================================
-  // 7. AUTO-INJECTOR (MẮT THẦN GIÁM SÁT)
+  // 7. AUTO-INJECTOR: MẮT THẦN GIÁM SÁT KHÔNG PHÁ VỠ DOM
   // ======================================================
   function autoInjectSystem() {
     var container = document.getElementById('sc-chart-container');
@@ -418,31 +428,26 @@
         injectCSS();
         registerProExtensions();
 
-        var hasCanvas = container.querySelector('canvas');
+        // KLineCharts sẽ tạo ra 1 cái div con bên trong container
+        // Chúng ta CHỈ CẦN chèn Sidebar lên TRƯỚC cái div con đó.
+        var klineWrapper = container.querySelector('div:not(.wa-pro-sidebar):not(.wa-floating-props)');
         var hasSidebar = container.querySelector('.wa-pro-sidebar');
 
-        if (hasCanvas && !hasSidebar) {
-            // Tạo Wrapper bọc biểu đồ
-            var chartWrapper = document.getElementById('sc-kline-wrapper');
-            if (!chartWrapper) {
-                chartWrapper = document.createElement('div');
-                chartWrapper.id = 'sc-kline-wrapper';
-                while (container.firstChild) chartWrapper.appendChild(container.firstChild);
-                container.appendChild(chartWrapper);
-            }
-
-            // Chèn Sidebar
+        if (klineWrapper && !hasSidebar) {
+            console.log('[Wave Alpha Drawing] Chart Detected. Injecting Pro Toolbar 2026...');
+            
             var sidebar = document.createElement('div');
             sidebar.className = 'wa-pro-sidebar';
             sidebar.innerHTML = buildHTML();
-            container.insertBefore(sidebar, chartWrapper);
+            // Đặt Sidebar vào trong container, nằm bên trái KLineCharts
+            container.insertBefore(sidebar, container.firstChild);
 
             // Chèn Thanh Tuỳ biến nổi
             var propsBar = document.createElement('div');
             propsBar.className = 'wa-floating-props';
             propsBar.id = 'wa-props-bar';
             propsBar.innerHTML = buildFloatingPropsHTML();
-            chartWrapper.appendChild(propsBar);
+            container.appendChild(propsBar);
 
             bindSidebarEvents(sidebar, propsBar);
         }
