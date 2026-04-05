@@ -80,17 +80,7 @@
       } return [];
     }
 
-    function createWave(name, step, labels) {
-      return {
-        name, totalStep: step, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: (ref) => {
-          let c = ref.coordinates || []; let figs = [];
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          labels.forEach((l, i) => { if (c[i]) figs.push({ type: 'text', attrs: { x: c[i].x, y: c[i].y - 8, text: l, align: 'center', baseline: 'bottom' }, ignoreEvent: true }); });
-          return figs;
-        }
-      };
-    }
+    
 
     const extensions = [
       // --- BATCH 1: LINES NÂNG CAO ---
@@ -373,13 +363,135 @@
         }
       },
 
-      // --- WAVES ---
-      createWave('waveElliott', 7, ['0', '1', '2', '3', '4', '5']), createWave('waveABC', 5, ['0', 'A', 'B', 'C']),
-      createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']), createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
-      { name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-      { name: 'fiveWaves', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-      { name: 'eightWaves', totalStep: 10, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-      { name: 'anyWaves', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      // --- BATCH 6: ELLIOTT WAVE FAMILY (Tự động vẽ kênh & lật label thông minh) ---
+      {
+        name: 'elliottImpulse', totalStep: 7,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding;
+          if (c.length < 2) return [];
+          var W = b.width, H = b.height;
+          var LABELS = ['(0)', '①', '②', '③', '④', '⑤'];
+          var figs = [];
+
+          for (var i = 0; i < c.length - 1; i++) {
+            figs.push({ type: 'line', attrs: { coordinates: [c[i], c[i + 1]] } });
+          }
+
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var p = c[j];
+            var pPrev = j > 0 ? c[j - 1] : c[Math.min(j + 1, c.length - 1)];
+            var pNext = j < c.length - 1 ? c[j + 1] : c[Math.max(j - 1, 0)];
+            var above = p.y <= (pPrev.y + pNext.y) / 2;
+            figs.push({
+              type: 'text',
+              attrs: { x: p.x, y: above ? p.y - 10 : p.y + 10, text: LABELS[j], align: 'center', baseline: above ? 'bottom' : 'top' },
+              ignoreEvent: true
+            });
+          }
+
+          function extendRay(from, dx, dy) {
+            var ts = [];
+            if (dx >  0.001) ts.push((W - from.x) / dx);
+            if (dx < -0.001) ts.push((0 - from.x) / dx);
+            if (dy >  0.001) ts.push((H - from.y) / dy);
+            if (dy < -0.001) ts.push((0 - from.y) / dy);
+            var tPos = ts.filter(function(v) { return v > 0; });
+            if (!tPos.length) return null;
+            var t = Math.min.apply(null, tPos);
+            return { x: from.x + dx * t, y: from.y + dy * t };
+          }
+
+          // Base channel (Vẽ nét đứt)
+          if (c.length >= 3) {
+            var dx02 = c[2].x - c[0].x, dy02 = c[2].y - c[0].y;
+            var e02 = extendRay(c[0], dx02, dy02);
+            if (e02) figs.push({ type: 'line', attrs: { coordinates: [c[0], e02] }, styles: { style: 'dashed' } });
+            var e1p = extendRay(c[1], dx02, dy02);
+            if (e1p) figs.push({ type: 'line', attrs: { coordinates: [c[1], e1p] }, styles: { style: 'dashed' } });
+          }
+
+          // Acceleration channel (Vẽ nét đứt)
+          if (c.length >= 5) {
+            var dx24 = c[4].x - c[2].x, dy24 = c[4].y - c[2].y;
+            var e24 = extendRay(c[2], dx24, dy24);
+            if (e24) figs.push({ type: 'line', attrs: { coordinates: [c[2], e24] }, styles: { style: 'dashed' } });
+            var e3p = extendRay(c[3], dx24, dy24);
+            if (e3p) figs.push({ type: 'line', attrs: { coordinates: [c[3], e3p] }, styles: { style: 'dashed' } });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'elliottCorrection', totalStep: 5,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var LABELS = ['', 'A', 'B', 'C']; var figs = [];
+          for (var i = 0; i < c.length - 1; i++) figs.push({ type: 'line', attrs: { coordinates: [c[i], c[i + 1]] } });
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var p = c[j], pPrev = j > 0 ? c[j - 1] : c[Math.min(j + 1, c.length - 1)], pNext = j < c.length - 1 ? c[j + 1] : c[Math.max(j - 1, 0)];
+            var above = p.y <= (pPrev.y + pNext.y) / 2;
+            figs.push({ type: 'text', attrs: { x: p.x, y: above ? p.y - 10 : p.y + 10, text: LABELS[j], align: 'center', baseline: above ? 'bottom' : 'top' }, ignoreEvent: true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'elliottTriangle', totalStep: 7,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var LABELS = ['', 'A', 'B', 'C', 'D', 'E']; var figs = [];
+          for (var i = 0; i < c.length - 1; i++) figs.push({ type: 'line', attrs: { coordinates: [c[i], c[i + 1]] } });
+          
+          // Đường biên tam giác (Vẽ nét đứt)
+          if (c.length >= 4) figs.push({ type: 'line', attrs: { coordinates: [c[1], c[3]] }, styles: { style: 'dashed' } });
+          if (c.length >= 5) figs.push({ type: 'line', attrs: { coordinates: [c[2], c[4]] }, styles: { style: 'dashed' } });
+          
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var p = c[j], pPrev = j > 0 ? c[j - 1] : c[Math.min(j + 1, c.length - 1)], pNext = j < c.length - 1 ? c[j + 1] : c[Math.max(j - 1, 0)];
+            var above = p.y <= (pPrev.y + pNext.y) / 2;
+            figs.push({ type: 'text', attrs: { x: p.x, y: above ? p.y - 10 : p.y + 10, text: LABELS[j], align: 'center', baseline: above ? 'bottom' : 'top' }, ignoreEvent: true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'elliottDouble', totalStep: 5,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var LABELS = ['', 'W', 'X', 'Y']; var figs = [];
+          for (var i = 0; i < c.length - 1; i++) figs.push({ type: 'line', attrs: { coordinates: [c[i], c[i + 1]] } });
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var p = c[j], pPrev = j > 0 ? c[j - 1] : c[Math.min(j + 1, c.length - 1)], pNext = j < c.length - 1 ? c[j + 1] : c[Math.max(j - 1, 0)];
+            var above = p.y <= (pPrev.y + pNext.y) / 2;
+            figs.push({ type: 'text', attrs: { x: p.x, y: above ? p.y - 10 : p.y + 10, text: LABELS[j], align: 'center', baseline: above ? 'bottom' : 'top' }, ignoreEvent: true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'elliottTriple', totalStep: 7,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (c.length < 2) return [];
+          var LABELS = ['', 'W', 'X', 'Y', 'X', 'Z']; var figs = [];
+          for (var i = 0; i < c.length - 1; i++) figs.push({ type: 'line', attrs: { coordinates: [c[i], c[i + 1]] } });
+          for (var j = 0; j < c.length; j++) {
+            if (!LABELS[j]) continue;
+            var p = c[j], pPrev = j > 0 ? c[j - 1] : c[Math.min(j + 1, c.length - 1)], pNext = j < c.length - 1 ? c[j + 1] : c[Math.max(j - 1, 0)];
+            var above = p.y <= (pPrev.y + pNext.y) / 2;
+            figs.push({ type: 'text', attrs: { x: p.x, y: above ? p.y - 10 : p.y + 10, text: LABELS[j], align: 'center', baseline: above ? 'bottom' : 'top' }, ignoreEvent: true });
+          }
+          return figs;
+        }
+      },
 
       // --- BATCH 5: SHAPES & ARROWS (Đã tối ưu Fill Color & Vô hạn điểm neo) ---
       {
@@ -1004,7 +1116,21 @@
     { icon: SVG.line, tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'extendedLine', n: 'Đường thẳng 2 chiều'}, {id: 'trendAngle', n: 'Góc xu hướng'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'crossLine', n: 'Đường chữ thập'}, {id: 'infoLine', n: 'Đường thông tin'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'curvedLine', n: 'Đường cong'} ]},
     { icon: SVG.fibo, tools: [ {id: 'fibRetracement', n: 'Fibonacci Retracement'}, {id: 'fibExtension', n: 'Fibonacci Extension'}, {id: 'fibFan', n: 'Fibonacci Fan'}, {id: 'fibArc', n: 'Fibonacci Arc'}, {id: 'fibTimeZone', n: 'Fibo Time Zone'}, {id: 'gannFan', n: 'Gann Fan'}, {id: 'gannBox', n: 'Gann Box'}, {id: 'gannSquare', n: 'Gann Square'} ]},
     { icon: SVG.shape, tools: [ {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} ]},
-    { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, tools: [ {id: 'waveElliott', n: 'Sóng Elliott (12345)'}, {id: 'waveABC', n: 'Sóng ABC'}, {id: 'waveTriangle', n: 'Tam giác (ABCDE)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'}, {id: 'headAndShoulders', n: 'Vai Đầu Vai'}, {id: 'threeWaves', n: 'Sóng 3'}, {id: 'fiveWaves', n: 'Sóng 5'}, {id: 'eightWaves', n: 'Sóng 8'}, {id: 'anyWaves', n: 'Sóng tự do'} ]},
+    { 
+      id: 'elliottWave',
+      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,19 6,8 10,14 15,4 19,10 22,7"/><text style="font-size:5px;fill:currentColor;stroke:none"><tspan x="3" y="22">0</tspan><tspan x="6" y="7">1</tspan><tspan x="10" y="22">2</tspan><tspan x="15" y="3">3</tspan><tspan x="19" y="22">4</tspan><tspan x="21" y="6">5</tspan></text></svg>`,
+      tools: [
+        { id: 'elliottImpulse',    n: 'Sóng Đẩy Elliott (12345)' },
+        { id: 'elliottCorrection', n: 'Sóng Điều Chỉnh (ABC)' },
+        { id: 'elliottTriangle',   n: 'Sóng Tam Giác (ABCDE)' },
+        { id: 'elliottDouble',     n: 'Sóng Đôi (WXY)' },
+        { id: 'elliottTriple',     n: 'Sóng Ba (WXYXZ)' },
+        // Gộp các Harmonic pattern vào chung menu này
+        { id: 'abcd',              n: 'Mô hình ABCD' },
+        { id: 'xabcd',             n: 'Mô hình XABCD' },
+        { id: 'headAndShoulders',  n: 'Vai Đầu Vai' }
+      ]
+    },
     { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`, tools: [ {id: 'andrewsPitchfork', n: 'Andrews Pitchfork'}, {id: 'schiffPitchfork', n: 'Schiff Pitchfork'}, {id: 'modifiedSchiffPitchfork', n: 'Modified Schiff'}, {id: 'insidePitchfork', n: 'Inside Pitchfork'} ]}
   ];
 
@@ -1200,7 +1326,7 @@
     
     if (name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT') || name === 'gannFan') return 'fibo';
     if (name === 'customText') return 'text';
-    if (name.startsWith('wave') || name.includes('abcd') || name === 'headAndShoulders') return 'waves';
+    if (name.startsWith('elliott') || name.includes('abcd') || name === 'headAndShoulders' || name.toLowerCase().includes('wave')) return 'waves';
     
     return 'lines'; // highlighter, arrow, pathShape, polyline, curveShape... tự động ăn theo cài đặt của nét vẽ (Lines)
   }
