@@ -391,7 +391,7 @@
   function bindCoreEvents(toolbar, panel) {
     const container = document.getElementById('sc-chart-container');
     
-    // --- 1. Bổ sung Tính năng Kéo thả & Thu gọn thanh công cụ ---
+    // --- 1. Tính năng Kéo thả & Thu gọn (Double Click) ---
     let handle = toolbar.querySelector('.wa-drag-grip');
     let isDragging = false, startX, startY, initialX, initialY;
     
@@ -414,7 +414,7 @@
       handle.addEventListener('dblclick', () => { toolbar.classList.toggle('collapsed'); });
     }
 
-    // --- 2. Lịch sử Undo / Redo ---
+    // --- 2. Tính năng Hoàn tác / Làm lại ---
     function saveHistory(action, overlay) {
       if(!overlay) return;
       undoStack.push({ action, overlay: JSON.parse(JSON.stringify(overlay)) });
@@ -442,7 +442,7 @@
       } catch(e) {}
     }
 
-    // --- 3. SỬA LỖI DOM: Đổi document.get... thành toolbar.query... ---
+    // --- 3. Gắn sự kiện bằng querySelector (SỬA LỖI KHÔNG BẤM ĐƯỢC) ---
     toolbar.querySelector('#wa-btn-undo').onclick = handleUndo;
     toolbar.querySelector('#wa-btn-redo').onclick = handleRedo;
     toolbar.querySelector('#wa-btn-magnet').onclick = function() {
@@ -459,7 +459,7 @@
           undoStack = []; redoStack = []; 
           hidePanel();
           
-          // Trả lại trạng thái con trỏ chuột
+          // Trả lại trạng thái con trỏ chuột (Thay document bằng toolbar)
           toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
           toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
           container.classList.remove('wa-drawing-mode');
@@ -469,7 +469,7 @@
       });
     };
 
-    // --- 4. Logic Active Menu ---
+    // --- 4. Sự kiện click chọn công cụ vẽ ---
     toolbar.addEventListener('click', (e) => {
       let menuItem = e.target.closest('.wa-menu-item');
       let btn = e.target.closest('.wa-tb-btn[data-tool]');
