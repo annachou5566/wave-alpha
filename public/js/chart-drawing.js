@@ -141,15 +141,24 @@
             let fillAlpha = ext.fillOpacity !== undefined ? ext.fillOpacity : toolStyles.fibo.fillOpacity;
 
             percents.forEach((p, i) => {
-              const y = coordinates[1].y + yDif * p; const price = (points[1].value + vDif * p).toFixed(precision.price);
-              lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: bounding.width, y }] });
-              if (showLabels) texts.push({ x: coordinates[0].x, y: y - 4, text: `${p} (${price})`, baseline: 'bottom' });
-              if (showFill && prevY !== null && i > 0 && fillAlpha > 0) {
-                let colorBase = colors[i-1].replace('1)', `${fillAlpha})`);
-                polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ { x: coordinates[0].x, y: prevY }, { x: bounding.width, y: prevY }, { x: bounding.width, y }, { x: coordinates[0].x, y } ] }, styles: { style: 'fill', color: colorBase } });
-              }
-              prevY = y;
-            });
+            const y = coordinates[1].y + yDif * p;
+            const price = (points[1].value + vDif * p).toFixed(precision.price);
+            
+            // Giới hạn chiều ngang tới điểm thứ 2 (coordinates[1].x)
+            const endX = coordinates[1].x; 
+            
+            lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: endX, y }] });
+            texts.push({ x: coordinates[0].x, y: y - 4, text: `${p} (${price})`, baseline: 'bottom' });
+            
+            if (prevY !== null && i > 0 && alpha > 0) {
+              polygons.push({
+                type: 'polygon', ignoreEvent: true,
+                attrs: { coordinates: [{x:coordinates[0].x, y:prevY}, {x:endX, y:prevY}, {x:endX, y:y}, {x:coordinates[0].x, y:y}] },
+                styles: { style: 'fill', color: rainbow[i-1].replace('0.15', alpha) }
+              });
+            }
+            prevY = y;
+          });
             return [...polygons, { type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
           } return [];
         }
@@ -199,12 +208,21 @@
             let prevY = null; let ext = overlay.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
 
             percents.forEach((p, i) => {
-              const y = coordinates[2].y + yDif * p; const price = (points[2].value + valueDif * p).toFixed(precision.price);
-              fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: bounding.width, y }] });
+              const y = coordinates[2].y + yDif * p; 
+              const price = (points[2].value + valueDif * p).toFixed(precision.price);
+              
+              // Giới hạn chiều ngang tới điểm thứ 3 (coordinates[2].x)
+              const endX = coordinates[2].x;
+
+              fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: endX, y }] });
               texts.push({ x: textX, y: y - 4, text: `${price} (${(p * 100).toFixed(1)}%)`, baseline: 'bottom' });
               
               if (prevY !== null && i > 0 && alpha > 0) {
-                polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [{x:coordinates[1].x, y:prevY}, {x:bounding.width, y:prevY}, {x:bounding.width, y:y}, {x:coordinates[1].x, y:y}] }, styles: { style: 'fill', color: colors[i-1].replace('0.15', alpha) } });
+                polygons.push({ 
+                  type: 'polygon', ignoreEvent: true, 
+                  attrs: { coordinates: [{x:coordinates[1].x, y:prevY}, {x:endX, y:prevY}, {x:endX, y:y}, {x:coordinates[1].x, y:y}] }, 
+                  styles: { style: 'fill', color: colors[i-1].replace('0.15', alpha) } 
+                });
               }
               prevY = y;
             });
