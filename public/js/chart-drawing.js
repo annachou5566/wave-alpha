@@ -372,6 +372,7 @@
     t.innerText = msg; t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 2000);
   }
 
+  // --- THAY THẾ HÀM NÀY ---
   function createConfirmModal(msg, onConfirm) {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
@@ -379,12 +380,15 @@
     box.style.cssText = 'background:#161A1E;border:1px solid #2b3139;padding:24px;border-radius:8px;color:#EAECEF;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.8);';
     box.innerHTML = `<div style="margin-bottom:20px;font-size:15px;">${msg}</div><div style="display:flex;gap:12px;justify-content:center;"><button id="wa-btn-c-cancel" style="padding:8px 20px;background:#2b3139;border:none;color:#EAECEF;border-radius:4px;cursor:pointer;">Hủy</button><button id="wa-btn-c-ok" style="padding:8px 20px;background:#F6465D;border:none;color:#FFF;border-radius:4px;cursor:pointer;font-weight:bold;">Đồng ý</button></div>`;
     overlay.appendChild(box);
+    
+    // LỖI Ở ĐÂY: Quên chèn modal vào giao diện. Đã bổ sung dòng dưới!
+    document.getElementById('sc-chart-container').appendChild(overlay);
+
     setTimeout(() => {
       box.querySelector('#wa-btn-c-cancel').onclick = () => overlay.remove();
       box.querySelector('#wa-btn-c-ok').onclick = () => { onConfirm(); overlay.remove(); };
     }, 0);
   }
-
   // ==========================================
   // 4. EVENTS ENGINE (UNDO, REDO, KEYBOARD)
   // ==========================================
@@ -450,16 +454,16 @@
       showToast(isMagnetMode ? 'Đã bật chế độ Bắt điểm' : 'Đã tắt Bắt điểm');
     };
     
+    // --- THAY THẾ SỰ KIỆN NÚT THÙNG RÁC ---
     toolbar.querySelector('#wa-btn-clear').onclick = function() {
       createConfirmModal('Bạn có chắc muốn xóa toàn bộ bản vẽ?', () => {
         if (global.tvChart) {
-          // Bắt buộc truyền object rỗng để KLineChart v9 hiểu là xóa TẤT CẢ
-          global.tvChart.removeOverlay({}); 
+          global.tvChart.removeOverlay(); // KLineChart v9 chỉ cần gọi hàm rỗng là xóa tất cả
           global.tvChart.cancelDrawing(); 
           undoStack = []; redoStack = []; 
           hidePanel();
           
-          // Trả lại trạng thái con trỏ chuột (Thay document bằng toolbar)
+          // Trả lại trạng thái con trỏ chuột
           toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
           toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
           container.classList.remove('wa-drawing-mode');
