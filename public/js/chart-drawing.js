@@ -75,7 +75,7 @@
         if (c[0].x === c[1].x && c[0].y !== c[1].y) coord = c[0].y < c[1].y ? { x: c[0].x, y: b.height } : { x: c[0].x, y: 0 };
         else if (c[0].x > c[1].x) coord = { x: 0, y: kc.utils.getLinearYFromCoordinates(c[0], c[1], { x: 0, y: c[0].y }) };
         else coord = { x: b.width, y: kc.utils.getLinearYFromCoordinates(c[0], c[1], { x: b.width, y: c[0].y }) };
-        return { coordinates: [c[0], coord] };
+        return [{ coordinates: [c[0], coord] }]; // Đã fix: Bọc mảng [] để KLineChart không bị crash
       } return [];
     }
 
@@ -130,21 +130,26 @@
       {
         name: 'fibonacciLine', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, bounding, overlay, precision }) {
-          const points = overlay.points; if (coordinates.length === 0) return [];
+          // Fix triệt để lỗi crash do KLineChart trả về undefined
+          const points = overlay?.points; 
+          if (!coordinates || coordinates.length < 2 || !points || points.length < 2) return [];
+          
           const lines = [], polygons = [], texts = [];
-          if (coordinates.length > 1) {
-            const vDif = points[0].value - points[1].value, yDif = coordinates[0].y - coordinates[1].y;
-            const percents = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
-            const colors = ['rgba(242,54,69,1)', 'rgba(255,152,0,1)', 'rgba(255,235,59,1)', 'rgba(76,175,80,1)', 'rgba(0,188,212,1)', 'rgba(41,98,255,1)'];
-            let prevY = null; let ext = overlay.extendData || {};
-            let showFill = ext.showFill !== false; let showLabels = ext.showLabels !== false;
-            let fillAlpha = ext.fillOpacity !== undefined ? ext.fillOpacity : toolStyles.fibo.fillOpacity;
+          const vDif = (points[0].value || 0) - (points[1].value || 0);
+          const yDif = (coordinates[0].y || 0) - (coordinates[1].y || 0);
+          const percents = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
+          
+          const rainbow = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
+          let prevY = null;
+          let ext = overlay.extendData || {};
+          let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+          const pricePrec = (precision && precision.price !== undefined) ? precision.price : 2;
 
-            percents.forEach((p, i) => {
+          percents.forEach((p, i) => {
             const y = coordinates[1].y + yDif * p;
-            const price = (points[1].value + vDif * p).toFixed(precision.price);
+            const price = ((points[1].value || 0) + vDif * p).toFixed(pricePrec);
             
-            // Giới hạn chiều ngang tới điểm thứ 2 (coordinates[1].x)
+            // Giới hạn chiều ngang chính xác tới điểm thứ 2, không full màn hình
             const endX = coordinates[1].x; 
             
             lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: endX, y }] });
@@ -159,8 +164,7 @@
             }
             prevY = y;
           });
-            return [...polygons, { type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
-          } return [];
+          return [...polygons, { type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
       { name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, overlay, precision }) { const lines = [], texts = []; if (coordinates.length > 1) { const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x; const yDif = coordinates[0].y - coordinates[1].y; const points = overlay.points; const valueDif = points[0].value - points[1].value; [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => { const y = coordinates[1].y + yDif * percent; const price = (points[1].value + valueDif * percent).toFixed(precision.price); lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); texts.push({ x: textX, y: y - 4, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); }); } return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
@@ -201,21 +205,28 @@
         name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, overlay, precision, bounding }) {
           const fbLines = [], texts = [], polygons = [];
-          if (coordinates.length > 2) {
-            const points = overlay.points; const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y; const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
+          if (!coordinates || coordinates.length < 2 || !overlay?.points || overlay.points.length < 2) return [];
+          
+          // Chỉ vẽ các mốc Fibo khi đã click đủ 3 điểm
+          if (coordinates.length > 2 && overlay.points.length > 2) {
+            const points = overlay.points; 
+            const valueDif = (points[1].value || 0) - (points[0].value || 0);
+            const yDif = (coordinates[1].y || 0) - (coordinates[0].y || 0); 
+            const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
             const percents = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
             const colors = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
             let prevY = null; let ext = overlay.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+            const pricePrec = (precision && precision.price !== undefined) ? precision.price : 2;
 
             percents.forEach((p, i) => {
               const y = coordinates[2].y + yDif * p; 
-              const price = (points[2].value + valueDif * p).toFixed(precision.price);
+              const price = ((points[2].value || 0) + valueDif * p).toFixed(pricePrec);
               
-              // Giới hạn chiều ngang tới điểm thứ 3 (coordinates[2].x)
+              // Giới hạn chiều dài khung Fibo phụ thuộc đúng vào điểm thứ 3
               const endX = coordinates[2].x;
 
               fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: endX, y }] });
-              texts.push({ x: textX, y: y - 4, text: `${price} (${(p * 100).toFixed(1)}%)`, baseline: 'bottom' });
+              texts.push({ x: textX, y: y - 4, text: `${p} (${price})`, baseline: 'bottom' });
               
               if (prevY !== null && i > 0 && alpha > 0) {
                 polygons.push({ 
@@ -226,7 +237,8 @@
               }
               prevY = y;
             });
-          } return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, ...polygons, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+          } 
+          return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, ...polygons, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
 
