@@ -357,11 +357,8 @@
       m.tools.forEach(t => html += `<div class="wa-menu-item" data-tool="${t.id}">${t.n}</div>`);
       html += `</div></div></div>`;
     });
-    html += `<button class="wa-tb-btn" data-tool="customText" data-tooltip="Văn bản (Text)">${SVG.text}</button>
-             <div style="width:20px; height:1px; background:#2b3139; margin:8px 0;"></div>
+    html += `<div style="width:20px; height:1px; background:#2b3139; margin:8px 0;"></div>
              <button class="wa-tb-btn" id="wa-btn-magnet" data-tooltip="Bắt điểm (Magnet)">${SVG.magnet}</button>
-             <button class="wa-tb-btn" id="wa-btn-undo" data-tooltip="Hoàn tác (Ctrl+Z)">${SVG.undo}</button>
-             <button class="wa-tb-btn" id="wa-btn-redo" data-tooltip="Làm lại (Ctrl+Y)">${SVG.redo}</button>
              <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xóa tất cả">${SVG.trash}</button>`;
     return html;
   }
@@ -385,8 +382,15 @@
     document.getElementById('sc-chart-container').appendChild(overlay);
 
     setTimeout(() => {
-      box.querySelector('#wa-btn-c-cancel').onclick = () => overlay.remove();
-      box.querySelector('#wa-btn-c-ok').onclick = () => { onConfirm(); overlay.remove(); };
+      box.querySelector('#wa-btn-c-cancel').onclick = () => {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      };
+      box.querySelector('#wa-btn-c-ok').onclick = () => { 
+        // Bắt buộc xóa bảng ngay lập tức khỏi màn hình trước
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        // Delay nhẹ 50ms rồi mới bắt đầu xóa hình để không bị kẹt UI
+        setTimeout(() => onConfirm(), 50); 
+      };
     }, 0);
   }
   // ==========================================
@@ -418,37 +422,10 @@
       handle.addEventListener('dblclick', () => { toolbar.classList.toggle('collapsed'); });
     }
 
-    // --- 2. Tính năng Hoàn tác / Làm lại ---
-    function saveHistory(action, overlay) {
-      if(!overlay) return;
-      undoStack.push({ action, overlay: JSON.parse(JSON.stringify(overlay)) });
-      if(undoStack.length > 30) undoStack.shift();
-      redoStack = [];
-    }
-    
-    function handleUndo() {
-      if(undoStack.length === 0) return showToast('Không có thao tác nào để Hoàn tác');
-      let step = undoStack.pop(); redoStack.push(step);
-      try {
-        if(step.action === 'add') global.tvChart.removeOverlay({ id: step.overlay.id });
-        if(step.action === 'delete') global.tvChart.createOverlay(step.overlay);
-        hidePanel();
-      } catch(e) {}
-    }
-    
-    function handleRedo() {
-      if(redoStack.length === 0) return;
-      let step = redoStack.pop(); undoStack.push(step);
-      try {
-        if(step.action === 'add') global.tvChart.createOverlay(step.overlay);
-        if(step.action === 'delete') global.tvChart.removeOverlay({ id: step.overlay.id });
-        hidePanel();
-      } catch(e) {}
-    }
+    // --- Đã gỡ bỏ tính năng Hoàn tác / Làm lại cho nhẹ mượt ---
+    function saveHistory() {} // Giữ lại hàm rỗng để các sự kiện vẽ không bị crash
 
-    // --- 3. Gắn sự kiện bằng querySelector (SỬA LỖI KHÔNG BẤM ĐƯỢC) ---
-    toolbar.querySelector('#wa-btn-undo').onclick = handleUndo;
-    toolbar.querySelector('#wa-btn-redo').onclick = handleRedo;
+    // --- 3. Gắn sự kiện bằng querySelector ---
     toolbar.querySelector('#wa-btn-magnet').onclick = function() {
       isMagnetMode = !isMagnetMode; this.classList.toggle('active', isMagnetMode);
       showToast(isMagnetMode ? 'Đã bật chế độ Bắt điểm' : 'Đã tắt Bắt điểm');
