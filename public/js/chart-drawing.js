@@ -408,37 +408,33 @@
         performEventMoveForDrawing: function({ currentStep, points, performPoint }) { if (currentStep === 2) points[0].price = performPoint.price; }
       },
 
-      // --- FIBONACCI ---
+      // --- BATCH 3: FIBONACCI FAMILY (TOÁN HỌC CHUẨN + RAINBOW FILL) ---
       {
-        name: 'fibonacciLine', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, bounding, overlay, precision }) {
-          const points = overlay?.points; 
-          if (!coordinates || coordinates.length < 2 || !points || points.length < 2) return [];
-          
-          const lines = [], polygons = [], texts = [];
-          const vDif = (points[0].value || 0) - (points[1].value || 0);
-          const yDif = (coordinates[0].y || 0) - (coordinates[1].y || 0);
-          const percents = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
-          
-          const rainbow = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
-          let prevY = null;
-          let ext = overlay.extendData || {};
-          let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-          const pricePrec = (precision && precision.price !== undefined) ? precision.price : 2;
+        name: 'fibRetracement', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, ov = ref.overlay, prec = ref.precision;
+          var pts = ov?.points;
+          if (c.length < 2 || !pts || pts.length < 2) return [];
+          var P0 = c[0], P1 = c[1];
+          var vDif = (pts[1].value || 0) - (pts[0].value || 0);
+          var yDif = P1.y - P0.y;
+          var LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+          var rainbow = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
+          var figs = [], polygons = [], lines = [], texts = [];
+          let ext = ov.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+          let prevY = null; var endX = P1.x; // Giới hạn chiều dài đến điểm P1
 
-          percents.forEach((p, i) => {
-            const y = coordinates[1].y + yDif * p;
-            const price = ((points[1].value || 0) + vDif * p).toFixed(pricePrec);
-            const endX = coordinates[1].x; 
-            
-            lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: endX, y }] });
-            texts.push({ x: coordinates[0].x, y: y - 4, text: `${p} (${price})`, baseline: 'bottom' });
-            
+          LEVELS.forEach(function(lv, i) {
+            var y = P0.y + lv * yDif;
+            var price = ((pts[0].value || 0) + lv * vDif).toFixed(prec?.price || 2);
+            lines.push({ coordinates: [{ x: P0.x, y: y }, { x: endX, y: y }] });
+            texts.push({ x: P0.x, y: y - 4, text: `${lv} (${price})`, align: 'left', baseline: 'bottom' });
             if (prevY !== null && i > 0 && alpha > 0) {
               polygons.push({
                 type: 'polygon', ignoreEvent: true,
-                attrs: { coordinates: [{x:coordinates[0].x, y:prevY}, {x:endX, y:prevY}, {x:endX, y:y}, {x:coordinates[0].x, y:y}] },
-                styles: { style: 'fill', color: rainbow[i-1].replace('0.15', alpha) }
+                attrs: { coordinates: [{x: P0.x, y: prevY}, {x: endX, y: prevY}, {x: endX, y: y}, {x: P0.x, y: y}] },
+                styles: { style: 'fill', color: rainbow[(i-1)%6].replace('0.15', alpha) }
               });
             }
             prevY = y;
@@ -446,73 +442,137 @@
           return [...polygons, { type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
         }
       },
-      { name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, overlay, precision }) { const lines = [], texts = []; if (coordinates.length > 1) { const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x; const yDif = coordinates[0].y - coordinates[1].y; const points = overlay.points; const valueDif = points[0].value - points[1].value; [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => { const y = coordinates[1].y + yDif * percent; const price = (points[1].value + valueDif * percent).toFixed(precision.price); lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); texts.push({ x: textX, y: y - 4, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); }); } return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-      { name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { const radius = getDistance(coordinates[0], coordinates[1]); const circles = [], texts = []; [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const r = radius * percent; circles.push({ ...coordinates[0], r }); texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` }); }); return [{ type: 'circle', attrs: circles, styles: { style: 'stroke' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } return []; } },
-      { name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, bounding }) { if (coordinates.length > 1) { const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24); const flag = coordinates[1].x > coordinates[0].x ? 0 : 1; const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]); let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3); const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle); const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle); const arcs = [ { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 }, { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI } ]; let x = coordinates[0].x - startRadius, y = coordinates[0].y - startRadius; for (let i = 2; i < 9; i++) { const r = arcs[i - 2].r + arcs[i - 1].r; let startAngle = 0; switch (i % 4) { case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break; case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; } const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle); arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 }); } return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }]; } return []; } },
       {
-        name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, bounding, overlay }) {
-          const lines1 = [], texts = [], polygons = []; let lines2 = [];
-          if (coordinates.length > 1) {
-            const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4; const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20;
-            const xDis = coordinates[1].x - coordinates[0].x, yDis = coordinates[1].y - coordinates[0].y;
-            const percents = [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0];
-            const colors = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
-            let ext = overlay.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-            let prevCoord = null;
+        name: 'fibExtension', totalStep: 4,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, ov = ref.overlay, prec = ref.precision;
+          var pts = ov?.points;
+          if (c.length < 2) return [];
+          if (c.length === 2) return [{ type: 'line', attrs: { coordinates: [c[0], c[1]] } }];
+          if (!pts || pts.length < 3) return [];
+          var P0 = c[0], P1 = c[1], P2 = c[2];
+          var swingY = P1.y - P0.y, swingV = (pts[1].value || 0) - (pts[0].value || 0);
+          var endX = P2.x; // Giới hạn chiều dài đến điểm P2
+          var LEVELS = [0.618, 1.0, 1.272, 1.414, 1.618, 2.0, 2.618];
+          var rainbow = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)', 'rgba(156,39,176,0.15)'];
+          var figs = [], polygons = [], lines = [], texts = [];
+          let ext = ov.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+          let prevY = null;
 
-            percents.forEach((p, i) => {
-              const x = coordinates[1].x - xDis * p, y = coordinates[1].y - yDis * p;
-              lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] });
-              lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
-              lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding));
-              lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding));
-              texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${p.toFixed(3)}` });
-              texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${p.toFixed(3)}` });
-              
-              let endRay = getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding)[0];
-              if(endRay && prevCoord && i > 0 && alpha > 0) {
-                 polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [coordinates[0], endRay.coordinates[1], prevCoord] }, styles: { style: 'fill', color: colors[i-1].replace('0.15', alpha) } });
-              }
-              if(endRay) prevCoord = endRay.coordinates[1];
-            });
-          } return [...polygons, { type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }];
+          figs.push({ type: 'line', attrs: { coordinates: [P0, P1] }, styles: { style: 'dashed' } });
+          figs.push({ type: 'line', attrs: { coordinates: [P1, P2] }, styles: { style: 'dashed' } });
+
+          LEVELS.forEach(function(lv, i) {
+            var y = P2.y + lv * swingY;
+            var price = ((pts[2].value || 0) + lv * swingV).toFixed(prec?.price || 2);
+            lines.push({ coordinates: [{ x: P1.x, y: y }, { x: endX, y: y }] });
+            texts.push({ x: P1.x, y: y - 4, text: `${lv} (${price})`, align: 'left', baseline: 'bottom' });
+            if (prevY !== null && i > 0 && alpha > 0) {
+              polygons.push({
+                type: 'polygon', ignoreEvent: true,
+                attrs: { coordinates: [{x: P1.x, y: prevY}, {x: endX, y: prevY}, {x: endX, y: y}, {x: P1.x, y: y}] },
+                styles: { style: 'fill', color: rainbow[(i-1)%7].replace('0.15', alpha) }
+              });
+            }
+            prevY = y;
+          });
+          return [...polygons, { type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }, ...figs];
         }
       },
       {
-        name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, overlay, precision, bounding }) {
-          const fbLines = [], texts = [], polygons = [];
-          if (!coordinates || coordinates.length < 2 || !overlay?.points || overlay.points.length < 2) return [];
-          if (coordinates.length > 2 && overlay.points.length > 2) {
-            const points = overlay.points; 
-            const valueDif = (points[1].value || 0) - (points[0].value || 0);
-            const yDif = (coordinates[1].y || 0) - (coordinates[0].y || 0); 
-            const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
-            const percents = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
-            const colors = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
-            let prevY = null; let ext = overlay.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-            const pricePrec = (precision && precision.price !== undefined) ? precision.price : 2;
+        name: 'fibFan', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, ov = ref.overlay;
+          if (c.length < 2) return [];
+          var W = b.width, H = b.height;
+          var P0 = c[0], P1 = c[1];
+          var LEVELS = [0.236, 0.382, 0.5, 0.618, 0.786];
+          var rainbow = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)'];
+          var figs = [], polygons = [];
+          let ext = ov.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+          let prevEnd = null;
 
-            percents.forEach((p, i) => {
-              const y = coordinates[2].y + yDif * p; 
-              const price = ((points[2].value || 0) + valueDif * p).toFixed(pricePrec);
-              const endX = coordinates[2].x;
+          figs.push({ type: 'line', attrs: { coordinates: [P0, P1] } });
+          figs.push({ type: 'line', attrs: { coordinates: [{ x: P1.x, y: 0 }, { x: P1.x, y: H }] }, styles: { style: 'dashed' } });
 
-              fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: endX, y }] });
-              texts.push({ x: textX, y: y - 4, text: `${p} (${price})`, baseline: 'bottom' });
-              
-              if (prevY !== null && i > 0 && alpha > 0) {
-                polygons.push({ 
-                  type: 'polygon', ignoreEvent: true, 
-                  attrs: { coordinates: [{x:coordinates[1].x, y:prevY}, {x:endX, y:prevY}, {x:endX, y:y}, {x:coordinates[1].x, y:y}] }, 
-                  styles: { style: 'fill', color: colors[i-1].replace('0.15', alpha) } 
-                });
-              }
-              prevY = y;
-            });
-          } 
-          return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, ...polygons, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+          LEVELS.forEach(function(lv, i) {
+            var fy = P0.y + lv * (P1.y - P0.y);
+            var dx = P1.x - P0.x, dy = fy - P0.y;
+            var ts = [];
+            if (dx > 0.001) ts.push((W - P0.x) / dx);
+            if (dx < -0.001) ts.push((0 - P0.x) / dx);
+            if (dy > 0.001) ts.push((H - P0.y) / dy);
+            if (dy < -0.001) ts.push((0 - P0.y) / dy);
+            var tMin = ts.length ? Math.min.apply(null, ts.filter(function(v) { return v > 0; })) : 1;
+            var end = isFinite(tMin) ? { x: P0.x + dx * tMin, y: P0.y + dy * tMin } : { x: P0.x + dx, y: P0.y + dy };
+            
+            figs.push({ type: 'line', attrs: { coordinates: [P0, end] } });
+            figs.push({ type: 'text', attrs: { x: end.x - 4, y: end.y - 4, text: `${lv}`, align: 'right', baseline: 'bottom' }, ignoreEvent: true });
+            
+            if (prevEnd !== null && i > 0 && alpha > 0) {
+              polygons.push({
+                type: 'polygon', ignoreEvent: true,
+                attrs: { coordinates: [P0, prevEnd, end] },
+                styles: { style: 'fill', color: rainbow[(i-1)%5].replace('0.15', alpha) }
+              });
+            }
+            prevEnd = end;
+          });
+          return [...polygons, ...figs];
+        }
+      },
+      {
+        name: 'fibArc', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [];
+          if (c.length < 2) return [];
+          var P0 = c[0], P1 = c[1];
+          var rBase = Math.sqrt(Math.pow(P1.x - P0.x, 2) + Math.pow(P1.y - P0.y, 2));
+          var LEVELS = [0.382, 0.5, 0.618, 1.0, 1.618];
+          var figs = [];
+          figs.push({ type: 'line', attrs: { coordinates: [P0, P1] }, styles: { style: 'dashed' } });
+          LEVELS.forEach(function(lv) {
+            var r = rBase * lv;
+            figs.push({ type: 'arc', attrs: { x: P0.x, y: P0.y, r: r, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true });
+            figs.push({ type: 'text', attrs: { x: P0.x + r + 3, y: P0.y, text: `${lv}`, align: 'left', baseline: 'middle' }, ignoreEvent: true });
+          });
+          return figs;
+        }
+      },
+      {
+        name: 'fibTimeZone', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, ov = ref.overlay;
+          if (c.length < 2) return [];
+          var H = b.height, W = b.width;
+          var unit = c[1].x - c[0].x;
+          if (Math.abs(unit) < 1) return [];
+          var FIB_SEQ = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+          var figs = [], polygons = [];
+          let ext = ov.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.05;
+          let prevX = null;
+          
+          FIB_SEQ.forEach(function(n, i) {
+            var x = c[0].x + n * unit;
+            if (x < 0 || x > W) return;
+            figs.push({ type: 'line', attrs: { coordinates: [{ x: x, y: 0 }, { x: x, y: H }] } });
+            figs.push({ type: 'text', attrs: { x: x + 3, y: 6, text: String(n), align: 'left', baseline: 'top' }, ignoreEvent: true });
+            
+            // Highlight nền xen kẽ cho TimeZone
+            if (prevX !== null && i % 2 === 1 && alpha > 0) {
+              polygons.push({
+                type: 'polygon', ignoreEvent: true,
+                attrs: { coordinates: [{x: prevX, y: 0}, {x: x, y: 0}, {x: x, y: H}, {x: prevX, y: H}] },
+                styles: { style: 'fill', color: `rgba(0, 240, 255, ${alpha})` }
+              });
+            }
+            prevX = x;
+          });
+          return [...polygons, ...figs];
         }
       },
 
@@ -640,7 +700,17 @@
         { id: 'insidePitchfork',         n: 'Inside Pitchfork' }
       ]
     },
-    { icon: SVG.fibo, tools: [ {id: 'fibonacciLine', n: 'Fibonacci Retracement'}, {id: 'fibonacciExtension', n: 'Fibo Extension'}, {id: 'fibonacciSpeedResistanceFan', n: 'Fibo Fan'}, {id: 'fibonacciCircle', n: 'Fibo Circle'}, {id: 'fibonacciSpiral', n: 'Fibo Spiral'}, {id: 'fibonacciSegment', n: 'Fibo Segment'} ]},
+    { 
+      id: 'fibonacci', 
+      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="20" x2="22" y2="20"/><line x1="2" y1="15" x2="22" y2="15"/><line x1="2" y1="11" x2="22" y2="11"/><line x1="2" y1="8"  x2="22" y2="8"/><line x1="2" y1="6"  x2="22" y2="6"/><text x="2" y="4" style="font-size:8px;fill:currentColor;stroke:none;font-style:italic">φ</text></svg>`, 
+      tools: [ 
+        { id: 'fibRetracement', n: 'Fibonacci Retracement' }, 
+        { id: 'fibExtension',   n: 'Fibonacci Extension' }, 
+        { id: 'fibFan',         n: 'Fibonacci Fan' }, 
+        { id: 'fibArc',         n: 'Fibonacci Arc' }, 
+        { id: 'fibTimeZone',    n: 'Fibonacci Time Zone' }
+      ]
+    },
     { icon: SVG.shape, tools: [ {id: 'rect', n: 'Hình chữ nhật'}, {id: 'circle', n: 'Hình tròn'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'gannBox', n: 'Hộp Gann'} ]},
     { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, tools: [ {id: 'waveElliott', n: 'Sóng Elliott (12345)'}, {id: 'waveABC', n: 'Sóng ABC'}, {id: 'waveTriangle', n: 'Tam giác (ABCDE)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'}, {id: 'headAndShoulders', n: 'Vai Đầu Vai'} ]}
   ];
@@ -830,7 +900,7 @@
   // ==========================================
   function getToolCategory(name) {
     if(['rect','circle','triangle','parallelogram','gannBox'].includes(name)) return 'shapes';
-    if(name.startsWith('fibo')) return 'fibo';
+    if(name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT')) return 'fibo';
     if(name === 'customText') return 'text';
     if(name.startsWith('wave') || name.includes('abcd') || name === 'headAndShoulders') return 'waves';
     return 'lines'; // Các tools Batch 1 (extendedLine, trendAngle, ...) mặc định rơi vào nhóm 'lines'
