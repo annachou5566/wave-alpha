@@ -157,14 +157,78 @@
       { name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, overlay, precision }) { const lines = [], texts = []; if (coordinates.length > 1) { const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x; const yDif = coordinates[0].y - coordinates[1].y; const points = overlay.points; const valueDif = points[0].value - points[1].value; [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => { const y = coordinates[1].y + yDif * percent; const price = (points[1].value + valueDif * percent).toFixed(precision.price); lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); texts.push({ x: textX, y: y - 4, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); }); } return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { const radius = getDistance(coordinates[0], coordinates[1]); const circles = [], texts = []; [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const r = radius * percent; circles.push({ ...coordinates[0], r }); texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` }); }); return [{ type: 'circle', attrs: circles, styles: { style: 'stroke' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } return []; } },
       { name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, bounding }) { if (coordinates.length > 1) { const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24); const flag = coordinates[1].x > coordinates[0].x ? 0 : 1; const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]); let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3); const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle); const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle); const arcs = [ { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 }, { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI } ]; let x = coordinates[0].x - startRadius, y = coordinates[0].y - startRadius; for (let i = 2; i < 9; i++) { const r = arcs[i - 2].r + arcs[i - 1].r; let startAngle = 0; switch (i % 4) { case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break; case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; } const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle); arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 }); } return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }]; } return []; } },
-      { name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, bounding }) { const lines1 = [], texts = []; let lines2 = []; if (coordinates.length > 1) { const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4; const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20; const xDistance = coordinates[1].x - coordinates[0].x, yDistance = coordinates[1].y - coordinates[0].y; [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0].forEach(percent => { const x = coordinates[1].x - xDistance * percent, y = coordinates[1].y - yDistance * percent; lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] }); lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding)); lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding)); texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${percent.toFixed(3)}` }); texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${percent.toFixed(3)}` }); }); } return [{ type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-      { name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, overlay, precision }) { const fbLines = [], texts = []; if (coordinates.length > 2) { const points = overlay.points; const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y; const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x; [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const y = coordinates[2].y + yDif * percent; const price = (points[2].value + valueDif * percent).toFixed(precision.price); fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] }); texts.push({ x: textX, y: y - 4, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); }); } return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      {
+        name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates, bounding, overlay }) {
+          const lines1 = [], texts = [], polygons = []; let lines2 = [];
+          if (coordinates.length > 1) {
+            const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4; const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20;
+            const xDis = coordinates[1].x - coordinates[0].x, yDis = coordinates[1].y - coordinates[0].y;
+            const percents = [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0];
+            const colors = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
+            let ext = overlay.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+            let prevCoord = null;
+
+            percents.forEach((p, i) => {
+              const x = coordinates[1].x - xDis * p, y = coordinates[1].y - yDis * p;
+              lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] });
+              lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
+              lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding));
+              lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding));
+              texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${p.toFixed(3)}` });
+              texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${p.toFixed(3)}` });
+              
+              // Tô màu mảng quạt Fibo
+              let endRay = getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding)[0];
+              if(endRay && prevCoord && i > 0 && alpha > 0) {
+                 polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [coordinates[0], endRay.coordinates[1], prevCoord] }, styles: { style: 'fill', color: colors[i-1].replace('0.15', alpha) } });
+              }
+              if(endRay) prevCoord = endRay.coordinates[1];
+            });
+          } return [...polygons, { type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
+      {
+        name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates, overlay, precision, bounding }) {
+          const fbLines = [], texts = [], polygons = [];
+          if (coordinates.length > 2) {
+            const points = overlay.points; const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y; const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
+            const percents = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+            const colors = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)'];
+            let prevY = null; let ext = overlay.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+
+            percents.forEach((p, i) => {
+              const y = coordinates[2].y + yDif * p; const price = (points[2].value + valueDif * p).toFixed(precision.price);
+              fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: bounding.width, y }] });
+              texts.push({ x: textX, y: y - 4, text: `${price} (${(p * 100).toFixed(1)}%)`, baseline: 'bottom' });
+              
+              if (prevY !== null && i > 0 && alpha > 0) {
+                polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [{x:coordinates[1].x, y:prevY}, {x:bounding.width, y:prevY}, {x:bounding.width, y:y}, {x:coordinates[1].x, y:y}] }, styles: { style: 'fill', color: colors[i-1].replace('0.15', alpha) } });
+              }
+              prevY = y;
+            });
+          } return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, ...polygons, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
 
       // CÁC MÔ HÌNH PHỨC TẠP
       { name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4; const xDis = coordinates[1].x - coordinates[0].x; const dashedLines = [ { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] }, { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] } ]; const solidLines = [ { coordinates: [coordinates[0], coordinates[1]] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] } ]; return [ { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] }, { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'line', attrs: solidLines } ]; } return []; } },
       { name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { let acLineCoordinates = [], bdLineCoordinates = []; const tags = ['A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { acLineCoordinates = [coordinates[0], coordinates[2]]; if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]]; } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const dashedLines = [], polygons = []; const tags = ['X', 'A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] }); polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] }); if (coordinates.length > 3) { dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] }); if (coordinates.length > 4) { dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] }); polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] }); } } } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
-      { name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function (ref) { var c = ref.coordinates || []; var figs = []; if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] } }); if (c.length >= 7) figs.push({ type: 'polygon', attrs: { coordinates: [c[3], c[4], c[5], c[6]] } }); if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } }); ['Left', 'Head', 'Right'].forEach((l, i) => { let idx = (i===0)?1 : (i===1)?3 : 5; if (c[idx]) figs.push({ type: 'text', attrs: { x: c[idx].x, y: c[idx].y - 15, text: l, align: 'center' }, ignoreEvent: true }); }); return figs; } },
+     {
+        name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function (ref) {
+          var c = ref.coordinates || []; var figs = [];
+          // Nền mờ 8% để nhìn xuyên thấu nến
+          const faintStyle = { style: 'fill', color: 'rgba(0, 240, 255, 0.08)' }; 
+          if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] }, styles: faintStyle });
+          if (c.length >= 7) figs.push({ type: 'polygon', attrs: { coordinates: [c[3], c[4], c[5], c[6]] }, styles: faintStyle });
+          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
+          ['Left', 'Head', 'Right'].forEach((l, i) => { let idx = (i===0)?1 : (i===1)?3 : 5; if (c[idx]) figs.push({ type: 'text', attrs: { x: c[idx].x, y: c[idx].y - 15, text: l, align: 'center' }, ignoreEvent: true }); });
+          return figs;
+        }
+      },
 
       // FIX TRIỆT ĐỂ: TEXT REAL-TIME 1 CLICK
       {
@@ -356,7 +420,20 @@
     
     document.getElementById('wa-btn-clear').onclick = function() {
       createConfirmModal('Bạn có chắc muốn xóa toàn bộ bản vẽ?', () => {
-        global.tvChart.removeOverlay(); undoStack = []; redoStack = []; hidePanel();
+        if (global.tvChart) {
+          // Bắt buộc truyền object rỗng để KLineChart v9 hiểu là xóa TẤT CẢ
+          global.tvChart.removeOverlay({}); 
+          global.tvChart.cancelDrawing(); 
+          undoStack = []; redoStack = []; 
+          hidePanel();
+          
+          // Trả lại trạng thái con trỏ chuột
+          document.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+          document.querySelector('[data-tool="pointer"]').classList.add('active');
+          document.getElementById('sc-chart-container').classList.remove('wa-drawing-mode');
+          
+          showToast('Đã xóa sạch bản vẽ');
+        }
       });
     };
 
