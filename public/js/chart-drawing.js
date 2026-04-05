@@ -1366,16 +1366,23 @@
       .wa-tb-menu-inner { 
           background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
           width: 230px; padding: 6px 0; display: flex; flex-direction: column; 
-          max-height: 65vh; overflow-y: auto; /* Thêm thanh cuộn khi màn hình nhỏ */
+          max-height: 55vh; overflow-y: auto; overflow-x: hidden;
       }
       .wa-tb-menu-inner::-webkit-scrollbar { width: 4px; }
       .wa-tb-menu-inner::-webkit-scrollbar-thumb { background: #2b3139; border-radius: 4px; }
+      .wa-tb-menu-inner::-webkit-scrollbar-track { background: transparent; }
 
-      /* Thu gọn 2 nút Magnet và Trash nằm ngang để tiết kiệm chiều dọc */
+      /* Giao diện cho Tiêu đề và Phân cách */
+      .wa-menu-header { padding: 12px 16px 4px 16px; color: #848E9C; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; pointer-events: none; }
+      .wa-menu-divider { width: 100%; height: 1px; background: #2b3139; margin: 4px 0; }
+
+      /* Thu gọn 2 nút Magnet và Trash */
       .wa-bot-actions { display: flex; width: 100%; justify-content: space-evenly; padding: 4px 0; }
       .wa-bot-actions .wa-tb-btn { width: 20px; height: 24px; margin: 0; }
       .wa-bot-actions .wa-tb-btn svg { width: 15px; height: 15px; }
-      .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
+      
+      /* Thêm padding-left (24px) để menu item lùi vào một chút cho đẹp so với tiêu đề */
+      .wa-menu-item { padding: 8px 16px 8px 24px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
       .wa-menu-item:hover { background: #2b3139; color: #00F0FF; }
 
       .wa-props-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 260px; background: rgba(22, 26, 30, 0.95); border-left: 1px solid #2b3139; box-shadow: -4px 0 24px rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 999; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
@@ -1425,30 +1432,63 @@
   const MENUS = [
     { 
       icon: SVG.line, 
-      tools: [ {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'extendedLine', n: 'Đường thẳng 2 chiều'}, {id: 'trendAngle', n: 'Góc xu hướng'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'crossLine', n: 'Đường chữ thập'}, {id: 'infoLine', n: 'Đường thông tin'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'curvedLine', n: 'Đường cong'} ]
+      tools: [ 
+        {id: 'header', n: 'Đường Cơ Bản'},
+        {id: 'segment', n: 'Đường xu hướng'}, {id: 'rayLine', n: 'Tia'}, {id: 'extendedLine', n: 'Đường thẳng 2 chiều'}, {id: 'trendAngle', n: 'Góc xu hướng'}, {id: 'horizontalStraightLine', n: 'Đường ngang'}, {id: 'verticalStraightLine', n: 'Đường dọc'}, {id: 'crossLine', n: 'Đường chữ thập'},
+        {id: 'divider'},
+        {id: 'header', n: 'Kênh & Nâng Cao'},
+        {id: 'infoLine', n: 'Đường thông tin'}, {id: 'priceChannelLine', n: 'Kênh song song'}, {id: 'curvedLine', n: 'Đường cong'} 
+      ]
     },
     { 
       icon: SVG.fibo, 
-      tools: [ {id: 'fibRetracement', n: 'Fibonacci Retracement'}, {id: 'fibExtension', n: 'Fibonacci Extension'}, {id: 'fibFan', n: 'Fibonacci Fan'}, {id: 'fibArc', n: 'Fibonacci Arc'}, {id: 'fibTimeZone', n: 'Fibo Time Zone'}, {id: 'gannFan', n: 'Gann Fan'}, {id: 'gannBox', n: 'Gann Box'}, {id: 'gannSquare', n: 'Gann Square'} ]
+      tools: [ 
+        {id: 'header', n: 'Fibonacci'},
+        {id: 'fibRetracement', n: 'Fibonacci Retracement'}, {id: 'fibExtension', n: 'Fibonacci Extension'}, {id: 'fibFan', n: 'Fibonacci Fan'}, {id: 'fibArc', n: 'Fibonacci Arc'}, {id: 'fibTimeZone', n: 'Fibo Time Zone'}, 
+        {id: 'divider'},
+        {id: 'header', n: 'Gann'},
+        {id: 'gannFan', n: 'Gann Fan'}, {id: 'gannBox', n: 'Gann Box'}, {id: 'gannSquare', n: 'Gann Square'} 
+      ]
     },
     { 
       icon: SVG.shape, 
-      tools: [ {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} ]
+      tools: [ 
+        {id: 'header', n: 'Hình Khối'},
+        {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, 
+        {id: 'divider'},
+        {id: 'header', n: 'Mũi Tên & Đường Dẫn'},
+        {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} 
+      ]
     },
     { 
       id: 'elliottWave',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, 
-      tools: [ {id: 'elliottImpulse', n: 'Sóng Đẩy Elliott (12345)'}, {id: 'elliottCorrection', n: 'Sóng Điều Chỉnh (ABC)'}, {id: 'elliottTriangle', n: 'Sóng Tam Giác (ABCDE)'}, {id: 'elliottDouble', n: 'Sóng Đôi (WXY)'}, {id: 'elliottTriple', n: 'Sóng Ba (WXYXZ)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'} ]
+      tools: [ 
+        {id: 'header', n: 'Sóng Elliott'},
+        {id: 'elliottImpulse', n: 'Sóng Đẩy Elliott (12345)'}, {id: 'elliottCorrection', n: 'Sóng Điều Chỉnh (ABC)'}, {id: 'elliottTriangle', n: 'Sóng Tam Giác (ABCDE)'}, {id: 'elliottDouble', n: 'Sóng Đôi (WXY)'}, {id: 'elliottTriple', n: 'Sóng Ba (WXYXZ)'}, 
+        {id: 'divider'},
+        {id: 'header', n: 'Mô Hình Harmonic'},
+        {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'} 
+      ]
     },
     { 
       id: 'pitchforkFamily',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="8" x2="4" y2="21"/><line x1="12" y1="8" x2="20" y2="21"/><line x1="4" y1="8" x2="20" y2="8"/></svg>`, 
-      tools: [ {id: 'andrewsPitchfork', n: 'Andrews Pitchfork'}, {id: 'schiffPitchfork', n: 'Schiff Pitchfork'}, {id: 'modifiedSchiffPitchfork', n: 'Modified Schiff'}, {id: 'insidePitchfork', n: 'Inside Pitchfork'} ]
+      tools: [ 
+        {id: 'header', n: 'Pitchfork'},
+        {id: 'andrewsPitchfork', n: 'Andrews Pitchfork'}, {id: 'schiffPitchfork', n: 'Schiff Pitchfork'}, {id: 'modifiedSchiffPitchfork', n: 'Modified Schiff'}, {id: 'insidePitchfork', n: 'Inside Pitchfork'} 
+      ]
     },
     { 
       id: 'chartPatterns',
       icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,18 5,10 8,14 12,6 16,14 19,10 22,18"/><line x1="5" y1="18" x2="19" y2="18"/></svg>`, 
-      tools: [ { id: 'headAndShoulders', n: 'Vai Đầu Vai' }, { id: 'inverseHeadAndShoulders', n: 'Vai Đầu Vai Ngược' }, { id: 'tripleTop', n: 'Ba Đỉnh' }, { id: 'tripleBottom', n: 'Ba Đáy' }, { id: 'doubleTop', n: 'Hai Đỉnh (Chữ M)' }, { id: 'doubleBottom', n: 'Hai Đáy (Chữ W)' }, { id: 'threeDrives', n: 'Three Drives' }, { id: 'symmetricalTriangle', n: 'Tam Giác Cân' }, { id: 'ascendingTriangle', n: 'Tam Giác Tăng' }, { id: 'descendingTriangle', n: 'Tam Giác Giảm' }, { id: 'risingWedge', n: 'Nêm Tăng' }, { id: 'fallingWedge', n: 'Nêm Giảm' }, { id: 'flagPattern', n: 'Mô hình Cờ (Flag)' }, { id: 'pennantPattern', n: 'Mô hình Pennant' } ]
+      tools: [ 
+        {id: 'header', n: 'Mô Hình Kinh Điển'},
+        { id: 'headAndShoulders', n: 'Vai Đầu Vai' }, { id: 'inverseHeadAndShoulders', n: 'Vai Đầu Vai Ngược' }, { id: 'tripleTop', n: 'Ba Đỉnh' }, { id: 'tripleBottom', n: 'Ba Đáy' }, { id: 'doubleTop', n: 'Hai Đỉnh (Chữ M)' }, { id: 'doubleBottom', n: 'Hai Đáy (Chữ W)' }, 
+        {id: 'divider'},
+        {id: 'header', n: 'Mô Hình Nêm & Cờ'},
+        { id: 'threeDrives', n: 'Three Drives' }, { id: 'symmetricalTriangle', n: 'Tam Giác Cân' }, { id: 'ascendingTriangle', n: 'Tam Giác Tăng' }, { id: 'descendingTriangle', n: 'Tam Giác Giảm' }, { id: 'risingWedge', n: 'Nêm Tăng' }, { id: 'fallingWedge', n: 'Nêm Giảm' }, { id: 'flagPattern', n: 'Mô hình Cờ (Flag)' }, { id: 'pennantPattern', n: 'Mô hình Pennant' } 
+      ]
     }
   ];
 
@@ -1458,7 +1498,15 @@
     MENUS.forEach(m => {
       html += `<div class="wa-tb-group"><button class="wa-tb-btn">${m.icon}</button>
                 <div class="wa-tb-menu"><div class="wa-tb-menu-inner">`;
-      m.tools.forEach(t => html += `<div class="wa-menu-item" data-tool="${t.id}">${t.n}</div>`);
+      m.tools.forEach(t => {
+        if (t.id === 'header') {
+          html += `<div class="wa-menu-header">${t.n}</div>`;
+        } else if (t.id === 'divider') {
+          html += `<div class="wa-menu-divider"></div>`;
+        } else {
+          html += `<div class="wa-menu-item" data-tool="${t.id}">${t.n}</div>`;
+        }
+      });
       html += `</div></div></div>`;
     });
     html += `<div style="width:24px; height:1px; background:#2b3139; margin:4px 0;"></div>
