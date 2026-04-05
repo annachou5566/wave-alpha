@@ -577,7 +577,117 @@
       },
 
       // --- MÔ HÌNH PHỨC TẠP ---
-      { name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4; const xDis = coordinates[1].x - coordinates[0].x; const dashedLines = [ { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] }, { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] } ]; const solidLines = [ { coordinates: [coordinates[0], coordinates[1]] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] } ]; return [ { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] }, { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'line', attrs: solidLines } ]; } return []; } },
+      // --- BATCH 4: GANN FAMILY (Đã tối ưu Rainbow Fill & Background) ---
+      {
+        name: 'gannFan', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, ov = ref.overlay;
+          if (c.length < 2) return [];
+          var W = b.width, H = b.height;
+          var P0 = c[0], P1 = c[1];
+          var unitX = Math.abs(P1.x - P0.x), unitY = Math.abs(P1.y - P0.y);
+          if (unitX < 1 || unitY < 1) return [];
+          var signX = P1.x >= P0.x ? 1 : -1, signY = P1.y >= P0.y ? 1 : -1;
+          var RATIOS = [[1, 8, '1×8'], [1, 4, '1×4'], [1, 3, '1×3'], [1, 2, '1×2'], [1, 1, '1×1'], [2, 1, '2×1'], [3, 1, '3×1'], [4, 1, '4×1'], [8, 1, '8×1']];
+          var rainbow = ['rgba(242,54,69,0.15)', 'rgba(255,152,0,0.15)', 'rgba(255,235,59,0.15)', 'rgba(76,175,80,0.15)', 'rgba(0,188,212,0.15)', 'rgba(41,98,255,0.15)', 'rgba(156,39,176,0.15)', 'rgba(103,58,183,0.15)'];
+          
+          var figs = [], polygons = [];
+          let ext = ov.extendData || {}; let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+          let prevEnd = null;
+
+          RATIOS.forEach(function(r, i) {
+            var dx = signX * r[0] * unitX, dy = signY * r[1] * unitY;
+            var ts = [];
+            if (dx > 0.001) ts.push((W - P0.x) / dx); if (dx < -0.001) ts.push((0 - P0.x) / dx);
+            if (dy > 0.001) ts.push((H - P0.y) / dy); if (dy < -0.001) ts.push((0 - P0.y) / dy);
+            var tPos = ts.filter(v => v > 0);
+            if (!tPos.length) return;
+            var tMin = Math.min(...tPos);
+            var end = { x: P0.x + dx * tMin, y: P0.y + dy * tMin };
+            
+            figs.push({ type: 'line', attrs: { coordinates: [P0, end] } });
+            figs.push({ type: 'text', attrs: { x: end.x + (signX > 0 ? -4 : 4), y: end.y + (signY > 0 ? -4 : 4), text: r[2], align: signX > 0 ? 'right' : 'left', baseline: signY > 0 ? 'bottom' : 'top' }, ignoreEvent: true });
+            
+            // Đổ màu Rainbow giữa các góc Gann
+            if (prevEnd !== null && alpha > 0) {
+              polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [P0, prevEnd, end] }, styles: { style: 'fill', color: rainbow[(i-1)%8].replace('0.15', alpha) } });
+            }
+            prevEnd = end;
+          });
+          return [...polygons, ...figs];
+        }
+      },
+      {
+        name: 'gannBox', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay;
+          if (c.length < 2) return [];
+          var x0 = Math.min(c[0].x, c[1].x), x1 = Math.max(c[0].x, c[1].x);
+          var y0 = Math.min(c[0].y, c[1].y), y1 = Math.max(c[0].y, c[1].y);
+          if ((x1 - x0) < 2 || (y1 - y0) < 2) return [];
+          var figs = [];
+          
+          // Đổ màu nền Box
+          figs.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [{x:x0, y:y0}, {x:x1, y:y0}, {x:x1, y:y1}, {x:x0, y:y1}] } });
+          figs.push({ type: 'line', attrs: { coordinates: [{x:x0, y:y0}, {x:x1, y:y0}, {x:x1, y:y1}, {x:x0, y:y1}, {x:x0, y:y0}] } });
+          figs.push({ type: 'line', attrs: { coordinates: [{x:x0, y:y0}, {x:x1, y:y1}] } });
+          figs.push({ type: 'line', attrs: { coordinates: [{x:x1, y:y0}, {x:x0, y:y1}] } });
+
+          for (var i = 1; i <= 7; i++) {
+            var hy = y0 + (i / 8) * (y1 - y0), vx = x0 + (i / 8) * (x1 - x0);
+            var isMid = (i === 4); // Highlight mức 0.5 (4/8)
+            var styleObj = isMid ? { style: 'solid', size: 2 } : { style: 'dashed', size: 1 };
+            figs.push({ type: 'line', attrs: { coordinates: [{x:x0, y:hy}, {x:x1, y:hy}] }, styles: styleObj });
+            figs.push({ type: 'line', attrs: { coordinates: [{x:vx, y:y0}, {x:vx, y:y1}] }, styles: styleObj });
+            figs.push({ type: 'text', attrs: { x: x0 - 3, y: hy, text: i + '/8', align: 'right', baseline: 'middle' }, ignoreEvent: true });
+          }
+          return figs;
+        }
+      },
+      {
+        name: 'gannSquare', totalStep: 3,
+        needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding;
+          if (c.length < 2) return [];
+          var W = b.width, H = b.height, P0 = c[0], P1 = c[1];
+          var rawDx = P1.x - P0.x, rawDy = P1.y - P0.y;
+          var size = Math.max(Math.abs(rawDx), Math.abs(rawDy));
+          if (size < 2) return [];
+          var signX = rawDx >= 0 ? 1 : -1, signY = rawDy >= 0 ? 1 : -1;
+          var x0 = P0.x, y0 = P0.y, x1 = P0.x + signX * size, y1 = P0.y + signY * size;
+          var xMin = Math.min(x0, x1), xMax = Math.max(x0, x1), yMin = Math.min(y0, y1), yMax = Math.max(y0, y1);
+          var figs = [];
+          
+          figs.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [{x:xMin, y:yMin}, {x:xMax, y:yMin}, {x:xMax, y:yMax}, {x:xMin, y:yMax}] } });
+          figs.push({ type: 'line', attrs: { coordinates: [{x:xMin, y:yMin}, {x:xMax, y:yMin}, {x:xMax, y:yMax}, {x:xMin, y:yMax}, {x:xMin, y:yMin}] } });
+          figs.push({ type: 'line', attrs: { coordinates: [{x:xMin, y:yMin}, {x:xMax, y:yMax}] } });
+          figs.push({ type: 'line', attrs: { coordinates: [{x:xMax, y:yMin}, {x:xMin, y:yMax}] } });
+
+          for (var i = 1; i <= 3; i++) {
+            var hy = yMin + (i / 4) * size, vx = xMin + (i / 4) * size;
+            var styleObj = (i === 2) ? { style: 'solid', size: 2 } : { style: 'dashed', size: 1 };
+            figs.push({ type: 'line', attrs: { coordinates: [{x:xMin, y:hy}, {x:xMax, y:hy}] }, styles: styleObj });
+            figs.push({ type: 'line', attrs: { coordinates: [{x:vx, y:yMin}, {x:vx, y:yMax}] }, styles: styleObj });
+          }
+
+          var RATIOS = [[1, 8, '1×8'], [1, 4, '1×4'], [1, 3, '1×3'], [1, 2, '1×2'], [1, 1, '1×1'], [2, 1, '2×1'], [3, 1, '3×1'], [4, 1, '4×1'], [8, 1, '8×1']];
+          RATIOS.forEach(function(r) {
+            var dx = signX * r[0] * size, dy = signY * r[1] * size;
+            var ts = [];
+            if (dx > 0.001) ts.push((W - P0.x) / dx); if (dx < -0.001) ts.push((0 - P0.x) / dx);
+            if (dy > 0.001) ts.push((H - P0.y) / dy); if (dy < -0.001) ts.push((0 - P0.y) / dy);
+            var tPos = ts.filter(v => v > 0);
+            if (!tPos.length) return;
+            var tMin = Math.min(...tPos);
+            var end = { x: P0.x + dx * tMin, y: P0.y + dy * tMin };
+            figs.push({ type: 'line', attrs: { coordinates: [P0, end] }, styles: { style: 'dashed' } });
+          });
+          return figs;
+        }
+      },
       { name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { let acLineCoordinates = [], bdLineCoordinates = []; const tags = ['A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { acLineCoordinates = [coordinates[0], coordinates[2]]; if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]]; } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const dashedLines = [], polygons = []; const tags = ['X', 'A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] }); polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] }); if (coordinates.length > 3) { dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] }); if (coordinates.length > 4) { dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] }); polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] }); } } } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       {
@@ -711,7 +821,16 @@
         { id: 'fibTimeZone',    n: 'Fibonacci Time Zone' }
       ]
     },
-    { icon: SVG.shape, tools: [ {id: 'rect', n: 'Hình chữ nhật'}, {id: 'circle', n: 'Hình tròn'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, {id: 'gannBox', n: 'Hộp Gann'} ]},
+    { icon: SVG.shape, tools: [ {id: 'rect', n: 'Hình chữ nhật'}, {id: 'circle', n: 'Hình tròn'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'} ]},
+    { 
+      id: 'gann',  
+      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"/><line x1="3" y1="21" x2="21" y2="3"/><line x1="3" y1="21" x2="21" y2="9"/><line x1="3" y1="21" x2="21" y2="15"/><line x1="3" y1="21" x2="15" y2="3"/><line x1="3" y1="21" x2="9" y2="3"/></svg>`,  
+      tools: [    
+        { id: 'gannFan',    n: 'Gann Fan' },    
+        { id: 'gannBox',    n: 'Gann Box' },    
+        { id: 'gannSquare', n: 'Gann Square' }
+      ]
+    },
     { icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, tools: [ {id: 'waveElliott', n: 'Sóng Elliott (12345)'}, {id: 'waveABC', n: 'Sóng ABC'}, {id: 'waveTriangle', n: 'Tam giác (ABCDE)'}, {id: 'abcd', n: 'Mô hình ABCD'}, {id: 'xabcd', n: 'Mô hình XABCD'}, {id: 'headAndShoulders', n: 'Vai Đầu Vai'} ]}
   ];
 
@@ -899,11 +1018,11 @@
   // 5. PROPS PANEL (WYSIWYG TÙY BIẾN CHO TỪNG LOẠI)
   // ==========================================
   function getToolCategory(name) {
-    if(['rect','circle','triangle','parallelogram','gannBox'].includes(name)) return 'shapes';
-    if(name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT')) return 'fibo';
+    if(['rect','circle','triangle','parallelogram','gannBox','gannSquare'].includes(name)) return 'shapes'; // Cho Gann Box và Square vào nhóm shapes để chỉnh viền + nền
+    if(name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT') || name === 'gannFan') return 'fibo'; // Cho Gann Fan vào nhóm Fibo để dùng chung thanh chỉnh nền cầu vồng (Fill Opacity)
     if(name === 'customText') return 'text';
     if(name.startsWith('wave') || name.includes('abcd') || name === 'headAndShoulders') return 'waves';
-    return 'lines'; // Các tools Batch 1 (extendedLine, trendAngle, ...) mặc định rơi vào nhóm 'lines'
+    return 'lines';
   }
 
   function renderPanel(overlay) {
