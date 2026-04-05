@@ -2,6 +2,7 @@
 // 🎨 FILE: chart-drawing.js
 // 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026
 // 100% KLineChart Pro Logic | Floating UI | Draggable
+// Cập nhật thuật toán từ klinecharts/pro/src/extension
 // ==========================================
 
 (function (global) {
@@ -28,6 +29,45 @@
     if (!kc || kc.__wa_extensions_registered) return;
     kc.__wa_extensions_registered = true;
 
+    // --- CÁC HÀM TIỆN ÍCH (UTILS) TỪ PRO REPO ---
+    function getRotateCoordinate(coordinate, targetCoordinate, angle) {
+      const x = (coordinate.x - targetCoordinate.x) * Math.cos(angle) - (coordinate.y - targetCoordinate.y) * Math.sin(angle) + targetCoordinate.x;
+      const y = (coordinate.x - targetCoordinate.x) * Math.sin(angle) + (coordinate.y - targetCoordinate.y) * Math.cos(angle) + targetCoordinate.y;
+      return { x, y };
+    }
+
+    function getDistance(c1, c2) {
+      const xDis = Math.abs(c1.x - c2.x);
+      const yDis = Math.abs(c1.y - c2.y);
+      return Math.sqrt(xDis * xDis + yDis * yDis);
+    }
+
+    function getRayLine(coordinates, bounding) {
+      if (coordinates.length > 1) {
+        let coordinate;
+        if (coordinates[0].x === coordinates[1].x && coordinates[0].y !== coordinates[1].y) {
+          if (coordinates[0].y < coordinates[1].y) {
+            coordinate = { x: coordinates[0].x, y: bounding.height };
+          } else {
+            coordinate = { x: coordinates[0].x, y: 0 };
+          }
+        } else if (coordinates[0].x > coordinates[1].x) {
+          coordinate = {
+            x: 0,
+            y: kc.utils.getLinearYFromCoordinates(coordinates[0], coordinates[1], { x: 0, y: coordinates[0].y })
+          };
+        } else {
+          coordinate = {
+            x: bounding.width,
+            y: kc.utils.getLinearYFromCoordinates(coordinates[0], coordinates[1], { x: bounding.width, y: coordinates[0].y })
+          };
+        }
+        return { coordinates: [coordinates[0], coordinate] };
+      }
+      return [];
+    }
+
+    // --- CUSTOM WAVES CŨ (Giữ lại để tương thích chart cũ) ---
     function createWave(name, totalStep, labels) {
       return {
         name: name, totalStep: totalStep, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
@@ -43,41 +83,384 @@
     }
 
     var extensions = [
-      // Sóng Elliott Pro
+      // Sóng tuỳ chỉnh của Wave Alpha
       createWave('waveElliott', 6, ['0', '1', '2', '3', '4', '5']), 
       createWave('waveABC', 4, ['0', 'A', 'B', 'C']),                   
       createWave('waveTriangle', 6, ['0', 'A', 'B', 'C', 'D', 'E']),
-      createWave('waveWXY', 4, ['0', 'W', 'X', 'Y']),                   
-      
+      createWave('waveWXY', 4, ['0', 'W', 'X', 'Y']),
+
+      // 1. ARROW (PRO)
       {
-        name: 'anyWaves', totalStep: -1, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || [];
-          return c.length > 1 ? [{ type: 'line', attrs: { coordinates: c } }] : [];
+        name: 'arrow', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates }) {
+          if (coordinates.length > 1) {
+            const flag = coordinates[1].x > coordinates[0].x ? 0 : 1;
+            const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
+            let offsetAngle;
+            if (kb) {
+              offsetAngle = Math.atan(kb[0]) + Math.PI * flag;
+            } else {
+              offsetAngle = coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3;
+            }
+            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y + 4 }, coordinates[1], offsetAngle);
+            const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[1].x - 8, y: coordinates[1].y - 4 }, coordinates[1], offsetAngle);
+            return [
+              { type: 'line', attrs: { coordinates } },
+              { type: 'line', ignoreEvent: true, attrs: { coordinates: [rotateCoordinate1, coordinates[1], rotateCoordinate2] } }
+            ];
+          }
+          return [];
         }
       },
+
+      // 2. CIRCLE (PRO)
       {
-        name: 'xabcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || []; var figs = [];
-          if (c.length >= 3) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2]] }, styles: { style: 'fill' } });
-          if (c.length >= 5) figs.push({ type: 'polygon', attrs: { coordinates: [c[2], c[3], c[4]] }, styles: { style: 'fill' } });
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          ['X', 'A', 'B', 'C', 'D'].forEach((l, i) => { if (c[i]) figs.push({ type: 'text', attrs: { x: c[i].x, y: c[i].y - 10, text: l, align: 'center' }, ignoreEvent: true }); });
-          return figs;
+        name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        styles: { circle: { color: 'rgba(22, 119, 255, 0.15)' } },
+        createPointFigures: function({ coordinates }) {
+          if (coordinates.length > 1) {
+            const radius = getDistance(coordinates[0], coordinates[1]);
+            return { type: 'circle', attrs: { ...coordinates[0], r: radius }, styles: { style: 'stroke_fill' } };
+          }
+          return [];
         }
       },
+
+      // 3. RECT (PRO)
       {
-        name: 'abcd', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || []; var figs = [];
-          if (c.length >= 3) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2]] }, styles: { style: 'fill' } });
-          if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[1], c[2], c[3]] }, styles: { style: 'fill' } });
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          ['A', 'B', 'C', 'D'].forEach((l, i) => { if (c[i]) figs.push({ type: 'text', attrs: { x: c[i].x, y: c[i].y - 10, text: l, align: 'center' }, ignoreEvent: true }); });
-          return figs;
+        name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        createPointFigures: function({ coordinates }) {
+          if (coordinates.length > 1) {
+            return [
+              { type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] }, styles: { style: 'stroke_fill' } }
+            ];
+          }
+          return [];
         }
       },
+
+      // 4. PARALLELOGRAM (PRO)
+      {
+        name: 'parallelogram', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        createPointFigures: function({ coordinates }) {
+          if (coordinates.length === 2) {
+            return [{ type: 'line', ignoreEvent: true, attrs: { coordinates } }];
+          }
+          if (coordinates.length === 3) {
+            const coordinate = { x: coordinates[0].x + (coordinates[2].x - coordinates[1].x), y: coordinates[2].y };
+            return [{ type: 'polygon', attrs: { coordinates: [coordinates[0], coordinates[1], coordinates[2], coordinate] }, styles: { style: 'stroke_fill' } }];
+          }
+          return [];
+        },
+        performEventPressedMove: function({ points, performPointIndex, performPoint }) {
+          if (performPointIndex < 2) {
+            points[0].price = performPoint.price;
+            points[1].price = performPoint.price;
+          }
+        },
+        performEventMoveForDrawing: function({ currentStep, points, performPoint }) {
+          if (currentStep === 2) {
+            points[0].price = performPoint.price;
+          }
+        }
+      },
+
+      // 5. TRIANGLE (PRO)
+      {
+        name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        createPointFigures: function({ coordinates }) {
+          return [{ type: 'polygon', attrs: { coordinates }, styles: { style: 'stroke_fill' } }];
+        }
+      },
+
+      // 6. FIBONACCI CIRCLE (PRO)
+      {
+        name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates }) {
+          if (coordinates.length > 1) {
+            const radius = getDistance(coordinates[0], coordinates[1]);
+            const percents = [0.236, 0.382, 0.5, 0.618, 0.786, 1];
+            const circles = [];
+            const texts = [];
+            percents.forEach(percent => {
+              const r = radius * percent;
+              circles.push({ ...coordinates[0], r });
+              texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` });
+            });
+            return [
+              { type: 'circle', attrs: circles, styles: { style: 'stroke' } },
+              { type: 'text', ignoreEvent: true, attrs: texts }
+            ];
+          }
+          return [];
+        }
+      },
+
+      // 7. FIBONACCI SEGMENT (PRO)
+      {
+        name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates, overlay, precision }) {
+          const lines = [];
+          const texts = [];
+          if (coordinates.length > 1) {
+            const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x;
+            const percents = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
+            const yDif = coordinates[0].y - coordinates[1].y;
+            const points = overlay.points;
+            const valueDif = points[0].value - points[1].value;
+            percents.forEach(percent => {
+              const y = coordinates[1].y + yDif * percent;
+              const price = (points[1].value + valueDif * percent).toFixed(precision.price);
+              lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
+              texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' });
+            });
+          }
+          return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
+
+      // 8. FIBONACCI SPIRAL (PRO)
+      {
+        name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates, bounding }) {
+          if (coordinates.length > 1) {
+            const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24);
+            const flag = coordinates[1].x > coordinates[0].x ? 0 : 1;
+            const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
+            let offsetAngle;
+            if (kb) {
+              offsetAngle = Math.atan(kb[0]) + Math.PI * flag;
+            } else {
+              offsetAngle = coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3;
+            }
+            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle);
+            const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle);
+            const arcs = [
+              { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 },
+              { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI }
+            ];
+            let x = coordinates[0].x - startRadius;
+            let y = coordinates[0].y - startRadius;
+            for (let i = 2; i < 9; i++) {
+              const r = arcs[i - 2].r + arcs[i - 1].r;
+              let startAngle = 0;
+              switch (i % 4) {
+                case 0: { startAngle = offsetAngle; x -= arcs[i - 2].r; break; }
+                case 1: { startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; }
+                case 2: { startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; }
+                case 3: { startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; }
+              }
+              const endAngle = startAngle + Math.PI / 2;
+              const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle);
+              arcs.push({ ...rotateCoordinate, r, startAngle, endAngle });
+            }
+            return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }];
+          }
+          return [];
+        }
+      },
+
+      // 9. FIBONACCI SPEED RESISTANCE FAN (PRO)
+      {
+        name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates, bounding }) {
+          const lines1 = [];
+          let lines2 = [];
+          const texts = [];
+          if (coordinates.length > 1) {
+            const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4;
+            const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20;
+            const xDistance = coordinates[1].x - coordinates[0].x;
+            const yDistance = coordinates[1].y - coordinates[0].y;
+            const percents = [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0];
+            percents.forEach(percent => {
+              const x = coordinates[1].x - xDistance * percent;
+              const y = coordinates[1].y - yDistance * percent;
+              lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] });
+              lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
+              lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding));
+              lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding));
+              texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${percent.toFixed(3)}` });
+              texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${percent.toFixed(3)}` });
+            });
+          }
+          return [{ type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
+
+      // 10. FIBONACCI EXTENSION (PRO)
+      {
+        name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates, overlay, precision }) {
+          const fbLines = [];
+          const texts = [];
+          if (coordinates.length > 2) {
+            const points = overlay.points;
+            const valueDif = points[1].value - points[0].value;
+            const yDif = coordinates[1].y - coordinates[0].y;
+            const percents = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+            const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
+            percents.forEach(percent => {
+              const y = coordinates[2].y + yDif * percent;
+              const price = (points[2].value + valueDif * percent).toFixed(precision.price);
+              fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] });
+              texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' });
+            });
+          }
+          return [
+            { type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } },
+            { type: 'line', attrs: fbLines },
+            { type: 'text', ignoreEvent: true, attrs: texts }
+          ];
+        }
+      },
+
+      // 11. GANN BOX (PRO)
+      {
+        name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        createPointFigures: function({ coordinates }) {
+          if (coordinates.length > 1) {
+            const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4;
+            const xDis = coordinates[1].x - coordinates[0].x;
+            const dashedLines = [
+              { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] },
+              { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] },
+              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] },
+              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] },
+              { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] },
+              { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] },
+              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] },
+              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] }
+            ];
+            const solidLines = [
+              { coordinates: [coordinates[0], coordinates[1]] },
+              { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] }
+            ];
+            return [
+              {
+                type: 'line',
+                attrs: [
+                  { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] },
+                  { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] },
+                  { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] },
+                  { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }
+                ]
+              },
+              {
+                type: 'polygon', ignoreEvent: true,
+                attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] },
+                styles: { style: 'fill' }
+              },
+              { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } },
+              { type: 'line', attrs: solidLines }
+            ];
+          }
+          return [];
+        }
+      },
+
+      // 12. THREE WAVES (PRO)
+      {
+        name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates }) {
+          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
+          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
+
+      // 13. FIVE WAVES (PRO)
+      {
+        name: 'fiveWaves', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates }) {
+          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
+          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
+
+      // 14. EIGHT WAVES (PRO)
+      {
+        name: 'eightWaves', totalStep: 10, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates }) {
+          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
+          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
+
+      // 15. ANY WAVES (PRO)
+      {
+        name: 'anyWaves', totalStep: Number.MAX_SAFE_INTEGER, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates }) {
+          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' }));
+          return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }];
+        }
+      },
+
+      // 16. ABCD (PRO)
+      {
+        name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        createPointFigures: function({ coordinates }) {
+          let acLineCoordinates = [];
+          let bdLineCoordinates = [];
+          const tags = ['A', 'B', 'C', 'D'];
+          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
+          if (coordinates.length > 2) {
+            acLineCoordinates = [coordinates[0], coordinates[2]];
+            if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]];
+          }
+          return [
+            { type: 'line', attrs: { coordinates } },
+            { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } },
+            { type: 'text', ignoreEvent: true, attrs: texts }
+          ];
+        }
+      },
+
+      // 17. XABCD (PRO)
+      {
+        name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
+        styles: { polygon: { color: 'rgba(22, 119, 255, 0.15)' } },
+        createPointFigures: function({ coordinates }) {
+          const dashedLines = [];
+          const polygons = [];
+          const tags = ['X', 'A', 'B', 'C', 'D'];
+          const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
+          if (coordinates.length > 2) {
+            dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] });
+            polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] });
+            if (coordinates.length > 3) {
+              dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] });
+              if (coordinates.length > 4) {
+                dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] });
+                polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] });
+              }
+            }
+          }
+          return [
+            { type: 'line', attrs: { coordinates } },
+            { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } },
+            { type: 'polygon', ignoreEvent: true, attrs: polygons },
+            { type: 'text', ignoreEvent: true, attrs: texts }
+          ];
+        }
+      },
+
+      // --- CÁC CÔNG CỤ TÙY CHỈNH THÊM ---
+      // TRỊ LỖI DẤU CHẤM CỦA TEXT BẰNG MÃ CHUẨN PRO
+      {
+        name: 'customText', totalStep: 1, 
+        needDefaultPointFigure: false, // Tuyệt đối không hiển thị dấu chấm
+        needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function (ref) {
+          if (!ref.coordinates || !ref.coordinates.length) return [];
+          if (ref.overlay.extendData === undefined || ref.overlay.extendData === null) ref.overlay.extendData = window.__WA_TEMP_TEXT__ || 'Văn bản...';
+          return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: ref.overlay.extendData, baseline: 'bottom', align: 'center' }, ignoreEvent: false }];
+        }
+      },
+      // Vai Đầu Vai (Head and Shoulders)
       {
         name: 'headAndShoulders', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function (ref) {
@@ -91,36 +474,9 @@
           });
           return figs;
         }
-      },
-      // TRỊ LỖI DẤU CHẤM CỦA TEXT BẰNG MÃ CHUẨN PRO
-      {
-        name: 'customText', totalStep: 1, 
-        needDefaultPointFigure: false, // Tuyệt đối không hiển thị dấu chấm
-        needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
-        createPointFigures: function (ref) {
-          if (!ref.coordinates || !ref.coordinates.length) return [];
-          if (ref.overlay.extendData === undefined || ref.overlay.extendData === null) ref.overlay.extendData = window.__WA_TEMP_TEXT__ || 'Văn bản...';
-          return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: ref.overlay.extendData, baseline: 'bottom', align: 'center' }, ignoreEvent: false }];
-        }
-      },
-      {
-        name: 'fibExtension', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || []; var figs = [];
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] } });
-          if (c.length > 2) figs.push({ type: 'line', attrs: { coordinates: [c[1], c[2]] }, styles: { style: 'dashed' } });
-          if (c.length === 3) {
-            var diffY = c[0].y - c[1].y, startY = c[2].y;
-            [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236].forEach(l => {
-              var y = startY - (diffY * l);
-              figs.push({ type: 'line', attrs: { coordinates: [{ x: c[2].x, y: y }, { x: ref.bounding.width, y: y }] } });
-              figs.push({ type: 'text', attrs: { x: c[2].x + 5, y: y - 5, text: 'Fib ' + l, baseline: 'bottom' }, ignoreEvent: true });
-            });
-          }
-          return figs;
-        }
       }
     ];
+
     extensions.forEach(e => { try { kc.registerOverlay(e); } catch(err){} });
   }
 
@@ -140,10 +496,44 @@
   };
 
   const MENU_MAP = [
-    { id: 'lines', icon: ICONS.lines, tools: [ { id: 'segment', name: 'Đường xu hướng (Trendline)' }, { id: 'rayLine', name: 'Tia (Ray)' }, { id: 'straightLine', name: 'Đường mở rộng' }, { id: 'horizontalStraightLine', name: 'Đường ngang' }, { id: 'verticalStraightLine', name: 'Đường dọc' }, { id: 'priceChannelLine', name: 'Kênh song song' }, { id: 'parallelStraightLine', name: 'Pitchfork' } ]},
-    { id: 'fibonacci', icon: ICONS.fibonacci, tools: [ { id: 'fibonacciLine', name: 'Fibonacci Retracement' }, { id: 'fibExtension', name: 'Fibonacci Extension' }, { id: 'fibonacciSpeedResistanceFan', name: 'Fibonacci Quạt' }, { id: 'fibonacciCircle', name: 'Fibonacci Vòng tròn' }, { id: 'fibonacciSpiral', name: 'Fibonacci Xoắn ốc' } ]},
-    { id: 'waves', icon: ICONS.waves, tools: [ { id: 'waveElliott', name: 'Sóng đẩy Elliott (12345)' }, { id: 'waveABC', name: 'Sóng điều chỉnh (ABC)' }, { id: 'waveTriangle', name: 'Sóng tam giác (ABCDE)' }, { id: 'waveWXY', name: 'Sóng WXY' }, { id: 'anyWaves', name: 'Vẽ Polyline (Tự do)' }, { id: 'xabcd', name: 'Mô hình XABCD' }, { id: 'abcd', name: 'Mô hình ABCD' }, { id: 'headAndShoulders', name: 'Vai Đầu Vai' } ]},
-    { id: 'shapes', icon: ICONS.shapes, tools: [ { id: 'rect', name: 'Hình chữ nhật' }, { id: 'triangle', name: 'Tam giác' }, { id: 'circle', name: 'Hình tròn' } ]}
+    { id: 'lines', icon: ICONS.lines, tools: [ 
+      { id: 'segment', name: 'Đường xu hướng (Trendline)' }, 
+      { id: 'rayLine', name: 'Tia (Ray)' }, 
+      { id: 'straightLine', name: 'Đường mở rộng' }, 
+      { id: 'horizontalStraightLine', name: 'Đường ngang' }, 
+      { id: 'verticalStraightLine', name: 'Đường dọc' }, 
+      { id: 'priceChannelLine', name: 'Kênh song song' }, 
+      { id: 'parallelStraightLine', name: 'Pitchfork' },
+      { id: 'arrow', name: 'Mũi tên (Arrow)' }
+    ]},
+    { id: 'fibonacci', icon: ICONS.fibonacci, tools: [ 
+      { id: 'fibonacciLine', name: 'Fibonacci Retracement' }, 
+      { id: 'fibonacciExtension', name: 'Fibonacci Extension' }, 
+      { id: 'fibonacciSpeedResistanceFan', name: 'Fibonacci Quạt' }, 
+      { id: 'fibonacciCircle', name: 'Fibonacci Vòng tròn' }, 
+      { id: 'fibonacciSpiral', name: 'Fibonacci Xoắn ốc' },
+      { id: 'fibonacciSegment', name: 'Fibonacci Phân đoạn' }
+    ]},
+    { id: 'waves', icon: ICONS.waves, tools: [ 
+      { id: 'waveElliott', name: 'Sóng đẩy Elliott (12345)' }, 
+      { id: 'waveABC', name: 'Sóng điều chỉnh (ABC)' }, 
+      { id: 'waveTriangle', name: 'Sóng tam giác (ABCDE)' }, 
+      { id: 'waveWXY', name: 'Sóng WXY' }, 
+      { id: 'threeWaves', name: 'Sóng 3' },
+      { id: 'fiveWaves', name: 'Sóng 5' },
+      { id: 'eightWaves', name: 'Sóng 8' },
+      { id: 'anyWaves', name: 'Vẽ Polyline (Tự do)' }, 
+      { id: 'xabcd', name: 'Mô hình XABCD' }, 
+      { id: 'abcd', name: 'Mô hình ABCD' }, 
+      { id: 'headAndShoulders', name: 'Vai Đầu Vai' } 
+    ]},
+    { id: 'shapes', icon: ICONS.shapes, tools: [ 
+      { id: 'rect', name: 'Hình chữ nhật' }, 
+      { id: 'triangle', name: 'Tam giác' }, 
+      { id: 'circle', name: 'Hình tròn' },
+      { id: 'parallelogram', name: 'Hình bình hành' },
+      { id: 'gannBox', name: 'Hộp Gann (Gann Box)' }
+    ]}
   ];
 
   // ======================================================
