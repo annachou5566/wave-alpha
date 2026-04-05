@@ -1317,17 +1317,187 @@
       },
 
       // --- TEXT ---
+ // --- BATCH 8: TEXT, ANNOTATIONS & CONTENT (Đã fix cú pháp & Thêm nền mờ) ---
       {
-        name: 'customText', totalStep: 1, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
-        createPointFigures: function (ref) {
-          if (!ref.coordinates || !ref.coordinates.length) return [];
-          let t = ref.overlay.extendData; 
-          if (typeof t !== 'string' || t.trim() === '') t = 'Văn bản...';
-          let lines = t.split('\n'); let figs = [];
-          lines.forEach((line, idx) => {
-            figs.push({ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y + (idx * 16), text: line, baseline: 'bottom', align: 'left' }, ignoreEvent: false });
-          });
+        name: 'plainText', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || []; if (!c.length) return [];
+          var ov = ref.overlay, label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : 'Văn bản';
+          return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: label, align: 'left', baseline: 'bottom' } }];
+        }
+      },
+      {
+        name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : 'Văn bản neo';
+          var figs = [];
+          figs.push({ type: 'arc', attrs: { x: c[0].x, y: c[0].y, r: 4, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true });
+          if (c.length >= 2) {
+            figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, ignoreEvent: true });
+            figs.push({ type: 'text', attrs: { x: c[1].x + 4, y: c[1].y, text: label, align: 'left', baseline: 'middle' } });
+          }
           return figs;
+        }
+      },
+      {
+        name: 'note', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : 'Ghi chú';
+          var x = c[0].x, y = c[0].y, pad = 8, boxH = 26, foldSize = 8;
+          var boxW = Math.min(label.length * 7 + pad * 2, 200), bx = x + 12, by = y - 28 - boxH;
+          var figs = [];
+          figs.push({ type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: bx, y: by + boxH }] }, ignoreEvent: true });
+          // Note box with folded top-right corner (Đổ nền mờ)
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: bx, y: by }, { x: bx + boxW - foldSize, y: by }, { x: bx + boxW, y: by + foldSize }, { x: bx + boxW, y: by + boxH }, { x: bx, y: by + boxH } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)' }, ignoreEvent: true });
+          figs.push({ type: 'line', attrs: { coordinates: [ { x: bx + boxW - foldSize, y: by }, { x: bx + boxW - foldSize, y: by + foldSize }, { x: bx + boxW, y: by + foldSize } ]}, ignoreEvent: true });
+          figs.push({ type: 'text', attrs: { x: bx + pad, y: by + boxH / 2, text: label, align: 'left', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'priceNote', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], b = ref.bounding, ov = ref.overlay, prec = ref.precision; if (!c.length) return [];
+          var W = b.width, dp = prec && prec.price != null ? prec.price : 2, pts = ov && ov.points ? ov.points : [];
+          var priceStr = pts[0] && pts[0].value != null ? pts[0].value.toFixed(dp) : '';
+          var noteStr  = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : 'Ghi chú giá';
+          var display  = priceStr ? (priceStr + '  ' + noteStr) : noteStr;
+          var boxW = Math.min(display.length * 7 + 16, 240), boxH = 24, tx = W - boxW, ty = c[0].y;
+          var figs = [];
+          figs.push({ type: 'line', attrs: { coordinates: [{ x: 0, y: ty }, { x: W, y: ty }] }, ignoreEvent: true });
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - boxH / 2 }, { x: W, y: ty - boxH / 2 }, { x: W, y: ty + boxH / 2 }, { x: tx, y: ty + boxH / 2 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)' }, ignoreEvent: true });
+          figs.push({ type: 'text', attrs: { x: tx + 6, y: ty, text: display, align: 'left', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'pin', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : '';
+          var x = c[0].x, y = c[0].y, pinH = 26, headR = 7;
+          var figs = [];
+          figs.push({ type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: y - pinH }] }, ignoreEvent: true });
+          figs.push({ type: 'arc',  attrs: { x: x, y: y - pinH - headR, r: headR, startAngle: 0, endAngle: Math.PI * 2 }, styles: { style: 'fill', color: '#00F0FF' }, ignoreEvent: true });
+          if (label) figs.push({ type: 'text', attrs: { x: x + headR + 4, y: y - pinH - headR, text: label, align: 'left', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'tableAnnotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [];
+          if (c.length < 2) return c.length ? [{ type: 'arc', attrs: { x: c[0].x, y: c[0].y, r: 4, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true }] : [];
+          var x0 = Math.min(c[0].x, c[1].x), x1 = Math.max(c[0].x, c[1].x);
+          var y0 = Math.min(c[0].y, c[1].y), y1 = Math.max(c[0].y, c[1].y);
+          var bW = x1 - x0, bH = y1 - y0; if (bW < 10 || bH < 10) return [];
+          var COLS = 3, ROWS = 3, figs = [];
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.08)' }, ignoreEvent: true });
+          for (var ci = 1; ci < COLS; ci++) { var vx = x0 + ci * bW / COLS; figs.push({ type: 'line', attrs: { coordinates: [{ x: vx, y: y0 }, { x: vx, y: y1 }] }, ignoreEvent: true }); }
+          for (var ri = 1; ri < ROWS; ri++) { var hy = y0 + ri * bH / ROWS; figs.push({ type: 'line', attrs: { coordinates: [{ x: x0, y: hy }, { x: x1, y: hy }] }, ignoreEvent: true }); }
+          return figs;
+        }
+      },
+      {
+        name: 'annotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : 'Chú thích';
+          var figs = []; figs.push({ type: 'arc', attrs: { x: c[0].x, y: c[0].y, r: 3, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true });
+          if (c.length < 2) return figs;
+          var tip = c[0], box = c[1];
+          var boxW = Math.min(label.length * 7 + 20, 200), boxH = 26;
+          var bx0 = box.x - boxW / 2, bx1 = box.x + boxW / 2, by0 = box.y - boxH / 2, by1 = box.y + boxH / 2;
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: bx0, y: by0 }, { x: bx1, y: by0 }, { x: bx1, y: by1 }, { x: bx0, y: by1 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)' }, ignoreEvent: true });
+          var dx = tip.x - box.x, dy = tip.y - box.y; var len = Math.sqrt(dx * dx + dy * dy) || 1;
+          var ux = dx / len, uy = dy / len, px = -uy, py = ux, hs = 7;
+          var arrowBase = { x: tip.x - ux * hs * 1.3, y: tip.y - uy * hs * 1.3 };
+          figs.push({ type: 'line', attrs: { coordinates: [{ x: box.x, y: box.y }, arrowBase] }, ignoreEvent: true });
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: arrowBase.x + px * hs * 0.5, y: arrowBase.y + py * hs * 0.5 }, { x: tip.x, y: tip.y }, { x: arrowBase.x - px * hs * 0.5, y: arrowBase.y - py * hs * 0.5 } ]}, styles: { style: 'fill' }, ignoreEvent: true });
+          figs.push({ type: 'text', attrs: { x: box.x, y: box.y, text: label, align: 'center', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'comment', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : 'Bình luận...';
+          var x = c[0].x, y = c[0].y;
+          var boxW = Math.min(label.length * 7 + 20, 240), boxH = 30, tailH = 14, tailW = 10;
+          var bx0 = x - boxW / 2, bx1 = x + boxW / 2, by0 = y - tailH - boxH, by1 = y - tailH;
+          var figs = [];
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: bx0, y: by0 }, { x: bx1, y: by0 }, { x: bx1, y: by1 }, { x: x + tailW, y: by1 }, { x: x, y: y }, { x: x - tailW, y: by1 }, { x: bx0, y: by1 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)' }, ignoreEvent: true });
+          figs.push({ type: 'text', attrs: { x: x, y: (by0 + by1) / 2, text: label, align: 'center', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'priceLabel', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay, prec = ref.precision; if (!c.length) return [];
+          var dp = prec && prec.price != null ? prec.price : 2, pts = ov && ov.points ? ov.points : [];
+          var priceStr = pts[0] && pts[0].value != null ? pts[0].value.toFixed(dp) : '—';
+          var suffix = (ov && ov.extendData) ? ('  ' + ov.extendData) : (ov && ov.text) ? ('  ' + ov.text) : '';
+          var label = priceStr + suffix;
+          var x = c[0].x, y = c[0].y, boxW = label.length * 7 + 16, boxH = 22;
+          var figs = [];
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + 8, y: y - boxH / 2 }, { x: x + boxW, y: y - boxH / 2 }, { x: x + boxW, y: y + boxH / 2 }, { x: x + 8, y: y + boxH / 2 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)' }, ignoreEvent: true });
+          figs.push({ type: 'text', attrs: { x: x + 12, y: y, text: label, align: 'left', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'signpost', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : 'Biển chỉ dẫn';
+          var figs = []; figs.push({ type: 'arc', attrs: { x: c[0].x, y: c[0].y, r: 3, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true });
+          if (c.length < 2) return figs;
+          var tip = c[0], post = c[1];
+          figs.push({ type: 'line', attrs: { coordinates: [tip, post] }, ignoreEvent: true });
+          var sW = Math.max(60, label.length * 7 + 20), sH = 26, ptrW = 10, sx = post.x, sy = post.y;
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: sx, y: sy }, { x: sx + ptrW, y: sy - sH / 2 }, { x: sx + sW, y: sy - sH / 2 }, { x: sx + sW, y: sy + sH / 2 }, { x: sx + ptrW, y: sy + sH / 2 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)' }, ignoreEvent: true });
+          figs.push({ type: 'text', attrs: { x: sx + ptrW + 6, y: sy, text: label, align: 'left', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'flagMarker', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var label = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : '';
+          var x = c[0].x, y = c[0].y, poleH = 32, fW = 22, fH = 14, pTop = y - poleH;
+          var figs = [];
+          figs.push({ type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: pTop }] }, ignoreEvent: true });
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: x, y: pTop }, { x: x + fW, y: pTop + fH / 2 }, { x: x, y: pTop + fH } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)' }, ignoreEvent: true });
+          if (label) figs.push({ type: 'text', attrs: { x: x + fW + 4, y: pTop + fH / 2, text: label, align: 'left', baseline: 'middle' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'insertImage', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [];
+          if (c.length < 2) return c.length ? [{ type: 'arc', attrs: { x: c[0].x, y: c[0].y, r: 4, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true }] : [];
+          var x0 = Math.min(c[0].x, c[1].x), x1 = Math.max(c[0].x, c[1].x), y0 = Math.min(c[0].y, c[1].y), y1 = Math.max(c[0].y, c[1].y);
+          var cxI = (x0 + x1) / 2, bW = x1 - x0, bH = y1 - y0; if (bW < 4 || bH < 4) return [];
+          var figs = [];
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.08)' }, ignoreEvent: true });
+          figs.push({ type: 'line', attrs: { coordinates: [ { x: x0 + bW * 0.08, y: y1 - bH * 0.14 }, { x: x0 + bW * 0.32, y: (y0+y1)/2 - bH * 0.12 }, { x: x0 + bW * 0.52, y: y1 - bH * 0.14 }, { x: x0 + bW * 0.68, y: y0 + bH * 0.28 }, { x: x1 - bW * 0.08, y: y1 - bH * 0.14 } ]}, ignoreEvent: true });
+          figs.push({ type: 'arc', attrs: { x: x0 + bW * 0.78, y: y0 + bH * 0.28, r: Math.min(bW, bH) * 0.09, startAngle: 0, endAngle: Math.PI * 2 }, ignoreEvent: true });
+          figs.push({ type: 'text', attrs: { x: cxI, y: y1 - 4, text: '📷 Ảnh', align: 'center', baseline: 'bottom' }, ignoreEvent: true });
+          return figs;
+        }
+      },
+      {
+        name: 'insertIcon', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates || [], ov = ref.overlay; if (!c.length) return [];
+          var icon = (ov && ov.extendData) ? String(ov.extendData) : (ov && ov.text) ? String(ov.text) : '⭐';
+          return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: icon, align: 'center', baseline: 'middle' } }];
         }
       }
     ];
@@ -1458,6 +1628,27 @@
         {id: 'divider'},
         {id: 'header', n: 'Mũi Tên & Đường Dẫn'},
         {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} 
+      ]
+    },
+    {
+      icon: SVG.text,
+      tools: [
+        { id: 'header', n: 'Văn Bản & Ghi Chú' },
+        { id: 'plainText', n: 'Văn bản' },
+        { id: 'anchoredText', n: 'Văn bản được neo' },
+        { id: 'note', n: 'Ghi chú' },
+        { id: 'priceNote', n: 'Ghi chú giá' },
+        { id: 'pin', n: 'Ghim' },
+        { id: 'tableAnnotation', n: 'Bảng' },
+        { id: 'annotation', n: 'Chú thích' },
+        { id: 'comment', n: 'Bình luận' },
+        { id: 'priceLabel', n: 'Nhãn giá' },
+        { id: 'signpost', n: 'Biển chỉ dẫn' },
+        { id: 'flagMarker', n: 'Cờ đánh dấu' },
+        { id: 'divider' },
+        { id: 'header', n: 'Nội Dung' },
+        { id: 'insertImage', n: 'Chèn Ảnh' },
+        { id: 'insertIcon', n: 'Chèn Icon' }
       ]
     },
     { 
@@ -1690,7 +1881,8 @@
     if (shapes.includes(name)) return 'shapes';
     
     if (name.startsWith('fibR') || name.startsWith('fibE') || name.startsWith('fibF') || name.startsWith('fibA') || name.startsWith('fibT') || name === 'gannFan') return 'fibo';
-    if (name === 'customText') return 'text';
+    const textTools = ['plainText', 'anchoredText', 'note', 'priceNote', 'pin', 'tableAnnotation', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker', 'insertImage', 'insertIcon', 'customText'];
+    if (textTools.includes(name)) return 'text';
     if (name.startsWith('wave') || name.startsWith('elliott') || name.includes('abcd') || name.includes('HeadAndShoulders') || name.includes('Top') || name.includes('Bottom') || name === 'threeDrives') return 'waves';
     
     return 'lines'; 
