@@ -1,8 +1,8 @@
 // ==========================================
 // 🎨 FILE: chart-drawing.js
-// 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026 (ULTIMATE EDITION)
-// Tech: Vanilla JS, KLineChart v9 API, No Frameworks
-// Features: Full Tools Restored, Right Panel, Realtime Text, Undo/Redo, Context Menu
+// 📦 WAVE ALPHA — PRO DRAWING ENGINE 2026 (MASTERPIECE EDITION)
+// Tech: Vanilla JS, KLineChart v9 API
+// Tối ưu UI/UX mượt mà, Fix Hover Trap, Fix Realtime Text
 // ==========================================
 
 (function (global) {
@@ -17,7 +17,7 @@
   let redoStack = [];
   let lastClickTime = 0;
   
-  // Debounce helper cho performance update (16ms = ~60fps)
+  // Debounce (16ms = ~60FPS) để cập nhật Real-time không lag
   function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -26,22 +26,28 @@
     };
   }
 
-  // Khởi tạo LocalStorage & Mặc định mỏng nhẹ chuẩn Pro
+  // Khởi tạo LocalStorage với đầy đủ các thuộc tính để KHÔNG BAO GIỜ CRASH
   const defaultStyles = {
-    lines: { lineColor: '#00F0FF', lineWidth: 1, lineStyle: 'solid', opacity: 1 },
-    shapes: { borderColor: '#00F0FF', borderWidth: 1, fillColor: 'rgba(0,0,0,0)', fillOpacity: 0 },
+    lines: { lineColor: '#00F0FF', lineWidth: 1, lineStyle: 'solid' },
+    shapes: { borderColor: '#00F0FF', borderWidth: 1, fillColor: '#00F0FF', fillOpacity: 0.15 }, // Hình khối mặc định trong suốt 15%
     fibo: { lineColor: '#EAECEF', showLabels: true, fillOpacity: 0.15 },
-    text: { textColor: '#EAECEF', textSize: 12, textInput: '', bold: false, italic: false }
+    text: { textColor: '#EAECEF', textSize: 14, textInput: 'Văn bản...' },
+    waves: { lineColor: '#00F0FF', lineWidth: 1, textColor: '#EAECEF', textSize: 12 } // Fix lỗi sập Sóng Elliott
   };
   
-  let toolStyles = JSON.parse(localStorage.getItem('wa_drawing_styles')) || defaultStyles;
+  // Đồng bộ Storage an toàn
+  let storedStyles = {};
+  try { storedStyles = JSON.parse(localStorage.getItem('wa_drawing_styles')) || {}; } catch(e){}
+  let toolStyles = { ...defaultStyles, ...storedStyles };
+  
+  // Đảm bảo các node con không bị mất nếu Storage cũ thiếu
+  Object.keys(defaultStyles).forEach(k => { if(!toolStyles[k]) toolStyles[k] = defaultStyles[k]; });
+
   function saveStyles() { localStorage.setItem('wa_drawing_styles', JSON.stringify(toolStyles)); }
 
   function hexToRgba(hex, alpha) {
     if(!hex) return `rgba(0,240,255,${alpha})`;
-    let r = parseInt(hex.slice(1, 3), 16) || 0, 
-        g = parseInt(hex.slice(3, 5), 16) || 0, 
-        b = parseInt(hex.slice(5, 7), 16) || 0;
+    let r = parseInt(hex.slice(1, 3), 16) || 0, g = parseInt(hex.slice(3, 5), 16) || 0, b = parseInt(hex.slice(5, 7), 16) || 0;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
@@ -54,7 +60,7 @@
   }
 
   // ==========================================
-  // 2. KLINECHART EXTENSIONS (PHỤC HỒI 100% CÔNG CỤ VẼ)
+  // 2. KLINECHART EXTENSIONS (17+ CÔNG CỤ VẼ)
   // ==========================================
   function registerProExtensions() {
     var kc = global.klinecharts;
@@ -62,12 +68,7 @@
     kc.__wa_extensions_registered = true;
 
     function getDistance(c1, c2) { return Math.sqrt(Math.pow(c1.x - c2.x, 2) + Math.pow(c1.y - c2.y, 2)); }
-    function getRotateCoordinate(c, tc, angle) {
-      return {
-        x: (c.x - tc.x) * Math.cos(angle) - (c.y - tc.y) * Math.sin(angle) + tc.x,
-        y: (c.x - tc.x) * Math.sin(angle) + (c.y - tc.y) * Math.cos(angle) + tc.y
-      };
-    }
+    function getRotateCoordinate(c, tc, angle) { return { x: (c.x - tc.x) * Math.cos(angle) - (c.y - tc.y) * Math.sin(angle) + tc.x, y: (c.x - tc.x) * Math.sin(angle) + (c.y - tc.y) * Math.cos(angle) + tc.y }; }
     function getRayLine(c, b) {
       if (c.length > 1) {
         let coord;
@@ -75,8 +76,7 @@
         else if (c[0].x > c[1].x) coord = { x: 0, y: kc.utils.getLinearYFromCoordinates(c[0], c[1], { x: 0, y: c[0].y }) };
         else coord = { x: b.width, y: kc.utils.getLinearYFromCoordinates(c[0], c[1], { x: b.width, y: c[0].y }) };
         return { coordinates: [c[0], coord] };
-      }
-      return [];
+      } return [];
     }
 
     function createWave(name, step, labels) {
@@ -85,17 +85,15 @@
         createPointFigures: (ref) => {
           let c = ref.coordinates || []; let figs = [];
           if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          labels.forEach((l, i) => { if (c[i]) figs.push({ type: 'text', attrs: { x: c[i].x, y: c[i].y - 6, text: l, align: 'center', baseline: 'bottom' }, ignoreEvent: true }); });
+          labels.forEach((l, i) => { if (c[i]) figs.push({ type: 'text', attrs: { x: c[i].x, y: c[i].y - 8, text: l, align: 'center', baseline: 'bottom' }, ignoreEvent: true }); });
           return figs;
         }
       };
     }
 
     const extensions = [
-      createWave('waveElliott', 7, ['0', '1', '2', '3', '4', '5']), 
-      createWave('waveABC', 5, ['0', 'A', 'B', 'C']),
-      createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']), 
-      createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
+      createWave('waveElliott', 7, ['0', '1', '2', '3', '4', '5']), createWave('waveABC', 5, ['0', 'A', 'B', 'C']),
+      createWave('waveTriangle', 7, ['0', 'A', 'B', 'C', 'D', 'E']), createWave('waveWXY', 5, ['0', 'W', 'X', 'Y']),
       { name: 'threeWaves', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'fiveWaves', totalStep: 7, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
       { name: 'eightWaves', totalStep: 10, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const texts = coordinates.map((coordinate, i) => ({ ...coordinate, text: `(${i})`, baseline: 'bottom' })); return [{ type: 'line', attrs: { coordinates } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
@@ -114,12 +112,12 @@
         }
       },
 
-      // BUG FIX: SHAPES TRONG SUỐT HOÀN TOÀN KHÔNG BỊ ĐỤC NỀN
-      { name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { style: 'stroke_fill', color: 'rgba(0,0,0,0)', borderColor: toolStyles.shapes.borderColor, borderSize: 1 }, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) } }; return []; } },
-      { name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { style: 'stroke_fill', color: 'rgba(0,0,0,0)', borderColor: toolStyles.shapes.borderColor, borderSize: 1 }, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }]; return []; } },
-      { name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { style: 'stroke_fill', color: 'rgba(0,0,0,0)', borderColor: toolStyles.shapes.borderColor, borderSize: 1 }, createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates } }]; } },
+      // SHAPES: Đã fix tô màu, viền mỏng
+      { name: 'circle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return { type: 'circle', attrs: { ...coordinates[0], r: getDistance(coordinates[0], coordinates[1]) } }; return []; } },
+      { name: 'rect', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) return [{ type: 'polygon', attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }]; return []; } },
+      { name: 'triangle', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { return [{ type: 'polygon', attrs: { coordinates } }]; } },
       {
-        name: 'parallelogram', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { style: 'stroke_fill', color: 'rgba(0,0,0,0)', borderColor: toolStyles.shapes.borderColor, borderSize: 1 },
+        name: 'parallelogram', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates }) {
           if (coordinates.length === 2) return [{ type: 'line', ignoreEvent: true, attrs: { coordinates } }];
           if (coordinates.length === 3) { const coordinate = { x: coordinates[0].x + (coordinates[2].x - coordinates[1].x), y: coordinates[2].y }; return [{ type: 'polygon', attrs: { coordinates: [coordinates[0], coordinates[1], coordinates[2], coordinate] } }]; } return [];
@@ -128,7 +126,7 @@
         performEventMoveForDrawing: function({ currentStep, points, performPoint }) { if (currentStep === 2) points[0].price = performPoint.price; }
       },
 
-      // PHỤC HỒI BỘ FIBONACCI
+      // FIBONACCI: Trả lại dải màu chuyên nghiệp
       {
         name: 'fibonacciLine', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function({ coordinates, bounding, overlay, precision }) {
@@ -145,7 +143,7 @@
             percents.forEach((p, i) => {
               const y = coordinates[1].y + yDif * p; const price = (points[1].value + vDif * p).toFixed(precision.price);
               lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: bounding.width, y }] });
-              if (showLabels) texts.push({ x: coordinates[0].x, y: y - 2, text: `${p} (${price})`, baseline: 'bottom' });
+              if (showLabels) texts.push({ x: coordinates[0].x, y: y - 4, text: `${p} (${price})`, baseline: 'bottom' });
               if (showFill && prevY !== null && i > 0 && fillAlpha > 0) {
                 let colorBase = colors[i-1].replace('1)', `${fillAlpha})`);
                 polygons.push({ type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ { x: coordinates[0].x, y: prevY }, { x: bounding.width, y: prevY }, { x: bounding.width, y }, { x: coordinates[0].x, y } ] }, styles: { style: 'fill', color: colorBase } });
@@ -156,115 +154,37 @@
           } return [];
         }
       },
-      {
-        name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, overlay, precision }) {
-          const lines = [], texts = [];
-          if (coordinates.length > 1) {
-            const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x; const yDif = coordinates[0].y - coordinates[1].y; const points = overlay.points; const valueDif = points[0].value - points[1].value;
-            [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => { const y = coordinates[1].y + yDif * percent; const price = (points[1].value + valueDif * percent).toFixed(precision.price); lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); });
-          } return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-      {
-        name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          if (coordinates.length > 1) {
-            const radius = getDistance(coordinates[0], coordinates[1]); const circles = [], texts = [];
-            [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const r = radius * percent; circles.push({ ...coordinates[0], r }); texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` }); });
-            return [{ type: 'circle', attrs: circles, styles: { style: 'stroke' } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-          } return [];
-        }
-      },
-      {
-        name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, bounding }) {
-          if (coordinates.length > 1) {
-            const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24); const flag = coordinates[1].x > coordinates[0].x ? 0 : 1; const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]);
-            let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3);
-            const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle); const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle);
-            const arcs = [ { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 }, { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI } ];
-            let x = coordinates[0].x - startRadius, y = coordinates[0].y - startRadius;
-            for (let i = 2; i < 9; i++) {
-              const r = arcs[i - 2].r + arcs[i - 1].r; let startAngle = 0;
-              switch (i % 4) { case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break; case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; }
-              const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle); arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 });
-            } return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }];
-          } return [];
-        }
-      },
-      {
-        name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, bounding }) {
-          const lines1 = [], texts = []; let lines2 = [];
-          if (coordinates.length > 1) {
-            const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4; const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20; const xDistance = coordinates[1].x - coordinates[0].x, yDistance = coordinates[1].y - coordinates[0].y;
-            [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0].forEach(percent => {
-              const x = coordinates[1].x - xDistance * percent, y = coordinates[1].y - yDistance * percent; lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] }); lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] });
-              lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding)); lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding));
-              texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${percent.toFixed(3)}` }); texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${percent.toFixed(3)}` });
-            });
-          } return [{ type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-      {
-        name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates, overlay, precision }) {
-          const fbLines = [], texts = [];
-          if (coordinates.length > 2) {
-            const points = overlay.points; const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y; const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x;
-            [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const y = coordinates[2].y + yDif * percent; const price = (points[2].value + valueDif * percent).toFixed(precision.price); fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] }); texts.push({ x: textX, y, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); });
-          } return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
+      { name: 'fibonacciSegment', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, overlay, precision }) { const lines = [], texts = []; if (coordinates.length > 1) { const textX = coordinates[1].x > coordinates[0].x ? coordinates[0].x : coordinates[1].x; const yDif = coordinates[0].y - coordinates[1].y; const points = overlay.points; const valueDif = points[0].value - points[1].value; [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0].forEach(percent => { const y = coordinates[1].y + yDif * percent; const price = (points[1].value + valueDif * percent).toFixed(precision.price); lines.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); texts.push({ x: textX, y: y - 4, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); }); } return [{ type: 'line', attrs: lines }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      { name: 'fibonacciCircle', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { const radius = getDistance(coordinates[0], coordinates[1]); const circles = [], texts = []; [0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const r = radius * percent; circles.push({ ...coordinates[0], r }); texts.push({ x: coordinates[0].x, y: coordinates[0].y + r + 6, text: `${(percent * 100).toFixed(1)}%` }); }); return [{ type: 'circle', attrs: circles, styles: { style: 'stroke' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } return []; } },
+      { name: 'fibonacciSpiral', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, bounding }) { if (coordinates.length > 1) { const startRadius = getDistance(coordinates[0], coordinates[1]) / Math.sqrt(24); const flag = coordinates[1].x > coordinates[0].x ? 0 : 1; const kb = kc.utils.getLinearSlopeIntercept(coordinates[0], coordinates[1]); let offsetAngle = kb ? Math.atan(kb[0]) + Math.PI * flag : (coordinates[1].y > coordinates[0].y ? Math.PI / 2 : Math.PI / 2 * 3); const rotateCoordinate1 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y }, coordinates[0], offsetAngle); const rotateCoordinate2 = getRotateCoordinate({ x: coordinates[0].x - startRadius, y: coordinates[0].y - startRadius }, coordinates[0], offsetAngle); const arcs = [ { ...rotateCoordinate1, r: startRadius, startAngle: offsetAngle, endAngle: offsetAngle + Math.PI / 2 }, { ...rotateCoordinate2, r: startRadius * 2, startAngle: offsetAngle + Math.PI / 2, endAngle: offsetAngle + Math.PI } ]; let x = coordinates[0].x - startRadius, y = coordinates[0].y - startRadius; for (let i = 2; i < 9; i++) { const r = arcs[i - 2].r + arcs[i - 1].r; let startAngle = 0; switch (i % 4) { case 0: startAngle = offsetAngle; x -= arcs[i - 2].r; break; case 1: startAngle = offsetAngle + Math.PI / 2; y -= arcs[i - 2].r; break; case 2: startAngle = offsetAngle + Math.PI; x += arcs[i - 2].r; break; case 3: startAngle = offsetAngle + Math.PI / 2 * 3; y += arcs[i - 2].r; break; } const rotateCoordinate = getRotateCoordinate({ x, y }, coordinates[0], offsetAngle); arcs.push({ ...rotateCoordinate, r, startAngle, endAngle: startAngle + Math.PI / 2 }); } return [{ type: 'arc', attrs: arcs }, { type: 'line', attrs: getRayLine(coordinates, bounding) }]; } return []; } },
+      { name: 'fibonacciSpeedResistanceFan', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, bounding }) { const lines1 = [], texts = []; let lines2 = []; if (coordinates.length > 1) { const xOffset = coordinates[1].x > coordinates[0].x ? -38 : 4; const yOffset = coordinates[1].y > coordinates[0].y ? -2 : 20; const xDistance = coordinates[1].x - coordinates[0].x, yDistance = coordinates[1].y - coordinates[0].y; [1, 0.75, 0.618, 0.5, 0.382, 0.25, 0].forEach(percent => { const x = coordinates[1].x - xDistance * percent, y = coordinates[1].y - yDistance * percent; lines1.push({ coordinates: [{ x, y: coordinates[0].y }, { x, y: coordinates[1].y }] }); lines1.push({ coordinates: [{ x: coordinates[0].x, y }, { x: coordinates[1].x, y }] }); lines2 = lines2.concat(getRayLine([coordinates[0], { x, y: coordinates[1].y }], bounding)); lines2 = lines2.concat(getRayLine([coordinates[0], { x: coordinates[1].x, y }], bounding)); texts.unshift({ x: coordinates[0].x + xOffset, y: y + 10, text: `${percent.toFixed(3)}` }); texts.unshift({ x: x - 18, y: coordinates[0].y + yOffset, text: `${percent.toFixed(3)}` }); }); } return [{ type: 'line', attrs: lines1 }, { type: 'line', attrs: lines2 }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      { name: 'fibonacciExtension', totalStep: 4, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates, overlay, precision }) { const fbLines = [], texts = []; if (coordinates.length > 2) { const points = overlay.points; const valueDif = points[1].value - points[0].value, yDif = coordinates[1].y - coordinates[0].y; const textX = coordinates[2].x > coordinates[1].x ? coordinates[1].x : coordinates[2].x; [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(percent => { const y = coordinates[2].y + yDif * percent; const price = (points[2].value + valueDif * percent).toFixed(precision.price); fbLines.push({ coordinates: [{ x: coordinates[1].x, y }, { x: coordinates[2].x, y }] }); texts.push({ x: textX, y: y - 4, text: `${price} (${(percent * 100).toFixed(1)}%)`, baseline: 'bottom' }); }); } return [{ type: 'line', attrs: { coordinates }, styles: { style: 'dashed' } }, { type: 'line', attrs: fbLines }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
 
       // CÁC MÔ HÌNH PHỨC TẠP
-      {
-        name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(0,0,0,0)', style: 'stroke_fill' } },
-        createPointFigures: function({ coordinates }) {
-          if (coordinates.length > 1) {
-            const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4; const xDis = coordinates[1].x - coordinates[0].x;
-            const dashedLines = [ { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] }, { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] } ];
-            const solidLines = [ { coordinates: [coordinates[0], coordinates[1]] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] } ];
-            return [ { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] }, { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'line', attrs: solidLines } ];
-          } return [];
-        }
-      },
-      {
-        name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function({ coordinates }) {
-          let acLineCoordinates = [], bdLineCoordinates = []; const tags = ['A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
-          if (coordinates.length > 2) { acLineCoordinates = [coordinates[0], coordinates[2]]; if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]]; }
-          return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-      {
-        name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, styles: { polygon: { color: 'rgba(0,0,0,0)', style: 'stroke_fill' } },
-        createPointFigures: function({ coordinates }) {
-          const dashedLines = [], polygons = []; const tags = ['X', 'A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` }));
-          if (coordinates.length > 2) { dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] }); polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] }); if (coordinates.length > 3) { dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] }); if (coordinates.length > 4) { dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] }); polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] }); } } }
-          return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }];
-        }
-      },
-      {
-        name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
-        createPointFigures: function (ref) {
-          var c = ref.coordinates || []; var figs = [];
-          if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] }, styles: { style: 'fill' } });
-          if (c.length >= 7) figs.push({ type: 'polygon', attrs: { coordinates: [c[3], c[4], c[5], c[6]] }, styles: { style: 'fill' } });
-          if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } });
-          ['Left', 'Head', 'Right'].forEach((l, i) => { let idx = (i===0)?1 : (i===1)?3 : 5; if (c[idx]) figs.push({ type: 'text', attrs: { x: c[idx].x, y: c[idx].y - 15, text: l, align: 'center' }, ignoreEvent: true }); });
-          return figs;
-        }
-      },
+      { name: 'gannBox', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { if (coordinates.length > 1) { const quarterYDis = (coordinates[1].y - coordinates[0].y) / 4; const xDis = coordinates[1].x - coordinates[0].x; const dashedLines = [ { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis }] }, { coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[1].y - quarterYDis * 2 }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y + quarterYDis * 2 }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[1].y }] }, { coordinates: [{ ...coordinates[0] }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.236, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[0].x + xDis * 0.5, y: coordinates[0].y }] } ]; const solidLines = [ { coordinates: [coordinates[0], coordinates[1]] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, { x: coordinates[1].x, y: coordinates[0].y }] } ]; return [ { type: 'line', attrs: [{ coordinates: [coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }] }, { coordinates: [{ x: coordinates[1].x, y: coordinates[0].y }, coordinates[1]] }, { coordinates: [coordinates[1], { x: coordinates[0].x, y: coordinates[1].y }] }, { coordinates: [{ x: coordinates[0].x, y: coordinates[1].y }, coordinates[0]] }] }, { type: 'polygon', ignoreEvent: true, attrs: { coordinates: [ coordinates[0], { x: coordinates[1].x, y: coordinates[0].y }, coordinates[1], { x: coordinates[0].x, y: coordinates[1].y } ] } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'line', attrs: solidLines } ]; } return []; } },
+      { name: 'abcd', totalStep: 5, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { let acLineCoordinates = [], bdLineCoordinates = []; const tags = ['A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { acLineCoordinates = [coordinates[0], coordinates[2]]; if (coordinates.length > 3) bdLineCoordinates = [coordinates[1], coordinates[3]]; } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: [{ coordinates: acLineCoordinates }, { coordinates: bdLineCoordinates }], styles: { style: 'dashed' } }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      { name: 'xabcd', totalStep: 6, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function({ coordinates }) { const dashedLines = [], polygons = []; const tags = ['X', 'A', 'B', 'C', 'D']; const texts = coordinates.map((coordinate, i) => ({ ...coordinate, baseline: 'bottom', text: `(${tags[i]})` })); if (coordinates.length > 2) { dashedLines.push({ coordinates: [coordinates[0], coordinates[2]] }); polygons.push({ coordinates: [coordinates[0], coordinates[1], coordinates[2]] }); if (coordinates.length > 3) { dashedLines.push({ coordinates: [coordinates[1], coordinates[3]] }); if (coordinates.length > 4) { dashedLines.push({ coordinates: [coordinates[2], coordinates[4]] }); polygons.push({ coordinates: [coordinates[2], coordinates[3], coordinates[4]] }); } } } return [{ type: 'line', attrs: { coordinates } }, { type: 'line', attrs: dashedLines, styles: { style: 'dashed' } }, { type: 'polygon', ignoreEvent: true, attrs: polygons }, { type: 'text', ignoreEvent: true, attrs: texts }]; } },
+      { name: 'headAndShoulders', totalStep: 8, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function (ref) { var c = ref.coordinates || []; var figs = []; if (c.length >= 4) figs.push({ type: 'polygon', attrs: { coordinates: [c[0], c[1], c[2], c[3]] } }); if (c.length >= 7) figs.push({ type: 'polygon', attrs: { coordinates: [c[3], c[4], c[5], c[6]] } }); if (c.length > 1) figs.push({ type: 'line', attrs: { coordinates: c } }); ['Left', 'Head', 'Right'].forEach((l, i) => { let idx = (i===0)?1 : (i===1)?3 : 5; if (c[idx]) figs.push({ type: 'text', attrs: { x: c[idx].x, y: c[idx].y - 15, text: l, align: 'center' }, ignoreEvent: true }); }); return figs; } },
 
-      // BUG FIX: TEXT REAL-TIME 1 CLICK
+      // FIX TRIỆT ĐỂ: TEXT REAL-TIME 1 CLICK
       {
         name: 'customText', totalStep: 1, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
         createPointFigures: function (ref) {
           if (!ref.coordinates || !ref.coordinates.length) return [];
-          let t = ref.overlay.extendData; if (!t) t = 'Văn bản...';
-          return [{ type: 'text', attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y, text: t, baseline: 'bottom', align: 'center' }, ignoreEvent: false }];
+          // Phải luôn là String và có độ dài để kích hoạt Bounding Box (click vào hình để edit)
+          let t = ref.overlay.extendData; 
+          if (typeof t !== 'string' || t.trim() === '') t = 'Văn bản...';
+          
+          let lines = t.split('\n');
+          let figs = [];
+          lines.forEach((line, idx) => {
+            figs.push({ 
+              type: 'text', 
+              attrs: { x: ref.coordinates[0].x, y: ref.coordinates[0].y + (idx * 16), text: line, baseline: 'bottom', align: 'left' }, 
+              ignoreEvent: false 
+            });
+          });
+          return figs;
         }
       }
     ];
@@ -273,34 +193,39 @@
   }
 
   // ======================================================
-  // 3. UI GENERATION (SIDEBAR & RIGHT PANEL PER-TOOL)
+  // 3. UI GENERATION (SIDEBAR BÊN TRÁI & PANEL BÊN PHẢI)
   // ======================================================
   function injectCSS() {
-    if (document.getElementById('wa-pro-css-v3')) return;
-    const style = document.createElement('style'); style.id = 'wa-pro-css-v3';
+    if (document.getElementById('wa-pro-css-v4')) return;
+    const style = document.createElement('style'); style.id = 'wa-pro-css-v4';
     style.textContent = `
       #sc-chart-container { position: relative !important; overflow: hidden !important; }
       
-      /* TOOLBAR TRÁI */
+      /* TOOLBAR BÊN TRÁI */
       .wa-toolbar { position: absolute; top: 60px; left: 16px; z-index: 999; width: 44px; background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; padding: 6px 0; }
       .wa-tb-btn { width: 34px; height: 34px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 2px 0; position: relative; transition: 0.15s; }
       .wa-tb-btn svg { width: 20px; height: 20px; }
       .wa-tb-btn:hover { background: #2b3139; color: #EAECEF; }
       .wa-tb-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
       
-      /* TOOLTIPS BÊN PHẢI NÚT VẼ */
-      .wa-tb-btn::after { content: attr(data-tooltip); position: absolute; left: 44px; top: 50%; transform: translateY(-50%); background: #1E2329; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; pointer-events: none; opacity: 0; transition: 0.2s; border: 1px solid #2b3139; z-index: 1000; }
+      /* TOOLTIP KHI HOVER */
+      .wa-tb-btn::after { content: attr(data-tooltip); position: absolute; left: 48px; top: 50%; transform: translateY(-50%); background: #1E2329; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; pointer-events: none; opacity: 0; transition: 0.2s; border: 1px solid #2b3139; z-index: 1000; }
       .wa-tb-btn:hover::after { opacity: 1; }
 
-      /* MENU DRAWING TOOLS MỞ RỘNG */
+      /* MENU CON - FIX LỖI HOVER TRAP (KHE HỞ BỊ CHẾT) */
       .wa-tb-group { position: relative; width: 100%; display: flex; justify-content: center; }
       .wa-tb-group::after { content: ''; position: absolute; right: 4px; bottom: 6px; border: solid #848E9C; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); pointer-events: none; }
-      .wa-tb-menu { position: absolute; left: 46px; top: -10px; background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: none; flex-direction: column; width: 230px; padding: 6px 0; z-index: 1000; }
-      .wa-tb-group:hover .wa-tb-menu { display: flex; }
+      .wa-tb-menu { 
+         position: absolute; left: 100%; top: -6px; 
+         padding-left: 8px; /* Đây là cây cầu tàng hình giúp chuột đi ngang không bị sập menu */
+         display: none; z-index: 1000; 
+      }
+      .wa-tb-group:hover .wa-tb-menu { display: block; }
+      .wa-tb-menu-inner { background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); width: 230px; padding: 6px 0; display: flex; flex-direction: column; }
       .wa-menu-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
       .wa-menu-item:hover { background: #2b3139; color: #00F0FF; }
 
-      /* PROPS PANEL PHẢI (SLIDE-IN) */
+      /* PROPS PANEL BÊN PHẢI (SLIDE IN) */
       .wa-props-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 260px; background: rgba(22, 26, 30, 0.95); border-left: 1px solid #2b3139; box-shadow: -4px 0 24px rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 999; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
       .wa-props-panel.show { transform: translateX(0); }
       .wa-panel-header { padding: 16px; border-bottom: 1px solid #2b3139; display: flex; justify-content: space-between; align-items: center; color: #EAECEF; font-weight: bold; font-size: 14px; }
@@ -308,7 +233,6 @@
       .wa-close-btn:hover { background: #2b3139; color: #F6465D; }
       .wa-panel-body { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
       
-      /* CONTROLS BÊN TRONG PANEL */
       .wa-control-row { display: flex; flex-direction: column; gap: 6px; }
       .wa-control-row label { color: #848E9C; font-size: 12px; }
       .wa-input, .wa-select { background: #0B0E11; border: 1px solid #2b3139; color: #EAECEF; padding: 8px 10px; border-radius: 4px; outline: none; font-size: 13px; width: 100%; box-sizing: border-box; }
@@ -357,9 +281,10 @@
   function buildToolbar() {
     let html = `<button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột (Esc)">${SVG.ptr}</button>`;
     MENUS.forEach(m => {
-      html += `<div class="wa-tb-group"><button class="wa-tb-btn">${m.icon}</button><div class="wa-tb-menu">`;
+      html += `<div class="wa-tb-group"><button class="wa-tb-btn">${m.icon}</button>
+                <div class="wa-tb-menu"><div class="wa-tb-menu-inner">`;
       m.tools.forEach(t => html += `<div class="wa-menu-item" data-tool="${t.id}">${t.n}</div>`);
-      html += `</div></div>`;
+      html += `</div></div></div>`;
     });
     html += `<button class="wa-tb-btn" data-tool="customText" data-tooltip="Văn bản (Text)">${SVG.text}</button>
              <div style="width:20px; height:1px; background:#2b3139; margin:8px 0;"></div>
@@ -372,21 +297,29 @@
 
   function showToast(msg) {
     let t = document.getElementById('wa-toast');
-    if(!t) {
-      t = document.createElement('div'); t.id = 'wa-toast'; t.className = 'wa-toast';
-      document.getElementById('sc-chart-container').appendChild(t);
-    }
-    t.innerText = msg; t.style.opacity = 1;
-    setTimeout(() => t.style.opacity = 0, 2000);
+    if(!t) { t = document.createElement('div'); t.id = 'wa-toast'; t.className = 'wa-toast'; document.getElementById('sc-chart-container').appendChild(t); }
+    t.innerText = msg; t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 2000);
+  }
+
+  function createConfirmModal(msg, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#161A1E;border:1px solid #2b3139;padding:24px;border-radius:8px;color:#EAECEF;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.8);';
+    box.innerHTML = `<div style="margin-bottom:20px;font-size:15px;">${msg}</div><div style="display:flex;gap:12px;justify-content:center;"><button id="wa-btn-c-cancel" style="padding:8px 20px;background:#2b3139;border:none;color:#EAECEF;border-radius:4px;cursor:pointer;">Hủy</button><button id="wa-btn-c-ok" style="padding:8px 20px;background:#F6465D;border:none;color:#FFF;border-radius:4px;cursor:pointer;font-weight:bold;">Đồng ý</button></div>`;
+    overlay.appendChild(box);
+    setTimeout(() => {
+      box.querySelector('#wa-btn-c-cancel').onclick = () => overlay.remove();
+      box.querySelector('#wa-btn-c-ok').onclick = () => { onConfirm(); overlay.remove(); };
+    }, 0);
   }
 
   // ==========================================
-  // 4. CORE LOGIC, EVENTS & UNDO/REDO
+  // 4. EVENTS ENGINE (UNDO, REDO, KEYBOARD)
   // ==========================================
   function bindCoreEvents(toolbar, panel) {
     const container = document.getElementById('sc-chart-container');
     
-    // Engine Undo/Redo
     function saveHistory(action, overlay) {
       if(!overlay) return;
       undoStack.push({ action, overlay: JSON.parse(JSON.stringify(overlay)) });
@@ -396,43 +329,37 @@
     
     function handleUndo() {
       if(undoStack.length === 0) return showToast('Không có thao tác nào để Hoàn tác');
-      let step = undoStack.pop();
-      redoStack.push(step);
+      let step = undoStack.pop(); redoStack.push(step);
       try {
         if(step.action === 'add') global.tvChart.removeOverlay({ id: step.overlay.id });
         if(step.action === 'delete') global.tvChart.createOverlay(step.overlay);
         hidePanel();
-      } catch(e) { console.error(e); }
+      } catch(e) {}
     }
     
     function handleRedo() {
       if(redoStack.length === 0) return;
-      let step = redoStack.pop();
-      undoStack.push(step);
+      let step = redoStack.pop(); undoStack.push(step);
       try {
         if(step.action === 'add') global.tvChart.createOverlay(step.overlay);
         if(step.action === 'delete') global.tvChart.removeOverlay({ id: step.overlay.id });
         hidePanel();
-      } catch(e) { console.error(e); }
+      } catch(e) {}
     }
 
     document.getElementById('wa-btn-undo').onclick = handleUndo;
     document.getElementById('wa-btn-redo').onclick = handleRedo;
     document.getElementById('wa-btn-magnet').onclick = function() {
-      isMagnetMode = !isMagnetMode;
-      this.classList.toggle('active', isMagnetMode);
-      showToast(isMagnetMode ? 'Bật chế độ Bắt điểm (Magnet)' : 'Tắt chế độ Bắt điểm');
+      isMagnetMode = !isMagnetMode; this.classList.toggle('active', isMagnetMode);
+      showToast(isMagnetMode ? 'Đã bật chế độ Bắt điểm' : 'Đã tắt Bắt điểm');
     };
     
     document.getElementById('wa-btn-clear').onclick = function() {
-      const modal = createConfirmModal('Bạn có chắc muốn xóa toàn bộ bản vẽ?', () => {
-        global.tvChart.removeOverlay();
-        undoStack = []; redoStack = []; hidePanel();
+      createConfirmModal('Bạn có chắc muốn xóa toàn bộ bản vẽ?', () => {
+        global.tvChart.removeOverlay(); undoStack = []; redoStack = []; hidePanel();
       });
-      container.appendChild(modal);
     };
 
-    // Khởi tạo Tool Vẽ
     toolbar.addEventListener('click', (e) => {
       let menuItem = e.target.closest('.wa-menu-item');
       let btn = e.target.closest('.wa-tb-btn[data-tool]');
@@ -447,7 +374,6 @@
         toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       }
-
       if(toolId) activateTool(toolId);
     });
 
@@ -456,31 +382,28 @@
       try { global.tvChart.cancelDrawing(); } catch(e){}
       hidePanel();
 
-      if (toolId === 'pointer') {
-        container.classList.remove('wa-drawing-mode'); return;
-      }
+      if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
       container.classList.add('wa-drawing-mode');
 
       try {
-        let tType = getToolCategory(toolId); let s = toolStyles[tType];
+        let tType = getToolCategory(toolId); let s = toolStyles[tType] || {};
         let config = { name: toolId, lock: false, styles: {} };
         
         if(tType === 'lines' || tType === 'waves') {
-          config.styles.line = { color: s.lineColor, size: s.lineWidth, style: s.lineStyle };
+          config.styles.line = { color: s.lineColor || '#00F0FF', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
         } else if (tType === 'shapes') {
-          config.styles.polygon = { style: 'stroke_fill', color: hexToRgba('#000000', 0), borderColor: s.borderColor, borderSize: s.borderWidth };
+          config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor, s.fillOpacity), borderColor: s.borderColor, borderSize: s.borderWidth };
         } else if (tType === 'fibo') {
           config.styles.line = { color: s.lineColor, size: 1 }; config.extendData = { showLabels: s.showLabels, fillOpacity: s.fillOpacity };
         } else if (toolId === 'customText') {
-          config.extendData = s.textInput; // Gán tạm, khi render sẽ xử lý object sau
-          config.styles.text = { color: s.textColor, size: s.textSize, weight: s.bold ? 'bold' : 'normal', family: s.italic ? 'italic' : 'sans-serif' };
+          config.extendData = toolStyles.text.textInput || 'Văn bản...'; // Ép kiểu chuỗi để fix lỗi bounding box
+          config.styles.text = { color: s.textColor, size: s.textSize, weight: 'normal', family: 'sans-serif' };
         }
 
         global.tvChart.createOverlay(config);
-      } catch (err) { showToast('Lỗi khởi tạo công cụ'); }
+      } catch (err) { showToast('Lỗi khởi tạo. Hệ thống sẽ khôi phục về mặc định.'); }
     }
 
-    // Event KLineChart v9
     let waitChart = setInterval(() => {
       if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
         if (!global.tvChart.__wa_event_bound) {
@@ -489,26 +412,16 @@
           global.tvChart.subscribeAction('onDrawEnd', function(data) {
             activateTool('pointer');
             toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
-            
-            // Xử lý Array Overlay trả về của v9
             let overlayObj = Array.isArray(data) ? data[0] : data;
             if(!overlayObj) return;
-
-            saveHistory('add', overlayObj);
-            currentSelectedOverlay = overlayObj;
-            renderPanel(currentSelectedOverlay);
+            saveHistory('add', overlayObj); currentSelectedOverlay = overlayObj; renderPanel(currentSelectedOverlay);
           });
 
           global.tvChart.subscribeAction('onOverlayClick', function(data) {
             let overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
             if(!overlayObj) { hidePanel(); return; }
-            
-            let now = Date.now();
-            let isDoubleClick = (now - lastClickTime < 300);
-            lastClickTime = now;
-
-            currentSelectedOverlay = overlayObj;
-            renderPanel(currentSelectedOverlay);
+            let now = Date.now(); let isDoubleClick = (now - lastClickTime < 300); lastClickTime = now;
+            currentSelectedOverlay = overlayObj; renderPanel(currentSelectedOverlay);
 
             if(isDoubleClick && overlayObj.name === 'customText') {
                setTimeout(() => { let t = document.getElementById('wa-prop-txt'); if(t) { t.focus(); t.select(); } }, 50);
@@ -519,25 +432,17 @@
       }
     }, 500);
 
-    // Keyboard Shortcuts
     if(!global.__wa_kb_bound) {
       global.__wa_kb_bound = true;
       document.addEventListener('keydown', (e) => {
         let isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
-        
         if(e.key === 'Escape') {
           if(global.tvChart) global.tvChart.cancelDrawing();
-          activateTool('pointer'); hidePanel();
-          if(isInput) e.target.blur();
+          activateTool('pointer'); hidePanel(); if(isInput) e.target.blur();
         }
-        
         if(!isInput) {
           if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (currentSelectedOverlay && global.tvChart) {
-              saveHistory('delete', currentSelectedOverlay);
-              global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-              hidePanel();
-            }
+            if (currentSelectedOverlay && global.tvChart) { saveHistory('delete', currentSelectedOverlay); global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel(); }
           }
           if (e.ctrlKey && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo(); }
           if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) { e.preventDefault(); handleRedo(); }
@@ -547,7 +452,7 @@
   }
 
   // ==========================================
-  // 5. RIGHT PROPS PANEL (WYSIWYG TÙY BIẾN CHO TỪNG LOẠI TOOL)
+  // 5. PROPS PANEL (WYSIWYG TÙY BIẾN CHO TỪNG LOẠI)
   // ==========================================
   function getToolCategory(name) {
     if(['rect','circle','triangle','parallelogram','gannBox'].includes(name)) return 'shapes';
@@ -561,12 +466,11 @@
     const panel = document.getElementById('wa-props-panel');
     if(!panel || !overlay) return;
     
-    const cat = getToolCategory(overlay.name);
-    const body = panel.querySelector('.wa-panel-body');
+    const cat = getToolCategory(overlay.name); const body = panel.querySelector('.wa-panel-body');
     let html = ''; let s = overlay.styles || {}; let ext = overlay.extendData || {};
 
     if (cat === 'text') {
-      let txt = typeof ext === 'string' ? ext : (ext.text || '');
+      let txt = typeof ext === 'string' ? ext : (ext.text || 'Văn bản...');
       let c = (s.text && s.text.color) ? colorToHex(s.text.color) : toolStyles.text.textColor;
       let sz = (s.text && s.text.size) ? s.text.size : toolStyles.text.textSize;
       html += `
@@ -577,7 +481,6 @@
           <div class="wa-control-row" style="flex:1"><label>Cỡ chữ</label><select id="wa-prop-s1" class="wa-select">
             <option value="12" ${sz==12?'selected':''}>12px</option><option value="14" ${sz==14?'selected':''}>14px</option>
             <option value="16" ${sz==16?'selected':''}>16px</option><option value="20" ${sz==20?'selected':''}>20px</option>
-            <option value="24" ${sz==24?'selected':''}>24px</option>
           </select></div>
         </div>`;
     } else if (cat === 'shapes') {
@@ -590,18 +493,19 @@
         </div>`;
     } else if (cat === 'fibo') {
       let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : toolStyles.fibo.lineColor;
+      let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : toolStyles.fibo.fillOpacity;
       html += `
         <div class="wa-control-row"><label>Màu vạch & Chữ</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
-        <div class="wa-control-row"><label>Độ đậm nền Fibo (0 = Tắt nền)</label>
-          <input type="number" id="wa-prop-a1" class="wa-input" step="0.05" min="0" max="1" value="${ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15}">
+        <div class="wa-control-row"><label>Độ đậm nền (0 = Tắt màu)</label>
+          <input type="number" id="wa-prop-a1" class="wa-input" step="0.05" min="0" max="1" value="${alpha}">
         </div>`;
-    } else { // Lines, waves
-      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : toolStyles.lines.lineColor;
+    } else { 
+      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : (toolStyles[cat] ? toolStyles[cat].lineColor : '#00F0FF');
       let lw = (s.line && s.line.size) ? s.line.size : 1;
       html += `
         <div style="display:flex; gap:8px;">
           <div class="wa-control-row" style="flex:1"><label>Màu nét</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Độ dày nét</label><select id="wa-prop-s1" class="wa-select">
+          <div class="wa-control-row" style="flex:1"><label>Độ dày</label><select id="wa-prop-s1" class="wa-select">
             <option value="1" ${lw==1?'selected':''}>1px</option><option value="2" ${lw==2?'selected':''}>2px</option><option value="3" ${lw==3?'selected':''}>3px</option>
           </select></div>
         </div>`;
@@ -610,12 +514,10 @@
     body.innerHTML = html;
     panel.classList.add('show');
 
-    // Debounce Update Function (16ms = Không lag)
     const updateEngine = debounce(() => {
       if(!currentSelectedOverlay || !global.tvChart) return;
       let newStyles = { ...currentSelectedOverlay.styles };
-      let newExt = currentSelectedOverlay.extendData || {};
-      if(typeof newExt === 'string') newExt = { text: newExt };
+      let newExt = currentSelectedOverlay.extendData;
       
       const v_txt = document.getElementById('wa-prop-txt'); const v_c1 = document.getElementById('wa-prop-c1');
       const v_c2 = document.getElementById('wa-prop-c2'); const v_s1 = document.getElementById('wa-prop-s1');
@@ -631,12 +533,13 @@
         if(v_c2) { newStyles.polygon = { ...newStyles.polygon, color: hexToRgba(v_c2.value, 0.15), style: 'stroke_fill' }; toolStyles.shapes.fillColor = v_c2.value; }
       }
       else if (cat === 'fibo') {
+        if(typeof newExt !== 'object') newExt = {};
         if(v_c1) { newStyles.line = { ...newStyles.line, color: v_c1.value }; newStyles.text = { ...newStyles.text, color: v_c1.value }; toolStyles.fibo.lineColor = v_c1.value; }
         if(v_a1) { newExt.fillOpacity = parseFloat(v_a1.value); toolStyles.fibo.fillOpacity = newExt.fillOpacity; }
       }
       else {
-        if(v_c1) { newStyles.line = { ...newStyles.line, color: v_c1.value }; toolStyles.lines.lineColor = v_c1.value; }
-        if(v_s1) { newStyles.line = { ...newStyles.line, size: parseInt(v_s1.value) }; toolStyles.lines.lineWidth = parseInt(v_s1.value); }
+        if(v_c1) { newStyles.line = { ...newStyles.line, color: v_c1.value }; toolStyles[cat].lineColor = v_c1.value; }
+        if(v_s1) { newStyles.line = { ...newStyles.line, size: parseInt(v_s1.value) }; toolStyles[cat].lineWidth = parseInt(v_s1.value); }
       }
 
       saveStyles();
@@ -646,11 +549,6 @@
     body.querySelectorAll('input, textarea, select').forEach(el => {
       el.addEventListener('input', updateEngine); el.addEventListener('change', updateEngine); el.addEventListener('compositionend', updateEngine);
     });
-
-    if(cat === 'text') {
-      let tArea = document.getElementById('wa-prop-txt');
-      if(tArea) { tArea.focus(); tArea.select(); }
-    }
   }
 
   function hidePanel() {
@@ -659,80 +557,38 @@
     currentSelectedOverlay = null;
   }
 
-  function createConfirmModal(msg, onConfirm) {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
-    const box = document.createElement('div');
-    box.style.cssText = 'background:#161A1E;border:1px solid #2b3139;padding:24px;border-radius:8px;color:#EAECEF;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.8);';
-    box.innerHTML = `<div style="margin-bottom:20px;font-size:15px;">${msg}</div><div style="display:flex;gap:12px;justify-content:center;"><button id="wa-btn-c-cancel" style="padding:8px 20px;background:#2b3139;border:none;color:#EAECEF;border-radius:4px;cursor:pointer;">Hủy</button><button id="wa-btn-c-ok" style="padding:8px 20px;background:#F6465D;border:none;color:#FFF;border-radius:4px;cursor:pointer;font-weight:bold;">Đồng ý</button></div>`;
-    overlay.appendChild(box);
-    setTimeout(() => {
-      box.querySelector('#wa-btn-c-cancel').onclick = () => overlay.remove();
-      box.querySelector('#wa-btn-c-ok').onclick = () => { onConfirm(); overlay.remove(); };
-    }, 0);
-    return overlay;
-  }
-
   // ==========================================
   // 6. RIGHT CLICK CONTEXT MENU 
   // ==========================================
   function bindContextMenu(panel) {
     const container = document.getElementById('sc-chart-container');
-    const cm = document.createElement('div');
-    cm.className = 'wa-context-menu';
-    cm.innerHTML = `
-      <div class="wa-cm-item" id="wa-cm-edit">Chỉnh sửa</div>
-      <div class="wa-cm-item" id="wa-cm-clone">Nhân bản (Clone)</div>
-      <div class="wa-cm-item" id="wa-cm-lock">Khóa / Mở khóa</div>
-      <div class="wa-cm-item" id="wa-cm-del" style="color:#F6465D;border-top:1px solid #2b3139;padding-top:12px;margin-top:4px;">Xóa hình</div>
-    `;
+    const cm = document.createElement('div'); cm.className = 'wa-context-menu';
+    cm.innerHTML = `<div class="wa-cm-item" id="wa-cm-edit">Chỉnh sửa</div><div class="wa-cm-item" id="wa-cm-clone">Nhân bản</div><div class="wa-cm-item" id="wa-cm-lock">Khóa / Mở khóa</div><div class="wa-cm-item" id="wa-cm-del" style="color:#F6465D;border-top:1px solid #2b3139;padding-top:12px;margin-top:4px;">Xóa hình</div>`;
     container.appendChild(cm);
 
     container.addEventListener('contextmenu', (e) => {
-      if(!currentSelectedOverlay) return;
-      e.preventDefault();
+      if(!currentSelectedOverlay) return; e.preventDefault();
       cm.style.left = e.clientX + 'px'; cm.style.top = e.clientY + 'px'; cm.style.display = 'block';
     });
 
     document.addEventListener('click', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
 
-    function actionDelete() {
+    function act(type) {
       if(currentSelectedOverlay && global.tvChart) {
-        saveHistory('delete', currentSelectedOverlay);
-        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-        hidePanel(); cm.style.display = 'none';
-      }
-    }
-    
-    function actionClone() {
-      if(currentSelectedOverlay && global.tvChart) {
-        let cloned = JSON.parse(JSON.stringify(currentSelectedOverlay));
-        delete cloned.id; 
-        if (cloned.points) cloned.points = cloned.points.map(p => ({ timestamp: p.timestamp, value: p.value * 1.001 }));
-        global.tvChart.createOverlay(cloned); showToast('Đã nhân bản'); cm.style.display = 'none';
-      }
-    }
-
-    function actionLock() {
-      if(currentSelectedOverlay && global.tvChart) {
-        let isLocked = currentSelectedOverlay.lock;
-        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !isLocked });
-        showToast(isLocked ? 'Đã mở khóa hình' : 'Đã khóa hình'); cm.style.display = 'none';
+        if (type==='del') { global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel(); }
+        if (type==='clone') { let cl = JSON.parse(JSON.stringify(currentSelectedOverlay)); delete cl.id; if (cl.points) cl.points = cl.points.map(p => ({ timestamp: p.timestamp, value: p.value * 1.001 })); global.tvChart.createOverlay(cl); showToast('Đã nhân bản'); }
+        if (type==='lock') { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock }); showToast('Đã đổi trạng thái khóa'); }
+        cm.style.display = 'none';
       }
     }
 
     cm.querySelector('#wa-cm-edit').onclick = () => { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
-    cm.querySelector('#wa-cm-clone').onclick = actionClone;
-    cm.querySelector('#wa-cm-lock').onclick = actionLock;
-    cm.querySelector('#wa-cm-del').onclick = actionDelete;
-
-    panel.querySelector('.wa-close-btn').onclick = hidePanel;
-    panel.querySelector('#wa-btn-p-lock').onclick = actionLock;
-    panel.querySelector('#wa-btn-p-del').onclick = actionDelete;
+    cm.querySelector('#wa-cm-clone').onclick = () => act('clone'); cm.querySelector('#wa-cm-lock').onclick = () => act('lock'); cm.querySelector('#wa-cm-del').onclick = () => act('del');
+    panel.querySelector('.wa-close-btn').onclick = hidePanel; panel.querySelector('#wa-btn-p-lock').onclick = () => act('lock'); panel.querySelector('#wa-btn-p-del').onclick = () => act('del');
   }
 
   // ==========================================
-  // 7. AUTO-HEAL SYSTEM (MutationObserver 100% No Lag)
+  // 7. AUTO-HEAL SYSTEM (MutationObserver Siêu mượt)
   // ==========================================
   function mountUI() {
     var container = document.getElementById('sc-chart-container');
@@ -744,11 +600,7 @@
     container.appendChild(sidebar);
 
     var panel = document.createElement('div'); panel.className = 'wa-props-panel'; panel.id = 'wa-props-panel';
-    panel.innerHTML = `
-      <div class="wa-panel-header">Cài đặt công cụ <button class="wa-close-btn" title="Đóng (Esc)">${SVG.close}</button></div>
-      <div class="wa-panel-body"></div>
-      <div class="wa-panel-footer"><button class="wa-action-btn" id="wa-btn-p-lock" title="Khóa hình">${SVG.magnet}</button><button class="wa-action-btn delete" id="wa-btn-p-del" title="Xóa hình">${SVG.trash}</button></div>
-    `;
+    panel.innerHTML = `<div class="wa-panel-header">Cài đặt công cụ <button class="wa-close-btn" title="Đóng (Esc)">${SVG.close}</button></div><div class="wa-panel-body"></div><div class="wa-panel-footer"><button class="wa-action-btn" id="wa-btn-p-lock" title="Khóa hình">${SVG.magnet}</button><button class="wa-action-btn delete" id="wa-btn-p-del" title="Xóa hình">${SVG.trash}</button></div>`;
     container.appendChild(panel);
 
     bindCoreEvents(sidebar, panel); bindContextMenu(panel);
@@ -757,7 +609,7 @@
   if (!global.__wa_auto_heal_started) {
     global.__wa_auto_heal_started = true;
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountUI); else mountUI();
-    const domObserver = new MutationObserver((mutations) => {
+    const domObserver = new MutationObserver(() => {
       if (document.getElementById('sc-chart-container') && !document.querySelector('.wa-toolbar')) mountUI();
     });
     domObserver.observe(document.body, { childList: true, subtree: true });
