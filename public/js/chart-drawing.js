@@ -2324,100 +2324,145 @@
 // ============================================================
 
 // --- 7.1 DRAWING KEY: chỉ theo SYMBOL, không dính Timeframe ---
+// --- BẮT ĐẦU ĐOẠN CẦN THAY THẾ ---
+
 function getDrawingKey() {
-  // Ưu tiên đọc symbol từ nhiều nguồn có thể có
-  var sym =
-    (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) ||
-    window.__wa_currentSymbol ||
-    'UNKNOWN';
-  // Normalize: "BTCUSDT.P" → "BTCUSDT"
+  var sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
   sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return 'wa_drawings_' + sym;
+  const key = 'wa_drawings_' + sym;
+  console.log(`🟡 [TRACKER] Lấy Key lưu trữ: ${key}`);
+  return key;
 }
 
-// Theo dõi key đang active để detect coin change
-var _waActiveKey = null;
-
-// --- 7.2 LỚP 1: SINGLE SOURCE OF TRUTH (LƯU TRỮ) ---
 function saveAllOverlays() {
-  if (!global.tvChart) return;
+  console.log("🔵 [TRACKER] HÀM LƯU ĐƯỢC GỌI!");
+  if (!global.tvChart) { console.log("❌ [TRACKER] Lỗi: tvChart chưa tồn tại!"); return; }
   try {
     var dataList = global.tvChart.getDataList();
-    if (!dataList || dataList.length === 0) return;
-    
+    if (!dataList || dataList.length === 0) {
+      console.log("⚠️ [TRACKER] Chart đang trống nến! TỪ CHỐI LƯU để không bị đè mất hình cũ.");
+      return;
+    }
     var overlays = global.tvChart.getOverlay() || [];
+    console.log(`🔵 [TRACKER] Tìm thấy ${overlays.length} hình trên biểu đồ hiện tại.`);
+    
     var dataToSave = overlays.map(function(o) {
-      return {
-        name: o.name, points: o.points, styles: o.styles, lock: o.lock, extendData: o.extendData
-      };
+      return { name: o.name, points: o.points, styles: o.styles, lock: o.lock, extendData: o.extendData };
     });
-    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-  } catch(e) { }
+    
+    const key = getDrawingKey();
+    localStorage.setItem(key, JSON.stringify(dataToSave));
+    console.log(`✅ [TRACKER] Đã lưu thành công vào LocalStorage [${key}]:`, dataToSave);
+  } catch(e) { console.error("❌ [TRACKER] Exception khi lưu:", e); }
 }
-// FIX LỖI TYPO ĐỂ HỆ THỐNG GỌI ĐƯỢC HÀM LƯU:
-global.__wa_saveAllOverlays = saveAllOverlays; 
+global.__wa_saveAllOverlays = saveAllOverlays;
 
-// --- 7.3 LỚP 2: TỌA ĐỘ VÀ PHỤC HỒI (CHẠY THEO EVENT) ---
+var _waRestoreTimer = null;
+var _waRestoreAttempts = 0;
+
 function restoreOverlays() {
+  console.log("🟠 [TRACKER] TIẾN TRÌNH KHÔI PHỤC BẮT ĐẦU CHẠY...");
   if (!global.tvChart) return;
-  try {
+  clearInterval(_waRestoreTimer);
+  _waRestoreAttempts = 0;
+
+  _waRestoreTimer = setInterval(function() {
+    _waRestoreAttempts++;
+    console.log(`⏳ [TRACKER] Đang thử nạp lại hình... (Lần ${_waRestoreAttempts})`);
+
+    if (_waRestoreAttempts > 20) {
+      console.log("❌ [TRACKER] Hết thời gian chờ (4 giây)! Nến vẫn chưa load xong. Hủy khôi phục.");
+      clearInterval(_waRestoreTimer); return;
+    }
+
     var dataList = global.tvChart.getDataList();
-    // Đảm bảo nến đã nạp xong (Được kích hoạt bởi Hook ở Bước 3)
-    if (!dataList || dataList.length === 0) return;
+    if (!dataList || dataList.length < 5) {
+      console.log("⚠️ [TRACKER] Biểu đồ chưa có đủ nến, tiếp tục chờ...");
+      return; 
+    }
+
+    clearInterval(_waRestoreTimer); 
+    console.log(`🟢 [TRACKER] Nến ĐÃ LOAD XONG (${dataList.length} cây). Bắt đầu ốp hình!`);
 
     var key = getDrawingKey();
-    if (_waActiveKey && _waActiveKey !== key) {
-      try { global.tvChart.removeOverlay(); } catch(e) {}
-    }
-    _waActiveKey = key;
-
     var saved = localStorage.getItem(key);
-    if (!saved) return;
+    console.log(`🟢 [TRACKER] Dữ liệu lấy từ Storage [${key}]:`, saved);
+
+    if (!saved || saved === '[]') {
+      console.log("⚠️ [TRACKER] Két sắt trống rỗng! Không có gì để vẽ lại.");
+      return;
+    }
 
     var overlayDefs;
     try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
-    if (!Array.isArray(overlayDefs)) return;
-
+    
     var currentOverlays = global.tvChart.getOverlay() || [];
-    // Chỉ vẽ lại nếu số hình trên chart đang bị thiếu so với trong Database
-    if (currentOverlays.length === overlayDefs.length) return; 
+    console.log(`⚖️ [TRACKER] So sánh: Chart đang có ${currentOverlays.length} hình | Storage có ${overlayDefs.length} hình`);
+    
+    if (currentOverlays.length >= overlayDefs.length) {
+      console.log("✅ [TRACKER] Số hình đã đủ, không cần ốp thêm.");
+      return; 
+    }
 
-    // Xóa sạch hình rác trước khi ốp data mới vào
     try { global.tvChart.removeOverlay(); } catch(e) {}
 
+    let successCount = 0;
     overlayDefs.forEach(function(o) {
       try {
         var cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
-        global.tvChart.createOverlay(cfg);
-      } catch(e) {}
+        let id = global.tvChart.createOverlay(cfg);
+        if(id) successCount++;
+      } catch(e) { console.error("❌ [TRACKER] Lỗi khi vẽ 1 hình cụ thể:", e); }
     });
-  } catch(e) {}
+    
+    console.log(`🚀 [TRACKER] KHÔI PHỤC HOÀN TẤT: Vẽ thành công ${successCount}/${overlayDefs.length} hình!`);
+
+  }, 200); 
 }
-// FIX LỖI TYPO ĐỂ GỌI TỪ BÊN NGOÀI ĐƯỢC:
 global.__wa_restoreOverlays = restoreOverlays;
+
+// --- KẾT THÚC ĐOẠN CẦN THAY THẾ ---
 
 
 // ============================================================
 // 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
 // ============================================================
 
+// --- BẮT ĐẦU ĐOẠN CẦN THAY THẾ ---
+
 window.__wa_onIntervalChange = function(newInterval) {
-  // Lưu hình vẽ hiện tại NGAY LẬP TỨC trước khi chart bị clear
-  try {
-    var overlays = global.tvChart ? global.tvChart.getOverlay() : [];
-    if (overlays && overlays.length > 0) {
-      var dataToSave = overlays.map(function(o) {
-        return { name: o.name, points: o.points, styles: o.styles, lock: o.lock, extendData: o.extendData };
-      });
-      localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
+  console.log(`\n===========================================`);
+  console.log(`🔥 [HOOK] USER BẤM NÚT ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
+  console.log(`===========================================`);
+  
+  if (typeof global.__wa_saveAllOverlays === 'function') {
+      global.__wa_saveAllOverlays();
+  } else {
+      console.log("❌ [HOOK LỖI] Không tìm thấy hàm lưu global.__wa_saveAllOverlays !!!");
+  }
+
+  setTimeout(() => {
+    if (typeof global.__wa_restoreOverlays === 'function') {
+      global.__wa_restoreOverlays();
+    } else {
+      console.log("❌ [HOOK LỖI] Không tìm thấy hàm khôi phục global.__wa_restoreOverlays !!!");
     }
-  } catch(e) {}
+  }, 50);
 };
 
 window.__wa_onSymbolChange = function(newSymbol) {
-  saveAllOverlays();
+  console.log(`\n===========================================`);
+  console.log(`🔥 [HOOK] USER BẤM ĐỔI COIN SANG: ${newSymbol}`);
+  console.log(`===========================================`);
+  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+  
   window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  setTimeout(() => {
+    if (typeof global.__wa_restoreOverlays === 'function') global.__wa_restoreOverlays();
+  }, 50);
 };
+
+// --- KẾT THÚC ĐOẠN CẦN THAY THẾ ---
 
 
 // ============================================================
