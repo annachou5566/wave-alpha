@@ -1950,28 +1950,71 @@
   function bindContextMenu(panel) {
     const container = document.getElementById('sc-chart-container');
     const cm = document.createElement('div'); cm.className = 'wa-context-menu';
-    cm.innerHTML = `<div class="wa-cm-item" id="wa-cm-edit">Chỉnh sửa</div><div class="wa-cm-item" id="wa-cm-clone">Nhân bản</div><div class="wa-cm-item" id="wa-cm-lock">Khóa / Mở khóa</div><div class="wa-cm-item" id="wa-cm-del" style="color:#F6465D;border-top:1px solid #2b3139;padding-top:12px;margin-top:4px;">Xóa hình</div>`;
     container.appendChild(cm);
 
     container.addEventListener('contextmenu', (e) => {
       if(!currentSelectedOverlay) return; e.preventDefault();
+      
+      let isText = getToolCategory(currentSelectedOverlay.name) === 'text';
+      let html = '';
+      
+      // NẾU LÀ CÔNG CỤ TEXT -> HIỂN THỊ NÚT PHÓNG TO / THU NHỎ TRỰC TIẾP
+      if (isText) {
+          html += `<div style="display:flex; padding:8px 16px; gap:8px; border-bottom:1px solid #2b3139; margin-bottom:4px;">
+                     <button id="wa-cm-z-out" title="Thu nhỏ chữ" style="flex:1; background:#2b3139; color:#fff; border:1px solid #474d57; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; transition:0.2s;" onmouseover="this.style.background='#474d57'" onmouseout="this.style.background='#2b3139'">A -</button>
+                     <button id="wa-cm-z-in" title="Phóng to chữ" style="flex:1; background:#2b3139; color:#fff; border:1px solid #474d57; padding:6px; border-radius:4px; cursor:pointer; font-weight:bold; transition:0.2s;" onmouseover="this.style.background='#474d57'" onmouseout="this.style.background='#2b3139'">A +</button>
+                   </div>`;
+      }
+      
+      html += `<div class="wa-cm-item" id="wa-cm-edit">Chỉnh sửa</div><div class="wa-cm-item" id="wa-cm-clone">Nhân bản</div><div class="wa-cm-item" id="wa-cm-lock">Khóa / Mở khóa</div><div class="wa-cm-item" id="wa-cm-del" style="color:#F6465D;border-top:1px solid #2b3139;padding-top:12px;margin-top:4px;">Xóa hình</div>`;
+      
+      cm.innerHTML = html;
       cm.style.left = e.clientX + 'px'; cm.style.top = e.clientY + 'px'; cm.style.display = 'block';
+
+      function act(type) {
+        if(currentSelectedOverlay && global.tvChart) {
+          if (type==='del') { global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel(); }
+          if (type==='clone') { let cl = JSON.parse(JSON.stringify(currentSelectedOverlay)); delete cl.id; if (cl.points) cl.points = cl.points.map(p => ({ timestamp: p.timestamp, value: p.value * 1.001 })); global.tvChart.createOverlay(cl); showToast('Đã nhân bản'); }
+          if (type==='lock') { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock }); showToast('Đã đổi trạng thái khóa'); }
+          cm.style.display = 'none';
+        }
+      }
+
+      cm.querySelector('#wa-cm-edit').onclick = () => { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
+      cm.querySelector('#wa-cm-clone').onclick = () => act('clone'); 
+      cm.querySelector('#wa-cm-lock').onclick = () => act('lock'); 
+      cm.querySelector('#wa-cm-del').onclick = () => act('del');
+      
+      // XỬ LÝ SỰ KIỆN KHI BẤM NÚT THU PHÓNG (Menu sẽ không bị tắt để bấm liên tục được)
+      if (isText) {
+          cm.querySelector('#wa-cm-z-in').onclick = (ev) => {
+             ev.stopPropagation(); 
+             let s = currentSelectedOverlay.styles || {}; let cur = (s.text && s.text.size) ? s.text.size : 14;
+             global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: { text: { size: Math.min(150, cur + 2) } } });
+             if (document.getElementById('wa-prop-s1')) document.getElementById('wa-prop-s1').value = Math.min(150, cur + 2);
+          };
+          cm.querySelector('#wa-cm-z-out').onclick = (ev) => {
+             ev.stopPropagation();
+             let s = currentSelectedOverlay.styles || {}; let cur = (s.text && s.text.size) ? s.text.size : 14;
+             global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: { text: { size: Math.max(10, cur - 2) } } });
+             if (document.getElementById('wa-prop-s1')) document.getElementById('wa-prop-s1').value = Math.max(10, cur - 2);
+          };
+      }
     });
 
     document.addEventListener('click', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
 
-    function act(type) {
-      if(currentSelectedOverlay && global.tvChart) {
-        if (type==='del') { global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel(); }
-        if (type==='clone') { let cl = JSON.parse(JSON.stringify(currentSelectedOverlay)); delete cl.id; if (cl.points) cl.points = cl.points.map(p => ({ timestamp: p.timestamp, value: p.value * 1.001 })); global.tvChart.createOverlay(cl); showToast('Đã nhân bản'); }
-        if (type==='lock') { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock }); showToast('Đã đổi trạng thái khóa'); }
-        cm.style.display = 'none';
-      }
-    }
-
-    cm.querySelector('#wa-cm-edit').onclick = () => { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
-    cm.querySelector('#wa-cm-clone').onclick = () => act('clone'); cm.querySelector('#wa-cm-lock').onclick = () => act('lock'); cm.querySelector('#wa-cm-del').onclick = () => act('del');
-    panel.querySelector('.wa-close-btn').onclick = hidePanel; panel.querySelector('#wa-btn-p-lock').onclick = () => act('lock'); panel.querySelector('#wa-btn-p-del').onclick = () => act('del');
+    panel.querySelector('.wa-close-btn').onclick = hidePanel; 
+    panel.querySelector('#wa-btn-p-lock').onclick = () => {
+        if(currentSelectedOverlay && global.tvChart) {
+           global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock }); showToast('Đã đổi trạng thái khóa');
+        }
+    };
+    panel.querySelector('#wa-btn-p-del').onclick = () => {
+        if(currentSelectedOverlay && global.tvChart) {
+           global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel();
+        }
+    };
   }
 
   // ==========================================
