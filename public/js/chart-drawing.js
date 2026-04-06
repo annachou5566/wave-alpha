@@ -36,6 +36,14 @@
     waves: { lineColor: '#3B82F6', lineWidth: 1, textColor: '#E8EDF2', textSize: 12 }
   };
   
+  // BỔ SUNG BẢNG MÀU CHUẨN (Fix triệt để lỗi giật lag khi render Panel)
+  const WA_SWATCHES = [
+    '#E8EDF2', '#8896A7', '#4A5568', '#1C242E',
+    '#22C55E', '#16A34A', '#86EFAC', '#052E16',
+    '#EF4444', '#B91C1C', '#FCA5A5', '#450A0A',
+    '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'
+  ];
+
   // Đồng bộ Storage an toàn
   let storedStyles = {};
   try { storedStyles = JSON.parse(localStorage.getItem('wa_drawing_styles')) || {}; } catch(e){}
@@ -2364,12 +2372,27 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountUI); 
     else mountUI();
     
-    // THUẬT TOÁN WATCHDOG CHỐNG LAG: 
-    // Thay vì dùng MutationObserver liên tục chọc ngoáy DOM, ta check mỗi giây 1 lần. Cực kỳ mượt!
+    // THUẬT TOÁN WATCHDOG V2: NHẬN DIỆN ĐỔI TIMEFRAME
     setInterval(() => {
       const container = document.getElementById('sc-chart-container');
-      if (container && global.tvChart && !document.querySelector('.wa-toolbar')) {
-        mountUI(); // Khôi phục Toolbar và Hình vẽ nếu bị framework re-render
+      if (container && global.tvChart) {
+        // Trường hợp 1: Framework xóa mất Toolbar UI
+        if (!document.querySelector('.wa-toolbar')) {
+          mountUI(); 
+        } 
+        // Trường hợp 2: Đổi Timeframe (UI còn nguyên nhưng hình vẽ trên KLineChart bị xóa sạch)
+        else {
+          const symbol = global.currentSymbol || 'wa_pair_default'; 
+          const saved = localStorage.getItem(`wa_drawings_${symbol}`);
+          // Nếu có bản ghi trong LocalStorage (và không phải là mảng rỗng do user chủ động xóa)
+          if (saved && saved !== '[]' && saved.length > 5) {
+            const currentOverlays = global.tvChart.getOverlay();
+            // Nhưng Chart lại trống trơn -> Bị Framework wipe data -> Ốp hình lại ngay!
+            if (currentOverlays.length === 0) {
+              restoreOverlays();
+            }
+          }
+        }
       }
     }, 1000);
   }
