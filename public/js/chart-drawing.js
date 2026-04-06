@@ -2266,10 +2266,12 @@
     currentSelectedOverlay = null;
   }
 
+  // Khởi tạo Context Menu và gắn sự kiện (Idempotent)
   function bindContextMenu(panel) {
     var container = document.getElementById('sc-chart-container');
     if (!container || !panel) return;
 
+    // Inject context menu DOM
     var cm = container.querySelector('.wa-context-menu');
     if (!cm) {
       cm = document.createElement('div');
@@ -2277,7 +2279,8 @@
       cm.innerHTML = [
         '<div class="wa-cm-item" id="wa-cm-edit">',
         '  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">',
-        '    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+        '    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>',
+        '    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
         '  </svg> Chỉnh sửa',
         '</div>',
         '<div class="wa-cm-item" id="wa-cm-clone">',
@@ -2290,7 +2293,8 @@
         '    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
         '  </svg> Khoá / Mở khoá',
         '</div>',
-        '<div class="wa-cm-item danger" id="wa-cm-del" style="border-top:1px solid var(--wa-border-subtle);margin-top:4px;padding-top:10px">',
+        '<div class="wa-cm-item danger" id="wa-cm-del"',
+        '     style="border-top:1px solid var(--wa-border-subtle);margin-top:4px;padding-top:10px">',
         '  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">',
         '    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
         '  </svg> Xoá hình',
@@ -2299,6 +2303,7 @@
       container.appendChild(cm);
     }
 
+    // Contextmenu listener trên container (1 lần/container)
     if (!container.__wa_ctx_menu_bound) {
       container.__wa_ctx_menu_bound = true;
       container.addEventListener('contextmenu', function(e) {
@@ -2311,41 +2316,51 @@
       });
     }
 
+    // Đóng menu khi click ra ngoài (1 lần/document)
     if (!global.__wa_cm_doc_click_bound) {
       global.__wa_cm_doc_click_bound = true;
       document.addEventListener('click', function(e) {
         if (!e.target.closest('.wa-context-menu')) {
-          document.querySelectorAll('.wa-context-menu').forEach(function(m) { m.style.display = 'none'; });
+          document.querySelectorAll('.wa-context-menu').forEach(function(m) {
+            m.style.display = 'none';
+          });
         }
       });
     }
 
+    // Hàm xử lý chung
     function act(type) {
       if (!currentSelectedOverlay || !global.tvChart) return;
       var activeCm = container.querySelector('.wa-context-menu');
       
       if (type === 'del') {
+        saveHistory('delete', currentSelectedOverlay);
         global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-        global.__wa_overlay_map.delete(currentSelectedOverlay.id);
+        _wa_untrackOverlay(currentSelectedOverlay.id);
         hidePanel();
       } else if (type === 'clone') {
         var cl = JSON.parse(JSON.stringify(currentSelectedOverlay));
         delete cl.id;
-        if (cl.points) { cl.points = cl.points.map(function(p) { return { timestamp: p.timestamp, value: p.value * 1.001 }; }); }
+        if (cl.points) {
+          cl.points = cl.points.map(function(p) {
+            return { timestamp: p.timestamp, value: p.value * 1.001 };
+          });
+        }
         var newId = global.tvChart.createOverlay(cl);
-        if (newId) global.__wa_overlay_map.set(newId, Object.assign({}, cl, { id: newId }));
-        if(typeof showToast==='function') showToast('Đã nhân bản');
+        if (newId) _wa_trackOverlay(Object.assign({}, cl, { id: newId }));
+        showToast('Đã nhân bản');
       } else if (type === 'lock') {
         global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
         var entry = global.__wa_overlay_map.get(currentSelectedOverlay.id);
         if (entry) entry.lock = !currentSelectedOverlay.lock;
-        if(typeof showToast==='function') showToast('Đã đổi trạng thái khóa');
+        showToast('Đã đổi trạng thái khóa');
       }
+      
       if (activeCm) activeCm.style.display = 'none';
-      saveToStorage();
+      saveAllOverlays();
     }
 
-    cm.querySelector('#wa-cm-edit').onclick  = function() { if(typeof renderPanel==='function') renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
+    cm.querySelector('#wa-cm-edit').onclick  = function() { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
     cm.querySelector('#wa-cm-clone').onclick = function() { act('clone'); };
     cm.querySelector('#wa-cm-lock').onclick  = function() { act('lock'); };
     cm.querySelector('#wa-cm-del').onclick   = function() { act('del'); };
@@ -2359,350 +2374,419 @@
   }
 
 
-  // ============================================================
-  // 7. KEEPALIVE ENGINE v7.0 (FINAL NATIVE MATCH)
-  // Tương thích 100% với tên Hook gốc của chart-ui.js
-  // ============================================================
+  // =============================================================================
+// PERSISTENCE ENGINE v7.0 — FINAL FIX
+// Root causes fixed:
+//   (A) Hook names đúng: waonIntervalChange / waonSymbolChange / warestoreOverlays
+//   (B) Re-patch createOverlay mỗi lần tvChart instance mới
+//   (C) onDrawEnd inject qua monkey-patch createOverlay (KLC v9 không có global event)
+//   (D) MutationObserver re-inject toolbar sau container.innerHTML = ''
+// =============================================================================
 
-  global.__wa_overlay_map = global.__wa_overlay_map || new Map();
-  var _waLastChartRef = null;
+// ---------------------------------------------------------------------------
+// 1. SHADOW MAP
+// ---------------------------------------------------------------------------
+window.__wa_overlay_map = window.__wa_overlay_map || new Map();
 
-  // Bóc tách Event từ KLineChart v9
-  function _wa_extractOverlay(data) {
-    if (!data) return null;
-    var o = Array.isArray(data) ? data[0] : data;
-    return (o && o.overlay) ? o.overlay : o; 
-  }
+function _wa_trackOverlay(obj) {
+    if (!obj || !obj.id) return;
+    window.__wa_overlay_map.set(obj.id, {
+        name:       obj.name,
+        points:     obj.points     ? JSON.parse(JSON.stringify(obj.points))     : [],
+        styles:     obj.styles     ? JSON.parse(JSON.stringify(obj.styles))     : {},
+        lock:       !!obj.lock,
+        extendData: obj.extendData !== undefined ? obj.extendData : null
+    });
+}
 
-  function getDrawingKey() {
-    var sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
-    sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
-    return 'wa_drawings_' + sym;
-  }
+function _wa_untrackOverlay(id) {
+    if (id) window.__wa_overlay_map.delete(id);
+}
 
-  function saveToStorage() {
+// ---------------------------------------------------------------------------
+// 2. DRAWING KEY — theo symbol, không theo timeframe
+// ---------------------------------------------------------------------------
+function getDrawingKey() {
+    var sym = (window.currentChartToken && window.currentChartToken.symbol)
+        ? window.currentChartToken.symbol
+        : (window.__wa_currentSymbol || 'UNKNOWN');
+    return 'wa_drawings_' + String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+// ---------------------------------------------------------------------------
+// 3. SAVE — chỉ đọc RAM
+// ---------------------------------------------------------------------------
+function saveAllOverlays() {
     try {
         var arr = [];
-        global.__wa_overlay_map.forEach(function(v) { arr.push(v); });
+        window.__wa_overlay_map.forEach(function(data) { arr.push(data); });
         localStorage.setItem(getDrawingKey(), JSON.stringify(arr));
-    } catch(e) {}
-  }
+    } catch (e) {}
+}
 
+// ---------------------------------------------------------------------------
+// 4. PATCH createOverlay — inject onDrawEnd vào mọi lần vẽ
+//    Phải gọi lại mỗi khi tvChart instance mới được tạo
+// ---------------------------------------------------------------------------
+function _wa_patchCreateOverlay(chart) {
+    if (!chart || typeof chart.createOverlay !== 'function') return;
+    if (chart.__wa_co_patched) return;
+    chart.__wa_co_patched = true;
 
-  // ─────────────────────────────────────────────────────────────
-  // THE NATIVE HOOKS (Khớp 100% với chart-ui.js)
-  // ─────────────────────────────────────────────────────────────
+    var _orig = chart.createOverlay.bind(chart);
 
-  // Gọi TRƯỚC KHI chart bị framework tiêu diệt
-  window.waonIntervalChange = function(newInterval) {
-    saveToStorage(); 
-  };
+    chart.createOverlay = function(cfg) {
+        // Skip patch khi restore — tự track thủ công sau
+        if (!cfg || cfg.__wa_restoring) return _orig(cfg);
 
-  // Gọi TRƯỚC KHI đổi Coin
-  window.waonSymbolChange = function(newSymbol) {
-    saveToStorage();
-    window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  };
+        var _userEnd = cfg.onDrawEnd;
+        cfg.onDrawEnd = function(overlay) {
+            // KLC v9: callback nhận trực tiếp overlay object
+            var ov = (overlay && overlay.overlay) ? overlay.overlay : overlay;
+            if (ov && ov.id) {
+                _wa_trackOverlay(ov);
+                saveAllOverlays();
+                saveHistory('add', ov);
+                currentSelectedOverlay = ov;
+                renderPanel(ov);
+                activateTool('pointer');
+                var tb = document.querySelector('.wa-toolbar');
+                if (tb) {
+                    tb.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+                    var ptr = tb.querySelector('[data-tool="pointer"]');
+                    if (ptr) ptr.classList.add('active');
+                }
+                var cont = document.getElementById('sc-chart-container');
+                if (cont) cont.classList.remove('wa-drawing-mode');
+            }
+            if (typeof _userEnd === 'function') return _userEnd(overlay);
+        };
 
-  // NATIVE RESTORE: Được gọi BỞI framework sau khi nạp xong nến
-  window.warestoreOverlays = function() {
-    if (!global.tvChart) return;
+        var _userSel = cfg.onSelected;
+        cfg.onSelected = function(overlay) {
+            var ov = (overlay && overlay.overlay) ? overlay.overlay : overlay;
+            if (ov && ov.id) {
+                if (window.__wa_overlay_map.has(ov.id)) _wa_trackOverlay(ov);
+                var now = Date.now();
+                var isDbl = (now - lastClickTime) < 300;
+                lastClickTime = now;
+                currentSelectedOverlay = ov;
+                renderPanel(ov);
+                if (isDbl && ov.name === 'customText') {
+                    setTimeout(function() {
+                        var t = document.getElementById('wa-prop-txt');
+                        if (t) { t.focus(); t.select(); }
+                    }, 50);
+                }
+            }
+            if (typeof _userSel === 'function') return _userSel(overlay);
+        };
 
-    // 1. Phục hồi Toolbar & Panel (vì container.innerHTML='' đã xóa chúng)
-    mountDOM();
+        var _userDel = cfg.onRemoved;
+        cfg.onRemoved = function(overlay) {
+            var ov = (overlay && overlay.overlay) ? overlay.overlay : overlay;
+            if (ov && ov.id) {
+                _wa_untrackOverlay(ov.id);
+                saveAllOverlays();
+            }
+            if (typeof _userDel === 'function') return _userDel(overlay);
+        };
 
-    // 2. Gắn Event lắng nghe vào cái chart mới tinh này
-    _bindChartEventsOnce(global.tvChart);
+        return _orig(cfg);
+    };
+}
 
-    // 3. Tiến hành vẽ lại hình từ Storage
-    var raw = localStorage.getItem(getDrawingKey());
-    if (!raw || raw === '[]') return;
-    
-    var arr;
-    try { arr = JSON.parse(raw); } catch(e) { return; }
-    
-    // Đảm bảo RAM Map khởi động lại sạch sẽ
-    global.__wa_overlay_map.clear();
-
-    arr.forEach(function(item) {
-      try {
-        var cfg = { name: item.name, points: item.points, styles: item.styles, lock: !!item.lock, extendData: item.extendData };
-        var newId = global.tvChart.createOverlay(cfg);
-        if (newId) {
-            global.__wa_overlay_map.set(newId, Object.assign({}, cfg, {id: newId}));
-        }
-      } catch(e) {}
-    });
-  };
-
-
-  // ─────────────────────────────────────────────────────────────
-  // CORE FUNCTIONS
-  // ─────────────────────────────────────────────────────────────
-
-  function activateTool(toolId) {
-    if (!global.tvChart) return;
-    var container = document.getElementById('sc-chart-container');
-    if (!container) return;
-
-    try { global.tvChart.cancelDrawing(); } catch (e) {}
-    hidePanel();
-
-    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
-    container.classList.add('wa-drawing-mode');
-
-    var TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
-    if (TEXT_TOOLS.indexOf(toolId) !== -1) {
-      if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
-      return;
+// ---------------------------------------------------------------------------
+// 5. RESTORE — đây là hàm chart-ui.js gọi trực tiếp qua window.warestoreOverlays
+//    Luôn re-patch trước khi restore vì tvChart vừa được tạo mới
+// ---------------------------------------------------------------------------
+function restoreOverlays() {
+    var chart = window.tvChart;
+    if (!chart || typeof chart.createOverlay !== 'function') {
+        setTimeout(restoreOverlays, 200);
+        return;
     }
 
-    try {
-      var tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines';
-      var s = toolStyles[tType] || {};
-      var config = { name: toolId, lock: false, styles: {} };
+    // LUÔN patch chart instance mới (flag bị reset khi instance mới tạo)
+    _wa_patchCreateOverlay(chart);
 
-      if (tType === 'lines' || tType === 'waves') {
-        config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
-      } else if (tType === 'shapes') {
-        config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15), borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
-      } else if (tType === 'fibo') {
-        config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 };
-        config.extendData  = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
-      } else if (tType === 'text') {
-        config.extendData  = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
-        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
-      }
-      global.tvChart.createOverlay(config);
-    } catch (err) {}
-  }
+    var raw = localStorage.getItem(getDrawingKey());
+    if (!raw) return;
+    var savedList;
+    try { savedList = JSON.parse(raw); } catch (e) { return; }
+    if (!Array.isArray(savedList) || !savedList.length) return;
 
-  var _waCoreEventsBound = false;
-  function bindCoreEventsOnce() {
+    var attempts = 0;
+    var poll = setInterval(function() {
+        attempts++;
+        var dl = [];
+        try { dl = chart.getDataList() || []; } catch (e) {}
+
+        if (dl.length >= 5 || attempts >= 25) {
+            clearInterval(poll);
+            if (dl.length < 5) return;
+
+            savedList.forEach(function(ovData) {
+                var newId = null;
+                try {
+                    newId = chart.createOverlay({
+                        name:           ovData.name,
+                        points:         JSON.parse(JSON.stringify(ovData.points || [])),
+                        styles:         JSON.parse(JSON.stringify(ovData.styles || {})),
+                        lock:           !!ovData.lock,
+                        extendData:     ovData.extendData !== undefined ? ovData.extendData : null,
+                        __wa_restoring: true
+                    });
+                } catch (e) {}
+
+                if (newId) {
+                    window.__wa_overlay_map.set(newId, {
+                        name:       ovData.name,
+                        points:     ovData.points,
+                        styles:     ovData.styles,
+                        lock:       ovData.lock,
+                        extendData: ovData.extendData
+                    });
+                }
+            });
+        }
+    }, 200);
+}
+
+// *** Expose đúng tên mà chart-ui.js gọi ***
+window.warestoreOverlays = restoreOverlays;
+
+// ---------------------------------------------------------------------------
+// 6. HOOKS — đúng tên mà chart-ui.js gọi
+// ---------------------------------------------------------------------------
+
+// Gọi trước khi openProChart(token, true) — lưu drawings TF cũ
+window.waonIntervalChange = function(newInterval) {
+    saveAllOverlays();
+    window.__wa_overlay_map.clear();
+    // Reset patch flag vì chart sắp bị destroy và tạo mới
+    if (window.tvChart) window.tvChart.__wa_co_patched = false;
+};
+
+// Gọi trước khi symbol thay đổi — lưu drawings coin cũ
+window.waonSymbolChange = function(newSymbol) {
+    saveAllOverlays();
+    window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    window.__wa_overlay_map.clear();
+    if (window.tvChart) window.tvChart.__wa_co_patched = false;
+};
+
+// ---------------------------------------------------------------------------
+// 7. BIND CORE EVENTS — document-level, chỉ 1 lần duy nhất
+// ---------------------------------------------------------------------------
+var _waCoreEventsBound = false;
+
+function bindCoreEventsOnce() {
     if (_waCoreEventsBound) return;
     _waCoreEventsBound = true;
 
-    var _isDragging = false, _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0, _dragRaf = null;
+    var _drag = false, _sx = 0, _sy = 0, _il = 0, _it = 0, _raf = null;
 
     document.addEventListener('mousedown', function(e) {
-      if (!e.target.closest('.wa-drag-grip')) return;
-      _isDragging = true; _startX = e.clientX; _startY = e.clientY;
-      var tb = document.querySelector('.wa-toolbar');
-      _initLeft = tb ? tb.offsetLeft : 0; _initTop  = tb ? tb.offsetTop  : 0;
-      document.body.style.userSelect = 'none';
+        if (!e.target.closest || !e.target.closest('.wa-drag-grip')) return;
+        _drag = true; _sx = e.clientX; _sy = e.clientY;
+        var tb = document.querySelector('.wa-toolbar');
+        _il = tb ? tb.offsetLeft : 0; _it = tb ? tb.offsetTop : 0;
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
     });
 
     document.addEventListener('mousemove', function(e) {
-      if (!_isDragging) return;
-      if (_dragRaf) cancelAnimationFrame(_dragRaf);
-      _dragRaf = requestAnimationFrame(function() {
-        var tb = document.querySelector('.wa-toolbar');
-        if (!tb) { _isDragging = false; return; }
-        tb.style.left = Math.max(0, _initLeft + (e.clientX - _startX)) + 'px';
-        tb.style.top  = Math.max(0, _initTop  + (e.clientY - _startY)) + 'px';
-      });
+        if (!_drag) return;
+        if (_raf) cancelAnimationFrame(_raf);
+        _raf = requestAnimationFrame(function() {
+            var tb = document.querySelector('.wa-toolbar');
+            if (!tb) { _drag = false; return; }
+            tb.style.left = Math.max(0, _il + e.clientX - _sx) + 'px';
+            tb.style.top  = Math.max(0, _it + e.clientY - _sy) + 'px';
+        });
     });
 
     document.addEventListener('mouseup', function() {
-      if (_isDragging) { _isDragging = false; document.body.style.userSelect = ''; }
+        if (_drag) { _drag = false; document.body.style.userSelect = ''; }
     });
 
     document.addEventListener('dblclick', function(e) {
-      if (e.target.closest('.wa-drag-grip')) {
-        var tb = document.querySelector('.wa-toolbar');
-        if (tb) tb.classList.toggle('collapsed');
-      }
+        if (e.target.closest && e.target.closest('.wa-drag-grip')) {
+            var tb = document.querySelector('.wa-toolbar');
+            if (tb) tb.classList.toggle('collapsed');
+        }
     });
 
     document.addEventListener('keydown', function(e) {
-      var tag = e.target.tagName;
-      var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
-
-      if (e.key === 'Escape') {
-        if (global.tvChart) try { global.tvChart.cancelDrawing(); } catch (ex) {}
-        activateTool('pointer'); hidePanel();
-        if (isInput) e.target.blur();
-      } else if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
-        if (currentSelectedOverlay && global.tvChart) {
-          global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-          global.__wa_overlay_map.delete(currentSelectedOverlay.id);
-          hidePanel(); saveToStorage();
+        var isIn = (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+        if (e.key === 'Escape') {
+            if (window.tvChart) window.tvChart.cancelDrawing();
+            activateTool('pointer'); hidePanel();
+            if (isIn) e.target.blur();
+            return;
         }
-      }
+        if (!isIn && (e.key === 'Delete' || e.key === 'Backspace')) {
+            if (currentSelectedOverlay && window.tvChart) {
+                saveHistory('delete', currentSelectedOverlay);
+                window.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+                _wa_untrackOverlay(currentSelectedOverlay.id);
+                hidePanel(); saveAllOverlays();
+            }
+        }
     });
-  }
+}
 
-  function mountDOM() {
+// ---------------------------------------------------------------------------
+// 8. MOUNT DOM — idempotent, re-inject toolbar sau container.innerHTML = ''
+// ---------------------------------------------------------------------------
+function mountDOM() {
+    injectCSS();
     var container = document.getElementById('sc-chart-container');
-    if (!container || container.querySelector('.wa-toolbar')) return; 
-
-    if(typeof injectCSS === 'function') injectCSS();
-    if(typeof registerProExtensions === 'function') registerProExtensions();
+    if (!container) return;
+    if (container.querySelector('.wa-toolbar')) return; // đã có rồi
 
     var sidebar = document.createElement('div');
     sidebar.className = 'wa-toolbar';
-    sidebar.innerHTML = typeof buildToolbar === 'function' ? buildToolbar() : '';
+    sidebar.innerHTML = buildToolbar();
     container.appendChild(sidebar);
 
     var panel = document.createElement('div');
     panel.className = 'wa-props-panel';
     panel.id = 'wa-props-panel';
-    panel.innerHTML = [
-      '<div class="wa-panel-header">Cài đặt công cụ',
-      '  <button class="wa-close-btn" title="Đóng (Esc)">' + (typeof SVG !== 'undefined' ? SVG.close : 'X') + '</button>',
-      '</div>',
-      '<div class="wa-panel-body">',
-      '  <div class="wa-panel-empty">',
-      '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">',
-      '      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>',
-      '    </svg>',
-      '    <span>Chọn hoặc vẽ một hình để chỉnh sửa</span>',
-      '  </div>',
-      '</div>',
-      '<div class="wa-panel-footer">',
-      '  <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">' + (typeof SVG !== 'undefined' ? SVG.magnet : 'Lock') + ' Khoá</button>',
-      '  <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">' + (typeof SVG !== 'undefined' ? SVG.trash : 'Del') + ' Xoá</button>',
-      '</div>'
-    ].join('');
+    panel.innerHTML =
+        '<div class="wa-panel-header">Cài đặt' +
+            '<button class="wa-close-btn">' + SVG.close + '</button>' +
+        '</div>' +
+        '<div class="wa-panel-body">' +
+            '<div class="wa-panel-empty">Chọn hoặc vẽ một hình</div>' +
+        '</div>' +
+        '<div class="wa-panel-footer">' +
+            '<button class="wa-action-btn" id="wa-btn-p-lock">Khoá</button>' +
+            '<button class="wa-action-btn delete" id="wa-btn-p-del">Xóa</button>' +
+        '</div>';
     container.appendChild(panel);
 
-    _bindToolbarLocalEvents(sidebar, panel);
-    bindContextMenu(panel);
-  }
+    // LOCAL events
+    panel.querySelector('.wa-close-btn').addEventListener('click', hidePanel);
 
-  function _bindToolbarLocalEvents(toolbar, panel) {
-    var container = document.getElementById('sc-chart-container');
-
-    toolbar.addEventListener('click', function(e) {
-      var menuItem = e.target.closest('.wa-menu-item');
-      var btn      = e.target.closest('.wa-tb-btn[data-tool]');
-      var toolId   = null;
-
-      if (menuItem) {
-        toolId = menuItem.getAttribute('data-tool');
-        toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-        menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
-      } else if (btn) {
-        toolId = btn.getAttribute('data-tool');
-        toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-      }
-      if (toolId) activateTool(toolId);
+    panel.querySelector('#wa-btn-p-lock').addEventListener('click', function() {
+        if (!currentSelectedOverlay || !window.tvChart) return;
+        var newLock = !currentSelectedOverlay.lock;
+        window.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: newLock });
+        var s = window.__wa_overlay_map.get(currentSelectedOverlay.id);
+        if (s) s.lock = newLock;
+        currentSelectedOverlay.lock = newLock;
+        showToast(newLock ? 'Đã khoá' : 'Đã mở khoá');
     });
 
-    var magnetBtn = toolbar.querySelector('#wa-btn-magnet');
-    if (magnetBtn) {
-      magnetBtn.addEventListener('click', function() {
-        global.isMagnetMode = !global.isMagnetMode;
-        this.classList.toggle('active', global.isMagnetMode);
-        if(typeof showToast==='function') showToast(global.isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
-      });
-    }
+    panel.querySelector('#wa-btn-p-del').addEventListener('click', function() {
+        if (!currentSelectedOverlay || !window.tvChart) return;
+        saveHistory('delete', currentSelectedOverlay);
+        window.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+        _wa_untrackOverlay(currentSelectedOverlay.id);
+        hidePanel(); saveAllOverlays();
+    });
 
-    var clearBtn = toolbar.querySelector('#wa-btn-clear');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function() {
-        if(typeof createConfirmModal==='function') {
-            createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
-            if (global.tvChart) {
-                global.tvChart.removeOverlay();
-                try { global.tvChart.cancelDrawing(); } catch (e) {}
+    sidebar.addEventListener('click', function(e) {
+        var menuItem = e.target.closest && e.target.closest('.wa-menu-item');
+        var btn = e.target.closest && e.target.closest('.wa-tb-btn[data-tool]');
+        var toolId = null;
+        if (menuItem) {
+            toolId = menuItem.getAttribute('data-tool');
+            sidebar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+            var pg = menuItem.closest('.wa-tb-group');
+            if (pg) pg.querySelector('.wa-tb-btn').classList.add('active');
+        } else if (btn) {
+            toolId = btn.getAttribute('data-tool');
+            sidebar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+        }
+        if (toolId) activateTool(toolId);
+    });
+
+    var magnetBtn = sidebar.querySelector('#wa-btn-magnet');
+    if (magnetBtn) magnetBtn.addEventListener('click', function() {
+        isMagnetMode = !isMagnetMode;
+        this.classList.toggle('active', isMagnetMode);
+        showToast(isMagnetMode ? 'Bật Magnet' : 'Tắt Magnet');
+    });
+
+    var clearBtn = sidebar.querySelector('#wa-btn-clear');
+    if (clearBtn) clearBtn.addEventListener('click', function() {
+        createConfirmModal('Xóa tất cả bản vẽ?', function() {
+            if (window.tvChart) {
+                window.tvChart.removeOverlay();
+                window.tvChart.cancelDrawing();
             }
-            global.__wa_overlay_map.clear();
-            global.undoStack = []; global.redoStack = [];
+            window.__wa_overlay_map.clear();
+            undoStack.length = 0; redoStack.length = 0;
             hidePanel();
-            toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-            var ptrBtn = toolbar.querySelector('[data-tool=pointer]');
-            if (ptrBtn) ptrBtn.classList.add('active');
-            if (container) container.classList.remove('wa-drawing-mode');
-            
-            saveToStorage();
-            if(typeof showToast==='function') showToast('🗑️ Đã xoá sạch bản vẽ');
-            });
+            sidebar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+            var ptr = sidebar.querySelector('[data-tool="pointer"]');
+            if (ptr) ptr.classList.add('active');
+            var cont = document.getElementById('sc-chart-container');
+            if (cont) cont.classList.remove('wa-drawing-mode');
+            saveAllOverlays();
+            showToast('Đã xóa sạch');
+        });
+    });
+}
+
+// ---------------------------------------------------------------------------
+// 9. MOUNT UI — entry point
+// ---------------------------------------------------------------------------
+function mountUI() {
+    bindCoreEventsOnce(); // document-level events: CHỈ 1 LẦN
+    mountDOM();           // inject toolbar + panel
+    // Patch tvChart ngay nếu đã có sẵn
+    if (window.tvChart) _wa_patchCreateOverlay(window.tvChart);
+}
+
+// ---------------------------------------------------------------------------
+// 10. WATCHDOG — phát hiện container.innerHTML = '' và re-inject toolbar
+// ---------------------------------------------------------------------------
+(function() {
+    if (window.__wa_watchdog_started) return;
+    window.__wa_watchdog_started = true;
+
+    function onMutation() {
+        var container = document.getElementById('sc-chart-container');
+        if (!container) return;
+        if (!container.querySelector('.wa-toolbar')) {
+            // Toolbar bị mất do container.innerHTML = '' — re-inject
+            // KHÔNG gọi bindCoreEventsOnce (đã bind rồi)
+            mountDOM();
+            // Patch chart instance mới nếu đã ready
+            if (window.tvChart) {
+                window.tvChart.__wa_co_patched = false;
+                _wa_patchCreateOverlay(window.tvChart);
+            }
         }
-      });
     }
 
-    if (panel) {
-      var closeBtn = panel.querySelector('.wa-close-btn');
-      if (closeBtn) closeBtn.addEventListener('click', hidePanel);
-
-      var lockBtn = panel.querySelector('#wa-btn-p-lock');
-      if (lockBtn) lockBtn.addEventListener('click', function() {
-        if (!currentSelectedOverlay || !global.tvChart) return;
-        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
-        var entry = global.__wa_overlay_map.get(currentSelectedOverlay.id);
-        if (entry) entry.lock = !currentSelectedOverlay.lock;
-        if(typeof showToast==='function') showToast('Đã đổi trạng thái khoá');
-        saveToStorage();
-      });
-
-      var delBtn = panel.querySelector('#wa-btn-p-del');
-      if (delBtn) delBtn.addEventListener('click', function() {
-        if (!currentSelectedOverlay || !global.tvChart) return;
-        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-        global.__wa_overlay_map.delete(currentSelectedOverlay.id);
-        hidePanel();
-        saveToStorage();
-      });
+    function startObserver() {
+        var target = document.getElementById('sc-chart-container') || document.body;
+        new MutationObserver(onMutation).observe(target.parentNode || target, {
+            childList: true,
+            subtree: true
+        });
     }
-  }
 
-  // ─────────────────────────────────────────────────────────────
-  // EVENT BINDER (Gọi 1 lần trên mỗi Chart Instance MỚI)
-  // ─────────────────────────────────────────────────────────────
-  function _bindChartEventsOnce(chart) {
-    if (!chart || chart === _waLastChartRef) return;
-    _waLastChartRef = chart;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startObserver);
+    } else {
+        startObserver();
+    }
+})();
 
-    chart.subscribeAction('onDrawEnd', function(data) {
-        activateTool('pointer');
-        var tb = document.querySelector('.wa-toolbar');
-        if (tb) {
-            tb.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-            var p = tb.querySelector('[data-tool=pointer]');
-            if(p) p.classList.add('active');
-        }
-
-        var o = _wa_extractOverlay(data);
-        if (!o || !o.id) return;
-
-        global.__wa_overlay_map.set(o.id, {
-            name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
-        });
-        saveToStorage();
-
-        global.currentSelectedOverlay = o;
-        if (typeof renderPanel === 'function') renderPanel(o);
-    });
-
-    chart.subscribeAction('onOverlayClick', function(data) {
-        var o = _wa_extractOverlay(data);
-        if (!o || !o.id) { hidePanel(); return; }
-
-        global.__wa_overlay_map.set(o.id, {
-            name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
-        });
-        saveToStorage();
-
-        global.currentSelectedOverlay = o;
-        if (typeof renderPanel === 'function') renderPanel(o);
-    });
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // BOOT
-  // ─────────────────────────────────────────────────────────────
-  function mountUI() {
-    bindCoreEventsOnce();
-    // Toolbar và phục hồi sẽ được lo bởi window.warestoreOverlays() 
-    // do chart-ui.js tự động kích hoạt.
-  }
-
-  if (document.readyState === 'loading') {
+// ---------------------------------------------------------------------------
+// 11. BOOT
+// ---------------------------------------------------------------------------
+if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', mountUI);
-  } else {
+} else {
     mountUI();
-  }
+}
 
-})(window); // <-- Chú ý giữ nguyên dòng đóng module này
+})(window);
