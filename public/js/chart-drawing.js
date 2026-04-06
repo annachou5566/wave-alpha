@@ -1316,75 +1316,20 @@
         }
       },
 
-      // --- BATCH 8: TEXT & ANNOTATIONS (Đã tối ưu 1-Click, Multi-line Text & HIT-BOX Click) ---
-      { 
-        name: 'plainText', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { 
-          var c = ref.coordinates || []; if (!c.length) return []; 
-          var txt = ref.overlay.extendData || '...'; var lines = txt.split('\n'); 
-          var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-          var bw = maxLen * 8 + 8, bh = lines.length * 18 + 8;
-          // Tấm nền tàng hình giúp click trúng chữ 100%
-          var figs = [ { type: 'polygon', attrs: { coordinates: [ { x: c[0].x - 4, y: c[0].y - 4 }, { x: c[0].x + bw, y: c[0].y - 4 }, { x: c[0].x + bw, y: c[0].y + bh }, { x: c[0].x - 4, y: c[0].y + bh } ]}, styles: { style: 'fill', color: 'rgba(0,0,0,0.01)' } } ]; 
-          lines.forEach((l, i) => figs.push({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i*18, text: l, align: 'left', baseline: 'top' } })); 
-          return figs; 
-        } 
-      },
-      { 
-        name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { style: 'dashed' } }); } var tx = c.length >= 2 ? c[1].x : c[0].x, ty = c.length >= 2 ? c[1].y : c[0].y; var lines = txt.split('\n'); lines.forEach((l, i) => figs.push({ type: 'text', attrs: { x: tx, y: ty + i*18, text: l, align: 'left', baseline: 'bottom' } })); return figs; } 
-      },
-      { 
-        name: 'note', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y, lines = txt.split('\n'), lh = 18, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(60, maxLen * 8.5 + pd * 2), bh = lines.length * lh + pd * 2; var figs = [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + bw, y: y }, { x: x + bw, y: y + bh }, { x: x, y: y + bh } ]} } ]; lines.forEach((l, i) => figs.push({ type: 'text', attrs: { x: x + pd, y: y + pd + i*lh, text: l, align: 'left', baseline: 'top' } })); return figs; } 
-      },
-      { 
-        name: 'priceNote', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var x = c[0].x, y = c[0].y; var bw = label.length * 8 + 16, bh = 24; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + bw, y: y - bh / 2 }, { x: x + bw, y: y + bh / 2 }, { x: x, y: y + bh / 2 } ]} }, { type: 'text', attrs: { x: x + 8, y: y, text: label, align: 'left', baseline: 'middle' } } ]; } 
-      },
-      { 
-        name: 'pin', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, r = 10; var figs = [ { type: 'circle', attrs: { x: x, y: y - r - 10, r: r } }, { type: 'line', attrs: { coordinates: [{ x: x, y: y - 10 }, { x: x, y: y }] } } ]; if (txt) { figs.push({ type: 'text', attrs: { x: x + r + 4, y: y - r - 10, text: txt, align: 'left', baseline: 'middle' } }); } return figs; } 
-      },
-      { 
-        name: 'tableAnnotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 160, y1 = c.length >= 2 ? c[1].y : y0 + 80; var W = Math.abs(x1 - x0) || 160, H = Math.abs(y1 - y0) || 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1), cols = 2, rows = 3, cw = W / cols, ch = H / rows; var figs = [{ type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]} }]; for (var ci = 1; ci < cols; ci++) figs.push({ type: 'line', attrs: { coordinates: [{ x: lx + ci * cw, y: ly }, { x: lx + ci * cw, y: ly + H }] } }); for (var ri = 1; ri < rows; ri++) figs.push({ type: 'line', attrs: { coordinates: [{ x: lx, y: ly + ri * ch }, { x: lx + W, y: ly + ri * ch }] } }); return figs; } 
-      },
-      { 
-        name: 'annotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] } }); var tx = c[1].x, ty = c[1].y, lines = txt.split('\n'), lh = 18, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(60, maxLen * 8.5 + pd * 2), bh = lines.length * lh + pd * 2; figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]} }); lines.forEach((l, i) => figs.push({ type: 'text', attrs: { x: tx + pd, y: ty - bh / 2 + pd + i*lh, text: l, align: 'left', baseline: 'top' } })); } else { figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: c[0].y, text: txt, align: 'left', baseline: 'middle' } }); } return figs; } 
-      },
-      { 
-        name: 'comment', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y, lines = txt.split('\n'), lh = 18, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(80, maxLen * 8.5 + pd * 2), bh = lines.length * lh + pd * 2, tail = 12; var figs = [ { type: 'polygon', attrs: { coordinates: [ { x: x - bw/2, y: y - bh - tail }, { x: x + bw/2, y: y - bh - tail }, { x: x + bw/2, y: y - tail }, { x: x + 12, y: y - tail }, { x: x, y: y }, { x: x - 4, y: y - tail }, { x: x - bw/2, y: y - tail } ]} } ]; lines.forEach((l, i) => figs.push({ type: 'text', attrs: { x: x, y: y - tail - bh + pd + i*lh, text: l, align: 'center', baseline: 'top' } })); return figs; } 
-      },
-      { 
-        name: 'priceLabel', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var label = custom || (priceVal != null ? priceVal.toFixed(dp) : '...'); var x = c[0].x, y = c[0].y, bw = label.length * 8.5 + 20, bh = 24, arr = 8; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + arr, y: y - bh / 2 }, { x: x + arr + bw, y: y - bh / 2 }, { x: x + arr + bw, y: y + bh / 2 }, { x: x + arr, y: y + bh / 2 } ]} }, { type: 'text', attrs: { x: x + arr + 6, y: y, text: label, align: 'left', baseline: 'middle' } } ]; } 
-      },
-      { 
-        name: 'signpost', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var tx = c.length >= 2 ? c[1].x : c[0].x, ty = c.length >= 2 ? c[1].y : c[0].y - 40; var figs = []; if (c.length >= 2) figs.push({ type: 'line', attrs: { coordinates: [c[0], { x: tx, y: ty }] } }); var lines = txt.split('\n'), lh = 18, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(40, maxLen * 8.5 + pd * 2), bh = lines.length * lh + pd * 2, notch = 12, isRight = tx >= c[0].x; var coords = isRight ? [{ x: tx, y: ty }, { x: tx + notch, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty + bh / 2 }, { x: tx + notch, y: ty + bh / 2 }] : [{ x: tx, y: ty }, { x: tx - notch, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty + bh / 2 }, { x: tx - notch, y: ty + bh / 2 }]; figs.push({ type: 'polygon', attrs: { coordinates: coords } }); lines.forEach((l, i) => figs.push({ type: 'text', attrs: { x: isRight ? tx + notch + pd : tx - notch - pd, y: ty - bh/2 + pd + i*lh, text: l, align: isRight ? 'left' : 'right', baseline: 'top' } })); return figs; } 
-      },
-      { 
-        name: 'flagMarker', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, pw = 3, ph = 34, fw = 26, fh = 16; return [ { type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: y - ph }] } }, { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - ph }, { x: x + fw, y: y - ph + fh / 2 }, { x: x, y: y - ph + fh } ]} }, ...(txt ? [{ type: 'text', attrs: { x: x + fw + 6, y: y - ph + fh / 2, text: txt, align: 'left', baseline: 'middle' } }] : []) ]; } 
-      },
-      { 
-        name: 'insertImage', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var url = ref.overlay.extendData || ''; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 120, y1 = c.length >= 2 ? c[1].y : y0 + 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1), W = Math.abs(x1 - x0) || 120, H = Math.abs(y1 - y0) || 80; if (url && url.startsWith('http')) return [{ type: 'image', attrs: { x: lx, y: ly, width: W, height: H, src: url } }]; return [ { type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]} }, { type: 'line', attrs: { coordinates: [{ x: lx, y: ly }, { x: lx + W, y: ly + H }] } }, { type: 'line', attrs: { coordinates: [{ x: lx + W, y: ly }, { x: lx, y: ly + H }] } }, { type: 'text', attrs: { x: lx + W / 2, y: ly + H / 2, text: '🖼 Nhập URL', align: 'center', baseline: 'middle' } } ]; } 
-      },
-      { 
-        name: 'insertIcon', totalStep: 1, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, 
-        createPointFigures: function(ref) { 
-          var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '⭐'; 
-          // Tấm nền tàng hình giúp click trúng Icon 100%
-          return [ 
-            { type: 'polygon', attrs: { coordinates: [ { x: c[0].x - 15, y: c[0].y - 15 }, { x: c[0].x + 15, y: c[0].y - 15 }, { x: c[0].x + 15, y: c[0].y + 15 }, { x: c[0].x - 15, y: c[0].y + 15 } ]}, styles: { style: 'fill', color: 'rgba(0,0,0,0.01)' } },
-            { type: 'text', attrs: { x: c[0].x, y: c[0].y, text: icon, align: 'center', baseline: 'middle' } } 
-          ]; 
-        } 
-      }
+      // --- BATCH 8: Text Annotation Tools ---
+      { name: 'plainText', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: txt, align: 'left', baseline: 'top' }, styles: { color: '#EAECEF', size: 14, family: 'Rajdhani, sans-serif', weight: '600' } }]; } },
+      { name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: 'rgba(0,240,255,0.4)', size: 1, style: 'dashed' } }); } var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y; figs.push({ type: 'text', attrs: { x: tx, y: ty, text: txt, align: 'left', baseline: 'bottom' }, styles: { color: '#00F0FF', size: 13, family: 'Rajdhani, sans-serif', weight: '700' } }); return figs; } },
+      { name: 'note', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var lines = txt.split('\n'); var lh = 16, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(60, maxLen * 7.5 + pd * 2); var bh = lines.length * lh + pd * 2; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + bw, y: y }, { x: x + bw, y: y + bh }, { x: x, y: y + bh } ]}, styles: { style: 'fill', color: 'rgba(240,185,11,0.15)', borderColor: '#F0B90B', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + pd, y: y + pd, text: lines[0], align: 'left', baseline: 'top' }, styles: { color: '#EAECEF', size: 12, family: 'sans-serif' } } ]; } },
+      { name: 'priceNote', totalStep: 2, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var x = c[0].x, y = c[0].y; var bw = label.length * 7 + 16, bh = 22; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + bw, y: y - bh / 2 }, { x: x + bw, y: y + bh / 2 }, { x: x, y: y + bh / 2 } ]}, styles: { style: 'fill', color: 'rgba(14,203,129,0.2)', borderColor: '#0ECB81', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 8, y: y, text: label, align: 'left', baseline: 'middle' }, styles: { color: '#0ECB81', size: 12, family: 'Rajdhani, sans-serif', weight: '700' } } ]; } },
+      { name: 'pin', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, r = 10; var figs = [ { type: 'circle', attrs: { x: x, y: y - r - 10, r: r }, styles: { style: 'fill', color: '#F0B90B', borderColor: '#fff', borderSize: 1.5 } }, { type: 'line', attrs: { coordinates: [{ x: x, y: y - 10 }, { x: x, y: y }] }, styles: { color: '#F0B90B', size: 2 } } ]; if (txt) { figs.push({ type: 'text', attrs: { x: x + r + 4, y: y - r - 10, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#EAECEF', size: 12 } }); } return figs; } },
+      { name: 'tableAnnotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 160; var y1 = c.length >= 2 ? c[1].y : y0 + 80; var W = Math.abs(x1 - x0) || 160, H = Math.abs(y1 - y0) || 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1); var cols = 2, rows = 3, cw = W / cols, ch = H / rows; var figs = [{ type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'fill', color: 'rgba(22,26,30,0.9)', borderColor: '#2b3139', borderSize: 1 }, ignoreEvent: true }]; for (var ci = 1; ci < cols; ci++) { figs.push({ type: 'line', attrs: { coordinates: [ { x: lx + ci * cw, y: ly }, { x: lx + ci * cw, y: ly + H } ]}, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }); } for (var ri = 1; ri < rows; ri++) { figs.push({ type: 'line', attrs: { coordinates: [ { x: lx, y: ly + ri * ch }, { x: lx + W, y: ly + ri * ch } ]}, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }); } return figs; } },
+      { name: 'annotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: '#00F0FF', size: 1 } }); var tx = c[1].x, ty = c[1].y; var bw = txt.length * 7.5 + 16, bh = 22; figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]}, styles: { style: 'stroke_fill', color: 'rgba(0,240,255,0.1)', borderColor: '#00F0FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: tx + 8, y: ty, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#00F0FF', size: 12, family: 'Rajdhani, sans-serif', weight: '600' } }); } else { figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: c[0].y, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#00F0FF', size: 12 } }); } return figs; } },
+      { name: 'comment', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var bw = Math.max(80, txt.length * 7 + 20), bh = 30, tail = 8; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh - tail }, { x: x + bw, y: y - bh - tail }, { x: x + bw, y: y - tail }, { x: x + 18, y: y - tail }, { x: x + 10, y: y }, { x: x + 6, y: y - tail }, { x: x, y: y - tail } ]}, styles: { style: 'stroke_fill', color: 'rgba(30,35,42,0.95)', borderColor: '#474d57', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 10, y: y - bh / 2 - tail, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#EAECEF', size: 12 } } ]; } },
+      { name: 'priceLabel', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: true, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var label = custom || (priceVal != null ? priceVal.toFixed(dp) : '...'); var x = c[0].x, y = c[0].y, bw = label.length * 7.5 + 20, bh = 20; var arr = 6; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + arr, y: y - bh / 2 }, { x: x + arr + bw, y: y - bh / 2 }, { x: x + arr + bw, y: y + bh / 2 }, { x: x + arr, y: y + bh / 2 } ]}, styles: { style: 'fill', color: '#F6465D' }, ignoreEvent: true }, { type: 'text', attrs: { x: x + arr + 6, y: y, text: label, align: 'left', baseline: 'middle' }, styles: { color: '#fff', size: 11, family: 'Rajdhani, sans-serif', weight: '700' } } ]; } },
+      { name: 'signpost', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y - 40; var figs = []; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], { x: tx, y: ty }] }, styles: { color: '#848e9c', size: 1, style: 'dashed' } }); } var bw = txt.length * 7.5 + 24, bh = 24, notch = 10; var isRight = tx >= c[0].x; var coords = isRight ? [{ x: tx, y: ty }, { x: tx + notch, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty + bh / 2 }, { x: tx + notch, y: ty + bh / 2 }] : [{ x: tx, y: ty }, { x: tx - notch, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty + bh / 2 }, { x: tx - notch, y: ty + bh / 2 }]; figs.push({ type: 'polygon', attrs: { coordinates: coords }, styles: { style: 'fill', color: 'rgba(153,69,255,0.25)', borderColor: '#9945FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: isRight ? tx + notch + 8 : tx - notch - 8, y: ty, text: txt, align: isRight ? 'left' : 'right', baseline: 'middle' }, styles: { color: '#d0aaff', size: 12, family: 'Rajdhani, sans-serif', weight: '700' } }); return figs; } },
+      { name: 'flagMarker', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14; return [ { type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: y - ph }] }, styles: { color: '#F0B90B', size: pw } }, { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - ph }, { x: x + fw, y: y - ph + fh / 2 }, { x: x, y: y - ph + fh } ]}, styles: { style: 'fill', color: '#F0B90B' }, ignoreEvent: true }, ...(txt ? [{ type: 'text', attrs: { x: x + fw + 4, y: y - ph + fh / 2, text: txt, align: 'left', baseline: 'middle' }, styles: { color: '#F0B90B', size: 11 } }] : []) ]; } },
+      { name: 'insertImage', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var url = ref.overlay.extendData || ''; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 120; var y1 = c.length >= 2 ? c[1].y : y0 + 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1); var W = Math.abs(x1 - x0) || 120, H = Math.abs(y1 - y0) || 80; var label = url ? '🖼 ' + url.split('/').pop().slice(0, 20) : '🖼 Double-click to set URL'; return [ { type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'stroke_fill', color: 'rgba(0,240,255,0.05)', borderColor: '#2b3139', borderSize: 1, borderStyle: 'dashed' }, ignoreEvent: true }, { type: 'line', attrs: { coordinates: [{ x: lx, y: ly }, { x: lx + W, y: ly + H }] }, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }, { type: 'line', attrs: { coordinates: [{ x: lx + W, y: ly }, { x: lx, y: ly + H }] }, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: lx + W / 2, y: ly + H / 2, text: label, align: 'center', baseline: 'middle' }, styles: { color: '#5E6673', size: 11 } } ]; } },
+      { name: 'insertIcon', totalStep: 2, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false, createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '★'; var x = c[0].x, y = c[0].y; return [{ type: 'text', attrs: { x: x, y: y, text: icon, align: 'center', baseline: 'middle' }, styles: { color: '#F0B90B', size: 22 } }]; } }
     ];
 
     extensions.forEach(e => { try { kc.registerOverlay(e); } catch(err){} });
@@ -1472,29 +1417,6 @@
       .wa-toast { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(22, 26, 30, 0.9); border: 1px solid #2b3139; color: #EAECEF; padding: 8px 16px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 9999; pointer-events: none; }
       
       .wa-drawing-mode canvas { cursor: crosshair !important; }
-
-      /* --- TEXT POPUP MINIMALIST --- */
-      .wa-text-popup-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(3px); z-index: 10005; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
-      .wa-text-popup-overlay.show { display: flex; opacity: 1; }
-      .wa-text-popup { background: #161A1E; border: 1px solid #2b3139; border-radius: 12px; width: 340px; padding: 24px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 16px; transform: scale(0.95); transition: transform 0.2s; }
-      .wa-text-popup-overlay.show .wa-text-popup { transform: scale(1); }
-      .wa-text-popup h3 { margin: 0; color: #EAECEF; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
-      .wa-tp-row { display: flex; gap: 12px; }
-      .wa-tp-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-      .wa-tp-col label { color: #848E9C; font-size: 12px; font-weight: 500; }
-      .wa-tp-input, .wa-tp-select, .wa-tp-textarea { background: #0B0E11; border: 1px solid #2b3139; color: #EAECEF; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: all 0.2s; width: 100%; box-sizing: border-box; }
-      .wa-tp-input:focus, .wa-tp-select:focus, .wa-tp-textarea:focus { border-color: #00F0FF; box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.1); }
-      .wa-tp-textarea { resize: none; height: 100px; font-family: inherit; line-height: 1.4; }
-      .wa-tp-color { height: 38px; padding: 2px; cursor: pointer; }
-      .wa-tp-color::-webkit-color-swatch-wrapper { padding: 0; }
-      .wa-tp-color::-webkit-color-swatch { border: none; border-radius: 6px; }
-      .wa-tp-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
-      .wa-tp-btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; }
-      .wa-tp-btn.cancel { background: transparent; color: #848E9C; border: 1px solid #2b3139; }
-      .wa-tp-btn.cancel:hover { background: #2b3139; color: #EAECEF; }
-      .wa-tp-btn.save { background: #00F0FF; color: #000; }
-      .wa-tp-btn.save:hover { background: #00c8d6; box-shadow: 0 4px 12px rgba(0, 240, 255, 0.2); }
-      
     `;
     document.head.appendChild(style);
   }
@@ -1654,97 +1576,92 @@
     }, 0);
   }
 
-// ==========================================
-  // TEXT POPUP ENGINE (CHUYÊN NGHIỆP & MINIMALIST)
-  // ==========================================
-  function createTextPopup() {
-    if(document.getElementById('wa-text-popup-overlay')) return global.openTextPopup;
-    
-    const overlay = document.createElement('div');
-    overlay.id = 'wa-text-popup-overlay';
-    overlay.className = 'wa-text-popup-overlay';
-    overlay.innerHTML = `
-      <div class="wa-text-popup">
-        <h3>✏️ Chỉnh sửa Văn bản</h3>
-        <div class="wa-tp-col">
-          <textarea id="wa-tp-text" class="wa-tp-textarea" placeholder="Nhập nội dung..."></textarea>
-        </div>
-        <div class="wa-tp-row">
-          <div class="wa-tp-col">
-            <label>Cỡ chữ</label>
-            <input type="number" id="wa-tp-size" class="wa-tp-input" min="10" max="100" value="14">
-          </div>
-          <div class="wa-tp-col">
-            <label>Màu chữ</label>
-            <input type="color" id="wa-tp-color" class="wa-tp-input wa-tp-color" value="#EAECEF">
-          </div>
-        </div>
-        <div class="wa-tp-col">
-          <label>Font chữ</label>
-          <select id="wa-tp-font" class="wa-tp-select">
-            <option value="sans-serif">Mặc định (Sans-serif)</option>
-            <option value="Arial">Arial</option>
-            <option value="Courier New">Monospace (Courier)</option>
-            <option value="Times New Roman">Times New Roman</option>
-          </select>
-        </div>
-        <div class="wa-tp-actions">
-          <button class="wa-tp-btn cancel" id="wa-tp-cancel">Hủy</button>
-          <button class="wa-tp-btn save" id="wa-tp-save">Lưu lại</button>
-        </div>
-      </div>
-    `;
-    document.getElementById('sc-chart-container').appendChild(overlay);
+// ─────────────────────────────────────────────
+  // TEXT EDITOR & WRAPPER (BATCH 8 ARCHITECTURE)
+  // ─────────────────────────────────────────────
+  var USE_NATIVE_PROMPT = false;
 
-    let currentEditingId = null;
+  function openTextEditor(currentText, onConfirm) {
+    if (USE_NATIVE_PROMPT) {
+      var result = window.prompt('Nhập nội dung:', currentText || '');
+      if (result !== null) onConfirm(result);
+      return;
+    }
+    var existing = document.getElementById('wa-text-editor');
+    if (existing) existing.remove();
 
-    function closePopup() { 
-      overlay.classList.remove('show'); 
-      setTimeout(() => { overlay.style.display = 'none'; }, 200); 
+    var backdrop = document.createElement('div');
+    backdrop.id = 'wa-text-editor';
+    backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
+    backdrop.innerHTML = `
+      <div style="background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:20px;width:340px;box-shadow:0 20px 40px rgba(0,0,0,0.7);font-family:Rajdhani,sans-serif;">
+        <div style="font-size:11px;font-weight:700;color:#848e9c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Nhập nội dung</div>
+        <textarea id="wa-te-input" rows="3" style="width:100%;box-sizing:border-box;background:#111418;border:1px solid #2b3139;border-radius:6px;color:#eaecef;font-size:14px;font-family:inherit;padding:8px 10px;resize:vertical;outline:none;" placeholder="Nhập text..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+          <button id="wa-te-cancel" style="background:transparent;border:1px solid #2b3139;color:#848e9c;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;">Hủy</button>
+          <button id="wa-te-confirm" style="background:#00F0FF;border:none;color:#000;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;">Xác nhận</button>
+        </div>
+      </div>`;
+    document.body.appendChild(backdrop);
+
+    var textarea = document.getElementById('wa-te-input');
+    textarea.value = currentText || '';
+    requestAnimationFrame(function() { textarea.focus(); textarea.select(); });
+
+    function confirm() { var val = textarea.value; backdrop.remove(); onConfirm(val); }
+    function cancel() { backdrop.remove(); }
+
+    document.getElementById('wa-te-confirm').addEventListener('click', confirm);
+    document.getElementById('wa-te-cancel').addEventListener('click', cancel);
+    backdrop.addEventListener('click', function(e) { if (e.target === backdrop) cancel(); });
+    textarea.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); confirm(); }
+      if (e.key === 'Escape') cancel();
+    });
+  }
+
+  var NON_EDITABLE_TOOLS = ['tableAnnotation'];
+  var URL_TOOLS = ['insertImage'];
+
+  function createTextOverlay(chart, toolId, initialData) {
+    if (!chart) return null;
+    var overlayId = null;
+    var isEditable = NON_EDITABLE_TOOLS.indexOf(toolId) === -1;
+    var isUrlTool = URL_TOOLS.indexOf(toolId) !== -1;
+    var urlPromptMsg = isUrlTool ? 'Nhập URL hình ảnh:' : 'Nhập nội dung:';
+
+    function openEditor(currentText) {
+      if (isUrlTool) {
+        var result = window.prompt(urlPromptMsg, currentText || '');
+        // FIX: Sửa modifyOverlay thành overrideOverlay
+        if (result !== null && overlayId) chart.overrideOverlay({ id: overlayId, extendData: result });
+        return;
+      }
+      openTextEditor(currentText, function(newText) {
+        // FIX: Sửa modifyOverlay thành overrideOverlay
+        if (overlayId) chart.overrideOverlay({ id: overlayId, extendData: newText });
+      });
     }
 
-    document.getElementById('wa-tp-cancel').onclick = closePopup;
-    document.getElementById('wa-tp-save').onclick = () => {
-      if(!currentEditingId || !global.tvChart) return;
-      const newText = document.getElementById('wa-tp-text').value;
-      const newSize = parseInt(document.getElementById('wa-tp-size').value) || 14;
-      const newColor = document.getElementById('wa-tp-color').value;
-      const newFont = document.getElementById('wa-tp-font').value;
-
-      const targetOverlay = global.tvChart.getOverlayById ? global.tvChart.getOverlayById(currentEditingId) : null;
-      let baseStyles = targetOverlay ? targetOverlay.styles : (currentSelectedOverlay ? currentSelectedOverlay.styles : {});
-      
-      let newStyles = JSON.parse(JSON.stringify(baseStyles || {}));
-      newStyles.text = { ...newStyles.text, color: newColor, size: newSize, family: newFont };
-      
-      try {
-        global.tvChart.overrideOverlay({ id: currentEditingId, styles: newStyles, extendData: newText });
-        if (currentSelectedOverlay && currentSelectedOverlay.id === currentEditingId) {
-            currentSelectedOverlay.styles = newStyles; currentSelectedOverlay.extendData = newText;
-        }
-      } catch(e){}
-      closePopup();
+    var config = {
+      name: toolId, extendData: initialData || '',
+      onDrawEnd: isEditable ? function(event) {
+        if (!overlayId && event && event.overlay) overlayId = event.overlay.id;
+        openEditor((event && event.overlay) ? event.overlay.extendData : '');
+        return false;
+      } : undefined,
+      onDoubleClick: isEditable ? function(event) {
+        if (!overlayId && event && event.overlay) overlayId = event.overlay.id;
+        openEditor((event && event.overlay) ? event.overlay.extendData : '');
+        return false;
+      } : undefined
     };
+    if (!config.onDrawEnd) delete config.onDrawEnd;
+    if (!config.onDoubleClick) delete config.onDoubleClick;
 
-    global.openTextPopup = function(overlayObj) {
-      currentEditingId = overlayObj.id;
-      let s = overlayObj.styles || {};
-      let ext = overlayObj.extendData || '';
-      let txt = typeof ext === 'string' ? ext : (ext.text || '');
-      if (!txt) txt = 'Văn bản...'; // Giá trị mặc định nếu rỗng
-
-      document.getElementById('wa-tp-text').value = txt;
-      document.getElementById('wa-tp-size').value = (s.text && s.text.size) ? s.text.size : toolStyles.text.textSize;
-      document.getElementById('wa-tp-color').value = (s.text && s.text.color) ? colorToHex(s.text.color) : toolStyles.text.textColor;
-      document.getElementById('wa-tp-font').value = (s.text && s.text.family) ? s.text.family : 'sans-serif';
-
-      overlay.style.display = 'flex';
-      requestAnimationFrame(() => {
-          overlay.classList.add('show');
-          setTimeout(() => { document.getElementById('wa-tp-text').focus(); document.getElementById('wa-tp-text').select(); }, 50);
-      });
-    };
-    return global.openTextPopup;
+    var id = chart.createOverlay(config);
+    if (id) overlayId = id;
+    return id;
   }
 
   // ==========================================
@@ -1822,30 +1739,35 @@
       if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
       container.classList.add('wa-drawing-mode');
 
+      const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','tableAnnotation','annotation','comment','priceLabel','signpost','flagMarker','insertImage','insertIcon'];
+
+      // ROUTE RIÊNG CHO TEXT & ANNOTATION (Chạy qua kiến trúc Modal mới)
+      if (TEXT_TOOLS.includes(toolId)) {
+        createTextOverlay(global.tvChart, toolId);
+        return;
+      }
+
+      // ROUTE CHO CÁC CÔNG CỤ VẼ THÔNG THƯỜNG CÒN LẠI
       try {
         let tType = getToolCategory(toolId); let s = toolStyles[tType] || {};
         let config = { name: toolId, lock: false, styles: {} };
         
-        // LUỒNG XỬ LÝ MỚI CHO TEXT (Gắn liền với Bảng Tùy Chỉnh)
-        if (tType === 'text') {
-            if (toolId === 'insertIcon') config.extendData = '⭐';
-            else if (toolId === 'insertImage') config.extendData = '';
-            else config.extendData = toolStyles.text.textInput || 'Văn bản...';
-            
-            // Ép màu nền mờ và chữ theo Bảng tùy chỉnh (Không dùng hardcode nữa)
-            config.styles.text = { color: s.textColor || '#EAECEF', size: s.textSize || 14, family: 'sans-serif' };
-            config.styles.polygon = { style: 'stroke_fill', color: 'rgba(0, 240, 255, 0.15)', borderColor: s.textColor || '#00F0FF' };
-        }
-        else if (tType === 'lines' || tType === 'waves') {
+        if(tType === 'lines' || tType === 'waves') {
           config.styles.line = { color: s.lineColor || '#00F0FF', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
         } else if (tType === 'shapes') {
           config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor, s.fillOpacity), borderColor: s.borderColor, borderSize: s.borderWidth };
         } else if (tType === 'fibo') {
           config.styles.line = { color: s.lineColor, size: 1 }; config.extendData = { showLabels: s.showLabels, fillOpacity: s.fillOpacity };
+        } else if (tType === 'text') {
+          // Khởi tạo dữ liệu mặc định để kích hoạt khả năng edit cho 13 công cụ Text
+          if (toolId === 'insertIcon') config.extendData = '⭐';
+          else if (toolId === 'insertImage') config.extendData = '';
+          else config.extendData = toolStyles.text.textInput || 'Văn bản...';
+          config.styles.text = { color: s.textColor || '#EAECEF', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
         }
 
         global.tvChart.createOverlay(config);
-      } catch (err) { showToast('Lỗi khởi tạo công cụ.'); }
+      } catch (err) { showToast('Lỗi khởi tạo. Hệ thống sẽ khôi phục về mặc định.'); }
     }
 
     let waitChart = setInterval(() => {
@@ -1853,50 +1775,22 @@
         if (!global.tvChart.__wa_event_bound) {
           global.tvChart.__wa_event_bound = true;
           
-          // SỰ KIỆN 1: VỪA VẼ XONG
           global.tvChart.subscribeAction('onDrawEnd', function(data) {
-            let overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
+            activateTool('pointer');
+            toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
+            let overlayObj = Array.isArray(data) ? data[0] : data;
             if(!overlayObj) return;
-
-            // [GIẢI DƯỢC KẸT CHẤM XANH] Đợi 100ms để biểu đồ nhả chuột rồi mới xử lý ngắt Tool
-            setTimeout(() => {
-                activateTool('pointer');
-                toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
-                let ptrBtn = toolbar.querySelector('[data-tool="pointer"]');
-                if(ptrBtn) ptrBtn.classList.add('active');
-                
-                saveHistory('add', overlayObj); 
-                currentSelectedOverlay = overlayObj; 
-
-                // Nếu là Text -> Mở Popup Nổi chuyên nghiệp, KHÔNG mở Panel phải
-                if (getToolCategory(overlayObj.name) === 'text' && overlayObj.name !== 'insertImage' && overlayObj.name !== 'insertIcon') {
-                    hidePanel(); // Đóng ngay panel phải cho đỡ vướng
-                    if(!global.openTextPopup) createTextPopup();
-                    global.openTextPopup(overlayObj);
-                } else {
-                    renderPanel(currentSelectedOverlay);
-                }
-            }, 100);
+            saveHistory('add', overlayObj); currentSelectedOverlay = overlayObj; renderPanel(currentSelectedOverlay);
           });
 
-          // SỰ KIỆN 2: DOUBLE-CLICK VÀO HÌNH CÓ SẴN
           global.tvChart.subscribeAction('onOverlayClick', function(data) {
             let overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
             if(!overlayObj) { hidePanel(); return; }
-            
-            let now = Date.now(); 
-            let isDoubleClick = (now - lastClickTime < 300); 
-            lastClickTime = now;
-            
-            currentSelectedOverlay = overlayObj; 
+            let now = Date.now(); let isDoubleClick = (now - lastClickTime < 300); lastClickTime = now;
+            currentSelectedOverlay = overlayObj; renderPanel(currentSelectedOverlay);
 
-            // Nếu Double-Click vào Text -> Mở Popup Nổi
-            if(isDoubleClick && getToolCategory(overlayObj.name) === 'text' && overlayObj.name !== 'insertImage' && overlayObj.name !== 'insertIcon') {
-               hidePanel(); // Đóng panel phải
-               if(!global.openTextPopup) createTextPopup();
-               global.openTextPopup(overlayObj);
-            } else {
-               renderPanel(currentSelectedOverlay);
+            if(isDoubleClick && overlayObj.name === 'customText') {
+               setTimeout(() => { let t = document.getElementById('wa-prop-txt'); if(t) { t.focus(); t.select(); } }, 50);
             }
           });
         }
@@ -1951,8 +1845,12 @@
 
       if (overlay.name === 'insertIcon') {
          html += `
-         <style>.wa-icon-picker{display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:#0B0E11;border:1px solid #2b3139;border-radius:4px;max-height:120px;overflow-y:auto;} .wa-icon-picker::-webkit-scrollbar{width:4px;} .wa-icon-picker::-webkit-scrollbar-thumb{background:#2b3139;border-radius:4px;} .wa-emo{cursor:pointer;font-size:20px;transition:0.1s;} .wa-emo:hover{transform:scale(1.3);}</style>
-         <div class="wa-control-row"><label>Click để đổi Icon:</label>
+         <style>
+           .wa-icon-picker { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; background: #0B0E11; border: 1px solid #2b3139; border-radius: 4px; max-height: 120px; overflow-y: auto; }
+           .wa-icon-picker::-webkit-scrollbar { width: 4px; } .wa-icon-picker::-webkit-scrollbar-thumb { background: #2b3139; border-radius: 4px; }
+           .wa-emo { cursor: pointer; font-size: 20px; transition: transform 0.1s; user-select: none; } .wa-emo:hover { transform: scale(1.3); }
+         </style>
+         <div class="wa-control-row"><label>Click để chọn Icon mới:</label>
            <div class="wa-icon-picker">
              ${['⭐','🔥','🚀','💎','🐂','🐻','📌','⚡','✅','❌','💰','📈','📉','🔔','💡','🎯','🏆','⚠️','💀','👽'].map(e=>`<span class="wa-emo">${e}</span>`).join('')}
            </div>
@@ -1960,8 +1858,9 @@
          </div>`;
       } else if (overlay.name === 'insertImage') {
          html += `
-         <div class="wa-control-row"><label>Dán đường dẫn ảnh online (.png, .jpg):</label>
+         <div class="wa-control-row"><label>Đường dẫn ảnh trực tuyến (URL):</label>
            <input type="text" id="wa-prop-txt" class="wa-input" placeholder="https://..." value="${txt}">
+           <div style="font-size:11px;color:#848E9C;margin-top:4px;">Dán link ảnh (.png, .jpg) vào ô trên. Nhấn ra ngoài hoặc Enter để ảnh hiện lên chart.</div>
          </div>`;
       } else {
          html += `
@@ -1973,11 +1872,11 @@
       if (overlay.name !== 'insertImage') {
         html += `
         <div style="display:flex; gap:8px; margin-top:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu nền & Chữ</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Cỡ chữ</label><select id="wa-prop-s1" class="wa-select">
+          <div class="wa-control-row" style="flex:1"><label>Màu sắc</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
+          <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
             <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
             <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
-            <option value="32" ${sz==32?'selected':''}>32px</option>
+            <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
           </select></div>
         </div>`;
       }
@@ -2011,8 +1910,26 @@
 
     body.innerHTML = html;
     panel.classList.add('show');
+body.innerHTML = html;
+    panel.classList.add('show');
 
-    // 1. ĐỊNH NGHĨA UPDATE ENGINE TRƯỚC
+    // Bắt sự kiện click cho Emoji Picker
+    body.querySelectorAll('.wa-emo').forEach(el => {
+       el.onclick = function() {
+          document.getElementById('wa-prop-txt').value = this.innerText;
+          updateEngine(); // Tự động load lên chart
+       };
+    });
+    body.innerHTML = html;
+    panel.classList.add('show');
+
+    // Bắt sự kiện click cho Bảng Emoji
+    body.querySelectorAll('.wa-emo').forEach(el => {
+       el.onclick = function() {
+          document.getElementById('wa-prop-txt').value = this.innerText;
+          updateEngine(); // Click Icon là tự đổi trên chart luôn
+       };
+    });
     const updateEngine = debounce(() => {
       if(!currentSelectedOverlay || !global.tvChart) return;
       let newStyles = { ...currentSelectedOverlay.styles };
@@ -2042,22 +1959,8 @@
       }
 
       saveStyles();
-      // ...
-try { 
-  // Đồng bộ ngược state để các lần gõ phím tiếp theo không bị đè dữ liệu cũ
-  currentSelectedOverlay.styles = newStyles;
-  currentSelectedOverlay.extendData = newExt;
-  global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); 
-} catch(e){}
+      try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
     }, 16);
-
-    // 2. KÍCH HOẠT EVENT CLICK EMOJI (GỌI UPDATE ENGINE Ở TRÊN)
-    body.querySelectorAll('.wa-emo').forEach(el => {
-       el.onclick = function() {
-          document.getElementById('wa-prop-txt').value = this.innerText;
-          updateEngine(); // Bây giờ gọi sẽ không bị lỗi Reference nữa
-       };
-    });
 
     body.querySelectorAll('input, textarea, select').forEach(el => {
       el.addEventListener('input', updateEngine); el.addEventListener('change', updateEngine); el.addEventListener('compositionend', updateEngine);
