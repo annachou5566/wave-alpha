@@ -382,7 +382,7 @@
             }
             out.push(points[points.length - 1]); return out;
           }
-          var pts = smooth(c, 8); var a = pts[0], z = pts[pts.length - 1];
+          var pts = smooth(c, 4); var a = pts[0], z = pts[pts.length - 1];
           var dx = z.x - a.x, dy = z.y - a.y; var len = Math.sqrt(dx * dx + dy * dy) || 1;
           var px = -dy / len, py = dx / len; var offs = [-3, -1.5, 0, 1.5, 3]; var figs = [];
           offs.forEach(function(o) {
@@ -482,7 +482,7 @@
             }
             out.push(points[points.length - 1]); return out;
           }
-          return [{ type: 'line', attrs: { coordinates: smooth(c, 10) } }];
+          return [{ type: 'line', attrs: { coordinates: smooth(c, 5) } }];
         }
       },
       {
@@ -491,7 +491,7 @@
           var c = ref.coordinates || []; if (c.length < 2) return [];
           var ctr = c[0], p = c[1];
           var r = Math.sqrt(Math.pow(p.x - ctr.x, 2) + Math.pow(p.y - ctr.y, 2)); if (r < 2) return [];
-          var pts = [], N = 64;
+          var pts = [], N = 48;
           for (var i = 0; i < N; i++) { var a = i / N * Math.PI * 2; pts.push({ x: ctr.x + r * Math.cos(a), y: ctr.y + r * Math.sin(a) }); }
           return [{ type: 'polygon', attrs: { coordinates: pts }, styles: { style: 'stroke_fill' } }];
         }
@@ -1680,11 +1680,15 @@
         initialX = toolbar.offsetLeft; initialY = toolbar.offsetTop;
         document.body.style.userSelect = 'none'; 
       });
+      let _dragRaf = null;
       document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
-        let dx = e.clientX - startX; let dy = e.clientY - startY;
-        toolbar.style.left = Math.max(0, initialX + dx) + 'px';
-        toolbar.style.top = Math.max(0, initialY + dy) + 'px';
+        if (_dragRaf) cancelAnimationFrame(_dragRaf);
+        _dragRaf = requestAnimationFrame(() => {
+          let dx = e.clientX - startX; let dy = e.clientY - startY;
+          toolbar.style.left = Math.max(0, initialX + dx) + 'px';
+          toolbar.style.top = Math.max(0, initialY + dy) + 'px';
+        });
       });
       document.addEventListener('mouseup', () => { isDragging = false; document.body.style.userSelect = ''; });
       handle.addEventListener('dblclick', () => { toolbar.classList.toggle('collapsed'); });
@@ -1911,7 +1915,7 @@
       }
 
       try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
-    }, 40);
+    }, 32);
 
     // 2. Luồng lưu bộ nhớ (Delay 500ms để không gây giật lag khi đang kéo thả màu)
     const saveEngine = debounce(() => { saveStyles(); }, 500);
@@ -1983,7 +1987,8 @@
     const domObserver = new MutationObserver(() => {
       if (document.getElementById('sc-chart-container') && !document.querySelector('.wa-toolbar')) mountUI();
     });
-    domObserver.observe(document.body, { childList: true, subtree: true });
+    const _chartRoot = document.getElementById('sc-chart-container') || document.body;
+    domObserver.observe(_chartRoot, { childList: true, subtree: false });
   }
 
 })(window);
