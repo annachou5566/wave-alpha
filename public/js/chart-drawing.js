@@ -2433,6 +2433,10 @@ window.__wa_onIntervalChange = function(newInterval) {
   if (typeof global.__wa_saveAllOverlays === 'function') {
       global.__wa_saveAllOverlays();
   }
+  
+  // FIX: Xóa trí nhớ RAM để ép hệ thống phải vẽ lại trên khung giờ mới
+  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
+  
   if (typeof global.__wa_restoreOverlays === 'function') {
       global.__wa_restoreOverlays();
   }
@@ -2444,6 +2448,10 @@ window.__wa_onSymbolChange = function(newSymbol) {
   console.log(`================================`);
   if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
   window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  // FIX: Xóa trí nhớ RAM
+  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
+  
   if (typeof global.__wa_restoreOverlays === 'function') {
       global.__wa_restoreOverlays();
   }
@@ -2785,6 +2793,10 @@ function mountUI() {
       if (container && !container.querySelector('.wa-toolbar')) {
         // Toolbar bị xóa → chỉ inject lại DOM, KHÔNG gắn lại global events
         mountDOM();
+        
+        // FIX: Chart đã bị framework làm mới -> Phải xóa RAM để đánh thức hàm vẽ lại
+        if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
+        
         // Sau khi DOM mới, gắn lại chart events nếu cần
         if (global.tvChart) {
           global.tvChart.__wa_chart_events_bound = false;
