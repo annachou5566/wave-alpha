@@ -2266,12 +2266,10 @@
     currentSelectedOverlay = null;
   }
 
-  // Khởi tạo Context Menu và gắn sự kiện (Idempotent)
   function bindContextMenu(panel) {
     var container = document.getElementById('sc-chart-container');
     if (!container || !panel) return;
 
-    // Inject context menu DOM
     var cm = container.querySelector('.wa-context-menu');
     if (!cm) {
       cm = document.createElement('div');
@@ -2279,8 +2277,7 @@
       cm.innerHTML = [
         '<div class="wa-cm-item" id="wa-cm-edit">',
         '  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">',
-        '    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>',
-        '    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+        '    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
         '  </svg> Chỉnh sửa',
         '</div>',
         '<div class="wa-cm-item" id="wa-cm-clone">',
@@ -2293,8 +2290,7 @@
         '    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
         '  </svg> Khoá / Mở khoá',
         '</div>',
-        '<div class="wa-cm-item danger" id="wa-cm-del"',
-        '     style="border-top:1px solid var(--wa-border-subtle);margin-top:4px;padding-top:10px">',
+        '<div class="wa-cm-item danger" id="wa-cm-del" style="border-top:1px solid var(--wa-border-subtle);margin-top:4px;padding-top:10px">',
         '  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">',
         '    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
         '  </svg> Xoá hình',
@@ -2303,7 +2299,6 @@
       container.appendChild(cm);
     }
 
-    // Contextmenu listener trên container (1 lần/container)
     if (!container.__wa_ctx_menu_bound) {
       container.__wa_ctx_menu_bound = true;
       container.addEventListener('contextmenu', function(e) {
@@ -2316,51 +2311,41 @@
       });
     }
 
-    // Đóng menu khi click ra ngoài (1 lần/document)
     if (!global.__wa_cm_doc_click_bound) {
       global.__wa_cm_doc_click_bound = true;
       document.addEventListener('click', function(e) {
         if (!e.target.closest('.wa-context-menu')) {
-          document.querySelectorAll('.wa-context-menu').forEach(function(m) {
-            m.style.display = 'none';
-          });
+          document.querySelectorAll('.wa-context-menu').forEach(function(m) { m.style.display = 'none'; });
         }
       });
     }
 
-    // Hàm xử lý chung
     function act(type) {
-      if (!currentSelectedOverlay || !global.tvChart) return;
+      if (!currentSelectedOverlay || !_waCurrentChartRef) return;
       var activeCm = container.querySelector('.wa-context-menu');
       
       if (type === 'del') {
-        saveHistory('delete', currentSelectedOverlay);
-        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-        _wa_untrackOverlay(currentSelectedOverlay.id);
+        _waCurrentChartRef.removeOverlay({ id: currentSelectedOverlay.id });
+        global.__wa_overlay_map.delete(currentSelectedOverlay.id);
         hidePanel();
       } else if (type === 'clone') {
         var cl = JSON.parse(JSON.stringify(currentSelectedOverlay));
         delete cl.id;
-        if (cl.points) {
-          cl.points = cl.points.map(function(p) {
-            return { timestamp: p.timestamp, value: p.value * 1.001 };
-          });
-        }
-        var newId = global.tvChart.createOverlay(cl);
-        if (newId) _wa_trackOverlay(Object.assign({}, cl, { id: newId }));
-        showToast('Đã nhân bản');
+        if (cl.points) { cl.points = cl.points.map(function(p) { return { timestamp: p.timestamp, value: p.value * 1.001 }; }); }
+        var newId = _waCurrentChartRef.createOverlay(cl);
+        if (newId) global.__wa_overlay_map.set(newId, Object.assign({}, cl, { id: newId }));
+        if(typeof showToast==='function') showToast('Đã nhân bản');
       } else if (type === 'lock') {
-        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
+        _waCurrentChartRef.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
         var entry = global.__wa_overlay_map.get(currentSelectedOverlay.id);
         if (entry) entry.lock = !currentSelectedOverlay.lock;
-        showToast('Đã đổi trạng thái khóa');
+        if(typeof showToast==='function') showToast('Đã đổi trạng thái khóa');
       }
-      
       if (activeCm) activeCm.style.display = 'none';
-      saveAllOverlays();
+      saveToStorage();
     }
 
-    cm.querySelector('#wa-cm-edit').onclick  = function() { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
+    cm.querySelector('#wa-cm-edit').onclick  = function() { if(typeof renderPanel==='function') renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
     cm.querySelector('#wa-cm-clone').onclick = function() { act('clone'); };
     cm.querySelector('#wa-cm-lock').onclick  = function() { act('lock'); };
     cm.querySelector('#wa-cm-del').onclick   = function() { act('del'); };
@@ -2375,199 +2360,103 @@
 
 
   // ============================================================
-  // 7. AUTO-HEAL & PERSISTENCE — REWRITE v4.0
+  // 7. THE ULTIMATE KEEPALIVE ENGINE (INTERCEPTOR PATTERN)
+  // Không phụ thuộc vào Hook của UI framework. Tự động sinh tồn.
   // ============================================================
 
-  // ─────────────────────────────────────────────────────────────
-  // 7.1 SHADOW MAP — Bộ nhớ RAM, nguồn sự thật duy nhất
-  // ─────────────────────────────────────────────────────────────
-
   global.__wa_overlay_map = global.__wa_overlay_map || new Map();
-
-  function _wa_trackOverlay(o) {
-    if (!o || !o.id) return;
-    global.__wa_overlay_map.set(o.id, {
-      name:        o.name,
-      id:          o.id,
-      points:      o.points,
-      styles:      o.styles,
-      lock:        !!o.lock,
-      extendData:  o.extendData
-      // Bỏ paneId để tránh lỗi layout khi đổi khung/TF
-    });
-  }
-
-  function _wa_untrackOverlay(id) {
-    if (id) global.__wa_overlay_map.delete(id);
-  }
-
-  global.__wa_updateOverlayInMap = function(id, styles, extendData) {
-    var entry = global.__wa_overlay_map.get(id);
-    if (!entry) return;
-    if (styles !== undefined) entry.styles = styles;
-    if (extendData !== undefined) entry.extendData = extendData;
-  };
-
-
-  // ─────────────────────────────────────────────────────────────
-  // 7.2 DRAWING KEY — Chỉ theo SYMBOL
-  // ─────────────────────────────────────────────────────────────
+  var _waCurrentChartRef = null;
+  var _waCurrentSymbolKey = "";
 
   function getDrawingKey() {
-    var sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken))
-              || window.__wa_currentSymbol
-              || 'UNKNOWN';
+    var sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
     sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
     return 'wa_drawings_' + sym;
   }
 
-
-  // ─────────────────────────────────────────────────────────────
-  // 7.3 SAVE ALL OVERLAYS — Đọc từ Map
-  // ─────────────────────────────────────────────────────────────
-
-  function saveAllOverlays(forceSave) {
-    try {
-      if (!forceSave && global.__wa_overlay_map.size === 0) return;
-      var dataToSave = [];
-      global.__wa_overlay_map.forEach(function(data) {
-        dataToSave.push(data);
-      });
-      localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-    } catch (e) {}
+  function saveToStorage() {
+    var arr = [];
+    global.__wa_overlay_map.forEach(function(v) { arr.push(v); });
+    localStorage.setItem(getDrawingKey(), JSON.stringify(arr));
   }
-  global.__wa_saveAllOverlays = function() { saveAllOverlays(); };
 
+  function loadFromStorage() {
+    if (!_waCurrentChartRef) return;
+    var raw = localStorage.getItem(getDrawingKey());
+    if (!raw || raw === '[]') return;
+    
+    var arr;
+    try { arr = JSON.parse(raw); } catch(e) { return; }
+    
+    try { _waCurrentChartRef.removeOverlay(); } catch(e) {}
+    global.__wa_overlay_map.clear();
 
-  // ─────────────────────────────────────────────────────────────
-  // 7.4 RESTORE OVERLAYS — Polling & Recovery
-  // ─────────────────────────────────────────────────────────────
+    arr.forEach(function(item) {
+      try {
+        var cfg = { name: item.name, points: item.points, styles: item.styles, lock: !!item.lock, extendData: item.extendData };
+        var newId = _waCurrentChartRef.createOverlay(cfg);
+        if (newId) global.__wa_overlay_map.set(newId, Object.assign({}, cfg, {id: newId}));
+      } catch(e) {}
+    });
+  }
 
-  var _waRestoreTimer    = null;
-  var _waRestoreAttempts = 0;
-  var _waForceRestore    = false;
-  var _waActiveKey       = '';
+  function activateTool(toolId) {
+    if (!_waCurrentChartRef) return;
+    var container = document.getElementById('sc-chart-container');
+    if (!container) return;
 
-  function restoreOverlays() {
-    if (!global.tvChart) {
-      _waRestoreTimer = setTimeout(restoreOverlays, 300);
+    try { _waCurrentChartRef.cancelDrawing(); } catch (e) {}
+    hidePanel();
+
+    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
+    container.classList.add('wa-drawing-mode');
+
+    var TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
+    if (TEXT_TOOLS.indexOf(toolId) !== -1) {
+      if (typeof createTextOverlay === 'function') createTextOverlay(_waCurrentChartRef, toolId);
       return;
     }
 
-    if (_waRestoreTimer) {
-      clearInterval(_waRestoreTimer);
-      _waRestoreTimer = null;
+    try {
+      var tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines';
+      var s = toolStyles[tType] || {};
+      var config = { name: toolId, lock: false, styles: {} };
+
+      if (tType === 'lines' || tType === 'waves') {
+        config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
+      } else if (tType === 'shapes') {
+        config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15), borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
+      } else if (tType === 'fibo') {
+        config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 };
+        config.extendData  = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
+      } else if (tType === 'text') {
+        config.extendData  = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
+        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
+      }
+
+      _waCurrentChartRef.createOverlay(config);
+    } catch (err) {
+      if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ.');
     }
-    _waRestoreAttempts = 0;
-
-    _waRestoreTimer = setInterval(function() {
-      _waRestoreAttempts++;
-
-      if (_waRestoreAttempts > 25) {
-        clearInterval(_waRestoreTimer);
-        _waRestoreTimer = null;
-        console.warn('[WA] restoreOverlays: Hủy vì không lấy được dữ liệu nến.');
-        return;
-      }
-
-      var dataList = global.tvChart.getDataList();
-      if (!dataList || dataList.length < 5) return;
-
-      clearInterval(_waRestoreTimer);
-      _waRestoreTimer = null;
-
-      var key = getDrawingKey();
-
-      if (_waActiveKey && _waActiveKey !== key) {
-        try { global.tvChart.removeOverlay(); } catch (e) {}
-        global.__wa_overlay_map.clear();
-        _waForceRestore = true; 
-      }
-      _waActiveKey = key;
-
-      var rawData = localStorage.getItem(key);
-      if (!rawData || rawData === '[]') {
-        _waForceRestore = false;
-        return;
-      }
-
-      var overlayDefs;
-      try { overlayDefs = JSON.parse(rawData); } catch (e) { _waForceRestore = false; return; }
-      if (!Array.isArray(overlayDefs) || overlayDefs.length === 0) {
-        _waForceRestore = false;
-        return;
-      }
-
-      var needRestore = _waForceRestore || (global.__wa_overlay_map.size < overlayDefs.length);
-      if (!needRestore) return;
-
-      _waForceRestore = false;
-
-      try { global.tvChart.removeOverlay(); } catch (e) {}
-      global.__wa_overlay_map.clear();
-
-      overlayDefs.forEach(function(o) {
-        try {
-          var cfg = {
-            name:       o.name,
-            points:     o.points,
-            styles:     o.styles,
-            lock:       !!o.lock,
-            extendData: o.extendData
-          };
-          var newId = global.tvChart.createOverlay(cfg);
-          if (newId) {
-            global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
-          }
-        } catch (e) {}
-      });
-
-      console.log('[WA] Đã khôi phục ' + global.__wa_overlay_map.size + ' hình vẽ.');
-    }, 200);
   }
-  global.__wa_restoreOverlays = restoreOverlays;
 
 
   // ─────────────────────────────────────────────────────────────
-  // 7.5 GLOBAL HOOKS — Đổi khung/coin
-  // ─────────────────────────────────────────────────────────────
-
-  window.__wa_onIntervalChange = function(newInterval) {
-    saveAllOverlays();
-    _waForceRestore = true;
-    setTimeout(restoreOverlays, 80);
-  };
-
-  window.__wa_onSymbolChange = function(newSymbol) {
-    saveAllOverlays();
-    window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-    _waForceRestore = true;
-    setTimeout(restoreOverlays, 80);
-  };
-
-
-  // ─────────────────────────────────────────────────────────────
-  // 7.6 BIND CORE EVENTS (ONCE) 
+  // DOM MOUNTING & BINDING
   // ─────────────────────────────────────────────────────────────
 
   var _waCoreEventsBound = false;
-
   function bindCoreEventsOnce() {
     if (_waCoreEventsBound) return;
     _waCoreEventsBound = true;
 
-    var _isDragging = false;
-    var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
-    var _dragRaf = null;
+    var _isDragging = false, _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0, _dragRaf = null;
 
     document.addEventListener('mousedown', function(e) {
       if (!e.target.closest('.wa-drag-grip')) return;
-      _isDragging = true;
-      _startX = e.clientX;
-      _startY = e.clientY;
+      _isDragging = true; _startX = e.clientX; _startY = e.clientY;
       var tb = document.querySelector('.wa-toolbar');
-      _initLeft = tb ? tb.offsetLeft : 0;
-      _initTop  = tb ? tb.offsetTop  : 0;
+      _initLeft = tb ? tb.offsetLeft : 0; _initTop  = tb ? tb.offsetTop  : 0;
       document.body.style.userSelect = 'none';
     });
 
@@ -2583,10 +2472,7 @@
     });
 
     document.addEventListener('mouseup', function() {
-      if (_isDragging) {
-        _isDragging = false;
-        document.body.style.userSelect = '';
-      }
+      if (_isDragging) { _isDragging = false; document.body.style.userSelect = ''; }
     });
 
     document.addEventListener('dblclick', function(e) {
@@ -2601,151 +2487,29 @@
       var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
 
       if (e.key === 'Escape') {
-        if (global.tvChart) try { global.tvChart.cancelDrawing(); } catch (ex) {}
-        activateTool('pointer');
-        hidePanel();
+        if (_waCurrentChartRef) try { _waCurrentChartRef.cancelDrawing(); } catch (ex) {}
+        activateTool('pointer'); hidePanel();
         if (isInput) e.target.blur();
-        return;
-      }
-
-      if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
-        if (currentSelectedOverlay && global.tvChart) {
-          saveHistory('delete', currentSelectedOverlay);
-          global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-          _wa_untrackOverlay(currentSelectedOverlay.id);
-          hidePanel();
-          saveAllOverlays();
+      } else if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
+        if (currentSelectedOverlay && _waCurrentChartRef) {
+          _waCurrentChartRef.removeOverlay({ id: currentSelectedOverlay.id });
+          global.__wa_overlay_map.delete(currentSelectedOverlay.id);
+          hidePanel(); saveToStorage();
         }
       }
     });
   }
 
-
-  // ─────────────────────────────────────────────────────────────
-  // 7.7 BIND CHART EVENTS (Instance Tracking)
-  // ─────────────────────────────────────────────────────────────
-
-  var _waLastChartInstance = null;
-
-  function _bindChartEventsOnce() {
-    if (!global.tvChart || typeof global.tvChart.subscribeAction !== 'function') return;
-    if (global.tvChart === _waLastChartInstance) return;
-    _waLastChartInstance = global.tvChart;
-
-    global.tvChart.subscribeAction('onDrawEnd', function(data) {
-      activateTool('pointer');
-      var tb = document.querySelector('.wa-toolbar');
-      if (tb) {
-        tb.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-        var ptr = tb.querySelector('[data-tool=pointer]');
-        if (ptr) ptr.classList.add('active');
-      }
-
-      var overlayObj = Array.isArray(data) ? data[0] : data;
-      if (!overlayObj) return;
-
-      _wa_trackOverlay(overlayObj);
-      saveHistory('add', overlayObj);
-      
-      currentSelectedOverlay = overlayObj;
-      renderPanel(currentSelectedOverlay);
-      saveAllOverlays();
-    });
-
-    global.tvChart.subscribeAction('onOverlayClick', function(data) {
-      var overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
-      if (!overlayObj) { hidePanel(); return; }
-
-      var now = Date.now();
-      var isDoubleClick = (now - lastClickTime) < 300;
-      lastClickTime = now;
-
-      _wa_trackOverlay(overlayObj);
-
-      currentSelectedOverlay = overlayObj;
-      renderPanel(currentSelectedOverlay);
-
-      if (isDoubleClick && overlayObj.name === 'customText') {
-        setTimeout(function() {
-          var t = document.getElementById('wa-prop-txt');
-          if (t) { t.focus(); t.select(); }
-        }, 50);
-      }
-    });
-  }
-
-
-  // ─────────────────────────────────────────────────────────────
-  // 7.8 HELPERS 
-  // ─────────────────────────────────────────────────────────────
-
-  function saveHistory(action, obj) {
-    // Placeholder 
-  }
-
-  function activateTool(toolId) {
-    if (!global.tvChart) return;
-    var container = document.getElementById('sc-chart-container');
-    if (!container) return;
-
-    try { global.tvChart.cancelDrawing(); } catch (e) {}
-    if (typeof hidePanel === 'function') hidePanel();
-
-    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
-    container.classList.add('wa-drawing-mode');
-
-    var TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin',
-                      'annotation','comment','priceLabel','signpost','flagMarker'];
-    
-    if (TEXT_TOOLS.indexOf(toolId) !== -1) {
-      if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
-      return;
-    }
-
-    try {
-      var tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines';
-      var s = toolStyles[tType] || {};
-      var config = { name: toolId, lock: false, styles: {} };
-
-      if (tType === 'lines' || tType === 'waves') {
-        config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
-      } else if (tType === 'shapes') {
-        config.styles.polygon = {
-          style: 'stroke_fill',
-          color: hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15),
-          borderColor: s.borderColor || '#3B82F6',
-          borderSize: s.borderWidth || 1
-        };
-      } else if (tType === 'fibo') {
-        config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 };
-        config.extendData  = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
-      } else if (tType === 'text') {
-        config.extendData  = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
-        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
-      }
-
-      global.tvChart.createOverlay(config);
-    } catch (err) {
-      if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ.');
-    }
-  }
-
-
-  // ─────────────────────────────────────────────────────────────
-  // 7.9 MOUNT DOM 
-  // ─────────────────────────────────────────────────────────────
-
   function mountDOM() {
     var container = document.getElementById('sc-chart-container');
-    if (!container) return;
-    if (container.querySelector('.wa-toolbar')) return; 
+    if (!container || container.querySelector('.wa-toolbar')) return; 
 
-    injectCSS();
-    registerProExtensions();
+    if(typeof injectCSS === 'function') injectCSS();
+    if(typeof registerProExtensions === 'function') registerProExtensions();
 
     var sidebar = document.createElement('div');
     sidebar.className = 'wa-toolbar';
-    sidebar.innerHTML = buildToolbar();
+    sidebar.innerHTML = typeof buildToolbar === 'function' ? buildToolbar() : '';
     container.appendChild(sidebar);
 
     var panel = document.createElement('div');
@@ -2753,20 +2517,19 @@
     panel.id = 'wa-props-panel';
     panel.innerHTML = [
       '<div class="wa-panel-header">Cài đặt công cụ',
-      '  <button class="wa-close-btn" title="Đóng (Esc)">' + SVG.close + '</button>',
+      '  <button class="wa-close-btn" title="Đóng (Esc)">' + (typeof SVG !== 'undefined' ? SVG.close : 'X') + '</button>',
       '</div>',
       '<div class="wa-panel-body">',
       '  <div class="wa-panel-empty">',
-      '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"',
-      '         style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">',
+      '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">',
       '      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>',
       '    </svg>',
       '    <span>Chọn hoặc vẽ một hình để chỉnh sửa</span>',
       '  </div>',
       '</div>',
       '<div class="wa-panel-footer">',
-      '  <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">' + SVG.magnet + ' Khoá</button>',
-      '  <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">' + SVG.trash + ' Xoá</button>',
+      '  <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">' + (typeof SVG !== 'undefined' ? SVG.magnet : 'Lock') + ' Khoá</button>',
+      '  <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">' + (typeof SVG !== 'undefined' ? SVG.trash : 'Del') + ' Xoá</button>',
       '</div>'
     ].join('');
     container.appendChild(panel);
@@ -2798,31 +2561,33 @@
     var magnetBtn = toolbar.querySelector('#wa-btn-magnet');
     if (magnetBtn) {
       magnetBtn.addEventListener('click', function() {
-        isMagnetMode = !isMagnetMode;
-        this.classList.toggle('active', isMagnetMode);
-        showToast(isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
+        global.isMagnetMode = !global.isMagnetMode;
+        this.classList.toggle('active', global.isMagnetMode);
+        if(typeof showToast==='function') showToast(global.isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
       });
     }
 
     var clearBtn = toolbar.querySelector('#wa-btn-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', function() {
-        createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
-          if (global.tvChart) {
-            global.tvChart.removeOverlay();
-            try { global.tvChart.cancelDrawing(); } catch (e) {}
-          }
-          global.__wa_overlay_map.clear();
-          undoStack = []; redoStack = [];
-          hidePanel();
-          toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-          var ptrBtn = toolbar.querySelector('[data-tool=pointer]');
-          if (ptrBtn) ptrBtn.classList.add('active');
-          if (container) container.classList.remove('wa-drawing-mode');
-          
-          saveAllOverlays(true);
-          showToast('🗑️ Đã xoá sạch bản vẽ');
-        });
+        if(typeof createConfirmModal==='function') {
+            createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
+            if (_waCurrentChartRef) {
+                _waCurrentChartRef.removeOverlay();
+                try { _waCurrentChartRef.cancelDrawing(); } catch (e) {}
+            }
+            global.__wa_overlay_map.clear();
+            global.undoStack = []; global.redoStack = [];
+            hidePanel();
+            toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+            var ptrBtn = toolbar.querySelector('[data-tool=pointer]');
+            if (ptrBtn) ptrBtn.classList.add('active');
+            if (container) container.classList.remove('wa-drawing-mode');
+            
+            saveToStorage();
+            if(typeof showToast==='function') showToast('🗑️ Đã xoá sạch bản vẽ');
+            });
+        }
       });
     }
 
@@ -2832,106 +2597,135 @@
 
       var lockBtn = panel.querySelector('#wa-btn-p-lock');
       if (lockBtn) lockBtn.addEventListener('click', function() {
-        if (!currentSelectedOverlay || !global.tvChart) return;
-        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
+        if (!currentSelectedOverlay || !_waCurrentChartRef) return;
+        _waCurrentChartRef.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
         var entry = global.__wa_overlay_map.get(currentSelectedOverlay.id);
         if (entry) entry.lock = !currentSelectedOverlay.lock;
-        showToast('Đã đổi trạng thái khoá');
-        saveAllOverlays();
+        if(typeof showToast==='function') showToast('Đã đổi trạng thái khoá');
+        saveToStorage();
       });
 
       var delBtn = panel.querySelector('#wa-btn-p-del');
       if (delBtn) delBtn.addEventListener('click', function() {
-        if (!currentSelectedOverlay || !global.tvChart) return;
-        saveHistory('delete', currentSelectedOverlay);
-        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-        _wa_untrackOverlay(currentSelectedOverlay.id);
+        if (!currentSelectedOverlay || !_waCurrentChartRef) return;
+        _waCurrentChartRef.removeOverlay({ id: currentSelectedOverlay.id });
+        global.__wa_overlay_map.delete(currentSelectedOverlay.id);
         hidePanel();
-        saveAllOverlays();
+        saveToStorage();
       });
     }
   }
 
 
   // ─────────────────────────────────────────────────────────────
-  // 7.10 MOUNT UI 
+  // VÒNG LẶP THEO DÕI SINH TỒN (KEEPALIVE ENGINE)
+  // Quét mỗi 200ms, không tốn CPU, bắt mọi sự kiện của Framework UI
   // ─────────────────────────────────────────────────────────────
 
-  function mountUI() {
-    bindCoreEventsOnce();
-    mountDOM();
-
-    var _waitChart = setInterval(function() {
-      if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
-        clearInterval(_waitChart);
-        _bindChartEventsOnce();
-        restoreOverlays(); 
-      }
-    }, 100);
-  }
-
-
-  // ─────────────────────────────────────────────────────────────
-  // 7.11 TOOLBAR WATCHDOG (Throttled & Targeted)
-  // ─────────────────────────────────────────────────────────────
-
-  (function startToolbarWatchdog() {
-    if (window.__wa_watchdog_started) return;
-    window.__wa_watchdog_started = true;
-
-    var _throttleTimer = null;
-
-    function _checkAndHeal() {
-      var container = document.getElementById('sc-chart-container');
-      if (!container || container.querySelector('.wa-toolbar')) return;
-
-      mountDOM();
-
-      if (global.tvChart) {
-        _bindChartEventsOnce();
-      }
-
-      _waForceRestore = true;
-      setTimeout(restoreOverlays, 300);
+  setInterval(function() {
+    // 1. Phục hồi Toolbar nếu Framework UI xóa mất DOM
+    var container = document.getElementById('sc-chart-container');
+    if (container && !container.querySelector('.wa-toolbar')) {
+        mountDOM();
     }
 
-    function _startObserver() {
-      var target = document.body;
-      var container = document.getElementById('sc-chart-container');
-      if (container && container.parentElement && container.parentElement !== document.body) {
-        target = container.parentElement.parentElement || container.parentElement || document.body;
-      }
+    // 2. Phát hiện tvChart bị Framework đập đi xây lại (Dead Reference)
+    if (global.tvChart && global.tvChart !== _waCurrentChartRef) {
+        _waCurrentChartRef = global.tvChart;
+        global.__wa_overlay_map.clear(); // Dọn tàn dư
 
-      var observer = new MutationObserver(function() {
-        if (_throttleTimer) return;
-        _throttleTimer = setTimeout(function() {
-          _throttleTimer = null;
-          _checkAndHeal();
-        }, 300);
-      });
+        // Monkey Patch 'applyNewData' để chộp sự kiện đổi Timeframe/Coin 
+        // TRƯỚC KHI KLineChart kịp xóa nến và hình cũ.
+        if (!_waCurrentChartRef.__wa_patched && typeof _waCurrentChartRef.applyNewData === 'function') {
+            _waCurrentChartRef.__wa_patched = true;
+            var origApply = _waCurrentChartRef.applyNewData.bind(_waCurrentChartRef);
+            
+            _waCurrentChartRef.applyNewData = function(dataList) {
+                saveToStorage(); // 🚨 Cứu dữ liệu trước khi bị KLineChart diệt!
+                var res = origApply(dataList);
+                global.__wa_overlay_map.clear(); // Chart đã trắng trơn, map cũng phải trắng
+                setTimeout(loadFromStorage, 150); // Chờ nến lên hình rồi vẽ lại
+                return res;
+            };
+        }
 
-      observer.observe(target, {
-        childList: true,
-        subtree: true  
-      });
+        // Gắn tai nghe sự kiện Vẽ cho cái Chart mới
+        _waCurrentChartRef.subscribeAction('onDrawEnd', function(data) {
+            activateTool('pointer');
+            var tb = document.querySelector('.wa-toolbar');
+            if (tb) {
+                tb.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+                var p = tb.querySelector('[data-tool=pointer]');
+                if(p) p.classList.add('active');
+            }
+
+            var o = Array.isArray(data) ? data[0] : data;
+            if (!o) return;
+
+            global.__wa_overlay_map.set(o.id, {
+                name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
+            });
+            saveToStorage();
+
+            global.currentSelectedOverlay = o;
+            if (typeof renderPanel === 'function') renderPanel(o);
+        });
+
+        _waCurrentChartRef.subscribeAction('onOverlayClick', function(data) {
+            var o = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
+            if (!o) { hidePanel(); return; }
+
+            global.__wa_overlay_map.set(o.id, {
+                name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
+            });
+            saveToStorage();
+
+            global.currentSelectedOverlay = o;
+            if (typeof renderPanel === 'function') renderPanel(o);
+        });
+
+        // Chờ nến của biểu đồ mới load xong để bung lụa (Khôi phục hình)
+        var attempts = 0;
+        var wait = setInterval(function() {
+            attempts++;
+            if (attempts > 50) { clearInterval(wait); return; } // Quá 5 giây thì dẹp
+            if (_waCurrentChartRef.getDataList().length >= 5) {
+                clearInterval(wait);
+                loadFromStorage();
+            }
+        }, 100);
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', _startObserver);
-    } else {
-      _startObserver();
+    // 3. Phát hiện đổi Symbol (Coin) từ biến môi trường
+    var keyNow = getDrawingKey();
+    if (_waCurrentSymbolKey !== "" && _waCurrentSymbolKey !== keyNow) {
+        // Có sự thay đổi Coin!
+        _waCurrentSymbolKey = keyNow;
+        if (_waCurrentChartRef) {
+            try { _waCurrentChartRef.removeOverlay(); } catch(e){}
+            global.__wa_overlay_map.clear();
+            
+            // Chờ nến của Coin mới xuất hiện
+            var attempts2 = 0;
+            var wait2 = setInterval(function() {
+                attempts2++;
+                if (attempts2 > 50) { clearInterval(wait2); return; }
+                if (_waCurrentChartRef.getDataList().length >= 5) {
+                    clearInterval(wait2);
+                    loadFromStorage();
+                }
+            }, 100);
+        }
+    } else if (_waCurrentSymbolKey === "") {
+        _waCurrentSymbolKey = keyNow;
     }
-  })();
 
+  }, 200);
 
   // ─────────────────────────────────────────────────────────────
-  // 7.12 BOOT
+  // STARTUP
   // ─────────────────────────────────────────────────────────────
+  bindCoreEventsOnce();
+  mountDOM();
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountUI);
-  } else {
-    mountUI();
-  }
-
-})(window);
+})(window); // <-- Chú ý giữ nguyên dòng đóng module này
