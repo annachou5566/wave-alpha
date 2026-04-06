@@ -1761,9 +1761,9 @@
             let now = Date.now(); let isDoubleClick = (now - lastClickTime < 300); lastClickTime = now;
             currentSelectedOverlay = overlayObj; renderPanel(currentSelectedOverlay);
 
-            if(isDoubleClick && overlayObj.name === 'customText') {
-               setTimeout(() => { let t = document.getElementById('wa-prop-txt'); if(t) { t.focus(); t.select(); } }, 50);
-            }
+            if(isDoubleClick && getToolCategory(overlayObj.name) === 'text') {
+   setTimeout(() => { let t = document.getElementById('wa-prop-txt'); if(t) { t.focus(); t.select(); } }, 50);
+}
           });
         }
         clearInterval(waitChart);
@@ -1908,7 +1908,13 @@
       }
 
       saveStyles();
-      try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
+      // ...
+try { 
+  // Đồng bộ ngược state để các lần gõ phím tiếp theo không bị đè dữ liệu cũ
+  currentSelectedOverlay.styles = newStyles;
+  currentSelectedOverlay.extendData = newExt;
+  global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); 
+} catch(e){}
     }, 16);
 
     // 2. KÍCH HOẠT EVENT CLICK EMOJI (GỌI UPDATE ENGINE Ở TRÊN)
