@@ -2360,13 +2360,21 @@
 
 
   // ============================================================
-  // 7. THE ULTIMATE KEEPALIVE ENGINE (INTERCEPTOR PATTERN)
-  // Không phụ thuộc vào Hook của UI framework. Tự động sinh tồn.
+  // 7. KEEPALIVE ENGINE v6.0 (TỔNG HỢP TRIỆT ĐỂ)
+  // Bóc tách Event + Instance Tracker + Timeframe Hooks
   // ============================================================
 
   global.__wa_overlay_map = global.__wa_overlay_map || new Map();
   var _waCurrentChartRef = null;
-  var _waCurrentSymbolKey = "";
+  var _waForceRestore = false;
+
+  // ─── EVENT NORMALIZER (Bóc tách Event bọc object theo Docs) ───
+  function _wa_extractOverlay(data) {
+    if (!data) return null;
+    var o = Array.isArray(data) ? data[0] : data;
+    // Bắt đúng cấu trúc { overlay: {...} } của KLC v9
+    return (o && o.overlay) ? o.overlay : o; 
+  }
 
   function getDrawingKey() {
     var sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
@@ -2399,6 +2407,18 @@
       } catch(e) {}
     });
   }
+
+  // ─── CHART-UI HOOKS (Bảo toàn dữ liệu ngay trước khi Framework dispose chart) ───
+  window.__wa_onIntervalChange = function(newInterval) {
+    saveToStorage();       // Cứu data vào ổ cứng
+    _waForceRestore = true; // Dặn Watchdog khôi phục khi chart mới lên
+  };
+
+  window.__wa_onSymbolChange = function(newSymbol) {
+    saveToStorage();
+    window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    _waForceRestore = true;
+  };
 
   function activateTool(toolId) {
     if (!_waCurrentChartRef) return;
@@ -2433,7 +2453,6 @@
         config.extendData  = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
       }
-
       _waCurrentChartRef.createOverlay(config);
     } catch (err) {
       if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ.');
@@ -2442,7 +2461,7 @@
 
 
   // ─────────────────────────────────────────────────────────────
-  // DOM MOUNTING & BINDING
+  // BINDING DOM (Chạy đúng 1 lần toàn vòng đời trang)
   // ─────────────────────────────────────────────────────────────
 
   var _waCoreEventsBound = false;
@@ -2618,112 +2637,72 @@
 
 
   // ─────────────────────────────────────────────────────────────
-  // VÒNG LẶP THEO DÕI SINH TỒN (KEEPALIVE ENGINE)
-  // Quét mỗi 200ms, không tốn CPU, bắt mọi sự kiện của Framework UI
+  // ENGINE THEO DÕI VÀ PHỤC HỒI (CHART INSTANCE TRACKER)
   // ─────────────────────────────────────────────────────────────
 
+  function _bindChartEvents(chart) {
+    // Sửa lỗi bóc tách Event theo tài liệu KLC v9
+    chart.subscribeAction('onDrawEnd', function(data) {
+        activateTool('pointer');
+        var tb = document.querySelector('.wa-toolbar');
+        if (tb) {
+            tb.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+            var p = tb.querySelector('[data-tool=pointer]');
+            if(p) p.classList.add('active');
+        }
+
+        var o = _wa_extractOverlay(data);
+        if (!o || !o.id) return;
+
+        global.__wa_overlay_map.set(o.id, {
+            name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
+        });
+        saveToStorage();
+
+        global.currentSelectedOverlay = o;
+        if (typeof renderPanel === 'function') renderPanel(o);
+    });
+
+    chart.subscribeAction('onOverlayClick', function(data) {
+        var o = _wa_extractOverlay(data);
+        if (!o || !o.id) { hidePanel(); return; }
+
+        global.__wa_overlay_map.set(o.id, {
+            name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
+        });
+        saveToStorage();
+
+        global.currentSelectedOverlay = o;
+        if (typeof renderPanel === 'function') renderPanel(o);
+    });
+  }
+
+  // Polling nhẹ (200ms) để giữ mạng sống cho Toolbar và Overlays
   setInterval(function() {
-    // 1. Phục hồi Toolbar nếu Framework UI xóa mất DOM
     var container = document.getElementById('sc-chart-container');
     if (container && !container.querySelector('.wa-toolbar')) {
         mountDOM();
     }
 
-    // 2. Phát hiện tvChart bị Framework đập đi xây lại (Dead Reference)
+    // Nhận diện Framework vừa tiêu diệt Chart cũ và tạo Chart mới
     if (global.tvChart && global.tvChart !== _waCurrentChartRef) {
         _waCurrentChartRef = global.tvChart;
-        global.__wa_overlay_map.clear(); // Dọn tàn dư
-
-        // Monkey Patch 'applyNewData' để chộp sự kiện đổi Timeframe/Coin 
-        // TRƯỚC KHI KLineChart kịp xóa nến và hình cũ.
-        if (!_waCurrentChartRef.__wa_patched && typeof _waCurrentChartRef.applyNewData === 'function') {
-            _waCurrentChartRef.__wa_patched = true;
-            var origApply = _waCurrentChartRef.applyNewData.bind(_waCurrentChartRef);
-            
-            _waCurrentChartRef.applyNewData = function(dataList) {
-                saveToStorage(); // 🚨 Cứu dữ liệu trước khi bị KLineChart diệt!
-                var res = origApply(dataList);
-                global.__wa_overlay_map.clear(); // Chart đã trắng trơn, map cũng phải trắng
-                setTimeout(loadFromStorage, 150); // Chờ nến lên hình rồi vẽ lại
-                return res;
-            };
-        }
-
-        // Gắn tai nghe sự kiện Vẽ cho cái Chart mới
-        _waCurrentChartRef.subscribeAction('onDrawEnd', function(data) {
-            activateTool('pointer');
-            var tb = document.querySelector('.wa-toolbar');
-            if (tb) {
-                tb.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-                var p = tb.querySelector('[data-tool=pointer]');
-                if(p) p.classList.add('active');
-            }
-
-            var o = Array.isArray(data) ? data[0] : data;
-            if (!o) return;
-
-            global.__wa_overlay_map.set(o.id, {
-                name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
-            });
-            saveToStorage();
-
-            global.currentSelectedOverlay = o;
-            if (typeof renderPanel === 'function') renderPanel(o);
-        });
-
-        _waCurrentChartRef.subscribeAction('onOverlayClick', function(data) {
-            var o = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
-            if (!o) { hidePanel(); return; }
-
-            global.__wa_overlay_map.set(o.id, {
-                name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
-            });
-            saveToStorage();
-
-            global.currentSelectedOverlay = o;
-            if (typeof renderPanel === 'function') renderPanel(o);
-        });
-
-        // Chờ nến của biểu đồ mới load xong để bung lụa (Khôi phục hình)
-        var attempts = 0;
-        var wait = setInterval(function() {
-            attempts++;
-            if (attempts > 50) { clearInterval(wait); return; } // Quá 5 giây thì dẹp
-            if (_waCurrentChartRef.getDataList().length >= 5) {
-                clearInterval(wait);
-                loadFromStorage();
-            }
-        }, 100);
+        _waForceRestore = true; 
+        _bindChartEvents(_waCurrentChartRef);
     }
 
-    // 3. Phát hiện đổi Symbol (Coin) từ biến môi trường
-    var keyNow = getDrawingKey();
-    if (_waCurrentSymbolKey !== "" && _waCurrentSymbolKey !== keyNow) {
-        // Có sự thay đổi Coin!
-        _waCurrentSymbolKey = keyNow;
-        if (_waCurrentChartRef) {
-            try { _waCurrentChartRef.removeOverlay(); } catch(e){}
-            global.__wa_overlay_map.clear();
-            
-            // Chờ nến của Coin mới xuất hiện
-            var attempts2 = 0;
-            var wait2 = setInterval(function() {
-                attempts2++;
-                if (attempts2 > 50) { clearInterval(wait2); return; }
-                if (_waCurrentChartRef.getDataList().length >= 5) {
-                    clearInterval(wait2);
-                    loadFromStorage();
-                }
-            }, 100);
+    // Nếu có cờ Restore, chờ data KLineChart nạp xong để bung hình ra
+    if (_waForceRestore && _waCurrentChartRef) {
+        var nData = _waCurrentChartRef.getDataList();
+        if (nData && nData.length >= 5) {
+            _waForceRestore = false;
+            loadFromStorage();
         }
-    } else if (_waCurrentSymbolKey === "") {
-        _waCurrentSymbolKey = keyNow;
     }
-
   }, 200);
 
   // ─────────────────────────────────────────────────────────────
-  // STARTUP
+  // STARTUP BOOT
   // ─────────────────────────────────────────────────────────────
   bindCoreEventsOnce();
   mountDOM();
