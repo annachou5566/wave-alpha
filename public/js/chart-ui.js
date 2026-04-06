@@ -997,16 +997,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                             upWickColor: ubd, downWickColor: dbd
                         }
                     },
-                    // 👇 THÊM ĐOẠN NÀY ĐỂ DIỆT KHUNG XANH TOÀN CỤC 👇
-                    overlay: {
-                        text: {
-                            backgroundColor: 'transparent',
-                            borderColor: 'transparent',
-                            borderSize: 0,
-                            paddingLeft: 0, paddingRight: 0, paddingTop: 0, paddingBottom: 0
-                        }
-                    },
-                    // 👆 HẾT ĐOẠN THÊM 👆
+                    
                     watermark: {
                         show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
                     }
