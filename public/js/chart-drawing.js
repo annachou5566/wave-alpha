@@ -29,11 +29,11 @@
 
   // Khởi tạo LocalStorage với đầy đủ các thuộc tính để KHÔNG BAO GIỜ CRASH
   const defaultStyles = {
-    lines: { lineColor: '#00F0FF', lineWidth: 1, lineStyle: 'solid' },
-    shapes: { borderColor: '#00F0FF', borderWidth: 1, fillColor: '#00F0FF', fillOpacity: 0.15 }, 
-    fibo: { lineColor: '#EAECEF', showLabels: true, fillOpacity: 0.15 },
-    text: { textColor: '#EAECEF', textSize: 14, textInput: 'Văn bản...' },
-    waves: { lineColor: '#00F0FF', lineWidth: 1, textColor: '#EAECEF', textSize: 12 }
+    lines: { lineColor: '#3B82F6', lineWidth: 1, lineStyle: 'solid' },
+    shapes: { borderColor: '#3B82F6', borderWidth: 1, fillColor: '#3B82F6', fillOpacity: 0.15 }, 
+    fibo: { lineColor: '#E8EDF2', showLabels: true, fillOpacity: 0.15 },
+    text: { textColor: '#E8EDF2', textSize: 14, textInput: 'Văn bản...' },
+    waves: { lineColor: '#3B82F6', lineWidth: 1, textColor: '#E8EDF2', textSize: 12 }
   };
   
   // Đồng bộ Storage an toàn
@@ -1328,74 +1328,327 @@
   // ======================================================
   function injectCSS() {
     if (document.getElementById('wa-pro-css-v4')) return;
+
+    // Inject Google Fonts
+    if (!document.getElementById('wa-gfonts')) {
+      const lnk = document.createElement('link');
+      lnk.id = 'wa-gfonts'; lnk.rel = 'stylesheet';
+      lnk.href = 'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lexend:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=Josefin+Sans:wght@400;600;700&family=Raleway:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap';
+      document.head.appendChild(lnk);
+    }
+
     const style = document.createElement('style'); style.id = 'wa-pro-css-v4';
     style.textContent = `
+      /* ── DESIGN TOKENS ── */
+      :root {
+        --wa-bg-base:      #0A0C10;
+        --wa-bg-surface:   #0F1218;
+        --wa-bg-elevated:  #151B23;
+        --wa-bg-overlay:   #1C242E;
+        --wa-bg-modal:     rgba(10,12,16,0.88);
+        --wa-border-subtle:  #1E2733;
+        --wa-border-default: #273040;
+        --wa-border-focus:   #3B82F6;
+        --wa-text-primary:   #E8EDF2;
+        --wa-text-secondary: #8896A7;
+        --wa-text-muted:     #4A5568;
+        --wa-text-accent:    #60A5FA;
+        --wa-accent:         #3B82F6;
+        --wa-accent-glow:    rgba(59,130,246,0.15);
+        --wa-accent-bright:  #60A5FA;
+        --wa-success:  #22C55E;
+        --wa-danger:   #EF4444;
+        --wa-warning:  #F59E0B;
+        --wa-purple:   #8B5CF6;
+        --wa-cyan:     #06B6D4;
+        --wa-font-main: 'Be Vietnam Pro', 'Lexend', 'Inter', sans-serif;
+      }
+
+      /* ── KEYFRAMES ── */
+      @keyframes wa-fadein {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes wa-fadein-scale {
+        from { opacity: 0; transform: scale(0.92); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+
+      /* ── BASE ── */
       #sc-chart-container { position: relative !important; overflow: hidden !important; }
+      .wa-toolbar, .wa-props-panel, .wa-context-menu, .wa-toast {
+        font-family: var(--wa-font-main);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── TOOLBAR ── */
+      .wa-toolbar {
+        position: absolute; top: 60px; left: 16px; z-index: 999;
+        width: 48px;
+        background: var(--wa-bg-surface);
+        border: 1px solid var(--wa-border-subtle);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+        display: flex; flex-direction: column; align-items: center;
+        padding: 0 0 8px 0;
+        transition: height 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s;
+      }
+      .wa-toolbar.collapsed { height: 20px; overflow: hidden; }
+      .wa-toolbar.collapsed .wa-drag-grip::after { content: 'Nhấn đúp để mở rộng'; position: absolute; left: 56px; top: 50%; transform: translateY(-50%); background: var(--wa-bg-elevated); color: var(--wa-text-secondary); padding: 4px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; border: 1px solid var(--wa-border-default); pointer-events: none; }
       
-      .wa-toolbar { position: absolute; top: 60px; left: 16px; z-index: 999; width: 44px; background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; padding: 0 0 6px 0; transition: height 0.2s, overflow 0.2s; }
-      .wa-toolbar.collapsed { height: 24px; overflow: hidden; }
-      .wa-drag-grip { width: 100%; height: 24px; display: flex; align-items: center; justify-content: center; cursor: grab; border-bottom: 1px solid transparent; opacity: 0.6; margin-bottom: 4px; background: #2b3139; border-radius: 8px 8px 0 0; }
+      /* Drawing mode glow */
+      .wa-drawing-mode .wa-toolbar {
+        box-shadow: 0 0 0 2px var(--wa-accent), 0 8px 32px rgba(59,130,246,0.2);
+      }
+
+      /* Draw step badge */
+      .wa-step-badge {
+        position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+        background: var(--wa-accent-glow); color: var(--wa-accent-bright);
+        border: 1px solid rgba(59,130,246,0.3); border-radius: 20px;
+        font-size: 10px; font-weight: 700; padding: 2px 8px;
+        white-space: nowrap; pointer-events: none;
+        font-family: var(--wa-font-main);
+      }
+
+      .wa-drag-grip {
+        width: 100%; height: 20px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: grab; opacity: 0.5;
+        background: var(--wa-bg-elevated);
+        border-radius: 12px 12px 0 0;
+        margin-bottom: 4px;
+        transition: opacity 0.15s;
+        position: relative;
+      }
+      .wa-drag-grip:hover { opacity: 1; }
       .wa-drag-grip:active { cursor: grabbing; }
-      .wa-drag-grip svg { width: 14px; height: 14px; color: #848E9C; }
-      .wa-drag-grip:hover { opacity: 1; color: #EAECEF; }
-      
-      .wa-tb-btn { width: 34px; height: 34px; border-radius: 6px; border: none; background: transparent; color: #848E9C; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 2px 0; position: relative; transition: 0.15s; }
+      .wa-drag-grip svg { width: 14px; height: 14px; color: var(--wa-text-secondary); }
+
+      /* Tool buttons */
+      .wa-tb-btn {
+        width: 38px; height: 38px;
+        border-radius: 8px; border: none;
+        background: transparent; color: var(--wa-text-secondary);
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        margin: 1px 0; position: relative;
+        transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+      }
       .wa-tb-btn svg { width: 20px; height: 20px; }
-      .wa-tb-btn:hover { background: #2b3139; color: #EAECEF; }
-      .wa-tb-btn.active { background: rgba(0, 240, 255, 0.15); color: #00F0FF; box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
-      
-      .wa-tb-btn::after { content: attr(data-tooltip); position: absolute; left: 48px; top: 50%; transform: translateY(-50%); background: #1E2329; color: #EAECEF; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; pointer-events: none; opacity: 0; transition: 0.2s; border: 1px solid #2b3139; z-index: 1000; }
+      .wa-tb-btn:hover {
+        background: var(--wa-bg-overlay); color: var(--wa-text-primary);
+        transform: scale(1.08);
+      }
+      .wa-tb-btn.active {
+        background: var(--wa-accent-glow); color: var(--wa-accent-bright);
+        box-shadow: 0 0 0 1px var(--wa-accent), 0 0 12px rgba(59,130,246,0.2);
+        border-radius: 8px;
+        border-left: 2px solid var(--wa-accent);
+      }
+      .wa-tb-btn[data-tool="pointer"] { cursor: pointer; }
+
+      /* Tooltip */
+      .wa-tb-btn::after {
+        content: attr(data-tooltip);
+        position: absolute; left: 48px; top: 50%; transform: translateY(-50%);
+        background: var(--wa-bg-elevated); color: var(--wa-text-primary);
+        padding: 5px 10px; border-radius: 6px; font-size: 11px;
+        white-space: nowrap; pointer-events: none; opacity: 0;
+        transition: opacity 0.18s; border: 1px solid var(--wa-border-default);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1000;
+        font-family: var(--wa-font-main);
+      }
       .wa-tb-btn:hover::after { opacity: 1; }
 
+      /* Group submenu chevron */
       .wa-tb-group { position: relative; width: 100%; display: flex; justify-content: center; }
-      .wa-tb-group::after { content: ''; position: absolute; right: 4px; bottom: 6px; border: solid #848E9C; border-width: 0 1.5px 1.5px 0; padding: 1.5px; transform: rotate(-45deg); pointer-events: none; }
+      .wa-tb-group::after {
+        content: '';
+        position: absolute; right: 3px; bottom: 8px;
+        width: 5px; height: 5px;
+        border: solid var(--wa-text-muted); border-width: 0 1.5px 1.5px 0;
+        transform: rotate(-45deg); pointer-events: none;
+      }
       .wa-tb-menu { position: absolute; left: 100%; top: -6px; padding-left: 8px; display: none; z-index: 1000; }
       .wa-tb-group:hover .wa-tb-menu { display: block; }
-      .wa-tb-menu-inner { 
-          background: #161A1E; border: 1px solid #2b3139; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
-          width: 230px; padding: 6px 0; display: flex; flex-direction: column; 
-          max-height: 55vh; overflow-y: auto; overflow-x: hidden;
+      .wa-tb-menu-inner {
+        background: var(--wa-bg-elevated);
+        border: 1px solid var(--wa-border-subtle);
+        border-radius: 12px;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+        width: 240px; padding: 8px 0;
+        display: flex; flex-direction: column;
+        max-height: 55vh; overflow-y: auto; overflow-x: hidden;
+        animation: wa-fadein 0.18s ease;
+        backdrop-filter: blur(20px);
       }
-      .wa-tb-menu-inner::-webkit-scrollbar { width: 4px; }
-      .wa-tb-menu-inner::-webkit-scrollbar-thumb { background: #2b3139; border-radius: 4px; }
-      .wa-tb-menu-inner::-webkit-scrollbar-track { background: transparent; }
+      .wa-tb-menu-inner::-webkit-scrollbar { width: 3px; }
+      .wa-tb-menu-inner::-webkit-scrollbar-thumb { background: var(--wa-border-default); border-radius: 3px; }
+      .wa-tb-menu-inner::-webkit-scrollbar-track { background: var(--wa-border-subtle); border-radius: 3px; }
 
-      .wa-menu-header { padding: 12px 16px 4px 16px; color: #848E9C; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; pointer-events: none; }
-      .wa-menu-divider { width: 100%; height: 1px; background: #2b3139; margin: 4px 0; }
+      .wa-menu-header {
+        padding: 14px 16px 6px 16px;
+        color: var(--wa-text-muted); font-size: 10px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 1.2px; pointer-events: none;
+        border-left: 2px solid var(--wa-accent); margin-left: 8px;
+        padding-left: 10px;
+      }
+      .wa-menu-divider { height: 1px; background: var(--wa-border-subtle); margin: 6px 12px; border-radius: 1px; }
 
+      /* Bottom action group */
       .wa-bot-actions { display: flex; width: 100%; justify-content: space-evenly; padding: 4px 0; }
-      .wa-bot-actions .wa-tb-btn { width: 20px; height: 24px; margin: 0; }
-      .wa-bot-actions .wa-tb-btn svg { width: 15px; height: 15px; }
-      
-      .wa-menu-item { padding: 8px 16px 8px 24px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
-      .wa-menu-item:hover { background: #2b3139; color: #00F0FF; }
+      .wa-bot-group-divider { width: 28px; height: 1px; background: var(--wa-border-subtle); margin: 4px 0; }
+      .wa-bot-actions .wa-tb-btn { width: 34px; height: 30px; margin: 0; }
+      .wa-bot-actions .wa-tb-btn svg { width: 16px; height: 16px; }
+      #wa-btn-magnet.active { color: var(--wa-warning); box-shadow: 0 0 0 1px var(--wa-warning), 0 0 10px rgba(245,158,11,0.2); background: rgba(245,158,11,0.1); border-left: 2px solid var(--wa-warning); }
+      #wa-btn-clear:hover { color: var(--wa-danger); background: rgba(239,68,68,0.1); }
 
-      .wa-props-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 260px; background: rgba(22, 26, 30, 0.95); border-left: 1px solid #2b3139; box-shadow: -4px 0 24px rgba(0,0,0,0.5); backdrop-filter: blur(10px); z-index: 999; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
-      .wa-props-panel.show { transform: translateX(0); }
-      .wa-panel-header { padding: 16px; border-bottom: 1px solid #2b3139; display: flex; justify-content: space-between; align-items: center; color: #EAECEF; font-weight: bold; font-size: 14px; }
-      .wa-close-btn { background: none; border: none; color: #848E9C; cursor: pointer; padding: 4px; border-radius: 4px; display:flex; align-items:center; }
-      .wa-close-btn:hover { background: #2b3139; color: #F6465D; }
-      .wa-panel-body { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-      
-      .wa-control-row { display: flex; flex-direction: column; gap: 6px; }
-      .wa-control-row label { color: #848E9C; font-size: 12px; }
-      .wa-input, .wa-select { background: #0B0E11; border: 1px solid #2b3139; color: #EAECEF; padding: 8px 10px; border-radius: 4px; outline: none; font-size: 13px; width: 100%; box-sizing: border-box; }
-      .wa-input:focus, .wa-select:focus { border-color: #00F0FF; }
-      .wa-textarea { height: 80px; resize: none; font-family: sans-serif; }
-      .wa-color-picker { width: 100%; height: 34px; padding: 0; border: 1px solid #2b3139; border-radius: 4px; cursor: pointer; background: #0B0E11; }
-      .wa-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
-      .wa-color-picker::-webkit-color-swatch { border: none; border-radius: 3px; }
-      
-      .wa-panel-footer { padding: 12px 16px; border-top: 1px solid #2b3139; display: flex; gap: 8px; justify-content: space-between; }
-      .wa-action-btn { flex: 1; background: #2b3139; border: none; color: #EAECEF; padding: 10px; border-radius: 4px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
-      .wa-action-btn:hover { background: #3c4450; }
-      .wa-action-btn.delete:hover { background: rgba(246, 70, 93, 0.2); color: #F6465D; }
+      .wa-menu-item {
+        padding: 8px 16px; font-size: 12.5px;
+        color: var(--wa-text-secondary); cursor: pointer;
+        border-radius: 6px; margin: 1px 6px;
+        transition: background 0.12s, color 0.12s, transform 0.12s;
+      }
+      .wa-menu-item:hover {
+        background: var(--wa-bg-overlay); color: var(--wa-text-primary);
+        transform: translateX(2px);
+      }
 
-      .wa-context-menu { position: fixed; background: #161A1E; border: 1px solid #2b3139; border-radius: 6px; padding: 4px 0; min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.6); z-index: 10000; display: none; }
-      .wa-cm-item { padding: 10px 16px; color: #EAECEF; font-size: 13px; cursor: pointer; transition: 0.1s; }
-      .wa-cm-item:hover { background: #2b3139; color: #00F0FF; }
-      .wa-toast { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(22, 26, 30, 0.9); border: 1px solid #2b3139; color: #EAECEF; padding: 8px 16px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 9999; pointer-events: none; }
-      
+      /* ── PROPS PANEL ── */
+      .wa-props-panel {
+        position: absolute; right: 0; top: 0; bottom: 0; width: 280px;
+        background: var(--wa-bg-modal);
+        border-left: 1px solid var(--wa-border-subtle);
+        box-shadow: -8px 0 40px rgba(0,0,0,0.6);
+        backdrop-filter: blur(24px);
+        z-index: 999;
+        transform: translateX(100%); opacity: 0;
+        transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s cubic-bezier(0.4,0,0.2,1);
+        display: flex; flex-direction: column;
+      }
+      .wa-props-panel.show { transform: translateX(0); opacity: 1; }
+
+      .wa-panel-header {
+        padding: 14px 16px;
+        background: var(--wa-bg-elevated);
+        border-bottom: 1px solid var(--wa-border-subtle);
+        display: flex; justify-content: space-between; align-items: center;
+        color: var(--wa-text-secondary); font-weight: 700; font-size: 12px;
+        text-transform: uppercase; letter-spacing: 0.5px;
+      }
+      .wa-close-btn { background: none; border: none; color: var(--wa-text-muted); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; transition: 0.15s; }
+      .wa-close-btn:hover { background: var(--wa-bg-overlay); color: var(--wa-danger); }
+
+      .wa-panel-body {
+        padding: 16px; flex: 1; overflow-y: auto;
+        display: flex; flex-direction: column; gap: 14px;
+      }
+      .wa-panel-body::-webkit-scrollbar { width: 3px; }
+      .wa-panel-body::-webkit-scrollbar-thumb { background: var(--wa-border-default); border-radius: 3px; }
+      .wa-panel-body::-webkit-scrollbar-track { background: var(--wa-border-subtle); border-radius: 3px; }
+
+      /* Empty state */
+      .wa-panel-empty {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 32px 16px; opacity: 0.3; text-align: center; gap: 10px;
+      }
+      .wa-panel-empty svg { width: 36px; height: 36px; color: var(--wa-text-muted); }
+      .wa-panel-empty p { font-size: 12px; color: var(--wa-text-muted); line-height: 1.5; margin: 0; }
+
+      .wa-control-row { display: flex; flex-direction: column; gap: 5px; }
+      .wa-control-row label {
+        color: var(--wa-text-muted); font-size: 11px; font-weight: 600;
+        letter-spacing: 0.3px; text-transform: uppercase;
+      }
+
+      .wa-input, .wa-select {
+        background: var(--wa-bg-base); border: 1px solid var(--wa-border-default);
+        color: var(--wa-text-primary); padding: 8px 12px;
+        border-radius: 8px; outline: none; font-size: 12.5px;
+        width: 100%; box-sizing: border-box;
+        font-family: var(--wa-font-main);
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      .wa-input:focus, .wa-select:focus {
+        border-color: var(--wa-border-focus);
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+      }
+      .wa-textarea { height: 90px; resize: vertical; line-height: 1.5; }
+      .wa-color-picker {
+        width: 100%; height: 38px; padding: 0;
+        border: 1px solid var(--wa-border-default); border-radius: 8px;
+        cursor: pointer; background: var(--wa-bg-base); overflow: hidden;
+      }
+      .wa-color-picker::-webkit-color-swatch-wrapper { padding: 2px; }
+      .wa-color-picker::-webkit-color-swatch { border: none; border-radius: 6px; }
+
+      /* Swatches */
+      .wa-swatches-row {
+        display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
+        margin-bottom: 6px;
+      }
+      .wa-swatch {
+        width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer;
+        border: 1.5px solid transparent;
+        transition: transform 0.12s, border-color 0.12s;
+      }
+      .wa-swatch:hover { transform: scale(1.2); border-color: var(--wa-text-primary); }
+      .wa-swatch.selected { border-color: var(--wa-accent-bright); box-shadow: 0 0 0 2px var(--wa-accent-glow); }
+
+      /* Panel footer */
+      .wa-panel-footer {
+        background: var(--wa-bg-elevated); border-top: 1px solid var(--wa-border-subtle);
+        padding: 12px 16px; display: flex; gap: 8px; justify-content: space-between;
+      }
+      .wa-action-btn {
+        flex: 1; background: var(--wa-bg-overlay);
+        border: 1px solid var(--wa-border-default); color: var(--wa-text-secondary);
+        padding: 9px; border-radius: 8px; cursor: pointer;
+        transition: all 0.15s cubic-bezier(0.4,0,0.2,1);
+        display: flex; justify-content: center; align-items: center;
+        font-size: 12px; font-weight: 600; font-family: var(--wa-font-main);
+      }
+      .wa-action-btn:hover { background: var(--wa-bg-modal); color: var(--wa-accent-bright); border-color: var(--wa-accent); }
+      .wa-action-btn.delete:hover {
+        background: rgba(239,68,68,0.12); color: var(--wa-danger);
+        border-color: rgba(239,68,68,0.3);
+      }
+
+      /* ── CONTEXT MENU ── */
+      .wa-context-menu {
+        position: fixed;
+        background: var(--wa-bg-elevated); border: 1px solid var(--wa-border-subtle);
+        border-radius: 10px; padding: 6px; min-width: 180px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+        backdrop-filter: blur(20px); z-index: 10000; display: none;
+        animation: wa-fadein 0.15s ease;
+        font-family: var(--wa-font-main);
+      }
+      .wa-cm-item {
+        border-radius: 6px; margin: 1px 0; padding: 9px 14px;
+        font-size: 12.5px; font-weight: 500; color: var(--wa-text-secondary);
+        cursor: pointer; display: flex; align-items: center; gap: 10px;
+        transition: background 0.12s, color 0.12s;
+      }
+      .wa-cm-item:hover { background: var(--wa-bg-overlay); color: var(--wa-text-primary); }
+      .wa-cm-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+      #wa-cm-del { color: var(--wa-danger); border-top: 1px solid var(--wa-border-subtle); padding-top: 12px; margin-top: 4px; }
+      #wa-cm-del:hover { background: rgba(239,68,68,0.1); }
+
+      /* ── TOAST ── */
+      .wa-toast {
+        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+        background: var(--wa-bg-elevated); border: 1px solid var(--wa-border-default);
+        color: var(--wa-text-primary); padding: 9px 18px;
+        border-radius: 8px; font-size: 12px; font-weight: 500; letter-spacing: 0.2px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 9999; pointer-events: none;
+        opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
+        font-family: var(--wa-font-main);
+      }
+      .wa-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+      /* ── MISC ── */
       .wa-drawing-mode canvas { cursor: crosshair !important; }
     `;
     document.head.appendChild(style);
@@ -1506,10 +1759,10 @@
       });
       html += `</div></div></div>`;
     });
-    html += `<div style="width:24px; height:1px; background:#2b3139; margin:4px 0;"></div>
+    html += `<div class="wa-bot-group-divider"></div>
              <div class="wa-bot-actions">
                <button class="wa-tb-btn" id="wa-btn-magnet" data-tooltip="Bắt điểm (Magnet)">${SVG.magnet}</button>
-               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xóa tất cả">${SVG.trash}</button>
+               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xóa tất cả [Del]">${SVG.trash}</button>
              </div>`;
     return html;
   }
@@ -1517,20 +1770,24 @@
   function showToast(msg) {
     let t = document.getElementById('wa-toast');
     if(!t) { t = document.createElement('div'); t.id = 'wa-toast'; t.className = 'wa-toast'; document.getElementById('sc-chart-container').appendChild(t); }
-    t.innerText = msg; t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 2000);
+    t.innerText = msg; t.classList.add('visible');
+    setTimeout(() => t.classList.remove('visible'), 2200);
   }
 
   function createConfirmModal(msg, onConfirm) {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
+    overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
     const box = document.createElement('div');
-    box.style.cssText = 'background:#161A1E;border:1px solid #2b3139;padding:24px;border-radius:8px;color:#EAECEF;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.8);';
-    box.innerHTML = `<div style="margin-bottom:20px;font-size:15px;">${msg}</div><div style="display:flex;gap:12px;justify-content:center;"><button id="wa-btn-c-cancel" style="padding:8px 20px;background:#2b3139;border:none;color:#EAECEF;border-radius:4px;cursor:pointer;">Hủy</button><button id="wa-btn-c-ok" style="padding:8px 20px;background:#F6465D;border:none;color:#FFF;border-radius:4px;cursor:pointer;font-weight:bold;">Đồng ý</button></div>`;
+    box.style.cssText = 'background:#151B23;border:1px solid #1E2733;padding:28px 24px;border-radius:14px;color:#E8EDF2;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.8);font-family:"Be Vietnam Pro",sans-serif;animation:wa-fadein-scale 0.2s cubic-bezier(0.34,1.56,0.64,1);min-width:280px;';
+    box.innerHTML = `<div style="margin-bottom:20px;font-size:14px;line-height:1.5;color:#E8EDF2;">${msg}</div><div style="display:flex;gap:10px;justify-content:center;"><button id="wa-btn-c-cancel" style="padding:9px 22px;background:transparent;border:1px solid #273040;color:#8896A7;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.15s;">Hủy</button><button id="wa-btn-c-ok" style="padding:9px 22px;background:#EF4444;border:none;color:#FFF;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:all 0.15s;">Đồng ý</button></div>`;
     overlay.appendChild(box);
-    
     document.getElementById('sc-chart-container').appendChild(overlay);
 
     setTimeout(() => {
+      box.querySelector('#wa-btn-c-cancel').onmouseenter = (e) => { e.target.style.background='#1C242E'; e.target.style.color='#E8EDF2'; };
+      box.querySelector('#wa-btn-c-cancel').onmouseleave = (e) => { e.target.style.background='transparent'; e.target.style.color='#8896A7'; };
+      box.querySelector('#wa-btn-c-ok').onmouseenter = (e) => { e.target.style.background='#B91C1C'; };
+      box.querySelector('#wa-btn-c-ok').onmouseleave = (e) => { e.target.style.background='#EF4444'; };
       box.querySelector('#wa-btn-c-cancel').onclick = () => {
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       };
@@ -1567,42 +1824,48 @@
 
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor';
-    backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
+    backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);backdrop-filter:blur(10px)';
     backdrop.innerHTML = `
-      <div style="background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:20px;width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.7);font-family:'Be Vietnam Pro',sans-serif;">
-        <div style="font-size:11px;font-weight:700;color:#848e9c;text-transform:uppercase;margin-bottom:12px;">Định dạng: ${toolId}</div>
+      <div style="background:#151B23;border:1px solid #1E2733;border-radius:14px;padding:22px 20px;width:400px;box-shadow:0 24px 80px rgba(0,0,0,0.8);font-family:'Be Vietnam Pro',sans-serif;animation:wa-fadein-scale 0.2s cubic-bezier(0.34,1.56,0.64,1);">
+        <div style="font-size:10px;font-weight:800;color:#4A5568;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:16px;">✏️ Định dạng: ${toolId}</div>
         
         <div style="display:flex; gap:10px; margin-bottom:12px;">
           <div style="flex:1;">
-            <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Màu chữ</label>
-            <input type="color" id="wa-te-color" value="${curColor}" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; cursor:pointer; padding:0;">
+            <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Màu chữ</label>
+            <input type="color" id="wa-te-color" value="${curColor}" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; cursor:pointer; padding:0; overflow:hidden;">
           </div>
           <div style="flex:1;">
-            <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Màu nền</label>
-            <input type="color" id="wa-te-bg" value="${curBg}" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; cursor:pointer; padding:0;">
+            <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Màu nền</label>
+            <input type="color" id="wa-te-bg" value="${curBg}" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; cursor:pointer; padding:0; overflow:hidden;">
           </div>
           <div style="flex:1;">
-            <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Cỡ chữ</label>
-            <input type="number" id="wa-te-size" value="${curSize}" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; color:#eaecef; padding:0 8px; box-sizing:border-box; outline:none;">
+            <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Cỡ chữ</label>
+            <input type="number" id="wa-te-size" value="${curSize}" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; color:#E8EDF2; padding:0 10px; box-sizing:border-box; outline:none; font-family:inherit; font-size:12.5px;">
           </div>
         </div>
 
         <div style="margin-bottom:14px;">
-           <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Font chữ</label>
-           <select id="wa-te-font" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; color:#eaecef; padding:0 8px; outline:none; cursor:pointer;">
+           <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Font chữ</label>
+           <select id="wa-te-font" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; color:#E8EDF2; padding:0 10px; outline:none; cursor:pointer; font-size:12.5px; font-family:inherit;">
               <option value="Be Vietnam Pro, sans-serif" ${curFont.includes('Be Vietnam')?'selected':''}>Be Vietnam Pro</option>
-              <option value="Rajdhani, sans-serif" ${curFont.includes('Rajdhani')?'selected':''}>Rajdhani</option>
+              <option value="Lexend, sans-serif" ${curFont.includes('Lexend')?'selected':''}>Lexend</option>
+              <option value="Nunito, sans-serif" ${curFont.includes('Nunito')?'selected':''}>Nunito</option>
+              <option value="Josefin Sans, sans-serif" ${curFont.includes('Josefin')?'selected':''}>Josefin Sans</option>
+              <option value="Raleway, sans-serif" ${curFont.includes('Raleway')?'selected':''}>Raleway</option>
+              <option value="Space Grotesk, sans-serif" ${curFont.includes('Space Grotesk')?'selected':''}>Space Grotesk</option>
+              <option value="Sora, sans-serif" ${curFont.includes('Sora')?'selected':''}>Sora</option>
+              <option value="Inter, sans-serif" ${curFont.includes('Inter')?'selected':''}>Inter</option>
               <option value="Roboto, sans-serif" ${curFont.includes('Roboto')?'selected':''}>Roboto</option>
               <option value="Arial, sans-serif" ${curFont.includes('Arial')?'selected':''}>Arial</option>
            </select>
         </div>
 
-        <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Nội dung</label>
-        <textarea id="wa-te-input" rows="4" style="width:100%;box-sizing:border-box;background:#111418;border:1px solid #2b3139;border-radius:6px;color:#eaecef;font-size:14px;font-family:inherit;padding:8px 10px;resize:vertical;outline:none;line-height:1.4;" placeholder="Nhập text..."></textarea>
+        <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Nội dung</label>
+        <textarea id="wa-te-input" rows="4" style="width:100%;box-sizing:border-box;background:#0A0C10;border:1px solid #273040;border-radius:8px;color:#E8EDF2;font-size:13px;font-family:inherit;padding:10px 12px;resize:vertical;outline:none;line-height:1.5;" placeholder="Nhập text..."></textarea>
         
         <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
-          <button id="wa-te-cancel" style="background:transparent;border:1px solid #2b3139;color:#848e9c;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;">Hủy</button>
-          <button id="wa-te-confirm" style="background:#00F0FF;border:none;color:#000;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;">Xác nhận</button>
+          <button id="wa-te-cancel" style="background:transparent;border:1px solid #273040;color:#8896A7;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.15s;">Hủy</button>
+          <button id="wa-te-confirm" style="background:#3B82F6;border:none;color:#fff;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:all 0.15s;">Xác nhận</button>
         </div>
       </div>`;
     document.body.appendChild(backdrop);
@@ -1827,6 +2090,17 @@
     return 'lines'; 
   }
 
+  const WA_SWATCHES = [
+    '#E8EDF2', '#8896A7', '#4A5568', '#1C242E',
+    '#22C55E', '#16A34A', '#86EFAC', '#052E16',
+    '#EF4444', '#B91C1C', '#FCA5A5', '#450A0A',
+    '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'
+  ];
+
+  function renderSwatches(targetInputId) {
+    return `<div class="wa-swatches-row">${WA_SWATCHES.map(c => `<div class="wa-swatch" style="background:${c}" data-color="${c}" data-target="${targetInputId}" title="${c}"></div>`).join('')}</div>`;
+  }
+
   function renderPanel(overlay) {
     const panel = document.getElementById('wa-props-panel');
     if(!panel || !overlay) return;
@@ -1847,7 +2121,7 @@
       
       html += `
         <div style="display:flex; gap:8px; margin-top:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu sắc</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
+          <div class="wa-control-row" style="flex:1"><label>Màu sắc</label>${renderSwatches('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
           <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
             <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
             <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
@@ -1859,14 +2133,14 @@
       let fc = (s.polygon && s.polygon.color) ? colorToHex(s.polygon.color) : toolStyles.shapes.fillColor;
       html += `
         <div style="display:flex; gap:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu Viền</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${bc}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Màu Nền</label><input type="color" id="wa-prop-c2" class="wa-color-picker" value="${fc}"></div>
+          <div class="wa-control-row" style="flex:1"><label>Màu Viền</label>${renderSwatches('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${bc}"></div>
+          <div class="wa-control-row" style="flex:1"><label>Màu Nền</label>${renderSwatches('wa-prop-c2')}<input type="color" id="wa-prop-c2" class="wa-color-picker" value="${fc}"></div>
         </div>`;
     } else if (cat === 'fibo') {
       let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : toolStyles.fibo.lineColor;
       let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : toolStyles.fibo.fillOpacity;
       html += `
-        <div class="wa-control-row"><label>Màu vạch & Chữ</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
+        <div class="wa-control-row"><label>Màu vạch & Chữ</label>${renderSwatches('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
         <div class="wa-control-row"><label>Độ đậm nền (0 = Tắt màu)</label>
           <input type="number" id="wa-prop-a1" class="wa-input" step="0.05" min="0" max="1" value="${alpha}">
         </div>`;
@@ -1884,6 +2158,21 @@
 
     body.innerHTML = html;
     panel.classList.add('show');
+
+    // Bind swatch clicks → update nearest color input
+    body.querySelectorAll('.wa-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        const targetId = sw.getAttribute('data-target');
+        const inp = document.getElementById(targetId);
+        if (inp) {
+          inp.value = sw.getAttribute('data-color');
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        body.querySelectorAll(`.wa-swatch[data-target="${targetId}"]`).forEach(s => s.classList.remove('selected'));
+        sw.classList.add('selected');
+      });
+    });
 
     // 1. Luồng vẽ biểu đồ (Cập nhật cực nhanh - 40ms)
     const updateEngine = debounce(() => {
