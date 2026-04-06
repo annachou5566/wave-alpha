@@ -2263,531 +2263,676 @@
   }
 
   // ==========================================
-  // 6. RIGHT CLICK CONTEXT MENU 
+// ⚠️  HƯỚNG DẪN TÍCH HỢP
+// ==========================================
+// Thay thế TOÀN BỘ từ dòng bắt đầu Section 6 đến hết file
+// (từ comment "// 6. RIGHT CLICK CONTEXT MENU" trở xuống)
+// bằng đoạn code dưới đây.
+// ==========================================
+
+
+  // ==========================================
+  // 6. RIGHT CLICK CONTEXT MENU
+  //    FIX: Tách DOM injection ra khỏi Event Binding.
+  //    - Event trên `container` (contextmenu) → guard bằng flag trên element.
+  //    - Event trên `document` (click để đóng menu) → guard bằng global flag.
+  //    Kết quả: Gọi bindContextMenu() 100 lần cũng chỉ có 1 listener.
   // ==========================================
   function bindContextMenu(panel) {
     const container = document.getElementById('sc-chart-container');
-    const cm = document.createElement('div'); cm.className = 'wa-context-menu';
-    cm.innerHTML = `
-      <div class="wa-cm-item" id="wa-cm-edit">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Chỉnh sửa
-      </div>
-      <div class="wa-cm-item" id="wa-cm-clone">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Nhân bản
-      </div>
-      <div class="wa-cm-item" id="wa-cm-lock">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Khoá / Mở khoá
-      </div>
-      <div class="wa-cm-item danger" id="wa-cm-del" style="border-top:1px solid var(--wa-border-subtle);margin-top:4px;padding-top:10px">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        Xoá hình
-      </div>`;
-    container.appendChild(cm);
+    if (!container) return;
 
-    container.addEventListener('contextmenu', (e) => {
-      if(!currentSelectedOverlay) return; e.preventDefault();
-      cm.style.left = e.clientX + 'px'; cm.style.top = e.clientY + 'px'; cm.style.display = 'block';
-    });
-
-    document.addEventListener('click', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
-
-    function act(type) {
-    if(currentSelectedOverlay && global.tvChart) {
-      if (type==='del') { global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel(); }
-      if (type==='clone') { let cl = JSON.parse(JSON.stringify(currentSelectedOverlay)); delete cl.id; if (cl.points) cl.points = cl.points.map(p => ({ timestamp: p.timestamp, value: p.value * 1.001 })); global.tvChart.createOverlay(cl); showToast('Đã nhân bản'); }
-      if (type==='lock') { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock }); showToast('Đã đổi trạng thái khóa'); }
-      cm.style.display = 'none';
-      
-      global.__wa_saveAllOverlays(); // <--- THÊM DÒNG NÀY
-    }
-  }
-
-    cm.querySelector('#wa-cm-edit').onclick = () => { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
-    cm.querySelector('#wa-cm-clone').onclick = () => act('clone'); 
-    cm.querySelector('#wa-cm-lock').onclick = () => act('lock'); 
-    cm.querySelector('#wa-cm-del').onclick = () => act('del');
-    
-    panel.querySelector('.wa-close-btn').onclick = hidePanel; 
-    panel.querySelector('#wa-btn-p-lock').onclick = () => act('lock'); 
-    panel.querySelector('#wa-btn-p-del').onclick = () => act('del');
-  }
-
-  // ============================================================
-// 7. AUTO-HEAL & PERSISTENCE — REWRITE v3.0
-// Giải quyết triệt để:
-//   (A) Memory Leak do double event binding
-//   (B) Toolbar mất khi đổi Timeframe
-//   (C) Hình vẽ mất khi đổi Timeframe
-// ============================================================
-
-// --- 7.1 DRAWING KEY: chỉ theo SYMBOL, không dính Timeframe ---
-function getDrawingKey() {
-  // Ưu tiên đọc symbol từ nhiều nguồn có thể có
-  var sym =
-    (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) ||
-    window.__wa_currentSymbol ||
-    'UNKNOWN';
-  // Normalize: "BTCUSDT.P" → "BTCUSDT"
-  sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return 'wa_drawings_' + sym;
-}
-
-// Theo dõi key đang active để detect coin change
-var _waActiveKey = null;
-
-// --- 7.2 SAVE ---
-function saveAllOverlays() {
-  if (!global.tvChart) return;
-  try {
-    var dataList = global.tvChart.getDataList();
-    // Không lưu khi chart đang trống (đang load data) → tránh ghi mảng rỗng đè lên hình cũ
-    if (!dataList || dataList.length === 0) return;
-    var overlays = global.tvChart.getOverlay();
-    if (!overlays || overlays.length === 0) return; // Không ghi đè nếu chart vừa bị clear
-    var dataToSave = overlays.map(function(o) {
-      return {
-        name: o.name,
-        points: o.points,
-        styles: o.styles,
-        lock: o.lock,
-        extendData: o.extendData
-        // Không lưu `id` và `paneId` — tránh xung đột khi restore
-      };
-    });
-    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-  } catch(e) { /* silent */ }
-}
-global.wasaveAllOverlays = saveAllOverlays;
-
-// --- 7.3 RESTORE (Stateless, với Retry Loop) ---
-var _waRestoreTimer = null;
-var _waRestoreAttempts = 0;
-var WA_RESTORE_MAX_ATTEMPTS = 20; // 20 * 200ms = 4 giây timeout
-
-function restoreOverlays() {
-  if (!global.tvChart) return;
-  clearInterval(_waRestoreTimer);
-  _waRestoreAttempts = 0;
-
-  _waRestoreTimer = setInterval(function() {
-    _waRestoreAttempts++;
-
-    // Timeout guard
-    if (_waRestoreAttempts > WA_RESTORE_MAX_ATTEMPTS) {
-      clearInterval(_waRestoreTimer);
-      return;
+    // ── 1. Inject DOM một lần duy nhất vào container hiện tại ──
+    let cm = container.querySelector('.wa-context-menu');
+    if (!cm) {
+      cm = document.createElement('div');
+      cm.className = 'wa-context-menu';
+      cm.innerHTML = `
+        <div class="wa-cm-item" id="wa-cm-edit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Chỉnh sửa
+        </div>
+        <div class="wa-cm-item" id="wa-cm-clone">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Nhân bản
+        </div>
+        <div class="wa-cm-item" id="wa-cm-lock">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Khoá / Mở khoá
+        </div>
+        <div class="wa-cm-item danger" id="wa-cm-del" style="border-top:1px solid var(--wa-border-subtle);margin-top:4px;padding-top:10px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Xoá hình
+        </div>`;
+      container.appendChild(cm);
     }
 
-    // Đợi KLineChart có data nến thật sự
-    var dataList = global.tvChart.getDataList();
-    if (!dataList || dataList.length < 5) return; // Chưa có data, thử lại
-
-    clearInterval(_waRestoreTimer); // Đã có data, tiến hành restore
-
-    var key = getDrawingKey();
-
-    // Nếu đổi coin: xóa overlay của coin cũ trên chart
-    if (_waActiveKey && _waActiveKey !== key) {
-      try { global.tvChart.removeOverlay(); } catch(e) {}
-    }
-    _waActiveKey = key;
-
-    var saved = localStorage.getItem(key);
-    if (!saved) return;
-
-    var overlayDefs;
-    try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
-    if (!Array.isArray(overlayDefs) || overlayDefs.length === 0) return;
-
-    // Stateless compare: chỉ restore nếu chart đang bị thiếu hình
-    var currentOverlays = global.tvChart.getOverlay() || [];
-    if (currentOverlays.length >= overlayDefs.length) return; // Đã đủ, không cần restore
-
-    // Clear toàn bộ hình hiện tại (có thể là hình nửa vời) rồi vẽ lại từ Storage
-    try { global.tvChart.removeOverlay(); } catch(e) {}
-
-    overlayDefs.forEach(function(o) {
-      try {
-        var cfg = {
-          name: o.name,
-          points: o.points,
-          styles: o.styles,
-          lock: !!o.lock,
-          extendData: o.extendData
-          // KHÔNG set paneId — tránh lỗi layout đa khung
-        };
-        global.tvChart.createOverlay(cfg);
-      } catch(e) { /* Bỏ qua overlay lỗi, tiếp tục restore các cái còn lại */ }
-    });
-
-  }, 200); // Poll mỗi 200ms, nhẹ hơn nhiều so với setInterval 1000ms liên tục
-}
-global.warestoreOverlays = restoreOverlays;
-
-
-// ============================================================
-// 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
-// ============================================================
-
-/**
- * Gọi từ chart-ui.js TRƯỚC KHI nạp data mới (đổi Timeframe)
- * VD: window.__wa_onIntervalChange('4H')
- */
-window.__wa_onIntervalChange = function(newInterval) {
-  // Bước 1: Lưu hình vẽ hiện tại NGAY LẬP TỨC trước khi chart bị clear
-  // Buộc save, bỏ qua guard dataList.length === 0
-  try {
-    var overlays = global.tvChart ? global.tvChart.getOverlay() : [];
-    if (overlays && overlays.length > 0) {
-      var dataToSave = overlays.map(function(o) {
-        return { name: o.name, points: o.points, styles: o.styles, lock: o.lock, extendData: o.extendData };
+    // ── 2. Guard contextmenu trên container ──
+    // Mỗi lần container được tạo mới (framework re-render), element mới sẽ không có flag.
+    // Nên listener sẽ được gắn đúng 1 lần cho mỗi "phiên bản" của container.
+    if (!container.__wa_ctx_bound) {
+      container.__wa_ctx_bound = true;
+      container.addEventListener('contextmenu', (e) => {
+        const activeCm = container.querySelector('.wa-context-menu');
+        if (!currentSelectedOverlay || !activeCm) return;
+        e.preventDefault();
+        activeCm.style.left = e.clientX + 'px';
+        activeCm.style.top = e.clientY + 'px';
+        activeCm.style.display = 'block';
       });
-      localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-    }
-  } catch(e) {}
-
-  // Bước 2: Schedule restore SAU KHI framework nạp data xong
-  // restoreOverlays() tự chờ dataList.length > 0
-  setTimeout(restoreOverlays, 50);
-};
-
-/**
- * Gọi từ chart-ui.js TRƯỚC KHI đổi sang coin khác
- * VD: window.__wa_onSymbolChange('ETH')
- */
-window.__wa_onSymbolChange = function(newSymbol) {
-  // Bước 1: Lưu hình vẽ của coin HIỆN TẠI
-  saveAllOverlays();
-
-  // Bước 2: Cập nhật symbol mới để getDrawingKey() trả về đúng key
-  window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-  // Bước 3: Schedule restore cho coin mới
-  setTimeout(restoreOverlays, 50);
-};
-
-
-// ============================================================
-// 7.5 BIND CORE EVENTS — CHỈ GẮN 1 LẦN DUY NHẤT
-// Tách hoàn toàn khỏi mountDOM() để tránh memory leak
-// ============================================================
-var _waCoreEventsBound = false;
-
-function bindCoreEventsOnce() {
-  if (_waCoreEventsBound) return; // GUARD: Không bao giờ chạy lần 2
-  _waCoreEventsBound = true;
-
-  // --- Drag Toolbar (mousemove/mouseup gắn vào document CHỈ 1 LẦN) ---
-  var _isDragging = false;
-  var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
-  var _dragRaf = null;
-
-  document.addEventListener('mousemove', function(e) {
-    if (!_isDragging) return;
-    if (_dragRaf) cancelAnimationFrame(_dragRaf);
-    _dragRaf = requestAnimationFrame(function() {
-      var tb = document.querySelector('.wa-toolbar');
-      if (!tb) { _isDragging = false; return; }
-      var dx = e.clientX - _startX;
-      var dy = e.clientY - _startY;
-      tb.style.left = Math.max(0, _initLeft + dx) + 'px';
-      tb.style.top  = Math.max(0, _initTop  + dy) + 'px';
-    });
-  });
-
-  document.addEventListener('mouseup', function() {
-    if (_isDragging) {
-      _isDragging = false;
-      document.body.style.userSelect = '';
-    }
-  });
-
-  // Gán drag-grip listener qua event delegation trên document
-  // → Không cần re-bind khi toolbar bị re-inject
-  document.addEventListener('mousedown', function(e) {
-    var grip = e.target.closest('.wa-drag-grip');
-    if (!grip) return;
-    _isDragging = true;
-    _startX = e.clientX;
-    _startY = e.clientY;
-    var tb = document.querySelector('.wa-toolbar');
-    _initLeft = tb ? tb.offsetLeft : 0;
-    _initTop  = tb ? tb.offsetTop  : 0;
-    document.body.style.userSelect = 'none';
-  });
-
-  document.addEventListener('dblclick', function(e) {
-    if (e.target.closest('.wa-drag-grip')) {
-      var tb = document.querySelector('.wa-toolbar');
-      if (tb) tb.classList.toggle('collapsed');
-    }
-  });
-
-  // --- Keyboard Shortcuts (keydown gắn 1 lần) ---
-  document.addEventListener('keydown', function(e) {
-    var tag = e.target.tagName;
-    var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
-
-    if (e.key === 'Escape') {
-      if (global.tvChart) global.tvChart.cancelDrawing();
-      activateTool('pointer');
-      hidePanel();
-      if (isInput) e.target.blur();
-      return;
     }
 
-    if (!isInput) {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && currentSelectedOverlay) {
-        if (global.tvChart) {
-          saveHistory('delete', currentSelectedOverlay);
-          global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-          hidePanel();
-          saveAllOverlays();
+    // ── 3. Guard document click để đóng menu ──
+    // Đây là event GLOBAL, chỉ gắn 1 lần duy nhất trong toàn bộ vòng đời trang web.
+    if (!global.__wa_cm_close_bound) {
+      global.__wa_cm_close_bound = true;
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.wa-context-menu')) {
+          // Tìm tất cả context menu đang mở (phòng trường hợp có nhiều instance)
+          document.querySelectorAll('.wa-context-menu').forEach(m => {
+            m.style.display = 'none';
+          });
         }
+      });
+    }
+
+    // ── 4. Action handler ──
+    function act(type) {
+      if (!currentSelectedOverlay || !global.tvChart) return;
+      const activeCm = container.querySelector('.wa-context-menu');
+      if (type === 'del') {
+        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+        hidePanel();
       }
+      if (type === 'clone') {
+        let cl = JSON.parse(JSON.stringify(currentSelectedOverlay));
+        delete cl.id;
+        if (cl.points) cl.points = cl.points.map(p => ({ timestamp: p.timestamp, value: p.value * 1.001 }));
+        global.tvChart.createOverlay(cl);
+        showToast('Đã nhân bản');
+      }
+      if (type === 'lock') {
+        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
+        showToast('Đã đổi trạng thái khóa');
+      }
+      if (activeCm) activeCm.style.display = 'none';
+      global.__wa_saveAllOverlays();
     }
-  });
-}
+
+    // ── 5. Gắn click lên các item trong menu (an toàn vì là DOM mới) ──
+    cm.querySelector('#wa-cm-edit').onclick  = () => { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
+    cm.querySelector('#wa-cm-clone').onclick = () => act('clone');
+    cm.querySelector('#wa-cm-lock').onclick  = () => act('lock');
+    cm.querySelector('#wa-cm-del').onclick   = () => act('del');
+
+    // ── 6. Gắn nút trong panel (DOM mới nên an toàn) ──
+    panel.querySelector('.wa-close-btn').onclick   = hidePanel;
+    panel.querySelector('#wa-btn-p-lock').onclick  = () => act('lock');
+    panel.querySelector('#wa-btn-p-del').onclick   = () => act('del');
+  }
+
+  function hidePanel() {
+    const p = document.getElementById('wa-props-panel');
+    if (p) p.classList.remove('show');
+    currentSelectedOverlay = null;
+  }
 
 
-// ============================================================
-// 7.6 MOUNT DOM — Chỉ chèn HTML Elements, KHÔNG bind global events
-// ============================================================
-function mountDOM() {
-  var container = document.getElementById('sc-chart-container');
-  if (!container) return;
+  // ==========================================
+  // 7. AUTO-HEAL & PERSISTENCE
+  //
+  //  Kiến trúc mới giải quyết triệt để 3 lỗi:
+  //
+  //  A. DRAWING PERSISTENCE
+  //     Key = tên coin (không có timeframe).
+  //     scheduleRestore(): polling nhẹ, chờ chart có data rồi mới restore.
+  //     Không còn setInterval 1s chạy mãi.
+  //
+  //  B. TOOLBAR WATCHDOG (Zero Memory Leak)
+  //     Observer theo dõi PARENT của #sc-chart-container.
+  //     Khi phát hiện toolbar mất → chỉ inject DOM (injectToolbarDOM).
+  //     injectToolbarDOM KHÔNG gọi bindCoreEvents → không tạo listener mới.
+  //     bindCoreEvents chỉ được gọi đúng 1 lần khi trang load.
+  //
+  //  C. GLOBAL HOOKS
+  //     __wa_onIntervalChange: save trước, schedule restore sau.
+  //     __wa_onSymbolChange:   save coin cũ, đổi key, schedule restore coin mới.
+  // ==========================================
 
-  // Idempotent: Nếu toolbar đã tồn tại thì bỏ qua
-  if (container.querySelector('.wa-toolbar')) return;
+  // ─────────────────────────────────────────
+  // 7-A. DRAWING PERSISTENCE LAYER
+  // ─────────────────────────────────────────
 
-  injectCSS();
-  registerProExtensions();
+  function getDrawingKey() {
+    // Key KHÔNG chứa timeframe → hình vẽ chia sẻ giữa 1H / 4H / 1D / ...
+    const sym = (window.currentChartToken && window.currentChartToken.symbol)
+      ? window.currentChartToken.symbol.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      : 'UNKNOWN';
+    return `wa_drawings_${sym}`;
+  }
 
-  // Inject Toolbar
-  var sidebar = document.createElement('div');
-  sidebar.className = 'wa-toolbar';
-  sidebar.innerHTML = buildToolbar();
-  container.appendChild(sidebar);
+  // Key đang active (để phát hiện khi đổi coin)
+  let __wa_activeKey = '';
 
-  // Inject Props Panel
-  var panel = document.createElement('div');
-  panel.className = 'wa-props-panel';
-  panel.id = 'wa-props-panel';
-  panel.innerHTML = `
-    <div class="wa-panel-header">Cài đặt công cụ
-      <button class="wa-close-btn" title="Đóng (Esc)">${SVG.close}</button>
-    </div>
-    <div class="wa-panel-body">
-      <div class="wa-panel-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-          style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">
-          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-        </svg>
-        <span>Chọn hoặc vẽ một hình chính sách</span>
+  // Timer dùng cho scheduleRestore (để có thể cancel/reset)
+  let __wa_restoreTimer = null;
+
+  /**
+   * saveAllOverlays()
+   * Lưu hình vẽ hiện tại vào LocalStorage.
+   * Bảo vệ: không lưu nếu chart đang rỗng (đang load data) để tránh ghi đè [] làm mất hình.
+   */
+  function saveAllOverlays() {
+    if (!global.tvChart) return;
+    try {
+      const dataList = global.tvChart.getDataList();
+      if (!dataList || dataList.length === 0) return; // Chart chưa có data → không lưu
+
+      const overlays = global.tvChart.getOverlay() || [];
+      const toSave = overlays.map(o => ({
+        name: o.name, id: o.id, points: o.points,
+        styles: o.styles, lock: o.lock, extendData: o.extendData
+        // KHÔNG lưu paneId → tránh lỗi layout khi restore trên chart đơn
+      }));
+      localStorage.setItem(getDrawingKey(), JSON.stringify(toSave));
+    } catch (e) {}
+  }
+  global.__wa_saveAllOverlays = saveAllOverlays;
+
+  /**
+   * restoreOverlaysNow()
+   * Đồng bộ hình vẽ từ Storage lên Chart.
+   * Điều kiện gọi: Chart PHẢI có data (đã được kiểm tra từ caller).
+   *
+   * Thuật toán:
+   *  1. Nếu coin thay đổi → xóa hết hình cũ.
+   *  2. So sánh ID từng overlay: nếu có overlay trong Storage chưa có trên chart → restore.
+   *  3. Xóa paneId trước khi createOverlay.
+   */
+  function restoreOverlaysNow() {
+    if (!global.tvChart) return;
+
+    const key = getDrawingKey();
+
+    // Phát hiện đổi coin → xóa hết hình của coin cũ
+    if (__wa_activeKey && __wa_activeKey !== key) {
+      try { global.tvChart.removeOverlay(); } catch (e) {}
+    }
+    __wa_activeKey = key;
+
+    const rawData = localStorage.getItem(key);
+    if (!rawData || rawData === '[]') return;
+
+    let savedOverlays;
+    try { savedOverlays = JSON.parse(rawData); } catch (e) { return; }
+    if (!Array.isArray(savedOverlays) || savedOverlays.length === 0) return;
+
+    const currentOverlays = global.tvChart.getOverlay() || [];
+    const currentIdSet    = new Set(currentOverlays.map(o => o.id));
+
+    // Tìm những overlay bị mất (có trong Storage nhưng không có trên Chart)
+    const missing = savedOverlays.filter(o => !currentIdSet.has(o.id));
+    if (missing.length === 0) return; // Không mất gì → bỏ qua
+
+    // Nếu mất > 0 → full-restore: xóa chart rồi vẽ lại toàn bộ từ Storage
+    // (để tránh trùng lặp và đảm bảo thứ tự đúng)
+    try { global.tvChart.removeOverlay(); } catch (e) {}
+
+    savedOverlays.forEach(o => {
+      const config = {
+        name:        o.name,
+        id:          o.id,
+        points:      o.points,
+        styles:      o.styles,
+        lock:        o.lock,
+        extendData:  o.extendData
+      };
+      // Xóa paneId để KLineChart tự phân bổ, tránh lỗi "pane not found"
+      delete config.paneId;
+      try { global.tvChart.createOverlay(config); } catch (e) {}
+    });
+  }
+
+  /**
+   * scheduleRestore(delayMs?)
+   * Polling nhẹ: thử restore sau `delayMs` ms.
+   * Nếu chart chưa có data → đệ quy tự lên lịch lại sau 300ms.
+   * Tự hủy khi restore thành công.
+   *
+   * Thay thế hoàn toàn setInterval 1s cũ.
+   */
+  function scheduleRestore(delayMs) {
+    if (__wa_restoreTimer) clearTimeout(__wa_restoreTimer);
+
+    function tryRestore() {
+      if (!global.tvChart) {
+        // Chart chưa khởi tạo → thử lại
+        __wa_restoreTimer = setTimeout(tryRestore, 500);
+        return;
+      }
+      const dataList = global.tvChart.getDataList();
+      if (!dataList || dataList.length === 0) {
+        // Nến chưa load xong → thử lại sau 300ms
+        __wa_restoreTimer = setTimeout(tryRestore, 300);
+        return;
+      }
+      // Chart sẵn sàng → restore
+      restoreOverlaysNow();
+      __wa_restoreTimer = null;
+    }
+
+    __wa_restoreTimer = setTimeout(tryRestore, delayMs || 0);
+  }
+
+
+  // ─────────────────────────────────────────
+  // 7-B. DOM INJECTION (tách riêng khỏi Event Binding)
+  // ─────────────────────────────────────────
+
+  /**
+   * injectToolbarDOM()
+   * CHỈ tạo và chèn phần tử HTML vào container.
+   * KHÔNG gọi bindCoreEvents() → KHÔNG tạo event listener mới.
+   *
+   * Được gọi bởi Watchdog khi phát hiện toolbar bị mất.
+   * bindCoreEvents() đã được gọi ở lần mountUI() đầu tiên và không bao giờ lặp lại.
+   */
+  function injectToolbarDOM() {
+    const container = document.getElementById('sc-chart-container');
+    if (!container) return;
+    if (container.querySelector('.wa-toolbar')) return; // Đã có rồi
+
+    // Toolbar
+    const sidebar = document.createElement('div');
+    sidebar.className = 'wa-toolbar';
+    sidebar.innerHTML = buildToolbar();
+    container.appendChild(sidebar);
+
+    // Props panel
+    const panel = document.createElement('div');
+    panel.className = 'wa-props-panel';
+    panel.id = 'wa-props-panel';
+    panel.innerHTML = `
+      <div class="wa-panel-header">
+        Cài đặt công cụ
+        <button class="wa-close-btn" title="Đóng [Esc]">${SVG.close}</button>
       </div>
-    </div>
-    <div class="wa-panel-footer">
-      <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">${SVG.magnet} Khoá</button>
-      <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">${SVG.trash} Xoá</button>
-    </div>`;
-  container.appendChild(panel);
+      <div class="wa-panel-body">
+        <div class="wa-panel-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+               style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">
+            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <span>Chọn hoặc vẽ một hình để chỉnh sửa</span>
+        </div>
+      </div>
+      <div class="wa-panel-footer">
+        <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">${SVG.magnet} Khoá</button>
+        <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">${SVG.trash} Xoá</button>
+      </div>`;
+    container.appendChild(panel);
 
-  // Bind LOCAL events (chỉ liên quan đến toolbar buttons — không phải document-level)
-  _bindToolbarLocalEvents(sidebar, panel);
-  bindContextMenu(panel);
-}
+    // ── Re-bind CÁC SỰ KIỆN LOCAL (an toàn vì DOM element mới) ──
+    // Chỉ những event gắn trực tiếp lên DOM node mới:
+    //   - drag handle mousedown
+    //   - toolbar button clicks
+    //   - context menu actions
+    // KHÔNG re-bind: document.mousemove, document.keydown (đã được guard từ lần đầu)
+    bindLocalDOMEvents(sidebar, panel);
+    bindContextMenu(panel); // bindContextMenu đã có guard, an toàn khi gọi lại
+  }
 
-// Local events: click trên toolbar, nút trong panel — KHÔNG phải mousemove/keydown
-function _bindToolbarLocalEvents(toolbar, panel) {
-  var container = document.getElementById('sc-chart-container');
+  /**
+   * bindLocalDOMEvents(toolbar, panel)
+   * Chỉ bind các event trực tiếp lên DOM node của toolbar/panel.
+   * Được gọi mỗi khi DOM được recreate (injectToolbarDOM).
+   * KHÔNG chứa bất kỳ document.addEventListener() nào.
+   */
+  function bindLocalDOMEvents(toolbar, panel) {
+    const container = document.getElementById('sc-chart-container');
 
-  toolbar.addEventListener('click', function(e) {
-    var menuItem = e.target.closest('.wa-menu-item');
-    var btn = e.target.closest('.wa-tb-btn[data-tool]');
-    var toolId = null;
-    if (menuItem) {
-      toolId = menuItem.getAttribute('data-tool');
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-      menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
-    } else if (btn) {
-      toolId = btn.getAttribute('data-tool');
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
+    // ── Drag handle ──
+    const handle = toolbar.querySelector('.wa-drag-grip');
+    if (handle) {
+      handle.addEventListener('mousedown', (e) => {
+        global.__wa_isDragging = true;
+        global.__wa_startX = e.clientX;
+        global.__wa_startY = e.clientY;
+        const tb = document.querySelector('.wa-toolbar');
+        global.__wa_initialX = tb ? tb.offsetLeft : 0;
+        global.__wa_initialY = tb ? tb.offsetTop  : 0;
+        document.body.style.userSelect = 'none';
+      });
+      handle.addEventListener('dblclick', () => toolbar.classList.toggle('collapsed'));
     }
-    if (toolId) activateTool(toolId);
-  });
 
-  var magnetBtn = toolbar.querySelector('#wa-btn-magnet');
-  if (magnetBtn) {
-    magnetBtn.addEventListener('click', function() {
+    // ── Toolbar buttons ──
+    toolbar.querySelector('#wa-btn-magnet').onclick = function () {
       isMagnetMode = !isMagnetMode;
       this.classList.toggle('active', isMagnetMode);
-      showToast(isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
-    });
-  }
+      showToast(isMagnetMode ? 'Đã bật chế độ Bắt điểm' : 'Đã tắt Bắt điểm');
+    };
 
-  var clearBtn = toolbar.querySelector('#wa-btn-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function() {
-      createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
+    toolbar.querySelector('#wa-btn-clear').onclick = function () {
+      createConfirmModal('Bạn có chắc muốn xóa toàn bộ bản vẽ?', () => {
         if (global.tvChart) {
           global.tvChart.removeOverlay();
           global.tvChart.cancelDrawing();
+          undoStack = []; redoStack = [];
+          hidePanel();
+          toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+          toolbar.querySelector('[data-tool="pointer"]').classList.add('active');
+          if (container) container.classList.remove('wa-drawing-mode');
+          global.__wa_saveAllOverlays();
+          showToast('Đã xóa sạch bản vẽ');
         }
-        undoStack = []; redoStack = [];
-        hidePanel();
-        toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-        toolbar.querySelector('[data-tool=pointer]').classList.add('active');
-        container.classList.remove('wa-drawing-mode');
-        saveAllOverlays();
-        showToast('🗑️ Đã xoá sạch bản vẽ');
+      });
+    };
+
+    toolbar.addEventListener('click', (e) => {
+      const menuItem = e.target.closest('.wa-menu-item');
+      const btn      = e.target.closest('.wa-tb-btn[data-tool]');
+      let toolId     = null;
+
+      if (menuItem) {
+        toolId = menuItem.getAttribute('data-tool');
+        toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+        menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
+      } else if (btn) {
+        toolId = btn.getAttribute('data-tool');
+        toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      if (toolId) activateToolLocal(toolId, toolbar, container);
+    });
+  }
+
+  /**
+   * activateToolLocal()
+   * Bản local của activateTool() để dùng được toolbar reference mới
+   * khi DOM bị inject lại.
+   */
+  function activateToolLocal(toolId, toolbar, container) {
+    if (!global.tvChart) return;
+    try { global.tvChart.cancelDrawing(); } catch (e) {}
+    hidePanel();
+
+    if (toolId === 'pointer') {
+      if (container) container.classList.remove('wa-drawing-mode');
+      return;
+    }
+    if (container) container.classList.add('wa-drawing-mode');
+
+    const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin',
+                        'annotation','comment','priceLabel','signpost','flagMarker'];
+    if (TEXT_TOOLS.includes(toolId)) {
+      createTextOverlay(global.tvChart, toolId);
+      return;
+    }
+
+    try {
+      const tType = getToolCategory(toolId);
+      const s = toolStyles[tType] || {};
+      const config = { name: toolId, lock: false, styles: {} };
+
+      if (tType === 'lines' || tType === 'waves') {
+        config.styles.line = { color: s.lineColor || '#00F0FF', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
+      } else if (tType === 'shapes') {
+        config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor, s.fillOpacity), borderColor: s.borderColor, borderSize: s.borderWidth };
+      } else if (tType === 'fibo') {
+        config.styles.line = { color: s.lineColor, size: 1 };
+        config.extendData  = { showLabels: s.showLabels, fillOpacity: s.fillOpacity };
+      } else if (tType === 'text') {
+        config.extendData  = toolStyles.text.textInput || 'Văn bản...';
+        config.styles.text = { color: s.textColor || '#EAECEF', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
+      }
+
+      global.tvChart.createOverlay(config);
+    } catch (err) {
+      showToast('Lỗi khởi tạo. Hệ thống sẽ khôi phục về mặc định.');
+    }
+  }
+
+
+  // ─────────────────────────────────────────
+  // 7-C. FULL MOUNT (chỉ gọi 1 lần khi trang load)
+  // ─────────────────────────────────────────
+
+  /**
+   * mountUI()
+   * Gọi đúng 1 lần khi trang load.
+   * Phụ trách:
+   *   1. Inject CSS + đăng ký extensions
+   *   2. Inject DOM (toolbar + panel)
+   *   3. Bind TẤT CẢ events (local + global)
+   */
+  function mountUI() {
+    const container = document.getElementById('sc-chart-container');
+    if (!container) return;
+    if (container.querySelector('.wa-toolbar')) return; // Đã mount rồi
+
+    injectCSS();
+    registerProExtensions();
+
+    // Inject DOM
+    injectToolbarDOM(); // Tạo sidebar + panel, bind local events
+
+    // ── Bind GLOBAL events (document level) - CHỈ 1 LẦN ──
+
+    // Drag: mousemove + mouseup
+    if (!global.__wa_mouse_bound) {
+      global.__wa_mouse_bound  = true;
+      global.__wa_isDragging   = false;
+      let _dragRaf = null;
+      document.addEventListener('mousemove', (e) => {
+        if (!global.__wa_isDragging) return;
+        if (_dragRaf) cancelAnimationFrame(_dragRaf);
+        _dragRaf = requestAnimationFrame(() => {
+          const tb = document.querySelector('.wa-toolbar');
+          if (!tb) return;
+          const dx = e.clientX - global.__wa_startX;
+          const dy = e.clientY - global.__wa_startY;
+          tb.style.left = Math.max(0, global.__wa_initialX + dx) + 'px';
+          tb.style.top  = Math.max(0, global.__wa_initialY + dy) + 'px';
+        });
+      });
+      document.addEventListener('mouseup', () => {
+        global.__wa_isDragging = false;
+        document.body.style.userSelect = '';
+      });
+    }
+
+    // Keyboard shortcuts
+    if (!global.__wa_kb_bound) {
+      global.__wa_kb_bound = true;
+      document.addEventListener('keydown', (e) => {
+        const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+        if (e.key === 'Escape') {
+          if (global.tvChart) global.tvChart.cancelDrawing();
+          const tb = document.querySelector('.wa-toolbar');
+          if (tb) {
+            const ptr = tb.querySelector('[data-tool="pointer"]');
+            if (ptr) ptr.classList.add('active');
+          }
+          hidePanel();
+          if (isInput) e.target.blur();
+        }
+        if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
+          if (currentSelectedOverlay && global.tvChart) {
+            global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+            hidePanel();
+            global.__wa_saveAllOverlays();
+          }
+        }
+      });
+    }
+
+    // Subscribe KLineChart events (đợi chart sẵn sàng)
+    if (!global.__wa_chart_events_bound) {
+      const waitChart = setInterval(() => {
+        if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
+          if (!global.tvChart.__wa_event_bound) {
+            global.tvChart.__wa_event_bound = true;
+
+            global.tvChart.subscribeAction('onDrawEnd', (data) => {
+              const tb = document.querySelector('.wa-toolbar');
+              if (tb) {
+                const ptr = tb.querySelector('[data-tool="pointer"]');
+                if (ptr) ptr.classList.add('active');
+              }
+              const c = document.getElementById('sc-chart-container');
+              if (c) c.classList.remove('wa-drawing-mode');
+
+              let overlayObj = Array.isArray(data) ? data[0] : data;
+              if (!overlayObj) return;
+              currentSelectedOverlay = overlayObj;
+              renderPanel(currentSelectedOverlay);
+              global.__wa_saveAllOverlays();
+            });
+
+            global.tvChart.subscribeAction('onOverlayClick', (data) => {
+              let overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
+              if (!overlayObj) { hidePanel(); return; }
+              const now = Date.now();
+              const isDoubleClick = (now - lastClickTime < 300);
+              lastClickTime = now;
+              currentSelectedOverlay = overlayObj;
+              renderPanel(currentSelectedOverlay);
+              if (isDoubleClick && overlayObj.name === 'customText') {
+                setTimeout(() => {
+                  const t = document.getElementById('wa-prop-txt');
+                  if (t) { t.focus(); t.select(); }
+                }, 50);
+              }
+            });
+          }
+          clearInterval(waitChart);
+          global.__wa_chart_events_bound = true;
+        }
+      }, 500);
+    }
+  }
+
+
+  // ─────────────────────────────────────────
+  // 7-D. TOOLBAR WATCHDOG
+  //      Theo dõi PARENT của #sc-chart-container.
+  //      Khi phát hiện toolbar bị mất → chỉ inject DOM, không bind event.
+  // ─────────────────────────────────────────
+
+  function startWatchdog() {
+    if (global.__wa_watchdog_started) return;
+    global.__wa_watchdog_started = true;
+
+    // Observer target phải là PARENT của container (vì framework có thể REPLACE container)
+    // Không observe container vì nó có thể bị xóa/thay thế hoàn toàn.
+    function getObserveTarget() {
+      const c = document.getElementById('sc-chart-container');
+      return (c && c.parentElement) ? c.parentElement : document.body;
+    }
+
+    let _observerPending = false;
+    const observer = new MutationObserver(() => {
+      // Debounce bằng rAF: tránh gọi liên tục khi framework re-render nhiều nodes cùng lúc
+      if (_observerPending) return;
+      _observerPending = true;
+      requestAnimationFrame(() => {
+        _observerPending = false;
+        const c = document.getElementById('sc-chart-container');
+        if (c && !c.querySelector('.wa-toolbar')) {
+          // Toolbar bị mất → inject lại DOM (KHÔNG bind event mới)
+          injectToolbarDOM();
+          // Sau khi DOM ổn định, restore hình vẽ
+          scheduleRestore(200);
+        }
       });
     });
+
+    observer.observe(getObserveTarget(), { childList: true, subtree: true });
+    global.__wa_watchdog_observer = observer;
   }
 
-  if (panel) {
-    var closeBtn = panel.querySelector('.wa-close-btn');
-    if (closeBtn) closeBtn.addEventListener('click', hidePanel);
-    var lockBtn = panel.querySelector('#wa-btn-p-lock');
-    if (lockBtn) lockBtn.addEventListener('click', function() {
-      if (!currentSelectedOverlay || !global.tvChart) return;
-      global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
-      showToast('Đã đổi trạng thái khoá');
-    });
-    var delBtn = panel.querySelector('#wa-btn-p-del');
-    if (delBtn) delBtn.addEventListener('click', function() {
-      if (!currentSelectedOverlay || !global.tvChart) return;
-      saveHistory('delete', currentSelectedOverlay);
-      global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-      hidePanel();
-      saveAllOverlays();
-    });
-  }
-}
 
+  // ─────────────────────────────────────────
+  // 7-E. GLOBAL HOOKS (dùng từ code bên ngoài)
+  // ─────────────────────────────────────────
 
-// ============================================================
-// 7.7 BIND CHART EVENTS — Gắn vào tvChart object (1 lần / chart instance)
-// ============================================================
-function _bindChartEventsOnce() {
-  if (!global.tvChart || global.tvChart.__wa_chart_events_bound) return;
-  global.tvChart.__wa_chart_events_bound = true;
-
-  global.tvChart.subscribeAction('onDrawEnd', function(data) {
-    activateTool('pointer');
-    var toolbar = document.querySelector('.wa-toolbar');
-    if (toolbar) {
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-      var ptr = toolbar.querySelector('[data-tool=pointer]');
-      if (ptr) ptr.classList.add('active');
-    }
-    var overlayObj = Array.isArray(data) ? data[0] : data;
-    if (!overlayObj) return;
-    saveHistory('add', overlayObj);
-    currentSelectedOverlay = overlayObj;
-    renderPanel(currentSelectedOverlay);
+  /**
+   * window.__wa_onIntervalChange(newInterval)
+   * Gọi từ chart-ui.js TRƯỚC KHI thay đổi timeframe.
+   *
+   * Flow:
+   *   1. Lưu hình vẽ hiện tại (trước khi chart xóa data)
+   *   2. Lên lịch restore sau khi chart load data mới xong
+   *
+   * Ví dụ từ chart-ui.js:
+   *   window.__wa_onIntervalChange('4h');
+   *   chart.loadMoreData(...);
+   */
+  global.__wa_onIntervalChange = function (newInterval) {
+    // 1. Lưu ngay trước khi framework xóa data
     saveAllOverlays();
-  });
 
-  global.tvChart.subscribeAction('onOverlayClick', function(data) {
-    var overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
-    if (!overlayObj) { hidePanel(); return; }
-    var now = Date.now();
-    var isDoubleClick = (now - lastClickTime) < 300;
-    lastClickTime = now;
-    currentSelectedOverlay = overlayObj;
-    renderPanel(currentSelectedOverlay);
-    if (isDoubleClick && overlayObj.name === 'customText') {
-      setTimeout(function() {
-        var t = document.getElementById('wa-prop-txt');
-        if (t) { t.focus(); t.select(); }
-      }, 50);
+    // 2. Sau khi framework load data mới → restore
+    //    scheduleRestore tự polling cho đến khi chart có nến
+    scheduleRestore(800);
+  };
+
+  /**
+   * window.__wa_onSymbolChange(newSymbol)
+   * Gọi từ chart-ui.js TRƯỚC KHI đổi coin.
+   *
+   * Flow:
+   *   1. Lưu hình vẽ của coin hiện tại
+   *   2. Sau khi chart load data của coin mới → restore hình của coin mới
+   *      (restoreOverlaysNow sẽ tự detect key thay đổi và xóa hình coin cũ)
+   *
+   * Ví dụ từ chart-ui.js:
+   *   window.__wa_onSymbolChange('ETHUSDT');
+   *   loadNewSymbol('ETHUSDT');
+   */
+  global.__wa_onSymbolChange = function (newSymbol) {
+    // 1. Lưu hình của coin hiện tại trước khi rời đi
+    saveAllOverlays();
+
+    // 2. Cập nhật currentChartToken nếu caller chưa làm (để getDrawingKey() trả đúng key mới)
+    if (newSymbol && window.currentChartToken) {
+      window.currentChartToken.symbol = newSymbol;
     }
-  });
-}
+
+    // 3. Lên lịch restore (restoreOverlaysNow sẽ phát hiện key đổi → xóa hình cũ → load hình mới)
+    scheduleRestore(800);
+  };
+
+  /**
+   * window.__wa_saveAllOverlays
+   * Public API: code bên ngoài có thể gọi để lưu thủ công.
+   * (Đã được khai báo ở trên, chỉ để tài liệu hóa ở đây)
+   */
+  // global.__wa_saveAllOverlays = saveAllOverlays; ← đã khai báo ở trên
 
 
-// ============================================================
-// 7.8 MAIN MOUNT FUNCTION — Entry point gọi từ ngoài
-// ============================================================
-function mountUI() {
-  // Bước 1: Gắn global events (chỉ 1 lần duy nhất)
-  bindCoreEventsOnce();
+  // ─────────────────────────────────────────
+  // 7-F. KHỞI ĐỘNG
+  //      Guard bằng __wa_boot_done để đảm bảo chỉ chạy 1 lần
+  //      dù file được load nhiều lần (hot-reload, module duplication...).
+  // ─────────────────────────────────────────
 
-  // Bước 2: Inject DOM nếu chưa có
-  mountDOM();
+  if (!global.__wa_boot_done) {
+    global.__wa_boot_done = true;
 
-  // Bước 3: Chờ tvChart sẵn sàng rồi bind chart-level events
-  var _waitChart = setInterval(function() {
-    if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
-      clearInterval(_waitChart);
-      _bindChartEventsOnce();
-      // Restore hình vẽ lần đầu
-      restoreOverlays();
-    }
-  }, 100);
-}
-
-
-// ============================================================
-// 7.9 TOOLBAR WATCHDOG — Siêu nhẹ, chỉ re-inject DOM, KHÔNG re-bind events
-// ============================================================
-(function startToolbarWatchdog() {
-  if (window.__wa_watchdog_started) return; // Chạy đúng 1 lần
-  window.__wa_watchdog_started = true;
-
-  var _observer = null;
-
-  function _onContainerMutation(mutations) {
-    for (var i = 0; i < mutations.length; i++) {
-      // Chỉ quan tâm khi có node bị XÓA (framework làm mới container)
-      if (mutations[i].removedNodes.length === 0) continue;
-      var container = document.getElementById('sc-chart-container');
-      if (container && !container.querySelector('.wa-toolbar')) {
-        // Toolbar bị xóa → chỉ inject lại DOM, KHÔNG gắn lại global events
-        mountDOM();
-        // Sau khi DOM mới, gắn lại chart events nếu cần
-        if (global.tvChart) {
-          global.tvChart.__wa_chart_events_bound = false;
-          _bindChartEventsOnce();
-        }
-        // Restore overlay sau khi framework load xong data
-        setTimeout(restoreOverlays, 100);
-        break;
-      }
+    // 1. Mount UI khi DOM sẵn sàng
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        mountUI();
+        startWatchdog();
+        scheduleRestore(1000); // Restore lần đầu khi trang load
+      });
+    } else {
+      mountUI();
+      startWatchdog();
+      scheduleRestore(1000);
     }
   }
 
-  function _startObserver() {
-    var container = document.getElementById('sc-chart-container');
-    var target = container ? container.parentNode : document.body;
-    if (!target) return;
-
-    _observer = new MutationObserver(_onContainerMutation);
-    _observer.observe(target, {
-      childList: true,
-      subtree: true  // Quan sát cả con cháu để bắt được khi framework re-render bên trong
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _startObserver);
-  } else {
-    _startObserver();
-  }
-})();
-
-
-// ============================================================
-// 7.10 KHỞI ĐỘNG
-// ============================================================
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', mountUI);
-} else {
-  mountUI();
-}
-
-})(window); // <-- Chú ý giữ nguyên dòng đóng module này
+})(window); // ← Giữ nguyên dòng đóng module
