@@ -2335,134 +2335,95 @@ function getDrawingKey() {
 }
 
 function saveAllOverlays() {
-  console.log("🔵 [TRACKER] HÀM LƯU ĐƯỢC GỌI!");
-  if (!global.tvChart) { console.log("❌ [TRACKER] Lỗi: tvChart chưa tồn tại!"); return; }
+  if (!global.tvChart) return;
   try {
     var dataList = global.tvChart.getDataList();
-    if (!dataList || dataList.length === 0) {
-      console.log("⚠️ [TRACKER] Chart đang trống nến! TỪ CHỐI LƯU để không bị đè mất hình cũ.");
-      return;
-    }
-    var overlays = global.tvChart.getOverlay() || [];
-    console.log(`🔵 [TRACKER] Tìm thấy ${overlays.length} hình trên biểu đồ hiện tại.`);
+    if (!dataList || dataList.length === 0) return;
     
+    var overlays = global.tvChart.getOverlays() || [];
     var dataToSave = overlays.map(function(o) {
-      return { name: o.name, points: o.points, styles: o.styles, lock: o.lock, extendData: o.extendData };
+      return { name: o.name, id: o.id, points: o.points, styles: o.styles, lock: o.lock, extendData: o.extendData };
     });
     
-    const key = getDrawingKey();
-    localStorage.setItem(key, JSON.stringify(dataToSave));
-    console.log(`✅ [TRACKER] Đã lưu thành công vào LocalStorage [${key}]:`, dataToSave);
-  } catch(e) { console.error("❌ [TRACKER] Exception khi lưu:", e); }
+    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
+  } catch(e) {}
 }
 global.__wa_saveAllOverlays = saveAllOverlays;
 
 var _waRestoreTimer = null;
 var _waRestoreAttempts = 0;
+var _waActiveKey = '';
 
 function restoreOverlays() {
-  console.log("🟠 [TRACKER] TIẾN TRÌNH KHÔI PHỤC BẮT ĐẦU CHẠY...");
   if (!global.tvChart) return;
   clearInterval(_waRestoreTimer);
   _waRestoreAttempts = 0;
 
   _waRestoreTimer = setInterval(function() {
     _waRestoreAttempts++;
-    console.log(`⏳ [TRACKER] Đang thử nạp lại hình... (Lần ${_waRestoreAttempts})`);
 
     if (_waRestoreAttempts > 20) {
-      console.log("❌ [TRACKER] Hết thời gian chờ (4 giây)! Nến vẫn chưa load xong. Hủy khôi phục.");
       clearInterval(_waRestoreTimer); return;
     }
 
     var dataList = global.tvChart.getDataList();
-    if (!dataList || dataList.length < 5) {
-      console.log("⚠️ [TRACKER] Biểu đồ chưa có đủ nến, tiếp tục chờ...");
-      return; 
-    }
+    if (!dataList || dataList.length < 5) return;
 
     clearInterval(_waRestoreTimer); 
-    console.log(`🟢 [TRACKER] Nến ĐÃ LOAD XONG (${dataList.length} cây). Bắt đầu ốp hình!`);
 
     var key = getDrawingKey();
-    var saved = localStorage.getItem(key);
-    console.log(`🟢 [TRACKER] Dữ liệu lấy từ Storage [${key}]:`, saved);
-
-    if (!saved || saved === '[]') {
-      console.log("⚠️ [TRACKER] Két sắt trống rỗng! Không có gì để vẽ lại.");
-      return;
+    if (_waActiveKey && _waActiveKey !== key) {
+      try { global.tvChart.removeOverlay(); } catch(e) {}
     }
+    _waActiveKey = key;
+
+    var saved = localStorage.getItem(key);
+    if (!saved || saved === '[]') return;
 
     var overlayDefs;
     try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
+    if (!Array.isArray(overlayDefs) || overlayDefs.length === 0) return;
     
-    var currentOverlays = global.tvChart.getOverlay() || [];
-    console.log(`⚖️ [TRACKER] So sánh: Chart đang có ${currentOverlays.length} hình | Storage có ${overlayDefs.length} hình`);
-    
-    if (currentOverlays.length >= overlayDefs.length) {
-      console.log("✅ [TRACKER] Số hình đã đủ, không cần ốp thêm.");
-      return; 
-    }
+    var currentOverlays = global.tvChart.getOverlays() || [];
+    if (currentOverlays.length >= overlayDefs.length) return; 
 
     try { global.tvChart.removeOverlay(); } catch(e) {}
 
-    let successCount = 0;
     overlayDefs.forEach(function(o) {
       try {
-        var cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
-        let id = global.tvChart.createOverlay(cfg);
-        if(id) successCount++;
-      } catch(e) { console.error("❌ [TRACKER] Lỗi khi vẽ 1 hình cụ thể:", e); }
+        var cfg = { name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
+        delete cfg.paneId; // Xóa paneId để sửa lỗi layout
+        global.tvChart.createOverlay(cfg);
+      } catch(e) {}
     });
-    
-    console.log(`🚀 [TRACKER] KHÔI PHỤC HOÀN TẤT: Vẽ thành công ${successCount}/${overlayDefs.length} hình!`);
-
   }, 200); 
 }
 global.__wa_restoreOverlays = restoreOverlays;
-
-// --- KẾT THÚC ĐOẠN CẦN THAY THẾ ---
 
 
 // ============================================================
 // 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
 // ============================================================
 
-// --- BẮT ĐẦU ĐOẠN CẦN THAY THẾ ---
-
 window.__wa_onIntervalChange = function(newInterval) {
-  console.log(`\n===========================================`);
-  console.log(`🔥 [HOOK] USER BẤM NÚT ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
-  console.log(`===========================================`);
-  
   if (typeof global.__wa_saveAllOverlays === 'function') {
       global.__wa_saveAllOverlays();
-  } else {
-      console.log("❌ [HOOK LỖI] Không tìm thấy hàm lưu global.__wa_saveAllOverlays !!!");
   }
-
-  setTimeout(() => {
-    if (typeof global.__wa_restoreOverlays === 'function') {
+  // Kích hoạt lại vòng lặp thăm dò để ốp hình khi chart load xong nến mới
+  if (typeof global.__wa_restoreOverlays === 'function') {
       global.__wa_restoreOverlays();
-    } else {
-      console.log("❌ [HOOK LỖI] Không tìm thấy hàm khôi phục global.__wa_restoreOverlays !!!");
-    }
-  }, 50);
+  }
 };
 
 window.__wa_onSymbolChange = function(newSymbol) {
-  console.log(`\n===========================================`);
-  console.log(`🔥 [HOOK] USER BẤM ĐỔI COIN SANG: ${newSymbol}`);
-  console.log(`===========================================`);
   if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-  
   window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  setTimeout(() => {
-    if (typeof global.__wa_restoreOverlays === 'function') global.__wa_restoreOverlays();
-  }, 50);
+  
+  // Kích hoạt lại vòng lặp thăm dò để ốp hình của coin mới
+  if (typeof global.__wa_restoreOverlays === 'function') {
+      global.__wa_restoreOverlays();
+  }
 };
-
-// --- KẾT THÚC ĐOẠN CẦN THAY THẾ ---
 
 
 // ============================================================
