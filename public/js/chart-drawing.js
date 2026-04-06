@@ -43,16 +43,13 @@
     '#EF4444', '#B91C1C', '#FCA5A5', '#450A0A',
     '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'
   ];
-
-  // ✅ FIX: Per-timeframe drawing key + restore flags
-  function getDrawingKey() {
-    const sym = global.currentSymbol || 'wa_default';
-    const itv = global.currentInterval || global.currentPeriod || '0';
-    return `wa_drawings_${sym}_${itv}`;
-  }
-  let __wa_lastKey = '';
-  let __wa_pendingRestore = false;
-
+function getDrawingKey() {
+  const sym = global.currentSymbol || 'wa_default';
+  const itv = global.currentInterval || global.currentPeriod || '0';
+  return `wa_drawings_${sym}_${itv}`;
+}
+let __wa_lastKey = '';
+let __wa_pendingRestore = false;
   // Đồng bộ Storage an toàn
   let storedStyles = {};
   try { storedStyles = JSON.parse(localStorage.getItem('wa_drawing_styles')) || {}; } catch(e){}
@@ -2321,73 +2318,66 @@
   // ==========================================
 
   // Khôi phục hình vẽ từ LocalStorage
-  function restoreOverlays() {
-    if (!global.tvChart) return;
-    try {
-      // BẢO VỆ 1: Chỉ khôi phục khi Chart ĐÃ LOAD XONG NẾN của khung thời gian mới
-      // Nếu nến chưa tải xong mà cố vẽ, thư viện sẽ báo lỗi hoặc không hiển thị
-      const dataList = global.tvChart.getDataList();
-      if (!dataList || dataList.length === 0) return;
+function restoreOverlays() {
+  if (!global.tvChart) return;
+  try {
+    const dataList = global.tvChart.getDataList();
+    if (!dataList || dataList.length === 0) return;
 
-      const currentKey = getDrawingKey();
+    const currentKey = getDrawingKey();
 
-      // ✅ FIX: Phát hiện timeframe/symbol vừa đổi → bật cờ restore
-      if (__wa_lastKey && __wa_lastKey !== currentKey) {
-        __wa_pendingRestore = true;
-      }
-      __wa_lastKey = currentKey;
+    // Phát hiện timeframe/symbol vừa đổi → bật cờ restore
+    if (__wa_lastKey && __wa_lastKey !== currentKey) {
+      __wa_pendingRestore = true;
+    }
+    __wa_lastKey = currentKey;
 
-      // Nếu không có pending và chart đang có overlay → skip (tiết kiệm CPU)
-      const existingOverlays = global.tvChart.getOverlay() || [];
-      if (!__wa_pendingRestore && existingOverlays.length > 0) return;
+    // Nếu không có pending và chart đang có overlay → không làm gì (tránh lãng phí)
+    const existingOverlays = global.tvChart.getOverlay() || [];
+    if (!__wa_pendingRestore && existingOverlays.length > 0) return;
 
-      const saved = localStorage.getItem(currentKey);
-      if (saved && saved !== '[]') {
-        const overlays = JSON.parse(saved);
-        let restored = 0;
-        overlays.forEach(o => {
-          delete o.paneId;
-          if (!global.tvChart.getOverlayById(o.id)) {
-            global.tvChart.createOverlay(o);
-            restored++;
-          }
-        });
-        if (restored > 0) __wa_pendingRestore = false;
-      } else {
-        __wa_pendingRestore = false;
-      }
-    } catch(e) { /* Bỏ qua lỗi rác để không làm gián đoạn vòng lặp */ }
-  }
+    const saved = localStorage.getItem(currentKey);
+    if (saved && saved !== '[]') {
+      const overlays = JSON.parse(saved);
+      let restored = 0;
+      overlays.forEach(o => {
+        delete o.paneId;
+        if (!global.tvChart.getOverlayById(o.id)) {
+          global.tvChart.createOverlay(o);
+          restored++;
+        }
+      });
+      if (restored > 0) __wa_pendingRestore = false;
+    } else {
+      __wa_pendingRestore = false; // Key mới chưa có data → không cần chờ nữa
+    }
+  } catch(e) {}
+}
 
   // Lưu toàn bộ hình vẽ xuống LocalStorage
-  function saveAllOverlays() {
-    if (!global.tvChart) return;
-    try {
-      const overlays = global.tvChart.getOverlay() || [];
-      
-      // Trích xuất Data an toàn, tránh lỗi Circular JSON khi lưu xuống bộ nhớ
-      const dataToSave = overlays.map(o => ({
-        name: o.name, id: o.id, points: o.points, 
-        styles: o.styles, lock: o.lock, extendData: o.extendData
-      }));
-      
-      localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-    } catch(e) {}
-  }
+function saveAllOverlays() {
+  if (!global.tvChart) return;
+  try {
+    const overlays = global.tvChart.getOverlay() || [];
+    const dataToSave = overlays.map(o => ({
+      name: o.name, id: o.id, points: o.points,
+      styles: o.styles, lock: o.lock, extendData: o.extendData
+    }));
+    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
+  } catch(e) {}
+}
   global.__wa_saveAllOverlays = saveAllOverlays;
+global.__wa_onIntervalChange = function(newInterval) {
+  saveAllOverlays();                    // Lưu khung giờ CŨ trước khi rời
+  global.currentInterval = newInterval; // Cập nhật khung giờ mới
+  __wa_pendingRestore = true;           // Bật cờ restore
+};
 
-  // ✅ FIX: API hook cho framework ngoài gọi khi đổi timeframe / symbol
-  global.__wa_onIntervalChange = function(newInterval) {
-    saveAllOverlays();
-    global.currentInterval = newInterval;
-    __wa_pendingRestore = true;
-  };
-  global.__wa_onSymbolChange = function(newSymbol) {
-    saveAllOverlays();
-    global.currentSymbol = newSymbol;
-    __wa_pendingRestore = true;
-  };
-
+global.__wa_onSymbolChange = function(newSymbol) {
+  saveAllOverlays();
+  global.currentSymbol = newSymbol;
+  __wa_pendingRestore = true;
+};
   function mountUI() {
     var container = document.getElementById('sc-chart-container');
     if (!container || container.querySelector('.wa-toolbar')) return;
@@ -2411,28 +2401,28 @@
     else mountUI();
     
     // THUẬT TOÁN WATCHDOG V3: BẤT TỬ TRƯỚC FRAMEWORK
-    setInterval(() => {
-      const container = document.getElementById('sc-chart-container');
-      if (container && global.tvChart) {
-        
-        // ✅ FIX: Smart Watchdog — toolbar check mỗi 3s, restore chỉ khi cần
-        if (!global.__wa_watchdog_tick) global.__wa_watchdog_tick = 0;
-        if (++global.__wa_watchdog_tick % 3 === 0) {
-          if (!document.querySelector('.wa-toolbar')) mountUI();
-        }
+let __wa_watchdog_tick = 0;
+setInterval(() => {
+  const container = document.getElementById('sc-chart-container');
+  if (!container || !global.tvChart) return;
 
-        // Phát hiện thay đổi timeframe/symbol → bật cờ
-        const newKey = getDrawingKey();
-        if (newKey !== __wa_lastKey) {
-          __wa_pendingRestore = true;
-        }
+  // Kiểm tra toolbar mỗi 3 giây thay vì mỗi giây
+  if (++__wa_watchdog_tick % 3 === 0) {
+    if (!document.querySelector('.wa-toolbar')) mountUI();
+  }
 
-        // Chỉ gọi restoreOverlays khi thực sự cần
-        if (__wa_pendingRestore) {
-          restoreOverlays();
-        }
-      }
-    }, 1000);
+  // Phát hiện thay đổi timeframe/symbol → bật cờ
+  const newKey = getDrawingKey();
+  if (newKey !== __wa_lastKey) {
+    __wa_pendingRestore = true;
+    // KHÔNG cập nhật __wa_lastKey ở đây — để restoreOverlays() xử lý
+  }
+
+  // Chỉ gọi restoreOverlays khi thực sự cần
+  if (__wa_pendingRestore) {
+    restoreOverlays();
+  }
+}, 1000);
   }
 
 })(window);

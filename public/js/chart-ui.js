@@ -769,6 +769,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
 
+    // >>> BỔ SUNG FIX 5: Lưu hình vẽ của Coin CŨ trước khi chuyển sang Coin MỚI <<<
+    if (!isTimeSwitch && window.currentChartToken && typeof window.__wa_onSymbolChange === 'function') {
+        window.__wa_onSymbolChange(t.symbol);
+    }
+
     window.currentChartToken = t; 
     overlay.classList.add('active');
     document.body.classList.add('overlay-active');
@@ -1043,6 +1048,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
 window.changeChartInterval = function(interval, btnEl) {
     if (window.currentChartInterval === interval) return;
+
+    // >>> BỔ SUNG FIX 5: Lưu hình vẽ ngay lập tức trước khi mọi thứ bị reset <<<
+    if (typeof window.__wa_onIntervalChange === 'function') {
+        window.__wa_onIntervalChange(interval);
+    }
 
     document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
