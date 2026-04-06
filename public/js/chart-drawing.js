@@ -2012,12 +2012,12 @@
         </div>`;
     }
 
-    // ... (phần trên của renderPanel giữ nguyên) ...
+
 
     body.innerHTML = html;
     panel.classList.add('show');
 
-    // 1. PHẢI KHAI BÁO updateEngine TRƯỚC TIÊN ĐỂ KHÔNG BỊ CRASH
+    // Khai báo engine update ngay sau khi render HTML
     const updateEngine = debounce(() => {
       if(!currentSelectedOverlay || !global.tvChart) return;
       let newStyles = { ...currentSelectedOverlay.styles };
@@ -2050,14 +2050,15 @@
       try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
     }, 16);
 
-    // 2. SAU ĐÓ MỚI GẮN SỰ KIỆN CLICK (Sẽ không bao giờ lỗi nữa)
+    // Gắn sự kiện click cho bảng Emoji
     body.querySelectorAll('.wa-emo').forEach(el => {
        el.onclick = function() {
           document.getElementById('wa-prop-txt').value = this.innerText;
-          updateEngine(); // Click Icon là tự đổi trên chart luôn
+          updateEngine(); 
        };
     });
 
+    // Lắng nghe thay đổi input
     body.querySelectorAll('input, textarea, select').forEach(el => {
       el.addEventListener('input', updateEngine); el.addEventListener('change', updateEngine); el.addEventListener('compositionend', updateEngine);
     });

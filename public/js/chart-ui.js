@@ -986,8 +986,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
             window.tvChart.setStyles({
                     grid: {
-                        horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
-                        vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
+                        // SỬA LỖI Ở 2 DÒNG DƯỚI ĐÂY: Thêm chữ ws. vào trước showGrid
+                        horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
+                        vertical:   { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
                     },
                     candle: { 
                         type: window.currentChartInterval === 'tick' ? 'area' : cType,
@@ -997,7 +998,6 @@ window.openProChart = function(t, isTimeSwitch = false) {
                             upWickColor: ubd, downWickColor: dbd
                         }
                     },
-                    
                     watermark: {
                         show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
                     }
