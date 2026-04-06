@@ -2350,12 +2350,11 @@ function getDrawingKey() {
 
 function saveAllOverlays() {
   try {
+    if (global.__wa_overlay_map.size === 0) return;
     let dataToSave = [];
-    if (global.__wa_overlay_map && global.__wa_overlay_map.size > 0) {
-      global.__wa_overlay_map.forEach(function(data) {
-        dataToSave.push(data);
-      });
-    }
+    global.__wa_overlay_map.forEach(function(data) {
+      dataToSave.push(data);
+    });
     localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
   } catch(e) {}
 }
@@ -2377,15 +2376,13 @@ let _waRestoreAttempts = 0;
 let _waActiveKey = '';
 
 function restoreOverlays() {
+  if (!global.tvChart) return;
   clearInterval(_waRestoreTimer);
   _waRestoreAttempts = 0;
 
   _waRestoreTimer = setInterval(function() {
     _waRestoreAttempts++;
-    if (_waRestoreAttempts > 50) { clearInterval(_waRestoreTimer); return; }
-
-    // [FIX] Bỏ qua vòng lặp này nếu tvChart chưa sẵn sàng (chống Crash)
-    if (!global.tvChart || typeof global.tvChart.getDataList !== 'function') return;
+    if (_waRestoreAttempts > 25) { clearInterval(_waRestoreTimer); return; }
 
     let dataList = global.tvChart.getDataList();
     if (!dataList || dataList.length < 5) return;
@@ -2395,7 +2392,7 @@ function restoreOverlays() {
     let key = getDrawingKey();
     if (_waActiveKey && _waActiveKey !== key) {
       try { global.tvChart.removeOverlay(); } catch(e) {}
-      if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
+      global.__wa_overlay_map.clear();
     }
     _waActiveKey = key;
 
@@ -2433,16 +2430,16 @@ window.__wa_onIntervalChange = function(newInterval) {
   console.log(`\n================================`);
   console.log(`🔥 [HOOK] ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
   console.log(`================================`);
+
   if (typeof global.__wa_saveAllOverlays === 'function') {
-      global.__wa_saveAllOverlays();
+    global.__wa_saveAllOverlays();
   }
-  
-  // FIX: Xóa trí nhớ RAM để ép hệ thống phải vẽ lại trên khung giờ mới
+
+  // Xóa state RAM để chart mới dựng lại từ localStorage / persisted source
   if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
-  
-  if (typeof global.__wa_restoreOverlays === 'function') {
-      global.__wa_restoreOverlays();
-  }
+
+  // ❌ KHÔNG restore ở đây nữa
+  // Vì lúc này vẫn đang là chart cũ, lát nữa openProChart() sẽ dispose nó.
 };
 
 window.__wa_onSymbolChange = function(newSymbol) {
@@ -2782,9 +2779,6 @@ function mountUI() {
 // ============================================================
 // 7.9 TOOLBAR WATCHDOG — Siêu nhẹ, chỉ re-inject DOM, KHÔNG re-bind events
 // ============================================================
-// ============================================================
-// 7.9 TOOLBAR WATCHDOG — Siêu nhẹ, chỉ re-inject DOM, KHÔNG re-bind events
-// ============================================================
 (function startToolbarWatchdog() {
   if (window.__wa_watchdog_started) return; // Chạy đúng 1 lần
   window.__wa_watchdog_started = true;
@@ -2797,21 +2791,17 @@ function mountUI() {
       if (mutations[i].removedNodes.length === 0) continue;
       var container = document.getElementById('sc-chart-container');
       if (container && !container.querySelector('.wa-toolbar')) {
-        // Toolbar bị xóa → chỉ inject lại DOM
+        // Toolbar bị xóa → chỉ inject lại DOM, KHÔNG gắn lại global events
         mountDOM();
         
-        // Xóa RAM để đánh thức hàm vẽ lại
+        // FIX: Chart đã bị framework làm mới -> Phải xóa RAM để đánh thức hàm vẽ lại
         if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
         
-        // [FIX] Dùng setInterval để ĐỢI tvChart mới được sinh ra rồi mới gắn sự kiện
-        let _rebindTimer = setInterval(() => {
-          if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
-            clearInterval(_rebindTimer);
-            global.tvChart.__wa_chart_events_bound = false;
-            _bindChartEventsOnce();
-          }
-        }, 100);
-
+        // Sau khi DOM mới, gắn lại chart events nếu cần
+        if (global.tvChart) {
+          global.tvChart.__wa_chart_events_bound = false;
+          _bindChartEventsOnce();
+        }
         // Restore overlay sau khi framework load xong data
         setTimeout(restoreOverlays, 100);
         break;
@@ -2825,7 +2815,10 @@ function mountUI() {
     if (!target) return;
 
     _observer = new MutationObserver(_onContainerMutation);
-    _observer.observe(target, { childList: true, subtree: true });
+    _observer.observe(target, {
+      childList: true,
+      subtree: true  // Quan sát cả con cháu để bắt được khi framework re-render bên trong
+    });
   }
 
   if (document.readyState === 'loading') {
