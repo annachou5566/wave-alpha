@@ -1581,23 +1581,61 @@
   // ─────────────────────────────────────────────
   var USE_NATIVE_PROMPT = false;
 
-  function openTextEditor(currentText, onConfirm) {
+  function openTextEditor(currentText, currentStyles, onConfirm) {
     if (USE_NATIVE_PROMPT) {
       var result = window.prompt('Nhập nội dung:', currentText || '');
-      if (result !== null) onConfirm(result);
+      if (result !== null) onConfirm(result, currentStyles);
       return;
     }
     var existing = document.getElementById('wa-text-editor');
     if (existing) existing.remove();
 
+    // Lấy style hiện tại hoặc mặc định
+    var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
+    var pStyles = (currentStyles && currentStyles.polygon) ? currentStyles.polygon : {};
+
+    var curColor = colorToHex(tStyles.color || '#EAECEF');
+    var curBg = colorToHex(pStyles.color || 'rgba(22, 26, 30, 0.9)'); 
+    var curSize = tStyles.size || 14;
+    var curFont = tStyles.family || 'Rajdhani, sans-serif';
+
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor';
     backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
     backdrop.innerHTML = `
-      <div style="background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:20px;width:340px;box-shadow:0 20px 40px rgba(0,0,0,0.7);font-family:Rajdhani,sans-serif;">
-        <div style="font-size:11px;font-weight:700;color:#848e9c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Nhập nội dung</div>
+      <div style="background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:20px;width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.7);font-family:Rajdhani,sans-serif;">
+        <div style="font-size:11px;font-weight:700;color:#848e9c;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Định dạng văn bản</div>
+        
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <div style="flex:1;">
+            <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Màu chữ</label>
+            <input type="color" id="wa-te-color" value="${curColor}" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; cursor:pointer; padding:0;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Màu nền</label>
+            <input type="color" id="wa-te-bg" value="${curBg}" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; cursor:pointer; padding:0;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Cỡ chữ</label>
+            <input type="number" id="wa-te-size" value="${curSize}" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; color:#eaecef; font-size:13px; padding:0 8px; box-sizing:border-box; outline:none;">
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+           <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Font chữ</label>
+           <select id="wa-te-font" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; color:#eaecef; font-size:13px; padding:0 8px; outline:none; cursor:pointer;">
+              <option value="Rajdhani, sans-serif" ${curFont.includes('Rajdhani')?'selected':''}>Rajdhani (Mặc định)</option>
+              <option value="sans-serif" ${curFont==='sans-serif'?'selected':''}>Sans-serif</option>
+              <option value="Arial" ${curFont==='Arial'?'selected':''}>Arial</option>
+              <option value="Courier New" ${curFont==='Courier New'?'selected':''}>Courier New</option>
+              <option value="Times New Roman" ${curFont==='Times New Roman'?'selected':''}>Times New Roman</option>
+           </select>
+        </div>
+
+        <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Nội dung</label>
         <textarea id="wa-te-input" rows="3" style="width:100%;box-sizing:border-box;background:#111418;border:1px solid #2b3139;border-radius:6px;color:#eaecef;font-size:14px;font-family:inherit;padding:8px 10px;resize:vertical;outline:none;" placeholder="Nhập text..."></textarea>
-        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+        
+        <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
           <button id="wa-te-cancel" style="background:transparent;border:1px solid #2b3139;color:#848e9c;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;">Hủy</button>
           <button id="wa-te-confirm" style="background:#00F0FF;border:none;color:#000;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;">Xác nhận</button>
         </div>
@@ -1608,14 +1646,36 @@
     textarea.value = currentText || '';
     requestAnimationFrame(function() { textarea.focus(); textarea.select(); });
 
-    function confirm() { var val = textarea.value; backdrop.remove(); onConfirm(val); }
+    function confirm() { 
+      var val = textarea.value; 
+      var newColor = document.getElementById('wa-te-color').value;
+      var newBg = document.getElementById('wa-te-bg').value;
+      var newSize = parseInt(document.getElementById('wa-te-size').value) || 14;
+      var newFont = document.getElementById('wa-te-font').value;
+
+      // Xây dựng style mới để ghi đè
+      var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+      if (!updatedStyles.text) updatedStyles.text = {};
+      if (!updatedStyles.polygon) updatedStyles.polygon = {};
+
+      updatedStyles.text.color = newColor;
+      updatedStyles.text.size = newSize;
+      updatedStyles.text.family = newFont;
+      
+      // Độ trong suốt (alpha) cho nền là 0.8 để biểu đồ bên dưới không bị che lấp hoàn toàn
+      updatedStyles.polygon.color = hexToRgba(newBg, 0.8);
+      updatedStyles.polygon.style = 'stroke_fill';
+
+      backdrop.remove(); 
+      onConfirm(val, updatedStyles); 
+    }
     function cancel() { backdrop.remove(); }
 
     document.getElementById('wa-te-confirm').addEventListener('click', confirm);
     document.getElementById('wa-te-cancel').addEventListener('click', cancel);
     backdrop.addEventListener('click', function(e) { if (e.target === backdrop) cancel(); });
     textarea.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); confirm(); }
+      if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); confirm(); } // Đổi sang Ctrl+Enter để cho phép xuống dòng bằng phím Enter
       if (e.key === 'Escape') cancel();
     });
   }
@@ -1630,16 +1690,14 @@
     var isUrlTool = URL_TOOLS.indexOf(toolId) !== -1;
     var urlPromptMsg = isUrlTool ? 'Nhập URL hình ảnh:' : 'Nhập nội dung:';
 
-    function openEditor(currentText) {
+    function openEditor(currentText, currentStyles) {
       if (isUrlTool) {
         var result = window.prompt(urlPromptMsg, currentText || '');
-        // FIX: Sửa modifyOverlay thành overrideOverlay
         if (result !== null && overlayId) chart.overrideOverlay({ id: overlayId, extendData: result });
         return;
       }
-      openTextEditor(currentText, function(newText) {
-        // FIX: Sửa modifyOverlay thành overrideOverlay
-        if (overlayId) chart.overrideOverlay({ id: overlayId, extendData: newText });
+      openTextEditor(currentText, currentStyles, function(newText, newStyles) {
+        if (overlayId) chart.overrideOverlay({ id: overlayId, extendData: newText, styles: newStyles });
       });
     }
 
@@ -1647,12 +1705,12 @@
       name: toolId, extendData: initialData || '',
       onDrawEnd: isEditable ? function(event) {
         if (!overlayId && event && event.overlay) overlayId = event.overlay.id;
-        openEditor((event && event.overlay) ? event.overlay.extendData : '');
+        openEditor((event && event.overlay) ? event.overlay.extendData : '', (event && event.overlay) ? event.overlay.styles : {});
         return false;
       } : undefined,
       onDoubleClick: isEditable ? function(event) {
         if (!overlayId && event && event.overlay) overlayId = event.overlay.id;
-        openEditor((event && event.overlay) ? event.overlay.extendData : '');
+        openEditor((event && event.overlay) ? event.overlay.extendData : '', (event && event.overlay) ? event.overlay.styles : {});
         return false;
       } : undefined
     };
