@@ -43,13 +43,7 @@
     '#EF4444', '#B91C1C', '#FCA5A5', '#450A0A',
     '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'
   ];
-function getDrawingKey() {
-  const sym = global.currentSymbol || 'wa_default';
-  const itv = global.currentInterval || global.currentPeriod || '0';
-  return `wa_drawings_${sym}_${itv}`;
-}
-let __wa_lastKey = '';
-let __wa_pendingRestore = false;
+
   // Đồng bộ Storage an toàn
   let storedStyles = {};
   try { storedStyles = JSON.parse(localStorage.getItem('wa_drawing_styles')) || {}; } catch(e){}
@@ -2314,11 +2308,11 @@ let __wa_pendingRestore = false;
   }
 
   // ==========================================
-  // 7. AUTO-HEAL & PERSISTENCE (FIX LAG & MẤT HÌNH 100%)
+  // 7. AUTO-HEAL & PERSISTENCE (FIX TRIỆT ĐỂ MẤT HÌNH & LAG)
   // ==========================================
 
   function getDrawingKey() {
-    // SỬ DỤNG ĐÚNG BIẾN GỐC CỦA HỆ THỐNG WAVE ALPHA (Fix lỗi mất hình)
+    // Đọc chính xác Symbol và Khung thời gian từ hệ thống Wave Alpha
     const sym = (window.currentChartToken && window.currentChartToken.symbol) ? window.currentChartToken.symbol : 'UNKNOWN';
     const itv = window.currentChartInterval || '1d';
     return `wa_drawings_${sym}_${itv}`;
@@ -2331,20 +2325,19 @@ let __wa_pendingRestore = false;
     if (!global.tvChart) return;
     try {
       const overlays = global.tvChart.getOverlay() || [];
-      // Lọc bỏ rác để chuỗi JSON cực nhẹ -> Chống Lag khi lưu
       const dataToSave = overlays.map(o => ({
         name: o.name, id: o.id, points: o.points,
         styles: o.styles, lock: o.lock, extendData: o.extendData
       }));
       localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-    } catch(e) {}
+    } catch (e) {}
   }
   global.__wa_saveAllOverlays = saveAllOverlays;
 
   function restoreOverlays() {
     if (!global.tvChart) return;
     try {
-      // Đợi KLineChart nạp xong nến mới bắt đầu vẽ (Chống lỗi không hiển thị hình)
+      // BẢO VỆ 1: Đợi nến tải xong 100% mới ốp hình vẽ vào
       const dataList = global.tvChart.getDataList();
       if (!dataList || dataList.length === 0) return; 
 
@@ -2354,34 +2347,31 @@ let __wa_pendingRestore = false;
         __wa_lastKey = currentKey;
       }
 
-      const existingOverlays = global.tvChart.getOverlay() || [];
-      // Nếu đã có hình và không ở trạng thái chờ phục hồi -> Bỏ qua để tiết kiệm CPU
-      if (!__wa_pendingRestore && existingOverlays.length > 0) return;
+      // BẢO VỆ 2: CHỐNG LAG CPU - Trừ khi có cờ chuyển khung, nếu không KHÔNG query hình vẽ
+      if (!__wa_pendingRestore) return; 
 
       const saved = localStorage.getItem(currentKey);
       if (saved && saved !== '[]') {
         const overlays = JSON.parse(saved);
-        let restored = 0;
+        let restoredCount = 0;
         overlays.forEach(o => {
-          delete o.paneId; // Xóa paneId để hình vẽ tự adapt vào khung mới
+          delete o.paneId; // Xóa paneId để hình vẽ không bị trượt layout khi đổi khung
           if (!global.tvChart.getOverlayById(o.id)) {
             global.tvChart.createOverlay(o);
-            restored++;
+            restoredCount++;
           }
         });
-        if (restored > 0) __wa_pendingRestore = false;
+        // Tắt cờ phục hồi khi đã ốp hình thành công
+        if (restoredCount > 0) __wa_pendingRestore = false;
       } else {
-        __wa_pendingRestore = false;
+        __wa_pendingRestore = false; // Tắt cờ nếu khung mới chưa có hình vẽ nào
       }
-    } catch(e) {}
+    } catch (e) {}
   }
 
   function mountUI() {
     var container = document.getElementById('sc-chart-container');
-    
-    // 🛡️ CHỐT CHẶN CHỐNG LAG: Chỉ chèn Toolbar khi biểu đồ đã load xong thẻ <canvas>
-    // Điều này ngăn chặn việc đụng độ DOM khi hệ thống đang dọn dẹp để đổi timeframe
-    if (!container || !container.querySelector('canvas')) return;
+    if (!container) return;
     if (container.querySelector('.wa-toolbar')) return;
 
     injectCSS(); registerProExtensions();
@@ -2402,31 +2392,23 @@ let __wa_pendingRestore = false;
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountUI); 
     else mountUI();
 
-    let __wa_watchdog_tick = 0;
-    setInterval(() => {
+    // THUẬT TOÁN BẤT TỬ 1: Quản lý Thanh Toolbar tức thì (Không gây lag vì subtree = false)
+    const domObserver = new MutationObserver(() => {
       const container = document.getElementById('sc-chart-container');
-      
-      // Nếu chart đang bị destroy (đổi timeframe) thì Watchdog NGỦ ĐÔNG để giải phóng CPU
-      if (!container || !global.tvChart || !container.querySelector('canvas')) return;
-
-      // Quét phục hồi Toolbar với chu kỳ thưa hơn (2 giây/lần) để cực kỳ mượt
-      if (++__wa_watchdog_tick % 2 === 0) {
-        if (!document.querySelector('.wa-toolbar')) mountUI();
+      if (container && !container.querySelector('.wa-toolbar')) {
+        mountUI();
       }
+    });
+    const _chartRoot = document.getElementById('sc-chart-container') || document.body;
+    domObserver.observe(_chartRoot, { childList: true, subtree: false });
 
-      // Quét đổi Timeframe
-      const newKey = getDrawingKey();
-      if (newKey !== __wa_lastKey) {
-        __wa_pendingRestore = true;
-      }
-
-      if (__wa_pendingRestore) {
-        restoreOverlays();
-      }
+    // THUẬT TOÁN BẤT TỬ 2: Quản lý Hình vẽ siêu nhẹ (1 giây 1 lần, CPU = 0%)
+    setInterval(() => {
+      if (global.tvChart) restoreOverlays();
     }, 1000);
   }
 
-  // Lắng nghe tín hiệu từ file chart-ui.js
+  // Bắt tín hiệu từ file chart-ui.js
   global.__wa_onIntervalChange = function(newInterval) {
     saveAllOverlays();
     __wa_pendingRestore = true;
@@ -2437,4 +2419,4 @@ let __wa_pendingRestore = false;
     __wa_pendingRestore = true;
   };
 
-})(window); 
+})(window); // <-- Chú ý giữ nguyên dòng đóng module này
