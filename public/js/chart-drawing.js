@@ -1472,6 +1472,27 @@
       .wa-toast { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(22, 26, 30, 0.9); border: 1px solid #2b3139; color: #EAECEF; padding: 8px 16px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; z-index: 9999; pointer-events: none; }
       
       .wa-drawing-mode canvas { cursor: crosshair !important; }
+      /* --- TEXT POPUP MINIMALIST --- */
+      .wa-text-popup-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(3px); z-index: 10005; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+      .wa-text-popup-overlay.show { display: flex; opacity: 1; }
+      .wa-text-popup { background: #161A1E; border: 1px solid #2b3139; border-radius: 12px; width: 340px; padding: 24px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 16px; transform: scale(0.95); transition: transform 0.2s; }
+      .wa-text-popup-overlay.show .wa-text-popup { transform: scale(1); }
+      .wa-text-popup h3 { margin: 0; color: #EAECEF; font-size: 16px; font-weight: 600; letter-spacing: 0.5px; }
+      .wa-tp-row { display: flex; gap: 12px; }
+      .wa-tp-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+      .wa-tp-col label { color: #848E9C; font-size: 12px; font-weight: 500; }
+      .wa-tp-input, .wa-tp-select, .wa-tp-textarea { background: #0B0E11; border: 1px solid #2b3139; color: #EAECEF; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: all 0.2s; width: 100%; box-sizing: border-box; }
+      .wa-tp-input:focus, .wa-tp-select:focus, .wa-tp-textarea:focus { border-color: #00F0FF; box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.1); }
+      .wa-tp-textarea { resize: none; height: 100px; font-family: inherit; line-height: 1.4; }
+      .wa-tp-color { height: 38px; padding: 2px; cursor: pointer; }
+      .wa-tp-color::-webkit-color-swatch-wrapper { padding: 0; }
+      .wa-tp-color::-webkit-color-swatch { border: none; border-radius: 6px; }
+      .wa-tp-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+      .wa-tp-btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; }
+      .wa-tp-btn.cancel { background: transparent; color: #848E9C; border: 1px solid #2b3139; }
+      .wa-tp-btn.cancel:hover { background: #2b3139; color: #EAECEF; }
+      .wa-tp-btn.save { background: #00F0FF; color: #000; }
+      .wa-tp-btn.save:hover { background: #00c8d6; box-shadow: 0 4px 12px rgba(0, 240, 255, 0.2); }
     `;
     document.head.appendChild(style);
   }
@@ -1631,7 +1652,97 @@
     }, 0);
   }
 
+// ==========================================
+  // TEXT POPUP ENGINE (CHUYÊN NGHIỆP & MINIMALIST)
+  // ==========================================
+  function createTextPopup() {
+    if(document.getElementById('wa-text-popup-overlay')) return global.openTextPopup;
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'wa-text-popup-overlay';
+    overlay.className = 'wa-text-popup-overlay';
+    overlay.innerHTML = `
+      <div class="wa-text-popup">
+        <h3>✏️ Chỉnh sửa Văn bản</h3>
+        <div class="wa-tp-col">
+          <textarea id="wa-tp-text" class="wa-tp-textarea" placeholder="Nhập nội dung..."></textarea>
+        </div>
+        <div class="wa-tp-row">
+          <div class="wa-tp-col">
+            <label>Cỡ chữ</label>
+            <input type="number" id="wa-tp-size" class="wa-tp-input" min="10" max="100" value="14">
+          </div>
+          <div class="wa-tp-col">
+            <label>Màu chữ</label>
+            <input type="color" id="wa-tp-color" class="wa-tp-input wa-tp-color" value="#EAECEF">
+          </div>
+        </div>
+        <div class="wa-tp-col">
+          <label>Font chữ</label>
+          <select id="wa-tp-font" class="wa-tp-select">
+            <option value="sans-serif">Mặc định (Sans-serif)</option>
+            <option value="Arial">Arial</option>
+            <option value="Courier New">Monospace (Courier)</option>
+            <option value="Times New Roman">Times New Roman</option>
+          </select>
+        </div>
+        <div class="wa-tp-actions">
+          <button class="wa-tp-btn cancel" id="wa-tp-cancel">Hủy</button>
+          <button class="wa-tp-btn save" id="wa-tp-save">Lưu lại</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('sc-chart-container').appendChild(overlay);
 
+    let currentEditingId = null;
+
+    function closePopup() { overlay.classList.remove('show'); setTimeout(() => { overlay.style.display = 'none'; }, 200); }
+
+    document.getElementById('wa-tp-cancel').onclick = closePopup;
+    document.getElementById('wa-tp-save').onclick = () => {
+      if(!currentEditingId || !global.tvChart) return;
+      const newText = document.getElementById('wa-tp-text').value;
+      const newSize = parseInt(document.getElementById('wa-tp-size').value) || 14;
+      const newColor = document.getElementById('wa-tp-color').value;
+      const newFont = document.getElementById('wa-tp-font').value;
+
+      const targetOverlay = global.tvChart.getOverlayById ? global.tvChart.getOverlayById(currentEditingId) : null;
+      let baseStyles = targetOverlay ? targetOverlay.styles : (currentSelectedOverlay ? currentSelectedOverlay.styles : {});
+      
+      let newStyles = JSON.parse(JSON.stringify(baseStyles || {}));
+      newStyles.text = { ...newStyles.text, color: newColor, size: newSize, family: newFont };
+      
+      try {
+        global.tvChart.overrideOverlay({ id: currentEditingId, styles: newStyles, extendData: newText });
+        // Đồng bộ lại vào currentSelectedOverlay để right panel không bị lỗi nếu bấm vào
+        if (currentSelectedOverlay && currentSelectedOverlay.id === currentEditingId) {
+            currentSelectedOverlay.styles = newStyles; currentSelectedOverlay.extendData = newText;
+        }
+      } catch(e){}
+      
+      closePopup();
+    };
+
+    global.openTextPopup = function(overlayObj) {
+      currentEditingId = overlayObj.id;
+      let s = overlayObj.styles || {};
+      let ext = overlayObj.extendData || '';
+      let txt = typeof ext === 'string' ? ext : (ext.text || '');
+
+      document.getElementById('wa-tp-text').value = txt;
+      document.getElementById('wa-tp-size').value = (s.text && s.text.size) ? s.text.size : toolStyles.text.textSize;
+      document.getElementById('wa-tp-color').value = (s.text && s.text.color) ? colorToHex(s.text.color) : toolStyles.text.textColor;
+      document.getElementById('wa-tp-font').value = (s.text && s.text.family) ? s.text.family : 'sans-serif';
+
+      overlay.style.display = 'flex';
+      // Mẹo nhỏ để CSS Transition chạy mượt
+      requestAnimationFrame(() => {
+          overlay.classList.add('show');
+          setTimeout(() => { document.getElementById('wa-tp-text').focus(); document.getElementById('wa-tp-text').select(); }, 50);
+      });
+    };
+    return global.openTextPopup;
+  }
 
   // ==========================================
   // 4. EVENTS ENGINE (KEYBOARD, TOOLS)
@@ -1761,9 +1872,11 @@
             let now = Date.now(); let isDoubleClick = (now - lastClickTime < 300); lastClickTime = now;
             currentSelectedOverlay = overlayObj; renderPanel(currentSelectedOverlay);
 
-            if(isDoubleClick && getToolCategory(overlayObj.name) === 'text') {
-   setTimeout(() => { let t = document.getElementById('wa-prop-txt'); if(t) { t.focus(); t.select(); } }, 50);
-}
+            // MỚI: Bật Popup khi Double-Click vào bất kỳ Text/Ghi chú nào
+            if (isDoubleClick && getToolCategory(overlayObj.name) === 'text' && overlayObj.name !== 'insertImage' && overlayObj.name !== 'insertIcon') {
+               if(!global.openTextPopup) createTextPopup();
+               global.openTextPopup(overlayObj);
+            }
           });
         }
         clearInterval(waitChart);
