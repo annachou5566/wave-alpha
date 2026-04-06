@@ -1369,17 +1369,6 @@
         tbWrap.innerHTML = `
           <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 8px;"></div>
 
-          <button id="sc-draw-toggle-btn" onclick="if(window.WaveDrawingAPI) window.WaveDrawingAPI.toggle();" title="Công cụ vẽ"
-  style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
-         font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 8px;
-         border-radius:6px; font-weight:600; transition:.15s;"
-  onmouseover="this.style.color='${COLOR.cyan}'; this.style.background='${COLOR.cyanFaint}'"
-  onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'">
-  ✏️ <span class="wa-label">Vẽ</span>
-</button>
-
-          <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 4px;"></div>
-
           <button id="btn-fx-indicator" title="Thư viện chỉ báo"
             style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
                    font-size:13px; display:flex; align-items:center; gap:5px; padding:4px 8px;
