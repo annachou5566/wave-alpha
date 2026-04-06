@@ -1015,6 +1015,12 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
                     if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
                 }
+
+                // 🚀 LỚP 3: LIFECYCLE HOOK - Bơm hình vẽ vào NGAY LẬP TỨC khi nến đã đổ xong
+                if (typeof window.__wa_restoreOverlays === 'function') {
+                    setTimeout(() => window.__wa_restoreOverlays(), 50); 
+                }
+
                 if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
             });
         }

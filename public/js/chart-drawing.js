@@ -2338,58 +2338,34 @@ function getDrawingKey() {
 // Theo dõi key đang active để detect coin change
 var _waActiveKey = null;
 
-// --- 7.2 SAVE ---
+// --- 7.2 LỚP 1: SINGLE SOURCE OF TRUTH (LƯU TRỮ) ---
 function saveAllOverlays() {
   if (!global.tvChart) return;
   try {
     var dataList = global.tvChart.getDataList();
-    // Không lưu khi chart đang trống (đang load data) → tránh ghi mảng rỗng đè lên hình cũ
     if (!dataList || dataList.length === 0) return;
-    var overlays = global.tvChart.getOverlay();
-    if (!overlays || overlays.length === 0) return; // Không ghi đè nếu chart vừa bị clear
+    
+    var overlays = global.tvChart.getOverlay() || [];
     var dataToSave = overlays.map(function(o) {
       return {
-        name: o.name,
-        points: o.points,
-        styles: o.styles,
-        lock: o.lock,
-        extendData: o.extendData
-        // Không lưu `id` và `paneId` — tránh xung đột khi restore
+        name: o.name, points: o.points, styles: o.styles, lock: o.lock, extendData: o.extendData
       };
     });
     localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-  } catch(e) { /* silent */ }
+  } catch(e) { }
 }
-global.wasaveAllOverlays = saveAllOverlays;
+// FIX LỖI TYPO ĐỂ HỆ THỐNG GỌI ĐƯỢC HÀM LƯU:
+global.__wa_saveAllOverlays = saveAllOverlays; 
 
-// --- 7.3 RESTORE (Stateless, với Retry Loop) ---
-var _waRestoreTimer = null;
-var _waRestoreAttempts = 0;
-var WA_RESTORE_MAX_ATTEMPTS = 20; // 20 * 200ms = 4 giây timeout
-
+// --- 7.3 LỚP 2: TỌA ĐỘ VÀ PHỤC HỒI (CHẠY THEO EVENT) ---
 function restoreOverlays() {
   if (!global.tvChart) return;
-  clearInterval(_waRestoreTimer);
-  _waRestoreAttempts = 0;
-
-  _waRestoreTimer = setInterval(function() {
-    _waRestoreAttempts++;
-
-    // Timeout guard
-    if (_waRestoreAttempts > WA_RESTORE_MAX_ATTEMPTS) {
-      clearInterval(_waRestoreTimer);
-      return;
-    }
-
-    // Đợi KLineChart có data nến thật sự
+  try {
     var dataList = global.tvChart.getDataList();
-    if (!dataList || dataList.length < 5) return; // Chưa có data, thử lại
-
-    clearInterval(_waRestoreTimer); // Đã có data, tiến hành restore
+    // Đảm bảo nến đã nạp xong (Được kích hoạt bởi Hook ở Bước 3)
+    if (!dataList || dataList.length === 0) return;
 
     var key = getDrawingKey();
-
-    // Nếu đổi coin: xóa overlay của coin cũ trên chart
     if (_waActiveKey && _waActiveKey !== key) {
       try { global.tvChart.removeOverlay(); } catch(e) {}
     }
@@ -2400,45 +2376,33 @@ function restoreOverlays() {
 
     var overlayDefs;
     try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
-    if (!Array.isArray(overlayDefs) || overlayDefs.length === 0) return;
+    if (!Array.isArray(overlayDefs)) return;
 
-    // Stateless compare: chỉ restore nếu chart đang bị thiếu hình
     var currentOverlays = global.tvChart.getOverlay() || [];
-    if (currentOverlays.length >= overlayDefs.length) return; // Đã đủ, không cần restore
+    // Chỉ vẽ lại nếu số hình trên chart đang bị thiếu so với trong Database
+    if (currentOverlays.length === overlayDefs.length) return; 
 
-    // Clear toàn bộ hình hiện tại (có thể là hình nửa vời) rồi vẽ lại từ Storage
+    // Xóa sạch hình rác trước khi ốp data mới vào
     try { global.tvChart.removeOverlay(); } catch(e) {}
 
     overlayDefs.forEach(function(o) {
       try {
-        var cfg = {
-          name: o.name,
-          points: o.points,
-          styles: o.styles,
-          lock: !!o.lock,
-          extendData: o.extendData
-          // KHÔNG set paneId — tránh lỗi layout đa khung
-        };
+        var cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
         global.tvChart.createOverlay(cfg);
-      } catch(e) { /* Bỏ qua overlay lỗi, tiếp tục restore các cái còn lại */ }
+      } catch(e) {}
     });
-
-  }, 200); // Poll mỗi 200ms, nhẹ hơn nhiều so với setInterval 1000ms liên tục
+  } catch(e) {}
 }
-global.warestoreOverlays = restoreOverlays;
+// FIX LỖI TYPO ĐỂ GỌI TỪ BÊN NGOÀI ĐƯỢC:
+global.__wa_restoreOverlays = restoreOverlays;
 
 
 // ============================================================
 // 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
 // ============================================================
 
-/**
- * Gọi từ chart-ui.js TRƯỚC KHI nạp data mới (đổi Timeframe)
- * VD: window.__wa_onIntervalChange('4H')
- */
 window.__wa_onIntervalChange = function(newInterval) {
-  // Bước 1: Lưu hình vẽ hiện tại NGAY LẬP TỨC trước khi chart bị clear
-  // Buộc save, bỏ qua guard dataList.length === 0
+  // Lưu hình vẽ hiện tại NGAY LẬP TỨC trước khi chart bị clear
   try {
     var overlays = global.tvChart ? global.tvChart.getOverlay() : [];
     if (overlays && overlays.length > 0) {
@@ -2448,25 +2412,11 @@ window.__wa_onIntervalChange = function(newInterval) {
       localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
     }
   } catch(e) {}
-
-  // Bước 2: Schedule restore SAU KHI framework nạp data xong
-  // restoreOverlays() tự chờ dataList.length > 0
-  setTimeout(restoreOverlays, 50);
 };
 
-/**
- * Gọi từ chart-ui.js TRƯỚC KHI đổi sang coin khác
- * VD: window.__wa_onSymbolChange('ETH')
- */
 window.__wa_onSymbolChange = function(newSymbol) {
-  // Bước 1: Lưu hình vẽ của coin HIỆN TẠI
   saveAllOverlays();
-
-  // Bước 2: Cập nhật symbol mới để getDrawingKey() trả về đúng key
   window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-  // Bước 3: Schedule restore cho coin mới
-  setTimeout(restoreOverlays, 50);
 };
 
 
