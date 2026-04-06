@@ -1316,71 +1316,84 @@
         }
       },
 
-      // --- BATCH 8: Text Annotation Tools (MỞ KHÓA SCHEMA STYLE ĐỂ ĐỔI MÀU 100%) ---
+      // --- BATCH 8: Text Annotation Tools (HỖ TRỢ MULTILINE & ẢNH THỰC TẾ) ---
       { 
         name: 'plainText', totalStep: 2, needDefaultPointFigure: true, 
-        styles: { text: { color: '#EAECEF' }, polygon: { color: 'transparent' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; var bgC = (pS.color && pS.color !== 'transparent') ? pS.color : 'transparent'; return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: txt, align: 'left', baseline: 'top' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Rajdhani, sans-serif', weight: '600', backgroundColor: bgC, borderColor: 'transparent' } }]; } 
+        styles: { text: { color: '#EAECEF' }, polygon: { color: 'transparent' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; var bgC = (pS.color && pS.color !== 'transparent') ? pS.color : 'transparent'; return [{ type: 'text', attrs: { x: c[0].x, y: c[0].y, text: txt.split('\n'), align: 'left', baseline: 'top' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: '600', backgroundColor: bgC, borderColor: 'transparent' } }]; } 
       },
       { 
         name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, 
-        styles: { text: { color: '#00F0FF' }, polygon: { color: 'transparent' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; var bgC = (pS.color && pS.color !== 'transparent') ? pS.color : 'transparent'; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: 'rgba(0,240,255,0.4)', size: 1, style: 'dashed' } }); } var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y; figs.push({ type: 'text', attrs: { x: tx, y: ty, text: txt, align: 'left', baseline: 'bottom' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Rajdhani, sans-serif', weight: '700', backgroundColor: bgC, borderColor: 'transparent' } }); return figs; } 
+        styles: { text: { color: '#00F0FF' }, polygon: { color: 'transparent' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; var bgC = (pS.color && pS.color !== 'transparent') ? pS.color : 'transparent'; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: 'rgba(0,240,255,0.4)', size: 1, style: 'dashed' } }); } var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y; figs.push({ type: 'text', attrs: { x: tx, y: ty, text: txt.split('\n'), align: 'left', baseline: 'bottom' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: '700', backgroundColor: bgC, borderColor: 'transparent' } }); return figs; } 
       },
       { 
         name: 'note', totalStep: 2, needDefaultPointFigure: true, 
-        styles: { text: { color: '#EAECEF' }, polygon: { color: 'rgba(240,185,11,0.15)' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var lines = txt.split('\n'); var lh = 16, pd = 8; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(60, maxLen * 7.5 + pd * 2); var bh = lines.length * lh + pd * 2; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + bw, y: y }, { x: x + bw, y: y + bh }, { x: x, y: y + bh } ]}, styles: { style: 'fill', color: pS.color || 'rgba(240,185,11,0.15)', borderColor: pS.borderColor || '#F0B90B', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + pd, y: y + pd, text: lines[0], align: 'left', baseline: 'top' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 12, family: tS.family || 'sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
+        styles: { text: { color: '#EAECEF' }, polygon: { color: 'rgba(240,185,11,0.15)' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var lines = txt.split('\n'); var lh = 18, pd = 10; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(60, maxLen * 7.5 + pd * 2); var bh = lines.length * lh + pd * 2; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y }, { x: x + bw, y: y }, { x: x + bw, y: y + bh }, { x: x, y: y + bh } ]}, styles: { style: 'fill', color: pS.color || 'rgba(240,185,11,0.15)', borderColor: pS.borderColor || '#F0B90B', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + pd, y: y + pd, text: lines, align: 'left', baseline: 'top' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
       },
       { 
         name: 'priceNote', totalStep: 2, needDefaultPointFigure: true, needDefaultYAxisFigure: true, 
-        styles: { text: { color: '#0ECB81' }, polygon: { color: 'rgba(14,203,129,0.2)' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var x = c[0].x, y = c[0].y; var bw = label.length * 7 + 16, bh = 22; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + bw, y: y - bh / 2 }, { x: x + bw, y: y + bh / 2 }, { x: x, y: y + bh / 2 } ]}, styles: { style: 'fill', color: pS.color || 'rgba(14,203,129,0.2)', borderColor: pS.borderColor || '#0ECB81', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 8, y: y, text: label, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#0ECB81', size: tS.size || 12, family: tS.family || 'Rajdhani, sans-serif', weight: '700', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
+        styles: { text: { color: '#0ECB81' }, polygon: { color: 'rgba(14,203,129,0.2)' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var lines = label.split('\n'); var x = c[0].x, y = c[0].y; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = maxLen * 7 + 16, bh = lines.length * 16 + 10; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + bw, y: y - bh / 2 }, { x: x + bw, y: y + bh / 2 }, { x: x, y: y + bh / 2 } ]}, styles: { style: 'fill', color: pS.color || 'rgba(14,203,129,0.2)', borderColor: pS.borderColor || '#0ECB81', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 8, y: y, text: lines, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#0ECB81', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: '700', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
       },
       { 
         name: 'pin', totalStep: 2, 
-        styles: { text: { color: '#EAECEF' }, polygon: { color: '#F0B90B' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, r = 10; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; var figs = [ { type: 'circle', attrs: { x: x, y: y - r - 10, r: r }, styles: { style: 'fill', color: pS.color || '#F0B90B', borderColor: pS.borderColor || '#fff', borderSize: 1.5 } }, { type: 'line', attrs: { coordinates: [{ x: x, y: y - 10 }, { x: x, y: y }] }, styles: { color: pS.color || '#F0B90B', size: 2 } } ]; if (txt) { figs.push({ type: 'text', attrs: { x: x + r + 4, y: y - r - 10, text: txt, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 12, family: tS.family || 'sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } }); } return figs; } 
-      },
-      { 
-        name: 'tableAnnotation', totalStep: 3, needDefaultPointFigure: true, 
-        styles: { polygon: { color: 'rgba(22,26,30,0.9)' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 160; var y1 = c.length >= 2 ? c[1].y : y0 + 80; var W = Math.abs(x1 - x0) || 160, H = Math.abs(y1 - y0) || 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1); var cols = 2, rows = 3, cw = W / cols, ch = H / rows; var os = ref.overlay.styles || {}; var pS = os.polygon || {}; var figs = [{ type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'fill', color: pS.color || 'rgba(22,26,30,0.9)', borderColor: pS.borderColor || '#2b3139', borderSize: 1 }, ignoreEvent: true }]; for (var ci = 1; ci < cols; ci++) { figs.push({ type: 'line', attrs: { coordinates: [ { x: lx + ci * cw, y: ly }, { x: lx + ci * cw, y: ly + H } ]}, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }); } for (var ri = 1; ri < rows; ri++) { figs.push({ type: 'line', attrs: { coordinates: [ { x: lx, y: ly + ri * ch }, { x: lx + W, y: ly + ri * ch } ]}, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }); } return figs; } 
+        styles: { text: { color: '#EAECEF' }, polygon: { color: '#F0B90B' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, r = 10; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; var figs = [ { type: 'circle', attrs: { x: x, y: y - r - 10, r: r }, styles: { style: 'fill', color: pS.color || '#F0B90B', borderColor: pS.borderColor || '#fff', borderSize: 1.5 } }, { type: 'line', attrs: { coordinates: [{ x: x, y: y - 10 }, { x: x, y: y }] }, styles: { color: pS.color || '#F0B90B', size: 2 } } ]; if (txt) { figs.push({ type: 'text', attrs: { x: x + r + 4, y: y - r - 10, text: txt.split('\n'), align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } }); } return figs; } 
       },
       { 
         name: 'annotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, 
-        styles: { text: { color: '#00F0FF' }, polygon: { color: 'rgba(0,240,255,0.1)' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: pS.borderColor || '#00F0FF', size: 1 } }); var tx = c[1].x, ty = c[1].y; var bw = txt.length * 7.5 + 16, bh = 22; figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]}, styles: { style: 'stroke_fill', color: pS.color || 'rgba(0,240,255,0.1)', borderColor: pS.borderColor || '#00F0FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: tx + 8, y: ty, text: txt, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Rajdhani, sans-serif', weight: '600', backgroundColor: 'transparent', borderColor: 'transparent' } }); } else { figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: c[0].y, text: txt, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Rajdhani, sans-serif', weight: '600', backgroundColor: 'transparent', borderColor: 'transparent' } }); } return figs; } 
+        styles: { text: { color: '#00F0FF' }, polygon: { color: 'rgba(0,240,255,0.1)' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var figs = []; var lines = txt.split('\n'); var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: pS.borderColor || '#00F0FF', size: 1 } }); var tx = c[1].x, ty = c[1].y; var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = maxLen * 7.5 + 16, bh = lines.length * 16 + 10; figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]}, styles: { style: 'stroke_fill', color: pS.color || 'rgba(0,240,255,0.1)', borderColor: pS.borderColor || '#00F0FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: tx + 8, y: ty, text: lines, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: '600', backgroundColor: 'transparent', borderColor: 'transparent' } }); } else { figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: c[0].y, text: lines, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: '600', backgroundColor: 'transparent', borderColor: 'transparent' } }); } return figs; } 
       },
       { 
         name: 'comment', totalStep: 2, 
-        styles: { text: { color: '#EAECEF' }, polygon: { color: 'rgba(30,35,42,0.95)' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var bw = Math.max(80, txt.length * 7 + 20), bh = 30, tail = 8; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh - tail }, { x: x + bw, y: y - bh - tail }, { x: x + bw, y: y - tail }, { x: x + 18, y: y - tail }, { x: x + 10, y: y }, { x: x + 6, y: y - tail }, { x: x, y: y - tail } ]}, styles: { style: 'stroke_fill', color: pS.color || 'rgba(30,35,42,0.95)', borderColor: pS.borderColor || '#474d57', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 10, y: y - bh / 2 - tail, text: txt, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 12, family: tS.family || 'sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
+        styles: { text: { color: '#EAECEF' }, polygon: { color: 'rgba(30,35,42,0.95)' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var x = c[0].x, y = c[0].y; var lines = txt.split('\n'); var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = Math.max(80, maxLen * 7 + 20), bh = lines.length * 16 + 14, tail = 8; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh - tail }, { x: x + bw, y: y - bh - tail }, { x: x + bw, y: y - tail }, { x: x + 18, y: y - tail }, { x: x + 10, y: y }, { x: x + 6, y: y - tail }, { x: x, y: y - tail } ]}, styles: { style: 'stroke_fill', color: pS.color || 'rgba(30,35,42,0.95)', borderColor: pS.borderColor || '#474d57', borderSize: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: x + 10, y: y - bh / 2 - tail, text: lines, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#EAECEF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
       },
       { 
         name: 'priceLabel', totalStep: 2, needDefaultYAxisFigure: true, 
-        styles: { text: { color: '#fff' }, polygon: { color: '#F6465D' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var x = c[0].x, y = c[0].y; var bw = label.length * 7 + 16, bh = 22; var arr = 6; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + arr, y: y - bh / 2 }, { x: x + arr + bw, y: y - bh / 2 }, { x: x + arr + bw, y: y + bh / 2 }, { x: x + arr, y: y + bh / 2 } ]}, styles: { style: 'fill', color: pS.color || '#F6465D' }, ignoreEvent: true }, { type: 'text', attrs: { x: x + arr + 6, y: y, text: label, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#fff', size: tS.size || 11, family: tS.family || 'Rajdhani, sans-serif', weight: '700', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
+        styles: { text: { color: '#fff' }, polygon: { color: '#F6465D' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; var priceVal = (pts[0] && pts[0].value != null) ? pts[0].value : null; var dp = (ref.precision && ref.precision.price != null) ? ref.precision.price : 4; var custom = ref.overlay.extendData || ''; var priceStr = priceVal != null ? priceVal.toFixed(dp) : ''; var label = custom ? (priceStr ? priceStr + '  ' + custom : custom) : (priceStr || '...'); var x = c[0].x, y = c[0].y; var bw = label.length * 7 + 16, bh = 22; var arr = 6; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh / 2 }, { x: x + arr, y: y - bh / 2 }, { x: x + arr + bw, y: y - bh / 2 }, { x: x + arr + bw, y: y + bh / 2 }, { x: x + arr, y: y + bh / 2 } ]}, styles: { style: 'fill', color: pS.color || '#F6465D' }, ignoreEvent: true }, { type: 'text', attrs: { x: x + arr + 6, y: y, text: label.split('\n'), align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#fff', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: '700', backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
       },
       { 
         name: 'signpost', totalStep: 3, needDefaultPointFigure: true, 
-        styles: { text: { color: '#d0aaff' }, polygon: { color: 'rgba(153,69,255,0.25)' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y - 40; var figs = []; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], { x: tx, y: ty }] }, styles: { color: pS.borderColor || '#848e9c', size: 1, style: 'dashed' } }); } var bw = txt.length * 7.5 + 24, bh = 24, notch = 10; var isRight = tx >= c[0].x; var coords = isRight ? [{ x: tx, y: ty }, { x: tx + notch, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty + bh / 2 }, { x: tx + notch, y: ty + bh / 2 }] : [{ x: tx, y: ty }, { x: tx - notch, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty + bh / 2 }, { x: tx - notch, y: ty + bh / 2 }]; figs.push({ type: 'polygon', attrs: { coordinates: coords }, styles: { style: 'fill', color: pS.color || 'rgba(153,69,255,0.25)', borderColor: pS.borderColor || '#9945FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: isRight ? tx + notch + 8 : tx - notch - 8, y: ty, text: txt, align: isRight ? 'left' : 'right', baseline: 'middle' }, styles: { color: tS.color || '#d0aaff', size: tS.size || 12, family: tS.family || 'Rajdhani, sans-serif', weight: '700', backgroundColor: 'transparent', borderColor: 'transparent' } }); return figs; } 
+        styles: { text: { color: '#d0aaff' }, polygon: { color: 'rgba(153,69,255,0.25)' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || '...'; var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y - 40; var figs = []; var lines = txt.split('\n'); var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], { x: tx, y: ty }] }, styles: { color: pS.borderColor || '#848e9c', size: 1, style: 'dashed' } }); } var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); var bw = maxLen * 7.5 + 24, bh = lines.length * 16 + 10, notch = 10; var isRight = tx >= c[0].x; var coords = isRight ? [{ x: tx, y: ty }, { x: tx + notch, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty + bh / 2 }, { x: tx + notch, y: ty + bh / 2 }] : [{ x: tx, y: ty }, { x: tx - notch, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty + bh / 2 }, { x: tx - notch, y: ty + bh / 2 }]; figs.push({ type: 'polygon', attrs: { coordinates: coords }, styles: { style: 'fill', color: pS.color || 'rgba(153,69,255,0.25)', borderColor: pS.borderColor || '#9945FF', borderSize: 1 }, ignoreEvent: true }); figs.push({ type: 'text', attrs: { x: isRight ? tx + notch + 8 : tx - notch - 8, y: ty, text: lines, align: isRight ? 'left' : 'right', baseline: 'middle' }, styles: { color: tS.color || '#d0aaff', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: '700', backgroundColor: 'transparent', borderColor: 'transparent' } }); return figs; } 
       },
       { 
         name: 'flagMarker', totalStep: 2, 
-        styles: { text: { color: '#F0B90B' }, polygon: { color: '#F0B90B' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: y - ph }] }, styles: { color: pS.color || '#F0B90B', size: pw } }, { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - ph }, { x: x + fw, y: y - ph + fh / 2 }, { x: x, y: y - ph + fh } ]}, styles: { style: 'fill', color: pS.color || '#F0B90B' }, ignoreEvent: true }, ...(txt ? [{ type: 'text', attrs: { x: x + fw + 4, y: y - ph + fh / 2, text: txt, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } }] : []) ]; } 
+        styles: { text: { color: '#F0B90B' }, polygon: { color: '#F0B90B' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var txt = ref.overlay.extendData || ''; var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; return [ { type: 'line', attrs: { coordinates: [{ x: x, y: y }, { x: x, y: y - ph }] }, styles: { color: pS.color || '#F0B90B', size: pw } }, { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - ph }, { x: x + fw, y: y - ph + fh / 2 }, { x: x, y: y - ph + fh } ]}, styles: { style: 'fill', color: pS.color || '#F0B90B' }, ignoreEvent: true }, ...(txt ? [{ type: 'text', attrs: { x: x + fw + 4, y: y - ph + fh / 2, text: txt.split('\n'), align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } }] : []) ]; } 
       },
       { 
+        // [CẬP NHẬT ẢNH THỰC TẾ]
         name: 'insertImage', totalStep: 3, needDefaultPointFigure: true, 
-        styles: { text: { color: '#5E6673' }, polygon: { color: 'rgba(0,240,255,0.05)' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var url = ref.overlay.extendData || ''; var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 120; var y1 = c.length >= 2 ? c[1].y : y0 + 80; var lx = Math.min(x0, x1), ly = Math.min(y0, y1); var W = Math.abs(x1 - x0) || 120, H = Math.abs(y1 - y0) || 80; var label = url ? '🖼 ' + url.split('/').pop().slice(0, 20) : '🖼 Double-click to set URL'; return [ { type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'stroke_fill', color: 'rgba(0,240,255,0.05)', borderColor: '#2b3139', borderSize: 1, borderStyle: 'dashed' }, ignoreEvent: true }, { type: 'line', attrs: { coordinates: [{ x: lx, y: ly }, { x: lx + W, y: ly + H }] }, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }, { type: 'line', attrs: { coordinates: [{ x: lx + W, y: ly }, { x: lx, y: ly + H }] }, styles: { color: '#2b3139', size: 1 }, ignoreEvent: true }, { type: 'text', attrs: { x: lx + W / 2, y: ly + H / 2, text: label, align: 'center', baseline: 'middle' }, styles: { color: '#5E6673', size: 11, backgroundColor: 'transparent', borderColor: 'transparent' } } ]; } 
+        styles: { text: { color: '#5E6673' }, polygon: { color: 'rgba(0,0,0,0.01)' } }, 
+        createPointFigures: function(ref) { 
+          var c = ref.coordinates || []; if (!c.length) return []; 
+          var url = ref.overlay.extendData || ''; 
+          var x0 = c[0].x, y0 = c[0].y; var x1 = c.length >= 2 ? c[1].x : x0 + 120; var y1 = c.length >= 2 ? c[1].y : y0 + 80; 
+          var lx = Math.min(x0, x1), ly = Math.min(y0, y1); var W = Math.abs(x1 - x0) || 120, H = Math.abs(y1 - y0) || 80; 
+          var figs = [];
+          if (url && url.length > 5) {
+              // Vẽ thẻ Image chuẩn của KLineChart
+              figs.push({ type: 'image', attrs: { x: lx, y: ly, width: W, height: H, src: url } });
+          } else {
+              // Khung nét đứt chờ nhập URL
+              figs.push({ type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'stroke_fill', color: 'rgba(0,240,255,0.05)', borderColor: '#2b3139', borderSize: 1, borderStyle: 'dashed' }, ignoreEvent: true }); 
+              figs.push({ type: 'text', attrs: { x: lx + W / 2, y: ly + H / 2, text: '🖼 Double-click to set URL', align: 'center', baseline: 'middle' }, styles: { color: '#5E6673', size: 11, family: 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } });
+          }
+          // Thêm 1 layer vô hình siêu mỏng đè lên ảnh để click chuột chọn ảnh dễ dàng
+          figs.push({ type: 'polygon', attrs: { coordinates: [ { x: lx, y: ly }, { x: lx + W, y: ly }, { x: lx + W, y: ly + H }, { x: lx, y: ly + H } ]}, styles: { style: 'fill', color: 'rgba(0,0,0,0.01)', borderSize: 0 } });
+          return figs; 
+        } 
       },
       { 
         name: 'insertIcon', totalStep: 2, 
-        styles: { text: { color: '#F0B90B' }, polygon: { color: 'transparent' } }, // Mở khóa
-        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '★'; var x = c[0].x, y = c[0].y; var os = ref.overlay.styles || {}; var tS = os.text || {}; return [{ type: 'text', attrs: { x: x, y: y, text: icon, align: 'center', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 22, family: tS.family || 'sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } }]; } 
+        styles: { text: { color: '#F0B90B' }, polygon: { color: 'transparent' } }, 
+        createPointFigures: function(ref) { var c = ref.coordinates || []; if (!c.length) return []; var icon = ref.overlay.extendData || '★'; var x = c[0].x, y = c[0].y; var os = ref.overlay.styles || {}; var tS = os.text || {}; return [{ type: 'text', attrs: { x: x, y: y, text: icon.split('\n'), align: 'center', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 22, family: tS.family || 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } }]; } 
       }
     ];
 
@@ -1642,9 +1655,8 @@
     var existing = document.getElementById('wa-text-editor');
     if (existing) existing.remove();
 
-    // Map màu mặc định gốc theo từng công cụ để Popup không bị ngu ngơ
     var defBg = 'rgba(22, 26, 30, 0.9)';
-    if (toolId === 'plainText' || toolId === 'insertIcon' || toolId === 'insertImage') defBg = 'transparent'; // Text thường thì nền rỗng
+    if (toolId === 'plainText' || toolId === 'insertIcon' || toolId === 'insertImage') defBg = 'transparent'; 
     else if (toolId === 'note') defBg = 'rgba(240,185,11,0.15)';
     else if (toolId === 'priceNote') defBg = 'rgba(14,203,129,0.2)';
     else if (toolId === 'pin' || toolId === 'flagMarker') defBg = '#F0B90B';
@@ -1658,13 +1670,14 @@
     var curColor = colorToHex(tStyles.color || (toolId === 'priceLabel' ? '#fff' : '#EAECEF'));
     var curBg = colorToHex(pStyles.color || defBg); 
     var curSize = tStyles.size || (toolId === 'priceLabel' ? 11 : 12);
-    var curFont = tStyles.family || 'Rajdhani, sans-serif';
+    // [CẬP NHẬT FONT MẶC ĐỊNH]
+    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
 
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor';
     backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
     backdrop.innerHTML = `
-      <div style="background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:20px;width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.7);font-family:Rajdhani,sans-serif;">
+      <div style="background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:20px;width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.7);font-family:'Be Vietnam Pro',sans-serif;">
         <div style="font-size:11px;font-weight:700;color:#848e9c;text-transform:uppercase;margin-bottom:12px;">Định dạng: ${toolId}</div>
         
         <div style="display:flex; gap:10px; margin-bottom:12px;">
@@ -1685,14 +1698,15 @@
         <div style="margin-bottom:14px;">
            <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Font chữ</label>
            <select id="wa-te-font" style="width:100%; height:32px; border:1px solid #2b3139; border-radius:4px; background:#111418; color:#eaecef; padding:0 8px; outline:none; cursor:pointer;">
-              <option value="Rajdhani, sans-serif" ${curFont.includes('Rajdhani')?'selected':''}>Rajdhani (Mặc định)</option>
-              <option value="sans-serif" ${curFont==='sans-serif'?'selected':''}>Sans-serif</option>
-              <option value="Arial" ${curFont==='Arial'?'selected':''}>Arial</option>
+              <option value="Be Vietnam Pro, sans-serif" ${curFont.includes('Be Vietnam')?'selected':''}>Be Vietnam Pro</option>
+              <option value="Rajdhani, sans-serif" ${curFont.includes('Rajdhani')?'selected':''}>Rajdhani</option>
+              <option value="Roboto, sans-serif" ${curFont.includes('Roboto')?'selected':''}>Roboto</option>
+              <option value="Arial, sans-serif" ${curFont.includes('Arial')?'selected':''}>Arial</option>
            </select>
         </div>
 
         <label style="display:block; font-size:11px; color:#848e9c; margin-bottom:4px;">Nội dung</label>
-        <textarea id="wa-te-input" rows="3" style="width:100%;box-sizing:border-box;background:#111418;border:1px solid #2b3139;border-radius:6px;color:#eaecef;font-size:14px;font-family:inherit;padding:8px 10px;resize:vertical;outline:none;" placeholder="Nhập text..."></textarea>
+        <textarea id="wa-te-input" rows="4" style="width:100%;box-sizing:border-box;background:#111418;border:1px solid #2b3139;border-radius:6px;color:#eaecef;font-size:14px;font-family:inherit;padding:8px 10px;resize:vertical;outline:none;line-height:1.4;" placeholder="Nhập text..."></textarea>
         
         <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
           <button id="wa-te-cancel" style="background:transparent;border:1px solid #2b3139;color:#848e9c;padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;">Hủy</button>
@@ -1729,7 +1743,8 @@
     });
   }
 
-  var NON_EDITABLE_TOOLS = ['tableAnnotation'];
+  // [CẬP NHẬT] Xóa bỏ bảng (tableAnnotation)
+  var NON_EDITABLE_TOOLS = [];
   var URL_TOOLS = ['insertImage'];
 
   function createTextOverlay(chart, toolId, initialData) {
@@ -1740,7 +1755,7 @@
 
     function openEditor(currentText, currentStyles) {
       if (isUrlTool) {
-        var result = window.prompt('Nhập URL hình ảnh:', currentText || '');
+        var result = window.prompt('Dán Link Ảnh (Ví dụ: https://...):', currentText || '');
         if (result !== null && overlayId) chart.overrideOverlay({ id: overlayId, extendData: result });
         return;
       }
@@ -2017,7 +2032,7 @@
     body.innerHTML = html;
     panel.classList.add('show');
 
-    // Khai báo engine update ngay sau khi render HTML
+    // 1. Luồng vẽ biểu đồ (Cập nhật cực nhanh - 40ms)
     const updateEngine = debounce(() => {
       if(!currentSelectedOverlay || !global.tvChart) return;
       let newStyles = { ...currentSelectedOverlay.styles };
@@ -2046,21 +2061,19 @@
         if(v_s1) { newStyles.line = { ...newStyles.line, size: parseInt(v_s1.value) }; toolStyles[cat].lineWidth = parseInt(v_s1.value); }
       }
 
-      saveStyles();
       try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
-    }, 16);
+    }, 40);
 
-    // Gắn sự kiện click cho bảng Emoji
+    // 2. Luồng lưu bộ nhớ (Delay 500ms để không gây giật lag khi đang kéo thả màu)
+    const saveEngine = debounce(() => { saveStyles(); }, 500);
+
     body.querySelectorAll('.wa-emo').forEach(el => {
-       el.onclick = function() {
-          document.getElementById('wa-prop-txt').value = this.innerText;
-          updateEngine(); 
-       };
+       el.onclick = function() { document.getElementById('wa-prop-txt').value = this.innerText; updateEngine(); saveEngine(); };
     });
 
-    // Lắng nghe thay đổi input
     body.querySelectorAll('input, textarea, select').forEach(el => {
-      el.addEventListener('input', updateEngine); el.addEventListener('change', updateEngine); el.addEventListener('compositionend', updateEngine);
+      el.addEventListener('input', () => { updateEngine(); saveEngine(); }); 
+      el.addEventListener('change', () => { updateEngine(); saveEngine(); });
     });
   }
 
