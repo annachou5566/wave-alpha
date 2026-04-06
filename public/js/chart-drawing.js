@@ -1809,6 +1809,22 @@
           if (e.key === 'Delete' || e.key === 'Backspace') {
             if (currentSelectedOverlay && global.tvChart) { saveHistory('delete', currentSelectedOverlay); global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); hidePanel(); }
           }
+          
+          // [TÍNH NĂNG MỚI] Phím tắt +/- hoặc Lên/Xuống để thu phóng Text trực tiếp không cần mở bảng
+          if (currentSelectedOverlay && global.tvChart && getToolCategory(currentSelectedOverlay.name) === 'text') {
+            if (e.key === '+' || e.key === '=' || e.key === 'ArrowUp') {
+               e.preventDefault();
+               let s = currentSelectedOverlay.styles || {}; let cur = (s.text && s.text.size) ? s.text.size : 14;
+               global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: { text: { size: Math.min(150, cur + 2) } } });
+               if (document.getElementById('wa-prop-s1')) document.getElementById('wa-prop-s1').value = Math.min(150, cur + 2);
+            }
+            if (e.key === '-' || e.key === '_' || e.key === 'ArrowDown') {
+               e.preventDefault();
+               let s = currentSelectedOverlay.styles || {}; let cur = (s.text && s.text.size) ? s.text.size : 14;
+               global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: { text: { size: Math.max(10, cur - 2) } } });
+               if (document.getElementById('wa-prop-s1')) document.getElementById('wa-prop-s1').value = Math.max(10, cur - 2);
+            }
+          }
         }
       });
     }
@@ -1848,11 +1864,7 @@
       html += `
         <div style="display:flex; gap:8px; margin-top:8px;">
           <div class="wa-control-row" style="flex:1"><label>Màu sắc</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
-            <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
-            <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
-            <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
-          </select></div>
+          <div class="wa-control-row" style="flex:1"><label>Cỡ chữ</label><input type="number" id="wa-prop-s1" class="wa-input" value="${sz}" min="10" max="150" step="2"></div>
         </div>`;
     } else if (cat === 'shapes') {
       let bc = (s.polygon && s.polygon.borderColor) ? colorToHex(s.polygon.borderColor) : toolStyles.shapes.borderColor;
