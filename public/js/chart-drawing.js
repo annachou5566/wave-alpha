@@ -2315,36 +2315,45 @@
   function restoreOverlays() {
     if (!global.tvChart) return;
     try {
-      // Nếu hệ thống bạn có nhiều cặp coin, hãy dùng global.currentSymbol, tạm thời lưu chung 'default'
+      // BẢO VỆ 1: Chỉ khôi phục khi Chart ĐÃ LOAD XONG NẾN của khung thời gian mới
+      // Nếu nến chưa tải xong mà cố vẽ, thư viện sẽ báo lỗi hoặc không hiển thị
+      const dataList = global.tvChart.getDataList();
+      if (!dataList || dataList.length === 0) return;
+
       const symbol = global.currentSymbol || 'wa_pair_default'; 
       const saved = localStorage.getItem(`wa_drawings_${symbol}`);
-      if (saved) {
+      
+      if (saved && saved !== '[]') {
         const overlays = JSON.parse(saved);
         overlays.forEach(o => {
-          // Tránh vẽ đè nếu hình đã tồn tại
+          // BẢO VỆ 2: Loại bỏ paneId để tránh lỗi xung đột layout giữa các khung giờ
+          delete o.paneId; 
+          
+          // BẢO VỆ 3: Nếu hình này bị mất (do đổi khung giờ hoặc tải lại), lập tức vẽ lại!
           if (!global.tvChart.getOverlayById(o.id)) {
             global.tvChart.createOverlay(o);
           }
         });
       }
-    } catch(e) { console.warn('Khôi phục bản vẽ thất bại:', e); }
+    } catch(e) { /* Bỏ qua lỗi rác để không làm gián đoạn vòng lặp */ }
   }
 
   // Lưu toàn bộ hình vẽ xuống LocalStorage
   function saveAllOverlays() {
     if (!global.tvChart) return;
     try {
-      const overlays = global.tvChart.getOverlay();
-      // Chỉ bóc tách các data cần thiết để không bị lỗi Circular JSON
+      const overlays = global.tvChart.getOverlay() || [];
+      
+      // Trích xuất Data an toàn, tránh lỗi Circular JSON khi lưu xuống bộ nhớ
       const dataToSave = overlays.map(o => ({
         name: o.name, id: o.id, points: o.points, 
         styles: o.styles, lock: o.lock, extendData: o.extendData
       }));
+      
       const symbol = global.currentSymbol || 'wa_pair_default';
       localStorage.setItem(`wa_drawings_${symbol}`, JSON.stringify(dataToSave));
     } catch(e) {}
   }
-  // Expose ra global để các function khác dùng được
   global.__wa_saveAllOverlays = saveAllOverlays;
 
   function mountUI() {
@@ -2361,9 +2370,6 @@
     container.appendChild(panel);
 
     bindCoreEvents(sidebar, panel); bindContextMenu(panel);
-    
-    // TỰ ĐỘNG KHÔI PHỤC HÌNH VẼ KHI GIAO DIỆN HỒI SINH (SAU KHI ĐỔI TIMEFRAME)
-    setTimeout(restoreOverlays, 300);
   }
 
   if (!global.__wa_auto_heal_started) {
@@ -2372,27 +2378,18 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountUI); 
     else mountUI();
     
-    // THUẬT TOÁN WATCHDOG V2: NHẬN DIỆN ĐỔI TIMEFRAME
+    // THUẬT TOÁN WATCHDOG V3: BẤT TỬ TRƯỚC FRAMEWORK
     setInterval(() => {
       const container = document.getElementById('sc-chart-container');
       if (container && global.tvChart) {
-        // Trường hợp 1: Framework xóa mất Toolbar UI
+        
+        // 1. Phục hồi Toolbar nếu web app re-render làm mất giao diện
         if (!document.querySelector('.wa-toolbar')) {
           mountUI(); 
-        } 
-        // Trường hợp 2: Đổi Timeframe (UI còn nguyên nhưng hình vẽ trên KLineChart bị xóa sạch)
-        else {
-          const symbol = global.currentSymbol || 'wa_pair_default'; 
-          const saved = localStorage.getItem(`wa_drawings_${symbol}`);
-          // Nếu có bản ghi trong LocalStorage (và không phải là mảng rỗng do user chủ động xóa)
-          if (saved && saved !== '[]' && saved.length > 5) {
-            const currentOverlays = global.tvChart.getOverlay();
-            // Nhưng Chart lại trống trơn -> Bị Framework wipe data -> Ốp hình lại ngay!
-            if (currentOverlays.length === 0) {
-              restoreOverlays();
-            }
-          }
         }
+        
+        // 2. Liên tục quét và ốp lại hình vẽ nếu biểu đồ cố tình xóa nó (Khi đổi khung giờ)
+        restoreOverlays();
       }
     }, 1000);
   }
