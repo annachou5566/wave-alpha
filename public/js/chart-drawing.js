@@ -1342,7 +1342,7 @@
         }
       },
 
-      // --- BATCH 8: Text Annotation Tools (HỖ TRỢ MULTILINE TỰ ĐỘNG CĂN DÒNG & GỌI ẢNH THỰC) ---
+      // --- BATCH 8: Text Annotation Tools (HỖ TRỢ MULTILINE TỰ ĐỘNG CĂN DÒNG) ---
       { 
         name: 'plainText', totalStep: 2, needDefaultPointFigure: true, 
         styles: { text: { color: '#EAECEF' }, polygon: { color: 'transparent' } }, 
@@ -1752,15 +1752,7 @@
         { id: 'tableAnnotation', name: 'Bảng', n: 'Bảng' }
       ]
     },
-    {
-      id: 'contentTools',
-      icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
-      tools: [
-        { id: 'header', n: 'Nội Dung' },
-        { id: 'insertImage', name: 'Chèn ảnh', n: 'Chèn ảnh' },
-        { id: 'insertIcon', name: 'Chèn icon', n: 'Chèn icon' }
-      ]
-    },
+    
     { 
       id: 'elliottWave',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12l5-8 6 16 5-12 4 4"/></svg>`, 
