@@ -44,6 +44,15 @@
     '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'
   ];
 
+  // ✅ FIX: Per-timeframe drawing key + restore flags
+  function getDrawingKey() {
+    const sym = global.currentSymbol || 'wa_default';
+    const itv = global.currentInterval || global.currentPeriod || '0';
+    return `wa_drawings_${sym}_${itv}`;
+  }
+  let __wa_lastKey = '';
+  let __wa_pendingRestore = false;
+
   // Đồng bộ Storage an toàn
   let storedStyles = {};
   try { storedStyles = JSON.parse(localStorage.getItem('wa_drawing_styles')) || {}; } catch(e){}
@@ -2320,20 +2329,32 @@
       const dataList = global.tvChart.getDataList();
       if (!dataList || dataList.length === 0) return;
 
-      const symbol = global.currentSymbol || 'wa_pair_default'; 
-      const saved = localStorage.getItem(`wa_drawings_${symbol}`);
-      
+      const currentKey = getDrawingKey();
+
+      // ✅ FIX: Phát hiện timeframe/symbol vừa đổi → bật cờ restore
+      if (__wa_lastKey && __wa_lastKey !== currentKey) {
+        __wa_pendingRestore = true;
+      }
+      __wa_lastKey = currentKey;
+
+      // Nếu không có pending và chart đang có overlay → skip (tiết kiệm CPU)
+      const existingOverlays = global.tvChart.getOverlay() || [];
+      if (!__wa_pendingRestore && existingOverlays.length > 0) return;
+
+      const saved = localStorage.getItem(currentKey);
       if (saved && saved !== '[]') {
         const overlays = JSON.parse(saved);
+        let restored = 0;
         overlays.forEach(o => {
-          // BẢO VỆ 2: Loại bỏ paneId để tránh lỗi xung đột layout giữa các khung giờ
-          delete o.paneId; 
-          
-          // BẢO VỆ 3: Nếu hình này bị mất (do đổi khung giờ hoặc tải lại), lập tức vẽ lại!
+          delete o.paneId;
           if (!global.tvChart.getOverlayById(o.id)) {
             global.tvChart.createOverlay(o);
+            restored++;
           }
         });
+        if (restored > 0) __wa_pendingRestore = false;
+      } else {
+        __wa_pendingRestore = false;
       }
     } catch(e) { /* Bỏ qua lỗi rác để không làm gián đoạn vòng lặp */ }
   }
@@ -2350,11 +2371,22 @@
         styles: o.styles, lock: o.lock, extendData: o.extendData
       }));
       
-      const symbol = global.currentSymbol || 'wa_pair_default';
-      localStorage.setItem(`wa_drawings_${symbol}`, JSON.stringify(dataToSave));
+      localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
     } catch(e) {}
   }
   global.__wa_saveAllOverlays = saveAllOverlays;
+
+  // ✅ FIX: API hook cho framework ngoài gọi khi đổi timeframe / symbol
+  global.__wa_onIntervalChange = function(newInterval) {
+    saveAllOverlays();
+    global.currentInterval = newInterval;
+    __wa_pendingRestore = true;
+  };
+  global.__wa_onSymbolChange = function(newSymbol) {
+    saveAllOverlays();
+    global.currentSymbol = newSymbol;
+    __wa_pendingRestore = true;
+  };
 
   function mountUI() {
     var container = document.getElementById('sc-chart-container');
@@ -2383,13 +2415,22 @@
       const container = document.getElementById('sc-chart-container');
       if (container && global.tvChart) {
         
-        // 1. Phục hồi Toolbar nếu web app re-render làm mất giao diện
-        if (!document.querySelector('.wa-toolbar')) {
-          mountUI(); 
+        // ✅ FIX: Smart Watchdog — toolbar check mỗi 3s, restore chỉ khi cần
+        if (!global.__wa_watchdog_tick) global.__wa_watchdog_tick = 0;
+        if (++global.__wa_watchdog_tick % 3 === 0) {
+          if (!document.querySelector('.wa-toolbar')) mountUI();
         }
-        
-        // 2. Liên tục quét và ốp lại hình vẽ nếu biểu đồ cố tình xóa nó (Khi đổi khung giờ)
-        restoreOverlays();
+
+        // Phát hiện thay đổi timeframe/symbol → bật cờ
+        const newKey = getDrawingKey();
+        if (newKey !== __wa_lastKey) {
+          __wa_pendingRestore = true;
+        }
+
+        // Chỉ gọi restoreOverlays khi thực sự cần
+        if (__wa_pendingRestore) {
+          restoreOverlays();
+        }
       }
     }, 1000);
   }
