@@ -985,22 +985,32 @@ window.openProChart = function(t, isTimeSwitch = false) {
             const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
 
             window.tvChart.setStyles({
-                grid: { 
-                    horizontal: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' }, 
-                    vertical: { show: ws.showGrid !== false, color: 'rgba(255,255,255,0.05)', style: 'dashed' } 
-                },
-                candle: { 
-                    type: window.currentChartInterval === 'tick' ? 'area' : cType,
-                    bar: { 
-                        upColor: ub, downColor: db, 
-                        upBorderColor: ubd, downBorderColor: dbd, 
-                        upWickColor: ubd, downWickColor: dbd 
+                    grid: {
+                        horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
+                        vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
+                    },
+                    candle: { 
+                        type: window.currentChartInterval === 'tick' ? 'area' : cType,
+                        bar: {
+                            upColor: ub, downColor: db, noChangeColor: '#848e9c',
+                            upBorderColor: ubd, downBorderColor: dbd,
+                            upWickColor: ubd, downWickColor: dbd
+                        }
+                    },
+                    // 👇 THÊM ĐOẠN NÀY ĐỂ DIỆT KHUNG XANH TOÀN CỤC 👇
+                    overlay: {
+                        text: {
+                            backgroundColor: 'transparent',
+                            borderColor: 'transparent',
+                            borderSize: 0,
+                            paddingLeft: 0, paddingRight: 0, paddingTop: 0, paddingBottom: 0
+                        }
+                    },
+                    // 👆 HẾT ĐOẠN THÊM 👆
+                    watermark: {
+                        show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
                     }
-                },
-                watermark: {
-                    show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, family: 'system-ui, sans-serif', weight: '800'
-                }
-            });
+                });
         }
 
         // 3. SỰ KIỆN RÊ CHUỘT
