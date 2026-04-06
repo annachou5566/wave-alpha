@@ -53,11 +53,11 @@
   }
 
   function colorToHex(color) {
-    if (!color) return '#00F0FF';
+    if (!color) return '#3B82F6'; // Cập nhật màu fallback
     if (color.startsWith('#')) return color.substring(0, 7);
     let match = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
     if (match) return `#${parseInt(match[1]).toString(16).padStart(2,'0')}${parseInt(match[2]).toString(16).padStart(2,'0')}${parseInt(match[3]).toString(16).padStart(2,'0')}`;
-    return '#00F0FF';
+    return '#3B82F6'; // Cập nhật màu fallback
   }
 
   // ==========================================
@@ -1328,24 +1328,17 @@
   // ======================================================
   function injectCSS() {
     if (document.getElementById('wa-pro-css-v4')) return;
-
-    // Inject Google Fonts
-    if (!document.getElementById('wa-gfonts')) {
-      const lnk = document.createElement('link');
-      lnk.id = 'wa-gfonts'; lnk.rel = 'stylesheet';
-      lnk.href = 'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lexend:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=Josefin+Sans:wght@400;600;700&family=Raleway:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap';
-      document.head.appendChild(lnk);
-    }
-
-    const style = document.createElement('style'); style.id = 'wa-pro-css-v4';
+    const style = document.createElement('style');
+    style.id = 'wa-pro-css-v4';
     style.textContent = `
-      /* ── DESIGN TOKENS ── */
+      @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Lexend:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=Josefin+Sans:wght@400;600;700&family=Raleway:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap');
+
       :root {
-        --wa-bg-base:      #0A0C10;
-        --wa-bg-surface:   #0F1218;
-        --wa-bg-elevated:  #151B23;
-        --wa-bg-overlay:   #1C242E;
-        --wa-bg-modal:     rgba(10,12,16,0.88);
+        --wa-bg-base:        #0A0C10;
+        --wa-bg-surface:     #0F1218;
+        --wa-bg-elevated:    #151B23;
+        --wa-bg-overlay:     #1C242E;
+        --wa-bg-modal:       rgba(10,12,16,0.85);
         --wa-border-subtle:  #1E2733;
         --wa-border-default: #273040;
         --wa-border-focus:   #3B82F6;
@@ -1356,15 +1349,22 @@
         --wa-accent:         #3B82F6;
         --wa-accent-glow:    rgba(59,130,246,0.15);
         --wa-accent-bright:  #60A5FA;
-        --wa-success:  #22C55E;
-        --wa-danger:   #EF4444;
-        --wa-warning:  #F59E0B;
-        --wa-purple:   #8B5CF6;
-        --wa-cyan:     #06B6D4;
-        --wa-font-main: 'Be Vietnam Pro', 'Lexend', 'Inter', sans-serif;
+        --wa-success:        #22C55E;
+        --wa-danger:         #EF4444;
+        --wa-warning:        #F59E0B;
+        --wa-purple:         #8B5CF6;
+        --wa-cyan:           #06B6D4;
       }
 
-      /* ── KEYFRAMES ── */
+      #sc-chart-container { position: relative !important; overflow: hidden !important; }
+
+      /* ─── BASE FONT ─── */
+      .wa-toolbar, .wa-props-panel, .wa-context-menu, .wa-toast, #wa-text-editor {
+        font-family: 'Be Vietnam Pro', 'Lexend', 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ─── ANIMATIONS ─── */
       @keyframes wa-fadein {
         from { opacity: 0; transform: translateY(-4px); }
         to   { opacity: 1; transform: translateY(0); }
@@ -1374,14 +1374,7 @@
         to   { opacity: 1; transform: scale(1); }
       }
 
-      /* ── BASE ── */
-      #sc-chart-container { position: relative !important; overflow: hidden !important; }
-      .wa-toolbar, .wa-props-panel, .wa-context-menu, .wa-toast {
-        font-family: var(--wa-font-main);
-        -webkit-font-smoothing: antialiased;
-      }
-
-      /* ── TOOLBAR ── */
+      /* ─── TOOLBAR ─── */
       .wa-toolbar {
         position: absolute; top: 60px; left: 16px; z-index: 999;
         width: 48px;
@@ -1391,48 +1384,41 @@
         box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
         display: flex; flex-direction: column; align-items: center;
         padding: 0 0 8px 0;
-        transition: height 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s;
+        transition: height 0.25s cubic-bezier(0.4,0,0.2,1), overflow 0.25s;
       }
-      .wa-toolbar.collapsed { height: 20px; overflow: hidden; }
-      .wa-toolbar.collapsed .wa-drag-grip::after { content: 'Nhấn đúp để mở rộng'; position: absolute; left: 56px; top: 50%; transform: translateY(-50%); background: var(--wa-bg-elevated); color: var(--wa-text-secondary); padding: 4px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; border: 1px solid var(--wa-border-default); pointer-events: none; }
+      .wa-toolbar.collapsed { height: 24px; overflow: hidden; }
       
-      /* Drawing mode glow */
+      /* Glow báo hiệu đang trong chế độ vẽ */
       .wa-drawing-mode .wa-toolbar {
         box-shadow: 0 0 0 2px var(--wa-accent), 0 8px 32px rgba(59,130,246,0.2);
       }
+      .wa-drawing-mode canvas { cursor: crosshair !important; }
 
-      /* Draw step badge */
-      .wa-step-badge {
-        position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
-        background: var(--wa-accent-glow); color: var(--wa-accent-bright);
-        border: 1px solid rgba(59,130,246,0.3); border-radius: 20px;
-        font-size: 10px; font-weight: 700; padding: 2px 8px;
-        white-space: nowrap; pointer-events: none;
-        font-family: var(--wa-font-main);
-      }
-
+      /* Drag Grip (···) */
       .wa-drag-grip {
         width: 100%; height: 20px;
         display: flex; align-items: center; justify-content: center;
-        cursor: grab; opacity: 0.5;
+        cursor: grab;
         background: var(--wa-bg-elevated);
         border-radius: 12px 12px 0 0;
-        margin-bottom: 4px;
+        opacity: 0.5; margin-bottom: 4px;
         transition: opacity 0.15s;
-        position: relative;
+      }
+      .wa-drag-grip:active { cursor: grabbing; }
+      .wa-drag-grip::after {
+        content: '···';
+        color: var(--wa-text-secondary); font-size: 14px; letter-spacing: 2px; line-height: 1;
       }
       .wa-drag-grip:hover { opacity: 1; }
-      .wa-drag-grip:active { cursor: grabbing; }
-      .wa-drag-grip svg { width: 14px; height: 14px; color: var(--wa-text-secondary); }
 
-      /* Tool buttons */
+      /* Tool Buttons */
       .wa-tb-btn {
         width: 38px; height: 38px;
         border-radius: 8px; border: none;
         background: transparent; color: var(--wa-text-secondary);
         cursor: pointer;
         display: flex; align-items: center; justify-content: center;
-        margin: 1px 0; position: relative;
+        margin: 2px 0; position: relative;
         transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
       }
       .wa-tb-btn svg { width: 20px; height: 20px; }
@@ -1445,33 +1431,49 @@
         box-shadow: 0 0 0 1px var(--wa-accent), 0 0 12px rgba(59,130,246,0.2);
         border-radius: 8px;
         border-left: 2px solid var(--wa-accent);
+        cursor: default;
       }
       .wa-tb-btn[data-tool="pointer"] { cursor: pointer; }
 
       /* Tooltip */
       .wa-tb-btn::after {
         content: attr(data-tooltip);
-        position: absolute; left: 48px; top: 50%; transform: translateY(-50%);
+        position: absolute; left: 50px; top: 50%; transform: translateY(-50%);
         background: var(--wa-bg-elevated); color: var(--wa-text-primary);
-        padding: 5px 10px; border-radius: 6px; font-size: 11px;
-        white-space: nowrap; pointer-events: none; opacity: 0;
-        transition: opacity 0.18s; border: 1px solid var(--wa-border-default);
+        padding: 5px 10px; border-radius: 6px;
+        font-size: 11px; white-space: nowrap;
+        pointer-events: none; opacity: 0; transition: opacity 0.2s;
+        border: 1px solid var(--wa-border-default);
         box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1000;
-        font-family: var(--wa-font-main);
       }
-      .wa-tb-btn:hover::after { opacity: 1; }
+      .wa-tb-btn::before {
+        content: '';
+        position: absolute; left: 46px; top: 50%; transform: translateY(-50%);
+        border: 5px solid transparent; border-right-color: var(--wa-border-default);
+        pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 1000;
+      }
+      .wa-tb-btn:hover::after, .wa-tb-btn:hover::before { opacity: 1; }
 
-      /* Group submenu chevron */
+      /* Keyboard Shortcuts Badge */
+      .wa-kbd {
+        display: inline-block; background: var(--wa-bg-overlay);
+        border: 1px solid var(--wa-border-default); border-radius: 3px;
+        font-size: 9px; padding: 1px 4px; margin-left: 6px; color: var(--wa-text-muted);
+      }
+
+      /* ─── DROPDOWN MENU ─── */
       .wa-tb-group { position: relative; width: 100%; display: flex; justify-content: center; }
       .wa-tb-group::after {
-        content: '';
-        position: absolute; right: 3px; bottom: 8px;
-        width: 5px; height: 5px;
-        border: solid var(--wa-text-muted); border-width: 0 1.5px 1.5px 0;
-        transform: rotate(-45deg); pointer-events: none;
+        content: ''; position: absolute; right: 5px; bottom: 7px; width: 6px; height: 6px;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2 1l4 3-4 3' stroke='%234A5568' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+        pointer-events: none;
       }
-      .wa-tb-menu { position: absolute; left: 100%; top: -6px; padding-left: 8px; display: none; z-index: 1000; }
+      .wa-tb-menu {
+        position: absolute; left: 100%; top: -6px;
+        padding-left: 8px; display: none; z-index: 1000;
+      }
       .wa-tb-group:hover .wa-tb-menu { display: block; }
+      
       .wa-tb-menu-inner {
         background: var(--wa-bg-elevated);
         border: 1px solid var(--wa-border-subtle);
@@ -1480,176 +1482,127 @@
         width: 240px; padding: 8px 0;
         display: flex; flex-direction: column;
         max-height: 55vh; overflow-y: auto; overflow-x: hidden;
-        animation: wa-fadein 0.18s ease;
         backdrop-filter: blur(20px);
+        animation: wa-fadein 0.18s ease;
       }
-      .wa-tb-menu-inner::-webkit-scrollbar { width: 3px; }
-      .wa-tb-menu-inner::-webkit-scrollbar-thumb { background: var(--wa-border-default); border-radius: 3px; }
-      .wa-tb-menu-inner::-webkit-scrollbar-track { background: var(--wa-border-subtle); border-radius: 3px; }
+      
+      /* Scrollbar */
+      .wa-tb-menu-inner::-webkit-scrollbar, .wa-panel-body::-webkit-scrollbar { width: 3px; }
+      .wa-tb-menu-inner::-webkit-scrollbar-thumb, .wa-panel-body::-webkit-scrollbar-thumb { background: var(--wa-border-default); border-radius: 3px; }
+      .wa-tb-menu-inner::-webkit-scrollbar-track, .wa-panel-body::-webkit-scrollbar-track { background: var(--wa-border-subtle); }
 
       .wa-menu-header {
         padding: 14px 16px 6px 16px;
         color: var(--wa-text-muted); font-size: 10px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 1.2px; pointer-events: none;
-        border-left: 2px solid var(--wa-accent); margin-left: 8px;
-        padding-left: 10px;
+        text-transform: uppercase; letter-spacing: 1.2px;
+        pointer-events: none; border-left: 2px solid var(--wa-accent);
+        margin: 0 6px;
       }
-      .wa-menu-divider { height: 1px; background: var(--wa-border-subtle); margin: 6px 12px; border-radius: 1px; }
-
-      /* Bottom action group */
-      .wa-bot-actions { display: flex; width: 100%; justify-content: space-evenly; padding: 4px 0; }
-      .wa-bot-group-divider { width: 28px; height: 1px; background: var(--wa-border-subtle); margin: 4px 0; }
-      .wa-bot-actions .wa-tb-btn { width: 34px; height: 30px; margin: 0; }
-      .wa-bot-actions .wa-tb-btn svg { width: 16px; height: 16px; }
-      #wa-btn-magnet.active { color: var(--wa-warning); box-shadow: 0 0 0 1px var(--wa-warning), 0 0 10px rgba(245,158,11,0.2); background: rgba(245,158,11,0.1); border-left: 2px solid var(--wa-warning); }
-      #wa-btn-clear:hover { color: var(--wa-danger); background: rgba(239,68,68,0.1); }
-
+      .wa-menu-divider {
+        background: var(--wa-border-subtle);
+        height: 1px; margin: 6px 12px; border-radius: 1px;
+      }
       .wa-menu-item {
-        padding: 8px 16px; font-size: 12.5px;
-        color: var(--wa-text-secondary); cursor: pointer;
-        border-radius: 6px; margin: 1px 6px;
+        padding: 8px 16px; margin: 1px 6px;
+        color: var(--wa-text-secondary); font-size: 12.5px;
+        cursor: pointer; border-radius: 6px;
         transition: background 0.12s, color 0.12s, transform 0.12s;
+        display: flex; align-items: center; gap: 8px;
       }
       .wa-menu-item:hover {
         background: var(--wa-bg-overlay); color: var(--wa-text-primary);
         transform: translateX(2px);
       }
 
-      /* ── PROPS PANEL ── */
+      /* ─── PROPERTIES PANEL ─── */
       .wa-props-panel {
         position: absolute; right: 0; top: 0; bottom: 0; width: 280px;
-        background: var(--wa-bg-modal);
+        background: var(--wa-bg-modal); backdrop-filter: blur(24px);
         border-left: 1px solid var(--wa-border-subtle);
-        box-shadow: -8px 0 40px rgba(0,0,0,0.6);
-        backdrop-filter: blur(24px);
-        z-index: 999;
+        box-shadow: -8px 0 40px rgba(0,0,0,0.6); z-index: 999;
         transform: translateX(100%); opacity: 0;
-        transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s cubic-bezier(0.4,0,0.2,1);
+        transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
         display: flex; flex-direction: column;
       }
       .wa-props-panel.show { transform: translateX(0); opacity: 1; }
 
       .wa-panel-header {
-        padding: 14px 16px;
-        background: var(--wa-bg-elevated);
+        padding: 14px 16px; background: var(--wa-bg-elevated);
         border-bottom: 1px solid var(--wa-border-subtle);
         display: flex; justify-content: space-between; align-items: center;
         color: var(--wa-text-secondary); font-weight: 700; font-size: 12px;
-        text-transform: uppercase; letter-spacing: 0.5px;
+        letter-spacing: 0.5px; text-transform: uppercase;
       }
-      .wa-close-btn { background: none; border: none; color: var(--wa-text-muted); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; transition: 0.15s; }
-      .wa-close-btn:hover { background: var(--wa-bg-overlay); color: var(--wa-danger); }
-
-      .wa-panel-body {
-        padding: 16px; flex: 1; overflow-y: auto;
-        display: flex; flex-direction: column; gap: 14px;
+      .wa-close-btn {
+        background: none; border: none; color: var(--wa-text-muted);
+        cursor: pointer; padding: 4px; border-radius: 4px;
+        display: flex; align-items: center; transition: 0.15s;
       }
-      .wa-panel-body::-webkit-scrollbar { width: 3px; }
-      .wa-panel-body::-webkit-scrollbar-thumb { background: var(--wa-border-default); border-radius: 3px; }
-      .wa-panel-body::-webkit-scrollbar-track { background: var(--wa-border-subtle); border-radius: 3px; }
+      .wa-close-btn:hover { background: rgba(239,68,68,0.12); color: var(--wa-danger); }
 
-      /* Empty state */
-      .wa-panel-empty {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        padding: 32px 16px; opacity: 0.3; text-align: center; gap: 10px;
-      }
-      .wa-panel-empty svg { width: 36px; height: 36px; color: var(--wa-text-muted); }
-      .wa-panel-empty p { font-size: 12px; color: var(--wa-text-muted); line-height: 1.5; margin: 0; }
-
-      .wa-control-row { display: flex; flex-direction: column; gap: 5px; }
+      .wa-panel-body { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+      
+      /* Inputs */
+      .wa-control-row { display: flex; flex-direction: column; gap: 6px; }
       .wa-control-row label {
         color: var(--wa-text-muted); font-size: 11px; font-weight: 600;
         letter-spacing: 0.3px; text-transform: uppercase;
       }
-
       .wa-input, .wa-select {
         background: var(--wa-bg-base); border: 1px solid var(--wa-border-default);
-        color: var(--wa-text-primary); padding: 8px 12px;
-        border-radius: 8px; outline: none; font-size: 12.5px;
-        width: 100%; box-sizing: border-box;
-        font-family: var(--wa-font-main);
-        transition: border-color 0.15s, box-shadow 0.15s;
+        color: var(--wa-text-primary); padding: 8px 12px; border-radius: 8px;
+        outline: none; font-size: 12.5px; width: 100%; box-sizing: border-box;
+        transition: border-color 0.15s, box-shadow 0.15s; font-family: inherit;
       }
       .wa-input:focus, .wa-select:focus {
-        border-color: var(--wa-border-focus);
-        box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+        border-color: var(--wa-border-focus); box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
       }
       .wa-textarea { height: 90px; resize: vertical; line-height: 1.5; }
+      
       .wa-color-picker {
         width: 100%; height: 38px; padding: 0;
         border: 1px solid var(--wa-border-default); border-radius: 8px;
         cursor: pointer; background: var(--wa-bg-base); overflow: hidden;
       }
-      .wa-color-picker::-webkit-color-swatch-wrapper { padding: 2px; }
-      .wa-color-picker::-webkit-color-swatch { border: none; border-radius: 6px; }
+      .wa-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+      .wa-color-picker::-webkit-color-swatch { border: none; border-radius: 7px; }
 
       /* Swatches */
-      .wa-swatches-row {
-        display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;
-        margin-bottom: 6px;
-      }
+      .wa-swatches-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 6px; }
       .wa-swatch {
         width: 100%; aspect-ratio: 1; border-radius: 4px; cursor: pointer;
-        border: 1.5px solid transparent;
-        transition: transform 0.12s, border-color 0.12s;
+        border: 1.5px solid transparent; transition: transform 0.12s, border-color 0.12s;
       }
       .wa-swatch:hover { transform: scale(1.2); border-color: var(--wa-text-primary); }
       .wa-swatch.selected { border-color: var(--wa-accent-bright); box-shadow: 0 0 0 2px var(--wa-accent-glow); }
 
-      /* Panel footer */
+      /* Footer Buttons */
       .wa-panel-footer {
         background: var(--wa-bg-elevated); border-top: 1px solid var(--wa-border-subtle);
-        padding: 12px 16px; display: flex; gap: 8px; justify-content: space-between;
+        padding: 12px 16px; display: flex; gap: 8px;
       }
       .wa-action-btn {
-        flex: 1; background: var(--wa-bg-overlay);
-        border: 1px solid var(--wa-border-default); color: var(--wa-text-secondary);
-        padding: 9px; border-radius: 8px; cursor: pointer;
+        flex: 1; background: var(--wa-bg-overlay); border: 1px solid var(--wa-border-subtle);
+        color: var(--wa-text-secondary); padding: 9px; border-radius: 8px; cursor: pointer;
+        font-size: 12px; font-weight: 600; font-family: inherit;
         transition: all 0.15s cubic-bezier(0.4,0,0.2,1);
-        display: flex; justify-content: center; align-items: center;
-        font-size: 12px; font-weight: 600; font-family: var(--wa-font-main);
+        display: flex; justify-content: center; align-items: center; gap: 6px;
       }
-      .wa-action-btn:hover { background: var(--wa-bg-modal); color: var(--wa-accent-bright); border-color: var(--wa-accent); }
-      .wa-action-btn.delete:hover {
-        background: rgba(239,68,68,0.12); color: var(--wa-danger);
-        border-color: rgba(239,68,68,0.3);
-      }
+      .wa-action-btn:hover { background: var(--wa-bg-elevated); color: var(--wa-text-primary); }
+      .wa-action-btn.delete:hover { background: rgba(239,68,68,0.12); color: var(--wa-danger); border-color: rgba(239,68,68,0.3); }
 
-      /* ── CONTEXT MENU ── */
-      .wa-context-menu {
-        position: fixed;
-        background: var(--wa-bg-elevated); border: 1px solid var(--wa-border-subtle);
-        border-radius: 10px; padding: 6px; min-width: 180px;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
-        backdrop-filter: blur(20px); z-index: 10000; display: none;
-        animation: wa-fadein 0.15s ease;
-        font-family: var(--wa-font-main);
-      }
-      .wa-cm-item {
-        border-radius: 6px; margin: 1px 0; padding: 9px 14px;
-        font-size: 12.5px; font-weight: 500; color: var(--wa-text-secondary);
-        cursor: pointer; display: flex; align-items: center; gap: 10px;
-        transition: background 0.12s, color 0.12s;
-      }
-      .wa-cm-item:hover { background: var(--wa-bg-overlay); color: var(--wa-text-primary); }
-      .wa-cm-item svg { width: 15px; height: 15px; flex-shrink: 0; }
-      #wa-cm-del { color: var(--wa-danger); border-top: 1px solid var(--wa-border-subtle); padding-top: 12px; margin-top: 4px; }
-      #wa-cm-del:hover { background: rgba(239,68,68,0.1); }
-
-      /* ── TOAST ── */
+      /* ─── TOAST ─── */
       .wa-toast {
-        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+        position: absolute; bottom: 24px; left: 50%;
+        transform: translateX(-50%) translateY(6px);
         background: var(--wa-bg-elevated); border: 1px solid var(--wa-border-default);
-        color: var(--wa-text-primary); padding: 9px 18px;
-        border-radius: 8px; font-size: 12px; font-weight: 500; letter-spacing: 0.2px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 9999; pointer-events: none;
-        opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
-        font-family: var(--wa-font-main);
+        color: var(--wa-text-primary); padding: 9px 18px; border-radius: 8px;
+        font-size: 12px; font-weight: 500; letter-spacing: 0.2px;
+        opacity: 0; transition: opacity 0.3s, transform 0.3s;
+        z-index: 9999; pointer-events: none; white-space: nowrap;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
-      .wa-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-      /* ── MISC ── */
-      .wa-drawing-mode canvas { cursor: crosshair !important; }
+      .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     `;
     document.head.appendChild(style);
   }
@@ -1747,53 +1700,106 @@
   ];
 
   function buildToolbar() {
-    let html = `<div class="wa-drag-grip" title="Kéo để di chuyển | Double-click để thu gọn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg></div>
-                <button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột (Esc)">${SVG.ptr}</button>`;
+    let html = `<div class="wa-drag-grip" title="Kéo để di chuyển • Double-click thu gọn"></div>
+                <button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột [Esc]">${SVG.ptr}</button>`;
+    
     MENUS.forEach(m => {
-      html += `<div class="wa-tb-group"><button class="wa-tb-btn">${m.icon}</button>
+      html += `<div class="wa-tb-group">
+                <button class="wa-tb-btn">${m.icon}</button>
                 <div class="wa-tb-menu"><div class="wa-tb-menu-inner">`;
       m.tools.forEach(t => {
-        if (t.id === 'header') html += `<div class="wa-menu-header">${t.n}</div>`;
-        else if (t.id === 'divider') html += `<div class="wa-menu-divider"></div>`;
-        else html += `<div class="wa-menu-item" data-tool="${t.id}">${t.n}</div>`;
+        if (t.id === 'header') {
+          html += `<div class="wa-menu-header">${t.n}</div>`;
+        } else if (t.id === 'divider') {
+          html += `<div class="wa-menu-divider"></div>`;
+        } else {
+          // Thêm dấu › phía trước tên công cụ để phân cấp thị giác tốt hơn
+          html += `<div class="wa-menu-item" data-tool="${t.id}">
+                    <span style="font-size:12px;width:16px;text-align:center;flex-shrink:0;opacity:0.7">›</span>${t.n}
+                  </div>`;
+        }
       });
       html += `</div></div></div>`;
     });
-    html += `<div class="wa-bot-group-divider"></div>
+    
+    // Đường phân cách cho nhóm nút bên dưới
+    html += `<div style="width:36px;height:1px;background:var(--wa-border-subtle);margin:4px 0"></div>
              <div class="wa-bot-actions">
-               <button class="wa-tb-btn" id="wa-btn-magnet" data-tooltip="Bắt điểm (Magnet)">${SVG.magnet}</button>
-               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xóa tất cả [Del]">${SVG.trash}</button>
+               <button class="wa-tb-btn" id="wa-btn-magnet" data-tooltip="Bật/tắt Magnet">${SVG.magnet}</button>
+               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xoá tất cả [Del]">${SVG.trash}</button>
              </div>`;
+             
     return html;
   }
 
   function showToast(msg) {
     let t = document.getElementById('wa-toast');
-    if(!t) { t = document.createElement('div'); t.id = 'wa-toast'; t.className = 'wa-toast'; document.getElementById('sc-chart-container').appendChild(t); }
-    t.innerText = msg; t.classList.add('visible');
-    setTimeout(() => t.classList.remove('visible'), 2200);
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'wa-toast'; 
+      t.className = 'wa-toast';
+      document.getElementById('sc-chart-container').appendChild(t);
+    }
+    
+    // Tự động nhận diện trạng thái để gắn Icon
+    const isSuccess = msg.includes('lưu') || msg.includes('nhân') || msg.includes('bản') || msg.includes('bật');
+    const isWarn = msg.includes('cảnh') || msg.includes('lỗi') || msg.includes('xóa') || msg.includes('tắt');
+    
+    t.innerText = (isSuccess ? '✓ ' : isWarn ? '⚠ ' : '') + msg;
+    t.classList.add('show');
+    
+    // Xóa timeout cũ nếu user thao tác quá nhanh
+    clearTimeout(t._to);
+    t._to = setTimeout(() => { 
+      t.classList.remove('show'); 
+    }, 2200);
   }
 
   function createConfirmModal(msg, onConfirm) {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10002;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+    overlay.style.cssText = `position:absolute;top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,0.7);z-index:99999;
+      display:flex;align-items:center;justify-content:center;
+      backdrop-filter:blur(8px)`;
     const box = document.createElement('div');
-    box.style.cssText = 'background:#151B23;border:1px solid #1E2733;padding:28px 24px;border-radius:14px;color:#E8EDF2;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.8);font-family:"Be Vietnam Pro",sans-serif;animation:wa-fadein-scale 0.2s cubic-bezier(0.34,1.56,0.64,1);min-width:280px;';
-    box.innerHTML = `<div style="margin-bottom:20px;font-size:14px;line-height:1.5;color:#E8EDF2;">${msg}</div><div style="display:flex;gap:10px;justify-content:center;"><button id="wa-btn-c-cancel" style="padding:9px 22px;background:transparent;border:1px solid #273040;color:#8896A7;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.15s;">Hủy</button><button id="wa-btn-c-ok" style="padding:9px 22px;background:#EF4444;border:none;color:#FFF;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:all 0.15s;">Đồng ý</button></div>`;
+    box.style.cssText = `background:var(--wa-bg-elevated);
+      border:1px solid var(--wa-border-subtle);
+      padding:28px 24px;border-radius:12px;
+      color:var(--wa-text-primary);text-align:center;
+      box-shadow:0 24px 64px rgba(0,0,0,0.8);
+      font-family:'Be Vietnam Pro','Inter',sans-serif;
+      animation:wa-fadein-scale 0.2s cubic-bezier(0.34,1.56,0.64,1)`;
+    box.innerHTML = `
+      <div style="margin-bottom:20px;font-size:14px;color:var(--wa-text-secondary)">${msg}</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button id="wa-btn-c-cancel" style="
+          padding:9px 22px;background:var(--wa-bg-overlay);
+          border:1px solid var(--wa-border-default);
+          color:var(--wa-text-secondary);border-radius:8px;
+          cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;
+          transition:all 0.15s">Huỷ</button>
+        <button id="wa-btn-c-ok" style="
+          padding:9px 22px;background:var(--wa-danger);border:none;
+          color:#fff;border-radius:8px;cursor:pointer;
+          font-family:inherit;font-size:12px;font-weight:700;
+          transition:all 0.15s">Đồng ý</button>
+      </div>`;
     overlay.appendChild(box);
     document.getElementById('sc-chart-container').appendChild(overlay);
-
+    
+    // Hover effects via JS inline logic
     setTimeout(() => {
-      box.querySelector('#wa-btn-c-cancel').onmouseenter = (e) => { e.target.style.background='#1C242E'; e.target.style.color='#E8EDF2'; };
-      box.querySelector('#wa-btn-c-cancel').onmouseleave = (e) => { e.target.style.background='transparent'; e.target.style.color='#8896A7'; };
+      box.querySelector('#wa-btn-c-cancel').onmouseenter = (e) => { e.target.style.background='transparent'; e.target.style.color='#E8EDF2'; };
+      box.querySelector('#wa-btn-c-cancel').onmouseleave = (e) => { e.target.style.background='var(--wa-bg-overlay)'; e.target.style.color='var(--wa-text-secondary)'; };
       box.querySelector('#wa-btn-c-ok').onmouseenter = (e) => { e.target.style.background='#B91C1C'; };
-      box.querySelector('#wa-btn-c-ok').onmouseleave = (e) => { e.target.style.background='#EF4444'; };
+      box.querySelector('#wa-btn-c-ok').onmouseleave = (e) => { e.target.style.background='var(--wa-danger)'; };
+      
       box.querySelector('#wa-btn-c-cancel').onclick = () => {
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       };
-      box.querySelector('#wa-btn-c-ok').onclick = () => { 
+      box.querySelector('#wa-btn-c-ok').onclick = () => {
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-        setTimeout(() => onConfirm(), 50); 
+        setTimeout(onConfirm, 50);
       };
     }, 0);
   }
@@ -1824,50 +1830,79 @@
 
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor';
-    backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);backdrop-filter:blur(10px)';
-    backdrop.innerHTML = `
-      <div style="background:#151B23;border:1px solid #1E2733;border-radius:14px;padding:22px 20px;width:400px;box-shadow:0 24px 80px rgba(0,0,0,0.8);font-family:'Be Vietnam Pro',sans-serif;animation:wa-fadein-scale 0.2s cubic-bezier(0.34,1.56,0.64,1);">
-        <div style="font-size:10px;font-weight:800;color:#4A5568;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:16px;">✏️ Định dạng: ${toolId}</div>
-        
-        <div style="display:flex; gap:10px; margin-bottom:12px;">
-          <div style="flex:1;">
-            <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Màu chữ</label>
-            <input type="color" id="wa-te-color" value="${curColor}" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; cursor:pointer; padding:0; overflow:hidden;">
-          </div>
-          <div style="flex:1;">
-            <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Màu nền</label>
-            <input type="color" id="wa-te-bg" value="${curBg}" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; cursor:pointer; padding:0; overflow:hidden;">
-          </div>
-          <div style="flex:1;">
-            <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Cỡ chữ</label>
-            <input type="number" id="wa-te-size" value="${curSize}" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; color:#E8EDF2; padding:0 10px; box-sizing:border-box; outline:none; font-family:inherit; font-size:12.5px;">
-          </div>
+    backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
+    // Bên trong openTextEditor(...)
+    backdrop.innerHTML = `<div style="
+      background:var(--wa-bg-elevated);
+      border:1px solid var(--wa-border-subtle);
+      border-radius:14px; padding:24px; width:400px;
+      box-shadow:0 24px 80px rgba(0,0,0,0.8);
+      font-family:'Be Vietnam Pro','Inter',sans-serif;
+      animation: wa-fadein-scale 0.2s cubic-bezier(0.34,1.56,0.64,1);">
+      <div style="font-size:11px;font-weight:800;color:var(--wa-text-muted);
+        text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        ✏️ ${toolId.toUpperCase()}
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div style="flex:1">
+          <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Màu chữ</label>
+          <input type="color" id="wa-te-color" value="${curColor}"
+            style="width:100%;height:34px;border:1px solid var(--wa-border-default);
+            border-radius:8px;background:var(--wa-bg-base);cursor:pointer;padding:0">
         </div>
-
-        <div style="margin-bottom:14px;">
-           <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Font chữ</label>
-           <select id="wa-te-font" style="width:100%; height:38px; border:1px solid #273040; border-radius:8px; background:#0A0C10; color:#E8EDF2; padding:0 10px; outline:none; cursor:pointer; font-size:12.5px; font-family:inherit;">
-              <option value="Be Vietnam Pro, sans-serif" ${curFont.includes('Be Vietnam')?'selected':''}>Be Vietnam Pro</option>
-              <option value="Lexend, sans-serif" ${curFont.includes('Lexend')?'selected':''}>Lexend</option>
-              <option value="Nunito, sans-serif" ${curFont.includes('Nunito')?'selected':''}>Nunito</option>
-              <option value="Josefin Sans, sans-serif" ${curFont.includes('Josefin')?'selected':''}>Josefin Sans</option>
-              <option value="Raleway, sans-serif" ${curFont.includes('Raleway')?'selected':''}>Raleway</option>
-              <option value="Space Grotesk, sans-serif" ${curFont.includes('Space Grotesk')?'selected':''}>Space Grotesk</option>
-              <option value="Sora, sans-serif" ${curFont.includes('Sora')?'selected':''}>Sora</option>
-              <option value="Inter, sans-serif" ${curFont.includes('Inter')?'selected':''}>Inter</option>
-              <option value="Roboto, sans-serif" ${curFont.includes('Roboto')?'selected':''}>Roboto</option>
-              <option value="Arial, sans-serif" ${curFont.includes('Arial')?'selected':''}>Arial</option>
-           </select>
+        <div style="flex:1">
+          <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Màu nền</label>
+          <input type="color" id="wa-te-bg" value="${curBg}"
+            style="width:100%;height:34px;border:1px solid var(--wa-border-default);
+            border-radius:8px;background:var(--wa-bg-base);cursor:pointer;padding:0">
         </div>
-
-        <label style="display:block; font-size:10px; font-weight:600; color:#4A5568; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:5px;">Nội dung</label>
-        <textarea id="wa-te-input" rows="4" style="width:100%;box-sizing:border-box;background:#0A0C10;border:1px solid #273040;border-radius:8px;color:#E8EDF2;font-size:13px;font-family:inherit;padding:10px 12px;resize:vertical;outline:none;line-height:1.5;" placeholder="Nhập text..."></textarea>
-        
-        <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
-          <button id="wa-te-cancel" style="background:transparent;border:1px solid #273040;color:#8896A7;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all 0.15s;">Hủy</button>
-          <button id="wa-te-confirm" style="background:#3B82F6;border:none;color:#fff;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:all 0.15s;">Xác nhận</button>
+        <div style="flex:1">
+          <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Cỡ chữ</label>
+          <input type="number" id="wa-te-size" value="${curSize}"
+            style="width:100%;height:34px;border:1px solid var(--wa-border-default);
+            border-radius:8px;background:var(--wa-bg-base);color:var(--wa-text-primary);
+            padding:0 8px;box-sizing:border-box;outline:none;font-family:inherit">
         </div>
-      </div>`;
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Font chữ</label>
+        <select id="wa-te-font" style="width:100%;height:34px;
+          border:1px solid var(--wa-border-default);border-radius:8px;
+          background:var(--wa-bg-base);color:var(--wa-text-primary);
+          padding:0 8px;outline:none;cursor:pointer;font-family:inherit">
+          <option value="'Be Vietnam Pro',sans-serif" ${curFont.includes('Be Vietnam') ? 'selected' : ''}>Be Vietnam Pro</option>
+          <option value="'Lexend',sans-serif" ${curFont.includes('Lexend') ? 'selected' : ''}>Lexend</option>
+          <option value="'Nunito',sans-serif" ${curFont.includes('Nunito') ? 'selected' : ''}>Nunito</option>
+          <option value="'Josefin Sans',sans-serif" ${curFont.includes('Josefin') ? 'selected' : ''}>Josefin Sans</option>
+          <option value="'Raleway',sans-serif" ${curFont.includes('Raleway') ? 'selected' : ''}>Raleway</option>
+          <option value="'Space Grotesk',sans-serif" ${curFont.includes('Space') ? 'selected' : ''}>Space Grotesk</option>
+          <option value="'Sora',sans-serif" ${curFont.includes('Sora') ? 'selected' : ''}>Sora</option>
+          <option value="'Inter',sans-serif" ${curFont.includes('Inter') ? 'selected' : ''}>Inter</option>
+          <option value="'Roboto',sans-serif" ${curFont.includes('Roboto') ? 'selected' : ''}>Roboto</option>
+          <option value="Arial,sans-serif" ${curFont.includes('Arial') ? 'selected' : ''}>Arial</option>
+        </select>
+      </div>
+      <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Nội dung</label>
+      <textarea id="wa-te-input" rows="4" placeholder="Nhập text..."
+        style="width:100%;box-sizing:border-box;
+        background:var(--wa-bg-base);border:1px solid var(--wa-border-default);
+        border-radius:8px;color:var(--wa-text-primary);
+        font-size:14px;font-family:inherit;padding:8px 12px;
+        resize:vertical;outline:none;line-height:1.5;
+        transition:border-color 0.15s,box-shadow 0.15s"></textarea>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button id="wa-te-cancel" style="
+          background:transparent;border:1px solid var(--wa-border-default);
+          color:var(--wa-text-secondary);padding:8px 18px;border-radius:8px;
+          cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;
+          transition:all 0.15s">Huỷ</button>
+        <button id="wa-te-confirm" style="
+          background:var(--wa-accent);border:none;color:#fff;
+          padding:8px 18px;border-radius:8px;cursor:pointer;
+          font-family:inherit;font-size:12px;font-weight:700;
+          transition:all 0.15s">Xác nhận</button>
+      </div>
+    </div>`;
     document.body.appendChild(backdrop);
 
     var textarea = document.getElementById('wa-te-input');
@@ -2090,17 +2125,6 @@
     return 'lines'; 
   }
 
-  const WA_SWATCHES = [
-    '#E8EDF2', '#8896A7', '#4A5568', '#1C242E',
-    '#22C55E', '#16A34A', '#86EFAC', '#052E16',
-    '#EF4444', '#B91C1C', '#FCA5A5', '#450A0A',
-    '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'
-  ];
-
-  function renderSwatches(targetInputId) {
-    return `<div class="wa-swatches-row">${WA_SWATCHES.map(c => `<div class="wa-swatch" style="background:${c}" data-color="${c}" data-target="${targetInputId}" title="${c}"></div>`).join('')}</div>`;
-  }
-
   function renderPanel(overlay) {
     const panel = document.getElementById('wa-props-panel');
     if(!panel || !overlay) return;
@@ -2108,73 +2132,63 @@
     const cat = getToolCategory(overlay.name); const body = panel.querySelector('.wa-panel-body');
     let html = ''; let s = overlay.styles || {}; let ext = overlay.extendData || {};
 
+    const buildSwatchesHTML = (targetId) => `<div class="wa-swatches-row">${WA_SWATCHES.map(c => `<div class="wa-swatch" style="background:${c}" data-color="${c}" data-target="${targetId}" title="${c}"></div>`).join('')}</div>`;
+
     if (cat === 'text') {
       let txt = typeof ext === 'string' ? ext : (ext.text || '');
       if (!txt) txt = 'Văn bản...';
       let c = (s.text && s.text.color) ? colorToHex(s.text.color) : toolStyles.text.textColor;
       let sz = (s.text && s.text.size) ? s.text.size : toolStyles.text.textSize;
 
-      html += `
-         <div class="wa-control-row"><label>Nội dung ghi chú:</label>
-           <textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea>
-         </div>`;
-      
-      html += `
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu sắc</label>${renderSwatches('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
-            <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
-            <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
-            <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
-          </select></div>
-        </div>`;
+      html += `<div class="wa-control-row"><label>Nội dung ghi chú:</label><textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea></div>`;
+      html += `<div style="display:flex; gap:8px; margin-top:8px;">
+                 <div class="wa-control-row" style="flex:1"><label>Màu sắc</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
+                 <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
+                   <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
+                   <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
+                   <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
+                 </select></div>
+               </div>`;
     } else if (cat === 'shapes') {
       let bc = (s.polygon && s.polygon.borderColor) ? colorToHex(s.polygon.borderColor) : toolStyles.shapes.borderColor;
       let fc = (s.polygon && s.polygon.color) ? colorToHex(s.polygon.color) : toolStyles.shapes.fillColor;
-      html += `
-        <div style="display:flex; gap:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu Viền</label>${renderSwatches('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${bc}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Màu Nền</label>${renderSwatches('wa-prop-c2')}<input type="color" id="wa-prop-c2" class="wa-color-picker" value="${fc}"></div>
-        </div>`;
+      html += `<div style="display:flex; gap:8px;">
+                 <div class="wa-control-row" style="flex:1"><label>Màu Viền</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${bc}"></div>
+                 <div class="wa-control-row" style="flex:1"><label>Màu Nền</label>${buildSwatchesHTML('wa-prop-c2')}<input type="color" id="wa-prop-c2" class="wa-color-picker" value="${fc}"></div>
+               </div>`;
     } else if (cat === 'fibo') {
       let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : toolStyles.fibo.lineColor;
       let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : toolStyles.fibo.fillOpacity;
-      html += `
-        <div class="wa-control-row"><label>Màu vạch & Chữ</label>${renderSwatches('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
-        <div class="wa-control-row"><label>Độ đậm nền (0 = Tắt màu)</label>
-          <input type="number" id="wa-prop-a1" class="wa-input" step="0.05" min="0" max="1" value="${alpha}">
-        </div>`;
+      html += `<div class="wa-control-row"><label>Màu vạch & Chữ</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
+               <div class="wa-control-row"><label>Độ đậm nền (0 = Tắt màu)</label><input type="number" id="wa-prop-a1" class="wa-input" step="0.05" min="0" max="1" value="${alpha}"></div>`;
     } else { 
-      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : (toolStyles[cat] ? toolStyles[cat].lineColor : '#00F0FF');
+      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : (toolStyles[cat] ? toolStyles[cat].lineColor : '#3B82F6');
       let lw = (s.line && s.line.size) ? s.line.size : 1;
-      html += `
-        <div style="display:flex; gap:8px;">
-          <div class="wa-control-row" style="flex:1"><label>Màu nét</label><input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
-          <div class="wa-control-row" style="flex:1"><label>Độ dày</label><select id="wa-prop-s1" class="wa-select">
-            <option value="1" ${lw==1?'selected':''}>1px</option><option value="2" ${lw==2?'selected':''}>2px</option><option value="3" ${lw==3?'selected':''}>3px</option>
-          </select></div>
-        </div>`;
+      html += `<div style="display:flex; gap:8px;">
+                 <div class="wa-control-row" style="flex:1"><label>Màu nét</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
+                 <div class="wa-control-row" style="flex:1"><label>Độ dày</label><select id="wa-prop-s1" class="wa-select">
+                   <option value="1" ${lw==1?'selected':''}>1px</option><option value="2" ${lw==2?'selected':''}>2px</option><option value="3" ${lw==3?'selected':''}>3px</option>
+                 </select></div>
+               </div>`;
     }
 
     body.innerHTML = html;
     panel.classList.add('show');
 
-    // Bind swatch clicks → update nearest color input
+    // Bind Swatches Click Event
     body.querySelectorAll('.wa-swatch').forEach(sw => {
       sw.addEventListener('click', () => {
-        const targetId = sw.getAttribute('data-target');
-        const inp = document.getElementById(targetId);
+        const inp = body.querySelector(`#${sw.dataset.target}`);
         if (inp) {
-          inp.value = sw.getAttribute('data-color');
+          inp.value = sw.dataset.color;
           inp.dispatchEvent(new Event('input', { bubbles: true }));
           inp.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        body.querySelectorAll(`.wa-swatch[data-target="${targetId}"]`).forEach(s => s.classList.remove('selected'));
+        body.querySelectorAll(`.wa-swatch[data-target="${sw.dataset.target}"]`).forEach(s => s.classList.remove('selected'));
         sw.classList.add('selected');
       });
     });
 
-    // 1. Luồng vẽ biểu đồ (Cập nhật cực nhanh - 40ms)
     const updateEngine = debounce(() => {
       if(!currentSelectedOverlay || !global.tvChart) return;
       let newStyles = { ...currentSelectedOverlay.styles };
@@ -2206,7 +2220,6 @@
       try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
     }, 32);
 
-    // 2. Luồng lưu bộ nhớ (Delay 500ms để không gây giật lag khi đang kéo thả màu)
     const saveEngine = debounce(() => { saveStyles(); }, 500);
 
     body.querySelectorAll('input, textarea, select').forEach(el => {
@@ -2227,7 +2240,23 @@
   function bindContextMenu(panel) {
     const container = document.getElementById('sc-chart-container');
     const cm = document.createElement('div'); cm.className = 'wa-context-menu';
-    cm.innerHTML = `<div class="wa-cm-item" id="wa-cm-edit">Chỉnh sửa</div><div class="wa-cm-item" id="wa-cm-clone">Nhân bản</div><div class="wa-cm-item" id="wa-cm-lock">Khóa / Mở khóa</div><div class="wa-cm-item" id="wa-cm-del" style="color:#F6465D;border-top:1px solid #2b3139;padding-top:12px;margin-top:4px;">Xóa hình</div>`;
+    cm.innerHTML = `
+      <div class="wa-cm-item" id="wa-cm-edit">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Chỉnh sửa
+      </div>
+      <div class="wa-cm-item" id="wa-cm-clone">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Nhân bản
+      </div>
+      <div class="wa-cm-item" id="wa-cm-lock">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Khoá / Mở khoá
+      </div>
+      <div class="wa-cm-item danger" id="wa-cm-del" style="border-top:1px solid var(--wa-border-subtle);margin-top:4px;padding-top:10px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Xoá hình
+      </div>`;
     container.appendChild(cm);
 
     container.addEventListener('contextmenu', (e) => {
@@ -2247,8 +2276,13 @@
     }
 
     cm.querySelector('#wa-cm-edit').onclick = () => { renderPanel(currentSelectedOverlay); cm.style.display = 'none'; };
-    cm.querySelector('#wa-cm-clone').onclick = () => act('clone'); cm.querySelector('#wa-cm-lock').onclick = () => act('lock'); cm.querySelector('#wa-cm-del').onclick = () => act('del');
-    panel.querySelector('.wa-close-btn').onclick = hidePanel; panel.querySelector('#wa-btn-p-lock').onclick = () => act('lock'); panel.querySelector('#wa-btn-p-del').onclick = () => act('del');
+    cm.querySelector('#wa-cm-clone').onclick = () => act('clone'); 
+    cm.querySelector('#wa-cm-lock').onclick = () => act('lock'); 
+    cm.querySelector('#wa-cm-del').onclick = () => act('del');
+    
+    panel.querySelector('.wa-close-btn').onclick = hidePanel; 
+    panel.querySelector('#wa-btn-p-lock').onclick = () => act('lock'); 
+    panel.querySelector('#wa-btn-p-del').onclick = () => act('del');
   }
 
   // ==========================================
@@ -2263,8 +2297,25 @@
     var sidebar = document.createElement('div'); sidebar.className = 'wa-toolbar'; sidebar.innerHTML = buildToolbar();
     container.appendChild(sidebar);
 
+    // Bên trong hàm mountUI()
     var panel = document.createElement('div'); panel.className = 'wa-props-panel'; panel.id = 'wa-props-panel';
-    panel.innerHTML = `<div class="wa-panel-header">Cài đặt công cụ <button class="wa-close-btn" title="Đóng (Esc)">${SVG.close}</button></div><div class="wa-panel-body"></div><div class="wa-panel-footer"><button class="wa-action-btn" id="wa-btn-p-lock" title="Khóa hình">${SVG.magnet}</button><button class="wa-action-btn delete" id="wa-btn-p-del" title="Xóa hình">${SVG.trash}</button></div>`;
+    panel.innerHTML = `
+      <div class="wa-panel-header">
+        Cài đặt công cụ
+        <button class="wa-close-btn" title="Đóng [Esc]">${SVG.close}</button>
+      </div>
+      <div class="wa-panel-body">
+        <div class="wa-panel-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">
+            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <span>Chọn hoặc vẽ một hình để chỉnh sửa</span>
+        </div>
+      </div>
+      <div class="wa-panel-footer">
+        <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">${SVG.magnet} Khoá</button>
+        <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">${SVG.trash} Xoá</button>
+      </div>`;
     container.appendChild(panel);
 
     bindCoreEvents(sidebar, panel); bindContextMenu(panel);
