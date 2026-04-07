@@ -917,7 +917,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     }
                 },
                 
-                // 🚀 ICON CHỈ BÁO BẰNG UNICODE (KHÔNG CẦN LOAD FONT)
+                // 🚀 CẤU HÌNH INDICATOR GLOBAL
                 indicator: {
                     tooltip: {
                         showRule: 'always',    
@@ -928,6 +928,23 @@ window.openProChart = function(t, isTimeSwitch = false) {
                             { id: 'setting', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '⚙', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F0B90B', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(240,185,11,0.1)' },
                             { id: 'close', position: 'middle', marginLeft: 6, marginTop: 7, marginRight: 0, marginBottom: 0, paddingLeft: 2, paddingTop: 2, paddingRight: 2, paddingBottom: 2, icon: '✕', fontFamily: 'sans-serif', size: 14, color: '#848e9c', activeColor: '#F6465D', backgroundColor: 'transparent', activeBackgroundColor: 'rgba(246,70,93,0.1)' }
                         ]
+                    },
+                    // 🚀 THIẾT KẾ NHÃN REALTIME MINIMALIST (TẮT MẶC ĐỊNH CHO MỌI CHỈ BÁO)
+                    lastValueMark: {
+                        show: false, // <-- Tắt mặc định để chart không bị rác rưởi
+                        text: {
+                            show: true,
+                            color: '#ffffff',     // Chữ trắng tinh tế
+                            size: 11,             // Nhỏ gọn
+                            family: 'Arial, sans-serif',
+                            weight: 'bold',
+                            paddingLeft: 6,       // Căn lề trái phải rộng ra 1 xíu cho sang
+                            paddingRight: 6,
+                            paddingTop: 3,
+                            paddingBottom: 3,
+                            borderRadius: 3       // Bo góc nhẹ 3px
+                            // Không set backgroundColor -> KLineCharts sẽ tự động mượn màu của dây Line làm màu nền.
+                        }
                     }
                 },
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
