@@ -1810,19 +1810,27 @@
                 </div>
 
                 <div style="font-size:10px; color:${COLOR.muted}; margin-bottom:8px; font-weight:600;">🎨 BỘ MÀU:</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
-                    <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(42,245,146,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Wave Alpha</button>
-                    <button onclick="window.waCsSetTheme('#0ECB81','#0ECB81','#F6465D','#F6465D','#111418')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(14,203,129,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Truyền Thống</button>
-                    <button onclick="window.waCsSetTheme('transparent','#FFFFFF','#FFFFFF','#FFFFFF','#131722')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Trắng Đen</button>
-                    <button 
-    onclick="window.waCsSetTheme('#26A69A','#26A69A','#EF5350','#EF5350','#131722')" 
-    style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" 
-    onmouseover="this.style.background='rgba(255,255,255,0.1)'" 
-    onmouseout="this.style.background='rgba(255,255,255,0.05)'"
->
-    Pro Trader Mode
-</button>
-                </div>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px;">
+    <button onclick="window.waCsSetTheme('#2af592','#2af592','#eb367f','#eb367f','#0f1a1c')" 
+        style="background:rgba(42,245,146,0.1); border:1px solid rgba(42,245,146,0.3); border-radius:6px; padding:6px; color:#2af592; font-size:11px; font-weight:700; cursor:pointer; text-align:center; transition:0.2s;">
+        Wave Alpha
+    </button>
+
+    <button onclick="window.waCsSetTheme('#089981','#089981','#f23645','#f23645','#161a1e')" 
+        style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:#0ECB81; font-size:11px; font-weight:700; cursor:pointer; text-align:center; transition:0.2s;">
+        Truyền Thống
+    </button>
+
+    <button onclick="window.waCsSetTheme('transparent','#eceef2','#eceef2','#eceef2','#131722')" 
+        style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:#FFFFFF; font-size:11px; font-weight:700; cursor:pointer; text-align:center; transition:0.2s;">
+        Zen (Hollow)
+    </button>
+
+    <button onclick="window.waCsSetTheme('#26A69A','#26A69A','#EF5350','#EF5350','#131722')" 
+        style="background:rgba(38,166,154,0.1); border:1px solid rgba(38,166,154,0.3); border-radius:6px; padding:6px; color:#26A69A; font-size:11px; font-weight:700; cursor:pointer; text-align:center; transition:0.2s;">
+        Pro Trader
+    </button>
+</div>
 
                 <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c', true)" style="width:100%; background:transparent; border:1px dashed ${COLOR.muted}; color:${COLOR.muted}; border-radius:6px; padding:8px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='${COLOR.white}'" onmouseout="this.style.background='transparent'; this.style.color='${COLOR.muted}'">↩ KHÔI PHỤC MẶC ĐỊNH</button>
             </div>
@@ -1956,43 +1964,65 @@
         };
 
         // Hàm Apply: Lưu và Vẽ lại biểu đồ với Viền nến
-        // Hàm Apply: Lưu và Vẽ lại biểu đồ với Viền nến
         window.waCsApply = function() {
-            const ub   = document.getElementById('wa-hex-up').value;
-            const ubd  = document.getElementById('wa-color-up-bd').value;
-            const db   = document.getElementById('wa-hex-down').value;
-            const dbd  = document.getElementById('wa-color-down-bd').value;
-            const bg   = document.getElementById('wa-hex-bg').value;
-            const showGrid = document.getElementById('wa-grid-toggle').dataset.on === '1';
-
-            localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: ub, colUpBd: ubd, colDown: db, colDownBd: dbd, colBg: bg }));
-
-            const chartContainer = document.getElementById('sc-chart-container');
-            if (chartContainer) chartContainer.style.background = bg;
-
-            if (window.tvChart) {
-                // Tự động chuyển mode Hollow (nến rỗng) nếu màu thân nến là transparent
-                const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
-
-                window.tvChart.setStyles({
-                    grid: {
-                        horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
-                        vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
-                    },
-                    candle: { 
-                        type: window.currentChartInterval === 'tick' ? 'area' : cType,
-                        bar: {
-                            upColor: ub, downColor: db, noChangeColor: '#848e9c',
-                            upBorderColor: ubd, downBorderColor: dbd,
-                            upWickColor: ubd, downWickColor: dbd
-                        }
-                    },
-                    watermark: {
-                        show: true, text: 'WAVE ALPHA', color: 'rgba(255, 255, 255, 0.05)', size: 48, weight: '800'
-                    }
-                });
-            }
-        };
+          const ub   = document.getElementById('wa-hex-up').value;
+          const ubd  = document.getElementById('wa-color-up-bd').value;
+          const db   = document.getElementById('wa-hex-down').value;
+          const dbd  = document.getElementById('wa-color-down-bd').value;
+          const bg   = document.getElementById('wa-hex-bg').value;
+          const showGrid = document.getElementById('wa-grid-toggle').dataset.on === '1';
+      
+          localStorage.setItem('wa_chart_settings', JSON.stringify({ showGrid, colUp: ub, colUpBd: ubd, colDown: db, colDownBd: dbd, colBg: bg }));
+      
+          const chartContainer = document.getElementById('sc-chart-container');
+          if (chartContainer) chartContainer.style.background = bg;
+      
+          // Helper: Chuyển Hex sang RGBA với độ mờ 70% cho Volume
+          const getVolColor = (hex, fallbackHex) => {
+              let target = (hex === 'transparent' || hex === 'rgba(0,0,0,0)') ? fallbackHex : hex;
+              if (!target.startsWith('#')) return target;
+              let r = parseInt(target.slice(1, 3), 16),
+                  g = parseInt(target.slice(3, 5), 16),
+                  b = parseInt(target.slice(5, 7), 16);
+              return `rgba(${r}, ${g}, ${b}, 0.7)`;
+          };
+      
+          const volUpColor = getVolColor(ub, ubd);
+          const volDownColor = getVolColor(db, dbd);
+      
+          if (window.tvChart) {
+              const cType = (ub === 'transparent' || ub === 'rgba(0,0,0,0)') ? 'candle_up_stroke' : 'candle_solid';
+      
+              // 1. Cập nhật màu Nến & Grid
+              window.tvChart.setStyles({
+                  grid: {
+                      horizontal: { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' },
+                      vertical:   { show: showGrid, color: 'rgba(255,255,255,0.05)', style: 'dashed' }
+                  },
+                  candle: { 
+                      type: window.currentChartInterval === 'tick' ? 'area' : cType,
+                      bar: {
+                          upColor: ub, downColor: db, noChangeColor: '#848e9c',
+                          upBorderColor: ubd, downBorderColor: dbd,
+                          upWickColor: ubd, downWickColor: dbd
+                      }
+                  }
+              });
+      
+              // 2. Cập nhật màu Volume đồng bộ (Opacity 70%)
+              window.tvChart.overrideIndicator({
+                  name: 'VOL',
+                  styles: {
+                      bars: [{
+                          upColor: volUpColor,
+                          downColor: volDownColor,
+                          noChangeColor: '#848e9c'
+                      }]
+                  }
+              });
+          }
+      };
+      
 
         
 
