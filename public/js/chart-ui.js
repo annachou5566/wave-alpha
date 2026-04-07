@@ -1031,9 +1031,9 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
                 }
 
-                // 🚀 LỚP 3: LIFECYCLE HOOK - Bơm hình vẽ vào NGAY LẬP TỨC khi nến đã đổ xong
-                if (typeof window.__wa_restoreOverlays === 'function') {
-                    setTimeout(() => window.__wa_restoreOverlays(), 50); 
+                // 🚀 LỚP 3: Dùng đúng lifecycle hook — tự rebind events + chờ data + restore
+                if (typeof window.__wa_onChartReady === 'function') {
+                    window.__wa_onChartReady();
                 }
 
                 if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
