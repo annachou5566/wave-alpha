@@ -2431,30 +2431,29 @@ window.__wa_onIntervalChange = function(newInterval) {
   console.log(`🔥 [HOOK] ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
   console.log(`================================`);
 
+  // 1. Lưu lại toàn bộ hình vẽ hiện tại xuống LocalStorage trước khi chuyển khung
   if (typeof global.__wa_saveAllOverlays === 'function') {
     global.__wa_saveAllOverlays();
   }
 
-  // Xóa state RAM để chart mới dựng lại từ localStorage / persisted source
-  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
-
-  // ❌ KHÔNG restore ở đây nữa
-  // Vì lúc này vẫn đang là chart cũ, lát nữa openProChart() sẽ dispose nó.
-};
-
-window.__wa_onSymbolChange = function(newSymbol) {
-  console.log(`\n================================`);
-  console.log(`🔥 [HOOK] ĐỔI COIN SANG: ${newSymbol}`);
-  console.log(`================================`);
-  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-  window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  
-  // FIX: Xóa trí nhớ RAM
-  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
-  
-  if (typeof global.__wa_restoreOverlays === 'function') {
-      global.__wa_restoreOverlays();
+  // 2. Xóa trí nhớ tạm (RAM)
+  if (global.__wa_overlay_map) {
+      global.__wa_overlay_map.clear();
   }
+
+  // 3. Xoá sạch hình trên chart hiện tại (tránh lỗi bóng ma đồ thị cũ)
+  if (global.tvChart) {
+      try { global.tvChart.removeOverlay(); } catch(e) {}
+  }
+
+  // 4. Giải pháp chuyên nghiệp: Chờ Engine nạp xong Chart & Nến mới rồi mới Restore
+  // Hàm __wa_restoreOverlays bên dưới đã có cơ chế tự động Quét (Polling) 200ms rất an toàn
+  setTimeout(() => {
+      if (typeof global.__wa_restoreOverlays === 'function') {
+          global.__wa_restoreOverlays();
+          console.log(`✅ Đã khôi phục thành công hình vẽ cho khung ${newInterval}`);
+      }
+  }, 400); // Trễ 400ms là đủ để bypass tiến trình dispose chart của hệ thống
 };
 
 
