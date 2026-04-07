@@ -1028,15 +1028,21 @@ if (isTimeSwitch && window.tvChart) {
     });
 
     window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-        if (histData && histData.length > 0) {
-            window.tvChart.applyNewData(histData); // Overlay TỰ ĐỘNG còn nguyên
-        }
-        // Chỉ restore indicator, KHÔNG cần restore overlay
-        if (window.WaveIndicatorAPI) {
-            if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
-        }
-        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
-    });
+    if (histData && histData.length > 0) {
+        window.tvChart.applyNewData(histData);
+    }
+
+    // ← BẮT BUỘC: applyNewData thay data mới → dataIndex cũ bị lệch
+    // Phải remap lại timestamp→dataIndex cho overlay
+    if (typeof window.__wa_restoreOverlays === 'function') {
+        window.__wa_restoreOverlays();
+    }
+
+    if (window.WaveIndicatorAPI) {
+        if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+    }
+    if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
+});
     return; // Thoát sớm — không rebuild chart
 }
 
