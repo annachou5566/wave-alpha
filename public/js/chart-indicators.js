@@ -995,7 +995,7 @@
           }
         },
         lines: [
-          { color: '#00E5FF', size: 2.2, style: 'solid' },   // RSI - Electric Cyan (nổi bật)
+          { color: '#00E5FF', size: 1.4, style: 'solid' },   // RSI - Electric Cyan (nổi bật)
           { color: '#FFD166', size: 1.2, style: 'solid' }    // MA - Soft Gold (premium)
         ]
       },
@@ -1135,8 +1135,7 @@
   
         // Đường 50 (Nét đứt thưa, dày 2px và màu trắng)
         ctx.lineWidth = 2; // Dày hơn đường 30/70
-        ctx.strokeStyle = '#00E5FF'; // cùng tone RSI (center bias)
-ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = COLOR.white;
         ctx.setLineDash([15, 10]);
         ctx.beginPath(); ctx.moveTo(0, y50); ctx.lineTo(fullWidth, y50); ctx.stroke();
         
