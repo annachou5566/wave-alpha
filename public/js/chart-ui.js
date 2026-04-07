@@ -895,13 +895,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
             }
         });
-// [WA-DRAWING] Báo cho drawing system biết chart mới đã sẵn sàng
-        if (window.__wa_onChartReady) {
-            window.__wa_onChartReady(
-                (window.currentChartToken && window.currentChartToken.symbol) || '',
-                window.currentChartInterval || '1d'
-            );
-        }
+
         // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
         window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
