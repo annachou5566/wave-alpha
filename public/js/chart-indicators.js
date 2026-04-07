@@ -991,7 +991,22 @@
         lines: [
           { color: '#7E57C2', size: 1, style: 'solid' },        
           { color: COLOR.gold, size: 1, style: 'solid' }
-        ]
+        ],
+        // 🚀 BẬT TÍNH NĂNG NATIVE: HIỂN THỊ NHÃN LÊN CỘT SỐ Y-AXIS
+        lastValueMark: {
+          show: true,
+          text: {
+            show: true,
+            color: '#ffffff', // Ép chữ màu trắng
+            size: 12,
+            paddingLeft: 4,
+            paddingRight: 4,
+            paddingTop: 4,
+            paddingBottom: 4,
+            borderRadius: 2
+            // Không set backgroundColor ở đây vì KLineCharts sẽ tự động lấy màu tím/vàng của đường dây!
+          }
+        }
       },
       calc: function(dataList, indicator) {
         const rsiLen = indicator.calcParams[0];
@@ -1106,7 +1121,6 @@
         return results;
       },
   
-      // THÊM PARAM 'bounding' ĐỂ LẤY KÍCH THƯỚC KHUNG CANVAS
       draw: function({ ctx, visibleRange, indicator, xAxis, yAxis, bounding }) {
         const { from, to } = visibleRange;
         const res = indicator.result;
@@ -1278,7 +1292,6 @@
           if (res[i]) {
             let x = xAxis.convertToPixel(i);
   
-            // 1. Phân kỳ BULL
             if (res[i].bullDiv !== undefined) {
               let y = yAxis.convertToPixel(res[i].bullDiv.endRSI);
               
@@ -1291,10 +1304,8 @@
               ctx.stroke();
               ctx.setLineDash([]); 
               
-              // Xích sát lại viền (5px)
               let labelY = y + 5;
               
-              // CHỐNG CLIPPING KHI ZOOM
               if (labelY + boxH > bounding.height - 2) {
                   labelY = bounding.height - boxH - 2;
               }
@@ -1309,7 +1320,6 @@
               ctx.fillText('Bull', x, labelY + boxH/2);
             }
   
-            // 2. Phân kỳ BEAR
             if (res[i].bearDiv !== undefined) {
               let y = yAxis.convertToPixel(res[i].bearDiv.endRSI);
               
@@ -1322,10 +1332,8 @@
               ctx.stroke();
               ctx.setLineDash([]);
   
-              // Xích sát lại viền (5px)
               let labelY = y - 5 - boxH;
               
-              // CHỐNG CLIPPING KHI ZOOM
               if (labelY < 2) {
                   labelY = 2;
               }
@@ -1342,42 +1350,6 @@
           }
         }
         ctx.restore();
-  
-        // --- VẼ REALTIME Y-AXIS BADGE (NHÃN GIÁ TRỊ MỚI NHẤT) ---
-        const realtimeData = res[res.length - 1]; 
-        if (realtimeData && realtimeData.rsi !== undefined) {
-            ctx.save();
-            const rsiVal = realtimeData.rsi;
-            let currentY = yAxis.convertToPixel(rsiVal);
-            
-            // Giữ nhãn luôn nằm gọn trong màn hình kể cả khi RSI giật mạnh quá khung
-            if (currentY < 12) currentY = 12;
-            if (currentY > bounding.height - 12) currentY = bounding.height - 12;
-  
-            const tagW = 42;
-            const tagH = 18;
-            // Ép sát lề phải của biểu đồ (cột số Y-Axis)
-            const tagX = bounding.width - tagW; 
-  
-            // Box nền Tím (Đồng bộ màu dây RSI)
-            ctx.fillStyle = '#7E57C2';
-            ctx.beginPath();
-            if (ctx.roundRect) {
-                ctx.roundRect(tagX, currentY - tagH/2, tagW, tagH, 3);
-            } else {
-                ctx.rect(tagX, currentY - tagH/2, tagW, tagH);
-            }
-            ctx.fill();
-  
-            // Chữ trắng sắc nét
-            ctx.fillStyle = COLOR.white;
-            ctx.font = 'bold 11px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(rsiVal.toFixed(2), tagX + tagW/2, currentY);
-            
-            ctx.restore();
-        }
   
         return false; 
       }
