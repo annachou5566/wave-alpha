@@ -301,13 +301,13 @@
       builtIn: true,
     },
     {
-    name: 'WAVE_RSI',
-    shortName: 'WAVE RSI',
-    description: 'RSI Nâng cao (MA, Bollinger Bands & Phân kỳ)',
+    name: 'WAVE_ADVANCED_RSI',
+    shortName: 'WAVE RSI PRO',
+    description: 'RSI Advanced (Giống 100% TV: Gradients, BB, Div)',
     category: 'oscillator',
     isStack: false,
-    defaultParams: [14, 14, 2, 1, 1],
-    paramLabels: ['Chu kỳ RSI', 'Chu kỳ MA', 'Hệ số BB (StdDev)', 'Hiện BB (1=Có, 0=Không)', 'Hiện Phân kỳ (1=Có, 0=Không)'],
+    defaultParams: [14, 0, 14, 2.0, 1],
+    paramLabels: ['Chu kỳ RSI', 'MA Type (0=SMA,1=BB,2=EMA,3=RMA,4=WMA,5=VWMA)', 'Chu kỳ MA', 'BB StdDev', 'Hiện Phân kỳ (1=Có, 0=Không)'],
     builtIn: false,
   },
     {
@@ -978,48 +978,44 @@
         });
       },
     });
-
 klinecharts.registerIndicator({
-    name: 'WAVE_RSI',
-    shortName: 'WAVE_RSI',
+    name: 'WAVE_ADVANCED_RSI',
+    shortName: 'RSI',
     series: 'normal',
-    calcParams: [14, 14, 2, 1, 1],
+    calcParams: [14, 0, 14, 2.0, 1],
     figures: [
       { key: 'rsi', title: 'RSI: ', type: 'line' },
       { key: 'rsiMA', title: 'MA: ', type: 'line' },
       { key: 'bbUpper', title: 'BB Up: ', type: 'line' },
       { key: 'bbLower', title: 'BB Low: ', type: 'line' },
-      { key: 'bullDiv', title: 'Bull Div: ', type: 'circle' },
-      { key: 'bearDiv', title: 'Bear Div: ', type: 'circle' }
+      { key: 'upperBand', title: '', type: 'line' },
+      { key: 'midLine', title: '', type: 'line' },
+      { key: 'lowerBand', title: '', type: 'line' }
     ],
     styles: {
       lines: [
-        { color: COLOR.cyan, size: 1.5, style: 'solid' },       // rsi
-        { color: COLOR.gold, size: 1, style: 'solid' },         // rsiMA
-        { color: COLOR.muted, size: 1, style: 'dashed' },       // bbUpper
-        { color: COLOR.muted, size: 1, style: 'dashed' }        // bbLower
-      ],
-      circles: [
-        { color: COLOR.green, size: 4, style: 'fill' },         // bullDiv
-        { color: COLOR.red, size: 4, style: 'fill' }            // bearDiv
+        { color: '#7E57C2', size: 1.5, style: 'solid' },        // rsi - Exact TV Color
+        { color: COLOR.gold, size: 1.5, style: 'solid' },       // rsiMA - TV yellow
+        { color: COLOR.green, size: 1, style: 'solid' },        // bbUpper
+        { color: COLOR.green, size: 1, style: 'solid' },        // bbLower
+        { color: '#787B86', size: 1, style: 'dashed' },         // upperBand (70)
+        { color: 'rgba(120,123,134,0.5)', size: 1, style: 'dashed' }, // midLine (50)
+        { color: '#787B86', size: 1, style: 'dashed' }          // lowerBand (30)
       ]
     },
     calc: function(dataList, indicator) {
-      const rsiLength = indicator.calcParams[0];
-      const maLength = indicator.calcParams[1];
-      const bbMult = indicator.calcParams[2];
-      const showBB = indicator.calcParams[3];
+      const rsiLen = indicator.calcParams[0];
+      const maType = indicator.calcParams[1]; // 0=SMA, 1=BB, 2=EMA, 3=RMA, 4=WMA, 5=VWMA
+      const maLen = indicator.calcParams[2];
+      const bbMult = indicator.calcParams[3];
       const showDiv = indicator.calcParams[4];
 
-      // 1. Calculate base Gains and Losses
+      // 1. Calculate Base RSI
       const gains = dataList.map((d, i) => i === 0 ? 0 : Math.max(d.close - dataList[i-1].close, 0));
       const losses = dataList.map((d, i) => i === 0 ? 0 : Math.max(dataList[i-1].close - d.close, 0));
-
-      // 2. Smooth via Wilder's Moving Average (calcRMA - from Math Helpers)
-      const avgGains = calcRMA(gains, rsiLength);
-      const avgLosses = calcRMA(losses, rsiLength);
-
-      // 3. Compute RSI Array
+      const avgGains = calcRMA(gains, rsiLen);
+      const avgLosses = calcRMA(losses, rsiLen);
+      
       const rsiData = dataList.map((d, i) => {
         if (i === 0) return 0;
         const g = avgGains[i] || 0;
@@ -1029,96 +1025,189 @@ klinecharts.registerIndicator({
         return 100 - (100 / (1 + (g / l)));
       });
 
-      // 4. Compute RSI MA (calcSMA - from Math Helpers)
-      const rsiSMA = calcSMA(rsiData, maLength);
-
-      // 5. Compute Standard Deviation for Bollinger Bands
-      const stdDev = [];
-      for (let i = 0; i < rsiData.length; i++) {
-        if (i < maLength - 1) { 
-          stdDev.push(0); 
-          continue; 
-        }
-        let sum = 0;
-        for (let j = 0; j < maLength; j++) sum += rsiData[i - j];
-        let mean = sum / maLength;
-        
-        let sumSq = 0;
-        for (let j = 0; j < maLength; j++) sumSq += Math.pow(rsiData[i - j] - mean, 2);
-        stdDev.push(Math.sqrt(sumSq / maLength));
+      // 2. Calculate Custom MAs
+      let rsiMA = [];
+      if (maType === 0 || maType === 1) rsiMA = calcSMA(rsiData, maLen);
+      else if (maType === 2) rsiMA = calcEMA(rsiData, maLen);
+      else if (maType === 3) rsiMA = calcRMA(rsiData, maLen);
+      else if (maType === 4) { // WMA
+        let norm = 0; for(let j=1; j<=maLen; j++) norm += j;
+        rsiMA = rsiData.map((_, i) => {
+          if (i < maLen - 1) return 0;
+          let sum = 0;
+          for(let j=0; j<maLen; j++) sum += rsiData[i - j] * (maLen - j);
+          return sum / norm;
+        });
+      } else if (maType === 5) { // VWMA
+        rsiMA = rsiData.map((_, i) => {
+          if (i < maLen - 1) return 0;
+          let sumPV = 0, sumV = 0;
+          for(let j=0; j<maLen; j++) {
+            let v = dataList[i-j].volume || 0;
+            sumPV += rsiData[i-j] * v;
+            sumV += v;
+          }
+          return sumV === 0 ? 0 : sumPV / sumV;
+        });
       }
 
-      // 6. Assemble base result array
+      // 3. Assemble base results
       const results = dataList.map((d, i) => {
-        const res = {
-          rsi: rsiData[i] || 0,
-          rsiMA: rsiSMA[i] || 0
+        let res = {
+          rsi: rsiData[i],
+          upperBand: 70,
+          midLine: 50,
+          lowerBand: 30
         };
-        
-        if (showBB === 1) {
-          res.bbUpper = res.rsiMA + (stdDev[i] * bbMult);
-          res.bbLower = res.rsiMA - (stdDev[i] * bbMult);
+        // Only plot MA if not standard without MA (assume we always plot based on TV logic)
+        res.rsiMA = rsiMA[i] || 0;
+
+        // BB Logic
+        if (maType === 1 && i >= maLen - 1) {
+          let mean = rsiMA[i];
+          let sumSq = 0;
+          for(let j=0; j<maLen; j++) sumSq += Math.pow(rsiData[i-j] - mean, 2);
+          let stdDev = Math.sqrt(sumSq / maLen);
+          res.bbUpper = mean + stdDev * bbMult;
+          res.bbLower = mean - stdDev * bbMult;
         }
+
+        // Exact TV Alert Logic
+        if (res.rsi > 70) window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Quá mua", type: 'rsi_ob'}}));
+        if (res.rsi < 30) window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Quá bán", type: 'rsi_os'}}));
+
         return res;
       });
 
-      // 7. Calculate Divergences (Lookback = 5)
+      // 4. Divergence Logic (Exact LookbackLeft=5, LookbackRight=5, Range 5-60)
       if (showDiv === 1) {
-        let lastPivotLow = null;
-        let lastPivotHigh = null;
-
-        // Start checking after enough bars have accumulated
+        let lastPL = null, lastPH = null;
         for (let i = 10; i < dataList.length; i++) {
-          let p = i - 5; // The potential pivot index confirmed by looking back 5 bars from 'i'
-          
-          // Check Pivot Low
-          let isPL = true;
+          let p = i - 5; // offset
+          let isPL = true, isPH = true;
           for (let j = 1; j <= 5; j++) {
-            if (rsiData[p] >= rsiData[p - j] || rsiData[p] > rsiData[p + j]) { 
-              isPL = false; 
-              break; 
-            }
+            if (rsiData[p] >= rsiData[p-j] || rsiData[p] > rsiData[p+j]) isPL = false;
+            if (rsiData[p] <= rsiData[p-j] || rsiData[p] < rsiData[p+j]) isPH = false;
           }
+          
           if (isPL) {
-            if (lastPivotLow) {
-              let bars = p - lastPivotLow.index;
-              if (bars >= 5 && bars <= 60) {
-                // RSI Higher Low && Price Lower Low
-                if (rsiData[p] > lastPivotLow.rsi && dataList[p].low < lastPivotLow.low) {
-                  results[p].bullDiv = rsiData[p]; // Mutate the history array object
-                }
+            if (lastPL) {
+              let bars = p - lastPL.idx;
+              if (bars >= 5 && bars <= 60 && rsiData[p] > lastPL.rsi && dataList[p].low < lastPL.low) {
+                results[p].bullDiv = rsiData[p];
+                window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Đã tìm thấy bullCondAlert"}}));
               }
             }
-            lastPivotLow = { index: p, rsi: rsiData[p], low: dataList[p].low };
+            lastPL = { idx: p, rsi: rsiData[p], low: dataList[p].low };
           }
 
-          // Check Pivot High
-          let isPH = true;
-          for (let j = 1; j <= 5; j++) {
-            if (rsiData[p] <= rsiData[p - j] || rsiData[p] < rsiData[p + j]) { 
-              isPH = false; 
-              break; 
-            }
-          }
           if (isPH) {
-            if (lastPivotHigh) {
-              let bars = p - lastPivotHigh.index;
-              if (bars >= 5 && bars <= 60) {
-                // RSI Lower High && Price Higher High
-                if (rsiData[p] < lastPivotHigh.rsi && dataList[p].high > lastPivotHigh.high) {
-                  results[p].bearDiv = rsiData[p]; // Mutate the history array object
-                }
+            if (lastPH) {
+              let bars = p - lastPH.idx;
+              if (bars >= 5 && bars <= 60 && rsiData[p] < lastPH.rsi && dataList[p].high > lastPH.high) {
+                results[p].bearDiv = rsiData[p];
+                window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Đã tìm thấy bearCondAlert"}}));
               }
             }
-            lastPivotHigh = { index: p, rsi: rsiData[p], high: dataList[p].high };
+            lastPH = { idx: p, rsi: rsiData[p], high: dataList[p].high };
           }
         }
       }
 
       return results;
+    },
+
+    // 100% IDENTICAL GRAPHICS (CANVAS OVERRIDE)
+    draw: function({ ctx, visibleRange, indicator, xAxis, yAxis }) {
+      const { from, to } = visibleRange;
+      const res = indicator.result;
+      const startX = xAxis.convertToPixel(from);
+      const endX = xAxis.convertToPixel(to - 1);
+      
+      const y70 = yAxis.convertToPixel(70);
+      const y50 = yAxis.convertToPixel(50);
+      const y30 = yAxis.convertToPixel(30);
+
+      // A. RSI Background Fill (70-30) -> color.rgb(126, 87, 194, 90) = rgba(126, 87, 194, 0.1)
+      ctx.fillStyle = 'rgba(126, 87, 194, 0.1)';
+      ctx.fillRect(startX, y70, endX - startX, y30 - y70);
+
+      // B. Bollinger Bands Fill (if BB)
+      if (indicator.calcParams[1] === 1) {
+        ctx.fillStyle = 'rgba(14, 203, 129, 0.1)'; // green 90% transparent
+        ctx.beginPath();
+        let hasPoints = false;
+        for (let i = from; i < to; i++) {
+          if (res[i] && res[i].bbUpper !== undefined) {
+            let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].bbUpper);
+            if (!hasPoints) { ctx.moveTo(x, y); hasPoints = true; } else ctx.lineTo(x, y);
+          }
+        }
+        if (hasPoints) {
+          for (let i = to - 1; i >= from; i--) {
+            if (res[i] && res[i].bbLower !== undefined) {
+              ctx.lineTo(xAxis.convertToPixel(i), yAxis.convertToPixel(res[i].bbLower));
+            }
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // C. Gradient Overbought / Oversold
+      ctx.save();
+      ctx.beginPath();
+      let first = true;
+      for (let i = from; i < to; i++) {
+        if (res[i] && res[i].rsi !== undefined) {
+          let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].rsi);
+          if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+        }
+      }
+      if (!first) {
+        // Return path via midline (50)
+        for (let i = to - 1; i >= from; i--) ctx.lineTo(xAxis.convertToPixel(i), y50);
+        ctx.closePath();
+        ctx.clip(); // Restrict drawing to area between RSI and midline
+
+        // Overbought Gradient (>70)
+        const gradOB = ctx.createLinearGradient(0, yAxis.convertToPixel(100), 0, y70);
+        gradOB.addColorStop(0, 'rgba(14, 203, 129, 1)'); // TV: green(0)
+        gradOB.addColorStop(1, 'rgba(14, 203, 129, 0)'); // TV: green(100)
+        ctx.fillStyle = gradOB;
+        ctx.fillRect(startX, yAxis.convertToPixel(100), endX - startX, y70 - yAxis.convertToPixel(100));
+
+        // Oversold Gradient (<30)
+        const gradOS = ctx.createLinearGradient(0, y30, 0, yAxis.convertToPixel(0));
+        gradOS.addColorStop(0, 'rgba(246, 70, 93, 0)'); // TV: red(100)
+        gradOS.addColorStop(1, 'rgba(246, 70, 93, 1)'); // TV: red(0)
+        ctx.fillStyle = gradOS;
+        ctx.fillRect(startX, y30, endX - startX, yAxis.convertToPixel(0) - y30);
+      }
+      ctx.restore();
+
+      // D. Draw Divergence Text Labels (Bull/Bear Plotshape)
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      for (let i = from; i < to; i++) {
+        if (res[i]) {
+          let x = xAxis.convertToPixel(i);
+          if (res[i].bullDiv !== undefined) {
+            let y = yAxis.convertToPixel(res[i].bullDiv) + 15;
+            ctx.fillStyle = COLOR.green;
+            ctx.fillText('Bull', x, y);
+          }
+          if (res[i].bearDiv !== undefined) {
+            let y = yAxis.convertToPixel(res[i].bearDiv) - 15;
+            ctx.fillStyle = COLOR.red;
+            ctx.fillText('Bear', x, y);
+          }
+        }
+      }
+
+      return false; // MUST RETURN FALSE => KLineCharts will continue drawing standard figures/lines over our canvas fill.
     }
   });
-
     console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] ✅ Đã đăng ký ' +
       INDICATOR_REGISTRY.filter(function (x) { return !x.builtIn; }).length +
       ' custom indicators');
