@@ -775,8 +775,29 @@ window.openProChart = function(t, isTimeSwitch = false) {
         document.getElementById('sc-top-tx').innerText = window.formatInt(t.tx_count);
     }
 
-    const container = document.getElementById('sc-chart-container');
-    
+        const container = document.getElementById('sc-chart-container');
+
+    // ═══════════════════════════════════════════════════════════
+    // ĐỔI TIMEFRAME: Thoát SỚM trước khi dispose/init
+    // Overlay sống trong chart instance — không được phép dispose
+    // ═══════════════════════════════════════════════════════════
+    if (isTimeSwitch && window.tvChart) {
+        let isTick = window.currentChartInterval === 'tick';
+        window.tvChart.setStyles({
+            candle: { type: isTick ? 'area' : 'candle_solid' }
+        });
+        window.fetchBinanceHistory(t, window.currentChartInterval, isTick).then(histData => {
+            if (histData && histData.length > 0) {
+                window.tvChart.applyNewData(histData);
+            }
+            if (window.WaveIndicatorAPI) {
+                if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+            }
+            if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
+        });
+        return; // Thoát openProChart hoàn toàn — KHÔNG dispose, KHÔNG init
+    }
+
     // [WA-DRAWING] Lưu drawings của timeframe CŨ trước khi destroy chart
     if (window.__wa_onBeforeChartInit) {
         window.__wa_onBeforeChartInit(
@@ -1015,36 +1036,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // ============================================================
-// KHI ĐỔI TIMEFRAME: Không dispose chart — chỉ applyNewData
-// Overlay sống trong chart instance → tự động không mất
-// ============================================================
-if (isTimeSwitch && window.tvChart) {
-    // Cập nhật kiểu nến nếu chuyển sang/từ tick mode
-    window.tvChart.setStyles({
-        candle: {
-            type: window.currentChartInterval === 'tick' ? 'area' : 'candle_solid'
-        }
-    });
-
-    window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-    if (histData && histData.length > 0) {
-        window.tvChart.applyNewData(histData);
-    }
-
-    // ← BẮT BUỘC: applyNewData thay data mới → dataIndex cũ bị lệch
-    // Phải remap lại timestamp→dataIndex cho overlay
-    if (typeof window.__wa_restoreOverlays === 'function') {
-        window.__wa_restoreOverlays();
-    }
-
-    if (window.WaveIndicatorAPI) {
-        if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
-    }
-    if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
-});
-    return; // Thoát sớm — không rebuild chart
-}
+        
 
 // KHI ĐỔI COIN: Vẫn rebuild bình thường như cũ
 if (typeof window.fetchBinanceHistory === 'function') {
