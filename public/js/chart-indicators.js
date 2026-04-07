@@ -995,7 +995,7 @@
           }
         },
         lines: [
-          { color: '#7E57C2', size: 1, style: 'solid' },        
+          { color: '#7E57C2', size: 2, style: 'solid' },        
           { color: COLOR.gold, size: 1, style: 'solid' }
         ]
       },
