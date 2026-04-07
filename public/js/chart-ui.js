@@ -826,6 +826,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
         });
         window.fetchBinanceHistory(t, window.currentChartInterval, isTick).then(histData => {
             if (histData && histData.length > 0) {
+                // 🛑 VÁ LỖI KHỰNG: Giết chết "cây nến bóng ma" của khung giờ cũ trước khi nạp data mới
+                window._waTargetCandle = null;
+                window._waCurrentCandle = null;
+                
                 window.tvChart.applyNewData(histData);
             }
             
@@ -1102,26 +1106,31 @@ window.openProChart = function(t, isTimeSwitch = false) {
         });
 
         
-
 // KHI ĐỔI COIN: Vẫn rebuild bình thường như cũ
 if (typeof window.fetchBinanceHistory === 'function') {
-            window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-                // ✅ FIX 3: Nếu lệnh fetch đã bị hủy do user bấm qua tab khác, bỏ qua không đổ nến nữa
-                if (_abortSignal.aborted) return; 
-                
-                if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
+    window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
+        // ✅ FIX 3: Nếu lệnh fetch đã bị hủy do user bấm qua tab khác, bỏ qua không đổ nến nữa
+        if (_abortSignal.aborted) return; 
         
-        if (window.WaveIndicatorAPI) {
-            if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
-            if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+        if (histData && histData.length > 0) {
+            // 🛑 VÁ LỖI KHỰNG: Giết chết "cây nến bóng ma" của Token cũ
+            window._waTargetCandle = null;
+            window._waCurrentCandle = null;
+            
+            window.tvChart.applyNewData(histData);
         }
 
-        if (typeof window.__wa_onChartReady === 'function') {
-            window.__wa_onChartReady();
-        }
+if (window.WaveIndicatorAPI) {
+    if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
+    if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+}
 
-        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
-    });
+if (typeof window.__wa_onChartReady === 'function') {
+    window.__wa_onChartReady();
+}
+
+if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
+});
 }
     }, 100); 
 };
