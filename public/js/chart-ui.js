@@ -776,11 +776,16 @@ window.openProChart = function(t, isTimeSwitch = false) {
     }
 
     const container = document.getElementById('sc-chart-container');
-    if (window.tvChart) { try { klinecharts.dispose(container); } catch(e) {} window.tvChart = null; }
     window.scActivePriceLines = [];
-    
-    // XÓA SẠCH CONTAINER (KHÔNG DÙNG WRAPPER ĐỂ TRÁNH VỠ LAYOUT)
-    container.innerHTML = ''; 
+
+    // 🌟 CHỈ ĐẬP ĐI XÂY LẠI KHI ĐỔI ĐỒNG COIN (Token mới)
+    if (!isTimeSwitch) {
+        if (window.tvChart) { 
+            try { klinecharts.dispose(container); } catch(e) {} 
+            window.tvChart = null; 
+        }
+        container.innerHTML = ''; 
+    }
 
     if (!isTimeSwitch) {
         let tradesBox = document.getElementById('sc-live-trades');
@@ -886,7 +891,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
             }
         });
-// ✅ FIX BUG: Báo cho hệ thống Drawing biết Chart mới đã tái sinh để nối lại các dây thần kinh (Events)
+// 🌟 NỐI DÂY THẦN KINH CHO CHART MỚI (Đúng chỗ bạn vừa thêm)
         if (typeof window.__wa_onChartReady === 'function') {
             window.__wa_onChartReady();
         }
@@ -1012,14 +1017,20 @@ window.openProChart = function(t, isTimeSwitch = false) {
         // Tải Data
         if (typeof window.fetchBinanceHistory === 'function') {
             window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-                if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
+                if (histData && histData.length > 0) {
+                    // 🌟 LỚP 1: ENGINE CHỈ CẬP NHẬT NẾN, GIỮ NGUYÊN BỘ KHUNG
+                    window.tvChart.applyNewData(histData);
+                }
                 
                 if (window.WaveIndicatorAPI) {
                     if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
                     if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
                 }
 
-                
+                // 🌟 LỚP 3: RA LỆNH CHO NÃO BỘ NẠP LẠI HÌNH VẼ
+                if (window.WaveDrawingState) {
+                    window.WaveDrawingState.syncToChart();
+                }
 
                 if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
             });

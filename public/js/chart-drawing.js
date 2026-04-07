@@ -2331,133 +2331,130 @@
   }
 
   // ============================================================
-// 7. AUTO-HEAL & PERSISTENCE — REWRITE v3.0
-// Giải quyết triệt để:
-//   (A) Memory Leak do double event binding
-//   (B) Toolbar mất khi đổi Timeframe
-//   (C) Hình vẽ mất khi đổi Timeframe
+// 7. KIẾN TRÚC 3 LỚP ĐỘC LẬP — STATE MANAGER (CHUẨN TRADINGVIEW)
+// Lớp 1: Engine (KLineChart - Chỉ vẽ nến)
+// Lớp 2: State (DrawingStore - Não bộ giữ dữ liệu hình vẽ)
+// Lớp 3: Controller (Hooks nối Lớp 1 và Lớp 2)
 // ============================================================
 
-// --- 7.1 DRAWING KEY: chỉ theo SYMBOL, không dính Timeframe ---
-// --- BỘ NHỚ RAM (SHADOW MAP) CHỨA DATA HÌNH VẼ ---
-global.__wa_overlay_map = global.__wa_overlay_map || new Map();
+class DrawingStore {
+  constructor() {
+    this.symbol = 'UNKNOWN';
+  }
 
-function getDrawingKey() {
-  let sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
-  sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return 'wa_drawings_' + sym;
-}
+  // 1. CHỈ LẤY KEY THEO COIN (KHÔNG LẤY TIMEFRAME)
+  _getKey() {
+    let sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
+    this.symbol = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return 'wa_drawings_' + this.symbol;
+  }
 
-function saveAllOverlays() {
-  try {
-    if (global.__wa_overlay_map.size === 0) return;
-    let dataToSave = [];
-    global.__wa_overlay_map.forEach(function(data) {
-      dataToSave.push(data);
-    });
-    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
-  } catch(e) {}
-}
-global.__wa_saveAllOverlays = saveAllOverlays;
-
-// Hàm hỗ trợ: Ghi hình vào bộ nhớ RAM
-function _wa_trackOverlay(o) {
-  if (!o || !o.id) return;
-  global.__wa_overlay_map.set(o.id, { name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
-}
-
-// Hàm hỗ trợ: Xóa hình khỏi bộ nhớ RAM
-function _wa_untrackOverlay(id) {
-  if (id) global.__wa_overlay_map.delete(id);
-}
-
-function restoreOverlays() {
-  if (!global.tvChart) return;
-  let key = getDrawingKey();
-  let saved = localStorage.getItem(key);
-  if (!saved || saved === '[]') return;
-
-  try {
-    let overlayDefs = JSON.parse(saved);
-    overlayDefs.forEach(function(o) {
-      try {
-        let cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
-        let newId = global.tvChart.createOverlay(cfg);
-        if (newId) {
-          global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
-        }
-      } catch(e) {}
-    });
-  } catch(e) {}
-}
-global.__wa_restoreOverlays = restoreOverlays;
-
-// HÀM MỚI: Được gọi khi Chart mới vừa tái sinh
-window.__wa_onChartReady = function() {
+  // 2. LƯU TỪ CANVAS XUỐNG KÉT SẮT (Chỉ lấy hình User vẽ)
+  saveFromChart() {
     if (!global.tvChart) return;
-    
-    // 1. Nối lại dây thần kinh vẽ (Events) cho Chart MỚI
-    if (typeof _bindChartEventsOnce === 'function') {
-        global.tvChart.__wa_chart_events_bound = false; 
-        _bindChartEventsOnce();
+    try {
+      let overlays = global.tvChart.getOverlay() || [];
+      // Bỏ qua các marker hệ thống (cá voi, bot)
+      let userDrawings = overlays.filter(o => o.name !== 'cyberMarker');
+      
+      if (userDrawings.length > 0) {
+        localStorage.setItem(this._getKey(), JSON.stringify(userDrawings));
+      } else {
+        localStorage.removeItem(this._getKey());
+      }
+    } catch (e) { console.error("[State] Lỗi khi lưu hình vẽ:", e); }
+  }
+
+  // 3. NẠP TỪ KÉT SẮT LÊN CANVAS
+  syncToChart() {
+    if (!global.tvChart) return;
+    let saved = localStorage.getItem(this._getKey());
+    if (!saved || saved === '[]') return;
+
+    try {
+      let overlayDefs = JSON.parse(saved);
+      
+      // Xóa sạch hình rác cũ của user trên màn hình (Giữ lại Marker cá voi)
+      let currentOverlays = global.tvChart.getOverlay() || [];
+      currentOverlays.forEach(o => {
+        if (o.name !== 'cyberMarker') global.tvChart.removeOverlay(o.id);
+      });
+
+      // Tái tạo lại hình vẽ
+      overlayDefs.forEach(o => {
+        global.tvChart.createOverlay({
+          name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData
+        });
+      });
+      console.log(`✅ [State] Đã đồng bộ ${overlayDefs.length} hình vẽ cho ${this.symbol}`);
+    } catch (e) { console.error("[State] Lỗi nạp hình vẽ:", e); }
+  }
+
+  // 4. XÓA SẠCH
+  clearAll() {
+    localStorage.removeItem(this._getKey());
+    if (global.tvChart) {
+      let overlays = global.tvChart.getOverlay() || [];
+      overlays.forEach(o => {
+        if (o.name !== 'cyberMarker') global.tvChart.removeOverlay(o.id);
+      });
     }
+  }
+}
 
-    // 2. Chờ nến load xong rồi mới thả hình vẽ vào
-    let attempts = 0;
-    let waitForData = setInterval(() => {
-        let dataList = global.tvChart.getDataList();
-        if (dataList && dataList.length > 0) {
-            clearInterval(waitForData);
-            restoreOverlays();
-        }
-        attempts++;
-        if (attempts > 50) clearInterval(waitForData); // Timeout 2.5s
-    }, 50);
-};
+// Khởi tạo Não Bộ State Manager
+window.WaveDrawingState = new DrawingStore();
 
+// (Giữ tương thích ngược nếu file khác lỡ gọi hàm cũ)
+global.__wa_saveAllOverlays = function() { window.WaveDrawingState.saveFromChart(); };
+global.__wa_restoreOverlays = function() { window.WaveDrawingState.syncToChart(); };
 
 // ============================================================
-// 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
+// 7.4 CONTROLLER HOOKS — KẾT NỐI UI VÀ STATE
 // ============================================================
 
 window.__wa_onIntervalChange = function(newInterval) {
-  console.log(`\n================================`);
-  console.log(`🔥 [HOOK] ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
-  console.log(`================================`);
-  
-  // CHỈ LƯU LẠI. Không xóa RAM. Không gọi Restore. (onChartReady sẽ tự làm)
-  if (typeof global.__wa_saveAllOverlays === 'function') {
-      global.__wa_saveAllOverlays();
-  }
+  console.log(`🔥 [HOOK] ĐỔI KHUNG GIỜ SANG: ${newInterval} (Bảo lưu dữ liệu)`);
+  // CHỈ LƯU. Tuyệt đối không xóa RAM hay dùng Timer ở đây.
+  window.WaveDrawingState.saveFromChart();
 };
 
 window.__wa_onSymbolChange = function(newSymbol) {
-  console.log(`\n================================`);
   console.log(`🔥 [HOOK] ĐỔI COIN SANG: ${newSymbol}`);
-  console.log(`================================`);
-  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+  // Lưu coin cũ trước khi chuyển
+  window.WaveDrawingState.saveFromChart();
   window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  
-  // FIX: Xóa trí nhớ RAM
-  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
-  
-  if (typeof global.__wa_restoreOverlays === 'function') {
-      global.__wa_restoreOverlays();
-  }
 };
 
+window.__wa_onChartReady = function() {
+  if (!global.tvChart) return;
+  
+  // 1. Chart mới ra đời -> Nối lại Event lắng nghe nét vẽ
+  global.tvChart.__wa_chart_events_bound = false;
+  _bindChartEventsOnce();
+  
+  // 2. Chờ nến tải xong rồi Ra lệnh Não bộ nạp hình vẽ
+  let attempts = 0;
+  let waitForData = setInterval(() => {
+    let dataList = global.tvChart.getDataList();
+    if (dataList && dataList.length > 0) {
+      clearInterval(waitForData);
+      window.WaveDrawingState.syncToChart();
+    }
+    attempts++;
+    if (attempts > 50) clearInterval(waitForData); // Hủy sau 2.5s
+  }, 50);
+};
 
 // ============================================================
 // 7.5 BIND CORE EVENTS — CHỈ GẮN 1 LẦN DUY NHẤT
-// Tách hoàn toàn khỏi mountDOM() để tránh memory leak
 // ============================================================
 var _waCoreEventsBound = false;
 
 function bindCoreEventsOnce() {
-  if (_waCoreEventsBound) return; // GUARD: Không bao giờ chạy lần 2
+  if (_waCoreEventsBound) return;
   _waCoreEventsBound = true;
 
-  // --- Drag Toolbar (mousemove/mouseup gắn vào document CHỈ 1 LẦN) ---
   var _isDragging = false;
   var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
   var _dragRaf = null;
@@ -2476,23 +2473,16 @@ function bindCoreEventsOnce() {
   });
 
   document.addEventListener('mouseup', function() {
-    if (_isDragging) {
-      _isDragging = false;
-      document.body.style.userSelect = '';
-    }
+    if (_isDragging) { _isDragging = false; document.body.style.userSelect = ''; }
   });
 
-  // Gán drag-grip listener qua event delegation trên document
-  // → Không cần re-bind khi toolbar bị re-inject
   document.addEventListener('mousedown', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
     if (!grip) return;
     _isDragging = true;
-    _startX = e.clientX;
-    _startY = e.clientY;
+    _startX = e.clientX; _startY = e.clientY;
     var tb = document.querySelector('.wa-toolbar');
-    _initLeft = tb ? tb.offsetLeft : 0;
-    _initTop  = tb ? tb.offsetTop  : 0;
+    _initLeft = tb ? tb.offsetLeft : 0; _initTop  = tb ? tb.offsetTop  : 0;
     document.body.style.userSelect = 'none';
   });
 
@@ -2503,15 +2493,13 @@ function bindCoreEventsOnce() {
     }
   });
 
-  // --- Keyboard Shortcuts (keydown gắn 1 lần) ---
   document.addEventListener('keydown', function(e) {
     var tag = e.target.tagName;
     var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
 
     if (e.key === 'Escape') {
       if (global.tvChart) global.tvChart.cancelDrawing();
-      activateTool('pointer');
-      hidePanel();
+      activateTool('pointer'); hidePanel();
       if (isInput) e.target.blur();
       return;
     }
@@ -2521,9 +2509,8 @@ function bindCoreEventsOnce() {
         if (global.tvChart) {
           saveHistory('delete', currentSelectedOverlay);
           global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-          _wa_untrackOverlay(currentSelectedOverlay.id); // XÓA KHỎI RAM
           hidePanel();
-          saveAllOverlays();
+          window.WaveDrawingState.saveFromChart(); // Cập nhật State
         }
       }
     }
@@ -2531,101 +2518,74 @@ function bindCoreEventsOnce() {
 }
 
 // ============================================================
-  // 6.5. BỔ SUNG CÁC HÀM BỊ THẤT LẠC KHI REFACTOR (FIX LỖI KHÔNG VẼ ĐƯỢC)
-  // ============================================================
-  function saveHistory(action, obj) {
-    // Hàm này tạm thời để trống để giữ tính tương thích, chống lỗi ReferenceError
+// 6.5. BỔ SUNG CÁC HÀM BỊ THẤT LẠC KHI REFACTOR
+// ============================================================
+function saveHistory(action, obj) { /* Trống để tránh lỗi */ }
+
+function activateTool(toolId) {
+  if (!global.tvChart) return;
+  const container = document.getElementById('sc-chart-container');
+  if (!container) return;
+
+  try { global.tvChart.cancelDrawing(); } catch(e){}
+  if (typeof hidePanel === 'function') hidePanel();
+
+  if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
+  container.classList.add('wa-drawing-mode');
+
+  const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
+  if (TEXT_TOOLS.includes(toolId)) {
+    if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
+    return;
   }
 
-  function activateTool(toolId) {
-    if (!global.tvChart) return;
-    const container = document.getElementById('sc-chart-container');
-    if (!container) return;
-
-    try { global.tvChart.cancelDrawing(); } catch(e){}
-    if (typeof hidePanel === 'function') hidePanel();
-
-    // Nếu chọn con trỏ chuột -> Thoát chế độ vẽ
-    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
-    container.classList.add('wa-drawing-mode');
-
-    const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
-
-    if (TEXT_TOOLS.includes(toolId)) {
-      if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
-      return;
+  try {
+    let tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines'; 
+    let s = toolStyles[tType] || {};
+    let config = { name: toolId, lock: false, styles: {} };
+    
+    if(tType === 'lines' || tType === 'waves') {
+      config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
+    } else if (tType === 'shapes') {
+      config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15), borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
+    } else if (tType === 'fibo') {
+      config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
+    } else if (tType === 'text') {
+      config.extendData = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
+      config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
     }
-
-    try {
-      let tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines'; 
-      let s = toolStyles[tType] || {};
-      let config = { name: toolId, lock: false, styles: {} };
-      
-      if(tType === 'lines' || tType === 'waves') {
-        config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
-      } else if (tType === 'shapes') {
-        config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15), borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
-      } else if (tType === 'fibo') {
-        config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
-      } else if (tType === 'text') {
-        config.extendData = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
-        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
-      }
-
-      global.tvChart.createOverlay(config);
-    } catch (err) { 
-      if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
-    }
+    global.tvChart.createOverlay(config);
+  } catch (err) { 
+    if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ.'); 
   }
+}
 
 // ============================================================
-// 7.6 MOUNT DOM — Chỉ chèn HTML Elements, KHÔNG bind global events
+// 7.6 MOUNT DOM — Chèn Giao Diện
 // ============================================================
 function mountDOM() {
   var container = document.getElementById('sc-chart-container');
-  if (!container) return;
+  if (!container || container.querySelector('.wa-toolbar')) return;
 
-  // Idempotent: Nếu toolbar đã tồn tại thì bỏ qua
-  if (container.querySelector('.wa-toolbar')) return;
+  injectCSS(); registerProExtensions();
 
-  injectCSS();
-  registerProExtensions();
-
-  // Inject Toolbar
   var sidebar = document.createElement('div');
   sidebar.className = 'wa-toolbar';
   sidebar.innerHTML = buildToolbar();
   container.appendChild(sidebar);
 
-  // Inject Props Panel
   var panel = document.createElement('div');
   panel.className = 'wa-props-panel';
   panel.id = 'wa-props-panel';
   panel.innerHTML = `
-    <div class="wa-panel-header">Cài đặt công cụ
-      <button class="wa-close-btn" title="Đóng (Esc)">${SVG.close}</button>
-    </div>
-    <div class="wa-panel-body">
-      <div class="wa-panel-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-          style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">
-          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-        </svg>
-        <span>Chọn hoặc vẽ một hình chính sách</span>
-      </div>
-    </div>
-    <div class="wa-panel-footer">
-      <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">${SVG.magnet} Khoá</button>
-      <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">${SVG.trash} Xoá</button>
-    </div>`;
+    <div class="wa-panel-header">Cài đặt công cụ<button class="wa-close-btn">${SVG.close}</button></div>
+    <div class="wa-panel-body"><div class="wa-panel-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span>Chọn hoặc vẽ một hình</span></div></div>
+    <div class="wa-panel-footer"><button class="wa-action-btn" id="wa-btn-p-lock">${SVG.magnet} Khoá</button><button class="wa-action-btn delete" id="wa-btn-p-del">${SVG.trash} Xoá</button></div>`;
   container.appendChild(panel);
 
-  // Bind LOCAL events (chỉ liên quan đến toolbar buttons — không phải document-level)
-  _bindToolbarLocalEvents(sidebar, panel);
-  bindContextMenu(panel);
+  _bindToolbarLocalEvents(sidebar, panel); bindContextMenu(panel);
 }
 
-// Local events: click trên toolbar, nút trong panel — KHÔNG phải mousemove/keydown
 function _bindToolbarLocalEvents(toolbar, panel) {
   var container = document.getElementById('sc-chart-container');
 
@@ -2633,71 +2593,55 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     var menuItem = e.target.closest('.wa-menu-item');
     var btn = e.target.closest('.wa-tb-btn[data-tool]');
     var toolId = null;
-    if (menuItem) {
-      toolId = menuItem.getAttribute('data-tool');
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-      menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
-    } else if (btn) {
-      toolId = btn.getAttribute('data-tool');
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-    }
+    if (menuItem) { toolId = menuItem.getAttribute('data-tool'); toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active')); menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active'); }
+    else if (btn) { toolId = btn.getAttribute('data-tool'); toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     if (toolId) activateTool(toolId);
   });
 
   var magnetBtn = toolbar.querySelector('#wa-btn-magnet');
   if (magnetBtn) {
     magnetBtn.addEventListener('click', function() {
-      isMagnetMode = !isMagnetMode;
-      this.classList.toggle('active', isMagnetMode);
-      showToast(isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
+      isMagnetMode = !isMagnetMode; this.classList.toggle('active', isMagnetMode);
+      if (typeof showToast === 'function') showToast(isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
     });
   }
 
   var clearBtn = toolbar.querySelector('#wa-btn-clear');
   if (clearBtn) {
     clearBtn.addEventListener('click', function() {
-      createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
-        if (global.tvChart) {
-          global.tvChart.removeOverlay();
-          global.tvChart.cancelDrawing();
-        }
-        if (global.__wa_overlay_map) global.__wa_overlay_map.clear(); // DỌN SẠCH RAM
-        undoStack = []; redoStack = [];
-        hidePanel();
-        toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-        toolbar.querySelector('[data-tool=pointer]').classList.add('active');
-        container.classList.remove('wa-drawing-mode');
-        saveAllOverlays();
-        showToast('🗑️ Đã xoá sạch bản vẽ');
-      });
+      if (typeof createConfirmModal === 'function') {
+        createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
+          window.WaveDrawingState.clearAll(); // Cập nhật State
+          hidePanel();
+          toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+          toolbar.querySelector('[data-tool=pointer]').classList.add('active');
+          container.classList.remove('wa-drawing-mode');
+          if (typeof showToast === 'function') showToast('🗑️ Đã xoá sạch bản vẽ');
+        });
+      }
     });
   }
 
   if (panel) {
-    var closeBtn = panel.querySelector('.wa-close-btn');
-    if (closeBtn) closeBtn.addEventListener('click', hidePanel);
+    var closeBtn = panel.querySelector('.wa-close-btn'); if (closeBtn) closeBtn.addEventListener('click', hidePanel);
     var lockBtn = panel.querySelector('#wa-btn-p-lock');
     if (lockBtn) lockBtn.addEventListener('click', function() {
       if (!currentSelectedOverlay || !global.tvChart) return;
       global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
-      showToast('Đã đổi trạng thái khoá');
     });
     var delBtn = panel.querySelector('#wa-btn-p-del');
     if (delBtn) delBtn.addEventListener('click', function() {
       if (!currentSelectedOverlay || !global.tvChart) return;
       saveHistory('delete', currentSelectedOverlay);
       global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-      _wa_untrackOverlay(currentSelectedOverlay.id); // XÓA KHỎI RAM
       hidePanel();
-      saveAllOverlays();
+      window.WaveDrawingState.saveFromChart(); // Cập nhật State
     });
   }
 }
 
-
 // ============================================================
-// 7.7 BIND CHART EVENTS — Gắn vào tvChart object (1 lần / chart instance)
+// 7.7 BIND CHART EVENTS — Nối dây thần kinh Event Vẽ
 // ============================================================
 function _bindChartEventsOnce() {
   if (!global.tvChart || global.tvChart.__wa_chart_events_bound) return;
@@ -2707,81 +2651,69 @@ function _bindChartEventsOnce() {
     activateTool('pointer');
     var toolbar = document.querySelector('.wa-toolbar');
     if (toolbar) {
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-      var ptr = toolbar.querySelector('[data-tool=pointer]');
-      if (ptr) ptr.classList.add('active');
+      toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+      var ptr = toolbar.querySelector('[data-tool=pointer]'); if (ptr) ptr.classList.add('active');
     }
     var overlayObj = Array.isArray(data) ? data[0] : data;
     if (!overlayObj) return;
-    
-    _wa_trackOverlay(overlayObj); // GHI VÀO RAM NGAY LẬP TỨC
 
     saveHistory('add', overlayObj);
     currentSelectedOverlay = overlayObj;
     renderPanel(currentSelectedOverlay);
-    saveAllOverlays();
+    
+    // Yêu cầu Não bộ lưu lại bản vẽ mới nhất
+    window.WaveDrawingState.saveFromChart();
   });
 
   global.tvChart.subscribeAction('onOverlayClick', function(data) {
     var overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
     if (!overlayObj) { hidePanel(); return; }
+    
     var now = Date.now();
     var isDoubleClick = (now - lastClickTime) < 300;
     lastClickTime = now;
+    
     currentSelectedOverlay = overlayObj;
-    
-    _wa_trackOverlay(overlayObj); // CẬP NHẬT RAM NẾU CÓ THAY ĐỔI
-    
     renderPanel(currentSelectedOverlay);
+    
+    // Nếu click vào hình để edit, cũng lưu lại state phòng hờ có thay đổi (di chuyển hình)
+    window.WaveDrawingState.saveFromChart(); 
+
     if (isDoubleClick && overlayObj.name === 'customText') {
-      setTimeout(function() {
-        var t = document.getElementById('wa-prop-txt');
-        if (t) { t.focus(); t.select(); }
-      }, 50);
+      setTimeout(function() { var t = document.getElementById('wa-prop-txt'); if (t) { t.focus(); t.select(); } }, 50);
     }
   });
 }
 
-
 // ============================================================
-// 7.8 MAIN MOUNT FUNCTION — Entry point gọi từ ngoài
+// 7.8 MAIN MOUNT FUNCTION
 // ============================================================
 function mountUI() {
-  // Bước 1: Gắn global events (chỉ 1 lần duy nhất)
   bindCoreEventsOnce();
-
-  // Bước 2: Inject DOM nếu chưa có
   mountDOM();
 
-  // Bước 3: Chờ tvChart sẵn sàng rồi bind chart-level events
   var _waitChart = setInterval(function() {
     if (global.tvChart && typeof global.tvChart.subscribeAction === 'function') {
       clearInterval(_waitChart);
       _bindChartEventsOnce();
-      // Restore hình vẽ lần đầu
-      restoreOverlays();
+      window.WaveDrawingState.syncToChart(); // Nạp lần đầu tiên
     }
   }, 100);
 }
 
-
 // ============================================================
-// 7.9 TOOLBAR WATCHDOG — Siêu nhẹ, chỉ re-inject DOM, KHÔNG re-bind events
+// 7.9 WATCHDOG DOM SIÊU NHẸ (Chỉ phục hồi Giao diện UI)
 // ============================================================
 (function startToolbarWatchdog() {
-  if (window.__wa_watchdog_started) return; // Chạy đúng 1 lần
+  if (window.__wa_watchdog_started) return; 
   window.__wa_watchdog_started = true;
-
-  var _observer = null;
 
   function _onContainerMutation(mutations) {
     for (var i = 0; i < mutations.length; i++) {
-      // Chỉ quan tâm khi có node bị XÓA (framework làm mới container)
       if (mutations[i].removedNodes.length === 0) continue;
       var container = document.getElementById('sc-chart-container');
       if (container && !container.querySelector('.wa-toolbar')) {
-        // Chỉ nạp lại Giao diện Toolbar. Mọi logic vẽ đã có __wa_onChartReady lo.
-        mountDOM();
+        mountDOM(); // DOM mất thì gắn DOM lại. Việc vẽ đã có State Manager lo.
         break;
       }
     }
@@ -2791,25 +2723,14 @@ function mountUI() {
     var container = document.getElementById('sc-chart-container');
     var target = container ? container.parentNode : document.body;
     if (!target) return;
-
-    _observer = new MutationObserver(_onContainerMutation);
-    _observer.observe(target, {
-      childList: true,
-      subtree: true  // Quan sát cả con cháu để bắt được khi framework re-render bên trong
-    });
+    new MutationObserver(_onContainerMutation).observe(target, { childList: true, subtree: true });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _startObserver);
-  } else {
-    _startObserver();
-  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', _startObserver); } 
+  else { _startObserver(); }
 })();
 
-
-// ============================================================
-// 7.10 KHỞI ĐỘNG
-// ============================================================
+// Khởi động module
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', mountUI);
 } else {
