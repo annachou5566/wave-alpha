@@ -1198,14 +1198,16 @@
         
         let gradOB = Math.abs(y70 - y100) > 1 ? ctx.createLinearGradient(0, y100, 0, y70) : 'rgba(14, 203, 129, 0.5)';
         if (typeof gradOB !== 'string') {
-          gradOB.addColorStop(0, 'rgba(0, 255, 163, 0.35)');
+          gradOB.addColorStop(0, 'rgba(0, 255, 163, 0.55)');
+gradOB.addColorStop(0.5, 'rgba(0, 255, 163, 0.25)');
 gradOB.addColorStop(1, 'rgba(0, 255, 163, 0)');
         }
   
         let gradOS = Math.abs(y0 - y30) > 1 ? ctx.createLinearGradient(0, y30, 0, y0) : 'rgba(246, 70, 93, 0.5)';
         if (typeof gradOS !== 'string') {
           gradOS.addColorStop(0, 'rgba(255, 82, 82, 0)');
-gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.35)');
+gradOS.addColorStop(0.5, 'rgba(255, 82, 82, 0.25)');
+gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         }
   
         ctx.fillStyle = gradOB;
