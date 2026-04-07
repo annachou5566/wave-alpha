@@ -983,7 +983,6 @@
       shortName: 'RSI',
       series: 'normal',
       calcParams: [14, 0, 14, 2.0, 1],
-      // 1. CHỈ GIỮ LẠI RSI VÀ MA TRÊN THANH TIÊU ĐỀ (INFO BAR) CHO GỌN
       figures: [
         { key: 'rsi', title: 'RSI: ', type: 'line' },
         { key: 'rsiMA', title: 'MA: ', type: 'line' }
@@ -1107,7 +1106,8 @@
         return results;
       },
   
-      draw: function({ ctx, visibleRange, indicator, xAxis, yAxis }) {
+      // THÊM PARAM 'bounding' ĐỂ LẤY KÍCH THƯỚC KHUNG CANVAS
+      draw: function({ ctx, visibleRange, indicator, xAxis, yAxis, bounding }) {
         const { from, to } = visibleRange;
         const res = indicator.result;
         const startX = xAxis.convertToPixel(from);
@@ -1135,10 +1135,9 @@
         ctx.fillStyle = 'rgba(126, 87, 194, 0.1)';
         ctx.fillRect(startX, y70, endX - startX, y30 - y70);
   
-        // --- Vẽ Bollinger Bands (Đã gộp vẽ Viền và Nền ở đây) ---
+        // --- Vẽ Bollinger Bands ---
         if (indicator.calcParams[1] === 1) {
           ctx.save();
-          // 1. Vẽ Viền BB (Lines)
           ctx.lineWidth = 1;
           ctx.strokeStyle = COLOR.green;
           
@@ -1162,7 +1161,6 @@
           }
           ctx.stroke();
   
-          // 2. Vẽ Nền BB (Fill)
           ctx.fillStyle = 'rgba(14, 203, 129, 0.1)';
           ctx.beginPath();
           hasUp = false;
@@ -1217,9 +1215,7 @@
                 let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
                 let interX = prevX + (currX - prevX) * ((y70 - prevY) / (currY - prevY));
                 ctx.moveTo(interX, y70);
-              } else {
-                ctx.moveTo(currX, y70);
-              }
+              } else ctx.moveTo(currX, y70);
             }
             ctx.lineTo(currX, currY);
           } else if (inOB) {
@@ -1229,9 +1225,7 @@
               let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
               let interX = prevX + (currX - prevX) * ((y70 - prevY) / (currY - prevY));
               ctx.lineTo(interX, y70);
-            } else {
-              ctx.lineTo(currX, y70);
-            }
+            } else ctx.lineTo(currX, y70);
           }
         }
         if (inOB) ctx.lineTo(xAxis.convertToPixel(to - 1), y70);
@@ -1254,9 +1248,7 @@
                 let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
                 let interX = prevX + (currX - prevX) * ((y30 - prevY) / (currY - prevY));
                 ctx.moveTo(interX, y30);
-              } else {
-                ctx.moveTo(currX, y30);
-              }
+              } else ctx.moveTo(currX, y30);
             }
             ctx.lineTo(currX, currY);
           } else if (inOS) {
@@ -1266,19 +1258,17 @@
               let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
               let interX = prevX + (currX - prevX) * ((y30 - prevY) / (currY - prevY));
               ctx.lineTo(interX, y30);
-            } else {
-              ctx.lineTo(currX, y30);
-            }
+            } else ctx.lineTo(currX, y30);
           }
         }
         if (inOS) ctx.lineTo(xAxis.convertToPixel(to - 1), y30);
         ctx.fill();
   
-        // --- VẼ TEXT VÀ TIA NỐI (DIVERGENCE LINE) TỐI ƯU UI ---
+        // --- VẼ TEXT PHÂN KỲ TỐI ƯU KHOẢNG CÁCH & CLIPPING ---
         ctx.save();
         ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle'; // Căn giữa chữ vào box
+        ctx.textBaseline = 'middle'; 
   
         const boxW = 32;
         const boxH = 16;
@@ -1292,7 +1282,6 @@
             if (res[i].bullDiv !== undefined) {
               let y = yAxis.convertToPixel(res[i].bullDiv.endRSI);
               
-              // Vẽ tia nối đứt khúc
               ctx.beginPath();
               ctx.moveTo(xAxis.convertToPixel(res[i].bullDiv.startI), yAxis.convertToPixel(res[i].bullDiv.startRSI));
               ctx.lineTo(x, y);
@@ -1300,21 +1289,22 @@
               ctx.lineWidth = 1.5;
               ctx.setLineDash([4, 4]); 
               ctx.stroke();
-              ctx.setLineDash([]); // Reset nét đứt
+              ctx.setLineDash([]); 
               
-              let labelY = y + 15;
+              // Xích sát lại viền (5px)
+              let labelY = y + 5;
+              
+              // CHỐNG CLIPPING KHI ZOOM
+              if (labelY + boxH > bounding.height - 2) {
+                  labelY = bounding.height - boxH - 2;
+              }
   
-              // Vẽ hộp nền (Background box) màu xanh
               ctx.fillStyle = COLOR.green;
               ctx.beginPath();
-              if (ctx.roundRect) {
-                 ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
-              } else {
-                 ctx.rect(x - boxW/2, labelY, boxW, boxH); // Fallback trình duyệt cũ
-              }
+              if (ctx.roundRect) ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
+              else ctx.rect(x - boxW/2, labelY, boxW, boxH); 
               ctx.fill();
   
-              // Vẽ Text màu trắng
               ctx.fillStyle = COLOR.white;
               ctx.fillText('Bull', x, labelY + boxH/2);
             }
@@ -1323,7 +1313,6 @@
             if (res[i].bearDiv !== undefined) {
               let y = yAxis.convertToPixel(res[i].bearDiv.endRSI);
               
-              // Vẽ tia nối đứt khúc
               ctx.beginPath();
               ctx.moveTo(xAxis.convertToPixel(res[i].bearDiv.startI), yAxis.convertToPixel(res[i].bearDiv.startRSI));
               ctx.lineTo(x, y);
@@ -1331,27 +1320,64 @@
               ctx.lineWidth = 1.5;
               ctx.setLineDash([4, 4]);
               ctx.stroke();
-              ctx.setLineDash([]); // Reset nét đứt
+              ctx.setLineDash([]);
   
-              let labelY = y - 15 - boxH;
+              // Xích sát lại viền (5px)
+              let labelY = y - 5 - boxH;
+              
+              // CHỐNG CLIPPING KHI ZOOM
+              if (labelY < 2) {
+                  labelY = 2;
+              }
   
-              // Vẽ hộp nền (Background box) màu đỏ
               ctx.fillStyle = COLOR.red;
               ctx.beginPath();
-              if (ctx.roundRect) {
-                 ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
-              } else {
-                 ctx.rect(x - boxW/2, labelY, boxW, boxH); // Fallback
-              }
+              if (ctx.roundRect) ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
+              else ctx.rect(x - boxW/2, labelY, boxW, boxH);
               ctx.fill();
   
-              // Vẽ Text màu trắng
               ctx.fillStyle = COLOR.white;
               ctx.fillText('Bear', x, labelY + boxH/2);
             }
           }
         }
         ctx.restore();
+  
+        // --- VẼ REALTIME Y-AXIS BADGE (NHÃN GIÁ TRỊ MỚI NHẤT) ---
+        const realtimeData = res[res.length - 1]; 
+        if (realtimeData && realtimeData.rsi !== undefined) {
+            ctx.save();
+            const rsiVal = realtimeData.rsi;
+            let currentY = yAxis.convertToPixel(rsiVal);
+            
+            // Giữ nhãn luôn nằm gọn trong màn hình kể cả khi RSI giật mạnh quá khung
+            if (currentY < 12) currentY = 12;
+            if (currentY > bounding.height - 12) currentY = bounding.height - 12;
+  
+            const tagW = 42;
+            const tagH = 18;
+            // Ép sát lề phải của biểu đồ (cột số Y-Axis)
+            const tagX = bounding.width - tagW; 
+  
+            // Box nền Tím (Đồng bộ màu dây RSI)
+            ctx.fillStyle = '#7E57C2';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(tagX, currentY - tagH/2, tagW, tagH, 3);
+            } else {
+                ctx.rect(tagX, currentY - tagH/2, tagW, tagH);
+            }
+            ctx.fill();
+  
+            // Chữ trắng sắc nét
+            ctx.fillStyle = COLOR.white;
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(rsiVal.toFixed(2), tagX + tagW/2, currentY);
+            
+            ctx.restore();
+        }
   
         return false; 
       }
