@@ -2340,104 +2340,70 @@
 
 // --- 7.1 DRAWING KEY: chỉ theo SYMBOL, không dính Timeframe ---
 // --- BỘ NHỚ RAM (SHADOW MAP) CHỨA DATA HÌNH VẼ ---
-// ============================================================
-// 7. AUTO-HEAL & PERSISTENCE — CHUẨN TRADINGVIEW (TIME-PRICE ANCHOR)
-// ============================================================
-
 global.__wa_overlay_map = global.__wa_overlay_map || new Map();
 
-// 💡 KIẾN TRÚC TRADINGVIEW: Chỉ lưu theo Symbol, KHÔNG dính Timeframe
 function getDrawingKey() {
   let sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
   sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return 'wa_drawings_' + sym; // VD: wa_drawings_BTCUSDT
+  return 'wa_drawings_' + sym;
 }
 
 function saveAllOverlays() {
   try {
-    if (global.__wa_overlay_map.size === 0) return;
-    let dataToSave = [];
-    global.__wa_overlay_map.forEach(data => dataToSave.push(data));
-    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
+    if (!global.tvChart) return;
+    let overlays = global.tvChart.getOverlay();
+    if (overlays && overlays.length > 0) {
+        // Lọc bỏ cyberMarker của bot Quant, chỉ lưu hình user vẽ
+        let userDrawings = overlays.filter(o => o.name !== 'cyberMarker');
+        localStorage.setItem(getDrawingKey(), JSON.stringify(userDrawings));
+    } else {
+        localStorage.removeItem(getDrawingKey());
+    }
   } catch(e) {}
 }
 global.__wa_saveAllOverlays = saveAllOverlays;
 
+// Hàm hỗ trợ: Ghi hình vào bộ nhớ RAM
 function _wa_trackOverlay(o) {
   if (!o || !o.id) return;
   global.__wa_overlay_map.set(o.id, { name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
 }
 
+// Hàm hỗ trợ: Xóa hình khỏi bộ nhớ RAM
 function _wa_untrackOverlay(id) {
   if (id) global.__wa_overlay_map.delete(id);
 }
 
-// 💡 HÀM PHỤC HỒI THÔNG MINH (CHỜ NẾN LOAD XONG MỚI VẼ)
 function restoreOverlays() {
-  let chart = global.tvChart;
-  if (!chart) return;
-
+  if (!global.tvChart) return;
   let key = getDrawingKey();
   let saved = localStorage.getItem(key);
   if (!saved || saved === '[]') return;
 
-  let overlayDefs;
-  try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
-
-  // HỦY BỎ các vòng lặp chờ cũ (nếu user click chuyển khung quá nhanh)
-  if (global.__wa_restoreInterval) clearInterval(global.__wa_restoreInterval);
-
-  let attempts = 0;
-  // Bắt đầu vòng lặp cực nhanh (50ms) để rình xem nến đã load vào chart chưa
-  global.__wa_restoreInterval = setInterval(() => {
-    let dataList = chart.getDataList();
-    
-    // NẾU CHART ĐÃ CÓ NẾN -> DỪNG CHỜ VÀ BẮT ĐẦU VẼ
-    if (dataList && dataList.length > 0) {
-      clearInterval(global.__wa_restoreInterval);
-
-      // Xóa rác cũ trước khi nạp
-      try { chart.removeOverlay(); } catch(e) {}
-      global.__wa_overlay_map.clear();
-
-      overlayDefs.forEach(o => {
-        try {
-          let cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
-          let newId = chart.createOverlay(cfg);
-          if (newId) {
+  try {
+    let overlayDefs = JSON.parse(saved);
+    overlayDefs.forEach(function(o) {
+      try {
+        let cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
+        let newId = global.tvChart.createOverlay(cfg);
+        // Cập nhật lại RAM cho đồng bộ
+        if (newId) {
             global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
-          }
-        } catch(e) {}
-      });
-      console.log(`✅ [TradingView Logic] Đã đồng bộ hình vẽ cho khung mới.`);
-    } else {
-      // Nếu chart vẫn rỗng (đang xoay vòng loading), tiếp tục chờ...
-      attempts++;
-      if (attempts > 100) clearInterval(global.__wa_restoreInterval); // Timeout sau 5 giây để chống kẹt bộ nhớ
-    }
-  }, 50);
+        }
+      } catch(e) {}
+    });
+  } catch(e) {}
 }
 global.__wa_restoreOverlays = restoreOverlays;
 
+
 // ============================================================
-// 7.4 GLOBAL HOOKS
+// 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
 // ============================================================
 
 window.__wa_onIntervalChange = function(newInterval) {
-  console.log(`\n================================`);
-  console.log(`🔥 [HOOK] ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
-  console.log(`================================`);
-
-  // 1. Lưu hình vẽ trước khi chart bị framework reset
   if (typeof global.__wa_saveAllOverlays === 'function') {
     global.__wa_saveAllOverlays();
-  }
-
-  // 2. Tuyệt đối KHÔNG xóa __wa_overlay_map.clear() ở đây
-
-  // 3. Kích hoạt hàm phục hồi. Nó sẽ tự động đi vào trạng thái "Chờ" cho đến khi data khung mới đổ về
-  if (typeof global.__wa_restoreOverlays === 'function') {
-    global.__wa_restoreOverlays();
   }
 };
 
@@ -2445,12 +2411,10 @@ window.__wa_onSymbolChange = function(newSymbol) {
   console.log(`\n================================`);
   console.log(`🔥 [HOOK] ĐỔI COIN SANG: ${newSymbol}`);
   console.log(`================================`);
-  
   if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-  
   window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
   
-  // KHI ĐỔI COIN KHÁC MỚI XÓA BỘ NHỚ RAM
+  // FIX: Xóa trí nhớ RAM
   if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
   
   if (typeof global.__wa_restoreOverlays === 'function') {
