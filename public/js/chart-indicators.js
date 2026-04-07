@@ -980,7 +980,7 @@
     });
     klinecharts.registerIndicator({
       name: 'WAVE_ADVANCED_RSI',
-      shortName: 'RSI',
+      shortName: 'RSI PRO',
       series: 'normal',
       calcParams: [14, 0, 14, 2.0, 1],
       figures: [
@@ -988,362 +988,129 @@
         { key: 'rsiMA', title: 'MA: ', type: 'line' }
       ],
       styles: {
-        // Bật nhãn Realtime Native (Gắn trên cột số Y-Axis) cho riêng chỉ báo này
-        indicator: {
-          lastValueMark: {
-            show: true
-          }
-        },
+        // Kích hoạt nhãn Realtime trên cột số
+        indicator: { lastValueMark: { show: true } },
         lines: [
-          { color: '#7E57C2', size: 2, style: 'solid' },        
-          { color: COLOR.gold, size: 1, style: 'solid' }
+          { color: '#00F0FF', size: 2, style: 'solid' }, // Dây RSI Neon Cyan độc quyền
+          { color: 'rgba(255, 215, 0, 0.6)', size: 1, style: 'solid' } // Dây MA mờ tạo chiều sâu
         ]
       },
       calc: function(dataList, indicator) {
-        const rsiLen = indicator.calcParams[0];
-        const maType = indicator.calcParams[1]; 
-        const maLen = indicator.calcParams[2];
-        const bbMult = indicator.calcParams[3];
-        const showDiv = indicator.calcParams[4];
+        const rsiLen = indicator.calcParams[0], maType = indicator.calcParams[1], maLen = indicator.calcParams[2], bbMult = indicator.calcParams[3], showDiv = indicator.calcParams[4];
         const dataSize = dataList.length;
-  
-        const gains = new Array(dataSize).fill(0);
-        const losses = new Array(dataSize).fill(0);
+        const gains = new Array(dataSize).fill(0), losses = new Array(dataSize).fill(0);
         for (let i = 1; i < dataSize; i++) {
           let diff = dataList[i].close - dataList[i-1].close;
-          if (diff > 0) gains[i] = diff;
-          else losses[i] = -diff;
+          if (diff > 0) gains[i] = diff; else losses[i] = -diff;
         }
-        
-        const avgGains = calcRMA(gains, rsiLen);
-        const avgLosses = calcRMA(losses, rsiLen);
-        
+        const avgGains = calcRMA(gains, rsiLen), avgLosses = calcRMA(losses, rsiLen);
         const rsiData = new Array(dataSize).fill(0);
         for (let i = 1; i < dataSize; i++) {
-          const g = avgGains[i] || 0;
-          const l = avgLosses[i] || 0;
-          if (l === 0) rsiData[i] = 100;
-          else if (g === 0) rsiData[i] = 0;
-          else rsiData[i] = 100 - (100 / (1 + (g / l)));
+          const g = avgGains[i] || 0, l = avgLosses[i] || 0;
+          rsiData[i] = l === 0 ? 100 : (g === 0 ? 0 : 100 - (100 / (1 + (g / l))));
         }
-  
-        let rsiMA = [];
-        if (maType === 0 || maType === 1) rsiMA = calcSMA(rsiData, maLen);
-        else if (maType === 2) rsiMA = calcEMA(rsiData, maLen);
-        else if (maType === 3) rsiMA = calcRMA(rsiData, maLen);
-        else if (maType === 4) { 
-          let norm = 0; for(let j=1; j<=maLen; j++) norm += j;
-          for (let i = 0; i < dataSize; i++) {
-            if (i < maLen - 1) { rsiMA.push(0); continue; }
-            let sum = 0;
-            for(let j=0; j<maLen; j++) sum += rsiData[i - j] * (maLen - j);
-            rsiMA.push(sum / norm);
-          }
-        } else if (maType === 5) { 
-          for (let i = 0; i < dataSize; i++) {
-            if (i < maLen - 1) { rsiMA.push(0); continue; }
-            let sumPV = 0, sumV = 0;
-            for(let j=0; j<maLen; j++) {
-              let v = dataList[i-j].volume || 0;
-              sumPV += rsiData[i-j] * v;
-              sumV += v;
-            }
-            rsiMA.push(sumV === 0 ? 0 : sumPV / sumV);
-          }
-        }
-  
+        let rsiMA = (maType === 0 || maType === 1) ? calcSMA(rsiData, maLen) : (maType === 2 ? calcEMA(rsiData, maLen) : calcRMA(rsiData, maLen));
         const results = new Array(dataSize);
         for (let i = 0; i < dataSize; i++) {
-          let res = {
-            rsi: rsiData[i],
-            rsiMA: rsiMA[i] || 0
-          };
-  
+          results[i] = { rsi: rsiData[i], rsiMA: rsiMA[i] || 0 };
           if (maType === 1 && i >= maLen - 1) {
-            let mean = rsiMA[i];
-            let sumSq = 0;
+            let mean = rsiMA[i], sumSq = 0;
             for(let j=0; j<maLen; j++) sumSq += Math.pow(rsiData[i-j] - mean, 2);
-            let stdDev = Math.sqrt(sumSq / maLen);
-            res.bbUpper = mean + stdDev * bbMult;
-            res.bbLower = mean - stdDev * bbMult;
+            let sd = Math.sqrt(sumSq / maLen);
+            results[i].bbUpper = mean + sd * bbMult; results[i].bbLower = mean - sd * bbMult;
           }
-          results[i] = res;
         }
-  
         if (showDiv === 1) {
           let lastPL = null, lastPH = null;
           for (let i = 10; i < dataSize; i++) {
-            let p = i - 5; 
-            let isPL = true, isPH = true;
+            let p = i - 5, isPL = true, isPH = true;
             for (let j = 1; j <= 5; j++) {
               if (rsiData[p] >= rsiData[p-j] || rsiData[p] > rsiData[p+j]) isPL = false;
               if (rsiData[p] <= rsiData[p-j] || rsiData[p] < rsiData[p+j]) isPH = false;
             }
-            
             if (isPL) {
-              if (lastPL) {
-                let bars = p - lastPL.idx;
-                if (bars >= 5 && bars <= 60 && rsiData[p] > lastPL.rsi && dataList[p].low < lastPL.low) {
-                  results[p].bullDiv = { startI: lastPL.idx, startRSI: lastPL.rsi, endRSI: rsiData[p] };
-                }
-              }
+              if (lastPL && (p - lastPL.idx) <= 60 && rsiData[p] > lastPL.rsi && dataList[p].low < lastPL.low) results[p].bullDiv = { startI: lastPL.idx, startRSI: lastPL.rsi, endRSI: rsiData[p] };
               lastPL = { idx: p, rsi: rsiData[p], low: dataList[p].low };
             }
-            
             if (isPH) {
-              if (lastPH) {
-                let bars = p - lastPH.idx;
-                if (bars >= 5 && bars <= 60 && rsiData[p] < lastPH.rsi && dataList[p].high > lastPH.high) {
-                  results[p].bearDiv = { startI: lastPH.idx, startRSI: lastPH.rsi, endRSI: rsiData[p] };
-                }
-              }
+              if (lastPH && (p - lastPH.idx) <= 60 && rsiData[p] < lastPH.rsi && dataList[p].high > lastPH.high) results[p].bearDiv = { startI: lastPH.idx, startRSI: lastPH.rsi, endRSI: rsiData[p] };
               lastPH = { idx: p, rsi: rsiData[p], high: dataList[p].high };
             }
           }
         }
         return results;
       },
-  
       draw: function({ ctx, visibleRange, indicator, xAxis, yAxis, bounding }) {
         const { from, to } = visibleRange;
-        const res = indicator.result;
-        
-        const startX = xAxis.convertToPixel(from);
-        const endX = xAxis.convertToPixel(to - 1);
-        
-        const y70 = yAxis.convertToPixel(70);
-        const y50 = yAxis.convertToPixel(50);
-        const y30 = yAxis.convertToPixel(30);
-  
-        const fullWidth = bounding.width; 
-  
-        // ==========================================
-        // 1. VẼ CON ĐƯỜNG VÔ CỰC (FULL SPAN)
-        // ==========================================
+        const res = indicator.result, y70 = yAxis.convertToPixel(70), y50 = yAxis.convertToPixel(50), y30 = yAxis.convertToPixel(30), fullW = bounding.width;
+    
         ctx.save();
-        
-        // Nền tím 
-        ctx.fillStyle = 'rgba(126, 87, 194, 0.08)';
-        ctx.fillRect(0, y70, fullWidth, y30 - y70);
-  
-        // Đường 30 và 70 (Nét đứt, mỏng 1px)
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = '#787B86';
-        ctx.setLineDash([10, 8]); 
-        ctx.beginPath(); ctx.moveTo(0, y70); ctx.lineTo(fullWidth, y70); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, y30); ctx.lineTo(fullWidth, y30); ctx.stroke();
-  
-        // Đường 50 (Nét đứt thưa, dày 2px và màu trắng)
-        ctx.lineWidth = 2; // Dày hơn đường 30/70
-        ctx.strokeStyle = COLOR.white; // Màu trắng
-        ctx.setLineDash([15, 10]);
-        ctx.beginPath(); ctx.moveTo(0, y50); ctx.lineTo(fullWidth, y50); ctx.stroke();
-        
+        // 1. VẼ CON ĐƯỜNG VÔ CỰC (ĐỒNG BỘ PRO TRADER)
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.03)'; 
+        ctx.fillRect(0, y70, fullW, y30 - y70);
+        ctx.lineWidth = 1; ctx.setLineDash([12, 10]);
+        ctx.strokeStyle = 'rgba(132, 142, 156, 0.2)'; 
+        ctx.beginPath(); ctx.moveTo(0, y70); ctx.lineTo(fullW, y70); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y30); ctx.lineTo(fullW, y30); ctx.stroke();
+        ctx.lineWidth = 2; ctx.strokeStyle = COLOR.white; // Đường 50 trắng dày 2px nổi bật
+        ctx.beginPath(); ctx.moveTo(0, y50); ctx.lineTo(fullW, y50); ctx.stroke();
         ctx.restore();
-  
-        // ==========================================
-        // 2. VẼ BOLLINGER BANDS
-        // ==========================================
-        if (indicator.calcParams[1] === 1) {
-          ctx.save();
-          ctx.lineWidth = 1;
-          ctx.strokeStyle = COLOR.green;
-          
-          ctx.beginPath();
-          let hasUp = false;
-          for (let i = from; i < to; i++) {
-            if (res[i] && res[i].bbUpper !== undefined) {
-              let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].bbUpper);
-              if (!hasUp) { ctx.moveTo(x, y); hasUp = true; } else ctx.lineTo(x, y);
-            }
-          }
-          ctx.stroke();
-  
-          ctx.beginPath();
-          let hasLow = false;
-          for (let i = from; i < to; i++) {
-            if (res[i] && res[i].bbLower !== undefined) {
-              let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].bbLower);
-              if (!hasLow) { ctx.moveTo(x, y); hasLow = true; } else ctx.lineTo(x, y);
-            }
-          }
-          ctx.stroke();
-  
-          ctx.fillStyle = 'rgba(14, 203, 129, 0.1)';
-          ctx.beginPath();
-          hasUp = false;
-          for (let i = from; i < to; i++) {
-            if (res[i] && res[i].bbUpper !== undefined) {
-              let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].bbUpper);
-              if (!hasUp) { ctx.moveTo(x, y); hasUp = true; } else ctx.lineTo(x, y);
-            }
-          }
-          if (hasUp) {
-            for (let i = to - 1; i >= from; i--) {
-              if (res[i] && res[i].bbLower !== undefined) {
-                ctx.lineTo(xAxis.convertToPixel(i), yAxis.convertToPixel(res[i].bbLower));
-              }
-            }
-            ctx.closePath();
-            ctx.fill();
-          }
-          ctx.restore();
-        }
-  
-        // ==========================================
-        // 3. VẼ GRADIENTS QUÁ MUA / QUÁ BÁN
-        // ==========================================
-        let y100 = yAxis.convertToPixel(100);
-        let y0 = yAxis.convertToPixel(0);
-        
-        let gradOB = Math.abs(y70 - y100) > 1 ? ctx.createLinearGradient(0, y100, 0, y70) : 'rgba(14, 203, 129, 0.5)';
-        if (typeof gradOB !== 'string') {
-          gradOB.addColorStop(0, 'rgba(38, 166, 154, 0.6)');
-          gradOB.addColorStop(1, 'rgba(38, 166, 154, 0)');
-        }
-  
-        let gradOS = Math.abs(y0 - y30) > 1 ? ctx.createLinearGradient(0, y30, 0, y0) : 'rgba(246, 70, 93, 0.5)';
-        if (typeof gradOS !== 'string') {
-          gradOS.addColorStop(0, 'rgba(239, 83, 80, 0)');
-          gradOS.addColorStop(1, 'rgba(239, 83, 80, 0.6)');
-        }
-  
-        ctx.fillStyle = gradOB;
-        ctx.beginPath();
-        let inOB = false;
+    
+        // 2. GRADIENTS SIGNATURE (XANH TEAL & ĐỎ MỀM)
+        let y100 = yAxis.convertToPixel(100), y0 = yAxis.convertToPixel(0);
+        let gradOB = ctx.createLinearGradient(0, y100, 0, y70);
+        gradOB.addColorStop(0, 'rgba(38, 166, 154, 0.6)'); // Màu nến tăng Pro
+        gradOB.addColorStop(1, 'rgba(38, 166, 154, 0)');
+        let gradOS = ctx.createLinearGradient(0, y30, 0, y0);
+        gradOS.addColorStop(0, 'rgba(239, 83, 80, 0)');   // Màu nến giảm Pro
+        gradOS.addColorStop(1, 'rgba(239, 83, 80, 0.6)');
+    
+        ctx.fillStyle = gradOB; ctx.beginPath(); let inOB = false;
         for (let i = from; i < to; i++) {
           if (!res[i] || res[i].rsi === undefined) continue;
-          let rsi = res[i].rsi;
-          let currX = xAxis.convertToPixel(i);
-          let currY = yAxis.convertToPixel(rsi);
-          
+          let rsi = res[i].rsi, currX = xAxis.convertToPixel(i), currY = yAxis.convertToPixel(rsi);
           if (rsi > 70) {
-            if (!inOB) {
-              inOB = true;
-              let prevRsi = res[i-1]?.rsi;
-              if (prevRsi !== undefined && prevRsi <= 70) {
-                let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
-                let interX = prevX + (currX - prevX) * ((y70 - prevY) / (currY - prevY));
-                ctx.moveTo(interX, y70);
-              } else ctx.moveTo(currX, y70);
-            }
+            if (!inOB) { inOB = true; let pRsi = res[i-1]?.rsi; if (pRsi !== undefined && pRsi <= 70) ctx.moveTo(xAxis.convertToPixel(i-1) + (currX - xAxis.convertToPixel(i-1)) * ((y70 - yAxis.convertToPixel(pRsi)) / (currY - yAxis.convertToPixel(pRsi))), y70); else ctx.moveTo(currX, y70); }
             ctx.lineTo(currX, currY);
-          } else if (inOB) {
-            inOB = false;
-            let prevRsi = res[i-1]?.rsi;
-            if (prevRsi !== undefined && prevRsi > 70) {
-              let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
-              let interX = prevX + (currX - prevX) * ((y70 - prevY) / (currY - prevY));
-              ctx.lineTo(interX, y70);
-            } else ctx.lineTo(currX, y70);
-          }
+          } else if (inOB) { inOB = false; let pRsi = res[i-1]?.rsi; if (pRsi !== undefined && pRsi > 70) ctx.lineTo(xAxis.convertToPixel(i-1) + (currX - xAxis.convertToPixel(i-1)) * ((y70 - yAxis.convertToPixel(pRsi)) / (currY - yAxis.convertToPixel(pRsi))), y70); else ctx.lineTo(currX, y70); }
         }
-        if (inOB) ctx.lineTo(xAxis.convertToPixel(to - 1), y70);
         ctx.fill();
-  
-        ctx.fillStyle = gradOS;
-        ctx.beginPath();
-        let inOS = false;
+        ctx.fillStyle = gradOS; ctx.beginPath(); let inOS = false;
         for (let i = from; i < to; i++) {
           if (!res[i] || res[i].rsi === undefined) continue;
-          let rsi = res[i].rsi;
-          let currX = xAxis.convertToPixel(i);
-          let currY = yAxis.convertToPixel(rsi);
-          
+          let rsi = res[i].rsi, currX = xAxis.convertToPixel(i), currY = yAxis.convertToPixel(rsi);
           if (rsi < 30) {
-            if (!inOS) {
-              inOS = true;
-              let prevRsi = res[i-1]?.rsi;
-              if (prevRsi !== undefined && prevRsi >= 30) {
-                let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
-                let interX = prevX + (currX - prevX) * ((y30 - prevY) / (currY - prevY));
-                ctx.moveTo(interX, y30);
-              } else ctx.moveTo(currX, y30);
-            }
+            if (!inOS) { inOS = true; let pRsi = res[i-1]?.rsi; if (pRsi !== undefined && pRsi >= 30) ctx.moveTo(xAxis.convertToPixel(i-1) + (currX - xAxis.convertToPixel(i-1)) * ((y30 - yAxis.convertToPixel(pRsi)) / (currY - yAxis.convertToPixel(pRsi))), y30); else ctx.moveTo(currX, y30); }
             ctx.lineTo(currX, currY);
-          } else if (inOS) {
-            inOS = false;
-            let prevRsi = res[i-1]?.rsi;
-            if (prevRsi !== undefined && prevRsi < 30) {
-              let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
-              let interX = prevX + (currX - prevX) * ((y30 - prevY) / (currY - prevY));
-              ctx.lineTo(interX, y30);
-            } else ctx.lineTo(currX, y30);
-          }
+          } else if (inOS) { inOS = false; let pRsi = res[i-1]?.rsi; if (pRsi !== undefined && pRsi < 30) ctx.lineTo(xAxis.convertToPixel(i-1) + (currX - xAxis.convertToPixel(i-1)) * ((y30 - yAxis.convertToPixel(pRsi)) / (currY - yAxis.convertToPixel(pRsi))), y30); else ctx.lineTo(currX, y30); }
         }
-        if (inOS) ctx.lineTo(xAxis.convertToPixel(to - 1), y30);
         ctx.fill();
-  
-        // ==========================================
-        // 4. VẼ PHÂN KỲ (DIVERGENCE LABELS & LINES)
-        // ==========================================
-        ctx.save();
-        ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle'; 
-  
-        const boxW = 32;
-        const boxH = 16;
-        const radius = 3;
-  
+    
+        // 3. VẼ PHÂN KỲ (BULL/BEAR BOX) SÁT VIỀN
+        ctx.save(); ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         for (let i = from; i < to; i++) {
           if (res[i]) {
             let x = xAxis.convertToPixel(i);
-  
-            if (res[i].bullDiv !== undefined) {
+            if (res[i].bullDiv) {
               let y = yAxis.convertToPixel(res[i].bullDiv.endRSI);
-              
-              ctx.beginPath();
-              ctx.moveTo(xAxis.convertToPixel(res[i].bullDiv.startI), yAxis.convertToPixel(res[i].bullDiv.startRSI));
-              ctx.lineTo(x, y);
-              ctx.strokeStyle = COLOR.green;
-              ctx.lineWidth = 1.5;
-              ctx.setLineDash([4, 4]); 
-              ctx.stroke();
-              ctx.setLineDash([]); 
-              
-              let labelY = y + 5;
-              if (labelY + boxH > bounding.height - 2) labelY = bounding.height - boxH - 2;
-  
-              ctx.fillStyle = COLOR.green;
-              ctx.beginPath();
-              if (ctx.roundRect) ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
-              else ctx.rect(x - boxW/2, labelY, boxW, boxH); 
-              ctx.fill();
-  
-              ctx.fillStyle = COLOR.white;
-              ctx.fillText('Bull', x, labelY + boxH/2);
+              ctx.beginPath(); ctx.moveTo(xAxis.convertToPixel(res[i].bullDiv.startI), yAxis.convertToPixel(res[i].bullDiv.startRSI)); ctx.lineTo(x, y);
+              ctx.strokeStyle = '#26A69A'; ctx.setLineDash([4, 4]); ctx.stroke();
+              let lY = Math.min(y + 5, bounding.height - 18);
+              ctx.fillStyle = '#26A69A'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 16, lY, 32, 16, 3) : ctx.rect(x - 16, lY, 32, 16); ctx.fill();
+              ctx.fillStyle = '#FFF'; ctx.fillText('Bull', x, lY + 8);
             }
-  
-            if (res[i].bearDiv !== undefined) {
+            if (res[i].bearDiv) {
               let y = yAxis.convertToPixel(res[i].bearDiv.endRSI);
-              
-              ctx.beginPath();
-              ctx.moveTo(xAxis.convertToPixel(res[i].bearDiv.startI), yAxis.convertToPixel(res[i].bearDiv.startRSI));
-              ctx.lineTo(x, y);
-              ctx.strokeStyle = COLOR.red;
-              ctx.lineWidth = 1.5;
-              ctx.setLineDash([4, 4]);
-              ctx.stroke();
-              ctx.setLineDash([]);
-  
-              let labelY = y - 5 - boxH;
-              if (labelY < 2) labelY = 2;
-  
-              ctx.fillStyle = COLOR.red;
-              ctx.beginPath();
-              if (ctx.roundRect) ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
-              else ctx.rect(x - boxW/2, labelY, boxW, boxH);
-              ctx.fill();
-  
-              ctx.fillStyle = COLOR.white;
-              ctx.fillText('Bear', x, labelY + boxH/2);
+              ctx.beginPath(); ctx.moveTo(xAxis.convertToPixel(res[i].bearDiv.startI), yAxis.convertToPixel(res[i].bearDiv.startRSI)); ctx.lineTo(x, y);
+              ctx.strokeStyle = '#EF5350'; ctx.setLineDash([4, 4]); ctx.stroke();
+              let lY = Math.max(y - 21, 2);
+              ctx.fillStyle = '#EF5350'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 16, lY, 32, 16, 3) : ctx.rect(x - 16, lY, 32, 16); ctx.fill();
+              ctx.fillStyle = '#FFF'; ctx.fillText('Bear', x, lY + 8);
             }
           }
         }
         ctx.restore();
-  
-        return false; // KLineCharts tự vẽ đè tiếp đường Line RSI và Line MA lên trên
+        return false;
       }
     });
     console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] ✅ Đã đăng ký ' +
