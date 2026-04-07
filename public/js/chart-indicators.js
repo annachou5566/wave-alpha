@@ -302,8 +302,8 @@
     },
     {
     name: 'WAVE_ADVANCED_RSI',
-    shortName: 'WAVE RSI PRO',
-    description: 'RSI Advanced (Giống 100% TV: Gradients, BB, Div)',
+    shortName: 'WAVE RSI',
+    description: 'RSI Advanced',
     category: 'oscillator',
     isStack: false,
     defaultParams: [14, 0, 14, 2.0, 1],
