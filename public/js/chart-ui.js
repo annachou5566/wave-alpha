@@ -886,7 +886,10 @@ window.openProChart = function(t, isTimeSwitch = false) {
                 yAxis: { axisLine: { show: false }, tickText: { color: t_text } },
             }
         });
-
+// ✅ FIX BUG: Báo cho hệ thống Drawing biết Chart mới đã tái sinh để nối lại các dây thần kinh (Events)
+        if (typeof window.__wa_onChartReady === 'function') {
+            window.__wa_onChartReady();
+        }
         // ĐĂNG KÝ CLICK ICON (Xử lý mượt cả VOL mặc định)
         window.tvChart.subscribeAction('onTooltipIconClick', function(data) {
             if (!data.indicatorName) return;
@@ -1016,10 +1019,7 @@ window.openProChart = function(t, isTimeSwitch = false) {
                     if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
                 }
 
-                // 🚀 LỚP 3: LIFECYCLE HOOK - Bơm hình vẽ vào NGAY LẬP TỨC khi nến đã đổ xong
-                if (typeof window.__wa_restoreOverlays === 'function') {
-                    setTimeout(() => window.__wa_restoreOverlays(), 50); 
-                }
+                
 
                 if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
             });

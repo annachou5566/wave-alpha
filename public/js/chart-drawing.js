@@ -2350,15 +2350,12 @@ function getDrawingKey() {
 
 function saveAllOverlays() {
   try {
-    if (!global.tvChart) return;
-    let overlays = global.tvChart.getOverlay();
-    if (overlays && overlays.length > 0) {
-        // Lọc bỏ cyberMarker của bot Quant, chỉ lưu hình user vẽ
-        let userDrawings = overlays.filter(o => o.name !== 'cyberMarker');
-        localStorage.setItem(getDrawingKey(), JSON.stringify(userDrawings));
-    } else {
-        localStorage.removeItem(getDrawingKey());
-    }
+    if (global.__wa_overlay_map.size === 0) return;
+    let dataToSave = [];
+    global.__wa_overlay_map.forEach(function(data) {
+      dataToSave.push(data);
+    });
+    localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
   } catch(e) {}
 }
 global.__wa_saveAllOverlays = saveAllOverlays;
@@ -2386,9 +2383,8 @@ function restoreOverlays() {
       try {
         let cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
         let newId = global.tvChart.createOverlay(cfg);
-        // Cập nhật lại RAM cho đồng bộ
         if (newId) {
-            global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
+          global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
         }
       } catch(e) {}
     });
@@ -2396,14 +2392,42 @@ function restoreOverlays() {
 }
 global.__wa_restoreOverlays = restoreOverlays;
 
+// HÀM MỚI: Được gọi khi Chart mới vừa tái sinh
+window.__wa_onChartReady = function() {
+    if (!global.tvChart) return;
+    
+    // 1. Nối lại dây thần kinh vẽ (Events) cho Chart MỚI
+    if (typeof _bindChartEventsOnce === 'function') {
+        global.tvChart.__wa_chart_events_bound = false; 
+        _bindChartEventsOnce();
+    }
+
+    // 2. Chờ nến load xong rồi mới thả hình vẽ vào
+    let attempts = 0;
+    let waitForData = setInterval(() => {
+        let dataList = global.tvChart.getDataList();
+        if (dataList && dataList.length > 0) {
+            clearInterval(waitForData);
+            restoreOverlays();
+        }
+        attempts++;
+        if (attempts > 50) clearInterval(waitForData); // Timeout 2.5s
+    }, 50);
+};
+
 
 // ============================================================
 // 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
 // ============================================================
 
 window.__wa_onIntervalChange = function(newInterval) {
+  console.log(`\n================================`);
+  console.log(`🔥 [HOOK] ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
+  console.log(`================================`);
+  
+  // CHỈ LƯU LẠI. Không xóa RAM. Không gọi Restore. (onChartReady sẽ tự làm)
   if (typeof global.__wa_saveAllOverlays === 'function') {
-    global.__wa_saveAllOverlays();
+      global.__wa_saveAllOverlays();
   }
 };
 
@@ -2756,19 +2780,8 @@ function mountUI() {
       if (mutations[i].removedNodes.length === 0) continue;
       var container = document.getElementById('sc-chart-container');
       if (container && !container.querySelector('.wa-toolbar')) {
-        // Toolbar bị xóa → chỉ inject lại DOM, KHÔNG gắn lại global events
+        // Chỉ nạp lại Giao diện Toolbar. Mọi logic vẽ đã có __wa_onChartReady lo.
         mountDOM();
-        
-        // FIX: Chart đã bị framework làm mới -> Phải xóa RAM để đánh thức hàm vẽ lại
-        if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
-        
-        // Sau khi DOM mới, gắn lại chart events nếu cần
-        if (global.tvChart) {
-          global.tvChart.__wa_chart_events_bound = false;
-          _bindChartEventsOnce();
-        }
-        // Restore overlay sau khi framework load xong data
-        setTimeout(restoreOverlays, 100);
         break;
       }
     }
