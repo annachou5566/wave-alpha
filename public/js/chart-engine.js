@@ -399,14 +399,30 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     let rawTk = parseInt(k.t || k.ot);
                     let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
 
-                    window.tvChart.updateData({
-                        timestamp: correctTk, // Đã chuẩn hoá 100% về mili-giây
-                        open: parseFloat(k.o),
-                        high: parseFloat(k.h),
-                        low: parseFloat(k.l),
-                        close: currentClose,
-                        volume: isNaN(currentVol) ? 0 : currentVol
-                    });
+                    // 💡 VÁ LỖI KHỰNG: Không cho phép kline ghi đè giá Close realtime trừ khi nến đã chốt sổ (k.x === true)
+                    let dataList = window.tvChart.getDataList();
+                    let lastCandle = (dataList && dataList.length > 0) ? dataList[dataList.length - 1] : null;
+
+                    if (lastCandle && lastCandle.timestamp === correctTk && k.x !== true) {
+                        window.tvChart.updateData({
+                            timestamp: correctTk,
+                            open: parseFloat(k.o),
+                            high: Math.max(lastCandle.high, parseFloat(k.h)),
+                            low: Math.min(lastCandle.low, parseFloat(k.l)),
+                            close: lastCandle.close, // 👈 Tuyệt đối giữ nguyên giá realtime đang nhảy của aggTrade
+                            volume: isNaN(currentVol) ? 0 : currentVol
+                        });
+                    } else {
+                        // Chốt nến hoặc sang nến mới
+                        window.tvChart.updateData({
+                            timestamp: correctTk,
+                            open: parseFloat(k.o),
+                            high: parseFloat(k.h),
+                            low: parseFloat(k.l),
+                            close: currentClose,
+                            volume: isNaN(currentVol) ? 0 : currentVol
+                        });
+                    }
                 }
             }
         }
@@ -448,45 +464,46 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            // 💡 VÁ LỖI: Bỏ wrapper chặn khung giờ (if tick/1s), cho phép MỌI KHUNG GIỜ nhận data realtime siêu tốc
-            if (nowT - (window.lastChartRender || 0) > 40) { // Giảm throttle xuống 40ms (~25 FPS) để mượt như app native
-                window.lastChartRender = nowT;
+            // 💡 VÁ LỖI 60FPS: Dùng requestAnimationFrame để vẽ mượt trơn tru cùng nhịp với tần số quét của màn hình
+            if (!window._isChartUpdatingRAF) {
+                window._isChartUpdatingRAF = true;
                 
-                if (window.tvChart && typeof window.tvChart.updateData === 'function') {
-                    if (window.currentChartInterval === 'tick') {
-                        // Gom nến tròn giây (timeSec * 1000) để không đẻ ra 10 nến/giây làm chart chạy loạn xạ
-                        window.tvChart.updateData({
-                            timestamp: timeSec * 1000,
-                            open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
-                            volume: parseFloat(valUSD || 0)
-                        });
+                requestAnimationFrame(() => {
+                    window._isChartUpdatingRAF = false; // Mở khóa ngay cho frame tiếp theo
                     
-                    } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
-                        // 1s chart lấy dữ liệu đã gộp để ra cây nến xanh đỏ thực sự
-                        window.tvChart.updateData({
-                            timestamp: timeSec * 1000,
-                            open: window.liveCandle1s.open,
-                            high: window.liveCandle1s.high,
-                            low: window.liveCandle1s.low,
-                            close: window.liveCandle1s.close,
-                            volume: window.liveCandle1s.vol
-                        });
-                    } else {
-                        // 💡 VÁ LỖI KHUNG LỚN (1m, 5m, 1h...): Bơm giá realtime vào ĐÚNG cây nến cuối cùng để không đẻ nến rác
-                        let dataList = window.tvChart.getDataList();
-                        if (dataList && dataList.length > 0) {
-                            let lastCandle = dataList[dataList.length - 1];
+                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
+                        if (window.currentChartInterval === 'tick') {
                             window.tvChart.updateData({
-                                timestamp: lastCandle.timestamp,    // TUYỆT ĐỐI GIỮ NGUYÊN TIMESTAMP CỦA NẾN HIỆN TẠI
-                                open: lastCandle.open,              // Giữ nguyên giá mở cửa
-                                high: Math.max(lastCandle.high, p), // Kéo râu nến lên nếu giá phá đỉnh nến
-                                low: Math.min(lastCandle.low, p),   // Kéo râu nến xuống nếu giá phá đáy nến
-                                close: p,                           // Chốt thân nến liên tục
-                                volume: lastCandle.volume           // Giữ nguyên volume (để luồng kline của Binance tự lo)
+                                timestamp: timeSec * 1000,
+                                open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
+                                volume: parseFloat(valUSD || 0)
                             });
+                        
+                        } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                            window.tvChart.updateData({
+                                timestamp: timeSec * 1000,
+                                open: window.liveCandle1s.open,
+                                high: window.liveCandle1s.high,
+                                low: window.liveCandle1s.low,
+                                close: window.liveCandle1s.close,
+                                volume: window.liveCandle1s.vol
+                            });
+                        } else {
+                            let dataList = window.tvChart.getDataList();
+                            if (dataList && dataList.length > 0) {
+                                let lastCandle = dataList[dataList.length - 1];
+                                window.tvChart.updateData({
+                                    timestamp: lastCandle.timestamp,    
+                                    open: lastCandle.open,              
+                                    high: Math.max(lastCandle.high, p), 
+                                    low: Math.min(lastCandle.low, p),   
+                                    close: p,                           
+                                    volume: lastCandle.volume           
+                                });
+                            }
                         }
                     }
-                }
+                });
             }
 
             if (!window.isRenderingPrice) {
