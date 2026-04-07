@@ -31,11 +31,19 @@ window.startWaterfallEngine = function() {
     let lastDraw = 0;
 
     function renderLoop(time) {
+        // 💡 VÁ LỖI: Trả lại trạng thái false để lần sau mở Chart động cơ còn biết đường chạy lại
+        if (!window.tvChart || !window._waTargetCandle) {
+            window._waRafRunning = false; 
+            return; 
+        }
+        
         requestAnimationFrame(renderLoop);
-        if (!window.tvChart || !window._waTargetCandle) return;
+        
+        // 💡 BẢO VỆ GPU: Nếu tab đang bị ẩn/thu nhỏ, tạm ngưng vẽ nến để tiết kiệm 100% tài nguyên Card Màn Hình
+        if (document.hidden) return;
         
         // 🛡️ BẢO VỆ CPU: Khóa render ở mức 30 FPS (khoảng 30-33ms). 
-        if (time - lastDraw < 30) return; 
+        if (time - lastDraw < 30) return;
 
         let t = window._waTargetCandle;
         let c = window._waCurrentCandle;
