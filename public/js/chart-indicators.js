@@ -992,19 +992,19 @@
         { key: 'midLine', title: '', type: 'line' },
         { key: 'lowerBand', title: '', type: 'line' }
       ],
+      // TÙY CHỈNH MÀU SẮC & NÉT VẼ Ở ĐÂY
       styles: {
         lines: [
-          { color: '#7E57C2', size: 1.5, style: 'solid' },        
-          { color: COLOR.gold, size: 1.5, style: 'solid' },       
-          { color: COLOR.green, size: 1, style: 'solid' },        
-          { color: COLOR.green, size: 1, style: 'solid' },        
-          { color: '#787B86', size: 1, style: 'dashed' },         
-          { color: 'rgba(120,123,134,0.5)', size: 1, style: 'dashed' }, 
-          { color: '#787B86', size: 1, style: 'dashed' }          
+          { color: '#7E57C2', size: 1, style: 'solid' },        // [0] rsi: Mỏng lại (size 1)
+          { color: COLOR.gold, size: 1, style: 'solid' },       // [1] rsiMA: Mỏng lại (size 1)
+          { color: COLOR.green, size: 1, style: 'solid' },      // [2] bbUpper
+          { color: COLOR.green, size: 1, style: 'solid' },      // [3] bbLower
+          { color: '#787B86', size: 1, style: 'dashed', dashedValue: [3, 3] }, // [4] 70: Nét đứt nhỏ, xám
+          { color: COLOR.white, size: 1.5, style: 'dashed', dashedValue: [8, 6] }, // [5] 50: Nét đứt to, trắng
+          { color: '#787B86', size: 1, style: 'dashed', dashedValue: [3, 3] }  // [6] 30: Nét đứt nhỏ, xám
         ]
       },
       calc: function(dataList, indicator) {
-        // (Giữ nguyên tối ưu tính toán từ bản trước - chạy cực nhanh)
         const rsiLen = indicator.calcParams[0];
         const maType = indicator.calcParams[1]; 
         const maLen = indicator.calcParams[2];
@@ -1110,7 +1110,6 @@
         return results;
       },
   
-      // 🚀 ENGINE VẼ MỚI (KHÔNG DÙNG CLIP() ĐỂ TRÁNH LAG)
       draw: function({ ctx, visibleRange, indicator, xAxis, yAxis }) {
         const { from, to } = visibleRange;
         const res = indicator.result;
@@ -1120,11 +1119,9 @@
         const y70 = yAxis.convertToPixel(70);
         const y30 = yAxis.convertToPixel(30);
   
-        // A. Fill nền Tím cơ bản (nhanh nhất)
         ctx.fillStyle = 'rgba(126, 87, 194, 0.1)';
         ctx.fillRect(startX, y70, endX - startX, y30 - y70);
   
-        // B. Fill Bollinger Bands
         if (indicator.calcParams[1] === 1) {
           ctx.fillStyle = 'rgba(14, 203, 129, 0.1)';
           ctx.beginPath();
@@ -1146,11 +1143,9 @@
           }
         }
   
-        // C. Gradients (TỐI ƯU TOÁN HỌC - KHÔNG DÙNG CLIP)
         let y100 = yAxis.convertToPixel(100);
         let y0 = yAxis.convertToPixel(0);
         
-        // Phòng hờ biểu đồ bị bóp dẹt quá nhỏ gây lỗi Gradient
         let gradOB = Math.abs(y70 - y100) > 1 ? ctx.createLinearGradient(0, y100, 0, y70) : 'rgba(14, 203, 129, 0.5)';
         if (typeof gradOB !== 'string') {
           gradOB.addColorStop(0, 'rgba(14, 203, 129, 0.8)'); 
@@ -1163,7 +1158,6 @@
           gradOS.addColorStop(1, 'rgba(246, 70, 93, 0.8)');
         }
   
-        // 1. Quá Mua (>70)
         ctx.fillStyle = gradOB;
         ctx.beginPath();
         let inOB = false;
@@ -1201,7 +1195,6 @@
         if (inOB) ctx.lineTo(xAxis.convertToPixel(to - 1), y70);
         ctx.fill();
   
-        // 2. Quá Bán (<30)
         ctx.fillStyle = gradOS;
         ctx.beginPath();
         let inOS = false;
@@ -1239,7 +1232,6 @@
         if (inOS) ctx.lineTo(xAxis.convertToPixel(to - 1), y30);
         ctx.fill();
   
-        // D. Text Bull/Bear Label
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
         for (let i = from; i < to; i++) {
