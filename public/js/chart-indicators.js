@@ -983,25 +983,19 @@
       shortName: 'RSI',
       series: 'normal',
       calcParams: [14, 0, 14, 2.0, 1],
+      // 1. Đã gỡ bỏ upperBand, midLine, lowerBand khỏi figures để tự vẽ bằng Canvas
       figures: [
         { key: 'rsi', title: 'RSI: ', type: 'line' },
         { key: 'rsiMA', title: 'MA: ', type: 'line' },
         { key: 'bbUpper', title: 'BB Up: ', type: 'line' },
-        { key: 'bbLower', title: 'BB Low: ', type: 'line' },
-        { key: 'upperBand', title: '', type: 'line' },
-        { key: 'midLine', title: '', type: 'line' },
-        { key: 'lowerBand', title: '', type: 'line' }
+        { key: 'bbLower', title: 'BB Low: ', type: 'line' }
       ],
-      // TÙY CHỈNH MÀU SẮC & NÉT VẼ Ở ĐÂY
       styles: {
         lines: [
-          { color: '#7E57C2', size: 1, style: 'solid' },        // [0] rsi: Mỏng lại (size 1)
-          { color: COLOR.gold, size: 1, style: 'solid' },       // [1] rsiMA: Mỏng lại (size 1)
+          { color: '#7E57C2', size: 1, style: 'solid' },        // [0] rsi
+          { color: COLOR.gold, size: 1, style: 'solid' },       // [1] rsiMA
           { color: COLOR.green, size: 1, style: 'solid' },      // [2] bbUpper
-          { color: COLOR.green, size: 1, style: 'solid' },      // [3] bbLower
-          { color: '#787B86', size: 1, style: 'dashed', dashedValue: [3, 3] }, // [4] 70: Nét đứt nhỏ, xám
-          { color: COLOR.white, size: 1.5, style: 'dashed', dashedValue: [8, 6] }, // [5] 50: Nét đứt to, trắng
-          { color: '#787B86', size: 1, style: 'dashed', dashedValue: [3, 3] }  // [6] 30: Nét đứt nhỏ, xám
+          { color: COLOR.green, size: 1, style: 'solid' }       // [3] bbLower
         ]
       },
       calc: function(dataList, indicator) {
@@ -1059,11 +1053,9 @@
   
         const results = new Array(dataSize);
         for (let i = 0; i < dataSize; i++) {
+          // Đã tối ưu dung lượng: bỏ lưu 30, 50, 70 trên từng điểm nến
           let res = {
             rsi: rsiData[i],
-            upperBand: 70,
-            midLine: 50,
-            lowerBand: 30,
             rsiMA: rsiMA[i] || 0
           };
   
@@ -1117,11 +1109,44 @@
         const endX = xAxis.convertToPixel(to - 1);
         
         const y70 = yAxis.convertToPixel(70);
+        const y50 = yAxis.convertToPixel(50);
         const y30 = yAxis.convertToPixel(30);
   
+        // --- 🚀 THÊM MỚI: VẼ ĐƯỜNG 30, 50, 70 CỐ ĐỊNH HOÀN TOÀN BẰNG CANVAS ---
+        ctx.save();
+        
+        // Vẽ đường 70 (Xám, đứt nhỏ)
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#787B86';
+        ctx.setLineDash([3, 3]); // Nét đứt: vạch 3px, khoảng trống 3px
+        ctx.beginPath();
+        ctx.moveTo(startX, y70);
+        ctx.lineTo(endX, y70);
+        ctx.stroke();
+  
+        // Vẽ đường 30 (Xám, đứt nhỏ)
+        ctx.beginPath();
+        ctx.moveTo(startX, y30);
+        ctx.lineTo(endX, y30);
+        ctx.stroke();
+  
+        // Vẽ đường 50 (Trắng, đứt to)
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = COLOR.white;
+        ctx.setLineDash([8, 6]); // Nét đứt to: vạch 8px, khoảng trống 6px
+        ctx.beginPath();
+        ctx.moveTo(startX, y50);
+        ctx.lineTo(endX, y50);
+        ctx.stroke();
+  
+        ctx.restore(); // Khôi phục trạng thái nét vẽ mặc định
+        // ----------------------------------------------------------------------
+  
+        // Nền tím
         ctx.fillStyle = 'rgba(126, 87, 194, 0.1)';
         ctx.fillRect(startX, y70, endX - startX, y30 - y70);
   
+        // Nền Bollinger Bands
         if (indicator.calcParams[1] === 1) {
           ctx.fillStyle = 'rgba(14, 203, 129, 0.1)';
           ctx.beginPath();
@@ -1143,6 +1168,7 @@
           }
         }
   
+        // Gradients
         let y100 = yAxis.convertToPixel(100);
         let y0 = yAxis.convertToPixel(0);
         
@@ -1232,6 +1258,7 @@
         if (inOS) ctx.lineTo(xAxis.convertToPixel(to - 1), y30);
         ctx.fill();
   
+        // Text Bull/Bear Label
         ctx.font = '11px sans-serif';
         ctx.textAlign = 'center';
         for (let i = from; i < to; i++) {
