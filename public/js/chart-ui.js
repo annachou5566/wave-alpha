@@ -40,11 +40,21 @@ window.currentChartInterval = '1d';
 window.currentTheme = localStorage.getItem('wave_theme') || 'cyber';
 
 window.isProSoundOn = true; 
-window.tapeRenderQueue = [];
-window.isTapeRendering = false;
-window.liveTradesQueue = [];
-window.isLiveTradesRendering = false;
+// ==========================================
+// 🌊 HFT TAPE ENGINE (DOM RECYCLING & BATCHING)
+// ==========================================
 
+// 1. Khởi tạo các Buffer và Bể chứa DOM (Tránh dọn rác GC)
+window._tapeBuffer = [];
+window._tradesBuffer = [];
+window._highlightQueue = [];
+window._domPool = [];
+window._isMasterRafRunning = false;
+window._tapeActiveTypes = new Set(['bot', 'liq', 'whale', 'shark', 'dolphin']); // Cache bộ lọc
+
+// ==========================================
+// 🔊 GIỮ NGUYÊN CÁC HÀM UI & ÂM THANH CỦA BẠN
+// ==========================================
 window.toggleProSound = function() {
     window.isProSoundOn = !window.isProSoundOn;
     let icon = document.getElementById('cc-sound-icon');
@@ -67,140 +77,6 @@ window.playProPing = function() {
     } catch(e) {}
 };
 
-window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
-    let isLiq = type.includes('CHÁY');
-    
-    // Nếu có truyền timestamp (từ API lịch sử) thì lấy giờ đó, không thì lấy giờ hiện tại (Realtime)
-    let dateObj = timestamp ? new Date(timestamp) : new Date();
-    const timeStr = dateObj.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    // ----------------------------------------------------
-    // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES
-    // ----------------------------------------------------
-    if (isLiq) {
-        let liqSig = `${type}_${price}_${vol}`;
-        let nowMs = Date.now();
-        if (!window.lastLiqEvent) window.lastLiqEvent = { sig: '', time: 0 };
-        if (window.lastLiqEvent.sig === liqSig && (nowMs - window.lastLiqEvent.time < 2000)) return; 
-        window.lastLiqEvent = { sig: liqSig, time: nowMs };
-
-        const liqTape = document.getElementById('fut-liq-tape');
-        if (liqTape) {
-            if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
-            
-            const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-            const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
-            const heatRatio = Math.min(1, vol / heatMaxThreshold); 
-            const opacity = 0.05 + (heatRatio * 0.5); 
-            
-            const lColor = type.includes('LONG') ? '#FF007F' : '#00F0FF'; 
-            const lBg = type.includes('LONG') ? `rgba(255, 0, 127, ${opacity})` : `rgba(0, 240, 255, ${opacity})`;
-            
-            const lEntry = document.createElement('div');
-            const borderLeft = heatRatio > 0.6 ? `4px solid ${lColor}` : 'none';
-            const fontWeight = heatRatio > 0.6 ? '900' : '600';
-
-            lEntry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; padding: 4px 6px; border-bottom: 1px solid var(--term-border); border-left: ${borderLeft}; background: ${lBg}; font-family: var(--font-num); transition: 0.3s; font-weight: ${fontWeight};`;
-
-            let lIcon = type.includes('LONG') ? '🩸' : '💥';
-            let lAction = type.includes('LONG') ? 'LIQ L' : 'LIQ S';
-            
-            lEntry.innerHTML = `
-                <span style="color:${lColor}; font-weight:800; width: 35%; text-shadow: 0 0 5px ${lColor};">${lIcon} ${lAction}</span>
-                <span style="color:#eaecef; font-weight:bold; width: 45%; text-align: center;">$${window.formatCompactUSD(vol)} @ ${window.formatPrice(price)}</span>
-                <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
-            `;
-            
-            liqTape.prepend(lEntry);
-            
-            if (!timestamp) {
-                lEntry.style.background = lColor;
-                lEntry.style.color = '#000';
-                setTimeout(() => { lEntry.style.background = lBg; lEntry.style.color = ''; }, 150);
-            }
-
-            while (liqTape.children.length > 50) liqTape.removeChild(liqTape.lastChild);
-        }
-    }
-
-    if (isLiq && vol < 1000) return; 
-    if (!isLiq && vol < 500 && !type.includes('BOT')) return;
-
-    // ----------------------------------------------------
-    // 2. PHÂN LOẠI CHÍNH XÁC TAG CHO BỘ LỌC TAPE
-    // ----------------------------------------------------
-    let tapeType = 'bot'; // Mặc định tất cả thuật toán, wash trade, sweep là bot
-    if (isLiq) tapeType = 'liq';
-    else if (type.includes('VOI')) tapeType = 'whale';
-    else if (type.includes('MẬP')) tapeType = 'shark';
-    else if (type.includes('HEO')) tapeType = 'dolphin';
-
-    // Chỉ cá voi, cá mập và thanh lý mới phát ra âm thanh và phát sáng
-    const isGlowFish = (tapeType === 'whale' || tapeType === 'shark' || tapeType === 'liq');
-    if (isGlowFish && !timestamp) window.playProPing();
-
-    const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-    const heatMaxThreshold = Math.max(5000, currentAvgTicket * 15);
-    const heatRatio = Math.min(1, vol / heatMaxThreshold); 
-    const opacity = 0.03 + (heatRatio * 0.27); 
-
-    let color = isBuy ? '#0ECB81' : '#F6465D';
-    let baseRgb = isBuy ? '14, 203, 129' : '246, 70, 93';
-
-    if (type.includes('CHÁY LONG')) { color = '#FF007F'; baseRgb = '255, 0, 127'; } 
-    else if (type.includes('CHÁY SHORT')) { color = '#00F0FF'; baseRgb = '0, 240, 255'; }
-
-    const bg = `rgba(${baseRgb}, ${isLiq ? 0.35 : opacity})`;
-    const action = isLiq ? '' : (isBuy ? 'BUY' : 'SELL');
-    const entry = document.createElement('div');
-    const fontWt = (heatRatio > 0.6 || isLiq) ? '900' : (heatRatio > 0.3 ? '800' : '600');
-
-    // GÁN NHÃN ĐÃ ĐƯỢC CHUẨN HÓA Ở TRÊN
-    entry.dataset.tapeType = tapeType; 
-    entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${(heatRatio > 0.6 || isLiq) ? 4 : 2}px solid ${color}; border-radius: 0; font-family: var(--font-num); gap: 4px; font-weight: ${fontWt}; transition: background 0.8s ease;`;
-
-    let glow = isGlowFish ? `text-shadow: 0 0 5px ${color};` : '';
-
-    entry.innerHTML = `
-        <span style="color:${color}; font-weight:800; width: 35%; ${glow}">${type} ${action}</span>
-        <span style="color:#eaecef; font-weight:bold; width: 45%; text-align: center;">$${window.formatCompactUSD(vol)} @ ${window.formatPrice(price)}</span>
-        <span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>
-    `;
-    
-    // KIỂM TRA CHECKBOX ĐỂ ẨN HIỆN NGAY TỪ LÚC TẠO LỆNH MỚI
-    let checkboxes = document.querySelectorAll('.tape-filter-cb');
-    if (checkboxes.length > 0) {
-        let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        if (!activeTypes.includes(tapeType)) {
-            entry.style.display = 'none';
-        }
-    }
-
-    window.tapeRenderQueue.push({ entry, isGlowFish, isBuy, bg });
-
-    if (!window.isTapeRendering) {
-        window.isTapeRendering = true;
-        requestAnimationFrame(() => {
-            const tape = document.getElementById('cc-sniper-tape');
-            if (tape && window.tapeRenderQueue.length > 0) {
-                if (tape.innerHTML.includes('Đang quét') || tape.innerHTML.includes('Đang rình')) tape.innerHTML = '';
-                const fragment = document.createDocumentFragment();
-                const items = window.tapeRenderQueue.splice(0, window.tapeRenderQueue.length);
-                for (let i = items.length - 1; i >= 0; i--) {
-                    fragment.insertBefore(items[i].entry, fragment.firstChild);
-                    if (items[i].isGlowFish && !timestamp) { 
-                        items[i].entry.style.background = items[i].isBuy ? 'rgba(14, 203, 129, 0.55)' : 'rgba(246, 70, 93, 0.55)';
-                        setTimeout(() => { items[i].entry.style.background = items[i].bg; items[i].entry.style.textShadow = 'none'; }, 150);
-                    }
-                }
-                tape.prepend(fragment);
-                while (tape.children.length > 50) tape.removeChild(tape.lastChild);
-            }
-            window.isTapeRendering = false;
-        });
-    }
-};
-
 window.toggleTapeFilterMenu = function(e) {
     if(e) e.stopPropagation();
     let menu = document.getElementById('tape-filter-menu');
@@ -211,7 +87,6 @@ window.toggleTapeFilterMenu = function(e) {
     }
 };
 
-// Đè lại hàm click ra ngoài để đóng cả 2 menu (Menu Chart lớn và Menu Tape nhỏ)
 document.addEventListener('click', function(e) {
     let menu1 = document.getElementById('sc-filter-menu');
     let btn1 = document.getElementById('sc-filter-btn');
@@ -228,26 +103,173 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// ==========================================
+// 🚀 ĐỘNG CƠ RENDER MỚI (CHỐNG GIẬT LAG)
+// ==========================================
 
+// Hàm fomat thời gian siêu tốc (Dùng Bitwise ops, nhanh hơn Date() 8x)
+window._fmtTime = function(ms) {
+    let d = ms ? new Date(ms) : new Date();
+    let h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+    return (h < 10 ? '0'+h : h) + ':' + (m < 10 ? '0'+m : m) + ':' + (s < 10 ? '0'+s : s);
+};
+
+// Hàm lấy thẻ Div tái chế (Không tạo mới nếu không cần thiết)
+window._getDiv = function() { return window._domPool.length > 0 ? window._domPool.pop() : document.createElement('div'); };
+
+// VÒNG LẶP MASTER: Chỉ 1 vòng lặp duy nhất xử lý TẤT CẢ mọi thứ trên màn hình
+window._masterTapeRenderLoop = function(time) {
+    let needsNextFrame = false;
+    
+    // A. Xử lý tắt đèn Highlight (Thay thế setTimeout tốn CPU)
+    for (let i = window._highlightQueue.length - 1; i >= 0; i--) {
+        let item = window._highlightQueue[i];
+        if (time - item.start > 150) {
+            item.el.style.background = item.endBg;
+            item.el.style.color = item.endColor || '';
+            item.el.style.textShadow = 'none';
+            window._highlightQueue.splice(i, 1);
+        } else {
+            needsNextFrame = true;
+        }
+    }
+
+    // B. Xử lý đẩy dữ liệu vào Sniper Tape & Bảng Thanh Lý (Futures)
+    const tape = document.getElementById('cc-sniper-tape');
+    const liqTape = document.getElementById('fut-liq-tape');
+    
+    if (window._tapeBuffer.length > 0) {
+        let fragSniper = document.createDocumentFragment();
+        let fragLiq = document.createDocumentFragment();
+        let items = window._tapeBuffer.splice(0, window._tapeBuffer.length);
+        
+        for (let i = items.length - 1; i >= 0; i--) { 
+            if (items[i].dataset.tapeType === 'liq_only' && liqTape) {
+                fragLiq.insertBefore(items[i], fragLiq.firstChild);
+            } else if (tape) {
+                fragSniper.insertBefore(items[i], fragSniper.firstChild); 
+            }
+        }
+        
+        if (tape && fragSniper.childNodes.length > 0) {
+            if (tape.innerHTML.includes('Đang quét')) tape.innerHTML = '';
+            tape.prepend(fragSniper);
+            while (tape.children.length > 50) { window._domPool.push(tape.removeChild(tape.lastChild)); }
+        }
+        
+        if (liqTape && fragLiq.childNodes.length > 0) {
+            if (liqTape.innerHTML.includes('Đang rình')) liqTape.innerHTML = '';
+            liqTape.prepend(fragLiq);
+            while (liqTape.children.length > 50) { window._domPool.push(liqTape.removeChild(liqTape.lastChild)); }
+        }
+    }
+
+    // C. Xử lý đẩy dữ liệu vào Smart Trades
+    const tradesBox = document.getElementById('sc-live-trades');
+    if (tradesBox && window._tradesBuffer.length > 0) {
+        let frag = document.createDocumentFragment();
+        let items = window._tradesBuffer.splice(0, window._tradesBuffer.length);
+        
+        for (let i = items.length - 1; i >= 0; i--) { frag.appendChild(items[i]); }
+        tradesBox.insertBefore(frag, tradesBox.firstChild);
+        
+        while (tradesBox.children.length > 30) { window._domPool.push(tradesBox.removeChild(tradesBox.lastChild)); }
+    }
+
+    if (window._tapeBuffer.length > 0 || window._tradesBuffer.length > 0 || needsNextFrame) {
+        requestAnimationFrame(window._masterTapeRenderLoop);
+    } else {
+        window._isMasterRafRunning = false;
+    }
+};
+
+window._triggerMasterRaf = function() {
+    if (!window._isMasterRafRunning) {
+        window._isMasterRafRunning = true;
+        requestAnimationFrame(window._masterTapeRenderLoop);
+    }
+};
+
+window.logToSniperTape = function(isBuy, vol, type, price, timestamp = null) {
+    let isLiq = type.includes('CHÁY');
+    const timeStr = window._fmtTime(timestamp);
+    
+    // 1. XỬ LÝ TAPE THANH LÝ TẠI TAB FUTURES
+    if (isLiq) {
+        let liqSig = `${type}_${price}_${vol}`;
+        let nowMs = Date.now();
+        if (!window.lastLiqEvent) window.lastLiqEvent = { sig: '', time: 0 };
+        if (window.lastLiqEvent.sig === liqSig && (nowMs - window.lastLiqEvent.time < 2000)) return; 
+        window.lastLiqEvent = { sig: liqSig, time: nowMs };
+
+        const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+        const heatRatio = Math.min(1, vol / Math.max(5000, currentAvgTicket * 15)); 
+        const opacity = 0.05 + (heatRatio * 0.5); 
+        
+        const lColor = type.includes('LONG') ? '#FF007F' : '#00F0FF'; 
+        const lBg = type.includes('LONG') ? `rgba(255, 0, 127, ${opacity})` : `rgba(0, 240, 255, ${opacity})`;
+        
+        const lEntry = window._getDiv();
+        lEntry.dataset.tapeType = 'liq_only';
+        lEntry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; padding: 4px 6px; border-bottom: 1px solid var(--term-border); border-left: ${heatRatio > 0.6 ? `4px solid ${lColor}` : 'none'}; background: ${lBg}; font-family: var(--font-num); transition: none; font-weight: ${heatRatio > 0.6 ? '900' : '600'};`;
+
+        let lIcon = type.includes('LONG') ? '🩸' : '💥';
+        let lAction = type.includes('LONG') ? 'LIQ L' : 'LIQ S';
+        
+        lEntry.innerHTML = `<span style="color:${lColor}; font-weight:800; width: 35%; text-shadow: 0 0 5px ${lColor};">${lIcon} ${lAction}</span><span style="color:#eaecef; font-weight:bold; width: 45%; text-align: center;">$${window.formatCompactUSD(vol)} @ ${window.formatPrice(price)}</span><span style="color:#848e9c; font-weight:600; width: 20%; text-align: right;">${timeStr}</span>`;
+        
+        if (!timestamp) {
+            lEntry.style.background = lColor;
+            lEntry.style.color = '#000';
+            window._highlightQueue.push({ el: lEntry, endBg: lBg, endColor: '', start: performance.now() });
+        }
+
+        window._tapeBuffer.push(lEntry);
+        window._triggerMasterRaf();
+    }
+
+    if (isLiq && vol < 1000) return; 
+    if (!isLiq && vol < 500 && !type.includes('BOT')) return;
+
+    let tapeType = isLiq ? 'liq' : (type.includes('VOI') ? 'whale' : (type.includes('MẬP') ? 'shark' : (type.includes('HEO') ? 'dolphin' : 'bot')));
+    const isGlowFish = (tapeType === 'whale' || tapeType === 'shark' || tapeType === 'liq');
+    if (isGlowFish && !timestamp) window.playProPing();
+
+    const currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
+    const heatRatio = Math.min(1, vol / Math.max(5000, currentAvgTicket * 15)); 
+    
+    let color = isLiq ? (type.includes('LONG') ? '#FF007F' : '#00F0FF') : (isBuy ? '#0ECB81' : '#F6465D');
+    let baseRgb = isLiq ? (type.includes('LONG') ? '255, 0, 127' : '0, 240, 255') : (isBuy ? '14, 203, 129' : '246, 70, 93');
+    const bg = `rgba(${baseRgb}, ${isLiq ? 0.35 : (0.03 + heatRatio * 0.27)})`;
+    const action = isLiq ? '' : (isBuy ? 'BUY' : 'SELL');
+
+    const entry = window._getDiv();
+    entry.dataset.tapeType = tapeType; 
+    entry.style.cssText = `display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; background: ${bg}; border-left: ${(heatRatio > 0.6 || isLiq) ? 4 : 2}px solid ${color}; font-family: var(--font-num); gap: 4px; font-weight: ${(heatRatio > 0.6 || isLiq) ? '900' : '800'}; transition: none;`;
+
+    entry.innerHTML = `<span style="color:${color}; width:35%; text-shadow:${isGlowFish ? '0 0 5px '+color : 'none'};">${type} ${action}</span><span style="color:#eaecef; width:45%; text-align:center;">$${window.formatCompactUSD(vol)} @ ${window.formatPrice(price)}</span><span style="color:#848e9c; width:20%; text-align:right;">${timeStr}</span>`;
+    
+    if (!window._tapeActiveTypes.has(tapeType)) entry.style.display = 'none';
+
+    if (isGlowFish && !timestamp) {
+        entry.style.background = `rgba(${baseRgb}, 0.55)`;
+        window._highlightQueue.push({ el: entry, endBg: bg, start: performance.now() });
+    }
+
+    window._tapeBuffer.push(entry);
+    window._triggerMasterRaf();
+};
 
 window.filterSniperTape = function() {
     let checkboxes = document.querySelectorAll('.tape-filter-cb');
-    if (checkboxes.length === 0) return;
+    window._tapeActiveTypes.clear();
+    checkboxes.forEach(cb => { if(cb.checked) window._tapeActiveTypes.add(cb.value); });
     
-    // Lấy danh sách các loại đang được Tick
-    let activeTypes = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-
     const tape = document.getElementById('cc-sniper-tape');
     if (!tape) return;
-    
     Array.from(tape.children).forEach(child => {
-        if (!child.dataset.tapeType) return; 
-        
-        // Hiện lên nếu Loại của dòng đó nằm trong danh sách đang Tick
-        if (activeTypes.includes(child.dataset.tapeType)) {
-            child.style.display = 'flex';
-        } else {
-            child.style.display = 'none';
+        if (child.dataset.tapeType && child.dataset.tapeType !== 'liq_only') {
+            child.style.display = window._tapeActiveTypes.has(child.dataset.tapeType) ? 'flex' : 'none';
         }
     });
 };
@@ -258,66 +280,37 @@ window.flushSmartTape = function(cluster) {
     if (filterEl && filterEl.value === 'none') return;
     
     let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-    let whaleMin = Math.max(15000, currentAvgTicket * 15);
-    let sharkMin = Math.max(5000, currentAvgTicket * 7);
-    let dolphinMin = Math.max(2000, currentAvgTicket * 3);
+    let whaleMin = Math.max(15000, currentAvgTicket * 15), sharkMin = Math.max(5000, currentAvgTicket * 7), dolphinMin = Math.max(2000, currentAvgTicket * 3);
+    let isWhale = cluster.vol >= whaleMin, isShark = cluster.vol >= sharkMin && cluster.vol < whaleMin, isDolphin = cluster.vol >= dolphinMin && cluster.vol < sharkMin;
+    let isSweep = cluster.count >= 6 && cluster.vol >= 1000;
 
-    let isWhale   = cluster.vol >= whaleMin;
-    let isShark   = cluster.vol >= sharkMin && cluster.vol < whaleMin;
-    let isDolphin = cluster.vol >= dolphinMin && cluster.vol < sharkMin;
-    let isSweep   = cluster.count >= 6 && cluster.vol >= 1000;
+    let icon = isWhale ? '🐋 ' : (isShark ? '🦈 ' : (isDolphin ? '🐬 ' : (isSweep ? '🤖 ' : '')));
+    let row = window._getDiv();
+    
+    let c_up = '#0ECB81', c_down = '#F6465D', c_bg = cluster.dir ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
+    row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:3px 4px; border-bottom:1px solid #1A1F26; background:${icon ? c_bg : 'transparent'}; font-weight:${icon ? '800' : 'normal'}; font-variant-numeric: tabular-nums; transition: none;`;
+    
+    row.innerHTML = `<span style="color:${cluster.dir ? c_up : c_down}; flex: 1; text-align: left; overflow: hidden; white-space: nowrap;">${window.formatPrice(cluster.p)}</span><span style="color:#eaecef; flex: 1; text-align: center; white-space: nowrap;">${icon}$${window.formatCompactUSD(cluster.vol)}</span><span style="color:#707A8A; flex: 1; text-align: right; white-space: nowrap;">${window._fmtTime(cluster.t)}</span>`;
 
-    let icon = ''; let fontWeight = 'normal';
-    if (isWhale) { icon = '🐋 '; fontWeight = '800'; } else if (isShark) { icon = '🦈 '; fontWeight = '700'; } else if (isDolphin) { icon = '🐬 '; fontWeight = '600'; } else if (isSweep) { icon = '🤖 '; fontWeight = '600'; }
-
-    let c_up = '#0ECB81'; let c_down = '#F6465D';
-    let c_bg_up = 'transparent'; let c_bg_down = 'transparent';
-    if (isWhale || isShark || isSweep) { c_bg_up = 'rgba(14, 203, 129, 0.15)'; c_bg_down = 'rgba(246, 70, 93, 0.15)'; }
-
-    let row = document.createElement('div');
-    row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:3px 4px; border-bottom:1px solid #1A1F26; background:${cluster.dir ? c_bg_up : c_bg_down}; font-weight:${fontWeight}; font-variant-numeric: tabular-nums; transition: 0.1s;`;
-    let timeStr = new Date(cluster.t).toLocaleTimeString('en-GB',{hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    row.innerHTML = `<span style="color:${cluster.dir ? c_up : c_down}; flex: 1; text-align: left; overflow: hidden; white-space: nowrap;">${window.formatPrice(cluster.p)}</span><span style="color:#eaecef; flex: 1; text-align: center; white-space: nowrap;">${icon}$${window.formatCompactUSD(cluster.vol)}</span><span style="color:#707A8A; flex: 1; text-align: right; white-space: nowrap;">${timeStr}</span>`;
-
-    window.liveTradesQueue.push({ el: row, isHighlight: isWhale || isShark, dir: cluster.dir, c_up, c_down, c_bg_up, c_bg_down });
-
-    if (!window.isLiveTradesRendering) {
-        window.isLiveTradesRendering = true;
-        requestAnimationFrame(() => {
-            let tradesBox = document.getElementById('sc-live-trades');
-            if (tradesBox && window.liveTradesQueue.length > 0) {
-                let fragment = document.createDocumentFragment();
-                let items = window.liveTradesQueue.splice(0, window.liveTradesQueue.length);
-                for (let i = items.length - 1; i >= 0; i--) {
-                    fragment.appendChild(items[i].el);
-                    if (items[i].isHighlight) {
-                        items[i].el.style.background = items[i].dir ? items[i].c_up : items[i].c_down; items[i].el.style.color = '#000000';
-                        setTimeout(() => { items[i].el.style.background = items[i].dir ? items[i].c_bg_up : items[i].c_bg_down; items[i].el.style.color = ''; }, 100);
-                    }
-                }
-                tradesBox.insertBefore(fragment, tradesBox.firstChild);
-                while (tradesBox.children.length > 30) tradesBox.removeChild(tradesBox.lastChild);
-            }
-            window.isLiveTradesRendering = false;
-        });
+    if (isWhale || isShark) {
+        row.style.background = cluster.dir ? c_up : c_down; row.style.color = '#000000';
+        window._highlightQueue.push({ el: row, endBg: c_bg, endColor: '', start: performance.now() });
     }
 
+    window._tradesBuffer.push(row);
+    window._triggerMasterRaf();
+    
     if (isDolphin || isShark || isWhale || isSweep) {
         if (isWhale) { window.scCWhale = (window.scCWhale||0) + 1; let el = document.getElementById('sc-stat-whale'); if(el) el.innerText = window.scCWhale; }
         else if (isShark) { window.scCShark = (window.scCShark||0) + 1; let el = document.getElementById('sc-stat-shark'); if(el) el.innerText = window.scCShark; }
         else if (isDolphin) { window.scCDolphin = (window.scCDolphin||0) + 1; let el = document.getElementById('sc-stat-dolphin'); if(el) el.innerText = window.scCDolphin; }
         else if (isSweep) { window.scCSweep = (window.scCSweep||0) + 1; let el = document.getElementById('sc-stat-sweep'); if(el) el.innerText = window.scCSweep; }
 
-        let fishType = isWhale ? 'whale' : (isShark ? 'shark' : (isDolphin ? 'dolphin' : 'bot'));
-        
-        // RÚT GỌN SỐ: Chỉ lấy 1 chữ số thập phân (Ví dụ 7.89K -> 7.8K)
-        let shortVol = cluster.vol >= 1e9 ? (cluster.vol/1e9).toFixed(1) + 'B' : (cluster.vol >= 1e6 ? (cluster.vol/1e6).toFixed(1) + 'M' : (cluster.vol >= 1e3 ? (cluster.vol/1e3).toFixed(1) + 'K' : cluster.vol.toFixed(0)));
-        let textMsg = icon + '$' + shortVol;
-        
+        let textMsg = icon + '$' + (cluster.vol >= 1e6 ? (cluster.vol/1e6).toFixed(1)+'M' : (cluster.vol >= 1e3 ? (cluster.vol/1e3).toFixed(1)+'K' : cluster.vol.toFixed(0)));
         if (isSweep && !isDolphin && !isShark && !isWhale) textMsg = '🤖 SWEEP';
         let markerColor = cluster.dir ? (window.currentTheme === 'trad' ? '#0ECB81' : '#2af592') : (window.currentTheme === 'trad' ? '#F6465D' : '#cb55e3');
 
-        window.scChartMarkers.push({ time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg, fishType: fishType });
+        window.scChartMarkers.push({ time: cluster.timeSec, position: cluster.dir ? 'belowBar' : 'aboveBar', color: markerColor, shape: cluster.dir ? 'arrowUp' : 'arrowDown', text: textMsg, fishType: isWhale ? 'whale' : (isShark ? 'shark' : (isDolphin ? 'dolphin' : 'bot')) });
         if (window.scChartMarkers.length > 50) window.scChartMarkers.shift();
         
         if (isWhale || isShark) {
