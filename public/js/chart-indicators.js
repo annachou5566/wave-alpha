@@ -1198,14 +1198,14 @@
         
         let gradOB = Math.abs(y70 - y100) > 1 ? ctx.createLinearGradient(0, y100, 0, y70) : 'rgba(14, 203, 129, 0.5)';
         if (typeof gradOB !== 'string') {
-          gradOB.addColorStop(0, 'rgba(14, 203, 129, 0.8)'); 
-          gradOB.addColorStop(1, 'rgba(14, 203, 129, 0)');
+          gradOB.addColorStop(0, 'rgba(38, 166, 154, 0.6)');
+          gradOB.addColorStop(1, 'rgba(38, 166, 154, 0)');
         }
   
         let gradOS = Math.abs(y0 - y30) > 1 ? ctx.createLinearGradient(0, y30, 0, y0) : 'rgba(246, 70, 93, 0.5)';
         if (typeof gradOS !== 'string') {
-          gradOS.addColorStop(0, 'rgba(246, 70, 93, 0)'); 
-          gradOS.addColorStop(1, 'rgba(246, 70, 93, 0.8)');
+          gradOS.addColorStop(0, 'rgba(239, 83, 80, 0)');
+          gradOS.addColorStop(1, 'rgba(239, 83, 80, 0.6)');
         }
   
         ctx.fillStyle = gradOB;
@@ -1814,7 +1814,14 @@
                     <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(42,245,146,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Wave Alpha</button>
                     <button onclick="window.waCsSetTheme('#0ECB81','#0ECB81','#F6465D','#F6465D','#111418')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(14,203,129,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Truyền Thống</button>
                     <button onclick="window.waCsSetTheme('transparent','#FFFFFF','#FFFFFF','#FFFFFF','#131722')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Trắng Đen</button>
-                    <button onclick="window.waCsSetTheme('#089981','#089981','#F23645','#F23645','#ffffff')" style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.bg}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Light Mode</button>
+                    <button 
+    onclick="window.waCsSetTheme('#26A69A','#26A69A','#EF5350','#EF5350','#131722')" 
+    style="background:rgba(255,255,255,0.05); border:1px solid ${COLOR.border}; border-radius:6px; padding:6px; color:${COLOR.white}; font-size:11px; font-weight:600; cursor:pointer; text-align:center; transition:0.2s;" 
+    onmouseover="this.style.background='rgba(255,255,255,0.1)'" 
+    onmouseout="this.style.background='rgba(255,255,255,0.05)'"
+>
+    Pro Trader Mode
+</button>
                 </div>
 
                 <button onclick="window.waCsSetTheme('#2af592','#2af592','#cb55e3','#cb55e3','#0f1a1c', true)" style="width:100%; background:transparent; border:1px dashed ${COLOR.muted}; color:${COLOR.muted}; border-radius:6px; padding:8px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='${COLOR.white}'" onmouseout="this.style.background='transparent'; this.style.color='${COLOR.muted}'">↩ KHÔI PHỤC MẶC ĐỊNH</button>
