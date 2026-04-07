@@ -1004,6 +1004,7 @@
         ]
       },
       calc: function(dataList, indicator) {
+        // (Giữ nguyên tối ưu tính toán từ bản trước - chạy cực nhanh)
         const rsiLen = indicator.calcParams[0];
         const maType = indicator.calcParams[1]; 
         const maLen = indicator.calcParams[2];
@@ -1011,7 +1012,6 @@
         const showDiv = indicator.calcParams[4];
         const dataSize = dataList.length;
   
-        // 1. Tối ưu toán học tính RSI (tránh tạo object thừa)
         const gains = new Array(dataSize).fill(0);
         const losses = new Array(dataSize).fill(0);
         for (let i = 1; i < dataSize; i++) {
@@ -1032,7 +1032,6 @@
           else rsiData[i] = 100 - (100 / (1 + (g / l)));
         }
   
-        // 2. Tối ưu tính MA
         let rsiMA = [];
         if (maType === 0 || maType === 1) rsiMA = calcSMA(rsiData, maLen);
         else if (maType === 2) rsiMA = calcEMA(rsiData, maLen);
@@ -1058,11 +1057,8 @@
           }
         }
   
-        // 3. Khởi tạo mảng Result và Tính BB
         const results = new Array(dataSize);
         for (let i = 0; i < dataSize; i++) {
-          const isLiveBar = (i === dataSize - 1); // CỜ BẢO VỆ CHỐNG SPAM EVENT (VÔ CÙNG QUAN TRỌNG)
-          
           let res = {
             rsi: rsiData[i],
             upperBand: 70,
@@ -1079,58 +1075,42 @@
             res.bbUpper = mean + stdDev * bbMult;
             res.bbLower = mean - stdDev * bbMult;
           }
-  
-          // FIX LỖI: Chỉ bắn cảnh báo duy nhất ở Nến hiện tại
-          if (isLiveBar) {
-            if (res.rsi > 70) window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Quá mua", type: 'rsi_ob'}}));
-            if (res.rsi < 30) window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Quá bán", type: 'rsi_os'}}));
-          }
-  
           results[i] = res;
         }
   
-        // 4. Divergence Logic với Cờ Bảo Vệ
         if (showDiv === 1) {
           let lastPL = null, lastPH = null;
           for (let i = 10; i < dataSize; i++) {
-            const isLiveBar = (i === dataSize - 1); // Cờ kiểm tra nến real-time
             let p = i - 5; 
             let isPL = true, isPH = true;
             for (let j = 1; j <= 5; j++) {
               if (rsiData[p] >= rsiData[p-j] || rsiData[p] > rsiData[p+j]) isPL = false;
               if (rsiData[p] <= rsiData[p-j] || rsiData[p] < rsiData[p+j]) isPH = false;
             }
-            
             if (isPL) {
               if (lastPL) {
                 let bars = p - lastPL.idx;
                 if (bars >= 5 && bars <= 60 && rsiData[p] > lastPL.rsi && dataList[p].low < lastPL.low) {
                   results[p].bullDiv = rsiData[p];
-                  // FIX LỖI: Chỉ báo Alert nếu nến confirm phân kỳ là nến HIỆN TẠI
-                  if (isLiveBar) window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Đã tìm thấy Bullish Divergence"}}));
                 }
               }
               lastPL = { idx: p, rsi: rsiData[p], low: dataList[p].low };
             }
-  
             if (isPH) {
               if (lastPH) {
                 let bars = p - lastPH.idx;
                 if (bars >= 5 && bars <= 60 && rsiData[p] < lastPH.rsi && dataList[p].high > lastPH.high) {
                   results[p].bearDiv = rsiData[p];
-                  // FIX LỖI: Chỉ báo Alert nếu nến confirm phân kỳ là nến HIỆN TẠI
-                  if (isLiveBar) window.dispatchEvent(new CustomEvent('WaveAlphaAlert', {detail: {msg: "Đã tìm thấy Bearish Divergence"}}));
                 }
               }
               lastPH = { idx: p, rsi: rsiData[p], high: dataList[p].high };
             }
           }
         }
-  
         return results;
       },
   
-      // UI Render - Giữ nguyên do tốc độ Draw Canvas đã được tối ưu tuyệt đối
+      // 🚀 ENGINE VẼ MỚI (KHÔNG DÙNG CLIP() ĐỂ TRÁNH LAG)
       draw: function({ ctx, visibleRange, indicator, xAxis, yAxis }) {
         const { from, to } = visibleRange;
         const res = indicator.result;
@@ -1138,10 +1118,9 @@
         const endX = xAxis.convertToPixel(to - 1);
         
         const y70 = yAxis.convertToPixel(70);
-        const y50 = yAxis.convertToPixel(50);
         const y30 = yAxis.convertToPixel(30);
   
-        // A. Fill nền Tím
+        // A. Fill nền Tím cơ bản (nhanh nhất)
         ctx.fillStyle = 'rgba(126, 87, 194, 0.1)';
         ctx.fillRect(startX, y70, endX - startX, y30 - y70);
   
@@ -1167,34 +1146,98 @@
           }
         }
   
-        // C. Gradients (Quá mua/Quá bán)
-        ctx.save();
+        // C. Gradients (TỐI ƯU TOÁN HỌC - KHÔNG DÙNG CLIP)
+        let y100 = yAxis.convertToPixel(100);
+        let y0 = yAxis.convertToPixel(0);
+        
+        // Phòng hờ biểu đồ bị bóp dẹt quá nhỏ gây lỗi Gradient
+        let gradOB = Math.abs(y70 - y100) > 1 ? ctx.createLinearGradient(0, y100, 0, y70) : 'rgba(14, 203, 129, 0.5)';
+        if (typeof gradOB !== 'string') {
+          gradOB.addColorStop(0, 'rgba(14, 203, 129, 0.8)'); 
+          gradOB.addColorStop(1, 'rgba(14, 203, 129, 0)');
+        }
+  
+        let gradOS = Math.abs(y0 - y30) > 1 ? ctx.createLinearGradient(0, y30, 0, y0) : 'rgba(246, 70, 93, 0.5)';
+        if (typeof gradOS !== 'string') {
+          gradOS.addColorStop(0, 'rgba(246, 70, 93, 0)'); 
+          gradOS.addColorStop(1, 'rgba(246, 70, 93, 0.8)');
+        }
+  
+        // 1. Quá Mua (>70)
+        ctx.fillStyle = gradOB;
         ctx.beginPath();
-        let first = true;
+        let inOB = false;
         for (let i = from; i < to; i++) {
-          if (res[i] && res[i].rsi !== undefined) {
-            let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].rsi);
-            if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+          if (!res[i] || res[i].rsi === undefined) continue;
+          let rsi = res[i].rsi;
+          let currX = xAxis.convertToPixel(i);
+          let currY = yAxis.convertToPixel(rsi);
+          
+          if (rsi > 70) {
+            if (!inOB) {
+              inOB = true;
+              let prevRsi = res[i-1]?.rsi;
+              if (prevRsi !== undefined && prevRsi <= 70) {
+                let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
+                let interX = prevX + (currX - prevX) * ((y70 - prevY) / (currY - prevY));
+                ctx.moveTo(interX, y70);
+              } else {
+                ctx.moveTo(currX, y70);
+              }
+            }
+            ctx.lineTo(currX, currY);
+          } else if (inOB) {
+            inOB = false;
+            let prevRsi = res[i-1]?.rsi;
+            if (prevRsi !== undefined && prevRsi > 70) {
+              let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
+              let interX = prevX + (currX - prevX) * ((y70 - prevY) / (currY - prevY));
+              ctx.lineTo(interX, y70);
+            } else {
+              ctx.lineTo(currX, y70);
+            }
           }
         }
-        if (!first) {
-          for (let i = to - 1; i >= from; i--) ctx.lineTo(xAxis.convertToPixel(i), y50);
-          ctx.closePath();
-          ctx.clip(); 
+        if (inOB) ctx.lineTo(xAxis.convertToPixel(to - 1), y70);
+        ctx.fill();
   
-          const gradOB = ctx.createLinearGradient(0, yAxis.convertToPixel(100), 0, y70);
-          gradOB.addColorStop(0, 'rgba(14, 203, 129, 1)'); 
-          gradOB.addColorStop(1, 'rgba(14, 203, 129, 0)'); 
-          ctx.fillStyle = gradOB;
-          ctx.fillRect(startX, yAxis.convertToPixel(100), endX - startX, y70 - yAxis.convertToPixel(100));
-  
-          const gradOS = ctx.createLinearGradient(0, y30, 0, yAxis.convertToPixel(0));
-          gradOS.addColorStop(0, 'rgba(246, 70, 93, 0)'); 
-          gradOS.addColorStop(1, 'rgba(246, 70, 93, 1)'); 
-          ctx.fillStyle = gradOS;
-          ctx.fillRect(startX, y30, endX - startX, yAxis.convertToPixel(0) - y30);
+        // 2. Quá Bán (<30)
+        ctx.fillStyle = gradOS;
+        ctx.beginPath();
+        let inOS = false;
+        for (let i = from; i < to; i++) {
+          if (!res[i] || res[i].rsi === undefined) continue;
+          let rsi = res[i].rsi;
+          let currX = xAxis.convertToPixel(i);
+          let currY = yAxis.convertToPixel(rsi);
+          
+          if (rsi < 30) {
+            if (!inOS) {
+              inOS = true;
+              let prevRsi = res[i-1]?.rsi;
+              if (prevRsi !== undefined && prevRsi >= 30) {
+                let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
+                let interX = prevX + (currX - prevX) * ((y30 - prevY) / (currY - prevY));
+                ctx.moveTo(interX, y30);
+              } else {
+                ctx.moveTo(currX, y30);
+              }
+            }
+            ctx.lineTo(currX, currY);
+          } else if (inOS) {
+            inOS = false;
+            let prevRsi = res[i-1]?.rsi;
+            if (prevRsi !== undefined && prevRsi < 30) {
+              let prevX = xAxis.convertToPixel(i-1), prevY = yAxis.convertToPixel(prevRsi);
+              let interX = prevX + (currX - prevX) * ((y30 - prevY) / (currY - prevY));
+              ctx.lineTo(interX, y30);
+            } else {
+              ctx.lineTo(currX, y30);
+            }
+          }
         }
-        ctx.restore();
+        if (inOS) ctx.lineTo(xAxis.convertToPixel(to - 1), y30);
+        ctx.fill();
   
         // D. Text Bull/Bear Label
         ctx.font = '11px sans-serif';
@@ -1203,14 +1246,12 @@
           if (res[i]) {
             let x = xAxis.convertToPixel(i);
             if (res[i].bullDiv !== undefined) {
-              let y = yAxis.convertToPixel(res[i].bullDiv) + 15;
               ctx.fillStyle = COLOR.green;
-              ctx.fillText('Bull', x, y);
+              ctx.fillText('Bull', x, yAxis.convertToPixel(res[i].bullDiv) + 15);
             }
             if (res[i].bearDiv !== undefined) {
-              let y = yAxis.convertToPixel(res[i].bearDiv) - 15;
               ctx.fillStyle = COLOR.red;
-              ctx.fillText('Bear', x, y);
+              ctx.fillText('Bear', x, yAxis.convertToPixel(res[i].bearDiv) - 15);
             }
           }
         }
