@@ -983,18 +983,15 @@
       shortName: 'RSI',
       series: 'normal',
       calcParams: [14, 0, 14, 2.0, 1],
+      // 1. CHỈ GIỮ LẠI RSI VÀ MA TRÊN THANH TIÊU ĐỀ (INFO BAR) CHO GỌN
       figures: [
         { key: 'rsi', title: 'RSI: ', type: 'line' },
-        { key: 'rsiMA', title: 'MA: ', type: 'line' },
-        { key: 'bbUpper', title: 'BB Up: ', type: 'line' },
-        { key: 'bbLower', title: 'BB Low: ', type: 'line' }
+        { key: 'rsiMA', title: 'MA: ', type: 'line' }
       ],
       styles: {
         lines: [
           { color: '#7E57C2', size: 1, style: 'solid' },        
-          { color: COLOR.gold, size: 1, style: 'solid' },       
-          { color: COLOR.green, size: 1, style: 'solid' },      
-          { color: COLOR.green, size: 1, style: 'solid' }       
+          { color: COLOR.gold, size: 1, style: 'solid' }
         ]
       },
       calc: function(dataList, indicator) {
@@ -1082,7 +1079,6 @@
               if (lastPL) {
                 let bars = p - lastPL.idx;
                 if (bars >= 5 && bars <= 60 && rsiData[p] > lastPL.rsi && dataList[p].low < lastPL.low) {
-                  // LƯU CẢ TOẠ ĐỘ ĐIỂM BẮT ĐẦU VÀ KẾT THÚC ĐỂ VẼ TIA
                   results[p].bullDiv = {
                     startI: lastPL.idx,
                     startRSI: lastPL.rsi,
@@ -1097,7 +1093,6 @@
               if (lastPH) {
                 let bars = p - lastPH.idx;
                 if (bars >= 5 && bars <= 60 && rsiData[p] < lastPH.rsi && dataList[p].high > lastPH.high) {
-                  // LƯU CẢ TOẠ ĐỘ ĐIỂM BẮT ĐẦU VÀ KẾT THÚC ĐỂ VẼ TIA
                   results[p].bearDiv = {
                     startI: lastPH.idx,
                     startRSI: lastPH.rsi,
@@ -1136,21 +1131,48 @@
         ctx.beginPath(); ctx.moveTo(startX, y50); ctx.lineTo(endX, y50); ctx.stroke();
         ctx.restore();
   
-        // --- Vẽ nền Bollinger ---
+        // --- Nền tím (Quá mua/Bán) ---
         ctx.fillStyle = 'rgba(126, 87, 194, 0.1)';
         ctx.fillRect(startX, y70, endX - startX, y30 - y70);
   
+        // --- Vẽ Bollinger Bands (Đã gộp vẽ Viền và Nền ở đây) ---
         if (indicator.calcParams[1] === 1) {
-          ctx.fillStyle = 'rgba(14, 203, 129, 0.1)';
+          ctx.save();
+          // 1. Vẽ Viền BB (Lines)
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = COLOR.green;
+          
           ctx.beginPath();
-          let hasPoints = false;
+          let hasUp = false;
           for (let i = from; i < to; i++) {
             if (res[i] && res[i].bbUpper !== undefined) {
               let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].bbUpper);
-              if (!hasPoints) { ctx.moveTo(x, y); hasPoints = true; } else ctx.lineTo(x, y);
+              if (!hasUp) { ctx.moveTo(x, y); hasUp = true; } else ctx.lineTo(x, y);
             }
           }
-          if (hasPoints) {
+          ctx.stroke();
+  
+          ctx.beginPath();
+          let hasLow = false;
+          for (let i = from; i < to; i++) {
+            if (res[i] && res[i].bbLower !== undefined) {
+              let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].bbLower);
+              if (!hasLow) { ctx.moveTo(x, y); hasLow = true; } else ctx.lineTo(x, y);
+            }
+          }
+          ctx.stroke();
+  
+          // 2. Vẽ Nền BB (Fill)
+          ctx.fillStyle = 'rgba(14, 203, 129, 0.1)';
+          ctx.beginPath();
+          hasUp = false;
+          for (let i = from; i < to; i++) {
+            if (res[i] && res[i].bbUpper !== undefined) {
+              let x = xAxis.convertToPixel(i), y = yAxis.convertToPixel(res[i].bbUpper);
+              if (!hasUp) { ctx.moveTo(x, y); hasUp = true; } else ctx.lineTo(x, y);
+            }
+          }
+          if (hasUp) {
             for (let i = to - 1; i >= from; i--) {
               if (res[i] && res[i].bbLower !== undefined) {
                 ctx.lineTo(xAxis.convertToPixel(i), yAxis.convertToPixel(res[i].bbLower));
@@ -1159,6 +1181,7 @@
             ctx.closePath();
             ctx.fill();
           }
+          ctx.restore();
         }
   
         // --- Vẽ Gradients ---
@@ -1251,20 +1274,23 @@
         if (inOS) ctx.lineTo(xAxis.convertToPixel(to - 1), y30);
         ctx.fill();
   
-        // --- VẼ TEXT VÀ TIA NỐI (DIVERGENCE LINE) ---
+        // --- VẼ TEXT VÀ TIA NỐI (DIVERGENCE LINE) TỐI ƯU UI ---
         ctx.save();
-        ctx.font = '11px sans-serif';
+        ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle'; // Căn giữa chữ vào box
+  
+        const boxW = 32;
+        const boxH = 16;
+        const radius = 3;
+  
         for (let i = from; i < to; i++) {
           if (res[i]) {
             let x = xAxis.convertToPixel(i);
   
+            // 1. Phân kỳ BULL
             if (res[i].bullDiv !== undefined) {
               let y = yAxis.convertToPixel(res[i].bullDiv.endRSI);
-              
-              // Vẽ Text
-              ctx.fillStyle = COLOR.green;
-              ctx.fillText('Bull', x, y + 15);
               
               // Vẽ tia nối đứt khúc
               ctx.beginPath();
@@ -1272,16 +1298,30 @@
               ctx.lineTo(x, y);
               ctx.strokeStyle = COLOR.green;
               ctx.lineWidth = 1.5;
-              ctx.setLineDash([4, 4]); // Nét đứt đẹp mắt
+              ctx.setLineDash([4, 4]); 
               ctx.stroke();
+              ctx.setLineDash([]); // Reset nét đứt
+              
+              let labelY = y + 15;
+  
+              // Vẽ hộp nền (Background box) màu xanh
+              ctx.fillStyle = COLOR.green;
+              ctx.beginPath();
+              if (ctx.roundRect) {
+                 ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
+              } else {
+                 ctx.rect(x - boxW/2, labelY, boxW, boxH); // Fallback trình duyệt cũ
+              }
+              ctx.fill();
+  
+              // Vẽ Text màu trắng
+              ctx.fillStyle = COLOR.white;
+              ctx.fillText('Bull', x, labelY + boxH/2);
             }
   
+            // 2. Phân kỳ BEAR
             if (res[i].bearDiv !== undefined) {
               let y = yAxis.convertToPixel(res[i].bearDiv.endRSI);
-              
-              // Vẽ Text
-              ctx.fillStyle = COLOR.red;
-              ctx.fillText('Bear', x, y - 15);
               
               // Vẽ tia nối đứt khúc
               ctx.beginPath();
@@ -1291,6 +1331,23 @@
               ctx.lineWidth = 1.5;
               ctx.setLineDash([4, 4]);
               ctx.stroke();
+              ctx.setLineDash([]); // Reset nét đứt
+  
+              let labelY = y - 15 - boxH;
+  
+              // Vẽ hộp nền (Background box) màu đỏ
+              ctx.fillStyle = COLOR.red;
+              ctx.beginPath();
+              if (ctx.roundRect) {
+                 ctx.roundRect(x - boxW/2, labelY, boxW, boxH, radius);
+              } else {
+                 ctx.rect(x - boxW/2, labelY, boxW, boxH); // Fallback
+              }
+              ctx.fill();
+  
+              // Vẽ Text màu trắng
+              ctx.fillStyle = COLOR.white;
+              ctx.fillText('Bear', x, labelY + boxH/2);
             }
           }
         }
