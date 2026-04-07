@@ -1704,3 +1704,114 @@ body.overlay-active {
 .sc-filter-menu label { font-family: var(--font-main) !important; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: #eaecef; cursor: pointer; padding: 6px 8px; border-radius: 4px; transition: 0.2s; font-weight: 600; white-space: nowrap; margin: 0; }
 .sc-filter-menu label:hover { background: rgba(255,255,255,0.05); }
 
+/* =========================================================
+   [FIX] KLINECHARTS RESIZE & CONTAINER FLEX LAYOUT
+   ========================================================= */
+   #sc-chart-container {
+    flex: 1 1 0%;
+    min-width: 0; /* Quan trọng để flexbox không bị phình to quá màn hình */
+    transition: width 0.22s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* =========================================================
+   [FIX] HEADER CHART & TIMEFRAME TRÊN MOBILE
+   ========================================================= */
+
+/* Thanh cuộn ngang cho timeframe (Áp dụng chung) */
+.sc-timeframe-bar {
+    display: flex;
+    flex-wrap: nowrap;          /* KHÔNG wrap xuống dòng */
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;      /* Ẩn scrollbar (Firefox) */
+    gap: 4px;
+    padding: 4px 8px;
+}
+.sc-timeframe-bar::-webkit-scrollbar { 
+    display: none;              /* Ẩn scrollbar (Chrome/Safari) */
+}
+
+.sc-time-btn {
+    flex-shrink: 0;             /* Không bị bóp méo chữ */
+    white-space: nowrap;
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
+@media (max-width: 768px) {
+    /* Ép header chart tự điều chỉnh chiều cao và tách làm 2 khối gọn */
+    .sc-header {
+        height: auto;
+        padding: 6px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    /* Đảm bảo chart chiếm tối đa height còn lại */
+    #sc-chart-container {
+        flex: 1 1 0%;
+        min-height: 200px;
+    }
+
+    /* Dòng 1: Symbol + Price */
+    .sc-header-top-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 0 4px;
+        min-height: 32px;
+    }
+    
+    .sc-coin-info {
+        gap: 8px;
+    }
+
+    .sc-coin-logo {
+        width: 26px;
+        height: 26px;
+    }
+
+    .sc-coin-symbol {
+        font-size: 15px;
+    }
+
+    .sc-live-price {
+        font-size: 18px;
+    }
+
+    /* Dòng 2: Timeframe scroll + Controls */
+    .sc-header-bottom-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        padding: 4px 2px 0 2px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    
+    /* Thu hẹp khu vực Price group nếu nó chứa các indicator buttons */
+    .sc-price-group {
+        gap: 8px;
+    }
+
+    /* Thu nhỏ font các nút điều khiển (Lọc marker, Indicator) */
+    .sc-indicator-btn, .sc-filter-btn {
+        font-size: 10px;
+        padding: 3px 6px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* Ẩn text label, chỉ giữ icon cho các nút điều khiển phụ để tiết kiệm không gian */
+    .sc-header-btn-label {
+        display: none !important;
+    }
+    
+    /* Thu gọn text thay đổi 24h */
+    .sc-change-24h {
+        font-size: 12px;
+    }
+}

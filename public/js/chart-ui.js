@@ -710,9 +710,16 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const allBtns = document.querySelectorAll('.sc-sidebar-icon');
     const allTabs = document.querySelectorAll('.sc-tab-content');
 
-    // [FIX] Gọi resize SAU khi transition xong (240ms)
+    // [FIX MỚI] Gọi resize nhiều lần để khớp với animation mượt mà trên mobile
     const doResize = function() {
+        // Resize ngay lập tức khi bắt đầu animation
+        if (window.tvChart) window.tvChart.resize(); 
+        
+        // Resize lần 2 sau khi transition kết thúc (240ms)
         setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 240);
+        
+        // Resize lần 3 an toàn (Buffer cho điện thoại render chậm)
+        setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 350);
     };
 
     if (btnElement && btnElement.classList.contains('active')) {
