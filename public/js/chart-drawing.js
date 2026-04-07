@@ -2331,7 +2331,7 @@
   }
 
   // ============================================================
-  // SECTION 6.5 — HÀM TIỆN ÍCH (giữ tương thích với drawing tools)
+  // SECTION 6.5 — HÀM TIỆN ÍCH & KHỞI TẠO CÔNG CỤ VẼ
   // ============================================================
   function saveHistory(action, obj) { /* stub giữ tương thích */ }
 
@@ -2339,22 +2339,40 @@
     if (!global.tvChart) return;
     const container = document.getElementById('sc-chart-container');
     if (!container) return;
+
     try { global.tvChart.cancelDrawing(); } catch(e){}
     if (typeof hidePanel === 'function') hidePanel();
+
     if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
     container.classList.add('wa-drawing-mode');
-    try { global.tvChart.startDraw(toolId); } catch(e){}
-    const toolbar = document.querySelector('.wa-toolbar');
-    if (toolbar) {
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
-      const btn = toolbar.querySelector(`[data-tool="${toolId}"]`);
-      if (btn) btn.classList.add('active');
+
+    const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
+    if (TEXT_TOOLS.includes(toolId)) {
+      if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
+      return;
     }
+
+    try {
+      let tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines'; 
+      let s = (typeof toolStyles !== 'undefined' && toolStyles[tType]) ? toolStyles[tType] : {};
+      let config = { name: toolId, lock: false, styles: {} };
+      
+      if(tType === 'lines' || tType === 'waves') {
+        config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
+      } else if (tType === 'shapes') {
+        config.styles.polygon = { style: 'stroke_fill', color: typeof hexToRgba === 'function' ? hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15) : '#3B82F6', borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
+      } else if (tType === 'fibo') {
+        config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
+      } else if (tType === 'text') {
+        config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
+        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
+      }
+      global.tvChart.createOverlay(config);
+    } catch (err) {}
   }
 
   // ============================================================
-  // WAVE ALPHA DRAWING SYSTEM v4.0
-  // Per-timeframe · Race-free · Event-driven
+  // WAVE ALPHA DRAWING SYSTEM v4.0 (PER-TIMEFRAME)
   // ============================================================
 
   // --- LAYER 1: STORE — chỉ đọc/ghi localStorage ---
@@ -2366,13 +2384,12 @@
     },
     save: function(sym, tf, overlays) {
       try {
-        if (!overlays || overlays.length === 0) return;
+        if (!overlays || overlays.length === 0) { localStorage.removeItem(this.key(sym, tf)); return; }
         localStorage.setItem(this.key(sym, tf), JSON.stringify(overlays));
       } catch(e) {}
     },
     load: function(sym, tf) {
-      try { return JSON.parse(localStorage.getItem(this.key(sym, tf))) || []; }
-      catch(e) { return []; }
+      try { return JSON.parse(localStorage.getItem(this.key(sym, tf))) || []; } catch(e) { return []; }
     },
     clear: function(sym, tf) {
       try { localStorage.removeItem(this.key(sym, tf)); } catch(e) {}
@@ -2400,23 +2417,22 @@
       chart.subscribeAction('onDrawEnd', function(data) {
         var o = Array.isArray(data) ? data[0] : data;
         if (!o || !o.id) return;
-
         activateTool('pointer');
+        
+        var toolbar = document.querySelector('.wa-toolbar');
+        if (toolbar) {
+          toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+          var ptr = toolbar.querySelector('[data-tool=pointer]'); if (ptr) ptr.classList.add('active');
+        }
 
-        // Ghi vào Registry (bỏ qua Marker cá voi)
         if (o.name !== 'cyberMarker') {
-            WA_Registry.set(o.id, {
-              id: o.id, name: o.name, points: o.points,
-              styles: o.styles, lock: !!o.lock, extendData: o.extendData
-            });
-
-            // Save ngay lập tức
+            WA_Registry.set(o.id, { id: o.id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
             var sym = (window.currentChartToken && window.currentChartToken.symbol) || '';
             var tf  = window.currentChartInterval || '1d';
             WA_Store.save(sym, tf, WA_Registry.all());
         }
 
-        currentSelectedOverlay = o;
+        window.currentSelectedOverlay = o;
         if (typeof renderPanel === 'function') renderPanel(o);
       });
 
@@ -2426,15 +2442,12 @@
         
         var existing = WA_Registry.get(o.id);
         if (existing) {
-          WA_Registry.set(o.id, {
-            id: o.id, name: o.name, points: o.points,
-            styles: o.styles, lock: !!o.lock, extendData: o.extendData
-          });
+          WA_Registry.set(o.id, { id: o.id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
           var sym = (window.currentChartToken && window.currentChartToken.symbol) || '';
           var tf  = window.currentChartInterval || '1d';
           WA_Store.save(sym, tf, WA_Registry.all());
         }
-        currentSelectedOverlay = o;
+        window.currentSelectedOverlay = o;
         if (typeof renderPanel === 'function') renderPanel(o);
       });
     },
@@ -2442,7 +2455,6 @@
     renderAll: function(chart, overlays) {
       if (!chart || !overlays || !overlays.length) return;
       try { 
-        // Dọn sạch hình cũ của User (giữ Marker Bot)
         let current = chart.getOverlay() || [];
         current.forEach(c => { if(c.name !== 'cyberMarker') chart.removeOverlay(c.id); }); 
       } catch(e) {}
@@ -2450,10 +2462,7 @@
       WA_Registry.clear();
       overlays.forEach(function(o) {
         try {
-          var id = chart.createOverlay({
-            name: o.name, points: o.points,
-            styles: o.styles, lock: !!o.lock, extendData: o.extendData
-          });
+          var id = chart.createOverlay({ name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
           if (id) WA_Registry.set(id, { id: id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
         } catch(e) {}
       });
@@ -2463,7 +2472,6 @@
   // --- LAYER 4: LIFECYCLE — điều phối ---
   var WA_Lifecycle = {
     _restoreTimer: null,
-
     onBeforeChartInit: function(sym, tf) {
       WA_Store.save(sym, tf, WA_Registry.all());
       WA_Registry.clear();
@@ -2474,14 +2482,10 @@
         } catch(e) {}
       }
     },
-
     onChartReady: function(sym, tf) {
       if (!global.tvChart) return;
-      var self = this;
-      var chart = global.tvChart;
-
+      var self = this; var chart = global.tvChart;
       WA_Bridge.bindEvents(chart);
-
       var overlays = WA_Store.load(sym, tf);
       if (!overlays.length) return;
 
@@ -2493,14 +2497,12 @@
         if (!global.tvChart || global.tvChart !== chart) { clearInterval(self._restoreTimer); self._restoreTimer = null; return; }
         var dataList = chart.getDataList();
         if (!dataList || dataList.length < 5) return;
-        clearInterval(self._restoreTimer);
-        self._restoreTimer = null;
+        clearInterval(self._restoreTimer); self._restoreTimer = null;
         WA_Bridge.renderAll(chart, overlays);
       }, 200);
     }
   };
 
-  // Bắt hook từ UI
   window.__wa_onBeforeChartInit = function(sym, tf) { WA_Lifecycle.onBeforeChartInit(sym, tf); };
   window.__wa_onChartReady = function(sym, tf) { WA_Lifecycle.onChartReady(sym, tf); };
 
@@ -2509,14 +2511,9 @@
     var tf  = window.currentChartInterval || '1d';
     WA_Store.save(sym, tf, WA_Registry.all());
   };
-  function _wa_trackOverlay(o) {
-    if (!o || !o.id) return;
-    WA_Registry.set(o.id, { id: o.id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
-  }
-  function _wa_untrackOverlay(id) { WA_Registry.del(id); }
 
   // ============================================================
-  // SECTION 7.5 — GLOBAL EVENTS (drag toolbar, keyboard)
+  // SECTION 7.5 — GLOBAL EVENTS (Kéo thả, Phím tắt)
   // ============================================================
   var _waCoreEventsBound = false;
   function bindCoreEventsOnce() {
@@ -2534,9 +2531,7 @@
         tb.style.top  = Math.max(0, _initTop  + (e.clientY - _startY)) + 'px';
       });
     });
-    document.addEventListener('mouseup', function() {
-      if (_isDragging) { _isDragging = false; document.body.style.userSelect = ''; }
-    });
+    document.addEventListener('mouseup', function() { if (_isDragging) { _isDragging = false; document.body.style.userSelect = ''; } });
     document.addEventListener('mousedown', function(e) {
       var grip = e.target.closest('.wa-drag-grip');
       if (!grip) return;
@@ -2546,10 +2541,7 @@
       document.body.style.userSelect = 'none';
     });
     document.addEventListener('dblclick', function(e) {
-      if (e.target.closest('.wa-drag-grip')) {
-        var tb = document.querySelector('.wa-toolbar');
-        if (tb) tb.classList.toggle('collapsed');
-      }
+      if (e.target.closest('.wa-drag-grip')) { var tb = document.querySelector('.wa-toolbar'); if (tb) tb.classList.toggle('collapsed'); }
     });
     document.addEventListener('keydown', function(e) {
       var tag = e.target.tagName;
@@ -2560,10 +2552,10 @@
         if (typeof hidePanel === 'function') hidePanel();
         return;
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && currentSelectedOverlay) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && window.currentSelectedOverlay) {
         if (global.tvChart) {
-          global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-          _wa_untrackOverlay(currentSelectedOverlay.id);
+          global.tvChart.removeOverlay({ id: window.currentSelectedOverlay.id });
+          WA_Registry.del(window.currentSelectedOverlay.id);
           if (typeof hidePanel === 'function') hidePanel();
           global.__wa_saveAllOverlays();
         }
@@ -2572,18 +2564,123 @@
   }
 
   // ============================================================
+  // SECTION 7.6 — GIAO DIỆN TOOLBAR (Phục hồi lại phần bị xóa)
+  // ============================================================
+  function mountDOM() {
+    var container = document.getElementById('sc-chart-container');
+    if (!container || container.querySelector('.wa-toolbar')) return;
+
+    if (typeof injectCSS === 'function') injectCSS();
+    if (typeof registerProExtensions === 'function') registerProExtensions();
+
+    var sidebar = document.createElement('div');
+    sidebar.className = 'wa-toolbar';
+    sidebar.innerHTML = typeof buildToolbar === 'function' ? buildToolbar() : '';
+    container.appendChild(sidebar);
+
+    var panel = document.createElement('div');
+    panel.className = 'wa-props-panel';
+    panel.id = 'wa-props-panel';
+    panel.innerHTML = `
+      <div class="wa-panel-header">Cài đặt công cụ<button class="wa-close-btn" title="Đóng (Esc)">✕</button></div>
+      <div class="wa-panel-body"><div class="wa-panel-empty"><span>Chọn hoặc vẽ một hình</span></div></div>
+      <div class="wa-panel-footer"><button class="wa-action-btn" id="wa-btn-p-lock">Khoá</button><button class="wa-action-btn delete" id="wa-btn-p-del">Xoá</button></div>`;
+    container.appendChild(panel);
+
+    _bindToolbarLocalEvents(sidebar, panel);
+    if (typeof bindContextMenu === 'function') bindContextMenu(panel);
+  }
+
+  function _bindToolbarLocalEvents(toolbar, panel) {
+    var container = document.getElementById('sc-chart-container');
+
+    toolbar.addEventListener('click', function(e) {
+      var menuItem = e.target.closest('.wa-menu-item');
+      var btn = e.target.closest('.wa-tb-btn[data-tool]');
+      var toolId = null;
+      if (menuItem) {
+        toolId = menuItem.getAttribute('data-tool');
+        toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+        menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
+      } else if (btn) {
+        toolId = btn.getAttribute('data-tool');
+        toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      if (toolId) activateTool(toolId);
+    });
+
+    var clearBtn = toolbar.querySelector('#wa-btn-clear');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+          if (global.tvChart) {
+            let overlays = global.tvChart.getOverlay() || [];
+            overlays.forEach(o => { if (o.name !== 'cyberMarker') global.tvChart.removeOverlay(o.id); });
+            global.tvChart.cancelDrawing();
+          }
+          WA_Registry.clear();
+          var sym = (window.currentChartToken && window.currentChartToken.symbol) || '';
+          var tf  = window.currentChartInterval || '1d';
+          WA_Store.clear(sym, tf);
+
+          if (typeof hidePanel === 'function') hidePanel();
+          toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+          var ptr = toolbar.querySelector('[data-tool=pointer]'); if(ptr) ptr.classList.add('active');
+          container.classList.remove('wa-drawing-mode');
+      });
+    }
+
+    if (panel) {
+      var closeBtn = panel.querySelector('.wa-close-btn'); if (closeBtn) closeBtn.addEventListener('click', function(){ if(typeof hidePanel === 'function') hidePanel(); });
+      var lockBtn = panel.querySelector('#wa-btn-p-lock');
+      if (lockBtn) lockBtn.addEventListener('click', function() {
+        if (!window.currentSelectedOverlay || !global.tvChart) return;
+        global.tvChart.overrideOverlay({ id: window.currentSelectedOverlay.id, lock: !window.currentSelectedOverlay.lock });
+      });
+      var delBtn = panel.querySelector('#wa-btn-p-del');
+      if (delBtn) delBtn.addEventListener('click', function() {
+        if (!window.currentSelectedOverlay || !global.tvChart) return;
+        global.tvChart.removeOverlay({ id: window.currentSelectedOverlay.id });
+        WA_Registry.del(window.currentSelectedOverlay.id);
+        if (typeof hidePanel === 'function') hidePanel();
+        global.__wa_saveAllOverlays();
+      });
+    }
+  }
+
+  // ============================================================
   // SECTION 7.8 — MOUNT (entry point)
   // ============================================================
   function mountUI() {
     bindCoreEventsOnce();
-    if (typeof mountDOM === 'function') mountDOM();
+    mountDOM();
     if (global.tvChart) WA_Bridge.bindEvents(global.tvChart);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountUI);
-  } else {
-    mountUI();
-  }
+  // ============================================================
+  // SECTION 7.9 WATCHDOG (Đảm bảo thanh công cụ không bao giờ mất)
+  // ============================================================
+  (function startToolbarWatchdog() {
+    if (window.__wa_watchdog_started) return; 
+    window.__wa_watchdog_started = true;
+    function _onContainerMutation(mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        if (mutations[i].removedNodes.length === 0) continue;
+        var container = document.getElementById('sc-chart-container');
+        if (container && !container.querySelector('.wa-toolbar')) { mountDOM(); break; }
+      }
+    }
+    function _startObserver() {
+      var container = document.getElementById('sc-chart-container');
+      var target = container ? container.parentNode : document.body;
+      if (!target) return;
+      new MutationObserver(_onContainerMutation).observe(target, { childList: true, subtree: true });
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', _startObserver); } 
+    else { _startObserver(); }
+  })();
 
-})(window); // ← GIỮ NGUYÊN DÒNG NÀY Ở CUỐI CÙNG
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', mountUI); } 
+  else { mountUI(); }
+
+})(window); // ← dòng đóng module, GIỮ NGUYÊN
