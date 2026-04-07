@@ -464,46 +464,51 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            // 💡 VÁ LỖI 60FPS: Dùng requestAnimationFrame để vẽ mượt trơn tru cùng nhịp với tần số quét của màn hình
-            if (!window._isChartUpdatingRAF) {
-                window._isChartUpdatingRAF = true;
+            // 💡 VÁ LỖI TREO MÁY: Trả lại Throttle 80ms (12 FPS) kết hợp RAF. 
+            // KHÔNG ép KLineChart vẽ 60FPS vì nó sẽ phải tính lại toàn bộ Indicator 60 lần/giây gây chết trình duyệt!
+            if (nowT - (window.lastChartRender || 0) > 80) { 
+                window.lastChartRender = nowT;
                 
-                requestAnimationFrame(() => {
-                    window._isChartUpdatingRAF = false; // Mở khóa ngay cho frame tiếp theo
+                if (!window._isChartUpdatingRAF) {
+                    window._isChartUpdatingRAF = true;
                     
-                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
-                        if (window.currentChartInterval === 'tick') {
-                            window.tvChart.updateData({
-                                timestamp: timeSec * 1000,
-                                open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
-                                volume: parseFloat(valUSD || 0)
-                            });
+                    requestAnimationFrame(() => {
+                        window._isChartUpdatingRAF = false; // Mở khóa ngay cho frame tiếp theo
                         
-                        } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
-                            window.tvChart.updateData({
-                                timestamp: timeSec * 1000,
-                                open: window.liveCandle1s.open,
-                                high: window.liveCandle1s.high,
-                                low: window.liveCandle1s.low,
-                                close: window.liveCandle1s.close,
-                                volume: window.liveCandle1s.vol
-                            });
-                        } else {
-                            let dataList = window.tvChart.getDataList();
-                            if (dataList && dataList.length > 0) {
-                                let lastCandle = dataList[dataList.length - 1];
+                        if (window.tvChart && typeof window.tvChart.updateData === 'function') {
+                            if (window.currentChartInterval === 'tick') {
                                 window.tvChart.updateData({
-                                    timestamp: lastCandle.timestamp,    
-                                    open: lastCandle.open,              
-                                    high: Math.max(lastCandle.high, p), 
-                                    low: Math.min(lastCandle.low, p),   
-                                    close: p,                           
-                                    volume: lastCandle.volume           
+                                    timestamp: timeSec * 1000,
+                                    open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
+                                    volume: parseFloat(valUSD || 0)
                                 });
+                            
+                            } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                                window.tvChart.updateData({
+                                    timestamp: timeSec * 1000,
+                                    open: window.liveCandle1s.open,
+                                    high: window.liveCandle1s.high,
+                                    low: window.liveCandle1s.low,
+                                    close: window.liveCandle1s.close,
+                                    volume: window.liveCandle1s.vol
+                                });
+                            } else {
+                                let dataList = window.tvChart.getDataList();
+                                if (dataList && dataList.length > 0) {
+                                    let lastCandle = dataList[dataList.length - 1];
+                                    window.tvChart.updateData({
+                                        timestamp: lastCandle.timestamp,    
+                                        open: lastCandle.open,              
+                                        high: Math.max(lastCandle.high, p), 
+                                        low: Math.min(lastCandle.low, p),   
+                                        close: p,                           
+                                        volume: lastCandle.volume           
+                                    });
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
 
             if (!window.isRenderingPrice) {
