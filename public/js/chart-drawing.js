@@ -2330,12 +2330,8 @@
     panel.querySelector('#wa-btn-p-del').onclick = () => act('del');
   }
 
-  // ============================================================
+// ============================================================
 // 7. AUTO-HEAL & PERSISTENCE — REWRITE v3.0
-// Giải quyết triệt để:
-//   (A) Memory Leak do double event binding
-//   (B) Toolbar mất khi đổi Timeframe
-//   (C) Hình vẽ mất khi đổi Timeframe
 // ============================================================
 
 // --- 7.1 DRAWING KEY: chỉ theo SYMBOL, không dính Timeframe ---
@@ -2350,8 +2346,7 @@ function getDrawingKey() {
 
 function saveAllOverlays() {
   try {
-    // ✅ BẢN VÁ 4: Đã xóa dòng "if (global.__wa_overlay_map.size === 0) return;" 
-    // Lưu kể cả khi rỗng để xóa hẳn data cũ trong localStorage
+    // ✅ BẢN VÁ 4: Bỏ điều kiện if(size === 0) return. Vẫn lưu khi mảng rỗng để đè chết rác trong LocalStorage.
     let dataToSave = [];
     global.__wa_overlay_map.forEach(function(data) {
       dataToSave.push(data);
@@ -2364,7 +2359,7 @@ global.__wa_saveAllOverlays = saveAllOverlays;
 // Hàm hỗ trợ: Ghi hình vào bộ nhớ RAM
 function _wa_trackOverlay(o) {
   if (!o || !o.id) return;
-  // ✅ BẢN VÁ 3: Chỉ lưu timestamp + value — bỏ dataIndex để không bị vỡ vị trí khi đổi TF
+  // ✅ BẢN VÁ 3: Lọc bỏ dataIndex, chỉ giữ timestamp và value
   var cleanPoints = (o.points || []).map(function(p) { return { timestamp: p.timestamp, value: p.value }; });
   global.__wa_overlay_map.set(o.id, { name: o.name, id: o.id, points: cleanPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
 }
@@ -2380,6 +2375,10 @@ let _waActiveKey = '';
 
 function restoreOverlays() {
   if (!global.tvChart) return;
+  
+  // ✅ BẢN VÁ 2: Xóa rác ID cũ trước khi nạp đồ thị mới
+  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
+
   clearInterval(_waRestoreTimer);
   _waRestoreAttempts = 0;
 
@@ -2409,13 +2408,11 @@ function restoreOverlays() {
     if (global.__wa_overlay_map.size >= overlayDefs.length) return;
 
     try { global.tvChart.removeOverlay(); } catch(e) {}
-    
-    // ✅ BẢN VÁ 2: Xóa ID cũ trước khi restore chart mới — tránh tích lũy rác
     global.__wa_overlay_map.clear();
 
     overlayDefs.forEach(function(o) {
       try {
-        // ✅ BẢN VÁ 3: Lọc dataIndex khi tạo lại hình
+        // ✅ BẢN VÁ 3: Lọc bỏ dataIndex khi tái tạo hình để chống vỡ tọa độ
         var cleanPoints = (o.points || []).map(function(p) { return { timestamp: p.timestamp, value: p.value }; });
         let cfg = { name: o.name, points: cleanPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
         let newId = global.tvChart.createOverlay(cfg);
@@ -2444,9 +2441,7 @@ window.__wa_onIntervalChange = function(newInterval) {
   // FIX: Xóa trí nhớ RAM để ép hệ thống phải vẽ lại trên khung giờ mới
   if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
   
-  if (typeof global.__wa_restoreOverlays === 'function') {
-      global.__wa_restoreOverlays();
-  }
+  // ✅ BẢN VÁ 5: Đã xóa lệnh gọi restoreOverlays ở đây. chart-ui.js sẽ gọi thông qua __wa_onChartReady
 };
 
 window.__wa_onSymbolChange = function(newSymbol) {
@@ -2459,17 +2454,17 @@ window.__wa_onSymbolChange = function(newSymbol) {
   // FIX: Xóa trí nhớ RAM
   if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
   
-  // ✅ BẢN VÁ 5: Đã xóa 3 dòng gọi restoreOverlays() ở đây.
+  // ✅ BẢN VÁ 5: Đã xóa lệnh gọi restoreOverlays ở đây. chart-ui.js sẽ gọi thông qua __wa_onChartReady
 };
 
-// ✅ BẢN VÁ 1: Bổ sung hàm __wa_onChartReady để chart-ui.js có thể gọi
+// ✅ BẢN VÁ 1: Thêm Hook báo hiệu Chart Mới đã ra đời
 window.__wa_onChartReady = function() {
   if (!global.tvChart) return;
-  // Rebind sự kiện onDrawEnd cho chart mới
+  // Bắt lại sự kiện onDrawEnd cho biểu đồ mới tạo
   global.tvChart.__wa_chart_events_bound = false;
   if (typeof _bindChartEventsOnce === 'function') _bindChartEventsOnce();
   
-  // Kích hoạt nạp hình vẽ (đã có sẵn setInterval chờ nến bên trong)
+  // Kích hoạt việc vẽ hình (Có sẵn setInterval chờ nến bên trong restoreOverlays)
   if (typeof global.__wa_restoreOverlays === 'function') {
       global.__wa_restoreOverlays();
   }
@@ -2478,7 +2473,6 @@ window.__wa_onChartReady = function() {
 
 // ============================================================
 // 7.5 BIND CORE EVENTS — CHỈ GẮN 1 LẦN DUY NHẤT
-// Tách hoàn toàn khỏi mountDOM() để tránh memory leak
 // ============================================================
 var _waCoreEventsBound = false;
 
@@ -2511,8 +2505,6 @@ function bindCoreEventsOnce() {
     }
   });
 
-  // Gán drag-grip listener qua event delegation trên document
-  // → Không cần re-bind khi toolbar bị re-inject
   document.addEventListener('mousedown', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
     if (!grip) return;
@@ -2560,52 +2552,52 @@ function bindCoreEventsOnce() {
 }
 
 // ============================================================
-  // 6.5. BỔ SUNG CÁC HÀM BỊ THẤT LẠC KHI REFACTOR (FIX LỖI KHÔNG VẼ ĐƯỢC)
-  // ============================================================
-  function saveHistory(action, obj) {
-    // Hàm này tạm thời để trống để giữ tính tương thích, chống lỗi ReferenceError
+// 6.5. BỔ SUNG CÁC HÀM BỊ THẤT LẠC KHI REFACTOR (FIX LỖI KHÔNG VẼ ĐƯỢC)
+// ============================================================
+function saveHistory(action, obj) {
+  // Hàm này tạm thời để trống để giữ tính tương thích, chống lỗi ReferenceError
+}
+
+function activateTool(toolId) {
+  if (!global.tvChart) return;
+  const container = document.getElementById('sc-chart-container');
+  if (!container) return;
+
+  try { global.tvChart.cancelDrawing(); } catch(e){}
+  if (typeof hidePanel === 'function') hidePanel();
+
+  // Nếu chọn con trỏ chuột -> Thoát chế độ vẽ
+  if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
+  container.classList.add('wa-drawing-mode');
+
+  const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
+
+  if (TEXT_TOOLS.includes(toolId)) {
+    if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
+    return;
   }
 
-  function activateTool(toolId) {
-    if (!global.tvChart) return;
-    const container = document.getElementById('sc-chart-container');
-    if (!container) return;
-
-    try { global.tvChart.cancelDrawing(); } catch(e){}
-    if (typeof hidePanel === 'function') hidePanel();
-
-    // Nếu chọn con trỏ chuột -> Thoát chế độ vẽ
-    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
-    container.classList.add('wa-drawing-mode');
-
-    const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
-
-    if (TEXT_TOOLS.includes(toolId)) {
-      if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
-      return;
+  try {
+    let tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines'; 
+    let s = toolStyles[tType] || {};
+    let config = { name: toolId, lock: false, styles: {} };
+    
+    if(tType === 'lines' || tType === 'waves') {
+      config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
+    } else if (tType === 'shapes') {
+      config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15), borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
+    } else if (tType === 'fibo') {
+      config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
+    } else if (tType === 'text') {
+      config.extendData = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
+      config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
     }
 
-    try {
-      let tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines'; 
-      let s = toolStyles[tType] || {};
-      let config = { name: toolId, lock: false, styles: {} };
-      
-      if(tType === 'lines' || tType === 'waves') {
-        config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
-      } else if (tType === 'shapes') {
-        config.styles.polygon = { style: 'stroke_fill', color: hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15), borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
-      } else if (tType === 'fibo') {
-        config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
-      } else if (tType === 'text') {
-        config.extendData = (toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
-        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
-      }
-
-      global.tvChart.createOverlay(config);
-    } catch (err) { 
-      if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
-    }
+    global.tvChart.createOverlay(config);
+  } catch (err) { 
+    if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
   }
+}
 
 // ============================================================
 // 7.6 MOUNT DOM — Chỉ chèn HTML Elements, KHÔNG bind global events
@@ -2649,12 +2641,11 @@ function mountDOM() {
     </div>`;
   container.appendChild(panel);
 
-  // Bind LOCAL events (chỉ liên quan đến toolbar buttons — không phải document-level)
+  // Bind LOCAL events
   _bindToolbarLocalEvents(sidebar, panel);
   bindContextMenu(panel);
 }
 
-// Local events: click trên toolbar, nút trong panel — KHÔNG phải mousemove/keydown
 function _bindToolbarLocalEvents(toolbar, panel) {
   var container = document.getElementById('sc-chart-container');
 
@@ -2724,7 +2715,6 @@ function _bindToolbarLocalEvents(toolbar, panel) {
   }
 }
 
-
 // ============================================================
 // 7.7 BIND CHART EVENTS — Gắn vào tvChart object (1 lần / chart instance)
 // ============================================================
@@ -2770,7 +2760,6 @@ function _bindChartEventsOnce() {
     }
   });
 }
-
 
 // ============================================================
 // 7.8 MAIN MOUNT FUNCTION — Entry point gọi từ ngoài
@@ -2845,7 +2834,6 @@ function mountUI() {
     _startObserver();
   }
 })();
-
 
 // ============================================================
 // 7.10 KHỞI ĐỘNG
