@@ -1549,9 +1549,17 @@ window.applyMarketUpdatesThrottled = function() {
     });
 
     if (hasUpdates) {
-        const freshStats = calculateMarketStats(window.allTokens);
-        renderMarketHUD(freshStats); 
-        updateSummary(); 
+        // 💡 VÁ LỖI: Nếu Chart (Overlay) đang mở và che mất màn hình chính thì BỎ QUA việc vẽ lại HUD
+        const chartOverlay = document.getElementById('super-chart-overlay');
+        const isChartActive = chartOverlay && chartOverlay.classList.contains('active');
+        
+        if (!isChartActive) {
+            const freshStats = calculateMarketStats(window.allTokens);
+            renderMarketHUD(freshStats); 
+        }
+        
+        updateSummary();
+        // ...
         if (typeof window.renderProWatchlist === 'function') window.renderProWatchlist(); 
     }
 };

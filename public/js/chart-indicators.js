@@ -242,7 +242,7 @@
       name: 'WAVE_PAC',
       shortName: 'Wave PAC',
       description: 'Hệ thống Kênh giá Wave (PAC & MAs)',
-      category: 'trend',
+      category: 'wave_alpha',
       isStack: true, // Hiển thị đè lên nến (overlay)
       defaultParams: [34, 89, 200, 610],
       paramLabels: ['Chu kỳ PAC', 'Đường tín hiệu', 'EMA Chậm 1', 'EMA Chậm 2'],
@@ -314,7 +314,7 @@
     name: 'WAVE_ADVANCED_RSI',
     shortName: 'WAVE RSI',
     description: 'RSI Advanced',
-    category: 'oscillator',
+    category: 'wave_alpha',
     isStack: false,
     defaultParams: [14, 0, 14, 2.0, 1],
     paramLabels: ['Chu kỳ RSI', 'MA Type (0=SMA,1=BB,2=EMA,3=RMA,4=WMA,5=VWMA)', 'Chu kỳ MA', 'BB StdDev', 'Hiện Phân kỳ (1=Có, 0=Không)'],

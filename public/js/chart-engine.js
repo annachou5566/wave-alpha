@@ -84,14 +84,24 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 
     if (window.chartWs) window.chartWs.close();
 
-    if (!window.quantWorker) {
+    // 💡 VÁ LỖI: Terminate worker cũ nếu đây là mở chart mới (đổi coin) để tránh Zombie Worker
+    if (!isTimeSwitch) {
+        if (window.quantWorker) {
+            window.quantWorker.terminate();
+            window.quantWorker = null;
+        }
         window.quantWorker = new Worker('public/js/quant-worker.js');
         window.quantWorker.onmessage = function(e) {
-            if (e.data.cmd === 'STATS_UPDATE') Object.assign(window.quantStats, e.data.stats);
+            if (e.data.cmd === 'STATS_UPDATE') {
+                Object.assign(window.quantStats, e.data.stats);
+            }
         };
     }
     
-    window.quantWorker.postMessage({ cmd: 'INIT' });
+    // Nếu là đổi khung giờ (isTimeSwitch) hoặc vừa tạo xong, thì reset data
+    if (window.quantWorker) {
+        window.quantWorker.postMessage({ cmd: 'INIT' });
+    }
     window.activeChartSessionId = Date.now() + '_' + t.symbol;
     let currentSession = window.activeChartSessionId;
 
@@ -122,12 +132,16 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 
     let params = [];
     if (contract) {
-        params.push(`came@${contract}@${chainId}@kline_1m`, `came@${contract}@${chainId}@kline_5m`, `came@${contract}@${chainId}@kline_15m`, `came@${contract}@${chainId}@kline_1h`);
-        // Ép tải luồng 1s nếu người dùng đang ở chart Tick
         let targetInterval = window.currentChartInterval === 'tick' ? '1s' : window.currentChartInterval;
-        let tk = `came@${contract}@${chainId}@kline_${targetInterval}`;
-        if (!params.includes(tk)) params.push(tk);
-    } 
+        
+        // 💡 VÁ LỖI: Chỉ subscribe luồng dữ liệu của khung giờ hiện tại
+        params.push(`came@${contract}@${chainId}@kline_${targetInterval}`);
+        
+        // Nếu UI của bạn có tính năng Candle Volume Widget buộc phải dùng khung 1m, thì mới mở dòng dưới đây:
+        if (targetInterval !== '1m') {
+            params.push(`came@${contract}@${chainId}@kline_1m`); 
+        }
+    }
 
     params.push('came@allTokens@ticker24');
 
@@ -156,8 +170,11 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
         }
     }
 
+    window._lastMarkerCount = 0; // 💡 Khởi tạo biến đếm marker
+
     if (window.scCalcInterval) clearInterval(window.scCalcInterval);
     window.scCalcInterval = setInterval(() => {
+        if (document.hidden) return; // 💡 VÁ LỖI: Đóng băng tính toán nếu tab bị ẩn
         if (window.activeChartSessionId !== currentSession) return;
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
@@ -252,7 +269,14 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 
         window.scSpeedWindow = window.scSpeedWindow.filter(x => now - x.t <= 5000);
 
-        if (typeof window.applyFishFilter === 'function') window.applyFishFilter();
+        // 💡 VÁ LỖI: Chỉ chạy vòng lặp Fish Filter NẾU THỰC SỰ có marker mới được thêm vào
+        if (typeof window.applyFishFilter === 'function') {
+            let currentMarkerCount = (window.scChartMarkers || []).length;
+            if (currentMarkerCount !== window._lastMarkerCount) {
+                window.applyFishFilter();
+                window._lastMarkerCount = currentMarkerCount;
+            }
+        }
         if (typeof window.updateCommandCenterUI === 'function') window.updateCommandCenterUI();
         
     }, 1000);
@@ -424,28 +448,41 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
-                if (nowT - (window.lastChartRender || 0) > 100) { // Render mỗi 100ms
-                    window.lastChartRender = nowT;
+            // 💡 VÁ LỖI: Bỏ wrapper chặn khung giờ (if tick/1s), cho phép MỌI KHUNG GIỜ nhận data realtime siêu tốc
+            if (nowT - (window.lastChartRender || 0) > 40) { // Giảm throttle xuống 40ms (~25 FPS) để mượt như app native
+                window.lastChartRender = nowT;
+                
+                if (window.tvChart && typeof window.tvChart.updateData === 'function') {
+                    if (window.currentChartInterval === 'tick') {
+                        // Gom nến tròn giây (timeSec * 1000) để không đẻ ra 10 nến/giây làm chart chạy loạn xạ
+                        window.tvChart.updateData({
+                            timestamp: timeSec * 1000,
+                            open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
+                            volume: parseFloat(valUSD || 0)
+                        });
                     
-                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
-                        if (window.currentChartInterval === 'tick') {
-                            // Gom nến tròn giây (timeSec * 1000) để không đẻ ra 10 nến/giây làm chart chạy loạn xạ
+                    } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                        // 1s chart lấy dữ liệu đã gộp để ra cây nến xanh đỏ thực sự
+                        window.tvChart.updateData({
+                            timestamp: timeSec * 1000,
+                            open: window.liveCandle1s.open,
+                            high: window.liveCandle1s.high,
+                            low: window.liveCandle1s.low,
+                            close: window.liveCandle1s.close,
+                            volume: window.liveCandle1s.vol
+                        });
+                    } else {
+                        // 💡 VÁ LỖI KHUNG LỚN (1m, 5m, 1h...): Bơm giá realtime vào ĐÚNG cây nến cuối cùng để không đẻ nến rác
+                        let dataList = window.tvChart.getDataList();
+                        if (dataList && dataList.length > 0) {
+                            let lastCandle = dataList[dataList.length - 1];
                             window.tvChart.updateData({
-                                timestamp: timeSec * 1000,
-                                open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p),
-                                volume: parseFloat(valUSD || 0)
-                            });
-                        
-                        } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
-                            // 1s chart lấy dữ liệu đã gộp để ra cây nến xanh đỏ thực sự
-                            window.tvChart.updateData({
-                                timestamp: timeSec * 1000,
-                                open: window.liveCandle1s.open,
-                                high: window.liveCandle1s.high,
-                                low: window.liveCandle1s.low,
-                                close: window.liveCandle1s.close,
-                                volume: window.liveCandle1s.vol
+                                timestamp: lastCandle.timestamp,    // TUYỆT ĐỐI GIỮ NGUYÊN TIMESTAMP CỦA NẾN HIỆN TẠI
+                                open: lastCandle.open,              // Giữ nguyên giá mở cửa
+                                high: Math.max(lastCandle.high, p), // Kéo râu nến lên nếu giá phá đỉnh nến
+                                low: Math.min(lastCandle.low, p),   // Kéo râu nến xuống nếu giá phá đáy nến
+                                close: p,                           // Chốt thân nến liên tục
+                                volume: lastCandle.volume           // Giữ nguyên volume (để luồng kline của Binance tự lo)
                             });
                         }
                     }

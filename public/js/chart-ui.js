@@ -505,11 +505,39 @@ window.updateCommandCenterUI = function() {
 };
 
 window.changeTheme = function() {
-    let el = document.getElementById('sc-theme-select');
-    if (el) {
-        window.currentTheme = el.value;
-        localStorage.setItem('wave_theme', window.currentTheme);
-        if (window.currentChartToken) window.openProChart(window.currentChartToken, true); 
+    const el = document.getElementById('sc-theme-select');
+    if (!el) return;
+    window.currentTheme = el.value;
+    localStorage.setItem('wave_theme', window.currentTheme);
+    
+    // Cập nhật class để CSS biến đổi màu HUD xung quanh
+    const overlayElem = document.getElementById('super-chart-overlay');
+    if (overlayElem) {
+        overlayElem.classList.remove('theme-cyber', 'theme-trad');
+        overlayElem.classList.add('theme-' + window.currentTheme);
+    }
+
+    // 💡 VÁ LỖI: Chỉ đổi màu trực tiếp vào Canvas, KHÔNG xóa chart đi vẽ lại
+    if (window.tvChart) {
+        const isTrad = window.currentTheme === 'trad';
+        const t_up = isTrad ? '#0ECB81' : '#2af592';
+        const t_down = isTrad ? '#F6465D' : '#cb55e3';
+        const t_text = isTrad ? '#848e9c' : '#527c82';
+        const t_line = isTrad ? '#00F0FF' : '#41e6e7';
+
+        window.tvChart.setStyles({
+            candle: {
+                bar: { upColor: t_up, downColor: t_down, noChangeColor: t_text,
+                       upBorderColor: t_up, downBorderColor: t_down,
+                       upWickColor: t_up, downWickColor: t_down },
+                area: { lineColor: t_line,
+                        backgroundColor: [
+                            { offset: 0, color: isTrad ? 'rgba(0,240,255,0.2)' : 'rgba(65,230,231,0.2)' },
+                            { offset: 1, color: 'rgba(0,0,0,0)' }
+                        ]}
+            },
+            yAxis: { tickText: { color: t_text } }
+        });
     }
 };
 
@@ -807,9 +835,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
             if (histData && histData.length > 0) {
                 window.tvChart.applyNewData(histData);
             }
-            if (window.WaveIndicatorAPI) {
-                if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
-            }
+            
+            // 💡 VÁ LỖI: Đã BỎ dòng gọi WaveIndicatorAPI.restore() tại đây.
+            // Khi đổi khung giờ, applyNewData tự động recalculate data. Việc gọi restore() 
+            // sẽ xóa sạch indicator cũ và rebuild lại từ đầu gây ra hiện tượng đơ giật 1 giây.
+
             if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
         });
         return; // Thoát openProChart hoàn toàn — KHÔNG dispose, KHÔNG init
@@ -1006,10 +1036,18 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
 
-        // [FIX] Tự động resize chart khi container thay đổi kích thước
         if (window._chartResizeObserver) window._chartResizeObserver.disconnect();
+        
+        // 💡 VÁ LỖI: Dùng requestAnimationFrame để giới hạn số lần resize tối đa là 60fps
+        let _resizeRafId = null;
         window._chartResizeObserver = new ResizeObserver(function() {
-            if (window.tvChart) window.tvChart.resize();
+            if (!window.tvChart) return;
+            if (_resizeRafId) cancelAnimationFrame(_resizeRafId);
+            
+            _resizeRafId = requestAnimationFrame(function() {
+                if (window.tvChart) window.tvChart.resize();
+                _resizeRafId = null;
+            });
         });
         window._chartResizeObserver.observe(container);
 
@@ -1133,8 +1171,14 @@ window.closeProChart = function() {
     if (typeof window.stopFuturesEngine === 'function') window.stopFuturesEngine();
     if (window.scCalcInterval) { clearInterval(window.scCalcInterval); window.scCalcInterval = null; }
     
-    // TẮT LUỒNG CẬP NHẬT API SMART MONEY VÀ FUTURES ĐỂ GIẢI PHÓNG RAM
+    // 💡 VÁ LỖI: Dừng vòng lặp 150ms của Tape để không bú CPU khi đã đóng chart
+    if (window.scTapeInterval) { clearInterval(window.scTapeInterval); window.scTapeInterval = null; } 
+    
     if (window.proChartApiInterval) { clearInterval(window.proChartApiInterval); window.proChartApiInterval = null; }
+
+    // 💡 VÁ LỖI: Xóa sạch rác markers để lần mở chart sau không bị dính data cũ
+    window.activeWaveMarkers = {};
+    window.scChartMarkers = [];
 
     const overlay = document.getElementById('super-chart-overlay');
     if (overlay) { overlay.classList.remove('active'); document.body.classList.remove('overlay-active'); }
