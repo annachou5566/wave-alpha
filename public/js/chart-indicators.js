@@ -301,6 +301,17 @@
       builtIn: true,
     },
     {
+  name: 'RSI_PRO',
+  shortName: 'RSI Pro',
+  description: 'RSI nâng cao: MA overlay, Bollinger Bands, phát hiện Divergence',
+  category: 'oscillator',
+  isStack: false,
+  defaultParams: [14, 14, 0, 2.0],
+  // maType: 0=SMA, 1=EMA, 2=RMA, 3=WMA, 4=VWMA
+  paramLabels: ['Chu kỳ RSI', 'Chu kỳ MA', 'Loại MA (0=SMA/1=EMA/2=RMA/3=WMA/4=VWMA)', 'BB StdDev'],
+  builtIn: false,
+},
+    {
       name: 'MACD',
       shortName: 'MACD',
       description: 'Moving Average Convergence Divergence',
@@ -968,7 +979,199 @@
         });
       },
     });
+// ── 16. RSI_PRO ──────────────────────────────────────────────────────
+// RSI + MA overlay + Bollinger Bands on RSI + Divergence detection
+kc.registerIndicator({
+  name: 'RSI_PRO',
+  shortName: 'RSI Pro',
+  series: 'normal',
+  calcParams: [14, 14, 0, 2.0],
+  // [rsiLength, maLength, maType(0-4), bbMult]
+  figures: [
+    { key: 'rsi',      title: 'RSI: ',    type: 'line' },
+    { key: 'rsiMa',    title: 'MA: ',     type: 'line' },
+    { key: 'bbUpper',  title: 'BB+: ',    type: 'line' },
+    { key: 'bbLower',  title: 'BB-: ',    type: 'line' },
+    { key: 'bullDiv',  title: 'Bull: ',   type: 'circle' },
+    { key: 'bearDiv',  title: 'Bear: ',   type: 'circle' },
+  ],
+  styles: {
+    lines: [
+      { color: '#7E57C2', size: 1, style: 'solid' },   // rsi — purple như TradingView
+      { color: COLOR.gold, size: 1, style: 'solid' },   // rsiMa
+      { color: COLOR.green, size: 1, style: 'dashed' }, // bbUpper
+      { color: COLOR.green, size: 1, style: 'dashed' }, // bbLower
+      { color: COLOR.green, size: 0, style: 'solid' },  // bullDiv (circle only)
+      { color: COLOR.red,   size: 0, style: 'solid' },  // bearDiv (circle only)
+    ],
+    circles: [
+      { color: COLOR.green, style: 'fill' },
+      { color: COLOR.red,   style: 'fill' },
+    ],
+  },
 
+  calc: function (dataList, indicator) {
+    var p         = indicator.calcParams || [14, 14, 0, 2.0];
+    var rsiLen    = p[0] || 14;
+    var maLen     = p[1] || 14;
+    var maType    = p[2] || 0;   // 0=SMA,1=EMA,2=RMA,3=WMA,4=VWMA
+    var bbMult    = p[3] || 2.0;
+    var n         = dataList.length;
+
+    // ── Step 1: RSI via Wilder's RMA ──────────────────────────────
+    var gains = new Array(n).fill(0);
+    var losses = new Array(n).fill(0);
+    for (var i = 1; i < n; i++) {
+      var diff = dataList[i].close - dataList[i - 1].close;
+      gains[i]  = diff > 0 ? diff : 0;
+      losses[i] = diff < 0 ? -diff : 0;
+    }
+    var avgGain = calcRMA(gains, rsiLen);
+    var avgLoss = calcRMA(losses, rsiLen);
+    var rsiArr = avgGain.map(function (g, i) {
+      var l = avgLoss[i];
+      if (isNaN(g) || isNaN(l)) return NaN;
+      if (l === 0) return 100;
+      if (g === 0) return 0;
+      return 100 - 100 / (1 + g / l);
+    });
+
+    // ── Step 2: MA on RSI ─────────────────────────────────────────
+    // WMA helper (volume-weighted not needed here — WMA = linearly weighted)
+    function calcWMA(data, period) {
+      var result = new Array(data.length).fill(NaN);
+      var denom = (period * (period + 1)) / 2;
+      for (var i = period - 1; i < data.length; i++) {
+        var sum = 0;
+        for (var j = 0; j < period; j++) {
+          var v = data[i - period + 1 + j];
+          sum += (isNaN(v) ? 0 : v) * (j + 1);
+        }
+        result[i] = sum / denom;
+      }
+      return result;
+    }
+
+    // VWMA helper (volume-weighted MA of RSI values)
+    function calcVWMA(rsiData, volData, period) {
+      var result = new Array(rsiData.length).fill(NaN);
+      for (var i = period - 1; i < rsiData.length; i++) {
+        var sumRV = 0, sumV = 0;
+        for (var j = i - period + 1; j <= i; j++) {
+          var rv = isNaN(rsiData[j]) ? 0 : rsiData[j];
+          var vol = volData[j] || 0;
+          sumRV += rv * vol;
+          sumV  += vol;
+        }
+        result[i] = sumV === 0 ? NaN : sumRV / sumV;
+      }
+      return result;
+    }
+
+    var volumes = dataList.map(function (d) { return d.volume || 0; });
+    var rsiClean = rsiArr.map(function (v) { return isNaN(v) ? 0 : v; });
+
+    var maArr;
+    if      (maType === 1) maArr = calcEMA(rsiClean, maLen);
+    else if (maType === 2) maArr = calcRMA(rsiClean, maLen);
+    else if (maType === 3) maArr = calcWMA(rsiClean, maLen);
+    else if (maType === 4) maArr = calcVWMA(rsiArr, volumes, maLen);
+    else                   maArr = calcSMA(rsiClean, maLen);  // default SMA
+
+    // ── Step 3: StdDev & Bollinger Bands on RSI ───────────────────
+    var bbUpper = new Array(n).fill(NaN);
+    var bbLower = new Array(n).fill(NaN);
+    for (var i = maLen - 1; i < n; i++) {
+      if (isNaN(maArr[i])) continue;
+      var slice = rsiArr.slice(i - maLen + 1, i + 1);
+      var mean  = maArr[i];
+      var variance = slice.reduce(function (acc, v) {
+        var d = (isNaN(v) ? 0 : v) - mean;
+        return acc + d * d;
+      }, 0) / maLen;
+      var sd = Math.sqrt(variance);
+      bbUpper[i] = mean + sd * bbMult;
+      bbLower[i] = mean - sd * bbMult;
+    }
+
+    // ── Step 4: Divergence detection ──────────────────────────────
+    // Pivot detection: a point is pivot low if it's the lowest in [i-left, i+right]
+    // Since we process left-to-right, we only know pivot at bar i+right
+    var LOOK_LEFT  = 5;
+    var LOOK_RIGHT = 5;
+    var RANGE_LOW  = 5;
+    var RANGE_HIGH = 60;
+
+    // Find pivot lows and highs in RSI
+    var pivotLow  = new Array(n).fill(false);
+    var pivotHigh = new Array(n).fill(false);
+    for (var i = LOOK_LEFT; i < n - LOOK_RIGHT; i++) {
+      var isLow = true, isHigh = true;
+      for (var j = i - LOOK_LEFT; j <= i + LOOK_RIGHT; j++) {
+        if (j === i) continue;
+        if (!isNaN(rsiArr[j]) && rsiArr[j] <= rsiArr[i]) isLow  = false;
+        if (!isNaN(rsiArr[j]) && rsiArr[j] >= rsiArr[i]) isHigh = false;
+      }
+      pivotLow[i]  = isLow  && !isNaN(rsiArr[i]);
+      pivotHigh[i] = isHigh && !isNaN(rsiArr[i]);
+    }
+
+    // For each confirmed pivot, look back for divergence
+    var bullDivArr = new Array(n).fill(NaN);
+    var bearDivArr = new Array(n).fill(NaN);
+
+    for (var i = LOOK_LEFT + RANGE_HIGH; i < n - LOOK_RIGHT; i++) {
+      var pivIdx = i - LOOK_RIGHT; // the pivot bar (confirmed LOOK_RIGHT bars later)
+
+      // ── Regular Bullish: price Lower Low, RSI Higher Low ──────
+      if (pivotLow[pivIdx]) {
+        // Find previous pivot low within range
+        for (var k = 1; k <= RANGE_HIGH - RANGE_LOW; k++) {
+          var prevIdx = pivIdx - LOOK_RIGHT - k;
+          if (prevIdx < 0) break;
+          if (pivotLow[prevIdx]) {
+            var rsiHL   = rsiArr[pivIdx]                  > rsiArr[prevIdx];
+            var priceLL = dataList[pivIdx].low            < dataList[prevIdx].low;
+            var inRange = (pivIdx - prevIdx) >= RANGE_LOW && (pivIdx - prevIdx) <= RANGE_HIGH;
+            if (rsiHL && priceLL && inRange) {
+              bullDivArr[pivIdx] = rsiArr[pivIdx];
+            }
+            break;
+          }
+        }
+      }
+
+      // ── Regular Bearish: price Higher High, RSI Lower High ────
+      if (pivotHigh[pivIdx]) {
+        for (var k = 1; k <= RANGE_HIGH - RANGE_LOW; k++) {
+          var prevIdx = pivIdx - LOOK_RIGHT - k;
+          if (prevIdx < 0) break;
+          if (pivotHigh[prevIdx]) {
+            var rsiLH   = rsiArr[pivIdx]                  < rsiArr[prevIdx];
+            var priceHH = dataList[pivIdx].high           > dataList[prevIdx].high;
+            var inRange = (pivIdx - prevIdx) >= RANGE_LOW && (pivIdx - prevIdx) <= RANGE_HIGH;
+            if (rsiLH && priceHH && inRange) {
+              bearDivArr[pivIdx] = rsiArr[pivIdx];
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // ── Step 5: Assemble output ───────────────────────────────────
+    return dataList.map(function (d, i) {
+      var out = {};
+      if (!isNaN(rsiArr[i]))   out.rsi     = rsiArr[i];
+      if (!isNaN(maArr[i]))    out.rsiMa   = maArr[i];
+      if (!isNaN(bbUpper[i]))  out.bbUpper = bbUpper[i];
+      if (!isNaN(bbLower[i]))  out.bbLower = bbLower[i];
+      if (!isNaN(bullDivArr[i])) out.bullDiv = bullDivArr[i];
+      if (!isNaN(bearDivArr[i])) out.bearDiv = bearDivArr[i];
+      return out;
+    });
+  },
+});
     console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] ✅ Đã đăng ký ' +
       INDICATOR_REGISTRY.filter(function (x) { return !x.builtIn; }).length +
       ' custom indicators');
