@@ -239,6 +239,16 @@
       builtIn: false,
     },
     {
+      name: 'WAVE_PAC',
+      shortName: 'Wave PAC',
+      description: 'Hệ thống Kênh giá Wave (PAC & MAs)',
+      category: 'trend',
+      isStack: true, // Hiển thị đè lên nến (overlay)
+      defaultParams: [34, 89, 200, 610],
+      paramLabels: ['Chu kỳ PAC', 'Đường tín hiệu', 'EMA Chậm 1', 'EMA Chậm 2'],
+      builtIn: false,
+    },
+    {
       name: 'SUPERTREND',
       shortName: 'ST',
       description: 'ATR-based trend direction indicator — changes color with trend',
@@ -556,7 +566,60 @@
         });
       },
     });
-
+    klinecharts.registerIndicator({
+      name: 'WAVE_PAC',
+      shortName: 'Wave PAC',
+      series: 'price',
+      calcParams: [34, 89, 200, 610],
+      figures: [
+        { key: 'pacH', title: 'PAC High: ', type: 'line' },
+        { key: 'pacL', title: 'PAC Low: ', type: 'line' },
+        { key: 'pacC', title: 'PAC Close: ', type: 'line' },
+        { key: 'signal', title: 'Signal EMA: ', type: 'line' },
+        { key: 'ema200', title: 'EMA 200: ', type: 'line' },
+        { key: 'ema610', title: 'EMA 610: ', type: 'line' }
+      ],
+      styles: {
+        lines: [
+          { color: COLOR.muted, size: 1, style: 'dashed' },   // pacH - viền trên đứt nét
+          { color: COLOR.muted, size: 1, style: 'dashed' },   // pacL - viền dưới đứt nét
+          { color: COLOR.white, size: 2, style: 'solid' },    // pacC - trục chính nổi bật
+          { color: COLOR.cyan, size: 2, style: 'solid' },     // signal - đường tín hiệu chính (Cyan của Wave Alpha)
+          { color: COLOR.gold, size: 1, style: 'solid' },     // ema200 - dài hạn
+          { color: COLOR.red, size: 1, style: 'solid' }       // ema610 - cực hạn
+        ]
+      },
+      calc: function(dataList, indicator) {
+        const [pacLen, sigLen, ema1Len, ema2Len] = indicator.calcParams;
+        
+        // Extract array data for math helpers
+        const highs = dataList.map(d => d.high);
+        const lows = dataList.map(d => d.low);
+        const closes = dataList.map(d => d.close);
+        
+        // Calculate values using standard helpers
+        const pacH_Arr = calcEMA(highs, pacLen);
+        const pacL_Arr = calcEMA(lows, pacLen);
+        const pacC_Arr = calcEMA(closes, pacLen);
+        const sig_Arr = calcEMA(closes, sigLen);
+        const ema200_Arr = calcEMA(closes, ema1Len);
+        const ema610_Arr = calcEMA(closes, ema2Len);
+    
+        return dataList.map((d, i) => {
+          const res = {};
+          
+          // Avoid returning NaN or undefined for early values
+          if (pacH_Arr[i] !== undefined && !isNaN(pacH_Arr[i])) res.pacH = pacH_Arr[i];
+          if (pacL_Arr[i] !== undefined && !isNaN(pacL_Arr[i])) res.pacL = pacL_Arr[i];
+          if (pacC_Arr[i] !== undefined && !isNaN(pacC_Arr[i])) res.pacC = pacC_Arr[i];
+          if (sig_Arr[i] !== undefined && !isNaN(sig_Arr[i])) res.signal = sig_Arr[i];
+          if (ema200_Arr[i] !== undefined && !isNaN(ema200_Arr[i])) res.ema200 = ema200_Arr[i];
+          if (ema610_Arr[i] !== undefined && !isNaN(ema610_Arr[i])) res.ema610 = ema610_Arr[i];
+          
+          return res;
+        });
+      }
+    });
     // ── 3. SUPERTREND ─────────────────────────────────
     kc.registerIndicator({
       name: 'SUPERTREND',
