@@ -1015,24 +1015,48 @@ window.openProChart = function(t, isTimeSwitch = false) {
             }
         });
 
-        // Tải Data
-        if (typeof window.fetchBinanceHistory === 'function') {
-            window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-                if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
-                
-                if (window.WaveIndicatorAPI) {
-                    if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
-                    if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
-                }
-
-                // 🚀 LỚP 3: Dùng đúng lifecycle hook — tự rebind events + chờ data + restore
-                if (typeof window.__wa_onChartReady === 'function') {
-                    window.__wa_onChartReady();
-                }
-
-                if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
-            });
+        // ============================================================
+// KHI ĐỔI TIMEFRAME: Không dispose chart — chỉ applyNewData
+// Overlay sống trong chart instance → tự động không mất
+// ============================================================
+if (isTimeSwitch && window.tvChart) {
+    // Cập nhật kiểu nến nếu chuyển sang/từ tick mode
+    window.tvChart.setStyles({
+        candle: {
+            type: window.currentChartInterval === 'tick' ? 'area' : 'candle_solid'
         }
+    });
+
+    window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
+        if (histData && histData.length > 0) {
+            window.tvChart.applyNewData(histData); // Overlay TỰ ĐỘNG còn nguyên
+        }
+        // Chỉ restore indicator, KHÔNG cần restore overlay
+        if (window.WaveIndicatorAPI) {
+            if (typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+        }
+        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
+    });
+    return; // Thoát sớm — không rebuild chart
+}
+
+// KHI ĐỔI COIN: Vẫn rebuild bình thường như cũ
+if (typeof window.fetchBinanceHistory === 'function') {
+    window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
+        if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
+        
+        if (window.WaveIndicatorAPI) {
+            if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();
+            if(typeof window.WaveIndicatorAPI.restore === 'function') window.WaveIndicatorAPI.restore();
+        }
+
+        if (typeof window.__wa_onChartReady === 'function') {
+            window.__wa_onChartReady();
+        }
+
+        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, isTimeSwitch);
+    });
+}
     }, 100); 
 };
 
