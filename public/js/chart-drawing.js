@@ -2333,7 +2333,7 @@
   // ============================================================
   // 6.5. BỔ SUNG CÁC HÀM BỊ THẤT LẠC KHI REFACTOR
   // ============================================================
-  function saveHistory(action, obj) { /* stub giữ tương thích */ }
+  function saveHistory(action, obj) { }
 
   function activateTool(toolId) {
     if (!global.tvChart) return;
@@ -2377,7 +2377,7 @@
 
 
 // ============================================================
-// 7. AUTO-HEAL & PERSISTENCE — REWRITE v3.0 (KLineChart v9 FIX)
+// 7. AUTO-HEAL & PERSISTENCE — REWRITE v4.0 (GIẢI PHÁP BINARY SEARCH)
 // ============================================================
 
 global.__wa_overlay_map = global.__wa_overlay_map || new Map();
@@ -2385,12 +2385,8 @@ global.__wa_overlay_map = global.__wa_overlay_map || new Map();
 function getDrawingKey() {
   let sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
   sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  
-  // 🌟 ĐÃ ÁP DỤNG CÁCH CỦA BẠN: LƯU TÁCH BIỆT THEO TIMEFRAME
-  // Vì hook __wa_onIntervalChange chạy TRƯỚC khi currentChartInterval bị đổi, 
-  // nên lúc lưu nó sẽ lưu vào Key của khung cũ (Hoàn hảo!).
-  let tf = String(window.currentChartInterval || '1D').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return 'wa_drawings_' + sym + '_' + tf;
+  // Dùng MỘT Key duy nhất để hình vẽ hiển thị đồng bộ qua MỌI khung giờ
+  return 'wa_drawings_' + sym;
 }
 
 function saveAllOverlays() {
@@ -2406,21 +2402,41 @@ global.__wa_saveAllOverlays = saveAllOverlays;
 
 function _wa_trackOverlay(o) {
   if (!o || !o.id) return;
-  
-  // 🌟 FIX GITHUB #516: BẮT BUỘC xóa dataIndex để chống lệch tọa độ khi đổi timeframe
-  var cleanPoints = (o.points || []).map(function(p) {
-    return { timestamp: p.timestamp, value: p.value };
-  });
-  
-  global.__wa_overlay_map.set(o.id, { 
-    name: o.name, id: o.id, 
-    points: cleanPoints, 
-    styles: o.styles, lock: !!o.lock, extendData: o.extendData 
-  });
+  // BẮT BUỘC xóa dataIndex khi lưu để KLineChart không ngáo
+  var cleanPoints = (o.points || []).map(function(p) { return { timestamp: p.timestamp, value: p.value }; });
+  global.__wa_overlay_map.set(o.id, { name: o.name, id: o.id, points: cleanPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
 }
 
 function _wa_untrackOverlay(id) {
   if (id) global.__wa_overlay_map.delete(id);
+}
+
+// 🌟 THUẬT TOÁN BINARY SEARCH SIÊU TỐC TÌM CÂY NẾN GẦN NHẤT
+function _wa_findNearestDataIndex(dataList, targetTs) {
+    if (!dataList || dataList.length === 0) return 0;
+    let minDiff = Infinity;
+    let bestIndex = 0;
+    let left = 0;
+    let right = dataList.length - 1;
+    
+    while (left <= right) {
+        let mid = Math.floor((left + right) / 2);
+        let ts = dataList[mid].timestamp;
+        
+        if (ts === targetTs) return mid; // Trúng phóc
+        
+        let diff = Math.abs(ts - targetTs);
+        if (diff < minDiff) {
+            minDiff = diff;
+            bestIndex = mid; // Lưu lại cây nến gần nhất
+        }
+        if (ts < targetTs) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return bestIndex;
 }
 
 let _waRestoreTimer = null;
@@ -2429,62 +2445,67 @@ let _waActiveKey = '';
 
 function restoreOverlays() {
   if (!global.tvChart) return;
-  
-  // 🌟 NẮM LẤY KEY CỦA KHUNG GIỜ MỚI NGAY LẬP TỨC TRƯỚC KHI VÀO TIMER
-  let key = getDrawingKey(); 
-  let saved = localStorage.getItem(key);
-  
-  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
-
   clearInterval(_waRestoreTimer);
   _waRestoreAttempts = 0;
-
-  // Nếu khung giờ mới không có bản vẽ nào, thoát sớm luôn, không cần mở Timer
-  if (!saved || saved === '[]') return;
 
   _waRestoreTimer = setInterval(function() {
     _waRestoreAttempts++;
     if (_waRestoreAttempts > 25) { clearInterval(_waRestoreTimer); return; }
 
     let dataList = global.tvChart.getDataList();
-    // Đổi thành === 0 để đảm bảo coin mới list (có ít nến) vẫn khôi phục được hình vẽ
+    // Đổi thành === 0 để đảm bảo coin mới list (ít nến) vẫn khôi phục được
     if (!dataList || dataList.length === 0) return;
 
     clearInterval(_waRestoreTimer);
 
+    let key = getDrawingKey();
     if (_waActiveKey && _waActiveKey !== key) {
       try { global.tvChart.removeOverlay(); } catch(e) {}
       global.__wa_overlay_map.clear();
     }
     _waActiveKey = key;
 
-    try {
-      let overlayDefs = JSON.parse(saved);
-      overlayDefs.forEach(function(o) {
-        try {
-          // 🌟 Lọc dataIndex khi nạp hình, đồng thời ĐƯA ĐÚNG ID CŨ VÀO
-          var cleanPoints = (o.points || []).map(function(p) { return { timestamp: p.timestamp, value: p.value }; });
-          
-          let cfg = { id: o.id, name: o.name, points: cleanPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
-          let newId = global.tvChart.createOverlay(cfg);
-          
-          if (newId) {
-            global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
-          }
-        } catch(e) {}
-      });
-    } catch(e) {}
+    let saved = localStorage.getItem(key);
+    if (!saved || saved === '[]') return;
+
+    let overlayDefs;
+    try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
+    if (!Array.isArray(overlayDefs) || overlayDefs.length === 0) return;
+
+    if (global.__wa_overlay_map.size >= overlayDefs.length) return;
+
+    try { global.tvChart.removeOverlay(); } catch(e) {}
+    
+    // Xóa map cũ trước khi restore
+    global.__wa_overlay_map.clear();
+
+    overlayDefs.forEach(function(o) {
+      try {
+        // 🌟 BÍ QUYẾT ĐẦU NGÀNH: Ép KLineChart phải nghe lời bằng cách tự tính dataIndex mới!
+        var mappedPoints = (o.points || []).map(function(p) {
+            let newIdx = _wa_findNearestDataIndex(dataList, p.timestamp);
+            return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
+        });
+        
+        // Truyền cả ID cũ vào để bảo toàn danh tính hình vẽ
+        let cfg = { id: o.id, name: o.name, points: mappedPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
+        let newId = global.tvChart.createOverlay(cfg);
+        
+        if (newId) {
+          global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
+        }
+      } catch(e) {}
+    });
   }, 100);
 }
 global.__wa_restoreOverlays = restoreOverlays;
+
 
 // ============================================================
 // 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
 // ============================================================
 
 window.__wa_onIntervalChange = function(newInterval) {
-  // Hook này chạy TRƯỚC khi chart-ui.js đổi biến currentChartInterval.
-  // Nhờ đó, nó lấy đúng Key của Khung Cũ và cất hình vẽ vào két an toàn.
   if (typeof global.__wa_saveAllOverlays === 'function') {
       global.__wa_saveAllOverlays();
   }
@@ -2733,7 +2754,6 @@ function _bindChartEventsOnce() {
   global.tvChart.subscribeAction('onOverlayClick', function(data) {
     var overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
     if (!overlayObj) { if (typeof hidePanel === 'function') hidePanel(); return; }
-    
     var now = Date.now();
     var isDoubleClick = (typeof window.lastClickTime !== 'undefined') ? (now - window.lastClickTime) < 300 : false;
     window.lastClickTime = now;
