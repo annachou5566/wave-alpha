@@ -2340,90 +2340,87 @@
 
 // --- 7.1 DRAWING KEY: chỉ theo SYMBOL, không dính Timeframe ---
 // --- BỘ NHỚ RAM (SHADOW MAP) CHỨA DATA HÌNH VẼ ---
+// ============================================================
+// 7. AUTO-HEAL & PERSISTENCE — CHUẨN TRADINGVIEW (TIME-PRICE ANCHOR)
+// ============================================================
+
 global.__wa_overlay_map = global.__wa_overlay_map || new Map();
 
+// 💡 KIẾN TRÚC TRADINGVIEW: Chỉ lưu theo Symbol, KHÔNG dính Timeframe
 function getDrawingKey() {
   let sym = (window.currentChartToken && (window.currentChartToken.symbol || window.currentChartToken)) || window.__wa_currentSymbol || 'UNKNOWN';
   sym = String(sym).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return 'wa_drawings_' + sym;
+  return 'wa_drawings_' + sym; // VD: wa_drawings_BTCUSDT
 }
 
 function saveAllOverlays() {
   try {
     if (global.__wa_overlay_map.size === 0) return;
     let dataToSave = [];
-    global.__wa_overlay_map.forEach(function(data) {
-      dataToSave.push(data);
-    });
+    global.__wa_overlay_map.forEach(data => dataToSave.push(data));
     localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
   } catch(e) {}
 }
 global.__wa_saveAllOverlays = saveAllOverlays;
 
-// Hàm hỗ trợ: Ghi hình vào bộ nhớ RAM
 function _wa_trackOverlay(o) {
   if (!o || !o.id) return;
   global.__wa_overlay_map.set(o.id, { name: o.name, id: o.id, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
 }
 
-// Hàm hỗ trợ: Xóa hình khỏi bộ nhớ RAM
 function _wa_untrackOverlay(id) {
   if (id) global.__wa_overlay_map.delete(id);
 }
 
-let _waRestoreTimer = null;
-let _waRestoreAttempts = 0;
-let _waActiveKey = '';
-
+// 💡 HÀM PHỤC HỒI THÔNG MINH (CHỜ NẾN LOAD XONG MỚI VẼ)
 function restoreOverlays() {
-  if (!global.tvChart) return;
-  clearInterval(_waRestoreTimer);
-  _waRestoreAttempts = 0;
+  let chart = global.tvChart;
+  if (!chart) return;
 
-  _waRestoreTimer = setInterval(function() {
-    _waRestoreAttempts++;
-    if (_waRestoreAttempts > 25) { clearInterval(_waRestoreTimer); return; }
+  let key = getDrawingKey();
+  let saved = localStorage.getItem(key);
+  if (!saved || saved === '[]') return;
 
-    let dataList = global.tvChart.getDataList();
-    if (!dataList || dataList.length < 5) return;
+  let overlayDefs;
+  try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
 
-    clearInterval(_waRestoreTimer);
+  // HỦY BỎ các vòng lặp chờ cũ (nếu user click chuyển khung quá nhanh)
+  if (global.__wa_restoreInterval) clearInterval(global.__wa_restoreInterval);
 
-    let key = getDrawingKey();
-    if (_waActiveKey && _waActiveKey !== key) {
-      try { global.tvChart.removeOverlay(); } catch(e) {}
+  let attempts = 0;
+  // Bắt đầu vòng lặp cực nhanh (50ms) để rình xem nến đã load vào chart chưa
+  global.__wa_restoreInterval = setInterval(() => {
+    let dataList = chart.getDataList();
+    
+    // NẾU CHART ĐÃ CÓ NẾN -> DỪNG CHỜ VÀ BẮT ĐẦU VẼ
+    if (dataList && dataList.length > 0) {
+      clearInterval(global.__wa_restoreInterval);
+
+      // Xóa rác cũ trước khi nạp
+      try { chart.removeOverlay(); } catch(e) {}
       global.__wa_overlay_map.clear();
+
+      overlayDefs.forEach(o => {
+        try {
+          let cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
+          let newId = chart.createOverlay(cfg);
+          if (newId) {
+            global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
+          }
+        } catch(e) {}
+      });
+      console.log(`✅ [TradingView Logic] Đã đồng bộ hình vẽ cho khung mới.`);
+    } else {
+      // Nếu chart vẫn rỗng (đang xoay vòng loading), tiếp tục chờ...
+      attempts++;
+      if (attempts > 100) clearInterval(global.__wa_restoreInterval); // Timeout sau 5 giây để chống kẹt bộ nhớ
     }
-    _waActiveKey = key;
-
-    let saved = localStorage.getItem(key);
-    if (!saved || saved === '[]') return;
-
-    let overlayDefs;
-    try { overlayDefs = JSON.parse(saved); } catch(e) { return; }
-    if (!Array.isArray(overlayDefs) || overlayDefs.length === 0) return;
-
-    if (global.__wa_overlay_map.size >= overlayDefs.length) return;
-
-    try { global.tvChart.removeOverlay(); } catch(e) {}
-    global.__wa_overlay_map.clear();
-
-    overlayDefs.forEach(function(o) {
-      try {
-        let cfg = { name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
-        let newId = global.tvChart.createOverlay(cfg);
-        if (newId) {
-          global.__wa_overlay_map.set(newId, Object.assign({}, cfg, { id: newId }));
-        }
-      } catch(e) {}
-    });
-  }, 200);
+  }, 50);
 }
 global.__wa_restoreOverlays = restoreOverlays;
 
-
 // ============================================================
-// 7.4 GLOBAL HOOKS — Gọi từ chart-ui.js bên ngoài
+// 7.4 GLOBAL HOOKS
 // ============================================================
 
 window.__wa_onIntervalChange = function(newInterval) {
@@ -2431,29 +2428,34 @@ window.__wa_onIntervalChange = function(newInterval) {
   console.log(`🔥 [HOOK] ĐỔI KHUNG GIỜ SANG: ${newInterval}`);
   console.log(`================================`);
 
-  // 1. Lưu lại toàn bộ hình vẽ hiện tại xuống LocalStorage trước khi chuyển khung
+  // 1. Lưu hình vẽ trước khi chart bị framework reset
   if (typeof global.__wa_saveAllOverlays === 'function') {
     global.__wa_saveAllOverlays();
   }
 
-  // 2. Xóa trí nhớ tạm (RAM)
-  if (global.__wa_overlay_map) {
-      global.__wa_overlay_map.clear();
-  }
+  // 2. Tuyệt đối KHÔNG xóa __wa_overlay_map.clear() ở đây
 
-  // 3. Xoá sạch hình trên chart hiện tại (tránh lỗi bóng ma đồ thị cũ)
-  if (global.tvChart) {
-      try { global.tvChart.removeOverlay(); } catch(e) {}
+  // 3. Kích hoạt hàm phục hồi. Nó sẽ tự động đi vào trạng thái "Chờ" cho đến khi data khung mới đổ về
+  if (typeof global.__wa_restoreOverlays === 'function') {
+    global.__wa_restoreOverlays();
   }
+};
 
-  // 4. Giải pháp chuyên nghiệp: Chờ Engine nạp xong Chart & Nến mới rồi mới Restore
-  // Hàm __wa_restoreOverlays bên dưới đã có cơ chế tự động Quét (Polling) 200ms rất an toàn
-  setTimeout(() => {
-      if (typeof global.__wa_restoreOverlays === 'function') {
-          global.__wa_restoreOverlays();
-          console.log(`✅ Đã khôi phục thành công hình vẽ cho khung ${newInterval}`);
-      }
-  }, 400); // Trễ 400ms là đủ để bypass tiến trình dispose chart của hệ thống
+window.__wa_onSymbolChange = function(newSymbol) {
+  console.log(`\n================================`);
+  console.log(`🔥 [HOOK] ĐỔI COIN SANG: ${newSymbol}`);
+  console.log(`================================`);
+  
+  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+  
+  window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  // KHI ĐỔI COIN KHÁC MỚI XÓA BỘ NHỚ RAM
+  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
+  
+  if (typeof global.__wa_restoreOverlays === 'function') {
+      global.__wa_restoreOverlays();
+  }
 };
 
 
