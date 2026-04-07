@@ -1,19 +1,4 @@
-// [THÊM MỚI] Bơm font icomoon cho tooltip chuẩn Pro
-(function() {
-  if (document.getElementById('wa-pro-font')) return;
-  const style = document.createElement('style');
-  style.id = 'wa-pro-font';
-  style.textContent = `
-    @font-face {
-      font-family: 'icomoon';
-      src: url('data:font/woff;base64,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') format('woff');
-      font-weight: 400;
-      font-style: normal;
-      font-display: block;
-    }
-  `;
-  document.head.appendChild(style);
-})();
+
 // ==========================================
 // 🚀 FILE: chart-ui.js - GIAO DIỆN & TRADINGVIEW
 // ==========================================
@@ -21,6 +6,34 @@
 
 window.tvChart = null;
 window.tvLineSeries = null; 
+// ═══ CACHE DOM — tránh querySelector mỗi giây ═══
+const _UI = {
+    nfEl: null, nfBox: null, speedEl: null, algoStatus: null, algoBox: null,
+    ofiBarBuy: null, ofiBarSell: null, avgEl: null, trendEl: null,
+    spVal: null, spMeter: null, dropEl: null, barBuy: null, barSell: null,
+    volBuy: null, volSell: null, ratioTxt: null, verdictEl: null
+};
+
+window.__cacheCommandCenterUI = function() {
+    _UI.nfEl       = document.getElementById('cc-net-flow');
+    _UI.nfBox      = document.getElementById('cc-nf-box');
+    _UI.speedEl    = document.getElementById('cc-speed');
+    _UI.algoStatus = document.getElementById('cc-algo-status');
+    _UI.algoBox    = document.getElementById('cc-algo-box');
+    _UI.ofiBarBuy  = document.getElementById('cc-ofi-bar-buy');
+    _UI.ofiBarSell = document.getElementById('cc-ofi-bar-sell');
+    _UI.avgEl      = document.getElementById('cc-avg-ticket');
+    _UI.trendEl    = document.getElementById('cc-vwap-trend');
+    _UI.spVal      = document.getElementById('cc-spread-val');
+    _UI.spMeter    = document.getElementById('cc-spread-meter');
+    _UI.dropEl     = document.getElementById('cc-drop-val');
+    _UI.barBuy     = document.getElementById('cc-whale-bar-buy');
+    _UI.barSell    = document.getElementById('cc-whale-bar-sell');
+    _UI.volBuy     = document.getElementById('cc-whale-vol-buy');
+    _UI.volSell    = document.getElementById('cc-whale-vol-sell');
+    _UI.ratioTxt   = document.getElementById('cc-whale-ratio');
+    _UI.verdictEl  = document.getElementById('fut-ai-verdict') || document.getElementById('ai-verdict-badge');
+};
 window.tvVolumeSeries = null; 
 window.tvCandleSeries = null;
 window.currentChartInterval = '1d'; 
@@ -322,8 +335,20 @@ window.flushSmartTape = function(cluster) {
 window.updateCommandCenterUI = function() {
     if (!document.getElementById('quant-command-center')) return;
 
-    let nfEl = document.getElementById('cc-net-flow');
-    let nfBox = document.getElementById('cc-nf-box');
+    // ✅ Kích hoạt Cache DOM 1 lần duy nhất, lấy ra dùng vĩnh viễn
+    if (!_UI.nfEl) window.__cacheCommandCenterUI();
+    if (!_UI.nfEl) return;
+
+    let nfEl = _UI.nfEl, nfBox = _UI.nfBox,
+        speedEl = _UI.speedEl, algoStatus = _UI.algoStatus, algoBox = _UI.algoBox,
+        ofiBarBuy = _UI.ofiBarBuy, ofiBarSell = _UI.ofiBarSell,
+        avgEl = _UI.avgEl, trendEl = _UI.trendEl,
+        spVal = _UI.spVal, spMeter = _UI.spMeter, dropEl = _UI.dropEl,
+        barBuy = _UI.barBuy, barSell = _UI.barSell,
+        volBuy = _UI.volBuy, volSell = _UI.volSell, ratioTxt = _UI.ratioTxt;
+    let verdictEl = _UI.verdictEl;
+
+    // --- BẮT ĐẦU LOGIC TÍNH TOÁN (Giữ nguyên 100%) ---
     if (nfEl && window.scNetFlow !== undefined) {
         nfEl.innerText = (window.scNetFlow >= 0 ? '+' : '-') + '$' + window.formatCompactUSD(Math.abs(window.scNetFlow));
         nfEl.style.color = window.scNetFlow >= 0 ? '#0ECB81' : '#F6465D';
@@ -331,11 +356,8 @@ window.updateCommandCenterUI = function() {
     }
 
     let speed = window.scSpeedWindow ? window.scSpeedWindow.reduce((s, x) => s + x.v, 0) / 5 : 0;
-    let speedEl = document.getElementById('cc-speed');
     if (speedEl) speedEl.innerText = '$' + window.formatCompactUSD(speed) + ' /s';
 
-    let algoStatus = document.getElementById('cc-algo-status');
-    let algoBox = document.getElementById('cc-algo-box');
     let now = Date.now();
     let recentSweeps = window.scTickHistory ? window.scTickHistory.filter(x => (now - x.t <= 15000) && x.q > 0) : [];
     let shortNetFlow = recentSweeps.reduce((s, x) => s + (x.dir ? x.v : -x.v), 0);
@@ -356,8 +378,6 @@ window.updateCommandCenterUI = function() {
         }
     }
 
-    let ofiBarBuy = document.getElementById('cc-ofi-bar-buy');
-    let ofiBarSell = document.getElementById('cc-ofi-bar-sell');
     if (ofiBarBuy && ofiBarSell) {
         let buyPct = window.quantStats.buyDominance || 50; let sellPct = 100 - buyPct;
         ofiBarBuy.style.width = `${buyPct}%`; ofiBarSell.style.width = `${sellPct}%`;
@@ -366,37 +386,30 @@ window.updateCommandCenterUI = function() {
     }
     
     let avgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 0;
-    let avgEl = document.getElementById('cc-avg-ticket');
     if (avgEl) { let icon = avgTicket > 3000 ? '🐋' : '🦐'; let color = avgTicket > 3000 ? '#F0B90B' : '#eaecef'; avgEl.innerHTML = `${icon} <span style="color:${color}">$${window.formatCompactUSD(avgTicket)}</span>`; }
 
     let trend = window.quantStats.trend || 0;
-    let trendEl = document.getElementById('cc-vwap-trend');
     if (trendEl) { trendEl.innerText = (trend > 0 ? '▲ +' : (trend < 0 ? '▼ ' : '')) + Math.abs(trend).toFixed(2) + '%'; trendEl.style.color = trend >= 0 ? '#0ECB81' : '#F6465D'; }
 
     let spread = window.quantStats.spread || 0;
-    let spVal = document.getElementById('cc-spread-val'); let spMeter = document.getElementById('cc-spread-meter');
     if (spVal && spMeter) {
         spVal.innerText = spread.toFixed(2) + '%';
         let fill = Math.min(100, Math.max(5, (spread / 2.0) * 100)); spMeter.style.width = fill + '%';
         if (spread < 0.2) { spMeter.style.background = '#0ECB81'; spVal.style.color = '#0ECB81'; } else if (spread < 0.8) { spMeter.style.background = '#F0B90B'; spVal.style.color = '#F0B90B'; } else { spMeter.style.background = '#F6465D'; spVal.style.color = '#F6465D'; }
     }
 
-    let drop = window.quantStats.drop || 0; let dropEl = document.getElementById('cc-drop-val');
+    let drop = window.quantStats.drop || 0;
     if (dropEl) { dropEl.innerText = drop.toFixed(2) + '%'; dropEl.style.color = drop < -1.0 ? '#00F0FF' : '#eaecef'; }
 
     const wBuy = window.quantStats.whaleBuyVol || 0; const wSell = window.quantStats.whaleSellVol || 0; const totalWhale = wBuy + wSell;
     let smBuyPct = 50, smSellPct = 50;
     if (totalWhale > 0) { smBuyPct = (wBuy / totalWhale) * 100; smSellPct = (wSell / totalWhale) * 100; }
     
-    let barBuy = document.getElementById('cc-whale-bar-buy'); let barSell = document.getElementById('cc-whale-bar-sell');
     if(barBuy) barBuy.style.width = `${smBuyPct}%`; if(barSell) barSell.style.width = `${smSellPct}%`;
-    let volBuy = document.getElementById('cc-whale-vol-buy'); if(volBuy) volBuy.innerText = 'B: $' + window.formatCompactUSD(wBuy);
-    let volSell = document.getElementById('cc-whale-vol-sell'); if(volSell) volSell.innerText = 'S: $' + window.formatCompactUSD(wSell);
-    let ratioTxt = document.getElementById('cc-whale-ratio');
+    if(volBuy) volBuy.innerText = 'B: $' + window.formatCompactUSD(wBuy);
+    if(volSell) volSell.innerText = 'S: $' + window.formatCompactUSD(wSell);
     if(ratioTxt) { ratioTxt.innerText = `${smBuyPct.toFixed(0)}% BUY`; ratioTxt.style.color = smBuyPct > 50 ? '#0ECB81' : '#F6465D'; }
 
-    // Chỉ đến fut-ai-verdict nếu có Tab Futures, nếu không lấy ai-verdict-badge
-    const verdictEl = document.getElementById('fut-ai-verdict') || document.getElementById('ai-verdict-badge');
     if (verdictEl) {
         let _vTrend = window.quantStats.trend || 0; let _vWBuy = window.quantStats.whaleBuyVol || 0; let _vWSell = window.quantStats.whaleSellVol || 0;
         let _vTotalW = _vWBuy + _vWSell; let _vSPct = _vTotalW > 0 ? (_vWSell / _vTotalW) * 100 : 50; let _vWNet = _vWBuy - _vWSell;
@@ -407,7 +420,6 @@ window.updateCommandCenterUI = function() {
         let normalTxPerSec = dailyTx / 86400; let normalAvgTicket = dailyVol / dailyTx;
         let isCrazyFast = txPerSec > Math.max(3, normalTxPerSec * 4); let isRetailTicket = avgTicket < Math.max(100, normalAvgTicket * 0.3); let isHeavyDump = _vWNet < -(Math.max(10000, normalAvgTicket * 20));
 
-        // Phán đoán Futures
         let hasFutures = window.quantStats.fundingRateObj != null;
         let fFunding = window.quantStats.fundingRateObj ? window.quantStats.fundingRateObj.rate : 0;
         let liqLong = window.quantStats.longLiq || 0; let liqShort = window.quantStats.shortLiq || 0;
@@ -465,14 +477,12 @@ window.updateCommandCenterUI = function() {
     }
 
     // --- UPDATE THANH LÝ (LIQUIDATION) ---
-    // Cập nhật lên Tab Futures Mới (Khắc phục lỗi 0$)
     let futLiqLongEl = document.getElementById('fut-liq-long');
     if (futLiqLongEl) futLiqLongEl.innerText = `$${window.formatCompactUSD((window.quantStats && window.quantStats.longLiq) ? window.quantStats.longLiq : 0)}`;
     
     let futLiqShortEl = document.getElementById('fut-liq-short');
     if (futLiqShortEl) futLiqShortEl.innerText = `$${window.formatCompactUSD((window.quantStats && window.quantStats.shortLiq) ? window.quantStats.shortLiq : 0)}`;
 
-    // Cập nhật cho bảng Data Flow cũ (Nếu bạn chưa xóa thẻ cũ)
     let ccLiqLongEl = document.getElementById('cc-liq-long');
     if (ccLiqLongEl) ccLiqLongEl.innerText = `🩸 Liq L: $${window.formatCompactUSD((window.quantStats && window.quantStats.longLiq) ? window.quantStats.longLiq : 0)}`;
     
@@ -743,6 +753,13 @@ window.renderProWatchlist = function(passedSearchTerm) {
 window.openProChart = function(t, isTimeSwitch = false) {
     const overlay = document.getElementById('super-chart-overlay');
     if (!overlay) return;
+
+    // ✅ FIX 3: Hủy API fetch cũ nếu còn đang chạy — tránh race condition (chồng chéo dữ liệu)
+    if (window._fetchAbortCtrl) {
+        window._fetchAbortCtrl.abort();
+    }
+    window._fetchAbortCtrl = new AbortController();
+    const _abortSignal = window._fetchAbortCtrl.signal;
 
     // THÊM ĐOẠN NÀY ĐỂ BÁO LƯU TRƯỚC KHI ĐỔI ĐỒNG COIN MỚI:
     if (!isTimeSwitch && window.currentChartToken && window.currentChartToken.symbol !== t.symbol) {
@@ -1040,8 +1057,11 @@ window.openProChart = function(t, isTimeSwitch = false) {
 
 // KHI ĐỔI COIN: Vẫn rebuild bình thường như cũ
 if (typeof window.fetchBinanceHistory === 'function') {
-    window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
-        if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
+            window.fetchBinanceHistory(t, window.currentChartInterval, window.currentChartInterval === 'tick').then(histData => {
+                // ✅ FIX 3: Nếu lệnh fetch đã bị hủy do user bấm qua tab khác, bỏ qua không đổ nến nữa
+                if (_abortSignal.aborted) return; 
+                
+                if (histData && histData.length > 0) window.tvChart.applyNewData(histData);
         
         if (window.WaveIndicatorAPI) {
             if(typeof window.WaveIndicatorAPI.initUI === 'function') window.WaveIndicatorAPI.initUI();

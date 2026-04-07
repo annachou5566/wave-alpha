@@ -16,6 +16,7 @@
   let isMagnetMode = false;
   let undoStack = [];
   let redoStack = [];
+  const MAX_HISTORY = 50;
   let lastClickTime = 0;
   
   // Debounce (16ms = ~60FPS) để cập nhật Real-time không lag
@@ -2333,7 +2334,20 @@
   // ============================================================
   // 6.5. BỔ SUNG CÁC HÀM BỊ THẤT LẠC KHI REFACTOR
   // ============================================================
-  function saveHistory(action, obj) { }
+  
+
+  function saveHistory(action, obj) {
+      if (!obj) return;
+      
+      // Lưu bản sao của object (Object.assign) để an toàn bộ nhớ
+      undoStack.push({ action: action, overlay: Object.assign({}, obj) });
+      
+      // Xóa entry cũ nhất nếu vượt quá 50 bước
+      if (undoStack.length > MAX_HISTORY) undoStack.shift(); 
+      
+      // Reset redo mỗi khi có hành động vẽ/xóa mới
+      redoStack = []; 
+  }
 
   function activateTool(toolId) {
     if (!global.tvChart) return;
@@ -2652,6 +2666,9 @@ function mountDOM() {
 
 function _bindToolbarLocalEvents(toolbar, panel) {
   var container = document.getElementById('sc-chart-container');
+  
+  // ✅ FIX 6: CACHE DANH SÁCH NÚT — tránh quét DOM lặp đi lặp lại
+  let _tbBtns = Array.from(toolbar.querySelectorAll('.wa-tb-btn'));
 
   toolbar.addEventListener('click', function(e) {
     var menuItem = e.target.closest('.wa-menu-item');
@@ -2659,11 +2676,11 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     var toolId = null;
     if (menuItem) {
       toolId = menuItem.getAttribute('data-tool');
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+      _tbBtns.forEach(function(b) { b.classList.remove('active'); }); // Dùng cache
       menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
     } else if (btn) {
       toolId = btn.getAttribute('data-tool');
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+      _tbBtns.forEach(function(b) { b.classList.remove('active'); }); // Dùng cache
       btn.classList.add('active');
     }
     if (toolId) activateTool(toolId);
@@ -2693,11 +2710,13 @@ function _bindToolbarLocalEvents(toolbar, panel) {
           if (typeof undoStack !== 'undefined') undoStack = []; 
           if (typeof redoStack !== 'undefined') redoStack = [];
           if (typeof hidePanel === 'function') hidePanel();
-          toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+          
+          _tbBtns.forEach(function(b) { b.classList.remove('active'); }); // Dùng cache
+          
           var ptr = toolbar.querySelector('[data-tool=pointer]');
           if (ptr) ptr.classList.add('active');
           container.classList.remove('wa-drawing-mode');
-          saveAllOverlays();
+          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
           if (typeof showToast === 'function') showToast('🗑️ Đã xoá sạch bản vẽ');
         });
       }
@@ -2716,11 +2735,11 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     var delBtn = panel.querySelector('#wa-btn-p-del');
     if (delBtn) delBtn.addEventListener('click', function() {
       if (typeof currentSelectedOverlay === 'undefined' || !currentSelectedOverlay || !global.tvChart) return;
-      saveHistory('delete', currentSelectedOverlay);
+      if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
       global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-      _wa_untrackOverlay(currentSelectedOverlay.id); 
+      if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(currentSelectedOverlay.id); 
       if (typeof hidePanel === 'function') hidePanel();
-      saveAllOverlays();
+      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
     });
   }
 }
