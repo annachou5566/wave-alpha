@@ -2331,9 +2331,11 @@
   }
 
   // ============================================================
-  // SECTION 6.5 — HÀM TIỆN ÍCH & KHỞI TẠO CÔNG CỤ VẼ
+  // SECTION 6.5 — HÀM TIỆN ÍCH (Giữ nguyên 100% bản gốc của Huy)
   // ============================================================
-  function saveHistory(action, obj) { /* stub giữ tương thích */ }
+  function saveHistory(action, obj) {
+    // Hàm này tạm thời để trống để giữ tính tương thích, chống lỗi ReferenceError
+  }
 
   function activateTool(toolId) {
     if (!global.tvChart) return;
@@ -2343,10 +2345,12 @@
     try { global.tvChart.cancelDrawing(); } catch(e){}
     if (typeof hidePanel === 'function') hidePanel();
 
+    // Nếu chọn con trỏ chuột -> Thoát chế độ vẽ
     if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
     container.classList.add('wa-drawing-mode');
 
     const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
+
     if (TEXT_TOOLS.includes(toolId)) {
       if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
       return;
@@ -2367,12 +2371,16 @@
         config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
       }
+
       global.tvChart.createOverlay(config);
-    } catch (err) {}
+    } catch (err) { 
+      if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
+    }
   }
 
   // ============================================================
-  // WAVE ALPHA DRAWING SYSTEM v4.0 (PER-TIMEFRAME)
+  // WAVE ALPHA DRAWING SYSTEM v4.0
+  // Per-timeframe · Race-free · Event-driven
   // ============================================================
 
   // --- LAYER 1: STORE — chỉ đọc/ghi localStorage ---
@@ -2389,7 +2397,8 @@
       } catch(e) {}
     },
     load: function(sym, tf) {
-      try { return JSON.parse(localStorage.getItem(this.key(sym, tf))) || []; } catch(e) { return []; }
+      try { return JSON.parse(localStorage.getItem(this.key(sym, tf))) || []; }
+      catch(e) { return []; }
     },
     clear: function(sym, tf) {
       try { localStorage.removeItem(this.key(sym, tf)); } catch(e) {}
@@ -2406,7 +2415,22 @@
     clear: function()       { this._map.clear(); },
     size: function()        { return this._map.size; }
   };
+  
+  // Tương thích ngược cho các tool cũ đang gọi global.__wa_overlay_map
   global.__wa_overlay_map = WA_Registry._map;
+
+  function _wa_trackOverlay(o) {
+    if (!o || !o.id) return;
+    WA_Registry.set(o.id, { id: o.id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
+  }
+  function _wa_untrackOverlay(id) { WA_Registry.del(id); }
+
+  function saveAllOverlays() {
+    var sym = (window.currentChartToken && window.currentChartToken.symbol) || window.__wa_currentSymbol || '';
+    var tf  = window.currentChartInterval || '1d';
+    WA_Store.save(sym, tf, WA_Registry.all());
+  }
+  global.__wa_saveAllOverlays = saveAllOverlays;
 
   // --- LAYER 3: BRIDGE — giao tiếp với KLineCharts ---
   var WA_Bridge = {
@@ -2415,40 +2439,50 @@
       chart.__wa_bound = true;
 
       chart.subscribeAction('onDrawEnd', function(data) {
-        var o = Array.isArray(data) ? data[0] : data;
-        if (!o || !o.id) return;
         activateTool('pointer');
-        
         var toolbar = document.querySelector('.wa-toolbar');
         if (toolbar) {
-          toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
-          var ptr = toolbar.querySelector('[data-tool=pointer]'); if (ptr) ptr.classList.add('active');
+          toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+          var ptr = toolbar.querySelector('[data-tool=pointer]');
+          if (ptr) ptr.classList.add('active');
         }
+        var o = Array.isArray(data) ? data[0] : data;
+        if (!o || !o.id) return;
 
+        // Bỏ qua marker bot, chỉ lưu hình vẽ user
         if (o.name !== 'cyberMarker') {
-            WA_Registry.set(o.id, { id: o.id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
-            var sym = (window.currentChartToken && window.currentChartToken.symbol) || '';
-            var tf  = window.currentChartInterval || '1d';
-            WA_Store.save(sym, tf, WA_Registry.all());
+          _wa_trackOverlay(o);
+          saveHistory('add', o);
+          saveAllOverlays();
         }
 
         window.currentSelectedOverlay = o;
-        if (typeof renderPanel === 'function') renderPanel(o);
+        if (typeof renderPanel === 'function') renderPanel(window.currentSelectedOverlay);
       });
 
       chart.subscribeAction('onOverlayClick', function(data) {
         var o = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
         if (!o) { if (typeof hidePanel === 'function') hidePanel(); return; }
         
-        var existing = WA_Registry.get(o.id);
-        if (existing) {
-          WA_Registry.set(o.id, { id: o.id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
-          var sym = (window.currentChartToken && window.currentChartToken.symbol) || '';
-          var tf  = window.currentChartInterval || '1d';
-          WA_Store.save(sym, tf, WA_Registry.all());
-        }
+        var now = Date.now();
+        var isDoubleClick = (typeof window.lastClickTime !== 'undefined') ? (now - window.lastClickTime) < 300 : false;
+        window.lastClickTime = now;
+        
         window.currentSelectedOverlay = o;
-        if (typeof renderPanel === 'function') renderPanel(o);
+        
+        var existing = WA_Registry.get(o.id);
+        if (existing && o.name !== 'cyberMarker') {
+          _wa_trackOverlay(o);
+          saveAllOverlays(); // Cập nhật vị trí khi kéo thả
+        }
+        
+        if (typeof renderPanel === 'function') renderPanel(window.currentSelectedOverlay);
+        if (isDoubleClick && o.name === 'customText') {
+          setTimeout(function() {
+            var t = document.getElementById('wa-prop-txt');
+            if (t) { t.focus(); t.select(); }
+          }, 50);
+        }
       });
     },
 
@@ -2462,14 +2496,17 @@
       WA_Registry.clear();
       overlays.forEach(function(o) {
         try {
-          var id = chart.createOverlay({ name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
-          if (id) WA_Registry.set(id, { id: id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
+          var id = chart.createOverlay({
+            name: o.name, points: o.points,
+            styles: o.styles, lock: !!o.lock, extendData: o.extendData
+          });
+          if (id) _wa_trackOverlay({ id: id, name: o.name, points: o.points, styles: o.styles, lock: !!o.lock, extendData: o.extendData });
         } catch(e) {}
       });
     }
   };
 
-  // --- LAYER 4: LIFECYCLE — điều phối ---
+  // --- LAYER 4: LIFECYCLE ---
   var WA_Lifecycle = {
     _restoreTimer: null,
     onBeforeChartInit: function(sym, tf) {
@@ -2484,8 +2521,11 @@
     },
     onChartReady: function(sym, tf) {
       if (!global.tvChart) return;
-      var self = this; var chart = global.tvChart;
+      var self = this;
+      var chart = global.tvChart;
+
       WA_Bridge.bindEvents(chart);
+
       var overlays = WA_Store.load(sym, tf);
       if (!overlays.length) return;
 
@@ -2497,100 +2537,147 @@
         if (!global.tvChart || global.tvChart !== chart) { clearInterval(self._restoreTimer); self._restoreTimer = null; return; }
         var dataList = chart.getDataList();
         if (!dataList || dataList.length < 5) return;
-        clearInterval(self._restoreTimer); self._restoreTimer = null;
+        clearInterval(self._restoreTimer);
+        self._restoreTimer = null;
         WA_Bridge.renderAll(chart, overlays);
       }, 200);
     }
   };
 
+  // Kích hoạt Lifecycle Hook từ chart-ui.js
   window.__wa_onBeforeChartInit = function(sym, tf) { WA_Lifecycle.onBeforeChartInit(sym, tf); };
   window.__wa_onChartReady = function(sym, tf) { WA_Lifecycle.onChartReady(sym, tf); };
 
-  global.__wa_saveAllOverlays = function() {
-    var sym = (window.currentChartToken && window.currentChartToken.symbol) || '';
-    var tf  = window.currentChartInterval || '1d';
-    WA_Store.save(sym, tf, WA_Registry.all());
-  };
 
   // ============================================================
-  // SECTION 7.5 — GLOBAL EVENTS (Kéo thả, Phím tắt)
+  // 7.5 BIND CORE EVENTS — CHỈ GẮN 1 LẦN DUY NHẤT (Giữ nguyên 100% bản gốc)
   // ============================================================
   var _waCoreEventsBound = false;
+
   function bindCoreEventsOnce() {
-    if (_waCoreEventsBound) return;
+    if (_waCoreEventsBound) return; // GUARD: Không bao giờ chạy lần 2
     _waCoreEventsBound = true;
 
-    var _isDragging = false, _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0, _dragRaf = null;
+    // --- Drag Toolbar (mousemove/mouseup gắn vào document CHỈ 1 LẦN) ---
+    var _isDragging = false;
+    var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
+    var _dragRaf = null;
+
     document.addEventListener('mousemove', function(e) {
       if (!_isDragging) return;
       if (_dragRaf) cancelAnimationFrame(_dragRaf);
       _dragRaf = requestAnimationFrame(function() {
         var tb = document.querySelector('.wa-toolbar');
         if (!tb) { _isDragging = false; return; }
-        tb.style.left = Math.max(0, _initLeft + (e.clientX - _startX)) + 'px';
-        tb.style.top  = Math.max(0, _initTop  + (e.clientY - _startY)) + 'px';
+        var dx = e.clientX - _startX;
+        var dy = e.clientY - _startY;
+        tb.style.left = Math.max(0, _initLeft + dx) + 'px';
+        tb.style.top  = Math.max(0, _initTop  + dy) + 'px';
       });
     });
-    document.addEventListener('mouseup', function() { if (_isDragging) { _isDragging = false; document.body.style.userSelect = ''; } });
+
+    document.addEventListener('mouseup', function() {
+      if (_isDragging) {
+        _isDragging = false;
+        document.body.style.userSelect = '';
+      }
+    });
+
+    // Gán drag-grip listener qua event delegation trên document
     document.addEventListener('mousedown', function(e) {
       var grip = e.target.closest('.wa-drag-grip');
       if (!grip) return;
-      _isDragging = true; _startX = e.clientX; _startY = e.clientY;
+      _isDragging = true;
+      _startX = e.clientX;
+      _startY = e.clientY;
       var tb = document.querySelector('.wa-toolbar');
-      _initLeft = tb ? tb.offsetLeft : 0; _initTop = tb ? tb.offsetTop : 0;
+      _initLeft = tb ? tb.offsetLeft : 0;
+      _initTop  = tb ? tb.offsetTop  : 0;
       document.body.style.userSelect = 'none';
     });
+
     document.addEventListener('dblclick', function(e) {
-      if (e.target.closest('.wa-drag-grip')) { var tb = document.querySelector('.wa-toolbar'); if (tb) tb.classList.toggle('collapsed'); }
+      if (e.target.closest('.wa-drag-grip')) {
+        var tb = document.querySelector('.wa-toolbar');
+        if (tb) tb.classList.toggle('collapsed');
+      }
     });
+
+    // --- Keyboard Shortcuts (keydown gắn 1 lần) ---
     document.addEventListener('keydown', function(e) {
       var tag = e.target.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
+
       if (e.key === 'Escape') {
         if (global.tvChart) global.tvChart.cancelDrawing();
         activateTool('pointer');
         if (typeof hidePanel === 'function') hidePanel();
+        if (isInput) e.target.blur();
         return;
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && window.currentSelectedOverlay) {
-        if (global.tvChart) {
-          global.tvChart.removeOverlay({ id: window.currentSelectedOverlay.id });
-          WA_Registry.del(window.currentSelectedOverlay.id);
-          if (typeof hidePanel === 'function') hidePanel();
-          global.__wa_saveAllOverlays();
+
+      if (!isInput) {
+        if ((e.key === 'Delete' || e.key === 'Backspace') && typeof window.currentSelectedOverlay !== 'undefined' && window.currentSelectedOverlay) {
+          if (global.tvChart) {
+            saveHistory('delete', window.currentSelectedOverlay);
+            global.tvChart.removeOverlay({ id: window.currentSelectedOverlay.id });
+            _wa_untrackOverlay(window.currentSelectedOverlay.id); // XÓA KHỎI RAM
+            if (typeof hidePanel === 'function') hidePanel();
+            saveAllOverlays();
+          }
         }
       }
     });
   }
 
   // ============================================================
-  // SECTION 7.6 — GIAO DIỆN TOOLBAR (Phục hồi lại phần bị xóa)
+  // 7.6 MOUNT DOM — (Giữ nguyên 100% bản gốc của Huy)
   // ============================================================
   function mountDOM() {
     var container = document.getElementById('sc-chart-container');
-    if (!container || container.querySelector('.wa-toolbar')) return;
+    if (!container) return;
+
+    // Idempotent: Nếu toolbar đã tồn tại thì bỏ qua
+    if (container.querySelector('.wa-toolbar')) return;
 
     if (typeof injectCSS === 'function') injectCSS();
     if (typeof registerProExtensions === 'function') registerProExtensions();
 
+    // Inject Toolbar
     var sidebar = document.createElement('div');
     sidebar.className = 'wa-toolbar';
     sidebar.innerHTML = typeof buildToolbar === 'function' ? buildToolbar() : '';
     container.appendChild(sidebar);
 
+    // Inject Props Panel
     var panel = document.createElement('div');
     panel.className = 'wa-props-panel';
     panel.id = 'wa-props-panel';
     panel.innerHTML = `
-      <div class="wa-panel-header">Cài đặt công cụ<button class="wa-close-btn" title="Đóng (Esc)">✕</button></div>
-      <div class="wa-panel-body"><div class="wa-panel-empty"><span>Chọn hoặc vẽ một hình</span></div></div>
-      <div class="wa-panel-footer"><button class="wa-action-btn" id="wa-btn-p-lock">Khoá</button><button class="wa-action-btn delete" id="wa-btn-p-del">Xoá</button></div>`;
+      <div class="wa-panel-header">Cài đặt công cụ
+        <button class="wa-close-btn" title="Đóng (Esc)">${typeof SVG !== 'undefined' && SVG.close ? SVG.close : '✕'}</button>
+      </div>
+      <div class="wa-panel-body">
+        <div class="wa-panel-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+            style="width:36px;height:36px;margin-bottom:8px;color:var(--wa-text-muted)">
+            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <span>Chọn hoặc vẽ một hình chính sách</span>
+        </div>
+      </div>
+      <div class="wa-panel-footer">
+        <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">${typeof SVG !== 'undefined' && SVG.magnet ? SVG.magnet : ''} Khoá</button>
+        <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">${typeof SVG !== 'undefined' && SVG.trash ? SVG.trash : ''} Xoá</button>
+      </div>`;
     container.appendChild(panel);
 
+    // Bind LOCAL events
     _bindToolbarLocalEvents(sidebar, panel);
     if (typeof bindContextMenu === 'function') bindContextMenu(panel);
   }
 
+  // Local events: (Giữ nguyên 100% bản gốc của Huy)
   function _bindToolbarLocalEvents(toolbar, panel) {
     var container = document.getElementById('sc-chart-container');
 
@@ -2600,87 +2687,136 @@
       var toolId = null;
       if (menuItem) {
         toolId = menuItem.getAttribute('data-tool');
-        toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+        toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
         menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
       } else if (btn) {
         toolId = btn.getAttribute('data-tool');
-        toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
+        toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
       }
       if (toolId) activateTool(toolId);
     });
 
+    var magnetBtn = toolbar.querySelector('#wa-btn-magnet');
+    if (magnetBtn) {
+      magnetBtn.addEventListener('click', function() {
+        if (typeof isMagnetMode !== 'undefined') {
+            isMagnetMode = !isMagnetMode;
+            this.classList.toggle('active', isMagnetMode);
+            if (typeof showToast === 'function') showToast(isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
+        }
+      });
+    }
+
     var clearBtn = toolbar.querySelector('#wa-btn-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', function() {
-          if (global.tvChart) {
-            let overlays = global.tvChart.getOverlay() || [];
-            overlays.forEach(o => { if (o.name !== 'cyberMarker') global.tvChart.removeOverlay(o.id); });
-            global.tvChart.cancelDrawing();
-          }
-          WA_Registry.clear();
-          var sym = (window.currentChartToken && window.currentChartToken.symbol) || '';
-          var tf  = window.currentChartInterval || '1d';
-          WA_Store.clear(sym, tf);
-
-          if (typeof hidePanel === 'function') hidePanel();
-          toolbar.querySelectorAll('.wa-tb-btn').forEach(b => b.classList.remove('active'));
-          var ptr = toolbar.querySelector('[data-tool=pointer]'); if(ptr) ptr.classList.add('active');
-          container.classList.remove('wa-drawing-mode');
+        if (typeof createConfirmModal === 'function') {
+          createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
+            if (global.tvChart) {
+              let overlays = global.tvChart.getOverlay() || [];
+              overlays.forEach(o => { if (o.name !== 'cyberMarker') global.tvChart.removeOverlay(o.id); });
+              global.tvChart.cancelDrawing();
+            }
+            WA_Registry.clear(); // DỌN SẠCH RAM
+            
+            if (typeof undoStack !== 'undefined') undoStack = []; 
+            if (typeof redoStack !== 'undefined') redoStack = [];
+            if (typeof hidePanel === 'function') hidePanel();
+            
+            toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+            var ptr = toolbar.querySelector('[data-tool=pointer]');
+            if (ptr) ptr.classList.add('active');
+            container.classList.remove('wa-drawing-mode');
+            
+            saveAllOverlays();
+            if (typeof showToast === 'function') showToast('🗑️ Đã xoá sạch bản vẽ');
+          });
+        }
       });
     }
 
     if (panel) {
-      var closeBtn = panel.querySelector('.wa-close-btn'); if (closeBtn) closeBtn.addEventListener('click', function(){ if(typeof hidePanel === 'function') hidePanel(); });
+      var closeBtn = panel.querySelector('.wa-close-btn');
+      if (closeBtn) closeBtn.addEventListener('click', function() { if(typeof hidePanel === 'function') hidePanel(); });
+      
       var lockBtn = panel.querySelector('#wa-btn-p-lock');
       if (lockBtn) lockBtn.addEventListener('click', function() {
-        if (!window.currentSelectedOverlay || !global.tvChart) return;
+        if (typeof window.currentSelectedOverlay === 'undefined' || !window.currentSelectedOverlay || !global.tvChart) return;
         global.tvChart.overrideOverlay({ id: window.currentSelectedOverlay.id, lock: !window.currentSelectedOverlay.lock });
+        if (typeof showToast === 'function') showToast('Đã đổi trạng thái khoá');
       });
+      
       var delBtn = panel.querySelector('#wa-btn-p-del');
       if (delBtn) delBtn.addEventListener('click', function() {
-        if (!window.currentSelectedOverlay || !global.tvChart) return;
+        if (typeof window.currentSelectedOverlay === 'undefined' || !window.currentSelectedOverlay || !global.tvChart) return;
+        saveHistory('delete', window.currentSelectedOverlay);
         global.tvChart.removeOverlay({ id: window.currentSelectedOverlay.id });
-        WA_Registry.del(window.currentSelectedOverlay.id);
+        _wa_untrackOverlay(window.currentSelectedOverlay.id); // XÓA KHỎI RAM
         if (typeof hidePanel === 'function') hidePanel();
-        global.__wa_saveAllOverlays();
+        saveAllOverlays();
       });
     }
   }
 
   // ============================================================
-  // SECTION 7.8 — MOUNT (entry point)
+  // 7.8 MAIN MOUNT FUNCTION — Entry point gọi từ ngoài
   // ============================================================
   function mountUI() {
     bindCoreEventsOnce();
     mountDOM();
+    
+    // Nếu chart đã có sẵn (ví dụ hot reload), bind luôn
     if (global.tvChart) WA_Bridge.bindEvents(global.tvChart);
   }
 
   // ============================================================
-  // SECTION 7.9 WATCHDOG (Đảm bảo thanh công cụ không bao giờ mất)
+  // 7.9 TOOLBAR WATCHDOG — Siêu nhẹ, chỉ re-inject DOM, KHÔNG re-bind events
   // ============================================================
   (function startToolbarWatchdog() {
-    if (window.__wa_watchdog_started) return; 
+    if (window.__wa_watchdog_started) return; // Chạy đúng 1 lần
     window.__wa_watchdog_started = true;
+
+    var _observer = null;
+
     function _onContainerMutation(mutations) {
       for (var i = 0; i < mutations.length; i++) {
+        // Chỉ quan tâm khi có node bị XÓA (framework làm mới container)
         if (mutations[i].removedNodes.length === 0) continue;
         var container = document.getElementById('sc-chart-container');
-        if (container && !container.querySelector('.wa-toolbar')) { mountDOM(); break; }
+        if (container && !container.querySelector('.wa-toolbar')) {
+          mountDOM();
+          break;
+        }
       }
     }
+
     function _startObserver() {
       var container = document.getElementById('sc-chart-container');
       var target = container ? container.parentNode : document.body;
       if (!target) return;
-      new MutationObserver(_onContainerMutation).observe(target, { childList: true, subtree: true });
+
+      _observer = new MutationObserver(_onContainerMutation);
+      _observer.observe(target, {
+        childList: true,
+        subtree: true  // Quan sát cả con cháu để bắt được khi framework re-render bên trong
+      });
     }
-    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', _startObserver); } 
-    else { _startObserver(); }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _startObserver);
+    } else {
+      _startObserver();
+    }
   })();
 
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', mountUI); } 
-  else { mountUI(); }
+  // ============================================================
+  // 7.10 KHỞI ĐỘNG
+  // ============================================================
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountUI);
+  } else {
+    mountUI();
+  }
 
-})(window); // ← dòng đóng module, GIỮ NGUYÊN
+})(window); // <-- Chú ý giữ nguyên dòng đóng module này
