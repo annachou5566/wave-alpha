@@ -991,22 +991,7 @@
         lines: [
           { color: '#7E57C2', size: 1, style: 'solid' },        
           { color: COLOR.gold, size: 1, style: 'solid' }
-        ],
-        // 🚀 BẬT TÍNH NĂNG NATIVE: HIỂN THỊ NHÃN LÊN CỘT SỐ Y-AXIS
-        lastValueMark: {
-          show: true,
-          text: {
-            show: true,
-            color: '#ffffff', // Ép chữ màu trắng
-            size: 12,
-            paddingLeft: 4,
-            paddingRight: 4,
-            paddingTop: 4,
-            paddingBottom: 4,
-            borderRadius: 2
-            // Không set backgroundColor ở đây vì KLineCharts sẽ tự động lấy màu tím/vàng của đường dây!
-          }
-        }
+        ]
       },
       calc: function(dataList, indicator) {
         const rsiLen = indicator.calcParams[0];
@@ -1093,11 +1078,7 @@
               if (lastPL) {
                 let bars = p - lastPL.idx;
                 if (bars >= 5 && bars <= 60 && rsiData[p] > lastPL.rsi && dataList[p].low < lastPL.low) {
-                  results[p].bullDiv = {
-                    startI: lastPL.idx,
-                    startRSI: lastPL.rsi,
-                    endRSI: rsiData[p]
-                  };
+                  results[p].bullDiv = { startI: lastPL.idx, startRSI: lastPL.rsi, endRSI: rsiData[p] };
                 }
               }
               lastPL = { idx: p, rsi: rsiData[p], low: dataList[p].low };
@@ -1107,11 +1088,7 @@
               if (lastPH) {
                 let bars = p - lastPH.idx;
                 if (bars >= 5 && bars <= 60 && rsiData[p] < lastPH.rsi && dataList[p].high > lastPH.high) {
-                  results[p].bearDiv = {
-                    startI: lastPH.idx,
-                    startRSI: lastPH.rsi,
-                    endRSI: rsiData[p]
-                  };
+                  results[p].bearDiv = { startI: lastPH.idx, startRSI: lastPH.rsi, endRSI: rsiData[p] };
                 }
               }
               lastPH = { idx: p, rsi: rsiData[p], high: dataList[p].high };
@@ -1124,6 +1101,8 @@
       draw: function({ ctx, visibleRange, indicator, xAxis, yAxis, bounding }) {
         const { from, to } = visibleRange;
         const res = indicator.result;
+        
+        // startX và endX chỉ dùng cho dải Bollinger và Gradient (phải bám theo nến)
         const startX = xAxis.convertToPixel(from);
         const endX = xAxis.convertToPixel(to - 1);
         
@@ -1131,25 +1110,36 @@
         const y50 = yAxis.convertToPixel(50);
         const y30 = yAxis.convertToPixel(30);
   
-        // --- Vẽ Mốc 30, 50, 70 ---
+        // Chiều rộng tuyệt đối của toàn bộ Chart (Dùng để tạo hiệu ứng "Con đường vô cực")
+        const fullWidth = bounding.width; 
+  
+        // ==========================================
+        // 1. VẼ CON ĐƯỜNG VÔ CỰC (FULL SPAN)
+        // ==========================================
         ctx.save();
+        
+        // Nền tím (Chạy xuyên suốt từ trái sang phải)
+        ctx.fillStyle = 'rgba(126, 87, 194, 0.08)';
+        ctx.fillRect(0, y70, fullWidth, y30 - y70);
+  
+        // Đường 30 và 70 (Nét đứt dài ra: 10px kẻ, 8px trống)
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#787B86';
-        ctx.setLineDash([3, 3]); 
-        ctx.beginPath(); ctx.moveTo(startX, y70); ctx.lineTo(endX, y70); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(startX, y30); ctx.lineTo(endX, y30); ctx.stroke();
+        ctx.setLineDash([10, 8]); 
+        ctx.beginPath(); ctx.moveTo(0, y70); ctx.lineTo(fullWidth, y70); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y30); ctx.lineTo(fullWidth, y30); ctx.stroke();
   
+        // Đường 50 (Nét đứt rất dài và thưa)
         ctx.lineWidth = 1.5;
-        ctx.strokeStyle = COLOR.white;
-        ctx.setLineDash([8, 6]);
-        ctx.beginPath(); ctx.moveTo(startX, y50); ctx.lineTo(endX, y50); ctx.stroke();
+        ctx.strokeStyle = 'rgba(234, 236, 239, 0.4)'; // Trắng mờ
+        ctx.setLineDash([15, 10]);
+        ctx.beginPath(); ctx.moveTo(0, y50); ctx.lineTo(fullWidth, y50); ctx.stroke();
+        
         ctx.restore();
   
-        // --- Nền tím (Quá mua/Bán) ---
-        ctx.fillStyle = 'rgba(126, 87, 194, 0.1)';
-        ctx.fillRect(startX, y70, endX - startX, y30 - y70);
-  
-        // --- Vẽ Bollinger Bands ---
+        // ==========================================
+        // 2. VẼ BOLLINGER BANDS
+        // ==========================================
         if (indicator.calcParams[1] === 1) {
           ctx.save();
           ctx.lineWidth = 1;
@@ -1196,7 +1186,9 @@
           ctx.restore();
         }
   
-        // --- Vẽ Gradients ---
+        // ==========================================
+        // 3. VẼ GRADIENTS QUÁ MUA / QUÁ BÁN
+        // ==========================================
         let y100 = yAxis.convertToPixel(100);
         let y0 = yAxis.convertToPixel(0);
         
@@ -1212,6 +1204,7 @@
           gradOS.addColorStop(1, 'rgba(246, 70, 93, 0.8)');
         }
   
+        // Fill Quá Mua (>70)
         ctx.fillStyle = gradOB;
         ctx.beginPath();
         let inOB = false;
@@ -1245,6 +1238,7 @@
         if (inOB) ctx.lineTo(xAxis.convertToPixel(to - 1), y70);
         ctx.fill();
   
+        // Fill Quá Bán (<30)
         ctx.fillStyle = gradOS;
         ctx.beginPath();
         let inOS = false;
@@ -1278,7 +1272,9 @@
         if (inOS) ctx.lineTo(xAxis.convertToPixel(to - 1), y30);
         ctx.fill();
   
-        // --- VẼ TEXT PHÂN KỲ TỐI ƯU KHOẢNG CÁCH & CLIPPING ---
+        // ==========================================
+        // 4. VẼ PHÂN KỲ (DIVERGENCE LABELS & LINES)
+        // ==========================================
         ctx.save();
         ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
@@ -1305,10 +1301,7 @@
               ctx.setLineDash([]); 
               
               let labelY = y + 5;
-              
-              if (labelY + boxH > bounding.height - 2) {
-                  labelY = bounding.height - boxH - 2;
-              }
+              if (labelY + boxH > bounding.height - 2) labelY = bounding.height - boxH - 2;
   
               ctx.fillStyle = COLOR.green;
               ctx.beginPath();
@@ -1333,10 +1326,7 @@
               ctx.setLineDash([]);
   
               let labelY = y - 5 - boxH;
-              
-              if (labelY < 2) {
-                  labelY = 2;
-              }
+              if (labelY < 2) labelY = 2;
   
               ctx.fillStyle = COLOR.red;
               ctx.beginPath();
@@ -1351,7 +1341,53 @@
         }
         ctx.restore();
   
-        return false; 
+        // ==========================================
+        // 5. NHÃN REALTIME BÁM SÁT LỀ PHẢI (CHỐNG LỖI MẤT TAG)
+        // ==========================================
+        const realtimeData = res[res.length - 1]; 
+        if (realtimeData && realtimeData.rsi !== undefined) {
+            ctx.save();
+            const rsiVal = realtimeData.rsi;
+            let currentY = yAxis.convertToPixel(rsiVal);
+            
+            // Tránh nhãn bị cắt mất nếu RSI chạy ra mép trên/dưới
+            if (currentY < 12) currentY = 12;
+            if (currentY > bounding.height - 12) currentY = bounding.height - 12;
+  
+            const tagW = 44;
+            const tagH = 20;
+            // Ép sát tuyệt đối vào mép lề phải của khung
+            const tagX = fullWidth - tagW; 
+  
+            // Đổ bóng nhẹ 3D cho nhãn (nhìn rất Pro)
+            ctx.shadowColor = 'rgba(0,0,0,0.4)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetY = 2;
+  
+            // Box nền Tím
+            ctx.fillStyle = '#7E57C2';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(tagX, currentY - tagH/2, tagW, tagH, 4);
+            } else {
+                ctx.rect(tagX, currentY - tagH/2, tagW, tagH);
+            }
+            ctx.fill();
+  
+            // Reset shadow để chữ không bị nhòe
+            ctx.shadowColor = 'transparent';
+  
+            // Chữ RSI trắng bo giữa
+            ctx.fillStyle = COLOR.white;
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(rsiVal.toFixed(2), tagX + tagW/2, currentY);
+            
+            ctx.restore();
+        }
+  
+        return false; // KLineCharts sẽ tự vẽ đè tiếp đường Line RSI và Line MA lên trên
       }
     });
     console.log('[Wave Alpha v' + WAVE_ALPHA_VERSION + '] ✅ Đã đăng ký ' +
