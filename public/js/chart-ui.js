@@ -716,40 +716,15 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 350);
     };
 
-    // Hàm chuyên biệt xử lý UI trên Mobile (Bung Chart + Bật tắt lớp mờ)
+    // Hàm điều khiển thu/phóng Chart trên Mobile (Đã xóa lớp mờ Backdrop)
     const handleMobileUI = (isNowCollapsed) => {
         if (!isMobile) return;
-        
         const chartArea = document.querySelector('.sc-chart-area');
         if (chartArea) {
             chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
         }
-
-        let backdrop = document.getElementById('sc-panel-backdrop');
-        if (!backdrop) {
-            backdrop = document.createElement('div');
-            backdrop.id = 'sc-panel-backdrop';
-            document.getElementById('super-chart-overlay').appendChild(backdrop);
-            
-            backdrop.addEventListener('click', () => {
-                // Đóng sidebar khi bấm ra ngoài lớp mờ
-                panelContent.classList.add('collapsed');
-                backdrop.classList.remove('visible');
-                allBtns.forEach(btn => btn.classList.remove('active'));
-                
-                if (chartArea) chartArea.dataset.mobileExpanded = 'true';
-                doResize(); // Cập nhật lại biểu đồ
-            });
-        }
-        
-        if (isNowCollapsed) {
-            backdrop.classList.remove('visible');
-        } else {
-            backdrop.classList.add('visible');
-        }
     };
 
-    // Trường hợp 1: Đóng sidebar do bấm lại đúng cái tab đang mở
     if (btnElement && btnElement.classList.contains('active')) {
         panelContent.classList.toggle('collapsed');
         handleMobileUI(panelContent.classList.contains('collapsed'));
@@ -757,7 +732,6 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         return; 
     }
     
-    // Trường hợp 2: Đang đóng thì mở ra
     if (panelContent.classList.contains('collapsed')) {
         panelContent.classList.remove('collapsed');
     }
@@ -769,7 +743,7 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) { targetTab.style.display = 'flex'; targetTab.classList.add('active'); }
     
-    handleMobileUI(false); // Tab mới đang mở ra -> Chart thu nhỏ, lớp mờ hiện lên
+    handleMobileUI(false); 
     doResize();
 };
 

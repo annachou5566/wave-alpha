@@ -1821,7 +1821,7 @@ body.overlay-active {
    📱 MOBILE-FIRST TRADING UI OPTIMIZATIONS (MAX-WIDTH: 991PX)
    ========================================================= */
    @media (max-width: 991px) {
-    /* TASK 1: Chart Tự Mở Rộng Khi Đóng Sidebar */
+    /* TASK 1: Chart Tự Mở Rộng Khi Đóng Sidebar (Không có lớp mờ) */
     .sc-chart-area {
         transition: flex 0.3s ease, height 0.3s cubic-bezier(0.4,0,0.2,1) !important;
     }
@@ -1833,7 +1833,6 @@ body.overlay-active {
     }
 
     /* TASK 2: Thiết kế lại Header (Tổng chiều cao <= 88px) */
-    /* 2a) Topbar - Thu nhỏ tối đa */
     .sc-topbar {
         padding: 0 8px !important;
         height: 38px !important;
@@ -1851,7 +1850,7 @@ body.overlay-active {
         white-space: nowrap;
     }
 
-    /* 2b) Stats Row - Cuộn ngang mượt mà */
+    /* Stats Row - Cuộn ngang mượt mà */
     .sc-stats-row {
         padding: 3px 8px !important;
         gap: 0 !important;
@@ -1883,28 +1882,31 @@ body.overlay-active {
     }
     .sc-mc-item span { font-size: 8px !important; }
     .sc-mc-item strong { font-size: 11px !important; }
-    /* Ẩn Daily Vol & FDV để nhường chỗ cho các stat quan trọng hơn */
     .sc-metrics-compact > .sc-mc-item:nth-child(1), 
     .sc-metrics-compact > .sc-mc-item:nth-child(5) { 
         display: none !important; 
     }
 
-    /* 2c) Toolbar - Kéo thanh Timeframe, cô đọng Icon */
+    /* ================================================= */
+    /* FIX LỖI TOOLBAR LOẠN XẠ -> ÉP VỀ 1 DÒNG DUY NHẤT */
+    /* ================================================= */
     .sc-toolbar {
         padding: 3px 6px !important;
         gap: 4px !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: nowrap !important; /* Ghi đè lệnh wrap trong HTML */
         min-height: 36px !important;
         align-items: center !important;
-        overflow: visible !important; /* FIX: Hiển thị menu Lọc Marker bị cắt */
+        overflow: visible !important; 
     }
-    /* Khối trái: Timeframe */
+    
+    /* Khối trái: Nút Timeframe (Cho phép cuộn ngang thoải mái) */
     .sc-toolbar > div:first-child {
-        flex: 1 1 auto;
-        overflow-x: auto;
-        overflow-y: visible; /* FIX: Lấy lại các nút bị khuất */
-        display: flex;
-        gap: 4px;
+        flex: 1 1 auto !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
         scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
         padding-right: 10px; 
@@ -1918,17 +1920,18 @@ body.overlay-active {
     }
     .sc-toolbar > div:first-child > span[style*="2b3139"] { flex-shrink: 0; }
     
-    /* Khối phải: Settings, Filter, Stats */
+    /* Khối phải: Settings, Filter, Stats (Ép cứng không xuống dòng) */
     .sc-toolbar > div:last-child {
-        flex-shrink: 0;
+        flex: 0 0 auto !important;
         display: flex !important;
+        flex-wrap: nowrap !important; /* Khử lỗi rớt dòng */
         gap: 4px !important;
-        flex-wrap: nowrap !important;
         margin-left: auto !important;
-        overflow: visible !important; /* FIX: Menu thả xuống an toàn */
+        overflow: visible !important; 
+        align-items: center !important;
     }
     .sc-filter-btn .sc-header-btn-label,
-    .sc-filter-btn span:not(i) { display: none !important; } /* Tắt text nút Lọc */
+    .sc-filter-btn span:not(i) { display: none !important; } 
     .sc-filter-btn {
         padding: 4px 8px !important;
         font-size: 11px !important;
@@ -1943,48 +1946,24 @@ body.overlay-active {
     }
     #sc-theme-select { font-size: 9px !important; width: 60px !important; }
 
-    /* TASK 3: Nâng cấp trải nghiệm Touch & Lớp mờ (Backdrop) */
+    /* TASK 3: Nâng cấp Touch Sidebar */
     .sc-sidebar-icon {
         min-height: 44px !important;
         min-width: 44px !important;
         font-size: 18px !important;
     }
-    
-    /* FIX: Z-index lớp mờ */
-    #sc-panel-backdrop {
-        display: none;
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(2px);
-        z-index: 10; /* Đẩy lớp mờ lên đè vùng Chart */
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    #sc-panel-backdrop.visible { 
-        display: block; 
-        opacity: 1;
-    }
-    
-    /* FIX: Z-index sidebar để không bị lớp mờ che mất */
-    .sc-right-container {
-        z-index: 11 !important; 
-    }
 
-    /* TASK 5b: Hỗ Trợ Màn Hình Ngang (Landscape Mode) */
+    /* TASK 5b: Màn Hình Ngang */
     @media (orientation: landscape) {
         .sc-chart-area { height: 100% !important; flex: 1 1 auto !important; border-bottom: none !important; }
         .sc-right-container { display: none !important; }
         .sc-topbar { height: 32px !important; }
         #sc-algo-limit, .sc-stats-row { display: none !important; }
-        #sc-panel-backdrop { display: none !important; }
     }
 
-    /* TASK 5c: Animation chớp tắt khi giá nhảy (Flash Alert) */
+    /* TASK 5c: Animation Flash Alert */
     #sc-live-price.price-flash-up { animation: flashGreen 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     #sc-live-price.price-flash-down { animation: flashRed 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    
     @keyframes flashGreen {
         0% { color: #0ECB81; text-shadow: 0 0 15px rgba(14,203,129,0.9); transform: scale(1.05); }
         100% { color: inherit; text-shadow: none; transform: scale(1); }
