@@ -969,13 +969,7 @@ function injectLayout() {
                                 <span title="Sweep" style="color:#2af592; display:flex; gap:2px; align-items:center;">🤖 <span id="sc-stat-sweep">0</span></span>
                             </div>
 
-                            <div style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.25); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.03); color:#848e9c; font-size:10px; font-weight:700; font-family:var(--font-main);">
-                                <i class="fas fa-palette"></i>
-                                <select id="sc-theme-select" onchange="window.changeTheme()" style="background:transparent; color:#848e9c; border:none; font-size:10px; font-weight:700; outline:none; cursor:pointer; padding:0; width: 70px; text-overflow: ellipsis;">
-                                    <option value="cyber">ALPHA</option>
-                                    <option value="trad">CLASSIC</option>
-                                </select>
-                            </div>
+                            
 
                         </div>
                     </div>

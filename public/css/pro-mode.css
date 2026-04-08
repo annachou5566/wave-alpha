@@ -1818,20 +1818,10 @@ body.overlay-active {
 
 
 /* =========================================================
-   🌐 TÙY CHỈNH GLOBAL (Áp dụng cả PC & Mobile)
-   ========================================================= */
-/* Xóa bỏ nút chọn Theme (Classic/Alpha) trên toàn hệ thống */
-#sc-theme-select, 
-.sc-theme-btn,
-.sc-theme-wrapper { 
-    display: none !important; 
-}
-
-/* =========================================================
    📱 MOBILE-FIRST TRADING UI OPTIMIZATIONS (MAX-WIDTH: 991PX)
    ========================================================= */
-@media (max-width: 991px) {
-    /* CHART: Thu/Phóng mượt mà - CHỐNG MỜ TUYỆT ĐỐI */
+   @media (max-width: 991px) {
+    /* CHART: Thu/Phóng không bao giờ bị mờ */
     .sc-chart-area {
         transition: flex 0.3s ease, height 0.3s cubic-bezier(0.4,0,0.2,1) !important;
         filter: none !important;
@@ -1845,81 +1835,75 @@ body.overlay-active {
         border-bottom: none !important;
     }
 
-    /* TIÊU DIỆT LỚP MỜ (BACKDROP) */
-    #sc-panel-backdrop { display: none !important; opacity: 0 !important; visibility: hidden !important; }
-
-    /* HEADER: Cấu trúc cô đọng */
+    /* HEADER & STATS */
     .sc-topbar { padding: 0 8px !important; height: 38px !important; gap: 6px !important; }
     #sc-coin-logo { width: 22px !important; height: 22px !important; }
     #sc-coin-symbol { font-size: 14px !important; }
     #sc-coin-name { display: none !important; } 
-    #sc-algo-limit {
-        font-size: 9px !important; padding: 2px 4px !important;
-        max-width: none !important; white-space: nowrap !important;
-    }
+    #sc-algo-limit { font-size: 9px !important; padding: 2px 4px !important; max-width: none !important; white-space: nowrap !important; }
 
     .sc-stats-row {
-        padding: 3px 8px !important; gap: 0 !important;
-        min-height: 28px !important; max-height: 28px !important;
-        overflow-x: auto !important; overflow-y: hidden !important;
-        flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; justify-content: flex-start !important;
+        padding: 3px 8px !important; gap: 0 !important; min-height: 28px !important; max-height: 28px !important;
+        overflow-x: auto !important; overflow-y: hidden !important; flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch; scrollbar-width: none; justify-content: flex-start !important;
     }
     .sc-stats-row::-webkit-scrollbar { display: none; }
     
     .sc-price-box { flex-direction: row !important; align-items: center !important; gap: 8px !important; flex-shrink: 0 !important; margin-right: 12px !important; }
     #sc-live-price { font-size: 16px !important; white-space: nowrap; }
     #sc-change-24h { font-size: 11px !important; white-space: nowrap; }
-    
     .sc-metrics-compact { gap: 12px !important; padding-bottom: 0 !important; }
     .sc-mc-item span { font-size: 8px !important; }
     .sc-mc-item strong { font-size: 11px !important; }
     .sc-metrics-compact > .sc-mc-item:nth-child(1), .sc-metrics-compact > .sc-mc-item:nth-child(5) { display: none !important; }
 
     /* =================================================================== */
-    /* FIX LỖI 1: CHIA TOOLBAR THÀNH 2 PHẦN (NHƯ APP BINANCE)              */
-    /* Phần Timeframe cuộn ngang thoải mái, Phần Nút ghim chặt bên phải    */
+    /* FIX LỖI TOOLBAR: ÉP TẤT CẢ VỀ 1 DÒNG DUY NHẤT LƯỚT NGANG MƯỢT MÀ   */
     /* =================================================================== */
     .sc-toolbar {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        overflow: visible !important; /* QUAN TRỌNG: Cho phép Menu Lọc rớt xuống không bị cắt */
+        flex-wrap: nowrap !important;       /* Tuyệt đối không cho rớt dòng */
+        overflow-x: auto !important;        /* Bật thanh trượt ngang */
+        overflow-y: hidden !important;
         padding: 4px 8px !important;
-        gap: 6px !important;
-        min-height: 38px !important;
+        gap: 8px !important;
+        min-height: 40px !important;
         align-items: center !important;
-    }
-    
-    /* Khối trái: Chỉ Timeframe cuộn ngang */
-    .sc-toolbar > div:first-child {
-        display: flex !important;
-        flex: 1 1 auto !important; /* Chiếm tối đa không gian */
-        flex-wrap: nowrap !important;
-        overflow-x: auto !important; /* Cho phép cuộn */
-        overflow-y: visible !important;
-        gap: 4px !important;
-        scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
-        padding-right: 15px; 
+        scrollbar-width: none;
+        width: 100% !important;
     }
-    .sc-toolbar > div:first-child::-webkit-scrollbar { display: none; }
-    .sc-time-btn { font-size: 10px !important; padding: 5px 10px !important; flex-shrink: 0; border-radius: 4px; }
+    .sc-toolbar::-webkit-scrollbar { display: none; }
     
-    /* Khối phải: Ghim cố định Lọc Marker, Bot... */
-    .sc-toolbar > div:last-child {
+    /* Ép tất cả các nút con bên trong giữ nguyên kích thước, không co bóp */
+    .sc-toolbar > * { flex: 0 0 auto !important; }
+    .sc-toolbar > div {
         display: flex !important;
-        flex: 0 0 auto !important; /* Không co giãn, ghim chặt góc phải */
+        flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
         gap: 6px !important;
-        overflow: visible !important; /* Mở khóa dropdown */
     }
-    .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; } 
-    .sc-filter-btn { padding: 5px 10px !important; font-size: 12px !important; }
+    
+    /* Căn chỉnh lại các nút bấm */
+    .sc-time-btn { font-size: 10px !important; padding: 5px 10px !important; border-radius: 4px; }
+    .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; } /* Tắt chữ Lọc Marker */
+    .sc-filter-btn { padding: 5px 10px !important; font-size: 12px !important; pointer-events: auto !important; }
 
-    /* Touch Sidebar */
-    .sc-sidebar-icon { min-height: 44px !important; min-width: 44px !important; font-size: 18px !important; }
+    /* =================================================================== */
+    /* FIX ĐỒNG BỘ HIỆU ỨNG TRƯỢT NỘI DUNG TỪ DƯỚI LÊN (CHỐNG TRƯỢT NGANG)*/
+    /* =================================================================== */
+    .sc-tab-content {
+        animation: none !important; /* Xóa hiệu ứng trượt từ trái qua của gốc */
+    }
+    .sc-tab-content.active {
+        animation: contentSlideUp 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+    }
+    @keyframes contentSlideUp {
+        0% { opacity: 0; transform: translateY(40px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
 
     /* Màn Hình Ngang */
     @media (orientation: landscape) {
@@ -1928,10 +1912,4 @@ body.overlay-active {
         .sc-topbar { height: 32px !important; }
         #sc-algo-limit, .sc-stats-row { display: none !important; }
     }
-
-    /* Animation Flash Alert */
-    #sc-live-price.price-flash-up { animation: flashGreen 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    #sc-live-price.price-flash-down { animation: flashRed 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    @keyframes flashGreen { 0% { color: #0ECB81; text-shadow: 0 0 15px rgba(14,203,129,0.9); transform: scale(1.05); } 100% { color: inherit; text-shadow: none; transform: scale(1); } }
-    @keyframes flashRed { 0% { color: #F6465D; text-shadow: 0 0 15px rgba(246,70,93,0.9); transform: scale(1.05); } 100% { color: inherit; text-shadow: none; transform: scale(1); } }
 }

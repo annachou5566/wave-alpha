@@ -695,27 +695,14 @@ window.toggleProSidePanel = function(tabId, btnElement) {
                 opacity: 1;
                 transform: translateY(0);
             }
-            /* HIỆU ỨNG TRÊN PC: Trượt ngang từ trái qua */
             @media (min-width: 992px) {
-                #sc-panel-content.collapsed {
-                    width: 0 !important;
-                    min-width: 0 !important;
-                    opacity: 0;
-                    pointer-events: none;
-                }
+                #sc-panel-content.collapsed { width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; }
             }
-            /* HIỆU ỨNG TRÊN MOBILE: Trượt dọc từ dưới lên */
             @media (max-width: 991px) {
                 #sc-panel-content.collapsed {
-                    height: 0 !important;
-                    min-height: 0 !important;
-                    flex: 0 0 0 !important;
-                    opacity: 0;
-                    transform: translateY(30px); /* Tụt xuống dưới khi đóng */
-                    pointer-events: none;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    border: none !important;
+                    height: 0 !important; min-height: 0 !important; flex: 0 0 0 !important;
+                    opacity: 0; transform: translateY(30px); pointer-events: none;
+                    margin: 0 !important; padding: 0 !important; border: none !important;
                 }
             }
         `;
@@ -727,7 +714,7 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const allTabs = document.querySelectorAll('.sc-tab-content');
     const isMobile = window.innerWidth <= 991;
 
-    // Dọn dẹp rác backdrop (chống mờ)
+    // Quét sạch rác backdrop nếu còn lưu
     const oldBackdrop = document.getElementById('sc-panel-backdrop');
     if (oldBackdrop) oldBackdrop.remove(); 
 
@@ -742,8 +729,6 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         const chartArea = document.querySelector('.sc-chart-area');
         if (chartArea) {
             chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
-            chartArea.style.filter = 'none';
-            chartArea.style.opacity = '1';
         }
     };
 
