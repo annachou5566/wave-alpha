@@ -689,20 +689,38 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
         s.textContent = `
-            #sc-panel-content {
-                transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-                overflow: hidden;
-                opacity: 1;
-                transform: translateY(0);
-            }
+            /* Desktop: Trượt ngang từ trái qua */
             @media (min-width: 992px) {
-                #sc-panel-content.collapsed { width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; }
+                #sc-panel-content {
+                    transition: width 0.25s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease !important;
+                    overflow: hidden;
+                }
+                #sc-panel-content.collapsed { 
+                    width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; 
+                }
             }
+            /* Mobile: Cấm trượt ngang, chỉ trượt dọc từ dưới lên */
             @media (max-width: 991px) {
+                #sc-panel-content {
+                    transition: flex 0.3s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease !important;
+                    width: 100% !important; /* Luôn full 100% màn hình, cấm hiệu ứng co giãn ngang */
+                    overflow: hidden;
+                }
                 #sc-panel-content.collapsed {
-                    height: 0 !important; min-height: 0 !important; flex: 0 0 0 !important;
-                    opacity: 0; transform: translateY(30px); pointer-events: none;
+                    flex: 0 0 0 !important;
+                    height: 0 !important; min-height: 0 !important;
+                    opacity: 0; 
+                    pointer-events: none;
                     margin: 0 !important; padding: 0 !important; border: none !important;
+                }
+                /* Nội dung Tab mọc từ dưới lên */
+                .sc-tab-content { animation: none !important; }
+                .sc-tab-content.active {
+                    animation: contentSlideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+                }
+                @keyframes contentSlideUp {
+                    0% { opacity: 0; transform: translateY(30px); }
+                    100% { opacity: 1; transform: translateY(0); }
                 }
             }
         `;

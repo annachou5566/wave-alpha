@@ -1858,52 +1858,60 @@ body.overlay-active {
     .sc-metrics-compact > .sc-mc-item:nth-child(1), .sc-metrics-compact > .sc-mc-item:nth-child(5) { display: none !important; }
 
     /* =================================================================== */
-    /* FIX LỖI TOOLBAR: ÉP TẤT CẢ VỀ 1 DÒNG DUY NHẤT LƯỚT NGANG MƯỢT MÀ   */
+    /* FIX LỖI TOOLBAR: MỞ KHÓA MENU LỌC & GOM VỀ 1 DÒNG DUY NHẤT        */
     /* =================================================================== */
     .sc-toolbar {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;       /* Tuyệt đối không cho rớt dòng */
-        overflow-x: auto !important;        /* Bật thanh trượt ngang */
-        overflow-y: hidden !important;
+        flex-wrap: nowrap !important;       
+        overflow: visible !important; /* <--- MỞ KHÓA: Cho phép Menu thả xuống */
         padding: 4px 8px !important;
         gap: 8px !important;
         min-height: 40px !important;
         align-items: center !important;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
         width: 100% !important;
     }
-    .sc-toolbar::-webkit-scrollbar { display: none; }
     
-    /* Ép tất cả các nút con bên trong giữ nguyên kích thước, không co bóp */
-    .sc-toolbar > * { flex: 0 0 auto !important; }
-    .sc-toolbar > div {
+    /* Khối trái: Timeframe -> Chuyển thanh cuộn vào đây */
+    .sc-toolbar > div:first-child {
         display: flex !important;
+        flex: 1 1 auto !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important; /* <--- THANH CUỘN CHỈ Ở ĐÂY */
+        overflow-y: visible !important;
+        align-items: center !important;
+        gap: 6px !important;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 15px;
+    }
+    .sc-toolbar > div:first-child::-webkit-scrollbar { display: none; }
+    
+    /* Khối phải: Settings, Filter, Stats */
+    .sc-toolbar > div:last-child {
+        display: flex !important;
+        flex: 0 0 auto !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
         gap: 6px !important;
+        overflow: visible !important;
     }
-    
-    /* Căn chỉnh lại các nút bấm */
-    .sc-time-btn { font-size: 10px !important; padding: 5px 10px !important; border-radius: 4px; }
-    .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; } /* Tắt chữ Lọc Marker */
-    .sc-filter-btn { padding: 5px 10px !important; font-size: 12px !important; pointer-events: auto !important; }
 
-    /* =================================================================== */
-    /* FIX ĐỒNG BỘ HIỆU ỨNG TRƯỢT NỘI DUNG TỪ DƯỚI LÊN (CHỐNG TRƯỢT NGANG)*/
-    /* =================================================================== */
-    .sc-tab-content {
-        animation: none !important; /* Xóa hiệu ứng trượt từ trái qua của gốc */
+    /* Thu nhỏ nút bấm Lọc Marker và sửa lỗi đè layer */
+    .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; }
+    .sc-filter-btn { 
+        padding: 4px 6px !important; 
+        font-size: 10px !important; 
+        pointer-events: auto !important; 
+        border-radius: 4px;
+        min-height: 24px;
     }
-    .sc-tab-content.active {
-        animation: contentSlideUp 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
-    }
-    @keyframes contentSlideUp {
-        0% { opacity: 0; transform: translateY(40px); }
-        100% { opacity: 1; transform: translateY(0); }
-    }
+    .sc-filter-menu { z-index: 999999 !important; } /* Đảm bảo Menu không bị che mất */
+
+    /* Căn chỉnh lại Timeframe */
+    .sc-time-btn { font-size: 10px !important; padding: 5px 10px !important; border-radius: 4px; flex-shrink: 0; }
 
     /* Màn Hình Ngang */
     @media (orientation: landscape) {
