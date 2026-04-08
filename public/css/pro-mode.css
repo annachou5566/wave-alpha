@@ -1858,14 +1858,14 @@ body.overlay-active {
     .sc-metrics-compact > .sc-mc-item:nth-child(1), .sc-metrics-compact > .sc-mc-item:nth-child(5) { display: none !important; }
 
     /* =================================================================== */
-    /* FIX LỖI TOOLBAR: FIT ĐÚNG 1 DÒNG, ẨN THỪA, FIX MENU RỚT TRÀN LỀ     */
+    /* FIX LỖI TOOLBAR: ÉP KHÍT TỐI ĐA, CÂN ĐỐI 1 DÒNG CHỐNG TRÀN LỀ       */
     /* =================================================================== */
     .sc-toolbar {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;       
         overflow: visible !important; 
-        padding: 4px 6px !important;
+        padding: 4px 2px !important; /* Ép sát 2 lề màn hình để lấy thêm diện tích */
         gap: 2px !important;
         min-height: 36px !important;
         align-items: center !important;
@@ -1873,51 +1873,47 @@ body.overlay-active {
         justify-content: space-between !important;
     }
     
-    /* Khối trái (Timeframe): Ép nhỏ lại, nhồi khít lại */
+    /* Khối trái (Timeframe): Ép nhỏ lại, nhồi khít lại tối đa */
     .sc-toolbar > div:first-child {
         display: flex !important;
         flex: 1 1 auto !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
-        gap: 2px !important; 
+        gap: 1px !important; /* Khoảng cách giữa các nút timeframe gần như dính liền */
         overflow: visible !important; 
     }
     .sc-toolbar > div:first-child > span { display: none !important; }
     
     .sc-time-btn { 
         font-size: 10px !important; 
-        padding: 4px 5px !important; 
+        padding: 4px 3px !important; /* Bóp bề ngang của nút timeframe lại */
         border-radius: 4px; 
         flex-shrink: 1 !important; 
         min-width: 0 !important; 
     }
 
-    /* Khối phải: Đặt làm "Neo" để Menu xổ xuống không văng ra ngoài */
+    /* Khối phải (Settings, Lọc): Ép nằm gọn gàng */
     .sc-toolbar > div:last-child {
         display: flex !important;
         flex: 0 0 auto !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
-        gap: 6px !important;
+        gap: 4px !important; /* Giảm khoảng cách giữa bánh răng và bộ lọc */
         overflow: visible !important;
-        position: relative !important; /* <--- NEO CHẶT LẠI ĐÂY */
+        position: relative !important; 
     }
 
-    /* XÓA NỀN ĐEN Ở CỤM KHỐI LỌC MARKER */
     .sc-toolbar > div:last-child > div { background: transparent !important; border: none !important; padding: 0 !important; }
-
-    /* ẨN HOÀN TOÀN THỐNG KÊ CÁ (Nằm gọn gàng hơn) */
     .sc-toolbar > div:last-child > div:nth-child(2) { display: none !important; }
-    
-    /* ẨN NÚT CHỤP HÌNH BẰNG CSS (Phòng hờ bạn chưa xóa kịp trong JS) */
     .sc-toolbar .fa-camera, .sc-toolbar [title*="Chụp"], .sc-toolbar [onclick*="screenshot"] { display: none !important; }
 
-    /* 🎯 FIX 1: THU NHỎ NÚT LỌC THÀNH ICON VUÔNG VỨC */
+    /* Thu nhỏ nút Lọc Marker thành 1 icon vuông vức */
+    .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; }
     .sc-filter-btn { 
-        padding: 4px 8px !important; 
-        font-size: 0 !important; /* BÍ QUYẾT: ÉP CHỮ BIẾN MẤT 100% */
+        padding: 4px 6px !important; /* Bóp lại cho gọn */
+        font-size: 0 !important; 
         pointer-events: auto !important; 
         border-radius: 4px;
         background: rgba(255,255,255,0.08) !important;
@@ -1927,23 +1923,22 @@ body.overlay-active {
         justify-content: center !important;
         min-height: 24px !important;
     }
-    /* Hiện lại icon với kích thước chuẩn */
     .sc-filter-btn i { font-size: 13px !important; color: #EAECEF !important; }
 
-    /* 🎯 FIX 2: ÉP MENU THẢ XUỐNG VỪA KHÍT GÓC PHẢI KHÔNG BỊ LẸM */
+    /* ÉP MENU THẢ XUỐNG VỪA KHÍT GÓC PHẢI KHÔNG BỊ LẸM */
     .sc-filter-menu { 
         position: absolute !important;
         z-index: 999999 !important; 
-        right: 0 !important;   /* Luôn bám chặt vào lề phải */
-        left: auto !important; /* Hủy bám lề trái */
-        top: 100% !important;  /* Nằm ngay dưới mép nút */
+        right: 0 !important;   
+        left: auto !important; 
+        top: 100% !important;  
         margin-top: 5px !important;
         min-width: 150px !important;
     }
 
-    /* Fix Bánh Răng Cài Đặt (Mở khóa chuột, phóng to icon 1 chút) */
+    /* Fix Bánh Răng Cài Đặt */
     .sc-toolbar i.fa-cog, .sc-toolbar i.fa-gear, .sc-toolbar [onclick*="setting"] {
-        pointer-events: auto !important; font-size: 15px !important; padding: 4px !important; color: #eaecef !important;
+        pointer-events: auto !important; font-size: 14px !important; padding: 4px !important; color: #eaecef !important;
     }
 
     /* Màn Hình Ngang */
