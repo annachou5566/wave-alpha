@@ -689,37 +689,42 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
         s.textContent = `
-            /* Desktop: Trượt ngang từ trái qua */
+            /* Desktop: Trượt ngang từ trái qua mượt mà */
             @media (min-width: 992px) {
                 #sc-panel-content {
-                    transition: width 0.25s cubic-bezier(0.25, 1, 0.5, 1), min-width 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease !important;
+                    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                                opacity 0.25s ease !important;
                     overflow: hidden;
                 }
                 #sc-panel-content.collapsed { 
                     width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; 
                 }
             }
-            /* Mobile: KHI ĐÓNG/MỞ TOÀN BỘ BẢNG CHỈ TRƯỢT DỌC LÊN/XUỐNG */
+            /* Mobile: Trượt dọc từ dưới lên êm ái, không giật mạnh */
             @media (max-width: 991px) {
                 #sc-panel-content {
-                    /* KHÓA CỨNG WIDTH 100%, chỉ animate height để tránh trượt ngang */
-                    transition: height 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease !important;
+                    /* Tăng thời gian lên 0.4s và dùng chuẩn mượt Ease-Out của hệ điều hành */
+                    transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1), 
+                                opacity 0.3s ease !important;
                     width: 100% !important; 
                     overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
                 }
                 #sc-panel-content.collapsed {
-                    height: 0 !important; min-height: 0 !important; flex: 0 0 0 !important;
+                    flex: 0 0 0 !important;
+                    height: 0 !important; min-height: 0 !important;
                     opacity: 0; 
                     pointer-events: none;
                     margin: 0 !important; padding: 0 !important; border: none !important;
                 }
-                /* Khi CÓ BẢNG, CHUYỂN TAB thì nội dung mọc từ dưới lên */
+                /* Nội dung bên trong cũng trồi lên chậm hơn một nhịp để tạo chiều sâu */
                 .sc-tab-content { animation: none !important; }
                 .sc-tab-content.active {
-                    animation: contentSlideUp 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+                    animation: contentSlideUp 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards !important;
                 }
                 @keyframes contentSlideUp {
-                    0% { opacity: 0; transform: translateY(30px); }
+                    0% { opacity: 0; transform: translateY(20px); }
                     100% { opacity: 1; transform: translateY(0); }
                 }
             }
@@ -732,14 +737,13 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const allTabs = document.querySelectorAll('.sc-tab-content');
     const isMobile = window.innerWidth <= 991;
 
-    // Quét sạch rác backdrop nếu còn lưu
     const oldBackdrop = document.getElementById('sc-panel-backdrop');
     if (oldBackdrop) oldBackdrop.remove(); 
 
     const doResize = function() {
         if (window.tvChart) window.tvChart.resize(); 
         setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 240);
-        setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 350);
+        setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 450); // Tăng delay khớp với animation mới
     };
 
     const handleMobileUI = (isNowCollapsed) => {
