@@ -710,18 +710,25 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const allTabs = document.querySelectorAll('.sc-tab-content');
     const isMobile = window.innerWidth <= 991;
 
+    // --- TIÊU DIỆT TÀN DƯ BACKDROP NẾU CÓ ---
+    const oldBackdrop = document.getElementById('sc-panel-backdrop');
+    if (oldBackdrop) oldBackdrop.remove(); 
+    // ----------------------------------------
+
     const doResize = function() {
         if (window.tvChart) window.tvChart.resize(); 
         setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 240);
         setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 350);
     };
 
-    // Hàm điều khiển thu/phóng Chart trên Mobile (Đã xóa lớp mờ Backdrop)
     const handleMobileUI = (isNowCollapsed) => {
         if (!isMobile) return;
         const chartArea = document.querySelector('.sc-chart-area');
         if (chartArea) {
             chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
+            // Cưỡng chế Chart luôn rõ nét bằng JS
+            chartArea.style.filter = 'none';
+            chartArea.style.opacity = '1';
         }
     };
 
