@@ -685,7 +685,6 @@ window.clearUserDrawings = function() {
 };
 
 window.toggleProSidePanel = function(tabId, btnElement) {
-    // [FIX] Inject CSS transition 1 lần duy nhất để tạo animation
     if (!document.getElementById('wa-panel-transition')) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
@@ -709,25 +708,56 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const panelContent = document.getElementById('sc-panel-content');
     const allBtns = document.querySelectorAll('.sc-sidebar-icon');
     const allTabs = document.querySelectorAll('.sc-tab-content');
+    const isMobile = window.innerWidth <= 991;
 
-    // [FIX MỚI] Gọi resize nhiều lần để khớp với animation mượt mà trên mobile
     const doResize = function() {
-        // Resize ngay lập tức khi bắt đầu animation
         if (window.tvChart) window.tvChart.resize(); 
-        
-        // Resize lần 2 sau khi transition kết thúc (240ms)
         setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 240);
-        
-        // Resize lần 3 an toàn (Buffer cho điện thoại render chậm)
         setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 350);
     };
 
+    // Hàm chuyên biệt xử lý UI trên Mobile (Bung Chart + Bật tắt lớp mờ)
+    const handleMobileUI = (isNowCollapsed) => {
+        if (!isMobile) return;
+        
+        const chartArea = document.querySelector('.sc-chart-area');
+        if (chartArea) {
+            chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
+        }
+
+        let backdrop = document.getElementById('sc-panel-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'sc-panel-backdrop';
+            document.getElementById('super-chart-overlay').appendChild(backdrop);
+            
+            backdrop.addEventListener('click', () => {
+                // Đóng sidebar khi bấm ra ngoài lớp mờ
+                panelContent.classList.add('collapsed');
+                backdrop.classList.remove('visible');
+                allBtns.forEach(btn => btn.classList.remove('active'));
+                
+                if (chartArea) chartArea.dataset.mobileExpanded = 'true';
+                doResize(); // Cập nhật lại biểu đồ
+            });
+        }
+        
+        if (isNowCollapsed) {
+            backdrop.classList.remove('visible');
+        } else {
+            backdrop.classList.add('visible');
+        }
+    };
+
+    // Trường hợp 1: Đóng sidebar do bấm lại đúng cái tab đang mở
     if (btnElement && btnElement.classList.contains('active')) {
         panelContent.classList.toggle('collapsed');
+        handleMobileUI(panelContent.classList.contains('collapsed'));
         doResize();
-        return;
+        return; 
     }
     
+    // Trường hợp 2: Đang đóng thì mở ra
     if (panelContent.classList.contains('collapsed')) {
         panelContent.classList.remove('collapsed');
     }
@@ -739,52 +769,9 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) { targetTab.style.display = 'flex'; targetTab.classList.add('active'); }
     
+    handleMobileUI(false); // Tab mới đang mở ra -> Chart thu nhỏ, lớp mờ hiện lên
     doResize();
-
-    // --- BẮT ĐẦU PATCH: MỞ RỘNG CHART & BACKDROP TRÊN MOBILE ---
-    if (window.innerWidth <= 991) {
-        const isNowCollapsed = panelContent.classList.contains('collapsed');
-        const chartArea = document.querySelector('.sc-chart-area');
-        
-        // Cấp thuộc tính cho CSS kéo giãn chart
-        if (chartArea) {
-            chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
-        }
-
-        // Khởi tạo và gắn sự kiện cho Overlay Backdrop (đóng sidebar khi chạm ra ngoài)
-        let backdrop = document.getElementById('sc-panel-backdrop');
-        if (!backdrop) {
-            backdrop = document.createElement('div');
-            backdrop.id = 'sc-panel-backdrop';
-            document.getElementById('super-chart-overlay').appendChild(backdrop);
-            
-            backdrop.addEventListener('click', () => {
-                panelContent.classList.add('collapsed');
-                backdrop.classList.remove('visible');
-                
-                const allBtns = document.querySelectorAll('.sc-sidebar-icon');
-                allBtns.forEach(btn => btn.classList.remove('active'));
-
-                if (chartArea) chartArea.dataset.mobileExpanded = 'true';
-                
-                // Trigger resize 2 nhịp để đảm bảo Chart render khớp sau khi CSS Transition chạy xong
-                setTimeout(() => { if (window.tvChart) window.tvChart.resize(); }, 50);
-                setTimeout(() => { if (window.tvChart) window.tvChart.resize(); }, 350);
-            });
-        }
-        
-        if (isNowCollapsed) {
-            backdrop.classList.remove('visible');
-        } else {
-            backdrop.classList.add('visible');
-        }
-    }
-
-    // Trigger dự phòng an toàn chống tràn RAM layout trên các thiết bị cấu hình thấp
-    setTimeout(() => { if (window.tvChart) window.tvChart.resize(); }, 400);
-    // --- KẾT THÚC PATCH ---
-
-}; // <--- Dấu đóng ngoặc của hàm toggleProSidePanel vẫn nằm ở đây
+};
 
 window.renderProWatchlist = function(passedSearchTerm) {
     const wlBody = document.getElementById('sc-watchlist-body');
