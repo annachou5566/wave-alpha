@@ -1858,37 +1858,44 @@ body.overlay-active {
     .sc-metrics-compact > .sc-mc-item:nth-child(1), .sc-metrics-compact > .sc-mc-item:nth-child(5) { display: none !important; }
 
     /* =================================================================== */
-    /* FIX LỖI TOOLBAR: MỞ KHÓA MENU LỌC & GOM VỀ 1 DÒNG DUY NHẤT        */
+    /* FIX LỖI TOOLBAR: FIT ĐÚNG 1 DÒNG, ẨN THỪA, FIX NỀN ĐEN              */
     /* =================================================================== */
     .sc-toolbar {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;       
-        overflow: visible !important; /* <--- MỞ KHÓA: Cho phép Menu thả xuống */
-        padding: 4px 8px !important;
-        gap: 8px !important;
-        min-height: 40px !important;
+        overflow: visible !important; 
+        padding: 4px 6px !important;
+        gap: 2px !important;
+        min-height: 36px !important;
         align-items: center !important;
         width: 100% !important;
+        justify-content: space-between !important;
     }
     
-    /* Khối trái: Timeframe -> Chuyển thanh cuộn vào đây */
+    /* Khối trái (Timeframe): Ép nhỏ lại, thu hẹp khoảng cách để không phải cuộn */
     .sc-toolbar > div:first-child {
         display: flex !important;
         flex: 1 1 auto !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        overflow-x: auto !important; /* <--- THANH CUỘN CHỈ Ở ĐÂY */
-        overflow-y: visible !important;
         align-items: center !important;
-        gap: 6px !important;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
-        padding-right: 15px;
+        gap: 1px !important; 
+        overflow: visible !important; 
     }
-    .sc-toolbar > div:first-child::-webkit-scrollbar { display: none; }
     
-    /* Khối phải: Settings, Filter, Stats */
+    /* Ẩn dấu gạch đứng | giữa các timeframe để tiết kiệm diện tích */
+    .sc-toolbar > div:first-child > span { display: none !important; }
+    
+    .sc-time-btn { 
+        font-size: 10.5px !important; 
+        padding: 4px 5px !important; 
+        border-radius: 4px; 
+        flex-shrink: 1 !important; 
+        min-width: 0 !important; 
+    }
+
+    /* Khối phải (Settings, Lọc): Ép nằm gọn gàng */
     .sc-toolbar > div:last-child {
         display: flex !important;
         flex: 0 0 auto !important;
@@ -1899,19 +1906,48 @@ body.overlay-active {
         overflow: visible !important;
     }
 
-    /* Thu nhỏ nút bấm Lọc Marker và sửa lỗi đè layer */
+    /* XÓA NỀN ĐEN (Background) ở các khối cha chứa nút Lọc */
+    .sc-toolbar > div:last-child > div {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    /* ẨN HOÀN TOÀN THỐNG KÊ CÁ VOI/MẬP (Vì chiếm quá nhiều chỗ trên mobile) */
+    .sc-toolbar > div:last-child > div:nth-child(2) { 
+        display: none !important; 
+    }
+    
+    /* ẨN NÚT CHỤP HÌNH (Dùng class & title chung nhất để bắt) */
+    .sc-toolbar .fa-camera, 
+    .sc-toolbar [title*="Chụp"], 
+    .sc-toolbar [title*="chụp"],
+    .sc-toolbar [onclick*="screenshot"],
+    .sc-toolbar [onclick*="capture"] {
+        display: none !important;
+    }
+
+    /* Thu nhỏ nút Lọc Marker thành 1 icon bấm mượt mà */
     .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; }
     .sc-filter-btn { 
-        padding: 4px 6px !important; 
-        font-size: 10px !important; 
+        padding: 4px 8px !important; 
+        font-size: 13px !important; 
         pointer-events: auto !important; 
         border-radius: 4px;
-        min-height: 24px;
+        background: rgba(255,255,255,0.08) !important; /* Cấp lại nền nhạt cho đẹp */
+        border: 1px solid rgba(255,255,255,0.1) !important;
     }
-    .sc-filter-menu { z-index: 999999 !important; } /* Đảm bảo Menu không bị che mất */
+    .sc-filter-menu { z-index: 999999 !important; right: 0 !important; left: auto !important; }
 
-    /* Căn chỉnh lại Timeframe */
-    .sc-time-btn { font-size: 10px !important; padding: 5px 10px !important; border-radius: 4px; flex-shrink: 0; }
+    /* Fix Bánh Răng Cài Đặt (Mở khóa chuột, phóng to icon 1 chút) */
+    .sc-toolbar i.fa-cog, 
+    .sc-toolbar i.fa-gear, 
+    .sc-toolbar [onclick*="setting"] {
+        pointer-events: auto !important;
+        font-size: 15px !important;
+        padding: 4px !important;
+        color: #eaecef !important;
+    }
 
     /* Màn Hình Ngang */
     @media (orientation: landscape) {

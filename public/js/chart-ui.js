@@ -699,24 +699,24 @@ window.toggleProSidePanel = function(tabId, btnElement) {
                     width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; 
                 }
             }
-            /* Mobile: Cấm trượt ngang, chỉ trượt dọc từ dưới lên */
+            /* Mobile: KHI ĐÓNG/MỞ TOÀN BỘ BẢNG CHỈ TRƯỢT DỌC LÊN/XUỐNG */
             @media (max-width: 991px) {
                 #sc-panel-content {
-                    transition: flex 0.3s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease !important;
-                    width: 100% !important; /* Luôn full 100% màn hình, cấm hiệu ứng co giãn ngang */
+                    /* KHÓA CỨNG WIDTH 100%, chỉ animate height để tránh trượt ngang */
+                    transition: height 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease !important;
+                    width: 100% !important; 
                     overflow: hidden;
                 }
                 #sc-panel-content.collapsed {
-                    flex: 0 0 0 !important;
-                    height: 0 !important; min-height: 0 !important;
+                    height: 0 !important; min-height: 0 !important; flex: 0 0 0 !important;
                     opacity: 0; 
                     pointer-events: none;
                     margin: 0 !important; padding: 0 !important; border: none !important;
                 }
-                /* Nội dung Tab mọc từ dưới lên */
+                /* Khi CÓ BẢNG, CHUYỂN TAB thì nội dung mọc từ dưới lên */
                 .sc-tab-content { animation: none !important; }
                 .sc-tab-content.active {
-                    animation: contentSlideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+                    animation: contentSlideUp 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
                 }
                 @keyframes contentSlideUp {
                     0% { opacity: 0; transform: translateY(30px); }
