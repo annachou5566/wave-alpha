@@ -1894,7 +1894,7 @@ body.overlay-active {
     }
 
     /* =================================================================== */
-    /* Khối phải (Chỉ báo, Mở rộng, Cài đặt, Lọc): Ép sát tối đa         */
+    /* KHỐI PHẢI: ÉP FLEX ĐỂ TRIỆT TIÊU HOÀN TOÀN KHOẢNG TRỐNG HTML RÁC    */
     /* =================================================================== */
     .sc-toolbar > div:last-child {
         display: flex !important;
@@ -1902,57 +1902,66 @@ body.overlay-active {
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
-        gap: 0px !important; /* 🎯 ÉP SÁT CÁC ICON VÀO NHAU HOÀN TOÀN */
+        justify-content: flex-end !important;
+        gap: 0 !important; /* 🎯 ÉP SÁT TUYỆT ĐỐI */
         overflow: visible !important;
         position: relative !important; 
     }
 
-    /* Bóp nhỏ khoảng trống (padding) dư thừa của tất cả icon khối phải */
-    .sc-toolbar > div:last-child > div { 
-        background: transparent !important; 
-        border: none !important; 
-        padding: 4px 6px !important; /* Ép sát lề trái phải của từng icon */
+    /* Lột sạch mọi padding/margin/border của các thẻ <div> bọc ngoài icon */
+    .sc-toolbar > div:last-child > * {
         margin: 0 !important;
-    }
-    
-    .sc-toolbar > div:last-child > div:nth-child(2) { display: none !important; }
-    .sc-toolbar .fa-camera, .sc-toolbar [title*="Chụp"], .sc-toolbar [onclick*="screenshot"] { display: none !important; }
-
-    /* Căn chỉnh Bánh Răng Cài Đặt & Các Icon khác cho đều nhau */
-    .sc-toolbar i.fa-cog, .sc-toolbar i.fa-gear, .sc-toolbar [onclick*="setting"], .sc-toolbar .fa-expand {
-        pointer-events: auto !important; 
-        font-size: 14px !important; /* Size chuẩn cho mọi icon */
-        padding: 2px !important; 
-        color: #eaecef !important;
-    }
-
-    /* 🎯 ĐỒNG BỘ NÚT LỌC MARKER & THÊM VẠCH NGĂN CÁCH */
-    .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; }
-    .sc-filter-btn { 
-        padding: 4px 6px 4px 10px !important; /* Chừa lề bên trái một chút để chứa vạch ngăn cách */
-        margin-left: 2px !important; /* Đẩy ra xa bánh răng một chút để lấy chỗ vẽ vạch */
-        
-        /* ĐÂY LÀ DẤU GẠCH NGĂN CÁCH ĐỒNG BỘ */
-        border-left: 1px solid rgba(255, 255, 255, 0.15) !important; 
-        
-        /* GỠ BỎ TOÀN BỘ NỀN VÀ KHUNG CŨ ĐỂ ĐỒNG BỘ VỚI CÁC ICON KIA */
-        border-top: none !important;
-        border-right: none !important;
-        border-bottom: none !important;
-        border-radius: 0 !important; 
-        background: transparent !important; 
-        
-        font-size: 0 !important; 
-        pointer-events: auto !important; 
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        width: auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        min-height: 20px !important;
     }
-    
-    .sc-filter-btn i { 
-        font-size: 14px !important; /* Size đồng bộ với bánh răng */
-        color: #EAECEF !important; 
+
+    /* Ẩn các phần tử thừa (Cá voi, Chụp hình...) */
+    .sc-toolbar > div:last-child > div:nth-child(2) { display: none !important; }
+    .sc-toolbar .fa-camera, .sc-toolbar [title*="Chụp"], .sc-toolbar [onclick*="screenshot"] { display: none !important; }
+
+    /* 🎯 ĐỒNG BỘ 100% STYLE CHO TẤT CẢ ICON (Cài đặt, Mở rộng, Lọc) */
+    .sc-toolbar i.fa-cog, 
+    .sc-toolbar i.fa-gear, 
+    .sc-toolbar [onclick*="setting"] i,
+    .sc-toolbar [onclick*="setting"], 
+    .sc-toolbar .fa-expand,
+    .sc-filter-btn i {
+        pointer-events: auto !important; 
+        font-size: 15px !important;  /* Kích thước icon bằng nhau tăm tắp */
+        color: #eaecef !important;   /* Cùng một màu xám trắng */
+        padding: 4px 6px !important; /* Đủ vùng chạm cho ngón tay nhưng nhìn vẫn khít */
+        margin: 0 !important;
+        line-height: 1 !important;
+        background: transparent !important;
+    }
+
+    /* Đưa nút Lọc Marker về dạng "tàng hình", chỉ giữ lại Icon bên trong */
+    .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; }
+    .sc-filter-btn { 
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important; 
+        border: none !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    /* 🎯 VẠCH NGĂN CÁCH TINH TẾ: Dùng pseudo-element để không chiếm diện tích thật */
+    .sc-filter-btn::before {
+        content: '';
+        display: block !important;
+        width: 1px !important;
+        height: 16px !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+        margin: 0 2px 0 0 !important; /* Áp sát vào icon cài đặt */
     }
 
     /* ÉP MENU THẢ XUỐNG VỪA KHÍT GÓC PHẢI KHÔNG BỊ LẸM */
