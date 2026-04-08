@@ -1901,13 +1901,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             </div>
           </div>
 
-          <div style="width:1px; height:18px; background:${COLOR.border}; margin:0 4px;"></div>
-          <button id="btn-wa-screenshot" title="Chụp ảnh chart"
-            style="background:transparent; color:${COLOR.muted}; border:none; cursor:pointer;
-                   font-size:13px; padding:4px 8px; border-radius:6px; transition:.15s;"
-            onmouseover="this.style.color='${COLOR.gold}'; this.style.background='rgba(240,185,11,0.07)'"
-            onmouseout="this.style.color='${COLOR.muted}'; this.style.background='transparent'">📷</button>
-        `;
+          `;
         container.appendChild(tbWrap);
 
         document.getElementById('btn-fx-indicator').addEventListener('click', function (e) {
@@ -1924,19 +1918,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
           else document.exitFullscreen && document.exitFullscreen();
         });
 
-        // Screenshot
-        document.getElementById('btn-wa-screenshot').addEventListener('click', function () {
-          if (global.tvChart && typeof global.tvChart.getConvertPictureUrl === 'function') {
-            const savedSettings = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');
-            const currentBgColor = savedSettings.colBg || '#1e2329';
-            
-            const url = global.tvChart.getConvertPictureUrl(true, 'jpeg', currentBgColor);
-            const a   = document.createElement('a');
-            a.href     = url;
-            a.download = 'wave-alpha-chart-' + Date.now() + '.jpg';
-            a.click();
-          }
-        });
+        
 
         // Xử lý mở/đóng menu Cài đặt Chart
         const btnCfg = document.getElementById('btn-wa-chart-cfg');
