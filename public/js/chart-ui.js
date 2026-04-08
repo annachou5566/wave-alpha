@@ -740,7 +740,51 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     if (targetTab) { targetTab.style.display = 'flex'; targetTab.classList.add('active'); }
     
     doResize();
-};
+
+    // --- BẮT ĐẦU PATCH: MỞ RỘNG CHART & BACKDROP TRÊN MOBILE ---
+    if (window.innerWidth <= 991) {
+        const isNowCollapsed = panelContent.classList.contains('collapsed');
+        const chartArea = document.querySelector('.sc-chart-area');
+        
+        // Cấp thuộc tính cho CSS kéo giãn chart
+        if (chartArea) {
+            chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
+        }
+
+        // Khởi tạo và gắn sự kiện cho Overlay Backdrop (đóng sidebar khi chạm ra ngoài)
+        let backdrop = document.getElementById('sc-panel-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'sc-panel-backdrop';
+            document.getElementById('super-chart-overlay').appendChild(backdrop);
+            
+            backdrop.addEventListener('click', () => {
+                panelContent.classList.add('collapsed');
+                backdrop.classList.remove('visible');
+                
+                const allBtns = document.querySelectorAll('.sc-sidebar-icon');
+                allBtns.forEach(btn => btn.classList.remove('active'));
+
+                if (chartArea) chartArea.dataset.mobileExpanded = 'true';
+                
+                // Trigger resize 2 nhịp để đảm bảo Chart render khớp sau khi CSS Transition chạy xong
+                setTimeout(() => { if (window.tvChart) window.tvChart.resize(); }, 50);
+                setTimeout(() => { if (window.tvChart) window.tvChart.resize(); }, 350);
+            });
+        }
+        
+        if (isNowCollapsed) {
+            backdrop.classList.remove('visible');
+        } else {
+            backdrop.classList.add('visible');
+        }
+    }
+
+    // Trigger dự phòng an toàn chống tràn RAM layout trên các thiết bị cấu hình thấp
+    setTimeout(() => { if (window.tvChart) window.tvChart.resize(); }, 400);
+    // --- KẾT THÚC PATCH ---
+
+}; // <--- Dấu đóng ngoặc của hàm toggleProSidePanel vẫn nằm ở đây
 
 window.renderProWatchlist = function(passedSearchTerm) {
     const wlBody = document.getElementById('sc-watchlist-body');
@@ -1040,20 +1084,37 @@ window.openProChart = function(t, isTimeSwitch = false) {
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
 
+        // --- BẮT ĐẦU PATCH: TỐI ƯU RESIZE OBSERVER & CLEAR CACHE ---
+        const chartArea = document.querySelector('.sc-chart-area');
+        if (chartArea) delete chartArea.dataset.mobileExpanded;
+        
+        const oldBackdrop = document.getElementById('sc-panel-backdrop');
+        if (oldBackdrop) oldBackdrop.classList.remove('visible');
+
         if (window._chartResizeObserver) window._chartResizeObserver.disconnect();
         
-        // 💡 VÁ LỖI: Dùng requestAnimationFrame để giới hạn số lần resize tối đa là 60fps
         let _resizeRafId = null;
+        const isMobile = () => window.innerWidth <= 991;
+        
         window._chartResizeObserver = new ResizeObserver(function() {
             if (!window.tvChart) return;
             if (_resizeRafId) cancelAnimationFrame(_resizeRafId);
             
+            // Giới hạn call stack vẽ lại chart ở tốc độ 60fps của thiết bị
             _resizeRafId = requestAnimationFrame(function() {
                 if (window.tvChart) window.tvChart.resize();
                 _resizeRafId = null;
             });
         });
+        
         window._chartResizeObserver.observe(container);
+        
+        // Trên mobile, Canvas đôi khi không bắt được sự thay đổi của class cha, 
+        // cần observe thêm lớp Wrapper để chắc chắn kích hoạt resize khi Sidebar thụt thò.
+        if (isMobile() && chartArea) {
+            window._chartResizeObserver.observe(chartArea);
+        }
+        // --- KẾT THÚC PATCH ---
 
         // [FIX 1.2] Áp dụng màu Chart, Grid VÀ Viền Nến từ LocalStorage khi khởi tạo
         const ws = JSON.parse(localStorage.getItem('wa_chart_settings') || '{}');

@@ -1502,6 +1502,18 @@ window.applyMarketUpdatesThrottled = function() {
                 priceEl.innerHTML = `$${newPrice.toLocaleString('en-US', { maximumFractionDigits: newPrice < 1 ? 6 : 4 })}`;
                 priceEl.setAttribute('data-raw', newPrice);
                 setTimeout(() => { priceEl.style.color = ''; }, 1000);
+
+                // --- BẮT ĐẦU PATCH: HIỆU ỨNG CHỚP GIÁ TRÊN MOBILE ---
+                if (window.innerWidth <= 991) {
+                    let livePriceChartEl = document.getElementById('sc-live-price');
+                    if (livePriceChartEl && priceEl.id.includes(window.currentChartToken?.symbol || 'XXX')) {
+                        livePriceChartEl.classList.remove('price-flash-up', 'price-flash-down');
+                        void livePriceChartEl.offsetWidth; // Ép trình duyệt reflow để kích hoạt lại keyframes
+                        livePriceChartEl.classList.add(isUp ? 'price-flash-up' : 'price-flash-down');
+                    }
+                }
+                // --- KẾT THÚC PATCH ---
+
             } else if (!priceEl.getAttribute('data-raw')) { priceEl.setAttribute('data-raw', newPrice); }
 
             let tdPriceEl = document.getElementById(`alpha-td-price-${tokenKey}`);
