@@ -990,7 +990,7 @@ function injectLayout() {
 
                 <div class="sc-right-container" id="sc-right-container">
                     <div class="sc-panel-content" id="sc-panel-content">
-                        <div id="tab-watchlist" class="sc-tab-content" style="padding: 0; display: none;">
+                        <div id="tab-watchlist" class="sc-tab-content" style="padding: 0; display: none; flex-direction: column; height: 100%; overflow-y: auto;">
                             <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
                                 <div style="display:flex; align-items:center;"><i class="fas fa-list" style="color:#F0B90B; margin-right: 6px; font-size: 13px;"></i> WATCHLIST</div>
                                 <input type="text" id="wl-search" placeholder="Tìm token..." onkeyup="window.renderProWatchlist(this.value)" autocomplete="off" style="background:rgba(255,255,255,0.05); border:1px solid #2b3139; color:#eaecef; font-size:10px; padding:3px 8px; border-radius:2px; width:120px; outline:none; font-family:var(--font-main);">
@@ -1001,7 +1001,7 @@ function injectLayout() {
                             <div id="sc-watchlist-body" style="flex:1; overflow-y:auto; background: var(--term-bg);"></div>
                         </div>
 
-                        <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex;">
+                        <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex; flex-direction: column; height: 100%; overflow-y: auto;">
                             <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
                                 <div style="display:flex; align-items:center;"><i class="fas fa-bolt" style="color:#00F0FF; margin-right: 6px; font-size: 13px;"></i> LIVE TRADES</div>
                             </div>
