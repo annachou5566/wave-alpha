@@ -2280,3 +2280,27 @@ window.openProChart = function(t, isTimeSwitch = false) {
         }, 100);
     }
 };
+
+function showDeleteButton(overlay) {
+    let btn = document.getElementById('wa-delete-btn');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'wa-delete-btn';
+      btn.innerHTML = '×';
+      btn.style.cssText = `
+        position:absolute; z-index:1000; width:24px; height:24px;
+        background:#EF4444; color:#fff; border:none; border-radius:50%;
+        font-size:16px; cursor:pointer; display:flex;
+        align-items:center; justify-content:center;
+        box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      `;
+      document.getElementById('sc-chart-container').appendChild(btn);
+    }
+    // Tính vị trí từ bounding box của overlay
+    const pts = overlay.points;
+    const firstPt = pts[0]; // dùng điểm đầu để định vị
+    btn.style.left = (firstPt.x + 8) + 'px';
+    btn.style.top  = (firstPt.y - 16) + 'px';
+    btn.style.display = 'flex';
+    btn.onclick = () => deleteOverlay(overlay);
+  }
