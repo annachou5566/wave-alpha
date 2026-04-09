@@ -126,10 +126,14 @@ document.addEventListener('DOMContentLoaded', () => {
             #sc-live-trades::-webkit-scrollbar-track { background: var(--term-bg); }
 
             @media (max-width: 991px) {
-                /* Ép toàn bộ giao diện theo chiều dọc, không cho phép tràn màn hình */
-                .sc-body { flex-direction: column !important; height: calc(100dvh - 42px) !important; overflow: hidden !important; }
+                /* 1. Thiết lập khung sườn dọc cho Mobile */
+                .sc-body { 
+                    flex-direction: column !important; 
+                    height: calc(100dvh - 42px) !important; /* Trừ đi chiều cao Topbar */
+                    overflow: hidden !important; 
+                }
                 
-                /* 1. CHART AREA: Chiếm toàn bộ khoảng trống còn lại (Tự co giãn) */
+                /* 2. BIỂU ĐỒ (CHART): Tự động co giãn theo không gian còn lại */
                 .sc-chart-area { 
                     flex: 1 1 0% !important; 
                     display: flex !important; 
@@ -138,11 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     height: auto !important; 
                 }
 
-                /* 2. THANH STATS & PRICE: Giữ nguyên vị trí sát dưới Chart */
-                .sc-stats-row { padding: 4px 10px; gap: 8px; flex-shrink: 0; background: var(--term-panel); border-top: 1px solid var(--term-border); }
-                .sc-price-box #sc-live-price { font-size: 18px !important; }
+                /* 3. THANH STATS: Nằm ngay dưới biểu đồ */
+                .sc-stats-row { 
+                    padding: 4px 10px; 
+                    gap: 8px; 
+                    flex-shrink: 0; 
+                    background: var(--term-panel); 
+                    border-top: 1px solid var(--term-border); 
+                }
 
-                /* 3. RIGHT CONTAINER: Chuyển thành khối điều hướng đáy */
+                /* 4. CONTAINER ĐIỀU HƯỚNG: Chứa bảng và thanh icon đáy */
                 .sc-right-container { 
                     display: flex !important; 
                     flex-direction: column-reverse !important; 
@@ -151,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     background: var(--term-bg);
                 }
 
-                /* 4. BOTTOM NAVIGATION: Thanh icon chết ở đáy */
+                /* 5. THANH ICON ĐÁY (BOTTOM NAV): Luôn cố định chiều cao */
                 .sc-icon-sidebar { 
                     flex-direction: row !important; 
                     width: 100% !important; 
@@ -166,28 +175,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 .sc-sidebar-icon { border-left: none !important; border-top: 2px solid transparent !important; height: 100% !important; flex: 1; }
                 .sc-sidebar-icon.active { border-top-color: var(--term-warn) !important; color: var(--term-warn) !important; }
-                .sc-sidebar-icon:hover::after { display: none; }
 
-                /* 5. PANEL NỘI DUNG: Khi mở sẽ ĐẨY biểu đồ lên (Tách biệt hoàn toàn) */
+                /* 6. BẢNG NỘI DUNG (SIDEBAR CONTENT): Đẩy biểu đồ lên khi xuất hiện */
                 .sc-panel-content { 
                     width: 100% !important; 
-                    height: 45vh !important; /* Độ cao khi mở bảng */
+                    height: 40vh !important; /* Chiếm 40% màn hình khi mở */
                     min-height: 0 !important; 
-                    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; 
+                    transition: height 0.3s ease-out !important; 
                     border-top: 1px solid var(--term-border);
                     background: var(--term-bg);
                     display: flex !important;
                     flex-shrink: 0 !important;
                 }
 
-                /* Khi đóng bảng: Co về 0, Chart sẽ tự động giãn ra chiếm 100% */
+                /* Khi đóng bảng: Chiều cao về 0, biểu đồ tự động giãn ra 100% */
                 .sc-panel-content.collapsed { 
                     height: 0px !important; 
                     border-top: none !important;
                     overflow: hidden !important;
                 }
-                
-                .sc-tab-content { flex: 1 !important; overflow-y: auto !important; }
                 
                 .sc-tab-content { flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; overscroll-behavior: contain !important; -webkit-overflow-scrolling: touch !important; padding-bottom: 30px !important; }
             }
