@@ -1971,7 +1971,7 @@
     return id;
   }
 
-  // ==========================================
+    // ==========================================
   // 4. EVENTS ENGINE (KEYBOARD, TOOLS)
   // ==========================================
   function bindCoreEvents(toolbar, panel) {
@@ -1979,35 +1979,38 @@
     
     let handle = toolbar.querySelector('.wa-drag-grip');
     if (handle) {
-            // 1. GIỮ NGUYÊN ĐOẠN CŨ (Dành cho PC)
-            handle.addEventListener('mousedown', (e) => {
-              global.__wa_isDragging = true;
-              global.__wa_startX = e.clientX; global.__wa_startY = e.clientY;
-              const tb = document.querySelector('.wa-toolbar');
-              global.__wa_initialX = tb ? tb.offsetLeft : 0; 
-              global.__wa_initialY = tb ? tb.offsetTop : 0;
-              document.body.style.userSelect = 'none'; 
-            });
+      // 1. Kéo thả bằng chuột trên PC
+      handle.addEventListener('mousedown', (e) => {
+        global.__wa_isDragging = true;
+        global.__wa_startX = e.clientX; global.__wa_startY = e.clientY;
+        const tb = document.querySelector('.wa-toolbar');
+        global.__wa_initialX = tb ? tb.offsetLeft : 0; 
+        global.__wa_initialY = tb ? tb.offsetTop : 0;
+        document.body.style.userSelect = 'none'; 
+      });
       
-            // 2. THÊM MỚI ĐOẠN NÀY VÀO NGAY BÊN DƯỚI (Dành cho Mobile)
-            handle.addEventListener('touchstart', (e) => {
-              if(e.touches.length === 0) return;
-              global.__wa_isDragging = true;
-              global.__wa_startX = e.touches[0].clientX; 
-              global.__wa_startY = e.touches[0].clientY;
-              const tb = document.querySelector('.wa-toolbar');
-              global.__wa_initialX = tb ? tb.offsetLeft : 0; 
-              global.__wa_initialY = tb ? tb.offsetTop : 0;
-              document.body.style.userSelect = 'none'; 
-            }, { passive: false });
+      // 2. Kéo thả bằng ngón tay trên Mobile
+      handle.addEventListener('touchstart', (e) => {
+        if(e.touches.length === 0) return;
+        global.__wa_isDragging = true;
+        global.__wa_startX = e.touches[0].clientX; 
+        global.__wa_startY = e.touches[0].clientY;
+        const tb = document.querySelector('.wa-toolbar');
+        global.__wa_initialX = tb ? tb.offsetLeft : 0; 
+        global.__wa_initialY = tb ? tb.offsetTop : 0;
+        document.body.style.userSelect = 'none'; 
+      }, { passive: false });
+
       handle.addEventListener('dblclick', () => { toolbar.classList.toggle('collapsed'); });
     }
 
-    // CHẶN LAG: Đảm bảo sự kiện chuột chỉ được gắn 1 lần duy nhất cho toàn trang web
+    // CHẶN LAG: Đảm bảo sự kiện chuột/touch chỉ được gắn 1 lần duy nhất cho toàn trang web
     if (!global.__wa_mouse_bound) {
       global.__wa_mouse_bound = true;
       global.__wa_isDragging = false;
       let _dragRaf = null;
+
+      // Xử lý di chuột PC
       document.addEventListener('mousemove', (e) => {
         if (!global.__wa_isDragging) return;
         if (_dragRaf) cancelAnimationFrame(_dragRaf);
@@ -2018,14 +2021,14 @@
           tb.style.left = Math.max(0, global.__wa_initialX + dx) + 'px';
           tb.style.top = Math.max(0, global.__wa_initialY + dy) + 'px';
         });
-        // 2. THÊM MỚI ĐOẠN NÀY NGAY BÊN DƯỚI (Dành cho vuốt ngón tay Mobile)
+      });
+
+      // Xử lý vuốt ngón tay Mobile
       document.addEventListener('touchmove', (e) => {
         if (!global.__wa_isDragging) return;
         e.preventDefault(); // Rất quan trọng: Chống cuộn biểu đồ khi đang kéo toolbar
-        
-        let dragRaf;
-        if (dragRaf) cancelAnimationFrame(dragRaf);
-        dragRaf = requestAnimationFrame(() => {
+        if (_dragRaf) cancelAnimationFrame(_dragRaf);
+        _dragRaf = requestAnimationFrame(() => {
             const tb = document.querySelector('.wa-toolbar');
             if (!tb) return;
             let dx = e.touches[0].clientX - global.__wa_startX;
@@ -2035,14 +2038,51 @@
         });
       }, { passive: false });
 
-      // 3. THÊM MỚI SỰ KIỆN NHẢ NGÓN TAY TRÊN MOBILE
+      // Nhả chuột PC
+      document.addEventListener('mouseup', () => { 
+        global.__wa_isDragging = false; 
+        document.body.style.userSelect = ''; 
+      });
+
+      // Nhả ngón tay Mobile
       document.addEventListener('touchend', () => {
         global.__wa_isDragging = false;
         document.body.style.userSelect = '';
       });
-      });
-      document.addEventListener('mouseup', () => { global.__wa_isDragging = false; document.body.style.userSelect = ''; });
     }
+
+    // XỬ LÝ CLICK CHỌN CÔNG CỤ TỪ MENU DROPDOWN
+    toolbar.addEventListener('click', (e) => {
+      let menuItem = e.target.closest('.wa-menu-item');
+      let btn = e.target.closest('.wa-tb-btn[data-tool]');
+      let toolId = null;
+
+      if (menuItem) {
+        toolId = menuItem.getAttribute('data-tool');
+        getTbBtns().forEach(b => b.classList.remove('active'));
+        menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
+
+        // ---- THÊM MỚI: Ẩn menu dropdown đi lập tức sau khi chọn công cụ ----
+        let parentMenu = menuItem.closest('.wa-tb-menu');
+        if (parentMenu) {
+           parentMenu.style.display = 'none'; // Ép ẩn menu con
+           setTimeout(() => { parentMenu.style.display = ''; }, 300); // Khôi phục trạng thái
+        }
+        
+        // Thu gọn toolbar trên mobile để chừa không gian vẽ
+        if (window.innerWidth <= 991) {
+            toolbar.classList.add('collapsed');
+        }
+
+      } else if (btn) {
+        toolId = btn.getAttribute('data-tool');
+        getTbBtns().forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+
+      if (toolId) { activateTool(toolId); }
+    });
+
 
     function saveHistory() {} 
 
