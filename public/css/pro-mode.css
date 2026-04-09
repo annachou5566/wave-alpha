@@ -1821,34 +1821,20 @@ body.overlay-active {
    📱 MOBILE-FIRST TRADING UI OPTIMIZATIONS (MAX-WIDTH: 991PX)
    ========================================================= */
    @media (max-width: 991px) {
-    /* CHART: Thu/Phóng không bao giờ bị mờ */
-    .sc-chart-area {
-        transition: flex 0.3s ease, height 0.3s cubic-bezier(0.4,0,0.2,1) !important;
-        filter: none !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-    }
-    .sc-chart-area[data-mobile-expanded="true"] {
-        flex: 1 1 auto !important;
-        height: auto !important;
-        min-height: 0 !important;
-        border-bottom: none !important;
-    }
+    /* Ép body không cuộn khi mở Chart */
+    body.overlay-active { overflow: hidden !important; }
+    
+    /* Chuyển toàn bộ khung sc-body thành chiều dọc */
+    .sc-body { flex-direction: column !important; min-height: 0 !important; flex: 1 1 auto !important; }
 
-    /* HEADER & STATS */
+    /* HEADER & STATS (Giữ nguyên tối ưu mobile của bạn) */
     .sc-topbar { padding: 0 8px !important; height: 38px !important; gap: 6px !important; }
     #sc-coin-logo { width: 22px !important; height: 22px !important; }
     #sc-coin-symbol { font-size: 14px !important; }
     #sc-coin-name { display: none !important; } 
     #sc-algo-limit { font-size: 9px !important; padding: 2px 4px !important; max-width: none !important; white-space: nowrap !important; }
-
-    .sc-stats-row {
-        padding: 3px 8px !important; gap: 0 !important; min-height: 28px !important; max-height: 28px !important;
-        overflow-x: auto !important; overflow-y: hidden !important; flex-wrap: nowrap !important;
-        -webkit-overflow-scrolling: touch; scrollbar-width: none; justify-content: flex-start !important;
-    }
+    .sc-stats-row { padding: 3px 8px !important; gap: 0 !important; min-height: 28px !important; max-height: 28px !important; overflow-x: auto !important; overflow-y: hidden !important; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; justify-content: flex-start !important; }
     .sc-stats-row::-webkit-scrollbar { display: none; }
-    
     .sc-price-box { flex-direction: row !important; align-items: center !important; gap: 8px !important; flex-shrink: 0 !important; margin-right: 12px !important; }
     #sc-live-price { font-size: 16px !important; white-space: nowrap; }
     #sc-change-24h { font-size: 11px !important; white-space: nowrap; }
@@ -1857,130 +1843,94 @@ body.overlay-active {
     .sc-mc-item strong { font-size: 11px !important; }
     .sc-metrics-compact > .sc-mc-item:nth-child(1), .sc-metrics-compact > .sc-mc-item:nth-child(5) { display: none !important; }
 
-    /* =================================================================== */
-    /* FIX LỖI TOOLBAR: ÉP KHÍT TỐI ĐA, CÂN ĐỐI 1 DÒNG CHỐNG TRÀN LỀ       */
-    /* =================================================================== */
-    .sc-toolbar {
+    /* YÊU CẦU 3: CHART TỰ CO GIÃN (Bảo vệ Volume & MACD) */
+    .sc-chart-area { 
+        flex: 1 1 auto !important; /* Tự động co giãn chiếm phần không gian còn lại */
+        height: auto !important; 
+        min-height: 270px !important; /* ĐẢM BẢO KHÔNG BỊ BÓP DẸP LÉP CHỈ BÁO MACD/RSI */
+        border-bottom: 1px solid #2b3139 !important; 
+        transition: flex 0.3s ease, min-height 0.3s ease !important;
+    }
+
+    /* BỐ CỤC KHỐI PHẢI THÀNH BOTTOM NAV + BOTTOM SHEET */
+    .sc-right-container { 
         display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;       
-        overflow: visible !important; 
-        padding: 4px 2px !important; /* Ép sát 2 lề màn hình để lấy thêm diện tích */
-        gap: 2px !important;
-        min-height: 36px !important;
-        align-items: center !important;
+        flex-direction: column !important; /* Sắp xếp dọc */
+        width: 100% !important; 
+        height: auto !important; 
+        flex: 0 0 auto !important; 
+        border-left: none !important; 
+        min-height: 0 !important; 
+    }
+
+    /* YÊU CẦU 1: THANH SIDEBAR ICON -> ĐIỀU HƯỚNG ĐÁY (LUÔN CHẾT DÍ Ở DƯỚI CÙNG) */
+    .sc-icon-sidebar { 
+        flex-direction: row !important; /* Nằm ngang */
+        width: 100% !important; 
+        height: 50px !important; /* Cao 50px vừa ngón tay */
+        padding-top: 0 !important; 
+        border-left: none !important; 
+        border-top: 1px solid #2b3139 !important; 
+        justify-content: space-around !important; /* Chia đều các icon */
+        flex-shrink: 0 !important; 
+        background: #13171b !important; 
+        order: 2 !important; /* Mãnh lệnh: Đẩy thanh này xuống dưới cùng */
+    }
+    .sc-sidebar-icon { 
+        border-left: none !important; 
+        border-bottom: none !important; 
+        border-top: 2px solid transparent !important; 
+        height: 100% !important; 
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important; 
         width: 100% !important;
-        justify-content: space-between !important;
     }
-    
-    /* Khối trái (Timeframe): Ép nhỏ lại, nhồi khít lại tối đa */
-    .sc-toolbar > div:first-child {
-        display: flex !important;
-        flex: 1 1 auto !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        gap: 1px !important; /* Khoảng cách giữa các nút timeframe gần như dính liền */
-        overflow: visible !important; 
-    }
-    .sc-toolbar > div:first-child > span { display: none !important; }
-    
-    .sc-time-btn { 
-        font-size: 10px !important; 
-        padding: 4px 3px !important; /* Bóp bề ngang của nút timeframe lại */
-        border-radius: 4px; 
-        flex-shrink: 1 !important; 
-        min-width: 0 !important; 
-    }
+    .sc-sidebar-icon.active { border-top-color: #00F0FF !important; color: #00F0FF !important; }
+    .sc-sidebar-icon:hover::after { display: none !important; }
 
-    /* =================================================================== */
-    /* KHỐI PHẢI: ÉP FLEX ĐỂ TRIỆT TIÊU HOÀN TOÀN KHOẢNG TRỐNG HTML RÁC    */
-    /* =================================================================== */
-    .sc-toolbar > div:last-child {
-        display: flex !important;
-        flex: 0 0 auto !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        justify-content: flex-end !important;
-        gap: 0 !important; /* 🎯 ÉP SÁT TUYỆT ĐỐI */
-        overflow: visible !important;
-        position: relative !important; 
+    /* YÊU CẦU 2: BẢNG NỘI DUNG (BOTTOM SHEET) - TRỒI LÊN TỪ ĐÁY NGAY SÁT THANH NAV */
+    .sc-panel-content { 
+        width: 100% !important; 
+        height: 40vh !important; /* Trồi lên chiếm 40% màn hình */
+        flex: none !important; 
+        min-height: 0 !important; 
+        border-top: none !important;
+        order: 1 !important; /* Mãnh lệnh: Nằm ngay trên thanh Icon đáy */
+        transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; 
     }
-
-    /* Lột sạch mọi padding/margin/border của các thẻ <div> bọc ngoài icon */
-    .sc-toolbar > div:last-child > * {
-        margin: 0 !important;
+    .sc-panel-content.collapsed { 
+        height: 0px !important; /* Đóng lại thì biến mất hoàn toàn */
+        flex: none !important; 
+        overflow: hidden !important; 
         padding: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        width: auto !important;
-        min-width: 0 !important;
-        min-height: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
     }
 
-    /* Ẩn các phần tử thừa (Cá voi, Chụp hình...) */
+    .sc-tab-content { 
+        flex: 1 1 auto !important; 
+        height: 100% !important; 
+        overflow-y: auto !important; 
+        overflow-x: hidden !important; 
+        overscroll-behavior: contain !important; 
+        -webkit-overflow-scrolling: touch !important; 
+        padding-bottom: 10px !important; 
+    }
+
+    /* GIỮ NGUYÊN FIX LỖI TOOLBAR TỪ CODE CŨ CỦA BẠN */
+    .sc-toolbar { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow: visible !important; padding: 4px 2px !important; gap: 2px !important; min-height: 36px !important; align-items: center !important; width: 100% !important; justify-content: space-between !important; }
+    .sc-toolbar > div:first-child { display: flex !important; flex: 1 1 auto !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; gap: 1px !important; overflow: visible !important; }
+    .sc-toolbar > div:first-child > span { display: none !important; }
+    .sc-time-btn { font-size: 10px !important; padding: 4px 3px !important; border-radius: 4px; flex-shrink: 1 !important; min-width: 0 !important; }
+    .sc-toolbar > div:last-child { display: flex !important; flex: 0 0 auto !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: flex-end !important; gap: 0 !important; overflow: visible !important; position: relative !important; }
+    .sc-toolbar > div:last-child > * { margin: 0 !important; padding: 0 !important; border: none !important; background: transparent !important; width: auto !important; min-width: 0 !important; min-height: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
     .sc-toolbar > div:last-child > div:nth-child(2) { display: none !important; }
     .sc-toolbar .fa-camera, .sc-toolbar [title*="Chụp"], .sc-toolbar [onclick*="screenshot"] { display: none !important; }
-
-    /* 🎯 ĐỒNG BỘ 100% STYLE CHO TẤT CẢ ICON (Cài đặt, Mở rộng, Lọc) */
-    .sc-toolbar i.fa-cog, 
-    .sc-toolbar i.fa-gear, 
-    .sc-toolbar [onclick*="setting"] i,
-    .sc-toolbar [onclick*="setting"], 
-    .sc-toolbar .fa-expand,
-    .sc-filter-btn i {
-        pointer-events: auto !important; 
-        font-size: 15px !important;  /* Kích thước icon bằng nhau tăm tắp */
-        color: #eaecef !important;   /* Cùng một màu xám trắng */
-        padding: 4px 6px !important; /* Đủ vùng chạm cho ngón tay nhưng nhìn vẫn khít */
-        margin: 0 !important;
-        line-height: 1 !important;
-        background: transparent !important;
-    }
-
-    /* Đưa nút Lọc Marker về dạng "tàng hình", chỉ giữ lại Icon bên trong */
+    .sc-toolbar i.fa-cog, .sc-toolbar i.fa-gear, .sc-toolbar [onclick*="setting"] i, .sc-toolbar [onclick*="setting"], .sc-toolbar .fa-expand, .sc-filter-btn i { pointer-events: auto !important; font-size: 15px !important; color: #eaecef !important; padding: 4px 6px !important; margin: 0 !important; line-height: 1 !important; background: transparent !important; }
     .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; }
-    .sc-filter-btn { 
-        padding: 0 !important;
-        margin: 0 !important;
-        background: transparent !important; 
-        border: none !important;
-        border-radius: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-
-    /* 🎯 VẠCH NGĂN CÁCH TINH TẾ: Dùng pseudo-element để không chiếm diện tích thật */
-    .sc-filter-btn::before {
-        content: '';
-        display: block !important;
-        width: 1px !important;
-        height: 16px !important;
-        background: rgba(255, 255, 255, 0.15) !important;
-        margin: 0 2px 0 0 !important; /* Áp sát vào icon cài đặt */
-    }
-
-    /* ÉP MENU THẢ XUỐNG VỪA KHÍT GÓC PHẢI KHÔNG BỊ LẸM */
-    .sc-filter-menu { 
-        position: absolute !important;
-        z-index: 999999 !important; 
-        right: 0 !important;   
-        left: auto !important; 
-        top: 100% !important;  
-        margin-top: 5px !important;
-        min-width: 150px !important;
-    }
-
-    /* Fix Bánh Răng Cài Đặt */
-    .sc-toolbar i.fa-cog, .sc-toolbar i.fa-gear, .sc-toolbar [onclick*="setting"] {
-        pointer-events: auto !important; font-size: 14px !important; padding: 4px !important; color: #eaecef !important;
-    }
-
-    /* Màn Hình Ngang */
+    .sc-filter-btn { padding: 0 !important; margin: 0 !important; background: transparent !important; border: none !important; border-radius: 0 !important; display: flex !important; align-items: center !important; }
+    .sc-filter-btn::before { content: ''; display: block !important; width: 1px !important; height: 16px !important; background: rgba(255, 255, 255, 0.15) !important; margin: 0 2px 0 0 !important; }
+    .sc-filter-menu { position: absolute !important; z-index: 999999 !important; right: 0 !important; left: auto !important; top: 100% !important; margin-top: 5px !important; min-width: 150px !important; }
+    
     @media (orientation: landscape) {
         .sc-chart-area { height: 100% !important; flex: 1 1 auto !important; border-bottom: none !important; }
         .sc-right-container { display: none !important; }
