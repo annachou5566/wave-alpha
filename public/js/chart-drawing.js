@@ -2756,11 +2756,26 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     var toolId = null;
     if (menuItem) {
       toolId = menuItem.getAttribute('data-tool');
-      _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); // Dùng hàm lấy cache
+      getTbBtns().forEach(function(b) { b.classList.remove('active'); });
       menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
+  
+      // ✅ THÊM VÀO ĐÂY: Ép đóng menu ngay lập tức
+      var group = menuItem.closest('.wa-tb-group');
+      if (group) {
+        var menu = group.querySelector('.wa-tb-menu');
+        if (menu) {
+          menu.style.display = 'none';
+          group.addEventListener('mouseleave', function restoreMenu() {
+            menu.style.display = '';
+            group.removeEventListener('mouseleave', restoreMenu);
+          }, { once: true });
+        }
+      }
+      // ✅ HẾT PHẦN THÊM
+  
     } else if (btn) {
       toolId = btn.getAttribute('data-tool');
-      _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); // Dùng hàm lấy cache
+      getTbBtns().forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
     }
     if (toolId) activateTool(toolId);
