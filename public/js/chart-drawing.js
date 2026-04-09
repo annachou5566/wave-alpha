@@ -1979,14 +1979,27 @@
     
     let handle = toolbar.querySelector('.wa-drag-grip');
     if (handle) {
-      handle.addEventListener('mousedown', (e) => {
-        global.__wa_isDragging = true;
-        global.__wa_startX = e.clientX; global.__wa_startY = e.clientY;
-        const tb = document.querySelector('.wa-toolbar');
-        global.__wa_initialX = tb ? tb.offsetLeft : 0; 
-        global.__wa_initialY = tb ? tb.offsetTop : 0;
-        document.body.style.userSelect = 'none'; 
-      });
+            // 1. GIỮ NGUYÊN ĐOẠN CŨ (Dành cho PC)
+            handle.addEventListener('mousedown', (e) => {
+              global.__wa_isDragging = true;
+              global.__wa_startX = e.clientX; global.__wa_startY = e.clientY;
+              const tb = document.querySelector('.wa-toolbar');
+              global.__wa_initialX = tb ? tb.offsetLeft : 0; 
+              global.__wa_initialY = tb ? tb.offsetTop : 0;
+              document.body.style.userSelect = 'none'; 
+            });
+      
+            // 2. THÊM MỚI ĐOẠN NÀY VÀO NGAY BÊN DƯỚI (Dành cho Mobile)
+            handle.addEventListener('touchstart', (e) => {
+              if(e.touches.length === 0) return;
+              global.__wa_isDragging = true;
+              global.__wa_startX = e.touches[0].clientX; 
+              global.__wa_startY = e.touches[0].clientY;
+              const tb = document.querySelector('.wa-toolbar');
+              global.__wa_initialX = tb ? tb.offsetLeft : 0; 
+              global.__wa_initialY = tb ? tb.offsetTop : 0;
+              document.body.style.userSelect = 'none'; 
+            }, { passive: false });
       handle.addEventListener('dblclick', () => { toolbar.classList.toggle('collapsed'); });
     }
 
@@ -2005,6 +2018,28 @@
           tb.style.left = Math.max(0, global.__wa_initialX + dx) + 'px';
           tb.style.top = Math.max(0, global.__wa_initialY + dy) + 'px';
         });
+        // 2. THÊM MỚI ĐOẠN NÀY NGAY BÊN DƯỚI (Dành cho vuốt ngón tay Mobile)
+      document.addEventListener('touchmove', (e) => {
+        if (!global.__wa_isDragging) return;
+        e.preventDefault(); // Rất quan trọng: Chống cuộn biểu đồ khi đang kéo toolbar
+        
+        let dragRaf;
+        if (dragRaf) cancelAnimationFrame(dragRaf);
+        dragRaf = requestAnimationFrame(() => {
+            const tb = document.querySelector('.wa-toolbar');
+            if (!tb) return;
+            let dx = e.touches[0].clientX - global.__wa_startX;
+            let dy = e.touches[0].clientY - global.__wa_startY;
+            tb.style.left = Math.max(0, global.__wa_initialX + dx) + 'px';
+            tb.style.top = Math.max(0, global.__wa_initialY + dy) + 'px';
+        });
+      }, { passive: false });
+
+      // 3. THÊM MỚI SỰ KIỆN NHẢ NGÓN TAY TRÊN MOBILE
+      document.addEventListener('touchend', () => {
+        global.__wa_isDragging = false;
+        document.body.style.userSelect = '';
+      });
       });
       document.addEventListener('mouseup', () => { global.__wa_isDragging = false; document.body.style.userSelect = ''; });
     }
