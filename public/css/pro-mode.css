@@ -1827,6 +1827,7 @@ body.overlay-active {
         filter: none !important;
         opacity: 1 !important;
         pointer-events: auto !important;
+        height: calc(100vh - 38px - 36px - 50px) !important; /* Chừa không gian cho Topbar(38) + Toolbar(36) + BottomNav(50) */
     }
     .sc-chart-area[data-mobile-expanded="true"] {
         flex: 1 1 auto !important;
@@ -1865,7 +1866,7 @@ body.overlay-active {
         flex-direction: row !important;
         flex-wrap: nowrap !important;       
         overflow: visible !important; 
-        padding: 4px 2px !important; /* Ép sát 2 lề màn hình để lấy thêm diện tích */
+        padding: 4px 2px !important; 
         gap: 2px !important;
         min-height: 36px !important;
         align-items: center !important;
@@ -1880,14 +1881,14 @@ body.overlay-active {
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
-        gap: 1px !important; /* Khoảng cách giữa các nút timeframe gần như dính liền */
+        gap: 1px !important; 
         overflow: visible !important; 
     }
     .sc-toolbar > div:first-child > span { display: none !important; }
     
     .sc-time-btn { 
         font-size: 10px !important; 
-        padding: 4px 3px !important; /* Bóp bề ngang của nút timeframe lại */
+        padding: 4px 3px !important; 
         border-radius: 4px; 
         flex-shrink: 1 !important; 
         min-width: 0 !important; 
@@ -1903,12 +1904,11 @@ body.overlay-active {
         flex-wrap: nowrap !important;
         align-items: center !important;
         justify-content: flex-end !important;
-        gap: 0 !important; /* 🎯 ÉP SÁT TUYỆT ĐỐI */
+        gap: 0 !important; 
         overflow: visible !important;
         position: relative !important; 
     }
 
-    /* Lột sạch mọi padding/margin/border của các thẻ <div> bọc ngoài icon */
     .sc-toolbar > div:last-child > * {
         margin: 0 !important;
         padding: 0 !important;
@@ -1922,7 +1922,6 @@ body.overlay-active {
         justify-content: center !important;
     }
 
-    /* Ẩn các phần tử thừa (Cá voi, Chụp hình...) */
     .sc-toolbar > div:last-child > div:nth-child(2) { display: none !important; }
     .sc-toolbar .fa-camera, .sc-toolbar [title*="Chụp"], .sc-toolbar [onclick*="screenshot"] { display: none !important; }
 
@@ -1934,15 +1933,14 @@ body.overlay-active {
     .sc-toolbar .fa-expand,
     .sc-filter-btn i {
         pointer-events: auto !important; 
-        font-size: 15px !important;  /* Kích thước icon bằng nhau tăm tắp */
-        color: #eaecef !important;   /* Cùng một màu xám trắng */
-        padding: 4px 6px !important; /* Đủ vùng chạm cho ngón tay nhưng nhìn vẫn khít */
+        font-size: 15px !important;  
+        color: #eaecef !important;   
+        padding: 4px 6px !important; 
         margin: 0 !important;
         line-height: 1 !important;
         background: transparent !important;
     }
 
-    /* Đưa nút Lọc Marker về dạng "tàng hình", chỉ giữ lại Icon bên trong */
     .sc-filter-btn .sc-header-btn-label, .sc-filter-btn span:not(i) { display: none !important; }
     .sc-filter-btn { 
         padding: 0 !important;
@@ -1954,17 +1952,15 @@ body.overlay-active {
         align-items: center !important;
     }
 
-    /* 🎯 VẠCH NGĂN CÁCH TINH TẾ: Dùng pseudo-element để không chiếm diện tích thật */
     .sc-filter-btn::before {
         content: '';
         display: block !important;
         width: 1px !important;
         height: 16px !important;
         background: rgba(255, 255, 255, 0.15) !important;
-        margin: 0 2px 0 0 !important; /* Áp sát vào icon cài đặt */
+        margin: 0 2px 0 0 !important; 
     }
 
-    /* ÉP MENU THẢ XUỐNG VỪA KHÍT GÓC PHẢI KHÔNG BỊ LẸM */
     .sc-filter-menu { 
         position: absolute !important;
         z-index: 999999 !important; 
@@ -1975,9 +1971,70 @@ body.overlay-active {
         min-width: 150px !important;
     }
 
-    /* Fix Bánh Răng Cài Đặt */
     .sc-toolbar i.fa-cog, .sc-toolbar i.fa-gear, .sc-toolbar [onclick*="setting"] {
         pointer-events: auto !important; font-size: 14px !important; padding: 4px !important; color: #eaecef !important;
+    }
+
+    /* =================================================================== */
+    /* PHẦN MỚI THÊM: ĐÓNG ĐINH BOTTOM NAVIGATION & BẢNG TRỒI LÊN TỪ ĐÁY   */
+    /* =================================================================== */
+    
+    /* 1. Đóng đinh thanh Icon xuống đáy màn hình */
+    .sc-right-container { position: static !important; }
+    .sc-icon-sidebar { 
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 50px !important; /* Vừa vặn ngón cái */
+        background: var(--term-panel, #1e222d) !important;
+        display: flex !important;
+        flex-direction: row !important; 
+        padding: 0 !important; 
+        border-left: none !important; 
+        border-top: 1px solid var(--term-border, #2a2e39) !important; 
+        justify-content: space-around !important; 
+        align-items: center !important;
+        z-index: 9999 !important; /* Luôn đè lên trên cùng */
+    }
+    
+    /* Căn giữa các Icon trong thanh đáy */
+    .sc-sidebar-icon { 
+        height: 100% !important; 
+        flex: 1 !important; 
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        border-left: none !important; 
+        border-top: 2px solid transparent !important; 
+        border-bottom: none !important;
+    }
+    .sc-sidebar-icon.active { border-top-color: var(--term-warn, #f5b900) !important; }
+    
+    /* 2. Hiệu ứng trượt từ dưới lên cho bảng nội dung (Bottom Sheet) */
+    .sc-panel-content { 
+        position: fixed !important;
+        bottom: 50px !important; /* Nằm ngay sát mép trên của thanh icon đáy */
+        left: 0 !important;
+        width: 100% !important; 
+        height: 50vh !important; /* Bảng chiếm một nửa màn hình */
+        background: var(--term-bg, #131722) !important;
+        border-top: 1px solid var(--term-border, #2a2e39) !important;
+        border-radius: 16px 16px 0 0 !important; /* Bo cong 2 góc trên cho đẹp */
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.8) !important;
+        z-index: 9998 !important;
+        
+        /* Hiệu ứng trượt mượt mà */
+        transform: translateY(0) !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; 
+        display: block !important; 
+    }
+    
+    /* Khi đóng: Đẩy bảng tuột thẳng xuống mép dưới để giấu đi */
+    .sc-panel-content.collapsed,
+    .sc-panel-content[style*="display: none"] { 
+        transform: translateY(120%) !important; 
+        display: block !important; /* Ghi đè CSS cũ để hiệu ứng trượt hoạt động */
     }
 
     /* Màn Hình Ngang */
