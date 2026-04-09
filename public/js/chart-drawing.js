@@ -1615,34 +1615,34 @@
     `;
     style.textContent += `
     #wa-float-del {
-      position: absolute;
-      bottom: 56px;
-      left: 50%;
-      transform: translateX(-50%) translateY(8px);
-      z-index: 998;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #EF4444;
-      color: #fff;
-      border: none;
-      border-radius: 20px;
-      padding: 8px 16px;
-      font-size: 12px;
-      font-weight: 700;
-      font-family: 'Be Vietnam Pro', sans-serif;
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s, transform 0.2s;
-      box-shadow: 0 4px 16px rgba(239,68,68,0.4);
-      white-space: nowrap;
-    }
-    #wa-float-del.show {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateX(-50%) translateY(0);
-    }
+  position: fixed;          /* ← đổi absolute → fixed */
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  z-index: 9998;            /* ← tăng z-index lên cao hơn panel (999) */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #EF4444;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Be Vietnam Pro', sans-serif;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 4px 20px rgba(239,68,68,0.5);
+  white-space: nowrap;
+}
+#wa-float-del.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
   `;
   document.head.appendChild(style);
   }
