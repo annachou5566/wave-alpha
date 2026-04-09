@@ -1613,7 +1613,38 @@
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     `;
-    document.head.appendChild(style);
+    style.textContent += `
+    #wa-float-del {
+      position: absolute;
+      bottom: 56px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      z-index: 998;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #EF4444;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'Be Vietnam Pro', sans-serif;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 4px 16px rgba(239,68,68,0.4);
+      white-space: nowrap;
+    }
+    #wa-float-del.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+  `;
+  document.head.appendChild(style);
   }
 
   const SVG = {
@@ -2219,6 +2250,8 @@
 
     body.innerHTML = html;
     panel.classList.add('show');
+    var fd = document.getElementById('wa-float-del');
+    if (fd) fd.classList.add('show');
 
     // Bind Swatches Click Event
     body.querySelectorAll('.wa-swatch').forEach(sw => {
@@ -2279,7 +2312,9 @@
 
   function hidePanel() {
     const p = document.getElementById('wa-props-panel');
-    if(p) p.classList.remove('show');
+    if (p) p.classList.remove('show');
+    var fd = document.getElementById('wa-float-del');  // ✅ THÊM
+    if (fd) fd.classList.remove('show');               // ✅ THÊM
     currentSelectedOverlay = null;
   }
 
@@ -2745,7 +2780,21 @@ function mountDOM() {
       <button class="wa-action-btn" id="wa-btn-p-lock" title="Khoá hình">Khoá</button>
       <button class="wa-action-btn delete" id="wa-btn-p-del" title="Xoá hình">Xoá</button>
     </div>`;
-  container.appendChild(panel);
+    container.appendChild(panel);
+
+  // ✅ Nút xóa nổi
+  var floatDel = document.createElement('button');
+  floatDel.id = 'wa-float-del';
+  floatDel.innerHTML = '✕ Xóa hình';
+  floatDel.addEventListener('click', function() {
+    if (!currentSelectedOverlay || !global.tvChart) return;
+    if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
+    global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+    if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(currentSelectedOverlay.id);
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+  });
+  container.appendChild(floatDel);
 
   _bindToolbarLocalEvents(sidebar, panel);
   if (typeof bindContextMenu === 'function') bindContextMenu(panel);
