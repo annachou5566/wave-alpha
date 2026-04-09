@@ -2669,7 +2669,19 @@ function bindCoreEventsOnce() {
       if (tb) tb.classList.toggle('collapsed');
     }
   });
-
+  var _lastTapTime = 0;
+  document.addEventListener('touchstart', function(e) {
+    if (!e.target.closest('.wa-drag-grip')) return;
+    var now = Date.now();
+    if (now - _lastTapTime < 300) {
+      // Double-tap!
+      var tb = document.querySelector('.wa-toolbar');
+      if (tb) tb.classList.toggle('collapsed');
+      _lastTapTime = 0; // reset để tránh triple-tap
+    } else {
+      _lastTapTime = now;
+    }
+  }, { passive: true });
   document.addEventListener('keydown', function(e) {
     var tag = e.target.tagName;
     var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
