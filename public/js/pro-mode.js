@@ -998,7 +998,7 @@ function injectLayout() {
                             <div style="display:flex; justify-content:space-between; font-size:9px; color:#5e6673; padding: 6px 15px; font-weight:800; background: #0B0E11; border-top: 1px solid #1A1F26; border-bottom: 1px solid #1A1F26; letter-spacing: 0.5px;">
                                 <span style="width:45%">TOKEN</span><span style="width:30%; text-align:right;">GIÁ</span><span style="width:25%; text-align:right;">24H%</span>
                             </div>
-                            <div id="sc-watchlist-body" style="flex:1; overflow-y:auto; background: var(--term-bg);"></div>
+                            <div id="sc-watchlist-body" style="background: var(--term-bg);"></div>
                         </div>
 
                         <div id="tab-trades" class="sc-tab-content active" style="padding: 0; display: flex; flex-direction: column; height: 100%; overflow-y: auto;">
@@ -1008,7 +1008,7 @@ function injectLayout() {
                             <div style="display:flex; justify-content:space-between; font-size:10px; color:#5e6673; padding: 6px 15px; font-weight:700; background: #0B0E11;">
                                 <span>GIÁ</span><span>KL ($)</span><span>TIME</span>
                             </div>
-                            <div id="sc-live-trades" style="flex:1; overflow-y:auto; padding: 0 10px; font-size:11.5px; font-family:var(--font-num);">
+                            <div id="sc-live-trades" style="padding: 0 10px; font-size:11.5px; font-family:var(--font-num);">
                                 <div style="text-align:center; margin-top:20px; color:#5e6673; font-style:italic;">Connecting to Dex...</div>
                             </div>
                         </div>
@@ -1599,7 +1599,7 @@ newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column
             <div style="display:flex; align-items:center;"><i class="fas fa-microscope" style="color:var(--term-warn); margin-right: 6px; font-size: 13px;"></i> ON-CHAIN DEX</div>
         </div>
         
-        <div id="sm-scroll-area" style="flex: 1; overflow-y: auto; padding: 10px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
+        <div id="sm-scroll-area" style="padding: 10px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;">
             
             <div class="term-widget" style="border-left: 2px solid #F6465D;">
                 <div class="term-w-title">RỦI RO HỆ THỐNG & TOKENOMICS</div>
@@ -1751,7 +1751,7 @@ newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column
             <span id="fut-live-status" style="font-size:9px; color:var(--term-warn);">⏳ Waiting...</span>
         </div>
         
-        <div style="flex: 1; overflow-y: auto; padding: 10px;">
+        <div style="padding: 10px;">
             
             <div class="term-widget" style="border-left: 2px solid #F0B90B; margin-bottom: 8px;">
                 <div class="term-w-title"><i class="fas fa-burn"></i> SỨC NÓNG (MARKET HEAT)</div>
