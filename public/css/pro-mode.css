@@ -1827,11 +1827,14 @@ body.overlay-active {
         filter: none !important;
         opacity: 1 !important;
         pointer-events: auto !important;
-        height: calc(100vh - 38px - 36px - 50px) !important; /* Chừa không gian cho Topbar(38) + Toolbar(36) + BottomNav(50) */
+        /* Khi mở sidebar: Trừ thêm 50vh của sidebar để nhường chỗ, giúp không đè chỉ báo phụ */
+        height: calc(100vh - 38px - 36px - 50px - 50vh) !important; 
     }
+    
     .sc-chart-area[data-mobile-expanded="true"] {
         flex: 1 1 auto !important;
-        height: auto !important;
+        /* Khi đóng sidebar: Chart chiếm toàn bộ chiều cao (trừ đi header và bottom nav) */
+        height: calc(100vh - 38px - 36px - 50px) !important;
         min-height: 0 !important;
         border-bottom: none !important;
     }

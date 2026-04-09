@@ -741,10 +741,17 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     if (oldBackdrop) oldBackdrop.remove(); 
 
     const doResize = function() {
-        if (window.tvChart) window.tvChart.resize(); 
-        setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 240);
-        setTimeout(function() { if (window.tvChart) window.tvChart.resize(); }, 450); // Tăng delay khớp với animation mới
-    };
+        if (!window.tvChart) return;
+        const start = Date.now();
+        const animate = function() {
+            if (window.tvChart) window.tvChart.resize();
+            // Gọi liên tục trong 450ms (khớp với thời gian transition CSS)
+            if (Date.now() - start < 450) {
+                requestAnimationFrame(animate);
+            }
+        };
+        requestAnimationFrame(animate);
+    }
 
     const handleMobileUI = (isNowCollapsed) => {
         if (!isMobile) return;
