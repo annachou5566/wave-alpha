@@ -2200,7 +2200,29 @@
     if (name.startsWith('wave') || name.startsWith('elliott') || name.includes('abcd') || name.includes('HeadAndShoulders') || name.includes('Top') || name.includes('Bottom') || name === 'threeDrives') return 'waves';
     return 'lines'; 
   }
-
+  function ensureFloatDeleteButton() {
+    const container = document.getElementById('sc-chart-container');
+    if (!container) return null;
+  
+    let btn = document.getElementById('wa-float-del');
+    if (btn) return btn;
+  
+    btn = document.createElement('button');
+    btn.id = 'wa-float-del';
+    btn.type = 'button';
+    btn.innerHTML = '🗑 Xóa hình đang chọn';
+  
+    btn.onclick = function () {
+      if (!currentSelectedOverlay || !global.tvChart) return;
+      global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+      hidePanel();
+      if (global.__wa_saveAllOverlays) global.__wa_saveAllOverlays();
+      showToast('Đã xóa hình đã chọn');
+    };
+  
+    container.appendChild(btn);
+    return btn;
+  }
   function renderPanel(overlay) {
     const panel = document.getElementById('wa-props-panel');
     if(!panel || !overlay) return;
@@ -2249,9 +2271,10 @@
     }
 
     body.innerHTML = html;
-    panel.classList.add('show');
-    var fd = document.getElementById('wa-float-del');
-    if (fd) fd.classList.add('show');
+panel.classList.add('show');
+
+var fd = ensureFloatDeleteButton();
+if (fd) fd.classList.add('show');
 
     // Bind Swatches Click Event
     body.querySelectorAll('.wa-swatch').forEach(sw => {
