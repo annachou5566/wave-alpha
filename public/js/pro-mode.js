@@ -126,74 +126,29 @@ document.addEventListener('DOMContentLoaded', () => {
             #sc-live-trades::-webkit-scrollbar-track { background: var(--term-bg); }
 
             @media (max-width: 991px) {
-                /* 1. Thiết lập khung sườn dọc cho Mobile */
-                .sc-body { 
-                    flex-direction: column !important; 
-                    height: calc(100dvh - 42px) !important; /* Trừ đi chiều cao Topbar */
-                    overflow: hidden !important; 
-                }
+                body.overlay-active { overflow: hidden !important; }
+                .sc-body { flex-direction: column !important; min-height: 0 !important; flex: 1 1 auto !important; }
+                .sc-topbar { padding: 6px 10px; }
+                .sc-chart-area { flex: none !important; height: 42vh !important; border-bottom: 1px solid var(--term-border); }
+                .sc-stats-row { padding: 6px 10px; gap: 8px; }
+                .sc-price-box { flex-direction: column; align-items: flex-start; gap: 0px; margin-right: 5px; justify-content: center;}
+                .sc-price-box #sc-live-price { font-size: 20px !important; min-width: 90px; font-variant-numeric: tabular-nums; }
+                .sc-price-box #sc-change-24h { font-size: 11px !important; font-variant-numeric: tabular-nums; }
+                .sc-metrics-compact { width: 100%; justify-content: flex-start; gap: 12px; overflow-x: auto; padding-bottom: 5px; flex-wrap: nowrap; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+                .sc-metrics-compact::-webkit-scrollbar { display: none; }
+                .sc-mc-item { flex: 0 0 auto; }
+                .sc-mc-item span { font-size: 8.5px; margin-bottom: 0; }
+                .sc-mc-item strong { font-size: 10.5px; font-variant-numeric: tabular-nums; }
                 
-                /* 2. BIỂU ĐỒ (CHART): Tự động co giãn theo không gian còn lại */
-                .sc-chart-area { 
-                    flex: 1 1 0% !important; 
-                    display: flex !important; 
-                    flex-direction: column !important;
-                    min-height: 0 !important; 
-                    height: auto !important; 
-                }
-
-                /* 3. THANH STATS: Nằm ngay dưới biểu đồ */
-                .sc-stats-row { 
-                    padding: 4px 10px; 
-                    gap: 8px; 
-                    flex-shrink: 0; 
-                    background: var(--term-panel); 
-                    border-top: 1px solid var(--term-border); 
-                }
-
-                /* 4. CONTAINER ĐIỀU HƯỚNG: Chứa bảng và thanh icon đáy */
-                .sc-right-container { 
-                    display: flex !important; 
-                    flex-direction: column-reverse !important; 
-                    width: 100% !important; 
-                    flex-shrink: 0 !important;
-                    background: var(--term-bg);
-                }
-
-                /* 5. THANH ICON ĐÁY (BOTTOM NAV): Luôn cố định chiều cao */
-                .sc-icon-sidebar { 
-                    flex-direction: row !important; 
-                    width: 100% !important; 
-                    height: 50px !important; 
-                    padding: 0 !important;
-                    border-left: none !important; 
-                    border-top: 1px solid var(--term-border) !important; 
-                    justify-content: space-around !important; 
-                    align-items: center !important;
-                    background: var(--term-panel) !important;
-                    flex-shrink: 0 !important;
-                }
-                .sc-sidebar-icon { border-left: none !important; border-top: 2px solid transparent !important; height: 100% !important; flex: 1; }
-                .sc-sidebar-icon.active { border-top-color: var(--term-warn) !important; color: var(--term-warn) !important; }
-
-                /* 6. BẢNG NỘI DUNG (SIDEBAR CONTENT): Đẩy biểu đồ lên khi xuất hiện */
-                .sc-panel-content { 
-                    width: 100% !important; 
-                    height: 40vh !important; /* Chiếm 40% màn hình khi mở */
-                    min-height: 0 !important; 
-                    transition: height 0.3s ease-out !important; 
-                    border-top: 1px solid var(--term-border);
-                    background: var(--term-bg);
-                    display: flex !important;
-                    flex-shrink: 0 !important;
-                }
-
-                /* Khi đóng bảng: Chiều cao về 0, biểu đồ tự động giãn ra 100% */
-                .sc-panel-content.collapsed { 
-                    height: 0px !important; 
-                    border-top: none !important;
-                    overflow: hidden !important;
-                }
+                
+                .sc-right-container { flex-direction: column-reverse; width: 100%; height: auto; flex: 1 1 auto; border-left: none; min-height: 0 !important; }
+                .sc-icon-sidebar { flex-direction: row; width: 100%; height: 40px; padding-top: 0; border-left: none; border-top: 1px solid var(--term-border); justify-content: space-around; flex-shrink: 0; }
+                .sc-sidebar-icon { border-left: none !important; border-bottom: 2px solid transparent; }
+                .sc-sidebar-icon.active { border-bottom-color: var(--term-warn); }
+                .sc-sidebar-icon:hover::after { display: none; }
+                
+                .sc-panel-content { width: 100% !important; flex: 1 1 auto !important; min-height: 0 !important; transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+                .sc-panel-content.collapsed { height: 0px !important; flex: none !important; }
                 
                 .sc-tab-content { flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; overscroll-behavior: contain !important; -webkit-overflow-scrolling: touch !important; padding-bottom: 30px !important; }
             }
