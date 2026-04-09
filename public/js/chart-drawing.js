@@ -2579,46 +2579,76 @@ var _waCoreEventsBound = false;
 var _cachedContainer = null; // ✅ FIX 5: Cache chart container
 
 function bindCoreEventsOnce() {
-  if (_waCoreEventsBound) return; 
-  _waCoreEventsBound = true;
+  if (waCoreEventsBound) return;
+  waCoreEventsBound = true;
+  var isDragging = false;
+  var startX = 0, startY = 0, initLeft = 0, initTop = 0;
+  var dragRaf = null;
+  var cachedToolbar = null;
 
-  var _isDragging = false;
-  var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
-  var _dragRaf = null;
-  var _cachedToolbar = null; // ✅ FIX 3: Cache toolbar element
+  // 1. XỬ LÝ DI CHUYỂN (MOUSE & TOUCH)
+  function handleMove(clientX, clientY) {
+    if (!isDragging) return;
+    if (dragRaf) cancelAnimationFrame(dragRaf);
+    dragRaf = requestAnimationFrame(function() {
+      var tb = cachedToolbar;
+      if (!cachedToolbar) {
+        cachedToolbar = document.querySelector('.wa-toolbar');
+        tb = cachedToolbar;
+      }
+      if (!tb) {
+        isDragging = false;
+        return;
+      }
+      var dx = clientX - startX;
+      var dy = clientY - startY;
+      tb.style.left = Math.max(0, initLeft + dx) + 'px';
+      tb.style.top = Math.max(0, initTop + dy) + 'px';
+    });
+  }
 
   document.addEventListener('mousemove', function(e) {
-    if (!_isDragging) return;
-    if (_dragRaf) cancelAnimationFrame(_dragRaf);
-    _dragRaf = requestAnimationFrame(function() {
-      // Dùng cache, nếu chưa có thì query 1 lần rồi nhớ luôn
-      var tb = _cachedToolbar || (_cachedToolbar = document.querySelector('.wa-toolbar'));
-      if (!tb) { _isDragging = false; return; }
-      var dx = e.clientX - _startX;
-      var dy = e.clientY - _startY;
-      tb.style.left = Math.max(0, _initLeft + dx) + 'px';
-      tb.style.top  = Math.max(0, _initTop  + dy) + 'px';
-    });
+    handleMove(e.clientX, e.clientY);
   });
 
-  document.addEventListener('mouseup', function() {
-    if (_isDragging) {
-      _isDragging = false;
+  document.addEventListener('touchmove', function(e) {
+    if (!isDragging) return;
+    e.preventDefault(); // Chống cuộn trang khi đang kéo thanh công cụ
+    handleMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+
+  // 2. XỬ LÝ KẾT THÚC KÉO THẢ (MOUSE & TOUCH)
+  function handleEnd() {
+    if (isDragging) {
+      isDragging = false;
       document.body.style.userSelect = '';
     }
-  });
+  }
+
+  document.addEventListener('mouseup', handleEnd);
+  document.addEventListener('touchend', handleEnd);
+
+  // 3. XỬ LÝ BẮT ĐẦU KÉO THẢ (MOUSE & TOUCH)
+  function handleStart(clientX, clientY, target) {
+    var grip = target.closest('.wa-drag-grip');
+    if (!grip) return;
+    isDragging = true;
+    startX = clientX;
+    startY = clientY;
+    var tb = document.querySelector('.wa-toolbar');
+    initLeft = tb ? tb.offsetLeft : 0;
+    initTop = tb ? tb.offsetTop : 0;
+    document.body.style.userSelect = 'none';
+  }
 
   document.addEventListener('mousedown', function(e) {
-    var grip = e.target.closest('.wa-drag-grip');
-    if (!grip) return;
-    _isDragging = true;
-    _startX = e.clientX;
-    _startY = e.clientY;
-    var tb = document.querySelector('.wa-toolbar');
-    _initLeft = tb ? tb.offsetLeft : 0;
-    _initTop  = tb ? tb.offsetTop  : 0;
-    document.body.style.userSelect = 'none';
+    handleStart(e.clientX, e.clientY, e.target);
   });
+
+  document.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 0) return;
+    handleStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+  }, { passive: false });
 
   document.addEventListener('dblclick', function(e) {
     if (e.target.closest('.wa-drag-grip')) {
