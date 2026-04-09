@@ -1591,7 +1591,8 @@ function injectSmartMoneyTab() {
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-smartmoney';
     newTabContent.className = 'sc-tab-content';
-    newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
+    // Thêm overflow-y: auto vào cấu trúc gốc của thẻ
+newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg); overflow-y: auto; height: 100%;';
     
     newTabContent.innerHTML = `
         <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
@@ -1741,7 +1742,8 @@ function injectFuturesTab() {
     const newTabContent = document.createElement('div');
     newTabContent.id = 'tab-futures';
     newTabContent.className = 'sc-tab-content';
-    newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg);';
+    // Thêm overflow-y: auto vào cấu trúc gốc của thẻ
+newTabContent.style.cssText = 'padding: 0; display: none; flex-direction: column; background: var(--term-bg); overflow-y: auto; height: 100%;';
     
     newTabContent.innerHTML = `
         <div class="sc-panel-title" style="padding: 12px 15px; margin: 0; background: #12151A; border-bottom: 1px solid #1e2329; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #eaecef; font-weight: 700; flex-shrink: 0; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box;">
