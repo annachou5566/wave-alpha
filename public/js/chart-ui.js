@@ -703,10 +703,10 @@ window.toggleProSidePanel = function(tabId, btnElement) {
             /* Mobile: Trượt dọc từ dưới lên êm ái, không giật mạnh */
             @media (max-width: 991px) {
                 #sc-panel-content {
+                    /* Tăng thời gian lên 0.4s và dùng chuẩn mượt Ease-Out của hệ điều hành */
                     transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1), 
                                 opacity 0.3s ease !important;
                     width: 100% !important; 
-                    height: 40vh !important; /* <--- CHIỀU CAO CỐ ĐỊNH KHI MỞ TRÊN ĐIỆN THOẠI */
                     overflow: hidden;
                     display: flex;
                     flex-direction: column;

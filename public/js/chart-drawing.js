@@ -2711,28 +2711,15 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     var menuItem = e.target.closest('.wa-menu-item');
     var btn = e.target.closest('.wa-tb-btn[data-tool]');
     var toolId = null;
-    
     if (menuItem) {
       toolId = menuItem.getAttribute('data-tool');
-      _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); 
+      _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); // Dùng hàm lấy cache
       menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
-      
-      // >>> THÊM ĐOẠN CODE NÀY VÀO ĐÂY <<<
-      // TỰ ĐỘNG ĐÓNG MENU NGAY LẬP TỨC
-      var menuDong = menuItem.closest('.wa-tb-menu');
-      if (menuDong) {
-          menuDong.style.display = 'none';
-          // Sau nửa giây nhả lại trạng thái cũ để lần sau mở còn lên
-          setTimeout(function() { menuDong.style.display = ''; }, 500); 
-      }
-      // >>> KẾT THÚC ĐOẠN THÊM MỚI <<<
-      
     } else if (btn) {
       toolId = btn.getAttribute('data-tool');
-      _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); 
+      _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); // Dùng hàm lấy cache
       btn.classList.add('active');
     }
-    
     if (toolId) activateTool(toolId);
   });
 
@@ -2917,28 +2904,3 @@ if (document.readyState === 'loading') {
 
 })(window); // <-- Chú ý giữ nguyên dòng đóng module này
 
-// =================================================================
-// YÊU CẦU 4: KÉO THẢ (DRAG & DROP) THANH CÔNG CỤ TRÊN MÀN CẢM ỨNG
-// =================================================================
-document.addEventListener('touchmove', function(e) {
-  if (!window._isDraggingTb) return;
-  e.preventDefault(); // Khóa cuộn màn hình khi đang kéo
-  let tb = document.querySelector('.wa-toolbar');
-  if (tb) {
-    tb.style.left = Math.max(0, window._tbInitX + (e.touches[0].clientX - window._tbStartX)) + 'px';
-    tb.style.top  = Math.max(0, window._tbInitY + (e.touches[0].clientY - window._tbStartY)) + 'px';
-  }
-}, { passive: false });
-
-document.addEventListener('touchend', function() { window._isDraggingTb = false; });
-
-document.addEventListener('touchstart', function(e) {
-  let grip = e.target.closest('.wa-drag-grip') || e.target.closest('.wa-toolbar'); // Chạm vào toolbar là kéo được
-  if (!grip || e.target.closest('.wa-tb-btn') || e.target.closest('.wa-menu-item')) return; // Bỏ qua nếu đang bấm nút
-  window._isDraggingTb = true;
-  window._tbStartX = e.touches[0].clientX; 
-  window._tbStartY = e.touches[0].clientY;
-  let tb = document.querySelector('.wa-toolbar');
-  window._tbInitX = tb ? tb.offsetLeft : 0; 
-  window._tbInitY = tb ? tb.offsetTop : 0;
-}, { passive: false });
