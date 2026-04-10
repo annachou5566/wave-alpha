@@ -13,6 +13,8 @@
   // 1. STATE & STORAGE MANAGEMENT
   // ==========================================
   let currentSelectedOverlay = null;
+  let _waDelX = 0;
+let _waDelY = 0;
   let isMagnetMode = false;
   let undoStack = [];
   let redoStack = [];
@@ -1763,7 +1765,138 @@
       t.classList.remove('show'); 
     }, 2200);
   }
+// =============================================
+// FLOATING DELETE BUTTON — Mobile + Desktop
+// Hiển thị nút ❌ khi chọn overlay
+// =============================================
+function showDeleteButton(overlay) {
+  if (!overlay || !overlay.id) return;
+  const container = document.getElementById('sc-chart-container');
+  if (!container) return;
 
+  // Xóa nút cũ nếu còn tồn tại
+  hideDeleteButton();
+
+  const btn = document.createElement('button');
+  btn.id = 'wa-del-btn';
+
+  // Tính vị trí an toàn — không bị tràn ra ngoài container
+  const cw = container.offsetWidth;
+  const ch = container.offsetHeight;
+  const bSize = 32;
+  const margin = 8;
+  let bx = Math.min(_waDelX + 14, cw - bSize - margin);
+  let by = Math.max(_waDelY - bSize - 6, margin);
+  // Clamp tránh vượt biên
+  bx = Math.max(margin, Math.min(bx, cw - bSize - margin));
+  by = Math.max(margin, Math.min(by, ch - bSize - margin));
+
+  btn.style.cssText = `
+    position: absolute;
+    left: ${bx}px;
+    top: ${by}px;
+    z-index: 1001;
+    width: ${bSize}px;
+    height: ${bSize}px;
+    background: #EF4444;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.55), 0 0 0 2px rgba(239,68,68,0.35);
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+  `;
+  btn.innerHTML = '&times;';
+  btn.title = 'Xóa hình (Delete)';
+
+  // Hover effect
+  btn.onmouseenter = () => {
+    btn.style.background = '#B91C1C';
+    btn.style.transform = 'scale(1.15)';
+    btn.style.boxShadow = '0 4px 14px rgba(0,0,0,0.7), 0 0 0 3px rgba(239,68,68,0.55)';
+  };
+  btn.onmouseleave = () => {
+    btn.style.background = '#EF4444';
+    btn.style.transform = 'scale(1)';
+    btn.style.boxShadow = '0 2px 10px rgba(0,0,0,0.55), 0 0 0 2px rgba(239,68,68,0.35)';
+  };
+
+  // Click / Touch — thực hiện xóa
+  const doDelete = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!global.tvChart) return;
+    try {
+      if (typeof saveHistory === 'function') saveHistory('delete', overlay);
+      global.tvChart.removeOverlay({ id: overlay.id });
+      if (typeof wauntrackOverlay === 'function') wauntrackOverlay(overlay.id);
+      if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+    } catch (err) {}
+    currentSelectedOverlay = null;
+    hideDeleteButton();
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof showToast === 'function') showToast('Đã xóa hình');
+  };
+
+  btn.addEventListener('click', doDelete);
+  btn.addEventListener('touchend', doDelete, { passive: false });
+
+  container.appendChild(btn);
+
+  // Animate vào — dùng rAF để CSS transition kích hoạt
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      btn.style.opacity = '1';
+      btn.style.transform = 'scale(1)';
+    });
+  });
+}
+
+function hideDeleteButton() {
+  const btn = document.getElementById('wa-del-btn');
+  if (btn) btn.remove();
+}
+
+// Theo dõi vị trí con trỏ / ngón tay để định vị nút ❌
+// Gọi hàm này 1 lần sau khi container chart được tạo
+function bindDeleteBtnTracker() {
+  const container = document.getElementById('sc-chart-container');
+  if (!container || container._waDelTrackerBound) return;
+  container._waDelTrackerBound = true;
+
+  const track = (e) => {
+    const rect = container.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    _waDelX = src.clientX - rect.left;
+    _waDelY = src.clientY - rect.top;
+  };
+
+  container.addEventListener('mousemove', track, { passive: true });
+  container.addEventListener('touchstart', track, { passive: true });
+
+  // Ẩn nút ❌ khi click vào canvas (không phải overlay)
+  container.addEventListener('click', (e) => {
+    if (e.target.id === 'wa-del-btn') return;
+    if (!e.target.closest('.wa-context-menu') && !e.target.closest('.wa-props-panel')) {
+      // Delay nhỏ để onOverlayClick chạy trước
+      setTimeout(() => {
+        if (!currentSelectedOverlay) hideDeleteButton();
+      }, 60);
+    }
+  });
+}
   function createConfirmModal(msg, onConfirm) {
     const overlay = document.createElement('div');
     overlay.style.cssText = `position:absolute;top:0;left:0;right:0;bottom:0;
@@ -2279,8 +2412,9 @@
 
   function hidePanel() {
     const p = document.getElementById('wa-props-panel');
-    if(p) p.classList.remove('show');
+    if (p) p.classList.remove('show');
     currentSelectedOverlay = null;
+    hideDeleteButton(); // ← THÊM DÒNG NÀY
   }
 
   // ==========================================
@@ -2724,7 +2858,7 @@ function mountDOM() {
   sidebar.className = 'wa-toolbar';
   sidebar.innerHTML = typeof buildToolbar === 'function' ? buildToolbar() : '';
   container.appendChild(sidebar);
-
+  bindDeleteBtnTracker();
   var panel = document.createElement('div');
   panel.className = 'wa-props-panel';
   panel.id = 'wa-props-panel';
@@ -2872,6 +3006,7 @@ function _bindChartEventsOnce() {
     saveHistory('add', overlayObj);
     window.currentSelectedOverlay = overlayObj;
     if (typeof renderPanel === 'function') renderPanel(window.currentSelectedOverlay);
+    showDeleteButton(overlayObj);
     saveAllOverlays();
   });
 
@@ -2886,6 +3021,7 @@ function _bindChartEventsOnce() {
     _wa_trackOverlay(overlayObj); 
     
     if (typeof renderPanel === 'function') renderPanel(window.currentSelectedOverlay);
+    showDeleteButton(overlayObj);
     if (isDoubleClick && overlayObj.name === 'customText') {
       setTimeout(function() {
         var t = document.getElementById('wa-prop-txt');
