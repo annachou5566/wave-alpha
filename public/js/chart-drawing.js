@@ -1681,6 +1681,24 @@
 .wa-toggle.wa-toggle-on { background: #3B82F6; border-color: #3B82F6; }
 .wa-toggle::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left 0.2s; }
 .wa-toggle.wa-toggle-on::after { left: 18px; }
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  .wa-tb-btn { min-width: 44px !important; min-height: 44px !important; }
+  .wa-menu-item { padding: 12px 16px !important; font-size: 13px !important; }
+  .wa-props-panel {
+    width: calc(100vw - 16px) !important;
+    right: 8px !important; left: 8px !important;
+    top: auto !important; bottom: 56px !important;
+    max-height: 52vh !important;
+    border-radius: 12px !important;
+  }
+  .wa-float-bar { gap: 2px !important; padding: 6px 10px !important; }
+  .wa-fb-btn { min-width: 40px !important; min-height: 40px !important; }
+}
+
+/* ── Touch: chặn text selection khi drag toolbar ── */
+#wa-float-bar { user-select: none; -webkit-user-select: none; }
+.wa-drawing-mode canvas { touch-action: none; }
     `;
     document.head.appendChild(style);
   }
@@ -1811,27 +1829,41 @@
     return html;
   }
 
-  function showToast(msg) {
+  function showToast(msg, type) {
     let t = document.getElementById('wa-toast');
     if (!t) {
       t = document.createElement('div');
-      t.id = 'wa-toast'; 
-      t.className = 'wa-toast';
-      document.getElementById('sc-chart-container').appendChild(t);
+      t.id = 'wa-toast';
+      document.body.appendChild(t); // ← gắn body, không gắn container
     }
-    
-    // Tự động nhận diện trạng thái để gắn Icon
-    const isSuccess = msg.includes('lưu') || msg.includes('nhân') || msg.includes('bản') || msg.includes('bật');
-    const isWarn = msg.includes('cảnh') || msg.includes('lỗi') || msg.includes('xóa') || msg.includes('tắt');
-    
-    t.innerText = (isSuccess ? '✓ ' : isWarn ? '⚠ ' : '') + msg;
-    t.classList.add('show');
-    
-    // Xóa timeout cũ nếu user thao tác quá nhanh
+    if (!type) {
+      if (msg.includes('lưu') || msg.includes('nhân') || msg.includes('bật') || msg.includes('bản') || msg.includes('sạch')) type = 'success';
+      else if (msg.includes('lỗi') || msg.includes('xóa') || msg.includes('tắt') || msg.includes('⚠')) type = 'error';
+      else type = 'info';
+    }
+    const icons   = { success: '✓', error: '✕', info: 'ℹ' };
+    const colors  = { success: '#22C55E', error: '#EF4444', info: '#3B82F6' };
+    t.style.cssText = `
+      position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-10px);
+      background:rgba(14,20,27,0.96); border:1px solid ${colors[type]}40;
+      border-left:3px solid ${colors[type]};
+      color:#E8EDF2; font-size:12px; font-weight:600;
+      font-family:'Be Vietnam Pro','Inter',sans-serif;
+      padding:9px 18px 9px 14px; border-radius:8px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.7);
+      z-index:9999999; white-space:nowrap; pointer-events:none;
+      opacity:0; transition:opacity 0.2s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    `;
+    t.innerHTML = `<span style="color:${colors[type]};margin-right:7px">${icons[type]}</span>${msg}`;
+    requestAnimationFrame(() => {
+      t.style.opacity = '1';
+      t.style.transform = 'translateX(-50%) translateY(0)';
+    });
     clearTimeout(t._to);
-    t._to = setTimeout(() => { 
-      t.classList.remove('show'); 
-    }, 2200);
+    t._to = setTimeout(() => {
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(-50%) translateY(-10px)';
+    }, 2500);
   }
 
   function createConfirmModal(msg, onConfirm) {
@@ -2117,6 +2149,25 @@
     body.innerHTML = html;
     panel.classList.add('show');
 
+// ── THÊM: Đóng panel khi click ra ngoài ──
+function _closePanelOutside(e) {
+  const panel = document.getElementById('wa-props-panel');
+  const bar   = document.getElementById('wa-float-bar');
+  const tb    = document.querySelector('.wa-toolbar');
+  if (panel  && !panel.contains(e.target) &&
+      (!bar   || !bar.contains(e.target))  &&
+      (!tb    || !tb.contains(e.target))) {
+    if (typeof hidePanel === 'function') hidePanel();
+    document.removeEventListener('mousedown',  _closePanelOutside);
+    document.removeEventListener('touchstart', _closePanelOutside);
+  }
+}
+setTimeout(() => {
+  document.addEventListener('mousedown',  _closePanelOutside);
+  document.addEventListener('touchstart', _closePanelOutside, { passive: true });
+}, 120);
+// ── HẾT ──
+
     // Bind Swatches Click Event
     body.querySelectorAll('.wa-swatch').forEach(sw => {
       sw.addEventListener('click', () => {
@@ -2188,28 +2239,37 @@ function hideFloatToolbar() {
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
   hideFloatToolbar();
+
   var container = document.getElementById('sc-chart-container');
   if (!container) return;
   var rect = container.getBoundingClientRect();
+
   var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : 'lines';
-  var s = ov.styles || {};
+  var s   = ov.styles || {};
   var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
 
+  // ── Màu chính ──────────────────────────────────────────────────
   var pc = '#3B82F6';
-  if (cat === 'text') pc = s.text && s.text.color ? colorToHex(s.text.color) : 'E8EDF2';
-  else if (cat === 'shapes') pc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '3B82F6';
-  else pc = s.line && s.line.color ? colorToHex(s.line.color) : '3B82F6';
+  if (cat === 'text')   pc = s.text    && s.text.color         ? colorToHex(s.text.color)            : '#E8EDF2';
+  else if (cat === 'shapes') pc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '#3B82F6';
+  else                  pc = s.line    && s.line.color          ? colorToHex(s.line.color)             : '#3B82F6';
   if (!pc.startsWith('#')) pc = '#' + pc;
 
-  var lw = (s.line && s.line.size) || 1;
-  var ls = (s.line && s.line.style) || 'solid';
+  var lw       = (s.line && s.line.size)  || 1;
+  var ls       = (s.line && s.line.style) || 'solid';
   var isLocked = !!ov.lock;
   var isHidden = !!ext._hidden;
   var showLine = (cat !== 'text');
 
-  function lwSVG(h) { return '<span style="display:block;width:14px;height:'+h+'px;background:currentColor;border-radius:1px;margin:auto"></span>'; }
-  function lsSVG(da) { return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>'; }
+  // ── SVG helpers ────────────────────────────────────────────────
+  function lwSVG(h) {
+    return '<span style="display:block;width:14px;height:'+h+'px;background:currentColor;border-radius:1px;margin:auto"></span>';
+  }
+  function lsSVG(da) {
+    return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
+  }
 
+  // ── Build HTML ─────────────────────────────────────────────────
   var html = '';
   html += '<div class="wa-fb-color-wrap" title="Màu chính">'
         +   '<div class="wa-fb-cswatch" id="wa-fb-sw" style="background:'+pc+'"></div>'
@@ -2222,17 +2282,17 @@ function showFloatToolbar(ov, posX, posY) {
     html += '<button class="wa-fb-btn wa-fb-lw'+(lw==2?' wa-fb-on':'')+'" data-w="2" title="Nét 2px">'+lwSVG(2)+'</button>';
     html += '<button class="wa-fb-btn wa-fb-lw'+(lw>=3?' wa-fb-on':'')+'" data-w="3" title="Nét 3px">'+lwSVG(3)+'</button>';
     html += '<div class="wa-fb-sep"></div>';
-    html += '<button class="wa-fb-btn wa-fb-ls'+(ls==='solid'?' wa-fb-on':'')+'" data-s="solid" title="Nét liền">'+lsSVG('none')+'</button>';
+    html += '<button class="wa-fb-btn wa-fb-ls'+(ls==='solid' ?' wa-fb-on':'')+'" data-s="solid"  title="Nét liền">'+lsSVG('none')+'</button>';
     html += '<button class="wa-fb-btn wa-fb-ls'+(ls==='dashed'?' wa-fb-on':'')+'" data-s="dashed" title="Nét đứt">'+lsSVG('5 3')+'</button>';
     html += '<button class="wa-fb-btn wa-fb-ls'+(ls==='dotted'?' wa-fb-on':'')+'" data-s="dotted" title="Nét chấm">'+lsSVG('1.5 3')+'</button>';
     html += '<div class="wa-fb-sep"></div>';
   }
 
-  var eyeShow = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-  var eyeHide = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-  var gearSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
-  var lockOn  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
-  var lockOff = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
+  var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeHide  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
+  var lockOn   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
+  var lockOff  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
   var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
 
   html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
@@ -2240,43 +2300,90 @@ function showFloatToolbar(ov, posX, posY) {
   html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
   html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
 
+  // ── Tạo DOM ────────────────────────────────────────────────────
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
   bar.innerHTML = html;
 
-  var bW = showLine ? 320 : 180;
-  var cx = posX != null ? posX : (_fbX - rect.left);
-  var cy = posY != null ? posY : (_fbY - rect.top);
-  var left = Math.max(4, Math.min(cx - bW / 2, rect.width - bW - 4));
-  var top  = cy - 50;
-  if (top < 60) top = cy + 16;
-  bar.style.left = left + 'px';
-  bar.style.top  = top + 'px';
+  // ─────────────────────────────────────────────────────────────
+  // 🎯 SMART POSITIONING — Tránh mép container, không bao giờ bị cắt
+  // Bước 1: Append trước (ẩn) để đo kích thước thực của bar
+  // ─────────────────────────────────────────────────────────────
+  bar.style.visibility = 'hidden';   // ẩn để đo, chưa animate
+  bar.style.opacity    = '0';
+  bar.style.transform  = 'translateY(6px) scale(0.97)';
+  bar.style.transition = 'none';
   container.appendChild(bar);
-  requestAnimationFrame(function() { bar.classList.add('wa-fb-show'); });
 
+  requestAnimationFrame(function() {
+    var bW     = bar.offsetWidth  || (showLine ? 320 : 180);
+    var bH     = bar.offsetHeight || 40;
+    var MARGIN = 6;                   // khoảng cách tối thiểu với mép container
+    var BAR_OFFSET_Y = 50;            // thanh nằm phía TRÊN con trỏ bao nhiêu px
+
+    // Tọa độ gốc (tính theo container)
+    var cx = (posX != null ? posX : (_fbX - rect.left));
+    var cy = (posY != null ? posY : (_fbY - rect.top));
+
+    // Căn giữa bar theo chiều ngang so với điểm click
+    var left = cx - bW / 2;
+    // Mặc định: hiện phía TRÊN điểm click
+    var top  = cy - BAR_OFFSET_Y;
+
+    // ── Flip dọc: nếu phía trên không đủ chỗ → đặt xuống dưới ──
+    if (top < MARGIN) {
+      top = cy + 16;  // hiện phía DƯỚI điểm click
+    }
+    // Nếu xuống dưới cũng không đủ chỗ (màn hình rất nhỏ) → ép vào MARGIN
+    if (top + bH > rect.height - MARGIN) {
+      top = rect.height - bH - MARGIN;
+    }
+
+    // ── Clamp ngang: không ra ngoài trái/phải ──────────────────
+    left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
+
+    bar.style.left = left + 'px';
+    bar.style.top  = top  + 'px';
+
+    // ── Animate in ─────────────────────────────────────────────
+    bar.style.visibility = 'visible';
+    bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
+    requestAnimationFrame(function() {
+      bar.style.opacity   = '1';
+      bar.style.transform = 'translateY(0) scale(1)';
+      bar.classList.add('wa-fb-show');
+    });
+  });
+
+  // ── Event handlers (giữ nguyên logic cũ) ──────────────────────
   bar.querySelector('#wa-fb-col').addEventListener('input', function() {
     bar.querySelector('#wa-fb-sw').style.background = this.value;
     _fbSetColor(ov, cat, this.value);
   });
   bar.querySelectorAll('.wa-fb-lw').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      bar.querySelectorAll('.wa-fb-lw').forEach(function(b){ b.classList.remove('wa-fb-on'); });
+      bar.querySelectorAll('.wa-fb-lw').forEach(function(b) { b.classList.remove('wa-fb-on'); });
       btn.classList.add('wa-fb-on');
       _fbSetLineWidth(ov, parseInt(btn.dataset.w));
     });
   });
   bar.querySelectorAll('.wa-fb-ls').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      bar.querySelectorAll('.wa-fb-ls').forEach(function(b){ b.classList.remove('wa-fb-on'); });
+      bar.querySelectorAll('.wa-fb-ls').forEach(function(b) { b.classList.remove('wa-fb-on'); });
       btn.classList.add('wa-fb-on');
       _fbSetLineStyle(ov, btn.dataset.s);
     });
   });
-  bar.querySelector('#wa-fb-vis').addEventListener('click', function() { _fbToggleVisible(ov); });
-  bar.querySelector('#wa-fb-cfg').addEventListener('click', function() { if (typeof renderPanel === 'function') renderPanel(ov); });
-  bar.querySelector('#wa-fb-lk').addEventListener('click', function() { _fbToggleLock(ov); });
+  bar.querySelector('#wa-fb-vis').addEventListener('click', function() {
+    _fbToggleVisible(ov);
+  });
+  bar.querySelector('#wa-fb-cfg').addEventListener('click', function() {
+    if (typeof renderPanel === 'function') renderPanel(ov);
+  });
+  bar.querySelector('#wa-fb-lk').addEventListener('click', function() {
+    _fbToggleLock(ov);
+  });
   bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
     if (!global.tvChart) return;
     if (typeof saveHistory === 'function') saveHistory('delete', ov);
@@ -2641,8 +2748,11 @@ function bindCoreEventsOnce() {
       if (!tb) { _isDragging = false; return; }
       var dx = e.clientX - _startX;
       var dy = e.clientY - _startY;
-      tb.style.left = Math.max(0, _initLeft + dx) + 'px';
-      tb.style.top  = Math.max(0, _initTop  + dy) + 'px';
+      const TBW = tb.offsetWidth  || 48;
+const TBH = tb.offsetHeight || 300;
+const M   = 4;
+tb.style.left = Math.max(M, Math.min(initLeft + dx, window.innerWidth  - TBW - M)) + 'px';
+tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M)) + 'px';
     });
   });
   document.addEventListener('touchmove', function(e) {
@@ -2657,8 +2767,11 @@ function bindCoreEventsOnce() {
       }
       var dx = e.touches[0].clientX - _startX;
       var dy = e.touches[0].clientY - _startY;
-      tb.style.left = Math.max(0, _initLeft + dx) + 'px';
-      tb.style.top  = Math.max(0, _initTop  + dy) + 'px';
+      const TBW = tb.offsetWidth  || 48;
+const TBH = tb.offsetHeight || 300;
+const M   = 4;
+tb.style.left = Math.max(M, Math.min(initLeft + dx, window.innerWidth  - TBW - M)) + 'px';
+tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M)) + 'px';
     });
   }, { passive: false });
   document.addEventListener('mouseup', function() {
@@ -2815,14 +2928,38 @@ function _bindToolbarLocalEvents(toolbar, panel) {
       _getTbBtns().forEach(function(b) { b.classList.remove('active'); });
       menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
 
-      // ✅ CHỈ THÊM 5 DÒNG NÀY
-      var group = menuItem.closest('.wa-tb-group');
-      var menu = group ? group.querySelector('.wa-tb-menu') : null;
-      if (menu) {
-        menu.style.display = 'none';
-        group.addEventListener('mouseleave', function() { menu.style.display = ''; }, { once: true });
-      }
-      // ✅ HẾT
+            // ── Đóng menu sau khi chọn tool ──────────────────────────────
+            var group = menuItem.closest('.wa-tb-group');
+            var menu  = group ? group.querySelector('.wa-tb-menu') : null;
+            if (menu) {
+              // 1. Ẩn menu ngay lập tức
+              menu.style.display = 'none';
+      
+              // 2. Desktop: mouseleave vẫn giữ (phòng hover-open nếu có)
+              group.addEventListener('mouseleave', function() {
+                menu.style.display = '';
+              }, { once: true });
+      
+              // 3. Mobile: đóng menu khi touch/click ra ngoài group
+              function _closeMenuOutside(e) {
+                if (!group.contains(e.target)) {
+                  menu.style.display = 'none';
+                  document.removeEventListener('mousedown',  _closeMenuOutside);
+                  document.removeEventListener('touchstart', _closeMenuOutside);
+                }
+              }
+              // Delay 0ms để tránh bắt ngay chính cú tap vừa chọn tool
+              setTimeout(function() {
+                document.addEventListener('mousedown',  _closeMenuOutside);
+                document.addEventListener('touchstart', _closeMenuOutside, { passive: true });
+              }, 0);
+      
+              // 4. Đóng tất cả menu khác đang mở (tránh 2 menu mở cùng lúc)
+              document.querySelectorAll('.wa-tb-menu').forEach(function(m) {
+                if (m !== menu) m.style.display = 'none';
+              });
+            }
+            // ── Hết phần đóng menu ───────────────────────────────────────
 
     } else if (btn) {
       toolId = btn.getAttribute('data-tool');
@@ -2836,7 +2973,17 @@ function _bindToolbarLocalEvents(toolbar, panel) {
 var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
 if (delSelBtn) {
   var _delSelSnapshot = null;
-
+// ── THÊM: Mờ mặc định khi chưa chọn hình ──────────────────
+window._syncDelSelBtn = function(hasSelection) {
+  var btn = document.querySelector('#wa-btn-del-sel');
+  if (!btn) return;
+  btn.style.opacity    = hasSelection ? '1'       : '0.35';
+  btn.style.cursor     = hasSelection ? 'pointer' : 'not-allowed';
+  btn.style.transition = 'opacity 0.2s ease';
+  btn.title            = hasSelection ? 'Xoá hình đang chọn [Del]' : 'Chưa chọn hình nào';
+};
+window._syncDelSelBtn(false); // mờ mặc định khi load
+// ── HẾT THÊM ────────────────────────────────────────────────
   function _findSelectedOverlay() {
     if (currentSelectedOverlay) return currentSelectedOverlay;
     if (window.currentSelectedOverlay) return window.currentSelectedOverlay;
@@ -2876,6 +3023,7 @@ if (delSelBtn) {
       if (typeof hidePanel === 'function') hidePanel();
       if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
       if (typeof showToast === 'function') showToast('Đã xóa hình');
+      window._syncDelSelBtn(false);
     } else {
       if (typeof showToast === 'function') showToast('Hãy chọn một hình trước khi xóa');
     }
@@ -2952,7 +3100,14 @@ if (delSelBtn) {
 function _bindChartEventsOnce() {
   if (!global.tvChart || global.tvChart.__wa_chart_events_bound) return;
   global.tvChart.__wa_chart_events_bound = true;
-
+// ── THÊM: Sáng/mờ nút xóa theo trạng thái chọn ─────────────
+global.tvChart.subscribeAction('onOverlaySelected', function() {
+  if (typeof window._syncDelSelBtn === 'function') window._syncDelSelBtn(true);
+});
+global.tvChart.subscribeAction('onOverlayDeselected', function() {
+  if (typeof window._syncDelSelBtn === 'function') window._syncDelSelBtn(false);
+});
+// ── HẾT THÊM ─────────────────────────────────────────────────
   global.tvChart.subscribeAction('onDrawEnd', function(data) {
     activateTool('pointer');
     var toolbar = document.querySelector('.wa-toolbar');
