@@ -1125,14 +1125,14 @@
             var lh = (tS.size || 14) + 6;
             var figs = [];
             lines.forEach(function(l, i) {
-                figs.push({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { 
-                  color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', 
-                  backgroundColor: pS.color || 'transparent',
-borderColor: pS.borderColor || 'transparent',
-borderSize: pS.borderSize || 0,
-paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, 
-                  borderSize: pS.borderSize || 0,
-                  paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
+                figs.push({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i * lh, text: l, align: 'left', baseline: 'top' }, styles: {
+                  color:           tS.color  || '#EAECEF',
+                  size:            tS.size   || 14,
+                  family:          tS.family || 'Be Vietnam Pro, sans-serif',
+                  weight:          tS.weight || '600',
+                  style:           tS.style  || 'normal',   // ← THÊM DÒNG NÀY
+                  backgroundColor: bgC,
+                  borderColor:     'transparent'
                 } });
             });
             return figs; 
@@ -1152,15 +1152,7 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
             if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: 'rgba(0,240,255,0.4)', size: 1, style: 'dashed' } }); } 
             var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y; 
             lines.forEach(function(l, i) {
-                figs.push({ type: 'text', attrs: { x: tx, y: ty + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { 
-                  color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', 
-                  backgroundColor: pS.color || 'transparent',
-borderColor: pS.borderColor || 'transparent',
-borderSize: pS.borderSize || 0,
-paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3, 
-                  borderSize: pS.borderSize || 0,
-                  paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
-                } });
+                figs.push({ type: 'text', attrs: { x: tx, y: ty + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', backgroundColor: bgC, borderColor: 'transparent' } });
             });
             return figs; 
         } 
@@ -1225,6 +1217,7 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
             var lines = typeof txt === 'string' ? txt.split('\n') : [String(txt)];
             var x = c[0].x, y = c[0].y, r = 10; var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; 
             var lh = (tS.size || 12) + 6;
+            var bgC = pS.color && pS.color !== 'transparent' ? pS.color : 'transparent';
             var figs = [ { type: 'circle', attrs: { x: x, y: y - r - 10, r: r }, styles: { style: 'fill', color: pS.color || '#F0B90B', borderColor: pS.borderColor || '#fff', borderSize: 1.5 } }, { type: 'line', attrs: { coordinates: [{ x: x, y: y - 10 }, { x: x, y: y }] }, styles: { color: pS.color || '#F0B90B', size: 2 } } ]; 
             if (txt) { 
                 lines.forEach(function(l, i) {
@@ -1261,26 +1254,12 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
                 figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]}, styles: { style: 'stroke_fill', color: pS.color || 'rgba(0,240,255,0.1)', borderColor: pS.borderColor || '#00F0FF', borderSize: 1 }, ignoreEvent: true }); 
                 lines.forEach(function(l, i) {
                     var lineY = ty - (lines.length - 1) * lh / 2 + i * lh;
-                    figs.push({ type: 'text', attrs: { x: tx + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { 
-                      color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', 
-                      backgroundColor: pS.color || 'transparent',
-borderColor: pS.borderColor || 'transparent',
-borderSize: pS.borderSize || 0,
-paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
-                      borderSize: pS.borderSize || 0,
-                      paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
-                    } });
+                    figs.push({ type: 'text', attrs: { x: tx + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', backgroundColor: 'transparent', borderColor: 'transparent' } });
                 });
             } else { 
                 lines.forEach(function(l, i) {
                     var lineY = c[0].y - (lines.length - 1) * lh / 2 + i * lh;
-                    figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { 
-                      color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', 
-                      backgroundColor: pS.color || 'transparent', 
-                      borderColor: pS.borderColor || 'transparent', 
-                      borderSize: pS.borderSize || 0,
-                      paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
-                    } });
+                    figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', backgroundColor: 'transparent', borderColor: 'transparent' } });
                 });
             } 
             return figs; 
@@ -1298,6 +1277,7 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
             var lh = (tS.size || 12) + 6;
             var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1); 
             var bw = Math.max(80, maxLen * ((tS.size||12) * 0.6) + 20), bh = lines.length * lh + 14, tail = 8; 
+            var bgC = pS.color && pS.color !== 'transparent' ? pS.color : 'transparent';
             var figs = [ { type: 'polygon', attrs: { coordinates: [ { x: x, y: y - bh - tail }, { x: x + bw, y: y - bh - tail }, { x: x + bw, y: y - tail }, { x: x + 18, y: y - tail }, { x: x + 10, y: y }, { x: x + 6, y: y - tail }, { x: x, y: y - tail } ]}, styles: { style: 'stroke_fill', color: pS.color || 'rgba(30,35,42,0.95)', borderColor: pS.borderColor || '#474d57', borderSize: 1 }, ignoreEvent: true } ];
             lines.forEach(function(l, i) {
                 var lineY = y - bh / 2 - tail - (lines.length - 1) * lh / 2 + i * lh;
@@ -1375,7 +1355,7 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
             if (txt) {
                 lines.forEach(function(l, i) {
                     var lineY = (y - ph + fh / 2) - (lines.length - 1) * lh / 2 + i * lh;
-                    figs.push({ type: 'text', attrs: { x: x + fw + 4, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent' } });
+                    figs.push({ type: 'text', attrs: { x: x + fw + 4, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } });
                 });
             }
             return figs; 
@@ -2148,6 +2128,9 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
       updatedStyles.text.size = parseInt(document.getElementById('wa-te-size').value) || 14;
       updatedStyles.text.family = document.getElementById('wa-te-font').value;
       updatedStyles.polygon.color = hexToRgba(document.getElementById('wa-te-bg').value, 0.8);
+      // GIỮ NGUYÊN weight và style từ overlay cũ, không bị ghi đè
+      if (tStyles.weight) updatedStyles.text.weight = tStyles.weight;
+      if (tStyles.style) updatedStyles.text.style = tStyles.style;
       
       backdrop.remove(); 
       onConfirm(val, updatedStyles); 
@@ -2376,7 +2359,7 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
         var ff     = stxt.family || 'Be Vietnam Pro, sans-serif';
         var sz     = stxt.size   || 13;
         var fw     = stxt.weight || 'normal';
-        var fi = tS.style || 'normal';
+        var fi     = stxt.style  || 'normal';
         var bgHex  = safeHex(spoly.color, '#151B23');
         var bgA    = toAlpha(spoly.color, 0);
         var bdHex  = safeHex(spoly.borderColor, '#273040');
@@ -2626,8 +2609,7 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
           if (ff)         ns.text.family = ff;
           if (sz !== null) ns.text.size  = sz;
           if (fw)         ns.text.weight = fw;
-          if (fi !== null) ns.text.style = fi || 'normal';
-
+          if (fi)         ns.text.style  = fi;
   
           ns.polygon.color       = (bgC && bgA > 0) ? mkRgba(bgC, bgA) : 'transparent';
           ns.polygon.style       = (bdOn || (bgA && bgA > 0)) ? 'strokefill' : 'fill';
@@ -2656,19 +2638,10 @@ paddingLeft: 5, paddingRight: 5, paddingTop: 3, paddingBottom: 3,
           // Kiểu nét đứt cho polygon border dùng line.style trong KLineChart
           if (bs) {
             ns.line.style = bs;
-            if (bs === 'dashed') {
-              ns.line.style = 'dashed';
-              ns.line.dashedValue = [6, 4];
-          } else {
-              ns.line.style = 'solid';
-              delete ns.line.dashedValue;
-          }
-          }
-          if (bs === 'dashed') {
-            ns.line.dashedValue = [6, 4];
-          } else {
-            delete ns.line.dashedValue;
-          }
+            if (bs === 'dashed') ns.line.dashedValue = [6, 4];
+            else delete ns.line.dashedValue;
+        }
+  
         } else if (cat === 'fibo') {
           var lc = gCP('c_lc');
           var lw = gRng('_rp_lw');
@@ -3017,9 +2990,9 @@ function _fbToggleLock(ov) {
     if (!container) return;
 
     try { global.tvChart.cancelDrawing(); } catch(e){}
-    if (typeof hidePanel === 'function') hidePanel();
-
-    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+if (typeof hidePanel === 'function') hidePanel();
+if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
     container.classList.add('wa-drawing-mode');
 
     const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
@@ -3042,7 +3015,7 @@ function _fbToggleLock(ov) {
         config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
       } else if (tType === 'text') {
         config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
-        config.styles = { text: { color: s.textColor||'E8EDF2', size: s.textSize||14, weight: s.textWeight||'600', style: 'normal', family: s.textFamily||'Be Vietnam Pro, sans-serif' } };
+        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', family: 'sans-serif' };
       }
 // THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
 config.onSelected = function(event) {
@@ -3335,16 +3308,11 @@ tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M
     if (panel && panel.contains(e.target)) return;
     var tb = document.querySelector('.wa-toolbar');
     if (tb && tb.contains(e.target)) return;
+    var _container = document.getElementById('sc-chart-container');
+    if (_container && _container.classList.contains('wa-drawing-mode')) return;
     if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-    var _panel = document.getElementById('wa-props-panel');
-if (_panel && _panel.classList.contains('show')
-    && !_panel.contains(ev.target)
-    && !ev.target.closest('.wa-float-bar')
-    && !ev.target.closest('.wa-cp-pop')
-    && !ev.target.closest('.wa-tb-menu')) {
-    hidePanel();
-}
-  }, { passive: true });
+    if (typeof hidePanel === 'function') hidePanel();
+}, { passive: true });
   document.addEventListener('touchstart', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
     if (!grip || !e.touches || !e.touches.length) return;
