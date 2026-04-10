@@ -1734,10 +1734,11 @@
     // Đường phân cách cho nhóm nút bên dưới
     html += `<div style="width:36px;height:1px;background:var(--wa-border-subtle);margin:4px 0"></div>
              <div class="wa-bot-actions">
-               <button class="wa-tb-btn" id="wa-btn-magnet" data-tooltip="Bật/tắt Magnet">${SVG.magnet}</button>
-               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xoá tất cả [Del]">${SVG.trash}</button>
-             </div>`;
-             
+               <button class="wa-tb-btn" id="wa-btn-del-sel" data-tooltip="Xoá hình đang chọn">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+               </button>
+               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xoá tất cả">${SVG.trash}</button>
+             </div>`;             
     return html;
   }
 
@@ -2284,60 +2285,33 @@
   }
 
   // ==========================================
-  // 6. RIGHT CLICK CONTEXT MENU 
-  // ==========================================
-  // ==========================================
-  // 6. XỬ LÝ XOÁ HÌNH (MOBILE LONG-PRESS & PANEL)
+  // 6. XỬ LÝ NÚT TRÊN PANEL (Đã loại bỏ Menu Chuột Phải)
   // ==========================================
   function bindContextMenu(panel) {
-    const container = document.getElementById('sc-chart-container');
-
-    // Hàm xoá hình đang chọn (dùng chung)
-    function deleteCurrentShape() {
-      if (currentSelectedOverlay && global.tvChart) {
-        if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
-        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-        if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(currentSelectedOverlay.id);
-        if (typeof hidePanel === 'function') hidePanel();
-        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-        if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
-      }
-    }
-
-    // 1. MOBILE: Nhấn giữ (Long-press) 0.5 giây để xoá hình ngay lập tức
-    let touchTimer;
-    container.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1 && currentSelectedOverlay) {
-        touchTimer = setTimeout(() => {
-          deleteCurrentShape();
-          if(navigator.vibrate) navigator.vibrate(50); // Rung nhẹ báo hiệu đã xoá
-        }, 500);
-      }
-    }, {passive: true});
-
-    container.addEventListener('touchmove', () => clearTimeout(touchTimer), {passive: true});
-    container.addEventListener('touchend', () => clearTimeout(touchTimer));
-
-    // (Desktop: KLineChart đã tự động lo việc click chuột phải để xoá, không cần code thêm)
-
-    // 2. Gán sự kiện cho các nút trên Props Panel (Thanh tuỳ chỉnh bên phải)
-    if (panel) {
-      let closeBtn = panel.querySelector('.wa-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { if(typeof hidePanel === 'function') hidePanel(); };
-      
-      let lockBtn = panel.querySelector('#wa-btn-p-lock');
-      if (lockBtn) lockBtn.onclick = () => {
-        if (currentSelectedOverlay && global.tvChart) {
-          global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock });
-          let existing = global.__wa_overlay_map.get(currentSelectedOverlay.id);
-          if (existing) existing.lock = !currentSelectedOverlay.lock;
-          if (typeof showToast === 'function') showToast('Đã đổi trạng thái khoá');
-        }
-      };
-      
-      let delBtn = panel.querySelector('#wa-btn-p-del');
-      if (delBtn) delBtn.onclick = deleteCurrentShape;
-    }
+    if (!panel) return;
+    
+    panel.querySelector('.wa-close-btn').onclick = () => { if(typeof hidePanel === 'function') hidePanel(); };
+    
+    panel.querySelector('#wa-btn-p-lock').onclick = () => {
+       if(currentSelectedOverlay && global.tvChart) {
+           global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, lock: !currentSelectedOverlay.lock }); 
+           let existing = global.__wa_overlay_map.get(currentSelectedOverlay.id);
+           if (existing) existing.lock = !currentSelectedOverlay.lock;
+           if (typeof showToast === 'function') showToast('Đã đổi trạng thái khóa');
+           if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+       }
+    }; 
+    
+    panel.querySelector('#wa-btn-p-del').onclick = () => {
+       if(currentSelectedOverlay && global.tvChart) {
+           if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
+           global.tvChart.removeOverlay({ id: currentSelectedOverlay.id }); 
+           if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(currentSelectedOverlay.id);
+           if (typeof hidePanel === 'function') hidePanel(); 
+           if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+           if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
+       }
+    };
   }
 
   // ============================================================
@@ -2777,21 +2751,10 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     if (toolId) activateTool(toolId);
   });
 
-  var magnetBtn = toolbar.querySelector('#wa-btn-magnet');
-  if (magnetBtn) {
-    magnetBtn.addEventListener('click', function() {
-      if (typeof isMagnetMode !== 'undefined') {
-          isMagnetMode = !isMagnetMode;
-          this.classList.toggle('active', isMagnetMode);
-          if (typeof showToast === 'function') showToast(isMagnetMode ? '🧲 Bật chế độ Magnet' : 'Tắt Magnet');
-      }
-    });
-  }
-
-  var clearBtn = toolbar.querySelector('#wa-btn-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function() {
-      // TÍNH NĂNG MỚI: Nếu Mobile/PC đang chọn 1 hình -> Bấm Thùng Rác là xoá hình đó luôn
+  // Sự kiện Xoá hình đang chọn (Dành cho Mobile / Nút vừa thay)
+  var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
+  if (delSelBtn) {
+    delSelBtn.addEventListener('click', function() {
       if (typeof currentSelectedOverlay !== 'undefined' && currentSelectedOverlay && global.tvChart) {
         if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
         global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
@@ -2799,10 +2762,15 @@ function _bindToolbarLocalEvents(toolbar, panel) {
         if (typeof hidePanel === 'function') hidePanel();
         if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
         if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
-        return; // Dừng tại đây, không hỏi xoá tất cả
+      } else {
+        if (typeof showToast === 'function') showToast('⚠️ Hãy click chọn một hình trước khi xoá');
       }
+    });
+  }
 
-      // LOGIC CŨ: Nếu không chọn hình nào -> Mới bật popup hỏi xoá tất cả
+  var clearBtn = toolbar.querySelector('#wa-btn-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
       if (typeof createConfirmModal === 'function') {
         createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
           if (global.tvChart) {
@@ -2814,7 +2782,7 @@ function _bindToolbarLocalEvents(toolbar, panel) {
           if (typeof window.redoStack !== 'undefined') window.redoStack = [];
           if (typeof hidePanel === 'function') hidePanel();
           
-          _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); 
+          _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); // Dùng hàm lấy cache
           
           var ptr = toolbar.querySelector('[data-tool=pointer]');
           if (ptr) ptr.classList.add('active');
