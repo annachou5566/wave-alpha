@@ -2543,25 +2543,43 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     if (toolId) activateTool(toolId);
   });
 
-  // 🌟 NÚT XÓA HÌNH ĐANG CHỌN (Fix Mobile: chặn touch trước khi KLineChart xử lý)
-  var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
-  if (delSelBtn) {
-    delSelBtn.addEventListener('click', function() {
-      var sel = currentSelectedOverlay || window.currentSelectedOverlay;
-      if (sel && global.tvChart) {
-        if (typeof saveHistory === 'function') saveHistory('delete', sel);
-        global.tvChart.removeOverlay({ id: sel.id });
-        if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(sel.id);
-        currentSelectedOverlay = null;
-        window.currentSelectedOverlay = null;
-        if (typeof hidePanel === 'function') hidePanel();
-        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-        if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
-      } else {
-        if (typeof showToast === 'function') showToast('⚠️ Hãy chọn một hình trước khi xoá');
-      }
-    });
-  }
+  // NÚT XÓA HÌNH ĐANG CHỌN (Fix Mobile chặn touch trước khi KLineChart xử lý)
+var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
+if (delSelBtn) {
+  // Snapshot overlay tại thời điểm touchstart/mousedown,
+  // TRƯỚC khi KLineChart có cơ hội xử lý event và bỏ chọn hình.
+  var _delSelSnapshot = null;
+
+  delSelBtn.addEventListener('touchstart', function(e) {
+    e.preventDefault();        // Ngăn browser sinh click giả → không trigger KLineChart
+    e.stopPropagation();       // Chặn bubble xuống canvas bên dưới
+    _delSelSnapshot = currentSelectedOverlay || window.currentSelectedOverlay || null;
+  }, { passive: false });
+
+  delSelBtn.addEventListener('mousedown', function(e) {
+    e.stopPropagation();       // Chặn bubble trên Desktop (an toàn, không ảnh hưởng click)
+    _delSelSnapshot = currentSelectedOverlay || window.currentSelectedOverlay || null;
+  });
+
+  delSelBtn.addEventListener('click', function() {
+    // Ưu tiên dùng snapshot (mobile), fallback về currentSelectedOverlay (desktop)
+    var sel = _delSelSnapshot || currentSelectedOverlay || window.currentSelectedOverlay;
+    _delSelSnapshot = null; // Reset sau mỗi lần dùng
+
+    if (sel && global.tvChart) {
+      if (typeof saveHistory === 'function') saveHistory('delete', sel);
+      global.tvChart.removeOverlay({ id: sel.id });
+      if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(sel.id);
+      currentSelectedOverlay = null;
+      window.currentSelectedOverlay = null;
+      if (typeof hidePanel === 'function') hidePanel();
+      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+      if (typeof showToast === 'function') showToast('Đã xóa hình');
+    } else {
+      if (typeof showToast === 'function') showToast('Hãy chọn một hình trước khi xóa');
+    }
+  });
+}
 
   // 🌟 NÚT XÓA TẤT CẢ (Thùng Rác)
   var clearBtn = toolbar.querySelector('#wa-btn-clear');
