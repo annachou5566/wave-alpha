@@ -2167,66 +2167,55 @@
     var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
   
-    // ── Cleanup lần render trước (tránh event listener tích lũy) ──
+    // ── Dọn dẹp rác bộ nhớ từ lần mở trước ──
     if (panel._rpCleanup) { try { panel._rpCleanup(); } catch(e){} }
     var _handlers = [];
     function _on(el, ev, fn, opts) { el.addEventListener(ev, fn, opts||false); _handlers.push([el,ev,fn,opts||false]); }
     function _offAll() { _handlers.forEach(function(h){ h[0].removeEventListener(h[1],h[2],h[3]); }); _handlers=[]; var p=document.getElementById('_rp_pop'); if(p) p.remove(); }
     panel._rpCleanup = _offAll;
   
-    // ── CSS (chỉ inject 1 lần) ───────────────────────────────────
+    // ── CSS Tối ưu (Sửa lỗi không cuộn được & scrollbar) ──
     if (!document.getElementById('_rp_css')) {
       var _st = document.createElement('style');
       _st.id = '_rp_css';
       _st.textContent = [
-        '.wa-panel-body{padding:10px!important;gap:0!important}',
+        /* Fix Scroll & Layout */
+        '.wa-props-panel{display:flex;flex-direction:column;max-height:100vh}',
+        '.wa-panel-body{padding:10px!important;gap:0!important;flex:1 1 auto!important;overflow-y:auto!important;min-height:0!important}',
+        '.wa-panel-body::-webkit-scrollbar{width:5px}',
+        '.wa-panel-body::-webkit-scrollbar-thumb{background:#273040;border-radius:5px}',
+        '.wa-panel-body::-webkit-scrollbar-track{background:transparent}',
   
-        // Section
-        '._s{background:#0D1117;border:1px solid #1E2A3A;border-radius:8px;margin-bottom:7px;overflow:hidden}',
+        '._s{background:#0D1117;border:1px solid #1E2A3A;border-radius:8px;margin-bottom:7px;overflow:hidden;flex-shrink:0}',
         '._sh{font-size:9.5px;font-weight:800;color:#4A5F72;text-transform:uppercase;letter-spacing:.9px;padding:7px 10px 5px;border-bottom:1px solid #1A2535}',
         '._sb{padding:8px 10px}',
-  
-        // Row / Col
         '._r{display:flex;gap:8px;margin-bottom:6px}',
         '._r:last-child{margin-bottom:0}',
         '._c{flex:1;min-width:0}',
         '._l{display:block;font-size:10px;color:#6B7E8D;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
   
-        // Select
         '._sel{width:100%;background:#080D12;border:1px solid #1E2A3A;color:#C8D6E0;padding:5px 24px 5px 8px;border-radius:5px;font-size:11px;outline:none;font-family:inherit;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%234A5568\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center}',
         '._sel:focus{border-color:#3B82F6}',
-  
-        // Textarea
         '._ta{width:100%;background:#080D12;border:1px solid #1E2A3A;color:#E8EDF2;padding:8px 9px;border-radius:5px;font-size:12.5px;outline:none;font-family:inherit;resize:vertical;min-height:62px;box-sizing:border-box;line-height:1.5;transition:border-color .15s}',
         '._ta:focus{border-color:#3B82F6}',
-  
-        // Range
         '._rw{display:flex;align-items:center;gap:6px}',
         '._rng{flex:1;-webkit-appearance:none;height:3px;background:#1A2535;border-radius:2px;outline:none;cursor:pointer}',
         '._rng::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#3B82F6;cursor:pointer;border:2px solid #0D1117}',
         '._rv{font-size:10px;color:#60A5FA;min-width:26px;text-align:right;font-weight:700;font-family:monospace}',
-  
-        // Segment
         '._seg{display:flex;background:#080D12;border:1px solid #1A2535;border-radius:6px;padding:2px;gap:2px}',
         '._segb{flex:1;border:none;background:transparent;color:#6B7E8D;padding:5px 4px;cursor:pointer;border-radius:4px;transition:.12s;display:flex;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;font-family:inherit;white-space:nowrap}',
         '._segb:hover{color:#A0B0C0;background:rgba(255,255,255,.05)}',
         '._segb.on{background:#1E2B3A;color:#E8EDF2;box-shadow:0 1px 3px rgba(0,0,0,.5)}',
-  
-        // Toggle
         '._trow{display:flex;justify-content:space-between;align-items:center;padding:3px 0}',
         '._tlbl{font-size:11px;color:#8896A7}',
         '._tog{width:32px;height:17px;border-radius:9px;background:#1A2130;border:1px solid #273040;position:relative;cursor:pointer;transition:.18s;flex-shrink:0}',
         '._tog::after{content:"";position:absolute;width:11px;height:11px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.18s}',
         '._tog.on{background:#3B82F6;border-color:#2563EB}',
         '._tog.on::after{left:17px}',
-  
-        // Color button
         '._cpb{width:100%;height:28px;border-radius:6px;border:1.5px solid #1E2A3A;cursor:pointer;position:relative;overflow:hidden;transition:.15s;background:#0D1117}',
         '._cpb:hover{border-color:#3B82F6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}',
         '._cpbf{position:absolute;inset:0;border-radius:5px;background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:6px 6px;background-position:0 0,0 3px,3px -3px,-3px 0}',
         '._cpfc{position:absolute;inset:0;border-radius:5px}',
-  
-        // Popup
         '._pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:9px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.92);width:216px;animation:wa-fadein .12s}',
         '._pg{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-bottom:8px}',
         '._pc{aspect-ratio:1;border-radius:2px;cursor:pointer;border:1.5px solid transparent;transition:transform .1s,border-color .1s;position:relative;z-index:0}',
@@ -2248,14 +2237,13 @@
     var rawExt = overlay.extendData;
     var ext    = (rawExt && typeof rawExt === 'object') ? rawExt : {};
   
-    // ── Tiện ích màu ─────────────────────────────────────────────
+    // ── Xử lý màu ──
     function toHex(c) {
       if (!c || c === 'transparent') return '#000000';
       if (typeof c !== 'string') return '#3B82F6';
-      if (c.charAt(0) === '#') { var h6 = c.slice(1).replace(/^(.{3})$/, '$1$1'); return '#' + h6.slice(0,6).toUpperCase(); }
+      if (c.charAt(0) === '#') return '#' + c.slice(1).replace(/^(.{3})$/, '$1$1').slice(0,6).toUpperCase();
       var m = c.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-      if (m) return '#' + [m[1],m[2],m[3]].map(function(v){ return (+v).toString(16).padStart(2,'0'); }).join('').toUpperCase();
-      return '#3B82F6';
+      return m ? '#' + [m[1],m[2],m[3]].map(function(v){ return (+v).toString(16).padStart(2,'0'); }).join('').toUpperCase() : '#3B82F6';
     }
     function toAlpha(c, def) {
       if (!c || c === 'transparent') return 0;
@@ -2268,163 +2256,98 @@
       return 'rgba('+r+','+g+','+b+','+parseFloat(a.toFixed(2))+')';
     }
   
-    // ── HTML Builders ─────────────────────────────────────────────
-    function cpBtn(id, hex) {
-      var bc = hex === '#000000' ? 'transparent' : hex;
-      return '<div class="_cpb" data-cp="'+id+'" tabindex="0"><div class="_cpbf"></div><div class="_cpfc" id="_cpfc_'+id+'" style="background:'+bc+'"></div></div>';
-    }
-    function rng(id, mn, mx, st, val, unit) {
-      unit = unit||'';
-      return '<div class="_rw"><input type="range" class="_rng" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'"><span class="_rv" id="'+id+'_v">'+val+unit+'</span></div>';
-    }
-    function seg(id, opts, cur) {
-      return '<div class="_seg">' + opts.map(function(o){
-        return '<button class="_segb'+(cur===o.v?' on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.l+'</button>';
-      }).join('') + '</div>';
-    }
-    function tog(id, on, label) {
-      return '<div class="_trow"><span class="_tlbl">'+label+'</span><div class="_tog'+(on?' on':'')+'" id="'+id+'"></div></div>';
-    }
-    function sel(id, opts, cur) {
-      return '<select class="_sel" id="'+id+'">' + opts.map(function(o){
-        return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.n+'</option>';
-      }).join('') + '</select>';
-    }
+    // ── Components Builders ──
+    function cpBtn(id, hex) { var bc = hex==='#000000'?'transparent':hex; return '<div class="_cpb" data-cp="'+id+'"><div class="_cpbf"></div><div class="_cpfc" id="_cpfc_'+id+'" style="background:'+bc+'"></div></div>'; }
+    function rng(id, mn, mx, st, val, unit) { return '<div class="_rw"><input type="range" class="_rng" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'"><span class="_rv" id="'+id+'_v">'+val+(unit||'')+'</span></div>'; }
+    function seg(id, opts, cur) { return '<div class="_seg">' + opts.map(function(o){ return '<button class="_segb'+(cur===o.v?' on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.l+'</button>'; }).join('') + '</div>'; }
+    function tog(id, on, label) { return '<div class="_trow"><span class="_tlbl">'+label+'</span><div class="_tog'+(on?' on':'')+'" id="'+id+'"></div></div>'; }
+    function sel(id, opts, cur) { return '<select class="_sel" id="'+id+'">' + opts.map(function(o){ return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.n+'</option>'; }).join('') + '</select>'; }
     function c(label, ctrl) { return '<div class="_c"><span class="_l">'+label+'</span>'+ctrl+'</div>'; }
     function r()  { return '<div class="_r">'+Array.prototype.slice.call(arguments).join('')+'</div>'; }
-    function sec(title, body_html) {
-      return '<div class="_s">'+(title?'<div class="_sh">'+title+'</div>':'')+'<div class="_sb">'+body_html+'</div></div>';
-    }
+    function sec(title, body_html) { return '<div class="_s">'+(title?'<div class="_sh">'+title+'</div>':'')+'<div class="_sb">'+body_html+'</div></div>'; }
   
-    // KLineChart chỉ hỗ trợ 'solid' và 'dashed' — KHÔNG có 'dotted'
+    // Cấu hình Nét đứt KLineChart
     var LS = [
-      {v:'solid',  l:'<svg width="20" height="10" style="flex-shrink:0"><line x1="1" y1="5" x2="19" y2="5" stroke="currentColor" stroke-width="2.5"/></svg><span>Liền</span>'},
-      {v:'dashed', l:'<svg width="20" height="10" style="flex-shrink:0"><line x1="1" y1="5" x2="19" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg><span>Đứt</span>'}
+      {v:'solid',  l:'<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5"/></svg><span>Liền</span>'},
+      {v:'dashed', l:'<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg><span>Đứt</span>'}
     ];
   
     var FONTS = [
-      {v:'Be Vietnam Pro, sans-serif', n:'Be Vietnam Pro'},
-      {v:'Inter, sans-serif',          n:'Inter'},
-      {v:'Lexend, sans-serif',         n:'Lexend'},
-      {v:'Nunito, sans-serif',         n:'Nunito'},
-      {v:'Space Grotesk, sans-serif',  n:'Space Grotesk'},
-      {v:'Sora, sans-serif',           n:'Sora'},
-      {v:'Raleway, sans-serif',        n:'Raleway'},
-      {v:'Roboto Mono, monospace',     n:'Roboto Mono'},
-      {v:'Arial, sans-serif',          n:'Arial'},
-      {v:'monospace',                  n:'Monospace'}
+      {v:'Be Vietnam Pro, sans-serif', n:'Be Vietnam Pro'}, {v:'Inter, sans-serif', n:'Inter'},
+      {v:'Lexend, sans-serif', n:'Lexend'}, {v:'Nunito, sans-serif', n:'Nunito'},
+      {v:'Space Grotesk, sans-serif', n:'Space Grotesk'}, {v:'Sora, sans-serif', n:'Sora'},
+      {v:'Raleway, sans-serif', n:'Raleway'}, {v:'Roboto Mono, monospace', n:'Roboto Mono'},
+      {v:'Arial, sans-serif', n:'Arial'}
     ];
   
-    // ── Build HTML ────────────────────────────────────────────────
     var html = '';
     try {
-  
       if (cat === 'text') {
         var txt = typeof rawExt === 'string' ? rawExt : (ext.text || '');
-        var tc  = toHex(s.text   && s.text.color)   || '#E8EDF2';
-        var ff  = (s.text  && s.text.family) || 'Be Vietnam Pro, sans-serif';
-        var sz  = (s.text  && s.text.size)   || 13;
-        var fw  = (s.text  && s.text.weight) || 'normal';
-        var fi  = (s.text  && s.text.style)  || 'normal';
+        var tc  = toHex(s.text && s.text.color) || '#E8EDF2';
+        var ff  = (s.text && s.text.family) || 'Be Vietnam Pro, sans-serif';
+        var sz  = (s.text && s.text.size)   || 14;
+        var fw  = (s.text && s.text.weight) || 'normal';
+        var fi  = (s.text && s.text.style)  || 'normal';
         var bgRaw = (s.polygon && s.polygon.color) || 'transparent';
-        var bgC = toHex(bgRaw);
-        var bgA = toAlpha(bgRaw, 0);
         var bdRaw = (s.polygon && s.polygon.borderColor) || 'transparent';
-        var bdC = toHex(bdRaw);
         var bdW = (s.polygon && s.polygon.borderSize) || 1;
-        var bdOn = bdRaw !== 'transparent' && bdRaw !== '' && !!s.polygon && !!(s.polygon.borderSize);
+        var bdOn = bdRaw !== 'transparent' && !!(s.polygon && s.polygon.borderSize);
   
-        html += sec('', '<textarea id="_rp_txt" class="_ta">'+txt+'</textarea>');
-        html += sec('Chữ',
+        html += sec('', '<textarea id="_rp_txt" class="_ta" placeholder="Nhập văn bản...">'+txt+'</textarea>');
+        html += sec('Văn bản',
           r(c('Font chữ', sel('_rp_ff', FONTS, ff))) +
           r(c('Màu chữ', cpBtn('c_tc', tc)), c('Cỡ chữ (px)', rng('_rp_sz', 10, 64, 1, sz))) +
-          r(c('Kiểu chữ',
-            seg('_rp_fw', [{v:'normal',l:'Thường'},{v:'bold',l:'<b>Đậm</b>'},{v:'800',l:'<b style="font-weight:900">Đậm+</b>'}], fw)
-          )) +
-          r(c('Nghiêng',
-            seg('_rp_fi', [{v:'normal',l:'Thẳng'},{v:'italic',l:'<i>Nghiêng</i>'}], fi)
-          ))
+          r(c('Độ đậm', seg('_rp_fw', [{v:'normal',l:'Thường'},{v:'bold',l:'Đậm'},{v:'800',l:'Đậm+'}], fw))) +
+          r(c('In nghiêng', seg('_rp_fi', [{v:'normal',l:'Thẳng'},{v:'italic',l:'Nghiêng'}], fi)))
         );
         html += sec('Nền & Khung',
-          r(c('Màu nền', cpBtn('c_bgc', bgC)), c('Độ trong suốt nền', rng('_rp_bga', 0, 1, 0.05, bgA))) +
-          '<div style="padding:2px 0 4px">'+tog('_rp_bdon', bdOn, 'Hiện khung viền')+'</div>' +
-          '<div id="_rp_bdbox" style="'+(bdOn?'':'opacity:.35;pointer-events:none;')+'transition:opacity .2s">' +
-          r(c('Màu viền', cpBtn('c_bdc', bdC)), c('Độ dày viền', rng('_rp_bdw', 1, 5, 1, bdW))) +
+          r(c('Màu nền', cpBtn('c_bgc', toHex(bgRaw))), c('Độ rõ nền', rng('_rp_bga', 0, 1, 0.05, toAlpha(bgRaw, 0)))) +
+          '<div style="margin:4px 0">'+tog('_rp_bdon', bdOn, 'Bật viền khung')+'</div>' +
+          '<div id="_rp_bdbox" style="'+(bdOn?'':'opacity:0.3;pointer-events:none')+'">' +
+          r(c('Màu viền', cpBtn('c_bdc', toHex(bdRaw))), c('Độ dày viền', rng('_rp_bdw', 1, 5, 1, bdW))) +
           '</div>'
         );
-  
-      } else if (cat === 'shapes') {
-        var bcRaw = (s.polygon && s.polygon.borderColor) || '#3B82F6';
-        var bc  = toHex(bcRaw);
-        var bw  = (s.polygon && s.polygon.borderSize) || 1;
-        // line.style điều khiển kiểu viền của polygon trong KLineChart
-        var bs  = (s.line && s.line.style) || 'solid';
-        var fcRaw = (s.polygon && s.polygon.color) || '#3B82F6';
-        var fc  = toHex(fcRaw);
-        var fa  = toAlpha(fcRaw, 0.15);
+      } 
+      else if (cat === 'shapes') {
+        var bc = toHex(s.polygon && s.polygon.borderColor);
+        var bw = (s.polygon && s.polygon.borderSize) || 1;
+        var bs = (s.line && s.line.style) || 'solid';
+        var fcRaw = (s.polygon && s.polygon.color) || 'transparent';
   
         html += sec('Đường viền',
           r(c('Màu viền', cpBtn('c_bc', bc)), c('Độ dày', rng('_rp_bw', 1, 8, 1, bw))) +
           r(c('Kiểu viền', seg('_rp_bs', LS, bs)))
         );
-        html += sec('Nền (Fill)',
-          r(c('Màu nền', cpBtn('c_fc', fc)), c('Độ đục (0 = trong suốt)', rng('_rp_fa', 0, 1, 0.05, fa)))
+        html += sec('Nền khối',
+          r(c('Màu nền', cpBtn('c_fc', toHex(fcRaw))), c('Độ đậm nhạt', rng('_rp_fa', 0, 1, 0.05, toAlpha(fcRaw, 0.15))))
         );
-  
-      } else if (cat === 'fibo') {
-        var lc  = toHex(s.line && s.line.color) || '#E8EDF2';
-        var lw  = (s.line && s.line.size)  || 1;
-        var ls  = (s.line && s.line.style) || 'solid';
-        var fa  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-        var slbl = ext.showLabels !== false;
-  
+      } 
+      else if (cat === 'fibo' || cat === 'waves') {
+        var lc = toHex(s.line && s.line.color) || '#3B82F6';
+        var lw = (s.line && s.line.size) || 1;
+        var ls = (s.line && s.line.style) || 'solid';
+        var fa = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+        
         html += sec('Đường kẻ',
           r(c('Màu đường', cpBtn('c_lc', lc)), c('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
           r(c('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
-        html += sec('Nền',
-          r(c('Độ đục fill (0 = tắt)', rng('_rp_fa', 0, 0.5, 0.01, fa)))
-        );
-        html += sec('Nhãn',
-          tog('_rp_slbl', slbl, 'Hiện nhãn số Fibonacci')
-        );
-  
-      } else if (cat === 'waves') {
-        var lc  = toHex(s.line && s.line.color) || '#3B82F6';
-        var lw  = (s.line && s.line.size)  || 1;
-        var ls  = (s.line && s.line.style) || 'solid';
-        var tc  = toHex(s.text && s.text.color) || '#E8EDF2';
-        var tsz = (s.text && s.text.size) || 12;
-  
+        if(cat === 'fibo') html += sec('Hiển thị', r(c('Độ đục nền', rng('_rp_fa', 0, 0.5, 0.01, fa))) + tog('_rp_slbl', ext.showLabels !== false, 'Hiện nhãn số'));
+        else html += sec('Văn bản', r(c('Màu nhãn', cpBtn('c_tc', toHex(s.text && s.text.color))), c('Cỡ chữ', rng('_rp_tsz', 8, 20, 1, (s.text && s.text.size)||12))));
+      } 
+      else {
         html += sec('Đường kẻ',
-          r(c('Màu đường', cpBtn('c_lc', lc)), c('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
-          r(c('Kiểu nét', seg('_rp_ls', LS, ls)))
-        );
-        html += sec('Nhãn sóng',
-          r(c('Màu chữ nhãn', cpBtn('c_tc', tc)), c('Cỡ chữ', rng('_rp_tsz', 8, 20, 1, tsz)))
-        );
-  
-      } else {
-        // LINES
-        var lc  = toHex(s.line && s.line.color) || '#3B82F6';
-        var lw  = (s.line && s.line.size)  || 1;
-        var ls  = (s.line && s.line.style) || 'solid';
-  
-        html += sec('Đường kẻ',
-          r(c('Màu sắc', cpBtn('c_lc', lc)), c('Độ dày', rng('_rp_lw', 1, 8, 1, lw))) +
-          r(c('Kiểu nét', seg('_rp_ls', LS, ls)))
+          r(c('Màu sắc', cpBtn('c_lc', toHex(s.line && s.line.color))), c('Độ dày', rng('_rp_lw', 1, 8, 1, (s.line && s.line.size)||1))) +
+          r(c('Kiểu nét', seg('_rp_ls', LS, (s.line && s.line.style)||'solid')))
         );
       }
-  
-    } catch(e) {
-      html = '<div style="padding:12px;color:#EF4444;font-size:11px">⚠ ' + e.message + '</div>';
-      console.error('[renderPanel]', e);
-    }
+    } catch(e) { html = '<div style="padding:12px;color:#EF4444">⚠ '+e.message+'</div>'; }
   
     body.innerHTML = html;
     panel.classList.add('show');
   
-    // ── Range: cập nhật số hiển thị theo thời gian thực ──────────
+    // ── Events ──
     body.querySelectorAll('._rng').forEach(function(inp) {
       var vEl = document.getElementById(inp.id + '_v');
       if (!vEl) return;
@@ -2432,255 +2355,162 @@
       _on(inp, 'input', function() { vEl.textContent = this.value + _unit; });
     });
   
-    // ── Segment buttons ───────────────────────────────────────────
     body.querySelectorAll('._segb').forEach(function(btn) {
       _on(btn, 'click', function() {
         body.querySelectorAll('._segb[data-seg="'+this.dataset.seg+'"]').forEach(function(b){ b.classList.remove('on'); });
-        this.classList.add('on');
-        doSave();
+        this.classList.add('on'); doAction();
       });
     });
   
-    // ── Toggle ────────────────────────────────────────────────────
     body.querySelectorAll('._tog').forEach(function(t) {
       _on(t, 'click', function() {
         this.classList.toggle('on');
         if (this.id === '_rp_bdon') {
-          var box = document.getElementById('_rp_bdbox');
-          if (box) box.style.opacity = this.classList.contains('on') ? '1' : '.35';
-          if (box) box.style.pointerEvents = this.classList.contains('on') ? '' : 'none';
+          var bx = document.getElementById('_rp_bdbox');
+          if (bx) { bx.style.opacity = this.classList.contains('on') ? '1' : '0.3'; bx.style.pointerEvents = this.classList.contains('on') ? '' : 'none'; }
         }
-        doSave();
+        doAction();
       });
     });
   
-    // ── Color Picker Popup ────────────────────────────────────────
-    // Palette 10×8 giống Excel/PowerPoint
+    // ── Color Picker ──
     var PAL = [
       ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
       ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
       ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
       ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
       ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
-      ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
-      ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
-      ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
+      ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D']
     ];
   
     var _activeCP = null;
+    function _closeCP() { var p = document.getElementById('_rp_pop'); if(p) p.remove(); _activeCP = null; }
   
-    function _closeCP() {
-      var p = document.getElementById('_rp_pop');
-      if (p) p.remove();
-      _activeCP = null;
-    }
-  
-    function _openCP(cpId, curHex, onApply) {
-      _closeCP();
-      _activeCP = cpId;
-      var btn = body.querySelector('._cpb[data-cp="'+cpId+'"]');
-      if (!btn) return;
-  
-      var pop = document.createElement('div');
-      pop.id  = '_rp_pop';
-      pop.className = '_pop';
-  
-      var gHtml = '<div class="_pg">';
-      PAL.forEach(function(row) {
-        row.forEach(function(cl) {
-          var isSel = cl.toUpperCase() === curHex.toUpperCase();
-          gHtml += '<div class="_pc'+(isSel?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'" title="'+cl+'"></div>';
-        });
-      });
-      gHtml += '</div>';
-      var hexVal = curHex.replace('#','').slice(0,6).toUpperCase();
-      gHtml += '<div class="_phrow"><span class="_phhash">#</span><input class="_phi" id="_phi" maxlength="6" value="'+hexVal+'" spellcheck="false"></div>';
-      pop.innerHTML = gHtml;
-      document.body.appendChild(pop);
-  
-      // Vị trí popup
-      var bRect = btn.getBoundingClientRect();
-      var top = bRect.bottom + 5, left = bRect.left;
-      if (top  + 240 > window.innerHeight) top  = bRect.top - 244;
-      if (left + 220 > window.innerWidth)  left = window.innerWidth - 222;
-      pop.style.left = Math.max(4, left) + 'px';
-      pop.style.top  = Math.max(4, top)  + 'px';
-  
-      function applyColor(hex) {
-        // Cập nhật button preview
-        var fc = document.getElementById('_cpfc_'+cpId);
-        if (fc) fc.style.background = hex;
-        btn.dataset.cur = hex;
-        // Cập nhật selection trong popup
-        pop.querySelectorAll('._pc').forEach(function(cl){ cl.classList.toggle('on', cl.dataset.c.toUpperCase()===hex.toUpperCase()); });
-        var phi = document.getElementById('_phi');
-        if (phi) phi.value = hex.replace('#','').toUpperCase();
-        onApply(hex);
-      }
-  
-      pop.querySelectorAll('._pc').forEach(function(cell) {
-        cell.addEventListener('mousedown', function(ev) { ev.stopPropagation(); applyColor(this.dataset.c); });
-      });
-  
-      var phi = pop.querySelector('#_phi');
-      phi.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
-      phi.addEventListener('input', function() {
-        var v = this.value.replace(/[^0-9a-fA-F]/g,'');
-        this.value = v;
-        if (v.length === 6) applyColor('#'+v);
-      });
-      phi.addEventListener('keydown', function(ev) {
-        if (ev.key === 'Enter' && this.value.length >= 3) { applyColor('#'+this.value.padEnd(6,'0')); _closeCP(); }
-      });
-    }
-  
-    // Đóng popup khi click bên ngoài
-    var _cpDocH = function(ev) {
-      var pop = document.getElementById('_rp_pop');
-      if (!pop) return;
-      var onBtn = !!ev.target.closest('._cpb');
-      if (!pop.contains(ev.target) && !onBtn) _closeCP();
-    };
-    _on(document, 'mousedown', _cpDocH);
-  
-    // Bind click cho tất cả color buttons
     body.querySelectorAll('._cpb').forEach(function(btn) {
-      var cpId = btn.dataset.cp;
-      // Lấy màu hiện tại từ fill div
-      var fc = document.getElementById('_cpfc_'+cpId);
-      var curColor = fc ? fc.style.background : '#3B82F6';
-      btn.dataset.cur = curColor;
-  
+      var cpId = btn.dataset.cp, fc = document.getElementById('_cpfc_'+cpId);
+      btn.dataset.cur = fc ? fc.style.background : '#3B82F6';
+      
       _on(btn, 'click', function(ev) {
         ev.stopPropagation();
         if (_activeCP === cpId) { _closeCP(); return; }
-        var hex = toHex(this.dataset.cur || curColor);
-        _openCP(cpId, hex, function(newHex) {
-          btn.dataset.cur = newHex;
-          doSave();
+        _closeCP(); _activeCP = cpId;
+        var curHex = toHex(btn.dataset.cur);
+        
+        var pop = document.createElement('div'); pop.id = '_rp_pop'; pop.className = '_pop';
+        var gHtml = '<div class="_pg">';
+        PAL.forEach(function(row) {
+          row.forEach(function(cl) {
+            gHtml += '<div class="_pc'+(cl.toUpperCase()===curHex.toUpperCase()?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
+          });
         });
+        gHtml += '</div><div class="_phrow"><span class="_phhash">#</span><input class="_phi" id="_phi" maxlength="6" value="'+curHex.replace('#','').slice(0,6).toUpperCase()+'"></div>';
+        pop.innerHTML = gHtml; document.body.appendChild(pop);
+  
+        var bRect = btn.getBoundingClientRect(), top = bRect.bottom + 5, left = bRect.left;
+        if (top + 220 > window.innerHeight) top = bRect.top - 224;
+        if (left + 220 > window.innerWidth) left = window.innerWidth - 222;
+        pop.style.left = Math.max(4, left) + 'px'; pop.style.top = Math.max(4, top) + 'px';
+  
+        function applyC(hex) {
+          fc.style.background = hex; btn.dataset.cur = hex;
+          pop.querySelectorAll('._pc').forEach(function(cl){ cl.classList.toggle('on', cl.dataset.c.toUpperCase()===hex.toUpperCase()); });
+          pop.querySelector('#_phi').value = hex.replace('#','').toUpperCase();
+          doAction();
+        }
+  
+        pop.querySelectorAll('._pc').forEach(function(c) { _on(c, 'mousedown', function(e){ e.stopPropagation(); applyC(this.dataset.c); }); });
+        var phi = pop.querySelector('#_phi');
+        _on(phi, 'mousedown', function(e){e.stopPropagation();});
+        _on(phi, 'input', function() { var v=this.value.replace(/[^0-9a-fA-F]/g,''); this.value=v; if(v.length===6) applyC('#'+v); });
       });
     });
   
-    // ── Getters để lấy giá trị từ panel ──────────────────────────
-    function gCP(id) {
-      var btn = body.querySelector('._cpb[data-cp="'+id+'"]');
-      if (!btn) return null;
-      return toHex(btn.dataset.cur || btn.querySelector('._cpfc').style.background);
-    }
-    function gRng(id) { var e=document.getElementById(id); return e ? parseFloat(e.value) : null; }
-    function gSeg(id) { var e=body.querySelector('._segb.on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
-    function gSel(id) { var e=document.getElementById(id); return e ? e.value : null; }
-    function gTog(id) { var e=document.getElementById(id); return e ? e.classList.contains('on') : false; }
-    function gTa(id)  { var e=document.getElementById(id); return e ? e.value : null; }
-  
-    // ── updateEngine: ghi thay đổi vào KLineChart ────────────────
-    function updateEngine() {
-      if (!currentSelectedOverlay || !global.tvChart) return;
-      try {
-        var ns = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
-        var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData)
-                 ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
-  
-        if (cat === 'text') {
-          var txt=gTa('_rp_txt'), tc=gCP('c_tc'), ff=gSel('_rp_ff');
-          var sz=gRng('_rp_sz'), fw=gSeg('_rp_fw'), fi=gSeg('_rp_fi');
-          var bgC=gCP('c_bgc'), bgA=gRng('_rp_bga');
-          var bdOn=gTog('_rp_bdon'), bdC=gCP('c_bdc'), bdW=gRng('_rp_bdw');
-  
-          if (!ns.text)    ns.text    = {};
-          if (!ns.polygon) ns.polygon = {};
-          if (tc)  ns.text.color  = tc;
-          if (ff)  ns.text.family = ff;
-          if (sz)  ns.text.size   = sz;
-          if (fw)  ns.text.weight = fw;
-          if (fi)  ns.text.style  = fi;
-          ns.polygon.color       = mkRgba(bgC, bgA !== null ? bgA : 0);
-          ns.polygon.style       = (bgA > 0 || bdOn) ? 'strokefill' : 'fill';
-          ns.polygon.borderColor = bdOn ? (bdC || '#3B82F6') : 'transparent';
-          ns.polygon.borderSize  = bdOn ? (bdW || 1) : 0;
-          if (txt !== null) currentSelectedOverlay.extendData = txt;
-  
-        } else if (cat === 'shapes') {
-          var bc=gCP('c_bc'), bw=gRng('_rp_bw'), bs=gSeg('_rp_bs');
-          var fc=gCP('c_fc'), fa=gRng('_rp_fa');
-          if (!ns.polygon) ns.polygon = {};
-          if (!ns.line)    ns.line    = {};
-          ns.polygon.borderColor = bc || '#3B82F6';
-          ns.polygon.borderSize  = bw || 1;
-          ns.polygon.color       = mkRgba(fc, fa !== null ? fa : 0.15);
-          ns.polygon.style       = 'strokefill';
-          // line.style điều khiển kiểu viền (solid/dashed) của polygon
-          ns.line.style          = bs || 'solid';
-          ns.line.color          = bc || '#3B82F6';
-          ns.line.size           = bw || 1;
-  
-        } else if (cat === 'fibo') {
-          var lc=gCP('c_lc'), lw=gRng('_rp_lw'), ls=gSeg('_rp_ls');
-          var fa=gRng('_rp_fa'), sl=gTog('_rp_slbl');
-          if (!ns.line) ns.line = {};
-          if (!ns.text) ns.text = {};
-          if (lc) { ns.line.color = lc; ns.text.color = lc; }
-          if (lw) ns.line.size  = lw;
-          if (ls) ns.line.style = ls;
-          if (fa !== null) ne.fillOpacity = fa;
-          ne.showLabels = sl;
-          currentSelectedOverlay.extendData = ne;
-  
-        } else if (cat === 'waves') {
-          var lc=gCP('c_lc'), lw=gRng('_rp_lw'), ls=gSeg('_rp_ls');
-          var tc=gCP('c_tc'), tsz=gRng('_rp_tsz');
-          if (!ns.line) ns.line = {};
-          if (!ns.text) ns.text = {};
-          if (lc) ns.line.color = lc;
-          if (lw) ns.line.size  = lw;
-          if (ls) ns.line.style = ls;
-          if (tc)  ns.text.color = tc;
-          if (tsz) ns.text.size  = tsz;
-  
-        } else {
-          var lc=gCP('c_lc'), lw=gRng('_rp_lw'), ls=gSeg('_rp_ls');
-          if (!ns.line) ns.line = {};
-          if (lc) ns.line.color = lc;
-          if (lw) ns.line.size  = lw;
-          if (ls) ns.line.style = ls;
-        }
-  
-        currentSelectedOverlay.styles = ns;
-        global.tvChart.overrideOverlay({
-          id: currentSelectedOverlay.id,
-          styles: ns,
-          extendData: currentSelectedOverlay.extendData
-        });
-        if (typeof saveStyles === 'function') saveStyles();
-        if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
-  
-      } catch(err) { console.error('[updateEngine]', err); }
-    }
-  
-    var _saveTimer;
-    function doSave() { clearTimeout(_saveTimer); _saveTimer = setTimeout(updateEngine, 120); }
-  
-    body.querySelectorAll('input, textarea, select').forEach(function(el) {
-      _on(el, 'input',  doSave);
-      _on(el, 'change', doSave);
+    _on(document, 'mousedown', function(ev) {
+      var pop = document.getElementById('_rp_pop');
+      if (pop && !pop.contains(ev.target) && !ev.target.closest('._cpb')) _closeCP();
     });
   
-    // ── Đóng panel khi click ra ngoài ────────────────────────────
-    var _panelH = function(ev) {
+    // ── Core Engine (CHỐNG LAG TUYỆT ĐỐI) ──
+    function gCP(id)  { var b = body.querySelector('._cpb[data-cp="'+id+'"]'); return b ? toHex(b.dataset.cur) : null; }
+    function gRng(id) { var e = document.getElementById(id); return e ? parseFloat(e.value) : null; }
+    function gSeg(id) { var e = body.querySelector('._segb.on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
+    function gSel(id) { var e = document.getElementById(id); return e ? e.value : null; }
+    function gTog(id) { var e = document.getElementById(id); return e ? e.classList.contains('on') : false; }
+    function gTa(id)  { var e = document.getElementById(id); return e ? e.value : null; }
+  
+    // Chia làm 2 timer: 1 cái render UI tức thời (rất nhẹ), 1 cái Save Storage chờ 0.6s (nặng)
+    var _uiTimer, _saveTimer;
+    function doAction() {
+      clearTimeout(_uiTimer); clearTimeout(_saveTimer);
+      _uiTimer = setTimeout(updateChartLive, 20); // Render biểu đồ mượt mà không delay
+      _saveTimer = setTimeout(saveToStorage, 600); // Debounce luồng ghi nặng
+    }
+  
+    function updateChartLive() {
+      if (!currentSelectedOverlay || !global.tvChart) return;
+      var ns = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
+      var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData) ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
+  
+      // Helper set nét đứt FIX CHUẨN
+      function setDashed(obj, isDashed) {
+        if(isDashed) { obj.style = 'dashed'; obj.dashedValue = [6, 4]; }
+        else { obj.style = 'solid'; delete obj.dashedValue; }
+      }
+  
+      if (cat === 'text') {
+        if(!ns.text) ns.text = {}; if(!ns.polygon) ns.polygon = {};
+        var bdon = gTog('_rp_bdon'), bga = gRng('_rp_bga');
+        ns.text.color = gCP('c_tc'); ns.text.family = gSel('_rp_ff'); ns.text.size = gRng('_rp_sz'); ns.text.weight = gSeg('_rp_fw'); ns.text.style = gSeg('_rp_fi');
+        ns.polygon.color = mkRgba(gCP('c_bgc'), bga);
+        ns.polygon.borderColor = bdon ? gCP('c_bdc') : 'transparent';
+        ns.polygon.borderSize = bdon ? gRng('_rp_bdw') : 0;
+        ns.polygon.style = (bdon || bga>0) ? 'strokefill' : 'fill';
+        var txt = gTa('_rp_txt'); if(txt !== null) currentSelectedOverlay.extendData = txt;
+        ne = txt;
+      } 
+      else if (cat === 'shapes') {
+        if(!ns.polygon) ns.polygon = {}; if(!ns.line) ns.line = {};
+        var bs = gSeg('_rp_bs') === 'dashed';
+        ns.polygon.borderColor = gCP('c_bc'); ns.polygon.borderSize = gRng('_rp_bw');
+        ns.polygon.color = mkRgba(gCP('c_fc'), gRng('_rp_fa'));
+        ns.polygon.style = 'strokefill';
+        ns.line.color = gCP('c_bc'); ns.line.size = gRng('_rp_bw');
+        setDashed(ns.line, bs); // Sửa dứt điểm nét đứt
+        if(bs) { ns.polygon.borderStyle = 'dashed'; ns.polygon.borderDashedValue = [6, 4]; }
+        else { ns.polygon.borderStyle = 'solid'; delete ns.polygon.borderDashedValue; }
+      } 
+      else if (cat === 'fibo' || cat === 'waves') {
+        if(!ns.line) ns.line = {}; if(!ns.text) ns.text = {};
+        ns.line.color = gCP('c_lc'); ns.line.size = gRng('_rp_lw'); setDashed(ns.line, gSeg('_rp_ls')==='dashed');
+        if(cat==='fibo') { ne.fillOpacity = gRng('_rp_fa'); ne.showLabels = gTog('_rp_slbl'); currentSelectedOverlay.extendData = ne; }
+        else { ns.text.color = gCP('c_tc'); ns.text.size = gRng('_rp_tsz'); }
+      } 
+      else {
+        if(!ns.line) ns.line = {};
+        ns.line.color = gCP('c_lc'); ns.line.size = gRng('_rp_lw'); setDashed(ns.line, gSeg('_rp_ls')==='dashed');
+      }
+  
+      currentSelectedOverlay.styles = ns;
+      global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: ns, extendData: currentSelectedOverlay.extendData });
+    }
+  
+    function saveToStorage() {
+      if (typeof saveStyles === 'function') saveStyles();
+      if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+    }
+  
+    body.querySelectorAll('input, textarea, select').forEach(function(el) { _on(el, 'input', doAction); _on(el, 'change', doAction); });
+  
+    // ── Auto Close Panel ──
+    _on(document, 'mousedown', function(ev) {
       var pop = document.getElementById('_rp_pop');
       if (pop && pop.contains(ev.target)) return;
-      var p  = document.getElementById('wa-props-panel');
-      var fb = document.getElementById('wa-float-bar');
-      var tb = document.querySelector('.wa-toolbar');
-      if (p && !p.contains(ev.target) && (!fb||!fb.contains(ev.target)) && (!tb||!tb.contains(ev.target))) {
+      var p = document.getElementById('wa-props-panel'), tb = document.querySelector('.wa-toolbar');
+      if (p && !p.contains(ev.target) && (!tb || !tb.contains(ev.target))) {
         _closeCP();
-        document.removeEventListener('mousedown', _panelH);
         if (typeof hidePanel === 'function') hidePanel();
       }
-    };
-    document.removeEventListener('mousedown', _panelH);
-    setTimeout(function() { document.addEventListener('mousedown', _panelH); }, 130);
+    });
   }
 
   function hidePanel() {
