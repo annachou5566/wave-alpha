@@ -2098,7 +2098,8 @@
     const p = document.getElementById('wa-props-panel');
     if(p) p.classList.remove('show');
     currentSelectedOverlay = null;
-  }
+    window.currentSelectedOverlay = null; // ← sync cả hai
+}
 
   function bindContextMenu(panel) {
     // Tất cả sự kiện cho Props Panel đã được xử lý trong _bindToolbarLocalEvents.
@@ -2543,48 +2544,60 @@ function _bindToolbarLocalEvents(toolbar, panel) {
   });
 
   // 🌟 NÚT XÓA HÌNH ĐANG CHỌN (Fix Mobile: chặn touch trước khi KLineChart xử lý)
-var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
-if (delSelBtn) {
-
-  // Hàm thực thi xóa — dùng chung cho cả touch và click
-  function _doDeleteSelected() {
-    var sel = window.currentSelectedOverlay;
-    if (sel && global.tvChart) {
-      if (typeof saveHistory === 'function') saveHistory('delete', sel);
-      global.tvChart.removeOverlay({ id: sel.id });
-      if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(sel.id);
-      if (typeof hidePanel === 'function') hidePanel();
-      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-      if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
-      window.currentSelectedOverlay = null;
-    } else {
-      if (typeof showToast === 'function') showToast('⚠️ Hãy chọn một hình trước khi xoá');
+  var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
+  if (delSelBtn) {
+    // Snapshot ngay tại thời điểm sớm nhất có thể (trước khi KLineChart
+    // kịp fire bất kỳ event nào làm null biến currentSelectedOverlay)
+    var _pendingDelete = null;
+  
+    function _captureSnapshot() {
+      // Kiểm tra cả hai biến để chắc chắn lấy được giá trị
+      _pendingDelete = currentSelectedOverlay || window.currentSelectedOverlay || null;
     }
+  
+    function _executeDelete() {
+      var sel = _pendingDelete;
+      _pendingDelete = null;
+      if (sel && global.tvChart) {
+        if (typeof saveHistory === 'function') saveHistory('delete', sel);
+        global.tvChart.removeOverlay({ id: sel.id });
+        if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(sel.id);
+        currentSelectedOverlay = null;
+        window.currentSelectedOverlay = null;
+        if (typeof hidePanel === 'function') hidePanel();
+        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+        if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
+      } else {
+        if (typeof showToast === 'function') showToast('⚠️ Hãy chọn một hình trước khi xoá');
+      }
+    }
+  
+    // ── DESKTOP: mousedown snapshot → click execute ──────────────────────
+    // stopPropagation để KLineChart không nhận mousedown này và deselect overlay
+    delSelBtn.addEventListener('mousedown', function(e) {
+      _captureSnapshot();
+      e.stopPropagation();
+    });
+  
+    delSelBtn.addEventListener('click', function(e) {
+      // Nếu không có snapshot (ví dụ touchstart đã xử lý rồi), bỏ qua
+      if (_pendingDelete !== null) {
+        _executeDelete();
+      }
+    });
+  
+    // ── MOBILE: touchstart snapshot + chặn bubble → touchend execute ─────
+    delSelBtn.addEventListener('touchstart', function(e) {
+      _captureSnapshot();
+      e.preventDefault();   // Ngăn trình duyệt tổng hợp sự kiện click giả
+      e.stopPropagation();  // Ngăn KLineChart nhận touch này và deselect
+    }, { passive: false }); // passive:false BẮT BUỘC để preventDefault có hiệu lực
+  
+    delSelBtn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      _executeDelete();
+    }, { passive: false });
   }
-
-  // ── MOBILE FIX ──────────────────────────────────────────────────────────
-  // Bắt touchstart (xảy ra TRƯỚC khi KLineChart nhận touch) để:
-  //   1. preventDefault() → ngăn trình duyệt tổng hợp sự kiện click giả sau đó
-  //   2. stopPropagation() → chặn touch bubble xuống canvas KLineChart
-  //   3. Thực thi xóa ngay lập tức, trước khi KLineChart kịp unselect hình
-  var _touchHandled = false;
-
-  delSelBtn.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    _touchHandled = true;
-    _doDeleteSelected();
-    // Reset flag sau 300ms để tránh edge case giữ ngón tay quá lâu
-    setTimeout(function() { _touchHandled = false; }, 300);
-  }, { passive: false }); // passive: false là BẮT BUỘC để preventDefault() có hiệu lực
-
-  // ── DESKTOP ─────────────────────────────────────────────────────────────
-  // click vẫn được giữ cho PC. Nếu touchstart đã xử lý rồi thì bỏ qua.
-  delSelBtn.addEventListener('click', function(e) {
-    if (_touchHandled) return;
-    _doDeleteSelected();
-  });
-}
 
   // 🌟 NÚT XÓA TẤT CẢ (Thùng Rác)
   var clearBtn = toolbar.querySelector('#wa-btn-clear');
@@ -2670,8 +2683,9 @@ function _bindChartEventsOnce() {
     _wa_trackOverlay(overlayObj); 
 
     saveHistory('add', overlayObj);
+    currentSelectedOverlay = overlayObj;
     window.currentSelectedOverlay = overlayObj;
-    if (typeof renderPanel === 'function') renderPanel(window.currentSelectedOverlay);
+    if (typeof renderPanel === 'function') renderPanel(currentSelectedOverlay);
     saveAllOverlays();
   });
 
@@ -2681,11 +2695,12 @@ function _bindChartEventsOnce() {
     var now = Date.now();
     var isDoubleClick = (typeof window.lastClickTime !== 'undefined') ? (now - window.lastClickTime) < 300 : false;
     window.lastClickTime = now;
-    window.currentSelectedOverlay = overlayObj;
+    currentSelectedOverlay = overlayObj;       // ← sync local closure
+    window.currentSelectedOverlay = overlayObj; // ← sync window
     
-    _wa_trackOverlay(overlayObj); 
+    _wa_trackOverlay(overlayObj);
     
-    if (typeof renderPanel === 'function') renderPanel(window.currentSelectedOverlay);
+    if (typeof renderPanel === 'function') renderPanel(currentSelectedOverlay);
     if (isDoubleClick && overlayObj.name === 'customText') {
       setTimeout(function() {
         var t = document.getElementById('wa-prop-txt');
