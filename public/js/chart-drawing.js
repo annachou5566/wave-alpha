@@ -2943,7 +2943,7 @@ function _bindToolbarLocalEvents(toolbar, panel) {
               // 3. Mobile: đóng menu khi touch/click ra ngoài group
               function _closeMenuOutside(e) {
                 if (!group.contains(e.target)) {
-                  menu.style.display = 'none';
+                  menu.style.display = '';
                   document.removeEventListener('mousedown',  _closeMenuOutside);
                   document.removeEventListener('touchstart', _closeMenuOutside);
                 }
