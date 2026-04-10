@@ -2398,11 +2398,24 @@ function showFloatToolbar(ov, posX, posY) {
   bar.innerHTML = html;
 
   var bW = showLine ? 320 : 180;
-  var cx = posX != null ? posX : (_fbX - rect.left);
-  var cy = posY != null ? posY : (_fbY - rect.top);
-  var left = Math.max(4, Math.min(cx - bW / 2, rect.width - bW - 4));
-  var top  = cy - 50;
+var left, top;
+if (posX != null && posY != null) {
+  // Vị trí được chỉ định rõ (lần đầu xuất hiện sau draw)
+  left = Math.max(4, Math.min(posX - bW / 2, rect.width - bW - 4));
+  top  = posY - 50;
+  if (top < 60) top = posY + 16;
+} else if (_fbLastPos) {
+  // Giữ nguyên vị trí cũ khi re-render (toggle visible/lock)
+  left = _fbLastPos.left;
+  top  = _fbLastPos.top;
+} else {
+  // Lần đầu, chưa có vị trí lưu → dùng vị trí chuột
+  var cx = _fbX - rect.left;
+  var cy = _fbY - rect.top;
+  left = Math.max(4, Math.min(cx - bW / 2, rect.width - bW - 4));
+  top  = cy - 50;
   if (top < 60) top = cy + 16;
+}
   bar.style.left = left + 'px';
   bar.style.top  = top + 'px';
   _fbLastPos = { left: left, top: top }; 
