@@ -2951,7 +2951,8 @@ function _bindToolbarLocalEvents(toolbar, panel) {
             var menu  = group ? group.querySelector('.wa-tb-menu') : null;
             if (menu) {
               // 1. Ẩn menu vừa click — dùng '' để trả quyền về CSS :hover
-              menu.style.display = '';
+              menu.style.display = 'none';
+setTimeout(function() { menu.style.display = ''; }, 200); // ← reset sau 200ms
             
               // 2. Desktop: mouseleave không cần làm gì thêm vì CSS đã tự ẩn
               // (xóa hoàn toàn dòng group.addEventListener mouseleave)
@@ -2959,7 +2960,7 @@ function _bindToolbarLocalEvents(toolbar, panel) {
               // 3. Mobile: closeMenuOutside — dùng '' thay 'none'
               function closeMenuOutside(e) {
                 if (!group.contains(e.target)) {
-                  menu.style.display = '';           // ← SỬA: '' thay 'none'
+                  menu.style.display = '';  // ← đúng rồi, giữ nguyên
                   document.removeEventListener('mousedown', closeMenuOutside);
                   document.removeEventListener('touchstart', closeMenuOutside);
                 }
@@ -2971,8 +2972,7 @@ function _bindToolbarLocalEvents(toolbar, panel) {
             
               // 4. Đóng tất cả menu khác — dùng '' thay 'none'
               document.querySelectorAll('.wa-tb-menu').forEach(function(m) {
-                if (m !== menu) m.style.display = ''; // ← SỬA: '' thay 'none'
-              });
+                              });
             }
 
     } else if (btn) {
