@@ -2596,11 +2596,14 @@ config.onSelected = function(event) {
     }
   }
 };
+// ✅ ĐÚNG
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+  // KHÔNG CÓ _fbIsDrawing ở đây
 };
-_fbIsDrawing = true;    // ← THÊM DÒNG NÀY
-      global.tvChart.createOverlay(config);
+
+_fbIsDrawing = true;   // ← CHUYỂN RA ĐÂY, trước createOverlay
+global.tvChart.createOverlay(config);
     } catch (err) { 
       if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
     }
