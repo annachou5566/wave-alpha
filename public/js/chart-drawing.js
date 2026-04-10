@@ -1353,7 +1353,7 @@
             if (txt) {
                 lines.forEach(function(l, i) {
                     var lineY = (y - ph + fh / 2) - (lines.length - 1) * lh / 2 + i * lh;
-                    figs.push({ type: 'text', attrs: { x: x + fw + 4, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', backgroundColor: 'transparent', borderColor: 'transparent' } });
+                    figs.push({ type: 'text', attrs: { x: x + fw + 4, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent' } });
                 });
             }
             return figs; 
