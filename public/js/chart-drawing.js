@@ -18,7 +18,7 @@
   let redoStack = [];
   const MAX_HISTORY = 50;
   let lastClickTime = 0;
-  
+  let _fbX = 0, _fbY = 0;
   // Debounce (16ms = ~60FPS) để cập nhật Real-time không lag
   function debounce(func, wait) {
     let timeout;
@@ -1612,6 +1612,75 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      /* ===== FLOATING TOOLBAR ===== */
+.wa-float-bar {
+  position: absolute;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 8px;
+  background: #1C242E;
+  border: 1px solid #273040;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
+  transition: opacity 0.18s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: none;
+  user-select: none;
+  font-family: Be Vietnam Pro, Inter, sans-serif;
+}
+.wa-float-bar.wa-fb-show { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+.wa-fb-color-wrap {
+  width: 26px; height: 26px; border-radius: 6px; position: relative;
+  border: 1.5px solid #273040; overflow: hidden; cursor: pointer; flex-shrink: 0;
+}
+.wa-fb-color-wrap input[type=color] {
+  opacity: 0; position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; border: none; padding: 0;
+}
+.wa-fb-cswatch { width: 100%; height: 100%; pointer-events: none; }
+.wa-fb-sep { width: 1px; height: 16px; background: #273040; margin: 0 4px; flex-shrink: 0; }
+.wa-fb-btn {
+  width: 28px; height: 28px; border: none; background: transparent;
+  color: #8896A7; cursor: pointer; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.14s; flex-shrink: 0; padding: 0;
+}
+.wa-fb-btn:hover { background: rgba(255,255,255,0.07); color: #E8EDF2; }
+.wa-fb-btn.wa-fb-on { background: rgba(59,130,246,0.15); color: #60A5FA; box-shadow: 0 0 0 1px #3B82F6; }
+.wa-fb-btn.wa-fb-del:hover { background: rgba(239,68,68,0.15); color: #EF4444; }
+.wa-fb-label {
+  font-size: 10px; color: #4A5568; padding: 0 4px; white-space: nowrap;
+}
+/* Panel improvements */
+.wa-prop-section { padding: 12px 16px; border-bottom: 1px solid #1E2733; }
+.wa-prop-section:last-child { border-bottom: none; }
+.wa-prop-section-title { font-size: 10px; font-weight: 700; color: #4A5568; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.wa-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.wa-row:last-child { margin-bottom: 0; }
+.wa-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.wa-col label { font-size: 10px; color: #8896A7; font-weight: 600; }
+.wa-seg { display: flex; gap: 2px; background: #0F1218; border-radius: 6px; padding: 2px; }
+.wa-seg-btn {
+  flex: 1; padding: 4px 6px; border: none; background: transparent;
+  color: #8896A7; cursor: pointer; border-radius: 4px; font-size: 11px;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  transition: all 0.14s;
+}
+.wa-seg-btn:hover { background: rgba(255,255,255,0.06); color: #E8EDF2; }
+.wa-seg-btn.wa-seg-on { background: #273040; color: #E8EDF2; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+.wa-range-wrap { display: flex; align-items: center; gap: 8px; }
+.wa-range { flex: 1; -webkit-appearance: none; height: 3px; background: #273040; border-radius: 2px; outline: none; }
+.wa-range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #3B82F6; cursor: pointer; }
+.wa-range-val { font-size: 11px; color: #60A5FA; min-width: 28px; text-align: right; font-weight: 600; }
+.wa-toggle-row { display: flex; align-items: center; justify-content: space-between; }
+.wa-toggle-label { font-size: 12px; color: #8896A7; }
+.wa-toggle { width: 36px; height: 20px; border-radius: 10px; background: #1E2733; border: 1px solid #273040; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+.wa-toggle.wa-toggle-on { background: #3B82F6; border-color: #3B82F6; }
+.wa-toggle::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left 0.2s; }
+.wa-toggle.wa-toggle-on::after { left: 18px; }
     `;
     document.head.appendChild(style);
   }
@@ -2112,7 +2181,178 @@
     currentSelectedOverlay = null;
     window.currentSelectedOverlay = null; // ← sync cả hai
 }
+function hideFloatToolbar() {
+  var b = document.getElementById('wa-float-bar');
+  if (b && b.parentNode) b.parentNode.removeChild(b);
+}
 
+function showFloatToolbar(ov, posX, posY) {
+  if (!ov) return;
+  hideFloatToolbar();
+  var container = document.getElementById('sc-chart-container');
+  if (!container) return;
+  var rect = container.getBoundingClientRect();
+  var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : 'lines';
+  var s = ov.styles || {};
+  var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
+
+  var pc = '#3B82F6';
+  if (cat === 'text') pc = s.text && s.text.color ? colorToHex(s.text.color) : 'E8EDF2';
+  else if (cat === 'shapes') pc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '3B82F6';
+  else pc = s.line && s.line.color ? colorToHex(s.line.color) : '3B82F6';
+  if (!pc.startsWith('#')) pc = '#' + pc;
+
+  var lw = (s.line && s.line.size) || 1;
+  var ls = (s.line && s.line.style) || 'solid';
+  var isLocked = !!ov.lock;
+  var isHidden = !!ext._hidden;
+  var showLine = (cat !== 'text');
+
+  function lwSVG(h) { return '<span style="display:block;width:14px;height:'+h+'px;background:currentColor;border-radius:1px;margin:auto"></span>'; }
+  function lsSVG(da) { return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>'; }
+
+  var html = '';
+  html += '<div class="wa-fb-color-wrap" title="Màu chính">'
+        +   '<div class="wa-fb-cswatch" id="wa-fb-sw" style="background:'+pc+'"></div>'
+        +   '<input type="color" id="wa-fb-col" value="'+pc+'">'
+        + '</div>';
+  html += '<div class="wa-fb-sep"></div>';
+
+  if (showLine) {
+    html += '<button class="wa-fb-btn wa-fb-lw'+(lw<=1?' wa-fb-on':'')+'" data-w="1" title="Nét 1px">'+lwSVG(1)+'</button>';
+    html += '<button class="wa-fb-btn wa-fb-lw'+(lw==2?' wa-fb-on':'')+'" data-w="2" title="Nét 2px">'+lwSVG(2)+'</button>';
+    html += '<button class="wa-fb-btn wa-fb-lw'+(lw>=3?' wa-fb-on':'')+'" data-w="3" title="Nét 3px">'+lwSVG(3)+'</button>';
+    html += '<div class="wa-fb-sep"></div>';
+    html += '<button class="wa-fb-btn wa-fb-ls'+(ls==='solid'?' wa-fb-on':'')+'" data-s="solid" title="Nét liền">'+lsSVG('none')+'</button>';
+    html += '<button class="wa-fb-btn wa-fb-ls'+(ls==='dashed'?' wa-fb-on':'')+'" data-s="dashed" title="Nét đứt">'+lsSVG('5 3')+'</button>';
+    html += '<button class="wa-fb-btn wa-fb-ls'+(ls==='dotted'?' wa-fb-on':'')+'" data-s="dotted" title="Nét chấm">'+lsSVG('1.5 3')+'</button>';
+    html += '<div class="wa-fb-sep"></div>';
+  }
+
+  var eyeShow = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeHide = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  var gearSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
+  var lockOn  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
+  var lockOff = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
+  var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+
+  html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
+  html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">'+gearSVG+'</button>';
+  html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
+  html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
+
+  var bar = document.createElement('div');
+  bar.id = 'wa-float-bar';
+  bar.className = 'wa-float-bar';
+  bar.innerHTML = html;
+
+  var bW = showLine ? 320 : 180;
+  var cx = posX != null ? posX : (_fbX - rect.left);
+  var cy = posY != null ? posY : (_fbY - rect.top);
+  var left = Math.max(4, Math.min(cx - bW / 2, rect.width - bW - 4));
+  var top  = cy - 50;
+  if (top < 60) top = cy + 16;
+  bar.style.left = left + 'px';
+  bar.style.top  = top + 'px';
+  container.appendChild(bar);
+  requestAnimationFrame(function() { bar.classList.add('wa-fb-show'); });
+
+  bar.querySelector('#wa-fb-col').addEventListener('input', function() {
+    bar.querySelector('#wa-fb-sw').style.background = this.value;
+    _fbSetColor(ov, cat, this.value);
+  });
+  bar.querySelectorAll('.wa-fb-lw').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      bar.querySelectorAll('.wa-fb-lw').forEach(function(b){ b.classList.remove('wa-fb-on'); });
+      btn.classList.add('wa-fb-on');
+      _fbSetLineWidth(ov, parseInt(btn.dataset.w));
+    });
+  });
+  bar.querySelectorAll('.wa-fb-ls').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      bar.querySelectorAll('.wa-fb-ls').forEach(function(b){ b.classList.remove('wa-fb-on'); });
+      btn.classList.add('wa-fb-on');
+      _fbSetLineStyle(ov, btn.dataset.s);
+    });
+  });
+  bar.querySelector('#wa-fb-vis').addEventListener('click', function() { _fbToggleVisible(ov); });
+  bar.querySelector('#wa-fb-cfg').addEventListener('click', function() { if (typeof renderPanel === 'function') renderPanel(ov); });
+  bar.querySelector('#wa-fb-lk').addEventListener('click', function() { _fbToggleLock(ov); });
+  bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
+    if (!global.tvChart) return;
+    if (typeof saveHistory === 'function') saveHistory('delete', ov);
+    global.tvChart.removeOverlay({ id: ov.id });
+    if (typeof global.__wa_untrack_overlay === 'function') global.__wa_untrack_overlay(ov.id);
+    else if (global.__wa_overlay_map) global.__wa_overlay_map.delete(ov.id);
+    hideFloatToolbar();
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  });
+}
+
+function _fbSetColor(ov, cat, hex) {
+  if (!global.tvChart || !ov) return;
+  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+  if (cat === 'text')        { if (!ns.text)    ns.text    = {}; ns.text.color          = hex; }
+  else if (cat === 'shapes') { if (!ns.polygon) ns.polygon = {}; ns.polygon.borderColor = hex; }
+  else                       { if (!ns.line)    ns.line    = {}; ns.line.color           = hex; }
+  ov.styles = ns;
+  global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
+  if (typeof saveAllOverlays === 'function') saveAllOverlays();
+}
+
+function _fbSetLineWidth(ov, w) {
+  if (!global.tvChart || !ov) return;
+  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+  if (!ns.line) ns.line = {};
+  ns.line.size = w;
+  ov.styles = ns;
+  global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
+  if (typeof saveAllOverlays === 'function') saveAllOverlays();
+}
+
+function _fbSetLineStyle(ov, style) {
+  if (!global.tvChart || !ov) return;
+  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+  if (!ns.line) ns.line = {};
+  ns.line.style = style;
+  ov.styles = ns;
+  global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
+  if (typeof saveAllOverlays === 'function') saveAllOverlays();
+}
+
+function _fbToggleVisible(ov) {
+  if (!global.tvChart || !ov) return;
+  var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
+  ext._hidden = !ext._hidden;
+  ov.extendData = ext;
+  // KLineChart không có API ẩn trực tiếp → dùng opacity thông qua styles
+  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+  if (ext._hidden) {
+    if (!ns.line)    ns.line    = {}; ns.line.color    = 'rgba(0,0,0,0)';
+    if (!ns.polygon) ns.polygon = {}; ns.polygon.color = 'rgba(0,0,0,0)'; ns.polygon.borderColor = 'rgba(0,0,0,0)';
+    if (!ns.text)    ns.text    = {}; ns.text.color    = 'rgba(0,0,0,0)';
+  } else {
+    // Restore: xóa override màu để fallback về styles gốc
+    if (ns.line)    delete ns.line.color;
+    if (ns.polygon) { delete ns.polygon.color; delete ns.polygon.borderColor; }
+    if (ns.text)    delete ns.text.color;
+  }
+  ov.styles = ns;
+  global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
+  if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  // Re-render toolbar để cập nhật icon mắt
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+}
+
+function _fbToggleLock(ov) {
+  if (!global.tvChart || !ov) return;
+  ov.lock = !ov.lock;
+  global.tvChart.overrideOverlay({ id: ov.id, lock: ov.lock });
+  if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  // Re-render toolbar để cập nhật icon khóa
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+}
   function bindContextMenu(panel) {
     // Tất cả sự kiện cho Props Panel đã được xử lý trong _bindToolbarLocalEvents.
     // Hàm này được giữ lại để tránh lỗi nếu có nơi nào gọi đến.
@@ -2175,9 +2415,12 @@ config.onSelected = function(event) {
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
-  if (typeof renderPanel === 'function') renderPanel(ov);
+  if (document.getElementById('wa-text-editor-backdrop')) return;
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
 };
-config.onDeselected = function() {};
+config.onDeselected = function() {
+  if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+};
       global.tvChart.createOverlay(config);
     } catch (err) { 
       if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
@@ -2388,9 +2631,11 @@ function bindCoreEventsOnce() {
   var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
   var _dragRaf = null;
   var _cachedToolbar = null; // ✅ FIX 3: Cache toolbar element
+  document.addEventListener('mousemove', function(e){ _fbX = e.clientX; _fbY = e.clientY; }, { passive: true });
+  document.addEventListener('touchend', function(e){ if(e.changedTouches&&e.changedTouches[0]){ _fbX=e.changedTouches[0].clientX; _fbY=e.changedTouches[0].clientY; } }, { passive: true });
 
   document.addEventListener('mousemove', function(e) {
-    if (!_isDragging) return;
+    if (!isDragging) return;
     if (_dragRaf) cancelAnimationFrame(_dragRaf);
     _dragRaf = requestAnimationFrame(function() {
       // Dùng cache, nếu chưa có thì query 1 lần rồi nhớ luôn
@@ -2441,6 +2686,17 @@ function bindCoreEventsOnce() {
     _initTop  = tb ? tb.offsetTop  : 0;
     document.body.style.userSelect = 'none';
   });
+  document.addEventListener('mousedown', function(e) {
+    var bar = document.getElementById('wa-float-bar');
+    if (!bar) return;
+    if (bar.contains(e.target)) return;
+    // Click vào panel hoặc toolbar thì không đóng
+    var panel = document.getElementById('wa-props-panel');
+    if (panel && panel.contains(e.target)) return;
+    var tb = document.querySelector('.wa-toolbar');
+    if (tb && tb.contains(e.target)) return;
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+  }, { passive: true });
   document.addEventListener('touchstart', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
     if (!grip || !e.touches || !e.touches.length) return;
@@ -2479,6 +2735,7 @@ function bindCoreEventsOnce() {
       if (global.tvChart) global.tvChart.cancelDrawing();
       activateTool('pointer');
       if (typeof hidePanel === 'function') hidePanel();
+      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();  // ← THÊM DÒNG NÀY
       if (isInput) e.target.blur();
       return;
     }
@@ -2739,8 +2996,8 @@ function _bindChartEventsOnce() {
     saveHistory('add', overlayObj);
     currentSelectedOverlay = overlayObj;
     window.currentSelectedOverlay = overlayObj;
-    if (typeof renderPanel === 'function') renderPanel(currentSelectedOverlay);
-    saveAllOverlays();
+    if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
+saveAllOverlays();
   });
 
   
