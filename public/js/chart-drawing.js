@@ -2754,7 +2754,11 @@ function _bindToolbarLocalEvents(toolbar, panel) {
   // Sự kiện Xoá hình đang chọn (Dành cho Mobile / Nút vừa thay)
   var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
   if (delSelBtn) {
-    delSelBtn.addEventListener('click', function() {
+    function executeDelete(e) {
+      // 🛡️ DỰNG KHIÊN: Ngăn không cho KLineChart biết bạn vừa chạm vào màn hình
+      e.preventDefault(); 
+      e.stopPropagation(); 
+      
       if (typeof currentSelectedOverlay !== 'undefined' && currentSelectedOverlay && global.tvChart) {
         if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
         global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
@@ -2763,9 +2767,13 @@ function _bindToolbarLocalEvents(toolbar, panel) {
         if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
         if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
       } else {
-        if (typeof showToast === 'function') showToast('⚠️ Hãy click chọn một hình trước khi xoá');
+        if (typeof showToast === 'function') showToast('⚠️ Hãy chạm chọn một hình trước khi xoá');
       }
-    });
+    }
+
+    // Bắt ngay lúc ngón tay vừa chạm / chuột vừa nhấn xuống (Nhanh hơn KLineChart)
+    delSelBtn.addEventListener('mousedown', executeDelete);
+    delSelBtn.addEventListener('touchstart', executeDelete, { passive: false });
   }
 
   var clearBtn = toolbar.querySelector('#wa-btn-clear');
