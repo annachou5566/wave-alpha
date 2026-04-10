@@ -2549,7 +2549,11 @@ function _fbToggleLock(ov) {
     try { global.tvChart.cancelDrawing(); } catch(e){}
     if (typeof hidePanel === 'function') hidePanel();
 
-    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
+    if (toolId === 'pointer') {
+      _fbIsDrawing = false;  // ← THÊM DÒNG NÀY
+      container.classList.remove('wa-drawing-mode');
+      return;
+    }
     container.classList.add('wa-drawing-mode');
 
     const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
@@ -2907,10 +2911,11 @@ function bindCoreEventsOnce() {
     var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
 
     if (e.key === 'Escape') {
+      _fbIsDrawing = false;  // ← THÊM DÒNG NÀY (ĐẦU TIÊN)
       if (global.tvChart) global.tvChart.cancelDrawing();
       activateTool('pointer');
       if (typeof hidePanel === 'function') hidePanel();
-      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();  // ← THÊM DÒNG NÀY
+      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
       if (isInput) e.target.blur();
       return;
     }
