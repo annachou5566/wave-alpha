@@ -2332,12 +2332,25 @@
       </div>`;
     container.appendChild(cm);
 
-    // Thêm cờ 'true' ở cuối để bắt sự kiện ưu tiên (Capture Phase)
-    // Thêm e.stopPropagation() để ngăn KLineChart cướp sự kiện
+    // 1. Chặn KLineChart xoá hình ngay từ lúc vừa nhấn chuột phải (button === 2)
+    container.addEventListener('mousedown', (e) => {
+      if (e.button === 2 && currentSelectedOverlay) {
+        e.stopPropagation();
+      }
+    }, true);
+
+    // 2. Chặn tiếp lúc nhả chuột phải
+    container.addEventListener('mouseup', (e) => {
+      if (e.button === 2 && currentSelectedOverlay) {
+        e.stopPropagation();
+      }
+    }, true);
+
+    // 3. Hiển thị Menu của bạn
     container.addEventListener('contextmenu', (e) => {
       if(!currentSelectedOverlay) return; 
       e.preventDefault(); 
-      e.stopPropagation(); // QUAN TRỌNG NHẤT LÀ DÒNG NÀY
+      e.stopPropagation(); 
       
       cm.style.left = e.clientX + 'px'; 
       cm.style.top = e.clientY + 'px'; 
