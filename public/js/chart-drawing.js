@@ -2632,7 +2632,11 @@
           ns.polygon.style = 'strokefill';
           // Kiểu nét đứt cho polygon border dùng line.style trong KLineChart
           if (bs) ns.line.style = bs;
-  
+          if (bs === 'dashed') {
+            ns.line.dashedValue = [6, 4];
+          } else {
+            delete ns.line.dashedValue;
+          }
         } else if (cat === 'fibo') {
           var lc = gCP('c_lc');
           var lw = gRng('_rp_lw');
