@@ -1125,14 +1125,12 @@
             var lh = (tS.size || 14) + 6;
             var figs = [];
             lines.forEach(function(l, i) {
-                figs.push({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i * lh, text: l, align: 'left', baseline: 'top' }, styles: {
-                  color:           tS.color  || '#EAECEF',
-                  size:            tS.size   || 14,
-                  family:          tS.family || 'Be Vietnam Pro, sans-serif',
-                  weight:          tS.weight || '600',
-                  style:           tS.style  || 'normal',   // ← THÊM DÒNG NÀY
-                  backgroundColor: bgC,
-                  borderColor:     'transparent'
+                figs.push({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { 
+                  color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', 
+                  backgroundColor: pS.color || 'transparent', 
+                  borderColor: pS.borderColor || 'transparent', 
+                  borderSize: pS.borderSize || 0,
+                  paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
                 } });
             });
             return figs; 
@@ -1152,7 +1150,13 @@
             if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: 'rgba(0,240,255,0.4)', size: 1, style: 'dashed' } }); } 
             var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y; 
             lines.forEach(function(l, i) {
-                figs.push({ type: 'text', attrs: { x: tx, y: ty + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', backgroundColor: bgC, borderColor: 'transparent' } });
+                figs.push({ type: 'text', attrs: { x: tx, y: ty + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { 
+                  color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', 
+                  backgroundColor: pS.color || 'transparent', 
+                  borderColor: pS.borderColor || 'transparent', 
+                  borderSize: pS.borderSize || 0,
+                  paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
+                } });
             });
             return figs; 
         } 
@@ -1253,12 +1257,24 @@
                 figs.push({ type: 'polygon', attrs: { coordinates: [ { x: tx, y: ty - bh / 2 }, { x: tx + bw, y: ty - bh / 2 }, { x: tx + bw, y: ty + bh / 2 }, { x: tx, y: ty + bh / 2 } ]}, styles: { style: 'stroke_fill', color: pS.color || 'rgba(0,240,255,0.1)', borderColor: pS.borderColor || '#00F0FF', borderSize: 1 }, ignoreEvent: true }); 
                 lines.forEach(function(l, i) {
                     var lineY = ty - (lines.length - 1) * lh / 2 + i * lh;
-                    figs.push({ type: 'text', attrs: { x: tx + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', backgroundColor: 'transparent', borderColor: 'transparent' } });
+                    figs.push({ type: 'text', attrs: { x: tx + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { 
+                      color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', 
+                      backgroundColor: pS.color || 'transparent', 
+                      borderColor: pS.borderColor || 'transparent', 
+                      borderSize: pS.borderSize || 0,
+                      paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
+                    } });
                 });
             } else { 
                 lines.forEach(function(l, i) {
                     var lineY = c[0].y - (lines.length - 1) * lh / 2 + i * lh;
-                    figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', backgroundColor: 'transparent', borderColor: 'transparent' } });
+                    figs.push({ type: 'text', attrs: { x: c[0].x + 8, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { 
+                      color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', 
+                      backgroundColor: pS.color || 'transparent', 
+                      borderColor: pS.borderColor || 'transparent', 
+                      borderSize: pS.borderSize || 0,
+                      paddingLeft: 6, paddingRight: 6, paddingTop: 4, paddingBottom: 4
+                    } });
                 });
             } 
             return figs; 
@@ -2631,7 +2647,11 @@
           ns.polygon.color = (fc && fa !== null && fa > 0) ? mkRgba(fc, fa) : 'transparent';
           ns.polygon.style = 'strokefill';
           // Kiểu nét đứt cho polygon border dùng line.style trong KLineChart
-          if (bs) ns.line.style = bs;
+          if (bs) {
+            ns.line.style = bs;
+            ns.polygon.borderStyle = bs; // Ép hình khối (shapes) nhận nét đứt
+            ns.polygon.borderDashedValue = bs === 'dashed' ? [6, 4] : [];
+          }
           if (bs === 'dashed') {
             ns.line.dashedValue = [6, 4];
           } else {
@@ -3304,6 +3324,7 @@ tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M
     var tb = document.querySelector('.wa-toolbar');
     if (tb && tb.contains(e.target)) return;
     if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    if (typeof hidePanel === 'function') hidePanel();
   }, { passive: true });
   document.addEventListener('touchstart', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
