@@ -2167,330 +2167,520 @@
     var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
   
-    // 1. Tự động chèn CSS giao diện mới gọn gàng và bảng màu (chỉ chạy 1 lần)
-    if (!document.getElementById('wa-compact-cp-css')) {
-      var s = document.createElement('style');
-      s.id = 'wa-compact-cp-css';
-      s.textContent = `
-        .wa-panel-body { padding: 12px; gap: 10px; font-family: "Be Vietnam Pro", sans-serif; }
-        .wp-sec { background: #0A0C10; border: 1px solid #1E2733; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-        .wp-stitle { font-size: 10px; font-weight: 700; color: #8896A7; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
-        .wp-row { display: flex; gap: 8px; margin-bottom: 8px; }
-        .wp-row:last-child { margin-bottom: 0; }
-        .wp-col { flex: 1; display: flex; flex-direction: column; min-width: 0; justify-content: center; }
-        .wp-lbl { font-size: 11px; color: #A0AEC0; margin-bottom: 4px; white-space: nowrap; font-weight: 600; }
-        
-        /* Color Picker Button */
-        .wp-cp-btn { height: 26px; border-radius: 6px; border: 1px solid #273040; cursor: pointer; background: #151B23; position: relative; overflow: hidden; transition: 0.2s; }
-        .wp-cp-btn:hover { border-color: #3B82F6; }
-        .wp-cp-color { width: 100%; height: 100%; pointer-events: none; border-radius: 4px; }
-        
-        /* Color Picker Popup Excel Style */
-        .wa-cp-pop { position: fixed; z-index: 999999; background: #151B23; border: 1px solid #273040; border-radius: 8px; padding: 10px; width: 200px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); animation: wa-fadein 0.15s; }
-        .wa-cp-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
-        .wa-cp-cell { aspect-ratio: 1; border-radius: 2px; cursor: pointer; border: 1px solid transparent; }
-        .wa-cp-cell:hover { transform: scale(1.3); border-color: #fff; z-index: 2; position: relative; }
-        .wa-cp-hex { display: flex; align-items: center; gap: 6px; margin-top: 10px; background: #0A0C10; padding: 4px 6px; border-radius: 4px; border: 1px solid #273040; }
-        .wa-cp-hex span { color: #8896A7; font-weight: 700; font-size: 12px; }
-        .wa-cp-hex input { background: transparent; border: none; color: #fff; outline: none; font-family: monospace; width: 100%; font-size: 12px; text-transform: uppercase; }
-        
-        /* Controls */
-        .wp-inp { background: #151B23; border: 1px solid #273040; color: #E8EDF2; padding: 5px 8px; border-radius: 6px; font-size: 11px; width: 100%; box-sizing: border-box; outline: none; font-family: inherit; }
-        .wp-inp:focus { border-color: #3B82F6; }
-        .wp-seg { display: flex; background: #151B23; border: 1px solid #273040; border-radius: 6px; padding: 2px; }
-        .wp-seg-btn { flex: 1; border: none; background: transparent; color: #8896A7; padding: 4px 2px; font-size: 11px; cursor: pointer; border-radius: 4px; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
-        .wp-seg-btn.on { background: #273040; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .wp-range-wrap { display: flex; align-items: center; gap: 8px; height: 26px; }
-        .wp-range { flex: 1; height: 4px; background: #273040; border-radius: 2px; -webkit-appearance: none; outline: none; cursor: pointer; }
-        .wp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #3B82F6; }
-        .wp-range-val { font-size: 11px; color: #60A5FA; width: 30px; text-align: right; font-family: monospace; }
-        .wp-tog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .wp-tog { width: 34px; height: 18px; border-radius: 9px; background: #1E2733; border: 1px solid #273040; position: relative; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
-        .wp-tog::after { content: ''; position: absolute; width: 12px; height: 12px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: 0.2s; }
-        .wp-tog.on { background: #3B82F6; border-color: #3B82F6; }
-        .wp-tog.on::after { left: 18px; }
-      `;
-      document.head.appendChild(s);
+    // ── Cleanup lần render trước (tránh event listener tích lũy) ──
+    if (panel._rpCleanup) { try { panel._rpCleanup(); } catch(e){} }
+    var _handlers = [];
+    function _on(el, ev, fn, opts) { el.addEventListener(ev, fn, opts||false); _handlers.push([el,ev,fn,opts||false]); }
+    function _offAll() { _handlers.forEach(function(h){ h[0].removeEventListener(h[1],h[2],h[3]); }); _handlers=[]; var p=document.getElementById('_rp_pop'); if(p) p.remove(); }
+    panel._rpCleanup = _offAll;
+  
+    // ── CSS (chỉ inject 1 lần) ───────────────────────────────────
+    if (!document.getElementById('_rp_css')) {
+      var _st = document.createElement('style');
+      _st.id = '_rp_css';
+      _st.textContent = [
+        '.wa-panel-body{padding:10px!important;gap:0!important}',
+  
+        // Section
+        '._s{background:#0D1117;border:1px solid #1E2A3A;border-radius:8px;margin-bottom:7px;overflow:hidden}',
+        '._sh{font-size:9.5px;font-weight:800;color:#4A5F72;text-transform:uppercase;letter-spacing:.9px;padding:7px 10px 5px;border-bottom:1px solid #1A2535}',
+        '._sb{padding:8px 10px}',
+  
+        // Row / Col
+        '._r{display:flex;gap:8px;margin-bottom:6px}',
+        '._r:last-child{margin-bottom:0}',
+        '._c{flex:1;min-width:0}',
+        '._l{display:block;font-size:10px;color:#6B7E8D;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+  
+        // Select
+        '._sel{width:100%;background:#080D12;border:1px solid #1E2A3A;color:#C8D6E0;padding:5px 24px 5px 8px;border-radius:5px;font-size:11px;outline:none;font-family:inherit;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%234A5568\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center}',
+        '._sel:focus{border-color:#3B82F6}',
+  
+        // Textarea
+        '._ta{width:100%;background:#080D12;border:1px solid #1E2A3A;color:#E8EDF2;padding:8px 9px;border-radius:5px;font-size:12.5px;outline:none;font-family:inherit;resize:vertical;min-height:62px;box-sizing:border-box;line-height:1.5;transition:border-color .15s}',
+        '._ta:focus{border-color:#3B82F6}',
+  
+        // Range
+        '._rw{display:flex;align-items:center;gap:6px}',
+        '._rng{flex:1;-webkit-appearance:none;height:3px;background:#1A2535;border-radius:2px;outline:none;cursor:pointer}',
+        '._rng::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#3B82F6;cursor:pointer;border:2px solid #0D1117}',
+        '._rv{font-size:10px;color:#60A5FA;min-width:26px;text-align:right;font-weight:700;font-family:monospace}',
+  
+        // Segment
+        '._seg{display:flex;background:#080D12;border:1px solid #1A2535;border-radius:6px;padding:2px;gap:2px}',
+        '._segb{flex:1;border:none;background:transparent;color:#6B7E8D;padding:5px 4px;cursor:pointer;border-radius:4px;transition:.12s;display:flex;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:600;font-family:inherit;white-space:nowrap}',
+        '._segb:hover{color:#A0B0C0;background:rgba(255,255,255,.05)}',
+        '._segb.on{background:#1E2B3A;color:#E8EDF2;box-shadow:0 1px 3px rgba(0,0,0,.5)}',
+  
+        // Toggle
+        '._trow{display:flex;justify-content:space-between;align-items:center;padding:3px 0}',
+        '._tlbl{font-size:11px;color:#8896A7}',
+        '._tog{width:32px;height:17px;border-radius:9px;background:#1A2130;border:1px solid #273040;position:relative;cursor:pointer;transition:.18s;flex-shrink:0}',
+        '._tog::after{content:"";position:absolute;width:11px;height:11px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.18s}',
+        '._tog.on{background:#3B82F6;border-color:#2563EB}',
+        '._tog.on::after{left:17px}',
+  
+        // Color button
+        '._cpb{width:100%;height:28px;border-radius:6px;border:1.5px solid #1E2A3A;cursor:pointer;position:relative;overflow:hidden;transition:.15s;background:#0D1117}',
+        '._cpb:hover{border-color:#3B82F6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}',
+        '._cpbf{position:absolute;inset:0;border-radius:5px;background-image:linear-gradient(45deg,#333 25%,transparent 25%),linear-gradient(-45deg,#333 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#333 75%),linear-gradient(-45deg,transparent 75%,#333 75%);background-size:6px 6px;background-position:0 0,0 3px,3px -3px,-3px 0}',
+        '._cpfc{position:absolute;inset:0;border-radius:5px}',
+  
+        // Popup
+        '._pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:9px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.92);width:216px;animation:wa-fadein .12s}',
+        '._pg{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-bottom:8px}',
+        '._pc{aspect-ratio:1;border-radius:2px;cursor:pointer;border:1.5px solid transparent;transition:transform .1s,border-color .1s;position:relative;z-index:0}',
+        '._pc:hover{transform:scale(1.5);border-color:rgba(255,255,255,.8);z-index:3;position:relative}',
+        '._pc.on{border-color:#3B82F6;box-shadow:0 0 0 1.5px #3B82F6;z-index:2}',
+        '._phrow{display:flex;align-items:center;gap:5px;background:#080D12;border:1px solid #1E2A3A;border-radius:5px;padding:4px 7px;margin-top:8px}',
+        '._phrow:focus-within{border-color:#3B82F6}',
+        '._phhash{color:#4A5568;font-weight:800;font-size:11px;font-family:monospace;user-select:none}',
+        '._phi{flex:1;background:transparent;border:none;color:#E8EDF2;font-size:11px;outline:none;font-family:monospace;text-transform:uppercase;min-width:0}',
+      ].join('');
+      document.head.appendChild(_st);
     }
   
-    var cat = getToolCategory(overlay.name);
+    var cat  = getToolCategory(overlay.name);
     var body = panel.querySelector('.wa-panel-body');
     if (!body) return;
   
-    var s = overlay.styles || {};
+    var s      = overlay.styles || {};
     var rawExt = overlay.extendData;
-    var ext = (rawExt && typeof rawExt === 'object') ? rawExt : {};
+    var ext    = (rawExt && typeof rawExt === 'object') ? rawExt : {};
   
-    // ── Helper Xử lý Màu (Không bao giờ crash) ───────────────────
+    // ── Tiện ích màu ─────────────────────────────────────────────
     function toHex(c) {
-      if (!c || c === 'transparent') return '#00000000';
-      if (c.startsWith('#')) return c.substring(0, 7);
-      var m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (m) return '#' + ((1 << 24) + (+m[1] << 16) + (+m[2] << 8) + +m[3]).toString(16).slice(1).toUpperCase();
+      if (!c || c === 'transparent') return '#000000';
+      if (typeof c !== 'string') return '#3B82F6';
+      if (c.charAt(0) === '#') { var h6 = c.slice(1).replace(/^(.{3})$/, '$1$1'); return '#' + h6.slice(0,6).toUpperCase(); }
+      var m = c.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+      if (m) return '#' + [m[1],m[2],m[3]].map(function(v){ return (+v).toString(16).padStart(2,'0'); }).join('').toUpperCase();
       return '#3B82F6';
     }
     function toAlpha(c, def) {
-      if (!c) return def;
-      if (c === 'transparent' || c === '#00000000') return 0;
-      var m = c.match(/rgba?\([^,]+,[^,]+,[^,]+,([^)]+)\)/);
-      return m ? parseFloat(m[1]) : def;
+      if (!c || c === 'transparent') return 0;
+      var m = c.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
+      return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : def;
+    }
+    function mkRgba(hex, a) {
+      if (a <= 0 || !hex || hex === '#000000') return 'transparent';
+      var r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+      return 'rgba('+r+','+g+','+b+','+parseFloat(a.toFixed(2))+')';
     }
   
-    // ── Bảng màu tĩnh (Excel style) ─────────────────────────────────
-    var PALETTE = [
-      ['#FFFFFF','#F2F2F2','#D9D9D9','#BFBFBF','#A6A6A6','#808080','#595959','#404040','#262626','#000000'],
-      ['#FCE5CD','#F4CCCC','#FCE4D6','#FFF2CC','#D9EAD3','#D0E0E3','#C9DAF8','#CFE2F3','#D9D2E9','#EAD1DC'],
-      ['#F9CB9C','#EA9999','#F9CB9C','#FFE599','#B6D7A8','#A2C4C9','#A4C2F4','#9FC5E8','#B4A7D6','#D5A6BD'],
-      ['#E69138','#E06666','#F6B26B','#FFD966','#93C47D','#76A5AF','#6D9EEB','#6FA8DC','#8E7CC3','#C27BA0'],
-      ['#C90000','#CC0000','#E69138','#F1C232','#6AA84F','#45818E','#3C78D8','#3D85C6','#674EA7','#A64D79'],
-      ['#990000','#990000','#B45F06','#BF9000','#38761D','#134F5C','#1155CC','#0B5394','#351C75','#741B47'],
-      ['#EF4444','#F59E0B','#EAB308','#22C55E','#14B8A6','#06B6D4','#3B82F6','#6366F1','#8B5CF6','#D946EF']
-    ];
-  
-    // ── HTML Builders ───────────────────────────────────────────────
-    function cpick(id, hex) {
-      var bg = (hex === '#00000000' || !hex) ? 'transparent' : hex;
-      return '<div class="wp-cp-btn" data-cp="'+id+'" data-val="'+hex+'"><div class="wp-cp-color" style="background:'+bg+'"></div></div>';
+    // ── HTML Builders ─────────────────────────────────────────────
+    function cpBtn(id, hex) {
+      var bc = hex === '#000000' ? 'transparent' : hex;
+      return '<div class="_cpb" data-cp="'+id+'" tabindex="0"><div class="_cpbf"></div><div class="_cpfc" id="_cpfc_'+id+'" style="background:'+bc+'"></div></div>';
     }
-    function rng(id, mn, mx, st, val) {
-      return '<div class="wp-range-wrap"><input type="range" class="wp-range" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'"><span class="wp-range-val" id="'+id+'-val">'+val+'</span></div>';
+    function rng(id, mn, mx, st, val, unit) {
+      unit = unit||'';
+      return '<div class="_rw"><input type="range" class="_rng" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'"><span class="_rv" id="'+id+'_v">'+val+unit+'</span></div>';
     }
     function seg(id, opts, cur) {
-      return '<div class="wp-seg">' + opts.map(function(o) { return '<button class="wp-seg-btn'+(cur===o.v?' on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.l+'</button>'; }).join('') + '</div>';
+      return '<div class="_seg">' + opts.map(function(o){
+        return '<button class="_segb'+(cur===o.v?' on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.l+'</button>';
+      }).join('') + '</div>';
     }
-    function tog(id, on, lbl) { return '<div class="wp-tog-row"><span class="wp-lbl" style="margin:0">'+lbl+'</span><div class="wp-tog'+(on?' on':'')+'" id="'+id+'"></div></div>'; }
-    function sec(t, c) { return '<div class="wp-sec">' + (t?'<div class="wp-stitle">'+t+'</div>':'') + c + '</div>'; }
-    function lbl(t, c) { return '<div class="wp-col"><span class="wp-lbl">'+t+'</span>'+c+'</div>'; }
-    function row() { return '<div class="wp-row">' + Array.from(arguments).join('') + '</div>'; }
+    function tog(id, on, label) {
+      return '<div class="_trow"><span class="_tlbl">'+label+'</span><div class="_tog'+(on?' on':'')+'" id="'+id+'"></div></div>';
+    }
+    function sel(id, opts, cur) {
+      return '<select class="_sel" id="'+id+'">' + opts.map(function(o){
+        return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.n+'</option>';
+      }).join('') + '</select>';
+    }
+    function c(label, ctrl) { return '<div class="_c"><span class="_l">'+label+'</span>'+ctrl+'</div>'; }
+    function r()  { return '<div class="_r">'+Array.prototype.slice.call(arguments).join('')+'</div>'; }
+    function sec(title, body_html) {
+      return '<div class="_s">'+(title?'<div class="_sh">'+title+'</div>':'')+'<div class="_sb">'+body_html+'</div></div>';
+    }
   
+    // KLineChart chỉ hỗ trợ 'solid' và 'dashed' — KHÔNG có 'dotted'
     var LS = [
-      {v:'solid',  l:'<svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="2"/></svg>'},
-      {v:'dashed', l:'<svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/></svg>'},
-      {v:'dotted', l:'<svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="2 3"/></svg>'}
+      {v:'solid',  l:'<svg width="20" height="10" style="flex-shrink:0"><line x1="1" y1="5" x2="19" y2="5" stroke="currentColor" stroke-width="2.5"/></svg><span>Liền</span>'},
+      {v:'dashed', l:'<svg width="20" height="10" style="flex-shrink:0"><line x1="1" y1="5" x2="19" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg><span>Đứt</span>'}
     ];
   
-    var html = '';
+    var FONTS = [
+      {v:'Be Vietnam Pro, sans-serif', n:'Be Vietnam Pro'},
+      {v:'Inter, sans-serif',          n:'Inter'},
+      {v:'Lexend, sans-serif',         n:'Lexend'},
+      {v:'Nunito, sans-serif',         n:'Nunito'},
+      {v:'Space Grotesk, sans-serif',  n:'Space Grotesk'},
+      {v:'Sora, sans-serif',           n:'Sora'},
+      {v:'Raleway, sans-serif',        n:'Raleway'},
+      {v:'Roboto Mono, monospace',     n:'Roboto Mono'},
+      {v:'Arial, sans-serif',          n:'Arial'},
+      {v:'monospace',                  n:'Monospace'}
+    ];
   
+    // ── Build HTML ────────────────────────────────────────────────
+    var html = '';
     try {
-      // ════════════ TEXT ════════════
+  
       if (cat === 'text') {
         var txt = typeof rawExt === 'string' ? rawExt : (ext.text || '');
-        var tc  = toHex(s.text && s.text.color);
-        var sz  = (s.text && s.text.size) || 14;
-        var fw  = (s.text && s.text.weight) || 'normal';
-        var bgC = toHex(s.polygon && s.polygon.color);
-        var bgA = toAlpha(s.polygon && s.polygon.color, 0);
-        var bdC = toHex(s.polygon && s.polygon.borderColor);
+        var tc  = toHex(s.text   && s.text.color)   || '#E8EDF2';
+        var ff  = (s.text  && s.text.family) || 'Be Vietnam Pro, sans-serif';
+        var sz  = (s.text  && s.text.size)   || 13;
+        var fw  = (s.text  && s.text.weight) || 'normal';
+        var fi  = (s.text  && s.text.style)  || 'normal';
+        var bgRaw = (s.polygon && s.polygon.color) || 'transparent';
+        var bgC = toHex(bgRaw);
+        var bgA = toAlpha(bgRaw, 0);
+        var bdRaw = (s.polygon && s.polygon.borderColor) || 'transparent';
+        var bdC = toHex(bdRaw);
         var bdW = (s.polygon && s.polygon.borderSize) || 1;
-        var bdOn= (bdC !== '#00000000' && !!(s.polygon && s.polygon.borderSize));
+        var bdOn = bdRaw !== 'transparent' && bdRaw !== '' && !!s.polygon && !!(s.polygon.borderSize);
   
-        html += sec('', '<textarea id="w-txt" class="wp-inp" style="height:70px;resize:vertical">'+txt+'</textarea>');
-        html += sec('Văn bản', 
-          row(lbl('Màu chữ', cpick('w-tc', tc)), lbl('Cỡ chữ', rng('w-sz', 10, 64, 1, sz))) +
-          row(lbl('Độ đậm', seg('w-fw', [{v:'normal',l:'Thường'},{v:'bold',l:'Đậm'},{v:'800',l:'Siêu Đậm'}], fw)))
+        html += sec('', '<textarea id="_rp_txt" class="_ta">'+txt+'</textarea>');
+        html += sec('Chữ',
+          r(c('Font chữ', sel('_rp_ff', FONTS, ff))) +
+          r(c('Màu chữ', cpBtn('c_tc', tc)), c('Cỡ chữ (px)', rng('_rp_sz', 10, 64, 1, sz))) +
+          r(c('Kiểu chữ',
+            seg('_rp_fw', [{v:'normal',l:'Thường'},{v:'bold',l:'<b>Đậm</b>'},{v:'800',l:'<b style="font-weight:900">Đậm+</b>'}], fw)
+          )) +
+          r(c('Nghiêng',
+            seg('_rp_fi', [{v:'normal',l:'Thẳng'},{v:'italic',l:'<i>Nghiêng</i>'}], fi)
+          ))
         );
-        html += sec('Nền & Khung', 
-          row(lbl('Màu nền', cpick('w-bgc', bgC)), lbl('Độ mờ nền', rng('w-bga', 0, 1, 0.05, bgA))) +
-          tog('w-bdon', bdOn, 'Hiện khung viền') +
-          '<div id="w-bdbox" style="margin-top:8px;'+(bdOn?'':'opacity:0.3;pointer-events:none')+'">' +
-          row(lbl('Màu khung', cpick('w-bdc', bdC)), lbl('Độ dày', rng('w-bdw', 1, 5, 1, bdW))) +
+        html += sec('Nền & Khung',
+          r(c('Màu nền', cpBtn('c_bgc', bgC)), c('Độ trong suốt nền', rng('_rp_bga', 0, 1, 0.05, bgA))) +
+          '<div style="padding:2px 0 4px">'+tog('_rp_bdon', bdOn, 'Hiện khung viền')+'</div>' +
+          '<div id="_rp_bdbox" style="'+(bdOn?'':'opacity:.35;pointer-events:none;')+'transition:opacity .2s">' +
+          r(c('Màu viền', cpBtn('c_bdc', bdC)), c('Độ dày viền', rng('_rp_bdw', 1, 5, 1, bdW))) +
           '</div>'
         );
-      } 
-      // ════════════ SHAPES (Hình chữ nhật, elip, v.v) ════════════
-      else if (cat === 'shapes') {
-        var bc = toHex(s.polygon && s.polygon.borderColor) || '#3B82F6';
-        var bw = (s.polygon && s.polygon.borderSize) || 1;
-        var bs = (s.line && s.line.style) || (s.polygon && s.polygon.borderStyle) || 'solid';
-        var fc = toHex(s.polygon && s.polygon.color);
-        var fa = toAlpha(s.polygon && s.polygon.color, 0.15);
   
-        html += sec('Đường viền', 
-          row(lbl('Màu viền', cpick('w-bc', bc)), lbl('Độ dày', rng('w-bw', 1, 8, 1, bw))) +
-          row(lbl('Kiểu viền', seg('w-bs', LS, bs)))
+      } else if (cat === 'shapes') {
+        var bcRaw = (s.polygon && s.polygon.borderColor) || '#3B82F6';
+        var bc  = toHex(bcRaw);
+        var bw  = (s.polygon && s.polygon.borderSize) || 1;
+        // line.style điều khiển kiểu viền của polygon trong KLineChart
+        var bs  = (s.line && s.line.style) || 'solid';
+        var fcRaw = (s.polygon && s.polygon.color) || '#3B82F6';
+        var fc  = toHex(fcRaw);
+        var fa  = toAlpha(fcRaw, 0.15);
+  
+        html += sec('Đường viền',
+          r(c('Màu viền', cpBtn('c_bc', bc)), c('Độ dày', rng('_rp_bw', 1, 8, 1, bw))) +
+          r(c('Kiểu viền', seg('_rp_bs', LS, bs)))
         );
-        html += sec('Màu nền', 
-          row(lbl('Màu nền (Fill)', cpick('w-fc', fc))) +
-          row(lbl('Độ đậm nhạt', rng('w-fa', 0, 1, 0.05, fa)))
+        html += sec('Nền (Fill)',
+          r(c('Màu nền', cpBtn('c_fc', fc)), c('Độ đục (0 = trong suốt)', rng('_rp_fa', 0, 1, 0.05, fa)))
         );
-      } 
-      // ════════════ WAVES & FIBO ════════════
-      else if (cat === 'fibo' || cat === 'waves') {
-        var lc = toHex(s.line && s.line.color) || '#3B82F6';
-        var lw = (s.line && s.line.size) || 1;
-        var lst = (s.line && s.line.style) || 'solid';
-        var fc = toHex(s.polygon ? s.polygon.color : ext.fillColor) || lc;
-        var fa = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-        
-        html += sec('Đường nét', 
-          row(lbl('Màu đường', cpick('w-lc', lc)), lbl('Độ dày', rng('w-lw', 1, 5, 1, lw))) +
-          row(lbl('Kiểu', seg('w-ls', LS, lst)))
+  
+      } else if (cat === 'fibo') {
+        var lc  = toHex(s.line && s.line.color) || '#E8EDF2';
+        var lw  = (s.line && s.line.size)  || 1;
+        var ls  = (s.line && s.line.style) || 'solid';
+        var fa  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+        var slbl = ext.showLabels !== false;
+  
+        html += sec('Đường kẻ',
+          r(c('Màu đường', cpBtn('c_lc', lc)), c('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
+          r(c('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
-        html += sec('Nền (nếu có)', 
-          row(lbl('Độ đậm nhạt (0 = tắt)', rng('w-fa', 0, 1, 0.05, fa)))
+        html += sec('Nền',
+          r(c('Độ đục fill (0 = tắt)', rng('_rp_fa', 0, 0.5, 0.01, fa)))
         );
-      } 
-      // ════════════ CÁC LOẠI LINE KHÁC ════════════
-      else {
-        var llc = toHex(s.line && s.line.color) || '#3B82F6';
-        var llw = (s.line && s.line.size) || 1;
-        var lls = (s.line && s.line.style) || 'solid';
-        html += sec('Đường kẻ', 
-          row(lbl('Màu sắc', cpick('w-lc', llc)), lbl('Độ dày', rng('w-lw', 1, 8, 1, llw))) +
-          row(lbl('Kiểu nét', seg('w-ls', LS, lls)))
+        html += sec('Nhãn',
+          tog('_rp_slbl', slbl, 'Hiện nhãn số Fibonacci')
+        );
+  
+      } else if (cat === 'waves') {
+        var lc  = toHex(s.line && s.line.color) || '#3B82F6';
+        var lw  = (s.line && s.line.size)  || 1;
+        var ls  = (s.line && s.line.style) || 'solid';
+        var tc  = toHex(s.text && s.text.color) || '#E8EDF2';
+        var tsz = (s.text && s.text.size) || 12;
+  
+        html += sec('Đường kẻ',
+          r(c('Màu đường', cpBtn('c_lc', lc)), c('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
+          r(c('Kiểu nét', seg('_rp_ls', LS, ls)))
+        );
+        html += sec('Nhãn sóng',
+          r(c('Màu chữ nhãn', cpBtn('c_tc', tc)), c('Cỡ chữ', rng('_rp_tsz', 8, 20, 1, tsz)))
+        );
+  
+      } else {
+        // LINES
+        var lc  = toHex(s.line && s.line.color) || '#3B82F6';
+        var lw  = (s.line && s.line.size)  || 1;
+        var ls  = (s.line && s.line.style) || 'solid';
+  
+        html += sec('Đường kẻ',
+          r(c('Màu sắc', cpBtn('c_lc', lc)), c('Độ dày', rng('_rp_lw', 1, 8, 1, lw))) +
+          r(c('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
       }
   
-    } catch(e) { html = '<div style="color:#EF4444">Lỗi: '+e.message+'</div>'; }
+    } catch(e) {
+      html = '<div style="padding:12px;color:#EF4444;font-size:11px">⚠ ' + e.message + '</div>';
+      console.error('[renderPanel]', e);
+    }
   
     body.innerHTML = html;
     panel.classList.add('show');
   
-    // ── Xử lý Live Range ──
-    body.querySelectorAll('.wp-range').forEach(function(r) {
-      r.addEventListener('input', function() { document.getElementById(r.id+'-val').textContent = r.value; });
+    // ── Range: cập nhật số hiển thị theo thời gian thực ──────────
+    body.querySelectorAll('._rng').forEach(function(inp) {
+      var vEl = document.getElementById(inp.id + '_v');
+      if (!vEl) return;
+      var _unit = vEl.textContent.replace(/[\d.-]/g, '');
+      _on(inp, 'input', function() { vEl.textContent = this.value + _unit; });
     });
   
-    // ── Xử lý Toggle & Segment ──
-    body.querySelectorAll('.wp-seg-btn').forEach(function(b) {
-      b.addEventListener('click', function() {
-        body.querySelectorAll('.wp-seg-btn[data-seg="'+this.dataset.seg+'"]').forEach(function(el){ el.classList.remove('on'); });
+    // ── Segment buttons ───────────────────────────────────────────
+    body.querySelectorAll('._segb').forEach(function(btn) {
+      _on(btn, 'click', function() {
+        body.querySelectorAll('._segb[data-seg="'+this.dataset.seg+'"]').forEach(function(b){ b.classList.remove('on'); });
         this.classList.add('on');
         doSave();
       });
     });
-    body.querySelectorAll('.wp-tog').forEach(function(t) {
-      t.addEventListener('click', function() {
+  
+    // ── Toggle ────────────────────────────────────────────────────
+    body.querySelectorAll('._tog').forEach(function(t) {
+      _on(t, 'click', function() {
         this.classList.toggle('on');
-        if(this.id==='w-bdon') document.getElementById('w-bdbox').style.cssText = this.classList.contains('on') ? '' : 'opacity:0.3;pointer-events:none';
+        if (this.id === '_rp_bdon') {
+          var box = document.getElementById('_rp_bdbox');
+          if (box) box.style.opacity = this.classList.contains('on') ? '1' : '.35';
+          if (box) box.style.pointerEvents = this.classList.contains('on') ? '' : 'none';
+        }
         doSave();
       });
     });
   
-    // ── COLOR PICKER POPUP (EXCEL STYLE) ──
-    var activeCP = null;
-    function closeCP() { var p = document.getElementById('_w_cp_pop'); if(p) p.remove(); activeCP = null; }
-    
-    body.querySelectorAll('.wp-cp-btn').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if(activeCP === this.dataset.cp) { closeCP(); return; }
-        closeCP();
-        activeCP = this.dataset.cp;
-        var hex = this.dataset.val || '#3B82F6';
-        
-        var pop = document.createElement('div');
-        pop.id = '_w_cp_pop'; pop.className = 'wa-cp-pop';
-        
-        var grids = '<div class="wa-cp-grid">';
-        PALETTE.forEach(function(row) {
-          row.forEach(function(c) { grids += '<div class="wa-cp-cell" style="background:'+c+'" data-c="'+c+'"></div>'; });
-        });
-        grids += '</div>';
-        
-        pop.innerHTML = grids + 
-          '<div class="wa-cp-hex"><span>#</span><input id="_w_cp_hex" maxlength="6" value="'+hex.replace('#','').substring(0,6)+'"></div>';
-        
-        document.body.appendChild(pop);
-        var rect = this.getBoundingClientRect();
-        var t = rect.bottom + 4, l = rect.left;
-        if (t + 200 > window.innerHeight) t = rect.top - 200;
-        pop.style.left = l + 'px'; pop.style.top = t + 'px';
+    // ── Color Picker Popup ────────────────────────────────────────
+    // Palette 10×8 giống Excel/PowerPoint
+    var PAL = [
+      ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
+      ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
+      ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
+      ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
+      ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
+      ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
+      ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
+      ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
+    ];
   
-        function applyCol(c) {
-          btn.dataset.val = c;
-          btn.querySelector('.wp-cp-color').style.background = (c==='#00000000') ? 'transparent' : c;
+    var _activeCP = null;
+  
+    function _closeCP() {
+      var p = document.getElementById('_rp_pop');
+      if (p) p.remove();
+      _activeCP = null;
+    }
+  
+    function _openCP(cpId, curHex, onApply) {
+      _closeCP();
+      _activeCP = cpId;
+      var btn = body.querySelector('._cpb[data-cp="'+cpId+'"]');
+      if (!btn) return;
+  
+      var pop = document.createElement('div');
+      pop.id  = '_rp_pop';
+      pop.className = '_pop';
+  
+      var gHtml = '<div class="_pg">';
+      PAL.forEach(function(row) {
+        row.forEach(function(cl) {
+          var isSel = cl.toUpperCase() === curHex.toUpperCase();
+          gHtml += '<div class="_pc'+(isSel?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'" title="'+cl+'"></div>';
+        });
+      });
+      gHtml += '</div>';
+      var hexVal = curHex.replace('#','').slice(0,6).toUpperCase();
+      gHtml += '<div class="_phrow"><span class="_phhash">#</span><input class="_phi" id="_phi" maxlength="6" value="'+hexVal+'" spellcheck="false"></div>';
+      pop.innerHTML = gHtml;
+      document.body.appendChild(pop);
+  
+      // Vị trí popup
+      var bRect = btn.getBoundingClientRect();
+      var top = bRect.bottom + 5, left = bRect.left;
+      if (top  + 240 > window.innerHeight) top  = bRect.top - 244;
+      if (left + 220 > window.innerWidth)  left = window.innerWidth - 222;
+      pop.style.left = Math.max(4, left) + 'px';
+      pop.style.top  = Math.max(4, top)  + 'px';
+  
+      function applyColor(hex) {
+        // Cập nhật button preview
+        var fc = document.getElementById('_cpfc_'+cpId);
+        if (fc) fc.style.background = hex;
+        btn.dataset.cur = hex;
+        // Cập nhật selection trong popup
+        pop.querySelectorAll('._pc').forEach(function(cl){ cl.classList.toggle('on', cl.dataset.c.toUpperCase()===hex.toUpperCase()); });
+        var phi = document.getElementById('_phi');
+        if (phi) phi.value = hex.replace('#','').toUpperCase();
+        onApply(hex);
+      }
+  
+      pop.querySelectorAll('._pc').forEach(function(cell) {
+        cell.addEventListener('mousedown', function(ev) { ev.stopPropagation(); applyColor(this.dataset.c); });
+      });
+  
+      var phi = pop.querySelector('#_phi');
+      phi.addEventListener('mousedown', function(ev){ ev.stopPropagation(); });
+      phi.addEventListener('input', function() {
+        var v = this.value.replace(/[^0-9a-fA-F]/g,'');
+        this.value = v;
+        if (v.length === 6) applyColor('#'+v);
+      });
+      phi.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Enter' && this.value.length >= 3) { applyColor('#'+this.value.padEnd(6,'0')); _closeCP(); }
+      });
+    }
+  
+    // Đóng popup khi click bên ngoài
+    var _cpDocH = function(ev) {
+      var pop = document.getElementById('_rp_pop');
+      if (!pop) return;
+      var onBtn = !!ev.target.closest('._cpb');
+      if (!pop.contains(ev.target) && !onBtn) _closeCP();
+    };
+    _on(document, 'mousedown', _cpDocH);
+  
+    // Bind click cho tất cả color buttons
+    body.querySelectorAll('._cpb').forEach(function(btn) {
+      var cpId = btn.dataset.cp;
+      // Lấy màu hiện tại từ fill div
+      var fc = document.getElementById('_cpfc_'+cpId);
+      var curColor = fc ? fc.style.background : '#3B82F6';
+      btn.dataset.cur = curColor;
+  
+      _on(btn, 'click', function(ev) {
+        ev.stopPropagation();
+        if (_activeCP === cpId) { _closeCP(); return; }
+        var hex = toHex(this.dataset.cur || curColor);
+        _openCP(cpId, hex, function(newHex) {
+          btn.dataset.cur = newHex;
           doSave();
-        }
-  
-        pop.querySelectorAll('.wa-cp-cell').forEach(function(cell) {
-          cell.addEventListener('mousedown', function(ce) { ce.stopPropagation(); applyCol(this.dataset.c); closeCP(); });
-        });
-        
-        var hInp = pop.querySelector('#_w_cp_hex');
-        hInp.addEventListener('mousedown', function(ce){ce.stopPropagation();});
-        hInp.addEventListener('input', function() {
-          var v = this.value.replace(/[^0-9A-Fa-f]/g, ''); this.value = v;
-          if(v.length === 6) applyCol('#'+v);
         });
       });
     });
   
-    document.addEventListener('mousedown', closeCP);
-  
-    // ── Engine Update (Lưu thay đổi) ──
-    function gv(id) { var e = document.getElementById(id); return e ? e.value : null; }
-    function gSeg(id) { var e = body.querySelector('.wp-seg-btn.on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
-    function gCP(id) { var e = body.querySelector('.wp-cp-btn[data-cp="'+id+'"]'); return e ? e.dataset.val : null; }
-    function gTog(id) { var e = document.getElementById(id); return e ? e.classList.contains('on') : false; }
-  
-    function hexToRgba(hex, a) {
-      if(!hex || hex === '#00000000' || a === 0) return 'transparent';
-      var r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
-      return 'rgba('+r+','+g+','+b+','+a+')';
+    // ── Getters để lấy giá trị từ panel ──────────────────────────
+    function gCP(id) {
+      var btn = body.querySelector('._cpb[data-cp="'+id+'"]');
+      if (!btn) return null;
+      return toHex(btn.dataset.cur || btn.querySelector('._cpfc').style.background);
     }
+    function gRng(id) { var e=document.getElementById(id); return e ? parseFloat(e.value) : null; }
+    function gSeg(id) { var e=body.querySelector('._segb.on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
+    function gSel(id) { var e=document.getElementById(id); return e ? e.value : null; }
+    function gTog(id) { var e=document.getElementById(id); return e ? e.classList.contains('on') : false; }
+    function gTa(id)  { var e=document.getElementById(id); return e ? e.value : null; }
   
+    // ── updateEngine: ghi thay đổi vào KLineChart ────────────────
     function updateEngine() {
       if (!currentSelectedOverlay || !global.tvChart) return;
       try {
         var ns = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
-        var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData) ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
+        var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData)
+                 ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
   
         if (cat === 'text') {
-          var txt = gv('w-txt');
-          if(!ns.text) ns.text = {}; if(!ns.polygon) ns.polygon = {};
-          ns.text.color = gCP('w-tc'); ns.text.size = parseFloat(gv('w-sz')); ns.text.weight = gSeg('w-fw');
-          
-          var bdOn = gTog('w-bdon');
-          ns.polygon.color = hexToRgba(gCP('w-bgc'), parseFloat(gv('w-bga')));
-          ns.polygon.borderColor = bdOn ? gCP('w-bdc') : 'transparent';
-          ns.polygon.borderSize = bdOn ? parseFloat(gv('w-bdw')) : 0;
-          ns.polygon.style = (bdOn || parseFloat(gv('w-bga')) > 0) ? 'strokefill' : 'fill';
-          ne = txt; // Chữ gán thẳng vào extendData
-        } 
-        else if (cat === 'shapes') {
-          if(!ns.polygon) ns.polygon = {}; if(!ns.line) ns.line = {};
-          var bs = gSeg('w-bs');
-          ns.polygon.borderColor = gCP('w-bc');
-          ns.polygon.borderSize = parseFloat(gv('w-bw'));
-          ns.polygon.color = hexToRgba(gCP('w-fc'), parseFloat(gv('w-fa')));
-          ns.polygon.style = 'strokefill';
-          // Ép cả 2 để fix dứt điểm nét đứt hình chữ nhật
-          ns.line.style = bs; 
-          ns.polygon.borderStyle = bs; 
-        } 
-        else if (cat === 'fibo' || cat === 'waves') {
-          if(!ns.line) ns.line = {}; if(!ns.polygon) ns.polygon = {};
-          ns.line.color = gCP('w-lc'); ns.line.size = parseFloat(gv('w-lw')); ns.line.style = gSeg('w-ls');
-          ne.fillOpacity = parseFloat(gv('w-fa'));
-        } 
-        else {
-          if(!ns.line) ns.line = {};
-          ns.line.color = gCP('w-lc'); ns.line.size = parseFloat(gv('w-lw')); ns.line.style = gSeg('w-ls');
+          var txt=gTa('_rp_txt'), tc=gCP('c_tc'), ff=gSel('_rp_ff');
+          var sz=gRng('_rp_sz'), fw=gSeg('_rp_fw'), fi=gSeg('_rp_fi');
+          var bgC=gCP('c_bgc'), bgA=gRng('_rp_bga');
+          var bdOn=gTog('_rp_bdon'), bdC=gCP('c_bdc'), bdW=gRng('_rp_bdw');
+  
+          if (!ns.text)    ns.text    = {};
+          if (!ns.polygon) ns.polygon = {};
+          if (tc)  ns.text.color  = tc;
+          if (ff)  ns.text.family = ff;
+          if (sz)  ns.text.size   = sz;
+          if (fw)  ns.text.weight = fw;
+          if (fi)  ns.text.style  = fi;
+          ns.polygon.color       = mkRgba(bgC, bgA !== null ? bgA : 0);
+          ns.polygon.style       = (bgA > 0 || bdOn) ? 'strokefill' : 'fill';
+          ns.polygon.borderColor = bdOn ? (bdC || '#3B82F6') : 'transparent';
+          ns.polygon.borderSize  = bdOn ? (bdW || 1) : 0;
+          if (txt !== null) currentSelectedOverlay.extendData = txt;
+  
+        } else if (cat === 'shapes') {
+          var bc=gCP('c_bc'), bw=gRng('_rp_bw'), bs=gSeg('_rp_bs');
+          var fc=gCP('c_fc'), fa=gRng('_rp_fa');
+          if (!ns.polygon) ns.polygon = {};
+          if (!ns.line)    ns.line    = {};
+          ns.polygon.borderColor = bc || '#3B82F6';
+          ns.polygon.borderSize  = bw || 1;
+          ns.polygon.color       = mkRgba(fc, fa !== null ? fa : 0.15);
+          ns.polygon.style       = 'strokefill';
+          // line.style điều khiển kiểu viền (solid/dashed) của polygon
+          ns.line.style          = bs || 'solid';
+          ns.line.color          = bc || '#3B82F6';
+          ns.line.size           = bw || 1;
+  
+        } else if (cat === 'fibo') {
+          var lc=gCP('c_lc'), lw=gRng('_rp_lw'), ls=gSeg('_rp_ls');
+          var fa=gRng('_rp_fa'), sl=gTog('_rp_slbl');
+          if (!ns.line) ns.line = {};
+          if (!ns.text) ns.text = {};
+          if (lc) { ns.line.color = lc; ns.text.color = lc; }
+          if (lw) ns.line.size  = lw;
+          if (ls) ns.line.style = ls;
+          if (fa !== null) ne.fillOpacity = fa;
+          ne.showLabels = sl;
+          currentSelectedOverlay.extendData = ne;
+  
+        } else if (cat === 'waves') {
+          var lc=gCP('c_lc'), lw=gRng('_rp_lw'), ls=gSeg('_rp_ls');
+          var tc=gCP('c_tc'), tsz=gRng('_rp_tsz');
+          if (!ns.line) ns.line = {};
+          if (!ns.text) ns.text = {};
+          if (lc) ns.line.color = lc;
+          if (lw) ns.line.size  = lw;
+          if (ls) ns.line.style = ls;
+          if (tc)  ns.text.color = tc;
+          if (tsz) ns.text.size  = tsz;
+  
+        } else {
+          var lc=gCP('c_lc'), lw=gRng('_rp_lw'), ls=gSeg('_rp_ls');
+          if (!ns.line) ns.line = {};
+          if (lc) ns.line.color = lc;
+          if (lw) ns.line.size  = lw;
+          if (ls) ns.line.style = ls;
         }
   
         currentSelectedOverlay.styles = ns;
-        if (cat !== 'text') currentSelectedOverlay.extendData = ne;
+        global.tvChart.overrideOverlay({
+          id: currentSelectedOverlay.id,
+          styles: ns,
+          extendData: currentSelectedOverlay.extendData
+        });
+        if (typeof saveStyles === 'function') saveStyles();
+        if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
   
-        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: ns, extendData: currentSelectedOverlay.extendData });
-        if(typeof saveStyles === 'function') saveStyles();
-        if(typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
-      } catch(err) { console.log(err); }
+      } catch(err) { console.error('[updateEngine]', err); }
     }
   
-    var _t; function doSave() { clearTimeout(_t); _t = setTimeout(updateEngine, 100); }
-    body.querySelectorAll('input, textarea').forEach(function(el) { el.addEventListener('input', doSave); });
+    var _saveTimer;
+    function doSave() { clearTimeout(_saveTimer); _saveTimer = setTimeout(updateEngine, 120); }
   
-    // ── Đóng panel khi click ra ngoài ──
-    function closePanelOutside(e) {
-      var p = document.getElementById('wa-props-panel'), cp = document.getElementById('_w_cp_pop');
-      if (p && !p.contains(e.target) && (!cp || !cp.contains(e.target)) && !e.target.closest('.wa-toolbar')) {
+    body.querySelectorAll('input, textarea, select').forEach(function(el) {
+      _on(el, 'input',  doSave);
+      _on(el, 'change', doSave);
+    });
+  
+    // ── Đóng panel khi click ra ngoài ────────────────────────────
+    var _panelH = function(ev) {
+      var pop = document.getElementById('_rp_pop');
+      if (pop && pop.contains(ev.target)) return;
+      var p  = document.getElementById('wa-props-panel');
+      var fb = document.getElementById('wa-float-bar');
+      var tb = document.querySelector('.wa-toolbar');
+      if (p && !p.contains(ev.target) && (!fb||!fb.contains(ev.target)) && (!tb||!tb.contains(ev.target))) {
+        _closeCP();
+        document.removeEventListener('mousedown', _panelH);
         if (typeof hidePanel === 'function') hidePanel();
-        document.removeEventListener('mousedown', closePanelOutside);
       }
-    }
-    document.removeEventListener('mousedown', closePanelOutside);
-    setTimeout(function() { document.addEventListener('mousedown', closePanelOutside); }, 100);
+    };
+    document.removeEventListener('mousedown', _panelH);
+    setTimeout(function() { document.addEventListener('mousedown', _panelH); }, 130);
   }
 
   function hidePanel() {
