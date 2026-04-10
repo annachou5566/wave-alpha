@@ -2100,471 +2100,458 @@
   }
 
   function renderPanel(overlay) {
-    const panel = document.getElementById('wa-props-panel');
+    var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
   
-    const cat = getToolCategory(overlay.name);
-    const body = panel.querySelector('.wa-panel-body');
-    let s = overlay.styles || {};
-    let ext = (typeof overlay.extendData === 'object' && overlay.extendData) ? overlay.extendData : {};
+    var cat = getToolCategory(overlay.name);
+    var body = panel.querySelector('.wa-panel-body');
+    if (!body) return;
   
-    // ─── helpers ───────────────────────────────────────────────
-    const SW = (id) => `<div class="wa-swatches-row">${WASWATCHES.map(c =>
-      `<div class="wa-swatch" style="background:${c}" data-color="${c}" data-target="${id}"></div>`
-    ).join('')}</div>`;
+    var s   = overlay.styles || {};
+    var rawExt = overlay.extendData;
+    var ext = (rawExt && typeof rawExt === 'object') ? rawExt : {};
   
-    const SEG = (id, opts, cur) => `<div class="wa-seg">${opts.map(o =>
-      `<button class="wa-seg-btn${cur===o.v?' wa-seg-on':''}" data-seg="${id}" data-val="${o.v}">${o.label}</button>`
-    ).join('')}</div>`;
+    // ── helper: luôn trả về #RRGGBB ──────────────────────────
+    function toHex(c) {
+      var h = colorToHex(c);
+      if (!h) return '#3B82F6';
+      return h.startsWith('#') ? h.substring(0, 7) : '#' + h.substring(0, 6);
+    }
   
-    const RANGE = (id, mn, mx, st, val, unit='') => `<div class="wa-range-wrap">
-      <input type="range" class="wa-range" id="${id}" min="${mn}" max="${mx}" step="${st}" value="${val}">
-      <span class="wa-range-val" id="${id}-val">${val}${unit}</span>
-    </div>`;
+    // ── HTML helpers ─────────────────────────────────────────
+    function sw(id) {
+      return '<div class="wa-swatches-row">' +
+        WASWATCHES.map(function(c) {
+          return '<div class="wa-swatch" style="background:#'+c+'" data-color="#'+c+'" data-target="'+id+'" title="#'+c+'"></div>';
+        }).join('') + '</div>';
+    }
+    function rng(id, mn, mx, st, val, unit) {
+      unit = unit || '';
+      return '<div class="wa-range-wrap">' +
+        '<input type="range" class="wa-range" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'">' +
+        '<span class="wa-range-val" id="'+id+'-val">'+val+unit+'</span></div>';
+    }
+    function seg(id, opts, cur) {
+      return '<div class="wa-seg">' + opts.map(function(o) {
+        return '<button class="wa-seg-btn'+(cur===o.v?' wa-seg-on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.label+'</button>';
+      }).join('') + '</div>';
+    }
+    function tog(id, on, lbl) {
+      return '<div class="wa-toggle-row"><span class="wa-toggle-label">'+lbl+'</span>' +
+        '<div class="wa-toggle'+(on?' wa-toggle-on':'')+'" id="'+id+'"></div></div>';
+    }
+    function sec(title, content) {
+      return '<div class="wa-prop-section">' +
+        (title ? '<div class="wa-prop-section-title">'+title+'</div>' : '') +
+        content + '</div>';
+    }
+    function row2(a, b) { return '<div class="wa-row"><div class="wa-col">'+a+'</div><div class="wa-col">'+b+'</div></div>'; }
+    function row1(a)    { return '<div class="wa-row"><div class="wa-col">'+a+'</div></div>'; }
+    function lbl(t, ctrl) { return '<label style="font-size:10px;color:#8896A7;font-weight:600;margin-bottom:4px;display:block">'+t+'</label>'+ctrl; }
+    function cpick(id, val) { return sw(id)+'<input type="color" id="'+id+'" class="wa-color-picker" value="'+val+'">'; }
   
-    const TOGGLE = (id, on, lbl) => `<div class="wa-toggle-row">
-      <span class="wa-toggle-label">${lbl}</span>
-      <div class="wa-toggle${on?' wa-toggle-on':''}" id="${id}"></div>
-    </div>`;
-  
-    const SEC = (title, body) => `<div class="wa-prop-section">
-      ${title ? `<div class="wa-prop-section-title">${title}</div>` : ''}${body}
-    </div>`;
-  
-    const COL2 = (a, b) => `<div class="wa-row"><div class="wa-col">${a}</div><div class="wa-col">${b}</div></div>`;
-    const COL1 = (a) => `<div class="wa-row"><div class="wa-col">${a}</div></div>`;
-    const LBL = (t, ctrl) => `<label style="font-size:10px;color:#8896A7;font-weight:600;margin-bottom:4px;display:block">${t}</label>${ctrl}`;
-  
-    const LINE_SEGS = [
+    var LS = [
       {v:'solid',  label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2"/></svg>'},
       {v:'dashed', label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2"/></svg>'},
-      {v:'dotted', label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3"/></svg>'},
+      {v:'dotted', label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3"/></svg>'}
     ];
-    const FONT_OPTS = [
+    var FONTS = [
       {v:'Be Vietnam Pro, sans-serif', n:'Be Vietnam Pro'},
       {v:'Inter, sans-serif',          n:'Inter'},
       {v:'Lexend, sans-serif',         n:'Lexend'},
       {v:'Space Grotesk, sans-serif',  n:'Space Grotesk'},
       {v:'Sora, sans-serif',           n:'Sora'},
       {v:'Raleway, sans-serif',        n:'Raleway'},
-      {v:'monospace',                  n:'Monospace'},
+      {v:'monospace',                  n:'Monospace'}
     ];
-    // ────────────────────────────────────────────────────────────
   
-    let html = '';
+    // ── Build HTML theo loại công cụ ─────────────────────────
+    var html = '';
   
-    /* ═══════════════════════════════════════════════════════
-       1. TEXT / ANNOTATION TOOLS
-    ═══════════════════════════════════════════════════════ */
+    try {
+  
+    // ════════════════════════════════════ TEXT ════════════════
     if (cat === 'text') {
-      let txt = typeof ext === 'string' ? ext : (ext.text || '');
-      if (!txt) txt = 'Văn bản...';
-      let tc  = colorToHex(s?.text?.color)       || '#EAECEF';
-      let bgC = colorToHex(s?.polygon?.color)    || '#1C242E';
-      let bdC = colorToHex(s?.polygon?.borderColor) || '#273040';
-      let sz  = s?.text?.size   || 13;
-      let fw  = s?.text?.weight || 'normal';
-      let fi  = s?.text?.style  || 'normal'; // italic
-      let ff  = s?.text?.family || 'Be Vietnam Pro, sans-serif';
-      let bgA = 0.85;
-      if (s?.polygon?.color && s.polygon.color.includes('rgba')) {
-        let m = s.polygon.color.match(/rgba\([^,]+,[^,]+,[^,]+,([^)]+)\)/);
+      var txt = (typeof rawExt === 'string') ? rawExt : (ext.text || '');
+      var tc  = toHex(s.text && s.text.color);
+      var ff  = (s.text && s.text.family) || 'Be Vietnam Pro, sans-serif';
+      var sz  = (s.text && s.text.size)   || 13;
+      var fw  = (s.text && s.text.weight) || 'normal';
+      var fi  = (s.text && s.text.style)  || 'normal';
+      var bgC = toHex(s.polygon && s.polygon.color);
+      var bgA = 0.85;
+      if (s.polygon && s.polygon.color && s.polygon.color.indexOf('rgba') === 0) {
+        var m = s.polygon.color.match(/rgba\([^,]+,[^,]+,[^,]+,([^)]+)\)/);
         if (m) bgA = parseFloat(m[1]);
       }
-      let bdW = s?.polygon?.borderSize || 1;
-      let bdShow = bdC !== '#00000000' && bdC !== 'transparent';
+      var bdC   = toHex(s.polygon && s.polygon.borderColor) || '#273040';
+      var bdW   = (s.polygon && s.polygon.borderSize) || 1;
+      var bdOn  = bdC !== '#00000000' && bdC !== '#000000' && !!(s.polygon && s.polygon.borderSize);
   
-      html += SEC('Nội dung', `<textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea>`);
+      html += sec('Nội dung', '<textarea id="wa-p-txt" class="wa-input wa-textarea">'+txt+'</textarea>');
   
-      html += SEC('Kiểu chữ', `
-        ${COL1(LBL('Font chữ', `<select id="wa-prop-ff" class="wa-select">
-          ${FONT_OPTS.map(f => `<option value="${f.v}"${ff.includes(f.v.split(',')[0])?'selected':''}>${f.n}</option>`).join('')}
-        </select>`))}
-        ${COL2(
-          LBL('Cỡ chữ (px)', RANGE('wa-prop-sz', 8, 72, 1, sz, 'px')),
-          LBL('Độ đậm & Nghiêng', `${SEG('wa-prop-fw', [
-            {v:'normal',label:'N'},{v:'600',label:'<b>B</b>'},{v:'700',label:'<b style="font-weight:800">B+</b>'}
-          ], fw)}
-          <div style="margin-top:4px">${SEG('wa-prop-fi', [
-            {v:'normal',label:'N'},{v:'italic',label:'<i>I</i>'}
-          ], fi)}</div>`)
-        )}
-      `);
+      var fontOpts = FONTS.map(function(f) {
+        return '<option value="'+f.v+'"'+(ff.indexOf(f.v.split(',')[0]) > -1 ? ' selected' : '')+'>'+f.n+'</option>';
+      }).join('');
+      html += sec('Kiểu chữ',
+        row1(lbl('Font chữ', '<select id="wa-p-ff" class="wa-select">'+fontOpts+'</select>')) +
+        row2(
+          lbl('Cỡ chữ', rng('wa-p-sz', 8, 72, 1, sz, 'px')),
+          lbl('Đậm',    seg('wa-p-fw', [{v:'normal',label:'N'},{v:'600',label:'<b>B</b>'},{v:'700',label:'<b style="font-weight:800">B+</b>'}], fw)) +
+          '<div style="margin-top:4px">'+lbl('Nghiêng', seg('wa-p-fi', [{v:'normal',label:'N'},{v:'italic',label:'<i>I</i>'}], fi))+'</div>'
+        )
+      );
+      html += sec('Màu chữ', row1(lbl('Màu chữ', cpick('wa-p-tc', tc))));
+      html += sec('Nền & Viền',
+        row2(
+          lbl('Màu nền',    cpick('wa-p-bgc', bgC)),
+          lbl('Opacity nền', rng('wa-p-bga', 0, 1, 0.05, bgA))
+        ) +
+        '<div style="margin-top:8px">' + tog('wa-p-bdon', bdOn, 'Hiện viền') + '</div>' +
+        '<div id="wa-p-bdopts" style="margin-top:8px;'+(bdOn?'':'opacity:0.4;pointer-events:none')+'">' +
+          row2(
+            lbl('Màu viền',   cpick('wa-p-bdc', bdC)),
+            lbl('Độ dày viền', rng('wa-p-bdw', 1, 6, 1, bdW, 'px'))
+          ) +
+        '</div>'
+      );
   
-      html += SEC('Màu chữ', `
-        ${SW('wa-prop-tc')}
-        <input type="color" id="wa-prop-tc" class="wa-color-picker" value="${tc}">
-      `);
-  
-      html += SEC('Nền & Viền', `
-        ${COL2(
-          LBL('Màu nền', `${SW('wa-prop-bgc')}<input type="color" id="wa-prop-bgc" class="wa-color-picker" value="${bgC}">`),
-          LBL('Opacity nền', RANGE('wa-prop-bga', 0, 1, 0.05, bgA))
-        )}
-        <div style="margin-top:8px">${TOGGLE('wa-prop-bd-show', bdShow, 'Hiện viền')}</div>
-        <div id="wa-prop-bd-opts" style="margin-top:8px;${!bdShow?'opacity:0.4;pointer-events:none':''}">
-          ${COL2(
-            LBL('Màu viền', `${SW('wa-prop-bdc')}<input type="color" id="wa-prop-bdc" class="wa-color-picker" value="${bdC}">`),
-            LBL('Độ dày viền', RANGE('wa-prop-bdw', 1, 6, 1, bdW, 'px'))
-          )}
-        </div>
-      `);
-  
-    /* ═══════════════════════════════════════════════════════
-       2. FIBONACCI & GANN FAN
-    ═══════════════════════════════════════════════════════ */
+    // ════════════════════════════════════ FIBO ════════════════
     } else if (cat === 'fibo') {
-      let lc     = colorToHex(s?.line?.color)  || '#E8EDF2';
-      let lw     = s?.line?.size  || 1;
-      let ls     = s?.line?.style || 'solid';
-      let alpha  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-      let showLb = ext.showLabels !== false;
-      let lbC    = colorToHex(ext.labelColor)  || lc;
-      let lbBg   = colorToHex(ext.labelBg)     || '#151B23';
-      let lbSz   = ext.labelSize || 11;
+      var lc     = toHex(s.line && s.line.color)  || '#E8EDF2';
+      var lw     = (s.line && s.line.size)  || 1;
+      var ls     = (s.line && s.line.style) || 'solid';
+      var alpha  = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.15;
+      var showLb = ext.showLabels !== false;
+      var lbC    = toHex(ext.labelColor) || lc;
+      var lbBg   = toHex(ext.labelBg)   || '#151B23';
+      var lbSz   = ext.labelSize || 11;
+      var levCfg = ext.levelColors || {};
   
-      const FIBO_LEVELS_MAP = {
-        fibRetracement: [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0],
-        fibExtension:   [0.618, 1.0, 1.272, 1.414, 1.618, 2.0, 2.618],
-        fibFan:         [0.236, 0.382, 0.5, 0.618, 0.786],
-        fibArc:         [0.382, 0.5, 0.618, 1.0, 1.618],
-        fibTimeZone:    [0, 1, 2, 3, 5, 8, 13, 21, 34, 55],
-        gannFan:        ['1:8','1:4','1:3','1:2','1:1','2:1','3:1','4:1','8:1'],
+      var FIBO_MAPS = {
+        fibRetracement:[0,0.236,0.382,0.5,0.618,0.786,1.0],
+        fibExtension:  [0.618,1.0,1.272,1.414,1.618,2.0,2.618],
+        fibFan:        [0.236,0.382,0.5,0.618,0.786],
+        fibArc:        [0.382,0.5,0.618,1.0,1.618],
+        fibTimeZone:   [0,1,2,3,5,8,13,21,34,55],
+        gannFan:       ['1:8','1:4','1:3','1:2','1:1','2:1','3:1','4:1','8:1']
       };
-      const LEVELS = FIBO_LEVELS_MAP[overlay.name] || FIBO_LEVELS_MAP.fibRetracement;
-      const RAINBOW = ['#F23645','#FF9800','#FFEB3B','#4CAF50','#00BCD4','#2962FF','#9C27B0','#E91E63','#607D8B','#795548'];
-      let levCfg = ext.levelColors || {};
+      var LEVELS = FIBO_MAPS[overlay.name] || FIBO_MAPS.fibRetracement;
+      var RAIN   = ['#F23645','#FF9800','#FFEB3B','#4CAF50','#00BCD4','#2962FF','#9C27B0','#E91E63','#607D8B','#795548'];
   
-      html += SEC('Đường chung', `
-        ${COL1(LBL('Màu đường', `${SW('wa-prop-lc')}<input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lc}">`))}
-        ${COL2(
-          LBL('Độ dày', RANGE('wa-prop-lw', 1, 5, 1, lw, 'px')),
-          LBL('Kiểu đường', SEG('wa-prop-ls', LINE_SEGS, ls))
-        )}
-      `);
+      html += sec('Đường chung',
+        row1(lbl('Màu đường', cpick('wa-p-lc', lc))) +
+        row2(
+          lbl('Độ dày', rng('wa-p-lw', 1, 5, 1, lw, 'px')),
+          lbl('Kiểu đường', seg('wa-p-ls', LS, ls))
+        )
+      );
+      html += sec('Vùng nền', row1(lbl('Opacity fill (0 = tắt)', rng('wa-p-fa', 0, 0.6, 0.01, alpha))));
+      html += sec('Nhãn số',
+        tog('wa-p-slbl', showLb, 'Hiện nhãn số') +
+        '<div id="wa-p-lblopts" style="margin-top:8px;'+(showLb?'':'opacity:0.4;pointer-events:none')+'">' +
+          row2(
+            lbl('Màu chữ nhãn',  cpick('wa-p-lbc', lbC)),
+            lbl('Nền nhãn',      cpick('wa-p-lbbg', lbBg))
+          ) +
+          row1(lbl('Cỡ chữ nhãn', rng('wa-p-lbsz', 8, 18, 1, lbSz, 'px'))) +
+        '</div>'
+      );
   
-      html += SEC('Vùng nền', `
-        ${COL1(LBL('Opacity fill (0 = tắt)', RANGE('wa-prop-fa', 0, 0.6, 0.01, alpha)))}
-      `);
+      var levRows = LEVELS.map(function(lv, i) {
+        var cfg  = levCfg[String(lv)] || {};
+        var lvC  = toHex(cfg.color) || RAIN[i % RAIN.length];
+        var lvBg = toHex(cfg.bg)    || RAIN[i % RAIN.length];
+        var lvOn = cfg.show !== false;
+        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #1E2733">' +
+          '<div class="wa-toggle'+(lvOn?' wa-toggle-on':'')+'" id="wa-lv-tog-'+i+'" data-lv="'+lv+'" style="width:28px;height:16px;flex-shrink:0"></div>' +
+          '<span style="font-size:11px;color:#8896A7;min-width:40px;font-weight:600">'+lv+'</span>' +
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:1px">' +
+            '<span style="font-size:8px;color:#4A5568">đường</span>' +
+            '<input type="color" value="'+lvC+'" id="wa-lv-c-'+i+'" data-lv="'+lv+'" style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">' +
+          '</div>' +
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:1px">' +
+            '<span style="font-size:8px;color:#4A5568">vùng</span>' +
+            '<input type="color" value="'+lvBg+'" id="wa-lv-bg-'+i+'" data-lv="'+lv+'" style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      html += sec('Màu từng mức', '<div style="font-size:10px;color:#4A5568;margin-bottom:8px">Bật/tắt · Màu đường · Màu vùng</div><div>' + levRows + '</div>');
   
-      html += SEC('Nhãn số', `
-        ${TOGGLE('wa-prop-show-lbl', showLb, 'Hiện nhãn số')}
-        <div id="wa-lbl-opts" style="margin-top:8px;${!showLb?'opacity:0.4;pointer-events:none':''}">
-          ${COL2(
-            LBL('Màu chữ nhãn', `${SW('wa-prop-lbc')}<input type="color" id="wa-prop-lbc" class="wa-color-picker" value="${lbC}">`),
-            LBL('Nền nhãn', `${SW('wa-prop-lbbg')}<input type="color" id="wa-prop-lbbg" class="wa-color-picker" value="${lbBg}">`)
-          )}
-          ${COL1(LBL('Cỡ chữ nhãn', RANGE('wa-prop-lbsz', 8, 18, 1, lbSz, 'px')))}
-        </div>
-      `);
-  
-      html += SEC('Màu từng mức', `
-        <div style="font-size:10px;color:#4A5568;margin-bottom:8px">Bật/tắt · Màu đường · Màu nền vùng</div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-        ${LEVELS.map((lv, i) => {
-          let cfg   = levCfg[String(lv)] || {};
-          let lvC   = colorToHex(cfg.color) || RAINBOW[i % RAINBOW.length];
-          let lvBg  = colorToHex(cfg.bg)    || RAINBOW[i % RAINBOW.length];
-          let lvOn  = cfg.show !== false;
-          return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #1E2733">
-            <div class="wa-toggle${lvOn?' wa-toggle-on':''}" id="wa-lv-tog-${i}" data-lv="${lv}" style="width:28px;height:16px;flex-shrink:0"></div>
-            <span style="font-size:11px;color:#8896A7;min-width:40px;font-weight:600">${lv}</span>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-              <span style="font-size:8px;color:#4A5568">đường</span>
-              <input type="color" value="${lvC}" id="wa-lv-c-${i}" data-lv="${lv}"
-                style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-              <span style="font-size:8px;color:#4A5568">vùng</span>
-              <input type="color" value="${lvBg}" id="wa-lv-bg-${i}" data-lv="${lv}"
-                style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">
-            </div>
-          </div>`;
-        }).join('')}
-        </div>
-      `);
-  
-    /* ═══════════════════════════════════════════════════════
-       3. SHAPES
-    ═══════════════════════════════════════════════════════ */
+    // ════════════════════════════════════ SHAPES ══════════════
     } else if (cat === 'shapes') {
-      let bc  = colorToHex(s?.polygon?.borderColor) || '#3B82F6';
-      let bw  = s?.polygon?.borderSize || s?.line?.size || 1;
-      let bs  = s?.line?.style || s?.polygon?.style || 'solid';
-      let fc  = colorToHex(s?.polygon?.color) || '#3B82F6';
-      let fa  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-      let tc  = colorToHex(s?.text?.color) || '#E8EDF2';
-      let tsz = s?.text?.size || 12;
+      var bc  = toHex(s.polygon && s.polygon.borderColor) || '#3B82F6';
+      var bw  = (s.polygon && s.polygon.borderSize) || 1;
+      var bst = (s.line && s.line.style) || 'solid';
+      var fc  = toHex(s.polygon && s.polygon.color) || '#3B82F6';
+      var fa  = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.15;
+      var stc = toHex(s.text && s.text.color) || '#E8EDF2';
+      var tsz = (s.text && s.text.size) || 12;
   
-      html += SEC('Viền', `
-        ${COL1(LBL('Màu viền', `${SW('wa-prop-bc')}<input type="color" id="wa-prop-bc" class="wa-color-picker" value="${bc}">`))}
-        ${COL2(
-          LBL('Độ dày', RANGE('wa-prop-bw', 1, 8, 1, bw, 'px')),
-          LBL('Kiểu', SEG('wa-prop-bs', LINE_SEGS, bs))
-        )}
-      `);
+      html += sec('Viền',
+        row1(lbl('Màu viền', cpick('wa-p-bc', bc))) +
+        row2(
+          lbl('Độ dày', rng('wa-p-bw', 1, 8, 1, bw, 'px')),
+          lbl('Kiểu', seg('wa-p-bs', LS, bst))
+        )
+      );
+      html += sec('Nền',
+        row1(lbl('Màu nền', cpick('wa-p-fc', fc))) +
+        row1(lbl('Opacity nền (0 = trong suốt)', rng('wa-p-sfa', 0, 1, 0.05, fa)))
+      );
+      html += sec('Nhãn',
+        row2(
+          lbl('Màu chữ', cpick('wa-p-tc', stc)),
+          lbl('Cỡ chữ',  rng('wa-p-tsz', 8, 32, 1, tsz, 'px'))
+        )
+      );
   
-      html += SEC('Nền', `
-        ${COL1(LBL('Màu nền', `${SW('wa-prop-fc')}<input type="color" id="wa-prop-fc" class="wa-color-picker" value="${fc}">`))}
-        ${COL1(LBL('Opacity nền (0 = trong suốt)', RANGE('wa-prop-fa', 0, 1, 0.05, fa)))}
-      `);
-  
-      html += SEC('Nhãn (nếu có)', `
-        ${COL2(
-          LBL('Màu chữ', `${SW('wa-prop-tc')}<input type="color" id="wa-prop-tc" class="wa-color-picker" value="${tc}">`),
-          LBL('Cỡ chữ', RANGE('wa-prop-tsz', 8, 32, 1, tsz, 'px'))
-        )}
-      `);
-  
-    /* ═══════════════════════════════════════════════════════
-       4. ELLIOTT WAVES & CHART PATTERNS
-    ═══════════════════════════════════════════════════════ */
+    // ════════════════════════════════════ WAVES ═══════════════
     } else if (cat === 'waves') {
-      let lc  = colorToHex(s?.line?.color)    || '#3B82F6';
-      let lw  = s?.line?.size  || 1;
-      let ls  = s?.line?.style || 'solid';
-      let fc  = colorToHex(s?.polygon?.color) || '#00F0FF';
-      let fa  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.08;
-      let tc  = colorToHex(s?.text?.color)    || '#E8EDF2';
-      let tsz = s?.text?.size || 12;
+      var wlc  = toHex(s.line && s.line.color)    || '#3B82F6';
+      var wlw  = (s.line && s.line.size)   || 1;
+      var wls  = (s.line && s.line.style)  || 'solid';
+      var wfc  = toHex(s.polygon && s.polygon.color) || '#00F0FF';
+      var wfa  = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.08;
+      var wtc  = toHex(s.text && s.text.color) || '#E8EDF2';
+      var wtsz = (s.text && s.text.size) || 12;
   
-      html += SEC('Đường kẻ', `
-        ${COL1(LBL('Màu đường', `${SW('wa-prop-lc')}<input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lc}">`))}
-        ${COL2(
-          LBL('Độ dày', RANGE('wa-prop-lw', 1, 5, 1, lw, 'px')),
-          LBL('Kiểu đường', SEG('wa-prop-ls', LINE_SEGS, ls))
-        )}
-      `);
+      html += sec('Đường kẻ',
+        row1(lbl('Màu đường', cpick('wa-p-lc', wlc))) +
+        row2(
+          lbl('Độ dày', rng('wa-p-lw', 1, 5, 1, wlw, 'px')),
+          lbl('Kiểu',   seg('wa-p-ls', LS, wls))
+        )
+      );
+      html += sec('Nền fill',
+        row1(lbl('Màu nền', cpick('wa-p-fc', wfc))) +
+        row1(lbl('Opacity (0 = tắt)', rng('wa-p-fa', 0, 0.5, 0.01, wfa)))
+      );
+      html += sec('Nhãn',
+        row2(
+          lbl('Màu chữ', cpick('wa-p-tc', wtc)),
+          lbl('Cỡ chữ',  rng('wa-p-tsz', 8, 20, 1, wtsz, 'px'))
+        )
+      );
   
-      html += SEC('Nền fill', `
-        ${COL1(LBL('Màu nền', `${SW('wa-prop-fc')}<input type="color" id="wa-prop-fc" class="wa-color-picker" value="${fc}">`))}
-        ${COL1(LBL('Opacity (0 = tắt)', RANGE('wa-prop-fa', 0, 0.5, 0.01, fa)))}
-      `);
-  
-      html += SEC('Nhãn / Label', `
-        ${COL2(
-          LBL('Màu chữ', `${SW('wa-prop-tc')}<input type="color" id="wa-prop-tc" class="wa-color-picker" value="${tc}">`),
-          LBL('Cỡ chữ', RANGE('wa-prop-tsz', 8, 20, 1, tsz, 'px'))
-        )}
-      `);
-  
-    /* ═══════════════════════════════════════════════════════
-       5. LINES (mặc định)
-    ═══════════════════════════════════════════════════════ */
+    // ════════════════════════════════════ LINES ═══════════════
     } else {
-      let lc = colorToHex(s?.line?.color)  || '#3B82F6';
-      let lw = s?.line?.size  || 1;
-      let ls = s?.line?.style || 'solid';
+      var llc = toHex(s.line && s.line.color) || '#3B82F6';
+      var llw = (s.line && s.line.size)  || 1;
+      var lls = (s.line && s.line.style) || 'solid';
   
-      html += SEC('Đường kẻ', `
-        ${COL1(LBL('Màu đường', `${SW('wa-prop-lc')}<input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lc}">`))}
-        ${COL2(
-          LBL('Độ dày', RANGE('wa-prop-lw', 1, 5, 1, lw, 'px')),
-          LBL('Kiểu đường', SEG('wa-prop-ls', LINE_SEGS, ls))
-        )}
-      `);
+      html += sec('Đường kẻ',
+        row1(lbl('Màu đường', cpick('wa-p-lc', llc))) +
+        row2(
+          lbl('Độ dày', rng('wa-p-lw', 1, 5, 1, llw, 'px')),
+          lbl('Kiểu',   seg('wa-p-ls', LS, lls))
+        )
+      );
+    }
+  
+    } catch(err) {
+      console.error('[renderPanel] Lỗi build HTML:', err);
+      html = '<div style="padding:16px;color:#EF4444;font-size:12px">Lỗi tải panel: ' + err.message + '</div>';
     }
   
     body.innerHTML = html;
     panel.classList.add('show');
   
-    // ─── Live range value display ───────────────────────────
+    // ── Range value live display ─────────────────────────────
     body.querySelectorAll('.wa-range').forEach(function(r) {
-      var valEl = document.getElementById(r.id + '-val');
-      if (!valEl) return;
+      var vel = document.getElementById(r.id + '-val');
+      if (!vel) return;
       r.addEventListener('input', function() {
-        valEl.textContent = this.value + (valEl.textContent.replace(/[\d.]/g,'') || '');
+        var unit = vel.textContent.replace(/[\d.]/g, '') || '';
+        vel.textContent = this.value + unit;
       });
     });
   
-    // ─── Swatch → color picker sync ─────────────────────────
+    // ── Swatch → color picker ────────────────────────────────
     body.querySelectorAll('.wa-swatch').forEach(function(sw) {
       sw.addEventListener('click', function() {
-        var picker = document.getElementById(this.dataset.target);
-        if (picker) { picker.value = this.dataset.color; picker.dispatchEvent(new Event('input')); }
-        body.querySelectorAll(`.wa-swatch[data-target="${this.dataset.target}"]`).forEach(function(s) { s.classList.remove('selected'); });
+        var inp = document.getElementById(this.dataset.target);
+        if (inp) { inp.value = this.dataset.color; inp.dispatchEvent(new Event('input', {bubbles:true})); }
+        body.querySelectorAll('.wa-swatch[data-target="'+this.dataset.target+'"]').forEach(function(s){ s.classList.remove('selected'); });
         this.classList.add('selected');
       });
     });
   
-    // ─── Segmented buttons ──────────────────────────────────
+    // ── Seg buttons ──────────────────────────────────────────
     body.querySelectorAll('.wa-seg-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        var seg = this.dataset.seg;
-        body.querySelectorAll(`.wa-seg-btn[data-seg="${seg}"]`).forEach(function(b) { b.classList.remove('wa-seg-on'); });
+        body.querySelectorAll('.wa-seg-btn[data-seg="'+this.dataset.seg+'"]').forEach(function(b){ b.classList.remove('wa-seg-on'); });
         this.classList.add('wa-seg-on');
-        saveEngine();
+        doSave();
       });
     });
   
-    // ─── Toggle switches ────────────────────────────────────
+    // ── Toggle switches ──────────────────────────────────────
     body.querySelectorAll('.wa-toggle').forEach(function(tog) {
+      if (tog.id && tog.id.indexOf('wa-lv-tog-') === 0) return; // fibo level toggles xử lý riêng
       tog.addEventListener('click', function() {
         this.classList.toggle('wa-toggle-on');
-        // Kết nối toggle với phần phụ thuộc
-        if (this.id === 'wa-prop-show-lbl') {
-          var opts = document.getElementById('wa-lbl-opts');
-          if (opts) opts.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
+        if (this.id === 'wa-p-slbl') {
+          var el = document.getElementById('wa-p-lblopts');
+          if (el) el.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
         }
-        if (this.id === 'wa-prop-bd-show') {
-          var opts = document.getElementById('wa-prop-bd-opts');
-          if (opts) opts.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
+        if (this.id === 'wa-p-bdon') {
+          var el = document.getElementById('wa-p-bdopts');
+          if (el) el.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
         }
-        saveEngine();
+        doSave();
       });
     });
   
-    // ─── Save engine ─────────────────────────────────────────
-    function getSeg(id) {
-      var on = body.querySelector(`.wa-seg-btn.wa-seg-on[data-seg="${id}"]`);
-      return on ? on.dataset.val : null;
-    }
-    function getToggle(id) {
-      var el = document.getElementById(id);
-      return el ? el.classList.contains('wa-toggle-on') : null;
-    }
-    function getVal(id) { var el = document.getElementById(id); return el ? el.value : null; }
-    function getNum(id) { var v = getVal(id); return v !== null ? parseFloat(v) : null; }
-    function getInt(id) { var v = getVal(id); return v !== null ? parseInt(v) : null; }
+    // ── Fibo level toggles ───────────────────────────────────
+    body.querySelectorAll('[id^="wa-lv-tog-"]').forEach(function(tog) {
+      tog.addEventListener('click', function() {
+        this.classList.toggle('wa-toggle-on');
+        doSave();
+      });
+    });
+  
+    // ── updateEngine ─────────────────────────────────────────
+    function gv(id) { var e = document.getElementById(id); return e ? e.value : null; }
+    function gn(id) { var v = gv(id); return v !== null ? parseFloat(v) : null; }
+    function gi(id) { var v = gv(id); return v !== null ? parseInt(v) : null; }
+    function gSeg(id) { var e = body.querySelector('.wa-seg-btn.wa-seg-on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
+    function gTog(id) { var e = document.getElementById(id); return e ? e.classList.contains('wa-toggle-on') : null; }
   
     function updateEngine() {
-      if (!currentSelectedOverlay) return;
-      var newStyles = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
-      var newExt    = JSON.parse(JSON.stringify((typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData) ? currentSelectedOverlay.extendData : {}));
-  
-      if (cat === 'text') {
-        var txt   = getVal('wa-prop-txt');
-        var tc    = getVal('wa-prop-tc');
-        var ff    = getVal('wa-prop-ff');
-        var sz    = getInt('wa-prop-sz');
-        var fw    = getSeg('wa-prop-fw');
-        var fi    = getSeg('wa-prop-fi');
-        var bgC   = getVal('wa-prop-bgc');
-        var bgA   = getNum('wa-prop-bga');
-        var bdC   = getVal('wa-prop-bdc');
-        var bdW   = getInt('wa-prop-bdw');
-        var bdOn  = getToggle('wa-prop-bd-show');
-  
-        if (!newStyles.text) newStyles.text = {};
-        if (!newStyles.polygon) newStyles.polygon = {};
-  
-        if (txt !== null)  newExt = typeof newExt === 'string' ? txt : txt;
-        if (tc)   newStyles.text.color   = tc;
-        if (ff)   newStyles.text.family  = ff;
-        if (sz)   newStyles.text.size    = sz;
-        if (fw)   newStyles.text.weight  = fw;
-        if (fi)   newStyles.text.style   = fi;
-        if (bgC && bgA !== null) newStyles.polygon.color = hexToRgba(bgC, bgA);
-        if (bdOn && bdC) { newStyles.polygon.borderColor = bdC; newStyles.polygon.borderSize = bdW || 1; }
-        else { newStyles.polygon.borderColor = 'transparent'; }
-  
-        toolStyles.text = { ...toolStyles.text, textColor: tc, textSize: sz, fontFamily: ff };
-  
-      } else if (cat === 'fibo') {
-        var lc  = getVal('wa-prop-lc');
-        var lw  = getInt('wa-prop-lw');
-        var ls  = getSeg('wa-prop-ls');
-        var fa  = getNum('wa-prop-fa');
-        var showLb = getToggle('wa-prop-show-lbl');
-        var lbC  = getVal('wa-prop-lbc');
-        var lbBg = getVal('wa-prop-lbbg');
-        var lbSz = getInt('wa-prop-lbsz');
-  
-        if (!newStyles.line) newStyles.line = {};
-        if (!newStyles.text) newStyles.text = {};
-        if (lc) { newStyles.line.color = lc; newStyles.text.color = lc; }
-        if (lw) newStyles.line.size  = lw;
-        if (ls) newStyles.line.style = ls;
-        if (fa !== null) newExt.fillOpacity   = fa;
-        if (showLb !== null) newExt.showLabels = showLb;
-        if (lbC)  newExt.labelColor  = lbC;
-        if (lbBg) newExt.labelBg     = lbBg;
-        if (lbSz) newExt.labelSize   = lbSz;
-  
-        // Per-level colors
-        if (!newExt.levelColors) newExt.levelColors = {};
-        body.querySelectorAll('[id^="wa-lv-c-"]').forEach(function(inp) {
-          var i   = inp.id.replace('wa-lv-c-', '');
-          var lv  = inp.dataset.lv;
-          var tog = document.getElementById('wa-lv-tog-' + i);
-          var bgI = document.getElementById('wa-lv-bg-' + i);
-          if (!newExt.levelColors[lv]) newExt.levelColors[lv] = {};
-          newExt.levelColors[lv].color = inp.value;
-          if (bgI) newExt.levelColors[lv].bg = bgI.value;
-          if (tog) newExt.levelColors[lv].show = tog.classList.contains('wa-toggle-on');
-        });
-  
-        toolStyles.fibo = { ...toolStyles.fibo, lineColor: lc, fillOpacity: fa };
-  
-      } else if (cat === 'shapes') {
-        var bc  = getVal('wa-prop-bc');
-        var bw  = getInt('wa-prop-bw');
-        var bs  = getSeg('wa-prop-bs');
-        var fc  = getVal('wa-prop-fc');
-        var fa  = getNum('wa-prop-fa');
-        var tc  = getVal('wa-prop-tc');
-        var tsz = getInt('wa-prop-tsz');
-  
-        if (!newStyles.polygon) newStyles.polygon = {};
-        if (!newStyles.line) newStyles.line = {};
-        if (!newStyles.text) newStyles.text = {};
-        if (bc) newStyles.polygon.borderColor = bc;
-        if (bw) { newStyles.polygon.borderSize = bw; newStyles.line.size = bw; }
-        if (bs) newStyles.line.style = bs;
-        if (fc && fa !== null) newStyles.polygon.color = hexToRgba(fc, fa);
-        newStyles.polygon.style = 'strokefill';
-        if (tc)  newStyles.text.color = tc;
-        if (tsz) newStyles.text.size  = tsz;
-  
-        toolStyles.shapes = { ...toolStyles.shapes, borderColor: bc, fillColor: fc, fillOpacity: fa };
-  
-      } else if (cat === 'waves') {
-        var lc  = getVal('wa-prop-lc');
-        var lw  = getInt('wa-prop-lw');
-        var ls  = getSeg('wa-prop-ls');
-        var fc  = getVal('wa-prop-fc');
-        var fa  = getNum('wa-prop-fa');
-        var tc  = getVal('wa-prop-tc');
-        var tsz = getInt('wa-prop-tsz');
-  
-        if (!newStyles.line) newStyles.line = {};
-        if (!newStyles.polygon) newStyles.polygon = {};
-        if (!newStyles.text) newStyles.text = {};
-        if (lc) newStyles.line.color    = lc;
-        if (lw) newStyles.line.size     = lw;
-        if (ls) newStyles.line.style    = ls;
-        if (fc && fa !== null) newStyles.polygon.color = hexToRgba(fc, fa);
-        if (tc)  newStyles.text.color = tc;
-        if (tsz) newStyles.text.size  = tsz;
-  
-      } else { // lines
-        var lc = getVal('wa-prop-lc');
-        var lw = getInt('wa-prop-lw');
-        var ls = getSeg('wa-prop-ls');
-  
-        if (!newStyles.line) newStyles.line = {};
-        if (lc) newStyles.line.color = lc;
-        if (lw) newStyles.line.size  = lw;
-        if (ls) newStyles.line.style = ls;
-        if (toolStyles[cat]) toolStyles[cat] = { ...toolStyles[cat], lineColor: lc, lineWidth: lw, lineStyle: ls };
-      }
-  
-      currentSelectedOverlay.styles    = newStyles;
-      currentSelectedOverlay.extendData = newExt;
-  
+      if (!currentSelectedOverlay || !global.tvChart) return;
       try {
-        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt });
-      } catch(e) {}
-      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+        var ns  = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
+        var ne  = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData)
+                  ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData))
+                  : {};
+  
+        if (cat === 'text') {
+          var nTxt = gv('wa-p-txt');
+          var nTc  = gv('wa-p-tc');
+          var nFf  = gv('wa-p-ff');
+          var nSz  = gi('wa-p-sz');
+          var nFw  = gSeg('wa-p-fw');
+          var nFi  = gSeg('wa-p-fi');
+          var nBgC = gv('wa-p-bgc');
+          var nBgA = gn('wa-p-bga');
+          var nBdC = gv('wa-p-bdc');
+          var nBdW = gi('wa-p-bdw');
+          var nBdOn= gTog('wa-p-bdon');
+  
+          if (!ns.text)    ns.text    = {};
+          if (!ns.polygon) ns.polygon = {};
+          if (nTxt !== null) currentSelectedOverlay.extendData = nTxt; // text = string trực tiếp
+          if (nTc)  ns.text.color  = nTc;
+          if (nFf)  ns.text.family = nFf;
+          if (nSz)  ns.text.size   = nSz;
+          if (nFw)  ns.text.weight = nFw;
+          if (nFi)  ns.text.style  = nFi;
+          if (nBgC !== null && nBgA !== null) ns.polygon.color = hexToRgba(nBgC, nBgA);
+          ns.polygon.borderColor = (nBdOn && nBdC) ? nBdC : 'transparent';
+          if (nBdOn && nBdW) ns.polygon.borderSize = nBdW;
+          ne = nTxt; // extendData = string
+  
+        } else if (cat === 'fibo') {
+          if (!ns.line) ns.line = {};
+          if (!ns.text) ns.text = {};
+          var lc = gv('wa-p-lc'), lw = gi('wa-p-lw'), ls = gSeg('wa-p-ls');
+          var fa = gn('wa-p-fa'), sl = gTog('wa-p-slbl');
+          var lbc = gv('wa-p-lbc'), lbbg = gv('wa-p-lbbg'), lbsz = gi('wa-p-lbsz');
+          if (lc) { ns.line.color = lc; ns.text.color = lc; }
+          if (lw) ns.line.size  = lw;
+          if (ls) ns.line.style = ls;
+          if (fa !== null)  ne.fillOpacity = fa;
+          if (sl !== null)  ne.showLabels  = sl;
+          if (lbc)  ne.labelColor = lbc;
+          if (lbbg) ne.labelBg    = lbbg;
+          if (lbsz) ne.labelSize  = lbsz;
+          if (!ne.levelColors) ne.levelColors = {};
+          body.querySelectorAll('[id^="wa-lv-c-"]').forEach(function(inp) {
+            var i   = inp.id.replace('wa-lv-c-', '');
+            var lv  = inp.dataset.lv;
+            if (!ne.levelColors[lv]) ne.levelColors[lv] = {};
+            ne.levelColors[lv].color = inp.value;
+            var bgI = document.getElementById('wa-lv-bg-' + i);
+            var tgI = document.getElementById('wa-lv-tog-' + i);
+            if (bgI) ne.levelColors[lv].bg   = bgI.value;
+            if (tgI) ne.levelColors[lv].show = tgI.classList.contains('wa-toggle-on');
+          });
+  
+        } else if (cat === 'shapes') {
+          if (!ns.polygon) ns.polygon = {};
+          if (!ns.line) ns.line = {};
+          if (!ns.text) ns.text = {};
+          var bc = gv('wa-p-bc'), bw = gi('wa-p-bw'), bs = gSeg('wa-p-bs');
+          var fc = gv('wa-p-fc'), fa = gn('wa-p-sfa');
+          var tc = gv('wa-p-tc'), tsz = gi('wa-p-tsz');
+          if (bc) ns.polygon.borderColor = bc;
+          if (bw) { ns.polygon.borderSize = bw; ns.line.size = bw; }
+          if (bs) ns.line.style = bs;
+          if (fc && fa !== null) { ns.polygon.color = hexToRgba(fc, fa); ns.polygon.style = 'strokefill'; }
+          if (tc)  ns.text.color = tc;
+          if (tsz) ns.text.size  = tsz;
+  
+        } else if (cat === 'waves') {
+          if (!ns.line) ns.line = {};
+          if (!ns.polygon) ns.polygon = {};
+          if (!ns.text) ns.text = {};
+          var lc = gv('wa-p-lc'), lw = gi('wa-p-lw'), ls = gSeg('wa-p-ls');
+          var fc = gv('wa-p-fc'), fa = gn('wa-p-fa');
+          var tc = gv('wa-p-tc'), tsz = gi('wa-p-tsz');
+          if (lc) ns.line.color = lc;
+          if (lw) ns.line.size  = lw;
+          if (ls) ns.line.style = ls;
+          if (fc && fa !== null) ns.polygon.color = hexToRgba(fc, fa);
+          if (tc)  ns.text.color = tc;
+          if (tsz) ns.text.size  = tsz;
+  
+        } else {
+          if (!ns.line) ns.line = {};
+          var lc = gv('wa-p-lc'), lw = gi('wa-p-lw'), ls = gSeg('wa-p-ls');
+          if (lc) ns.line.color = lc;
+          if (lw) ns.line.size  = lw;
+          if (ls) ns.line.style = ls;
+        }
+  
+        currentSelectedOverlay.styles = ns;
+        if (cat !== 'text') currentSelectedOverlay.extendData = ne;
+  
+        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: ns, extendData: currentSelectedOverlay.extendData });
+        saveStyles();
+        if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+  
+      } catch(err) { console.error('[updateEngine]', err); }
     }
   
-    var saveTimer;
-    function saveEngine() { clearTimeout(saveTimer); saveTimer = setTimeout(updateEngine, 300); }
+    var _t;
+    function doSave() { clearTimeout(_t); _t = setTimeout(updateEngine, 300); }
   
     body.querySelectorAll('input, textarea, select').forEach(function(el) {
-      el.addEventListener('input',  saveEngine);
-      el.addEventListener('change', saveEngine);
+      el.addEventListener('input',  doSave);
+      el.addEventListener('change', doSave);
     });
+  
+    // ── Đóng panel khi click ra ngoài ────────────────────────
+    function closePanelOutside(e) {
+      var p  = document.getElementById('wa-props-panel');
+      var fb = document.getElementById('wa-float-bar');
+      var tb = document.querySelector('.wa-toolbar');
+      var outside = p && !p.contains(e.target) &&
+                    (!fb || !fb.contains(e.target)) &&
+                    (!tb || !tb.contains(e.target));
+      if (outside) {
+        if (typeof hidePanel === 'function') hidePanel();
+        document.removeEventListener('mousedown', closePanelOutside);
+        document.removeEventListener('touchstart', closePanelOutside);
+      }
+    }
+    document.removeEventListener('mousedown', closePanelOutside);
+    document.removeEventListener('touchstart', closePanelOutside);
+    setTimeout(function() {
+      document.addEventListener('mousedown',  closePanelOutside);
+      document.addEventListener('touchstart', closePanelOutside, { passive: true });
+    }, 150);
   }
 
   function hidePanel() {
