@@ -18,8 +18,6 @@
   let redoStack = [];
   const MAX_HISTORY = 50;
   let lastClickTime = 0;
-  let _fbIsDrawing = false;
-  let _fbLastPos = null;
   let _fbX = 0, _fbY = 0;
   // Debounce (16ms = ~60FPS) để cập nhật Real-time không lag
   function debounce(func, wait) {
@@ -2044,7 +2042,6 @@
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
-        if (_fbIsDrawing) return; 
         if (document.getElementById('wa-text-editor-backdrop')) return;
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
       },
@@ -2072,257 +2069,108 @@
 
   function renderPanel(overlay) {
     const panel = document.getElementById('wa-props-panel');
-    if (!panel || !overlay) return;
-    const cat = getToolCategory(overlay.name);
-    const body = panel.querySelector('.wa-panel-body');
-    const s = overlay.styles || {};
-    const ext = (typeof overlay.extendData === 'object' && overlay.extendData) ? overlay.extendData : {};
-  
-    const buildSwatches = (targetId) =>
-      `<div class="wa-swatches-row">${WA_SWATCHES.map(c =>
-        `<div class="wa-swatch" style="background:#${c}" data-color="#${c}" data-target="${targetId}" title="#${c}"></div>`
-      ).join('')}</div>`;
-  
-    let html = '';
-  
-    // ─── LINES / WAVES ───────────────────────────────────────────
-    if (cat === 'lines' || cat === 'waves') {
-      const lc = s.line && s.line.color ? colorToHex(s.line.color) : '3B82F6';
-      const lw = (s.line && s.line.size) || 1;
-      const ls = (s.line && s.line.style) || 'solid';
-      const lhex = lc.startsWith('#') ? lc : '#' + lc;
-  
-      html += `<div class="wa-prop-section">
-        <div class="wa-prop-section-title">Màu đường</div>
-        <div class="wa-row">
-          <div class="wa-col">
-            ${buildSwatches('wa-prop-lc')}
-            <input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lhex}">
-          </div>
-        </div>
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Độ dày nét</div>
-        <div class="wa-seg" id="wa-prop-lw-seg">
-          <button class="wa-seg-btn${lw<=1?' wa-seg-on':''}" data-w="1">1px</button>
-          <button class="wa-seg-btn${lw==2?' wa-seg-on':''}" data-w="2">2px</button>
-          <button class="wa-seg-btn${lw>=3?' wa-seg-on':''}" data-w="3">3px</button>
-        </div>
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Kiểu nét</div>
-        <div class="wa-seg" id="wa-prop-ls-seg">
-          <button class="wa-seg-btn${ls==='solid'?' wa-seg-on':''}" data-s="solid">Liền</button>
-          <button class="wa-seg-btn${ls==='dashed'?' wa-seg-on':''}" data-s="dashed">Đứt</button>
-          <button class="wa-seg-btn${ls==='dotted'?' wa-seg-on':''}" data-s="dotted">Chấm</button>
-        </div>
-      </div>`;
+    if(!panel || !overlay) return;
+    
+    const cat = getToolCategory(overlay.name); const body = panel.querySelector('.wa-panel-body');
+    let html = ''; let s = overlay.styles || {}; let ext = overlay.extendData || {};
+
+    const buildSwatchesHTML = (targetId) => `<div class="wa-swatches-row">${WA_SWATCHES.map(c => `<div class="wa-swatch" style="background:${c}" data-color="${c}" data-target="${targetId}" title="${c}"></div>`).join('')}</div>`;
+
+    if (cat === 'text') {
+      let txt = typeof ext === 'string' ? ext : (ext.text || '');
+      if (!txt) txt = 'Văn bản...';
+      let c = (s.text && s.text.color) ? colorToHex(s.text.color) : toolStyles.text.textColor;
+      let sz = (s.text && s.text.size) ? s.text.size : toolStyles.text.textSize;
+
+      html += `<div class="wa-control-row"><label>Nội dung ghi chú:</label><textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea></div>`;
+      html += `<div style="display:flex; gap:8px; margin-top:8px;">
+                 <div class="wa-control-row" style="flex:1"><label>Màu sắc</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
+                 <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
+                   <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
+                   <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
+                   <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
+                 </select></div>
+               </div>`;
+    } else if (cat === 'shapes') {
+      let bc = (s.polygon && s.polygon.borderColor) ? colorToHex(s.polygon.borderColor) : toolStyles.shapes.borderColor;
+      let fc = (s.polygon && s.polygon.color) ? colorToHex(s.polygon.color) : toolStyles.shapes.fillColor;
+      html += `<div style="display:flex; gap:8px;">
+                 <div class="wa-control-row" style="flex:1"><label>Màu Viền</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${bc}"></div>
+                 <div class="wa-control-row" style="flex:1"><label>Màu Nền</label>${buildSwatchesHTML('wa-prop-c2')}<input type="color" id="wa-prop-c2" class="wa-color-picker" value="${fc}"></div>
+               </div>`;
+    } else if (cat === 'fibo') {
+      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : toolStyles.fibo.lineColor;
+      let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : toolStyles.fibo.fillOpacity;
+      html += `<div class="wa-control-row"><label>Màu vạch & Chữ</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
+               <div class="wa-control-row"><label>Độ đậm nền (0 = Tắt màu)</label><input type="number" id="wa-prop-a1" class="wa-input" step="0.05" min="0" max="1" value="${alpha}"></div>`;
+    } else { 
+      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : (toolStyles[cat] ? toolStyles[cat].lineColor : '#3B82F6');
+      let lw = (s.line && s.line.size) ? s.line.size : 1;
+      html += `<div style="display:flex; gap:8px;">
+                 <div class="wa-control-row" style="flex:1"><label>Màu nét</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
+                 <div class="wa-control-row" style="flex:1"><label>Độ dày</label><select id="wa-prop-s1" class="wa-select">
+                   <option value="1" ${lw==1?'selected':''}>1px</option><option value="2" ${lw==2?'selected':''}>2px</option><option value="3" ${lw==3?'selected':''}>3px</option>
+                 </select></div>
+               </div>`;
     }
-  
-    // ─── SHAPES ───────────────────────────────────────────────────
-    else if (cat === 'shapes') {
-      const bc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '3B82F6';
-      const fc = s.polygon && s.polygon.color ? colorToHex(s.polygon.color) : '3B82F6';
-      const bw = (s.polygon && s.polygon.borderSize) || 1;
-      const bs = (s.polygon && s.polygon.style) || 'solid';
-      const fo = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-      const bhex = bc.startsWith('#') ? bc : '#' + bc;
-      const fhex = fc.startsWith('#') ? fc : '#' + fc;
-  
-      html += `<div class="wa-prop-section">
-        <div class="wa-prop-section-title">Màu viền</div>
-        ${buildSwatches('wa-prop-bc')}
-        <input type="color" id="wa-prop-bc" class="wa-color-picker" value="${bhex}">
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Màu nền</div>
-        ${buildSwatches('wa-prop-fc')}
-        <input type="color" id="wa-prop-fc" class="wa-color-picker" value="${fhex}">
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Độ trong suốt nền</div>
-        <div class="wa-range-wrap">
-          <input type="range" id="wa-prop-fo" class="wa-range" min="0" max="1" step="0.05" value="${fo}">
-          <span class="wa-range-val" id="wa-prop-fo-val">${Math.round(fo*100)}%</span>
-        </div>
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Độ dày viền</div>
-        <div class="wa-seg" id="wa-prop-bw-seg">
-          <button class="wa-seg-btn${bw<=1?' wa-seg-on':''}" data-bw="1">1px</button>
-          <button class="wa-seg-btn${bw==2?' wa-seg-on':''}" data-bw="2">2px</button>
-          <button class="wa-seg-btn${bw>=3?' wa-seg-on':''}" data-bw="3">3px</button>
-        </div>
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Kiểu viền</div>
-        <div class="wa-seg" id="wa-prop-bs-seg">
-          <button class="wa-seg-btn${bs==='solid'?' wa-seg-on':''}" data-bs="solid">Liền</button>
-          <button class="wa-seg-btn${bs==='dashed'?' wa-seg-on':''}" data-bs="dashed">Đứt</button>
-          <button class="wa-seg-btn${bs==='dotted'?' wa-seg-on':''}" data-bs="dotted">Chấm</button>
-        </div>
-      </div>`;
-    }
-  
-    // ─── FIBO ─────────────────────────────────────────────────────
-    else if (cat === 'fibo') {
-      const lc = s.line && s.line.color ? colorToHex(s.line.color) : 'E8EDF2';
-      const lhex = lc.startsWith('#') ? lc : '#' + lc;
-      const fo = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
-      const showLbl = ext.showLabels !== false;
-  
-      html += `<div class="wa-prop-section">
-        <div class="wa-prop-section-title">Màu đường</div>
-        ${buildSwatches('wa-prop-lc')}
-        <input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lhex}">
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Độ trong suốt vùng</div>
-        <div class="wa-range-wrap">
-          <input type="range" id="wa-prop-fo" class="wa-range" min="0" max="0.5" step="0.01" value="${fo}">
-          <span class="wa-range-val" id="wa-prop-fo-val">${Math.round(fo*100)}%</span>
-        </div>
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-toggle-row">
-          <span class="wa-toggle-label">Hiện nhãn mức</span>
-          <div class="wa-toggle${showLbl?' wa-toggle-on':''}" id="wa-prop-showlbl"></div>
-        </div>
-      </div>`;
-    }
-  
-    // ─── TEXT ─────────────────────────────────────────────────────
-    else if (cat === 'text') {
-      const tc = s.text && s.text.color ? colorToHex(s.text.color) : 'E8EDF2';
-      const bgc = s.polygon && s.polygon.color ? colorToHex(s.polygon.color) : '1C242E';
-      const sz = (s.text && s.text.size) || 13;
-      const ff = (s.text && s.text.family) || 'Be Vietnam Pro, sans-serif';
-      const thex = tc.startsWith('#') ? tc : '#' + tc;
-      const bhex = bgc.startsWith('#') ? bgc : '#' + bgc;
-      const curTxt = typeof ext === 'string' ? ext : (ext && ext.text ? ext.text : '');
-  
-      html += `<div class="wa-prop-section">
-        <div class="wa-prop-section-title">Màu chữ</div>
-        ${buildSwatches('wa-prop-tc')}
-        <input type="color" id="wa-prop-tc" class="wa-color-picker" value="${thex}">
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Màu nền</div>
-        ${buildSwatches('wa-prop-bgc')}
-        <input type="color" id="wa-prop-bgc" class="wa-color-picker" value="${bhex}">
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Cỡ chữ</div>
-        <div class="wa-range-wrap">
-          <input type="range" id="wa-prop-fsz" class="wa-range" min="9" max="32" step="1" value="${sz}">
-          <span class="wa-range-val" id="wa-prop-fsz-val">${sz}px</span>
-        </div>
-      </div>
-      <div class="wa-prop-section">
-        <div class="wa-prop-section-title">Font chữ</div>
-        <select id="wa-prop-ff" class="wa-select">
-          ${['Be Vietnam Pro,sans-serif','Lexend,sans-serif','Nunito,sans-serif','Inter,sans-serif','Roboto,sans-serif','Arial,sans-serif']
-            .map(f => `<option value="${f}"${ff.includes(f.split(',')[0])?' selected':''}>${f.split(',')[0]}</option>`).join('')}
-        </select>
-      </div>
-      <div class="wa-prop-section">
-        <button class="wa-action-btn" id="wa-prop-edit-txt" style="width:100%">✏️ Chỉnh sửa nội dung</button>
-      </div>`;
-    }
-  
+
     body.innerHTML = html;
     panel.classList.add('show');
-  
-    // ── Bind swatch clicks ───────────────────────────────────────
+
+    // Bind Swatches Click Event
     body.querySelectorAll('.wa-swatch').forEach(sw => {
       sw.addEventListener('click', () => {
-        const inp = body.querySelector('#' + sw.dataset.target);
-        if (inp) { inp.value = sw.dataset.color; inp.dispatchEvent(new Event('input', { bubbles: true })); }
+        const inp = body.querySelector(`#${sw.dataset.target}`);
+        if (inp) {
+          inp.value = sw.dataset.color;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        }
         body.querySelectorAll(`.wa-swatch[data-target="${sw.dataset.target}"]`).forEach(s => s.classList.remove('selected'));
         sw.classList.add('selected');
       });
     });
-  
-    // ── debounced apply ──────────────────────────────────────────
-    const apply = debounce(function() {
-      if (!overlay || !global.tvChart) return;
-      const ns = JSON.parse(JSON.stringify(overlay.styles || {}));
-      const ne = JSON.parse(JSON.stringify(overlay.extendData || {}));
-  
-      if (cat === 'lines' || cat === 'waves') {
-        const lc = body.querySelector('#wa-prop-lc'); if (lc) { if (!ns.line) ns.line = {}; ns.line.color = lc.value; }
+
+    const updateEngine = debounce(() => {
+      if(!currentSelectedOverlay || !global.tvChart) return;
+      let newStyles = { ...currentSelectedOverlay.styles };
+      let newExt = currentSelectedOverlay.extendData;
+      
+      const v_txt = document.getElementById('wa-prop-txt'); const v_c1 = document.getElementById('wa-prop-c1');
+      const v_c2 = document.getElementById('wa-prop-c2'); const v_s1 = document.getElementById('wa-prop-s1');
+      const v_a1 = document.getElementById('wa-prop-a1');
+
+      if(cat === 'text') {
+        newExt = v_txt ? v_txt.value : ''; toolStyles.text.textInput = newExt;
+        if(v_c1) { newStyles.text = { ...newStyles.text, color: v_c1.value }; toolStyles.text.textColor = v_c1.value; }
+        if(v_s1) { newStyles.text = { ...newStyles.text, size: parseInt(v_s1.value) }; toolStyles.text.textSize = parseInt(v_s1.value); }
+      } 
+      else if (cat === 'shapes') {
+        if(v_c1) { newStyles.polygon = { ...newStyles.polygon, borderColor: v_c1.value }; toolStyles.shapes.borderColor = v_c1.value; }
+        if(v_c2) { newStyles.polygon = { ...newStyles.polygon, color: hexToRgba(v_c2.value, 0.15), style: 'stroke_fill' }; toolStyles.shapes.fillColor = v_c2.value; }
       }
-      if (cat === 'shapes') {
-        const bc = body.querySelector('#wa-prop-bc'); if (bc) { if (!ns.polygon) ns.polygon = {}; ns.polygon.borderColor = bc.value; }
-        const fc = body.querySelector('#wa-prop-fc'); if (fc) { if (!ns.polygon) ns.polygon = {}; ns.polygon.color = hexToRgba(fc.value.replace('#',''), parseFloat(body.querySelector('#wa-prop-fo')?.value || 0.15)); }
-        const bwEl = body.querySelector('#wa-prop-bw-seg .wa-seg-on'); if (bwEl) { if (!ns.polygon) ns.polygon = {}; ns.polygon.borderSize = parseInt(bwEl.dataset.bw); }
-        const bsEl = body.querySelector('#wa-prop-bs-seg .wa-seg-on'); if (bsEl) { if (!ns.polygon) ns.polygon = {}; ns.polygon.style = bsEl.dataset.bs; }
+      else if (cat === 'fibo') {
+        if(typeof newExt !== 'object') newExt = {};
+        if(v_c1) { newStyles.line = { ...newStyles.line, color: v_c1.value }; newStyles.text = { ...newStyles.text, color: v_c1.value }; toolStyles.fibo.lineColor = v_c1.value; }
+        if(v_a1) { newExt.fillOpacity = parseFloat(v_a1.value); toolStyles.fibo.fillOpacity = newExt.fillOpacity; }
       }
-      if (cat === 'fibo') {
-        const lc = body.querySelector('#wa-prop-lc'); if (lc) { if (!ns.line) ns.line = {}; ns.line.color = lc.value; }
-        const fo = body.querySelector('#wa-prop-fo'); if (fo) ne.fillOpacity = parseFloat(fo.value);
-        const tog = body.querySelector('#wa-prop-showlbl'); if (tog) ne.showLabels = tog.classList.contains('wa-toggle-on');
+      else {
+        if(v_c1) { newStyles.line = { ...newStyles.line, color: v_c1.value }; toolStyles[cat].lineColor = v_c1.value; }
+        if(v_s1) { newStyles.line = { ...newStyles.line, size: parseInt(v_s1.value) }; toolStyles[cat].lineWidth = parseInt(v_s1.value); }
       }
-      if (cat === 'text') {
-        const tc = body.querySelector('#wa-prop-tc'); if (tc) { if (!ns.text) ns.text = {}; ns.text.color = tc.value; }
-        const bgc = body.querySelector('#wa-prop-bgc'); if (bgc) { if (!ns.polygon) ns.polygon = {}; ns.polygon.color = bgc.value; }
-        const fsz = body.querySelector('#wa-prop-fsz'); if (fsz) { if (!ns.text) ns.text = {}; ns.text.size = parseInt(fsz.value); }
-        const ff = body.querySelector('#wa-prop-ff'); if (ff) { if (!ns.text) ns.text = {}; ns.text.family = ff.value; }
-      }
-  
-      overlay.styles = ns;
-      overlay.extendData = ne;
-      global.tvChart.overrideOverlay({ id: overlay.id, styles: ns, extendData: ne });
-      if (typeof saveAllOverlays === 'function') saveAllOverlays();
-    }, 120);
-  
-    // ── Line color input ─────────────────────────────────────────
-    ['wa-prop-lc','wa-prop-bc','wa-prop-fc','wa-prop-tc','wa-prop-bgc'].forEach(id => {
-      const el = body.querySelector('#' + id); if (el) el.addEventListener('input', apply);
-    });
-  
-    // ── Segment buttons (lw, bw, ls, bs) ────────────────────────
-    body.querySelectorAll('.wa-seg-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const seg = this.closest('.wa-seg');
-        seg.querySelectorAll('.wa-seg-btn').forEach(b => b.classList.remove('wa-seg-on'));
-        this.classList.add('wa-seg-on');
-        apply();
-      });
-    });
-  
-    // ── Range sliders ────────────────────────────────────────────
-    ['wa-prop-fo','wa-prop-fsz'].forEach(id => {
-      const el = body.querySelector('#' + id);
-      const valEl = body.querySelector('#' + id + '-val');
-      if (el) el.addEventListener('input', function() {
-        if (valEl) valEl.textContent = id === 'wa-prop-fsz' ? this.value + 'px' : Math.round(this.value*100) + '%';
-        apply();
-      });
-    });
-  
-    // ── Toggle ───────────────────────────────────────────────────
-    const tog = body.querySelector('#wa-prop-showlbl');
-    if (tog) tog.addEventListener('click', function() {
-      this.classList.toggle('wa-toggle-on'); apply();
-    });
-  
-    // ── Select ───────────────────────────────────────────────────
-    const ffEl = body.querySelector('#wa-prop-ff');
-    if (ffEl) ffEl.addEventListener('change', apply);
-  
-    // ── Edit text button ─────────────────────────────────────────
-    const editBtn = body.querySelector('#wa-prop-edit-txt');
-    if (editBtn) editBtn.addEventListener('click', function() {
-      const curTxt = typeof overlay.extendData === 'string' ? overlay.extendData : '';
-      if (typeof openTextEditor === 'function') {
-        openTextEditor(curTxt, overlay.styles || {}, overlay.name, function(newText, newStyles) {
-          overlay.extendData = newText;
-          overlay.styles = newStyles;
-          global.tvChart.overrideOverlay({ id: overlay.id, extendData: newText, styles: newStyles });
-          if (typeof saveAllOverlays === 'function') saveAllOverlays();
-        });
-      }
+
+      try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
+    }, 32);
+
+    // Sửa đoạn saveEngine thành như sau:
+  const saveEngine = debounce(() => { 
+    saveStyles(); 
+    if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+  }, 500);
+
+    body.querySelectorAll('input, textarea, select').forEach(el => {
+      el.addEventListener('input', () => { updateEngine(); saveEngine(); }); 
+      el.addEventListener('change', () => { updateEngine(); saveEngine(); });
     });
   }
 
@@ -2398,27 +2246,13 @@ function showFloatToolbar(ov, posX, posY) {
   bar.innerHTML = html;
 
   var bW = showLine ? 320 : 180;
-var left, top;
-if (posX != null && posY != null) {
-  // Vị trí được chỉ định rõ (lần đầu xuất hiện sau draw)
-  left = Math.max(4, Math.min(posX - bW / 2, rect.width - bW - 4));
-  top  = posY - 50;
-  if (top < 60) top = posY + 16;
-} else if (_fbLastPos) {
-  // Giữ nguyên vị trí cũ khi re-render (toggle visible/lock)
-  left = _fbLastPos.left;
-  top  = _fbLastPos.top;
-} else {
-  // Lần đầu, chưa có vị trí lưu → dùng vị trí chuột
-  var cx = _fbX - rect.left;
-  var cy = _fbY - rect.top;
-  left = Math.max(4, Math.min(cx - bW / 2, rect.width - bW - 4));
-  top  = cy - 50;
+  var cx = posX != null ? posX : (_fbX - rect.left);
+  var cy = posY != null ? posY : (_fbY - rect.top);
+  var left = Math.max(4, Math.min(cx - bW / 2, rect.width - bW - 4));
+  var top  = cy - 50;
   if (top < 60) top = cy + 16;
-}
   bar.style.left = left + 'px';
   bar.style.top  = top + 'px';
-  _fbLastPos = { left: left, top: top }; 
   container.appendChild(bar);
   requestAnimationFrame(function() { bar.classList.add('wa-fb-show'); });
 
@@ -2549,11 +2383,7 @@ function _fbToggleLock(ov) {
     try { global.tvChart.cancelDrawing(); } catch(e){}
     if (typeof hidePanel === 'function') hidePanel();
 
-    if (toolId === 'pointer') {
-      _fbIsDrawing = false;  // ← THÊM DÒNG NÀY
-      container.classList.remove('wa-drawing-mode');
-      return;
-    }
+    if (toolId === 'pointer') { container.classList.remove('wa-drawing-mode'); return; }
     container.classList.add('wa-drawing-mode');
 
     const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
@@ -2584,26 +2414,13 @@ config.onSelected = function(event) {
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
-  if (_fbIsDrawing) return; 
   if (document.getElementById('wa-text-editor-backdrop')) return;
-  if (typeof showFloatToolbar === 'function') {
-    showFloatToolbar(ov, null, null);
-    // Giữ nguyên vị trí cũ, không nhảy theo chuột
-    var _rb = document.getElementById('wa-float-bar');
-    if (_rb && _fbLastPos) {
-      _rb.style.left = _fbLastPos.left + 'px';
-      _rb.style.top  = _fbLastPos.top  + 'px';
-    }
-  }
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
 };
-// ✅ ĐÚNG
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-  // KHÔNG CÓ _fbIsDrawing ở đây
 };
-
-_fbIsDrawing = true;   // ← CHUYỂN RA ĐÂY, trước createOverlay
-global.tvChart.createOverlay(config);
+      global.tvChart.createOverlay(config);
     } catch (err) { 
       if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
     }
@@ -2817,10 +2634,9 @@ function bindCoreEventsOnce() {
   document.addEventListener('touchend', function(e){ if(e.changedTouches&&e.changedTouches[0]){ _fbX=e.changedTouches[0].clientX; _fbY=e.changedTouches[0].clientY; } }, { passive: true });
 
   document.addEventListener('mousemove', function(e) {
-    if (!isDragging) return;
+    if (!_isDragging) return;
     if (_dragRaf) cancelAnimationFrame(_dragRaf);
     _dragRaf = requestAnimationFrame(function() {
-      // Dùng cache, nếu chưa có thì query 1 lần rồi nhớ luôn
       var tb = _cachedToolbar || (_cachedToolbar = document.querySelector('.wa-toolbar'));
       if (!tb) { _isDragging = false; return; }
       var dx = e.clientX - _startX;
@@ -2914,11 +2730,10 @@ function bindCoreEventsOnce() {
     var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
 
     if (e.key === 'Escape') {
-      _fbIsDrawing = false;  // ← THÊM DÒNG NÀY (ĐẦU TIÊN)
       if (global.tvChart) global.tvChart.cancelDrawing();
       activateTool('pointer');
       if (typeof hidePanel === 'function') hidePanel();
-      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();  // ← THÊM DÒNG NÀY
       if (isInput) e.target.blur();
       return;
     }
@@ -3094,32 +2909,7 @@ if (delSelBtn) {
     });
   }
 
-  // 🌟 NÚT XÓA TẤT CẢ (Thùng Rác)
-  var clearBtn = toolbar.querySelector('#wa-btn-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function() {
-      if (typeof createConfirmModal === 'function') {
-        createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
-          if (global.tvChart) {
-            global.tvChart.removeOverlay();
-          }
-          if (global.__wa_overlay_map) global.__wa_overlay_map.clear(); 
-          if (typeof window.undoStack !== 'undefined') window.undoStack = []; 
-          if (typeof window.redoStack !== 'undefined') window.redoStack = [];
-          if (typeof hidePanel === 'function') hidePanel();
-          
-          _getTbBtns().forEach(function(b) { b.classList.remove('active'); }); 
-          
-          var ptr = toolbar.querySelector('[data-tool=pointer]');
-          if (ptr) ptr.classList.add('active');
-          if(container) container.classList.remove('wa-drawing-mode');
-          
-          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-          if (typeof showToast === 'function') showToast('🗑️ Đã xoá sạch bản vẽ');
-        });
-      }
-    });
-  }
+  
 
   // 🌟 CÁC NÚT TRÊN BẢNG PROPERTIES PANEL (Thanh trượt bên phải)
   if (panel) {
@@ -3179,7 +2969,6 @@ function _bindChartEventsOnce() {
     saveHistory('add', overlayObj);
     currentSelectedOverlay = overlayObj;
     window.currentSelectedOverlay = overlayObj;
-    _fbIsDrawing = false;
     if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
 saveAllOverlays();
   });
@@ -3260,4 +3049,3 @@ if (document.readyState === 'loading') {
 }
 
 })(window); // <-- Chú ý giữ nguyên dòng đóng module này
-
