@@ -2932,34 +2932,30 @@ function _bindToolbarLocalEvents(toolbar, panel) {
             var group = menuItem.closest('.wa-tb-group');
             var menu  = group ? group.querySelector('.wa-tb-menu') : null;
             if (menu) {
-              // 1. Ẩn menu ngay lập tức
-              menu.style.display = 'none';
-      
-              // 2. Desktop: mouseleave vẫn giữ (phòng hover-open nếu có)
-              group.addEventListener('mouseleave', function() {
-                menu.style.display = '';
-              }, { once: true });
-      
-              // 3. Mobile: đóng menu khi touch/click ra ngoài group
-              function _closeMenuOutside(e) {
+              // 1. Ẩn menu vừa click — dùng '' để trả quyền về CSS :hover
+              menu.style.display = '';
+            
+              // 2. Desktop: mouseleave không cần làm gì thêm vì CSS đã tự ẩn
+              // (xóa hoàn toàn dòng group.addEventListener mouseleave)
+            
+              // 3. Mobile: closeMenuOutside — dùng '' thay 'none'
+              function closeMenuOutside(e) {
                 if (!group.contains(e.target)) {
-                  menu.style.display = '';
-                  document.removeEventListener('mousedown',  _closeMenuOutside);
-                  document.removeEventListener('touchstart', _closeMenuOutside);
+                  menu.style.display = '';           // ← SỬA: '' thay 'none'
+                  document.removeEventListener('mousedown', closeMenuOutside);
+                  document.removeEventListener('touchstart', closeMenuOutside);
                 }
               }
-              // Delay 0ms để tránh bắt ngay chính cú tap vừa chọn tool
               setTimeout(function() {
-                document.addEventListener('mousedown',  _closeMenuOutside);
-                document.addEventListener('touchstart', _closeMenuOutside, { passive: true });
+                document.addEventListener('mousedown', closeMenuOutside);
+                document.addEventListener('touchstart', closeMenuOutside, { passive: true });
               }, 0);
-      
-              // 4. Đóng tất cả menu khác đang mở (tránh 2 menu mở cùng lúc)
+            
+              // 4. Đóng tất cả menu khác — dùng '' thay 'none'
               document.querySelectorAll('.wa-tb-menu').forEach(function(m) {
-                if (m !== menu) m.style.display = 'none';
+                if (m !== menu) m.style.display = ''; // ← SỬA: '' thay 'none'
               });
             }
-            // ── Hết phần đóng menu ───────────────────────────────────────
 
     } else if (btn) {
       toolId = btn.getAttribute('data-tool');
