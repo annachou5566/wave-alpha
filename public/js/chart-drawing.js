@@ -2312,8 +2312,22 @@ function restoreOverlays() {
             return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
         });
         
-        // Truyền cả ID cũ vào để bảo toàn danh tính hình vẽ
-        let cfg = { id: o.id, name: o.name, points: mappedPoints, styles: o.styles, lock: !!o.lock, extendData: o.extendData };
+        let cfg = {
+          id: o.id,
+          name: o.name,
+          points: mappedPoints,
+          styles: o.styles,
+          lock: !!o.lock,
+          extendData: o.extendData,
+          onSelected: function(event) {
+            var ov = event && event.overlay ? event.overlay : null;
+            if (!ov) return;
+            currentSelectedOverlay = ov;
+            window.currentSelectedOverlay = ov;
+            if (typeof renderPanel === 'function') renderPanel(ov);
+          },
+          onDeselected: function() {}
+        };
         let newId = global.tvChart.createOverlay(cfg);
         
         if (newId) {
