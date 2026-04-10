@@ -2042,9 +2042,8 @@
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
-        // Guard: text editor đang mở thì không mở props panel
         if (document.getElementById('wa-text-editor-backdrop')) return;
-        if (typeof renderPanel === 'function') renderPanel(ov);
+        if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
       },
       onDeselected: function() {}
     };
