@@ -2238,6 +2238,13 @@ function hideFloatToolbar() {
 
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
+   // ── GIỮ VỊ TRÍ CŨ khi chỉ cập nhật icon (posX/posY = null) ──
+   var existingBar = document.getElementById('wa-float-bar');
+   var savedLeft = null, savedTop = null;
+   if (posX === null && posY === null && existingBar) {
+     savedLeft = existingBar.style.left;
+     savedTop  = existingBar.style.top;
+   }
   hideFloatToolbar();
 
   var container = document.getElementById('sc-chart-container');
@@ -2317,6 +2324,17 @@ function showFloatToolbar(ov, posX, posY) {
   container.appendChild(bar);
 
   requestAnimationFrame(function() {
+    // ── Nếu chỉ cập nhật icon, khôi phục vị trí cũ, không animate ──
+  if (savedLeft !== null) {
+    bar.style.left       = savedLeft;
+    bar.style.top        = savedTop;
+    bar.style.visibility = 'visible';
+    bar.style.transition = 'none';
+    bar.style.opacity    = '1';
+    bar.style.transform  = 'translateY(0) scale(1)';
+    bar.classList.add('wa-fb-show');
+    return;   // ← bỏ qua toàn bộ logic tính vị trí bên dưới
+  }
     var bW     = bar.offsetWidth  || (showLine ? 320 : 180);
     var bH     = bar.offsetHeight || 40;
     var MARGIN = 6;                   // khoảng cách tối thiểu với mép container
