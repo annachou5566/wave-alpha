@@ -2543,41 +2543,55 @@ function _bindToolbarLocalEvents(toolbar, panel) {
     if (toolId) activateTool(toolId);
   });
 
-  // 🌟 1. NÚT XÓA HÌNH ĐANG CHỌN (Đã fix chạm xuyên thấu cho Mobile)
-  var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
-  if (delSelBtn) {
-    function _doDeleteSelected(e) {
-      // 🛡️ Dựng khiên chặn KLineChart bỏ chọn hình
-      if (e) { e.preventDefault(); e.stopPropagation(); }
-      
-      // Lấy chính xác hình đang được chọn
-      var sel = window.currentSelectedOverlay || currentSelectedOverlay;
-      
-      if (sel && global.tvChart) {
-        if (typeof saveHistory === 'function') saveHistory('delete', sel);
-        
-        global.tvChart.removeOverlay({ id: sel.id }); // Xóa hình khỏi Chart
-        
-        if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(sel.id);
-        if (typeof hidePanel === 'function') hidePanel();
-        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-        if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
-        
-        // Quan trọng: Dọn dẹp biến sau khi xóa để không bị lỗi click lần sau
-        window.currentSelectedOverlay = null;
-        currentSelectedOverlay = null;
-      } else {
-        if (typeof showToast === 'function') showToast('⚠️ Hãy chọn một hình trước khi xoá');
+  // NÚT XÓA HÌNH ĐANG CHỌN
+var delSelBtn = toolbar.querySelector('#wa-btn-del-sel');
+if (delSelBtn) {
+  var _delSelSnapshot = null;
+
+  function _findSelectedOverlay() {
+    if (currentSelectedOverlay) return currentSelectedOverlay;
+    if (window.currentSelectedOverlay) return window.currentSelectedOverlay;
+    // Dùng đúng tên: waoverlaymap (toàn bộ lowercase)
+    if (global.waoverlaymap && global.tvChart) {
+      for (var _id of global.waoverlaymap.keys()) {
+        try {
+          var _ov = global.tvChart.getOverlayById(_id);
+          if (_ov && _ov.selected) return _ov;
+        } catch(e) {}
       }
     }
-
-    // Bắt sự kiện sớm nhất trên Mobile và PC
-    delSelBtn.addEventListener('touchstart', _doDeleteSelected, { passive: false });
-    delSelBtn.addEventListener('mousedown', function(e) {
-       // Chỉ chạy mousedown nếu không phải là thao tác cảm ứng (tránh chạy đúp)
-       if (e.pointerType !== 'touch') _doDeleteSelected(e); 
-    });
+    return null;
   }
+
+  delSelBtn.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    _delSelSnapshot = _findSelectedOverlay();
+  }, { passive: false });
+
+  delSelBtn.addEventListener('mousedown', function(e) {
+    e.stopPropagation();
+    _delSelSnapshot = _findSelectedOverlay();
+  });
+
+  delSelBtn.addEventListener('click', function() {
+    var sel = _delSelSnapshot || _findSelectedOverlay();
+    _delSelSnapshot = null;
+
+    if (sel && global.tvChart) {
+      if (typeof saveHistory === 'function') saveHistory('delete', sel);
+      global.tvChart.removeOverlay({ id: sel.id });
+      if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(sel.id);
+      currentSelectedOverlay = null;
+      window.currentSelectedOverlay = null;
+      if (typeof hidePanel === 'function') hidePanel();
+      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+      if (typeof showToast === 'function') showToast('Đã xóa hình');
+    } else {
+      if (typeof showToast === 'function') showToast('Hãy chọn một hình trước khi xóa');
+    }
+  });
+}
 
   // 🌟 2. NÚT XÓA TẤT CẢ (Đã gỡ bỏ cancelDrawing gây lỗi)
   var clearBtn = toolbar.querySelector('#wa-btn-clear');
