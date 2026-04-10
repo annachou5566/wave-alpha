@@ -2101,127 +2101,469 @@
 
   function renderPanel(overlay) {
     const panel = document.getElementById('wa-props-panel');
-    if(!panel || !overlay) return;
-    
-    const cat = getToolCategory(overlay.name); const body = panel.querySelector('.wa-panel-body');
-    let html = ''; let s = overlay.styles || {}; let ext = overlay.extendData || {};
-
-    const buildSwatchesHTML = (targetId) => `<div class="wa-swatches-row">${WA_SWATCHES.map(c => `<div class="wa-swatch" style="background:${c}" data-color="${c}" data-target="${targetId}" title="${c}"></div>`).join('')}</div>`;
-
+    if (!panel || !overlay) return;
+  
+    const cat = getToolCategory(overlay.name);
+    const body = panel.querySelector('.wa-panel-body');
+    let s = overlay.styles || {};
+    let ext = (typeof overlay.extendData === 'object' && overlay.extendData) ? overlay.extendData : {};
+  
+    // ─── helpers ───────────────────────────────────────────────
+    const SW = (id) => `<div class="wa-swatches-row">${WASWATCHES.map(c =>
+      `<div class="wa-swatch" style="background:${c}" data-color="${c}" data-target="${id}"></div>`
+    ).join('')}</div>`;
+  
+    const SEG = (id, opts, cur) => `<div class="wa-seg">${opts.map(o =>
+      `<button class="wa-seg-btn${cur===o.v?' wa-seg-on':''}" data-seg="${id}" data-val="${o.v}">${o.label}</button>`
+    ).join('')}</div>`;
+  
+    const RANGE = (id, mn, mx, st, val, unit='') => `<div class="wa-range-wrap">
+      <input type="range" class="wa-range" id="${id}" min="${mn}" max="${mx}" step="${st}" value="${val}">
+      <span class="wa-range-val" id="${id}-val">${val}${unit}</span>
+    </div>`;
+  
+    const TOGGLE = (id, on, lbl) => `<div class="wa-toggle-row">
+      <span class="wa-toggle-label">${lbl}</span>
+      <div class="wa-toggle${on?' wa-toggle-on':''}" id="${id}"></div>
+    </div>`;
+  
+    const SEC = (title, body) => `<div class="wa-prop-section">
+      ${title ? `<div class="wa-prop-section-title">${title}</div>` : ''}${body}
+    </div>`;
+  
+    const COL2 = (a, b) => `<div class="wa-row"><div class="wa-col">${a}</div><div class="wa-col">${b}</div></div>`;
+    const COL1 = (a) => `<div class="wa-row"><div class="wa-col">${a}</div></div>`;
+    const LBL = (t, ctrl) => `<label style="font-size:10px;color:#8896A7;font-weight:600;margin-bottom:4px;display:block">${t}</label>${ctrl}`;
+  
+    const LINE_SEGS = [
+      {v:'solid',  label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2"/></svg>'},
+      {v:'dashed', label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2"/></svg>'},
+      {v:'dotted', label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3"/></svg>'},
+    ];
+    const FONT_OPTS = [
+      {v:'Be Vietnam Pro, sans-serif', n:'Be Vietnam Pro'},
+      {v:'Inter, sans-serif',          n:'Inter'},
+      {v:'Lexend, sans-serif',         n:'Lexend'},
+      {v:'Space Grotesk, sans-serif',  n:'Space Grotesk'},
+      {v:'Sora, sans-serif',           n:'Sora'},
+      {v:'Raleway, sans-serif',        n:'Raleway'},
+      {v:'monospace',                  n:'Monospace'},
+    ];
+    // ────────────────────────────────────────────────────────────
+  
+    let html = '';
+  
+    /* ═══════════════════════════════════════════════════════
+       1. TEXT / ANNOTATION TOOLS
+    ═══════════════════════════════════════════════════════ */
     if (cat === 'text') {
       let txt = typeof ext === 'string' ? ext : (ext.text || '');
       if (!txt) txt = 'Văn bản...';
-      let c = (s.text && s.text.color) ? colorToHex(s.text.color) : toolStyles.text.textColor;
-      let sz = (s.text && s.text.size) ? s.text.size : toolStyles.text.textSize;
-
-      html += `<div class="wa-control-row"><label>Nội dung ghi chú:</label><textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea></div>`;
-      html += `<div style="display:flex; gap:8px; margin-top:8px;">
-                 <div class="wa-control-row" style="flex:1"><label>Màu sắc</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${c}"></div>
-                 <div class="wa-control-row" style="flex:1"><label>Kích cỡ</label><select id="wa-prop-s1" class="wa-select">
-                   <option value="12" ${sz==12?'selected':''}>12px</option><option value="16" ${sz==16?'selected':''}>16px</option>
-                   <option value="20" ${sz==20?'selected':''}>20px</option><option value="24" ${sz==24?'selected':''}>24px</option>
-                   <option value="32" ${sz==32?'selected':''}>32px</option><option value="48" ${sz==48?'selected':''}>48px</option>
-                 </select></div>
-               </div>`;
-    } else if (cat === 'shapes') {
-      let bc = (s.polygon && s.polygon.borderColor) ? colorToHex(s.polygon.borderColor) : toolStyles.shapes.borderColor;
-      let fc = (s.polygon && s.polygon.color) ? colorToHex(s.polygon.color) : toolStyles.shapes.fillColor;
-      html += `<div style="display:flex; gap:8px;">
-                 <div class="wa-control-row" style="flex:1"><label>Màu Viền</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${bc}"></div>
-                 <div class="wa-control-row" style="flex:1"><label>Màu Nền</label>${buildSwatchesHTML('wa-prop-c2')}<input type="color" id="wa-prop-c2" class="wa-color-picker" value="${fc}"></div>
-               </div>`;
+      let tc  = colorToHex(s?.text?.color)       || '#EAECEF';
+      let bgC = colorToHex(s?.polygon?.color)    || '#1C242E';
+      let bdC = colorToHex(s?.polygon?.borderColor) || '#273040';
+      let sz  = s?.text?.size   || 13;
+      let fw  = s?.text?.weight || 'normal';
+      let fi  = s?.text?.style  || 'normal'; // italic
+      let ff  = s?.text?.family || 'Be Vietnam Pro, sans-serif';
+      let bgA = 0.85;
+      if (s?.polygon?.color && s.polygon.color.includes('rgba')) {
+        let m = s.polygon.color.match(/rgba\([^,]+,[^,]+,[^,]+,([^)]+)\)/);
+        if (m) bgA = parseFloat(m[1]);
+      }
+      let bdW = s?.polygon?.borderSize || 1;
+      let bdShow = bdC !== '#00000000' && bdC !== 'transparent';
+  
+      html += SEC('Nội dung', `<textarea id="wa-prop-txt" class="wa-input wa-textarea">${txt}</textarea>`);
+  
+      html += SEC('Kiểu chữ', `
+        ${COL1(LBL('Font chữ', `<select id="wa-prop-ff" class="wa-select">
+          ${FONT_OPTS.map(f => `<option value="${f.v}"${ff.includes(f.v.split(',')[0])?'selected':''}>${f.n}</option>`).join('')}
+        </select>`))}
+        ${COL2(
+          LBL('Cỡ chữ (px)', RANGE('wa-prop-sz', 8, 72, 1, sz, 'px')),
+          LBL('Độ đậm & Nghiêng', `${SEG('wa-prop-fw', [
+            {v:'normal',label:'N'},{v:'600',label:'<b>B</b>'},{v:'700',label:'<b style="font-weight:800">B+</b>'}
+          ], fw)}
+          <div style="margin-top:4px">${SEG('wa-prop-fi', [
+            {v:'normal',label:'N'},{v:'italic',label:'<i>I</i>'}
+          ], fi)}</div>`)
+        )}
+      `);
+  
+      html += SEC('Màu chữ', `
+        ${SW('wa-prop-tc')}
+        <input type="color" id="wa-prop-tc" class="wa-color-picker" value="${tc}">
+      `);
+  
+      html += SEC('Nền & Viền', `
+        ${COL2(
+          LBL('Màu nền', `${SW('wa-prop-bgc')}<input type="color" id="wa-prop-bgc" class="wa-color-picker" value="${bgC}">`),
+          LBL('Opacity nền', RANGE('wa-prop-bga', 0, 1, 0.05, bgA))
+        )}
+        <div style="margin-top:8px">${TOGGLE('wa-prop-bd-show', bdShow, 'Hiện viền')}</div>
+        <div id="wa-prop-bd-opts" style="margin-top:8px;${!bdShow?'opacity:0.4;pointer-events:none':''}">
+          ${COL2(
+            LBL('Màu viền', `${SW('wa-prop-bdc')}<input type="color" id="wa-prop-bdc" class="wa-color-picker" value="${bdC}">`),
+            LBL('Độ dày viền', RANGE('wa-prop-bdw', 1, 6, 1, bdW, 'px'))
+          )}
+        </div>
+      `);
+  
+    /* ═══════════════════════════════════════════════════════
+       2. FIBONACCI & GANN FAN
+    ═══════════════════════════════════════════════════════ */
     } else if (cat === 'fibo') {
-      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : toolStyles.fibo.lineColor;
-      let alpha = ext.fillOpacity !== undefined ? ext.fillOpacity : toolStyles.fibo.fillOpacity;
-      html += `<div class="wa-control-row"><label>Màu vạch & Chữ</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
-               <div class="wa-control-row"><label>Độ đậm nền (0 = Tắt màu)</label><input type="number" id="wa-prop-a1" class="wa-input" step="0.05" min="0" max="1" value="${alpha}"></div>`;
-    } else { 
-      let lc = (s.line && s.line.color) ? colorToHex(s.line.color) : (toolStyles[cat] ? toolStyles[cat].lineColor : '#3B82F6');
-      let lw = (s.line && s.line.size) ? s.line.size : 1;
-      html += `<div style="display:flex; gap:8px;">
-                 <div class="wa-control-row" style="flex:1"><label>Màu nét</label>${buildSwatchesHTML('wa-prop-c1')}<input type="color" id="wa-prop-c1" class="wa-color-picker" value="${lc}"></div>
-                 <div class="wa-control-row" style="flex:1"><label>Độ dày</label><select id="wa-prop-s1" class="wa-select">
-                   <option value="1" ${lw==1?'selected':''}>1px</option><option value="2" ${lw==2?'selected':''}>2px</option><option value="3" ${lw==3?'selected':''}>3px</option>
-                 </select></div>
-               </div>`;
+      let lc     = colorToHex(s?.line?.color)  || '#E8EDF2';
+      let lw     = s?.line?.size  || 1;
+      let ls     = s?.line?.style || 'solid';
+      let alpha  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+      let showLb = ext.showLabels !== false;
+      let lbC    = colorToHex(ext.labelColor)  || lc;
+      let lbBg   = colorToHex(ext.labelBg)     || '#151B23';
+      let lbSz   = ext.labelSize || 11;
+  
+      const FIBO_LEVELS_MAP = {
+        fibRetracement: [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0],
+        fibExtension:   [0.618, 1.0, 1.272, 1.414, 1.618, 2.0, 2.618],
+        fibFan:         [0.236, 0.382, 0.5, 0.618, 0.786],
+        fibArc:         [0.382, 0.5, 0.618, 1.0, 1.618],
+        fibTimeZone:    [0, 1, 2, 3, 5, 8, 13, 21, 34, 55],
+        gannFan:        ['1:8','1:4','1:3','1:2','1:1','2:1','3:1','4:1','8:1'],
+      };
+      const LEVELS = FIBO_LEVELS_MAP[overlay.name] || FIBO_LEVELS_MAP.fibRetracement;
+      const RAINBOW = ['#F23645','#FF9800','#FFEB3B','#4CAF50','#00BCD4','#2962FF','#9C27B0','#E91E63','#607D8B','#795548'];
+      let levCfg = ext.levelColors || {};
+  
+      html += SEC('Đường chung', `
+        ${COL1(LBL('Màu đường', `${SW('wa-prop-lc')}<input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lc}">`))}
+        ${COL2(
+          LBL('Độ dày', RANGE('wa-prop-lw', 1, 5, 1, lw, 'px')),
+          LBL('Kiểu đường', SEG('wa-prop-ls', LINE_SEGS, ls))
+        )}
+      `);
+  
+      html += SEC('Vùng nền', `
+        ${COL1(LBL('Opacity fill (0 = tắt)', RANGE('wa-prop-fa', 0, 0.6, 0.01, alpha)))}
+      `);
+  
+      html += SEC('Nhãn số', `
+        ${TOGGLE('wa-prop-show-lbl', showLb, 'Hiện nhãn số')}
+        <div id="wa-lbl-opts" style="margin-top:8px;${!showLb?'opacity:0.4;pointer-events:none':''}">
+          ${COL2(
+            LBL('Màu chữ nhãn', `${SW('wa-prop-lbc')}<input type="color" id="wa-prop-lbc" class="wa-color-picker" value="${lbC}">`),
+            LBL('Nền nhãn', `${SW('wa-prop-lbbg')}<input type="color" id="wa-prop-lbbg" class="wa-color-picker" value="${lbBg}">`)
+          )}
+          ${COL1(LBL('Cỡ chữ nhãn', RANGE('wa-prop-lbsz', 8, 18, 1, lbSz, 'px')))}
+        </div>
+      `);
+  
+      html += SEC('Màu từng mức', `
+        <div style="font-size:10px;color:#4A5568;margin-bottom:8px">Bật/tắt · Màu đường · Màu nền vùng</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+        ${LEVELS.map((lv, i) => {
+          let cfg   = levCfg[String(lv)] || {};
+          let lvC   = colorToHex(cfg.color) || RAINBOW[i % RAINBOW.length];
+          let lvBg  = colorToHex(cfg.bg)    || RAINBOW[i % RAINBOW.length];
+          let lvOn  = cfg.show !== false;
+          return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #1E2733">
+            <div class="wa-toggle${lvOn?' wa-toggle-on':''}" id="wa-lv-tog-${i}" data-lv="${lv}" style="width:28px;height:16px;flex-shrink:0"></div>
+            <span style="font-size:11px;color:#8896A7;min-width:40px;font-weight:600">${lv}</span>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+              <span style="font-size:8px;color:#4A5568">đường</span>
+              <input type="color" value="${lvC}" id="wa-lv-c-${i}" data-lv="${lv}"
+                style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+              <span style="font-size:8px;color:#4A5568">vùng</span>
+              <input type="color" value="${lvBg}" id="wa-lv-bg-${i}" data-lv="${lv}"
+                style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">
+            </div>
+          </div>`;
+        }).join('')}
+        </div>
+      `);
+  
+    /* ═══════════════════════════════════════════════════════
+       3. SHAPES
+    ═══════════════════════════════════════════════════════ */
+    } else if (cat === 'shapes') {
+      let bc  = colorToHex(s?.polygon?.borderColor) || '#3B82F6';
+      let bw  = s?.polygon?.borderSize || s?.line?.size || 1;
+      let bs  = s?.line?.style || s?.polygon?.style || 'solid';
+      let fc  = colorToHex(s?.polygon?.color) || '#3B82F6';
+      let fa  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+      let tc  = colorToHex(s?.text?.color) || '#E8EDF2';
+      let tsz = s?.text?.size || 12;
+  
+      html += SEC('Viền', `
+        ${COL1(LBL('Màu viền', `${SW('wa-prop-bc')}<input type="color" id="wa-prop-bc" class="wa-color-picker" value="${bc}">`))}
+        ${COL2(
+          LBL('Độ dày', RANGE('wa-prop-bw', 1, 8, 1, bw, 'px')),
+          LBL('Kiểu', SEG('wa-prop-bs', LINE_SEGS, bs))
+        )}
+      `);
+  
+      html += SEC('Nền', `
+        ${COL1(LBL('Màu nền', `${SW('wa-prop-fc')}<input type="color" id="wa-prop-fc" class="wa-color-picker" value="${fc}">`))}
+        ${COL1(LBL('Opacity nền (0 = trong suốt)', RANGE('wa-prop-fa', 0, 1, 0.05, fa)))}
+      `);
+  
+      html += SEC('Nhãn (nếu có)', `
+        ${COL2(
+          LBL('Màu chữ', `${SW('wa-prop-tc')}<input type="color" id="wa-prop-tc" class="wa-color-picker" value="${tc}">`),
+          LBL('Cỡ chữ', RANGE('wa-prop-tsz', 8, 32, 1, tsz, 'px'))
+        )}
+      `);
+  
+    /* ═══════════════════════════════════════════════════════
+       4. ELLIOTT WAVES & CHART PATTERNS
+    ═══════════════════════════════════════════════════════ */
+    } else if (cat === 'waves') {
+      let lc  = colorToHex(s?.line?.color)    || '#3B82F6';
+      let lw  = s?.line?.size  || 1;
+      let ls  = s?.line?.style || 'solid';
+      let fc  = colorToHex(s?.polygon?.color) || '#00F0FF';
+      let fa  = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.08;
+      let tc  = colorToHex(s?.text?.color)    || '#E8EDF2';
+      let tsz = s?.text?.size || 12;
+  
+      html += SEC('Đường kẻ', `
+        ${COL1(LBL('Màu đường', `${SW('wa-prop-lc')}<input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lc}">`))}
+        ${COL2(
+          LBL('Độ dày', RANGE('wa-prop-lw', 1, 5, 1, lw, 'px')),
+          LBL('Kiểu đường', SEG('wa-prop-ls', LINE_SEGS, ls))
+        )}
+      `);
+  
+      html += SEC('Nền fill', `
+        ${COL1(LBL('Màu nền', `${SW('wa-prop-fc')}<input type="color" id="wa-prop-fc" class="wa-color-picker" value="${fc}">`))}
+        ${COL1(LBL('Opacity (0 = tắt)', RANGE('wa-prop-fa', 0, 0.5, 0.01, fa)))}
+      `);
+  
+      html += SEC('Nhãn / Label', `
+        ${COL2(
+          LBL('Màu chữ', `${SW('wa-prop-tc')}<input type="color" id="wa-prop-tc" class="wa-color-picker" value="${tc}">`),
+          LBL('Cỡ chữ', RANGE('wa-prop-tsz', 8, 20, 1, tsz, 'px'))
+        )}
+      `);
+  
+    /* ═══════════════════════════════════════════════════════
+       5. LINES (mặc định)
+    ═══════════════════════════════════════════════════════ */
+    } else {
+      let lc = colorToHex(s?.line?.color)  || '#3B82F6';
+      let lw = s?.line?.size  || 1;
+      let ls = s?.line?.style || 'solid';
+  
+      html += SEC('Đường kẻ', `
+        ${COL1(LBL('Màu đường', `${SW('wa-prop-lc')}<input type="color" id="wa-prop-lc" class="wa-color-picker" value="${lc}">`))}
+        ${COL2(
+          LBL('Độ dày', RANGE('wa-prop-lw', 1, 5, 1, lw, 'px')),
+          LBL('Kiểu đường', SEG('wa-prop-ls', LINE_SEGS, ls))
+        )}
+      `);
     }
-
+  
     body.innerHTML = html;
     panel.classList.add('show');
-
-// ── THÊM: Đóng panel khi click ra ngoài ──
-function _closePanelOutside(e) {
-  const panel = document.getElementById('wa-props-panel');
-  const bar   = document.getElementById('wa-float-bar');
-  const tb    = document.querySelector('.wa-toolbar');
-  if (panel  && !panel.contains(e.target) &&
-      (!bar   || !bar.contains(e.target))  &&
-      (!tb    || !tb.contains(e.target))) {
-    if (typeof hidePanel === 'function') hidePanel();
-    document.removeEventListener('mousedown',  _closePanelOutside);
-    document.removeEventListener('touchstart', _closePanelOutside);
-  }
-}
-setTimeout(() => {
-  document.addEventListener('mousedown',  _closePanelOutside);
-  document.addEventListener('touchstart', _closePanelOutside, { passive: true });
-}, 120);
-// ── HẾT ──
-
-    // Bind Swatches Click Event
-    body.querySelectorAll('.wa-swatch').forEach(sw => {
-      sw.addEventListener('click', () => {
-        const inp = body.querySelector(`#${sw.dataset.target}`);
-        if (inp) {
-          inp.value = sw.dataset.color;
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        body.querySelectorAll(`.wa-swatch[data-target="${sw.dataset.target}"]`).forEach(s => s.classList.remove('selected'));
-        sw.classList.add('selected');
+  
+    // ─── Live range value display ───────────────────────────
+    body.querySelectorAll('.wa-range').forEach(function(r) {
+      var valEl = document.getElementById(r.id + '-val');
+      if (!valEl) return;
+      r.addEventListener('input', function() {
+        valEl.textContent = this.value + (valEl.textContent.replace(/[\d.]/g,'') || '');
       });
     });
-
-    const updateEngine = debounce(() => {
-      if(!currentSelectedOverlay || !global.tvChart) return;
-      let newStyles = { ...currentSelectedOverlay.styles };
-      let newExt = currentSelectedOverlay.extendData;
-      
-      const v_txt = document.getElementById('wa-prop-txt'); const v_c1 = document.getElementById('wa-prop-c1');
-      const v_c2 = document.getElementById('wa-prop-c2'); const v_s1 = document.getElementById('wa-prop-s1');
-      const v_a1 = document.getElementById('wa-prop-a1');
-
-      if(cat === 'text') {
-        newExt = v_txt ? v_txt.value : ''; toolStyles.text.textInput = newExt;
-        if(v_c1) { newStyles.text = { ...newStyles.text, color: v_c1.value }; toolStyles.text.textColor = v_c1.value; }
-        if(v_s1) { newStyles.text = { ...newStyles.text, size: parseInt(v_s1.value) }; toolStyles.text.textSize = parseInt(v_s1.value); }
-      } 
-      else if (cat === 'shapes') {
-        if(v_c1) { newStyles.polygon = { ...newStyles.polygon, borderColor: v_c1.value }; toolStyles.shapes.borderColor = v_c1.value; }
-        if(v_c2) { newStyles.polygon = { ...newStyles.polygon, color: hexToRgba(v_c2.value, 0.15), style: 'stroke_fill' }; toolStyles.shapes.fillColor = v_c2.value; }
+  
+    // ─── Swatch → color picker sync ─────────────────────────
+    body.querySelectorAll('.wa-swatch').forEach(function(sw) {
+      sw.addEventListener('click', function() {
+        var picker = document.getElementById(this.dataset.target);
+        if (picker) { picker.value = this.dataset.color; picker.dispatchEvent(new Event('input')); }
+        body.querySelectorAll(`.wa-swatch[data-target="${this.dataset.target}"]`).forEach(function(s) { s.classList.remove('selected'); });
+        this.classList.add('selected');
+      });
+    });
+  
+    // ─── Segmented buttons ──────────────────────────────────
+    body.querySelectorAll('.wa-seg-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var seg = this.dataset.seg;
+        body.querySelectorAll(`.wa-seg-btn[data-seg="${seg}"]`).forEach(function(b) { b.classList.remove('wa-seg-on'); });
+        this.classList.add('wa-seg-on');
+        saveEngine();
+      });
+    });
+  
+    // ─── Toggle switches ────────────────────────────────────
+    body.querySelectorAll('.wa-toggle').forEach(function(tog) {
+      tog.addEventListener('click', function() {
+        this.classList.toggle('wa-toggle-on');
+        // Kết nối toggle với phần phụ thuộc
+        if (this.id === 'wa-prop-show-lbl') {
+          var opts = document.getElementById('wa-lbl-opts');
+          if (opts) opts.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
+        }
+        if (this.id === 'wa-prop-bd-show') {
+          var opts = document.getElementById('wa-prop-bd-opts');
+          if (opts) opts.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
+        }
+        saveEngine();
+      });
+    });
+  
+    // ─── Save engine ─────────────────────────────────────────
+    function getSeg(id) {
+      var on = body.querySelector(`.wa-seg-btn.wa-seg-on[data-seg="${id}"]`);
+      return on ? on.dataset.val : null;
+    }
+    function getToggle(id) {
+      var el = document.getElementById(id);
+      return el ? el.classList.contains('wa-toggle-on') : null;
+    }
+    function getVal(id) { var el = document.getElementById(id); return el ? el.value : null; }
+    function getNum(id) { var v = getVal(id); return v !== null ? parseFloat(v) : null; }
+    function getInt(id) { var v = getVal(id); return v !== null ? parseInt(v) : null; }
+  
+    function updateEngine() {
+      if (!currentSelectedOverlay) return;
+      var newStyles = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
+      var newExt    = JSON.parse(JSON.stringify((typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData) ? currentSelectedOverlay.extendData : {}));
+  
+      if (cat === 'text') {
+        var txt   = getVal('wa-prop-txt');
+        var tc    = getVal('wa-prop-tc');
+        var ff    = getVal('wa-prop-ff');
+        var sz    = getInt('wa-prop-sz');
+        var fw    = getSeg('wa-prop-fw');
+        var fi    = getSeg('wa-prop-fi');
+        var bgC   = getVal('wa-prop-bgc');
+        var bgA   = getNum('wa-prop-bga');
+        var bdC   = getVal('wa-prop-bdc');
+        var bdW   = getInt('wa-prop-bdw');
+        var bdOn  = getToggle('wa-prop-bd-show');
+  
+        if (!newStyles.text) newStyles.text = {};
+        if (!newStyles.polygon) newStyles.polygon = {};
+  
+        if (txt !== null)  newExt = typeof newExt === 'string' ? txt : txt;
+        if (tc)   newStyles.text.color   = tc;
+        if (ff)   newStyles.text.family  = ff;
+        if (sz)   newStyles.text.size    = sz;
+        if (fw)   newStyles.text.weight  = fw;
+        if (fi)   newStyles.text.style   = fi;
+        if (bgC && bgA !== null) newStyles.polygon.color = hexToRgba(bgC, bgA);
+        if (bdOn && bdC) { newStyles.polygon.borderColor = bdC; newStyles.polygon.borderSize = bdW || 1; }
+        else { newStyles.polygon.borderColor = 'transparent'; }
+  
+        toolStyles.text = { ...toolStyles.text, textColor: tc, textSize: sz, fontFamily: ff };
+  
+      } else if (cat === 'fibo') {
+        var lc  = getVal('wa-prop-lc');
+        var lw  = getInt('wa-prop-lw');
+        var ls  = getSeg('wa-prop-ls');
+        var fa  = getNum('wa-prop-fa');
+        var showLb = getToggle('wa-prop-show-lbl');
+        var lbC  = getVal('wa-prop-lbc');
+        var lbBg = getVal('wa-prop-lbbg');
+        var lbSz = getInt('wa-prop-lbsz');
+  
+        if (!newStyles.line) newStyles.line = {};
+        if (!newStyles.text) newStyles.text = {};
+        if (lc) { newStyles.line.color = lc; newStyles.text.color = lc; }
+        if (lw) newStyles.line.size  = lw;
+        if (ls) newStyles.line.style = ls;
+        if (fa !== null) newExt.fillOpacity   = fa;
+        if (showLb !== null) newExt.showLabels = showLb;
+        if (lbC)  newExt.labelColor  = lbC;
+        if (lbBg) newExt.labelBg     = lbBg;
+        if (lbSz) newExt.labelSize   = lbSz;
+  
+        // Per-level colors
+        if (!newExt.levelColors) newExt.levelColors = {};
+        body.querySelectorAll('[id^="wa-lv-c-"]').forEach(function(inp) {
+          var i   = inp.id.replace('wa-lv-c-', '');
+          var lv  = inp.dataset.lv;
+          var tog = document.getElementById('wa-lv-tog-' + i);
+          var bgI = document.getElementById('wa-lv-bg-' + i);
+          if (!newExt.levelColors[lv]) newExt.levelColors[lv] = {};
+          newExt.levelColors[lv].color = inp.value;
+          if (bgI) newExt.levelColors[lv].bg = bgI.value;
+          if (tog) newExt.levelColors[lv].show = tog.classList.contains('wa-toggle-on');
+        });
+  
+        toolStyles.fibo = { ...toolStyles.fibo, lineColor: lc, fillOpacity: fa };
+  
+      } else if (cat === 'shapes') {
+        var bc  = getVal('wa-prop-bc');
+        var bw  = getInt('wa-prop-bw');
+        var bs  = getSeg('wa-prop-bs');
+        var fc  = getVal('wa-prop-fc');
+        var fa  = getNum('wa-prop-fa');
+        var tc  = getVal('wa-prop-tc');
+        var tsz = getInt('wa-prop-tsz');
+  
+        if (!newStyles.polygon) newStyles.polygon = {};
+        if (!newStyles.line) newStyles.line = {};
+        if (!newStyles.text) newStyles.text = {};
+        if (bc) newStyles.polygon.borderColor = bc;
+        if (bw) { newStyles.polygon.borderSize = bw; newStyles.line.size = bw; }
+        if (bs) newStyles.line.style = bs;
+        if (fc && fa !== null) newStyles.polygon.color = hexToRgba(fc, fa);
+        newStyles.polygon.style = 'strokefill';
+        if (tc)  newStyles.text.color = tc;
+        if (tsz) newStyles.text.size  = tsz;
+  
+        toolStyles.shapes = { ...toolStyles.shapes, borderColor: bc, fillColor: fc, fillOpacity: fa };
+  
+      } else if (cat === 'waves') {
+        var lc  = getVal('wa-prop-lc');
+        var lw  = getInt('wa-prop-lw');
+        var ls  = getSeg('wa-prop-ls');
+        var fc  = getVal('wa-prop-fc');
+        var fa  = getNum('wa-prop-fa');
+        var tc  = getVal('wa-prop-tc');
+        var tsz = getInt('wa-prop-tsz');
+  
+        if (!newStyles.line) newStyles.line = {};
+        if (!newStyles.polygon) newStyles.polygon = {};
+        if (!newStyles.text) newStyles.text = {};
+        if (lc) newStyles.line.color    = lc;
+        if (lw) newStyles.line.size     = lw;
+        if (ls) newStyles.line.style    = ls;
+        if (fc && fa !== null) newStyles.polygon.color = hexToRgba(fc, fa);
+        if (tc)  newStyles.text.color = tc;
+        if (tsz) newStyles.text.size  = tsz;
+  
+      } else { // lines
+        var lc = getVal('wa-prop-lc');
+        var lw = getInt('wa-prop-lw');
+        var ls = getSeg('wa-prop-ls');
+  
+        if (!newStyles.line) newStyles.line = {};
+        if (lc) newStyles.line.color = lc;
+        if (lw) newStyles.line.size  = lw;
+        if (ls) newStyles.line.style = ls;
+        if (toolStyles[cat]) toolStyles[cat] = { ...toolStyles[cat], lineColor: lc, lineWidth: lw, lineStyle: ls };
       }
-      else if (cat === 'fibo') {
-        if(typeof newExt !== 'object') newExt = {};
-        if(v_c1) { newStyles.line = { ...newStyles.line, color: v_c1.value }; newStyles.text = { ...newStyles.text, color: v_c1.value }; toolStyles.fibo.lineColor = v_c1.value; }
-        if(v_a1) { newExt.fillOpacity = parseFloat(v_a1.value); toolStyles.fibo.fillOpacity = newExt.fillOpacity; }
-      }
-      else {
-        if(v_c1) { newStyles.line = { ...newStyles.line, color: v_c1.value }; toolStyles[cat].lineColor = v_c1.value; }
-        if(v_s1) { newStyles.line = { ...newStyles.line, size: parseInt(v_s1.value) }; toolStyles[cat].lineWidth = parseInt(v_s1.value); }
-      }
-
-      try { global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt }); } catch(e){}
-    }, 32);
-
-    // Sửa đoạn saveEngine thành như sau:
-  const saveEngine = debounce(() => { 
-    saveStyles(); 
-    if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-  }, 500);
-
-    body.querySelectorAll('input, textarea, select').forEach(el => {
-      el.addEventListener('input', () => { updateEngine(); saveEngine(); }); 
-      el.addEventListener('change', () => { updateEngine(); saveEngine(); });
+  
+      currentSelectedOverlay.styles    = newStyles;
+      currentSelectedOverlay.extendData = newExt;
+  
+      try {
+        global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: newStyles, extendData: newExt });
+      } catch(e) {}
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+    }
+  
+    var saveTimer;
+    function saveEngine() { clearTimeout(saveTimer); saveTimer = setTimeout(updateEngine, 300); }
+  
+    body.querySelectorAll('input, textarea, select').forEach(function(el) {
+      el.addEventListener('input',  saveEngine);
+      el.addEventListener('change', saveEngine);
     });
   }
 
