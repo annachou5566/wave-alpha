@@ -1612,7 +1612,8 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-      /* CONTEXT MENU */
+
+      /* BỔ SUNG GIAO DIỆN CONTEXT MENU */
       .wa-context-menu {
         position: fixed; background: var(--wa-bg-elevated);
         border: 1px solid var(--wa-border-subtle); border-radius: 8px;
@@ -2321,29 +2322,28 @@
       </div>`;
     container.appendChild(cm);
 
-    // 1. Chặn KLineChart bằng cách dùng tham số 'true' (Capture phase) và stopPropagation
+    // 1. Chặn event mặc định của KLineChart trên Desktop
     container.addEventListener('contextmenu', (e) => {
       if(!currentSelectedOverlay) return; 
-      e.preventDefault(); e.stopPropagation(); 
+      e.preventDefault(); e.stopPropagation();
       cm.style.left = e.clientX + 'px'; cm.style.top = e.clientY + 'px'; cm.style.display = 'block';
     }, true);
 
-    // 2. Thêm thao tác Nhấn giữ (Long-Press) 0.5 giây cho Mobile/Tablet
+    // 2. Nhấn giữ (Long-press) 0.5s cho Mobile
     let touchTimer;
     container.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1 && currentSelectedOverlay) {
         let touch = e.touches[0];
         touchTimer = setTimeout(() => {
           cm.style.left = touch.clientX + 'px'; cm.style.top = touch.clientY + 'px'; cm.style.display = 'block';
-          if(navigator.vibrate) navigator.vibrate(50); // Rung máy nhẹ báo hiệu
-        }, 500); 
+          if(navigator.vibrate) navigator.vibrate(50);
+        }, 500);
       }
     }, {passive: true});
-    
     container.addEventListener('touchmove', () => clearTimeout(touchTimer), {passive: true});
     container.addEventListener('touchend', () => clearTimeout(touchTimer));
 
-    // 3. Tắt menu khi bấm ra ngoài
+    // 3. Tắt menu khi click/chạm chỗ khác
     document.addEventListener('mousedown', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
     document.addEventListener('touchstart', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; }, {passive: true});
 
@@ -2834,6 +2834,18 @@ function _bindToolbarLocalEvents(toolbar, panel) {
   var clearBtn = toolbar.querySelector('#wa-btn-clear');
   if (clearBtn) {
     clearBtn.addEventListener('click', function() {
+      // NẾU CÓ 1 HÌNH ĐANG ĐƯỢC CHỌN -> CHỈ XÓA HÌNH ĐÓ (Fix triệt để cho Mobile)
+      if (typeof currentSelectedOverlay !== 'undefined' && currentSelectedOverlay && global.tvChart) {
+        if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
+        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
+        if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(currentSelectedOverlay.id);
+        if (typeof hidePanel === 'function') hidePanel();
+        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+        if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
+        return;
+      }
+
+      // NẾU KHÔNG CHỌN HÌNH NÀO -> MỚI BẬT MODAL XÓA TẤT CẢ NHƯ CŨ
       if (typeof createConfirmModal === 'function') {
         createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
           if (global.tvChart) {
