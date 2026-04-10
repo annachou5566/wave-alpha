@@ -1611,21 +1611,31 @@
         z-index: 9999; pointer-events: none; white-space: nowrap;
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
-      .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-      /* BỔ SUNG GIAO DIỆN CONTEXT MENU */
+        /* ─── GIAO DIỆN CONTEXT MENU ─── */
       .wa-context-menu {
-        position: fixed; background: var(--wa-bg-elevated);
-        border: 1px solid var(--wa-border-subtle); border-radius: 8px;
-        padding: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-        z-index: 999999; display: none; min-width: 140px;
+        position: fixed; /* Bắt buộc dùng fixed để nổi lên trên mọi thứ */
+        background: var(--wa-bg-elevated);
+        border: 1px solid var(--wa-border-subtle);
+        border-radius: 8px;
+        padding: 4px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+        z-index: 999999;
+        display: none; /* Ẩn mặc định */
+        min-width: 140px;
       }
       .wa-cm-item {
-        padding: 8px 12px; color: var(--wa-text-primary); font-size: 13px;
-        cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px;
+        padding: 8px 12px;
+        color: var(--wa-text-primary);
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
       .wa-cm-item:hover { background: var(--wa-bg-overlay); }
       .wa-cm-item.danger { color: var(--wa-danger); }
+      .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     `;
     document.head.appendChild(style);
   }
@@ -2322,30 +2332,19 @@
       </div>`;
     container.appendChild(cm);
 
-    // 1. Chặn event mặc định của KLineChart trên Desktop
+    // Thêm cờ 'true' ở cuối để bắt sự kiện ưu tiên (Capture Phase)
+    // Thêm e.stopPropagation() để ngăn KLineChart cướp sự kiện
     container.addEventListener('contextmenu', (e) => {
       if(!currentSelectedOverlay) return; 
-      e.preventDefault(); e.stopPropagation();
-      cm.style.left = e.clientX + 'px'; cm.style.top = e.clientY + 'px'; cm.style.display = 'block';
+      e.preventDefault(); 
+      e.stopPropagation(); // QUAN TRỌNG NHẤT LÀ DÒNG NÀY
+      
+      cm.style.left = e.clientX + 'px'; 
+      cm.style.top = e.clientY + 'px'; 
+      cm.style.display = 'block';
     }, true);
 
-    // 2. Nhấn giữ (Long-press) 0.5s cho Mobile
-    let touchTimer;
-    container.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1 && currentSelectedOverlay) {
-        let touch = e.touches[0];
-        touchTimer = setTimeout(() => {
-          cm.style.left = touch.clientX + 'px'; cm.style.top = touch.clientY + 'px'; cm.style.display = 'block';
-          if(navigator.vibrate) navigator.vibrate(50);
-        }, 500);
-      }
-    }, {passive: true});
-    container.addEventListener('touchmove', () => clearTimeout(touchTimer), {passive: true});
-    container.addEventListener('touchend', () => clearTimeout(touchTimer));
-
-    // 3. Tắt menu khi click/chạm chỗ khác
-    document.addEventListener('mousedown', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
-    document.addEventListener('touchstart', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; }, {passive: true});
+    document.addEventListener('click', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
 
     function act(type) {
     if(currentSelectedOverlay && global.tvChart) {
@@ -2834,18 +2833,6 @@ function _bindToolbarLocalEvents(toolbar, panel) {
   var clearBtn = toolbar.querySelector('#wa-btn-clear');
   if (clearBtn) {
     clearBtn.addEventListener('click', function() {
-      // NẾU CÓ 1 HÌNH ĐANG ĐƯỢC CHỌN -> CHỈ XÓA HÌNH ĐÓ (Fix triệt để cho Mobile)
-      if (typeof currentSelectedOverlay !== 'undefined' && currentSelectedOverlay && global.tvChart) {
-        if (typeof saveHistory === 'function') saveHistory('delete', currentSelectedOverlay);
-        global.tvChart.removeOverlay({ id: currentSelectedOverlay.id });
-        if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(currentSelectedOverlay.id);
-        if (typeof hidePanel === 'function') hidePanel();
-        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-        if (typeof showToast === 'function') showToast('🗑️ Đã xoá hình');
-        return;
-      }
-
-      // NẾU KHÔNG CHỌN HÌNH NÀO -> MỚI BẬT MODAL XÓA TẤT CẢ NHƯ CŨ
       if (typeof createConfirmModal === 'function') {
         createConfirmModal('Bạn có chắc muốn xoá tất cả bản vẽ?', function() {
           if (global.tvChart) {
