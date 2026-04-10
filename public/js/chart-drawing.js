@@ -1612,6 +1612,19 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      /* CONTEXT MENU */
+      .wa-context-menu {
+        position: fixed; background: var(--wa-bg-elevated);
+        border: 1px solid var(--wa-border-subtle); border-radius: 8px;
+        padding: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        z-index: 999999; display: none; min-width: 140px;
+      }
+      .wa-cm-item {
+        padding: 8px 12px; color: var(--wa-text-primary); font-size: 13px;
+        cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px;
+      }
+      .wa-cm-item:hover { background: var(--wa-bg-overlay); }
+      .wa-cm-item.danger { color: var(--wa-danger); }
     `;
     document.head.appendChild(style);
   }
@@ -2308,12 +2321,31 @@
       </div>`;
     container.appendChild(cm);
 
+    // 1. Chặn KLineChart bằng cách dùng tham số 'true' (Capture phase) và stopPropagation
     container.addEventListener('contextmenu', (e) => {
-      if(!currentSelectedOverlay) return; e.preventDefault();
+      if(!currentSelectedOverlay) return; 
+      e.preventDefault(); e.stopPropagation(); 
       cm.style.left = e.clientX + 'px'; cm.style.top = e.clientY + 'px'; cm.style.display = 'block';
-    });
+    }, true);
 
-    document.addEventListener('click', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
+    // 2. Thêm thao tác Nhấn giữ (Long-Press) 0.5 giây cho Mobile/Tablet
+    let touchTimer;
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1 && currentSelectedOverlay) {
+        let touch = e.touches[0];
+        touchTimer = setTimeout(() => {
+          cm.style.left = touch.clientX + 'px'; cm.style.top = touch.clientY + 'px'; cm.style.display = 'block';
+          if(navigator.vibrate) navigator.vibrate(50); // Rung máy nhẹ báo hiệu
+        }, 500); 
+      }
+    }, {passive: true});
+    
+    container.addEventListener('touchmove', () => clearTimeout(touchTimer), {passive: true});
+    container.addEventListener('touchend', () => clearTimeout(touchTimer));
+
+    // 3. Tắt menu khi bấm ra ngoài
+    document.addEventListener('mousedown', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; });
+    document.addEventListener('touchstart', (e) => { if(!e.target.closest('.wa-context-menu')) cm.style.display = 'none'; }, {passive: true});
 
     function act(type) {
     if(currentSelectedOverlay && global.tvChart) {
