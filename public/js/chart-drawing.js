@@ -2109,6 +2109,10 @@
   
     var s   = overlay.styles || {};
     var rawExt = overlay.extendData;
+    var WASWATCHES = ['#E8EDF2','#8896A7','#4A5568','#1C242E',
+      '#22C55E','#16A34A','#86EFAC','#052E16',
+      '#EF4444','#B91C1C','#FCA5A5','#450A0A',
+      '#3B82F6','#8B5CF6','#F59E0B','#06B6D4'];
     var ext = (rawExt && typeof rawExt === 'object') ? rawExt : {};
   
     // ── helper: luôn trả về #RRGGBB ──────────────────────────
