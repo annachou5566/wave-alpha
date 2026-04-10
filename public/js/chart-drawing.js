@@ -1700,6 +1700,70 @@
 #wa-float-bar { user-select: none; -webkit-user-select: none; }
 .wa-drawing-mode canvas { touch-action: none; }
     `;
+      /* ═══════════ COLOR PICKER + COMPACT PANEL ═══════════════ */
+  style.textContent += [
+    /* Color picker button */
+    '.wa-cp{position:relative;width:100%}',
+    '.wa-cp-btn{height:26px;border-radius:5px;border:2px solid #273040;cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s}',
+    '.wa-cp-btn:hover{border-color:#3B82F6}',
+    '.wa-cp-fill{position:absolute;inset:0;pointer-events:none}',
+    /* Popup */
+    '.wa-cp-pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:10px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.92);width:228px;animation:wa-fadein-scale .15s cubic-bezier(.34,1.56,.64,1)}',
+    '.wa-cp-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-bottom:6px}',
+    '.wa-cp-cell{aspect-ratio:1;border-radius:3px;cursor:pointer;border:1.5px solid transparent;transition:transform .1s,border-color .1s;position:relative;z-index:0}',
+    '.wa-cp-cell:hover{transform:scale(1.45);border-color:#fff;z-index:2}',
+    '.wa-cp-cell.sel{border-color:#3B82F6;box-shadow:0 0 0 2px rgba(59,130,246,.5);z-index:1}',
+    '.wa-cp-sep{height:1px;background:#1E2733;margin:6px 0}',
+    '.wa-cp-bottom{display:flex;align-items:center;gap:6px;margin-top:6px}',
+    '.wa-cp-hexbox{flex:1;display:flex;align-items:center;gap:4px;background:#0A0C10;border:1px solid #273040;border-radius:6px;padding:4px 7px}',
+    '.wa-cp-hexbox:focus-within{border-color:#3B82F6}',
+    '.wa-cp-hash{color:#4A5568;font-size:11px;font-weight:700;font-family:monospace;user-select:none}',
+    '.wa-cp-hi{flex:1;background:transparent;border:none;color:#E8EDF2;font-size:11px;padding:0;outline:none;font-family:monospace;min-width:0;text-transform:uppercase;width:60px}',
+    '.wa-cp-native{width:28px;height:28px;border:2px solid #273040;border-radius:5px;cursor:pointer;padding:0;overflow:hidden;flex-shrink:0}',
+    '.wa-cp-native::-webkit-color-swatch-wrapper{padding:0}',
+    '.wa-cp-native::-webkit-color-swatch{border:none}',
+    /* Compact sections */
+    '.wp-sec{border-bottom:1px solid #1A2030;padding:9px 12px}',
+    '.wp-sec:last-child{border-bottom:none}',
+    '.wp-stitle{font-size:9px;font-weight:800;color:#3A4A5A;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:7px}',
+    '.wp-r{display:flex;gap:7px;margin-bottom:5px}',
+    '.wp-r:last-child{margin-bottom:0}',
+    '.wp-c{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}',
+    '.wp-lbl{font-size:10px;color:#6B7A8D;font-weight:600;display:block;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    /* Range */
+    '.wp-rw{display:flex;align-items:center;gap:5px}',
+    '.wp-rng{flex:1;-webkit-appearance:none;height:3px;background:#1E2B3A;border-radius:2px;outline:none;cursor:pointer}',
+    '.wp-rng::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#3B82F6;cursor:pointer;border:none}',
+    '.wp-rv{font-size:10px;color:#60A5FA;min-width:24px;text-align:right;font-weight:700;font-family:monospace}',
+    /* Seg */
+    '.wp-seg{display:flex;gap:1px;background:#0A0F15;border-radius:5px;padding:2px}',
+    '.wp-sb{flex:1;padding:3px 2px;border:none;background:transparent;color:#5A6A7A;cursor:pointer;border-radius:4px;font-size:10px;display:flex;align-items:center;justify-content:center;transition:all .12s;line-height:1}',
+    '.wp-sb:hover{background:rgba(255,255,255,.07);color:#C0C8D0}',
+    '.wp-sb.on{background:#1E2B3A;color:#E8EDF2;box-shadow:0 1px 3px rgba(0,0,0,.5)}',
+    /* Toggle */
+    '.wp-togrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}',
+    '.wp-toglbl{font-size:11px;color:#8896A7}',
+    '.wp-tog{width:32px;height:18px;border-radius:9px;background:#1A2130;border:1px solid #273040;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}',
+    '.wp-tog.on{background:#3B82F6;border-color:#3B82F6}',
+    '.wp-tog::after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .18s}',
+    '.wp-tog.on::after{left:16px}',
+    /* Select */
+    '.wp-sel{background:#0A0C10;border:1px solid #273040;color:#C8D0DA;padding:5px 8px;border-radius:5px;outline:none;font-size:11px;width:100%;font-family:inherit;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%234A5568\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:22px}',
+    '.wp-sel:focus{border-color:#3B82F6}',
+    /* Textarea */
+    '.wp-ta{background:#0A0C10;border:1px solid #273040;color:#E8EDF2;padding:7px 9px;border-radius:6px;outline:none;font-size:12px;width:100%;font-family:inherit;resize:vertical;line-height:1.5;min-height:64px;box-sizing:border-box;transition:border-color .15s}',
+    '.wp-ta:focus{border-color:#3B82F6}',
+    /* Fibo level row */
+    '.wp-fvr{display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid #141C26}',
+    '.wp-fvr:last-child{border-bottom:none}',
+    '.wp-fvlv{font-size:10px;color:#6B7A8D;min-width:38px;font-weight:700;font-family:monospace}',
+    /* Small toggle for fibo levels */
+    '.wp-tog-sm{width:24px!important;height:14px!important;border-radius:7px!important}',
+    '.wp-tog-sm::after{width:10px!important;height:10px!important;top:1px!important;left:1px!important}',
+    '.wp-tog-sm.on::after{left:11px!important}',
+    /* cp label under color */
+    '.wp-cp-sub{font-size:8px;color:#3A4A5A;text-align:center;margin-top:2px}',
+  ].join('');
     document.head.appendChild(style);
   }
 
@@ -2103,459 +2167,330 @@
     var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
   
+    // 1. Tự động chèn CSS giao diện mới gọn gàng và bảng màu (chỉ chạy 1 lần)
+    if (!document.getElementById('wa-compact-cp-css')) {
+      var s = document.createElement('style');
+      s.id = 'wa-compact-cp-css';
+      s.textContent = `
+        .wa-panel-body { padding: 12px; gap: 10px; font-family: "Be Vietnam Pro", sans-serif; }
+        .wp-sec { background: #0A0C10; border: 1px solid #1E2733; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+        .wp-stitle { font-size: 10px; font-weight: 700; color: #8896A7; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .wp-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .wp-row:last-child { margin-bottom: 0; }
+        .wp-col { flex: 1; display: flex; flex-direction: column; min-width: 0; justify-content: center; }
+        .wp-lbl { font-size: 11px; color: #A0AEC0; margin-bottom: 4px; white-space: nowrap; font-weight: 600; }
+        
+        /* Color Picker Button */
+        .wp-cp-btn { height: 26px; border-radius: 6px; border: 1px solid #273040; cursor: pointer; background: #151B23; position: relative; overflow: hidden; transition: 0.2s; }
+        .wp-cp-btn:hover { border-color: #3B82F6; }
+        .wp-cp-color { width: 100%; height: 100%; pointer-events: none; border-radius: 4px; }
+        
+        /* Color Picker Popup Excel Style */
+        .wa-cp-pop { position: fixed; z-index: 999999; background: #151B23; border: 1px solid #273040; border-radius: 8px; padding: 10px; width: 200px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); animation: wa-fadein 0.15s; }
+        .wa-cp-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+        .wa-cp-cell { aspect-ratio: 1; border-radius: 2px; cursor: pointer; border: 1px solid transparent; }
+        .wa-cp-cell:hover { transform: scale(1.3); border-color: #fff; z-index: 2; position: relative; }
+        .wa-cp-hex { display: flex; align-items: center; gap: 6px; margin-top: 10px; background: #0A0C10; padding: 4px 6px; border-radius: 4px; border: 1px solid #273040; }
+        .wa-cp-hex span { color: #8896A7; font-weight: 700; font-size: 12px; }
+        .wa-cp-hex input { background: transparent; border: none; color: #fff; outline: none; font-family: monospace; width: 100%; font-size: 12px; text-transform: uppercase; }
+        
+        /* Controls */
+        .wp-inp { background: #151B23; border: 1px solid #273040; color: #E8EDF2; padding: 5px 8px; border-radius: 6px; font-size: 11px; width: 100%; box-sizing: border-box; outline: none; font-family: inherit; }
+        .wp-inp:focus { border-color: #3B82F6; }
+        .wp-seg { display: flex; background: #151B23; border: 1px solid #273040; border-radius: 6px; padding: 2px; }
+        .wp-seg-btn { flex: 1; border: none; background: transparent; color: #8896A7; padding: 4px 2px; font-size: 11px; cursor: pointer; border-radius: 4px; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+        .wp-seg-btn.on { background: #273040; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .wp-range-wrap { display: flex; align-items: center; gap: 8px; height: 26px; }
+        .wp-range { flex: 1; height: 4px; background: #273040; border-radius: 2px; -webkit-appearance: none; outline: none; cursor: pointer; }
+        .wp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #3B82F6; }
+        .wp-range-val { font-size: 11px; color: #60A5FA; width: 30px; text-align: right; font-family: monospace; }
+        .wp-tog-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .wp-tog { width: 34px; height: 18px; border-radius: 9px; background: #1E2733; border: 1px solid #273040; position: relative; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+        .wp-tog::after { content: ''; position: absolute; width: 12px; height: 12px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: 0.2s; }
+        .wp-tog.on { background: #3B82F6; border-color: #3B82F6; }
+        .wp-tog.on::after { left: 18px; }
+      `;
+      document.head.appendChild(s);
+    }
+  
     var cat = getToolCategory(overlay.name);
     var body = panel.querySelector('.wa-panel-body');
     if (!body) return;
   
-    var s   = overlay.styles || {};
+    var s = overlay.styles || {};
     var rawExt = overlay.extendData;
-    var WASWATCHES = ['#E8EDF2','#8896A7','#4A5568','#1C242E',
-      '#22C55E','#16A34A','#86EFAC','#052E16',
-      '#EF4444','#B91C1C','#FCA5A5','#450A0A',
-      '#3B82F6','#8B5CF6','#F59E0B','#06B6D4'];
     var ext = (rawExt && typeof rawExt === 'object') ? rawExt : {};
   
-    // ── helper: luôn trả về #RRGGBB ──────────────────────────
+    // ── Helper Xử lý Màu (Không bao giờ crash) ───────────────────
     function toHex(c) {
-      var h = colorToHex(c);
-      if (!h) return '#3B82F6';
-      return h.startsWith('#') ? h.substring(0, 7) : '#' + h.substring(0, 6);
+      if (!c || c === 'transparent') return '#00000000';
+      if (c.startsWith('#')) return c.substring(0, 7);
+      var m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (m) return '#' + ((1 << 24) + (+m[1] << 16) + (+m[2] << 8) + +m[3]).toString(16).slice(1).toUpperCase();
+      return '#3B82F6';
+    }
+    function toAlpha(c, def) {
+      if (!c) return def;
+      if (c === 'transparent' || c === '#00000000') return 0;
+      var m = c.match(/rgba?\([^,]+,[^,]+,[^,]+,([^)]+)\)/);
+      return m ? parseFloat(m[1]) : def;
     }
   
-    // ── HTML helpers ─────────────────────────────────────────
-    function sw(id) {
-      return '<div class="wa-swatches-row">' +
-        WASWATCHES.map(function(c) {
-          return '<div class="wa-swatch" style="background:#'+c+'" data-color="#'+c+'" data-target="'+id+'" title="#'+c+'"></div>';
-        }).join('') + '</div>';
+    // ── Bảng màu tĩnh (Excel style) ─────────────────────────────────
+    var PALETTE = [
+      ['#FFFFFF','#F2F2F2','#D9D9D9','#BFBFBF','#A6A6A6','#808080','#595959','#404040','#262626','#000000'],
+      ['#FCE5CD','#F4CCCC','#FCE4D6','#FFF2CC','#D9EAD3','#D0E0E3','#C9DAF8','#CFE2F3','#D9D2E9','#EAD1DC'],
+      ['#F9CB9C','#EA9999','#F9CB9C','#FFE599','#B6D7A8','#A2C4C9','#A4C2F4','#9FC5E8','#B4A7D6','#D5A6BD'],
+      ['#E69138','#E06666','#F6B26B','#FFD966','#93C47D','#76A5AF','#6D9EEB','#6FA8DC','#8E7CC3','#C27BA0'],
+      ['#C90000','#CC0000','#E69138','#F1C232','#6AA84F','#45818E','#3C78D8','#3D85C6','#674EA7','#A64D79'],
+      ['#990000','#990000','#B45F06','#BF9000','#38761D','#134F5C','#1155CC','#0B5394','#351C75','#741B47'],
+      ['#EF4444','#F59E0B','#EAB308','#22C55E','#14B8A6','#06B6D4','#3B82F6','#6366F1','#8B5CF6','#D946EF']
+    ];
+  
+    // ── HTML Builders ───────────────────────────────────────────────
+    function cpick(id, hex) {
+      var bg = (hex === '#00000000' || !hex) ? 'transparent' : hex;
+      return '<div class="wp-cp-btn" data-cp="'+id+'" data-val="'+hex+'"><div class="wp-cp-color" style="background:'+bg+'"></div></div>';
     }
-    function rng(id, mn, mx, st, val, unit) {
-      unit = unit || '';
-      return '<div class="wa-range-wrap">' +
-        '<input type="range" class="wa-range" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'">' +
-        '<span class="wa-range-val" id="'+id+'-val">'+val+unit+'</span></div>';
+    function rng(id, mn, mx, st, val) {
+      return '<div class="wp-range-wrap"><input type="range" class="wp-range" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'"><span class="wp-range-val" id="'+id+'-val">'+val+'</span></div>';
     }
     function seg(id, opts, cur) {
-      return '<div class="wa-seg">' + opts.map(function(o) {
-        return '<button class="wa-seg-btn'+(cur===o.v?' wa-seg-on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.label+'</button>';
-      }).join('') + '</div>';
+      return '<div class="wp-seg">' + opts.map(function(o) { return '<button class="wp-seg-btn'+(cur===o.v?' on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.l+'</button>'; }).join('') + '</div>';
     }
-    function tog(id, on, lbl) {
-      return '<div class="wa-toggle-row"><span class="wa-toggle-label">'+lbl+'</span>' +
-        '<div class="wa-toggle'+(on?' wa-toggle-on':'')+'" id="'+id+'"></div></div>';
-    }
-    function sec(title, content) {
-      return '<div class="wa-prop-section">' +
-        (title ? '<div class="wa-prop-section-title">'+title+'</div>' : '') +
-        content + '</div>';
-    }
-    function row2(a, b) { return '<div class="wa-row"><div class="wa-col">'+a+'</div><div class="wa-col">'+b+'</div></div>'; }
-    function row1(a)    { return '<div class="wa-row"><div class="wa-col">'+a+'</div></div>'; }
-    function lbl(t, ctrl) { return '<label style="font-size:10px;color:#8896A7;font-weight:600;margin-bottom:4px;display:block">'+t+'</label>'+ctrl; }
-    function cpick(id, val) { return sw(id)+'<input type="color" id="'+id+'" class="wa-color-picker" value="'+val+'">'; }
+    function tog(id, on, lbl) { return '<div class="wp-tog-row"><span class="wp-lbl" style="margin:0">'+lbl+'</span><div class="wp-tog'+(on?' on':'')+'" id="'+id+'"></div></div>'; }
+    function sec(t, c) { return '<div class="wp-sec">' + (t?'<div class="wp-stitle">'+t+'</div>':'') + c + '</div>'; }
+    function lbl(t, c) { return '<div class="wp-col"><span class="wp-lbl">'+t+'</span>'+c+'</div>'; }
+    function row() { return '<div class="wp-row">' + Array.from(arguments).join('') + '</div>'; }
   
     var LS = [
-      {v:'solid',  label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2"/></svg>'},
-      {v:'dashed', label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2"/></svg>'},
-      {v:'dotted', label:'<svg width="22" height="10"><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="1 3"/></svg>'}
-    ];
-    var FONTS = [
-      {v:'Be Vietnam Pro, sans-serif', n:'Be Vietnam Pro'},
-      {v:'Inter, sans-serif',          n:'Inter'},
-      {v:'Lexend, sans-serif',         n:'Lexend'},
-      {v:'Space Grotesk, sans-serif',  n:'Space Grotesk'},
-      {v:'Sora, sans-serif',           n:'Sora'},
-      {v:'Raleway, sans-serif',        n:'Raleway'},
-      {v:'monospace',                  n:'Monospace'}
+      {v:'solid',  l:'<svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="2"/></svg>'},
+      {v:'dashed', l:'<svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/></svg>'},
+      {v:'dotted', l:'<svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="2 3"/></svg>'}
     ];
   
-    // ── Build HTML theo loại công cụ ─────────────────────────
     var html = '';
   
     try {
+      // ════════════ TEXT ════════════
+      if (cat === 'text') {
+        var txt = typeof rawExt === 'string' ? rawExt : (ext.text || '');
+        var tc  = toHex(s.text && s.text.color);
+        var sz  = (s.text && s.text.size) || 14;
+        var fw  = (s.text && s.text.weight) || 'normal';
+        var bgC = toHex(s.polygon && s.polygon.color);
+        var bgA = toAlpha(s.polygon && s.polygon.color, 0);
+        var bdC = toHex(s.polygon && s.polygon.borderColor);
+        var bdW = (s.polygon && s.polygon.borderSize) || 1;
+        var bdOn= (bdC !== '#00000000' && !!(s.polygon && s.polygon.borderSize));
   
-    // ════════════════════════════════════ TEXT ════════════════
-    if (cat === 'text') {
-      var txt = (typeof rawExt === 'string') ? rawExt : (ext.text || '');
-      var tc  = toHex(s.text && s.text.color);
-      var ff  = (s.text && s.text.family) || 'Be Vietnam Pro, sans-serif';
-      var sz  = (s.text && s.text.size)   || 13;
-      var fw  = (s.text && s.text.weight) || 'normal';
-      var fi  = (s.text && s.text.style)  || 'normal';
-      var bgC = toHex(s.polygon && s.polygon.color);
-      var bgA = 0.85;
-      if (s.polygon && s.polygon.color && s.polygon.color.indexOf('rgba') === 0) {
-        var m = s.polygon.color.match(/rgba\([^,]+,[^,]+,[^,]+,([^)]+)\)/);
-        if (m) bgA = parseFloat(m[1]);
+        html += sec('', '<textarea id="w-txt" class="wp-inp" style="height:70px;resize:vertical">'+txt+'</textarea>');
+        html += sec('Văn bản', 
+          row(lbl('Màu chữ', cpick('w-tc', tc)), lbl('Cỡ chữ', rng('w-sz', 10, 64, 1, sz))) +
+          row(lbl('Độ đậm', seg('w-fw', [{v:'normal',l:'Thường'},{v:'bold',l:'Đậm'},{v:'800',l:'Siêu Đậm'}], fw)))
+        );
+        html += sec('Nền & Khung', 
+          row(lbl('Màu nền', cpick('w-bgc', bgC)), lbl('Độ mờ nền', rng('w-bga', 0, 1, 0.05, bgA))) +
+          tog('w-bdon', bdOn, 'Hiện khung viền') +
+          '<div id="w-bdbox" style="margin-top:8px;'+(bdOn?'':'opacity:0.3;pointer-events:none')+'">' +
+          row(lbl('Màu khung', cpick('w-bdc', bdC)), lbl('Độ dày', rng('w-bdw', 1, 5, 1, bdW))) +
+          '</div>'
+        );
+      } 
+      // ════════════ SHAPES (Hình chữ nhật, elip, v.v) ════════════
+      else if (cat === 'shapes') {
+        var bc = toHex(s.polygon && s.polygon.borderColor) || '#3B82F6';
+        var bw = (s.polygon && s.polygon.borderSize) || 1;
+        var bs = (s.line && s.line.style) || (s.polygon && s.polygon.borderStyle) || 'solid';
+        var fc = toHex(s.polygon && s.polygon.color);
+        var fa = toAlpha(s.polygon && s.polygon.color, 0.15);
+  
+        html += sec('Đường viền', 
+          row(lbl('Màu viền', cpick('w-bc', bc)), lbl('Độ dày', rng('w-bw', 1, 8, 1, bw))) +
+          row(lbl('Kiểu viền', seg('w-bs', LS, bs)))
+        );
+        html += sec('Màu nền', 
+          row(lbl('Màu nền (Fill)', cpick('w-fc', fc))) +
+          row(lbl('Độ đậm nhạt', rng('w-fa', 0, 1, 0.05, fa)))
+        );
+      } 
+      // ════════════ WAVES & FIBO ════════════
+      else if (cat === 'fibo' || cat === 'waves') {
+        var lc = toHex(s.line && s.line.color) || '#3B82F6';
+        var lw = (s.line && s.line.size) || 1;
+        var lst = (s.line && s.line.style) || 'solid';
+        var fc = toHex(s.polygon ? s.polygon.color : ext.fillColor) || lc;
+        var fa = ext.fillOpacity !== undefined ? ext.fillOpacity : 0.15;
+        
+        html += sec('Đường nét', 
+          row(lbl('Màu đường', cpick('w-lc', lc)), lbl('Độ dày', rng('w-lw', 1, 5, 1, lw))) +
+          row(lbl('Kiểu', seg('w-ls', LS, lst)))
+        );
+        html += sec('Nền (nếu có)', 
+          row(lbl('Độ đậm nhạt (0 = tắt)', rng('w-fa', 0, 1, 0.05, fa)))
+        );
+      } 
+      // ════════════ CÁC LOẠI LINE KHÁC ════════════
+      else {
+        var llc = toHex(s.line && s.line.color) || '#3B82F6';
+        var llw = (s.line && s.line.size) || 1;
+        var lls = (s.line && s.line.style) || 'solid';
+        html += sec('Đường kẻ', 
+          row(lbl('Màu sắc', cpick('w-lc', llc)), lbl('Độ dày', rng('w-lw', 1, 8, 1, llw))) +
+          row(lbl('Kiểu nét', seg('w-ls', LS, lls)))
+        );
       }
-      var bdC   = toHex(s.polygon && s.polygon.borderColor) || '#273040';
-      var bdW   = (s.polygon && s.polygon.borderSize) || 1;
-      var bdOn  = bdC !== '#00000000' && bdC !== '#000000' && !!(s.polygon && s.polygon.borderSize);
   
-      html += sec('Nội dung', '<textarea id="wa-p-txt" class="wa-input wa-textarea">'+txt+'</textarea>');
-  
-      var fontOpts = FONTS.map(function(f) {
-        return '<option value="'+f.v+'"'+(ff.indexOf(f.v.split(',')[0]) > -1 ? ' selected' : '')+'>'+f.n+'</option>';
-      }).join('');
-      html += sec('Kiểu chữ',
-        row1(lbl('Font chữ', '<select id="wa-p-ff" class="wa-select">'+fontOpts+'</select>')) +
-        row2(
-          lbl('Cỡ chữ', rng('wa-p-sz', 8, 72, 1, sz, 'px')),
-          lbl('Đậm',    seg('wa-p-fw', [{v:'normal',label:'N'},{v:'600',label:'<b>B</b>'},{v:'700',label:'<b style="font-weight:800">B+</b>'}], fw)) +
-          '<div style="margin-top:4px">'+lbl('Nghiêng', seg('wa-p-fi', [{v:'normal',label:'N'},{v:'italic',label:'<i>I</i>'}], fi))+'</div>'
-        )
-      );
-      html += sec('Màu chữ', row1(lbl('Màu chữ', cpick('wa-p-tc', tc))));
-      html += sec('Nền & Viền',
-        row2(
-          lbl('Màu nền',    cpick('wa-p-bgc', bgC)),
-          lbl('Opacity nền', rng('wa-p-bga', 0, 1, 0.05, bgA))
-        ) +
-        '<div style="margin-top:8px">' + tog('wa-p-bdon', bdOn, 'Hiện viền') + '</div>' +
-        '<div id="wa-p-bdopts" style="margin-top:8px;'+(bdOn?'':'opacity:0.4;pointer-events:none')+'">' +
-          row2(
-            lbl('Màu viền',   cpick('wa-p-bdc', bdC)),
-            lbl('Độ dày viền', rng('wa-p-bdw', 1, 6, 1, bdW, 'px'))
-          ) +
-        '</div>'
-      );
-  
-    // ════════════════════════════════════ FIBO ════════════════
-    } else if (cat === 'fibo') {
-      var lc     = toHex(s.line && s.line.color)  || '#E8EDF2';
-      var lw     = (s.line && s.line.size)  || 1;
-      var ls     = (s.line && s.line.style) || 'solid';
-      var alpha  = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.15;
-      var showLb = ext.showLabels !== false;
-      var lbC    = toHex(ext.labelColor) || lc;
-      var lbBg   = toHex(ext.labelBg)   || '#151B23';
-      var lbSz   = ext.labelSize || 11;
-      var levCfg = ext.levelColors || {};
-  
-      var FIBO_MAPS = {
-        fibRetracement:[0,0.236,0.382,0.5,0.618,0.786,1.0],
-        fibExtension:  [0.618,1.0,1.272,1.414,1.618,2.0,2.618],
-        fibFan:        [0.236,0.382,0.5,0.618,0.786],
-        fibArc:        [0.382,0.5,0.618,1.0,1.618],
-        fibTimeZone:   [0,1,2,3,5,8,13,21,34,55],
-        gannFan:       ['1:8','1:4','1:3','1:2','1:1','2:1','3:1','4:1','8:1']
-      };
-      var LEVELS = FIBO_MAPS[overlay.name] || FIBO_MAPS.fibRetracement;
-      var RAIN   = ['#F23645','#FF9800','#FFEB3B','#4CAF50','#00BCD4','#2962FF','#9C27B0','#E91E63','#607D8B','#795548'];
-  
-      html += sec('Đường chung',
-        row1(lbl('Màu đường', cpick('wa-p-lc', lc))) +
-        row2(
-          lbl('Độ dày', rng('wa-p-lw', 1, 5, 1, lw, 'px')),
-          lbl('Kiểu đường', seg('wa-p-ls', LS, ls))
-        )
-      );
-      html += sec('Vùng nền', row1(lbl('Opacity fill (0 = tắt)', rng('wa-p-fa', 0, 0.6, 0.01, alpha))));
-      html += sec('Nhãn số',
-        tog('wa-p-slbl', showLb, 'Hiện nhãn số') +
-        '<div id="wa-p-lblopts" style="margin-top:8px;'+(showLb?'':'opacity:0.4;pointer-events:none')+'">' +
-          row2(
-            lbl('Màu chữ nhãn',  cpick('wa-p-lbc', lbC)),
-            lbl('Nền nhãn',      cpick('wa-p-lbbg', lbBg))
-          ) +
-          row1(lbl('Cỡ chữ nhãn', rng('wa-p-lbsz', 8, 18, 1, lbSz, 'px'))) +
-        '</div>'
-      );
-  
-      var levRows = LEVELS.map(function(lv, i) {
-        var cfg  = levCfg[String(lv)] || {};
-        var lvC  = toHex(cfg.color) || RAIN[i % RAIN.length];
-        var lvBg = toHex(cfg.bg)    || RAIN[i % RAIN.length];
-        var lvOn = cfg.show !== false;
-        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #1E2733">' +
-          '<div class="wa-toggle'+(lvOn?' wa-toggle-on':'')+'" id="wa-lv-tog-'+i+'" data-lv="'+lv+'" style="width:28px;height:16px;flex-shrink:0"></div>' +
-          '<span style="font-size:11px;color:#8896A7;min-width:40px;font-weight:600">'+lv+'</span>' +
-          '<div style="display:flex;flex-direction:column;align-items:center;gap:1px">' +
-            '<span style="font-size:8px;color:#4A5568">đường</span>' +
-            '<input type="color" value="'+lvC+'" id="wa-lv-c-'+i+'" data-lv="'+lv+'" style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">' +
-          '</div>' +
-          '<div style="display:flex;flex-direction:column;align-items:center;gap:1px">' +
-            '<span style="font-size:8px;color:#4A5568">vùng</span>' +
-            '<input type="color" value="'+lvBg+'" id="wa-lv-bg-'+i+'" data-lv="'+lv+'" style="width:26px;height:20px;border:1px solid #273040;border-radius:4px;background:#0A0C10;cursor:pointer;padding:0">' +
-          '</div>' +
-        '</div>';
-      }).join('');
-      html += sec('Màu từng mức', '<div style="font-size:10px;color:#4A5568;margin-bottom:8px">Bật/tắt · Màu đường · Màu vùng</div><div>' + levRows + '</div>');
-  
-    // ════════════════════════════════════ SHAPES ══════════════
-    } else if (cat === 'shapes') {
-      var bc  = toHex(s.polygon && s.polygon.borderColor) || '#3B82F6';
-      var bw  = (s.polygon && s.polygon.borderSize) || 1;
-      var bst = (s.line && s.line.style) || 'solid';
-      var fc  = toHex(s.polygon && s.polygon.color) || '#3B82F6';
-      var fa  = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.15;
-      var stc = toHex(s.text && s.text.color) || '#E8EDF2';
-      var tsz = (s.text && s.text.size) || 12;
-  
-      html += sec('Viền',
-        row1(lbl('Màu viền', cpick('wa-p-bc', bc))) +
-        row2(
-          lbl('Độ dày', rng('wa-p-bw', 1, 8, 1, bw, 'px')),
-          lbl('Kiểu', seg('wa-p-bs', LS, bst))
-        )
-      );
-      html += sec('Nền',
-        row1(lbl('Màu nền', cpick('wa-p-fc', fc))) +
-        row1(lbl('Opacity nền (0 = trong suốt)', rng('wa-p-sfa', 0, 1, 0.05, fa)))
-      );
-      html += sec('Nhãn',
-        row2(
-          lbl('Màu chữ', cpick('wa-p-tc', stc)),
-          lbl('Cỡ chữ',  rng('wa-p-tsz', 8, 32, 1, tsz, 'px'))
-        )
-      );
-  
-    // ════════════════════════════════════ WAVES ═══════════════
-    } else if (cat === 'waves') {
-      var wlc  = toHex(s.line && s.line.color)    || '#3B82F6';
-      var wlw  = (s.line && s.line.size)   || 1;
-      var wls  = (s.line && s.line.style)  || 'solid';
-      var wfc  = toHex(s.polygon && s.polygon.color) || '#00F0FF';
-      var wfa  = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.08;
-      var wtc  = toHex(s.text && s.text.color) || '#E8EDF2';
-      var wtsz = (s.text && s.text.size) || 12;
-  
-      html += sec('Đường kẻ',
-        row1(lbl('Màu đường', cpick('wa-p-lc', wlc))) +
-        row2(
-          lbl('Độ dày', rng('wa-p-lw', 1, 5, 1, wlw, 'px')),
-          lbl('Kiểu',   seg('wa-p-ls', LS, wls))
-        )
-      );
-      html += sec('Nền fill',
-        row1(lbl('Màu nền', cpick('wa-p-fc', wfc))) +
-        row1(lbl('Opacity (0 = tắt)', rng('wa-p-fa', 0, 0.5, 0.01, wfa)))
-      );
-      html += sec('Nhãn',
-        row2(
-          lbl('Màu chữ', cpick('wa-p-tc', wtc)),
-          lbl('Cỡ chữ',  rng('wa-p-tsz', 8, 20, 1, wtsz, 'px'))
-        )
-      );
-  
-    // ════════════════════════════════════ LINES ═══════════════
-    } else {
-      var llc = toHex(s.line && s.line.color) || '#3B82F6';
-      var llw = (s.line && s.line.size)  || 1;
-      var lls = (s.line && s.line.style) || 'solid';
-  
-      html += sec('Đường kẻ',
-        row1(lbl('Màu đường', cpick('wa-p-lc', llc))) +
-        row2(
-          lbl('Độ dày', rng('wa-p-lw', 1, 5, 1, llw, 'px')),
-          lbl('Kiểu',   seg('wa-p-ls', LS, lls))
-        )
-      );
-    }
-  
-    } catch(err) {
-      console.error('[renderPanel] Lỗi build HTML:', err);
-      html = '<div style="padding:16px;color:#EF4444;font-size:12px">Lỗi tải panel: ' + err.message + '</div>';
-    }
+    } catch(e) { html = '<div style="color:#EF4444">Lỗi: '+e.message+'</div>'; }
   
     body.innerHTML = html;
     panel.classList.add('show');
   
-    // ── Range value live display ─────────────────────────────
-    body.querySelectorAll('.wa-range').forEach(function(r) {
-      var vel = document.getElementById(r.id + '-val');
-      if (!vel) return;
-      r.addEventListener('input', function() {
-        var unit = vel.textContent.replace(/[\d.]/g, '') || '';
-        vel.textContent = this.value + unit;
-      });
+    // ── Xử lý Live Range ──
+    body.querySelectorAll('.wp-range').forEach(function(r) {
+      r.addEventListener('input', function() { document.getElementById(r.id+'-val').textContent = r.value; });
     });
   
-    // ── Swatch → color picker ────────────────────────────────
-    body.querySelectorAll('.wa-swatch').forEach(function(sw) {
-      sw.addEventListener('click', function() {
-        var inp = document.getElementById(this.dataset.target);
-        if (inp) { inp.value = this.dataset.color; inp.dispatchEvent(new Event('input', {bubbles:true})); }
-        body.querySelectorAll('.wa-swatch[data-target="'+this.dataset.target+'"]').forEach(function(s){ s.classList.remove('selected'); });
-        this.classList.add('selected');
+    // ── Xử lý Toggle & Segment ──
+    body.querySelectorAll('.wp-seg-btn').forEach(function(b) {
+      b.addEventListener('click', function() {
+        body.querySelectorAll('.wp-seg-btn[data-seg="'+this.dataset.seg+'"]').forEach(function(el){ el.classList.remove('on'); });
+        this.classList.add('on');
+        doSave();
       });
     });
-  
-    // ── Seg buttons ──────────────────────────────────────────
-    body.querySelectorAll('.wa-seg-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        body.querySelectorAll('.wa-seg-btn[data-seg="'+this.dataset.seg+'"]').forEach(function(b){ b.classList.remove('wa-seg-on'); });
-        this.classList.add('wa-seg-on');
+    body.querySelectorAll('.wp-tog').forEach(function(t) {
+      t.addEventListener('click', function() {
+        this.classList.toggle('on');
+        if(this.id==='w-bdon') document.getElementById('w-bdbox').style.cssText = this.classList.contains('on') ? '' : 'opacity:0.3;pointer-events:none';
         doSave();
       });
     });
   
-    // ── Toggle switches ──────────────────────────────────────
-    body.querySelectorAll('.wa-toggle').forEach(function(tog) {
-      if (tog.id && tog.id.indexOf('wa-lv-tog-') === 0) return; // fibo level toggles xử lý riêng
-      tog.addEventListener('click', function() {
-        this.classList.toggle('wa-toggle-on');
-        if (this.id === 'wa-p-slbl') {
-          var el = document.getElementById('wa-p-lblopts');
-          if (el) el.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
+    // ── COLOR PICKER POPUP (EXCEL STYLE) ──
+    var activeCP = null;
+    function closeCP() { var p = document.getElementById('_w_cp_pop'); if(p) p.remove(); activeCP = null; }
+    
+    body.querySelectorAll('.wp-cp-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if(activeCP === this.dataset.cp) { closeCP(); return; }
+        closeCP();
+        activeCP = this.dataset.cp;
+        var hex = this.dataset.val || '#3B82F6';
+        
+        var pop = document.createElement('div');
+        pop.id = '_w_cp_pop'; pop.className = 'wa-cp-pop';
+        
+        var grids = '<div class="wa-cp-grid">';
+        PALETTE.forEach(function(row) {
+          row.forEach(function(c) { grids += '<div class="wa-cp-cell" style="background:'+c+'" data-c="'+c+'"></div>'; });
+        });
+        grids += '</div>';
+        
+        pop.innerHTML = grids + 
+          '<div class="wa-cp-hex"><span>#</span><input id="_w_cp_hex" maxlength="6" value="'+hex.replace('#','').substring(0,6)+'"></div>';
+        
+        document.body.appendChild(pop);
+        var rect = this.getBoundingClientRect();
+        var t = rect.bottom + 4, l = rect.left;
+        if (t + 200 > window.innerHeight) t = rect.top - 200;
+        pop.style.left = l + 'px'; pop.style.top = t + 'px';
+  
+        function applyCol(c) {
+          btn.dataset.val = c;
+          btn.querySelector('.wp-cp-color').style.background = (c==='#00000000') ? 'transparent' : c;
+          doSave();
         }
-        if (this.id === 'wa-p-bdon') {
-          var el = document.getElementById('wa-p-bdopts');
-          if (el) el.style.cssText = this.classList.contains('wa-toggle-on') ? '' : 'opacity:0.4;pointer-events:none';
-        }
-        doSave();
+  
+        pop.querySelectorAll('.wa-cp-cell').forEach(function(cell) {
+          cell.addEventListener('mousedown', function(ce) { ce.stopPropagation(); applyCol(this.dataset.c); closeCP(); });
+        });
+        
+        var hInp = pop.querySelector('#_w_cp_hex');
+        hInp.addEventListener('mousedown', function(ce){ce.stopPropagation();});
+        hInp.addEventListener('input', function() {
+          var v = this.value.replace(/[^0-9A-Fa-f]/g, ''); this.value = v;
+          if(v.length === 6) applyCol('#'+v);
+        });
       });
     });
   
-    // ── Fibo level toggles ───────────────────────────────────
-    body.querySelectorAll('[id^="wa-lv-tog-"]').forEach(function(tog) {
-      tog.addEventListener('click', function() {
-        this.classList.toggle('wa-toggle-on');
-        doSave();
-      });
-    });
+    document.addEventListener('mousedown', closeCP);
   
-    // ── updateEngine ─────────────────────────────────────────
+    // ── Engine Update (Lưu thay đổi) ──
     function gv(id) { var e = document.getElementById(id); return e ? e.value : null; }
-    function gn(id) { var v = gv(id); return v !== null ? parseFloat(v) : null; }
-    function gi(id) { var v = gv(id); return v !== null ? parseInt(v) : null; }
-    function gSeg(id) { var e = body.querySelector('.wa-seg-btn.wa-seg-on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
-    function gTog(id) { var e = document.getElementById(id); return e ? e.classList.contains('wa-toggle-on') : null; }
+    function gSeg(id) { var e = body.querySelector('.wp-seg-btn.on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
+    function gCP(id) { var e = body.querySelector('.wp-cp-btn[data-cp="'+id+'"]'); return e ? e.dataset.val : null; }
+    function gTog(id) { var e = document.getElementById(id); return e ? e.classList.contains('on') : false; }
+  
+    function hexToRgba(hex, a) {
+      if(!hex || hex === '#00000000' || a === 0) return 'transparent';
+      var r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+      return 'rgba('+r+','+g+','+b+','+a+')';
+    }
   
     function updateEngine() {
       if (!currentSelectedOverlay || !global.tvChart) return;
       try {
-        var ns  = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
-        var ne  = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData)
-                  ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData))
-                  : {};
+        var ns = JSON.parse(JSON.stringify(currentSelectedOverlay.styles || {}));
+        var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData) ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
   
         if (cat === 'text') {
-          var nTxt = gv('wa-p-txt');
-          var nTc  = gv('wa-p-tc');
-          var nFf  = gv('wa-p-ff');
-          var nSz  = gi('wa-p-sz');
-          var nFw  = gSeg('wa-p-fw');
-          var nFi  = gSeg('wa-p-fi');
-          var nBgC = gv('wa-p-bgc');
-          var nBgA = gn('wa-p-bga');
-          var nBdC = gv('wa-p-bdc');
-          var nBdW = gi('wa-p-bdw');
-          var nBdOn= gTog('wa-p-bdon');
-  
-          if (!ns.text)    ns.text    = {};
-          if (!ns.polygon) ns.polygon = {};
-          if (nTxt !== null) currentSelectedOverlay.extendData = nTxt; // text = string trực tiếp
-          if (nTc)  ns.text.color  = nTc;
-          if (nFf)  ns.text.family = nFf;
-          if (nSz)  ns.text.size   = nSz;
-          if (nFw)  ns.text.weight = nFw;
-          if (nFi)  ns.text.style  = nFi;
-          if (nBgC !== null && nBgA !== null) ns.polygon.color = hexToRgba(nBgC, nBgA);
-          ns.polygon.borderColor = (nBdOn && nBdC) ? nBdC : 'transparent';
-          if (nBdOn && nBdW) ns.polygon.borderSize = nBdW;
-          ne = nTxt; // extendData = string
-  
-        } else if (cat === 'fibo') {
-          if (!ns.line) ns.line = {};
-          if (!ns.text) ns.text = {};
-          var lc = gv('wa-p-lc'), lw = gi('wa-p-lw'), ls = gSeg('wa-p-ls');
-          var fa = gn('wa-p-fa'), sl = gTog('wa-p-slbl');
-          var lbc = gv('wa-p-lbc'), lbbg = gv('wa-p-lbbg'), lbsz = gi('wa-p-lbsz');
-          if (lc) { ns.line.color = lc; ns.text.color = lc; }
-          if (lw) ns.line.size  = lw;
-          if (ls) ns.line.style = ls;
-          if (fa !== null)  ne.fillOpacity = fa;
-          if (sl !== null)  ne.showLabels  = sl;
-          if (lbc)  ne.labelColor = lbc;
-          if (lbbg) ne.labelBg    = lbbg;
-          if (lbsz) ne.labelSize  = lbsz;
-          if (!ne.levelColors) ne.levelColors = {};
-          body.querySelectorAll('[id^="wa-lv-c-"]').forEach(function(inp) {
-            var i   = inp.id.replace('wa-lv-c-', '');
-            var lv  = inp.dataset.lv;
-            if (!ne.levelColors[lv]) ne.levelColors[lv] = {};
-            ne.levelColors[lv].color = inp.value;
-            var bgI = document.getElementById('wa-lv-bg-' + i);
-            var tgI = document.getElementById('wa-lv-tog-' + i);
-            if (bgI) ne.levelColors[lv].bg   = bgI.value;
-            if (tgI) ne.levelColors[lv].show = tgI.classList.contains('wa-toggle-on');
-          });
-  
-        } else if (cat === 'shapes') {
-          if (!ns.polygon) ns.polygon = {};
-          if (!ns.line) ns.line = {};
-          if (!ns.text) ns.text = {};
-          var bc = gv('wa-p-bc'), bw = gi('wa-p-bw'), bs = gSeg('wa-p-bs');
-          var fc = gv('wa-p-fc'), fa = gn('wa-p-sfa');
-          var tc = gv('wa-p-tc'), tsz = gi('wa-p-tsz');
-          if (bc) ns.polygon.borderColor = bc;
-          if (bw) { ns.polygon.borderSize = bw; ns.line.size = bw; }
-          if (bs) ns.line.style = bs;
-          if (fc && fa !== null) { ns.polygon.color = hexToRgba(fc, fa); ns.polygon.style = 'strokefill'; }
-          if (tc)  ns.text.color = tc;
-          if (tsz) ns.text.size  = tsz;
-  
-        } else if (cat === 'waves') {
-          if (!ns.line) ns.line = {};
-          if (!ns.polygon) ns.polygon = {};
-          if (!ns.text) ns.text = {};
-          var lc = gv('wa-p-lc'), lw = gi('wa-p-lw'), ls = gSeg('wa-p-ls');
-          var fc = gv('wa-p-fc'), fa = gn('wa-p-fa');
-          var tc = gv('wa-p-tc'), tsz = gi('wa-p-tsz');
-          if (lc) ns.line.color = lc;
-          if (lw) ns.line.size  = lw;
-          if (ls) ns.line.style = ls;
-          if (fc && fa !== null) ns.polygon.color = hexToRgba(fc, fa);
-          if (tc)  ns.text.color = tc;
-          if (tsz) ns.text.size  = tsz;
-  
-        } else {
-          if (!ns.line) ns.line = {};
-          var lc = gv('wa-p-lc'), lw = gi('wa-p-lw'), ls = gSeg('wa-p-ls');
-          if (lc) ns.line.color = lc;
-          if (lw) ns.line.size  = lw;
-          if (ls) ns.line.style = ls;
+          var txt = gv('w-txt');
+          if(!ns.text) ns.text = {}; if(!ns.polygon) ns.polygon = {};
+          ns.text.color = gCP('w-tc'); ns.text.size = parseFloat(gv('w-sz')); ns.text.weight = gSeg('w-fw');
+          
+          var bdOn = gTog('w-bdon');
+          ns.polygon.color = hexToRgba(gCP('w-bgc'), parseFloat(gv('w-bga')));
+          ns.polygon.borderColor = bdOn ? gCP('w-bdc') : 'transparent';
+          ns.polygon.borderSize = bdOn ? parseFloat(gv('w-bdw')) : 0;
+          ns.polygon.style = (bdOn || parseFloat(gv('w-bga')) > 0) ? 'strokefill' : 'fill';
+          ne = txt; // Chữ gán thẳng vào extendData
+        } 
+        else if (cat === 'shapes') {
+          if(!ns.polygon) ns.polygon = {}; if(!ns.line) ns.line = {};
+          var bs = gSeg('w-bs');
+          ns.polygon.borderColor = gCP('w-bc');
+          ns.polygon.borderSize = parseFloat(gv('w-bw'));
+          ns.polygon.color = hexToRgba(gCP('w-fc'), parseFloat(gv('w-fa')));
+          ns.polygon.style = 'strokefill';
+          // Ép cả 2 để fix dứt điểm nét đứt hình chữ nhật
+          ns.line.style = bs; 
+          ns.polygon.borderStyle = bs; 
+        } 
+        else if (cat === 'fibo' || cat === 'waves') {
+          if(!ns.line) ns.line = {}; if(!ns.polygon) ns.polygon = {};
+          ns.line.color = gCP('w-lc'); ns.line.size = parseFloat(gv('w-lw')); ns.line.style = gSeg('w-ls');
+          ne.fillOpacity = parseFloat(gv('w-fa'));
+        } 
+        else {
+          if(!ns.line) ns.line = {};
+          ns.line.color = gCP('w-lc'); ns.line.size = parseFloat(gv('w-lw')); ns.line.style = gSeg('w-ls');
         }
   
         currentSelectedOverlay.styles = ns;
         if (cat !== 'text') currentSelectedOverlay.extendData = ne;
   
         global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: ns, extendData: currentSelectedOverlay.extendData });
-        saveStyles();
-        if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
-  
-      } catch(err) { console.error('[updateEngine]', err); }
+        if(typeof saveStyles === 'function') saveStyles();
+        if(typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+      } catch(err) { console.log(err); }
     }
   
-    var _t;
-    function doSave() { clearTimeout(_t); _t = setTimeout(updateEngine, 300); }
+    var _t; function doSave() { clearTimeout(_t); _t = setTimeout(updateEngine, 100); }
+    body.querySelectorAll('input, textarea').forEach(function(el) { el.addEventListener('input', doSave); });
   
-    body.querySelectorAll('input, textarea, select').forEach(function(el) {
-      el.addEventListener('input',  doSave);
-      el.addEventListener('change', doSave);
-    });
-  
-    // ── Đóng panel khi click ra ngoài ────────────────────────
+    // ── Đóng panel khi click ra ngoài ──
     function closePanelOutside(e) {
-      var p  = document.getElementById('wa-props-panel');
-      var fb = document.getElementById('wa-float-bar');
-      var tb = document.querySelector('.wa-toolbar');
-      var outside = p && !p.contains(e.target) &&
-                    (!fb || !fb.contains(e.target)) &&
-                    (!tb || !tb.contains(e.target));
-      if (outside) {
+      var p = document.getElementById('wa-props-panel'), cp = document.getElementById('_w_cp_pop');
+      if (p && !p.contains(e.target) && (!cp || !cp.contains(e.target)) && !e.target.closest('.wa-toolbar')) {
         if (typeof hidePanel === 'function') hidePanel();
         document.removeEventListener('mousedown', closePanelOutside);
-        document.removeEventListener('touchstart', closePanelOutside);
       }
     }
     document.removeEventListener('mousedown', closePanelOutside);
-    document.removeEventListener('touchstart', closePanelOutside);
-    setTimeout(function() {
-      document.addEventListener('mousedown',  closePanelOutside);
-      document.addEventListener('touchstart', closePanelOutside, { passive: true });
-    }, 150);
+    setTimeout(function() { document.addEventListener('mousedown', closePanelOutside); }, 100);
   }
 
   function hidePanel() {
