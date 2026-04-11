@@ -2030,7 +2030,16 @@
     }, 0);
   }
 
-      
+      // ── THEO DÕI CHUỘT (Dùng khi vẽ chữ mới) ──
+  if (!window._waMouseX) {
+    window._waMouseX = window.innerWidth / 2;
+    window._waMouseY = window.innerHeight / 2;
+    document.addEventListener('mousemove', function(e) {
+      window._waMouseX = e.clientX;
+      window._waMouseY = e.clientY;
+    });
+  }
+
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
     var existing = document.getElementById('wa-text-editor');
     if (existing) existing.remove();
@@ -2040,48 +2049,18 @@
     var curSize  = tStyles.size  || 14;
     var curFont  = tStyles.family || 'sans-serif';
 
-    // 1. Lấy toạ độ chuột làm dự phòng (khi mới vẽ lần đầu)
-    var posX = typeof _fbX !== 'undefined' ? _fbX : window.innerWidth / 2;
-    var posY = typeof _fbY !== 'undefined' ? _fbY : window.innerHeight / 2;
-
-    var ov = window.currentSelectedOverlay;
-    var isTopAligned = (toolId === 'plainText' || toolId === 'note' || toolId === 'anchoredText');
-
-    // 2. Tính toạ độ PIXEL CHÍNH XÁC 100% từ Chart (cho các chữ đã vẽ)
-    if (ov && global.tvChart && ov.points && ov.points.length > 0) {
-      try {
-        var pixel = global.tvChart.convertToPixel(ov.points[0]);
-        var px = Array.isArray(pixel) ? pixel[0].x : pixel.x;
-        var py = Array.isArray(pixel) ? pixel[0].y : pixel.y;
-        
-        var container = document.getElementById('sc-chart-container');
-        if (px != null && py != null && container) {
-          var rect = container.getBoundingClientRect();
-          posX = rect.left + px;
-          posY = rect.top + py;
-          
-          // Bù trừ khoảng cách padding cho từng loại tooltip
-          if (toolId === 'note') { posX += 10; posY += 10; }
-          if (toolId === 'annotation') { posX += 8; }
-          if (toolId === 'priceNote') { posX += 8; }
-          if (toolId === 'comment') { posX += 10; posY -= 14; }
-          if (toolId === 'pin') { posX += 14; posY -= 20; }
-        }
-      } catch(e) {}
-    }
+    // Dùng tọa độ lúc click vào chữ (đã lưu trong onSelected)
+    var posX = window._waTextClickX || _fbX || window.innerWidth  / 2;
+    var posY = window._waTextClickY || _fbY || window.innerHeight / 2;
 
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-
-    // Căn lề tuỳ theo loại text (trên cùng hoặc ở giữa)
-    var transformCSS = isTopAligned ? 'none' : 'translate(0, -50%)';
-
     input.style.cssText = [
       'position:fixed',
       'left:'  + posX + 'px',
       'top:'   + posY + 'px',
-      'transform:' + transformCSS,
+      'transform:translate(0,-50%)',
       'background:transparent',
       'border:none',
       'outline:none',
@@ -2101,7 +2080,8 @@
 
     document.body.appendChild(input);
 
-    // Làm mờ chữ gốc trên chart để không bị trùng 2 lớp
+    // Ẩn chữ gốc trên chart để không bị trùng 2 lớp
+    var ov = window.currentSelectedOverlay;
     if (ov && global.tvChart) {
       try {
         var ts = JSON.parse(JSON.stringify(ov.styles || {}));
@@ -2111,7 +2091,6 @@
       } catch(e) {}
     }
 
-    // Tự động kéo giãn độ rộng text
     requestAnimationFrame(function() {
       input.focus();
       if (!currentText || currentText === 'Văn bản...') input.select();
@@ -2132,7 +2111,7 @@
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text)    updatedStyles.text    = {};
       if (!updatedStyles.polygon) updatedStyles.polygon = {};
-      updatedStyles.text.color = curColor; // Khôi phục màu gốc
+      updatedStyles.text.color = curColor; // trả lại màu gốc
       input.remove();
       onConfirm(val, updatedStyles);
     }
@@ -2175,6 +2154,9 @@
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
+        // Lưu tọa độ NGAY lúc click vào chữ, trước khi chuột đi chỗ khác
+        window._waTextClickX = _fbX;
+        window._waTextClickY = _fbY;
         if (document.getElementById('wa-text-editor')) return;
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
         if (typeof renderPanel === 'function') renderPanel(ov);
@@ -3165,6 +3147,9 @@ config.onSelected = function(event) {
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
+  // Lưu tọa độ NGAY lúc click vào chữ, trước khi chuột đi chỗ khác
+  window._waTextClickX = _fbX;
+  window._waTextClickY = _fbY;
   if (document.getElementById('wa-text-editor')) return;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
   if (typeof renderPanel === 'function') renderPanel(ov);
