@@ -3331,7 +3331,8 @@ function bindCoreEventsOnce() {
   var _isDragging = false;
   var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
   var _dragRaf = null;
-  var _cachedToolbar = null; // ✅ FIX 3: Cache toolbar element
+  var _cachedToolbar = null;
+
   function _clampFloatBarToViewport() {
     var bar = document.getElementById('wa-float-bar');
     var container = document.getElementById('sc-chart-container');
@@ -3341,12 +3342,13 @@ function bindCoreEventsOnce() {
     var maxL = Math.max(M, container.clientWidth - bar.offsetWidth - M);
     var maxT = Math.max(M, container.clientHeight - bar.offsetHeight - M - safeBottom);
     var left = parseFloat(bar.style.left || '0');
-    var top = parseFloat(bar.style.top || '0');
+    var top  = parseFloat(bar.style.top  || '0');
     if (isNaN(left)) left = M;
-    if (isNaN(top)) top = M;
+    if (isNaN(top))  top  = M;
     bar.style.left = Math.max(M, Math.min(left, maxL)) + 'px';
-    bar.style.top = Math.max(M, Math.min(top, maxT)) + 'px';
+    bar.style.top  = Math.max(M, Math.min(top,  maxT)) + 'px';
   }
+
   document.addEventListener('mousemove', function(e){ _fbX = e.clientX; _fbY = e.clientY; }, { passive: true });
   document.addEventListener('touchend', function(e){ if(e.changedTouches&&e.changedTouches[0]){ _fbX=e.changedTouches[0].clientX; _fbY=e.changedTouches[0].clientY; } }, { passive: true });
 
@@ -3358,64 +3360,63 @@ function bindCoreEventsOnce() {
       if (!tb) { _isDragging = false; return; }
       var dx = e.clientX - _startX;
       var dy = e.clientY - _startY;
-      const TBW = tb.offsetWidth  || 48;
-const TBH = tb.offsetHeight || 300;
-const M   = 4;
-tb.style.left = Math.max(M, Math.min(initLeft + dx, window.innerWidth  - TBW - M)) + 'px';
-tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M)) + 'px';
+      var TBW = tb.offsetWidth  || 48;
+      var TBH = tb.offsetHeight || 300;
+      var M   = 4;
+      tb.style.left = Math.max(M, Math.min(_initLeft + dx, window.innerWidth  - TBW - M)) + 'px';
+      tb.style.top  = Math.max(M, Math.min(_initTop  + dy, window.innerHeight - TBH - M)) + 'px';
     });
   });
+
   document.addEventListener('touchmove', function(e) {
     if (!_isDragging || !e.touches || !e.touches.length) return;
     e.preventDefault();
     if (_dragRaf) cancelAnimationFrame(_dragRaf);
     _dragRaf = requestAnimationFrame(function() {
       var tb = _cachedToolbar || (_cachedToolbar = document.querySelector('.wa-toolbar'));
-      if (!tb) { 
-        _isDragging = false;
-        return;
-      }
+      if (!tb) { _isDragging = false; return; }
       var dx = e.touches[0].clientX - _startX;
       var dy = e.touches[0].clientY - _startY;
-      const TBW = tb.offsetWidth  || 48;
-const TBH = tb.offsetHeight || 300;
-const M   = 4;
-tb.style.left = Math.max(M, Math.min(initLeft + dx, window.innerWidth  - TBW - M)) + 'px';
-tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M)) + 'px';
+      var TBW = tb.offsetWidth  || 48;
+      var TBH = tb.offsetHeight || 300;
+      var M   = 4;
+      tb.style.left = Math.max(M, Math.min(_initLeft + dx, window.innerWidth  - TBW - M)) + 'px';
+      tb.style.top  = Math.max(M, Math.min(_initTop  + dy, window.innerHeight - TBH - M)) + 'px';
     });
   }, { passive: false });
+
   document.addEventListener('mouseup', function() {
     if (_isDragging) {
       _isDragging = false;
       document.body.style.userSelect = '';
     }
   });
+
   document.addEventListener('touchend', function() {
     if (_isDragging) {
       _isDragging = false;
       document.body.style.userSelect = '';
     }
   });
+
   document.addEventListener('mousedown', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
     if (!grip) return;
-    e.preventDefault();
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    cachedToolbar = document.querySelector('.wa-toolbar');
-    var tb = cachedToolbar;
-    initLeft = tb ? tb.offsetLeft : 0;
-    initTop = tb ? tb.offsetTop : 0;
+    _isDragging = true;
+    _startX = e.clientX;
+    _startY = e.clientY;
+    var tb = document.querySelector('.wa-toolbar');
+    _initLeft = tb ? tb.offsetLeft : 0;
+    _initTop  = tb ? tb.offsetTop  : 0;
+    _cachedToolbar = tb;
     document.body.style.userSelect = 'none';
   });
+
   document.addEventListener('mousedown', function(e) {
-    if (e.target.closest('.wa-drag-grip')) return;
     if (isDrawingSessionActive) return;
     var bar = document.getElementById('wa-float-bar');
     if (!bar) return;
     if (bar.contains(e.target)) return;
-    // Click vào panel hoặc toolbar thì không đóng
     var panel = document.getElementById('wa-props-panel');
     if (panel && panel.contains(e.target)) return;
     var tb = document.querySelector('.wa-toolbar');
@@ -3424,7 +3425,8 @@ tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M
     if (_container && _container.classList.contains('wa-drawing-mode')) return;
     if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
     if (typeof hidePanel === 'function') hidePanel();
-}, { passive: true });
+  }, { passive: true });
+
   document.addEventListener('touchstart', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
     if (!grip || !e.touches || !e.touches.length) return;
@@ -3434,23 +3436,25 @@ tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M
     var tb = document.querySelector('.wa-toolbar');
     _initLeft = tb ? tb.offsetLeft : 0;
     _initTop  = tb ? tb.offsetTop  : 0;
+    _cachedToolbar = tb;
     document.body.style.userSelect = 'none';
   }, { passive: false });
+
   document.addEventListener('dblclick', function(e) {
     if (e.target.closest('.wa-drag-grip')) {
       var tb = document.querySelector('.wa-toolbar');
       if (tb) tb.classList.toggle('collapsed');
     }
   });
+
   var _lastTapTime = 0;
   document.addEventListener('touchstart', function(e) {
     if (!e.target.closest('.wa-drag-grip')) return;
     var now = Date.now();
     if (now - _lastTapTime < 300) {
-      // Double-tap!
       var tb = document.querySelector('.wa-toolbar');
       if (tb) tb.classList.toggle('collapsed');
-      _lastTapTime = 0; // reset để tránh triple-tap
+      _lastTapTime = 0;
     } else {
       _lastTapTime = now;
     }
