@@ -2050,8 +2050,9 @@
     var curFont = tStyles.family || 'sans-serif';
 
     var ov = window.currentSelectedOverlay;
-    var posX = window._waMouseX;
-    var posY = window._waMouseY;
+        // Lấy tọa độ lúc click vào chữ, không phải lúc bấm nút cây bút
+        var posX = window._waTextClickX || window._waMouseX;
+        var posY = window._waTextClickY || window._waMouseY;
 
     // ── TÍNH TỌA ĐỘ CHÍNH XÁC 100% CỦA CHỮ TRÊN BIỂU ĐỒ ──
     if (ov && global.tvChart && ov.points && ov.points[0]) {
@@ -3173,12 +3174,17 @@ function _fbToggleLock(ov) {
       }
 // THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
 config.onSelected = function(event) {
-  isDrawingSessionActive = false;
+  if (isDrawingSessionActive) return;
   var ov = event && event.overlay ? event.overlay : null;
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
-  if (document.getElementById('wa-text-editor-backdrop')) return;
+  
+  // ← LƯU TỌA ĐỘ NGAY LÚC CLICK VÀO CHỮ, trước khi chuột đi chỗ khác
+  window._waTextClickX = _fbX;
+  window._waTextClickY = _fbY;
+
+  if (document.getElementById('wa-text-editor')) return;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
   if (typeof renderPanel === 'function') renderPanel(ov);
 };
