@@ -3727,13 +3727,9 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
         _allHidden = !_allHidden;
         hideAllBtn.style.opacity = _allHidden ? '0.4' : '1';
         
-        // Áp dụng override cho TOÀN BỘ overlay đang có trên chart
+        // Dùng thuộc tính visible chuẩn của KLineChart v9 (Không làm mất màu cũ)
         global.tvChart.overrideOverlay({
-          styles: {
-            line: { color: _allHidden ? 'transparent' : undefined },
-            polygon: { color: _allHidden ? 'transparent' : undefined, borderColor: _allHidden ? 'transparent' : undefined },
-            text: { color: _allHidden ? 'transparent' : undefined, backgroundColor: _allHidden ? 'transparent' : undefined }
-          }
+          visible: !_allHidden
         });
         
         if (typeof showToast === 'function') {
