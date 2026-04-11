@@ -2670,7 +2670,7 @@
           ns.polygon.style = 'strokefill';
           // Kiểu nét đứt cho polygon border dùng line.style trong KLineChart
           if (bs) {
-            ns.line.style = bs;
+            ns.line.style = bs === 'dotted' ? 'dashed' : bs;
             if (bs === 'dashed') ns.line.dashedValue = [6, 4];
             else if (bs === 'dotted') ns.line.dashedValue = [1.5, 3];
             else delete ns.line.dashedValue;
@@ -2686,7 +2686,7 @@
   
           if (lc) { ns.line.color = mkRgba(lc, lo !== null ? lo : 1); ns.text.color = lc; }
           if (lw !== null) ns.line.size  = lw;
-          if (ls) { ns.line.style = ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
+          if (ls) { ns.line.style = ls === 'dotted' ? 'dashed' : ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
   
           var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData)
                    ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
@@ -2705,7 +2705,7 @@
   
           if (lc)          ns.line.color  = mkRgba(lc, lo !== null ? lo : 1);
           if (lw !== null) ns.line.size   = lw;
-          if (ls) { ns.line.style = ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
+          if (ls) { ns.line.style = ls === 'dotted' ? 'dashed' : ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
           if (tc)          ns.text.color  = tc;
           if (tsz !== null) ns.text.size  = tsz;
   
@@ -2717,7 +2717,7 @@
   
           if (lc)          ns.line.color  = mkRgba(lc, lo !== null ? lo : 1);
           if (lw !== null) ns.line.size   = lw;
-          if (ls) { ns.line.style = ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
+          if (ls) { ns.line.style = ls === 'dotted' ? 'dashed' : ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
         }
   
         currentSelectedOverlay.styles = ns;
@@ -3108,11 +3108,11 @@ function _fbToggleLock(ov) {
         config.styles.line = { color: typeof hexToRgba === 'function' ? hexToRgba(s.borderColor || '#3B82F6', s.borderOpacity !== undefined ? s.borderOpacity : 1) : (s.borderColor || '#3B82F6'), size: s.borderWidth || 1, style: s.borderStyle || 'solid' };
       } else if (tType === 'fibo') {
         config.styles.line = {
-          color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#E8EDF2', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#E8EDF2'),
-          size: 1,
-          style: s.lineStyle || 'solid',
-          dashedValue: s.lineStyle === 'dashed' ? [6, 4] : s.lineStyle === 'dotted' ? [1.5, 3] : undefined
-        };
+  color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#E8EDF2', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#E8EDF2'),
+  size: 1,
+  style: s.lineStyle || 'solid',
+  dashedValue: s.lineStyle === 'dashed' ? [6, 4] : s.lineStyle === 'dotted' ? [1.5, 3] : undefined
+};
       } else if (tType === 'text') {
         config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
