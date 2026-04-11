@@ -3093,51 +3093,43 @@ function _fbToggleLock(ov) {
         config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
       }
-      config.onSelected = function(event) {
-        if (isDrawingSessionActive) return;
-        var ov = event && event.overlay ? event.overlay : null;
-        if (!ov) return;
-        currentSelectedOverlay = ov;
-        window.currentSelectedOverlay = ov;
-        
-        // Tránh Sidebar cướp focus của ô gõ chữ
-        if (document.getElementById('wa-text-editor')) return; 
-      
-        if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
-        if (typeof renderPanel === 'function') renderPanel(ov);
-      };
-      
-      config.onDeselected = function() {
-        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-      };
-      
-      config.onDoubleClick = function(event) {
-        var ov = event && event.overlay ? event.overlay : null;
-        if (!ov) return false;
-        
-        var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
-        if (cat === 'text') {
-          // Tắt các thanh công cụ để tập trung gõ
-          if (typeof hidePanel === 'function') hidePanel();
-          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-          
-          // Delay 50ms để KLineChart xử lý xong click, sau đó mới bật ô chữ tàng hình
-          setTimeout(function() {
-            if (typeof openTextEditor === 'function') {
-              openTextEditor(
-                ov.extendData || '', 
-                ov.styles || {}, 
-                ov.name, 
-                function(newText, newStyles) {
-                  global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                  if (typeof saveAllOverlays === 'function') saveAllOverlays();
-                }
-              );
-            }
-          }, 50);
+// THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
+config.onSelected = function(event) {
+  isDrawingSessionActive = false;
+  var ov = event && event.overlay ? event.overlay : null;
+  if (!ov) return;
+  currentSelectedOverlay = ov;
+  window.currentSelectedOverlay = ov;
+  if (document.getElementById('wa-text-editor-backdrop')) return;
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+  if (typeof renderPanel === 'function') renderPanel(ov);
+};
+config.onDeselected = function() {
+  if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+};
+// --- DÁN THÊM DOUBLE CLICK VÀO ĐÂY ---
+config.onDoubleClick = function(event) {
+  var ov = event && event.overlay ? event.overlay : null;
+  if (!ov) return false;
+  
+  var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+  if (cat === 'text') {
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    
+    if (typeof openTextEditor === 'function') {
+      openTextEditor(
+        ov.extendData || '', 
+        ov.styles || {}, 
+        ov.name, 
+        function(newText, newStyles) {
+          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
         }
-        return false;
-      };
+      );
+    }
+  }
+  return false;
+};
 // -------------------------------------
       global.tvChart.createOverlay(config);
     } catch (err) { 
@@ -3287,36 +3279,9 @@ function restoreOverlays() {
             if (!ov) return;
             currentSelectedOverlay = ov;
             window.currentSelectedOverlay = ov;
-            
-            if (document.getElementById('wa-text-editor')) return;
             if (typeof renderPanel === 'function') renderPanel(ov);
           },
-          onDeselected: function() {},
-          onDoubleClick: function(event) {
-            var ov = event && event.overlay ? event.overlay : null;
-            if (!ov) return false;
-            
-            var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
-            if (cat === 'text') {
-              if (typeof hidePanel === 'function') hidePanel();
-              if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-              
-              setTimeout(function() {
-                if (typeof openTextEditor === 'function') {
-                  openTextEditor(
-                    ov.extendData || '', 
-                    ov.styles || {}, 
-                    ov.name, 
-                    function(newText, newStyles) {
-                      global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                      if (typeof saveAllOverlays === 'function') saveAllOverlays();
-                    }
-                  );
-                }
-              }, 50);
-            }
-            return false;
-          }
+          onDeselected: function() {}
         };
         let newId = global.tvChart.createOverlay(cfg);
         
