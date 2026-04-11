@@ -3717,42 +3717,30 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
        });
   }
  
-  // NÚT ẨN/HIỆN TẤT CẢ
-var _allHidden = false;
-var hideAllBtn = toolbar.querySelector('#wa-btn-hide-all');
-
-function _waSetDrawingsVisible(visible) {
-  var container = document.getElementById('sc-chart-container') || document.body;
-
-  // Tìm canvas/svg của drawing layer
-  var candidates = container.querySelectorAll('canvas, svg');
-
-  candidates.forEach(function(el) {
-    var cls = (el.className && el.className.baseVal) || el.className || '';
-    var text = String(cls).toLowerCase();
-
-    // Chỉ đụng layer có vẻ là overlay/drawing
-    if (
-      text.includes('overlay') ||
-      text.includes('draw') ||
-      text.includes('drawing')
-    ) {
-      el.style.opacity = visible ? '1' : '0';
-      el.style.pointerEvents = visible ? '' : 'none';
+    // NÚT ẨN/HIỆN TẤT CẢ
+    var _allHidden = false;
+    var hideAllBtn = toolbar.querySelector('#wa-btn-hide-all');
+  
+    if (hideAllBtn) {
+      hideAllBtn.addEventListener('click', function() {
+        if (!global.tvChart) return;
+        _allHidden = !_allHidden;
+        hideAllBtn.style.opacity = _allHidden ? '0.4' : '1';
+        
+        // Áp dụng override cho TOÀN BỘ overlay đang có trên chart
+        global.tvChart.overrideOverlay({
+          styles: {
+            line: { color: _allHidden ? 'transparent' : undefined },
+            polygon: { color: _allHidden ? 'transparent' : undefined, borderColor: _allHidden ? 'transparent' : undefined },
+            text: { color: _allHidden ? 'transparent' : undefined, backgroundColor: _allHidden ? 'transparent' : undefined }
+          }
+        });
+        
+        if (typeof showToast === 'function') {
+          showToast(_allHidden ? 'Đã ẩn tất cả' : 'Đã hiện tất cả');
+        }
+      });
     }
-  });
-}
-
-if (hideAllBtn) {
-  hideAllBtn.addEventListener('click', function() {
-    _allHidden = !_allHidden;
-    hideAllBtn.style.opacity = _allHidden ? '0.4' : '1';
-    _waSetDrawingsVisible(!_allHidden);
-    if (typeof showToast === 'function') {
-      showToast(_allHidden ? 'Đã ẩn tất cả' : 'Đã hiện tất cả');
-    }
-  });
-}
   
 
   // 🌟 CÁC NÚT TRÊN BẢNG PROPERTIES PANEL (Thanh trượt bên phải)
