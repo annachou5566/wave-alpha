@@ -3399,12 +3399,14 @@ tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M
   document.addEventListener('mousedown', function(e) {
     var grip = e.target.closest('.wa-drag-grip');
     if (!grip) return;
-    _isDragging = true;
-    _startX = e.clientX;
-    _startY = e.clientY;
-    var tb = document.querySelector('.wa-toolbar');
-    _initLeft = tb ? tb.offsetLeft : 0;
-    _initTop  = tb ? tb.offsetTop  : 0;
+    e.preventDefault();
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    cachedToolbar = document.querySelector('.wa-toolbar');
+    var tb = cachedToolbar;
+    initLeft = tb ? tb.offsetLeft : 0;
+    initTop = tb ? tb.offsetTop : 0;
     document.body.style.userSelect = 'none';
   });
   document.addEventListener('mousedown', function(e) {
