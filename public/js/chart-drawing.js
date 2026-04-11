@@ -2030,8 +2030,8 @@
     }, 0);
   }
 
-    // ─────────────────────────────────────────────
-  // TEXT EDITOR & WRAPPER (INLINE EDITING)
+      // ─────────────────────────────────────────────
+  // TEXT EDITOR & WRAPPER (INLINE EDITING SIÊU THỰC)
   // ─────────────────────────────────────────────
   
   if (!window._waMouseX) {
@@ -2052,17 +2052,47 @@
     var curSize = tStyles.size || 14;
     var curFont = tStyles.family || 'sans-serif';
 
-    // Tạo ô gõ chữ tàng hình bay lơ lửng tại vị trí click chuột
+    var ov = window.currentSelectedOverlay;
+    var posX = window._waMouseX;
+    var posY = window._waMouseY;
+
+    // 1. TÍNH TỌA ĐỘ CHÍNH XÁC CỦA CHỮ TRÊN BIỂU ĐỒ
+    if (ov && global.tvChart && ov.points && ov.points.length > 0) {
+      try {
+        var pixel = global.tvChart.convertToPixel({
+          dataIndex: ov.points[0].dataIndex,
+          timestamp: ov.points[0].timestamp,
+          value: ov.points[0].value
+        });
+        var container = document.getElementById('sc-chart-container');
+        if (pixel && container) {
+          var rect = container.getBoundingClientRect();
+          posX = rect.left + pixel.x;
+          posY = rect.top + pixel.y;
+        }
+      } catch(e) {}
+      
+      // 2. ẨN TẠM THỜI CHỮ GỐC ĐỂ KHÔNG BỊ TRÙNG 2 DÒNG
+      try {
+        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!tempStyles.text) tempStyles.text = {};
+        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ gốc trong suốt
+        global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
+      } catch(e) {}
+    }
+
+    // 3. TẠO Ô GÕ CHỮ ĐÈ ĐÚNG VỊ TRÍ GỐC
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor'; 
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
     input.style.cssText = `
       position: fixed;
-      left: ${window._waMouseX}px;
-      top: ${window._waMouseY - (curSize/2)}px;
-      background: transparent !important; 
-      border: 1px dashed rgba(59, 130, 246, 0.5) !important;            
+      left: ${posX}px;
+      top: ${posY}px;
+      transform: translate(0, -50%); /* Căn giữa theo chiều dọc */
+      background: rgba(15, 20, 26, 0.8) !important; /* Nền mờ nhẹ để dễ nhìn chữ */
+      border: 1px dashed #3B82F6 !important;            
       outline: none !important;           
       color: ${curColor};
       font-family: ${curFont};
@@ -2071,12 +2101,13 @@
       z-index: 999999;
       min-width: 50px;
       height: ${curSize * 1.5}px;
-      padding: 0;
+      padding: 2px 6px;
       margin: 0;
       resize: none;
       overflow: hidden;
       white-space: pre;
       caret-color: ${curColor};
+      border-radius: 4px;
     `;
 
     document.body.appendChild(input);
@@ -2084,14 +2115,14 @@
     requestAnimationFrame(function() {
       input.focus();
       if (!currentText || currentText === 'Văn bản...') input.select();
-      input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
+      input.style.width = Math.max(50, input.scrollWidth + 15) + 'px';
       input.style.height = input.scrollHeight + 'px';
     });
 
     input.addEventListener('input', function() {
       this.style.width = '50px'; 
       this.style.height = 'auto';
-      this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
+      this.style.width = Math.max(50, this.scrollWidth + 15) + 'px';
       this.style.height = this.scrollHeight + 'px';
     });
 
@@ -2103,8 +2134,11 @@
       if (!updatedStyles.text) updatedStyles.text = {};
       if (!updatedStyles.polygon) updatedStyles.polygon = {};
       
+      // Trả lại màu gốc cho biểu đồ (vì lúc nãy mình ẩn đi)
+      updatedStyles.text.color = curColor; 
+      
       input.remove();
-      onConfirm(val, updatedStyles);
+      onConfirm(val, updatedStyles); // Bơm chữ thật vào lại biểu đồ
     }
 
     input.addEventListener('blur', commit); // Click ra ngoài tự lưu
