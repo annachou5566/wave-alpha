@@ -3832,4 +3832,30 @@ if (document.readyState === 'loading') {
 }
 
 })(window); // <-- Chú ý giữ nguyên dòng đóng module này
+/*
+=== CODEX IMPROVEMENT PROPOSALS ===
 
+BUGS FOUND (not in the task description):
+
+- `saveHistory` trước đó dùng clone nông (`Object.assign`) nên undo/redo có thể giữ tham chiếu cũ và gây sai dữ liệu khi overlay bị mutate tiếp.
+- Panel style trước đó chỉ có `solid/dashed` nên các overlay hỗ trợ `dotted` qua toolbar không đồng bộ với panel.
+- Trên mobile, panel đang dùng animation trượt ngang của desktop khiến cảm giác mở panel không đúng kỳ vọng dạng bottom-sheet.
+
+UX IMPROVEMENTS SUGGESTED (not implemented, for human review):
+
+- Thêm nút Undo/Redo trực tiếp trên toolbar nổi để người dùng mobile thao tác mà không cần bàn phím.
+- Thêm “preset style chips” cho text/shape (ví dụ: Note, Warning, Success) để rút ngắn số lần mở panel.
+- Thêm tùy chọn ghim panel (pin) khi người dùng muốn chỉnh nhiều object liên tục mà không tự đóng.
+
+PERFORMANCE OBSERVATIONS:
+
+- `renderPanel` rebuild lại toàn bộ HTML mỗi lần chọn overlay; với overlay thay đổi nhanh có thể tạo nhiều listener ngắn hạn.
+- Có nhiều `document.addEventListener` toàn cục; có thể gom theo event bus nhẹ để giảm số callback luôn hoạt động.
+- Một số `createPointFigures` tạo nhiều object mỗi frame khi kéo điểm; có thể cân nhắc cache style-derived values theo overlay id.
+
+MOBILE-SPECIFIC GAPS REMAINING:
+
+- Chưa có gesture “shake để undo”; hiện tại mới hỗ trợ Ctrl/Cmd + Z/Y (desktop) và API hàm nội bộ.
+- Cần test thực thiết bị cho bàn phím ảo (iOS/Android) để tinh chỉnh thêm safe-area cho floating toolbar trong mọi trường hợp.
+- Chưa có tối ưu đặc thù cho thao tác một tay trên màn hình nhỏ (đặc biệt khi panel mở đồng thời với toolbar nổi).
+*/
