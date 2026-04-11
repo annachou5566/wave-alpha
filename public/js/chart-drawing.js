@@ -2978,26 +2978,19 @@ function _fbToggleVisible(ov) {
   if (!ns.text)    ns.text    = {};
 
   if (ext._hidden) {
-    // Lưu lại toàn bộ extendData gốc (fillOpacity, showLabels...)
     ov._hiddenExtSnap = JSON.stringify(ov.extendData || {});
-    // Ẩn line
-    ns.line.color = 'rgba(0,0,0,0)';
-    // Ẩn polygon (fill + border)
+    ns.line.color          = 'rgba(0,0,0,0)';
     ns.polygon.color       = 'rgba(0,0,0,0)';
     ns.polygon.borderColor = 'rgba(0,0,0,0)';
-    // Ẩn text
-    ns.text.color = 'rgba(0,0,0,0)';
-    // Ẩn fill fibo/gann (extendData.fillOpacity)
+    ns.text.color          = 'rgba(0,0,0,0)';
+    ns.text.backgroundColor = 'rgba(0,0,0,0)';
     ext.fillOpacity = 0;
   } else {
-    // Restore line
     delete ns.line.color;
-    // Restore polygon
     delete ns.polygon.color;
     delete ns.polygon.borderColor;
-    // Restore text
     delete ns.text.color;
-    // Restore extendData gốc
+    delete ns.text.backgroundColor;
     if (ov._hiddenExtSnap) {
       try { ext = JSON.parse(ov._hiddenExtSnap); } catch(e) {}
       delete ov._hiddenExtSnap;
