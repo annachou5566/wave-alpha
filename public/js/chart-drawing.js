@@ -3408,6 +3408,7 @@ tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M
     document.body.style.userSelect = 'none';
   });
   document.addEventListener('mousedown', function(e) {
+    if (e.target.closest('.wa-drag-grip')) return;
     if (isDrawingSessionActive) return;
     var bar = document.getElementById('wa-float-bar');
     if (!bar) return;
