@@ -3714,9 +3714,7 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
           if (typeof showToast === 'function') showToast('🗑️ Đã xoá sạch bản vẽ');
         });
       }
-    });
-  }
-  // NÚT ẨN/HIỆN TẤT CẢ
+        // NÚT ẨN/HIỆN TẤT CẢ
   var _allHidden = false;
   var hideAllBtn = toolbar.querySelector('#wa-btn-hide-all');
   if (hideAllBtn) {
@@ -3759,6 +3757,9 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
       if (typeof showToast === 'function') showToast(_allHidden ? 'Đã ẩn tất cả' : 'Đã hiện tất cả');
     });
   }
+    });
+  }
+
   
 
   // 🌟 CÁC NÚT TRÊN BẢNG PROPERTIES PANEL (Thanh trượt bên phải)
