@@ -2174,16 +2174,26 @@
         return false;
       },
       onDoubleClick: function(event) {
-        if (!overlayId && event && event.overlay) {
-          overlayId = event.overlay.id;
-          openEditor(event.overlay ? event.overlay.extendData : '', event.overlay ? event.overlay.styles : {});
+        var ov = event && event.overlay ? event.overlay : null;
+        if (ov) {
+          overlayId = ov.id;
+          
+          // 1. Tắt các menu đang mở
+          if (typeof hidePanel === 'function') hidePanel();
+          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+          
+          // 2. CHÚ Ý: Gán lại biến selected để hàm openEditor (hoặc openTextEditor) 
+          // biết chính xác text nào để làm tàng hình.
+          currentSelectedOverlay = ov;
+          window.currentSelectedOverlay = ov;
+          
+          // 3. Mở ô gõ chữ
+          openEditor(ov.extendData || '', ov.styles || {});
         }
         return false;
-      },  // ← ĐỔI } thành }, (thêm dấu phẩy)
-      // THÊM VÀO ĐÂY:
+      },
       onSelected: function(event) {
-        // Bỏ dòng: if (isDrawingSessionActive) return;
-        isDrawingSessionActive = false;  // ← THÊM DÒNG NÀY để reset sau khi vẽ xong
+        isDrawingSessionActive = false; // Reset sau khi vẽ xong
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return;
         currentSelectedOverlay = ov;
@@ -2912,28 +2922,27 @@ function showFloatToolbar(ov, posX, posY) {
 
   // 1. Sự kiện nút sửa chữ
   var editBtn = bar.querySelector('#wa-fb-edit');
-  if (editBtn) {
-    editBtn.addEventListener('click', function() {
-      // Ẩn các menu đi để chuẩn bị gõ chữ
-      if (typeof hidePanel === 'function') hidePanel();
-      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+if (editBtn) {
+  editBtn.addEventListener('click', function() {
+    // Ẩn các menu đi chuẩn bị gõ chữ
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    
+    // Delay 50ms tắt menu xong mới gọi chữ lên
+    setTimeout(function() {
+      // THÊM DÒNG NÀY ĐỂ FIX LỖI:
+      // Phục hồi lại biến do hidePanel đã set nó thành null
+      window.currentSelectedOverlay = ov; 
       
-      // Delay 50ms để tắt menu xong mới gọi ô chữ lên
-      setTimeout(function() {
-        if (typeof openTextEditor === 'function') {
-          openTextEditor(
-            ov.extendData || '', 
-            ov.styles || {}, 
-            ov.name, 
-            function(newText, newStyles) {
-              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-              if (typeof saveAllOverlays === 'function') saveAllOverlays();
-            }
-          );
-        }
-      }, 50);
-    });
-  }
+      if (typeof openTextEditor === 'function') {
+        openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
+          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+          if (typeof saveAllOverlays === 'function') saveAllOverlays();
+        });
+      }
+    }, 50);
+  });
+}
 
   // 2. Drag Bar Logic (kéo thả thanh công cụ nổi)
   var dragHandle = bar.querySelector('#wa-fb-drag');
