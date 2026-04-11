@@ -3723,7 +3723,8 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
       _allHidden = !_allHidden;
       hideAllBtn.style.opacity = _allHidden ? '0.4' : '1';
       global.__wa_overlay_map.forEach(function(ov) {
-        var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+        var liveOv = (global.tvChart.getOverlayById ? global.tvChart.getOverlayById(ov.id) : null) || ov;
+        var ns = JSON.parse(JSON.stringify(liveOv.styles || ov.styles || {}));
         if (!ns.line)    ns.line    = {};
         if (!ns.polygon) ns.polygon = {};
         if (!ns.text)    ns.text    = {};
@@ -3733,10 +3734,9 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
           ns.polygon.borderColor  = 'rgba(0,0,0,0)';
           ns.text.color           = 'rgba(0,0,0,0)';
           ns.text.backgroundColor = 'rgba(0,0,0,0)';
-          ov._hideAllExtSnap = JSON.stringify(ov.extendData || {});
+          ov._hideAllExtSnap = JSON.stringify(liveOv.extendData || ov.extendData || {});
           var ext = JSON.parse(ov._hideAllExtSnap);
           ext.fillOpacity = 0;
-          ov.extendData = ext;
           global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
         } else {
           delete ns.line.color;
@@ -3749,10 +3749,8 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
             try { ext = JSON.parse(ov._hideAllExtSnap); } catch(e) {}
             delete ov._hideAllExtSnap;
           }
-          ov.extendData = ext;
           global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
         }
-        ov.styles = ns;
       });
       if (typeof showToast === 'function') showToast(_allHidden ? 'Đã ẩn tất cả' : 'Đã hiện tất cả');
     });
