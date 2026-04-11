@@ -31,11 +31,11 @@
 
   // Khởi tạo LocalStorage với đầy đủ các thuộc tính để KHÔNG BAO GIỜ CRASH
   const defaultStyles = {
-    lines: { lineColor: '#3B82F6', lineWidth: 1, lineStyle: 'solid' },
-    shapes: { borderColor: '#3B82F6', borderWidth: 1, fillColor: '#3B82F6', fillOpacity: 0.15 }, 
-    fibo: { lineColor: '#E8EDF2', showLabels: true, fillOpacity: 0.15 },
+    lines: { lineColor: '#3B82F6', lineWidth: 1, lineStyle: 'solid', lineOpacity: 1 },
+    shapes: { borderColor: '#3B82F6', borderWidth: 1, borderStyle: 'solid', borderOpacity: 1, fillColor: '#3B82F6', fillOpacity: 0.15 }, 
+    fibo: { lineColor: '#E8EDF2', lineStyle: 'solid', lineOpacity: 1, showLabels: true, fillOpacity: 0.15 },
     text: { textColor: '#E8EDF2', textSize: 14, textInput: 'Văn bản...' },
-    waves: { lineColor: '#3B82F6', lineWidth: 1, textColor: '#E8EDF2', textSize: 12 }
+    waves: { lineColor: '#3B82F6', lineWidth: 1, lineStyle: 'solid', lineOpacity: 1, textColor: '#E8EDF2', textSize: 12 }
   };
   
   // BỔ SUNG BẢNG MÀU CHUẨN (Fix triệt để lỗi giật lag khi render Panel)
@@ -1116,7 +1116,7 @@
       // --- BATCH 8: Text Annotation Tools (HỖ TRỢ MULTILINE TỰ ĐỘNG CĂN DÒNG) ---
       { 
         name: 'plainText', totalStep: 2, needDefaultPointFigure: true, 
-        styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: 'transparent', borderColor: 'transparent', borderSize: 0 } },
+        styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: 'transparent', borderColor: 'transparent', borderSize: 0 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var txt = ref.overlay.extendData || '...'; 
@@ -1154,14 +1154,14 @@
             if (c.length >= 2) { figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: 'rgba(0,240,255,0.4)', size: 1, style: 'dashed' } }); } 
             var tx = c.length >= 2 ? c[1].x : c[0].x; var ty = c.length >= 2 ? c[1].y : c[0].y; 
             lines.forEach(function(l, i) {
-              figs.push({ type: 'text', attrs: { x: tx, y: ty + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: bgC, borderColor: pS.borderColor || 'transparent', borderSize: pS.borderSize || 0 } });
+                figs.push({ type: 'text', attrs: { x: tx, y: ty + i * lh, text: l, align: 'left', baseline: 'top' }, styles: { color: tS.color || '#00F0FF', size: tS.size || 13, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: bgC, borderColor: pS.borderColor || 'transparent', borderSize: pS.borderSize || 0 } });
             });
             return figs; 
         } 
       },
       { 
         name: 'note', totalStep: 2, needDefaultPointFigure: true, 
-         styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: 'rgba(240,185,11,0.15)', borderColor: '#F0B90B', borderSize: 1 } },
+        styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: 'rgba(240,185,11,0.15)', borderColor: '#F0B90B', borderSize: 1 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var txt = ref.overlay.extendData || '...'; 
@@ -1191,7 +1191,7 @@
       },
       { 
         name: 'priceNote', totalStep: 2, needDefaultPointFigure: true, needDefaultYAxisFigure: true, 
-        styles: { text: { color: '#0ECB81', style: 'normal' }, polygon: { color: 'rgba(14,203,129,0.2)', borderColor: '#0ECB81', borderSize: 1 } },  
+        styles: { text: { color: '#0ECB81', style: 'normal' }, polygon: { color: 'rgba(14,203,129,0.2)', borderColor: '#0ECB81', borderSize: 1 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; 
@@ -1215,7 +1215,7 @@
       },
       { 
         name: 'pin', totalStep: 2, 
-       styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: '#F0B90B', borderColor: '#fff', borderSize: 1.5 } }, 
+        styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: '#F0B90B', borderColor: '#fff', borderSize: 1.5 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var txt = ref.overlay.extendData || ''; 
@@ -1244,7 +1244,7 @@
       },
       { 
         name: 'annotation', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, 
-        styles: { text: { color: '#00F0FF', style: 'normal' }, polygon: { color: 'rgba(0,240,255,0.1)', borderColor: '#00F0FF', borderSize: 1 } },  
+        styles: { text: { color: '#00F0FF', style: 'normal' }, polygon: { color: 'rgba(0,240,255,0.1)', borderColor: '#00F0FF', borderSize: 1 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var txt = ref.overlay.extendData || '...'; 
@@ -1274,7 +1274,7 @@
       },
       { 
         name: 'comment', totalStep: 2, 
-        styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: 'rgba(30,35,42,0.95)', borderColor: '#474d57', borderSize: 1 } },
+        styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: 'rgba(30,35,42,0.95)', borderColor: '#474d57', borderSize: 1 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var txt = ref.overlay.extendData || '...'; 
@@ -1295,7 +1295,7 @@
                   weight:          tS.weight || '600',
                   style:           tS.style  || 'normal',   // ← THÊM DÒNG NÀY
                   backgroundColor: bgC,
-                   borderColor:     pS.borderColor || 'transparent',
+                  borderColor:     pS.borderColor || 'transparent',
                   borderSize:      pS.borderSize || 0
                 } });
             });
@@ -1304,7 +1304,7 @@
       },
       { 
         name: 'priceLabel', totalStep: 2, needDefaultYAxisFigure: true, 
-       styles: { text: { color: '#fff', style: 'normal' }, polygon: { color: '#F6465D', borderColor: '#F6465D', borderSize: 1 } }, 
+        styles: { text: { color: '#fff', style: 'normal' }, polygon: { color: '#F6465D', borderColor: '#F6465D', borderSize: 1 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var pts = (ref.overlay && ref.overlay.points) ? ref.overlay.points : []; 
@@ -1344,7 +1344,7 @@
             var isRight = tx >= c[0].x; 
             var coords = isRight ? [{ x: tx, y: ty }, { x: tx + notch, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty - bh / 2 }, { x: tx + notch + bw, y: ty + bh / 2 }, { x: tx + notch, y: ty + bh / 2 }] : [{ x: tx, y: ty }, { x: tx - notch, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty - bh / 2 }, { x: tx - notch - bw, y: ty + bh / 2 }, { x: tx - notch, y: ty + bh / 2 }]; 
             figs.push({ type: 'polygon', attrs: { coordinates: coords }, styles: { style: 'fill', color: pS.color || 'rgba(153,69,255,0.25)', borderColor: pS.borderColor || '#9945FF', borderSize: 1 }, ignoreEvent: true }); 
-                   lines.forEach(function(l, i) {
+                lines.forEach(function(l, i) {
                     var lineY = ty - (lines.length - 1) * lh / 2 + i * lh;
                     figs.push({ type: 'text', attrs: { x: isRight ? tx + notch + 8 : tx - notch - 8, y: lineY, text: l, align: isRight ? 'left' : 'right', baseline: 'middle' }, styles: { color: tS.color || '#d0aaff', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: bgC, borderColor: pS.borderColor || 'transparent', borderSize: pS.borderSize || 0 } });
                 });
@@ -1353,7 +1353,7 @@
       },
       { 
         name: 'flagMarker', totalStep: 2, 
-         styles: { text: { color: '#F0B90B', style: 'normal' }, polygon: { color: '#F0B90B', borderColor: '#F0B90B', borderSize: 1 } }, 
+        styles: { text: { color: '#F0B90B', style: 'normal' }, polygon: { color: '#F0B90B', borderColor: '#F0B90B', borderSize: 1 } }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var txt = ref.overlay.extendData || ''; 
@@ -1366,7 +1366,7 @@
             if (txt) {
                 lines.forEach(function(l, i) {
                     var lineY = (y - ph + fh / 2) - (lines.length - 1) * lh / 2 + i * lh;
-                                        figs.push({ type: 'text', attrs: { x: x + fw + 4, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: bgC, borderColor: pS.borderColor || 'transparent', borderSize: pS.borderSize || 0 } });
+                    figs.push({ type: 'text', attrs: { x: x + fw + 4, y: lineY, text: l, align: 'left', baseline: 'middle' }, styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: bgC, borderColor: pS.borderColor || 'transparent', borderSize: pS.borderSize || 0 } });
                 });
             }
             return figs; 
@@ -1736,9 +1736,15 @@
     top: auto !important; bottom: 56px !important;
     max-height: 52vh !important;
     border-radius: 12px !important;
+    transform: translateY(110%) !important;
+    opacity: 0 !important;
   }
+  .wa-props-panel.show { transform: translateY(0) !important; opacity: 1 !important; }
   .wa-float-bar { gap: 2px !important; padding: 6px 10px !important; }
   .wa-fb-btn { min-width: 40px !important; min-height: 40px !important; }
+  ._rng { height: 8px !important; }
+  ._rng::-webkit-slider-thumb { width: 18px !important; height: 18px !important; }
+  ._cpb { min-height: 40px !important; }
 }
 
 /* ── Touch: chặn text selection khi drag toolbar ── */
@@ -2181,12 +2187,14 @@
       },  // ← ĐỔI } thành }, (thêm dấu phẩy)
       // THÊM VÀO ĐÂY:
       onSelected: function(event) {
+        if (isDrawingSessionActive) return;
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
         if (document.getElementById('wa-text-editor-backdrop')) return;
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+        if (typeof renderPanel === 'function') renderPanel(ov);
       },
       onDeselected: function() {}
     };
@@ -2344,7 +2352,8 @@
   
     var LS = [
       { v:'solid',  l:'<svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" stroke="currentColor" stroke-width="2.5"/></svg> Liền' },
-      { v:'dashed', l:'<svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg> Đứt' }
+      { v:'dashed', l:'<svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg> Đứt' },
+      { v:'dotted', l:'<svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1.5 3"/></svg> Chấm' }
     ];
     var FONTS = [
       { v:'Be Vietnam Pro, sans-serif', n:'Be Vietnam Pro' },
@@ -2374,6 +2383,7 @@
         var bgA    = toAlpha(spoly.color, 0);
         var bdHex  = safeHex(spoly.borderColor, '#273040');
         var bdW    = spoly.borderSize || 1;
+        var bdA    = toAlpha(spoly.borderColor, 1);
         var bdOn   = !!(spoly.borderSize && spoly.borderColor && spoly.borderColor !== 'transparent');
   
         html += sec('', '<textarea id="_rp_txt" class="_ta">'+txt+'</textarea>');
@@ -2388,6 +2398,7 @@
           '<div style="padding:2px 0 4px">'+tog('_rp_bdon', bdOn, 'Bật viền khung')+'</div>' +
           '<div id="_rp_bdbox" style="'+(bdOn ? '' : 'opacity:.3;pointer-events:none')+'">' +
           ro(co('Màu viền', cpBtn('c_bdc', bdHex)), co('Dày viền', rng('_rp_bdw', 1, 5, 1, bdW))) +
+          ro(co('Opacity viền', rng('_rp_bda', 0, 1, 0.05, bdA))) +
           '</div>'
         );
   
@@ -2396,12 +2407,14 @@
         var sline  = s.line    || {};
         var bc     = safeHex(spoly.borderColor, '#3B82F6');
         var bw     = spoly.borderSize || 1;
+        var bo     = toAlpha(spoly.borderColor, 1);
         var bs     = sline.style || 'solid';
         var fcHex  = safeHex(spoly.color, '#3B82F6');
         var fa     = toAlpha(spoly.color, 0.15);
   
         html += sec('Đường viền',
           ro(co('Màu viền', cpBtn('c_bc', bc)), co('Độ dày', rng('_rp_bw', 1, 8, 1, bw))) +
+          ro(co('Opacity viền', rng('_rp_bo', 0, 1, 0.05, bo))) +
           ro(co('Kiểu viền', seg('_rp_bs', LS, bs)))
         );
         html += sec('Nền khối',
@@ -2413,11 +2426,13 @@
         var lc     = safeHex(sline.color, '#E8EDF2');
         var lw     = sline.size  || 1;
         var ls     = sline.style || 'solid';
+        var lo     = toAlpha(sline.color, 1);
         var fa     = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.15;
         var slbl   = (ext.showLabels !== false);
   
         html += sec('Đường Fibonacci',
           ro(co('Màu đường', cpBtn('c_lc', lc)), co('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
+          ro(co('Opacity đường', rng('_rp_lo', 0, 1, 0.05, lo))) +
           ro(co('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
         html += sec('Hiển thị',
@@ -2432,11 +2447,13 @@
         var lc     = safeHex(sline.color, '#3B82F6');
         var lw     = sline.size  || 1;
         var ls     = sline.style || 'solid';
+        var lo     = toAlpha(sline.color, 1);
         var tc     = safeHex(stxt.color, '#E8EDF2');
         var tsz    = stxt.size || 12;
   
         html += sec('Đường kẻ sóng',
           ro(co('Màu đường', cpBtn('c_lc', lc)), co('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
+          ro(co('Opacity đường', rng('_rp_lo', 0, 1, 0.05, lo))) +
           ro(co('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
         html += sec('Nhãn ký hiệu',
@@ -2449,9 +2466,11 @@
         var lc     = safeHex(sline.color, '#3B82F6');
         var lw     = sline.size  || 1;
         var ls     = sline.style || 'solid';
+        var lo     = toAlpha(sline.color, 1);
   
         html += sec('Đường kẻ',
           ro(co('Màu sắc', cpBtn('c_lc', lc)), co('Độ dày', rng('_rp_lw', 1, 8, 1, lw))) +
+          ro(co('Opacity đường', rng('_rp_lo', 0, 1, 0.05, lo))) +
           ro(co('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
       }
@@ -2612,6 +2631,7 @@
           var bdOn = gTog('_rp_bdon');
           var bdC = gCP('c_bdc');
           var bdW = gRng('_rp_bdw');
+          var bdA = gRng('_rp_bda');
           var txt = gTa('_rp_txt');
   
           // FIX BUG #4: chỉ assign khi giá trị hợp lệ (không null)
@@ -2623,7 +2643,7 @@
   
           ns.polygon.color       = (bgC && bgA > 0) ? mkRgba(bgC, bgA) : 'transparent';
           ns.polygon.style       = (bdOn || (bgA && bgA > 0)) ? 'strokefill' : 'fill';
-          ns.polygon.borderColor = bdOn ? (bdC || '#3B82F6') : 'transparent';
+          ns.polygon.borderColor = bdOn ? mkRgba((bdC || '#3B82F6'), bdA !== null ? bdA : 1) : 'transparent';
           ns.polygon.borderSize  = bdOn ? (bdW !== null ? bdW : 1) : 0;
   
           if (txt !== null) currentSelectedOverlay.extendData = txt;
@@ -2631,13 +2651,14 @@
         } else if (cat === 'shapes') {
           var bc = gCP('c_bc');
           var bw = gRng('_rp_bw');
+          var bo = gRng('_rp_bo');
           var bs = gSeg('_rp_bs');
           var fc = gCP('c_fc');
           var fa = gRng('_rp_fa');
   
           if (bc) {
-            ns.polygon.borderColor = bc;
-            ns.line.color          = bc;  // KLineChart dùng line.color cho viền polygon
+            ns.polygon.borderColor = mkRgba(bc, bo !== null ? bo : 1);
+            ns.line.color          = mkRgba(bc, bo !== null ? bo : 1);  // KLineChart dùng line.color cho viền polygon
           }
           if (bw !== null) {
             ns.polygon.borderSize = bw;
@@ -2649,19 +2670,21 @@
           if (bs) {
             ns.line.style = bs;
             if (bs === 'dashed') ns.line.dashedValue = [6, 4];
+            else if (bs === 'dotted') ns.line.dashedValue = [1.5, 3];
             else delete ns.line.dashedValue;
         }
   
         } else if (cat === 'fibo') {
           var lc = gCP('c_lc');
           var lw = gRng('_rp_lw');
+          var lo = gRng('_rp_lo');
           var ls = gSeg('_rp_ls');
           var fa = gRng('_rp_fa');
           var sl = gTog('_rp_slbl');
   
-          if (lc) { ns.line.color = lc; ns.text.color = lc; }
+          if (lc) { ns.line.color = mkRgba(lc, lo !== null ? lo : 1); ns.text.color = lc; }
           if (lw !== null) ns.line.size  = lw;
-          if (ls)          ns.line.style = ls;
+          if (ls) { ns.line.style = ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
   
           var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData)
                    ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
@@ -2673,24 +2696,26 @@
           // FIX BUG #4: Sóng Elliott - check null trước khi assign
           var lc  = gCP('c_lc');
           var lw  = gRng('_rp_lw');
+          var lo  = gRng('_rp_lo');
           var ls  = gSeg('_rp_ls');
           var tc  = gCP('c_tc');
           var tsz = gRng('_rp_tsz');
   
-          if (lc)          ns.line.color  = lc;
+          if (lc)          ns.line.color  = mkRgba(lc, lo !== null ? lo : 1);
           if (lw !== null) ns.line.size   = lw;
-          if (ls)          ns.line.style  = ls;
+          if (ls) { ns.line.style = ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
           if (tc)          ns.text.color  = tc;
           if (tsz !== null) ns.text.size  = tsz;
   
         } else { // lines, pitchforks, arrows
           var lc = gCP('c_lc');
           var lw = gRng('_rp_lw');
+          var lo = gRng('_rp_lo');
           var ls = gSeg('_rp_ls');
   
-          if (lc)          ns.line.color  = lc;
+          if (lc)          ns.line.color  = mkRgba(lc, lo !== null ? lo : 1);
           if (lw !== null) ns.line.size   = lw;
-          if (ls)          ns.line.style  = ls;
+          if (ls) { ns.line.style = ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
         }
   
         currentSelectedOverlay.styles = ns;
@@ -2833,6 +2858,7 @@ function showFloatToolbar(ov, posX, posY) {
     var bH     = bar.offsetHeight || 40;
     var MARGIN = 6;                   // khoảng cách tối thiểu với mép container
     var BAR_OFFSET_Y = 50;            // thanh nằm phía TRÊN con trỏ bao nhiêu px
+    var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
 
     // Tọa độ gốc (tính theo container)
     var cx = (posX != null ? posX : (_fbX - rect.left));
@@ -2848,8 +2874,8 @@ function showFloatToolbar(ov, posX, posY) {
       top = cy + 16;  // hiện phía DƯỚI điểm click
     }
     // Nếu xuống dưới cũng không đủ chỗ (màn hình rất nhỏ) → ép vào MARGIN
-    if (top + bH > rect.height - MARGIN) {
-      top = rect.height - bH - MARGIN;
+    if (top + bH > rect.height - MARGIN - safeBottom) {
+      top = rect.height - bH - MARGIN - safeBottom;
     }
 
     // ── Clamp ngang: không ra ngoài trái/phải ──────────────────
@@ -2984,14 +3010,60 @@ function _fbToggleLock(ov) {
   function saveHistory(action, obj) {
       if (!obj) return;
       
-      // Lưu bản sao của object (Object.assign) để an toàn bộ nhớ
-      undoStack.push({ action: action, overlay: Object.assign({}, obj) });
+      var snap;
+      try { snap = JSON.parse(JSON.stringify(obj)); } catch(e) { snap = Object.assign({}, obj); }
+      if (snap && snap.points && Array.isArray(snap.points)) {
+        snap.points = snap.points.map(function(p){ return { timestamp: p.timestamp, dataIndex: p.dataIndex, value: p.value }; });
+      }
+      undoStack.push({ action: action, overlay: snap });
       
       // Xóa entry cũ nhất nếu vượt quá 50 bước
       if (undoStack.length > MAX_HISTORY) undoStack.shift(); 
       
       // Reset redo mỗi khi có hành động vẽ/xóa mới
       redoStack = []; 
+  }
+
+  function _wa_applyHistory(entry, isRedo) {
+    if (!entry || !entry.overlay || !global.tvChart) return;
+    var ov = entry.overlay;
+    if (entry.action === 'add') {
+      if (isRedo) {
+        var newId = global.tvChart.createOverlay(ov);
+        if (newId) { ov.id = newId; _wa_trackOverlay(ov); currentSelectedOverlay = ov; window.currentSelectedOverlay = ov; }
+      } else {
+        global.tvChart.removeOverlay({ id: ov.id });
+        _wa_untrackOverlay(ov.id);
+        if (currentSelectedOverlay && currentSelectedOverlay.id === ov.id) { currentSelectedOverlay = null; window.currentSelectedOverlay = null; hideFloatToolbar(); hidePanel(); }
+      }
+      return;
+    }
+    if (entry.action === 'delete') {
+      if (isRedo) {
+        global.tvChart.removeOverlay({ id: ov.id });
+        _wa_untrackOverlay(ov.id);
+        if (currentSelectedOverlay && currentSelectedOverlay.id === ov.id) { currentSelectedOverlay = null; window.currentSelectedOverlay = null; hideFloatToolbar(); hidePanel(); }
+      } else {
+        var restoredId = global.tvChart.createOverlay(ov);
+        if (restoredId) { ov.id = restoredId; _wa_trackOverlay(ov); currentSelectedOverlay = ov; window.currentSelectedOverlay = ov; showFloatToolbar(ov, null, null); renderPanel(ov); }
+      }
+    }
+  }
+  function undoLastAction() {
+    var entry = undoStack.pop();
+    if (!entry) return;
+    _wa_applyHistory(entry, false);
+    redoStack.push(entry);
+    if (redoStack.length > MAX_HISTORY) redoStack.shift();
+    if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+  }
+  function redoLastAction() {
+    var entry = redoStack.pop();
+    if (!entry) return;
+    _wa_applyHistory(entry, true);
+    undoStack.push(entry);
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
   }
 
   function activateTool(toolId) {
@@ -3005,7 +3077,7 @@ function _fbToggleLock(ov) {
     window.currentSelectedOverlay = null;
     try { global.tvChart.cancelDrawing(); } catch(e){}
     if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hidePanel === 'function') hidePanel();
     if (toolId === 'pointer') { isDrawingSessionActive = false; container.classList.remove('wa-drawing-mode'); return; }
     isDrawingSessionActive = true;
     container.classList.add('wa-drawing-mode');
@@ -3023,23 +3095,26 @@ if (typeof hidePanel === 'function') hidePanel();
       let config = { name: toolId, lock: false, styles: {} };
       
       if(tType === 'lines' || tType === 'waves') {
-        config.styles.line = { color: s.lineColor || '#3B82F6', size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
+        config.styles.line = { color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#3B82F6', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#3B82F6'), size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
       } else if (tType === 'shapes') {
-        config.styles.polygon = { style: 'stroke_fill', color: typeof hexToRgba === 'function' ? hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15) : '#3B82F6', borderColor: s.borderColor || '#3B82F6', borderSize: s.borderWidth || 1 };
+        config.styles.polygon = { style: 'stroke_fill', color: typeof hexToRgba === 'function' ? hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15) : '#3B82F6', borderColor: typeof hexToRgba === 'function' ? hexToRgba(s.borderColor || '#3B82F6', s.borderOpacity !== undefined ? s.borderOpacity : 1) : (s.borderColor || '#3B82F6'), borderSize: s.borderWidth || 1 };
+        config.styles.line = { color: typeof hexToRgba === 'function' ? hexToRgba(s.borderColor || '#3B82F6', s.borderOpacity !== undefined ? s.borderOpacity : 1) : (s.borderColor || '#3B82F6'), size: s.borderWidth || 1, style: s.borderStyle || 'solid' };
       } else if (tType === 'fibo') {
-        config.styles.line = { color: s.lineColor || '#E8EDF2', size: 1 }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
+        config.styles.line = { color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#E8EDF2', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#E8EDF2'), size: 1, style: s.lineStyle || 'solid' }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
       } else if (tType === 'text') {
         config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
-       config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
+        config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
       }
 // THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
 config.onSelected = function(event) {
+  if (isDrawingSessionActive) return;
   var ov = event && event.overlay ? event.overlay : null;
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
   if (document.getElementById('wa-text-editor-backdrop')) return;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+  if (typeof renderPanel === 'function') renderPanel(ov);
 };
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
@@ -3254,6 +3329,21 @@ function bindCoreEventsOnce() {
   var _startX = 0, _startY = 0, _initLeft = 0, _initTop = 0;
   var _dragRaf = null;
   var _cachedToolbar = null; // ✅ FIX 3: Cache toolbar element
+  function _clampFloatBarToViewport() {
+    var bar = document.getElementById('wa-float-bar');
+    var container = document.getElementById('sc-chart-container');
+    if (!bar || !container) return;
+    var M = 6;
+    var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
+    var maxL = Math.max(M, container.clientWidth - bar.offsetWidth - M);
+    var maxT = Math.max(M, container.clientHeight - bar.offsetHeight - M - safeBottom);
+    var left = parseFloat(bar.style.left || '0');
+    var top = parseFloat(bar.style.top || '0');
+    if (isNaN(left)) left = M;
+    if (isNaN(top)) top = M;
+    bar.style.left = Math.max(M, Math.min(left, maxL)) + 'px';
+    bar.style.top = Math.max(M, Math.min(top, maxT)) + 'px';
+  }
   document.addEventListener('mousemove', function(e){ _fbX = e.clientX; _fbY = e.clientY; }, { passive: true });
   document.addEventListener('touchend', function(e){ if(e.changedTouches&&e.changedTouches[0]){ _fbX=e.changedTouches[0].clientX; _fbY=e.changedTouches[0].clientY; } }, { passive: true });
 
@@ -3359,9 +3449,28 @@ tb.style.top  = Math.max(M, Math.min(initTop  + dy, window.innerHeight - TBH - M
       _lastTapTime = now;
     }
   }, { passive: true });
+  window.addEventListener('resize', _clampFloatBarToViewport, { passive: true });
+  document.addEventListener('scroll', _clampFloatBarToViewport, { passive: true, capture: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', _clampFloatBarToViewport, { passive: true });
+    window.visualViewport.addEventListener('scroll', _clampFloatBarToViewport, { passive: true });
+  }
   document.addEventListener('keydown', function(e) {
     var tag = e.target.tagName;
     var isInput = (tag === 'INPUT' || tag === 'TEXTAREA');
+    var key = (e.key || '').toLowerCase();
+
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) { if (typeof redoLastAction === 'function') redoLastAction(); }
+      else { if (typeof undoLastAction === 'function') undoLastAction(); }
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'y') {
+      e.preventDefault();
+      if (typeof redoLastAction === 'function') redoLastAction();
+      return;
+    }
 
     if (e.key === 'Escape') {
       if (global.tvChart) global.tvChart.cancelDrawing();
@@ -3643,6 +3752,7 @@ global.tvChart.subscribeAction('onOverlayDeselected', function() {
     currentSelectedOverlay = overlayObj;
     window.currentSelectedOverlay = overlayObj;
     if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
+    if (typeof renderPanel === 'function') renderPanel(currentSelectedOverlay);
 saveAllOverlays();
   });
 
@@ -3722,3 +3832,4 @@ if (document.readyState === 'loading') {
 }
 
 })(window); // <-- Chú ý giữ nguyên dòng đóng module này
+
