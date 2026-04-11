@@ -2033,133 +2033,101 @@
   // ─────────────────────────────────────────────
   // TEXT EDITOR & WRAPPER
   // ─────────────────────────────────────────────
-  function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    var existing = document.getElementById('wa-text-editor');
-    if (existing) existing.remove();
+  // ── TRACKING CHUỘT ĐỂ BIẾT VỊ TRÍ CLICK ──
+if (!window._waMouseX) {
+  window._waMouseX = window.innerWidth / 2;
+  window._waMouseY = window.innerHeight / 2;
+  document.addEventListener('mousemove', function(e) {
+    window._waMouseX = e.clientX;
+    window._waMouseY = e.clientY;
+  });
+}
 
-    var defBg = 'rgba(22, 26, 30, 0.9)';
-    if (toolId === 'plainText') defBg = 'transparent'; 
-    else if (toolId === 'note') defBg = 'rgba(240,185,11,0.15)';
-    else if (toolId === 'priceNote') defBg = 'rgba(14,203,129,0.2)';
-    else if (toolId === 'pin' || toolId === 'flagMarker') defBg = '#F0B90B';
-    else if (toolId === 'priceLabel') defBg = '#F6465D';
-    else if (toolId === 'signpost') defBg = 'rgba(153,69,255,0.25)';
-    else if (toolId === 'annotation') defBg = 'rgba(0,240,255,0.1)';
+// ── INLINE TEXT EDITOR (GIỐNG TRADINGVIEW) ──
+function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
+  // Xóa editor cũ nếu đang mở
+  var existing = document.getElementById('wa-text-editor');
+  if (existing) existing.remove();
 
-    var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
-    var pStyles = (currentStyles && currentStyles.polygon) ? currentStyles.polygon : {};
+  var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
+  var curColor = (tStyles.color) ? tStyles.color : '#E8EDF2';
+  var curSize = tStyles.size || 14;
+  var curFont = tStyles.family || 'sans-serif';
 
-    var curColor = colorToHex(tStyles.color || (toolId === 'priceLabel' ? '#fff' : '#EAECEF'));
-    var curBg = colorToHex(pStyles.color || defBg); 
-    var curSize = tStyles.size || (toolId === 'priceLabel' ? 11 : 12);
-    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
+  // Tạo ô gõ chữ tàng hình bay lơ lửng tại vị trí chuột
+  var input = document.createElement('textarea');
+  input.id = 'wa-text-editor'; 
+  input.value = (currentText === 'Văn bản...' || !currentText) ? '' : currentText;
+  input.placeholder = 'Nhập chữ...';
+  
+  input.style.cssText = `
+    position: fixed;
+    left: ${window._waMouseX}px;
+    top: ${window._waMouseY - (curSize/2)}px;
+    background: rgba(15, 20, 26, 0.75);
+    backdrop-filter: blur(4px);
+    border: 1px dashed #3B82F6;
+    border-radius: 4px;
+    color: ${curColor};
+    font-family: ${curFont};
+    font-size: ${curSize}px;
+    line-height: 1.2;
+    outline: none;
+    z-index: 999999;
+    min-width: 80px;
+    min-height: ${curSize * 1.5}px;
+    padding: 4px 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    resize: none;
+    overflow: hidden;
+    white-space: pre;
+  `;
 
-    var backdrop = document.createElement('div');
-    backdrop.id = 'wa-text-editor';
-    backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)';
-    // Bên trong openTextEditor(...)
-    backdrop.innerHTML = `<div style="
-      background:var(--wa-bg-elevated);
-      border:1px solid var(--wa-border-subtle);
-      border-radius:14px; padding:24px; width:400px;
-      box-shadow:0 24px 80px rgba(0,0,0,0.8);
-      font-family:'Be Vietnam Pro','Inter',sans-serif;
-      animation: wa-fadein-scale 0.2s cubic-bezier(0.34,1.56,0.64,1);">
-      <div style="font-size:11px;font-weight:800;color:var(--wa-text-muted);
-        text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        ✏️ ${toolId.toUpperCase()}
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:12px">
-        <div style="flex:1">
-          <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Màu chữ</label>
-          <input type="color" id="wa-te-color" value="${curColor}"
-            style="width:100%;height:34px;border:1px solid var(--wa-border-default);
-            border-radius:8px;background:var(--wa-bg-base);cursor:pointer;padding:0">
-        </div>
-        <div style="flex:1">
-          <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Màu nền</label>
-          <input type="color" id="wa-te-bg" value="${curBg}"
-            style="width:100%;height:34px;border:1px solid var(--wa-border-default);
-            border-radius:8px;background:var(--wa-bg-base);cursor:pointer;padding:0">
-        </div>
-        <div style="flex:1">
-          <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Cỡ chữ</label>
-          <input type="number" id="wa-te-size" value="${curSize}"
-            style="width:100%;height:34px;border:1px solid var(--wa-border-default);
-            border-radius:8px;background:var(--wa-bg-base);color:var(--wa-text-primary);
-            padding:0 8px;box-sizing:border-box;outline:none;font-family:inherit">
-        </div>
-      </div>
-      <div style="margin-bottom:14px">
-        <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Font chữ</label>
-        <select id="wa-te-font" style="width:100%;height:34px;
-          border:1px solid var(--wa-border-default);border-radius:8px;
-          background:var(--wa-bg-base);color:var(--wa-text-primary);
-          padding:0 8px;outline:none;cursor:pointer;font-family:inherit">
-          <option value="'Be Vietnam Pro',sans-serif" ${curFont.includes('Be Vietnam') ? 'selected' : ''}>Be Vietnam Pro</option>
-          <option value="'Lexend',sans-serif" ${curFont.includes('Lexend') ? 'selected' : ''}>Lexend</option>
-          <option value="'Nunito',sans-serif" ${curFont.includes('Nunito') ? 'selected' : ''}>Nunito</option>
-          <option value="'Josefin Sans',sans-serif" ${curFont.includes('Josefin') ? 'selected' : ''}>Josefin Sans</option>
-          <option value="'Raleway',sans-serif" ${curFont.includes('Raleway') ? 'selected' : ''}>Raleway</option>
-          <option value="'Space Grotesk',sans-serif" ${curFont.includes('Space') ? 'selected' : ''}>Space Grotesk</option>
-          <option value="'Sora',sans-serif" ${curFont.includes('Sora') ? 'selected' : ''}>Sora</option>
-          <option value="'Inter',sans-serif" ${curFont.includes('Inter') ? 'selected' : ''}>Inter</option>
-          <option value="'Roboto',sans-serif" ${curFont.includes('Roboto') ? 'selected' : ''}>Roboto</option>
-          <option value="Arial,sans-serif" ${curFont.includes('Arial') ? 'selected' : ''}>Arial</option>
-        </select>
-      </div>
-      <label style="display:block;font-size:11px;color:var(--wa-text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">Nội dung</label>
-      <textarea id="wa-te-input" rows="4" placeholder="Nhập text..."
-        style="width:100%;box-sizing:border-box;
-        background:var(--wa-bg-base);border:1px solid var(--wa-border-default);
-        border-radius:8px;color:var(--wa-text-primary);
-        font-size:14px;font-family:inherit;padding:8px 12px;
-        resize:vertical;outline:none;line-height:1.5;
-        transition:border-color 0.15s,box-shadow 0.15s"></textarea>
-      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-        <button id="wa-te-cancel" style="
-          background:transparent;border:1px solid var(--wa-border-default);
-          color:var(--wa-text-secondary);padding:8px 18px;border-radius:8px;
-          cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;
-          transition:all 0.15s">Huỷ</button>
-        <button id="wa-te-confirm" style="
-          background:var(--wa-accent);border:none;color:#fff;
-          padding:8px 18px;border-radius:8px;cursor:pointer;
-          font-family:inherit;font-size:12px;font-weight:700;
-          transition:all 0.15s">Xác nhận</button>
-      </div>
-    </div>`;
-    document.body.appendChild(backdrop);
+  document.body.appendChild(input);
 
-    var textarea = document.getElementById('wa-te-input');
-    textarea.value = currentText || '';
-    requestAnimationFrame(function() { textarea.focus(); textarea.select(); });
+  // Focus và bôi đen text sẵn
+  requestAnimationFrame(function() {
+    input.focus();
+    input.style.width = Math.max(80, input.scrollWidth + 10) + 'px';
+    input.style.height = input.scrollHeight + 'px';
+  });
 
-    function confirm() { 
-      var val = textarea.value; 
-      var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-      if (!updatedStyles.text) updatedStyles.text = {};
-      if (!updatedStyles.polygon) updatedStyles.polygon = {};
+  // Tự động giãn khung khi gõ dài ra
+  input.addEventListener('input', function() {
+    this.style.width = '80px'; 
+    this.style.height = 'auto';
+    this.style.width = Math.max(80, this.scrollWidth + 10) + 'px';
+    this.style.height = this.scrollHeight + 'px';
+  });
 
-      updatedStyles.text.color = document.getElementById('wa-te-color').value;
-      updatedStyles.text.size = parseInt(document.getElementById('wa-te-size').value) || 14;
-      updatedStyles.text.family = document.getElementById('wa-te-font').value;
-      updatedStyles.polygon.color = hexToRgba(document.getElementById('wa-te-bg').value, 0.8);
-      updatedStyles.text.weight = updatedStyles.text.weight || tStyles.weight || 'normal';
-      updatedStyles.text.style = updatedStyles.text.style || tStyles.style || 'normal';
-      
-      backdrop.remove(); 
-      onConfirm(val, updatedStyles); 
-    }
-    function cancel() { backdrop.remove(); }
-
-    document.getElementById('wa-te-confirm').addEventListener('click', confirm);
-    document.getElementById('wa-te-cancel').addEventListener('click', cancel);
-    textarea.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); confirm(); }
-      if (e.key === 'Escape') cancel();
-    });
+  // Hàm xác nhận khi xong
+  function commit() {
+    if (!document.getElementById('wa-text-editor')) return;
+    var val = input.value.trim() || 'Văn bản...';
+    
+    var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+    if (!updatedStyles.text) updatedStyles.text = {};
+    if (!updatedStyles.polygon) updatedStyles.polygon = {};
+    
+    input.remove();
+    onConfirm(val, updatedStyles); // Bơm chữ ngược lại vào chart
   }
+
+  // Click ra ngoài (blur) thì lưu
+  input.addEventListener('blur', commit);
+  
+  // Bấm Enter thì lưu, Bấm Shift+Enter thì xuống dòng
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      commit();
+    }
+    if (e.key === 'Escape') {
+      input.value = currentText; // Hủy bỏ
+      commit();
+    }
+  });
+}
 
   function createTextOverlay(chart, toolId, initialData) {
     if (!chart) return null;
@@ -3102,11 +3070,10 @@ function _fbToggleLock(ov) {
 
     const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
 
-    //ĐÃ XÓA KHỐI NÀY ĐỂ BỎ POPUP
-    // if (TEXT_TOOLS.includes(toolId)) {
-    //   if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
-    //   return;
-    // }
+    if (TEXT_TOOLS.includes(toolId)) {
+      if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
+      return;
+    }
 
     try {
       let tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines'; 
