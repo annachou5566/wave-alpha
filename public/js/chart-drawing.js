@@ -2757,24 +2757,31 @@ function showFloatToolbar(ov, posX, posY) {
     return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
   }
 
-    // ── Build HTML ─────────────────────────────────────────────────
-    var html = '';
+    // ──   // ── Build HTML ─────────────────────────────────────────────────
+  var html = '';
   
-    var dragSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
-    var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-    var eyeHide  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-    var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
-    var lockOn   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
-    var lockOff  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
-    var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
-  
-    // Chỉ chừa lại: Drag, Config, Lock, Visibility, Delete
-    html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
+  var dragSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
+  var editSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+  var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeHide  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
+  var lockOn   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
+  var lockOff  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
+  var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+
+  html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
+  html += '<div class="wa-fb-sep"></div>';
+
+  // Nếu công cụ là văn bản (text) thì hiển thị thêm nút SỬA CHỮ
+  if (cat === 'text') {
+    html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">'+editSVG+'</button>';
     html += '<div class="wa-fb-sep"></div>';
-    html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">'+gearSVG+'</button>';
-    html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
-    html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
-    html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
+  }
+
+  html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">'+gearSVG+'</button>';
+  html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
+  html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
+  html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
 
   // ── Tạo DOM ────────────────────────────────────────────────────
   var bar = document.createElement('div');
@@ -2864,38 +2871,75 @@ function showFloatToolbar(ov, posX, posY) {
     if (typeof hidePanel === 'function') hidePanel();
     if (typeof saveAllOverlays === 'function') saveAllOverlays();
   });
+  
+  // ============================================
+  // BẮT ĐẦU CHÈN SỰ KIỆN NÚT SỬA CHỮ VÀ DRAG BAR VÀO ĐÂY:
+  // ============================================
+
+  // 1. Sự kiện nút sửa chữ
+  var editBtn = bar.querySelector('#wa-fb-edit');
+  if (editBtn) {
+    editBtn.addEventListener('click', function() {
+      // Ẩn các menu đi để chuẩn bị gõ chữ
+      if (typeof hidePanel === 'function') hidePanel();
+      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+      
+      // Delay 50ms để tắt menu xong mới gọi ô chữ lên
+      setTimeout(function() {
+        if (typeof openTextEditor === 'function') {
+          openTextEditor(
+            ov.extendData || '', 
+            ov.styles || {}, 
+            ov.name, 
+            function(newText, newStyles) {
+              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+              if (typeof saveAllOverlays === 'function') saveAllOverlays();
+            }
+          );
+        }
+      }, 50);
+    });
+  }
+
+  // 2. Drag Bar Logic (kéo thả thanh công cụ nổi)
   var dragHandle = bar.querySelector('#wa-fb-drag');
-  var isDragging = false;
-  var startX, startY, initLeft, initTop;
+  if (dragHandle) {
+    var isDragging = false;
+    var startX, startY, initLeft, initTop;
 
-  dragHandle.addEventListener('mousedown', function(e) {
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    initLeft = parseFloat(bar.style.left) || 0;
-    initTop = parseFloat(bar.style.top) || 0;
-    dragHandle.style.cursor = 'grabbing';
-    e.preventDefault();
-  });
+    dragHandle.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      initLeft = parseFloat(bar.style.left) || 0;
+      initTop = parseFloat(bar.style.top) || 0;
+      dragHandle.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
 
-  document.addEventListener('mousemove', function(e) {
-    if (!isDragging) return;
-    var dx = e.clientX - startX;
-    var dy = e.clientY - startY;
-    bar.style.left = (initLeft + dx) + 'px';
-    bar.style.top = (initTop + dy) + 'px';
-  });
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      bar.style.left = (initLeft + dx) + 'px';
+      bar.style.top = (initTop + dy) + 'px';
+    });
 
-  document.addEventListener('mouseup', function() {
-    if (isDragging) {
-      isDragging = false;
-      dragHandle.style.cursor = 'grab';
-      // Cập nhật lại _fbX và _fbY để khi save vị trí bar nó được ghi đè
-      var rect = bar.getBoundingClientRect();
-      _fbX = rect.left;
-      _fbY = rect.top;
-    }
-  });
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        dragHandle.style.cursor = 'grab';
+        var rect = bar.getBoundingClientRect();
+        _fbX = rect.left;
+        _fbY = rect.top;
+      }
+    });
+  }
+
+  // ============================================
+  // KẾT THÚC CHÈN
+  // ============================================
+
 }
 
 function _fbSetColor(ov, cat, hex) {
