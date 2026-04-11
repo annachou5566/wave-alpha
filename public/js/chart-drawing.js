@@ -3716,47 +3716,25 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
       }
        });
   }
- // NÚT ẨN/HIỆN TẤT CẢ
- var _allHidden = false;
- var hideAllBtn = toolbar.querySelector('#wa-btn-hide-all');
- if (hideAllBtn) {
-   hideAllBtn.addEventListener('click', function() {
-     if (!global.tvChart || !global.__wa_overlay_map) return;
-     _allHidden = !_allHidden;
-     hideAllBtn.style.opacity = _allHidden ? '0.4' : '1';
-     global.__wa_overlay_map.forEach(function(ov) {
-       var liveOv = (global.tvChart.getOverlayById ? global.tvChart.getOverlayById(ov.id) : null) || ov;
-       var ns = JSON.parse(JSON.stringify(liveOv.styles || ov.styles || {}));
-       if (!ns.line)    ns.line    = {};
-       if (!ns.polygon) ns.polygon = {};
-       if (!ns.text)    ns.text    = {};
-       if (_allHidden) {
-         ns.line.color           = 'rgba(0,0,0,0)';
-         ns.polygon.color        = 'rgba(0,0,0,0)';
-         ns.polygon.borderColor  = 'rgba(0,0,0,0)';
-         ns.text.color           = 'rgba(0,0,0,0)';
-         ns.text.backgroundColor = 'rgba(0,0,0,0)';
-         ov._hideAllExtSnap = JSON.stringify(liveOv.extendData || ov.extendData || {});
-         var ext = JSON.parse(ov._hideAllExtSnap);
-         ext.fillOpacity = 0;
-         global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
-       } else {
-         delete ns.line.color;
-         delete ns.polygon.color;
-         delete ns.polygon.borderColor;
-         delete ns.text.color;
-         delete ns.text.backgroundColor;
-         var ext = {};
-         if (ov._hideAllExtSnap) {
-           try { ext = JSON.parse(ov._hideAllExtSnap); } catch(e) {}
-           delete ov._hideAllExtSnap;
-         }
-         global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
-       }
+   // NÚT ẨN/HIỆN TẤT CẢ
+   var _allHidden = false;
+   var hideAllBtn = toolbar.querySelector('#wa-btn-hide-all');
+   if (hideAllBtn) {
+     hideAllBtn.addEventListener('click', function() {
+       if (!global.tvChart || !global.__wa_overlay_map) return;
+       _allHidden = !_allHidden;
+       hideAllBtn.style.opacity = _allHidden ? '0.35' : '1';
+       
+       global.__wa_overlay_map.forEach(function(ov) {
+         global.tvChart.overrideOverlay({ 
+           id: ov.id, 
+           visible: !_allHidden 
+         });
+       });
+       
+       if (typeof showToast === 'function') showToast(_allHidden ? 'Đã ẩn tất cả' : 'Đã hiện tất cả');
      });
-     if (typeof showToast === 'function') showToast(_allHidden ? 'Đã ẩn tất cả' : 'Đã hiện tất cả');
-   });
- }
+   }
   
 
   // 🌟 CÁC NÚT TRÊN BẢNG PROPERTIES PANEL (Thanh trượt bên phải)
