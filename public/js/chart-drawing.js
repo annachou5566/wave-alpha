@@ -3094,15 +3094,30 @@ function _fbToggleLock(ov) {
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
       }
 // THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
-config.onSelected = function(event) {
-  isDrawingSessionActive = false;
+config.onDoubleClick = function(event) {
   var ov = event && event.overlay ? event.overlay : null;
-  if (!ov) return;
-  currentSelectedOverlay = ov;
-  window.currentSelectedOverlay = ov;
-  if (document.getElementById('wa-text-editor-backdrop')) return;
-  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
-  if (typeof renderPanel === 'function') renderPanel(ov);
+  if (!ov) return false;
+  
+  // Chỉ mở Text Editor nếu loại hình vẽ là "text"
+  var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+  if (cat === 'text') {
+    // Ẩn panel & thanh công cụ để tập trung gõ chữ
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    
+    // Gọi Text Editor tàng hình
+    if (typeof openTextEditor === 'function') {
+      openTextEditor(
+        ov.extendData || '', 
+        ov.styles || {}, 
+        ov.name, 
+        function(newText, newStyles) {
+          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+        }
+      );
+    }
+  }
+  return false; // Ngăn chặn sự kiện mặc định
 };
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
