@@ -3107,7 +3107,30 @@ config.onSelected = function(event) {
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
 };
-
+// --- DÁN THÊM DOUBLE CLICK VÀO ĐÂY ---
+config.onDoubleClick = function(event) {
+  var ov = event && event.overlay ? event.overlay : null;
+  if (!ov) return false;
+  
+  var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+  if (cat === 'text') {
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    
+    if (typeof openTextEditor === 'function') {
+      openTextEditor(
+        ov.extendData || '', 
+        ov.styles || {}, 
+        ov.name, 
+        function(newText, newStyles) {
+          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+        }
+      );
+    }
+  }
+  return false;
+};
+// -------------------------------------
       global.tvChart.createOverlay(config);
     } catch (err) { 
       if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
