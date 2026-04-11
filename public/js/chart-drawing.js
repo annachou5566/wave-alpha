@@ -2033,100 +2033,93 @@
   // ─────────────────────────────────────────────
   // TEXT EDITOR & WRAPPER
   // ─────────────────────────────────────────────
-  // ── TRACKING CHUỘT ĐỂ ĐẶT Ô CHỮ ĐÚNG VỊ TRÍ ──
-if (!window._waMouseX) {
-  window._waMouseX = window.innerWidth / 2;
-  window._waMouseY = window.innerHeight / 2;
-  document.addEventListener('mousemove', function(e) {
-    window._waMouseX = e.clientX;
-    window._waMouseY = e.clientY;
-  });
-}
-
-// ── BÍ QUYẾT INLINE EDITOR CỦA TRADINGVIEW / CANVA ──
-function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-  var existing = document.getElementById('wa-text-editor');
-  if (existing) existing.remove();
-
-  var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
-  var curColor = tStyles.color || '#E8EDF2';
-  var curSize = tStyles.size || 14;
-  var curFont = tStyles.family || 'sans-serif';
-
-  // Tạo ô gõ chữ
-  var input = document.createElement('textarea');
-  input.id = 'wa-text-editor'; 
-  input.value = (currentText === 'Văn bản...' || !currentText) ? '' : currentText;
+    // ── TRACKING CHUỘT ĐỂ BIẾT VỊ TRÍ CLICK ──
+    if (!window._waMouseX) {
+      window._waMouseX = window.innerWidth / 2;
+      window._waMouseY = window.innerHeight / 2;
+      document.addEventListener('mousemove', function(e) {
+        window._waMouseX = e.clientX;
+        window._waMouseY = e.clientY;
+      });
+    }
   
-  // CSS TÀNG HÌNH HOÀN TOÀN: Không viền, không nền, đồng bộ màu sắc/font chữ
-  input.style.cssText = `
-    position: fixed;
-    left: ${window._waMouseX}px;
-    top: ${window._waMouseY - (curSize/2)}px;
-    background: transparent !important; 
-    border: none !important;            
-    outline: none !important;           
-    color: ${curColor};
-    font-family: ${curFont};
-    font-size: ${curSize}px;
-    line-height: 1.2;
-    z-index: 999999;
-    min-width: 50px;
-    height: ${curSize * 1.5}px;
-    padding: 0;
-    margin: 0;
-    resize: none;
-    overflow: hidden;
-    white-space: pre;
-    caret-color: ${curColor}; /* Màu con trỏ chuột nhấp nháy khớp màu chữ */
-  `;
-
-  document.body.appendChild(input);
-
-  // Focus và bôi đen toàn bộ nếu là chữ mặc định mới tạo
-  requestAnimationFrame(function() {
-    input.focus();
-    if (!currentText || currentText === 'Văn bản...') {
-      input.select(); // Bôi đen sẵn, gõ cái là đè luôn
-    }
-    input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
-    input.style.height = input.scrollHeight + 'px';
-  });
-
-  // Tự động giãn khung tàng hình khi gõ dài ra
-  input.addEventListener('input', function() {
-    this.style.width = '50px'; 
-    this.style.height = 'auto';
-    this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
-    this.style.height = this.scrollHeight + 'px';
-  });
-
-  // Lưu và xóa ô tàng hình khi gõ xong
-  function commit() {
-    if (!document.getElementById('wa-text-editor')) return;
-    var val = input.value.trim() || 'Văn bản...';
-    
-    var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-    if (!updatedStyles.text) updatedStyles.text = {};
-    if (!updatedStyles.polygon) updatedStyles.polygon = {};
-    
-    input.remove(); // Xóa thẻ
-    onConfirm(val, updatedStyles); // Bơm chữ vào lại Canvas
-  }
-
-  input.addEventListener('blur', commit); // Click ra ngoài tự lưu
+    function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
+      var existing = document.getElementById('wa-text-editor');
+      if (existing) existing.remove();
   
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { // Nhấn Enter lưu (Shift+Enter để xuống dòng)
-      e.preventDefault();
-      commit();
+      var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
+      var curColor = tStyles.color || '#E8EDF2';
+      var curSize = tStyles.size || 14;
+      var curFont = tStyles.family || 'sans-serif';
+  
+      // Tạo ô gõ chữ tàng hình bay lơ lửng tại vị trí chuột
+      var input = document.createElement('textarea');
+      input.id = 'wa-text-editor'; 
+      input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+      
+      input.style.cssText = `
+        position: fixed;
+        left: ${window._waMouseX}px;
+        top: ${window._waMouseY - (curSize/2)}px;
+        background: transparent !important; 
+        border: none !important;            
+        outline: none !important;           
+        color: ${curColor};
+        font-family: ${curFont};
+        font-size: ${curSize}px;
+        line-height: 1.2;
+        z-index: 999999;
+        min-width: 50px;
+        height: ${curSize * 1.5}px;
+        padding: 0;
+        margin: 0;
+        resize: none;
+        overflow: hidden;
+        white-space: pre;
+        caret-color: ${curColor};
+      `;
+  
+      document.body.appendChild(input);
+  
+      requestAnimationFrame(function() {
+        input.focus();
+        if (!currentText || currentText === 'Văn bản...') input.select();
+        input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
+        input.style.height = input.scrollHeight + 'px';
+      });
+  
+      input.addEventListener('input', function() {
+        this.style.width = '50px'; 
+        this.style.height = 'auto';
+        this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
+        this.style.height = this.scrollHeight + 'px';
+      });
+  
+      function commit() {
+        if (!document.getElementById('wa-text-editor')) return;
+        var val = input.value.trim() || 'Văn bản...';
+        
+        var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+        if (!updatedStyles.text) updatedStyles.text = {};
+        if (!updatedStyles.polygon) updatedStyles.polygon = {};
+        
+        input.remove();
+        onConfirm(val, updatedStyles);
+      }
+  
+      input.addEventListener('blur', commit);
+      
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          commit();
+        }
+        if (e.key === 'Escape') {
+          input.value = currentText; 
+          commit();
+        }
+      });
     }
-    if (e.key === 'Escape') {
-      input.value = currentText; 
-      commit();
-    }
-  });
-}
 
   function createTextOverlay(chart, toolId, initialData) {
     if (!chart) return null;
@@ -3101,30 +3094,15 @@ function _fbToggleLock(ov) {
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
       }
 // THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
-config.onDoubleClick = function(event) {
+config.onSelected = function(event) {
+  isDrawingSessionActive = false;
   var ov = event && event.overlay ? event.overlay : null;
-  if (!ov) return false;
-  
-  // Chỉ mở Text Editor nếu loại hình vẽ là "text"
-  var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
-  if (cat === 'text') {
-    // Ẩn panel & thanh công cụ để tập trung gõ chữ
-    if (typeof hidePanel === 'function') hidePanel();
-    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-    
-    // Gọi Text Editor tàng hình
-    if (typeof openTextEditor === 'function') {
-      openTextEditor(
-        ov.extendData || '', 
-        ov.styles || {}, 
-        ov.name, 
-        function(newText, newStyles) {
-          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-        }
-      );
-    }
-  }
-  return false; // Ngăn chặn sự kiện mặc định
+  if (!ov) return;
+  currentSelectedOverlay = ov;
+  window.currentSelectedOverlay = ov;
+  if (document.getElementById('wa-text-editor-backdrop')) return;
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+  if (typeof renderPanel === 'function') renderPanel(ov);
 };
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
