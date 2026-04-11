@@ -2969,34 +2969,46 @@ function _fbSetLineStyle(ov, style) {
 
 function _fbToggleVisible(ov) {
   if (!global.tvChart || !ov) return;
-  var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
+  var ext = (typeof ov.extendData === 'object' && ov.extendData) ? JSON.parse(JSON.stringify(ov.extendData)) : {};
   ext._hidden = !ext._hidden;
-  ov.extendData = ext;
-  // KLineChart không có API ẩn trực tiếp → dùng opacity thông qua styles
+
   var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+  if (!ns.line)    ns.line    = {};
+  if (!ns.polygon) ns.polygon = {};
+  if (!ns.text)    ns.text    = {};
+
   if (ext._hidden) {
-    if (!ns.line)    ns.line    = {}; ns.line.color    = 'rgba(0,0,0,0)';
-    if (!ns.polygon) ns.polygon = {}; ns.polygon.color = 'rgba(0,0,0,0)'; ns.polygon.borderColor = 'rgba(0,0,0,0)'; ns.polygon.borderStyle = 'solid'; ns.polygon._prevStyle = ns.polygon.style; ns.polygon.style = 'fill';
-    if (!ns.text)    ns.text    = {}; ns.text.color    = 'rgba(0,0,0,0)';
-    ov._hiddenExtData = JSON.stringify(ov.extendData || {});
-    ov.extendData = Object.assign({}, ov.extendData, { fillOpacity: 0 });
+    // Lưu lại toàn bộ extendData gốc (fillOpacity, showLabels...)
+    ov._hiddenExtSnap = JSON.stringify(ov.extendData || {});
+    // Ẩn line
+    ns.line.color = 'rgba(0,0,0,0)';
+    // Ẩn polygon (fill + border)
+    ns.polygon.color       = 'rgba(0,0,0,0)';
+    ns.polygon.borderColor = 'rgba(0,0,0,0)';
+    // Ẩn text
+    ns.text.color = 'rgba(0,0,0,0)';
+    // Ẩn fill fibo/gann (extendData.fillOpacity)
+    ext.fillOpacity = 0;
   } else {
-    if (ns.line)    delete ns.line.color;
-    if (ns.polygon) {
-        delete ns.polygon.color;
-        delete ns.polygon.borderColor;
-        if (ns.polygon._prevStyle !== undefined) { ns.polygon.style = ns.polygon._prevStyle; delete ns.polygon._prevStyle; }
+    // Restore line
+    delete ns.line.color;
+    // Restore polygon
+    delete ns.polygon.color;
+    delete ns.polygon.borderColor;
+    // Restore text
+    delete ns.text.color;
+    // Restore extendData gốc
+    if (ov._hiddenExtSnap) {
+      try { ext = JSON.parse(ov._hiddenExtSnap); } catch(e) {}
+      delete ov._hiddenExtSnap;
     }
-    if (ns.text)    delete ns.text.color;
-    if (ov._hiddenExtData) {
-        try { ov.extendData = JSON.parse(ov._hiddenExtData); } catch(e) {}
-        delete ov._hiddenExtData;
-    }
-}
+    ext._hidden = false;
+  }
+
+  ov.extendData = ext;
   ov.styles = ns;
   global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
-  // Re-render toolbar để cập nhật icon mắt
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
 }
 
