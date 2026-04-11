@@ -2976,14 +2976,23 @@ function _fbToggleVisible(ov) {
   var ns = JSON.parse(JSON.stringify(ov.styles || {}));
   if (ext._hidden) {
     if (!ns.line)    ns.line    = {}; ns.line.color    = 'rgba(0,0,0,0)';
-    if (!ns.polygon) ns.polygon = {}; ns.polygon.color = 'rgba(0,0,0,0)'; ns.polygon.borderColor = 'rgba(0,0,0,0)';
+    if (!ns.polygon) ns.polygon = {}; ns.polygon.color = 'rgba(0,0,0,0)'; ns.polygon.borderColor = 'rgba(0,0,0,0)'; ns.polygon.borderStyle = 'solid'; ns.polygon._prevStyle = ns.polygon.style; ns.polygon.style = 'fill';
     if (!ns.text)    ns.text    = {}; ns.text.color    = 'rgba(0,0,0,0)';
+    ov._hiddenExtData = JSON.stringify(ov.extendData || {});
+    ov.extendData = Object.assign({}, ov.extendData, { fillOpacity: 0 });
   } else {
-    // Restore: xóa override màu để fallback về styles gốc
     if (ns.line)    delete ns.line.color;
-    if (ns.polygon) { delete ns.polygon.color; delete ns.polygon.borderColor; }
+    if (ns.polygon) {
+        delete ns.polygon.color;
+        delete ns.polygon.borderColor;
+        if (ns.polygon._prevStyle !== undefined) { ns.polygon.style = ns.polygon._prevStyle; delete ns.polygon._prevStyle; }
+    }
     if (ns.text)    delete ns.text.color;
-  }
+    if (ov._hiddenExtData) {
+        try { ov.extendData = JSON.parse(ov._hiddenExtData); } catch(e) {}
+        delete ov._hiddenExtData;
+    }
+}
   ov.styles = ns;
   global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
