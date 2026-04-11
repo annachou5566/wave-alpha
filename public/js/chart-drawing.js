@@ -2030,10 +2030,7 @@
     }, 0);
   }
 
-      // ─────────────────────────────────────────────
-  // TEXT EDITOR & WRAPPER (INLINE EDITING SIÊU THỰC)
-  // ─────────────────────────────────────────────
-  
+      // ── THEO DÕI CHUỘT (Dùng khi vẽ chữ mới) ──
   if (!window._waMouseX) {
     window._waMouseX = window.innerWidth / 2;
     window._waMouseY = window.innerHeight / 2;
@@ -2056,8 +2053,8 @@
     var posX = window._waMouseX;
     var posY = window._waMouseY;
 
-    // 1. TÍNH TỌA ĐỘ CHÍNH XÁC CỦA CHỮ TRÊN BIỂU ĐỒ
-    if (ov && global.tvChart && ov.points && ov.points.length > 0) {
+    // ── TÍNH TỌA ĐỘ CHÍNH XÁC 100% CỦA CHỮ TRÊN BIỂU ĐỒ ──
+    if (ov && global.tvChart && ov.points && ov.points[0]) {
       try {
         var pixel = global.tvChart.convertToPixel({
           dataIndex: ov.points[0].dataIndex,
@@ -2071,28 +2068,21 @@
           posY = rect.top + pixel.y;
         }
       } catch(e) {}
-      
-      // 2. ẨN TẠM THỜI CHỮ GỐC ĐỂ KHÔNG BỊ TRÙNG 2 DÒNG
-      try {
-        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
-        if (!tempStyles.text) tempStyles.text = {};
-        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ gốc trong suốt
-        global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
-      } catch(e) {}
     }
 
-    // 3. TẠO Ô GÕ CHỮ ĐÈ ĐÚNG VỊ TRÍ GỐC
+    // ── TẠO Ô GÕ CHỮ TÀNG HÌNH ──
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor'; 
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
+    // Xóa toàn bộ viền và nền, chỉ để lại chữ và con trỏ nhấp nháy
     input.style.cssText = `
       position: fixed;
       left: ${posX}px;
       top: ${posY}px;
-      transform: translate(0, -50%); /* Căn giữa theo chiều dọc */
-      background: rgba(15, 20, 26, 0.8) !important; /* Nền mờ nhẹ để dễ nhìn chữ */
-      border: 1px dashed #3B82F6 !important;            
+      transform: translate(0, -50%);
+      background: transparent !important; 
+      border: none !important;            
       outline: none !important;           
       color: ${curColor};
       font-family: ${curFont};
@@ -2101,31 +2091,41 @@
       z-index: 999999;
       min-width: 50px;
       height: ${curSize * 1.5}px;
-      padding: 2px 6px;
+      padding: 0;
       margin: 0;
       resize: none;
       overflow: hidden;
       white-space: pre;
       caret-color: ${curColor};
-      border-radius: 4px;
     `;
 
     document.body.appendChild(input);
 
+    // Kéo giãn khung theo độ dài của chữ
     requestAnimationFrame(function() {
       input.focus();
       if (!currentText || currentText === 'Văn bản...') input.select();
-      input.style.width = Math.max(50, input.scrollWidth + 15) + 'px';
+      input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
       input.style.height = input.scrollHeight + 'px';
     });
-
     input.addEventListener('input', function() {
       this.style.width = '50px'; 
       this.style.height = 'auto';
-      this.style.width = Math.max(50, this.scrollWidth + 15) + 'px';
+      this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
       this.style.height = this.scrollHeight + 'px';
     });
 
+    // ── ẨN CHỮ GỐC ĐI ĐỂ KHÔNG BỊ TRÙNG 2 LỚP ──
+    if (ov && global.tvChart) {
+      try {
+        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!tempStyles.text) tempStyles.text = {};
+        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ trên chart trong suốt
+        global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
+      } catch(e) {}
+    }
+
+    // ── LƯU LẠI KHI GÕ XONG ──
     function commit() {
       if (!document.getElementById('wa-text-editor')) return;
       var val = input.value.trim() || 'Văn bản...';
@@ -2134,17 +2134,17 @@
       if (!updatedStyles.text) updatedStyles.text = {};
       if (!updatedStyles.polygon) updatedStyles.polygon = {};
       
-      // Trả lại màu gốc cho biểu đồ (vì lúc nãy mình ẩn đi)
+      // Trả lại màu chữ gốc sau khi gõ xong
       updatedStyles.text.color = curColor; 
       
       input.remove();
-      onConfirm(val, updatedStyles); // Bơm chữ thật vào lại biểu đồ
+      onConfirm(val, updatedStyles);
     }
 
-    input.addEventListener('blur', commit); // Click ra ngoài tự lưu
+    input.addEventListener('blur', commit); // Click ra ngoài là lưu luôn
     
     input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { // Nhấn Enter lưu
+      if (e.key === 'Enter' && !e.shiftKey) { // Bấm Enter là lưu
         e.preventDefault();
         commit();
       }
