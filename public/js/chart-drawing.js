@@ -2030,96 +2030,96 @@
     }, 0);
   }
 
+    // ─────────────────────────────────────────────
+  // TEXT EDITOR & WRAPPER (INLINE EDITING)
   // ─────────────────────────────────────────────
-  // TEXT EDITOR & WRAPPER
-  // ─────────────────────────────────────────────
-    // ── TRACKING CHUỘT ĐỂ BIẾT VỊ TRÍ CLICK ──
-    if (!window._waMouseX) {
-      window._waMouseX = window.innerWidth / 2;
-      window._waMouseY = window.innerHeight / 2;
-      document.addEventListener('mousemove', function(e) {
-        window._waMouseX = e.clientX;
-        window._waMouseY = e.clientY;
-      });
-    }
   
-    function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-      var existing = document.getElementById('wa-text-editor');
-      if (existing) existing.remove();
-  
-      var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
-      var curColor = tStyles.color || '#E8EDF2';
-      var curSize = tStyles.size || 14;
-      var curFont = tStyles.family || 'sans-serif';
-  
-      // Tạo ô gõ chữ tàng hình bay lơ lửng tại vị trí chuột
-      var input = document.createElement('textarea');
-      input.id = 'wa-text-editor'; 
-      input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+  if (!window._waMouseX) {
+    window._waMouseX = window.innerWidth / 2;
+    window._waMouseY = window.innerHeight / 2;
+    document.addEventListener('mousemove', function(e) {
+      window._waMouseX = e.clientX;
+      window._waMouseY = e.clientY;
+    });
+  }
+
+  function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
+    var existing = document.getElementById('wa-text-editor');
+    if (existing) existing.remove();
+
+    var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
+    var curColor = tStyles.color || '#E8EDF2';
+    var curSize = tStyles.size || 14;
+    var curFont = tStyles.family || 'sans-serif';
+
+    // Tạo ô gõ chữ tàng hình bay lơ lửng tại vị trí click chuột
+    var input = document.createElement('textarea');
+    input.id = 'wa-text-editor'; 
+    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    
+    input.style.cssText = `
+      position: fixed;
+      left: ${window._waMouseX}px;
+      top: ${window._waMouseY - (curSize/2)}px;
+      background: transparent !important; 
+      border: 1px dashed rgba(59, 130, 246, 0.5) !important;            
+      outline: none !important;           
+      color: ${curColor};
+      font-family: ${curFont};
+      font-size: ${curSize}px;
+      line-height: 1.2;
+      z-index: 999999;
+      min-width: 50px;
+      height: ${curSize * 1.5}px;
+      padding: 0;
+      margin: 0;
+      resize: none;
+      overflow: hidden;
+      white-space: pre;
+      caret-color: ${curColor};
+    `;
+
+    document.body.appendChild(input);
+
+    requestAnimationFrame(function() {
+      input.focus();
+      if (!currentText || currentText === 'Văn bản...') input.select();
+      input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
+      input.style.height = input.scrollHeight + 'px';
+    });
+
+    input.addEventListener('input', function() {
+      this.style.width = '50px'; 
+      this.style.height = 'auto';
+      this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
+      this.style.height = this.scrollHeight + 'px';
+    });
+
+    function commit() {
+      if (!document.getElementById('wa-text-editor')) return;
+      var val = input.value.trim() || 'Văn bản...';
       
-      input.style.cssText = `
-        position: fixed;
-        left: ${window._waMouseX}px;
-        top: ${window._waMouseY - (curSize/2)}px;
-        background: transparent !important; 
-        border: none !important;            
-        outline: none !important;           
-        color: ${curColor};
-        font-family: ${curFont};
-        font-size: ${curSize}px;
-        line-height: 1.2;
-        z-index: 999999;
-        min-width: 50px;
-        height: ${curSize * 1.5}px;
-        padding: 0;
-        margin: 0;
-        resize: none;
-        overflow: hidden;
-        white-space: pre;
-        caret-color: ${curColor};
-      `;
-  
-      document.body.appendChild(input);
-  
-      requestAnimationFrame(function() {
-        input.focus();
-        if (!currentText || currentText === 'Văn bản...') input.select();
-        input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
-        input.style.height = input.scrollHeight + 'px';
-      });
-  
-      input.addEventListener('input', function() {
-        this.style.width = '50px'; 
-        this.style.height = 'auto';
-        this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
-        this.style.height = this.scrollHeight + 'px';
-      });
-  
-      function commit() {
-        if (!document.getElementById('wa-text-editor')) return;
-        var val = input.value.trim() || 'Văn bản...';
-        
-        var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-        if (!updatedStyles.text) updatedStyles.text = {};
-        if (!updatedStyles.polygon) updatedStyles.polygon = {};
-        
-        input.remove();
-        onConfirm(val, updatedStyles);
+      var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+      if (!updatedStyles.text) updatedStyles.text = {};
+      if (!updatedStyles.polygon) updatedStyles.polygon = {};
+      
+      input.remove();
+      onConfirm(val, updatedStyles);
+    }
+
+    input.addEventListener('blur', commit); // Click ra ngoài tự lưu
+    
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { // Nhấn Enter lưu
+        e.preventDefault();
+        commit();
       }
-  
-      input.addEventListener('blur', commit);
-      
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          commit();
-        }
-        if (e.key === 'Escape') {
-          input.value = currentText; 
-          commit();
-        }
-      });
-    }
+      if (e.key === 'Escape') {
+        input.value = currentText; 
+        commit();
+      }
+    });
+  }
 
   function createTextOverlay(chart, toolId, initialData) {
     if (!chart) return null;
