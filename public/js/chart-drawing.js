@@ -2033,7 +2033,7 @@
   // ─────────────────────────────────────────────
   // TEXT EDITOR & WRAPPER
   // ─────────────────────────────────────────────
-  // ── TRACKING CHUỘT ĐỂ BIẾT VỊ TRÍ CLICK ──
+  // ── TRACKING CHUỘT ĐỂ ĐẶT Ô CHỮ ĐÚNG VỊ TRÍ ──
 if (!window._waMouseX) {
   window._waMouseX = window.innerWidth / 2;
   window._waMouseY = window.innerHeight / 2;
@@ -2043,64 +2043,65 @@ if (!window._waMouseX) {
   });
 }
 
-// ── INLINE TEXT EDITOR (GIỐNG TRADINGVIEW) ──
+// ── BÍ QUYẾT INLINE EDITOR CỦA TRADINGVIEW / CANVA ──
 function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-  // Xóa editor cũ nếu đang mở
   var existing = document.getElementById('wa-text-editor');
   if (existing) existing.remove();
 
   var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
-  var curColor = (tStyles.color) ? tStyles.color : '#E8EDF2';
+  var curColor = tStyles.color || '#E8EDF2';
   var curSize = tStyles.size || 14;
   var curFont = tStyles.family || 'sans-serif';
 
-  // Tạo ô gõ chữ tàng hình bay lơ lửng tại vị trí chuột
+  // Tạo ô gõ chữ
   var input = document.createElement('textarea');
   input.id = 'wa-text-editor'; 
   input.value = (currentText === 'Văn bản...' || !currentText) ? '' : currentText;
-  input.placeholder = 'Nhập chữ...';
   
+  // CSS TÀNG HÌNH HOÀN TOÀN: Không viền, không nền, đồng bộ màu sắc/font chữ
   input.style.cssText = `
     position: fixed;
     left: ${window._waMouseX}px;
     top: ${window._waMouseY - (curSize/2)}px;
-    background: rgba(15, 20, 26, 0.75);
-    backdrop-filter: blur(4px);
-    border: 1px dashed #3B82F6;
-    border-radius: 4px;
+    background: transparent !important; 
+    border: none !important;            
+    outline: none !important;           
     color: ${curColor};
     font-family: ${curFont};
     font-size: ${curSize}px;
     line-height: 1.2;
-    outline: none;
     z-index: 999999;
-    min-width: 80px;
-    min-height: ${curSize * 1.5}px;
-    padding: 4px 8px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    min-width: 50px;
+    height: ${curSize * 1.5}px;
+    padding: 0;
+    margin: 0;
     resize: none;
     overflow: hidden;
     white-space: pre;
+    caret-color: ${curColor}; /* Màu con trỏ chuột nhấp nháy khớp màu chữ */
   `;
 
   document.body.appendChild(input);
 
-  // Focus và bôi đen text sẵn
+  // Focus và bôi đen toàn bộ nếu là chữ mặc định mới tạo
   requestAnimationFrame(function() {
     input.focus();
-    input.style.width = Math.max(80, input.scrollWidth + 10) + 'px';
+    if (!currentText || currentText === 'Văn bản...') {
+      input.select(); // Bôi đen sẵn, gõ cái là đè luôn
+    }
+    input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
     input.style.height = input.scrollHeight + 'px';
   });
 
-  // Tự động giãn khung khi gõ dài ra
+  // Tự động giãn khung tàng hình khi gõ dài ra
   input.addEventListener('input', function() {
-    this.style.width = '80px'; 
+    this.style.width = '50px'; 
     this.style.height = 'auto';
-    this.style.width = Math.max(80, this.scrollWidth + 10) + 'px';
+    this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
     this.style.height = this.scrollHeight + 'px';
   });
 
-  // Hàm xác nhận khi xong
+  // Lưu và xóa ô tàng hình khi gõ xong
   function commit() {
     if (!document.getElementById('wa-text-editor')) return;
     var val = input.value.trim() || 'Văn bản...';
@@ -2109,21 +2110,19 @@ function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
     if (!updatedStyles.text) updatedStyles.text = {};
     if (!updatedStyles.polygon) updatedStyles.polygon = {};
     
-    input.remove();
-    onConfirm(val, updatedStyles); // Bơm chữ ngược lại vào chart
+    input.remove(); // Xóa thẻ
+    onConfirm(val, updatedStyles); // Bơm chữ vào lại Canvas
   }
 
-  // Click ra ngoài (blur) thì lưu
-  input.addEventListener('blur', commit);
+  input.addEventListener('blur', commit); // Click ra ngoài tự lưu
   
-  // Bấm Enter thì lưu, Bấm Shift+Enter thì xuống dòng
   input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) { // Nhấn Enter lưu (Shift+Enter để xuống dòng)
       e.preventDefault();
       commit();
     }
     if (e.key === 'Escape') {
-      input.value = currentText; // Hủy bỏ
+      input.value = currentText; 
       commit();
     }
   });
