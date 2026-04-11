@@ -2046,80 +2046,112 @@
 
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    var curSize  = tStyles.size  || 14;
-    var curFont  = tStyles.family || 'sans-serif';
+    var curSize = tStyles.size || 14;
+    var curFont = tStyles.family || 'sans-serif';
 
-    // Dùng tọa độ lúc click vào chữ (đã lưu trong onSelected)
-    var posX = window._waTextClickX || _fbX || window.innerWidth  / 2;
-    var posY = window._waTextClickY || _fbY || window.innerHeight / 2;
-
-    var input = document.createElement('textarea');
-    input.id = 'wa-text-editor';
-    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-    input.style.cssText = [
-      'position:fixed',
-      'left:'  + posX + 'px',
-      'top:'   + posY + 'px',
-      'transform:translate(0,-50%)',
-      'background:transparent',
-      'border:none',
-      'outline:none',
-      'color:'       + curColor,
-      'font-family:' + curFont,
-      'font-size:'   + curSize + 'px',
-      'line-height:1.2',
-      'z-index:999999',
-      'min-width:50px',
-      'padding:0',
-      'margin:0',
-      'resize:none',
-      'overflow:hidden',
-      'white-space:pre',
-      'caret-color:' + curColor
-    ].join(';');
-
-    document.body.appendChild(input);
-
-    // Ẩn chữ gốc trên chart để không bị trùng 2 lớp
     var ov = window.currentSelectedOverlay;
-    if (ov && global.tvChart) {
+    var posX = window._waMouseX;
+    var posY = window._waMouseY;
+
+    // ── TÍNH TỌA ĐỘ CHÍNH XÁC 100% CỦA CHỮ TRÊN BIỂU ĐỒ ──
+    if (ov && global.tvChart && ov.points && ov.points[0]) {
       try {
-        var ts = JSON.parse(JSON.stringify(ov.styles || {}));
-        if (!ts.text) ts.text = {};
-        ts.text.color = 'rgba(0,0,0,0)';
-        global.tvChart.overrideOverlay({ id: ov.id, styles: ts });
+        var pixel = global.tvChart.convertToPixel({
+          dataIndex: ov.points[0].dataIndex,
+          timestamp: ov.points[0].timestamp,
+          value: ov.points[0].value
+        });
+        var container = document.getElementById('sc-chart-container');
+        if (pixel && container) {
+          var rect = container.getBoundingClientRect();
+          posX = rect.left + pixel.x;
+          posY = rect.top + pixel.y;
+        }
       } catch(e) {}
     }
 
+    // ── TẠO Ô GÕ CHỮ TÀNG HÌNH ──
+    var input = document.createElement('textarea');
+    input.id = 'wa-text-editor'; 
+    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    
+    // Xóa toàn bộ viền và nền, chỉ để lại chữ và con trỏ nhấp nháy
+    input.style.cssText = `
+      position: fixed;
+      left: ${posX}px;
+      top: ${posY}px;
+      transform: translate(0, -50%);
+      background: transparent !important; 
+      border: none !important;            
+      outline: none !important;           
+      color: ${curColor};
+      font-family: ${curFont};
+      font-size: ${curSize}px;
+      line-height: 1.2;
+      z-index: 999999;
+      min-width: 50px;
+      height: ${curSize * 1.5}px;
+      padding: 0;
+      margin: 0;
+      resize: none;
+      overflow: hidden;
+      white-space: pre;
+      caret-color: ${curColor};
+    `;
+
+    document.body.appendChild(input);
+
+    // Kéo giãn khung theo độ dài của chữ
     requestAnimationFrame(function() {
       input.focus();
       if (!currentText || currentText === 'Văn bản...') input.select();
-      input.style.width  = Math.max(50, input.scrollWidth + 10) + 'px';
+      input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
       input.style.height = input.scrollHeight + 'px';
     });
-
     input.addEventListener('input', function() {
-      this.style.width  = '50px';
+      this.style.width = '50px'; 
       this.style.height = 'auto';
-      this.style.width  = Math.max(50, this.scrollWidth + 10) + 'px';
+      this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
       this.style.height = this.scrollHeight + 'px';
     });
 
+    // ── ẨN CHỮ GỐC ĐI ĐỂ KHÔNG BỊ TRÙNG 2 LỚP ──
+    if (ov && global.tvChart) {
+      try {
+        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!tempStyles.text) tempStyles.text = {};
+        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ trên chart trong suốt
+        global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
+      } catch(e) {}
+    }
+
+    // ── LƯU LẠI KHI GÕ XONG ──
     function commit() {
       if (!document.getElementById('wa-text-editor')) return;
       var val = input.value.trim() || 'Văn bản...';
+      
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-      if (!updatedStyles.text)    updatedStyles.text    = {};
+      if (!updatedStyles.text) updatedStyles.text = {};
       if (!updatedStyles.polygon) updatedStyles.polygon = {};
-      updatedStyles.text.color = curColor; // trả lại màu gốc
+      
+      // Trả lại màu chữ gốc sau khi gõ xong
+      updatedStyles.text.color = curColor; 
+      
       input.remove();
       onConfirm(val, updatedStyles);
     }
 
-    input.addEventListener('blur', commit);
+    input.addEventListener('blur', commit); // Click ra ngoài là lưu luôn
+    
     input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') { input.value = currentText || ''; commit(); }
+      if (e.key === 'Enter' && !e.shiftKey) { // Bấm Enter là lưu
+        e.preventDefault();
+        commit();
+      }
+      if (e.key === 'Escape') {
+        input.value = currentText; 
+        commit();
+      }
     });
   }
 
@@ -2148,16 +2180,15 @@
         }
         return false;
       },  // ← ĐỔI } thành }, (thêm dấu phẩy)
+      // THÊM VÀO ĐÂY:
       onSelected: function(event) {
-        if (isDrawingSessionActive) return;
+        // Bỏ dòng: if (isDrawingSessionActive) return;
+        isDrawingSessionActive = false;  // ← THÊM DÒNG NÀY để reset sau khi vẽ xong
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
-        // Lưu tọa độ NGAY lúc click vào chữ, trước khi chuột đi chỗ khác
-        window._waTextClickX = _fbX;
-        window._waTextClickY = _fbY;
-        if (document.getElementById('wa-text-editor')) return;
+        if (document.getElementById('wa-text-editor-backdrop')) return;
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
         if (typeof renderPanel === 'function') renderPanel(ov);
       },
@@ -3142,15 +3173,12 @@ function _fbToggleLock(ov) {
       }
 // THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
 config.onSelected = function(event) {
-  if (isDrawingSessionActive) return;
+  isDrawingSessionActive = false;
   var ov = event && event.overlay ? event.overlay : null;
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
-  // Lưu tọa độ NGAY lúc click vào chữ, trước khi chuột đi chỗ khác
-  window._waTextClickX = _fbX;
-  window._waTextClickY = _fbY;
-  if (document.getElementById('wa-text-editor')) return;
+  if (document.getElementById('wa-text-editor-backdrop')) return;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
   if (typeof renderPanel === 'function') renderPanel(ov);
 };
@@ -3920,31 +3948,4 @@ if (document.readyState === 'loading') {
   mountUI();
 }
 
-})(window); // <-- Chú ý giữ nguyên dòng đóng module này
-/*
-=== CODEX IMPROVEMENT PROPOSALS ===
-
-BUGS FOUND (not in the task description):
-
-- `saveHistory` trước đó dùng clone nông (`Object.assign`) nên undo/redo có thể giữ tham chiếu cũ và gây sai dữ liệu khi overlay bị mutate tiếp.
-- Panel style trước đó chỉ có `solid/dashed` nên các overlay hỗ trợ `dotted` qua toolbar không đồng bộ với panel.
-- Trên mobile, panel đang dùng animation trượt ngang của desktop khiến cảm giác mở panel không đúng kỳ vọng dạng bottom-sheet.
-
-UX IMPROVEMENTS SUGGESTED (not implemented, for human review):
-
-- Thêm nút Undo/Redo trực tiếp trên toolbar nổi để người dùng mobile thao tác mà không cần bàn phím.
-- Thêm “preset style chips” cho text/shape (ví dụ: Note, Warning, Success) để rút ngắn số lần mở panel.
-- Thêm tùy chọn ghim panel (pin) khi người dùng muốn chỉnh nhiều object liên tục mà không tự đóng.
-
-PERFORMANCE OBSERVATIONS:
-
-- `renderPanel` rebuild lại toàn bộ HTML mỗi lần chọn overlay; với overlay thay đổi nhanh có thể tạo nhiều listener ngắn hạn.
-- Có nhiều `document.addEventListener` toàn cục; có thể gom theo event bus nhẹ để giảm số callback luôn hoạt động.
-- Một số `createPointFigures` tạo nhiều object mỗi frame khi kéo điểm; có thể cân nhắc cache style-derived values theo overlay id.
-
-MOBILE-SPECIFIC GAPS REMAINING:
-
-- Chưa có gesture “shake để undo”; hiện tại mới hỗ trợ Ctrl/Cmd + Z/Y (desktop) và API hàm nội bộ.
-- Cần test thực thiết bị cho bàn phím ảo (iOS/Android) để tinh chỉnh thêm safe-area cho floating toolbar trong mọi trường hợp.
-- Chưa có tối ưu đặc thù cho thao tác một tay trên màn hình nhỏ (đặc biệt khi panel mở đồng thời với toolbar nổi).
-*/
+})(window); 
