@@ -1933,14 +1933,14 @@
       html += `</div></div></div>`;
     });
     
-    // Đường phân cách cho nhóm nút bên dưới
     html += `<div style="width:36px;height:1px;background:var(--wa-border-subtle);margin:4px 0"></div>
-             <div class="wa-bot-actions">
-               <button class="wa-tb-btn" id="wa-btn-del-sel" data-tooltip="Xoá hình đang chọn">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-               </button>
-               <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xoá tất cả">${SVG.trash}</button>
-             </div>`;             
+         <div class="wa-bot-actions">
+           <button class="wa-tb-btn" id="wa-btn-del-sel" data-tooltip="Xoá hình đang chọn">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+           </button>
+           <button class="wa-tb-btn" id="wa-btn-hide-all" data-tooltip="Ẩn/Hiện tất cả"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+           <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xoá tất cả">${SVG.trash}</button>
+         </div>`;          
     return html;
   }
 
@@ -3716,7 +3716,49 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
       }
     });
   }
-
+  // NÚT ẨN/HIỆN TẤT CẢ
+  var _allHidden = false;
+  var hideAllBtn = toolbar.querySelector('#wa-btn-hide-all');
+  if (hideAllBtn) {
+    hideAllBtn.addEventListener('click', function() {
+      if (!global.tvChart || !global.__wa_overlay_map) return;
+      _allHidden = !_allHidden;
+      hideAllBtn.style.opacity = _allHidden ? '0.4' : '1';
+      global.__wa_overlay_map.forEach(function(ov) {
+        var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!ns.line)    ns.line    = {};
+        if (!ns.polygon) ns.polygon = {};
+        if (!ns.text)    ns.text    = {};
+        if (_allHidden) {
+          ns.line.color           = 'rgba(0,0,0,0)';
+          ns.polygon.color        = 'rgba(0,0,0,0)';
+          ns.polygon.borderColor  = 'rgba(0,0,0,0)';
+          ns.text.color           = 'rgba(0,0,0,0)';
+          ns.text.backgroundColor = 'rgba(0,0,0,0)';
+          ov._hideAllExtSnap = JSON.stringify(ov.extendData || {});
+          var ext = JSON.parse(ov._hideAllExtSnap);
+          ext.fillOpacity = 0;
+          ov.extendData = ext;
+          global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
+        } else {
+          delete ns.line.color;
+          delete ns.polygon.color;
+          delete ns.polygon.borderColor;
+          delete ns.text.color;
+          delete ns.text.backgroundColor;
+          var ext = {};
+          if (ov._hideAllExtSnap) {
+            try { ext = JSON.parse(ov._hideAllExtSnap); } catch(e) {}
+            delete ov._hideAllExtSnap;
+          }
+          ov.extendData = ext;
+          global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
+        }
+        ov.styles = ns;
+      });
+      if (typeof showToast === 'function') showToast(_allHidden ? 'Đã ẩn tất cả' : 'Đã hiện tất cả');
+    });
+  }
   
 
   // 🌟 CÁC NÚT TRÊN BẢNG PROPERTIES PANEL (Thanh trượt bên phải)
