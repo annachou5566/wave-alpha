@@ -2904,7 +2904,6 @@ function showFloatToolbar(ov, posX, posY) {
     if (typeof hidePanel === 'function') hidePanel();
     if (typeof saveAllOverlays === 'function') saveAllOverlays();
   });
-  // BẮT ĐẦU DÁN BƯỚC 3 VÀO ĐÂY: Drag Bar Logic
   var dragHandle = bar.querySelector('#wa-fb-drag');
   var isDragging = false;
   var startX, startY, initLeft, initTop;
@@ -2937,8 +2936,6 @@ function showFloatToolbar(ov, posX, posY) {
       _fbY = rect.top;
     }
   });
-  // KẾT THÚC BƯỚC 3
-
 }
 
 function _fbSetColor(ov, cat, hex) {
@@ -3105,10 +3102,11 @@ function _fbToggleLock(ov) {
 
     const TEXT_TOOLS = ['plainText','anchoredText','note','priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'];
 
-    if (TEXT_TOOLS.includes(toolId)) {
-      if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
-      return;
-    }
+    //ĐÃ XÓA KHỐI NÀY ĐỂ BỎ POPUP
+    // if (TEXT_TOOLS.includes(toolId)) {
+    //   if (typeof createTextOverlay === 'function') createTextOverlay(global.tvChart, toolId);
+    //   return;
+    // }
 
     try {
       let tType = typeof getToolCategory === 'function' ? getToolCategory(toolId) : 'lines'; 
