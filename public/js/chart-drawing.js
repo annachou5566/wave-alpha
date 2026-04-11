@@ -2030,128 +2030,87 @@
     }, 0);
   }
 
-      // ── THEO DÕI CHUỘT (Dùng khi vẽ chữ mới) ──
-  if (!window._waMouseX) {
-    window._waMouseX = window.innerWidth / 2;
-    window._waMouseY = window.innerHeight / 2;
-    document.addEventListener('mousemove', function(e) {
-      window._waMouseX = e.clientX;
-      window._waMouseY = e.clientY;
-    });
-  }
-
+      
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
     var existing = document.getElementById('wa-text-editor');
     if (existing) existing.remove();
 
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    var curSize = tStyles.size || 14;
-    var curFont = tStyles.family || 'sans-serif';
+    var curSize  = tStyles.size  || 14;
+    var curFont  = tStyles.family || 'sans-serif';
 
-    var ov = window.currentSelectedOverlay;
-    var posX = window._waMouseX;
-    var posY = window._waMouseY;
+    // Dùng tọa độ lúc click vào chữ (đã lưu trong onSelected)
+    var posX = window._waTextClickX || _fbX || window.innerWidth  / 2;
+    var posY = window._waTextClickY || _fbY || window.innerHeight / 2;
 
-    // ── TÍNH TỌA ĐỘ CHÍNH XÁC 100% CỦA CHỮ TRÊN BIỂU ĐỒ ──
-    if (ov && global.tvChart && ov.points && ov.points[0]) {
-      try {
-        var pixel = global.tvChart.convertToPixel({
-          dataIndex: ov.points[0].dataIndex,
-          timestamp: ov.points[0].timestamp,
-          value: ov.points[0].value
-        });
-        var container = document.getElementById('sc-chart-container');
-        if (pixel && container) {
-          var rect = container.getBoundingClientRect();
-          posX = rect.left + pixel.x;
-          posY = rect.top + pixel.y;
-        }
-      } catch(e) {}
-    }
-
-    // ── TẠO Ô GÕ CHỮ TÀNG HÌNH ──
     var input = document.createElement('textarea');
-    input.id = 'wa-text-editor'; 
+    input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-    
-    // Xóa toàn bộ viền và nền, chỉ để lại chữ và con trỏ nhấp nháy
-    input.style.cssText = `
-      position: fixed;
-      left: ${posX}px;
-      top: ${posY}px;
-      transform: translate(0, -50%);
-      background: transparent !important; 
-      border: none !important;            
-      outline: none !important;           
-      color: ${curColor};
-      font-family: ${curFont};
-      font-size: ${curSize}px;
-      line-height: 1.2;
-      z-index: 999999;
-      min-width: 50px;
-      height: ${curSize * 1.5}px;
-      padding: 0;
-      margin: 0;
-      resize: none;
-      overflow: hidden;
-      white-space: pre;
-      caret-color: ${curColor};
-    `;
+    input.style.cssText = [
+      'position:fixed',
+      'left:'  + posX + 'px',
+      'top:'   + posY + 'px',
+      'transform:translate(0,-50%)',
+      'background:transparent',
+      'border:none',
+      'outline:none',
+      'color:'       + curColor,
+      'font-family:' + curFont,
+      'font-size:'   + curSize + 'px',
+      'line-height:1.2',
+      'z-index:999999',
+      'min-width:50px',
+      'padding:0',
+      'margin:0',
+      'resize:none',
+      'overflow:hidden',
+      'white-space:pre',
+      'caret-color:' + curColor
+    ].join(';');
 
     document.body.appendChild(input);
 
-    // Kéo giãn khung theo độ dài của chữ
-    requestAnimationFrame(function() {
-      input.focus();
-      if (!currentText || currentText === 'Văn bản...') input.select();
-      input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
-      input.style.height = input.scrollHeight + 'px';
-    });
-    input.addEventListener('input', function() {
-      this.style.width = '50px'; 
-      this.style.height = 'auto';
-      this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
-      this.style.height = this.scrollHeight + 'px';
-    });
-
-    // ── ẨN CHỮ GỐC ĐI ĐỂ KHÔNG BỊ TRÙNG 2 LỚP ──
+    // Ẩn chữ gốc trên chart để không bị trùng 2 lớp
+    var ov = window.currentSelectedOverlay;
     if (ov && global.tvChart) {
       try {
-        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
-        if (!tempStyles.text) tempStyles.text = {};
-        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ trên chart trong suốt
-        global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
+        var ts = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!ts.text) ts.text = {};
+        ts.text.color = 'rgba(0,0,0,0)';
+        global.tvChart.overrideOverlay({ id: ov.id, styles: ts });
       } catch(e) {}
     }
 
-    // ── LƯU LẠI KHI GÕ XONG ──
+    requestAnimationFrame(function() {
+      input.focus();
+      if (!currentText || currentText === 'Văn bản...') input.select();
+      input.style.width  = Math.max(50, input.scrollWidth + 10) + 'px';
+      input.style.height = input.scrollHeight + 'px';
+    });
+
+    input.addEventListener('input', function() {
+      this.style.width  = '50px';
+      this.style.height = 'auto';
+      this.style.width  = Math.max(50, this.scrollWidth + 10) + 'px';
+      this.style.height = this.scrollHeight + 'px';
+    });
+
     function commit() {
       if (!document.getElementById('wa-text-editor')) return;
       var val = input.value.trim() || 'Văn bản...';
-      
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-      if (!updatedStyles.text) updatedStyles.text = {};
+      if (!updatedStyles.text)    updatedStyles.text    = {};
       if (!updatedStyles.polygon) updatedStyles.polygon = {};
-      
-      // Trả lại màu chữ gốc sau khi gõ xong
-      updatedStyles.text.color = curColor; 
-      
+      updatedStyles.text.color = curColor; // trả lại màu gốc
       input.remove();
       onConfirm(val, updatedStyles);
     }
 
-    input.addEventListener('blur', commit); // Click ra ngoài là lưu luôn
-    
+    input.addEventListener('blur', commit);
     input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { // Bấm Enter là lưu
-        e.preventDefault();
-        commit();
-      }
-      if (e.key === 'Escape') {
-        input.value = currentText; 
-        commit();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { input.value = currentText || ''; commit(); }
     });
   }
 
@@ -2180,15 +2139,16 @@
         }
         return false;
       },  // ← ĐỔI } thành }, (thêm dấu phẩy)
-      // THÊM VÀO ĐÂY:
       onSelected: function(event) {
-        // Bỏ dòng: if (isDrawingSessionActive) return;
-        isDrawingSessionActive = false;  // ← THÊM DÒNG NÀY để reset sau khi vẽ xong
+        if (isDrawingSessionActive) return;
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
-        if (document.getElementById('wa-text-editor-backdrop')) return;
+        // Lưu tọa độ NGAY lúc click vào chữ, trước khi chuột đi chỗ khác
+        window._waTextClickX = _fbX;
+        window._waTextClickY = _fbY;
+        if (document.getElementById('wa-text-editor')) return;
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
         if (typeof renderPanel === 'function') renderPanel(ov);
       },
@@ -3173,12 +3133,15 @@ function _fbToggleLock(ov) {
       }
 // THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
 config.onSelected = function(event) {
-  isDrawingSessionActive = false;
+  if (isDrawingSessionActive) return;
   var ov = event && event.overlay ? event.overlay : null;
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
-  if (document.getElementById('wa-text-editor-backdrop')) return;
+  // Lưu tọa độ NGAY lúc click vào chữ, trước khi chuột đi chỗ khác
+  window._waTextClickX = _fbX;
+  window._waTextClickY = _fbY;
+  if (document.getElementById('wa-text-editor')) return;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
   if (typeof renderPanel === 'function') renderPanel(ov);
 };
