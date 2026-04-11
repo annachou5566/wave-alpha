@@ -3097,12 +3097,22 @@ function _fbToggleLock(ov) {
       let config = { name: toolId, lock: false, styles: {} };
       
       if(tType === 'lines' || tType === 'waves') {
-        config.styles.line = { color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#3B82F6', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#3B82F6'), size: s.lineWidth || 1, style: s.lineStyle || 'solid' };
+        config.styles.line = {
+          color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#3B82F6', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#3B82F6'),
+          size: s.lineWidth || 1,
+          style: s.lineStyle || 'solid',
+          dashedValue: s.lineStyle === 'dashed' ? [6, 4] : s.lineStyle === 'dotted' ? [1.5, 3] : undefined
+        };
       } else if (tType === 'shapes') {
         config.styles.polygon = { style: 'stroke_fill', color: typeof hexToRgba === 'function' ? hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15) : '#3B82F6', borderColor: typeof hexToRgba === 'function' ? hexToRgba(s.borderColor || '#3B82F6', s.borderOpacity !== undefined ? s.borderOpacity : 1) : (s.borderColor || '#3B82F6'), borderSize: s.borderWidth || 1 };
         config.styles.line = { color: typeof hexToRgba === 'function' ? hexToRgba(s.borderColor || '#3B82F6', s.borderOpacity !== undefined ? s.borderOpacity : 1) : (s.borderColor || '#3B82F6'), size: s.borderWidth || 1, style: s.borderStyle || 'solid' };
       } else if (tType === 'fibo') {
-        config.styles.line = { color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#E8EDF2', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#E8EDF2'), size: 1, style: s.lineStyle || 'solid' }; config.extendData = { showLabels: s.showLabels !== false, fillOpacity: s.fillOpacity !== undefined ? s.fillOpacity : 0.15 };
+        config.styles.line = {
+          color: typeof hexToRgba === 'function' ? hexToRgba(s.lineColor || '#E8EDF2', s.lineOpacity !== undefined ? s.lineOpacity : 1) : (s.lineColor || '#E8EDF2'),
+          size: 1,
+          style: s.lineStyle || 'solid',
+          dashedValue: s.lineStyle === 'dashed' ? [6, 4] : s.lineStyle === 'dotted' ? [1.5, 3] : undefined
+        };
       } else if (tType === 'text') {
         config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
