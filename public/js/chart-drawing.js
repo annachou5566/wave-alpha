@@ -2884,25 +2884,7 @@ function showFloatToolbar(ov, posX, posY) {
     });
   });
 
-  // ── Event handlers (giữ nguyên logic cũ) ──────────────────────
-  bar.querySelector('#wa-fb-col').addEventListener('input', function() {
-    bar.querySelector('#wa-fb-sw').style.background = this.value;
-    _fbSetColor(ov, cat, this.value);
-  });
-  bar.querySelectorAll('.wa-fb-lw').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      bar.querySelectorAll('.wa-fb-lw').forEach(function(b) { b.classList.remove('wa-fb-on'); });
-      btn.classList.add('wa-fb-on');
-      _fbSetLineWidth(ov, parseInt(btn.dataset.w));
-    });
-  });
-  bar.querySelectorAll('.wa-fb-ls').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      bar.querySelectorAll('.wa-fb-ls').forEach(function(b) { b.classList.remove('wa-fb-on'); });
-      btn.classList.add('wa-fb-on');
-      _fbSetLineStyle(ov, btn.dataset.s);
-    });
-  });
+  
   bar.querySelector('#wa-fb-vis').addEventListener('click', function() {
     _fbToggleVisible(ov);
   });
@@ -2922,6 +2904,41 @@ function showFloatToolbar(ov, posX, posY) {
     if (typeof hidePanel === 'function') hidePanel();
     if (typeof saveAllOverlays === 'function') saveAllOverlays();
   });
+  // BẮT ĐẦU DÁN BƯỚC 3 VÀO ĐÂY: Drag Bar Logic
+  var dragHandle = bar.querySelector('#wa-fb-drag');
+  var isDragging = false;
+  var startX, startY, initLeft, initTop;
+
+  dragHandle.addEventListener('mousedown', function(e) {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    initLeft = parseFloat(bar.style.left) || 0;
+    initTop = parseFloat(bar.style.top) || 0;
+    dragHandle.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    var dx = e.clientX - startX;
+    var dy = e.clientY - startY;
+    bar.style.left = (initLeft + dx) + 'px';
+    bar.style.top = (initTop + dy) + 'px';
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (isDragging) {
+      isDragging = false;
+      dragHandle.style.cursor = 'grab';
+      // Cập nhật lại _fbX và _fbY để khi save vị trí bar nó được ghi đè
+      var rect = bar.getBoundingClientRect();
+      _fbX = rect.left;
+      _fbY = rect.top;
+    }
+  });
+  // KẾT THÚC BƯỚC 3
+
 }
 
 function _fbSetColor(ov, cat, hex) {
