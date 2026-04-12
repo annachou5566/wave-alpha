@@ -1437,60 +1437,44 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * Build the indicator library modal HTML
    */
   function buildIndicatorModalHTML() {
-    const tabsHTML = CATEGORIES.map(function (cat, i) {
-      return '<button class="wa-tab' + (i === 0 ? ' active' : '') + '" data-cat="' + cat.key + '">' + cat.label + '</button>';
+    const tabsHTML = CATEGORIES.map((cat, i) => {
+      return `<button class="wa-tab ${i === 0 ? 'active' : ''}" data-cat="${cat.key}">${cat.label}</button>`;
     }).join('');
-
+  
     return `
-    <div id="sc-indicator-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82);
-         z-index:99999; backdrop-filter:blur(6px); justify-content:center; align-items:center;">
-      <div id="wa-ind-modal-box" style="background:${COLOR.bg}; width:640px; height:520px; max-width:92vw;
-           max-height:86vh; border-radius:14px; border:1px solid ${COLOR.border};
-           box-shadow:0 20px 60px rgba(0,0,0,0.9); display:flex; flex-direction:column; overflow:hidden;">
-
+      <!-- Đã bỏ lớp mờ đen (backdrop-filter/rgba), chỉ giữ lại đúng cái khung nội dung -->
+      <div id="sc-indicator-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:${COLOR.bg}; width:640px; height:520px; max-width:92vw; max-height:86vh; border-radius:14px; border:1px solid ${COLOR.border}; box-shadow:0 20px 60px rgba(0,0,0,0.6); z-index:99999; flex-direction:column; overflow:hidden;">
+        
         <!-- Header -->
-        <div style="padding:14px 20px; border-bottom:1px solid ${COLOR.border};
-             display:flex; justify-content:space-between; align-items:center; gap:12px; flex-shrink:0;">
+        <div style="padding:14px 20px; border-bottom:1px solid ${COLOR.border}; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
           <h5 style="margin:0; color:${COLOR.white}; font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px;">
-            <span style="color:${COLOR.cyan}; font-size:18px;">⚡</span> Thư viện Chỉ báo
+            <span style="color:${COLOR.cyan}; font-size:18px;">∿</span> Thư viện Chỉ báo
           </h5>
-          <button id="wa-ind-modal-close" aria-label="Đóng" style="background:transparent; border:none;
-              color:${COLOR.muted}; cursor:pointer; font-size:18px; line-height:1; padding:2px 6px;
-              border-radius:4px; transition:color .15s;">✕</button>
+          <button id="wa-ind-modal-close" aria-label="Đóng" style="background:transparent; border:none; color:${COLOR.muted}; cursor:pointer; font-size:18px; line-height:1; padding:2px 6px; border-radius:4px; transition:color .15s;">✕</button>
         </div>
-
+  
         <!-- Search -->
         <div style="padding:12px 20px; border-bottom:1px solid ${COLOR.border}; flex-shrink:0;">
           <div style="position:relative;">
-            <span style="position:absolute; left:11px; top:50%; transform:translateY(-50%);
-                  color:${COLOR.muted}; font-size:13px; pointer-events:none;">🔍</span>
-            <input id="wa-ind-search" type="text" placeholder="Tìm kiếm chỉ báo..."
-              autocomplete="off"
-              style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.35);
-                     border:1px solid ${COLOR.border}; border-radius:8px;
-                     padding:8px 12px 8px 34px; color:${COLOR.white};
-                     outline:none; font-size:13px; transition:border-color .15s;">
+            <span style="position:absolute; left:11px; top:50%; transform:translateY(-50%); color:${COLOR.muted}; font-size:13px; pointer-events:none;">🔍</span>
+            <input id="wa-ind-search" type="text" placeholder="Tìm kiếm chỉ báo..." autocomplete="off" style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.35); border:1px solid ${COLOR.border}; border-radius:8px; padding:8px 12px 8px 34px; color:${COLOR.white}; outline:none; font-size:13px; transition:border-color .15s;">
           </div>
         </div>
-
+  
         <!-- Tabs -->
-        <div id="wa-ind-tabs" style="display:flex; gap:4px; padding:10px 20px 0;
-             overflow-x:auto; flex-shrink:0; scrollbar-width:none;">
+        <div id="wa-ind-tabs" style="display:flex; gap:4px; padding:10px 20px 0; overflow-x:auto; flex-shrink:0; scrollbar-width:none;">
           ${tabsHTML}
         </div>
-
+  
         <!-- List -->
-        <div id="wa-ind-list" style="flex:1; overflow-y:auto; padding:10px 14px 14px;
-             display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content: start;"></div>
-
+        <div id="wa-ind-list" style="flex:1; overflow-y:auto; padding:10px 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:6px; align-content: start;"></div>
+        
         <!-- Empty state -->
-        <div id="wa-ind-empty" style="display:none; flex:1; align-items:center;
-             justify-content:center; padding:30px; color:${COLOR.muted}; font-size:13px;
-             text-align:center;">
+        <div id="wa-ind-empty" style="display:none; flex:1; align-items:center; justify-content:center; padding:30px; color:${COLOR.muted}; font-size:13px; text-align:center;">
           Không tìm thấy chỉ báo phù hợp
         </div>
       </div>
-    </div>`;
+    `;
   }
 
   /**
@@ -1739,15 +1723,38 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         renderIndicatorList(e.target.value, activeTab ? activeTab.dataset.cat : 'all');
       });
 
-      // Close
-      document.getElementById('wa-ind-modal-close').addEventListener('click', function () {
-        document.getElementById('sc-indicator-modal').style.display = 'none';
-      });
+          // Search
+    document.getElementById('wa-ind-search').addEventListener('input', function(e) {
+      const activeTab = document.querySelector('.wa-tab.active');
+      renderIndicatorList(e.target.value, activeTab ? activeTab.dataset.cat : 'all');
+    });
 
-      // Close on backdrop
-      document.getElementById('sc-indicator-modal').addEventListener('click', function (e) {
-        if (e.target === this) this.style.display = 'none';
+    /* ====== BẠN DÁN CODE VÀO ĐÂY ====== */
+    const indModal = document.getElementById('sc-indicator-modal');
+    
+    // Nút X để đóng
+    const closeBtn = document.getElementById('wa-ind-modal-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function(e) {
+        if (indModal) indModal.style.display = 'none';
       });
+    }
+
+    // Click chuột ra ngoài giao diện (body/chart) thì tự tắt popup
+    document.addEventListener('click', function(e) {
+      // id nút mở popup trên thanh công cụ của bạn
+      const btnInd = document.getElementById('btn-fx-indicator'); 
+      
+      if (indModal && indModal.style.display === 'flex') {
+        // Nếu click không nằm trong popup và không nằm trên nút bật popup
+        if (!indModal.contains(e.target) && (!btnInd || !btnInd.contains(e.target))) {
+          indModal.style.display = 'none';
+        }
+      }
+    });
+    /* ================================== */
+
+    
     }
 
     // ── Settings Modal ──
