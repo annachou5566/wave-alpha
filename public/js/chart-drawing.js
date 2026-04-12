@@ -1113,7 +1113,7 @@
         }
       },
 
-        // --- BATCH 8 : Text Annotation Tools (HỖ TRỢ MULTILINE & TÙY CHỈNH NỀN/VIỀN) ---
+         // --- BATCH 8 : Text Annotation Tools (HỖ TRỢ MULTILINE & CĂN LỀ PIXEL-PERFECT) ---
   {
     name: 'plainText',
     totalStep: 2,
@@ -1132,11 +1132,16 @@
       var tS = os && os.text ? os.text : {};
       var pS = os && os.polygon ? os.polygon : {};
       
-      var lh = (tS.size || 14) + 6;
-      var pd = 6;
+      // ĐO KÍCH THƯỚC CHỮ CHÍNH XÁC TUYỆT ĐỐI BẰNG CANVAS
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
-      var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-      var bw = maxLen * (tS.size || 14) * 0.6 + pd * 2;
+      var lh = (tS.size || 14) + 6;
+      var pd = 8; // Khoảng đệm 2 bên trái phải
+      
+      var bw = textW + pd * 2;
       var bh = lines.length * lh + pd * 2;
       
       var bgC = pS.color && pS.color !== 'transparent' ? pS.color : 'transparent';
@@ -1191,12 +1196,18 @@
       var os = ref.overlay.styles;
       var tS = os && os.text ? os.text : {};
       var pS = os && os.polygon ? os.polygon : {};
-      var lh = (tS.size || 14) + 6;
-      var pd = 6;
-      var figs = [];
+      
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 13) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
+      
+      var lh = (tS.size || 13) + 6;
+      var pd = 8;
       var tx = c.length > 1 ? c[1].x : c[0].x;
       var ty = c.length > 1 ? c[1].y : c[0].y;
       
+      var figs = [];
       if (c.length > 1) {
         figs.push({
           type: 'line',
@@ -1205,8 +1216,7 @@
         });
       }
       
-      var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-      var bw = maxLen * (tS.size || 14) * 0.6 + pd * 2;
+      var bw = textW + pd * 2;
       var bh = lines.length * lh + pd * 2;
       var bgC = pS.color && pS.color !== 'transparent' ? pS.color : 'transparent';
       var bdC = pS.borderColor && pS.borderColor !== 'transparent' ? pS.borderColor : 'transparent';
@@ -1254,9 +1264,14 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
-      var lh = (tS.size || 12) + 6, pd = 10;
-      var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-      var bw = Math.max(60, maxLen * (tS.size || 12) * 0.6 + pd * 2);
+      
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
+      
+      var lh = (tS.size || 14) + 6, pd = 10;
+      var bw = Math.max(60, textW + pd * 2);
       var bh = lines.length * lh + pd * 2;
       
       var figs = [{
@@ -1294,10 +1309,15 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
+      
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
+      
       var x = c[0].x, y = c[0].y;
       var lh = (tS.size || 12) + 6;
-      var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-      var bw = maxLen * (tS.size || 12) * 0.6 + 20, bh = lines.length * lh + 10;
+      var bw = textW + 16, bh = lines.length * lh + 10; // Căn lề 8px mỗi bên
       
       var figs = [{
         type: 'polygon',
@@ -1329,7 +1349,7 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
-      var lh = (tS.size || 12) + 6;
+      var lh = (tS.size || 14) + 6;
       
       var figs = [
         { type: 'circle', attrs: { x: x, y: y - r - 10, r: r }, styles: { style: 'stroke_fill', color: pS.color, borderColor: pS.borderColor, borderSize: pS.borderSize || 0 } },
@@ -1364,13 +1384,18 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
+      
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
+      
       var lh = (tS.size || 12) + 6;
       
       if (c.length > 1) {
         figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: pS.borderColor || '#00F0FF', size: 1 } });
         var tx = c[1].x, ty = c[1].y;
-        var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-        var bw = maxLen * (tS.size || 12) * 0.6 + 16, bh = lines.length * lh + 10;
+        var bw = textW + 16, bh = lines.length * lh + 10;
         figs.push({
           type: 'polygon',
           attrs: { coordinates: [ {x:tx, y:ty-bh/2}, {x:tx+bw, y:ty-bh/2}, {x:tx+bw, y:ty+bh/2}, {x:tx, y:ty+bh/2} ] },
@@ -1411,9 +1436,14 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
-      var lh = (tS.size || 12) + 6;
-      var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-      var bw = Math.max(80, maxLen * (tS.size || 12) * 0.6 + 20), bh = lines.length * lh + 14, tail = 8;
+      
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
+      
+      var lh = (tS.size || 14) + 6;
+      var bw = Math.max(80, textW + 20), bh = lines.length * lh + 14, tail = 8;
       
       var figs = [{
         type: 'polygon',
@@ -1451,9 +1481,14 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
-      var lh = (tS.size || 12) + 6;
-      var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-      var bw = maxLen * (tS.size || 12) * 0.6 + 16, bh = lines.length * lh + 10;
+      
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 11) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
+      
+      var lh = (tS.size || 11) + 6;
+      var bw = textW + 12, bh = lines.length * lh + 10;
       var arr = 6;
       
       var figs = [{
@@ -1489,14 +1524,19 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
+      
+      var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
+      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      var textW = 0;
+      lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
+      
       var lh = (tS.size || 12) + 6;
       
       if (c.length > 1) {
         figs.push({ type: 'line', attrs: { coordinates: [c[0], {x:tx, y:ty}] }, styles: { color: pS.borderColor || '#848e9c', size: 1, style: 'dashed' } });
       }
       
-      var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
-      var bw = maxLen * (tS.size || 12) * 0.6 + 24, bh = lines.length * lh + 10, notch = 10;
+      var bw = textW + 16, bh = lines.length * lh + 10, notch = 10;
       var isRight = tx >= c[0].x;
       var coords = isRight ? 
         [ {x:tx, y:ty}, {x:tx+notch, y:ty-bh/2}, {x:tx+notch+bw, y:ty-bh/2}, {x:tx+notch+bw, y:ty+bh/2}, {x:tx+notch, y:ty+bh/2} ] :
@@ -1532,7 +1572,7 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
-      var lh = (tS.size || 12) + 6;
+      var lh = (tS.size || 11) + 6;
       
       var figs = [
         { type: 'line', attrs: { coordinates: [{x:x, y:y}, {x:x, y:y-ph}] }, styles: { color: pS.borderColor || pS.color, size: pw } },
