@@ -2212,13 +2212,21 @@
       name: toolId, extendData: initialData || '',
       onDrawEnd: function(event) {
         isDrawingSessionActive = false;
+        
         if (!overlayId && event && event.overlay) {
           overlayId = event.overlay.id;
           
-          // THÊM DÒNG NÀY ĐỂ Ô GÕ CHỮ BIẾT ĐANG SỬA TEXT NÀO VÀ TÍNH TỌA ĐỘ
+          // 1. Lưu lại overlay ngay lập tức để hệ thống nhận diện
           window.currentSelectedOverlay = event.overlay;
           
-          openEditor(event.overlay ? event.overlay.extendData : '', event.overlay ? event.overlay.styles : {});
+          // 2. Dùng setTimeout để tách luồng, đợi KLineChart hoàn tất việc render
+          // box chứa chữ (bounding box) xong xuôi mới mở ô nhập liệu.
+          setTimeout(function() {
+            openEditor(
+              event.overlay ? event.overlay.extendData : '', 
+              event.overlay ? event.overlay.styles : {}
+            );
+          }, 50); 
         }
         return false;
       },
