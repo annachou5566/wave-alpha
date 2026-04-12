@@ -2742,7 +2742,6 @@ onDrawEnd: function(event) {
     function item(lbl, ctrlStr) { return '<div class="_r"><span class="_c_lbl">'+lbl+'</span><div class="_c_ctrl">'+ctrlStr+'</div></div>'; }
     function sec(title, inner) { return '<div class="_s">'+(title?'<div class="_sh">'+title+'</div>':'')+'<div class="_sb">'+inner+'</div></div>'; }
 
-    // ĐÃ TRẢ LẠI ICON SVG NÉT ĐỨT / LIỀN CỰC RÕ RÀNG
     var LS = [
       { v:'solid',  l:'<svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2.5"/></svg>' },
       { v:'dashed', l:'<svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg>' },
@@ -2795,7 +2794,7 @@ onDrawEnd: function(event) {
         var sline=s.line||{}, lc=safeHex(sline.color,'#3B82F6'), lw=sline.size||1, ls=sline.style||'solid', lo=toAlpha(sline.color,1);
         html += sec('Đường Line',
           item('Màu sắc', cpBtn('c_lc',lc) + rng('_rp_lo',0,1,0.05,lo)) +
-          item('Nét vẽ', seg('_rp_ls',LS,ls) + sel('_rp_lw',W_OPTS,lw))
+          item('Kiểu nét vẽ', seg('_rp_ls',LS,ls) + sel('_rp_lw',W_OPTS,lw))
         );
       }
     } catch(e) { html = '<div style="color:red;padding:10px">Lỗi hiển thị</div>'; }
@@ -2878,7 +2877,6 @@ onDrawEnd: function(event) {
     function gTog(id){ var e=document.getElementById(id); return e?e.classList.contains('on'):false; }
     function gTa(id) { var e=document.getElementById(id); return e?e.value:null; }
 
-    // HÀM HỖ TRỢ XỬ LÝ CHUẨN NÉT ĐỨT CHO KLINECHART (Khắc phục lỗi Hình khối không nhận nét đứt)
     function setLineStyle(target, bs) {
       if (!target) return;
       var style = bs === 'dotted' ? 'dashed' : bs;
@@ -2916,7 +2914,7 @@ onDrawEnd: function(event) {
           ns.polygon.style = (bdOn || (bgA && bgA>0)) ? 'strokefill' : 'fill';
           ns.polygon.borderColor = bdOn ? mkRgba((bdC||'#3B82F6'), bdA!==null?bdA:1) : 'transparent';
           ns.polygon.borderSize  = bdOn ? (bdW!==null?parseInt(bdW):1) : 0;
-          if (bdOn && bs) setPolyBorderStyle(ns.polygon, bs); // CHUẨN NÉT ĐỨT CHO TEXT BOX
+          if (bdOn && bs) setPolyBorderStyle(ns.polygon, bs);
           if (txt!==null) currentSelectedOverlay.extendData = txt;
 
         } else if (cat === 'shapes') {
@@ -2927,7 +2925,7 @@ onDrawEnd: function(event) {
           ns.polygon.style = 'strokefill';
           if (bs) {
             setLineStyle(ns.line, bs);
-            setPolyBorderStyle(ns.polygon, bs); // FIX LỖI: HÌNH KHỐI ĐÃ NHẬN NÉT ĐỨT
+            setPolyBorderStyle(ns.polygon, bs);
           }
 
         } else if (cat === 'fibo') {
@@ -2953,7 +2951,14 @@ onDrawEnd: function(event) {
 
     function saveToStorage() { if (typeof saveAllOverlays === 'function') saveAllOverlays(); }
 
-    body.querySelectorAll('input, textarea, select').forEach(function(el) { _on(el, 'input', doAction); _on(el, 'change', doAction); });
+    // ĐÃ THÊM: Ngăn biểu đồ giành phím tắt khi bạn đang gõ văn bản
+    body.querySelectorAll('input, textarea, select').forEach(function(el) { 
+      _on(el, 'input', doAction); 
+      _on(el, 'change', doAction);
+      _on(el, 'keydown', function(e) { e.stopPropagation(); });
+      _on(el, 'keyup', function(e) { e.stopPropagation(); });
+      _on(el, 'keypress', function(e) { e.stopPropagation(); });
+    });
   }
 
   function hidePanel() {
