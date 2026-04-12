@@ -2050,52 +2050,70 @@
     var curFont = tStyles.family || 'sans-serif';
   
     var ov = window.currentSelectedOverlay;
-    // Mặc định lấy theo chuột (Dành cho lúc mới tạo chữ lần đầu)
-    var posX = window.waMouseX;
-    var posY = window.waMouseY;
+    
+    // Khởi tạo tọa độ ở giữa màn hình phòng hờ tất cả đều lỗi
+    var posX = window.innerWidth / 2;
+    var posY = window.innerHeight / 2;
   
-      // 1. TÍNH CHÍNH XÁC 100% TỌA ĐỘ CỦA CHỮ GỐC KHỎI BỊ NHẢY
-  if (ov && ov.points && ov.points[0]) {
-    try {
-      var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
-      if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
-
-      if (chartObj && typeof chartObj.convertToPixel === 'function') {
-        // Tìm đúng ID của pane đang chứa cái khung vẽ đó
-        var targetPaneId = 'candle_pane'; 
-        if (chartObj.getOverlayById) {
-          var overlayInfo = chartObj.getOverlayById(ov.id);
-          if (overlayInfo && overlayInfo.paneId) {
-            targetPaneId = overlayInfo.paneId;
+    // 1. TÍNH TỌA ĐỘ CHÍNH XÁC CỦA TEXT TRÊN BIỂU ĐỒ
+    if (ov) {
+      try {
+        var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
+        if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
+  
+        var container = document.getElementById('sc-chart-container');
+        
+        // MẸO: Thử lấy bounding box (khung chữ nhật bao quanh text) do KLineChart tự tính
+        // Đây là cách chính xác nhất vì thư viện đã tính sẵn cho mình lúc vẽ xong
+        var bbox = null;
+        
+        // Cách 1: Tìm trong mảng figures nếu KLineChart expose ra
+        if (ov._figures && ov._figures.length > 0 && ov._figures[0].bounding) {
+          bbox = ov._figures[0].bounding;
+        } 
+        // Cách 2: Lấy tạm toạ độ điểm đầu tiên (points[0]) làm gốc
+        else if (chartObj && typeof chartObj.convertToPixel === 'function' && ov.points && ov.points[0]) {
+          // Finder mặc định tìm pane chính chứa nến
+          var pixelInfo = chartObj.convertToPixel(
+            {
+              dataIndex: ov.points[0].dataIndex,
+              timestamp: ov.points[0].timestamp,
+              value: ov.points[0].value
+            },
+            { finder: { paneId: 'candle_pane' } } 
+          );
+          
+          if (pixelInfo) {
+            bbox = { x: pixelInfo.x, y: pixelInfo.y };
           }
         }
-
-        // Bỏ { paneId: ... } vào một object options như API của KLineChart yêu cầu
-        var pixel = chartObj.convertToPixel(
-          {
-            dataIndex: ov.points[0].dataIndex,
-            timestamp: ov.points[0].timestamp,
-            value: ov.points[0].value
-          },
-          { finder: { paneId: targetPaneId } } // <--- FIX LỖI TẠI ĐÂY
-        );
-        
-        var container = document.getElementById('sc-chart-container');
-        if (pixel && container) {
+  
+        if (bbox && container) {
           var rect = container.getBoundingClientRect();
-          posX = rect.left + pixel.x;
-          posY = rect.top + pixel.y;
+          posX = rect.left + bbox.x;
+          posY = rect.top + bbox.y;
           
-          // Bù trừ tọa độ
+          // Bù trừ một chút cho nó khớp y xì với text cũ
           var name = ov.name || toolId;
           if (name === 'note') { posX += 10; posY += 10; }
           else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
           else if (name === 'pin') { posX += 14; posY -= 10; }
           else if (name === 'priceLabel') { posX += 6; }
+        } else {
+          // Nếu không lấy được bounding, dùng đỡ toạ độ chuột lúc click
+          posX = window.waMouseX;
+          posY = window.waMouseY;
         }
+      } catch(e) { 
+        console.log("Lỗi tính vị trí:", e); 
+        posX = window.waMouseX;
+        posY = window.waMouseY;
       }
-    } catch(e) { console.log("Lỗi tính vị trí:", e); }
-  }
+    } else {
+      // Nếu là text vẽ lần đầu (chưa có ov), dùng tọa độ chuột
+      posX = window.waMouseX;
+      posY = window.waMouseY;
+    }
   
     // 2. TẠO TEXTAREA VÀ BỎ THUỘC TÍNH TRANSFORM TRÁNH BỊ GIẬT LÊN CAO
     var input = document.createElement('textarea');
@@ -2125,31 +2143,34 @@
     `;
     document.body.appendChild(input);
   
-    // Kéo giãn khung theo độ dài của chữ
+    // Co giãn khung theo độ dài của chữ
     requestAnimationFrame(function() {
       input.focus();
-      if (!currentText || currentText === 'Văn bản...') input.select();
+      if (!currentText || currentText === 'Văn bản...') {
+        input.select();
+      }
       input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
       input.style.height = input.scrollHeight + 'px';
     });
+  
     input.addEventListener('input', function() {
-      this.style.width = '50px'; 
+      this.style.width = '50px';
       this.style.height = 'auto';
       this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
       this.style.height = this.scrollHeight + 'px';
     });
-
-    // ── ẨN CHỮ GỐC ĐI ĐỂ KHÔNG BỊ TRÙNG 2 LỚP ──
+  
+    // 3. ẨN TEXT CŨ TRÊN BIỂU ĐỒ ĐI ĐỂ KHÔNG BỊ TRÙNG 2 LỚP
     if (ov && global.tvChart) {
       try {
         var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
         if (!tempStyles.text) tempStyles.text = {};
-        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ trên chart trong suốt
+        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ tàng hình
         global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
       } catch(e) {}
     }
-
-    // ── LƯU LẠI KHI GÕ XONG ──
+  
+    // 4. LƯU LẠI KHI GÕ XONG
     function commit() {
       if (!document.getElementById('wa-text-editor')) return;
       var val = input.value.trim() || 'Văn bản...';
@@ -2158,22 +2179,24 @@
       if (!updatedStyles.text) updatedStyles.text = {};
       if (!updatedStyles.polygon) updatedStyles.polygon = {};
       
-      // Trả lại màu chữ gốc sau khi gõ xong
-      updatedStyles.text.color = curColor; 
+      // Trả lại màu gốc cho chữ
+      updatedStyles.text.color = curColor;
       
       input.remove();
       onConfirm(val, updatedStyles);
     }
-
-    input.addEventListener('blur', commit); // Click ra ngoài là lưu luôn
-    
+  
+    // Click ra ngoài là lưu
+    input.addEventListener('blur', commit);
+  
+    // Nhấn Enter là lưu
     input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { // Bấm Enter là lưu
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         commit();
       }
       if (e.key === 'Escape') {
-        input.value = currentText; 
+        input.value = currentText; // Huỷ sửa, trả về chữ cũ
         commit();
       }
     });
