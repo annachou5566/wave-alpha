@@ -1114,35 +1114,78 @@
       },
 
       // --- BATCH 8: Text Annotation Tools (HỖ TRỢ MULTILINE TỰ ĐỘNG CĂN DÒNG) ---
-      { 
-        name: 'plainText', totalStep: 2, needDefaultPointFigure: true, 
-        styles: { text: { color: '#EAECEF', style: 'normal' }, polygon: { color: 'transparent', borderColor: 'transparent', borderSize: 0 } }, 
-        createPointFigures: function(ref) { 
-            var c = ref.coordinates || []; if (!c.length) return []; 
-            var txt = ref.overlay.extendData || '...'; 
-            var lines = typeof txt === 'string' ? txt.split('\n') : [String(txt)];
-            var os = ref.overlay.styles || {}; var tS = os.text || {}; var pS = os.polygon || {}; 
-            var bgC = (pS.color && pS.color !== 'transparent') ? pS.color : 'transparent'; 
-            var lh = (tS.size || 14) + 6;
-            var figs = [];
-            lines.forEach(function(l, i) {
-                figs.push({ type: 'text', attrs: { x: c[0].x, y: c[0].y + i * lh, text: l, align: 'left', baseline: 'top' }, styles: {
-                  color:           tS.color  || '#EAECEF',
-                  size:            tS.size   || 14,
-                  family:          tS.family || 'Be Vietnam Pro, sans-serif',
-                  weight:          tS.weight || '600',
-                  style:           tS.style  || 'normal',   // ← THÊM DÒNG NÀY
-                  backgroundColor: bgC,
-                  borderColor:     pS.borderColor || 'transparent',
-                  borderSize:      pS.borderSize || 0
-                } });
+      {
+        name: 'plainText',
+        totalStep: 2,
+        needDefaultPointFigure: true,
+        styles: { 
+            text: { color: '#EAECEF', style: 'normal' }, 
+            polygon: { color: 'rgba(30,35,42,0.85)', borderColor: '#474d57', borderSize: 1 } 
+        },
+        createPointFigures: function(ref) {
+          var c = ref.coordinates;
+          if (!c.length) return [];
+          var txt = ref.overlay.extendData;
+          var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
+          
+          var os = ref.overlay.styles;
+          var tS = os && os.text ? os.text : {};
+          var pS = os && os.polygon ? os.polygon : {};
+          
+          var lh = (tS.size || 14) + 6;
+          var pd = 6; // Padding
+          
+          // Tính độ dài chữ lớn nhất để vẽ khung
+          var maxLen = lines.reduce(function(m, l) { return Math.max(m, l.length); }, 1);
+          var bw = maxLen * (tS.size || 14) * 0.6 + pd * 2;
+          var bh = lines.length * lh + pd * 2;
+          
+          var bgC = pS.color && pS.color !== 'transparent' ? pS.color : 'transparent';
+          var bdC = pS.borderColor && pS.borderColor !== 'transparent' ? pS.borderColor : 'transparent';
+          var bdW = pS.borderSize || 0;
+          
+          var figs = [];
+          
+          // Nếu có cài đặt màu viền hoặc nền thì vẽ khung Polygon
+          if (bgC !== 'transparent' || bdC !== 'transparent') {
+              figs.push({
+                type: 'polygon',
+                attrs: { coordinates: [
+                    { x: c[0].x - pd, y: c[0].y - pd },
+                    { x: c[0].x - pd + bw, y: c[0].y - pd },
+                    { x: c[0].x - pd + bw, y: c[0].y - pd + bh },
+                    { x: c[0].x - pd, y: c[0].y - pd + bh }
+                ]},
+                styles: { style: 'stroke_fill', color: bgC, borderColor: bdC, borderSize: bdW },
+                ignoreEvent: true
+              });
+          }
+          
+          lines.forEach(function(l, i) {
+            figs.push({
+              type: 'text',
+              attrs: { x: c[0].x, y: c[0].y + i * lh, text: l, align: 'left', baseline: 'top' },
+              styles: { 
+                color: tS.color || '#EAECEF', 
+                size: tS.size || 14, 
+                family: tS.family || 'Be Vietnam Pro, sans-serif', 
+                weight: tS.weight || '600', 
+                style: tS.style || 'normal',
+                backgroundColor: 'transparent',
+                borderColor: 'transparent',
+                borderSize: 0
+              }
             });
-            return figs; 
-        } 
+          });
+          return figs;
+        }
       },
       { 
         name: 'anchoredText', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true, 
-        styles: { text: { color: '#00F0FF', style: 'normal' }, polygon: { color: 'transparent', borderColor: 'transparent', borderSize: 0 } }, 
+        styles: { 
+          text: { color: '#00F0FF', style: 'normal' }, 
+          polygon: { color: 'rgba(0,240,255,0.1)', borderColor: '#00F0FF', borderSize: 1 } 
+      }, 
         createPointFigures: function(ref) { 
             var c = ref.coordinates || []; if (!c.length) return []; 
             var txt = ref.overlay.extendData || '...'; 
