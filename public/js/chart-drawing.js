@@ -2054,39 +2054,48 @@
     var posX = window.waMouseX;
     var posY = window.waMouseY;
   
-    // 1. TÍNH CHÍNH XÁC 100% TỌA ĐỘ CỦA CHỮ GỐC KHỎI BỊ NHẢY
-    if (ov && ov.points && ov.points[0]) {
-      try {
-        // Tìm an toàn chart instance
-        var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
-        if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
-  
-        if (chartObj && typeof chartObj.convertToPixel === 'function') {
-          var pixel = chartObj.convertToPixel(
-            {
-              dataIndex: ov.points[0].dataIndex,
-              timestamp: ov.points[0].timestamp,
-              value: ov.points[0].value
-            },
-            { paneId: ov.groupId || 'candle_pane' } // Ép tính theo đúng vùng vẽ
-          );
-          
-          var container = document.getElementById('sc-chart-container');
-          if (pixel && container) {
-            var rect = container.getBoundingClientRect();
-            posX = rect.left + pixel.x;
-            posY = rect.top + pixel.y;
-            
-            // Bù trừ tọa độ cho các nhãn đặc thù bị lệch (giữ cho không nhảy)
-            var name = ov.name || toolId;
-            if (name === 'note') { posX += 10; posY += 10; }
-            else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
-            else if (name === 'pin') { posX += 14; posY -= 10; }
-            else if (name === 'priceLabel') { posX += 6; }
+      // 1. TÍNH CHÍNH XÁC 100% TỌA ĐỘ CỦA CHỮ GỐC KHỎI BỊ NHẢY
+  if (ov && ov.points && ov.points[0]) {
+    try {
+      var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
+      if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
+
+      if (chartObj && typeof chartObj.convertToPixel === 'function') {
+        // Tìm đúng ID của pane đang chứa cái khung vẽ đó
+        var targetPaneId = 'candle_pane'; 
+        if (chartObj.getOverlayById) {
+          var overlayInfo = chartObj.getOverlayById(ov.id);
+          if (overlayInfo && overlayInfo.paneId) {
+            targetPaneId = overlayInfo.paneId;
           }
         }
-      } catch(e) { console.log("Lỗi tính vị trí:", e); }
-    }
+
+        // Bỏ { paneId: ... } vào một object options như API của KLineChart yêu cầu
+        var pixel = chartObj.convertToPixel(
+          {
+            dataIndex: ov.points[0].dataIndex,
+            timestamp: ov.points[0].timestamp,
+            value: ov.points[0].value
+          },
+          { finder: { paneId: targetPaneId } } // <--- FIX LỖI TẠI ĐÂY
+        );
+        
+        var container = document.getElementById('sc-chart-container');
+        if (pixel && container) {
+          var rect = container.getBoundingClientRect();
+          posX = rect.left + pixel.x;
+          posY = rect.top + pixel.y;
+          
+          // Bù trừ tọa độ
+          var name = ov.name || toolId;
+          if (name === 'note') { posX += 10; posY += 10; }
+          else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
+          else if (name === 'pin') { posX += 14; posY -= 10; }
+          else if (name === 'priceLabel') { posX += 6; }
+        }
+      }
+    } catch(e) { console.log("Lỗi tính vị trí:", e); }
+  }
   
     // 2. TẠO TEXTAREA VÀ BỎ THUỘC TÍNH TRANSFORM TRÁNH BỊ GIẬT LÊN CAO
     var input = document.createElement('textarea');
