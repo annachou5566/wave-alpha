@@ -2092,15 +2092,18 @@
           posX = window.waMouseX || (window.innerWidth / 2);
           posY = window.waMouseY || (window.innerHeight / 2);
         }
-      } catch(e) { 
-        posX = window.waMouseX || (window.innerWidth / 2);
-        posY = window.waMouseY || (window.innerHeight / 2);
-      }
-    } else {
-      // Sửa lỗi bay ra góc trái: Cập nhật fallback an toàn nhất khi chưa có ov
-      posX = window.waMouseX || (window.innerWidth / 2);
-      posY = window.waMouseY || (window.innerHeight / 2);
+      } catch(e) {
+        posX = window.waMouseX || window.innerWidth / 2;
+        posY = window.waMouseY || window.innerHeight / 2;
     }
+} else {
+    posX = window.waMouseX || window.innerWidth / 2;
+    posY = window.waMouseY || window.innerHeight / 2;
+}
+
+// ✅ THÊM 2 DÒNG NÀY - đảm bảo luôn có giá trị dù convertToPixel trả null
+if (!posX) posX = window.waMouseX || window.innerWidth / 2;
+if (!posY) posY = window.waMouseY || window.innerHeight / 2;
   
     // 2. TẠO TEXTAREA ĐỒNG BỘ FONT SIZE VỚI CANVAS
     var input = document.createElement('textarea');
@@ -2150,21 +2153,16 @@
       this.style.height = this.scrollHeight + 'px';
     });
   
-    // 3. ẨN CHỮ CŨ KHÔNG BỊ LỖI ĐEN XÌ
-    if (ov && global.tvChart) {
-      try {
-        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
-        if (!tempStyles.text) tempStyles.text = {};
-        
-        // MẸO: Lưu lại màu gốc vào một trường tạm để tái sử dụng
-        tempStyles.text._originalColor = tempStyles.text.color; 
-        
-        // Xóa màu chữ chuẩn xác hơn bằng mã rgba(0,0,0,0) (đục suốt)
-        tempStyles.text.color = 'rgba(0,0,0,0)'; 
-        
-        global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
-      } catch(e) {}
-    }
+    // 3. ẨN CHỮ CŨ - CHỈ khi đang SỬA text đã có, KHÔNG chạy khi vẽ mới lần đầu
+if (ov && currentText && currentText !== 'Văn bản...' && global.tvChart) {
+  try {
+      var tempStyles = JSON.parse(JSON.stringify(ov.styles));
+      if (!tempStyles.text) tempStyles.text = {};
+      tempStyles.text.originalColor = tempStyles.text.color;
+      tempStyles.text.color = 'rgba(0,0,0,0)';
+      global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
+  } catch(e) {}
+}
   
     // 4. LƯU LẠI
     function commit() {
