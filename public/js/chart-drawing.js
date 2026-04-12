@@ -3209,14 +3209,11 @@ function hideFloatToolbar() {
 
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
-
   var existingBar = document.getElementById('wa-float-bar');
   var savedLeft = null, savedTop = null;
   if (posX === null && posY === null && existingBar) {
-    savedLeft = existingBar.style.left;
-    savedTop  = existingBar.style.top;
+    savedLeft = existingBar.style.left; savedTop = existingBar.style.top;
   }
-  
   hideFloatToolbar();
 
   var container = document.getElementById('sc-chart-container');
@@ -3224,79 +3221,70 @@ function showFloatToolbar(ov, posX, posY) {
   var rect = container.getBoundingClientRect();
 
   var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : 'lines';
-  var s   = ov.styles || {};
+  var ns = ov.styles || {};
   var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
 
-  // ── Tính Màu chính và Màu nền ────────────────────────────────────
-  var defColor = '#3B82F6';
-  var curColor = defColor;
-  var hasBg = false;
-  var curBg = '';
-
-  if (cat === 'text') {
-    if (s.text && s.text.color) curColor = s.text.color;
-    hasBg = true;
-    if (s.polygon && s.polygon.color) curBg = s.polygon.color; // text background
-  } else if (cat === 'highlighter' || cat === 'brushes') {
-    if (s.polygon && s.polygon.color) curColor = s.polygon.color;
-    else if (s.line && s.line.color) curColor = s.line.color;
-  } else if (cat === 'shapes') {
-    if (s.polygon && s.polygon.borderColor) curColor = s.polygon.borderColor;
-    else if (s.line && s.line.color) curColor = s.line.color;
-    hasBg = true;
-    if (s.polygon && s.polygon.color) curBg = s.polygon.color;
-  } else if (cat === 'fibo') {
-    if (s.line && s.line.color) curColor = s.line.color;
-  } else {
-    if (s.line && s.line.color) curColor = s.line.color;
+  // 1. Trích xuất 3 loại màu dựa trên tool
+  function safeHex(c) {
+    if (!c || c === 'transparent' || c === 'rgba(0,0,0,0)') return '';
+    return (typeof colorToHex === 'function') ? colorToHex(c) : c;
   }
-
-  var c2h = typeof colorToHex === 'function' ? colorToHex(curColor) : curColor;
-  if (c2h) curColor = c2h;
-
-  if (hasBg && curBg && curBg !== 'transparent' && curBg !== 'rgba(0,0,0,0)') {
-    var c2hBg = typeof colorToHex === 'function' ? colorToHex(curBg) : curBg;
-    if (c2hBg && c2hBg !== 'rgba(0,0,0,0)') curBg = c2hBg;
+  var cText = '', cBg = '', cBorder = '';
+  
+  if (cat === 'text') {
+    cText   = safeHex(ns.text && ns.text.color ? ns.text.color : '#E8EDF2');
+    cBg     = safeHex(ns.polygon && ns.polygon.color ? ns.polygon.color : '');
+    cBorder = safeHex(ns.polygon && ns.polygon.borderColor ? ns.polygon.borderColor : '');
+  } else if (cat === 'shapes') {
+    cBorder = safeHex((ns.polygon && ns.polygon.borderColor) || (ns.line && ns.line.color) || '#3B82F6');
+    cBg     = safeHex(ns.polygon && ns.polygon.color ? ns.polygon.color : '');
   } else {
-    curBg = '';
+    cBorder = safeHex(ns.line && ns.line.color ? ns.line.color : '#3B82F6');
   }
 
   var isLocked = !!ov.lock;
   var isHidden = !!ov._hiddenExtSnap || !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
 
-  function fbCpBtn(id, hex, title) {
-    var safeColor = hex || '';
-    var bg = safeColor || 'transparent';
-    return '<div class="_cpb" id="'+id+'" data-cur="'+safeColor+'" title="'+title+'" style="margin: 0 2px; width:22px; height:22px; border-radius:4px; flex-shrink:0; border: 1.5px solid #273040; cursor: pointer; position: relative; overflow: hidden;">'
-         + '<div class="_cpbg" style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#111827 25%,transparent 25%,transparent 75%,#111827 75%,#111827),repeating-linear-gradient(45deg,#111827 25%,#1A202C 25%,#1A202C 75%,#111827 75%,#111827);background-position:0 0,4px 4px;background-size:8px 8px;z-index:0"></div>'
-         + '<div class="_cpf" id="_cpfc_'+id+'" style="position:absolute;inset:0;z-index:1;background:'+bg+'"></div>'
-         + '</div>';
-  }
-
-  var html = '';
+  // 2. Icon SVGs & Hàm tạo Nút Màu xịn xò (Có dải màu dưới chân icon)
+  var svgText   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>';
+  var svgBg     = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11l-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="M5 2l5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/></svg>';
+  var svgBorder = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+  
   var dragSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
   var editSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
+  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
   var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   var eyeHide  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   var lockOn   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
   var lockOff  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
   var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
 
-  html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
-  html += '<div class="wa-fb-sep"></div>';
-
-  html += fbCpBtn('wa-fb-main-color', curColor, 'Màu chính');
-  if (hasBg) {
-    html += fbCpBtn('wa-fb-bg-color', curBg, 'Màu nền');
+  function fbCpBtn(id, hex, iconSvg, title) {
+    var bgSt = hex ? ('background:'+hex+';border:none;') : 'background:linear-gradient(to top right, transparent 40%, #F23645 40%, #F23645 60%, transparent 60%);border:1px solid rgba(255,255,255,0.1);';
+    return '<button class="wa-fb-btn" id="'+id+'" data-cur="'+(hex||'')+'" title="'+title+'" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0; width:28px; height:28px;">'
+         + '<div style="flex:1; display:flex; align-items:center; justify-content:center; pointer-events:none; margin-top:2px;">' + iconSvg + '</div>'
+         + '<div id="_cpfc_'+id+'" style="width:16px; height:4px; border-radius:2px; margin-bottom:4px; flex-shrink:0; box-sizing:border-box; pointer-events:none; '+bgSt+'"></div>'
+         + '</button>';
   }
+
+  // 3. Build DOM cho Toolbar
+  var html = '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
   html += '<div class="wa-fb-sep"></div>';
 
   if (cat === 'text') {
-    html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">'+editSVG+'</button>';
+    html += fbCpBtn('wa-fb-cp-text', cText, svgText, 'Màu chữ');
+    html += fbCpBtn('wa-fb-cp-bg', cBg, svgBg, 'Màu nền');
+    html += fbCpBtn('wa-fb-cp-border', cBorder, svgBorder, 'Màu viền khung');
     html += '<div class="wa-fb-sep"></div>';
+    html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">'+editSVG+'</button>';
+  } else if (cat === 'shapes') {
+    html += fbCpBtn('wa-fb-cp-border', cBorder, svgBorder, 'Màu viền');
+    html += fbCpBtn('wa-fb-cp-bg', cBg, svgBg, 'Màu nền');
+  } else {
+    html += fbCpBtn('wa-fb-cp-border', cBorder, svgBorder, 'Màu nét / viền');
   }
 
+  html += '<div class="wa-fb-sep"></div>';
   html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">'+gearSVG+'</button>';
   html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
   html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
@@ -3306,66 +3294,170 @@ function showFloatToolbar(ov, posX, posY) {
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
   bar.innerHTML = html;
-
   bar.style.visibility = 'hidden';
-  bar.style.opacity    = '0';
-  bar.style.transform  = 'translateY(6px) scale(0.97)';
+  bar.style.opacity = '0';
+  bar.style.transform = 'translateY(6px) scale(0.97)';
   bar.style.transition = 'none';
   container.appendChild(bar);
 
-  if (!window._fbPopDocEvent) {
-    window._fbPopDocEvent = true;
-    document.addEventListener('mousedown', function(ev) {
-      var pop = document.getElementById('_fb_pop');
-      if (pop && !pop.contains(ev.target) && !ev.target.closest('._cpb')) {
-        pop.remove();
-        window._aFB_CP = null;
-      }
-    });
-    
+  // Nhúng Style an toàn cho Popup Màu (đẹp chuẩn như Cài Đặt)
+  if (!document.getElementById('wa-fb-pop-style')) {
     var st = document.createElement('style');
+    st.id = 'wa-fb-pop-style';
     st.innerHTML = '._pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:9px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.92);width:218px}._pg{display:grid;grid-template-columns:repeat(10, 1fr);gap:4px}._pc{width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(255,255,255,.18);cursor:pointer;transition:transform .12s, border-color .12s}._pc:hover{transform:scale(1.5);border-color:rgba(255,255,255,.8);z-index:3}._pc.on{border-color:#3B82F6;z-index:2}._ph{margin-top:10px;display:flex;align-items:center;gap:8px;height:28px;border:1px solid #1E2A3A;border-radius:6px;background:#080D12;padding:0 8px}._ph:focus-within{border-color:#3B82F6}._phi{flex:1;background:transparent;border:none;color:#E8EDF2;font-size:11px;outline:none;font-family:monospace;text-transform:uppercase;min-width:0}';
     document.head.appendChild(st);
   }
+  if (!window._fbPopBound) {
+    window._fbPopBound = true;
+    document.addEventListener('mousedown', function(ev) {
+      var pop = document.getElementById('_fb_pop');
+      if (pop && !pop.contains(ev.target) && !ev.target.closest('.wa-fb-btn')) { pop.remove(); window._fbActiveCP = null; }
+    });
+  }
 
   requestAnimationFrame(function() {
+    // Positioning
     if (savedLeft !== null) {
-      bar.style.left       = savedLeft;
-      bar.style.top        = savedTop;
-      bar.style.visibility = 'visible';
-      bar.style.transition = 'none';
-      bar.style.opacity    = '1';
-      bar.style.transform  = 'translateY(0) scale(1)';
+      bar.style.left = savedLeft; bar.style.top = savedTop;
+      bar.style.visibility = 'visible'; bar.style.transition = 'none';
+      bar.style.opacity = '1'; bar.style.transform = 'translateY(0) scale(1)';
       bar.classList.add('wa-fb-show');
     } else {
-      var bW = bar.offsetWidth || 180;
-      var bH = bar.offsetHeight || 40;
-      var MARGIN = 6;
-      var BAR_OFFSET_Y = 50;
+      var bW = bar.offsetWidth || 180, bH = bar.offsetHeight || 40;
+      var MARGIN = 6, BAR_OFFSET_Y = 50;
       var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
-      
-      var cx = (posX != null ? posX : (_fbX - rect.left));
-      var cy = (posY != null ? posY : (_fbY - rect.top));
-      
-      var left = cx - bW / 2;
-      var top  = cy - BAR_OFFSET_Y;
-      
+      var cx = (posX != null ? posX : (_fbX - rect.left)), cy = (posY != null ? posY : (_fbY - rect.top));
+      var left = cx - bW / 2, top = cy - BAR_OFFSET_Y;
       if (top < MARGIN) top = cy + 16;
       if (top + bH > rect.height - MARGIN - safeBottom) top = rect.height - bH - MARGIN - safeBottom;
       left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
-      
-      bar.style.left = left + 'px';
-      bar.style.top  = top  + 'px';
-      
+      bar.style.left = left + 'px'; bar.style.top = top + 'px';
       bar.style.visibility = 'visible';
       bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
       requestAnimationFrame(function() {
-        bar.style.opacity   = '1';
-        bar.style.transform = 'translateY(0) scale(1)';
+        bar.style.opacity = '1'; bar.style.transform = 'translateY(0) scale(1)';
         bar.classList.add('wa-fb-show');
       });
     }
 
+    // Bind Color Pickers Logic
+    function bindColorPicker(btnId, onChange) {
+      var btn = bar.querySelector('#'+btnId);
+      if (!btn) return;
+      btn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        var existingPop = document.getElementById('_fb_pop');
+        if (existingPop) { existingPop.remove(); if (window._fbActiveCP === btnId) { window._fbActiveCP = null; return; } }
+        window._fbActiveCP = btnId;
+        
+        var curHex = btn.dataset.cur || '';
+        var pop = document.createElement('div');
+        pop.id = '_fb_pop'; pop.className = '_pop';
+        
+        var PAL = [
+          ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
+          ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
+          ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
+          ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
+          ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
+          ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
+          ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
+          ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
+        ];
+        
+        var gh = '<div class="_pg"><div class="_pc'+(!curHex?' on':'')+'" style="background:repeating-linear-gradient(-45deg,#111827 0 4px,#1F2937 4px 8px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);" data-c="" title="Trong suốt / Tắt"></div>';
+        PAL.forEach(function(row){ row.forEach(function(cl){
+          gh += '<div class="_pc'+((curHex&&cl.toUpperCase()===curHex.toUpperCase())?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
+        }); });
+        gh += '</div><div class="_ph">'
+            + '<span style="color:#4A5568;font-family:monospace;font-weight:800;font-size:11px;user-select:none">#</span>'
+            + '<input class="_phi" id="_phi_'+btnId+'" maxlength="6" value="'+(curHex?curHex.slice(1).toUpperCase():'')+'">'
+            + '</div>';
+        pop.innerHTML = gh;
+        document.body.appendChild(pop);
+
+        var br = btn.getBoundingClientRect();
+        var pT = br.bottom+5, pL = br.left;
+        if (pT+250 > window.innerHeight) pT = br.top-254;
+        if (pL+222 > window.innerWidth) pL = window.innerWidth-224;
+        pop.style.left = Math.max(4, pL)+'px'; pop.style.top = Math.max(4, pT)+'px';
+
+        function applyC(hex) {
+          var fEl = document.getElementById('_cpfc_'+btnId);
+          if (fEl) {
+            if (hex) { fEl.style.background = hex; fEl.style.border = 'none'; }
+            else { fEl.style.background = 'linear-gradient(to top right, transparent 40%, #F23645 40%, #F23645 60%, transparent 60%)'; fEl.style.border = '1px solid rgba(255,255,255,0.1)'; }
+          }
+          btn.dataset.cur = hex;
+          pop.querySelectorAll('._pc').forEach(function(c){
+            c.classList.toggle('on', (c.dataset.c||'').toUpperCase()===(hex||'').toUpperCase());
+          });
+          var phi = document.getElementById('_phi_'+btnId);
+          if (phi) phi.value = hex ? hex.slice(1).toUpperCase() : '';
+          onChange(hex);
+        }
+
+        pop.querySelectorAll('._pc').forEach(function(c){
+          c.addEventListener('mousedown', function(e){ e.stopPropagation(); applyC(this.dataset.c); });
+        });
+        var phi = document.getElementById('_phi_'+btnId);
+        if (phi) {
+          phi.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          phi.addEventListener('input', function(){
+            var v = this.value.replace(/[^0-9a-fA-F]/g,''); this.value = v;
+            if (v.length === 6) applyC('#'+v);
+            else if (!v.length) applyC('');
+          });
+        }
+      });
+    }
+
+    // Callbacks xử lý đổi màu cho từng loại: CHỮ / VIỀN / NỀN
+    bindColorPicker('wa-fb-cp-text', function(hex) {
+      if (!global.tvChart) return;
+      var objS = JSON.parse(JSON.stringify(ov.styles || {}));
+      if (!objS.text) objS.text = {};
+      objS.text.color = hex || 'rgba(0,0,0,0)';
+      ov.styles = objS; global.tvChart.overrideOverlay({ id: ov.id, styles: objS });
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+    });
+
+    bindColorPicker('wa-fb-cp-border', function(hex) {
+      if (!global.tvChart) return;
+      var objS = JSON.parse(JSON.stringify(ov.styles || {}));
+      if (cat === 'shapes' || cat === 'text') {
+        if (!objS.polygon) objS.polygon = {};
+        objS.polygon.borderColor = hex || 'transparent';
+      }
+      if (cat !== 'text') {
+        if (!objS.line) objS.line = {};
+        objS.line.color = hex || 'transparent';
+      }
+      ov.styles = objS; global.tvChart.overrideOverlay({ id: ov.id, styles: objS });
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+    });
+
+    bindColorPicker('wa-fb-cp-bg', function(hex) {
+      if (!global.tvChart) return;
+      var objS = JSON.parse(JSON.stringify(ov.styles || {}));
+      if (!objS.polygon) objS.polygon = {};
+      if (!hex) {
+        objS.polygon.color = 'transparent';
+      } else {
+        var a = (cat === 'text') ? 1 : 0.15;
+        if (ov.styles && ov.styles.polygon && ov.styles.polygon.color && ov.styles.polygon.color !== 'transparent') {
+          var m = String(ov.styles.polygon.color).match(/rgba\([^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+)\)/);
+          if (m) a = parseFloat(m[1]);
+        }
+        var r = parseInt(hex.slice(1,3), 16)||0, g = parseInt(hex.slice(3,5), 16)||0, b = parseInt(hex.slice(5,7), 16)||0;
+        objS.polygon.color = 'rgba('+r+','+g+','+b+','+a+')';
+        if (cat === 'shapes') objS.polygon.style = 'strokefill';
+      }
+      ov.styles = objS; global.tvChart.overrideOverlay({ id: ov.id, styles: objS, extendData: ov.extendData });
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+    });
+
+    // Các tính năng cơ bản
     bar.querySelector('#wa-fb-vis').addEventListener('click', function() { _fbToggleVisible(ov); });
     bar.querySelector('#wa-fb-cfg').addEventListener('click', function() { if (typeof renderPanel === 'function') renderPanel(ov); });
     bar.querySelector('#wa-fb-lk').addEventListener('click', function() { _fbToggleLock(ov); });
@@ -3397,105 +3489,6 @@ function showFloatToolbar(ov, posX, posY) {
       });
     }
 
-    function _bindFBCP(btnId, onChange) {
-      var btn = bar.querySelector('#'+btnId);
-      if (!btn) return;
-      btn.addEventListener('click', function(ev) {
-        ev.stopPropagation();
-        var p = document.getElementById('_fb_pop');
-        if (p) { p.remove(); if(window._aFB_CP === btnId) { window._aFB_CP=null; return; } }
-        window._aFB_CP = btnId;
-        
-        var curHex = btn.dataset.cur || '#3B82F6';
-        if (curHex === 'transparent' || curHex === 'rgba(0,0,0,0)') curHex = '';
-        var pop = document.createElement('div');
-        pop.id = '_fb_pop'; pop.className = '_pop';
-        
-        var gh = '<div class="_pg"><div class="_pc'+(!curHex?' on':'')+'" style="background:repeating-linear-gradient(-45deg,#111827 0 4px,#1F2937 4px 8px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);" data-c="" title="Không màu"></div>';
-        var PAL = [
-          ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
-          ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
-          ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
-          ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
-          ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
-          ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
-          ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
-          ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
-        ];
-        PAL.forEach(function(row){ row.forEach(function(cl){
-          gh += '<div class="_pc'+(curHex&&cl.toUpperCase()===curHex.toUpperCase()?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
-        }); });
-        gh += '</div><div class="_ph">'
-            + '<span style="color:#4A5568;font-family:monospace;font-weight:800;font-size:11px;user-select:none">#</span>'
-            + '<input class="_phi" id="_phi_'+btnId+'" maxlength="6" value="'+(curHex?curHex.slice(1).toUpperCase():'')+'">'
-            + '</div>';
-        pop.innerHTML = gh;
-        document.body.appendChild(pop);
-
-        var br = btn.getBoundingClientRect();
-        var top = br.bottom+5, left = br.left;
-        if (top+250 > window.innerHeight) top = br.top-254;
-        if (left+222 > window.innerWidth)  left = window.innerWidth-224;
-        pop.style.left = Math.max(4,left)+'px';
-        pop.style.top  = Math.max(4,top)+'px';
-
-        function applyC(hex) {
-          var fEl = document.getElementById('_cpfc_'+btnId);
-          if (fEl) fEl.style.background = hex || 'transparent';
-          btn.dataset.cur = hex;
-          pop.querySelectorAll('._pc').forEach(function(c){
-            c.classList.toggle('on', (c.dataset.c||'').toUpperCase()===(hex||'').toUpperCase());
-          });
-          var phi = document.getElementById('_phi_'+btnId);
-          if (phi) phi.value = hex ? hex.slice(1).toUpperCase() : '';
-          onChange(hex);
-        }
-
-        pop.querySelectorAll('._pc').forEach(function(c){
-          c.addEventListener('mousedown', function(e){ e.stopPropagation(); applyC(this.dataset.c); });
-        });
-        var phi = document.getElementById('_phi_'+btnId);
-        if (phi) {
-          phi.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-          phi.addEventListener('input', function(){
-            var v = this.value.replace(/[^0-9a-fA-F]/g,''); this.value = v;
-            if (v.length === 6) applyC('#'+v);
-            if (!v.length) applyC('');
-          });
-        }
-      });
-    }
-
-    _bindFBCP('wa-fb-main-color', function(hex) {
-      if (typeof _fbSetColor === 'function') _fbSetColor(ov, cat, hex || '#3B82F6');
-    });
-
-    _bindFBCP('wa-fb-bg-color', function(hex) {
-      if (!global.tvChart || !ov) return;
-      var ns = JSON.parse(JSON.stringify(ov.styles || {}));
-      if (!ns.polygon) ns.polygon = {};
-      
-      if (!hex) {
-        ns.polygon.color = 'transparent';
-      } else {
-        var defA = (cat === 'text') ? 1 : 0.15;
-        var cA = defA;
-        if (ov.styles && ov.styles.polygon && ov.styles.polygon.color) {
-          var m = ov.styles.polygon.color.match(/rgba\([^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+)\)/);
-          if (m) cA = parseFloat(m[1]);
-          else if (ov.styles.polygon.color !== 'transparent') cA = 1;
-        }
-        var r = parseInt(hex.slice(1,3), 16)||0, g = parseInt(hex.slice(3,5), 16)||0, b = parseInt(hex.slice(5,7), 16)||0;
-        ns.polygon.color = 'rgba('+r+','+g+','+b+','+cA+')';
-        if (cat === 'shapes') ns.polygon.style = 'strokefill';
-      }
-      
-      ov.styles = ns;
-      global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-      if (typeof saveAllOverlays === 'function') saveAllOverlays();
-      if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
-    });
-
     var dragHandle = bar.querySelector('#wa-fb-drag');
     if (dragHandle) {
       var isDragging = false, startX, startY, initLeft, initTop;
@@ -3506,9 +3499,8 @@ function showFloatToolbar(ov, posX, posY) {
       });
       document.addEventListener('mousemove', function(e) {
         if (!isDragging) return;
-        var dx = e.clientX - startX, dy = e.clientY - startY;
-        bar.style.left = (initLeft + dx) + 'px';
-        bar.style.top = (initTop + dy) + 'px';
+        bar.style.left = (initLeft + e.clientX - startX) + 'px';
+        bar.style.top = (initTop + e.clientY - startY) + 'px';
       });
       document.addEventListener('mouseup', function() {
         if (isDragging) {
@@ -3520,41 +3512,12 @@ function showFloatToolbar(ov, posX, posY) {
   });
 }
 
-function _fbSetColor(ov, cat, hex) {
-  if (!global.tvChart || !ov) return;
-  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
-  if (cat === 'text')        { if (!ns.text)    ns.text    = {}; ns.text.color          = hex; }
-  else if (cat === 'shapes') { if (!ns.polygon) ns.polygon = {}; ns.polygon.borderColor = hex; if(!ns.line) ns.line={}; ns.line.color=hex; }
-  else                       { if (!ns.line)    ns.line    = {}; ns.line.color           = hex; }
-  ov.styles = ns;
-  global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-  if (typeof saveAllOverlays === 'function') saveAllOverlays();
-  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
-}
-
-function _fbSetLineWidth(ov, w) {
-  if (!global.tvChart || !ov) return;
-  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
-  if (!ns.line) ns.line = {};
-  ns.line.size = w;
-  ov.styles = ns;
-  global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-  if (typeof saveAllOverlays === 'function') saveAllOverlays();
-}
-
-function _fbSetLineStyle(ov, style) {
-  if (!global.tvChart || !ov) return;
-  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
-  if (!ns.line) ns.line = {};
-  ns.line.style = style;
-  ov.styles = ns;
-  global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-  if (typeof saveAllOverlays === 'function') saveAllOverlays();
-}
+function _fbSetColor(ov, cat, hex) { /* Hàm rỗng để tránh lỗi nếu có chỗ khác gọi */ }
+function _fbSetLineWidth(ov, w) { /* Hàm rỗng để tránh lỗi nếu có chỗ khác gọi */ }
+function _fbSetLineStyle(ov, style) { /* Hàm rỗng để tránh lỗi nếu có chỗ khác gọi */ }
 
 function _fbToggleVisible(ov) {
   if (!global.tvChart || !ov) return;
-
   var isTextOverlay = (ov.name === 'text') || (typeof ov.extendData === 'string');
   var wasHidden = !!ov._hiddenExtSnap || !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
 
@@ -3568,33 +3531,20 @@ function _fbToggleVisible(ov) {
   if (!wasHidden) {
     ov._hiddenExtSnap = typeof ov.extendData === 'undefined' ? '' : JSON.parse(JSON.stringify(ov.extendData));
     ov._hiddenStyleSnap = JSON.parse(JSON.stringify(ov.styles || {}));
-
-    ns.line.color = 'rgba(0,0,0,0)';
-    ns.polygon.color = 'rgba(0,0,0,0)';
-    ns.polygon.borderColor = 'rgba(0,0,0,0)';
-    ns.text.color = 'rgba(0,0,0,0)';
+    ns.line.color = 'rgba(0,0,0,0)'; ns.polygon.color = 'rgba(0,0,0,0)';
+    ns.polygon.borderColor = 'rgba(0,0,0,0)'; ns.text.color = 'rgba(0,0,0,0)';
     ns.text.backgroundColor = 'rgba(0,0,0,0)';
-
     if (!isTextOverlay) {
       ext = (typeof ov.extendData === 'object' && ov.extendData) ? JSON.parse(JSON.stringify(ov.extendData)) : {};
-      ext._hidden = true;
-      ext.fillOpacity = 0;
-    } else {
-      ext = ov.extendData; 
-    }
+      ext._hidden = true; ext.fillOpacity = 0;
+    } else { ext = ov.extendData; }
   } else {
     ext = typeof ov._hiddenExtSnap === 'undefined' ? ov.extendData : JSON.parse(JSON.stringify(ov._hiddenExtSnap));
     ns = ov._hiddenStyleSnap ? JSON.parse(JSON.stringify(ov._hiddenStyleSnap)) : ns;
-    if (!isTextOverlay && ext && typeof ext === 'object') {
-      ext._hidden = false;
-    }
-    delete ov._hiddenExtSnap;
-    delete ov._hiddenStyleSnap;
+    if (!isTextOverlay && ext && typeof ext === 'object') ext._hidden = false;
+    delete ov._hiddenExtSnap; delete ov._hiddenStyleSnap;
   }
-
-  ov.extendData = ext;
-  ov.styles = ns;
-
+  ov.extendData = ext; ov.styles = ns;
   global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
