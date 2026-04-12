@@ -2666,12 +2666,12 @@ onDrawEnd: function(event) {
     function _off() { _H.forEach(function(h){ h[0].removeEventListener(h[1], h[2], false); }); _H = []; var p=document.getElementById('_rp_pop'); if(p) p.remove(); }
     panel._rpCleanup = _off;
 
-    // 2. CSS (Tự động co giãn, không bị cắt viền, không thanh cuộn)
+    // 2. CSS UI Minimalist tự động co giãn
     if (!document.getElementById('_rp_css_flex')) {
       var _css = document.createElement('style');
       _css.id = '_rp_css_flex';
       _css.innerHTML = 
-        ".wa-props-panel{display:flex!important;flex-direction:column!important;box-shadow:0 10px 40px rgba(0,0,0,0.8)!important;border:1px solid rgba(255,255,255,0.1)!important;border-radius:12px!important;background:#151B23!important;width:auto!important;min-width:240px;max-width:90vw;overflow:visible!important}" +
+        ".wa-props-panel{display:flex!important;flex-direction:column!important;box-shadow:0 12px 48px rgba(0,0,0,0.8)!important;border:1px solid rgba(255,255,255,0.08)!important;border-radius:12px!important;background:#151B23!important;width:auto!important;min-width:260px;max-width:92vw;overflow:visible!important}" +
         ".wa-panel-header{background:transparent!important;border-bottom:1px solid rgba(255,255,255,0.05)!important;padding:12px 14px!important}" +
         ".wa-panel-title{font-size:14px!important;font-weight:600!important;color:#E8EDF2!important}" +
         ".wa-close-btn{color:#8896A7!important;transition:color 0.2s}" +
@@ -2683,15 +2683,15 @@ onDrawEnd: function(event) {
         "._r{display:flex;justify-content:space-between;align-items:center;padding:4px 0;width:100%}" +
         "._c_lbl{font-size:12px;color:#A0AEC0;white-space:nowrap;margin-right:12px;flex-shrink:0}" +
         "._c_ctrl{display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end}" +
-        "._sel{width:auto;min-width:80px;max-width:140px;height:26px;background:#1E2532;border:1px solid rgba(255,255,255,0.1);color:#E8EDF2;padding:0 24px 0 8px;border-radius:6px;font-size:12px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%238896A7'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;text-overflow:ellipsis}" +
+        "._sel{width:auto;min-width:60px;max-width:140px;height:26px;background:#1E2532;border:1px solid rgba(255,255,255,0.1);color:#E8EDF2;padding:0 22px 0 8px;border-radius:6px;font-size:12px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%238896A7'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;text-overflow:ellipsis}" +
         "._sel:focus{border-color:#3B82F6}" +
         "._ta{width:100%;background:#1E2532;border:1px solid rgba(255,255,255,0.1);color:#E8EDF2;padding:8px 10px;border-radius:6px;font-size:13px;outline:none;resize:vertical;min-height:45px;margin-bottom:6px}" +
         "._ta:focus{border-color:#3B82F6}" +
-        "._rng{flex:1;width:100px;max-width:140px;-webkit-appearance:none;height:2px;background:rgba(255,255,255,0.15);border-radius:1px;outline:none;cursor:pointer}" +
+        "._rng{flex:1;width:80px;max-width:130px;-webkit-appearance:none;height:2px;background:rgba(255,255,255,0.15);border-radius:1px;outline:none;cursor:pointer}" +
         "._rng::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#3B82F6;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.5)}" +
         "._rv{font-size:11px;color:#3B82F6;min-width:28px;text-align:right;font-weight:600;font-family:monospace}" +
         "._seg{display:flex;background:#1E2532;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:2px;gap:2px;height:26px}" +
-        "._segb{border:none;background:transparent;color:#8896A7;cursor:pointer;border-radius:4px;font-size:11px;font-weight:500;padding:0 8px;min-width:30px;display:flex;align-items:center;justify-content:center}" +
+        "._segb{border:none;background:transparent;color:#8896A7;cursor:pointer;border-radius:4px;font-size:11px;font-weight:500;padding:0 8px;min-width:32px;display:flex;align-items:center;justify-content:center}" +
         "._segb.on{background:#3B82F6;color:#fff}" +
         "._tog{width:34px;height:20px;border-radius:10px;background:rgba(255,255,255,0.1);position:relative;cursor:pointer;transition:0.2s;flex-shrink:0}" +
         "._tog::after{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:3px;left:3px;transition:0.2s;box-shadow:0 1px 2px rgba(0,0,0,0.2)}" +
@@ -2739,15 +2739,14 @@ onDrawEnd: function(event) {
     function sel(id, opts, cur) { return '<select class="_sel" id="'+id+'">'+opts.map(function(o){ return '<option value="'+o.v+'"'+(String(o.v)===String(cur)?' selected':'')+'>'+o.n+'</option>'; }).join('')+'</select>'; }
     function cpBtn(id, hex) { var safe = hex||''; return '<div class="_cpb" data-cp="'+id+'" data-cur="'+safe+'"><div class="_cpbg"></div><div class="_cpf" id="_cpfc_'+id+'" style="background:'+(safe||'transparent')+'"></div></div>'; }
     
-    function item(lbl, ctrlStr) {
-      return '<div class="_r"><span class="_c_lbl">'+lbl+'</span><div class="_c_ctrl">'+ctrlStr+'</div></div>';
-    }
+    function item(lbl, ctrlStr) { return '<div class="_r"><span class="_c_lbl">'+lbl+'</span><div class="_c_ctrl">'+ctrlStr+'</div></div>'; }
     function sec(title, inner) { return '<div class="_s">'+(title?'<div class="_sh">'+title+'</div>':'')+'<div class="_sb">'+inner+'</div></div>'; }
 
+    // ĐÃ TRẢ LẠI ICON SVG NÉT ĐỨT / LIỀN CỰC RÕ RÀNG
     var LS = [
-      { v:'solid',  l:'<svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="currentColor" stroke-width="2"/></svg>' },
-      { v:'dashed', l:'<svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2"/></svg>' },
-      { v:'dotted', l:'<svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"/></svg>' }
+      { v:'solid',  l:'<svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2.5"/></svg>' },
+      { v:'dashed', l:'<svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg>' },
+      { v:'dotted', l:'<svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1.5 3"/></svg>' }
     ];
     var FONTS = [{v:'Be Vietnam Pro, sans-serif', n:'Be VN Pro'},{v:'Inter, sans-serif',n:'Inter'},{v:'Arial, sans-serif',n:'Arial'}];
     var SIZES = [{v:10,n:'10px'},{v:12,n:'12px'},{v:14,n:'14px'},{v:16,n:'16px'},{v:20,n:'20px'},{v:24,n:'24px'}];
@@ -2758,7 +2757,9 @@ onDrawEnd: function(event) {
       if (cat === 'text') {
         var stxt=s.text||{}, spoly=s.polygon||{}, txt=typeof rawExt==='string'?rawExt:(typeof ext.text==='string'?ext.text:'');
         var tc=safeHex(stxt.color,'#E8EDF2'), ff=stxt.family||'Be Vietnam Pro, sans-serif', sz=stxt.size||13, fw=stxt.weight||'normal', fi=stxt.style||'normal';
-        var bgHex=safeHex(spoly.color,'#151B23'), bgA=toAlpha(spoly.color,0), bdHex=safeHex(spoly.borderColor,'#273040'), bdW=spoly.borderSize||1, bdA=toAlpha(spoly.borderColor,1), bdOn=!!(spoly.borderSize&&spoly.borderColor&&spoly.borderColor!=='transparent');
+        var bgHex=safeHex(spoly.color,'#151B23'), bgA=toAlpha(spoly.color,0);
+        var bdHex=safeHex(spoly.borderColor,'#273040'), bdW=spoly.borderSize||1, bdA=toAlpha(spoly.borderColor,1), bs=spoly.borderStyle||'solid';
+        var bdOn=!!(spoly.borderSize&&spoly.borderColor&&spoly.borderColor!=='transparent');
 
         html += sec('', '<textarea id="_rp_txt" class="_ta" placeholder="Nội dung...">'+txt+'</textarea>');
         html += sec('Kiểu chữ',
@@ -2769,33 +2770,32 @@ onDrawEnd: function(event) {
           item('Màu nền', cpBtn('c_bgc',bgHex) + rng('_rp_bga',0,1,0.05,bgA)) +
           item('Bật viền khung', tog('_rp_bdon', bdOn)) +
           '<div id="_rp_bdbox" style="'+(bdOn?'':'display:none')+'">' +
-          item('Viền', cpBtn('c_bdc',bdHex) + sel('_rp_bdw',W_OPTS,bdW)) +
+          item('Màu / Nét viền', cpBtn('c_bdc',bdHex) + seg('_rp_bs',LS,bs) + sel('_rp_bdw',W_OPTS,bdW)) +
           item('Độ mờ viền', rng('_rp_bda',0,1,0.05,bdA)) +
           '</div>'
         );
       } else if (cat === 'shapes') {
         var spoly=s.polygon||{}, sline=s.line||{};
-        var bc=safeHex(spoly.borderColor,'#3B82F6'), bw=spoly.borderSize||1, bo=toAlpha(spoly.borderColor,1), bs=sline.style||'solid', fcHex=safeHex(spoly.color,'#3B82F6'), fa=toAlpha(spoly.color,0.15);
+        var bc=safeHex(spoly.borderColor,'#3B82F6'), bw=spoly.borderSize||1, bo=toAlpha(spoly.borderColor,1), bs=spoly.borderStyle||sline.style||'solid', fcHex=safeHex(spoly.color,'#3B82F6'), fa=toAlpha(spoly.color,0.15);
 
         html += sec('Hình học',
           item('Màu nền', cpBtn('c_fc',fcHex) + rng('_rp_fa',0,1,0.05,fa)) +
           item('Màu viền', cpBtn('c_bc',bc) + rng('_rp_bo',0,1,0.05,bo)) +
-          item('Kiểu nét viền', seg('_rp_bs',LS,bs) + sel('_rp_bw',W_OPTS,bw))
+          item('Nét viền', seg('_rp_bs',LS,bs) + sel('_rp_bw',W_OPTS,bw))
         );
       } else if (cat === 'fibo') {
         var sline=s.line||{}, lc=safeHex(sline.color,'#E8EDF2'), lw=sline.size||1, ls=sline.style||'solid', lo=toAlpha(sline.color,1), fa=(ext.fillOpacity!==undefined)?ext.fillOpacity:0.15, slbl=(ext.showLabels!==false);
 
         html += sec('Công cụ Fibo',
-          item('Màu đường', cpBtn('c_lc',lc) + rng('_rp_lo',0,1,0.05,lo)) +
+          item('Đường Fibo', cpBtn('c_lc',lc) + rng('_rp_lo',0,1,0.05,lo)) +
           item('Nét vẽ', seg('_rp_ls',LS,ls) + sel('_rp_lw',W_OPTS,lw)) +
-          item('Độ mờ nền vùng', rng('_rp_fa',0,0.5,0.01,fa)) +
-          item('Hiển thị Nhãn %', tog('_rp_slbl',slbl))
+          item('Nền / Nhãn', rng('_rp_fa',0,0.5,0.01,fa) + tog('_rp_slbl',slbl))
         );
       } else {
         var sline=s.line||{}, lc=safeHex(sline.color,'#3B82F6'), lw=sline.size||1, ls=sline.style||'solid', lo=toAlpha(sline.color,1);
         html += sec('Đường Line',
           item('Màu sắc', cpBtn('c_lc',lc) + rng('_rp_lo',0,1,0.05,lo)) +
-          item('Kiểu nét vẽ', seg('_rp_ls',LS,ls) + sel('_rp_lw',W_OPTS,lw))
+          item('Nét vẽ', seg('_rp_ls',LS,ls) + sel('_rp_lw',W_OPTS,lw))
         );
       }
     } catch(e) { html = '<div style="color:red;padding:10px">Lỗi hiển thị</div>'; }
@@ -2878,6 +2878,22 @@ onDrawEnd: function(event) {
     function gTog(id){ var e=document.getElementById(id); return e?e.classList.contains('on'):false; }
     function gTa(id) { var e=document.getElementById(id); return e?e.value:null; }
 
+    // HÀM HỖ TRỢ XỬ LÝ CHUẨN NÉT ĐỨT CHO KLINECHART (Khắc phục lỗi Hình khối không nhận nét đứt)
+    function setLineStyle(target, bs) {
+      if (!target) return;
+      var style = bs === 'dotted' ? 'dashed' : bs;
+      var val = bs === 'dashed' ? [6,4] : (bs === 'dotted' ? [2,2] : null);
+      target.style = style;
+      if (val) target.dashedValue = val; else delete target.dashedValue;
+    }
+    function setPolyBorderStyle(target, bs) {
+      if (!target) return;
+      var style = bs === 'dotted' ? 'dashed' : bs;
+      var val = bs === 'dashed' ? [6,4] : (bs === 'dotted' ? [2,2] : null);
+      target.borderStyle = style;
+      if (val) target.borderDashedValue = val; else delete target.borderDashedValue;
+    }
+
     var _uiT, _svT;
     function doAction() {
       clearTimeout(_uiT); clearTimeout(_svT);
@@ -2893,13 +2909,14 @@ onDrawEnd: function(event) {
 
         if (cat === 'text') {
           var tc=gCP('c_tc'), ff=gSel('_rp_ff'), sz=gSel('_rp_sz'), fw=gSeg('_rp_fw'), fi=gSeg('_rp_fi');
-          var bgC=gCP('c_bgc'), bgA=gRng('_rp_bga'), bdOn=gTog('_rp_bdon'), bdC=gCP('c_bdc'), bdW=gSel('_rp_bdw'), bdA=gRng('_rp_bda'), txt=gTa('_rp_txt');
+          var bgC=gCP('c_bgc'), bgA=gRng('_rp_bga'), bdOn=gTog('_rp_bdon'), bdC=gCP('c_bdc'), bdW=gSel('_rp_bdw'), bdA=gRng('_rp_bda'), bs=gSeg('_rp_bs'), txt=gTa('_rp_txt');
 
           if(tc) ns.text.color=tc; if(ff) ns.text.family=ff; if(sz!==null) ns.text.size=parseInt(sz); if(fw) ns.text.weight=fw; if(fi) ns.text.style=fi;
           ns.polygon.color = (bgC && bgA>0) ? mkRgba(bgC, bgA) : 'transparent';
           ns.polygon.style = (bdOn || (bgA && bgA>0)) ? 'strokefill' : 'fill';
           ns.polygon.borderColor = bdOn ? mkRgba((bdC||'#3B82F6'), bdA!==null?bdA:1) : 'transparent';
           ns.polygon.borderSize  = bdOn ? (bdW!==null?parseInt(bdW):1) : 0;
+          if (bdOn && bs) setPolyBorderStyle(ns.polygon, bs); // CHUẨN NÉT ĐỨT CHO TEXT BOX
           if (txt!==null) currentSelectedOverlay.extendData = txt;
 
         } else if (cat === 'shapes') {
@@ -2908,13 +2925,16 @@ onDrawEnd: function(event) {
           if (bw!==null) { ns.polygon.borderSize=parseInt(bw); ns.line.size=parseInt(bw); }
           ns.polygon.color = (fc && fa!==null && fa>0) ? mkRgba(fc, fa) : 'transparent';
           ns.polygon.style = 'strokefill';
-          if (bs) { ns.line.style = bs==='dotted'?'dashed':bs; if(bs==='dashed')ns.line.dashedValue=[6,4]; else if(bs==='dotted')ns.line.dashedValue=[1.5,3]; else delete ns.line.dashedValue; }
+          if (bs) {
+            setLineStyle(ns.line, bs);
+            setPolyBorderStyle(ns.polygon, bs); // FIX LỖI: HÌNH KHỐI ĐÃ NHẬN NÉT ĐỨT
+          }
 
         } else if (cat === 'fibo') {
           var lc=gCP('c_lc'), lw=gSel('_rp_lw'), lo=gRng('_rp_lo'), ls=gSeg('_rp_ls'), fa=gRng('_rp_fa'), sl=gTog('_rp_slbl');
           if(lc) { ns.line.color=mkRgba(lc,lo!==null?lo:1); ns.text.color=lc; }
           if(lw!==null) ns.line.size=parseInt(lw);
-          if (ls) { ns.line.style = ls==='dotted'?'dashed':ls; if(ls==='dashed')ns.line.dashedValue=[6,4]; else if(ls==='dotted')ns.line.dashedValue=[1.5,3]; else delete ns.line.dashedValue; }
+          if (ls) setLineStyle(ns.line, ls);
           if(fa!==null && currentSelectedOverlay.extendData) currentSelectedOverlay.extendData.fillOpacity=fa;
           if(currentSelectedOverlay.extendData) currentSelectedOverlay.extendData.showLabels=sl;
 
@@ -2922,7 +2942,7 @@ onDrawEnd: function(event) {
           var lc=gCP('c_lc'), lw=gSel('_rp_lw'), lo=gRng('_rp_lo'), ls=gSeg('_rp_ls');
           if(lc) ns.line.color=mkRgba(lc,lo!==null?lo:1);
           if(lw!==null) ns.line.size=parseInt(lw);
-          if (ls) { ns.line.style = ls==='dotted'?'dashed':ls; if(ls==='dashed')ns.line.dashedValue=[6,4]; else if(ls==='dotted')ns.line.dashedValue=[1.5,3]; else delete ns.line.dashedValue; }
+          if (ls) setLineStyle(ns.line, ls);
         }
 
         currentSelectedOverlay.styles = ns;
