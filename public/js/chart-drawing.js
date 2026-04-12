@@ -2630,7 +2630,8 @@ onDrawEnd: function(event) {
   function renderPanel(overlay) {
     var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
-          // --- BẮT ĐẦU: LOGIC KÉO THẢ (VƯỢT GIỚI HẠN) ---
+
+    // --- BẮT ĐẦU: LOGIC KÉO THẢ ---
     if (!panel.dataset.dragSetup) {
       panel.dataset.dragSetup = "true";
       var header = panel.querySelector('.wa-panel-header');
@@ -2639,32 +2640,24 @@ onDrawEnd: function(event) {
           header.addEventListener('mousedown', function(e) {
               if (e.target.closest('.wa-close-btn')) return;
               isDragging = true;
-              
               var rect = panel.getBoundingClientRect();
-              
-              // Chuyển sang Fixed tự do, giải phóng Right/Bottom
               panel.style.right = 'auto';
               panel.style.bottom = 'auto';
               panel.style.margin = '0';
               panel.style.left = rect.left + 'px';
               panel.style.top = rect.top + 'px';
-              
               startX = e.clientX;
               startY = e.clientY;
               initL = rect.left;
               initT = rect.top;
-              
               document.addEventListener('mousemove', onMouseMove);
               document.addEventListener('mouseup', onMouseUp);
           });
           function onMouseMove(e) {
               if (!isDragging) return;
               e.preventDefault();
-              var dx = e.clientX - startX, dy = e.clientY - startY;
-              
-              // Không thèm chặn mép! Cứ cho kéo ra tới mép tùy ý!
-              panel.style.left = (initL + dx) + 'px';
-              panel.style.top = (initT + dy) + 'px';
+              panel.style.left = (initL + e.clientX - startX) + 'px';
+              panel.style.top = (initT + e.clientY - startY) + 'px';
           }
           function onMouseUp() {
               isDragging = false;
@@ -2672,120 +2665,110 @@ onDrawEnd: function(event) {
               document.removeEventListener('mouseup', onMouseUp);
           }
       }
-  }
-  // --- KẾT THÚC: LOGIC KÉO THẢ ---
-    // ── 1. Cleanup listeners & popup từ lần trước ──
+    }
+    // --- KẾT THÚC: LOGIC KÉO THẢ ---
+
+    // 1. Cleanup listeners cũ
     if (panel._rpCleanup) { try { panel._rpCleanup(); } catch(e){} }
     var _H = [];
     function _on(el, ev, fn) { if (!el) return; el.addEventListener(ev, fn, false); _H.push([el, ev, fn]); }
     function _off() { _H.forEach(function(h){ h[0].removeEventListener(h[1], h[2], false); }); _H = []; var p=document.getElementById('_rp_pop'); if(p) p.remove(); }
     panel._rpCleanup = _off;
-  
-    // ── 2. CSS (chỉ inject 1 lần) ──
-    if (!document.getElementById('_rp_css_v3')) {
+
+    // 2. CSS UI Hiện Đại Mới
+    if (!document.getElementById('_rp_css_v4')) {
       var _css = document.createElement('style');
-      _css.id = '_rp_css_v3';
+      _css.id = '_rp_css_v4';
       _css.textContent = [
-        '.wa-props-panel{display:flex!important;flex-direction:column!important}',
-        '.wa-panel-body{padding:10px!important;gap:0!important;flex:1 1 auto!important;overflow-y:auto!important;min-height:0!important;overscroll-behavior:contain}',
-        '.wa-panel-body::-webkit-scrollbar{width:4px}',
-        '.wa-panel-body::-webkit-scrollbar-thumb{background:#273040;border-radius:4px}',
-        '._s{background:#0D1117;border:1px solid #1E2A3A;border-radius:8px;margin-bottom:7px}',
-        '._sh{font-size:9.5px;font-weight:800;color:#4A5F72;text-transform:uppercase;letter-spacing:.9px;padding:7px 10px 5px;border-bottom:1px solid #1A2535}',
-        '._sb{padding:8px 10px}',
-        '._r{display:flex;gap:8px;margin-bottom:6px}._r:last-child{margin-bottom:0}',
-        '._c{flex:1;min-width:0}',
-        '._l{display:block;font-size:10px;color:#6B7E8D;font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-        '._sel{width:100%;background:#080D12;border:1px solid #1E2A3A;color:#C8D6E0;padding:5px 24px 5px 8px;border-radius:5px;font-size:11px;outline:none;font-family:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%234A5568\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center}',
-        '._sel:focus{border-color:#3B82F6}',
-        '._ta{width:100%;background:#080D12;border:1px solid #1E2A3A;color:#E8EDF2;padding:8px;border-radius:5px;font-size:12px;outline:none;font-family:inherit;resize:vertical;min-height:60px;box-sizing:border-box;line-height:1.5}',
-        '._ta:focus{border-color:#3B82F6}',
-        '._rw{display:flex;align-items:center;gap:6px}',
-        '._rng{flex:1;-webkit-appearance:none;height:3px;background:#1A2535;border-radius:2px;outline:none;cursor:pointer}',
-        '._rng::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#3B82F6;cursor:pointer;border:2px solid #0D1117}',
-        '._rv{font-size:10px;color:#60A5FA;min-width:26px;text-align:right;font-weight:700;font-family:monospace}',
-        '._seg{display:flex;background:#080D12;border:1px solid #1A2535;border-radius:6px;padding:2px;gap:2px}',
-        '._segb{flex:1;border:none;background:transparent;color:#6B7E8D;padding:5px 3px;cursor:pointer;border-radius:4px;transition:.12s;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:600;font-family:inherit;white-space:nowrap}',
-        '._segb:hover{color:#A0B0C0;background:rgba(255,255,255,.05)}',
-        '._segb.on{background:#1E2B3A;color:#E8EDF2}',
-        '._trow{display:flex;justify-content:space-between;align-items:center;padding:3px 0}',
-        '._tlbl{font-size:11px;color:#8896A7}',
-        '._tog{width:32px;height:17px;border-radius:9px;background:#1A2130;border:1px solid #273040;position:relative;cursor:pointer;transition:.18s;flex-shrink:0}',
-        '._tog::after{content:"";position:absolute;width:11px;height:11px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.18s}',
-        '._tog.on{background:#3B82F6;border-color:#2563EB}',
-        '._tog.on::after{left:17px}',
-        // ─── Color Picker Button ───
-        '._cpb{width:100%;height:28px;border-radius:6px;border:1.5px solid #1E2A3A;cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s}',
-        '._cpb:hover{border-color:#3B82F6}',
-        '._cpbg{position:absolute;inset:0;background-image:linear-gradient(45deg,#444 25%,transparent 25%),linear-gradient(-45deg,#444 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#444 75%),linear-gradient(-45deg,transparent 75%,#444 75%);background-size:6px 6px;background-position:0 0,0 3px,3px -3px,-3px 0}',
-        '._cpf{position:absolute;inset:0;border-radius:5px}',
-        // ─── Popup ───
-        '._pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:9px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.92);width:218px}',
-        '._pg{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-bottom:8px}',
-        '._pc{aspect-ratio:1;border-radius:2px;cursor:pointer;border:1.5px solid transparent;transition:transform .1s;position:relative;z-index:0}',
-        '._pc:hover{transform:scale(1.5);border-color:rgba(255,255,255,.8);z-index:3}',
-        '._pc.on{border-color:#3B82F6;z-index:2}',
-        '._ph{display:flex;align-items:center;gap:5px;background:#080D12;border:1px solid #1E2A3A;border-radius:5px;padding:4px 7px}',
-        '._ph:focus-within{border-color:#3B82F6}',
-        '._phi{flex:1;background:transparent;border:none;color:#E8EDF2;font-size:11px;outline:none;font-family:monospace;text-transform:uppercase;min-width:0}',
+        '.wa-props-panel{display:flex!important;flex-direction:column!important;box-shadow:0 12px 48px rgba(0,0,0,0.6)!important;border:1px solid #2A2E39!important;border-radius:12px!important;background:#131722!important;overflow:hidden}',
+        '.wa-panel-header{background:#1E222D!important;border-bottom:1px solid #2A2E39!important;padding:12px 16px!important}',
+        '.wa-panel-title{font-size:14px!important;font-weight:600!important;color:#D1D4DC!important}',
+        '.wa-close-btn{color:#787B86!important}',
+        '.wa-close-btn:hover{color:#D1D4DC!important;background:transparent!important}',
+        '.wa-panel-body{padding:16px 20px!important;gap:0!important;flex:1 1 auto!important;overflow-y:auto!important;min-height:0!important;overscroll-behavior:contain;background:#131722!important}',
+        '.wa-panel-body::-webkit-scrollbar{width:5px}',
+        '.wa-panel-body::-webkit-scrollbar-thumb{background:#2A2E39;border-radius:5px}',
+        '._s{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.06)}',
+        '._s:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}',
+        '._sh{font-size:13px;font-weight:600;color:#B2B5BE;margin-bottom:14px;display:flex;align-items:center}',
+        '._sh::before{content:"";display:block;width:3px;height:14px;background:#2962FF;margin-right:8px;border-radius:2px}',
+        '._sb{padding:0}',
+        '._r{display:flex;gap:16px;margin-bottom:14px;align-items:flex-end}._r:last-child{margin-bottom:0}',
+        '._c{flex:1;min-width:0;display:flex;flex-direction:column}',
+        '._l{font-size:12px;color:#787B86;margin-bottom:8px;font-weight:500;white-space:nowrap}',
+        '._sel{width:100%;height:34px;background:#1E222D;border:1px solid #2A2E39;color:#D1D4DC;padding:0 28px 0 12px;border-radius:6px;font-size:13px;outline:none;font-family:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%23787B86\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .15s}',
+        '._sel:hover{border-color:#434651}',
+        '._sel:focus{border-color:#2962FF}',
+        '._ta{width:100%;background:#1E222D;border:1px solid #2A2E39;color:#D1D4DC;padding:12px;border-radius:6px;font-size:14px;outline:none;font-family:inherit;resize:vertical;min-height:80px;line-height:1.5;transition:border-color .15s}',
+        '._ta:hover{border-color:#434651}',
+        '._ta:focus{border-color:#2962FF}',
+        '._rw{display:flex;align-items:center;gap:12px;height:34px}',
+        '._rng{flex:1;-webkit-appearance:none;height:4px;background:#2A2E39;border-radius:2px;outline:none;cursor:pointer}',
+        '._rng::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#2962FF;cursor:pointer;border:2px solid #131722;box-shadow:0 1px 3px rgba(0,0,0,.5);transition:transform .1s}',
+        '._rng::-webkit-slider-thumb:hover{transform:scale(1.15)}',
+        '._rv{font-size:12px;color:#2962FF;min-width:32px;text-align:right;font-weight:600;font-family:monospace}',
+        '._seg{display:flex;background:#1E222D;border:1px solid #2A2E39;border-radius:6px;padding:2px;gap:2px;height:34px;box-sizing:border-box}',
+        '._segb{flex:1;border:none;background:transparent;color:#787B86;cursor:pointer;border-radius:4px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:500;white-space:nowrap}',
+        '._segb:hover{color:#D1D4DC;background:#2A2E39}',
+        '._segb.on{background:#2962FF;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}',
+        '._trow{display:flex;justify-content:space-between;align-items:center;padding:10px 0}',
+        '._tlbl{font-size:13px;color:#D1D4DC;font-weight:500}',
+        '._tog{width:36px;height:20px;border-radius:10px;background:#2A2E39;position:relative;cursor:pointer;transition:.2s;flex-shrink:0}',
+        '._tog::after{content:"";position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}',
+        '._tog.on{background:#2962FF}',
+        '._tog.on::after{left:19px}',
+        '._cpb{width:100%;height:34px;border-radius:6px;border:1px solid #2A2E39;cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s}',
+        '._cpb:hover{border-color:#434651}',
+        '._cpbg{position:absolute;inset:0;background-image:linear-gradient(45deg,#2A2E39 25%,transparent 25%),linear-gradient(-45deg,#2A2E39 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2A2E39 75%),linear-gradient(-45deg,transparent 75%,#2A2E39 75%);background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0}',
+        '._cpf{position:absolute;inset:0}',
+        '._pop{position:fixed;z-index:999999;background:#1E222D;border:1px solid #2A2E39;border-radius:10px;padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.5);width:232px}',
+        '._pg{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-bottom:14px}',
+        '._pc{aspect-ratio:1;border-radius:4px;cursor:pointer;border:1.5px solid transparent;transition:transform .1s,border-color .1s}',
+        '._pc:hover{transform:scale(1.3);border-color:#fff;z-index:3}',
+        '._pc.on{border-color:#2962FF;z-index:2}',
+        '._ph{display:flex;align-items:center;gap:8px;background:#131722;border:1px solid #2A2E39;border-radius:6px;padding:6px 10px;transition:border-color .15s}',
+        '._ph:focus-within{border-color:#2962FF}',
+        '._ph span{color:#787B86;font-family:monospace;font-weight:700;font-size:13px}',
+        '._phi{flex:1;background:transparent;border:none;color:#D1D4DC;font-size:13px;outline:none;font-family:monospace;text-transform:uppercase}'
       ].join('');
       document.head.appendChild(_css);
     }
-  
-    var cat    = getToolCategory(overlay.name);
-    var body   = panel.querySelector('.wa-panel-body');
-    if (!body) return;
-  
-    var s      = overlay.styles || {};
+
+    // 3. Chuẩn bị dữ liệu công cụ
+    var s = overlay.styles || {};
+    var ext = (typeof overlay.extendData === 'object' && overlay.extendData) ? overlay.extendData : {};
     var rawExt = overlay.extendData;
-    var ext    = (rawExt && typeof rawExt === 'object') ? rawExt : {};
-  
-    // ── Utilities màu ──────────────────────────────────────────────────────────
-    // FIX BUG #1: toHex luôn trả về '#RRGGBB' hoặc null - KHÔNG BAO GIỜ thiếu '#'
-    function toHex(c) {
-      if (!c || c === 'transparent' || c === '') return null;
-      if (typeof c !== 'string') return null;
-      var v = c.trim();
-      if (v.charAt(0) === '#') {
-        var h = v.slice(1);
-        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-        return '#' + h.slice(0, 6).toUpperCase();
+    var cat = typeof getToolCategory === 'function' ? getToolCategory(overlay.name) : 'lines';
+
+    // Helper functions
+    function mkRgba(hex, a) {
+      if (!hex || hex === 'transparent') return 'transparent';
+      var r = parseInt(hex.slice(1,3),16)||0, g = parseInt(hex.slice(3,5),16)||0, b = parseInt(hex.slice(5,7),16)||0;
+      return 'rgba('+r+','+g+','+b+','+a+')';
+    }
+    function toHex(color) {
+      if (!color || color === 'transparent') return null;
+      if (color.indexOf('#') === 0) return color.slice(0, 7).toUpperCase();
+      if (typeof colorToHex === 'function') {
+        var h = colorToHex(color);
+        return h === 'rgba(0,0,0,0)' ? null : h;
       }
-      var m = v.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-      if (m) return '#' + [m[1],m[2],m[3]].map(function(x){ return (+x).toString(16).padStart(2,'0'); }).join('').toUpperCase();
       return null;
     }
-    function safeHex(c, def) { return toHex(c) || def || '#3B82F6'; }
-    function toAlpha(c, def) {
-      if (!c || c === 'transparent') return (def !== undefined ? def : 0);
-      var m = c.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([^)]+)\)/);
-      return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : (def !== undefined ? def : 1);
+    function toAlpha(color, def) {
+      if (!color || color === 'transparent') return def;
+      var m = String(color).match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
+      return m ? parseFloat(m[1]) : 1;
     }
-    function mkRgba(hex, a) {
-      if (!hex || a <= 0) return 'transparent';
-      var h = hex.replace('#','');
-      if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-      var r=parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
-      return 'rgba('+r+','+g+','+b+','+parseFloat(a.toFixed(2))+')';
-    }
-  
-    // ── Component Builders ─────────────────────────────────────────────────────
-    // FIX BUG #2: data-cur được set ngay trong HTML, không phải lúc click
-    function cpBtn(id, hex) {
-      var safeColor = hex || '';
-      var bg = safeColor || 'transparent';
-      return '<div class="_cpb" data-cp="'+id+'" data-cur="'+safeColor+'">'
-           + '<div class="_cpbg"></div>'
-           + '<div class="_cpf" id="_cpfc_'+id+'" style="background:'+bg+'"></div>'
-           + '</div>';
-    }
-    function rng(id, mn, mx, st, val, unit) {
-      var u = unit || '';
-      return '<div class="_rw"><input type="range" class="_rng" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+val+'"><span class="_rv" id="'+id+'_v">'+val+u+'</span></div>';
+    function safeHex(c, def) { return toHex(c) || def; }
+
+    // Helpers tạo HTML Controls
+    function rng(id, min, max, step, val) {
+      return '<div class="_rw"><input type="range" class="_rng" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+val+'"><span class="_rv" id="'+id+'_v">'+val+'</span></div>';
     }
     function seg(id, opts, cur) {
-      return '<div class="_seg">'+opts.map(function(o){
-        return '<button class="_segb'+(o.v===cur?' on':'')+'" data-seg="'+id+'" data-val="'+o.v+'">'+o.l+'</button>';
+      return '<div class="_seg" id="'+id+'">'+opts.map(function(o){
+        return '<button class="_segb'+(o.v===cur?' on':'')+'" data-v="'+o.v+'">'+o.l+'</button>';
       }).join('')+'</div>';
     }
     function tog(id, on, lbl) {
@@ -2801,7 +2784,15 @@ onDrawEnd: function(event) {
     function sec(title, inner) {
       return '<div class="_s">'+(title?'<div class="_sh">'+title+'</div>':'')+'<div class="_sb">'+inner+'</div></div>';
     }
-  
+    function cpBtn(id, hex) {
+      var safeColor = hex || '';
+      var bg = safeColor || 'transparent';
+      return '<div class="_cpb" data-cp="'+id+'" data-cur="'+safeColor+'">'
+           + '<div class="_cpbg"></div>'
+           + '<div class="_cpf" id="_cpfc_'+id+'" style="background:'+bg+'"></div>'
+           + '</div>';
+    }
+
     var LS = [
       { v:'solid',  l:'<svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" stroke="currentColor" stroke-width="2.5"/></svg> Liền' },
       { v:'dashed', l:'<svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg> Đứt' },
@@ -2818,8 +2809,8 @@ onDrawEnd: function(event) {
       { v:'Roboto Mono, monospace',     n:'Roboto Mono' },
       { v:'Arial, sans-serif',          n:'Arial' }
     ];
-  
-    // ── Build HTML theo từng category ─────────────────────────────────────────
+
+    // 4. Build HTML
     var html = '';
     try {
       if (cat === 'text') {
@@ -2837,23 +2828,22 @@ onDrawEnd: function(event) {
         var bdW    = spoly.borderSize || 1;
         var bdA    = toAlpha(spoly.borderColor, 1);
         var bdOn   = !!(spoly.borderSize && spoly.borderColor && spoly.borderColor !== 'transparent');
-  
-        html += sec('', '<textarea id="_rp_txt" class="_ta">'+txt+'</textarea>');
+
+        html += sec('', '<textarea id="_rp_txt" class="_ta" placeholder="Nhập nội dung...">'+txt+'</textarea>');
         html += sec('Văn bản',
           ro(co('Font chữ', sel('_rp_ff', FONTS, ff))) +
           ro(co('Màu chữ', cpBtn('c_tc', tc)), co('Cỡ (px)', rng('_rp_sz', 10, 64, 1, sz))) +
-          ro(co('Độ đậm', seg('_rp_fw', [{v:'normal',l:'Thường'},{v:'bold',l:'Đậm'},{v:'800',l:'Đậm+'}], fw))) +
-          ro(co('In nghiêng', seg('_rp_fi', [{v:'normal',l:'Thẳng'},{v:'italic',l:'Nghiêng'}], fi)))
+          ro(co('Độ đậm', seg('_rp_fw', [{v:'normal',l:'Thường'},{v:'bold',l:'Đậm'},{v:'800',l:'Đậm+'}], fw)),
+             co('In nghiêng', seg('_rp_fi', [{v:'normal',l:'Thẳng'},{v:'italic',l:'Nghiêng'}], fi)))
         );
         html += sec('Nền & Khung',
-          ro(co('Màu nền', cpBtn('c_bgc', bgHex)), co('Opacity nền', rng('_rp_bga', 0, 1, 0.05, bgA))) +
-          '<div style="padding:2px 0 4px">'+tog('_rp_bdon', bdOn, 'Bật viền khung')+'</div>' +
-          '<div id="_rp_bdbox" style="'+(bdOn ? '' : 'opacity:.3;pointer-events:none')+'">' +
+          ro(co('Màu nền', cpBtn('c_bgc', bgHex)), co('Độ mờ nền', rng('_rp_bga', 0, 1, 0.05, bgA))) +
+          tog('_rp_bdon', bdOn, 'Bật viền khung') +
+          '<div id="_rp_bdbox" style="margin-top:10px;'+(bdOn ? '' : 'opacity:0.3;pointer-events:none')+'">' +
           ro(co('Màu viền', cpBtn('c_bdc', bdHex)), co('Dày viền', rng('_rp_bdw', 1, 5, 1, bdW))) +
-          ro(co('Opacity viền', rng('_rp_bda', 0, 1, 0.05, bdA))) +
+          ro(co('Độ mờ viền', rng('_rp_bda', 0, 1, 0.05, bdA))) +
           '</div>'
         );
-  
       } else if (cat === 'shapes') {
         var spoly  = s.polygon || {};
         var sline  = s.line    || {};
@@ -2863,16 +2853,15 @@ onDrawEnd: function(event) {
         var bs     = sline.style || 'solid';
         var fcHex  = safeHex(spoly.color, '#3B82F6');
         var fa     = toAlpha(spoly.color, 0.15);
-  
+
         html += sec('Đường viền',
           ro(co('Màu viền', cpBtn('c_bc', bc)), co('Độ dày', rng('_rp_bw', 1, 8, 1, bw))) +
-          ro(co('Opacity viền', rng('_rp_bo', 0, 1, 0.05, bo))) +
-          ro(co('Kiểu viền', seg('_rp_bs', LS, bs)))
+          ro(co('Độ mờ', rng('_rp_bo', 0, 1, 0.05, bo))) +
+          ro(co('Kiểu nét', seg('_rp_bs', LS, bs)))
         );
         html += sec('Nền khối',
-          ro(co('Màu nền', cpBtn('c_fc', fcHex)), co('Opacity (0=trong suốt)', rng('_rp_fa', 0, 1, 0.05, fa)))
+          ro(co('Màu nền', cpBtn('c_fc', fcHex)), co('Độ mờ (0=tắt)', rng('_rp_fa', 0, 1, 0.05, fa)))
         );
-  
       } else if (cat === 'fibo') {
         var sline  = s.line || {};
         var lc     = safeHex(sline.color, '#E8EDF2');
@@ -2881,19 +2870,17 @@ onDrawEnd: function(event) {
         var lo     = toAlpha(sline.color, 1);
         var fa     = (ext.fillOpacity !== undefined) ? ext.fillOpacity : 0.15;
         var slbl   = (ext.showLabels !== false);
-  
+
         html += sec('Đường Fibonacci',
           ro(co('Màu đường', cpBtn('c_lc', lc)), co('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
-          ro(co('Opacity đường', rng('_rp_lo', 0, 1, 0.05, lo))) +
+          ro(co('Độ mờ', rng('_rp_lo', 0, 1, 0.05, lo))) +
           ro(co('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
         html += sec('Hiển thị',
-          ro(co('Opacity fill (0 = tắt)', rng('_rp_fa', 0, 0.5, 0.01, fa))) +
+          ro(co('Độ mờ vùng (0=tắt)', rng('_rp_fa', 0, 0.5, 0.01, fa))) +
           tog('_rp_slbl', slbl, 'Hiện nhãn % Fibonacci')
         );
-  
       } else if (cat === 'waves') {
-        // Sóng Elliott, Harmonic, Chart Patterns
         var sline  = s.line || {};
         var stxt   = s.text || {};
         var lc     = safeHex(sline.color, '#3B82F6');
@@ -2902,72 +2889,70 @@ onDrawEnd: function(event) {
         var lo     = toAlpha(sline.color, 1);
         var tc     = safeHex(stxt.color, '#E8EDF2');
         var tsz    = stxt.size || 12;
-  
+
         html += sec('Đường kẻ sóng',
           ro(co('Màu đường', cpBtn('c_lc', lc)), co('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
-          ro(co('Opacity đường', rng('_rp_lo', 0, 1, 0.05, lo))) +
+          ro(co('Độ mờ', rng('_rp_lo', 0, 1, 0.05, lo))) +
           ro(co('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
         html += sec('Nhãn ký hiệu',
           ro(co('Màu nhãn', cpBtn('c_tc', tc)), co('Cỡ chữ', rng('_rp_tsz', 8, 20, 1, tsz)))
         );
-  
       } else {
-        // lines, pitchforks, arrows, v.v.
         var sline  = s.line || {};
         var lc     = safeHex(sline.color, '#3B82F6');
         var lw     = sline.size  || 1;
         var ls     = sline.style || 'solid';
         var lo     = toAlpha(sline.color, 1);
-  
-        html += sec('Đường kẻ',
-          ro(co('Màu sắc', cpBtn('c_lc', lc)), co('Độ dày', rng('_rp_lw', 1, 8, 1, lw))) +
-          ro(co('Opacity đường', rng('_rp_lo', 0, 1, 0.05, lo))) +
+
+        html += sec('Đường Line',
+          ro(co('Màu đường', cpBtn('c_lc', lc)), co('Độ dày', rng('_rp_lw', 1, 5, 1, lw))) +
+          ro(co('Độ mờ', rng('_rp_lo', 0, 1, 0.05, lo))) +
           ro(co('Kiểu nét', seg('_rp_ls', LS, ls)))
         );
       }
-    } catch(e) {
-      html = '<div style="padding:12px;color:#EF4444;font-size:11px">⚠ '+e.message+'</div>';
-      console.error('[renderPanel]', e);
-    }
-  
-    body.innerHTML = html;
+    } catch(e) { html = '<div style="color:red">Lỗi hiển thị thuộc tính.</div>'; }
+
+    var b = panel.querySelector('.wa-panel-body');
+    if(b) b.innerHTML = html;
     panel.classList.add('show');
-  
-    // ── Range: cập nhật display ──
-    body.querySelectorAll('._rng').forEach(function(inp) {
-      var vEl = document.getElementById(inp.id + '_v');
-      if (!vEl) return;
-      var unit = vEl.textContent.replace(/[\d.]/g, '');
-      _on(inp, 'input', function() { vEl.textContent = this.value + unit; });
+
+    // 5. Events Setup
+    var body = panel.querySelector('.wa-panel-body');
+    if (!body) return;
+
+    // Range update số text
+    body.querySelectorAll('._rng').forEach(function(r){
+      _on(r, 'input', function(){ var v=document.getElementById(this.id+'_v'); if(v) v.innerText = this.value; });
     });
-  
-    // ── Segment buttons ──
-    body.querySelectorAll('._segb').forEach(function(btn) {
-      _on(btn, 'click', function() {
-        body.querySelectorAll('._segb[data-seg="'+this.dataset.seg+'"]').forEach(function(b){ b.classList.remove('on'); });
-        this.classList.add('on');
-        doAction();
+
+    // Segment buttons
+    body.querySelectorAll('._seg').forEach(function(sg){
+      sg.querySelectorAll('._segb').forEach(function(b){
+        _on(b, 'click', function(){
+          sg.querySelectorAll('._segb').forEach(function(x){ x.classList.remove('on'); });
+          this.classList.add('on');
+          doAction();
+        });
       });
     });
-  
-    // ── Toggle ──
-    body.querySelectorAll('._tog').forEach(function(t) {
-      _on(t, 'click', function() {
+
+    // Toggles
+    body.querySelectorAll('._tog').forEach(function(t){
+      _on(t, 'click', function(){
         this.classList.toggle('on');
         if (this.id === '_rp_bdon') {
           var bx = document.getElementById('_rp_bdbox');
           if (bx) {
-            var on = this.classList.contains('on');
-            bx.style.opacity      = on ? '1' : '0.3';
-            bx.style.pointerEvents = on ? '' : 'none';
+            bx.style.opacity = this.classList.contains('on') ? '1' : '0.3';
+            bx.style.pointerEvents = this.classList.contains('on') ? 'auto' : 'none';
           }
         }
         doAction();
       });
     });
-  
-    // ── Color Picker (hoàn toàn viết lại để fix bug #2) ──
+
+    // Color Picker Logic
     var PAL = [
       ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
       ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
@@ -2980,7 +2965,7 @@ onDrawEnd: function(event) {
     ];
     var _aCP = null;
     function _closeCP() { var p=document.getElementById('_rp_pop'); if(p) p.remove(); _aCP=null; }
-  
+
     body.querySelectorAll('._cpb').forEach(function(btn) {
       var cid = btn.dataset.cp;
       _on(btn, 'click', function(ev) {
@@ -2988,42 +2973,40 @@ onDrawEnd: function(event) {
         if (_aCP === cid) { _closeCP(); return; }
         _closeCP(); _aCP = cid;
   
-        // FIX BUG #2: đọc từ data-cur (luôn có giá trị từ HTML)
         var curHex = toHex(btn.dataset.cur) || '#3B82F6';
-  
         var pop = document.createElement('div');
         pop.id = '_rp_pop'; pop.className = '_pop';
-        var gh = '<div class="_pg">';
+        
+        var gh = '<div class="_pg"><div class="_pc'+(!curHex?' on':'')+'" style="background:repeating-linear-gradient(-45deg,#2A2E39 0 4px,transparent 4px 8px);border:1px solid rgba(255,255,255,0.1)" data-c="" title="Không màu"></div>';
         PAL.forEach(function(row){ row.forEach(function(cl){
           gh += '<div class="_pc'+(cl.toUpperCase()===curHex.toUpperCase()?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
         }); });
         gh += '</div><div class="_ph">'
-            + '<span style="color:#4A5568;font-family:monospace;font-weight:800;font-size:11px;user-select:none">#</span>'
-            + '<input class="_phi" id="_phi_'+cid+'" maxlength="6" value="'+curHex.slice(1).toUpperCase()+'">'
+            + '<span>#</span>'
+            + '<input class="_phi" id="_phi_'+cid+'" maxlength="6" value="'+(curHex?curHex.slice(1).toUpperCase():'')+'">'
             + '</div>';
         pop.innerHTML = gh;
         document.body.appendChild(pop);
-  
+
         var br = btn.getBoundingClientRect();
         var top = br.bottom+5, left = br.left;
         if (top+250 > window.innerHeight) top = br.top-254;
         if (left+222 > window.innerWidth)  left = window.innerWidth-224;
         pop.style.left = Math.max(4,left)+'px';
         pop.style.top  = Math.max(4,top)+'px';
-  
-        var fEl = document.getElementById('_cpfc_'+cid);
+
         function applyC(hex) {
-          // FIX BUG #2: update cả visual lẫn data-cur
-          if (fEl) fEl.style.background = hex;
+          var fEl = document.getElementById('_cpfc_'+cid);
+          if (fEl) fEl.style.background = hex || 'transparent';
           btn.dataset.cur = hex;
           pop.querySelectorAll('._pc').forEach(function(c){
-            c.classList.toggle('on', c.dataset.c.toUpperCase()===hex.toUpperCase());
+            c.classList.toggle('on', (c.dataset.c||'').toUpperCase()===(hex||'').toUpperCase());
           });
           var phi = document.getElementById('_phi_'+cid);
-          if (phi) phi.value = hex.slice(1).toUpperCase();
+          if (phi) phi.value = hex ? hex.slice(1).toUpperCase() : '';
           doAction();
         }
-  
+
         pop.querySelectorAll('._pc').forEach(function(c){
           c.addEventListener('mousedown', function(e){ e.stopPropagation(); applyC(this.dataset.c); });
         });
@@ -3033,37 +3016,32 @@ onDrawEnd: function(event) {
           phi.addEventListener('input', function(){
             var v = this.value.replace(/[^0-9a-fA-F]/g,''); this.value = v;
             if (v.length === 6) applyC('#'+v);
+            else if (!v.length) applyC('');
           });
         }
       });
     });
-  
+
     _on(document, 'mousedown', function(ev){
       var pop = document.getElementById('_rp_pop');
       if (pop && !pop.contains(ev.target) && !ev.target.closest('._cpb')) _closeCP();
     });
-  
-    // ── Getters (tất cả đều null-safe) ──────────────────────────────────────
-    // FIX BUG #3: gCP đọc data-cur (luôn hợp lệ sau init), trả về hex hoặc null
-    function gCP(id) {
-      var b = body.querySelector('._cpb[data-cp="'+id+'"]');
-      if (!b) return null;
-      return toHex(b.dataset.cur); // '#RRGGBB' hoặc null - KHÔNG BAO GIỜ thiếu '#'
-    }
+
+    // ── Getters & Action ──
+    function gCP(id) { var b = body.querySelector('._cpb[data-cp="'+id+'"]'); return b ? toHex(b.dataset.cur) : null; }
     function gRng(id) { var e=document.getElementById(id); return e ? parseFloat(e.value) : null; }
-    function gSeg(id) { var e=body.querySelector('._segb.on[data-seg="'+id+'"]'); return e ? e.dataset.val : null; }
+    function gSeg(id) { var e=document.getElementById(id); if(!e) return null; var on=e.querySelector('._segb.on'); return on ? on.dataset.v : null; }
     function gSel(id) { var e=document.getElementById(id); return e ? e.value : null; }
     function gTog(id) { var e=document.getElementById(id); return e ? e.classList.contains('on') : false; }
     function gTa(id)  { var e=document.getElementById(id); return e ? e.value : null; }
-  
-    // ── 2-tier debounce: render nhanh, save chậm ──
+
     var _uiT, _svT;
     function doAction() {
       clearTimeout(_uiT); clearTimeout(_svT);
       _uiT = setTimeout(updateChartLive, 16);
       _svT = setTimeout(saveToStorage, 800);
     }
-  
+
     function updateChartLive() {
       if (!currentSelectedOverlay || !global.tvChart) return;
       try {
@@ -3071,124 +3049,103 @@ onDrawEnd: function(event) {
         if (!ns.line)    ns.line    = {};
         if (!ns.text)    ns.text    = {};
         if (!ns.polygon) ns.polygon = {};
-  
+
         if (cat === 'text') {
-          var tc  = gCP('c_tc');
-          var ff  = gSel('_rp_ff');
-          var sz  = gRng('_rp_sz');
-          var fw  = gSeg('_rp_fw');
-          var fi  = gSeg('_rp_fi');
-          var bgC = gCP('c_bgc');
-          var bgA = gRng('_rp_bga');
-          var bdOn = gTog('_rp_bdon');
-          var bdC = gCP('c_bdc');
-          var bdW = gRng('_rp_bdw');
-          var bdA = gRng('_rp_bda');
+          var tc = gCP('c_tc'), ff = gSel('_rp_ff'), sz = gRng('_rp_sz'), fw = gSeg('_rp_fw'), fi = gSeg('_rp_fi');
+          var bgC = gCP('c_bgc'), bgA = gRng('_rp_bga');
+          var bdOn = gTog('_rp_bdon'), bdC = gCP('c_bdc'), bdW = gRng('_rp_bdw'), bdA = gRng('_rp_bda');
           var txt = gTa('_rp_txt');
-  
-          // FIX BUG #4: chỉ assign khi giá trị hợp lệ (không null)
-          if (tc)         ns.text.color  = tc;
-          if (ff)         ns.text.family = ff;
-          if (sz !== null) ns.text.size  = sz;
-          if (fw)         ns.text.weight = fw;
-          if (fi)         ns.text.style  = fi;
-  
-          ns.polygon.color       = (bgC && bgA > 0) ? mkRgba(bgC, bgA) : 'transparent';
-          ns.polygon.style       = (bdOn || (bgA && bgA > 0)) ? 'strokefill' : 'fill';
+
+          if (tc) ns.text.color = tc;
+          if (ff) ns.text.family = ff;
+          if (sz !== null) ns.text.size = sz;
+          if (fw) ns.text.weight = fw;
+          if (fi) ns.text.style = fi;
+
+          ns.polygon.color = (bgC && bgA > 0) ? mkRgba(bgC, bgA) : 'transparent';
+          ns.polygon.style = (bdOn || (bgA && bgA > 0)) ? 'strokefill' : 'fill';
           ns.polygon.borderColor = bdOn ? mkRgba((bdC || '#3B82F6'), bdA !== null ? bdA : 1) : 'transparent';
           ns.polygon.borderSize  = bdOn ? (bdW !== null ? bdW : 1) : 0;
-  
-          if (txt !== null) currentSelectedOverlay.extendData = txt;
-  
+          
+          if (txt !== null) {
+            currentSelectedOverlay.extendData = txt;
+          }
+
         } else if (cat === 'shapes') {
-          var bc = gCP('c_bc');
-          var bw = gRng('_rp_bw');
-          var bo = gRng('_rp_bo');
-          var bs = gSeg('_rp_bs');
-          var fc = gCP('c_fc');
-          var fa = gRng('_rp_fa');
-  
+          var bc = gCP('c_bc'), bw = gRng('_rp_bw'), bo = gRng('_rp_bo'), bs = gSeg('_rp_bs');
+          var fc = gCP('c_fc'), fa = gRng('_rp_fa');
+
           if (bc) {
             ns.polygon.borderColor = mkRgba(bc, bo !== null ? bo : 1);
-            ns.line.color          = mkRgba(bc, bo !== null ? bo : 1);  // KLineChart dùng line.color cho viền polygon
+            ns.line.color          = mkRgba(bc, bo !== null ? bo : 1);
           }
-          if (bw !== null) {
-            ns.polygon.borderSize = bw;
-            ns.line.size          = bw;
-          }
+          if (bw !== null) { ns.polygon.borderSize = bw; ns.line.size = bw; }
           ns.polygon.color = (fc && fa !== null && fa > 0) ? mkRgba(fc, fa) : 'transparent';
           ns.polygon.style = 'strokefill';
-          // Kiểu nét đứt cho polygon border dùng line.style trong KLineChart
+          
           if (bs) {
             ns.line.style = bs === 'dotted' ? 'dashed' : bs;
             if (bs === 'dashed') ns.line.dashedValue = [6, 4];
             else if (bs === 'dotted') ns.line.dashedValue = [1.5, 3];
             else delete ns.line.dashedValue;
-        }
-  
+          }
         } else if (cat === 'fibo') {
-          var lc = gCP('c_lc');
-          var lw = gRng('_rp_lw');
-          var lo = gRng('_rp_lo');
-          var ls = gSeg('_rp_ls');
-          var fa = gRng('_rp_fa');
-          var sl = gTog('_rp_slbl');
-  
+          var lc = gCP('c_lc'), lw = gRng('_rp_lw'), lo = gRng('_rp_lo'), ls = gSeg('_rp_ls');
+          var fa = gRng('_rp_fa'), sl = gTog('_rp_slbl');
+
           if (lc) { ns.line.color = mkRgba(lc, lo !== null ? lo : 1); ns.text.color = lc; }
-          if (lw !== null) ns.line.size  = lw;
-          if (ls) { ns.line.style = ls === 'dotted' ? 'dashed' : ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
-  
-          var ne = (typeof currentSelectedOverlay.extendData === 'object' && currentSelectedOverlay.extendData)
-                   ? JSON.parse(JSON.stringify(currentSelectedOverlay.extendData)) : {};
-          if (fa !== null) ne.fillOpacity = fa;
-          ne.showLabels = sl;
-          currentSelectedOverlay.extendData = ne;
-  
+          if (lw !== null) ns.line.size = lw;
+          if (ls) {
+            ns.line.style = ls === 'dotted' ? 'dashed' : ls;
+            if (ls === 'dashed') ns.line.dashedValue = [6, 4];
+            else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3];
+            else delete ns.line.dashedValue;
+          }
+          if (fa !== null && currentSelectedOverlay.extendData) currentSelectedOverlay.extendData.fillOpacity = fa;
+          if (currentSelectedOverlay.extendData) currentSelectedOverlay.extendData.showLabels = sl;
         } else if (cat === 'waves') {
-          // FIX BUG #4: Sóng Elliott - check null trước khi assign
-          var lc  = gCP('c_lc');
-          var lw  = gRng('_rp_lw');
-          var lo  = gRng('_rp_lo');
-          var ls  = gSeg('_rp_ls');
-          var tc  = gCP('c_tc');
-          var tsz = gRng('_rp_tsz');
-  
-          if (lc)          ns.line.color  = mkRgba(lc, lo !== null ? lo : 1);
-          if (lw !== null) ns.line.size   = lw;
-          if (ls) { ns.line.style = ls === 'dotted' ? 'dashed' : ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
-          if (tc)          ns.text.color  = tc;
-          if (tsz !== null) ns.text.size  = tsz;
-  
-        } else { // lines, pitchforks, arrows
-          var lc = gCP('c_lc');
-          var lw = gRng('_rp_lw');
-          var lo = gRng('_rp_lo');
-          var ls = gSeg('_rp_ls');
-  
-          if (lc)          ns.line.color  = mkRgba(lc, lo !== null ? lo : 1);
-          if (lw !== null) ns.line.size   = lw;
-          if (ls) { ns.line.style = ls === 'dotted' ? 'dashed' : ls; if (ls === 'dashed') ns.line.dashedValue = [6, 4]; else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3]; else delete ns.line.dashedValue; }
+          var lc = gCP('c_lc'), lw = gRng('_rp_lw'), lo = gRng('_rp_lo'), ls = gSeg('_rp_ls');
+          var tc = gCP('c_tc'), tsz = gRng('_rp_tsz');
+
+          if (lc) ns.line.color = mkRgba(lc, lo !== null ? lo : 1);
+          if (lw !== null) ns.line.size = lw;
+          if (ls) {
+            ns.line.style = ls === 'dotted' ? 'dashed' : ls;
+            if (ls === 'dashed') ns.line.dashedValue = [6, 4];
+            else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3];
+            else delete ns.line.dashedValue;
+          }
+          if (tc) ns.text.color = tc;
+          if (tsz !== null) ns.text.size = tsz;
+        } else {
+          var lc = gCP('c_lc'), lw = gRng('_rp_lw'), lo = gRng('_rp_lo'), ls = gSeg('_rp_ls');
+          if (lc) ns.line.color = mkRgba(lc, lo !== null ? lo : 1);
+          if (lw !== null) ns.line.size = lw;
+          if (ls) {
+            ns.line.style = ls === 'dotted' ? 'dashed' : ls;
+            if (ls === 'dashed') ns.line.dashedValue = [6, 4];
+            else if (ls === 'dotted') ns.line.dashedValue = [1.5, 3];
+            else delete ns.line.dashedValue;
+          }
         }
-  
+
         currentSelectedOverlay.styles = ns;
         global.tvChart.overrideOverlay({
-          id:         currentSelectedOverlay.id,
-          styles:     ns,
+          id: currentSelectedOverlay.id,
+          styles: ns,
           extendData: currentSelectedOverlay.extendData
         });
-  
-      } catch(err) {
-        console.error('[updateChartLive]', err);
-      }
+        
+        if (typeof showFloatToolbar === 'function') {
+          showFloatToolbar(currentSelectedOverlay, null, null);
+        }
+      } catch(e) { console.error('Lỗi updateChartLive:', e); }
     }
-  
+
     function saveToStorage() {
-      try {
-        if (typeof saveStyles           === 'function') saveStyles();
-        if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
-      } catch(e) {}
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
     }
-  
+
     // Bind input/change cho tất cả controls
     body.querySelectorAll('input, textarea, select').forEach(function(el) {
       _on(el, 'input',  doAction);
