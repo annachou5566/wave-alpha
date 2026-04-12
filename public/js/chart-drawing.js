@@ -1950,6 +1950,7 @@
   position: absolute;
   z-index: 1002;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 1px;
   padding: 4px 8px;
@@ -1984,6 +1985,101 @@
 .wa-fb-btn:hover { background: rgba(255,255,255,0.07); color: #E8EDF2; }
 .wa-fb-btn.wa-fb-on { background: rgba(59,130,246,0.15); color: #60A5FA; box-shadow: 0 0 0 1px #3B82F6; }
 .wa-fb-btn.wa-fb-del:hover { background: rgba(239,68,68,0.15); color: #EF4444; }
+/* --- BẮT ĐẦU CHÈN CODE TỪ ĐÂY --- */
+.wa-fb-bg-btn{
+  width:22px; height:22px;
+  border:1.5px solid #273040;
+  background:#0F141A;
+  border-radius:6px;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  flex-shrink:0;
+  transition:border-color .15s, background .15s;
+  margin-left: 2px;
+}
+.wa-fb-bg-btn:hover{ border-color:#3B82F6; }
+
+.wa-fb-bg-chip{
+  width:12px; height:12px; border-radius:3px; overflow:hidden;
+  background:repeating-linear-gradient(-45deg,#111827 0 4px,#1F2937 4px 8px);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.wa-fb-bg-fill{ width:100%; height:100%; display:block; }
+
+.wa-fb-bg-pal{
+  display:none;
+  width:100%;
+  margin-top:6px;
+  padding-top:6px;
+  border-top:1px solid #273040;
+}
+.wa-fb-bg-pal.open{ display:block; }
+
+.wa-fb-pg{
+  display:grid;
+  grid-template-columns:repeat(10, 1fr);
+  gap:6px;
+}
+.wa-fb-pc{
+  width:16px; height:16px;
+  border-radius:4px;
+  border:1.5px solid rgba(255,255,255,.18);
+  cursor:pointer;
+  transition:transform .12s, border-color .12s;
+  position:relative;
+}
+.wa-fb-pc:hover{
+  transform:scale(1.35);
+  border-color:rgba(255,255,255,.85);
+  z-index:3;
+}
+.wa-fb-pc.on{ border-color:#3B82F6; }
+
+.wa-fb-pc-clear{
+  background:repeating-linear-gradient(-45deg,#111827 0 4px,#1F2937 4px 8px);
+}
+.wa-fb-pc-clear::after{
+  content:'';
+  position:absolute;
+  left:2px; right:2px; top:7px; height:2px;
+  background:#F23645;
+  transform:rotate(-45deg);
+  border-radius:2px;
+}
+
+.wa-fb-ph{
+  margin-top:8px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  height:28px;
+  border:1px solid #1E2A3A;
+  border-radius:6px;
+  background:#080D12;
+  padding:0 8px;
+}
+.wa-fb-ph span{
+  color:#4A5568;
+  font-family:monospace;
+  font-weight:800;
+  font-size:11px;
+  user-select:none;
+}
+.wa-fb-phi{
+  flex:1;
+  background:transparent;
+  border:none;
+  color:#E8EDF2;
+  font-size:11px;
+  outline:none;
+  font-family:monospace;
+  text-transform:uppercase;
+  min-width:0;
+}
+/* --- KẾT THÚC CHÈN CODE --- */
 .wa-fb-label {
   font-size: 10px; color: #4A5568; padding: 0 4px; white-space: nowrap;
 }
@@ -2779,7 +2875,24 @@ onDrawEnd: function(event) {
       { v:'Roboto Mono, monospace',     n:'Roboto Mono' },
       { v:'Arial, sans-serif',          n:'Arial' }
     ];
-  
+    var FB_PAL = [
+      ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
+      ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
+      ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
+      ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
+      ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
+      ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
+      ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
+      ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
+    ];
+    
+    var curTextBg = colorToHex((((ov.styles || {}).text || {}).backgroundColor) || '') || '';
+    var bgGridHTML = '<div class="wa-fb-pc wa-fb-pc-clear'+(!curTextBg ? ' on' : '')+'" data-c="" title="Không nền"></div>';
+    FB_PAL.forEach(function(row){
+      row.forEach(function(cl){
+        bgGridHTML += '<div class="wa-fb-pc'+(curTextBg && cl.toUpperCase()===curTextBg.toUpperCase() ? ' on' : '')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
+      });
+    });
     // ── Build HTML theo từng category ─────────────────────────────────────────
     var html = '';
     try {
@@ -3228,6 +3341,9 @@ function showFloatToolbar(ov, posX, posY) {
   // Nếu công cụ là văn bản (text) thì hiển thị thêm nút SỬA CHỮ
   if (cat === 'text') {
     html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">'+editSVG+'</button>';
+    html += '<button class="wa-fb-bg-btn" id="wa-fb-bg-btn" title="Nền chữ">'
+         +    '<span class="wa-fb-bg-chip"><span class="wa-fb-bg-fill" id="wa-fb-bg-fill" style="background:'+(curTextBg || 'transparent')+'"></span></span>'
+         +  '</button>';
     html += '<div class="wa-fb-sep"></div>';
   }
 
@@ -3235,7 +3351,15 @@ function showFloatToolbar(ov, posX, posY) {
   html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
   html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
   html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
-
+  if (cat === 'text') {
+    html += '<div class="wa-fb-bg-pal" id="wa-fb-bg-pal">'
+         +    '<div class="wa-fb-pg">'+bgGridHTML+'</div>'
+         +    '<div class="wa-fb-ph">'
+         +      '<span>#</span>'
+         +      '<input class="wa-fb-phi" id="wa-fb-bg-hex" maxlength="6" value="'+(curTextBg ? curTextBg.slice(1).toUpperCase() : '')+'">'
+         +    '</div>'
+         +  '</div>';
+  }
   // ── Tạo DOM ────────────────────────────────────────────────────
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
@@ -3324,7 +3448,28 @@ function showFloatToolbar(ov, posX, posY) {
     if (typeof hidePanel === 'function') hidePanel();
     if (typeof saveAllOverlays === 'function') saveAllOverlays();
   });
+   // ---> BẮT ĐẦU DÁN HÀM MỚI TỪ ĐÂY <---
+   function _fbSetTextBackground(ov, hex) {
+    if (!global.tvChart || !ov) return;
   
+    var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+    if (!ns.text) ns.text = {};
+  
+    if (hex) ns.text.backgroundColor = hex;
+    else delete ns.text.backgroundColor;
+  
+    ov.styles = ns;
+  
+    global.tvChart.overrideOverlay({
+      id: ov.id,
+      styles: ns,
+      extendData: ov.extendData
+    });
+  
+    if (typeof saveAllOverlays === 'function') saveAllOverlays();
+    if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+  }
+  // ---> KẾT THÚC DÁN <---
   // ============================================
   // BẮT ĐẦU CHÈN SỰ KIỆN NÚT SỬA CHỮ VÀ DRAG BAR VÀO ĐÂY:
   // ============================================
@@ -3352,7 +3497,48 @@ if (editBtn) {
     }, 50);
   });
 }
+// ---> BẮT ĐẦU DÁN SỰ KIỆN MÀU TỪ ĐÂY <---
+var bgBtn = bar.querySelector('#wa-fb-bg-btn');
+var bgPal = bar.querySelector('#wa-fb-bg-pal');
+var bgFill = bar.querySelector('#wa-fb-bg-fill');
+var bgHex  = bar.querySelector('#wa-fb-bg-hex');
 
+if (bgBtn && bgPal) {
+  bgBtn.addEventListener('click', function(ev) {
+    ev.stopPropagation();
+    bgPal.classList.toggle('open');
+  });
+
+  bgPal.querySelectorAll('.wa-fb-pc').forEach(function(pc) {
+    pc.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      var hex = this.dataset.c || '';
+
+      if (bgFill) bgFill.style.background = hex || 'transparent';
+      if (bgHex) bgHex.value = hex ? hex.slice(1).toUpperCase() : '';
+
+      _fbSetTextBackground(ov, hex);
+    });
+  });
+
+  if (bgHex) {
+    bgHex.addEventListener('input', function(ev) {
+      ev.stopPropagation();
+      var v = (this.value || '').replace(/[^0-9a-f]/ig, '').slice(0, 6).toUpperCase();
+      this.value = v;
+
+      if (v.length === 6) {
+        var hex = '#' + v;
+        if (bgFill) bgFill.style.background = hex;
+        _fbSetTextBackground(ov, hex);
+      } else if (!v.length) {
+        if (bgFill) bgFill.style.background = 'transparent';
+        _fbSetTextBackground(ov, '');
+      }
+    });
+  }
+}
+// ---> KẾT THÚC DÁN <---
   // 2. Drag Bar Logic (kéo thả thanh công cụ nổi)
   var dragHandle = bar.querySelector('#wa-fb-drag');
   if (dragHandle) {
