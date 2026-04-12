@@ -1945,48 +1945,108 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-      /* ===== FLOATING TOOLBAR ===== */
-.wa-float-bar {
-  position: absolute;
-  z-index: 1002;
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  padding: 4px 8px;
-  background: #1C242E;
-  border: 1px solid #273040;
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05);
-  backdrop-filter: blur(20px);
-  opacity: 0;
-  transform: translateY(-8px) scale(0.95);
-  transition: opacity 0.18s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
-  pointer-events: none;
-  user-select: none;
-  font-family: Be Vietnam Pro, Inter, sans-serif;
-}
-.wa-float-bar.wa-fb-show { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
-.wa-fb-color-wrap {
-  width: 26px; height: 26px; border-radius: 6px; position: relative;
-  border: 1.5px solid #273040; overflow: hidden; cursor: pointer; flex-shrink: 0;
-}
-.wa-fb-color-wrap input[type=color] {
-  opacity: 0; position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; border: none; padding: 0;
-}
-.wa-fb-cswatch { width: 100%; height: 100%; pointer-events: none; }
-.wa-fb-sep { width: 1px; height: 16px; background: #273040; margin: 0 4px; flex-shrink: 0; }
-.wa-fb-btn {
-  width: 28px; height: 28px; border: none; background: transparent;
-  color: #8896A7; cursor: pointer; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.14s; flex-shrink: 0; padding: 0;
-}
-.wa-fb-btn:hover { background: rgba(255,255,255,0.07); color: #E8EDF2; }
-.wa-fb-btn.wa-fb-on { background: rgba(59,130,246,0.15); color: #60A5FA; box-shadow: 0 0 0 1px #3B82F6; }
-.wa-fb-btn.wa-fb-del:hover { background: rgba(239,68,68,0.15); color: #EF4444; }
-.wa-fb-label {
-  font-size: 10px; color: #4A5568; padding: 0 4px; white-space: nowrap;
-}
+      
+    /* ========================================= */
+    /* FLOATING TOOLBAR (SIÊU TỐI GIẢN & HIỆN ĐẠI) */
+    /* ========================================= */
+    .wa-float-bar { 
+        position: absolute; 
+        z-index: 1002; 
+        display: flex; 
+        align-items: center; 
+        gap: 4px; 
+        padding: 4px 6px; 
+        background: rgba(15, 23, 42, 0.85); /* Nền kính tối */
+        border: 1px solid rgba(255, 255, 255, 0.08); 
+        border-radius: 12px; 
+        box-shadow: 0 12px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.4); 
+        backdrop-filter: blur(20px); 
+        -webkit-backdrop-filter: blur(20px);
+        opacity: 0; 
+        transform: translateY(10px) scale(0.96); 
+        transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); 
+        pointer-events: none; 
+        user-select: none; 
+        font-family: 'Inter', 'Be Vietnam Pro', sans-serif; 
+    }
+    .wa-float-bar.wa-fb-show { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+        pointer-events: all; 
+    }
+
+    /* Grip Kéo thả */
+    .wa-fb-drag {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 28px;
+        cursor: grab;
+        color: #475569;
+        margin-right: 2px;
+        transition: color 0.15s;
+    }
+    .wa-fb-drag:hover { color: #94A3B8; }
+    .wa-fb-drag:active { cursor: grabbing; color: #E2E8F0; }
+
+    /* Dấu gạch dọc phân cách */
+    .wa-fb-sep { 
+        width: 1px; 
+        height: 16px; 
+        background: rgba(255, 255, 255, 0.1); 
+        margin: 0 4px; 
+        flex-shrink: 0; 
+    }
+
+    /* Các nút bấm (Button) */
+    .wa-fb-btn { 
+        width: 32px; 
+        height: 32px; 
+        border: none; 
+        background: transparent; 
+        color: #94A3B8; 
+        cursor: pointer; 
+        border-radius: 8px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); 
+        padding: 0;
+        position: relative;
+    }
+    .wa-fb-btn svg { width: 16px; height: 16px; }
+    .wa-fb-btn:hover { background: rgba(255, 255, 255, 0.08); color: #F8FAFC; }
+    
+    /* Nút đang bật (Active / Lock) */
+    .wa-fb-btn.wa-fb-on { 
+        background: rgba(59, 130, 246, 0.15); 
+        color: #60A5FA; 
+    }
+
+    /* Nút Xóa (Thùng rác) */
+    .wa-fb-btn.wa-fb-del:hover { 
+        background: rgba(239, 68, 68, 0.15); 
+        color: #F87171; 
+    }
+
+    /* Ô hiển thị Màu Sắc */
+    .wa-fb-color-wrap { 
+        width: 24px; 
+        height: 24px; 
+        border-radius: 6px; 
+        position: relative; 
+        overflow: hidden; 
+        cursor: pointer; 
+        border: 2px solid rgba(255,255,255,0.1);
+        transition: transform 0.1s, border-color 0.15s;
+    }
+    .wa-fb-color-wrap:hover {
+        transform: scale(1.1);
+        border-color: rgba(255,255,255,0.3);
+    }
+    .wa-fb-cswatch { width: 100%; height: 100%; pointer-events: none; }
+
 /* Panel improvements */
 .wa-prop-section { padding: 12px 16px; border-bottom: 1px solid #1E2733; }
 .wa-prop-section:last-child { border-bottom: none; }
@@ -3208,17 +3268,26 @@ function showFloatToolbar(ov, posX, posY) {
     return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
   }
 
-    // ──   // ── Build HTML ─────────────────────────────────────────────────
-  var html = '';
-  
-  var dragSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
-  var editSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-  var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-  var eyeHide  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
-  var lockOn   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
-  var lockOff  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
-  var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+      // Build HTML
+  var dragSVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>';
+  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+  var lockOn = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+  var lockOff = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>';
+  var trashSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+
+  var html = `
+      <div class="wa-fb-drag" title="Kéo thả toolbar">${dragSVG}</div>
+      
+      <div class="wa-fb-color-wrap" id="wa-fb-cfg-color" title="Màu sắc hiện tại">
+          <div class="wa-fb-cswatch" style="background:${pc};"></div>
+      </div>
+
+      <div class="wa-fb-sep"></div>
+
+      <button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt thuộc tính">${gearSVG}</button>
+      <button class="wa-fb-btn ${isLocked ? 'wa-fb-on' : ''}" id="wa-fb-lk" title="Khóa/Mở khóa">${isLocked ? lockOn : lockOff}</button>
+      <button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa công cụ">${trashSVG}</button>
+  `;
 
   html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
   html += '<div class="wa-fb-sep"></div>';
