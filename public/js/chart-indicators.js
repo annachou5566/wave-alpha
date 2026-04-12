@@ -1740,19 +1740,24 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
       });
     }
 
-    // Click chuột ra ngoài giao diện (body/chart) thì tự tắt popup
-    document.addEventListener('click', function(e) {
-      // id nút mở popup trên thanh công cụ của bạn
-      const btnInd = document.getElementById('btn-fx-indicator'); 
-      
-      if (indModal && indModal.style.display === 'flex') {
-        // Nếu click không nằm trong popup và không nằm trên nút bật popup
-        if (!indModal.contains(e.target) && (!btnInd || !btnInd.contains(e.target))) {
-          indModal.style.display = 'none';
-        }
-      }
-    });
-    /* ================================== */
+        // Click chuột ra ngoài giao diện thì tắt (phiên bản chống lỗi tải lại DOM)
+        document.addEventListener('click', function(e) {
+          // Nhớ thay 'btn-fx-indicator' bằng ID nút mở popup của bạn nếu có
+          const btnInd = document.getElementById('btn-fx-indicator'); 
+          
+          if (indModal && indModal.style.display === 'flex') {
+            // Sử dụng e.composedPath() để truy vết luồng click chuột
+            // Giúp nhận diện chuẩn xác bạn đang click bên trong popup kể cả khi thẻ vừa bị đổi màu
+            const path = e.composedPath ? e.composedPath() : [];
+            const isClickInsideModal = path.includes(indModal);
+            const isClickOnButton = btnInd && path.includes(btnInd);
+    
+            // Chỉ ẩn popup khi vị trí click KHÔNG nằm trong popup VÀ KHÔNG nằm trên nút bật
+            if (!isClickInsideModal && !isClickOnButton) {
+              indModal.style.display = 'none';
+            }
+          }
+        });
 
     
     }
