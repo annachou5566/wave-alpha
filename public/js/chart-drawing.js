@@ -3268,40 +3268,44 @@ function showFloatToolbar(ov, posX, posY) {
     return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
   }
 
-        // 1. Khai báo Icon siêu mỏng, đẹp mắt (Lucide Icons)
+        // 1. Định nghĩa Icon mỏng, đẹp (Dành riêng cho Float Toolbar)
   var dragSVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>';
   var editSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
   var lockOn = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
   var lockOff = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>';
   var eyeShow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   var eyeHide = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24l11 11 M3 3l18 18"/></svg>';
   var trashSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
 
-  // 2. Build HTML cực kỳ logic và linh hoạt
-  var html = `
-      <div class="wa-fb-drag wa-drag-grip" title="Kéo thả toolbar">${dragSVG}</div>
-      <div class="wa-fb-color-wrap" id="wa-fb-cfg-color" title="Màu sắc hiện tại">
-          <div class="wa-fb-cswatch" style="background:${pc};"></div>
-      </div>
-      <div class="wa-fb-sep"></div>
-  `;
+  // 2. Build chuỗi HTML (Giữ cấu trúc gốc của file, tránh phá hỏng sự kiện Drag)
+  var html = '';
+  html += '<div class="wa-fb-drag wa-drag-grip" title="Kéo thả toolbar">' + dragSVG + '</div>';
+  
+  html += '<div class="wa-fb-color-wrap" id="wa-fb-cfg-color" title="Màu sắc hiện tại">';
+  html += '  <div class="wa-fb-cswatch" style="background:' + pc + ';"></div>';
+  html += '</div>';
+  
+  html += '<div class="wa-fb-sep"></div>';
 
-  // Thêm nút Sửa chữ nếu công cụ là Text
   if (cat === 'text') {
-      html += `<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">${editSVG}</button>`;
-      html += `<div class="wa-fb-sep"></div>`;
+      html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">' + editSVG + '</button>';
+      html += '<div class="wa-fb-sep"></div>';
   }
 
-  // Các nút cơ bản luôn có
-  html += `
-      <button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">${gearSVG}</button>
-      <button class="wa-fb-btn ${isLocked ? 'wa-fb-on' : ''}" id="wa-fb-lk" title="${isLocked ? 'Mở khóa' : 'Khóa'}">${isLocked ? lockOn : lockOff}</button>
-      <button class="wa-fb-btn ${isHidden ? 'wa-fb-on' : ''}" id="wa-fb-vis" title="${isHidden ? 'Hiện' : 'Ẩn'}">${isHidden ? eyeHide : eyeShow}</button>
-      <button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa công cụ">${trashSVG}</button>
-  `;
+  html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt thuộc tính">' + gearSVG + '</button>';
+  
+  var lockClass = isLocked ? ' wa-fb-on' : '';
+  var lockIcon = isLocked ? lockOn : lockOff;
+  html += '<button class="wa-fb-btn' + lockClass + '" id="wa-fb-lk" title="Khóa/Mở khóa">' + lockIcon + '</button>';
+  
+  var visClass = isHidden ? ' wa-fb-on' : '';
+  var visIcon = isHidden ? eyeHide : eyeShow;
+  html += '<button class="wa-fb-btn' + visClass + '" id="wa-fb-vis" title="Ẩn/Hiện">' + visIcon + '</button>';
+  
+  html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa công cụ">' + trashSVG + '</button>';
 
-  // 3. Gắn DOM
+  // 3. Khởi tạo Element
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
