@@ -1793,10 +1793,59 @@
       }
 
           /* PROPERTIES PANEL (FLOATING & DRAGGABLE) */
-    .wa-props-panel { position: absolute; right: 20px; top: 60px; bottom: auto; max-height: calc(100vh - 80px); width: 280px; background: var(--wa-bg-modal); backdrop-filter: blur(24px); border: 1px solid var(--wa-border-subtle); border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s; display: flex; flex-direction: column; }
-    .wa-props-panel.show { opacity: 1; pointer-events: all; }
-    .wa-panel-header { padding: 14px 16px; background: var(--wa-bg-elevated); border-bottom: 1px solid var(--wa-border-subtle); border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; color: var(--wa-text-secondary); font-weight: 700; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; cursor: grab; user-select: none; }
-    .wa-panel-header:active { cursor: grabbing; }
+.wa-props-panel { 
+    position: fixed !important; /* Đổi sang Fixed để tự do toàn màn hình, bất chấp Parent Container */
+    right: 16px; 
+    top: 60px; 
+    width: 280px; 
+    background: var(--wa-bg-modal); 
+    backdrop-filter: blur(24px); 
+    border: 1px solid var(--wa-border-subtle); 
+    border-radius: 12px; 
+    box-shadow: 0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04); 
+    z-index: 9999999 !important; /* Z-INDEX ĐỘC TÔN: Đè lên mọi thứ */
+    opacity: 0; 
+    pointer-events: none; 
+    transition: opacity 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1); 
+    display: flex; 
+    flex-direction: column; 
+    transform: scale(0.95); /* Thêm hiệu ứng Pop nhẹ khi mở */
+}
+.wa-props-panel.show { 
+    opacity: 1; 
+    pointer-events: all; 
+    transform: scale(1);
+}
+.wa-panel-header { 
+    padding: 14px 16px; 
+    background: var(--wa-bg-elevated); 
+    border-bottom: 1px solid var(--wa-border-subtle); 
+    border-radius: 12px 12px 0 0; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    color: var(--wa-text-secondary); 
+    font-weight: 700; 
+    font-size: 12px; 
+    letter-spacing: 0.5px; 
+    text-transform: uppercase; 
+    cursor: grab; 
+    user-select: none; 
+    touch-action: none; /* Khóa cuộn trang khi kéo trên điện thoại/pad */
+}
+.wa-panel-header:active { 
+    cursor: grabbing; 
+    background: var(--wa-bg-overlay); /* Phản hồi khi nhấn giữ */
+}
+.wa-panel-body { 
+    padding: 16px; 
+    flex: 1; 
+    overflow-y: auto; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 14px; 
+    max-height: calc(100vh - 140px); /* Tự động co lại nếu sát mép dưới màn hình */
+}
       .wa-close-btn {
         background: none; border: none; color: var(--wa-text-muted);
         cursor: pointer; padding: 4px; border-radius: 4px;
@@ -2513,51 +2562,50 @@ onDrawEnd: function(event) {
   function renderPanel(overlay) {
     var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
-      // --- BẮT ĐẦU: LOGIC KÉO THẢ (CHỈ CHẠY 1 LẦN) ---
-      if (!panel.dataset.dragSetup) {
-        panel.dataset.dragSetup = "true";
-        var header = panel.querySelector('.wa-panel-header');
-        if (header) {
-            var isDragging = false, startX, startY, initL, initT;
-            header.addEventListener('mousedown', function(e) {
-                // Bỏ qua nếu người dùng bấm vào nút X (Đóng)
-                if (e.target.closest('.wa-close-btn')) return;
-                isDragging = true;
-                
-                var rect = panel.getBoundingClientRect();
-                var container = document.getElementById('sc-chart-container') || document.body;
-                var cRect = container.getBoundingClientRect();
-                
-                // Giải phóng panel khỏi lề phải (right) để di chuyển tự do bằng left/top
-                panel.style.right = 'auto';
-                panel.style.bottom = 'auto';
-                panel.style.left = (rect.left - cRect.left) + 'px';
-                panel.style.top = (rect.top - cRect.top) + 'px';
-                panel.style.margin = '0';
-                
-                startX = e.clientX;
-                startY = e.clientY;
-                initL = rect.left - cRect.left;
-                initT = rect.top - cRect.top;
-                
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            });
-            function onMouseMove(e) {
-                if (!isDragging) return;
-                e.preventDefault();
-                var dx = e.clientX - startX, dy = e.clientY - startY;
-                panel.style.left = (initL + dx) + 'px';
-                panel.style.top = (initT + dy) + 'px';
-            }
-            function onMouseUp() {
-                isDragging = false;
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            }
-        }
-    }
-    // --- KẾT THÚC: LOGIC KÉO THẢ ---
+          // --- BẮT ĐẦU: LOGIC KÉO THẢ (VƯỢT GIỚI HẠN) ---
+    if (!panel.dataset.dragSetup) {
+      panel.dataset.dragSetup = "true";
+      var header = panel.querySelector('.wa-panel-header');
+      if (header) {
+          var isDragging = false, startX, startY, initL, initT;
+          header.addEventListener('mousedown', function(e) {
+              if (e.target.closest('.wa-close-btn')) return;
+              isDragging = true;
+              
+              var rect = panel.getBoundingClientRect();
+              
+              // Chuyển sang Fixed tự do, giải phóng Right/Bottom
+              panel.style.right = 'auto';
+              panel.style.bottom = 'auto';
+              panel.style.margin = '0';
+              panel.style.left = rect.left + 'px';
+              panel.style.top = rect.top + 'px';
+              
+              startX = e.clientX;
+              startY = e.clientY;
+              initL = rect.left;
+              initT = rect.top;
+              
+              document.addEventListener('mousemove', onMouseMove);
+              document.addEventListener('mouseup', onMouseUp);
+          });
+          function onMouseMove(e) {
+              if (!isDragging) return;
+              e.preventDefault();
+              var dx = e.clientX - startX, dy = e.clientY - startY;
+              
+              // Không thèm chặn mép! Cứ cho kéo ra tới mép tùy ý!
+              panel.style.left = (initL + dx) + 'px';
+              panel.style.top = (initT + dy) + 'px';
+          }
+          function onMouseUp() {
+              isDragging = false;
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+          }
+      }
+  }
+  // --- KẾT THÚC: LOGIC KÉO THẢ ---
     // ── 1. Cleanup listeners & popup từ lần trước ──
     if (panel._rpCleanup) { try { panel._rpCleanup(); } catch(e){} }
     var _H = [];
