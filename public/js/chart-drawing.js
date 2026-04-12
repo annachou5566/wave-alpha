@@ -1132,17 +1132,17 @@
       var tS = os && os.text ? os.text : {};
       var pS = os && os.polygon ? os.polygon : {};
       
-      // ĐO KÍCH THƯỚC CHỮ CHÍNH XÁC TUYỆT ĐỐI BẰNG CANVAS
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
       ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
       var lh = (tS.size || 14) + 6;
-      var pd = 8; // Khoảng đệm 2 bên trái phải
       
-      var bw = textW + pd * 2;
-      var bh = lines.length * lh + pd * 2;
+      // Tách lề trái/phải để bù trừ lỗi đo chữ của trình duyệt
+      var pl = 4, pr = 12, pt = 6, pb = 6; 
+      var bw = textW + pl + pr;
+      var bh = lines.length * lh + pt + pb;
       
       var bgC = pS.color && pS.color !== 'transparent' ? pS.color : 'transparent';
       var bdC = pS.borderColor && pS.borderColor !== 'transparent' ? pS.borderColor : 'transparent';
@@ -1153,10 +1153,10 @@
           figs.push({
             type: 'polygon',
             attrs: { coordinates: [
-                { x: c[0].x - pd, y: c[0].y - pd },
-                { x: c[0].x - pd + bw, y: c[0].y - pd },
-                { x: c[0].x - pd + bw, y: c[0].y - pd + bh },
-                { x: c[0].x - pd, y: c[0].y - pd + bh }
+                { x: c[0].x - pl, y: c[0].y - pt },
+                { x: c[0].x - pl + bw, y: c[0].y - pt },
+                { x: c[0].x - pl + bw, y: c[0].y - pt + bh },
+                { x: c[0].x - pl, y: c[0].y - pt + bh }
             ]},
             styles: { style: 'stroke_fill', color: bgC, borderColor: bdC, borderSize: bdW },
             ignoreEvent: true
@@ -1203,7 +1203,7 @@
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
       var lh = (tS.size || 13) + 6;
-      var pd = 8;
+      var pl = 4, pr = 12, pt = 6, pb = 6;
       var tx = c.length > 1 ? c[1].x : c[0].x;
       var ty = c.length > 1 ? c[1].y : c[0].y;
       
@@ -1216,8 +1216,8 @@
         });
       }
       
-      var bw = textW + pd * 2;
-      var bh = lines.length * lh + pd * 2;
+      var bw = textW + pl + pr;
+      var bh = lines.length * lh + pt + pb;
       var bgC = pS.color && pS.color !== 'transparent' ? pS.color : 'transparent';
       var bdC = pS.borderColor && pS.borderColor !== 'transparent' ? pS.borderColor : 'transparent';
       var bdW = pS.borderSize || 0;
@@ -1226,10 +1226,10 @@
           figs.push({
             type: 'polygon',
             attrs: { coordinates: [
-                { x: tx - pd, y: ty - pd },
-                { x: tx - pd + bw, y: ty - pd },
-                { x: tx - pd + bw, y: ty - pd + bh },
-                { x: tx - pd, y: ty - pd + bh }
+                { x: tx - pl, y: ty - pt },
+                { x: tx - pl + bw, y: ty - pt },
+                { x: tx - pl + bw, y: ty - pt + bh },
+                { x: tx - pl, y: ty - pt + bh }
             ]},
             styles: { style: 'stroke_fill', color: bgC, borderColor: bdC, borderSize: bdW },
             ignoreEvent: true
@@ -1270,9 +1270,10 @@
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
-      var lh = (tS.size || 14) + 6, pd = 10;
-      var bw = Math.max(60, textW + pd * 2);
-      var bh = lines.length * lh + pd * 2;
+      var lh = (tS.size || 14) + 6;
+      var pl = 8, pr = 14, pt = 8, pb = 8;
+      var bw = Math.max(60, textW + pl + pr);
+      var bh = lines.length * lh + pt + pb;
       
       var figs = [{
         type: 'polygon',
@@ -1283,7 +1284,7 @@
       lines.forEach(function(l, i) {
         figs.push({
           type: 'text',
-          attrs: { x: x+pd, y: y+pd + i*lh, text: l, align: 'left', baseline: 'top' },
+          attrs: { x: x+pl, y: y+pt + i*lh, text: l, align: 'left', baseline: 'top' },
           styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
@@ -1317,7 +1318,8 @@
       
       var x = c[0].x, y = c[0].y;
       var lh = (tS.size || 12) + 6;
-      var bw = textW + 16, bh = lines.length * lh + 10; // Căn lề 8px mỗi bên
+      var pl = 6, pr = 12;
+      var bw = textW + pl + pr, bh = lines.length * lh + 10; 
       
       var figs = [{
         type: 'polygon',
@@ -1329,7 +1331,7 @@
         var lineY = y - (lines.length - 1)*lh/2 + i*lh;
         figs.push({
           type: 'text',
-          attrs: { x: x+8, y: lineY, text: l, align: 'left', baseline: 'middle' },
+          attrs: { x: x+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
           styles: { color: tS.color || '#0ECB81', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
@@ -1360,7 +1362,7 @@
           var lineY = y - r - 10 - (lines.length - 1)*lh/2 + i*lh;
           figs.push({
             type: 'text',
-            attrs: { x: x+r+4, y: lineY, text: l, align: 'left', baseline: 'middle' },
+            attrs: { x: x+r+6, y: lineY, text: l, align: 'left', baseline: 'middle' },
             styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
@@ -1391,11 +1393,12 @@
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
       var lh = (tS.size || 12) + 6;
+      var pl = 6, pr = 12;
       
       if (c.length > 1) {
         figs.push({ type: 'line', attrs: { coordinates: [c[0], c[1]] }, styles: { color: pS.borderColor || '#00F0FF', size: 1 } });
         var tx = c[1].x, ty = c[1].y;
-        var bw = textW + 16, bh = lines.length * lh + 10;
+        var bw = textW + pl + pr, bh = lines.length * lh + 10;
         figs.push({
           type: 'polygon',
           attrs: { coordinates: [ {x:tx, y:ty-bh/2}, {x:tx+bw, y:ty-bh/2}, {x:tx+bw, y:ty+bh/2}, {x:tx, y:ty+bh/2} ] },
@@ -1406,7 +1409,7 @@
           var lineY = ty - (lines.length - 1)*lh/2 + i*lh;
           figs.push({
             type: 'text',
-            attrs: { x: tx+8, y: lineY, text: l, align: 'left', baseline: 'middle' },
+            attrs: { x: tx+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
             styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
@@ -1415,7 +1418,7 @@
           var lineY = c[0].y - (lines.length - 1)*lh/2 + i*lh;
           figs.push({
             type: 'text',
-            attrs: { x: c[0].x+8, y: lineY, text: l, align: 'left', baseline: 'middle' },
+            attrs: { x: c[0].x+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
             styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
@@ -1443,7 +1446,8 @@
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
       var lh = (tS.size || 14) + 6;
-      var bw = Math.max(80, textW + 20), bh = lines.length * lh + 14, tail = 8;
+      var pl = 8, pr = 14;
+      var bw = Math.max(80, textW + pl + pr), bh = lines.length * lh + 14, tail = 8;
       
       var figs = [{
         type: 'polygon',
@@ -1455,7 +1459,7 @@
         var lineY = y - bh/2 - tail - (lines.length - 1)*lh/2 + i*lh;
         figs.push({
           type: 'text',
-          attrs: { x: x+10, y: lineY, text: l, align: 'left', baseline: 'middle' },
+          attrs: { x: x+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
           styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
@@ -1488,8 +1492,8 @@
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
       var lh = (tS.size || 11) + 6;
-      var bw = textW + 12, bh = lines.length * lh + 10;
-      var arr = 6;
+      var pl = 6, pr = 12, arr = 6;
+      var bw = textW + pl + pr, bh = lines.length * lh + 10;
       
       var figs = [{
         type: 'polygon',
@@ -1501,7 +1505,7 @@
         var lineY = y - (lines.length - 1)*lh/2 + i*lh;
         figs.push({
           type: 'text',
-          attrs: { x: x+arr+6, y: lineY, text: l, align: 'left', baseline: 'middle' },
+          attrs: { x: x+arr+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
           styles: { color: tS.color || '#ffffff', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
@@ -1531,12 +1535,13 @@
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
       var lh = (tS.size || 12) + 6;
+      var pl = 6, pr = 12;
       
       if (c.length > 1) {
         figs.push({ type: 'line', attrs: { coordinates: [c[0], {x:tx, y:ty}] }, styles: { color: pS.borderColor || '#848e9c', size: 1, style: 'dashed' } });
       }
       
-      var bw = textW + 16, bh = lines.length * lh + 10, notch = 10;
+      var bw = textW + pl + pr, bh = lines.length * lh + 10, notch = 10;
       var isRight = tx >= c[0].x;
       var coords = isRight ? 
         [ {x:tx, y:ty}, {x:tx+notch, y:ty-bh/2}, {x:tx+notch+bw, y:ty-bh/2}, {x:tx+notch+bw, y:ty+bh/2}, {x:tx+notch, y:ty+bh/2} ] :
@@ -1552,7 +1557,7 @@
         var lineY = ty - (lines.length - 1)*lh/2 + i*lh;
         figs.push({
           type: 'text',
-          attrs: { x: isRight ? tx+notch+8 : tx-notch-8, y: lineY, text: l, align: isRight ? 'left' : 'right', baseline: 'middle' },
+          attrs: { x: isRight ? tx+notch+pl : tx-notch-pr, y: lineY, text: l, align: isRight ? 'left' : 'right', baseline: 'middle' },
           styles: { color: tS.color || '#d0aaff', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
@@ -1583,7 +1588,7 @@
           var lineY = y - ph + fh/2 - (lines.length - 1)*lh/2 + i*lh;
           figs.push({
             type: 'text',
-            attrs: { x: x+fw+4, y: lineY, text: l, align: 'left', baseline: 'middle' },
+            attrs: { x: x+fw+6, y: lineY, text: l, align: 'left', baseline: 'middle' },
             styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
