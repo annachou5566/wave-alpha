@@ -3268,95 +3268,154 @@ function showFloatToolbar(ov, posX, posY) {
     return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
   }
 
-            // 1. Lấy thông số hiện tại của công cụ để hiển thị đúng trên Toolbar
+            // 1. Trích xuất thuộc tính hiện tại
   var curLine = (ov.styles && ov.styles.line) ? ov.styles.line : {};
   var curSize = curLine.size || 1;
   var curStyle = curLine.style || 'solid';
 
-  // 2. Icon siêu mỏng bo góc (Lucide)
+  // 2. Bộ Icon
   var dragSVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>';
   var editSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
   var lockOn = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
   var lockOff = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>';
   var eyeShow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   var eyeHide = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24l11 11 M3 3l18 18"/></svg>';
   var trashSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+  var lineSolid = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5"/></svg>';
+  var lineDashed = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg>';
+  var lineDotted = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1.5 3"/></svg>';
 
-  // 3. Build giao diện Full Options
+  // 3. Build giao diện bằng Custom Elements
   var html = '';
   
-  // Nút kéo thả (Giữ đúng class 'wa-fb-drag' để script bên dưới nhận diện được, BỎ 'wa-drag-grip')
-  html += '<div class="wa-fb-drag" title="Kéo thả" style="cursor:grab; display:flex; align-items:center; justify-content:center; width:16px; height:28px; color:#475569; margin-right:4px;">' + dragSVG + '</div>';
+  // Drag
+  html += '<div class="wa-fb-drag" title="Kéo thả" style="cursor:grab; display:flex; align-items:center; justify-content:center; width:16px; height:28px; color:#475569; margin-right:2px;">' + dragSVG + '</div>';
   
-  // Khối Chọn Màu (Đã trả lại thẻ input type="color" để click xổ ra bảng màu)
-  html += '<div class="wa-fb-color-wrap" title="Đổi màu sắc">';
-  html += '  <input type="color" value="' + pc + '" style="opacity:0; position:absolute; inset:0; width:100%; height:100%; cursor:pointer; z-index:2;">';
-  html += '  <div class="wa-fb-cswatch" style="background:' + pc + ';"></div>';
-  html += '</div>';
+  // Nút Color (Custom)
+  html += '<button class="wa-fb-btn" id="wa-fb-quick-color" title="Màu sắc" style="padding:0; overflow:hidden;">';
+  html += '  <div style="width:16px; height:16px; border-radius:4px; background:' + pc + '; border:1px solid rgba(255,255,255,0.2);"></div>';
+  html += '</button>';
+
+  // Nút Độ Dày (Custom)
+  html += '<button class="wa-fb-btn" id="wa-fb-quick-thick" title="Độ dày ('+curSize+'px)" style="font-size:12px; font-weight:700; width:auto; padding:0 8px;">' + curSize + 'px</button>';
+
+  // Nút Kiểu Nét (Custom)
+  html += '<button class="wa-fb-btn" id="wa-fb-quick-style" title="Kiểu nét" style="width:auto; padding:0 8px;">' + (curStyle=='dashed'?lineDashed : curStyle=='dotted'?lineDotted : lineSolid) + '</button>';
 
   html += '<div class="wa-fb-sep"></div>';
 
-  // Khối Chọn Độ Dày Nét Vẽ (Dropdown xịn xò)
-  html += '<select id="wa-fb-thick" title="Độ dày" style="background:transparent; color:#94A3B8; border:none; outline:none; cursor:pointer; height:28px; border-radius:6px; font-weight:600; font-size:12px; appearance:none; text-align:center; padding:0 6px;">';
-  [1, 2, 3, 4, 5].forEach(v => {
-      html += '<option value="'+v+'" style="background:#1C242E;" '+(v == curSize ? 'selected' : '')+'>'+v+'px</option>';
-  });
-  html += '</select>';
-
-  // Khối Chọn Kiểu Nét (Liền / Đứt / Chấm)
-  html += '<select id="wa-fb-style" title="Kiểu nét" style="background:transparent; color:#94A3B8; border:none; outline:none; cursor:pointer; height:28px; border-radius:6px; font-weight:600; font-size:12px; appearance:none; text-align:center; padding:0 6px; margin-right:4px;">';
-  html += '<option value="solid" style="background:#1C242E;" '+(curStyle=='solid'?'selected':'')+'>━━</option>';
-  html += '<option value="dashed" style="background:#1C242E;" '+(curStyle=='dashed'?'selected':'')+'> ┄ </option>';
-  html += '<option value="dotted" style="background:#1C242E;" '+(curStyle=='dotted'?'selected':'')+'> • • </option>';
-  html += '</select>';
-
-  html += '<div class="wa-fb-sep"></div>';
-
-  // Nút Sửa Text
   if (cat === 'text') {
       html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">' + editSVG + '</button>';
       html += '<div class="wa-fb-sep"></div>';
   }
 
-  // Các nút Tiện ích
   html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">' + gearSVG + '</button>';
   html += '<button class="wa-fb-btn' + (isLocked ? ' wa-fb-on' : '') + '" id="wa-fb-lk" title="' + (isLocked ? 'Mở khóa' : 'Khóa') + '">' + (isLocked ? lockOn : lockOff) + '</button>';
   html += '<button class="wa-fb-btn' + (isHidden ? ' wa-fb-on' : '') + '" id="wa-fb-vis" title="' + (isHidden ? 'Hiện' : 'Ẩn') + '">' + (isHidden ? eyeHide : eyeShow) + '</button>';
   html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa công cụ">' + trashSVG + '</button>';
 
-  // 4. Khởi tạo Element
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
   bar.innerHTML = html;
   document.body.appendChild(bar);
 
-  // 5. Gắn sự kiện để khi đổi Độ dày & Kiểu nét sẽ cập nhật Chart tức thì
-  setTimeout(function() {
-      var selThick = document.getElementById('wa-fb-thick');
-      var selStyle = document.getElementById('wa-fb-style');
-      
-      if(selThick) selThick.onchange = function() {
-          var ns = JSON.parse(JSON.stringify(ov.styles));
-          if(!ns.line) ns.line = {};
-          ns.line.size = parseInt(this.value);
-          if(global.tvChart) {
-              global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-              if(typeof saveToStorage === 'function') saveToStorage();
-          }
-      };
-      
-      if(selStyle) selStyle.onchange = function() {
-          var ns = JSON.parse(JSON.stringify(ov.styles));
-          if(!ns.line) ns.line = {};
-          ns.line.style = this.value;
-          if(global.tvChart) {
-              global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-              if(typeof saveToStorage === 'function') saveToStorage();
-          }
-      };
-  }, 50);
+  // 4. Hàm hỗ trợ tạo Mini Popup Popup
+  function createMiniPopup(btnId, contentHTML, width) {
+      var btn = document.getElementById(btnId);
+      if(!btn) return;
+      btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          // Đóng popup cũ nếu có
+          var exist = document.getElementById('wa-mini-pop');
+          if(exist) exist.remove();
+          
+          var pop = document.createElement('div');
+          pop.id = 'wa-mini-pop';
+          pop.style.cssText = 'position:fixed; background:#151B23; border:1px solid #273040; border-radius:8px; padding:6px; box-shadow:0 12px 32px rgba(0,0,0,0.8); z-index:999999; display:flex; flex-direction:column; gap:4px; width:'+width+'px;';
+          pop.innerHTML = contentHTML;
+          document.body.appendChild(pop);
+
+          var rect = btn.getBoundingClientRect();
+          pop.style.top = (rect.bottom + 6) + 'px';
+          pop.style.left = rect.left + 'px';
+
+          // Click ra ngoài để đóng
+          var closePop = function(ev) {
+              if(!pop.contains(ev.target)) {
+                  pop.remove();
+                  document.removeEventListener('mousedown', closePop);
+              }
+          };
+          setTimeout(() => document.addEventListener('mousedown', closePop), 10);
+
+          // Xử lý sự kiện trong popup
+          var items = pop.querySelectorAll('.pop-item');
+          items.forEach(item => {
+              item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.08)';
+              item.onmouseleave = () => item.style.background = 'transparent';
+              item.onclick = function(ev) {
+                  ev.stopPropagation();
+                  var val = this.dataset.val;
+                  var type = this.dataset.type;
+                  
+                  var ns = JSON.parse(JSON.stringify(ov.styles));
+                  if(type === 'color') {
+                      if(ns.line) ns.line.color = val;
+                      if(ns.polygon && ns.polygon.borderColor) ns.polygon.borderColor = val;
+                      if(cat === 'text' && ns.text) ns.text.color = val;
+                  } 
+                  else if(type === 'thick') {
+                      if(!ns.line) ns.line = {};
+                      ns.line.size = parseInt(val);
+                      if(ns.polygon && ns.polygon.borderSize !== undefined) ns.polygon.borderSize = parseInt(val);
+                  }
+                  else if(type === 'style') {
+                      if(!ns.line) ns.line = {};
+                      ns.line.style = val;
+                  }
+
+                  if(global.tvChart) {
+                      global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
+                      if(typeof saveToStorage === 'function') saveToStorage();
+                  }
+                  
+                  // Cập nhật ngay UI của nút
+                  if(type === 'color') btn.innerHTML = '<div style="width:16px; height:16px; border-radius:4px; background:' + val + '; border:1px solid rgba(255,255,255,0.2);"></div>';
+                  if(type === 'thick') btn.innerHTML = val + 'px';
+                  if(type === 'style') btn.innerHTML = (val=='dashed'?lineDashed : val=='dotted'?lineDotted : lineSolid);
+
+                  pop.remove();
+              };
+          });
+      });
+  }
+
+  // 5. Khởi tạo dữ liệu Mini Popups
+  // Bảng màu gọn gàng (20 màu cơ bản)
+  var colors = ['#EF4444','#F97316','#F59E0B','#EAB308','#84CC16','#22C55E','#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6','#6366F1','#8B5CF6','#A855F7','#D946EF','#EC4899','#F43F5E','#FFFFFF','#94A3B8','#000000'];
+  var cHtml = '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;">';
+  colors.forEach(c => {
+      cHtml += '<div class="pop-item" data-type="color" data-val="'+c+'" style="width:24px; height:24px; border-radius:4px; cursor:pointer; background:'+c+'; border:1px solid rgba(255,255,255,0.1);"></div>';
+  });
+  cHtml += '</div>';
+  createMiniPopup('wa-fb-quick-color', cHtml, 145);
+
+  // Menu Độ dày (1-5px)
+  var tHtml = '';
+  [1,2,3,4,5].forEach(v => {
+      tHtml += '<div class="pop-item" data-type="thick" data-val="'+v+'" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2; font-size:12px; font-weight:600;">Độ dày '+v+'px</div>';
+  });
+  createMiniPopup('wa-fb-quick-thick', tHtml, 120);
+
+  // Menu Kiểu nét
+  var sHtml = '';
+  sHtml += '<div class="pop-item" data-type="style" data-val="solid" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2;">' + lineSolid + '</div>';
+  sHtml += '<div class="pop-item" data-type="style" data-val="dashed" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2;">' + lineDashed + '</div>';
+  sHtml += '<div class="pop-item" data-type="style" data-val="dotted" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2;">' + lineDotted + '</div>';
+  createMiniPopup('wa-fb-quick-style', sHtml, 100);
+
 
   // ─────────────────────────────────────────────────────────────
   // 🎯 SMART POSITIONING — Tránh mép container, không bao giờ bị cắt
