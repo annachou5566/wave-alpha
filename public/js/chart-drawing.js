@@ -1945,108 +1945,48 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-      
-    /* ========================================= */
-    /* FLOATING TOOLBAR (SIÊU TỐI GIẢN & HIỆN ĐẠI) */
-    /* ========================================= */
-    .wa-float-bar { 
-        position: absolute; 
-        z-index: 1002; 
-        display: flex; 
-        align-items: center; 
-        gap: 4px; 
-        padding: 4px 6px; 
-        background: rgba(15, 23, 42, 0.85); /* Nền kính tối */
-        border: 1px solid rgba(255, 255, 255, 0.08); 
-        border-radius: 12px; 
-        box-shadow: 0 12px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.4); 
-        backdrop-filter: blur(20px); 
-        -webkit-backdrop-filter: blur(20px);
-        opacity: 0; 
-        transform: translateY(10px) scale(0.96); 
-        transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); 
-        pointer-events: none; 
-        user-select: none; 
-        font-family: 'Inter', 'Be Vietnam Pro', sans-serif; 
-    }
-    .wa-float-bar.wa-fb-show { 
-        opacity: 1; 
-        transform: translateY(0) scale(1); 
-        pointer-events: all; 
-    }
-
-    /* Grip Kéo thả */
-    .wa-fb-drag {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 16px;
-        height: 28px;
-        cursor: grab;
-        color: #475569;
-        margin-right: 2px;
-        transition: color 0.15s;
-    }
-    .wa-fb-drag:hover { color: #94A3B8; }
-    .wa-fb-drag:active { cursor: grabbing; color: #E2E8F0; }
-
-    /* Dấu gạch dọc phân cách */
-    .wa-fb-sep { 
-        width: 1px; 
-        height: 16px; 
-        background: rgba(255, 255, 255, 0.1); 
-        margin: 0 4px; 
-        flex-shrink: 0; 
-    }
-
-    /* Các nút bấm (Button) */
-    .wa-fb-btn { 
-        width: 32px; 
-        height: 32px; 
-        border: none; 
-        background: transparent; 
-        color: #94A3B8; 
-        cursor: pointer; 
-        border-radius: 8px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); 
-        padding: 0;
-        position: relative;
-    }
-    .wa-fb-btn svg { width: 16px; height: 16px; }
-    .wa-fb-btn:hover { background: rgba(255, 255, 255, 0.08); color: #F8FAFC; }
-    
-    /* Nút đang bật (Active / Lock) */
-    .wa-fb-btn.wa-fb-on { 
-        background: rgba(59, 130, 246, 0.15); 
-        color: #60A5FA; 
-    }
-
-    /* Nút Xóa (Thùng rác) */
-    .wa-fb-btn.wa-fb-del:hover { 
-        background: rgba(239, 68, 68, 0.15); 
-        color: #F87171; 
-    }
-
-    /* Ô hiển thị Màu Sắc */
-    .wa-fb-color-wrap { 
-        width: 24px; 
-        height: 24px; 
-        border-radius: 6px; 
-        position: relative; 
-        overflow: hidden; 
-        cursor: pointer; 
-        border: 2px solid rgba(255,255,255,0.1);
-        transition: transform 0.1s, border-color 0.15s;
-    }
-    .wa-fb-color-wrap:hover {
-        transform: scale(1.1);
-        border-color: rgba(255,255,255,0.3);
-    }
-    .wa-fb-cswatch { width: 100%; height: 100%; pointer-events: none; }
-
+      /* ===== FLOATING TOOLBAR ===== */
+.wa-float-bar {
+  position: absolute;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 8px;
+  background: #1C242E;
+  border: 1px solid #273040;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
+  transition: opacity 0.18s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: none;
+  user-select: none;
+  font-family: Be Vietnam Pro, Inter, sans-serif;
+}
+.wa-float-bar.wa-fb-show { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+.wa-fb-color-wrap {
+  width: 26px; height: 26px; border-radius: 6px; position: relative;
+  border: 1.5px solid #273040; overflow: hidden; cursor: pointer; flex-shrink: 0;
+}
+.wa-fb-color-wrap input[type=color] {
+  opacity: 0; position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; border: none; padding: 0;
+}
+.wa-fb-cswatch { width: 100%; height: 100%; pointer-events: none; }
+.wa-fb-sep { width: 1px; height: 16px; background: #273040; margin: 0 4px; flex-shrink: 0; }
+.wa-fb-btn {
+  width: 28px; height: 28px; border: none; background: transparent;
+  color: #8896A7; cursor: pointer; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.14s; flex-shrink: 0; padding: 0;
+}
+.wa-fb-btn:hover { background: rgba(255,255,255,0.07); color: #E8EDF2; }
+.wa-fb-btn.wa-fb-on { background: rgba(59,130,246,0.15); color: #60A5FA; box-shadow: 0 0 0 1px #3B82F6; }
+.wa-fb-btn.wa-fb-del:hover { background: rgba(239,68,68,0.15); color: #EF4444; }
+.wa-fb-label {
+  font-size: 10px; color: #4A5568; padding: 0 4px; white-space: nowrap;
+}
 /* Panel improvements */
 .wa-prop-section { padding: 12px 16px; border-bottom: 1px solid #1E2733; }
 .wa-prop-section:last-child { border-bottom: none; }
@@ -3230,348 +3170,226 @@ function hideFloatToolbar() {
 
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
-
-  // Giữ vị trí cũ nếu chỉ refresh icon
-  var existingBar = document.getElementById('wa-float-bar');
-  var savedLeft = null, savedTop = null;
-  if (posX === null && posY === null && existingBar) {
-      savedLeft = existingBar.style.left;
-      savedTop = existingBar.style.top;
-  }
+   // ── GIỮ VỊ TRÍ CŨ khi chỉ cập nhật icon (posX/posY = null) ──
+   var existingBar = document.getElementById('wa-float-bar');
+   var savedLeft = null, savedTop = null;
+   if (posX === null && posY === null && existingBar) {
+     savedLeft = existingBar.style.left;
+     savedTop  = existingBar.style.top;
+   }
   hideFloatToolbar();
 
+  var container = document.getElementById('sc-chart-container');
+  if (!container) return;
+  var rect = container.getBoundingClientRect();
+
   var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : 'lines';
-  var s = ov.styles || {};
-  var isLocked = !!ov.lock;
+  var s   = ov.styles || {};
   var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
-  var isHidden = !!ext.hidden;
 
-  // Đọc màu/nét/size hiện tại
+  // ── Màu chính ──────────────────────────────────────────────────
   var pc = '#3B82F6';
-  if (cat === 'text') pc = (s.text && s.text.color) ? (s.text.color.startsWith('#') ? s.text.color : '#' + (typeof colorToHex === 'function' ? colorToHex(s.text.color) : 'E8EDF2')) : '#E8EDF2';
-  else if (cat === 'shapes') pc = (s.polygon && s.polygon.borderColor) ? (s.polygon.borderColor.startsWith('#') ? s.polygon.borderColor : '#' + (typeof colorToHex === 'function' ? colorToHex(s.polygon.borderColor) : '3B82F6')) : '#3B82F6';
-  else pc = (s.line && s.line.color) ? (s.line.color.startsWith('#') ? s.line.color : '#' + (typeof colorToHex === 'function' ? colorToHex(s.line.color) : '3B82F6')) : '#3B82F6';
-  if (!pc || !pc.startsWith('#')) pc = '#3B82F6';
+  if (cat === 'text')   pc = s.text    && s.text.color         ? colorToHex(s.text.color)            : '#E8EDF2';
+  else if (cat === 'shapes') pc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '#3B82F6';
+  else                  pc = s.line    && s.line.color          ? colorToHex(s.line.color)             : '#3B82F6';
+  if (!pc.startsWith('#')) pc = '#' + pc;
 
-  var lw = (s.line && s.line.size) ? s.line.size : 1;
-  var ls = (s.line && s.line.style) ? s.line.style : 'solid';
-  var tsz = (s.text && s.text.size) ? s.text.size : 14;
+  var lw       = (s.line && s.line.size)  || 1;
+  var ls       = (s.line && s.line.style) || 'solid';
+  var isLocked = !!ov.lock;
+  var isHidden = !!ext._hidden;
+  var showLine = (cat !== 'text');
 
-  // SVG Icons
-  var dragSVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>';
-  var editSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
-  var lockOnSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-  var lockOffSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
-  var eyeShowSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-  var eyeHideSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-  var trashSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
-  var lineSolid = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5"/></svg>';
-  var lineDashed = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg>';
-  var lineDotted = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1.5 3"/></svg>';
-
-  // Xây HTML
-  var html = '';
-  html += '<div class="wa-fb-drag" title="Kéo thả" style="cursor:grab;display:flex;align-items:center;justify-content:center;width:16px;height:28px;color:#475569;margin-right:2px;flex-shrink:0;">' + dragSVG + '</div>';
-
-  // Ô màu
-  html += '<button class="wa-fb-btn" id="wa-fb-qcolor" title="Màu sắc" style="padding:2px;overflow:visible;">';
-  html += '<div id="wa-fb-cprev" style="width:16px;height:16px;border-radius:4px;background:' + pc + ';border:1px solid rgba(255,255,255,0.25);pointer-events:none;"></div>';
-  html += '</button>';
-
-  if (cat === 'text') {
-      html += '<button class="wa-fb-btn" id="wa-fb-qtsize" title="Cỡ chữ" style="font-size:11px;font-weight:700;width:auto;padding:0 6px;min-width:36px;">' + tsz + 'px</button>';
-      html += '<div class="wa-fb-sep"></div>';
-      html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">' + editSVG + '</button>';
-  } else {
-      html += '<button class="wa-fb-btn" id="wa-fb-qthick" title="Độ dày" style="font-size:11px;font-weight:700;width:auto;padding:0 6px;min-width:32px;">' + lw + 'px</button>';
-      html += '<button class="wa-fb-btn" id="wa-fb-qstyle" title="Kiểu nét" style="width:auto;padding:0 5px;">' + (ls === 'dashed' ? lineDashed : ls === 'dotted' ? lineDotted : lineSolid) + '</button>';
+  // ── SVG helpers ────────────────────────────────────────────────
+  function lwSVG(h) {
+    return '<span style="display:block;width:14px;height:'+h+'px;background:currentColor;border-radius:1px;margin:auto"></span>';
+  }
+  function lsSVG(da) {
+    return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
   }
 
-  html += '<div class="wa-fb-sep"></div>';
-  html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt">' + gearSVG + '</button>';
-  html += '<button class="wa-fb-btn' + (isLocked ? ' wa-fb-on' : '') + '" id="wa-fb-lk" title="' + (isLocked ? 'Mở khóa' : 'Khóa') + '">' + (isLocked ? lockOnSVG : lockOffSVG) + '</button>';
-  html += '<button class="wa-fb-btn' + (isHidden ? ' wa-fb-on' : '') + '" id="wa-fb-vis" title="' + (isHidden ? 'Hiện' : 'Ẩn') + '">' + (isHidden ? eyeHideSVG : eyeShowSVG) + '</button>';
-  html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">' + trashSVG + '</button>';
+    // ──   // ── Build HTML ─────────────────────────────────────────────────
+  var html = '';
+  
+  var dragSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
+  var editSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+  var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeHide  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
+  var lockOn   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
+  var lockOff  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
+  var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
 
-  // Tạo element bar
+  html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
+  html += '<div class="wa-fb-sep"></div>';
+
+  // Nếu công cụ là văn bản (text) thì hiển thị thêm nút SỬA CHỮ
+  if (cat === 'text') {
+    html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">'+editSVG+'</button>';
+    html += '<div class="wa-fb-sep"></div>';
+  }
+
+  html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">'+gearSVG+'</button>';
+  html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
+  html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
+  html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
+
+  // ── Tạo DOM ────────────────────────────────────────────────────
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
-  bar.style.cssText = 'position:fixed; z-index:100002;';
   bar.innerHTML = html;
-  document.body.appendChild(bar);
 
-  // Tính vị trí hiển thị
+  // ─────────────────────────────────────────────────────────────
+  // 🎯 SMART POSITIONING — Tránh mép container, không bao giờ bị cắt
+  // Bước 1: Append trước (ẩn) để đo kích thước thực của bar
+  // ─────────────────────────────────────────────────────────────
+  bar.style.visibility = 'hidden';   // ẩn để đo, chưa animate
+  bar.style.opacity    = '0';
+  bar.style.transform  = 'translateY(6px) scale(0.97)';
+  bar.style.transition = 'none';
+  container.appendChild(bar);
+
   requestAnimationFrame(function() {
-      if (savedLeft !== null) {
-          bar.style.left = savedLeft;
-          bar.style.top = savedTop;
-          bar.style.visibility = 'visible';
-          bar.style.transition = 'none';
-          bar.style.opacity = '1';
-          bar.style.transform = 'translateY(0) scale(1)';
-          bar.classList.add('wa-fb-show');
-          return;
-      }
-      var bW = bar.offsetWidth || 280;
-      var bH = bar.offsetHeight || 40;
-      var MARGIN = 8;
-      var mX = (posX !== null && posX !== undefined) ? posX : (window.waMouseX || window.innerWidth / 2);
-      var mY = (posY !== null && posY !== undefined) ? posY : (window.waMouseY || window.innerHeight / 2);
-      var left = mX - bW / 2;
-      var top = mY - bH - 12;
-      if (top < MARGIN) top = mY + 16;
-      if (top + bH > window.innerHeight - MARGIN) top = window.innerHeight - bH - MARGIN;
-      left = Math.max(MARGIN, Math.min(left, window.innerWidth - bW - MARGIN));
-      bar.style.left = left + 'px';
-      bar.style.top = top + 'px';
-      bar.style.visibility = 'visible';
-      bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
-      bar.style.opacity = '1';
+    // ── Nếu chỉ cập nhật icon, khôi phục vị trí cũ, không animate ──
+  if (savedLeft !== null) {
+    bar.style.left       = savedLeft;
+    bar.style.top        = savedTop;
+    bar.style.visibility = 'visible';
+    bar.style.transition = 'none';
+    bar.style.opacity    = '1';
+    bar.style.transform  = 'translateY(0) scale(1)';
+    bar.classList.add('wa-fb-show');
+    return;   // ← bỏ qua toàn bộ logic tính vị trí bên dưới
+  }
+    var bW     = bar.offsetWidth  || (showLine ? 320 : 180);
+    var bH     = bar.offsetHeight || 40;
+    var MARGIN = 6;                   // khoảng cách tối thiểu với mép container
+    var BAR_OFFSET_Y = 50;            // thanh nằm phía TRÊN con trỏ bao nhiêu px
+    var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
+
+    // Tọa độ gốc (tính theo container)
+    var cx = (posX != null ? posX : (_fbX - rect.left));
+    var cy = (posY != null ? posY : (_fbY - rect.top));
+
+    // Căn giữa bar theo chiều ngang so với điểm click
+    var left = cx - bW / 2;
+    // Mặc định: hiện phía TRÊN điểm click
+    var top  = cy - BAR_OFFSET_Y;
+
+    // ── Flip dọc: nếu phía trên không đủ chỗ → đặt xuống dưới ──
+    if (top < MARGIN) {
+      top = cy + 16;  // hiện phía DƯỚI điểm click
+    }
+    // Nếu xuống dưới cũng không đủ chỗ (màn hình rất nhỏ) → ép vào MARGIN
+    if (top + bH > rect.height - MARGIN - safeBottom) {
+      top = rect.height - bH - MARGIN - safeBottom;
+    }
+
+    // ── Clamp ngang: không ra ngoài trái/phải ──────────────────
+    left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
+
+    bar.style.left = left + 'px';
+    bar.style.top  = top  + 'px';
+
+    // ── Animate in ─────────────────────────────────────────────
+    bar.style.visibility = 'visible';
+    bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
+    requestAnimationFrame(function() {
+      bar.style.opacity   = '1';
       bar.style.transform = 'translateY(0) scale(1)';
       bar.classList.add('wa-fb-show');
+    });
   });
 
-  // ── DRAG (dùng addEventListener để KHÔNG ghi đè handler của toolbar chính) ──
-  var dragHandle = bar.querySelector('.wa-fb-drag');
-  if (dragHandle) {
-      var fbDragging = false, fbStartX, fbStartY, fbInitL, fbInitT;
-      var onFbMove = function(e) {
-          if (!fbDragging) return;
-          bar.style.left = (fbInitL + e.clientX - fbStartX) + 'px';
-          bar.style.top  = (fbInitT + e.clientY - fbStartY) + 'px';
-      };
-      var onFbUp = function() {
-          if (!fbDragging) return;
-          fbDragging = false;
-          dragHandle.style.cursor = 'grab';
-          document.removeEventListener('mousemove', onFbMove);
-          document.removeEventListener('mouseup', onFbUp);
-      };
-      dragHandle.addEventListener('mousedown', function(e) {
-          fbDragging = true;
-          fbStartX = e.clientX;
-          fbStartY = e.clientY;
-          fbInitL  = parseFloat(bar.style.left) || 0;
-          fbInitT  = parseFloat(bar.style.top)  || 0;
-          dragHandle.style.cursor = 'grabbing';
-          e.preventDefault();
-          e.stopPropagation();
-          document.addEventListener('mousemove', onFbMove);
-          document.addEventListener('mouseup',   onFbUp);
-      });
-  }
+  
+  bar.querySelector('#wa-fb-vis').addEventListener('click', function() {
+    _fbToggleVisible(ov);
+  });
+  bar.querySelector('#wa-fb-cfg').addEventListener('click', function() {
+    if (typeof renderPanel === 'function') renderPanel(ov);
+  });
+  bar.querySelector('#wa-fb-lk').addEventListener('click', function() {
+    _fbToggleLock(ov);
+  });
+  bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
+    if (!global.tvChart) return;
+    if (typeof saveHistory === 'function') saveHistory('delete', ov);
+    global.tvChart.removeOverlay({ id: ov.id });
+    if (typeof global.__wa_untrack_overlay === 'function') global.__wa_untrack_overlay(ov.id);
+    else if (global.__wa_overlay_map) global.__wa_overlay_map.delete(ov.id);
+    hideFloatToolbar();
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  });
+  
+  // ============================================
+  // BẮT ĐẦU CHÈN SỰ KIỆN NÚT SỬA CHỮ VÀ DRAG BAR VÀO ĐÂY:
+  // ============================================
 
-  // ── HÀM ÁP DỤNG STYLE XUỐNG CHART ──
-  function applyStyle(type, val) {
-      if (!global.tvChart) return;
-      try {
-          var ns = JSON.parse(JSON.stringify(ov.styles || {}));
-          if (type === 'color') {
-              if (cat === 'text') {
-                  if (!ns.text) ns.text = {};
-                  ns.text.color = val;
-              } else if (cat === 'shapes') {
-                  if (!ns.polygon) ns.polygon = {};
-                  ns.polygon.borderColor = val;
-                  ns.polygon.color = val;
-                  if (!ns.line) ns.line = {};
-                  ns.line.color = val;
-              } else {
-                  if (!ns.line) ns.line = {};
-                  ns.line.color = val;
-                  if (!ns.point) ns.point = {};
-                  ns.point.color = val;
-              }
-          } else if (type === 'thick') {
-              if (!ns.line) ns.line = {};
-              ns.line.size = val;
-              if (cat === 'shapes') {
-                  if (!ns.polygon) ns.polygon = {};
-                  ns.polygon.borderSize = val;
-              }
-          } else if (type === 'style') {
-              if (!ns.line) ns.line = {};
-              ns.line.style = val;
-              if (cat === 'shapes') {
-                  if (!ns.polygon) ns.polygon = {};
-              }
-          } else if (type === 'tsize') {
-              if (!ns.text) ns.text = {};
-              ns.text.size = val;
-          }
-          global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-          ov.styles = ns;
+  // 1. Sự kiện nút sửa chữ
+  var editBtn = bar.querySelector('#wa-fb-edit');
+if (editBtn) {
+  editBtn.addEventListener('click', function() {
+    // Ẩn các menu đi chuẩn bị gõ chữ
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    
+    // Delay 50ms tắt menu xong mới gọi chữ lên
+    setTimeout(function() {
+      // THÊM DÒNG NÀY ĐỂ FIX LỖI:
+      // Phục hồi lại biến do hidePanel đã set nó thành null
+      window.currentSelectedOverlay = ov; 
+      
+      if (typeof openTextEditor === 'function') {
+        openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
+          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
           if (typeof saveAllOverlays === 'function') saveAllOverlays();
-      } catch(e) { console.error('applyStyle error:', e); }
-  }
-
-  // ── MINI POPUP HELPER ──
-  function openMiniPop(anchorId, innerHTML, widthPx, onReady) {
-      var anchor = document.getElementById(anchorId);
-      if (!anchor) return;
-      anchor.addEventListener('click', function handler(e) {
-          e.stopPropagation();
-          var old = document.getElementById('wa-mini-pop');
-          if (old) { old.remove(); return; }
-          var pop = document.createElement('div');
-          pop.id = 'wa-mini-pop';
-          pop.style.cssText = 'position:fixed;z-index:100010;background:#151B23;border:1px solid #273040;border-radius:8px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,0.9);width:' + widthPx + 'px;';
-          pop.innerHTML = innerHTML;
-          document.body.appendChild(pop);
-          var r = anchor.getBoundingClientRect();
-          var pW = widthPx, pH = pop.offsetHeight || 160;
-          var lt = r.left, tp = r.bottom + 6;
-          if (tp + pH > window.innerHeight - 8) tp = r.top - pH - 6;
-          if (lt + pW > window.innerWidth - 8) lt = window.innerWidth - pW - 8;
-          pop.style.left = Math.max(4, lt) + 'px';
-          pop.style.top  = Math.max(4, tp) + 'px';
-          if (onReady) onReady(pop, anchor);
-          var closeHandler = function(ev) {
-              if (!pop.contains(ev.target) && ev.target !== anchor) {
-                  pop.remove();
-                  document.removeEventListener('mousedown', closeHandler, true);
-              }
-          };
-          setTimeout(function() { document.addEventListener('mousedown', closeHandler, true); }, 20);
-      });
-  }
-
-  // ── POPUP MÀU SẮC ──
-  var COLORS = ['#EF4444','#F97316','#F59E0B','#EAB308','#84CC16','#22C55E','#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6','#6366F1','#8B5CF6','#A855F7','#D946EF','#EC4899','#F43F5E','#FFFFFF','#94A3B8','#64748B'];
-  var cHtml = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;">';
-  COLORS.forEach(function(c) {
-      cHtml += '<div data-c="' + c + '" style="width:22px;height:22px;border-radius:4px;background:' + c + ';cursor:pointer;border:1.5px solid rgba(255,255,255,0.08);transition:transform 0.1s;"></div>';
-  });
-  cHtml += '</div>';
-  openMiniPop('wa-fb-qcolor', cHtml, 140, function(pop) {
-      pop.querySelectorAll('[data-c]').forEach(function(swatch) {
-          swatch.addEventListener('mouseenter', function() { this.style.transform = 'scale(1.3)'; this.style.zIndex = '2'; this.style.position = 'relative'; });
-          swatch.addEventListener('mouseleave', function() { this.style.transform = ''; this.style.zIndex = ''; });
-          swatch.addEventListener('mousedown', function(e) {
-              e.stopPropagation();
-              var chosen = this.getAttribute('data-c');
-              applyStyle('color', chosen);
-              var prev = document.getElementById('wa-fb-cprev');
-              if (prev) prev.style.background = chosen;
-              pop.remove();
-          });
-      });
-  });
-
-  // ── POPUP SIZE CHỮ (chỉ Text) ──
-  if (cat === 'text') {
-      var szHtml = '';
-      [10,12,13,14,16,18,20,24,32,48].forEach(function(v) {
-          szHtml += '<div data-v="' + v + '" style="padding:5px 10px;cursor:pointer;color:#E8EDF2;font-size:12px;font-weight:600;border-radius:4px;">' + v + 'px</div>';
-      });
-      openMiniPop('wa-fb-qtsize', szHtml, 90, function(pop, btn) {
-          pop.querySelectorAll('[data-v]').forEach(function(item) {
-              item.addEventListener('mouseenter', function() { this.style.background = 'rgba(255,255,255,0.08)'; });
-              item.addEventListener('mouseleave', function() { this.style.background = 'transparent'; });
-              item.addEventListener('mousedown', function(e) {
-                  e.stopPropagation();
-                  var v = parseInt(this.getAttribute('data-v'));
-                  applyStyle('tsize', v);
-                  btn.textContent = v + 'px';
-                  pop.remove();
-              });
-          });
-      });
-  } else {
-      // ── POPUP ĐỘ DÀY ──
-      var thHtml = '';
-      [1,2,3,4,5].forEach(function(v) {
-          thHtml += '<div data-v="' + v + '" style="padding:6px 10px;cursor:pointer;color:#E8EDF2;font-size:12px;font-weight:600;border-radius:4px;">Độ dày ' + v + 'px</div>';
-      });
-      openMiniPop('wa-fb-qthick', thHtml, 105, function(pop, btn) {
-          pop.querySelectorAll('[data-v]').forEach(function(item) {
-              item.addEventListener('mouseenter', function() { this.style.background = 'rgba(255,255,255,0.08)'; });
-              item.addEventListener('mouseleave', function() { this.style.background = 'transparent'; });
-              item.addEventListener('mousedown', function(e) {
-                  e.stopPropagation();
-                  var v = parseInt(this.getAttribute('data-v'));
-                  applyStyle('thick', v);
-                  btn.textContent = v + 'px';
-                  pop.remove();
-              });
-          });
-      });
-
-      // ── POPUP KIỂU NÉT ──
-      var stHtml = [
-          '<div data-v="solid" style="padding:6px 10px;cursor:pointer;color:#E8EDF2;border-radius:4px;display:flex;align-items:center;">' + lineSolid + '</div>',
-          '<div data-v="dashed" style="padding:6px 10px;cursor:pointer;color:#E8EDF2;border-radius:4px;display:flex;align-items:center;">' + lineDashed + '</div>',
-          '<div data-v="dotted" style="padding:6px 10px;cursor:pointer;color:#E8EDF2;border-radius:4px;display:flex;align-items:center;">' + lineDotted + '</div>'
-      ].join('');
-      openMiniPop('wa-fb-qstyle', stHtml, 80, function(pop, btn) {
-          pop.querySelectorAll('[data-v]').forEach(function(item) {
-              item.addEventListener('mouseenter', function() { this.style.background = 'rgba(255,255,255,0.08)'; });
-              item.addEventListener('mouseleave', function() { this.style.background = 'transparent'; });
-              item.addEventListener('mousedown', function(e) {
-                  e.stopPropagation();
-                  var v = this.getAttribute('data-v');
-                  applyStyle('style', v);
-                  btn.innerHTML = v === 'dashed' ? lineDashed : v === 'dotted' ? lineDotted : lineSolid;
-                  pop.remove();
-              });
-          });
-      });
-  }
-
-  // ── CÁC NÚT CHỨC NĂNG ──
-  var btnEdit = document.getElementById('wa-fb-edit');
-  if (btnEdit) btnEdit.addEventListener('click', function() {
-      if (typeof hidePanel === 'function') hidePanel();
-      if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-      setTimeout(function() {
-          window.currentSelectedOverlay = ov;
-          if (typeof openTextEditor === 'function')
-              openTextEditor(ov.extendData, ov.styles, ov.name, function(nT, nS) {
-                  global.tvChart.overrideOverlay({ id: ov.id, extendData: nT, styles: nS });
-                  if (typeof saveAllOverlays === 'function') saveAllOverlays();
-              });
-      }, 50);
-  });
-
-  var btnCfg = document.getElementById('wa-fb-cfg');
-  if (btnCfg) btnCfg.addEventListener('click', function() {
-      if (typeof renderPanel === 'function') renderPanel(ov);
-  });
-
-  var btnLk = document.getElementById('wa-fb-lk');
-  if (btnLk) btnLk.addEventListener('click', function() {
-      if (typeof fbToggleLock === 'function') fbToggleLock(ov);
-      else {
-          var nl = !ov.lock;
-          global.tvChart.overrideOverlay({ id: ov.id, lock: nl });
-          ov.lock = nl;
-          showFloatToolbar(ov, null, null);
+        });
       }
+    }, 50);
   });
+}
 
-  var btnVis = document.getElementById('wa-fb-vis');
-  if (btnVis) btnVis.addEventListener('click', function() {
-      if (typeof fbToggleVisible === 'function') fbToggleVisible(ov);
-      else {
-          ext.hidden = !isHidden;
-          global.tvChart.overrideOverlay({ id: ov.id, extendData: ext });
-          ov.extendData = ext;
-          showFloatToolbar(ov, null, null);
+  // 2. Drag Bar Logic (kéo thả thanh công cụ nổi)
+  var dragHandle = bar.querySelector('#wa-fb-drag');
+  if (dragHandle) {
+    var isDragging = false;
+    var startX, startY, initLeft, initTop;
+
+    dragHandle.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      initLeft = parseFloat(bar.style.left) || 0;
+      initTop = parseFloat(bar.style.top) || 0;
+      dragHandle.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      bar.style.left = (initLeft + dx) + 'px';
+      bar.style.top = (initTop + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        dragHandle.style.cursor = 'grab';
+        var rect = bar.getBoundingClientRect();
+        _fbX = rect.left;
+        _fbY = rect.top;
       }
-  });
+    });
+  }
 
-  var btnRm = document.getElementById('wa-fb-rm');
-  if (btnRm) btnRm.addEventListener('click', function() {
-      if (!global.tvChart) return;
-      if (typeof saveHistory === 'function') saveHistory('delete', ov);
-      global.tvChart.removeOverlay({ id: ov.id });
-      if (typeof global.wauntrackoverlayoverlay === 'undefined' && typeof global.wauntrackoverlay === 'function') global.wauntrackoverlay(ov.id);
-      hideFloatToolbar();
-      if (typeof hidePanel === 'function') hidePanel();
-      if (typeof saveAllOverlays === 'function') saveAllOverlays();
-  });
+  // ============================================
+  // KẾT THÚC CHÈN
+  // ============================================
+
 }
 
 function _fbSetColor(ov, cat, hex) {
