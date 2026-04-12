@@ -2101,21 +2101,20 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     if (!posX) posX = window.waMouseX || window.innerWidth / 2;
     if (!posY) posY = window.waMouseY || window.innerHeight / 2;
   
-    // 2. TẠO Ô NHẬP LIỆU CÓ VIỀN VÀ KHỚP 100% PIXEL
-    var pad = 4; // Padding để tạo không gian với viền
+    // 2. TẠO Ô NHẬP LIỆU FIT VỪA KHÍT (Bỏ padding, bỏ background mờ)
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
-    // CSS được tinh chỉnh để box-sizing và padding tự bù trừ cho tọa độ tuyệt đối
+    // Dùng outline thay vì border để outline bám sát rìa chữ mà không đẩy nội dung vào trong
     input.style.cssText = `
       position: fixed; 
-      left: ${posX - pad}px; 
-      top: ${posY - pad}px;
-      background: rgba(15, 23, 42, 0.65) !important; 
-      border: 1px dashed #3B82F6 !important; 
-      border-radius: 4px;
-      outline: none !important;
+      left: ${posX}px; 
+      top: ${posY}px;
+      background: transparent !important; 
+      border: none !important;
+      outline: 1px dashed #3B82F6 !important; 
+      outline-offset: 2px;
       color: ${curColor}; 
       font-family: ${curFont}; 
       font-size: ${curSize}px; 
@@ -2123,22 +2122,25 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       font-weight: ${curWeight}; 
       font-style: ${curStyle};
       z-index: 999999; 
-      min-width: 50px; 
-      padding: ${pad}px; 
+      min-width: 8px; 
+      min-height: ${curSize * 1.2}px;
+      padding: 0; 
       margin: 0; 
       resize: none; 
       overflow: hidden;
       white-space: pre; 
       caret-color: ${curColor};
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
       box-sizing: content-box;
-      backdrop-filter: blur(4px);
     `;
     document.body.appendChild(input);
   
+    // Resize fit khít theo nội dung
     function resizeInput() {
-       input.style.height = 'auto';
-       input.style.width = Math.max(50, input.scrollWidth) + 'px';
+       input.style.height = '0px'; // Ép tính lại từ đầu
+       input.style.width = '0px';
+       
+       // Cộng đúng 2px dư dả để chữ cuối cùng không bị nhảy dòng
+       input.style.width = (input.scrollWidth + 2) + 'px';
        input.style.height = input.scrollHeight + 'px';
     }
   
@@ -2162,7 +2164,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
-    // 4. LƯU LẠI VÀ ĐÓNG TEXTAREA (Mất viền do xóa textarea)
+    // 4. LƯU LẠI VÀ ĐÓNG TEXTAREA
     var isCommitted = false;
     function commit() {
       if (isCommitted) return;
@@ -2170,7 +2172,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       
       var el = document.getElementById('wa-text-editor');
       if (!el) return;
-      var val = el.value.trim() || 'Văn bản...';
+      var val = el.value.trim();
+      // Nếu xóa trắng thì mặc định là 'Văn bản...' để không bị mất tool
+      if (!val) val = 'Văn bản...'; 
       
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
