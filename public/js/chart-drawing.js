@@ -2050,15 +2050,56 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var curColor = tStyles.color || '#E8EDF2';
     var curSize = tStyles.size || 14;
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
+  
     var ov = window.currentSelectedOverlay;
+    var posX, posY;
+    var isEditMode = false;
   
-    // 1. TỌA ĐỘ: Dùng luôn tọa độ click chuột làm vị trí (Chính xác 100% với mọi Tool)
-    var posX = window.waMouseX;
-    var posY = window.waMouseY;
+    // 1. TÍNH TOẠ ĐỘ TRỰC TIẾP TỪ BIỂU ĐỒ (Không phụ thuộc vào vị trí chuột)
+    if (ov && ov.points && ov.points.length > 0) {
+      try {
+        var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
+        if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
+        var container = document.getElementById('sc-chart-container');
+        
+        if (container && chartObj && typeof chartObj.convertToPixel === 'function') {
+            // Lấy điểm cuối cùng của hình vẽ (điểm luôn chứa text)
+            var lastPt = ov.points[ov.points.length - 1];
+            
+            var targetPaneId = 'candle_pane';
+            if (chartObj.getOverlayById) {
+                var info = chartObj.getOverlayById(ov.id);
+                if (info && info.paneId) targetPaneId = info.paneId;
+            }
   
-    // Backup an toàn nếu chuột không xác định được
-    if (!posX) posX = window.innerWidth / 2;
-    if (!posY) posY = window.innerHeight / 2;
+            var pixelInfo = chartObj.convertToPixel(
+                { dataIndex: lastPt.dataIndex, timestamp: lastPt.timestamp, value: lastPt.value },
+                { finder: { paneId: targetPaneId } }
+            );
+  
+            if (pixelInfo) {
+                var rect = container.getBoundingClientRect();
+                posX = rect.left + pixelInfo.x;
+                posY = rect.top + pixelInfo.y;
+                
+                // Bù trừ để ô nhập liệu đè khít lên từng loại text
+                var name = ov.name || toolId;
+                if (name === 'note') { posX += 10; posY += 10; }
+                else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
+                else if (name === 'pin') { posX += 14; posY -= 10; }
+                else if (name === 'priceLabel') { posX += 6; }
+                else if (name === 'signpost') { posY -= 40; } // Bù trừ đặc biệt cho biển chỉ dẫn
+                else if (name === 'comment') { posX += 10; posY -= 20; }
+                
+                isEditMode = (currentText && currentText !== 'Văn bản...');
+            }
+        }
+      } catch(e) { console.log(e); }
+    }
+  
+    // Fallback nếu không xác định được (chỉ xảy ra khi lỗi cực hiếm)
+    if (!posX) posX = window.waMouseX || window.innerWidth / 2;
+    if (!posY) posY = window.waMouseY || window.innerHeight / 2;
   
     // 2. TẠO Ô NHẬP LIỆU
     var input = document.createElement('textarea');
@@ -2089,19 +2130,24 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     input.addEventListener('input', resizeInput);
   
-    // 3. ẨN CHỮ CŨ NẾU ĐANG SỬA TEXT ĐÃ VẼ
-    if (ov && currentText && currentText !== 'Văn bản...' && global.tvChart) {
+    // 3. ẨN TEXT CŨ KHI ĐANG SỬA
+    var savedOriginalColor = null;
+    if (isEditMode && global.tvChart && ov.id) {
       try {
         var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
         if (!tempStyles.text) tempStyles.text = {};
-        tempStyles.text.originalColor = tempStyles.text.color;
+        savedOriginalColor = tempStyles.text.color;
         tempStyles.text.color = 'rgba(0,0,0,0)';
         global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
       } catch(e) {}
     }
   
-    // 4. LƯU VÀ ĐÓNG TEXTAREA KHI XONG
+    // 4. LƯU LẠI VÀ ĐÓNG
+    var isCommitted = false;
     function commit() {
+      if (isCommitted) return;
+      isCommitted = true;
+      
       var el = document.getElementById('wa-text-editor');
       if (!el) return;
       var val = el.value.trim() || 'Văn bản...';
@@ -2109,9 +2155,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
       
-      if (updatedStyles.text.originalColor) {
-          updatedStyles.text.color = updatedStyles.text.originalColor;
-          delete updatedStyles.text.originalColor;
+      // Phục hồi lại màu sắc sau khi sửa xong
+      if (savedOriginalColor) {
+          updatedStyles.text.color = savedOriginalColor;
       } else {
           updatedStyles.text.color = curColor;
       }
