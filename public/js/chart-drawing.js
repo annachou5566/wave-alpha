@@ -4326,32 +4326,42 @@ if (document.readyState === 'loading') {
 
 })(window); 
 
-// --- BỔ SUNG: TỰ ĐỘNG ĐÓNG BẢNG VÀ THANH CÔNG CỤ KHI CLICK RA NGOÀI (BẢN CHUẨN) ---
-document.addEventListener('mousedown', function(e) {
-  var panel = document.getElementById('wa-props-panel');
-  var floatBar = document.getElementById('wa-float-bar');
-  
-  // 1. Nếu click TRÚNG Bảng Properties -> Không đóng
-  if (panel && panel.contains(e.target)) return;
-  
-  // 2. Nếu click TRÚNG Thanh Float Toolbar -> Không đóng
-  if (floatBar && floatBar.contains(e.target)) return;
-  
-  // 3. Nếu click TRÚNG Bảng Chọn Màu (Popup) -> Không đóng
-  if (e.target.closest('._pop')) return;
+// --- BỔ SUNG V3: HOÀN THIỆN ĐÓNG/MỞ KHI VẼ MULTI-CLICK ---
+(function() {
+  // 1. Đồng bộ tuyệt đối: Khi biểu đồ ra lệnh ẩn Float Toolbar (click ra ngoài vùng trống), tự động ẩn luôn Properties Panel
+  var _origHideFloat = window.hideFloatToolbar;
+  window.hideFloatToolbar = function() {
+    if (_origHideFloat) _origHideFloat();
+    if (typeof hidePanel === 'function') hidePanel();
+    window.currentSelectedOverlay = null; // Chốt xóa trạng thái để tránh lỗi hiển thị lại
+  };
 
-  // 4. TIẾN HÀNH ĐÓNG CẢ 2
-  // Dù click vào nền web hay nền biểu đồ trống, đều đóng sạch sẽ
-  if (typeof hidePanel === 'function') {
-    hidePanel();
-  } else if (panel) {
-    panel.classList.remove('show'); // Phương án dự phòng nếu hàm hidePanel bị lỗi
-  }
+  // 2. Lắng nghe click thông minh để xử lý Click 2, Click 3... của các hình phức tạp
+  document.addEventListener('mousedown', function(e) {
+    var panel = document.getElementById('wa-props-panel');
+    var floatBar = document.getElementById('wa-float-bar');
+    
+    // Bỏ qua không làm gì nếu click thẳng vào trong thanh công cụ hoặc bảng màu
+    if (panel && panel.contains(e.target)) return;
+    if (floatBar && floatBar.contains(e.target)) return;
+    if (e.target.closest('._pop')) return;
 
-  if (typeof hideFloatToolbar === 'function') {
-    hideFloatToolbar();
-  } else if (floatBar) {
-    floatBar.style.visibility = 'hidden';
-    floatBar.style.opacity = '0';
-  }
-}, true); // Lưu ý chữ 'true' ở đây: Bắt sự kiện ưu tiên (Capture Phase) để nó chạy trước mọi thứ
+    // NẾU CLICK VÀO KHU VỰC VẼ BIỂU ĐỒ (Canvas)
+    if (e.target.closest('canvas')) {
+      // Cho biểu đồ 100ms để xử lý xong điểm neo của nét vẽ hiện tại (Click 1, Click 2...)
+      setTimeout(function() {
+        // Nếu vẫn đang có hình được chọn (tức là đang vẽ hoặc vừa chốt xong click cuối)
+        if (window.currentSelectedOverlay) {
+            // Ép cả 2 thanh hiện lên chễm chệ trên màn hình
+            if (typeof showFloatToolbar === 'function') showFloatToolbar(window.currentSelectedOverlay, null, null);
+            if (typeof renderPanel === 'function') renderPanel(window.currentSelectedOverlay);
+        }
+      }, 100);
+      return;
+    }
+
+    // NẾU CLICK RA NGOÀI LỀ WEB (Menu, vùng xám, các nút khác...) -> Ép đóng
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar(); 
+    // Lưu ý: hideFloatToolbar ở trên đã được nâng cấp gọi luôn hidePanel() rồi.
+  }, true);
+})();
