@@ -2043,47 +2043,63 @@
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
     var existing = document.getElementById('wa-text-editor');
     if (existing) existing.remove();
-
+  
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
     var curSize = tStyles.size || 14;
     var curFont = tStyles.family || 'sans-serif';
-
+  
     var ov = window.currentSelectedOverlay;
-    var posX = window._waMouseX;
-    var posY = window._waMouseY;
-
-    // ── TÍNH TỌA ĐỘ CHÍNH XÁC 100% CỦA CHỮ TRÊN BIỂU ĐỒ ──
-    if (ov && global.tvChart && ov.points && ov.points[0]) {
+    // Mặc định lấy theo chuột (Dành cho lúc mới tạo chữ lần đầu)
+    var posX = window.waMouseX;
+    var posY = window.waMouseY;
+  
+    // 1. TÍNH CHÍNH XÁC 100% TỌA ĐỘ CỦA CHỮ GỐC KHỎI BỊ NHẢY
+    if (ov && ov.points && ov.points[0]) {
       try {
-        var pixel = global.tvChart.convertToPixel({
-          dataIndex: ov.points[0].dataIndex,
-          timestamp: ov.points[0].timestamp,
-          value: ov.points[0].value
-        });
-        var container = document.getElementById('sc-chart-container');
-        if (pixel && container) {
-          var rect = container.getBoundingClientRect();
-          posX = rect.left + pixel.x;
-          posY = rect.top + pixel.y;
+        // Tìm an toàn chart instance
+        var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
+        if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
+  
+        if (chartObj && typeof chartObj.convertToPixel === 'function') {
+          var pixel = chartObj.convertToPixel(
+            {
+              dataIndex: ov.points[0].dataIndex,
+              timestamp: ov.points[0].timestamp,
+              value: ov.points[0].value
+            },
+            { paneId: ov.groupId || 'candle_pane' } // Ép tính theo đúng vùng vẽ
+          );
+          
+          var container = document.getElementById('sc-chart-container');
+          if (pixel && container) {
+            var rect = container.getBoundingClientRect();
+            posX = rect.left + pixel.x;
+            posY = rect.top + pixel.y;
+            
+            // Bù trừ tọa độ cho các nhãn đặc thù bị lệch (giữ cho không nhảy)
+            var name = ov.name || toolId;
+            if (name === 'note') { posX += 10; posY += 10; }
+            else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
+            else if (name === 'pin') { posX += 14; posY -= 10; }
+            else if (name === 'priceLabel') { posX += 6; }
+          }
         }
-      } catch(e) {}
+      } catch(e) { console.log("Lỗi tính vị trí:", e); }
     }
-
-    // ── TẠO Ô GÕ CHỮ TÀNG HÌNH ──
+  
+    // 2. TẠO TEXTAREA VÀ BỎ THUỘC TÍNH TRANSFORM TRÁNH BỊ GIẬT LÊN CAO
     var input = document.createElement('textarea');
-    input.id = 'wa-text-editor'; 
+    input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
-    // Xóa toàn bộ viền và nền, chỉ để lại chữ và con trỏ nhấp nháy
     input.style.cssText = `
       position: fixed;
       left: ${posX}px;
       top: ${posY}px;
-      transform: translate(0, -50%);
-      background: transparent !important; 
-      border: none !important;            
-      outline: none !important;           
+      background: transparent !important;
+      border: none !important;
+      outline: none !important;
       color: ${curColor};
       font-family: ${curFont};
       font-size: ${curSize}px;
@@ -2098,9 +2114,8 @@
       white-space: pre;
       caret-color: ${curColor};
     `;
-
     document.body.appendChild(input);
-
+  
     // Kéo giãn khung theo độ dài của chữ
     requestAnimationFrame(function() {
       input.focus();
