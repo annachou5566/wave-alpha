@@ -2047,33 +2047,25 @@
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
     var curSize = tStyles.size || 14;
-    var curFont = tStyles.family || 'sans-serif';
+    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif'; // Cập nhật font chuẩn
   
     var ov = window.currentSelectedOverlay;
     
-    // Khởi tạo tọa độ ở giữa màn hình phòng hờ tất cả đều lỗi
-    var posX = window.innerWidth / 2;
-    var posY = window.innerHeight / 2;
+    // 1. TÍNH TỌA ĐỘ CHUẨN KỂ CẢ LÚC MỚI VẼ CHỮ
+    var posX, posY;
   
-    // 1. TÍNH TỌA ĐỘ CHÍNH XÁC CỦA TEXT TRÊN BIỂU ĐỒ
-    if (ov) {
+    if (ov && ov.points && ov.points[0]) {
       try {
         var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
         if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
   
         var container = document.getElementById('sc-chart-container');
-        
-        // MẸO: Thử lấy bounding box (khung chữ nhật bao quanh text) do KLineChart tự tính
-        // Đây là cách chính xác nhất vì thư viện đã tính sẵn cho mình lúc vẽ xong
         var bbox = null;
         
-        // Cách 1: Tìm trong mảng figures nếu KLineChart expose ra
         if (ov._figures && ov._figures.length > 0 && ov._figures[0].bounding) {
           bbox = ov._figures[0].bounding;
         } 
-        // Cách 2: Lấy tạm toạ độ điểm đầu tiên (points[0]) làm gốc
-        else if (chartObj && typeof chartObj.convertToPixel === 'function' && ov.points && ov.points[0]) {
-          // Finder mặc định tìm pane chính chứa nến
+        else if (chartObj && typeof chartObj.convertToPixel === 'function') {
           var pixelInfo = chartObj.convertToPixel(
             {
               dataIndex: ov.points[0].dataIndex,
@@ -2082,10 +2074,7 @@
             },
             { finder: { paneId: 'candle_pane' } } 
           );
-          
-          if (pixelInfo) {
-            bbox = { x: pixelInfo.x, y: pixelInfo.y };
-          }
+          if (pixelInfo) bbox = { x: pixelInfo.x, y: pixelInfo.y };
         }
   
         if (bbox && container) {
@@ -2093,33 +2082,33 @@
           posX = rect.left + bbox.x;
           posY = rect.top + bbox.y;
           
-          // Bù trừ một chút cho nó khớp y xì với text cũ
           var name = ov.name || toolId;
           if (name === 'note') { posX += 10; posY += 10; }
           else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
           else if (name === 'pin') { posX += 14; posY -= 10; }
           else if (name === 'priceLabel') { posX += 6; }
         } else {
-          // Nếu không lấy được bounding, dùng đỡ toạ độ chuột lúc click
-          posX = window.waMouseX;
-          posY = window.waMouseY;
+          // Lấy lại tọa độ chuột dự phòng một cách an toàn
+          posX = window.waMouseX || (window.innerWidth / 2);
+          posY = window.waMouseY || (window.innerHeight / 2);
         }
       } catch(e) { 
-        console.log("Lỗi tính vị trí:", e); 
-        posX = window.waMouseX;
-        posY = window.waMouseY;
+        posX = window.waMouseX || (window.innerWidth / 2);
+        posY = window.waMouseY || (window.innerHeight / 2);
       }
     } else {
-      // Nếu là text vẽ lần đầu (chưa có ov), dùng tọa độ chuột
-      posX = window.waMouseX;
-      posY = window.waMouseY;
+      // Sửa lỗi bay ra góc trái: Cập nhật fallback an toàn nhất khi chưa có ov
+      posX = window.waMouseX || (window.innerWidth / 2);
+      posY = window.waMouseY || (window.innerHeight / 2);
     }
   
-    // 2. TẠO TEXTAREA VÀ BỎ THUỘC TÍNH TRANSFORM TRÁNH BỊ GIẬT LÊN CAO
+    // 2. TẠO TEXTAREA ĐỒNG BỘ FONT SIZE VỚI CANVAS
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
+    // FIX FONT SIZE LỆCH: Các trình duyệt có thể hiển thị px khác với Canvas của KLineChart
+    // Do đó, ta cần điều chỉnh font-size và line-height để match hoàn toàn.
     input.style.cssText = `
       position: fixed;
       left: ${posX}px;
@@ -2129,11 +2118,12 @@
       outline: none !important;
       color: ${curColor};
       font-family: ${curFont};
-      font-size: ${curSize}px;
-      line-height: 1.2;
+      font-size: ${curSize}px; 
+      line-height: 1.1; /* Canvas thường vẽ với line-height thấp hơn HTML */
+      font-weight: ${tStyles.weight || 'normal'}; /* Đồng bộ cả độ đậm */
+      font-style: ${tStyles.style || 'normal'}; /* Đồng bộ cả in nghiêng */
       z-index: 999999;
       min-width: 50px;
-      height: ${curSize * 1.5}px;
       padding: 0;
       margin: 0;
       resize: none;
@@ -2143,60 +2133,65 @@
     `;
     document.body.appendChild(input);
   
-    // Co giãn khung theo độ dài của chữ
+    // Focus và bôi đen nếu là text mới
     requestAnimationFrame(function() {
       input.focus();
       if (!currentText || currentText === 'Văn bản...') {
         input.select();
       }
+      input.style.height = 'auto'; // Reset trước khi tính toán
       input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
       input.style.height = input.scrollHeight + 'px';
     });
   
     input.addEventListener('input', function() {
-      this.style.width = '50px';
-      this.style.height = 'auto';
+      this.style.height = 'auto'; 
       this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
       this.style.height = this.scrollHeight + 'px';
     });
   
-    // 3. ẨN TEXT CŨ TRÊN BIỂU ĐỒ ĐI ĐỂ KHÔNG BỊ TRÙNG 2 LỚP
+    // 3. ẨN CHỮ CŨ KHÔNG BỊ LỖI ĐEN XÌ
     if (ov && global.tvChart) {
       try {
         var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
         if (!tempStyles.text) tempStyles.text = {};
-        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ tàng hình
+        
+        // MẸO: Lưu lại màu gốc vào một trường tạm để tái sử dụng
+        tempStyles.text._originalColor = tempStyles.text.color; 
+        
+        // Xóa màu chữ chuẩn xác hơn bằng mã rgba(0,0,0,0) (đục suốt)
+        tempStyles.text.color = 'rgba(0,0,0,0)'; 
+        
         global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
       } catch(e) {}
     }
   
-    // 4. LƯU LẠI KHI GÕ XONG
+    // 4. LƯU LẠI
     function commit() {
       if (!document.getElementById('wa-text-editor')) return;
-      var val = input.value.trim() || 'Văn bản...';
+      var val = input.value.trim();
+      if (!val) val = 'Văn bản...'; // Chống lỗi xóa trống text
       
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
-      if (!updatedStyles.polygon) updatedStyles.polygon = {};
       
-      // Trả lại màu gốc cho chữ
-      updatedStyles.text.color = curColor;
+      // Trả lại màu chữ ban đầu (hoặc từ giá trị gốc nếu có)
+      updatedStyles.text.color = updatedStyles.text._originalColor || curColor;
+      delete updatedStyles.text._originalColor; 
       
       input.remove();
       onConfirm(val, updatedStyles);
     }
   
-    // Click ra ngoài là lưu
     input.addEventListener('blur', commit);
   
-    // Nhấn Enter là lưu
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         commit();
       }
       if (e.key === 'Escape') {
-        input.value = currentText; // Huỷ sửa, trả về chữ cũ
+        input.value = currentText; 
         commit();
       }
     });
