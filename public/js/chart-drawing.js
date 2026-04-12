@@ -2229,7 +2229,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var curColor = tStyles.color || '#E8EDF2';
     var curSize = tStyles.size || 14;
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
-    var curWeight = tStyles.weight || 'normal';
+    var curWeight = tStyles.weight || '600'; 
     var curStyle = tStyles.style || 'normal';
   
     var ov = window.currentSelectedOverlay;
@@ -2237,7 +2237,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var isEditMode = false;
     var name = ov ? (ov.name || toolId) : toolId;
   
-    // 1. TÍNH TOẠ ĐỘ TRỰC TIẾP TỪ BIỂU ĐỒ
+    // 1. TÍNH TOẠ ĐỘ PIXEL PERFECT VÀ BÙ TRỪ KHOẢNG ĐỆM
     if (ov && ov.points && ov.points.length > 0) {
       try {
         var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
@@ -2262,12 +2262,25 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 posX = rect.left + pixelInfo.x;
                 posY = rect.top + pixelInfo.y;
                 
-                if (name === 'note') { posX += 10; posY += 10; }
+                // KHẮC PHỤC LỖI LỆCH PIXEL DO LINE-HEIGHT CỦA HTML
+                var halfLeading = 3; // HTML tự sinh 3px khoảng trống trên/dưới chữ
+                posX -= 1; // Bù trừ lề trái tàng hình của Textarea
+  
+                if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
+                else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
                 else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
-                else if (name === 'pin') { posX += 14; posY -= 10; }
-                else if (name === 'priceLabel') { posX += 6; }
-                else if (name === 'signpost') { posY -= 40; }
-                else if (name === 'comment') { posX += 10; posY -= 20; }
+                else if (name === 'comment') { posX += 10; posY -= 15; }
+                else if (name === 'priceLabel') { posX += 12; }
+                else if (name === 'pin') { posX += 14; posY -= 20; }
+                else if (name === 'flagMarker') { posX += 26; posY -= 23; }
+                else if (name === 'signpost') { 
+                    posX += 18; 
+                    // Nếu signpost lật sang trái
+                    if (ov.points.length > 1) {
+                        var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
+                        if (pt0 && pixelInfo.x < pt0.x) posX -= 36;
+                    }
+                }
                 
                 isEditMode = true;
             }
@@ -2279,26 +2292,27 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     if (!posX) posX = window.waMouseX || window.innerWidth / 2;
     if (!posY) posY = window.waMouseY || window.innerHeight / 2;
   
-    // 2. TẠO Ô NHẬP LIỆU (XÓA VIỀN NÉT ĐỨT, TRONG SUỐT 100%)
+    // 2. TẠO Ô NHẬP LIỆU (TÀNG HÌNH 100%, ĐỒNG BỘ NÉT CHỮ)
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     var defaultText = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     input.value = defaultText;
     
-    // Xử lý căn lề để khi khung phình to, chữ không bị trôi khỏi nền
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
     var textAlign = 'left';
   
-    // Fix tinh chỉnh riêng cho Biển chỉ dẫn lật trái
-    if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
+    // Fix căn lề phải cho biển chỉ dẫn lật ngược
+    if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && typeof chartObj !== 'undefined') {
         var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
-        if (pt0 && pixelInfo.x < pt0.x) {
+        if (pt0 && pixelInfo && pixelInfo.x < pt0.x) {
             textAlign = 'right';
             transformCSS = 'translate(-100%, -50%)';
-            posX -= 16;
         }
     }
+  
+    // Khớp line-height tuyệt đối với code Canvas (size + 6)
+    var exactLineHeight = curSize + 6;
   
     input.style.cssText = `
       position: fixed; 
@@ -2311,13 +2325,14 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       color: ${curColor}; 
       font-family: ${curFont}; 
       font-size: ${curSize}px; 
-      line-height: 1.2;
+      line-height: ${exactLineHeight}px;
       font-weight: ${curWeight}; 
       font-style: ${curStyle};
       text-align: ${textAlign};
+      letter-spacing: normal;
       z-index: 999999; 
       min-width: 10px; 
-      min-height: ${curSize * 1.2}px;
+      min-height: ${exactLineHeight}px;
       padding: 0; 
       margin: 0; 
       resize: none; 
@@ -2328,7 +2343,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     `;
     document.body.appendChild(input);
   
-    // Resize Khung gõ
     function resizeInput() {
        input.style.height = '0px'; 
        input.style.width = '0px';
@@ -2342,17 +2356,16 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       resizeInput();
     });
   
-    // 3. ĐỒNG BỘ REAL-TIME KHUNG NỀN VỚI CHỮ
+    // 3. ĐỒNG BỘ REAL-TIME KHUNG NỀN CANVAS VỚI CHỮ
     input.addEventListener('input', function() {
         resizeInput();
-        // Yêu cầu Canvas vẽ lại khung nền ngay lập tức theo nội dung đang gõ
         if (isEditMode && global.tvChart && ov && ov.id) {
             var liveText = input.value || ' ';
             global.tvChart.overrideOverlay({ id: ov.id, extendData: liveText });
         }
     });
   
-    // 4. LÀM TRONG SUỐT CHỮ CŨ TRÊN CANVAS ĐỂ KHÔNG BỊ BÓNG ĐÔI
+    // 4. ẨN TEXT GỐC TRÊN CANVAS, ĐỂ LẠI KHUNG NỀN LÓT PHÍA SAU
     var savedOriginalColor = null;
     if (isEditMode && global.tvChart && ov && ov.id) {
       try {
@@ -2364,7 +2377,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
-    // 5. LƯU LẠI VÀ ĐÓNG TEXTAREA
+    // 5. LƯU LẠI VÀ TRẢ LẠI MÀU CHỮ LÊN CANVAS KHI XONG
     var isCommitted = false;
     function commit() {
       if (isCommitted) return;
@@ -2378,7 +2391,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
       
-      // Phục hồi lại màu chữ lên Canvas
       if (savedOriginalColor) {
           updatedStyles.text.color = savedOriginalColor;
       } else {
