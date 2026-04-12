@@ -3209,13 +3209,14 @@ function hideFloatToolbar() {
 
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
-   // ── GIỮ VỊ TRÍ CŨ khi chỉ cập nhật icon (posX/posY = null) ──
-   var existingBar = document.getElementById('wa-float-bar');
-   var savedLeft = null, savedTop = null;
-   if (posX === null && posY === null && existingBar) {
-     savedLeft = existingBar.style.left;
-     savedTop  = existingBar.style.top;
-   }
+
+  var existingBar = document.getElementById('wa-float-bar');
+  var savedLeft = null, savedTop = null;
+  if (posX === null && posY === null && existingBar) {
+    savedLeft = existingBar.style.left;
+    savedTop  = existingBar.style.top;
+  }
+  
   hideFloatToolbar();
 
   var container = document.getElementById('sc-chart-container');
@@ -3226,55 +3227,58 @@ function showFloatToolbar(ov, posX, posY) {
   var s   = ov.styles || {};
   var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
 
-  // ── Màu chính ──────────────────────────────────────────────────
-  var pc = '#3B82F6';
-  if (cat === 'text')   pc = s.text    && s.text.color         ? colorToHex(s.text.color)            : '#E8EDF2';
-  else if (cat === 'shapes') pc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '#3B82F6';
-  else                  pc = s.line    && s.line.color          ? colorToHex(s.line.color)             : '#3B82F6';
-  if (!pc.startsWith('#')) pc = '#' + pc;
+  // ── Tính Màu chính và Màu nền ────────────────────────────────────
+  var defColor = '#3B82F6';
+  var curColor = defColor;
+  var hasBg = false;
+  var curBg = '';
 
-  var lw       = (s.line && s.line.size)  || 1;
-  var ls       = (s.line && s.line.style) || 'solid';
+  if (cat === 'text') {
+    if (s.text && s.text.color) curColor = s.text.color;
+    hasBg = true;
+    if (s.polygon && s.polygon.color) curBg = s.polygon.color; // text background
+  } else if (cat === 'highlighter' || cat === 'brushes') {
+    if (s.polygon && s.polygon.color) curColor = s.polygon.color;
+    else if (s.line && s.line.color) curColor = s.line.color;
+  } else if (cat === 'shapes') {
+    if (s.polygon && s.polygon.borderColor) curColor = s.polygon.borderColor;
+    else if (s.line && s.line.color) curColor = s.line.color;
+    hasBg = true;
+    if (s.polygon && s.polygon.color) curBg = s.polygon.color;
+  } else if (cat === 'fibo') {
+    if (s.line && s.line.color) curColor = s.line.color;
+  } else {
+    if (s.line && s.line.color) curColor = s.line.color;
+  }
+
+  var c2h = typeof colorToHex === 'function' ? colorToHex(curColor) : curColor;
+  if (c2h) curColor = c2h;
+
+  if (hasBg && curBg && curBg !== 'transparent' && curBg !== 'rgba(0,0,0,0)') {
+    var c2hBg = typeof colorToHex === 'function' ? colorToHex(curBg) : curBg;
+    if (c2hBg && c2hBg !== 'rgba(0,0,0,0)') curBg = c2hBg;
+  } else {
+    curBg = '';
+  }
+
   var isLocked = !!ov.lock;
-  var isHidden =
-  !!ov._hiddenExtSnap ||
-  !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
-  var showLine = (cat !== 'text');
+  var isHidden = !!ov._hiddenExtSnap || !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
 
-  // ── SVG helpers ────────────────────────────────────────────────
-  function lwSVG(h) {
-    return '<span style="display:block;width:14px;height:'+h+'px;background:currentColor;border-radius:1px;margin:auto"></span>';
-  }
-  function lsSVG(da) {
-    return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
+  function fbCpBtn(id, hex, title) {
+    var safeColor = hex || '';
+    var bg = safeColor || 'transparent';
+    return '<div class="_cpb" id="'+id+'" data-cur="'+safeColor+'" title="'+title+'" style="margin: 0 2px; width:22px; height:22px; border-radius:4px; flex-shrink:0; border: 1.5px solid #273040; cursor: pointer; position: relative; overflow: hidden;">'
+         + '<div class="_cpbg" style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#111827 25%,transparent 25%,transparent 75%,#111827 75%,#111827),repeating-linear-gradient(45deg,#111827 25%,#1A202C 25%,#1A202C 75%,#111827 75%,#111827);background-position:0 0,4px 4px;background-size:8px 8px;z-index:0"></div>'
+         + '<div class="_cpf" id="_cpfc_'+id+'" style="position:absolute;inset:0;z-index:1;background:'+bg+'"></div>'
+         + '</div>';
   }
 
-    // ──   // ── Build HTML ─────────────────────────────────────────────────
   var html = '';
-  var FB_PAL = [
-    ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
-    ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
-    ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
-    ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
-    ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
-    ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
-    ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
-    ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
-  ];
-  var curTextBgRaw = (((ov.styles || {}).text || {}).backgroundColor) || '';
-  var curTextBg = typeof colorToHex === 'function' && curTextBgRaw ? colorToHex(curTextBgRaw) : curTextBgRaw;
-  if (!curTextBg || curTextBg === 'rgba(0,0,0,0)' || curTextBg === 'transparent') curTextBg = '';
-  var bgGridHTML = '<div class="wa-fb-pc wa-fb-pc-clear'+(!curTextBg ? ' on' : '')+'" data-c="" title="Không nền"></div>';
-  FB_PAL.forEach(function(row){
-    row.forEach(function(cl){
-      bgGridHTML += '<div class="wa-fb-pc'+(curTextBg && cl.toUpperCase()===curTextBg.toUpperCase() ? ' on' : '')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
-    });
-  });
   var dragSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
   var editSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
   var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   var eyeHide  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-  var gearSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>';
   var lockOn   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
   var lockOff  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>';
   var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
@@ -3282,12 +3286,14 @@ function showFloatToolbar(ov, posX, posY) {
   html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
   html += '<div class="wa-fb-sep"></div>';
 
-  // Nếu công cụ là văn bản (text) thì hiển thị thêm nút SỬA CHỮ
+  html += fbCpBtn('wa-fb-main-color', curColor, 'Màu chính');
+  if (hasBg) {
+    html += fbCpBtn('wa-fb-bg-color', curBg, 'Màu nền');
+  }
+  html += '<div class="wa-fb-sep"></div>';
+
   if (cat === 'text') {
     html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">'+editSVG+'</button>';
-    html += '<button class="wa-fb-bg-btn" id="wa-fb-bg-btn" title="Nền chữ">'
-         +    '<span class="wa-fb-bg-chip"><span class="wa-fb-bg-fill" id="wa-fb-bg-fill" style="background:'+(curTextBg || 'transparent')+'"></span></span>'
-         +  '</button>';
     html += '<div class="wa-fb-sep"></div>';
   }
 
@@ -3295,219 +3301,235 @@ function showFloatToolbar(ov, posX, posY) {
   html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
   html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
   html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
-  if (cat === 'text') {
-    html += '<div class="wa-fb-bg-pal" id="wa-fb-bg-pal">'
-         +    '<div class="wa-fb-pg">'+bgGridHTML+'</div>'
-         +    '<div class="wa-fb-ph">'
-         +      '<span>#</span>'
-         +      '<input class="wa-fb-phi" id="wa-fb-bg-hex" maxlength="6" value="'+(curTextBg ? curTextBg.slice(1).toUpperCase() : '')+'">'
-         +    '</div>'
-         +  '</div>';
-  }
 
-  // ── Tạo DOM ────────────────────────────────────────────────────
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
   bar.innerHTML = html;
 
-  // ─────────────────────────────────────────────────────────────
-  // 🎯 SMART POSITIONING — Tránh mép container, không bao giờ bị cắt
-  // Bước 1: Append trước (ẩn) để đo kích thước thực của bar
-  // ─────────────────────────────────────────────────────────────
-  bar.style.visibility = 'hidden';   // ẩn để đo, chưa animate
+  bar.style.visibility = 'hidden';
   bar.style.opacity    = '0';
   bar.style.transform  = 'translateY(6px) scale(0.97)';
   bar.style.transition = 'none';
   container.appendChild(bar);
 
-  requestAnimationFrame(function() {
-    // ── Nếu chỉ cập nhật icon, khôi phục vị trí cũ, không animate ──
-  if (savedLeft !== null) {
-    bar.style.left       = savedLeft;
-    bar.style.top        = savedTop;
-    bar.style.visibility = 'visible';
-    bar.style.transition = 'none';
-    bar.style.opacity    = '1';
-    bar.style.transform  = 'translateY(0) scale(1)';
-    bar.classList.add('wa-fb-show');
-    return;   // ← bỏ qua toàn bộ logic tính vị trí bên dưới
-  }
-    var bW     = bar.offsetWidth  || (showLine ? 320 : 180);
-    var bH     = bar.offsetHeight || 40;
-    var MARGIN = 6;                   // khoảng cách tối thiểu với mép container
-    var BAR_OFFSET_Y = 50;            // thanh nằm phía TRÊN con trỏ bao nhiêu px
-    var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
-
-    // Tọa độ gốc (tính theo container)
-    var cx = (posX != null ? posX : (_fbX - rect.left));
-    var cy = (posY != null ? posY : (_fbY - rect.top));
-
-    // Căn giữa bar theo chiều ngang so với điểm click
-    var left = cx - bW / 2;
-    // Mặc định: hiện phía TRÊN điểm click
-    var top  = cy - BAR_OFFSET_Y;
-
-    // ── Flip dọc: nếu phía trên không đủ chỗ → đặt xuống dưới ──
-    if (top < MARGIN) {
-      top = cy + 16;  // hiện phía DƯỚI điểm click
-    }
-    // Nếu xuống dưới cũng không đủ chỗ (màn hình rất nhỏ) → ép vào MARGIN
-    if (top + bH > rect.height - MARGIN - safeBottom) {
-      top = rect.height - bH - MARGIN - safeBottom;
-    }
-
-    // ── Clamp ngang: không ra ngoài trái/phải ──────────────────
-    left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
-
-    bar.style.left = left + 'px';
-    bar.style.top  = top  + 'px';
-
-    // ── Animate in ─────────────────────────────────────────────
-    bar.style.visibility = 'visible';
-    bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
-    requestAnimationFrame(function() {
-      bar.style.opacity   = '1';
-      bar.style.transform = 'translateY(0) scale(1)';
-      bar.classList.add('wa-fb-show');
+  if (!window._fbPopDocEvent) {
+    window._fbPopDocEvent = true;
+    document.addEventListener('mousedown', function(ev) {
+      var pop = document.getElementById('_fb_pop');
+      if (pop && !pop.contains(ev.target) && !ev.target.closest('._cpb')) {
+        pop.remove();
+        window._aFB_CP = null;
+      }
     });
-  });
-
-  
-  bar.querySelector('#wa-fb-vis').addEventListener('click', function() {
-    _fbToggleVisible(ov);
-  });
-  bar.querySelector('#wa-fb-cfg').addEventListener('click', function() {
-    if (typeof renderPanel === 'function') renderPanel(ov);
-  });
-  bar.querySelector('#wa-fb-lk').addEventListener('click', function() {
-    _fbToggleLock(ov);
-  });
-  bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
-    if (!global.tvChart) return;
-    if (typeof saveHistory === 'function') saveHistory('delete', ov);
-    global.tvChart.removeOverlay({ id: ov.id });
-    if (typeof global.__wa_untrack_overlay === 'function') global.__wa_untrack_overlay(ov.id);
-    else if (global.__wa_overlay_map) global.__wa_overlay_map.delete(ov.id);
-    hideFloatToolbar();
-    if (typeof hidePanel === 'function') hidePanel();
-    if (typeof saveAllOverlays === 'function') saveAllOverlays();
-  });
-  
-  // ============================================
-  // BẮT ĐẦU CHÈN SỰ KIỆN NÚT SỬA CHỮ VÀ DRAG BAR VÀO ĐÂY:
-  // ============================================
-
-  // 1. Sự kiện nút sửa chữ
-  var editBtn = bar.querySelector('#wa-fb-edit');
-if (editBtn) {
-  editBtn.addEventListener('click', function() {
-    // Ẩn các menu đi chuẩn bị gõ chữ
-    if (typeof hidePanel === 'function') hidePanel();
-    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
     
-    // Delay 50ms tắt menu xong mới gọi chữ lên
-    setTimeout(function() {
-      // THÊM DÒNG NÀY ĐỂ FIX LỖI:
-      // Phục hồi lại biến do hidePanel đã set nó thành null
-      window.currentSelectedOverlay = ov; 
+    var st = document.createElement('style');
+    st.innerHTML = '._pop{position:fixed;z-index:999999;background:#151B23;border:1px solid #273040;border-radius:9px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.92);width:218px}._pg{display:grid;grid-template-columns:repeat(10, 1fr);gap:4px}._pc{width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(255,255,255,.18);cursor:pointer;transition:transform .12s, border-color .12s}._pc:hover{transform:scale(1.5);border-color:rgba(255,255,255,.8);z-index:3}._pc.on{border-color:#3B82F6;z-index:2}._ph{margin-top:10px;display:flex;align-items:center;gap:8px;height:28px;border:1px solid #1E2A3A;border-radius:6px;background:#080D12;padding:0 8px}._ph:focus-within{border-color:#3B82F6}._phi{flex:1;background:transparent;border:none;color:#E8EDF2;font-size:11px;outline:none;font-family:monospace;text-transform:uppercase;min-width:0}';
+    document.head.appendChild(st);
+  }
+
+  requestAnimationFrame(function() {
+    if (savedLeft !== null) {
+      bar.style.left       = savedLeft;
+      bar.style.top        = savedTop;
+      bar.style.visibility = 'visible';
+      bar.style.transition = 'none';
+      bar.style.opacity    = '1';
+      bar.style.transform  = 'translateY(0) scale(1)';
+      bar.classList.add('wa-fb-show');
+    } else {
+      var bW = bar.offsetWidth || 180;
+      var bH = bar.offsetHeight || 40;
+      var MARGIN = 6;
+      var BAR_OFFSET_Y = 50;
+      var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
       
-      if (typeof openTextEditor === 'function') {
-        openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
-          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-          if (typeof saveAllOverlays === 'function') saveAllOverlays();
+      var cx = (posX != null ? posX : (_fbX - rect.left));
+      var cy = (posY != null ? posY : (_fbY - rect.top));
+      
+      var left = cx - bW / 2;
+      var top  = cy - BAR_OFFSET_Y;
+      
+      if (top < MARGIN) top = cy + 16;
+      if (top + bH > rect.height - MARGIN - safeBottom) top = rect.height - bH - MARGIN - safeBottom;
+      left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
+      
+      bar.style.left = left + 'px';
+      bar.style.top  = top  + 'px';
+      
+      bar.style.visibility = 'visible';
+      bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
+      requestAnimationFrame(function() {
+        bar.style.opacity   = '1';
+        bar.style.transform = 'translateY(0) scale(1)';
+        bar.classList.add('wa-fb-show');
+      });
+    }
+
+    bar.querySelector('#wa-fb-vis').addEventListener('click', function() { _fbToggleVisible(ov); });
+    bar.querySelector('#wa-fb-cfg').addEventListener('click', function() { if (typeof renderPanel === 'function') renderPanel(ov); });
+    bar.querySelector('#wa-fb-lk').addEventListener('click', function() { _fbToggleLock(ov); });
+    bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
+      if (!global.tvChart) return;
+      if (typeof saveHistory === 'function') saveHistory('delete', ov);
+      global.tvChart.removeOverlay({ id: ov.id });
+      if (typeof global.__wa_untrack_overlay === 'function') global.__wa_untrack_overlay(ov.id);
+      else if (global.__wa_overlay_map) global.__wa_overlay_map.delete(ov.id);
+      hideFloatToolbar();
+      if (typeof hidePanel === 'function') hidePanel();
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+    });
+
+    var editBtn = bar.querySelector('#wa-fb-edit');
+    if (editBtn) {
+      editBtn.addEventListener('click', function() {
+        if (typeof hidePanel === 'function') hidePanel();
+        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+        setTimeout(function() {
+          window.currentSelectedOverlay = ov; 
+          if (typeof openTextEditor === 'function') {
+            openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
+              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+              if (typeof saveAllOverlays === 'function') saveAllOverlays();
+            });
+          }
+        }, 50);
+      });
+    }
+
+    function _bindFBCP(btnId, onChange) {
+      var btn = bar.querySelector('#'+btnId);
+      if (!btn) return;
+      btn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        var p = document.getElementById('_fb_pop');
+        if (p) { p.remove(); if(window._aFB_CP === btnId) { window._aFB_CP=null; return; } }
+        window._aFB_CP = btnId;
+        
+        var curHex = btn.dataset.cur || '#3B82F6';
+        if (curHex === 'transparent' || curHex === 'rgba(0,0,0,0)') curHex = '';
+        var pop = document.createElement('div');
+        pop.id = '_fb_pop'; pop.className = '_pop';
+        
+        var gh = '<div class="_pg"><div class="_pc'+(!curHex?' on':'')+'" style="background:repeating-linear-gradient(-45deg,#111827 0 4px,#1F2937 4px 8px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);" data-c="" title="Không màu"></div>';
+        var PAL = [
+          ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
+          ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
+          ['#F0FFF4','#C6F6D5','#9AE6B4','#68D391','#48BB78','#38A169','#22C55E','#276749','#1C4532','#052E16'],
+          ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3B82F6','#2B6CB0','#2C5282','#1E3A5F','#172554'],
+          ['#FFFFF0','#FEFCBF','#FAF089','#F6E05E','#ECC94B','#F59E0B','#D69E2E','#B7791F','#975A16','#78350F'],
+          ['#FAF5FF','#E9D8FD','#D6BCFA','#B794F4','#9F7AEA','#8B5CF6','#6B46C1','#553C9A','#44337A','#1A0A3D'],
+          ['#E0FFFF','#B2F5EA','#81E6D9','#4FD1C5','#38B2AC','#06B6D4','#0891B2','#0E7490','#155E75','#083344'],
+          ['#FFF0F6','#FFD6E7','#FFA8CB','#FF79A8','#F06292','#EC4899','#DB2777','#BE185D','#9D174D','#831843']
+        ];
+        PAL.forEach(function(row){ row.forEach(function(cl){
+          gh += '<div class="_pc'+(curHex&&cl.toUpperCase()===curHex.toUpperCase()?' on':'')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
+        }); });
+        gh += '</div><div class="_ph">'
+            + '<span style="color:#4A5568;font-family:monospace;font-weight:800;font-size:11px;user-select:none">#</span>'
+            + '<input class="_phi" id="_phi_'+btnId+'" maxlength="6" value="'+(curHex?curHex.slice(1).toUpperCase():'')+'">'
+            + '</div>';
+        pop.innerHTML = gh;
+        document.body.appendChild(pop);
+
+        var br = btn.getBoundingClientRect();
+        var top = br.bottom+5, left = br.left;
+        if (top+250 > window.innerHeight) top = br.top-254;
+        if (left+222 > window.innerWidth)  left = window.innerWidth-224;
+        pop.style.left = Math.max(4,left)+'px';
+        pop.style.top  = Math.max(4,top)+'px';
+
+        function applyC(hex) {
+          var fEl = document.getElementById('_cpfc_'+btnId);
+          if (fEl) fEl.style.background = hex || 'transparent';
+          btn.dataset.cur = hex;
+          pop.querySelectorAll('._pc').forEach(function(c){
+            c.classList.toggle('on', (c.dataset.c||'').toUpperCase()===(hex||'').toUpperCase());
+          });
+          var phi = document.getElementById('_phi_'+btnId);
+          if (phi) phi.value = hex ? hex.slice(1).toUpperCase() : '';
+          onChange(hex);
+        }
+
+        pop.querySelectorAll('._pc').forEach(function(c){
+          c.addEventListener('mousedown', function(e){ e.stopPropagation(); applyC(this.dataset.c); });
         });
+        var phi = document.getElementById('_phi_'+btnId);
+        if (phi) {
+          phi.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+          phi.addEventListener('input', function(){
+            var v = this.value.replace(/[^0-9a-fA-F]/g,''); this.value = v;
+            if (v.length === 6) applyC('#'+v);
+            if (!v.length) applyC('');
+          });
+        }
+      });
+    }
+
+    _bindFBCP('wa-fb-main-color', function(hex) {
+      if (typeof _fbSetColor === 'function') _fbSetColor(ov, cat, hex || '#3B82F6');
+    });
+
+    _bindFBCP('wa-fb-bg-color', function(hex) {
+      if (!global.tvChart || !ov) return;
+      var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+      if (!ns.polygon) ns.polygon = {};
+      
+      if (!hex) {
+        ns.polygon.color = 'transparent';
+      } else {
+        var defA = (cat === 'text') ? 1 : 0.15;
+        var cA = defA;
+        if (ov.styles && ov.styles.polygon && ov.styles.polygon.color) {
+          var m = ov.styles.polygon.color.match(/rgba\([^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+)\)/);
+          if (m) cA = parseFloat(m[1]);
+          else if (ov.styles.polygon.color !== 'transparent') cA = 1;
+        }
+        var r = parseInt(hex.slice(1,3), 16)||0, g = parseInt(hex.slice(3,5), 16)||0, b = parseInt(hex.slice(5,7), 16)||0;
+        ns.polygon.color = 'rgba('+r+','+g+','+b+','+cA+')';
+        if (cat === 'shapes') ns.polygon.style = 'strokefill';
       }
-    }, 50);
+      
+      ov.styles = ns;
+      global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
+      if (typeof saveAllOverlays === 'function') saveAllOverlays();
+      if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+    });
+
+    var dragHandle = bar.querySelector('#wa-fb-drag');
+    if (dragHandle) {
+      var isDragging = false, startX, startY, initLeft, initTop;
+      dragHandle.addEventListener('mousedown', function(e) {
+        isDragging = true; startX = e.clientX; startY = e.clientY;
+        initLeft = parseFloat(bar.style.left) || 0; initTop = parseFloat(bar.style.top) || 0;
+        dragHandle.style.cursor = 'grabbing'; e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        var dx = e.clientX - startX, dy = e.clientY - startY;
+        bar.style.left = (initLeft + dx) + 'px';
+        bar.style.top = (initTop + dy) + 'px';
+      });
+      document.addEventListener('mouseup', function() {
+        if (isDragging) {
+          isDragging = false; dragHandle.style.cursor = 'grab';
+          var r = bar.getBoundingClientRect(); _fbX = r.left; _fbY = r.top;
+        }
+      });
+    }
   });
-}
-var bgBtn = bar.querySelector('#wa-fb-bg-btn');
-var bgPal = bar.querySelector('#wa-fb-bg-pal');
-var bgFill = bar.querySelector('#wa-fb-bg-fill');
-var bgHex  = bar.querySelector('#wa-fb-bg-hex');
-
-if (bgBtn && bgPal) {
-  bgBtn.addEventListener('click', function(ev) {
-    ev.stopPropagation();
-    bgPal.classList.toggle('open');
-  });
-
-  bgPal.querySelectorAll('.wa-fb-pc').forEach(function(pc) {
-    pc.addEventListener('click', function(ev) {
-      ev.stopPropagation();
-      var hex = this.dataset.c || '';
-      if (bgFill) bgFill.style.background = hex || 'transparent';
-      if (bgHex) bgHex.value = hex ? hex.slice(1).toUpperCase() : '';
-      _fbSetTextBackground(ov, hex);
-    });
-  });
-
-  if (bgHex) {
-    bgHex.addEventListener('input', function(ev) {
-      ev.stopPropagation();
-      var v = (this.value || '').replace(/[^0-9a-f]/ig, '').slice(0, 6).toUpperCase();
-      this.value = v;
-      if (v.length === 6) {
-        var hex = '#' + v;
-        if (bgFill) bgFill.style.background = hex;
-        _fbSetTextBackground(ov, hex);
-      } else if (!v.length) {
-        if (bgFill) bgFill.style.background = 'transparent';
-        _fbSetTextBackground(ov, '');
-      }
-    });
-  }
-}
-  // 2. Drag Bar Logic (kéo thả thanh công cụ nổi)
-  var dragHandle = bar.querySelector('#wa-fb-drag');
-  if (dragHandle) {
-    var isDragging = false;
-    var startX, startY, initLeft, initTop;
-
-    dragHandle.addEventListener('mousedown', function(e) {
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      initLeft = parseFloat(bar.style.left) || 0;
-      initTop = parseFloat(bar.style.top) || 0;
-      dragHandle.style.cursor = 'grabbing';
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', function(e) {
-      if (!isDragging) return;
-      var dx = e.clientX - startX;
-      var dy = e.clientY - startY;
-      bar.style.left = (initLeft + dx) + 'px';
-      bar.style.top = (initTop + dy) + 'px';
-    });
-
-    document.addEventListener('mouseup', function() {
-      if (isDragging) {
-        isDragging = false;
-        dragHandle.style.cursor = 'grab';
-        var rect = bar.getBoundingClientRect();
-        _fbX = rect.left;
-        _fbY = rect.top;
-      }
-    });
-  }
-
-  // ============================================
-  // KẾT THÚC CHÈN
-  // ============================================
-
 }
 
 function _fbSetColor(ov, cat, hex) {
   if (!global.tvChart || !ov) return;
   var ns = JSON.parse(JSON.stringify(ov.styles || {}));
   if (cat === 'text')        { if (!ns.text)    ns.text    = {}; ns.text.color          = hex; }
-  else if (cat === 'shapes') { if (!ns.polygon) ns.polygon = {}; ns.polygon.borderColor = hex; }
+  else if (cat === 'shapes') { if (!ns.polygon) ns.polygon = {}; ns.polygon.borderColor = hex; if(!ns.line) ns.line={}; ns.line.color=hex; }
   else                       { if (!ns.line)    ns.line    = {}; ns.line.color           = hex; }
   ov.styles = ns;
   global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
 }
 
 function _fbSetLineWidth(ov, w) {
@@ -3529,24 +3551,12 @@ function _fbSetLineStyle(ov, style) {
   global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
 }
-function _fbSetTextBackground(ov, hex) {
-  if (!global.tvChart || !ov) return;
-  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
-  if (!ns.text) ns.text = {};
-  if (hex) ns.text.backgroundColor = hex;
-  else delete ns.text.backgroundColor;
-  ov.styles = ns;
-  global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ov.extendData });
-  if (typeof saveAllOverlays === 'function') saveAllOverlays();
-  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
-}
+
 function _fbToggleVisible(ov) {
   if (!global.tvChart || !ov) return;
 
   var isTextOverlay = (ov.name === 'text') || (typeof ov.extendData === 'string');
-  var wasHidden =
-    !!ov._hiddenExtSnap ||
-    !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
+  var wasHidden = !!ov._hiddenExtSnap || !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
 
   var ns = JSON.parse(JSON.stringify(ov.styles || {}));
   if (!ns.line) ns.line = {};
@@ -3556,11 +3566,7 @@ function _fbToggleVisible(ov) {
   var ext = ov.extendData;
 
   if (!wasHidden) {
-    ov._hiddenExtSnap =
-      typeof ov.extendData === 'undefined'
-        ? ''
-        : JSON.parse(JSON.stringify(ov.extendData));
-
+    ov._hiddenExtSnap = typeof ov.extendData === 'undefined' ? '' : JSON.parse(JSON.stringify(ov.extendData));
     ov._hiddenStyleSnap = JSON.parse(JSON.stringify(ov.styles || {}));
 
     ns.line.color = 'rgba(0,0,0,0)';
@@ -3570,29 +3576,18 @@ function _fbToggleVisible(ov) {
     ns.text.backgroundColor = 'rgba(0,0,0,0)';
 
     if (!isTextOverlay) {
-      ext =
-        (typeof ov.extendData === 'object' && ov.extendData)
-          ? JSON.parse(JSON.stringify(ov.extendData))
-          : {};
+      ext = (typeof ov.extendData === 'object' && ov.extendData) ? JSON.parse(JSON.stringify(ov.extendData)) : {};
       ext._hidden = true;
       ext.fillOpacity = 0;
     } else {
-      ext = ov.extendData; // giữ nguyên text string, không đổi thành object
+      ext = ov.extendData; 
     }
   } else {
-    ext =
-      typeof ov._hiddenExtSnap === 'undefined'
-        ? ov.extendData
-        : JSON.parse(JSON.stringify(ov._hiddenExtSnap));
-
-    ns = ov._hiddenStyleSnap
-      ? JSON.parse(JSON.stringify(ov._hiddenStyleSnap))
-      : ns;
-
+    ext = typeof ov._hiddenExtSnap === 'undefined' ? ov.extendData : JSON.parse(JSON.stringify(ov._hiddenExtSnap));
+    ns = ov._hiddenStyleSnap ? JSON.parse(JSON.stringify(ov._hiddenStyleSnap)) : ns;
     if (!isTextOverlay && ext && typeof ext === 'object') {
       ext._hidden = false;
     }
-
     delete ov._hiddenExtSnap;
     delete ov._hiddenStyleSnap;
   }
@@ -3600,12 +3595,7 @@ function _fbToggleVisible(ov) {
   ov.extendData = ext;
   ov.styles = ns;
 
-  global.tvChart.overrideOverlay({
-    id: ov.id,
-    styles: ns,
-    extendData: ext
-  });
-
+  global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
 }
