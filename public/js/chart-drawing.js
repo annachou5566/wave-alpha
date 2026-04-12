@@ -3230,10 +3230,12 @@ function hideFloatToolbar() {
 
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
+  
+  // Xóa toolbar cũ nếu đang hiện
   var existing = document.getElementById('wa-float-bar');
   if (existing) existing.remove();
 
-  // 1. Phân loại Tool và lấy đúng thông số cấu trúc của KLineChart
+  // 1. Phân loại Tool và lấy thuộc tính
   var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : 'lines';
   var isLocked = ov.lock;
   var isHidden = ov.visible === false;
@@ -3241,7 +3243,6 @@ function showFloatToolbar(ov, posX, posY) {
   var curColor = '#3B82F6', curThick = 1, curStyle = 'solid', curTextSize = 14;
   var s = ov.styles || {};
   
-  // Đọc chính xác style đang có để hiển thị lên Toolbar
   if (cat === 'text') {
       if (s.text) {
           curColor = s.text.color || '#E8EDF2';
@@ -3261,7 +3262,7 @@ function showFloatToolbar(ov, posX, posY) {
       }
   }
 
-  // 2. Bộ Icon
+  // 2. Icon siêu nhẹ
   var dragSVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>';
   var editSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
   var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
@@ -3274,7 +3275,7 @@ function showFloatToolbar(ov, posX, posY) {
   var lineDashed = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg>';
   var lineDotted = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1.5 3"/></svg>';
 
-  // 3. Render HTML giao diện
+  // 3. Xây dựng HTML
   var html = '';
   html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor:grab; display:flex; align-items:center; justify-content:center; width:16px; height:28px; color:#475569; margin-right:2px;">' + dragSVG + '</div>';
   
@@ -3297,51 +3298,54 @@ function showFloatToolbar(ov, posX, posY) {
   html += '<button class="wa-fb-btn' + (isHidden ? ' wa-fb-on' : '') + '" id="wa-fb-vis" title="' + (isHidden ? 'Hiện' : 'Ẩn') + '">' + (isHidden ? eyeHide : eyeShow) + '</button>';
   html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa công cụ">' + trashSVG + '</button>';
 
+  // Tạo Element Toolbar
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
-  bar.style.left = posX + 'px';
-  bar.style.top = posY + 'px';
   bar.innerHTML = html;
+  
+  // Tính toán lại vị trí cho chuẩn nếu posX bị null
+  var safeX = posX || (window.innerWidth / 2);
+  var safeY = posY || (window.innerHeight / 2);
+  
+  // Tránh bị dính sát lề trên
+  if (safeY < 60) safeY = 60;
+  
+  bar.style.left = safeX + 'px';
+  bar.style.top = safeY + 'px';
+  
   document.body.appendChild(bar);
 
-  // ==========================================
-  // BẮT ĐẦU PHẦN LOGIC ĐIỀU KHIỂN ĐÃ FIX LỖI
-  // ==========================================
-
-  // 4. KÉO THẢ (DRAG) 
+  // 4. KÉO THẢ (DRAG) HOÀN HẢO KHÔNG BỊ ĐỤNG EVENT
   var dragHandle = document.getElementById('wa-fb-drag');
   var isDragging = false, startX, startY, initialL, initialT;
   
   if (dragHandle) {
-      dragHandle.addEventListener('mousedown', function(e) {
+      dragHandle.onmousedown = function(e) {
           isDragging = true;
           startX = e.clientX;
           startY = e.clientY;
-          var rect = bar.getBoundingClientRect();
-          initialL = rect.left;
-          initialT = rect.top;
-          
-          bar.style.left = initialL + 'px';
-          bar.style.top = initialT + 'px';
-          bar.style.bottom = 'auto';
-          bar.style.right = 'auto';
-          
-          document.body.style.userSelect = 'none';
+          initialL = parseFloat(bar.style.left) || bar.offsetLeft;
+          initialT = parseFloat(bar.style.top) || bar.offsetTop;
+          dragHandle.style.cursor = 'grabbing';
           e.preventDefault();
-      });
-      
-      document.addEventListener('mousemove', function(e) {
-          if (!isDragging) return;
-          bar.style.left = (initialL + (e.clientX - startX)) + 'px';
-          bar.style.top = (initialT + (e.clientY - startY)) + 'px';
-      });
-      
-      document.addEventListener('mouseup', function() {
-          isDragging = false;
-          document.body.style.userSelect = '';
-      });
+      };
   }
+  
+  document.onmousemove = function(e) {
+      if (!isDragging) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      bar.style.left = (initialL + dx) + 'px';
+      bar.style.top = (initialT + dy) + 'px';
+  };
+  
+  document.onmouseup = function() {
+      if (isDragging) {
+          isDragging = false;
+          if(dragHandle) dragHandle.style.cursor = 'grab';
+      }
+  };
 
   // 5. CẬP NHẬT CHART TRỰC TIẾP TÙY LOẠI (TEXT HAY SHAPE HAY LINE)
   function applyLiveStyle(type, val) {
@@ -3414,7 +3418,7 @@ function showFloatToolbar(ov, posX, posY) {
   }
 
   // 7. GẮN DỮ LIỆU CHO CÁC POPUP
-  // Popup Màu sắc (Đã sửa lỗi rê chuột mất màu: Không thay đổi background, chỉ phóng to)
+  // Popup Màu sắc (Đã sửa lỗi hover scale to)
   var colors = ['#EF4444','#F97316','#F59E0B','#EAB308','#84CC16','#22C55E','#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6','#6366F1','#8B5CF6','#A855F7','#D946EF','#EC4899','#F43F5E','#FFFFFF','#94A3B8','#000000'];
   var cHtml = '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;">';
   colors.forEach(c => {
@@ -3490,7 +3494,7 @@ function showFloatToolbar(ov, posX, posY) {
       });
   }
 
-  // 8. NÚT CHỨC NĂNG (EDIT, CONFIG, LOCK, DELETE)
+  // 8. NÚT CHỨC NĂNG CƠ BẢN
   var btnEdit = document.getElementById('wa-fb-edit');
   if (btnEdit) {
       btnEdit.onclick = function() {
