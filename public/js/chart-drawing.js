@@ -3463,12 +3463,52 @@ function _fbToggleVisible(ov) {
 
 function _fbToggleLock(ov) {
   if (!global.tvChart || !ov) return;
-  ov.lock = !ov.lock;
-  global.tvChart.overrideOverlay({ id: ov.id, lock: ov.lock });
-  if (typeof saveAllOverlays === 'function') saveAllOverlays();
-  // Re-render toolbar để cập nhật icon khóa
-  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+  
+  // 1. Tính toán trạng thái khóa mới
+  var newLockState = !ov.lock;
+  
+  // 2. Gửi lệnh cập nhật xuống KLineChart và biến RAM
+  global.tvChart.overrideOverlay({ id: ov.id, lock: newLockState });
+  ov.lock = newLockState;
+  
+  if (global.__wa_overlay_map) {
+      let existing = global.__wa_overlay_map.get(ov.id);
+      if (existing) existing.lock = newLockState;
+  }
+
+  // 3. Cập nhật Giao diện nút Khóa trên Toolbar Nổi
+  var fbBtn = document.getElementById('wa-fb-lk');
+  if (fbBtn) {
+      if (newLockState) {
+          fbBtn.classList.add('wa-fb-on');
+          fbBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>'; // Icon Ổ Khóa
+      } else {
+          fbBtn.classList.remove('wa-fb-on');
+          fbBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>'; // Icon Ổ Mở Khóa
+      }
+  }
+
+  // 4. Đồng bộ màu sắc nút Khóa sang Properties Panel (nếu đang mở)
+  var pLockBtn = document.getElementById('wa-btn-p-lock');
+  if (pLockBtn) {
+      if (newLockState) {
+          pLockBtn.style.background = 'rgba(59,130,246,0.15)';
+          pLockBtn.style.color = '#60A5FA';
+          pLockBtn.style.borderColor = '#3B82F6';
+      } else {
+          pLockBtn.style.background = '';
+          pLockBtn.style.color = '';
+          pLockBtn.style.borderColor = '';
+      }
+  }
+
+  // 5. Hiển thị thông báo và Lưu lại
+  if (typeof showToast === 'function') {
+      showToast(newLockState ? 'Đã khóa công cụ' : 'Đã mở khóa công cụ', newLockState ? 'info' : 'success');
+  }
+  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
 }
+
   function bindContextMenu(panel) {
     // Tất cả sự kiện cho Props Panel đã được xử lý trong _bindToolbarLocalEvents.
     // Hàm này được giữ lại để tránh lỗi nếu có nơi nào gọi đến.
@@ -4252,30 +4292,38 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
         var ov = window.currentSelectedOverlay;
         if (typeof ov === 'undefined' || !ov || !global.tvChart) return;
         
-        // 1. Tính toán trạng thái khóa mới (đảo ngược cái cũ)
         var newLockState = !ov.lock;
-        
-        // 2. Cập nhật lên biểu đồ KLineChart
         global.tvChart.overrideOverlay({ id: ov.id, lock: newLockState });
         
-        // 3. Đồng bộ lại RAM và biến hiện tại
         if (global.__wa_overlay_map) {
             let existing = global.__wa_overlay_map.get(ov.id);
             if (existing) existing.lock = newLockState;
         }
         ov.lock = newLockState;
   
-        // 4. Đổi màu giao diện nút Khóa
+        // Đổi màu giao diện nút Khóa trên Properties Panel
         if (newLockState) {
             lockBtn.style.background = 'rgba(59,130,246,0.15)';
             lockBtn.style.color = '#60A5FA';
             lockBtn.style.borderColor = '#3B82F6';
-            if (typeof showToast === 'function') showToast('Đã khóa công cụ', 'success');
+            if (typeof showToast === 'function') showToast('Đã khóa công cụ', 'info');
         } else {
-            lockBtn.style.background = ''; // Xóa style inline để dùng lại CSS gốc
+            lockBtn.style.background = '';
             lockBtn.style.color = '';
             lockBtn.style.borderColor = '';
-            if (typeof showToast === 'function') showToast('Đã mở khóa công cụ', 'info');
+            if (typeof showToast === 'function') showToast('Đã mở khóa công cụ', 'success');
+        }
+  
+        // ĐỒNG BỘ SANG THANH TOOLBAR NỔI
+        var fbLockBtn = document.getElementById('wa-fb-lk');
+        if (fbLockBtn) {
+            if (newLockState) {
+                fbLockBtn.classList.add('wa-fb-on');
+                fbLockBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+            } else {
+                fbLockBtn.classList.remove('wa-fb-on');
+                fbLockBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>';
+            }
         }
   
         if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
