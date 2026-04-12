@@ -3410,8 +3410,32 @@ function restoreOverlays() {
             window.currentSelectedOverlay = ov;
             if (typeof renderPanel === 'function') renderPanel(ov);
           },
-          onDeselected: function() {}
+          onDeselected: function() {},
+          
+          // ✅ THÊM ĐOẠN NÀY ĐỂ HỖ TRỢ DOUBLE-CLICK CHO TEXT CŨ
+          onDoubleClick: function(event) {
+            var ov = event && event.overlay ? event.overlay : null;
+            if (!ov) return false;
+
+            if (typeof hidePanel === 'function') hidePanel();
+
+            window.currentSelectedOverlay = ov;
+            if (typeof openTextEditor === 'function') {
+                openTextEditor(
+                    ov.extendData || '', 
+                    ov.styles || {}, 
+                    ov.name, 
+                    function(newText, newStyles) {
+                        if (global.tvChart) {
+                            global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                        }
+                    }
+                );
+            }
+            return false;
+          }
         };
+        
         let newId = global.tvChart.createOverlay(cfg);
         
         if (newId) {
