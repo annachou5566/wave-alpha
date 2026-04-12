@@ -2049,148 +2049,81 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
     var curSize = tStyles.size || 14;
-    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif'; // Cập nhật font chuẩn
-  
+    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var ov = window.currentSelectedOverlay;
-    
-    // 1. TÍNH TỌA ĐỘ CHUẨN KỂ CẢ LÚC MỚI VẼ CHỮ
-    var posX, posY;
   
-    if (ov && ov.points && ov.points[0]) {
-      try {
-        var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
-        if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
+    // 1. TỌA ĐỘ: Dùng luôn tọa độ click chuột làm vị trí (Chính xác 100% với mọi Tool)
+    var posX = window.waMouseX;
+    var posY = window.waMouseY;
   
-        var container = document.getElementById('sc-chart-container');
-        var bbox = null;
-        
-        if (ov._figures && ov._figures.length > 0 && ov._figures[0].bounding) {
-          bbox = ov._figures[0].bounding;
-        } 
-        else if (chartObj && typeof chartObj.convertToPixel === 'function') {
-          var lastPt = ov.points[ov.points.length - 1];
-var pixelInfo = chartObj.convertToPixel(
-    { dataIndex: lastPt.dataIndex, timestamp: lastPt.timestamp, value: lastPt.value },
-    { finder: { paneId: targetPaneId } }
-);
-          if (pixelInfo) bbox = { x: pixelInfo.x, y: pixelInfo.y };
-        }
+    // Backup an toàn nếu chuột không xác định được
+    if (!posX) posX = window.innerWidth / 2;
+    if (!posY) posY = window.innerHeight / 2;
   
-        if (bbox && container) {
-          var rect = container.getBoundingClientRect();
-          posX = rect.left + bbox.x;
-          posY = rect.top + bbox.y;
-          
-          var name = ov.name || toolId;
-          if (name === 'note') { posX += 10; posY += 10; }
-          else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
-          else if (name === 'pin') { posX += 14; posY -= 10; }
-          else if (name === 'priceLabel') { posX += 6; }
-        } else {
-          // Lấy lại tọa độ chuột dự phòng một cách an toàn
-          posX = window.waMouseX || (window.innerWidth / 2);
-          posY = window.waMouseY || (window.innerHeight / 2);
-        }
-      } catch(e) {
-        posX = window.waMouseX || window.innerWidth / 2;
-        posY = window.waMouseY || window.innerHeight / 2;
-    }
-} else {
-    posX = window.waMouseX || window.innerWidth / 2;
-    posY = window.waMouseY || window.innerHeight / 2;
-}
-
-// ✅ THÊM 2 DÒNG NÀY - đảm bảo luôn có giá trị dù convertToPixel trả null
-if (!posX) posX = window.waMouseX || window.innerWidth / 2;
-if (!posY) posY = window.waMouseY || window.innerHeight / 2;
-  
-    // 2. TẠO TEXTAREA ĐỒNG BỘ FONT SIZE VỚI CANVAS
+    // 2. TẠO Ô NHẬP LIỆU
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
-    // FIX FONT SIZE LỆCH: Các trình duyệt có thể hiển thị px khác với Canvas của KLineChart
-    // Do đó, ta cần điều chỉnh font-size và line-height để match hoàn toàn.
     input.style.cssText = `
-      position: fixed;
-      left: ${posX}px;
-      top: ${posY}px;
-      background: transparent !important;
-      border: none !important;
-      outline: none !important;
-      color: ${curColor};
-      font-family: ${curFont};
-      font-size: ${curSize}px; 
-      line-height: 1.1; /* Canvas thường vẽ với line-height thấp hơn HTML */
-      font-weight: ${tStyles.weight || 'normal'}; /* Đồng bộ cả độ đậm */
-      font-style: ${tStyles.style || 'normal'}; /* Đồng bộ cả in nghiêng */
-      z-index: 999999;
-      min-width: 50px;
-      padding: 0;
-      margin: 0;
-      resize: none;
-      overflow: hidden;
-      white-space: pre;
-      caret-color: ${curColor};
+      position: fixed; left: ${posX}px; top: ${posY}px;
+      background: transparent !important; border: none !important; outline: none !important;
+      color: ${curColor}; font-family: ${curFont}; font-size: ${curSize}px; line-height: 1.1;
+      font-weight: ${tStyles.weight || 'normal'}; font-style: ${tStyles.style || 'normal'};
+      z-index: 999999; min-width: 50px; padding: 0; margin: 0; resize: none; overflow: hidden;
+      white-space: pre; caret-color: ${curColor};
     `;
     document.body.appendChild(input);
   
-    // Focus và bôi đen nếu là text mới
+    function resizeInput() {
+       input.style.height = 'auto';
+       input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
+       input.style.height = input.scrollHeight + 'px';
+    }
+  
     requestAnimationFrame(function() {
       input.focus();
-      if (!currentText || currentText === 'Văn bản...') {
-        input.select();
-      }
-      input.style.height = 'auto'; // Reset trước khi tính toán
-      input.style.width = Math.max(50, input.scrollWidth + 10) + 'px';
-      input.style.height = input.scrollHeight + 'px';
+      if (!currentText || currentText === 'Văn bản...') input.select();
+      resizeInput();
     });
   
-    input.addEventListener('input', function() {
-      this.style.height = 'auto'; 
-      this.style.width = Math.max(50, this.scrollWidth + 10) + 'px';
-      this.style.height = this.scrollHeight + 'px';
-    });
+    input.addEventListener('input', resizeInput);
   
-    // 3. ẨN CHỮ CŨ - CHỈ khi đang SỬA text đã có, KHÔNG chạy khi vẽ mới lần đầu
-if (ov && currentText && currentText !== 'Văn bản...' && global.tvChart) {
-  try {
-      var tempStyles = JSON.parse(JSON.stringify(ov.styles));
-      if (!tempStyles.text) tempStyles.text = {};
-      tempStyles.text.originalColor = tempStyles.text.color;
-      tempStyles.text.color = 'rgba(0,0,0,0)';
-      global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
-  } catch(e) {}
-}
+    // 3. ẨN CHỮ CŨ NẾU ĐANG SỬA TEXT ĐÃ VẼ
+    if (ov && currentText && currentText !== 'Văn bản...' && global.tvChart) {
+      try {
+        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!tempStyles.text) tempStyles.text = {};
+        tempStyles.text.originalColor = tempStyles.text.color;
+        tempStyles.text.color = 'rgba(0,0,0,0)';
+        global.tvChart.overrideOverlay({ id: ov.id, styles: tempStyles });
+      } catch(e) {}
+    }
   
-    // 4. LƯU LẠI
+    // 4. LƯU VÀ ĐÓNG TEXTAREA KHI XONG
     function commit() {
-      if (!document.getElementById('wa-text-editor')) return;
-      var val = input.value.trim();
-      if (!val) val = 'Văn bản...'; // Chống lỗi xóa trống text
+      var el = document.getElementById('wa-text-editor');
+      if (!el) return;
+      var val = el.value.trim() || 'Văn bản...';
       
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
       
-      // Trả lại màu chữ ban đầu (hoặc từ giá trị gốc nếu có)
-      updatedStyles.text.color = updatedStyles.text._originalColor || curColor;
-      delete updatedStyles.text._originalColor; 
+      if (updatedStyles.text.originalColor) {
+          updatedStyles.text.color = updatedStyles.text.originalColor;
+          delete updatedStyles.text.originalColor;
+      } else {
+          updatedStyles.text.color = curColor;
+      }
       
-      input.remove();
+      el.remove();
       onConfirm(val, updatedStyles);
     }
   
     input.addEventListener('blur', commit);
-  
     input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        commit();
-      }
-      if (e.key === 'Escape') {
-        input.value = currentText; 
-        commit();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { input.value = currentText || ''; commit(); }
     });
   }
 
