@@ -4242,40 +4242,74 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
     }
   
 
-  // 🌟 CÁC NÚT TRÊN BẢNG PROPERTIES PANEL (Thanh trượt bên phải)
-  if (panel) {
-    var closeBtn = panel.querySelector('.wa-close-btn');
-    if (closeBtn) closeBtn.addEventListener('click', function() { if(typeof hidePanel === 'function') hidePanel(); });
-    
-    var lockBtn = panel.querySelector('#wa-btn-p-lock');
-    if (lockBtn) lockBtn.addEventListener('click', function() {
-      if (typeof window.currentSelectedOverlay === 'undefined' || !window.currentSelectedOverlay || !global.tvChart) return;
-      global.tvChart.overrideOverlay({ id: window.currentSelectedOverlay.id, lock: !window.currentSelectedOverlay.lock });
+    // 🌟 CÁC NÚT TRÊN BẢNG PROPERTIES PANEL (Thanh trượt bên phải)
+    if (panel) {
+      var closeBtn = panel.querySelector('.wa-close-btn');
+      if (closeBtn) closeBtn.addEventListener('click', function() { if(typeof hidePanel === 'function') hidePanel(); });
       
-      // Đồng bộ lại RAM
-      let existing = global.__wa_overlay_map.get(window.currentSelectedOverlay.id);
-      if (existing) existing.lock = !window.currentSelectedOverlay.lock;
-      window.currentSelectedOverlay.lock = !window.currentSelectedOverlay.lock;
-
-      if (typeof showToast === 'function') showToast('Đã đổi trạng thái khoá');
-      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-    });
-    
-    var delBtn = panel.querySelector('#wa-btn-p-del');
-    if (delBtn) delBtn.addEventListener('click', function() {
-      if (typeof window.currentSelectedOverlay === 'undefined' || !window.currentSelectedOverlay || !global.tvChart) return;
+      var lockBtn = panel.querySelector('#wa-btn-p-lock');
+      if (lockBtn) lockBtn.addEventListener('click', function() {
+        var ov = window.currentSelectedOverlay;
+        if (typeof ov === 'undefined' || !ov || !global.tvChart) return;
+        
+        // 1. Tính toán trạng thái khóa mới (đảo ngược cái cũ)
+        var newLockState = !ov.lock;
+        
+        // 2. Cập nhật lên biểu đồ KLineChart
+        global.tvChart.overrideOverlay({ id: ov.id, lock: newLockState });
+        
+        // 3. Đồng bộ lại RAM và biến hiện tại
+        if (global.__wa_overlay_map) {
+            let existing = global.__wa_overlay_map.get(ov.id);
+            if (existing) existing.lock = newLockState;
+        }
+        ov.lock = newLockState;
+  
+        // 4. Đổi màu giao diện nút Khóa
+        if (newLockState) {
+            lockBtn.style.background = 'rgba(59,130,246,0.15)';
+            lockBtn.style.color = '#60A5FA';
+            lockBtn.style.borderColor = '#3B82F6';
+            if (typeof showToast === 'function') showToast('Đã khóa công cụ', 'success');
+        } else {
+            lockBtn.style.background = ''; // Xóa style inline để dùng lại CSS gốc
+            lockBtn.style.color = '';
+            lockBtn.style.borderColor = '';
+            if (typeof showToast === 'function') showToast('Đã mở khóa công cụ', 'info');
+        }
+  
+        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+      });
       
-      if (typeof saveHistory === 'function') saveHistory('delete', window.currentSelectedOverlay);
-      global.tvChart.removeOverlay({ id: window.currentSelectedOverlay.id });
+      var delBtn = panel.querySelector('#wa-btn-p-del');
+      if (delBtn) delBtn.addEventListener('click', function() {
+        var ov = window.currentSelectedOverlay;
+        if (typeof ov === 'undefined' || !ov || !global.tvChart) return;
+        
+        if (typeof saveHistory === 'function') saveHistory('delete', ov);
+        global.tvChart.removeOverlay({ id: ov.id });
+        
+        if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(ov.id); 
+        if (typeof hidePanel === 'function') hidePanel();
+        if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+        
+        window.currentSelectedOverlay = null; // Xóa xong phải gỡ biến nhớ
+      });
       
-      if (typeof _wa_untrackOverlay === 'function') _wa_untrackOverlay(window.currentSelectedOverlay.id); 
-      if (typeof hidePanel === 'function') hidePanel();
-      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-      
-      window.currentSelectedOverlay = null; // Xóa xong phải gỡ biến nhớ
-    });
+      // 🌟 ĐỒNG BỘ MÀU NÚT KHÓA KHI VỪA MỞ PANEL LÊN
+      if (lockBtn && window.currentSelectedOverlay) {
+          if (window.currentSelectedOverlay.lock) {
+              lockBtn.style.background = 'rgba(59,130,246,0.15)';
+              lockBtn.style.color = '#60A5FA';
+              lockBtn.style.borderColor = '#3B82F6';
+          } else {
+              lockBtn.style.background = '';
+              lockBtn.style.color = '';
+              lockBtn.style.borderColor = '';
+          }
+      }
+    }
   }
-}
 
 // ============================================================
 // 7.7 BIND CHART EVENTS — Gắn vào tvChart object (1 lần / chart instance)
