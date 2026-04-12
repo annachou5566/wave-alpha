@@ -1113,7 +1113,7 @@
         }
       },
 
-         // --- BATCH 8 : Text Annotation Tools (HỖ TRỢ MULTILINE & CĂN LỀ PIXEL-PERFECT) ---
+           // --- BATCH 8 : Text Annotation Tools (HỖ TRỢ MULTILINE, PIXEL-PERFECT VÀ IN NGHIÊNG) ---
   {
     name: 'plainText',
     totalStep: 2,
@@ -1132,14 +1132,16 @@
       var tS = os && os.text ? os.text : {};
       var pS = os && os.polygon ? os.polygon : {};
       
+      // Ép KLineChart hiểu lệnh in nghiêng bằng cách trộn vào font-weight
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '600');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
       var lh = (tS.size || 14) + 6;
-      
-      // Tách lề trái/phải để bù trừ lỗi đo chữ của trình duyệt
       var pl = 4, pr = 12, pt = 6, pb = 6; 
       var bw = textW + pl + pr;
       var bh = lines.length * lh + pt + pb;
@@ -1169,7 +1171,7 @@
           attrs: { x: c[0].x, y: c[0].y + i * lh, text: l, align: 'left', baseline: 'top' },
           styles: { 
             color: tS.color || '#EAECEF', size: tS.size || 14, 
-            family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal',
+            family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight,
             backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0
           }
         });
@@ -1197,8 +1199,11 @@
       var tS = os && os.text ? os.text : {};
       var pS = os && os.polygon ? os.polygon : {};
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '700');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 13) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 13) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
@@ -1242,7 +1247,7 @@
           attrs: { x: tx, y: ty + i * lh, text: l, align: 'left', baseline: 'top' },
           styles: { 
             color: tS.color || '#00F0FF', size: tS.size || 13, 
-            family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal',
+            family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight,
             backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0
           }
         });
@@ -1265,8 +1270,11 @@
       var tS = os.text || {};
       var pS = os.polygon || {};
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '600');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
@@ -1285,7 +1293,7 @@
         figs.push({
           type: 'text',
           attrs: { x: x+pl, y: y+pt + i*lh, text: l, align: 'left', baseline: 'top' },
-          styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+          styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
       return figs;
@@ -1311,8 +1319,11 @@
       var tS = os.text || {};
       var pS = os.polygon || {};
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '700');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
@@ -1332,7 +1343,7 @@
         figs.push({
           type: 'text',
           attrs: { x: x+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
-          styles: { color: tS.color || '#0ECB81', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+          styles: { color: tS.color || '#0ECB81', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
       return figs;
@@ -1351,6 +1362,9 @@
       var os = ref.overlay.styles;
       var tS = os.text || {};
       var pS = os.polygon || {};
+      
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '600');
       var lh = (tS.size || 14) + 6;
       
       var figs = [
@@ -1363,7 +1377,7 @@
           figs.push({
             type: 'text',
             attrs: { x: x+r+6, y: lineY, text: l, align: 'left', baseline: 'middle' },
-            styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+            styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
       }
@@ -1387,8 +1401,11 @@
       var tS = os.text || {};
       var pS = os.polygon || {};
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '600');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
@@ -1410,7 +1427,7 @@
           figs.push({
             type: 'text',
             attrs: { x: tx+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
-            styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+            styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
       } else {
@@ -1419,7 +1436,7 @@
           figs.push({
             type: 'text',
             attrs: { x: c[0].x+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
-            styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+            styles: { color: tS.color || '#00F0FF', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
       }
@@ -1440,8 +1457,11 @@
       var tS = os.text || {};
       var pS = os.polygon || {};
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '600');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '600') + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 14) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
@@ -1460,7 +1480,7 @@
         figs.push({
           type: 'text',
           attrs: { x: x+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
-          styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '600', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+          styles: { color: tS.color || '#EAECEF', size: tS.size || 14, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
       return figs;
@@ -1486,8 +1506,11 @@
       var tS = os.text || {};
       var pS = os.polygon || {};
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '700');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 11) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 11) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
@@ -1506,7 +1529,7 @@
         figs.push({
           type: 'text',
           attrs: { x: x+arr+pl, y: lineY, text: l, align: 'left', baseline: 'middle' },
-          styles: { color: tS.color || '#ffffff', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+          styles: { color: tS.color || '#ffffff', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
       return figs;
@@ -1529,8 +1552,11 @@
       var tS = os.text || {};
       var pS = os.polygon || {};
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '700');
+      
       var ctx = window._waTextCtx || (window._waTextCtx = document.createElement('canvas').getContext('2d'));
-      ctx.font = (tS.style || 'normal') + ' ' + (tS.weight || '700') + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
+      ctx.font = fWeight + ' ' + (tS.size || 12) + 'px ' + (tS.family || 'Be Vietnam Pro, sans-serif');
       var textW = 0;
       lines.forEach(function(l) { textW = Math.max(textW, ctx.measureText(l).width); });
       
@@ -1558,7 +1584,7 @@
         figs.push({
           type: 'text',
           attrs: { x: isRight ? tx+notch+pl : tx-notch-pr, y: lineY, text: l, align: isRight ? 'left' : 'right', baseline: 'middle' },
-          styles: { color: tS.color || '#d0aaff', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+          styles: { color: tS.color || '#d0aaff', size: tS.size || 12, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
         });
       });
       return figs;
@@ -1579,6 +1605,9 @@
       var pS = os.polygon || {};
       var lh = (tS.size || 11) + 6;
       
+      var isItalic = tS.style === 'italic' ? 'italic ' : '';
+      var fWeight = isItalic + (tS.weight || '700');
+      
       var figs = [
         { type: 'line', attrs: { coordinates: [{x:x, y:y}, {x:x, y:y-ph}] }, styles: { color: pS.borderColor || pS.color, size: pw } },
         { type: 'polygon', attrs: { coordinates: [{x:x, y:y-ph}, {x:x+fw, y:y-ph+fh/2}, {x:x, y:y-ph+fh}] }, styles: { style: 'stroke_fill', color: pS.color, borderColor: pS.borderColor, borderSize: pS.borderSize || 0 }, ignoreEvent: true }
@@ -1589,7 +1618,7 @@
           figs.push({
             type: 'text',
             attrs: { x: x+fw+6, y: lineY, text: l, align: 'left', baseline: 'middle' },
-            styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: tS.weight || '700', style: tS.style || 'normal', backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
+            styles: { color: tS.color || '#F0B90B', size: tS.size || 11, family: tS.family || 'Be Vietnam Pro, sans-serif', weight: fWeight, backgroundColor: 'transparent', borderColor: 'transparent', borderSize: 0 }
           });
         });
       }
