@@ -4326,38 +4326,32 @@ if (document.readyState === 'loading') {
 
 })(window); 
 
-// --- BỔ SUNG: TỰ ĐỘNG ĐÓNG BẢNG VÀ THANH CÔNG CỤ KHI CLICK RA NGOÀI ---
+// --- BỔ SUNG: TỰ ĐỘNG ĐÓNG BẢNG VÀ THANH CÔNG CỤ KHI CLICK RA NGOÀI (BẢN CHUẨN) ---
 document.addEventListener('mousedown', function(e) {
   var panel = document.getElementById('wa-props-panel');
   var floatBar = document.getElementById('wa-float-bar');
   
-  // Nếu panel và float bar không hiển thị thì bỏ qua
-  var isPanelVisible = panel && panel.classList.contains('show');
-  var isFloatBarVisible = floatBar && floatBar.style.visibility === 'visible';
+  // 1. Nếu click TRÚNG Bảng Properties -> Không đóng
+  if (panel && panel.contains(e.target)) return;
   
-  if (!isPanelVisible && !isFloatBarVisible) return;
-
-  // Kiểm tra xem vị trí click có nằm trong các khu vực an toàn không
-  var clickedInsidePanel = panel && panel.contains(e.target);
-  var clickedInsideFloatBar = floatBar && floatBar.contains(e.target);
-  var clickedInsidePopup = e.target.closest('._pop'); // Popup bảng chọn màu
+  // 2. Nếu click TRÚNG Thanh Float Toolbar -> Không đóng
+  if (floatBar && floatBar.contains(e.target)) return;
   
-  // KHÔNG đóng nếu click trúng một trong những cái trên
-  if (clickedInsidePanel || clickedInsideFloatBar || clickedInsidePopup) {
-    return;
-  }
+  // 3. Nếu click TRÚNG Bảng Chọn Màu (Popup) -> Không đóng
+  if (e.target.closest('._pop')) return;
 
-  // KHÔNG đóng nếu click vào khu vực vẽ biểu đồ (để KLineChart tự quản lý việc bỏ chọn Overlay)
-  // Vì nếu bạn click vào một hình khối khác trên biểu đồ, KLineChart sẽ tự động mở bảng cài đặt mới.
-  if (e.target.closest('canvas')) {
-    return;
-  }
-
-  // Nếu click ra khoảng trống (ví dụ: nền web, menu bên ngoài), tiến hành Đóng tất cả
-  if (isPanelVisible && typeof hidePanel === 'function') {
+  // 4. TIẾN HÀNH ĐÓNG CẢ 2
+  // Dù click vào nền web hay nền biểu đồ trống, đều đóng sạch sẽ
+  if (typeof hidePanel === 'function') {
     hidePanel();
+  } else if (panel) {
+    panel.classList.remove('show'); // Phương án dự phòng nếu hàm hidePanel bị lỗi
   }
-  if (isFloatBarVisible && typeof hideFloatToolbar === 'function') {
+
+  if (typeof hideFloatToolbar === 'function') {
     hideFloatToolbar();
+  } else if (floatBar) {
+    floatBar.style.visibility = 'hidden';
+    floatBar.style.opacity = '0';
   }
-});
+}, true); // Lưu ý chữ 'true' ở đây: Bắt sự kiện ưu tiên (Capture Phase) để nó chạy trước mọi thứ
