@@ -3230,53 +3230,41 @@ function hideFloatToolbar() {
 
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
-   // ── GIỮ VỊ TRÍ CŨ khi chỉ cập nhật icon (posX/posY = null) ──
-   var existingBar = document.getElementById('wa-float-bar');
-   var savedLeft = null, savedTop = null;
-   if (posX === null && posY === null && existingBar) {
-     savedLeft = existingBar.style.left;
-     savedTop  = existingBar.style.top;
-   }
-  hideFloatToolbar();
+  var existing = document.getElementById('wa-float-bar');
+  if (existing) existing.remove();
 
-  var container = document.getElementById('sc-chart-container');
-  if (!container) return;
-  var rect = container.getBoundingClientRect();
-
+  // 1. Phân loại Tool và lấy đúng thông số cấu trúc của KLineChart
   var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : 'lines';
-  var s   = ov.styles || {};
-  var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
-
-  // ── Màu chính ──────────────────────────────────────────────────
-  var pc = '#3B82F6';
-  if (cat === 'text')   pc = s.text    && s.text.color         ? colorToHex(s.text.color)            : '#E8EDF2';
-  else if (cat === 'shapes') pc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '#3B82F6';
-  else                  pc = s.line    && s.line.color          ? colorToHex(s.line.color)             : '#3B82F6';
-  if (!pc.startsWith('#')) pc = '#' + pc;
-
-  var lw       = (s.line && s.line.size)  || 1;
-  var ls       = (s.line && s.line.style) || 'solid';
-  var isLocked = !!ov.lock;
-  var isHidden = !!ext._hidden;
-  var showLine = (cat !== 'text');
-
-  // ── SVG helpers ────────────────────────────────────────────────
-  function lwSVG(h) {
-    return '<span style="display:block;width:14px;height:'+h+'px;background:currentColor;border-radius:1px;margin:auto"></span>';
+  var isLocked = ov.lock;
+  var isHidden = ov.visible === false;
+  
+  var curColor = '#3B82F6', curThick = 1, curStyle = 'solid', curTextSize = 14;
+  var s = ov.styles || {};
+  
+  // Đọc chính xác style đang có để hiển thị lên Toolbar
+  if (cat === 'text') {
+      if (s.text) {
+          curColor = s.text.color || '#E8EDF2';
+          curTextSize = s.text.size || 14;
+      }
+  } else if (cat === 'shapes') {
+      if (s.polygon) {
+          curColor = s.polygon.borderColor || s.polygon.color || '#3B82F6';
+          curThick = s.polygon.borderSize || 1;
+      }
+      if (s.line) curStyle = s.line.style || 'solid';
+  } else {
+      if (s.line) {
+          curColor = s.line.color || '#3B82F6';
+          curThick = s.line.size || 1;
+          curStyle = s.line.style || 'solid';
+      }
   }
-  function lsSVG(da) {
-    return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
-  }
-
-            // 1. Trích xuất thuộc tính hiện tại
-  var curLine = (ov.styles && ov.styles.line) ? ov.styles.line : {};
-  var curSize = curLine.size || 1;
-  var curStyle = curLine.style || 'solid';
 
   // 2. Bộ Icon
   var dragSVG = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>';
   var editSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
+  var gearSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>';
   var lockOn = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
   var lockOff = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>';
   var eyeShow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -3286,30 +3274,24 @@ function showFloatToolbar(ov, posX, posY) {
   var lineDashed = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 3"/></svg>';
   var lineDotted = '<svg width="20" height="10"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1.5 3"/></svg>';
 
-  // 3. Build giao diện bằng Custom Elements
+  // 3. Render HTML giao diện
   var html = '';
+  html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor:grab; display:flex; align-items:center; justify-content:center; width:16px; height:28px; color:#475569; margin-right:2px;">' + dragSVG + '</div>';
   
-  // Drag
-  html += '<div class="wa-fb-drag" title="Kéo thả" style="cursor:grab; display:flex; align-items:center; justify-content:center; width:16px; height:28px; color:#475569; margin-right:2px;">' + dragSVG + '</div>';
-  
-  // Nút Color (Custom)
   html += '<button class="wa-fb-btn" id="wa-fb-quick-color" title="Màu sắc" style="padding:0; overflow:hidden;">';
-  html += '  <div style="width:16px; height:16px; border-radius:4px; background:' + pc + '; border:1px solid rgba(255,255,255,0.2);"></div>';
+  html += '  <div id="wa-fb-color-preview" style="width:16px; height:16px; border-radius:4px; background:' + curColor + '; border:1px solid rgba(255,255,255,0.2);"></div>';
   html += '</button>';
 
-  // Nút Độ Dày (Custom)
-  html += '<button class="wa-fb-btn" id="wa-fb-quick-thick" title="Độ dày ('+curSize+'px)" style="font-size:12px; font-weight:700; width:auto; padding:0 8px;">' + curSize + 'px</button>';
-
-  // Nút Kiểu Nét (Custom)
-  html += '<button class="wa-fb-btn" id="wa-fb-quick-style" title="Kiểu nét" style="width:auto; padding:0 8px;">' + (curStyle=='dashed'?lineDashed : curStyle=='dotted'?lineDotted : lineSolid) + '</button>';
-
-  html += '<div class="wa-fb-sep"></div>';
-
   if (cat === 'text') {
-      html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">' + editSVG + '</button>';
+      html += '<button class="wa-fb-btn" id="wa-fb-quick-tsize" title="Cỡ chữ" style="font-size:12px; font-weight:700; width:auto; padding:0 8px;">' + curTextSize + 'px</button>';
       html += '<div class="wa-fb-sep"></div>';
+      html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">' + editSVG + '</button>';
+  } else {
+      html += '<button class="wa-fb-btn" id="wa-fb-quick-thick" title="Độ dày" style="font-size:12px; font-weight:700; width:auto; padding:0 8px;">' + curThick + 'px</button>';
+      html += '<button class="wa-fb-btn" id="wa-fb-quick-style" title="Kiểu nét" style="width:auto; padding:0 8px;">' + (curStyle=='dashed'?lineDashed : curStyle=='dotted'?lineDotted : lineSolid) + '</button>';
   }
 
+  html += '<div class="wa-fb-sep"></div>';
   html += '<button class="wa-fb-btn" id="wa-fb-cfg" title="Cài đặt chi tiết">' + gearSVG + '</button>';
   html += '<button class="wa-fb-btn' + (isLocked ? ' wa-fb-on' : '') + '" id="wa-fb-lk" title="' + (isLocked ? 'Mở khóa' : 'Khóa') + '">' + (isLocked ? lockOn : lockOff) + '</button>';
   html += '<button class="wa-fb-btn' + (isHidden ? ' wa-fb-on' : '') + '" id="wa-fb-vis" title="' + (isHidden ? 'Hiện' : 'Ẩn') + '">' + (isHidden ? eyeHide : eyeShow) + '</button>';
@@ -3318,18 +3300,96 @@ function showFloatToolbar(ov, posX, posY) {
   var bar = document.createElement('div');
   bar.id = 'wa-float-bar';
   bar.className = 'wa-float-bar';
+  bar.style.left = posX + 'px';
+  bar.style.top = posY + 'px';
   bar.innerHTML = html;
   document.body.appendChild(bar);
 
-  // 4. Hàm hỗ trợ tạo Mini Popup Popup
-  function createMiniPopup(btnId, contentHTML, width) {
+  // ==========================================
+  // BẮT ĐẦU PHẦN LOGIC ĐIỀU KHIỂN ĐÃ FIX LỖI
+  // ==========================================
+
+  // 4. KÉO THẢ (DRAG) 
+  var dragHandle = document.getElementById('wa-fb-drag');
+  var isDragging = false, startX, startY, initialL, initialT;
+  
+  if (dragHandle) {
+      dragHandle.addEventListener('mousedown', function(e) {
+          isDragging = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          var rect = bar.getBoundingClientRect();
+          initialL = rect.left;
+          initialT = rect.top;
+          
+          bar.style.left = initialL + 'px';
+          bar.style.top = initialT + 'px';
+          bar.style.bottom = 'auto';
+          bar.style.right = 'auto';
+          
+          document.body.style.userSelect = 'none';
+          e.preventDefault();
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+          if (!isDragging) return;
+          bar.style.left = (initialL + (e.clientX - startX)) + 'px';
+          bar.style.top = (initialT + (e.clientY - startY)) + 'px';
+      });
+      
+      document.addEventListener('mouseup', function() {
+          isDragging = false;
+          document.body.style.userSelect = '';
+      });
+  }
+
+  // 5. CẬP NHẬT CHART TRỰC TIẾP TÙY LOẠI (TEXT HAY SHAPE HAY LINE)
+  function applyLiveStyle(type, val) {
+      if (!global.tvChart) return;
+      var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+      
+      if (type === 'color') {
+          if (cat === 'text') {
+              if(!ns.text) ns.text = {};
+              ns.text.color = val;
+          } else if (cat === 'shapes') {
+              if(!ns.polygon) ns.polygon = {};
+              ns.polygon.borderColor = val;
+              ns.polygon.color = val; 
+              if(!ns.line) ns.line = {};
+              ns.line.color = val;
+          } else {
+              if(!ns.line) ns.line = {};
+              ns.line.color = val;
+          }
+      } else if (type === 'thick') {
+          if (cat === 'shapes') {
+              if(!ns.polygon) ns.polygon = {};
+              ns.polygon.borderSize = val;
+          }
+          if(!ns.line) ns.line = {};
+          ns.line.size = val;
+      } else if (type === 'style') {
+          if(!ns.line) ns.line = {};
+          ns.line.style = val;
+      } else if (type === 'tsize') {
+          if(!ns.text) ns.text = {};
+          ns.text.size = val;
+      }
+
+      global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
+      ov.styles = ns; 
+      if (typeof saveToStorage === 'function') saveToStorage();
+  }
+
+  // 6. MINI POPUP ĐA NĂNG
+  function createMiniPopup(btnId, contentHTML, width, onSetup) {
       var btn = document.getElementById(btnId);
       if(!btn) return;
-      btn.addEventListener('click', function(e) {
+      btn.onclick = function(e) {
           e.stopPropagation();
-          // Đóng popup cũ nếu có
           var exist = document.getElementById('wa-mini-pop');
-          if(exist) exist.remove();
+          if(exist) { exist.remove(); return; } 
           
           var pop = document.createElement('div');
           pop.id = 'wa-mini-pop';
@@ -3341,232 +3401,139 @@ function showFloatToolbar(ov, posX, posY) {
           pop.style.top = (rect.bottom + 6) + 'px';
           pop.style.left = rect.left + 'px';
 
-          // Click ra ngoài để đóng
           var closePop = function(ev) {
-              if(!pop.contains(ev.target)) {
+              if(!pop.contains(ev.target) && !btn.contains(ev.target)) {
                   pop.remove();
                   document.removeEventListener('mousedown', closePop);
               }
           };
           setTimeout(() => document.addEventListener('mousedown', closePop), 10);
 
-          // Xử lý sự kiện trong popup
-          var items = pop.querySelectorAll('.pop-item');
-          items.forEach(item => {
+          if(onSetup) onSetup(pop, btn);
+      };
+  }
+
+  // 7. GẮN DỮ LIỆU CHO CÁC POPUP
+  // Popup Màu sắc (Đã sửa lỗi rê chuột mất màu: Không thay đổi background, chỉ phóng to)
+  var colors = ['#EF4444','#F97316','#F59E0B','#EAB308','#84CC16','#22C55E','#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6','#6366F1','#8B5CF6','#A855F7','#D946EF','#EC4899','#F43F5E','#FFFFFF','#94A3B8','#000000'];
+  var cHtml = '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;">';
+  colors.forEach(c => {
+      cHtml += '<div class="pop-item-color" data-val="'+c+'" style="width:24px; height:24px; border-radius:4px; cursor:pointer; background:'+c+'; border:1px solid rgba(255,255,255,0.1); transition:transform 0.1s;"></div>';
+  });
+  cHtml += '</div>';
+  createMiniPopup('wa-fb-quick-color', cHtml, 145, function(pop, btn) {
+      pop.querySelectorAll('.pop-item-color').forEach(item => {
+          item.onmouseenter = () => item.style.transform = 'scale(1.25)';
+          item.onmouseleave = () => item.style.transform = 'scale(1)';
+          item.onclick = function(ev) {
+              ev.stopPropagation();
+              applyLiveStyle('color', this.dataset.val);
+              document.getElementById('wa-fb-color-preview').style.background = this.dataset.val;
+              pop.remove();
+          };
+      });
+  });
+
+  if (cat === 'text') {
+      // Popup Size Chữ cho Text
+      var tsHtml = '';
+      [12, 13, 14, 16, 18, 20, 24, 32, 48].forEach(v => {
+          tsHtml += '<div class="pop-item-hover" data-val="'+v+'" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2; font-size:12px; font-weight:600;">Cỡ chữ ' + v + 'px</div>';
+      });
+      createMiniPopup('wa-fb-quick-tsize', tsHtml, 100, function(pop, btn) {
+          pop.querySelectorAll('.pop-item-hover').forEach(item => {
               item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.08)';
               item.onmouseleave = () => item.style.background = 'transparent';
               item.onclick = function(ev) {
                   ev.stopPropagation();
-                  var val = this.dataset.val;
-                  var type = this.dataset.type;
-                  
-                  var ns = JSON.parse(JSON.stringify(ov.styles));
-                  if(type === 'color') {
-                      if(ns.line) ns.line.color = val;
-                      if(ns.polygon && ns.polygon.borderColor) ns.polygon.borderColor = val;
-                      if(cat === 'text' && ns.text) ns.text.color = val;
-                  } 
-                  else if(type === 'thick') {
-                      if(!ns.line) ns.line = {};
-                      ns.line.size = parseInt(val);
-                      if(ns.polygon && ns.polygon.borderSize !== undefined) ns.polygon.borderSize = parseInt(val);
-                  }
-                  else if(type === 'style') {
-                      if(!ns.line) ns.line = {};
-                      ns.line.style = val;
-                  }
+                  applyLiveStyle('tsize', parseInt(this.dataset.val));
+                  btn.innerHTML = this.dataset.val + 'px';
+                  pop.remove();
+              };
+          });
+      });
+  } else {
+      // Popup Độ Dày
+      var tHtml = '';
+      [1, 2, 3, 4, 5].forEach(v => {
+          tHtml += '<div class="pop-item-hover" data-val="'+v+'" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2; font-size:12px; font-weight:600;">Độ dày '+v+'px</div>';
+      });
+      createMiniPopup('wa-fb-quick-thick', tHtml, 100, function(pop, btn) {
+          pop.querySelectorAll('.pop-item-hover').forEach(item => {
+              item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.08)';
+              item.onmouseleave = () => item.style.background = 'transparent';
+              item.onclick = function(ev) {
+                  ev.stopPropagation();
+                  applyLiveStyle('thick', parseInt(this.dataset.val));
+                  btn.innerHTML = this.dataset.val + 'px';
+                  pop.remove();
+              };
+          });
+      });
 
-                  if(global.tvChart) {
-                      global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
-                      if(typeof saveToStorage === 'function') saveToStorage();
-                  }
-                  
-                  // Cập nhật ngay UI của nút
-                  if(type === 'color') btn.innerHTML = '<div style="width:16px; height:16px; border-radius:4px; background:' + val + '; border:1px solid rgba(255,255,255,0.2);"></div>';
-                  if(type === 'thick') btn.innerHTML = val + 'px';
-                  if(type === 'style') btn.innerHTML = (val=='dashed'?lineDashed : val=='dotted'?lineDotted : lineSolid);
-
+      // Popup Kiểu Nét
+      var sHtml = '';
+      sHtml += '<div class="pop-item-hover" data-val="solid" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2; display:flex; align-items:center;">' + lineSolid + '</div>';
+      sHtml += '<div class="pop-item-hover" data-val="dashed" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2; display:flex; align-items:center;">' + lineDashed + '</div>';
+      sHtml += '<div class="pop-item-hover" data-val="dotted" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2; display:flex; align-items:center;">' + lineDotted + '</div>';
+      createMiniPopup('wa-fb-quick-style', sHtml, 80, function(pop, btn) {
+          pop.querySelectorAll('.pop-item-hover').forEach(item => {
+              item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.08)';
+              item.onmouseleave = () => item.style.background = 'transparent';
+              item.onclick = function(ev) {
+                  ev.stopPropagation();
+                  applyLiveStyle('style', this.dataset.val);
+                  btn.innerHTML = (this.dataset.val=='dashed'?lineDashed : this.dataset.val=='dotted'?lineDotted : lineSolid);
                   pop.remove();
               };
           });
       });
   }
 
-  // 5. Khởi tạo dữ liệu Mini Popups
-  // Bảng màu gọn gàng (20 màu cơ bản)
-  var colors = ['#EF4444','#F97316','#F59E0B','#EAB308','#84CC16','#22C55E','#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6','#6366F1','#8B5CF6','#A855F7','#D946EF','#EC4899','#F43F5E','#FFFFFF','#94A3B8','#000000'];
-  var cHtml = '<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;">';
-  colors.forEach(c => {
-      cHtml += '<div class="pop-item" data-type="color" data-val="'+c+'" style="width:24px; height:24px; border-radius:4px; cursor:pointer; background:'+c+'; border:1px solid rgba(255,255,255,0.1);"></div>';
-  });
-  cHtml += '</div>';
-  createMiniPopup('wa-fb-quick-color', cHtml, 145);
-
-  // Menu Độ dày (1-5px)
-  var tHtml = '';
-  [1,2,3,4,5].forEach(v => {
-      tHtml += '<div class="pop-item" data-type="thick" data-val="'+v+'" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2; font-size:12px; font-weight:600;">Độ dày '+v+'px</div>';
-  });
-  createMiniPopup('wa-fb-quick-thick', tHtml, 120);
-
-  // Menu Kiểu nét
-  var sHtml = '';
-  sHtml += '<div class="pop-item" data-type="style" data-val="solid" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2;">' + lineSolid + '</div>';
-  sHtml += '<div class="pop-item" data-type="style" data-val="dashed" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2;">' + lineDashed + '</div>';
-  sHtml += '<div class="pop-item" data-type="style" data-val="dotted" style="padding:6px 10px; cursor:pointer; border-radius:4px; color:#E8EDF2;">' + lineDotted + '</div>';
-  createMiniPopup('wa-fb-quick-style', sHtml, 100);
-
-
-  // ─────────────────────────────────────────────────────────────
-  // 🎯 SMART POSITIONING — Tránh mép container, không bao giờ bị cắt
-  // Bước 1: Append trước (ẩn) để đo kích thước thực của bar
-  // ─────────────────────────────────────────────────────────────
-  bar.style.visibility = 'hidden';   // ẩn để đo, chưa animate
-  bar.style.opacity    = '0';
-  bar.style.transform  = 'translateY(6px) scale(0.97)';
-  bar.style.transition = 'none';
-  container.appendChild(bar);
-
-  requestAnimationFrame(function() {
-    // ── Nếu chỉ cập nhật icon, khôi phục vị trí cũ, không animate ──
-  if (savedLeft !== null) {
-    bar.style.left       = savedLeft;
-    bar.style.top        = savedTop;
-    bar.style.visibility = 'visible';
-    bar.style.transition = 'none';
-    bar.style.opacity    = '1';
-    bar.style.transform  = 'translateY(0) scale(1)';
-    bar.classList.add('wa-fb-show');
-    return;   // ← bỏ qua toàn bộ logic tính vị trí bên dưới
-  }
-    var bW     = bar.offsetWidth  || (showLine ? 320 : 180);
-    var bH     = bar.offsetHeight || 40;
-    var MARGIN = 6;                   // khoảng cách tối thiểu với mép container
-    var BAR_OFFSET_Y = 50;            // thanh nằm phía TRÊN con trỏ bao nhiêu px
-    var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
-
-    // Tọa độ gốc (tính theo container)
-    var cx = (posX != null ? posX : (_fbX - rect.left));
-    var cy = (posY != null ? posY : (_fbY - rect.top));
-
-    // Căn giữa bar theo chiều ngang so với điểm click
-    var left = cx - bW / 2;
-    // Mặc định: hiện phía TRÊN điểm click
-    var top  = cy - BAR_OFFSET_Y;
-
-    // ── Flip dọc: nếu phía trên không đủ chỗ → đặt xuống dưới ──
-    if (top < MARGIN) {
-      top = cy + 16;  // hiện phía DƯỚI điểm click
-    }
-    // Nếu xuống dưới cũng không đủ chỗ (màn hình rất nhỏ) → ép vào MARGIN
-    if (top + bH > rect.height - MARGIN - safeBottom) {
-      top = rect.height - bH - MARGIN - safeBottom;
-    }
-
-    // ── Clamp ngang: không ra ngoài trái/phải ──────────────────
-    left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
-
-    bar.style.left = left + 'px';
-    bar.style.top  = top  + 'px';
-
-    // ── Animate in ─────────────────────────────────────────────
-    bar.style.visibility = 'visible';
-    bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
-    requestAnimationFrame(function() {
-      bar.style.opacity   = '1';
-      bar.style.transform = 'translateY(0) scale(1)';
-      bar.classList.add('wa-fb-show');
-    });
-  });
-
-  
-  bar.querySelector('#wa-fb-vis').addEventListener('click', function() {
-    _fbToggleVisible(ov);
-  });
-  bar.querySelector('#wa-fb-cfg').addEventListener('click', function() {
-    if (typeof renderPanel === 'function') renderPanel(ov);
-  });
-  bar.querySelector('#wa-fb-lk').addEventListener('click', function() {
-    _fbToggleLock(ov);
-  });
-  bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
-    if (!global.tvChart) return;
-    if (typeof saveHistory === 'function') saveHistory('delete', ov);
-    global.tvChart.removeOverlay({ id: ov.id });
-    if (typeof global.__wa_untrack_overlay === 'function') global.__wa_untrack_overlay(ov.id);
-    else if (global.__wa_overlay_map) global.__wa_overlay_map.delete(ov.id);
-    hideFloatToolbar();
-    if (typeof hidePanel === 'function') hidePanel();
-    if (typeof saveAllOverlays === 'function') saveAllOverlays();
-  });
-  
-  // ============================================
-  // BẮT ĐẦU CHÈN SỰ KIỆN NÚT SỬA CHỮ VÀ DRAG BAR VÀO ĐÂY:
-  // ============================================
-
-  // 1. Sự kiện nút sửa chữ
-  var editBtn = bar.querySelector('#wa-fb-edit');
-if (editBtn) {
-  editBtn.addEventListener('click', function() {
-    // Ẩn các menu đi chuẩn bị gõ chữ
-    if (typeof hidePanel === 'function') hidePanel();
-    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-    
-    // Delay 50ms tắt menu xong mới gọi chữ lên
-    setTimeout(function() {
-      // THÊM DÒNG NÀY ĐỂ FIX LỖI:
-      // Phục hồi lại biến do hidePanel đã set nó thành null
-      window.currentSelectedOverlay = ov; 
-      
-      if (typeof openTextEditor === 'function') {
-        openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
-          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-          if (typeof saveAllOverlays === 'function') saveAllOverlays();
-        });
-      }
-    }, 50);
-  });
-}
-
-  // 2. Drag Bar Logic (kéo thả thanh công cụ nổi)
-  var dragHandle = bar.querySelector('#wa-fb-drag');
-  if (dragHandle) {
-    var isDragging = false;
-    var startX, startY, initLeft, initTop;
-
-    dragHandle.addEventListener('mousedown', function(e) {
-      isDragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      initLeft = parseFloat(bar.style.left) || 0;
-      initTop = parseFloat(bar.style.top) || 0;
-      dragHandle.style.cursor = 'grabbing';
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', function(e) {
-      if (!isDragging) return;
-      var dx = e.clientX - startX;
-      var dy = e.clientY - startY;
-      bar.style.left = (initLeft + dx) + 'px';
-      bar.style.top = (initTop + dy) + 'px';
-    });
-
-    document.addEventListener('mouseup', function() {
-      if (isDragging) {
-        isDragging = false;
-        dragHandle.style.cursor = 'grab';
-        var rect = bar.getBoundingClientRect();
-        _fbX = rect.left;
-        _fbY = rect.top;
-      }
-    });
+  // 8. NÚT CHỨC NĂNG (EDIT, CONFIG, LOCK, DELETE)
+  var btnEdit = document.getElementById('wa-fb-edit');
+  if (btnEdit) {
+      btnEdit.onclick = function() {
+          if(typeof openTextEditor === 'function') openTextEditor(ov.extendData, ov.styles, ov.name, function(nT, nS) {
+              global.tvChart.overrideOverlay({id: ov.id, extendData: nT, styles: nS});
+          });
+          bar.remove();
+      };
   }
 
-  // ============================================
-  // KẾT THÚC CHÈN
-  // ============================================
+  var btnCfg = document.getElementById('wa-fb-cfg');
+  if (btnCfg) {
+      btnCfg.onclick = function() {
+          if(typeof renderPanel === 'function') renderPanel(ov);
+      };
+  }
 
+  var btnLk = document.getElementById('wa-fb-lk');
+  if (btnLk) {
+      btnLk.onclick = function() {
+          global.tvChart.overrideOverlay({id: ov.id, lock: !ov.lock});
+          bar.remove();
+      };
+  }
+
+  var btnVis = document.getElementById('wa-fb-vis');
+  if (btnVis) {
+      btnVis.onclick = function() {
+          global.tvChart.overrideOverlay({id: ov.id, visible: isHidden ? true : false});
+          bar.remove();
+      };
+  }
+
+  var btnRm = document.getElementById('wa-fb-rm');
+  if (btnRm) {
+      btnRm.onclick = function() {
+          global.tvChart.removeOverlay(ov.id);
+          bar.remove();
+      };
+  }
+  
+  // Kích hoạt hiệu ứng xuất hiện mềm mại
+  requestAnimationFrame(() => bar.classList.add('wa-fb-show'));
 }
 
 function _fbSetColor(ov, cat, hex) {
