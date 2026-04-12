@@ -2959,48 +2959,6 @@ onDrawEnd: function(event) {
       _on(el, 'keypress', function(e) { e.stopPropagation(); });
     });
 
-     // --- BỔ SUNG: XỬ LÝ CLICK RA NGOÀI (BẢN CHUẨN KHÔNG LỖI TEXT) ---
-     if (!window._wa_panel_sync) {
-      window._wa_panel_sync = true;
-
-      // 1. Click vào Lề Web, Thanh Menu (Ngoài biểu đồ) -> Ép đóng
-      document.addEventListener('mousedown', function(e) {
-        var p = document.getElementById('wa-props-panel');
-        var f = document.getElementById('wa-float-bar');
-        var c = document.getElementById('sc-chart-container') || document.querySelector('.klinecharts-pro');
-
-        if (p && p.contains(e.target)) return;
-        if (f && f.contains(e.target)) return;
-        if (e.target.closest('._pop')) return;
-        
-        // Nếu click thẳng vào vùng vẽ biểu đồ -> Không đụng chạm, để biểu đồ lo
-        if (e.target.closest('canvas') || (c && c.contains(e.target))) return;
-
-        // Tiến hành dọn dẹp
-        if (typeof hidePanel === 'function') hidePanel();
-        else if (p) p.classList.remove('show');
-        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-      }, true);
-
-      // 2. Kẹp thẳng vào lệnh ẩn Float Toolbar của KLineChart
-      // Lý do Panel không tự đóng khi bạn click ra nền trống biểu đồ là do KLineChart chỉ gọi hàm hideFloatToolbar.
-      // Ta sẽ nâng cấp hàm này để nó dọn luôn cái Panel.
-      if (typeof window.hideFloatToolbar === 'function' && !window._wa_hooked_hide) {
-        var _originalHideFloat = window.hideFloatToolbar;
-        window.hideFloatToolbar = function() {
-          _originalHideFloat.apply(this, arguments); // Cứ ẩn thanh Float như bình thường
-          
-          // Sau đó ẩn thêm Panel
-          if (typeof hidePanel === 'function') hidePanel();
-          else {
-            var p = document.getElementById('wa-props-panel');
-            if (p) p.classList.remove('show');
-          }
-          window.currentSelectedOverlay = null; // Xóa trạng thái
-        };
-        window._wa_hooked_hide = true;
-      }
-    }
   } 
 
   function hidePanel() {
@@ -3010,8 +2968,14 @@ onDrawEnd: function(event) {
     window.currentSelectedOverlay = null; // ← sync cả hai
 }
 function hideFloatToolbar() {
-  var b = document.getElementById('wa-float-bar');
-  if (b && b.parentNode) b.parentNode.removeChild(b);
+  var floatBar = document.getElementById('wa-float-bar');
+  if (floatBar) {
+      floatBar.style.visibility = 'hidden';
+      floatBar.style.opacity = '0';
+  }
+  
+  // THÊM ĐÚNG DÒNG NÀY VÀO LÀ XONG:
+  if (typeof hidePanel === 'function') hidePanel();
 }
 
 function showFloatToolbar(ov, posX, posY) {
