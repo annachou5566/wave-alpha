@@ -3197,7 +3197,9 @@ function showFloatToolbar(ov, posX, posY) {
   var lw       = (s.line && s.line.size)  || 1;
   var ls       = (s.line && s.line.style) || 'solid';
   var isLocked = !!ov.lock;
-  var isHidden = !!ext._hidden;
+  var isHidden =
+  !!ov._hiddenExtSnap ||
+  !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
   var showLine = (cat !== 'text');
 
   // ── SVG helpers ────────────────────────────────────────────────
@@ -3425,38 +3427,70 @@ function _fbSetLineStyle(ov, style) {
 
 function _fbToggleVisible(ov) {
   if (!global.tvChart || !ov) return;
-  var ext = (typeof ov.extendData === 'object' && ov.extendData) ? JSON.parse(JSON.stringify(ov.extendData)) : {};
-  ext._hidden = !ext._hidden;
+
+  var isTextOverlay = (ov.name === 'text') || (typeof ov.extendData === 'string');
+  var wasHidden =
+    !!ov._hiddenExtSnap ||
+    !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
 
   var ns = JSON.parse(JSON.stringify(ov.styles || {}));
-  if (!ns.line)    ns.line    = {};
+  if (!ns.line) ns.line = {};
   if (!ns.polygon) ns.polygon = {};
-  if (!ns.text)    ns.text    = {};
+  if (!ns.text) ns.text = {};
 
-  if (ext._hidden) {
-    ov._hiddenExtSnap = JSON.stringify(ov.extendData || {});
-    ns.line.color          = 'rgba(0,0,0,0)';
-    ns.polygon.color       = 'rgba(0,0,0,0)';
+  var ext = ov.extendData;
+
+  if (!wasHidden) {
+    ov._hiddenExtSnap =
+      typeof ov.extendData === 'undefined'
+        ? ''
+        : JSON.parse(JSON.stringify(ov.extendData));
+
+    ov._hiddenStyleSnap = JSON.parse(JSON.stringify(ov.styles || {}));
+
+    ns.line.color = 'rgba(0,0,0,0)';
+    ns.polygon.color = 'rgba(0,0,0,0)';
     ns.polygon.borderColor = 'rgba(0,0,0,0)';
-    ns.text.color          = 'rgba(0,0,0,0)';
+    ns.text.color = 'rgba(0,0,0,0)';
     ns.text.backgroundColor = 'rgba(0,0,0,0)';
-    ext.fillOpacity = 0;
-  } else {
-    delete ns.line.color;
-    delete ns.polygon.color;
-    delete ns.polygon.borderColor;
-    delete ns.text.color;
-    delete ns.text.backgroundColor;
-    if (ov._hiddenExtSnap) {
-      try { ext = JSON.parse(ov._hiddenExtSnap); } catch(e) {}
-      delete ov._hiddenExtSnap;
+
+    if (!isTextOverlay) {
+      ext =
+        (typeof ov.extendData === 'object' && ov.extendData)
+          ? JSON.parse(JSON.stringify(ov.extendData))
+          : {};
+      ext._hidden = true;
+      ext.fillOpacity = 0;
+    } else {
+      ext = ov.extendData; // giữ nguyên text string, không đổi thành object
     }
-    ext._hidden = false;
+  } else {
+    ext =
+      typeof ov._hiddenExtSnap === 'undefined'
+        ? ov.extendData
+        : JSON.parse(JSON.stringify(ov._hiddenExtSnap));
+
+    ns = ov._hiddenStyleSnap
+      ? JSON.parse(JSON.stringify(ov._hiddenStyleSnap))
+      : ns;
+
+    if (!isTextOverlay && ext && typeof ext === 'object') {
+      ext._hidden = false;
+    }
+
+    delete ov._hiddenExtSnap;
+    delete ov._hiddenStyleSnap;
   }
 
   ov.extendData = ext;
   ov.styles = ns;
-  global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ext });
+
+  global.tvChart.overrideOverlay({
+    id: ov.id,
+    styles: ns,
+    extendData: ext
+  });
+
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
 }
