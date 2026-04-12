@@ -2235,6 +2235,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var ov = window.currentSelectedOverlay;
     var posX, posY;
     var isEditMode = false;
+    var name = ov ? (ov.name || toolId) : toolId;
   
     // 1. TÍNH TOẠ ĐỘ TRỰC TIẾP TỪ BIỂU ĐỒ
     if (ov && ov.points && ov.points.length > 0) {
@@ -2245,7 +2246,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         
         if (container && chartObj && typeof chartObj.convertToPixel === 'function') {
             var lastPt = ov.points[ov.points.length - 1];
-            
             var targetPaneId = 'candle_pane';
             if (chartObj.getOverlayById) {
                 var info = chartObj.getOverlayById(ov.id);
@@ -2262,7 +2262,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 posX = rect.left + pixelInfo.x;
                 posY = rect.top + pixelInfo.y;
                 
-                var name = ov.name || toolId;
                 if (name === 'note') { posX += 10; posY += 10; }
                 else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
                 else if (name === 'pin') { posX += 14; posY -= 10; }
@@ -2270,7 +2269,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 else if (name === 'signpost') { posY -= 40; }
                 else if (name === 'comment') { posX += 10; posY -= 20; }
                 
-                isEditMode = (currentText && currentText !== 'Văn bản...');
+                isEditMode = true;
             }
         }
       } catch(e) { console.log(e); }
@@ -2280,28 +2279,44 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     if (!posX) posX = window.waMouseX || window.innerWidth / 2;
     if (!posY) posY = window.waMouseY || window.innerHeight / 2;
   
-    // 2. TẠO Ô NHẬP LIỆU FIT VỪA KHÍT (Bỏ padding, bỏ background mờ)
+    // 2. TẠO Ô NHẬP LIỆU (XÓA VIỀN NÉT ĐỨT, TRONG SUỐT 100%)
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
-    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    var defaultText = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    input.value = defaultText;
     
-    // Dùng outline thay vì border để outline bám sát rìa chữ mà không đẩy nội dung vào trong
+    // Xử lý căn lề để khi khung phình to, chữ không bị trôi khỏi nền
+    var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
+    var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
+    var textAlign = 'left';
+  
+    // Fix tinh chỉnh riêng cho Biển chỉ dẫn lật trái
+    if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
+        var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
+        if (pt0 && pixelInfo.x < pt0.x) {
+            textAlign = 'right';
+            transformCSS = 'translate(-100%, -50%)';
+            posX -= 16;
+        }
+    }
+  
     input.style.cssText = `
       position: fixed; 
       left: ${posX}px; 
       top: ${posY}px;
+      transform: ${transformCSS};
       background: transparent !important; 
       border: none !important;
-      outline: 1px dashed #3B82F6 !important; 
-      outline-offset: 2px;
+      outline: none !important; 
       color: ${curColor}; 
       font-family: ${curFont}; 
       font-size: ${curSize}px; 
       line-height: 1.2;
       font-weight: ${curWeight}; 
       font-style: ${curStyle};
+      text-align: ${textAlign};
       z-index: 999999; 
-      min-width: 8px; 
+      min-width: 10px; 
       min-height: ${curSize * 1.2}px;
       padding: 0; 
       margin: 0; 
@@ -2313,25 +2328,31 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     `;
     document.body.appendChild(input);
   
-    // Resize fit khít theo nội dung
+    // Resize Khung gõ
     function resizeInput() {
-       input.style.height = '0px'; // Ép tính lại từ đầu
+       input.style.height = '0px'; 
        input.style.width = '0px';
-       
-       // Cộng đúng 2px dư dả để chữ cuối cùng không bị nhảy dòng
        input.style.width = (input.scrollWidth + 2) + 'px';
        input.style.height = input.scrollHeight + 'px';
     }
   
     requestAnimationFrame(function() {
       input.focus();
-      if (!currentText || currentText === 'Văn bản...') input.select();
+      if (defaultText === '') input.select();
       resizeInput();
     });
   
-    input.addEventListener('input', resizeInput);
+    // 3. ĐỒNG BỘ REAL-TIME KHUNG NỀN VỚI CHỮ
+    input.addEventListener('input', function() {
+        resizeInput();
+        // Yêu cầu Canvas vẽ lại khung nền ngay lập tức theo nội dung đang gõ
+        if (isEditMode && global.tvChart && ov && ov.id) {
+            var liveText = input.value || ' ';
+            global.tvChart.overrideOverlay({ id: ov.id, extendData: liveText });
+        }
+    });
   
-    // 3. ẨN TEXT CŨ KHI ĐANG SỬA
+    // 4. LÀM TRONG SUỐT CHỮ CŨ TRÊN CANVAS ĐỂ KHÔNG BỊ BÓNG ĐÔI
     var savedOriginalColor = null;
     if (isEditMode && global.tvChart && ov && ov.id) {
       try {
@@ -2343,7 +2364,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
-    // 4. LƯU LẠI VÀ ĐÓNG TEXTAREA
+    // 5. LƯU LẠI VÀ ĐÓNG TEXTAREA
     var isCommitted = false;
     function commit() {
       if (isCommitted) return;
@@ -2352,13 +2373,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var el = document.getElementById('wa-text-editor');
       if (!el) return;
       var val = el.value.trim();
-      // Nếu xóa trắng thì mặc định là 'Văn bản...' để không bị mất tool
       if (!val) val = 'Văn bản...'; 
       
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
       
-      // Trả lại màu chữ ban đầu lên Canvas
+      // Phục hồi lại màu chữ lên Canvas
       if (savedOriginalColor) {
           updatedStyles.text.color = savedOriginalColor;
       } else {
