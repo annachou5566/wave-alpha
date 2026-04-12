@@ -1945,8 +1945,7 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    
-/* ===== FLOATING TOOLBAR ===== */
+      /* ===== FLOATING TOOLBAR ===== */
 .wa-float-bar {
   position: absolute;
   z-index: 1002;
@@ -1986,8 +1985,6 @@
 .wa-fb-btn:hover { background: rgba(255,255,255,0.07); color: #E8EDF2; }
 .wa-fb-btn.wa-fb-on { background: rgba(59,130,246,0.15); color: #60A5FA; box-shadow: 0 0 0 1px #3B82F6; }
 .wa-fb-btn.wa-fb-del:hover { background: rgba(239,68,68,0.15); color: #EF4444; }
-
-/* -- CSS NỀN CHỮ (THÊM MỚI) -- */
 .wa-fb-bg-btn{
   width:22px; height:22px; border:1.5px solid #273040; background:#0F141A;
   border-radius:6px; padding:0; display:flex; align-items:center;
@@ -2029,7 +2026,6 @@
 .wa-fb-label {
   font-size: 10px; color: #4A5568; padding: 0 4px; white-space: nowrap;
 }
-
 /* Panel improvements */
 .wa-prop-section { padding: 12px 16px; border-bottom: 1px solid #1E2733; }
 .wa-prop-section:last-child { border-bottom: none; }
@@ -3213,13 +3209,13 @@ function hideFloatToolbar() {
 
 function showFloatToolbar(ov, posX, posY) {
   if (!ov) return;
-  // ── GIỮ VỊ TRÍ CŨ khi chỉ cập nhật icon (posX/posY = null) ──
-  var existingBar = document.getElementById('wa-float-bar');
-  var savedLeft = null, savedTop = null;
-  if (posX === null && posY === null && existingBar) {
-    savedLeft = existingBar.style.left;
-    savedTop  = existingBar.style.top;
-  }
+   // ── GIỮ VỊ TRÍ CŨ khi chỉ cập nhật icon (posX/posY = null) ──
+   var existingBar = document.getElementById('wa-float-bar');
+   var savedLeft = null, savedTop = null;
+   if (posX === null && posY === null && existingBar) {
+     savedLeft = existingBar.style.left;
+     savedTop  = existingBar.style.top;
+   }
   hideFloatToolbar();
 
   var container = document.getElementById('sc-chart-container');
@@ -3231,30 +3227,30 @@ function showFloatToolbar(ov, posX, posY) {
   var ext = (typeof ov.extendData === 'object' && ov.extendData) ? ov.extendData : {};
 
   // ── Màu chính ──────────────────────────────────────────────────
-  var defColor = '#3B82F6';
-  var curColor = defColor;
-  if (cat === 'text') {
-    if (s.text && s.text.color) curColor = s.text.color;
-  } else if (cat === 'brushes' || cat === 'highlighter') {
-    if (s.polygon && s.polygon.color) curColor = s.polygon.color;
-    else if (s.line && s.line.color) curColor = s.line.color;
-  } else {
-    if (s.line && s.line.color) curColor = s.line.color;
-  }
-  var c2h = colorToHex(curColor);
-  if (c2h) curColor = c2h;
+  var pc = '#3B82F6';
+  if (cat === 'text')   pc = s.text    && s.text.color         ? colorToHex(s.text.color)            : '#E8EDF2';
+  else if (cat === 'shapes') pc = s.polygon && s.polygon.borderColor ? colorToHex(s.polygon.borderColor) : '#3B82F6';
+  else                  pc = s.line    && s.line.color          ? colorToHex(s.line.color)             : '#3B82F6';
+  if (!pc.startsWith('#')) pc = '#' + pc;
 
-  // ── Locked / Visible ───────────────────────────────────────────
+  var lw       = (s.line && s.line.size)  || 1;
+  var ls       = (s.line && s.line.style) || 'solid';
   var isLocked = !!ov.lock;
-  var isHidden = !!ov._hiddenExtSnap || !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
+  var isHidden =
+  !!ov._hiddenExtSnap ||
+  !!(ov.extendData && typeof ov.extendData === 'object' && ov.extendData._hidden);
+  var showLine = (cat !== 'text');
 
+  // ── SVG helpers ────────────────────────────────────────────────
+  function lwSVG(h) {
+    return '<span style="display:block;width:14px;height:'+h+'px;background:currentColor;border-radius:1px;margin:auto"></span>';
+  }
   function lsSVG(da) {
     return '<svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="'+da+'"/></svg>';
   }
 
-  // ── Build HTML ─────────────────────────────────────────────────
+    // ──   // ── Build HTML ─────────────────────────────────────────────────
   var html = '';
-
   var FB_PAL = [
     ['#FFFFFF','#F2F3F5','#C0C8D0','#8896A7','#4A5568','#2D3748','#1A202C','#0F141A','#060A0F','#000000'],
     ['#FFF5F5','#FED7D7','#FC8181','#F56565','#F23645','#E53E3E','#C53030','#9B2C2C','#742A2A','#450A0A'],
@@ -3274,7 +3270,6 @@ function showFloatToolbar(ov, posX, posY) {
       bgGridHTML += '<div class="wa-fb-pc'+(curTextBg && cl.toUpperCase()===curTextBg.toUpperCase() ? ' on' : '')+'" style="background:'+cl+'" data-c="'+cl+'"></div>';
     });
   });
-
   var dragSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
   var editSVG  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
   var eyeShow  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -3287,6 +3282,7 @@ function showFloatToolbar(ov, posX, posY) {
   html += '<div id="wa-fb-drag" title="Kéo thả" style="cursor: grab; display: flex; align-items: center; justify-content: center; width: 24px; height: 28px; color: #8896A7;">' + dragSVG + '</div>';
   html += '<div class="wa-fb-sep"></div>';
 
+  // Nếu công cụ là văn bản (text) thì hiển thị thêm nút SỬA CHỮ
   if (cat === 'text') {
     html += '<button class="wa-fb-btn" id="wa-fb-edit" title="Sửa nội dung">'+editSVG+'</button>';
     html += '<button class="wa-fb-bg-btn" id="wa-fb-bg-btn" title="Nền chữ">'
@@ -3299,7 +3295,6 @@ function showFloatToolbar(ov, posX, posY) {
   html += '<button class="wa-fb-btn'+(isLocked?' wa-fb-on':'')+'" id="wa-fb-lk" title="'+(isLocked?'Mở khóa':'Khóa')+'">'+(isLocked?lockOn:lockOff)+'</button>';
   html += '<button class="wa-fb-btn'+(isHidden?' wa-fb-on':'')+'" id="wa-fb-vis" title="'+(isHidden?'Hiện':'Ẩn')+'">'+(isHidden?eyeHide:eyeShow)+'</button>';
   html += '<button class="wa-fb-btn wa-fb-del" id="wa-fb-rm" title="Xóa">'+trashSVG+'</button>';
-
   if (cat === 'text') {
     html += '<div class="wa-fb-bg-pal" id="wa-fb-bg-pal">'
          +    '<div class="wa-fb-pg">'+bgGridHTML+'</div>'
@@ -3317,156 +3312,191 @@ function showFloatToolbar(ov, posX, posY) {
   bar.innerHTML = html;
 
   // ─────────────────────────────────────────────────────────────
-  // 🎯 SMART POSITIONING
+  // 🎯 SMART POSITIONING — Tránh mép container, không bao giờ bị cắt
+  // Bước 1: Append trước (ẩn) để đo kích thước thực của bar
   // ─────────────────────────────────────────────────────────────
-  bar.style.visibility = 'hidden';
+  bar.style.visibility = 'hidden';   // ẩn để đo, chưa animate
   bar.style.opacity    = '0';
   bar.style.transform  = 'translateY(6px) scale(0.97)';
   bar.style.transition = 'none';
   container.appendChild(bar);
 
   requestAnimationFrame(function() {
-    if (savedLeft !== null) {
-      bar.style.left       = savedLeft;
-      bar.style.top        = savedTop;
-      bar.style.visibility = 'visible';
-      bar.style.transition = 'none';
-      bar.style.opacity    = '1';
-      bar.style.transform  = 'translateY(0) scale(1)';
-      bar.style.pointerEvents = 'all';
-    } else {
-      var bw = bar.offsetWidth;
-      var bh = bar.offsetHeight;
-      var PADDING = 12;
-      var finalX = posX;
-      var finalY = posY - bh - 10;
-      if (finalY < PADDING) {
-        finalY = posY + 30;
-      }
-      if (finalX < PADDING) finalX = PADDING;
-      if (finalX + bw > rect.width - PADDING) {
-        finalX = rect.width - bw - PADDING;
-      }
-      if (finalY + bh > rect.height - PADDING) {
-        finalY = rect.height - bh - PADDING;
-      }
-      bar.style.left = finalX + 'px';
-      bar.style.top  = finalY + 'px';
-      bar.style.visibility = 'visible';
-      
-      requestAnimationFrame(function() {
-        bar.style.transition = 'opacity 0.18s, transform 0.22s cubic-bezier(0.34,1.56,0.64,1)';
-        bar.classList.add('wa-fb-show');
-      });
+    // ── Nếu chỉ cập nhật icon, khôi phục vị trí cũ, không animate ──
+  if (savedLeft !== null) {
+    bar.style.left       = savedLeft;
+    bar.style.top        = savedTop;
+    bar.style.visibility = 'visible';
+    bar.style.transition = 'none';
+    bar.style.opacity    = '1';
+    bar.style.transform  = 'translateY(0) scale(1)';
+    bar.classList.add('wa-fb-show');
+    return;   // ← bỏ qua toàn bộ logic tính vị trí bên dưới
+  }
+    var bW     = bar.offsetWidth  || (showLine ? 320 : 180);
+    var bH     = bar.offsetHeight || 40;
+    var MARGIN = 6;                   // khoảng cách tối thiểu với mép container
+    var BAR_OFFSET_Y = 50;            // thanh nằm phía TRÊN con trỏ bao nhiêu px
+    var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
+
+    // Tọa độ gốc (tính theo container)
+    var cx = (posX != null ? posX : (_fbX - rect.left));
+    var cy = (posY != null ? posY : (_fbY - rect.top));
+
+    // Căn giữa bar theo chiều ngang so với điểm click
+    var left = cx - bW / 2;
+    // Mặc định: hiện phía TRÊN điểm click
+    var top  = cy - BAR_OFFSET_Y;
+
+    // ── Flip dọc: nếu phía trên không đủ chỗ → đặt xuống dưới ──
+    if (top < MARGIN) {
+      top = cy + 16;  // hiện phía DƯỚI điểm click
+    }
+    // Nếu xuống dưới cũng không đủ chỗ (màn hình rất nhỏ) → ép vào MARGIN
+    if (top + bH > rect.height - MARGIN - safeBottom) {
+      top = rect.height - bH - MARGIN - safeBottom;
     }
 
-    bar.querySelector('#wa-fb-vis').addEventListener('click', function() {
-      _fbToggleVisible(ov);
-    });
-    bar.querySelector('#wa-fb-cfg').addEventListener('click', function() {
-      if (typeof renderPanel === 'function') renderPanel(ov);
-    });
-    bar.querySelector('#wa-fb-lk').addEventListener('click', function() {
-      _fbToggleLock(ov);
-    });
-    bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
-      if (!global.tvChart) return;
-      if (typeof saveHistory === 'function') saveHistory('delete', ov);
-      global.tvChart.removeOverlay({ id: ov.id });
-      if (typeof global.__wa_untrack_overlay === 'function') global.__wa_untrack_overlay(ov.id);
-      else if (global.__wa_overlay_map) global.__wa_overlay_map.delete(ov.id);
-      hideFloatToolbar();
-      if (typeof hidePanel === 'function') hidePanel();
-      if (typeof saveAllOverlays === 'function') saveAllOverlays();
-    });
-    
-    // 1. Sự kiện nút sửa chữ
-    var editBtn = bar.querySelector('#wa-fb-edit');
-    if (editBtn) {
-      editBtn.addEventListener('click', function() {
-        if (typeof hidePanel === 'function') hidePanel();
-        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-        setTimeout(function() {
-          window.currentSelectedOverlay = ov; 
-          if (typeof openTextEditor === 'function') {
-            openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
-              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-              if (typeof saveAllOverlays === 'function') saveAllOverlays();
-            });
-          }
-        }, 50);
-      });
-    }
+    // ── Clamp ngang: không ra ngoài trái/phải ──────────────────
+    left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
 
-    // --- BẮT ĐẦU SỰ KIỆN MÀU NỀN ---
-    var bgBtn = bar.querySelector('#wa-fb-bg-btn');
-    var bgPal = bar.querySelector('#wa-fb-bg-pal');
-    var bgFill = bar.querySelector('#wa-fb-bg-fill');
-    var bgHex  = bar.querySelector('#wa-fb-bg-hex');
-    if (bgBtn && bgPal) {
-      bgBtn.addEventListener('click', function(ev) {
-        ev.stopPropagation();
-        bgPal.classList.toggle('open');
-      });
-      bgPal.querySelectorAll('.wa-fb-pc').forEach(function(pc) {
-        pc.addEventListener('click', function(ev) {
-          ev.stopPropagation();
-          var hex = this.dataset.c || '';
-          if (bgFill) bgFill.style.background = hex || 'transparent';
-          if (bgHex) bgHex.value = hex ? hex.slice(1).toUpperCase() : '';
-          _fbSetTextBackground(ov, hex);
-        });
-      });
-      if (bgHex) {
-        bgHex.addEventListener('input', function(ev) {
-          ev.stopPropagation();
-          var v = (this.value || '').replace(/[^0-9a-f]/ig, '').slice(0, 6).toUpperCase();
-          this.value = v;
-          if (v.length === 6) {
-            var hex = '#' + v;
-            if (bgFill) bgFill.style.background = hex;
-            _fbSetTextBackground(ov, hex);
-          } else if (!v.length) {
-            if (bgFill) bgFill.style.background = 'transparent';
-            _fbSetTextBackground(ov, '');
-          }
-        });
-      }
-    }
-    // --- KẾT THÚC SỰ KIỆN MÀU NỀN ---
+    bar.style.left = left + 'px';
+    bar.style.top  = top  + 'px';
 
-    // 2. Drag Bar Logic
-    var dragHandle = bar.querySelector('#wa-fb-drag');
-    if (dragHandle) {
-      var isDragging = false;
-      var startX, startY, initLeft, initTop;
-      dragHandle.addEventListener('mousedown', function(e) {
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        initLeft = parseFloat(bar.style.left) || 0;
-        initTop = parseFloat(bar.style.top) || 0;
-        dragHandle.style.cursor = 'grabbing';
-        e.preventDefault();
-      });
-      document.addEventListener('mousemove', function(e) {
-        if (!isDragging) return;
-        var dx = e.clientX - startX;
-        var dy = e.clientY - startY;
-        bar.style.left = (initLeft + dx) + 'px';
-        bar.style.top = (initTop + dy) + 'px';
-      });
-      document.addEventListener('mouseup', function() {
-        if (isDragging) {
-          isDragging = false;
-          dragHandle.style.cursor = 'grab';
-          var rect = bar.getBoundingClientRect();
-          _fbX = rect.left;
-          _fbY = rect.top;
-        }
-      });
-    }
+    // ── Animate in ─────────────────────────────────────────────
+    bar.style.visibility = 'visible';
+    bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
+    requestAnimationFrame(function() {
+      bar.style.opacity   = '1';
+      bar.style.transform = 'translateY(0) scale(1)';
+      bar.classList.add('wa-fb-show');
+    });
   });
+
+  
+  bar.querySelector('#wa-fb-vis').addEventListener('click', function() {
+    _fbToggleVisible(ov);
+  });
+  bar.querySelector('#wa-fb-cfg').addEventListener('click', function() {
+    if (typeof renderPanel === 'function') renderPanel(ov);
+  });
+  bar.querySelector('#wa-fb-lk').addEventListener('click', function() {
+    _fbToggleLock(ov);
+  });
+  bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
+    if (!global.tvChart) return;
+    if (typeof saveHistory === 'function') saveHistory('delete', ov);
+    global.tvChart.removeOverlay({ id: ov.id });
+    if (typeof global.__wa_untrack_overlay === 'function') global.__wa_untrack_overlay(ov.id);
+    else if (global.__wa_overlay_map) global.__wa_overlay_map.delete(ov.id);
+    hideFloatToolbar();
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  });
+  
+  // ============================================
+  // BẮT ĐẦU CHÈN SỰ KIỆN NÚT SỬA CHỮ VÀ DRAG BAR VÀO ĐÂY:
+  // ============================================
+
+  // 1. Sự kiện nút sửa chữ
+  var editBtn = bar.querySelector('#wa-fb-edit');
+if (editBtn) {
+  editBtn.addEventListener('click', function() {
+    // Ẩn các menu đi chuẩn bị gõ chữ
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    
+    // Delay 50ms tắt menu xong mới gọi chữ lên
+    setTimeout(function() {
+      // THÊM DÒNG NÀY ĐỂ FIX LỖI:
+      // Phục hồi lại biến do hidePanel đã set nó thành null
+      window.currentSelectedOverlay = ov; 
+      
+      if (typeof openTextEditor === 'function') {
+        openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
+          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+          if (typeof saveAllOverlays === 'function') saveAllOverlays();
+        });
+      }
+    }, 50);
+  });
+}
+var bgBtn = bar.querySelector('#wa-fb-bg-btn');
+var bgPal = bar.querySelector('#wa-fb-bg-pal');
+var bgFill = bar.querySelector('#wa-fb-bg-fill');
+var bgHex  = bar.querySelector('#wa-fb-bg-hex');
+
+if (bgBtn && bgPal) {
+  bgBtn.addEventListener('click', function(ev) {
+    ev.stopPropagation();
+    bgPal.classList.toggle('open');
+  });
+
+  bgPal.querySelectorAll('.wa-fb-pc').forEach(function(pc) {
+    pc.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      var hex = this.dataset.c || '';
+      if (bgFill) bgFill.style.background = hex || 'transparent';
+      if (bgHex) bgHex.value = hex ? hex.slice(1).toUpperCase() : '';
+      _fbSetTextBackground(ov, hex);
+    });
+  });
+
+  if (bgHex) {
+    bgHex.addEventListener('input', function(ev) {
+      ev.stopPropagation();
+      var v = (this.value || '').replace(/[^0-9a-f]/ig, '').slice(0, 6).toUpperCase();
+      this.value = v;
+      if (v.length === 6) {
+        var hex = '#' + v;
+        if (bgFill) bgFill.style.background = hex;
+        _fbSetTextBackground(ov, hex);
+      } else if (!v.length) {
+        if (bgFill) bgFill.style.background = 'transparent';
+        _fbSetTextBackground(ov, '');
+      }
+    });
+  }
+}
+  // 2. Drag Bar Logic (kéo thả thanh công cụ nổi)
+  var dragHandle = bar.querySelector('#wa-fb-drag');
+  if (dragHandle) {
+    var isDragging = false;
+    var startX, startY, initLeft, initTop;
+
+    dragHandle.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      initLeft = parseFloat(bar.style.left) || 0;
+      initTop = parseFloat(bar.style.top) || 0;
+      dragHandle.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      bar.style.left = (initLeft + dx) + 'px';
+      bar.style.top = (initTop + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        dragHandle.style.cursor = 'grab';
+        var rect = bar.getBoundingClientRect();
+        _fbX = rect.left;
+        _fbY = rect.top;
+      }
+    });
+  }
+
+  // ============================================
+  // KẾT THÚC CHÈN
+  // ============================================
+
 }
 
 function _fbSetColor(ov, cat, hex) {
@@ -3499,7 +3529,17 @@ function _fbSetLineStyle(ov, style) {
   global.tvChart.overrideOverlay({ id: ov.id, styles: ns });
   if (typeof saveAllOverlays === 'function') saveAllOverlays();
 }
-
+function _fbSetTextBackground(ov, hex) {
+  if (!global.tvChart || !ov) return;
+  var ns = JSON.parse(JSON.stringify(ov.styles || {}));
+  if (!ns.text) ns.text = {};
+  if (hex) ns.text.backgroundColor = hex;
+  else delete ns.text.backgroundColor;
+  ov.styles = ns;
+  global.tvChart.overrideOverlay({ id: ov.id, styles: ns, extendData: ov.extendData });
+  if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+}
 function _fbToggleVisible(ov) {
   if (!global.tvChart || !ov) return;
 
