@@ -2951,7 +2951,6 @@ onDrawEnd: function(event) {
 
     function saveToStorage() { if (typeof saveAllOverlays === 'function') saveAllOverlays(); }
 
-    // ĐÃ THÊM: Ngăn biểu đồ giành phím tắt khi bạn đang gõ văn bản
     body.querySelectorAll('input, textarea, select').forEach(function(el) { 
       _on(el, 'input', doAction); 
       _on(el, 'change', doAction);
@@ -2959,6 +2958,49 @@ onDrawEnd: function(event) {
       _on(el, 'keyup', function(e) { e.stopPropagation(); });
       _on(el, 'keypress', function(e) { e.stopPropagation(); });
     });
+
+    // --- BỔ SUNG ĐỒNG BỘ ẨN/HIỆN THÔNG MINH BẬC NHẤT ---
+    if (!window._wa_panel_sync) {
+      window._wa_panel_sync = true;
+
+      // 1. Click vào Thanh Menu, Viền Web (Ngoài biểu đồ) -> Ép đóng cả 2
+      document.addEventListener('mousedown', function(e) {
+        var p = document.getElementById('wa-props-panel');
+        var f = document.getElementById('wa-float-bar');
+        var c = document.getElementById('sc-chart-container') || document.querySelector('.klinecharts-pro');
+
+        if (p && p.contains(e.target)) return;
+        if (f && f.contains(e.target)) return;
+        if (e.target.closest('._pop')) return;
+        
+        // Nếu click thẳng vào vùng vẽ của biểu đồ -> Kệ biểu đồ tự xử, ta lui ra
+        if (e.target.closest('canvas') || (c && c.contains(e.target))) return;
+
+        // Nếu click vào Header Web, Thanh điều hướng web... -> Xóa sổ Panel
+        if (typeof hidePanel === 'function') hidePanel();
+        else if (p) p.classList.remove('show');
+        
+        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+      }, true);
+
+      // 2. Chó Săn: Bắt chước theo hành vi của Float Toolbar (Do biểu đồ quản lý)
+      // Nếu biểu đồ giấu FloatToolbar đi (khi bạn click vào nền trống của biểu đồ),
+      // Bảng Properties sẽ TỰ NHẬN BIẾT và lùi lại đóng theo ngay lập tức.
+      setInterval(function() {
+        var p = document.getElementById('wa-props-panel');
+        var f = document.getElementById('wa-float-bar');
+        
+        // Chỉ chạy theo dõi nếu Properties Panel đang lỡ hiển thị
+        if (p && p.classList.contains('show')) {
+          var isFloatHidden = !f || f.style.visibility === 'hidden' || f.style.opacity === '0' || f.style.display === 'none';
+          if (isFloatHidden) {
+            if (typeof hidePanel === 'function') hidePanel();
+            else p.classList.remove('show');
+            window.currentSelectedOverlay = null; // Chốt hạ xóa bộ nhớ
+          }
+        }
+      }, 150); // Theo dõi mỗi 150ms, siêu nhẹ không giật lag
+    }
   }
 
   function hidePanel() {
