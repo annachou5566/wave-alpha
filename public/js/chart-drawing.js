@@ -2207,8 +2207,8 @@
       icon: SVG.shape, 
       tools: [ 
         {id: 'header', n: 'Hình Khối'},
-        { id: 'freehandBrush', n: 'Bút vẽ (Freehand)', icon: SVG.freehandBrush },
-        { id: 'highlighter', n: 'Bút Dạ Quang', icon: SVG.highlighter },
+        {id: 'freehandBrush', n: 'Bút vẽ (Freehand)', icon: SVG.freehandBrush },
+        {id: 'highlighter', n: 'Bút Dạ Quang', icon: SVG.highlighter },
         {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, 
         {id: 'divider'},
         {id: 'header', n: 'Mũi Tên & Đường Dẫn'},
