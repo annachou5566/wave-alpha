@@ -2248,15 +2248,34 @@
       ]
     },
     { 
-      icon: SVG.shape, 
+      // Đổi icon đại diện thanh Toolbar thành Cọ Vẽ cho chuẩn TradingView
+      icon: SVG.freehandBrush, 
       tools: [ 
-        {id: 'header', n: 'Hình Khối'},
-        {id: 'freehandBrush', n: 'Bút vẽ (Freehand)', icon: SVG.freehandBrush },
-        {id: 'highlighter', n: 'Bút Dạ Quang', icon: SVG.highlighter },
-        {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, 
+        // 📂 THƯ MỤC 1: CỌ VẼ
+        {id: 'header', n: 'Cọ Vẽ Tự Do'},
+        {id: 'freehandBrush', n: 'Bút vẽ (Freehand)'},
+        {id: 'highlighter', n: 'Bút Dạ Quang'},
         {id: 'divider'},
+
+        // 📂 THƯ MỤC 2: MŨI TÊN & ĐƯỜNG DẪN
         {id: 'header', n: 'Mũi Tên & Đường Dẫn'},
-        {id: 'polyline', n: 'Đường đa đoạn'}, {id: 'pathShape', n: 'Đường dẫn'}, {id: 'arcShape', n: 'Hình vòng cung'}, {id: 'doubleCurveShape', n: 'Đường cong đôi'}, {id: 'arrow', n: 'Mũi tên'}, {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, {id: 'arrowDown', n: 'Mũi tên chỉ xuống'} 
+        {id: 'pathShape', n: 'Đường dẫn (Path)'}, 
+        {id: 'polyline', n: 'Đường đa đoạn'}, 
+        {id: 'arcShape', n: 'Hình vòng cung'}, 
+        {id: 'doubleCurveShape', n: 'Đường cong đôi'}, 
+        {id: 'arrow', n: 'Mũi tên'}, 
+        {id: 'arrowUp', n: 'Mũi tên chỉ lên'}, 
+        {id: 'arrowDown', n: 'Mũi tên chỉ xuống'},
+        {id: 'divider'},
+
+        // 📂 THƯ MỤC 3: HÌNH KHỐI
+        {id: 'header', n: 'Hình Khối'},
+        {id: 'rectangle', n: 'Hình chữ nhật'}, 
+        {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, 
+        {id: 'circle', n: 'Vòng tròn'}, 
+        {id: 'ellipse', n: 'Hình ellipse'}, 
+        {id: 'triangle', n: 'Tam giác'}, 
+        {id: 'parallelogram', n: 'Hình bình hành'} 
       ]
     },
     {
