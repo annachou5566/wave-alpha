@@ -3926,6 +3926,8 @@ function bindCoreEventsOnce() {
          if (typeof watrackOverlay === 'function') watrackOverlay(ov);
          if (typeof saveHistory === 'function') saveHistory({ action: 'add', overlay: ov });
       }
+      if (global.tvChart) global.tvChart.cancelDrawing(); 
+      // Lệnh này bắt buộc KLineChart chốt sổ hình vẽ hiện tại và nhả chuột ra hoàn toàn
       fhId = null; fhPoints = [];
       if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
     }
