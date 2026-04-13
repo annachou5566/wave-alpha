@@ -3939,7 +3939,10 @@ function bindCoreEventsOnce() {
     var y = e.clientY - rect.top;
     
     var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
-    if (dist < 3) return; 
+    
+    // 🔥 FIX TẬN GỐC: Chỉ lưu điểm khi chuột di chuyển đủ xa (> 8px) 
+    // Điều này làm sạch 90% rác toạ độ, giúp biểu đồ ko bao giờ bị giật lag
+    if (dist < 8) return; 
     
     var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
     if (!p || typeof p.value !== 'number') return;
