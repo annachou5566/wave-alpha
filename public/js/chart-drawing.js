@@ -101,7 +101,7 @@
     // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
     {
       name: 'freehandBrush',
-      totalStep: Number.MAX_SAFE_INTEGER,
+      totalStep: 1,
       needDefaultPointFigure: false,
       needDefaultXAxisFigure: false,
       needDefaultYAxisFigure: false,
@@ -116,7 +116,7 @@
     },
     {
       name: 'highlighter',
-      totalStep: Number.MAX_SAFE_INTEGER,
+      totalStep: 1,
       needDefaultPointFigure: false,
       needDefaultXAxisFigure: false,
       needDefaultYAxisFigure: false,
@@ -406,7 +406,7 @@
 
       // --- BATCH 5: SHAPES & ARROWS ---
       {
-        name: 'highlighter', totalStep: Number.MAX_SAFE_INTEGER,
+        name: 'highlighter', totalStep: 1,
         needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
         createPointFigures: function(ref) {
           var c = ref.coordinates || []; if (c.length < 2) return [];
@@ -3923,11 +3923,19 @@ function bindCoreEventsOnce() {
     if (fhId) {
       var ov = global.tvChart.getOverlayById(fhId);
       if (ov) {
-         if (typeof watrackOverlay === 'function') watrackOverlay(ov);
-         if (typeof saveHistory === 'function') saveHistory({ action: 'add', overlay: ov });
+         // Fix 1: Sửa đúng tên hàm nội bộ
+         if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
+         if (typeof saveHistory === 'function') saveHistory('add', ov);
       }
-      fhId = null; fhPoints = [];
-      if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+      
+      // Fix 2: Bắt buộc gọi ngắt vẽ để KLineChart nhả chuột hoàn toàn
+      try { global.tvChart.cancelDrawing(); } catch(err){}
+      
+      fhId = null; 
+      fhPoints = [];
+      
+      // Fix 3: Sửa đúng tên hàm lưu bộ nhớ
+      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
     }
   };
 
