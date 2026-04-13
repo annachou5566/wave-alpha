@@ -3940,103 +3940,106 @@ var _cachedContainer = null; // ✅ FIX 5: Cache chart container
 
 function bindCoreEventsOnce() {
         // ====== ENGINE BÚT VẼ TỰ DO (PHIÊN BẢN ƯU TIÊN SỰ KIỆN 100%) ======
-  var fhActive = false;
-  var fhId = null;
-  var fhPoints = [];
-  var lastFhX = 0, lastFhY = 0;
-  var container = document.getElementById('sc-chart-container');
-  
-  container.addEventListener('pointerdown', function(e) {
-    if (window.waCurrentFreehandTool !== 'freehandBrush' && window.waCurrentFreehandTool !== 'highlighter') return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    
-    var rect = container.getBoundingClientRect();
-    var x = e.clientX - rect.left;
-    var y = e.clientY - rect.top;
-    
-    var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
-    if (!p || typeof p.value !== 'number') return;
-    
-    lastFhX = x; lastFhY = y;
-    fhPoints = [{ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value }];
-    
-    // ĐỌC CHÍNH XÁC MÀU VÀ ĐỘ DÀY ĐÃ LƯU TRONG BỘ NHỚ PANEL
-    var s = toolStyles['brush'] || {};
-    var isHL = window.waCurrentFreehandTool === 'highlighter';
-    var fhStyles = { line: { style: 'solid' } };
-    
-    if (isHL) {
-        var hlC = s.hlColor || '#FFEB3B';
-        var hlO = s.hlOpacity !== undefined ? s.hlOpacity : 0.45;
-        fhStyles.line.color = typeof hexToRgba === 'function' ? hexToRgba(hlC, hlO) : 'rgba(255, 235, 59, 0.45)';
-        fhStyles.line.size = s.hlWidth || 16;
-    } else {
-        var brC = s.lineColor || '#3B82F6';
-        var brO = s.lineOpacity !== undefined ? s.lineOpacity : 1;
-        fhStyles.line.color = typeof hexToRgba === 'function' ? hexToRgba(brC, brO) : '#3B82F6';
-        fhStyles.line.size = s.lineWidth || 3;
-    }
-    
-    fhId = global.tvChart.createOverlay({
-      name: window.waCurrentFreehandTool,
-      points: fhPoints, lock: false, styles: fhStyles
-    }, 'candle_pane');
-    fhActive = true;
-  }, { capture: true, passive: false });
-
-  // Bắt move trên toàn bộ Window thay vì chỉ Container để nét vẽ không đứt khi kéo nhanh
-  window.addEventListener('pointermove', function(e) {
-    if (!fhActive || !fhId) return;
-    e.stopImmediatePropagation();
-    e.preventDefault(); 
-    
-    var rect = container.getBoundingClientRect();
-    var x = e.clientX - rect.left;
-    var y = e.clientY - rect.top;
-    
-    var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
-    
-    // 🔥 FIX TẬN GỐC: Chỉ lưu điểm khi chuột di chuyển đủ xa (> 8px) 
-    // Điều này làm sạch 90% rác toạ độ, giúp biểu đồ ko bao giờ bị giật lag
-    if (dist < 8) return; 
-    
-    var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
-    if (!p || typeof p.value !== 'number') return;
-    
-    lastFhX = x; lastFhY = y;
-    fhPoints.push({ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value });
-    
-    global.tvChart.overrideOverlay({ id: fhId, points: fhPoints });
-  }, { capture: true, passive: false });
-
-  var endFh = function(e) {
-    if (!fhActive) return;
-    e.stopImmediatePropagation();
-    fhActive = false;
-    if (fhId) {
-      var ov = global.tvChart.getOverlayById(fhId);
-      if (ov) {
-         // Fix 1: Sửa đúng tên hàm nội bộ
-         if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
-         if (typeof saveHistory === 'function') saveHistory('add', ov);
-      }
+        var fhActive = false;
+        var fhId = null;
+        var fhPoints = [];
+        var lastFhX = 0, lastFhY = 0;
+        var container = document.getElementById('sc-chart-container');
+        
+        container.addEventListener('pointerdown', function(e) {
+          if (window.waCurrentFreehandTool !== 'freehandBrush' && window.waCurrentFreehandTool !== 'highlighter') return;
+          if (e.pointerType === 'mouse' && e.button !== 0) return;
+          
+          // 🔥 LỖI KHÔNG BẤM ĐƯỢC GIAO DIỆN: Chặn không cho vẽ nếu người dùng đang bấm vào thanh công cụ nổi, menu màu, hoặc bảng cài đặt
+          if (e.target.closest('.wa-float-bar') || e.target.closest('.wa-props-panel') || e.target.closest('._pop') || e.target.closest('.wa-toolbar')) return;
+          
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          
+          var rect = container.getBoundingClientRect();
+          var x = e.clientX - rect.left;
+          var y = e.clientY - rect.top;
+          
+          var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
+          if (!p || typeof p.value !== 'number') return;
+          
+          lastFhX = x; lastFhY = y;
+          fhPoints = [{ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value }];
+          
+          var s = toolStyles['brush'] || {};
+          var isHL = window.waCurrentFreehandTool === 'highlighter';
+          var fhStyles = { line: { style: 'solid' } };
+          
+          if (isHL) {
+              var hlC = s.hlColor || '#FFEB3B';
+              var hlO = s.hlOpacity !== undefined ? s.hlOpacity : 0.45;
+              fhStyles.line.color = typeof hexToRgba === 'function' ? hexToRgba(hlC, hlO) : 'rgba(255, 235, 59, 0.45)';
+              fhStyles.line.size = s.hlWidth || 16;
+          } else {
+              var brC = s.lineColor || '#3B82F6';
+              var brO = s.lineOpacity !== undefined ? s.lineOpacity : 1;
+              fhStyles.line.color = typeof hexToRgba === 'function' ? hexToRgba(brC, brO) : '#3B82F6';
+              fhStyles.line.size = s.lineWidth || 3;
+          }
+          
+          fhId = global.tvChart.createOverlay({
+            name: window.waCurrentFreehandTool,
+            points: fhPoints, lock: false, styles: fhStyles
+          }, 'candle_pane');
+          fhActive = true;
+        }, { capture: true, passive: false });
       
-      // Fix 2: Bắt buộc gọi ngắt vẽ để KLineChart nhả chuột hoàn toàn
-      try { global.tvChart.cancelDrawing(); } catch(err){}
+        window.addEventListener('pointermove', function(e) {
+          if (!fhActive || !fhId) return;
+          e.stopImmediatePropagation();
+          e.preventDefault(); 
+          
+          var rect = container.getBoundingClientRect();
+          var x = e.clientX - rect.left;
+          var y = e.clientY - rect.top;
+          
+          var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
+          if (dist < 6) return; 
+          
+          var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
+          if (!p || typeof p.value !== 'number') return;
+          
+          lastFhX = x; lastFhY = y;
+          fhPoints.push({ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value });
+          global.tvChart.overrideOverlay({ id: fhId, points: fhPoints });
+        }, { capture: true, passive: false });
       
-      fhId = null; 
-      fhPoints = [];
-      
-      // Fix 3: Sửa đúng tên hàm lưu bộ nhớ
-      if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-    }
-  };
-
-  window.addEventListener('pointerup', endFh, { capture: true });
-  window.addEventListener('pointercancel', endFh, { capture: true });
+        var endFh = function(e) {
+          if (!fhActive) return;
+          e.stopImmediatePropagation();
+          fhActive = false;
+          
+          if (fhId && global.tvChart) {
+              var ov = global.tvChart.getOverlayById(fhId);
+              if (ov) {
+                  if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
+                  if (typeof saveHistory === 'function') saveHistory('add', ov);
+                  
+                  // 🔥 TỰ ĐỘNG CHỌN NÉT VẼ VÀ HIỂN THỊ GIAO DIỆN NGAY LẬP TỨC
+                  currentSelectedOverlay = ov;
+                  window.currentSelectedOverlay = ov;
+                  
+                  if (typeof showFloatToolbar === 'function') {
+                      var rect = container.getBoundingClientRect();
+                      var endX = e.clientX - rect.left;
+                      var endY = e.clientY - rect.top;
+                      // Bật thanh màu nổi ở ngay điểm nhả chuột
+                      showFloatToolbar(ov, endX, endY);
+                  }
+                  if (typeof renderPanel === 'function') renderPanel(ov);
+              }
+          }
+          fhId = null; fhPoints = [];
+          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+        };
+        
+        window.addEventListener('pointerup', endFh, { capture: true });
+        window.addEventListener('pointercancel', endFh, { capture: true });
   // ====================================================================
   if (_waCoreEventsBound) return; 
   _waCoreEventsBound = true;
