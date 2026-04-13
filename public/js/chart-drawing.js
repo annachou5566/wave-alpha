@@ -102,14 +102,13 @@
     // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
     {
       name: 'freehandBrush',
-      totalStep: Number.MAX_SAFE_INTEGER,
+      totalStep: 1, // 🔥 SỬA CHỖ NÀY THÀNH 1 ĐỂ NGẮT DÍNH CHUỘT
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
         if (c.length < 2) return [];
 
-        // Thuật toán làm mượt nhúng trực tiếp (An toàn tuyệt đối)
         function smooth(points, seg) {
           if (points.length < 3) return points;
           var out = [];
@@ -133,7 +132,7 @@
     },
     {
       name: 'highlighter',
-      totalStep: Number.MAX_SAFE_INTEGER,
+      totalStep: 1, // 🔥 SỬA CHỖ NÀY THÀNH 1 ĐỂ NGẮT DÍNH CHUỘT
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
