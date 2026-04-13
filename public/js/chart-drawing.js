@@ -98,33 +98,31 @@
     
     const extensions = [
    
-        // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
-        {
-          name: 'freehandBrush',
-          totalStep: Number.MAX_SAFE_INTEGER,
-          needDefaultPointFigure: false,
-          needDefaultXAxisFigure: false,
-          needDefaultYAxisFigure: false,
-          createPointFigures: function(ref) {
-            var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
-            var c = ref.coordinates.slice(0, realCount);
-            if (c.length < 2) return [];
-            return [{ type: 'line', attrs: { coordinates: c } }];
-          }
-        },
-        {
-          name: 'highlighter',
-          totalStep: Number.MAX_SAFE_INTEGER,
-          needDefaultPointFigure: false,
-          needDefaultXAxisFigure: false,
-          needDefaultYAxisFigure: false,
-          createPointFigures: function(ref) {
-            var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
-            var c = ref.coordinates.slice(0, realCount);
-            if (c.length < 2) return [];
-            return [{ type: 'line', attrs: { coordinates: c } }];
-          }
-        },
+            // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
+    {
+      name: 'freehandBrush',
+      totalStep: 1, // FIX: Đặt = 1 để KLineChart chốt sổ ngay cú click đầu tiên, tự ngắt bắt chuột
+      needDefaultPointFigure: false,
+      needDefaultXAxisFigure: false,
+      needDefaultYAxisFigure: false,
+      createPointFigures: function(ref) {
+        var c = ref.coordinates;
+        if (c.length < 2) return [];
+        return [{ type: 'line', attrs: { coordinates: c } }];
+      }
+    },
+    {
+      name: 'highlighter',
+      totalStep: 1, // FIX: Tránh lỗi xóa nhầm và tự ngắt nét dính
+      needDefaultPointFigure: false,
+      needDefaultXAxisFigure: false,
+      needDefaultYAxisFigure: false,
+      createPointFigures: function(ref) {
+        var c = ref.coordinates;
+        if (c.length < 2) return [];
+        return [{ type: 'line', attrs: { coordinates: c } }];
+      }
+    },
 
       // --- BATCH 1: LINES NÂNG CAO ---
       {
@@ -3528,19 +3526,23 @@ function _fbToggleLock(ov) {
       container.classList.add('wa-drawing-mode');
       window.waCurrentFreehandTool = toolId;
       
-      // Tự khóa kéo Chart
+      // Khóa biểu đồ
       if (global.tvChart) {
         global.tvChart.setStyles({ grid: { horizontal: { show: false } } }); 
-        var sc = global.tvChart.getChartStore().getTimeScaleStore();
-        if(sc) sc.setScrollEnabled(false); 
+        try {
+          var sc = global.tvChart.getChartStore().getTimeScaleStore();
+          if(sc) sc.setScrollEnabled(false); 
+        } catch(e){}
         global.tvChart.setStyles({ candle: { tooltip: { showRule: 'none' } } });
       }
       return; 
     } else {
-      // Mở khóa lại biểu đồ cho Pointer hoặc Line khác
+      // Mở khóa biểu đồ
       if (global.tvChart) {
-        var sc = global.tvChart.getChartStore().getTimeScaleStore();
-        if(sc) sc.setScrollEnabled(true);
+        try {
+          var sc = global.tvChart.getChartStore().getTimeScaleStore();
+          if(sc) sc.setScrollEnabled(true);
+        } catch(e){}
         global.tvChart.setStyles({ candle: { tooltip: { showRule: 'always' } } });
       }
     }
@@ -3898,88 +3900,89 @@ function bindCoreEventsOnce() {
     if (e.changedTouches && e.changedTouches[0]) { fbX = e.changedTouches[0].clientX; fbY = e.changedTouches[0].clientY; }
   }, { passive: true });
 
-  // ====== ENGINE BÚT VẼ TỰ DO (PHIÊN BẢN ƯU TIÊN SỰ KIỆN 100%) ======
-  var fhActive = false;
-  var fhId = null;
-  var fhPoints = [];
-  var lastFhX = 0, lastFhY = 0;
-  var container = document.getElementById('sc-chart-container');
-  
-  container.addEventListener('pointerdown', function(e) {
-    if (window.waCurrentFreehandTool !== 'freehandBrush' && window.waCurrentFreehandTool !== 'highlighter') return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // ====== ENGINE BÚT VẼ TỰ DO (PHIÊN BẢN ƯU TIÊN SỰ KIỆN 100%) ======
+    var fhActive = false;
+    var fhId = null;
+    var fhPoints = [];
+    var lastFhX = 0, lastFhY = 0;
     
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    
-    var rect = container.getBoundingClientRect();
-    var x = e.clientX - rect.left;
-    var y = e.clientY - rect.top;
-    
-    var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
-    if (!p || typeof p.value !== 'number') return;
-    
-    lastFhX = x; lastFhY = y;
-    fhPoints = [{ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value }];
-    
-    // Đổ màu lấy từ hệ thống ToolStyles (giúp bạn tự do đổi màu trên PropPanel được)
-    var cStyles = typeof toolStyles !== 'undefined' ? toolStyles['lines'] : {};
-    var pColor = cStyles && cStyles.lineColor ? cStyles.lineColor : '#3B82F6';
-    
-    var fhStyles = window.waCurrentFreehandTool === 'highlighter' 
-      ? { line: { size: 16, color: 'rgba(255, 235, 59, 0.45)', style: 'solid' } } 
-      : { line: { size: 3, color: pColor, style: 'solid' } };
-    
-    fhId = global.tvChart.createOverlay({
-      name: window.waCurrentFreehandTool,
-      points: fhPoints, lock: false, styles: fhStyles
-    }, 'candle_pane');
-    fhActive = true;
-  }, { capture: true, passive: false });
-
-  window.addEventListener('pointermove', function(e) {
-    if (!fhActive || !fhId) return;
-    e.stopImmediatePropagation();
-    e.preventDefault(); 
-    
-    var rect = container.getBoundingClientRect();
-    var x = e.clientX - rect.left;
-    var y = e.clientY - rect.top;
-    
-    var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
-    if (dist < 3) return; 
-    
-    var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
-    if (!p || typeof p.value !== 'number') return;
-    
-    lastFhX = x; lastFhY = y;
-    fhPoints.push({ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value });
-    
-    global.tvChart.overrideOverlay({ id: fhId, points: fhPoints });
-  }, { capture: true, passive: false });
-
-  var endFh = function(e) {
-    if (!fhActive) return;
-    e.stopImmediatePropagation();
-    fhActive = false;
-    if (fhId) {
-      var ov = global.tvChart.getOverlayById(fhId);
-      if (ov) {
-         if (typeof watrackOverlay === 'function') watrackOverlay(ov);
-         if (typeof saveHistory === 'function') saveHistory({ action: 'add', overlay: ov });
-      }
+    window.addEventListener('pointerdown', function(e) {
+      if (window.waCurrentFreehandTool !== 'freehandBrush' && window.waCurrentFreehandTool !== 'highlighter') return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       
-      // Cắt đứt chuỗi vẽ, tránh lỗi vệt dính
-      if (global.tvChart) global.tvChart.cancelDrawing();
-
-      fhId = null; fhPoints = [];
-      if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
-    }
-  };
-
-  window.addEventListener('pointerup', endFh, { capture: true });
-  window.addEventListener('pointercancel', endFh, { capture: true });
-  // ====================================================================
+      var container = document.getElementById('sc-chart-container');
+      if (!container || !container.contains(e.target)) return;
+      
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      
+      var rect = container.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      
+      var p = global.tvChart.convertFromPixel({ x: x, y: y }, { paneId: 'candle_pane' });
+      if (!p || typeof p.value !== 'number') return;
+      
+      lastFhX = x; lastFhY = y;
+      fhPoints = [{ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value }];
+      
+      var cStyles = typeof toolStyles !== 'undefined' ? toolStyles['lines'] : {};
+      var pColor = cStyles && cStyles.lineColor ? cStyles.lineColor : '#3B82F6';
+      
+      var fhStyles = window.waCurrentFreehandTool === 'highlighter' 
+        ? { line: { size: 16, color: 'rgba(255, 235, 59, 0.45)', style: 'solid' } } 
+        : { line: { size: 3, color: pColor, style: 'solid' } };
+      
+      fhId = global.tvChart.createOverlay({
+        name: window.waCurrentFreehandTool,
+        points: fhPoints, lock: false, styles: fhStyles
+      }, 'candle_pane');
+      
+      fhActive = true;
+    }, { capture: true, passive: false });
+  
+    window.addEventListener('pointermove', function(e) {
+      if (!fhActive || !fhId) return;
+      e.stopImmediatePropagation();
+      e.preventDefault(); 
+      
+      var container = document.getElementById('sc-chart-container');
+      if (!container) return;
+      var rect = container.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      
+      var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
+      if (dist < 3) return; 
+      
+      var p = global.tvChart.convertFromPixel({ x: x, y: y }, { paneId: 'candle_pane' });
+      if (!p || typeof p.value !== 'number') return;
+      
+      lastFhX = x; lastFhY = y;
+      fhPoints.push({ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value });
+      
+      global.tvChart.overrideOverlay({ id: fhId, points: fhPoints });
+    }, { capture: true, passive: false });
+  
+    var endFh = function(e) {
+      if (!fhActive) return;
+      e.stopImmediatePropagation();
+      fhActive = false;
+      if (fhId) {
+        var ov = global.tvChart.getOverlayById(fhId);
+        if (ov) {
+           if (typeof watrackOverlay === 'function') watrackOverlay(ov);
+           if (typeof saveHistory === 'function') saveHistory({ action: 'add', overlay: ov });
+        }
+        // Không gọi cancelDrawing() nữa, hệ thống tự lưu an toàn
+        fhId = null; fhPoints = [];
+        if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+      }
+    };
+  
+    window.addEventListener('pointerup', endFh, { capture: true });
+    window.addEventListener('pointercancel', endFh, { capture: true });
+    // ====================================================================
 
   var lastTapTime = 0;
   document.addEventListener('touchstart', function(e) {
