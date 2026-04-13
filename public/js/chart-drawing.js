@@ -79,45 +79,6 @@
     if (!kc || kc.__wa_extensions_registered) return;
     kc.__wa_extensions_registered = true;
 
-    // 🔥 1. ĐĂNG KÝ FIGURE NÉT VẼ BO TRÒN CHỐNG RĂNG CƯA
-    kc.registerFigure({
-      name: 'waRoundLine',
-      render: function(ctx, attrs, styles) {
-        var c = attrs.coordinates;
-        if (!c || c.length < 2) return;
-        // Fix: Lấy trực tiếp size và color (bao gồm độ trong suốt) từ attrs do mình truyền vào
-        ctx.lineWidth = attrs.width || 2;
-        ctx.strokeStyle = attrs.color || '#3B82F6';
-        ctx.lineCap = 'round';  // Bo tròn 2 đầu nét vẽ
-        ctx.lineJoin = 'round'; // Bo tròn các khúc cua
-        ctx.beginPath();
-        ctx.moveTo(c[0].x, c[0].y);
-        for (var i = 1; i < c.length; i++) {
-          ctx.lineTo(c[i].x, c[i].y);
-        }
-        ctx.stroke();
-      }
-    });
-
-    // 🔥 2. THUẬT TOÁN NỘI SUY (Làm mượt đường đi của chuột)
-    function smoothLine(points, seg) {
-      if (points.length < 3) return points;
-      var out = [];
-      for (var i = 0; i < points.length - 1; i++) {
-        var p0 = points[Math.max(0, i - 1)], p1 = points[i];
-        var p2 = points[i + 1], p3 = points[Math.min(points.length - 1, i + 2)];
-        for (var j = 0; j < seg; j++) {
-          var t = j / seg, t2 = t * t, t3 = t2 * t;
-          out.push({
-            x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-            y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
-          });
-        }
-      }
-      out.push(points[points.length - 1]);
-      return out;
-    }
-
     // [TỐI ƯU HÓA SIÊU MƯỢT] Hàm tính toán tia Zero-Allocation (Không dùng Mảng)
     // Giúp loại bỏ hoàn toàn lag giật khi vẽ Pitchfork, Elliott, Mô hình giá
     function fastRayEnd(p, dx, dy, W, H) {
@@ -141,47 +102,64 @@
     // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
     {
       name: 'freehandBrush',
-      totalStep: 1,
+      totalStep: Number.MAX_SAFE_INTEGER,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
-        var pts = ref.overlay.points || [];
-        if (pts.length < 2) return [];
-        // Hack: Tự ánh xạ toạ độ để lách luật totalStep = 1 của KLineChart
-        var c = [];
-        for(var i = 0; i < pts.length; i++) {
-           c.push({
-             x: ref.xAxis.convertToPixel({ dataIndex: pts[i].dataIndex, timestamp: pts[i].timestamp }),
-             y: ref.yAxis.convertToPixel(pts[i].value)
-           });
+        var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
+        var c = ref.coordinates.slice(0, realCount);
+        if (c.length < 2) return [];
+
+        // Thuật toán làm mượt nhúng trực tiếp (An toàn tuyệt đối)
+        function smooth(points, seg) {
+          if (points.length < 3) return points;
+          var out = [];
+          for (var i = 0; i < points.length - 1; i++) {
+            var p0 = points[Math.max(0, i - 1)], p1 = points[i];
+            var p2 = points[i + 1], p3 = points[Math.min(points.length - 1, i + 2)];
+            for (var j = 0; j < seg; j++) {
+              var t = j / seg, t2 = t * t, t3 = t2 * t;
+              out.push({
+                x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+                y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+              });
+            }
+          }
+          out.push(points[points.length - 1]);
+          return out;
         }
-        var ls = ref.overlay.styles && ref.overlay.styles.line ? ref.overlay.styles.line : {};
-        return [{ 
-          type: 'waRoundLine', 
-          attrs: { coordinates: smoothLine(c, 3), width: ls.size || 2, color: ls.color || '#3B82F6' } 
-        }];
+
+        return [{ type: 'line', attrs: { coordinates: smooth(c, 4) } }];
       }
     },
     {
       name: 'highlighter',
-      totalStep: 1,
+      totalStep: Number.MAX_SAFE_INTEGER,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
-        var pts = ref.overlay.points || [];
-        if (pts.length < 2) return [];
-        // Hack: Tự ánh xạ toạ độ để lách luật totalStep = 1 của KLineChart
-        var c = [];
-        for(var i = 0; i < pts.length; i++) {
-           c.push({
-             x: ref.xAxis.convertToPixel({ dataIndex: pts[i].dataIndex, timestamp: pts[i].timestamp }),
-             y: ref.yAxis.convertToPixel(pts[i].value)
-           });
+        var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
+        var c = ref.coordinates.slice(0, realCount);
+        if (c.length < 2) return [];
+
+        function smooth(points, seg) {
+          if (points.length < 3) return points;
+          var out = [];
+          for (var i = 0; i < points.length - 1; i++) {
+            var p0 = points[Math.max(0, i - 1)], p1 = points[i];
+            var p2 = points[i + 1], p3 = points[Math.min(points.length - 1, i + 2)];
+            for (var j = 0; j < seg; j++) {
+              var t = j / seg, t2 = t * t, t3 = t2 * t;
+              out.push({
+                x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+                y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+              });
+            }
+          }
+          out.push(points[points.length - 1]);
+          return out;
         }
-        var ls = ref.overlay.styles && ref.overlay.styles.line ? ref.overlay.styles.line : {};
-        // Truyền mặc định màu vàng dạ quang (0.45 opacity) để biểu đồ nến hiện xuyên qua được
-        return [{ 
-          type: 'waRoundLine', 
-          attrs: { coordinates: smoothLine(c, 3), width: ls.size || 16, color: ls.color || 'rgba(255, 235, 59, 0.45)' } 
-        }];
+
+        // Vẽ 1 nét duy nhất, mượt mà và nhận đúng độ trong suốt (opacity: 0.45)
+        return [{ type: 'line', attrs: { coordinates: smooth(c, 4) } }];
       }
     },
 
