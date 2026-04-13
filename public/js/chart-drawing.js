@@ -79,49 +79,6 @@
     if (!kc || kc.__wa_extensions_registered) return;
     kc.__wa_extensions_registered = true;
 
-// 🔥 ĐĂNG KÝ FIGURE NÉT VẼ BO TRÒN (SIÊU MƯỢT - CHUẨN TRADINGVIEW)
-kc.registerFigure({
-  name: 'waRoundLine',
-  render: function(ctx, attrs, styles) {
-    var c = attrs.coordinates;
-    if (!c || c.length < 2) return;
-    
-    ctx.lineWidth = styles.size || 2;
-    ctx.strokeStyle = styles.color || '#3B82F6';
-    
-    // 🎯 KHẮC PHỤC GAI NHỌN: Bo tròn 2 đầu và Bo tròn các khúc cua gắt
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    
-    if (styles.style === 'dashed') ctx.setLineDash(styles.dashedValue || [6, 4]);
-    else ctx.setLineDash([]);
-    
-    ctx.beginPath();
-    ctx.moveTo(c[0].x, c[0].y);
-    
-    // 🎯 THUẬT TOÁN ZERO-ALLOCATION: Vẽ đường cong Bezier qua các điểm chuột (Triệt tiêu 100% giật lag)
-    for (var i = 1; i < c.length - 1; i++) {
-      var xc = (c[i].x + c[i + 1].x) / 2;
-      var yc = (c[i].y + c[i + 1].y) / 2;
-      ctx.quadraticCurveTo(c[i].x, c[i].y, xc, yc);
-    }
-    ctx.lineTo(c[c.length - 1].x, c[c.length - 1].y);
-    ctx.stroke();
-  },
-  checkEventOn: function(coord, attrs, styles) {
-    // Thuật toán nhận diện nhấp chuột thông minh (tránh lỗi Crash của KLineChart)
-    var c = attrs.coordinates;
-    if (!c || c.length < 2) return false;
-    var r = Math.max((styles.size || 2) / 2 + 4, 6);
-    for (var i = 0; i < c.length; i++) {
-      var dx = c[i].x - coord.x;
-      var dy = c[i].y - coord.y;
-      if (dx * dx + dy * dy <= r * r) return true;
-    }
-    return false;
-  }
-});
-
     // [TỐI ƯU HÓA SIÊU MƯỢT] Hàm tính toán tia Zero-Allocation (Không dùng Mảng)
     // Giúp loại bỏ hoàn toàn lag giật khi vẽ Pitchfork, Elliott, Mô hình giá
     function fastRayEnd(p, dx, dy, W, H) {
@@ -145,28 +102,61 @@ kc.registerFigure({
     // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
     {
       name: 'freehandBrush',
-      totalStep: 1,
+      totalStep: 1, // Sửa lỗi dính trỏ chuột
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
         if (c.length < 2) return [];
-        
-        // 🚀 Dùng Figure độc quyền waRoundLine siêu mượt thay cho Line thông thường
-        return [{ type: 'waRoundLine', attrs: { coordinates: c } }];
+
+        // 🚀 Thuật toán Chaikin: Vát tròn góc gắt tự động (Triệt tiêu hoàn toàn gai nhọn & zigzag)
+        function smooth(points) {
+            if (points.length < 3) return points;
+            var out = points;
+            // Vát góc 2 lần để tạo độ mượt tuyệt đối nhưng không làm lag CPU
+            for (var k = 0; k < 2; k++) {
+                var next = [];
+                next.push(out[0]);
+                for (var i = 0; i < out.length - 1; i++) {
+                    next.push({ x: 0.75 * out[i].x + 0.25 * out[i+1].x, y: 0.75 * out[i].y + 0.25 * out[i+1].y });
+                    next.push({ x: 0.25 * out[i].x + 0.75 * out[i+1].x, y: 0.25 * out[i].y + 0.75 * out[i+1].y });
+                }
+                next.push(out[out.length - 1]);
+                out = next;
+            }
+            return out;
+        }
+
+        return [{ type: 'line', attrs: { coordinates: smooth(c) } }];
       }
     },
     {
       name: 'highlighter',
-      totalStep: 1,
+      totalStep: 1, // Sửa lỗi dính trỏ chuột
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
         if (c.length < 2) return [];
-        
-        // 🚀 Dùng Figure độc quyền waRoundLine siêu mượt
-        return [{ type: 'waRoundLine', attrs: { coordinates: c } }];
+
+        // 🚀 Dùng chung thuật toán mượt mà cho bút Highlight
+        function smooth(points) {
+            if (points.length < 3) return points;
+            var out = points;
+            for (var k = 0; k < 2; k++) {
+                var next = [];
+                next.push(out[0]);
+                for (var i = 0; i < out.length - 1; i++) {
+                    next.push({ x: 0.75 * out[i].x + 0.25 * out[i+1].x, y: 0.75 * out[i].y + 0.25 * out[i+1].y });
+                    next.push({ x: 0.25 * out[i].x + 0.75 * out[i+1].x, y: 0.25 * out[i].y + 0.75 * out[i+1].y });
+                }
+                next.push(out[out.length - 1]);
+                out = next;
+            }
+            return out;
+        }
+
+        return [{ type: 'line', attrs: { coordinates: smooth(c) } }];
       }
     },
 
