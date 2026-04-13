@@ -2253,13 +2253,13 @@
       tools: [ 
         // 📂 THƯ MỤC 1: CỌ VẼ
         {id: 'header', n: 'Cọ Vẽ Tự Do'},
-        {id: 'freehandBrush', n: 'Bút vẽ (Freehand)'},
+        {id: 'freehandBrush', n: 'Bút vẽ'},
         {id: 'highlighter', n: 'Bút Dạ Quang'},
         {id: 'divider'},
 
         // 📂 THƯ MỤC 2: MŨI TÊN & ĐƯỜNG DẪN
         {id: 'header', n: 'Mũi Tên & Đường Dẫn'},
-        {id: 'pathShape', n: 'Đường dẫn (Path)'}, 
+        {id: 'pathShape', n: 'Đường dẫn'}, 
         {id: 'polyline', n: 'Đường đa đoạn'}, 
         {id: 'arcShape', n: 'Hình vòng cung'}, 
         {id: 'doubleCurveShape', n: 'Đường cong đôi'}, 
@@ -2714,6 +2714,7 @@ onDrawEnd: function(event) {
     const textTools = ['plainText', 'anchoredText', 'note', 'priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'];
     if (textTools.includes(name)) return 'text';
     if (name.startsWith('wave') || name.startsWith('elliott') || name.includes('abcd') || name.includes('HeadAndShoulders') || name.includes('Top') || name.includes('Bottom') || name === 'threeDrives') return 'waves';
+    if (name === 'freehandBrush' || name === 'highlighter') return 'brush';
     return 'lines'; 
   }
 
@@ -2880,6 +2881,19 @@ onDrawEnd: function(event) {
           item('Nét vẽ', seg('_rp_ls',LS,ls) + sel('_rp_lw',W_OPTS,lw)) +
           item('Nền / Nhãn', rng('_rp_fa',0,0.5,0.01,fa) + tog('_rp_slbl',slbl))
         );
+        // 🔥 THÊM NGUYÊN KHỐI NÀY VÀO DƯỚI FIBO:
+      } else if (cat === 'brush') {
+        var sline = s.line || {};
+        var isHL = overlay.name === 'highlighter';
+        var lc = safeHex(sline.color, isHL ? '#FFEB3B' : '#3B82F6');
+        var lw = sline.size || (isHL ? 16 : 3);
+        var lo = toAlpha(sline.color, isHL ? 0.45 : 1);
+
+        html += sec(isHL ? 'Bút Dạ Quang' : 'Cọ Vẽ Tự Do',
+          item('Màu / Độ đậm', cpBtn('c_lc',lc) + rng('_rp_lo',0,1,0.05,lo)) +
+          item('Độ dày cọ', rng('_rp_lw_rng', 1, 40, 1, lw)) // Kéo slider từ 1px đến 40px
+        );
+        
       } else {
         var sline=s.line||{}, lc=safeHex(sline.color,'#3B82F6'), lw=sline.size||1, ls=sline.style||'solid', lo=toAlpha(sline.color,1);
         html += sec('Đường Line',
@@ -3025,7 +3039,12 @@ onDrawEnd: function(event) {
           if (ls) setLineStyle(ns.line, ls);
           if(fa!==null && currentSelectedOverlay.extendData) currentSelectedOverlay.extendData.fillOpacity=fa;
           if(currentSelectedOverlay.extendData) currentSelectedOverlay.extendData.showLabels=sl;
-
+// 🔥 THÊM NGUYÊN KHỐI NÀY VÀO DƯỚI FIBO:
+} else if (cat === 'brush') {
+  var lc=gCP('c_lc'), lw=gRng('_rp_lw_rng'), lo=gRng('_rp_lo');
+  if(lc) ns.line.color=mkRgba(lc, lo!==null ? lo : (currentSelectedOverlay.name==='highlighter'?0.45:1));
+  if(lw!==null) ns.line.size=parseInt(lw);
+  ns.line.style='solid'; // Cọ vẽ luôn là nét liền
         } else {
           var lc=gCP('c_lc'), lw=gSel('_rp_lw'), lo=gRng('_rp_lo'), ls=gSeg('_rp_ls');
           if(lc) ns.line.color=mkRgba(lc,lo!==null?lo:1);
@@ -3322,13 +3341,26 @@ function showFloatToolbar(ov, posX, posY) {
     bindColorPicker('wa-fb-cp-border', function(hex) {
       if (!global.tvChart) return;
       var objS = JSON.parse(JSON.stringify(ov.styles || {}));
+      
       if (cat === 'shapes' || cat === 'text') {
         if (!objS.polygon) objS.polygon = {};
         objS.polygon.borderColor = hex || 'transparent';
       }
+      
       if (cat !== 'text') {
         if (!objS.line) objS.line = {};
-        objS.line.color = hex || 'transparent';
+        if (hex) {
+          // 🔥 BÍ QUYẾT: Giữ lại Opacity cũ khi đổi màu qua Toolbar nổi
+          var oldA = 1;
+          if (objS.line.color && objS.line.color.startsWith('rgba')) {
+            var m = objS.line.color.match(/rgba\([^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+)\)/);
+            if (m) oldA = parseFloat(m[1]);
+          }
+          var r = parseInt(hex.slice(1,3), 16)||0, g = parseInt(hex.slice(3,5), 16)||0, b = parseInt(hex.slice(5,7), 16)||0;
+          objS.line.color = 'rgba('+r+','+g+','+b+','+oldA+')';
+        } else {
+          objS.line.color = 'transparent';
+        }
       }
       ov.styles = objS; global.tvChart.overrideOverlay({ id: ov.id, styles: objS });
       if (typeof saveAllOverlays === 'function') saveAllOverlays();
@@ -3631,6 +3663,13 @@ function _fbToggleLock(ov) {
           size: s.lineWidth || 1,
           style: s.lineStyle || 'solid',
           dashedValue: s.lineStyle === 'dashed' ? [6, 4] : s.lineStyle === 'dotted' ? [1.5, 3] : undefined
+        };
+      } else if (tType === 'brush') { 
+        let isHL = toolId === 'highlighter';
+        config.styles.line = {
+          color: typeof hexToRgba === 'function' ? hexToRgba(isHL ? '#FFEB3B' : '#3B82F6', isHL ? 0.45 : 1) : (isHL ? 'rgba(255,235,59,0.45)' : '#3B82F6'),
+          size: isHL ? 16 : 3,
+          style: 'solid'
         };
       } else if (tType === 'shapes') {
         config.styles.polygon = { style: 'stroke_fill', color: typeof hexToRgba === 'function' ? hexToRgba(s.fillColor || '#3B82F6', s.fillOpacity !== undefined ? s.fillOpacity : 0.15) : '#3B82F6', borderColor: typeof hexToRgba === 'function' ? hexToRgba(s.borderColor || '#3B82F6', s.borderOpacity !== undefined ? s.borderOpacity : 1) : (s.borderColor || '#3B82F6'), borderSize: s.borderWidth || 1 };
