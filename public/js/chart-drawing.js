@@ -97,6 +97,29 @@
     function getDistance(c1, c2) { return Math.sqrt(Math.pow(c1.x - c2.x, 2) + Math.pow(c1.y - c2.y, 2)); }
     
     const extensions = [
+        // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
+  {
+    name: 'freehandBrush',
+    totalStep: Number.MAX_SAFE_INTEGER,
+    needDefaultPointFigure: false,
+    needDefaultXAxisFigure: false,
+    needDefaultYAxisFigure: false,
+    createPointFigures: function(ref) {
+      if (ref.coordinates.length < 2) return [];
+      return [{ type: 'line', attrs: { coordinates: ref.coordinates } }];
+    }
+  },
+  {
+    name: 'highlighter',
+    totalStep: Number.MAX_SAFE_INTEGER,
+    needDefaultPointFigure: false,
+    needDefaultXAxisFigure: false,
+    needDefaultYAxisFigure: false,
+    createPointFigures: function(ref) {
+      if (ref.coordinates.length < 2) return [];
+      return [{ type: 'line', attrs: { coordinates: ref.coordinates } }];
+    }
+  },
       // --- BATCH 1: LINES NÂNG CAO ---
       {
         name: 'extendedLine', totalStep: 3,
@@ -2160,29 +2183,6 @@
   };
 
   const MENUS = [
-        // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
-        {
-          name: 'freehandBrush',
-          totalStep: Number.MAX_SAFE_INTEGER,
-          needDefaultPointFigure: false,
-          needDefaultXAxisFigure: false,
-          needDefaultYAxisFigure: false,
-          createPointFigures: function(ref) {
-            if (ref.coordinates.length < 2) return [];
-            return [{ type: 'line', attrs: { coordinates: ref.coordinates } }];
-          }
-        },
-        {
-          name: 'highlighter',
-          totalStep: Number.MAX_SAFE_INTEGER,
-          needDefaultPointFigure: false,
-          needDefaultXAxisFigure: false,
-          needDefaultYAxisFigure: false,
-          createPointFigures: function(ref) {
-            if (ref.coordinates.length < 2) return [];
-            return [{ type: 'line', attrs: { coordinates: ref.coordinates } }];
-          }
-        },
     { 
       icon: SVG.line, 
       tools: [ 
