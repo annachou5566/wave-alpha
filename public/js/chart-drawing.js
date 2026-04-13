@@ -3521,13 +3521,37 @@ function _fbToggleLock(ov) {
     currentSelectedOverlay = null;
     window.currentSelectedOverlay = null;
     try { global.tvChart.cancelDrawing(); } catch(e){}
-    // ---> DÁN ĐOẠN NÀY VÀO:
+      // ---> DÁN ĐOẠN NÀY VÀO THAY THẾ ĐOẠN CŨ:
   window.waCurrentFreehandTool = null;
   if (toolId === 'freehandBrush' || toolId === 'highlighter') {
     isDrawingSessionActive = true;
     container.classList.add('wa-drawing-mode');
-    window.waCurrentFreehandTool = toolId; // Báo hiệu chế độ Drag-to-Draw
-    return; // Dừng ở đây, phó mặc hoàn toàn cho cơ chế vẽ ở Bước 2
+    window.waCurrentFreehandTool = toolId;
+    
+    // FIX: KHÓA CHART LẠI ĐỂ KHÔNG BỊ TRƯỢT KHI VẼ
+    if (global.tvChart) {
+      global.tvChart.setStyles({ grid: { horizontal: { show: false } } }); // Trick nhỏ mồi re-render
+      // Thuộc tính quan trọng nhất khóa pan:
+      var sc = global.tvChart.getChartStore().getTimeScaleStore();
+      if(sc) sc.setScrollEnabled(false); 
+      // Cách 2 dự phòng cho API v9:
+      global.tvChart.setStyles({ 
+          candle: { tooltip: { showRule: 'none' } }, // Ẩn tooltip chớp nháy gây lag
+      });
+      // Vô hiệu hóa kéo (Kéo bằng CSS)
+      container.style.pointerEvents = 'none'; 
+      setTimeout(() => container.style.pointerEvents = 'auto', 10);
+    }
+    return; 
+  } else {
+    // NẾU CHỌN CÔNG CỤ KHÁC (HAY CHUỘT): MỞ KHÓA LẠI CHART
+    if (global.tvChart) {
+      var sc = global.tvChart.getChartStore().getTimeScaleStore();
+      if(sc) sc.setScrollEnabled(true);
+      global.tvChart.setStyles({ 
+          candle: { tooltip: { showRule: 'always' } },
+      });
+    }
   }
   // <--- KẾT THÚC DÁN
     if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
@@ -3834,54 +3858,52 @@ var _waCoreEventsBound = false;
 var _cachedContainer = null; // ✅ FIX 5: Cache chart container
 
 function bindCoreEventsOnce() {
-      // ====== ENGINE BÚT VẼ TỰ DO / HIGHLIGHTER (PHIÊN BẢN MƯỢT MÀ NHẤT) ======
+        // ====== ENGINE BÚT VẼ TỰ DO (PHIÊN BẢN ƯU TIÊN SỰ KIỆN 100%) ======
   var fhActive = false;
   var fhId = null;
   var fhPoints = [];
   var lastFhX = 0, lastFhY = 0;
   var container = document.getElementById('sc-chart-container');
   
+  // Chặn hoàn toàn mọi thao tác của thư viện khi đang ở chế độ vẽ tự do
   container.addEventListener('pointerdown', function(e) {
     if (window.waCurrentFreehandTool !== 'freehandBrush' && window.waCurrentFreehandTool !== 'highlighter') return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     
-    e.stopPropagation(); 
+    e.stopImmediatePropagation(); // NGẮT LẬP TỨC MỌI SỰ KIỆN KHÁC (bao gồm cả Pan chart)
+    e.preventDefault();
     
     var rect = container.getBoundingClientRect();
     var x = e.clientX - rect.left;
     var y = e.clientY - rect.top;
     
-    // Tối ưu an toàn tọa độ (Fix lỗi nhòe nét)
     var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
     if (!p || typeof p.value !== 'number') return;
     
     lastFhX = x; lastFhY = y;
-    
-    // Lưu BẮT BUỘC cả dataIndex và timestamp
     fhPoints = [{ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value }];
     
-    // Tùy chỉnh màu mặc định ở đây (bạn có thể thay đổi mã màu HEX/RGBA)
     var fhStyles = window.waCurrentFreehandTool === 'highlighter' 
-      ? { line: { size: 16, color: 'rgba(255, 235, 59, 0.45)', style: 'solid' } } // Vàng dạ quang
-      : { line: { size: 3, color: '#3B82F6', style: 'solid' } }; // Xanh dương
+      ? { line: { size: 16, color: 'rgba(255, 235, 59, 0.45)', style: 'solid' } } 
+      : { line: { size: 3, color: '#3B82F6', style: 'solid' } };
     
     fhId = global.tvChart.createOverlay({
       name: window.waCurrentFreehandTool,
       points: fhPoints, lock: false, styles: fhStyles
     }, 'candle_pane');
     fhActive = true;
-  }, { capture: true });
+  }, { capture: true, passive: false });
 
-  container.addEventListener('pointermove', function(e) {
+  // Bắt move trên toàn bộ Window thay vì chỉ Container để nét vẽ không đứt khi kéo nhanh
+  window.addEventListener('pointermove', function(e) {
     if (!fhActive || !fhId) return;
-    e.stopPropagation();
+    e.stopImmediatePropagation();
     e.preventDefault(); 
     
     var rect = container.getBoundingClientRect();
     var x = e.clientX - rect.left;
     var y = e.clientY - rect.top;
     
-    // THUẬT TOÁN CANVA: Lấy mẫu cách nhau 3px giúp nét trơn tuột và không đơ trình duyệt
     var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
     if (dist < 3) return; 
     
@@ -3891,12 +3913,12 @@ function bindCoreEventsOnce() {
     lastFhX = x; lastFhY = y;
     fhPoints.push({ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value });
     
-    // Render theo thời gian thực
     global.tvChart.overrideOverlay({ id: fhId, points: fhPoints });
   }, { capture: true, passive: false });
 
-  var endFh = function() {
+  var endFh = function(e) {
     if (!fhActive) return;
+    e.stopImmediatePropagation();
     fhActive = false;
     if (fhId) {
       var ov = global.tvChart.getOverlayById(fhId);
@@ -3909,9 +3931,9 @@ function bindCoreEventsOnce() {
     }
   };
 
-  container.addEventListener('pointerup', endFh, { capture: true });
-  document.addEventListener('pointerup', endFh, { capture: true });
-  // =========================================================================
+  window.addEventListener('pointerup', endFh, { capture: true });
+  window.addEventListener('pointercancel', endFh, { capture: true });
+  // ====================================================================
   if (_waCoreEventsBound) return; 
   _waCoreEventsBound = true;
 
