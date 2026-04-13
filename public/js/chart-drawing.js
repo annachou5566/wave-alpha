@@ -85,10 +85,11 @@
       render: function(ctx, attrs, styles) {
         var c = attrs.coordinates;
         if (!c || c.length < 2) return;
-        ctx.lineWidth = styles.size || 2;
-        ctx.strokeStyle = styles.color || '#3B82F6';
-        ctx.lineCap = 'round';  // BÍ QUYẾT: Bo tròn 2 đầu nét vẽ
-        ctx.lineJoin = 'round'; // BÍ QUYẾT: Bo tròn các khúc cua
+        // Fix: Lấy trực tiếp size và color (bao gồm độ trong suốt) từ attrs do mình truyền vào
+        ctx.lineWidth = attrs.width || 2;
+        ctx.strokeStyle = attrs.color || '#3B82F6';
+        ctx.lineCap = 'round';  // Bo tròn 2 đầu nét vẽ
+        ctx.lineJoin = 'round'; // Bo tròn các khúc cua
         ctx.beginPath();
         ctx.moveTo(c[0].x, c[0].y);
         for (var i = 1; i < c.length; i++) {
@@ -143,11 +144,21 @@
       totalStep: 1,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
-        var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
-        var c = ref.coordinates.slice(0, realCount);
-        if (c.length < 2) return [];
-        // FIX: Dùng Figure waRoundLine và smoothLine thay cho Line thẳng góc cạnh
-        return [{ type: 'waRoundLine', attrs: { coordinates: smoothLine(c, 3) } }];
+        var pts = ref.overlay.points || [];
+        if (pts.length < 2) return [];
+        // Hack: Tự ánh xạ toạ độ để lách luật totalStep = 1 của KLineChart
+        var c = [];
+        for(var i = 0; i < pts.length; i++) {
+           c.push({
+             x: ref.xAxis.convertToPixel({ dataIndex: pts[i].dataIndex, timestamp: pts[i].timestamp }),
+             y: ref.yAxis.convertToPixel(pts[i].value)
+           });
+        }
+        var ls = ref.overlay.styles && ref.overlay.styles.line ? ref.overlay.styles.line : {};
+        return [{ 
+          type: 'waRoundLine', 
+          attrs: { coordinates: smoothLine(c, 3), width: ls.size || 2, color: ls.color || '#3B82F6' } 
+        }];
       }
     },
     {
@@ -155,11 +166,22 @@
       totalStep: 1,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
-        var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
-        var c = ref.coordinates.slice(0, realCount);
-        if (c.length < 2) return [];
-        // FIX: Vẽ ĐÚNG 1 NÉT siêu mượt. KLineChart sẽ tự lấy độ dày size=16 và opacity để lấp đầy nét.
-        return [{ type: 'waRoundLine', attrs: { coordinates: smoothLine(c, 3) } }];
+        var pts = ref.overlay.points || [];
+        if (pts.length < 2) return [];
+        // Hack: Tự ánh xạ toạ độ để lách luật totalStep = 1 của KLineChart
+        var c = [];
+        for(var i = 0; i < pts.length; i++) {
+           c.push({
+             x: ref.xAxis.convertToPixel({ dataIndex: pts[i].dataIndex, timestamp: pts[i].timestamp }),
+             y: ref.yAxis.convertToPixel(pts[i].value)
+           });
+        }
+        var ls = ref.overlay.styles && ref.overlay.styles.line ? ref.overlay.styles.line : {};
+        // Truyền mặc định màu vàng dạ quang (0.45 opacity) để biểu đồ nến hiện xuyên qua được
+        return [{ 
+          type: 'waRoundLine', 
+          attrs: { coordinates: smoothLine(c, 3), width: ls.size || 16, color: ls.color || 'rgba(255, 235, 59, 0.45)' } 
+        }];
       }
     },
 
