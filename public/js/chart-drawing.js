@@ -70,6 +70,7 @@
     return '#3B82F6'; // Cập nhật màu fallback
   }
 
+  
   // ==========================================
   // 2. KLINECHART EXTENSIONS (CÔNG CỤ VẼ)
   // ==========================================
@@ -77,6 +78,44 @@
     var kc = global.klinecharts;
     if (!kc || kc.__wa_extensions_registered) return;
     kc.__wa_extensions_registered = true;
+
+    // 🔥 1. ĐĂNG KÝ FIGURE NÉT VẼ BO TRÒN CHỐNG RĂNG CƯA
+    kc.registerFigure({
+      name: 'waRoundLine',
+      render: function(ctx, attrs, styles) {
+        var c = attrs.coordinates;
+        if (!c || c.length < 2) return;
+        ctx.lineWidth = styles.size || 2;
+        ctx.strokeStyle = styles.color || '#3B82F6';
+        ctx.lineCap = 'round';  // BÍ QUYẾT: Bo tròn 2 đầu nét vẽ
+        ctx.lineJoin = 'round'; // BÍ QUYẾT: Bo tròn các khúc cua
+        ctx.beginPath();
+        ctx.moveTo(c[0].x, c[0].y);
+        for (var i = 1; i < c.length; i++) {
+          ctx.lineTo(c[i].x, c[i].y);
+        }
+        ctx.stroke();
+      }
+    });
+
+    // 🔥 2. THUẬT TOÁN NỘI SUY (Làm mượt đường đi của chuột)
+    function smoothLine(points, seg) {
+      if (points.length < 3) return points;
+      var out = [];
+      for (var i = 0; i < points.length - 1; i++) {
+        var p0 = points[Math.max(0, i - 1)], p1 = points[i];
+        var p2 = points[i + 1], p3 = points[Math.min(points.length - 1, i + 2)];
+        for (var j = 0; j < seg; j++) {
+          var t = j / seg, t2 = t * t, t3 = t2 * t;
+          out.push({
+            x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+            y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+          });
+        }
+      }
+      out.push(points[points.length - 1]);
+      return out;
+    }
 
     // [TỐI ƯU HÓA SIÊU MƯỢT] Hàm tính toán tia Zero-Allocation (Không dùng Mảng)
     // Giúp loại bỏ hoàn toàn lag giật khi vẽ Pitchfork, Elliott, Mô hình giá
@@ -102,31 +141,25 @@
     {
       name: 'freehandBrush',
       totalStep: 1,
-      needDefaultPointFigure: false,
-      needDefaultXAxisFigure: false,
-      needDefaultYAxisFigure: false,
+      needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
-        // Fix: Lấy số lượng điểm thật, CẮT BỎ điểm preview ảo ở góc trái do KLine tự sinh ra
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
-        
         if (c.length < 2) return [];
-        return [{ type: 'line', attrs: { coordinates: c } }];
+        // FIX: Dùng Figure waRoundLine và smoothLine thay cho Line thẳng góc cạnh
+        return [{ type: 'waRoundLine', attrs: { coordinates: smoothLine(c, 3) } }];
       }
     },
     {
       name: 'highlighter',
       totalStep: 1,
-      needDefaultPointFigure: false,
-      needDefaultXAxisFigure: false,
-      needDefaultYAxisFigure: false,
+      needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
-        // Fix: Cắt bỏ điểm ảo
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
-        
         if (c.length < 2) return [];
-        return [{ type: 'line', attrs: { coordinates: c } }];
+        // FIX: Vẽ ĐÚNG 1 NÉT siêu mượt. KLineChart sẽ tự lấy độ dày size=16 và opacity để lấp đầy nét.
+        return [{ type: 'waRoundLine', attrs: { coordinates: smoothLine(c, 3) } }];
       }
     },
 
@@ -405,35 +438,7 @@
       },
 
       // --- BATCH 5: SHAPES & ARROWS ---
-      {
-        name: 'highlighter', totalStep: 1,
-        needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
-        createPointFigures: function(ref) {
-          var c = ref.coordinates || []; if (c.length < 2) return [];
-          function smooth(points, seg) {
-            if (points.length < 3) return points.slice();
-            var out = [];
-            for (var i = 0; i < points.length - 1; i++) {
-              var p0 = points[i - 1] || points[i], p1 = points[i], p2 = points[i + 1], p3 = points[i + 2] || p2;
-              for (var j = 0; j < seg; j++) {
-                var t = j / seg, t2 = t * t, t3 = t2 * t;
-                out.push({
-                  x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-                  y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
-                });
-              }
-            }
-            out.push(points[points.length - 1]); return out;
-          }
-          var pts = smooth(c, 4); var a = pts[0], z = pts[pts.length - 1];
-          var dx = z.x - a.x, dy = z.y - a.y; var len = Math.sqrt(dx * dx + dy * dy) || 1;
-          var px = -dy / len, py = dx / len; var offs = [-3, -1.5, 0, 1.5, 3]; var figs = [];
-          offs.forEach(function(o) {
-            figs.push({ type: 'line', attrs: { coordinates: pts.map(function(p) { return { x: p.x + px * o, y: p.y + py * o }; }) } });
-          });
-          return figs;
-        }
-      },
+      
       {
         name: 'arrow', totalStep: 3, needDefaultPointFigure: true, needDefaultXAxisFigure: true, needDefaultYAxisFigure: true,
         createPointFigures: function(ref) {
