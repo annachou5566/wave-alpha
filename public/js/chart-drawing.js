@@ -79,6 +79,49 @@
     if (!kc || kc.__wa_extensions_registered) return;
     kc.__wa_extensions_registered = true;
 
+// 🔥 ĐĂNG KÝ FIGURE NÉT VẼ BO TRÒN (SIÊU MƯỢT - CHUẨN TRADINGVIEW)
+kc.registerFigure({
+  name: 'waRoundLine',
+  render: function(ctx, attrs, styles) {
+    var c = attrs.coordinates;
+    if (!c || c.length < 2) return;
+    
+    ctx.lineWidth = styles.size || 2;
+    ctx.strokeStyle = styles.color || '#3B82F6';
+    
+    // 🎯 KHẮC PHỤC GAI NHỌN: Bo tròn 2 đầu và Bo tròn các khúc cua gắt
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    if (styles.style === 'dashed') ctx.setLineDash(styles.dashedValue || [6, 4]);
+    else ctx.setLineDash([]);
+    
+    ctx.beginPath();
+    ctx.moveTo(c[0].x, c[0].y);
+    
+    // 🎯 THUẬT TOÁN ZERO-ALLOCATION: Vẽ đường cong Bezier qua các điểm chuột (Triệt tiêu 100% giật lag)
+    for (var i = 1; i < c.length - 1; i++) {
+      var xc = (c[i].x + c[i + 1].x) / 2;
+      var yc = (c[i].y + c[i + 1].y) / 2;
+      ctx.quadraticCurveTo(c[i].x, c[i].y, xc, yc);
+    }
+    ctx.lineTo(c[c.length - 1].x, c[c.length - 1].y);
+    ctx.stroke();
+  },
+  checkEventOn: function(coord, attrs, styles) {
+    // Thuật toán nhận diện nhấp chuột thông minh (tránh lỗi Crash của KLineChart)
+    var c = attrs.coordinates;
+    if (!c || c.length < 2) return false;
+    var r = Math.max((styles.size || 2) / 2 + 4, 6);
+    for (var i = 0; i < c.length; i++) {
+      var dx = c[i].x - coord.x;
+      var dy = c[i].y - coord.y;
+      if (dx * dx + dy * dy <= r * r) return true;
+    }
+    return false;
+  }
+});
+
     // [TỐI ƯU HÓA SIÊU MƯỢT] Hàm tính toán tia Zero-Allocation (Không dùng Mảng)
     // Giúp loại bỏ hoàn toàn lag giật khi vẽ Pitchfork, Elliott, Mô hình giá
     function fastRayEnd(p, dx, dy, W, H) {
@@ -102,63 +145,28 @@
     // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
     {
       name: 'freehandBrush',
-      totalStep: 1, // 🔥 SỬA CHỖ NÀY THÀNH 1 ĐỂ NGẮT DÍNH CHUỘT
+      totalStep: 1,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
         if (c.length < 2) return [];
-
-        function smooth(points, seg) {
-          if (points.length < 3) return points;
-          var out = [];
-          for (var i = 0; i < points.length - 1; i++) {
-            var p0 = points[Math.max(0, i - 1)], p1 = points[i];
-            var p2 = points[i + 1], p3 = points[Math.min(points.length - 1, i + 2)];
-            for (var j = 0; j < seg; j++) {
-              var t = j / seg, t2 = t * t, t3 = t2 * t;
-              out.push({
-                x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-                y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
-              });
-            }
-          }
-          out.push(points[points.length - 1]);
-          return out;
-        }
-
-        return [{ type: 'line', attrs: { coordinates: smooth(c, 4) } }];
+        
+        // 🚀 Dùng Figure độc quyền waRoundLine siêu mượt thay cho Line thông thường
+        return [{ type: 'waRoundLine', attrs: { coordinates: c } }];
       }
     },
     {
       name: 'highlighter',
-      totalStep: 1, // 🔥 SỬA CHỖ NÀY THÀNH 1 ĐỂ NGẮT DÍNH CHUỘT
+      totalStep: 1,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
         if (c.length < 2) return [];
-
-        function smooth(points, seg) {
-          if (points.length < 3) return points;
-          var out = [];
-          for (var i = 0; i < points.length - 1; i++) {
-            var p0 = points[Math.max(0, i - 1)], p1 = points[i];
-            var p2 = points[i + 1], p3 = points[Math.min(points.length - 1, i + 2)];
-            for (var j = 0; j < seg; j++) {
-              var t = j / seg, t2 = t * t, t3 = t2 * t;
-              out.push({
-                x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-                y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
-              });
-            }
-          }
-          out.push(points[points.length - 1]);
-          return out;
-        }
-
-        // Vẽ 1 nét duy nhất, mượt mà và nhận đúng độ trong suốt (opacity: 0.45)
-        return [{ type: 'line', attrs: { coordinates: smooth(c, 4) } }];
+        
+        // 🚀 Dùng Figure độc quyền waRoundLine siêu mượt
+        return [{ type: 'waRoundLine', attrs: { coordinates: c } }];
       }
     },
 
