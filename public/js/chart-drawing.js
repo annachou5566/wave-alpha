@@ -97,29 +97,39 @@
     function getDistance(c1, c2) { return Math.sqrt(Math.pow(c1.x - c2.x, 2) + Math.pow(c1.y - c2.y, 2)); }
     
     const extensions = [
-        // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
-  {
-    name: 'freehandBrush',
-    totalStep: Number.MAX_SAFE_INTEGER,
-    needDefaultPointFigure: false,
-    needDefaultXAxisFigure: false,
-    needDefaultYAxisFigure: false,
-    createPointFigures: function(ref) {
-      if (ref.coordinates.length < 2) return [];
-      return [{ type: 'line', attrs: { coordinates: ref.coordinates } }];
-    }
-  },
-  {
-    name: 'highlighter',
-    totalStep: Number.MAX_SAFE_INTEGER,
-    needDefaultPointFigure: false,
-    needDefaultXAxisFigure: false,
-    needDefaultYAxisFigure: false,
-    createPointFigures: function(ref) {
-      if (ref.coordinates.length < 2) return [];
-      return [{ type: 'line', attrs: { coordinates: ref.coordinates } }];
-    }
-  },
+   
+    // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
+    {
+      name: 'freehandBrush',
+      totalStep: Number.MAX_SAFE_INTEGER,
+      needDefaultPointFigure: false,
+      needDefaultXAxisFigure: false,
+      needDefaultYAxisFigure: false,
+      createPointFigures: function(ref) {
+        // Fix: Lấy số lượng điểm thật, CẮT BỎ điểm preview ảo ở góc trái do KLine tự sinh ra
+        var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
+        var c = ref.coordinates.slice(0, realCount);
+        
+        if (c.length < 2) return [];
+        return [{ type: 'line', attrs: { coordinates: c } }];
+      }
+    },
+    {
+      name: 'highlighter',
+      totalStep: Number.MAX_SAFE_INTEGER,
+      needDefaultPointFigure: false,
+      needDefaultXAxisFigure: false,
+      needDefaultYAxisFigure: false,
+      createPointFigures: function(ref) {
+        // Fix: Cắt bỏ điểm ảo
+        var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
+        var c = ref.coordinates.slice(0, realCount);
+        
+        if (c.length < 2) return [];
+        return [{ type: 'line', attrs: { coordinates: c } }];
+      }
+    },
+
       // --- BATCH 1: LINES NÂNG CAO ---
       {
         name: 'extendedLine', totalStep: 3,
@@ -3824,79 +3834,84 @@ var _waCoreEventsBound = false;
 var _cachedContainer = null; // ✅ FIX 5: Cache chart container
 
 function bindCoreEventsOnce() {
-    // ====== ENGINE BÚT VẼ TỰ DO / HIGHLIGHTER ======
-    var fhActive = false;
-    var fhId = null;
-    var fhPoints = [];
-    var lastFhX = 0, lastFhY = 0;
-    var container = document.getElementById('sc-chart-container');
+      // ====== ENGINE BÚT VẼ TỰ DO / HIGHLIGHTER (PHIÊN BẢN MƯỢT MÀ NHẤT) ======
+  var fhActive = false;
+  var fhId = null;
+  var fhPoints = [];
+  var lastFhX = 0, lastFhY = 0;
+  var container = document.getElementById('sc-chart-container');
+  
+  container.addEventListener('pointerdown', function(e) {
+    if (window.waCurrentFreehandTool !== 'freehandBrush' && window.waCurrentFreehandTool !== 'highlighter') return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     
-    // Bắt đầu đè chuột / chạm bút
-    container.addEventListener('pointerdown', function(e) {
-      if (window.waCurrentFreehandTool !== 'freehandBrush' && window.waCurrentFreehandTool !== 'highlighter') return;
-      if (e.pointerType === 'mouse' && e.button !== 0) return; // Chỉ nhận click chuột trái hoặc bút/touch
-      
-      e.stopPropagation(); // Ép KLineChart ngưng bắt sự kiện để chart không bị kéo lê
-      
-      var rect = container.getBoundingClientRect();
-      var x = e.clientX - rect.left;
-      var y = e.clientY - rect.top;
-      
-      lastFhX = x; lastFhY = y;
-      var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
-      fhPoints = [{ timestamp: p.timestamp, value: p.value }];
-      
-      // Xét màu và nét vẽ
-      var fhStyles = window.waCurrentFreehandTool === 'highlighter' 
-        ? { line: { size: 16, color: 'rgba(255, 235, 59, 0.45)', style: 'solid' } } // Màu dạ quang
-        : { line: { size: 2, color: '#3B82F6', style: 'solid' } }; // Màu xanh bút mực
-      
-      fhId = global.tvChart.createOverlay({
-        name: window.waCurrentFreehandTool,
-        points: fhPoints, lock: false, styles: fhStyles
-      }, 'candle_pane');
-      fhActive = true;
-    }, { capture: true });
-  
-    // Kéo lướt để vẽ liên tục
-    container.addEventListener('pointermove', function(e) {
-      if (!fhActive || !fhId) return;
-      e.stopPropagation();
-      e.preventDefault(); // Khóa cuộn trang khi vẽ bằng ngón tay
-      
-      var rect = container.getBoundingClientRect();
-      var x = e.clientX - rect.left;
-      var y = e.clientY - rect.top;
-      
-      // TỐI ƯU SIÊU MƯỢT: Khoảng cách > 3px mới vẽ điểm tiếp theo (Chống giật lag)
-      var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
-      if (dist < 3) return;
-      
-      lastFhX = x; lastFhY = y;
-      var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
-      fhPoints.push({ timestamp: p.timestamp, value: p.value });
-      
-      global.tvChart.overrideOverlay({ id: fhId, points: fhPoints });
-    }, { capture: true, passive: false });
-  
-    // Nhả chuột / Nhấc bút
-    var endFh = function() {
-      if (!fhActive) return;
-      fhActive = false;
-      if (fhId) {
-        var ov = global.tvChart.getOverlayById(fhId);
-        if (ov) {
-           if (typeof watrackOverlay === 'function') watrackOverlay(ov);
-           if (typeof saveHistory === 'function') saveHistory({ action: 'add', overlay: ov });
-        }
-        fhId = null; fhPoints = [];
-        if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+    e.stopPropagation(); 
+    
+    var rect = container.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var y = e.clientY - rect.top;
+    
+    // Tối ưu an toàn tọa độ (Fix lỗi nhòe nét)
+    var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
+    if (!p || typeof p.value !== 'number') return;
+    
+    lastFhX = x; lastFhY = y;
+    
+    // Lưu BẮT BUỘC cả dataIndex và timestamp
+    fhPoints = [{ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value }];
+    
+    // Tùy chỉnh màu mặc định ở đây (bạn có thể thay đổi mã màu HEX/RGBA)
+    var fhStyles = window.waCurrentFreehandTool === 'highlighter' 
+      ? { line: { size: 16, color: 'rgba(255, 235, 59, 0.45)', style: 'solid' } } // Vàng dạ quang
+      : { line: { size: 3, color: '#3B82F6', style: 'solid' } }; // Xanh dương
+    
+    fhId = global.tvChart.createOverlay({
+      name: window.waCurrentFreehandTool,
+      points: fhPoints, lock: false, styles: fhStyles
+    }, 'candle_pane');
+    fhActive = true;
+  }, { capture: true });
+
+  container.addEventListener('pointermove', function(e) {
+    if (!fhActive || !fhId) return;
+    e.stopPropagation();
+    e.preventDefault(); 
+    
+    var rect = container.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var y = e.clientY - rect.top;
+    
+    // THUẬT TOÁN CANVA: Lấy mẫu cách nhau 3px giúp nét trơn tuột và không đơ trình duyệt
+    var dist = Math.sqrt(Math.pow(x - lastFhX, 2) + Math.pow(y - lastFhY, 2));
+    if (dist < 3) return; 
+    
+    var p = global.tvChart.convertFromPixel({ x: x, y: y }, 'candle_pane');
+    if (!p || typeof p.value !== 'number') return;
+    
+    lastFhX = x; lastFhY = y;
+    fhPoints.push({ dataIndex: p.dataIndex, timestamp: p.timestamp, value: p.value });
+    
+    // Render theo thời gian thực
+    global.tvChart.overrideOverlay({ id: fhId, points: fhPoints });
+  }, { capture: true, passive: false });
+
+  var endFh = function() {
+    if (!fhActive) return;
+    fhActive = false;
+    if (fhId) {
+      var ov = global.tvChart.getOverlayById(fhId);
+      if (ov) {
+         if (typeof watrackOverlay === 'function') watrackOverlay(ov);
+         if (typeof saveHistory === 'function') saveHistory({ action: 'add', overlay: ov });
       }
-    };
-  
-    container.addEventListener('pointerup', endFh, { capture: true });
-    document.addEventListener('pointerup', endFh, { capture: true });
-    // ================================================
+      fhId = null; fhPoints = [];
+      if (typeof global.wasaveAllOverlays === 'function') global.wasaveAllOverlays();
+    }
+  };
+
+  container.addEventListener('pointerup', endFh, { capture: true });
+  document.addEventListener('pointerup', endFh, { capture: true });
+  // =========================================================================
   if (_waCoreEventsBound) return; 
   _waCoreEventsBound = true;
 
