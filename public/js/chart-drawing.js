@@ -3185,6 +3185,36 @@ function showFloatToolbar(ov, posX, posY) {
   } else if (cat === 'shapes') {
     html += fbCpBtn('wa-fb-cp-border', cBorder, svgBorder, 'Màu viền');
     html += fbCpBtn('wa-fb-cp-bg', cBg, svgBg, 'Màu nền');
+  
+  // 🔥 THÊM GIAO DIỆN THANH TRƯỢT CHO NHÓM CỌ VẼ / DẠ QUANG
+  } else if (cat === 'brush') {
+    var isHL = ov.name === 'highlighter';
+    var lw = ns.line && ns.line.size !== undefined ? ns.line.size : (isHL ? 16 : 3);
+    var lo = 1;
+    if (ns.line && ns.line.color && ns.line.color.startsWith('rgba')) {
+      var m = ns.line.color.match(/rgba\([^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+)\)/);
+      if (m) lo = parseFloat(m[1]);
+    } else if (isHL) lo = 0.45;
+
+    html += fbCpBtn('wa-fb-cp-border', cBorder, svgBorder, 'Màu nét vẽ');
+    html += '<div class="wa-fb-sep"></div>';
+    
+    // Giao diện thanh trượt Size
+    html += '<div style="display:flex; align-items:center; gap:6px; padding:0 4px;" title="Độ dày cọ">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8896A7" stroke-width="2"><circle cx="12" cy="12" r="5"/></svg>';
+    html += '<input type="range" class="wa-fb-rng" id="wa-fb-size" min="1" max="40" step="1" value="'+lw+'" style="width:60px;" oninput="this.nextElementSibling.innerText=this.value">';
+    html += '<span style="color:#60A5FA; font-size:10px; font-family:monospace; min-width:16px; text-align:right;">'+lw+'</span>';
+    html += '</div>';
+
+    html += '<div class="wa-fb-sep"></div>';
+    
+    // Giao diện thanh trượt Opacity
+    html += '<div style="display:flex; align-items:center; gap:6px; padding:0 4px;" title="Độ đậm nhạt (Opacity)">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8896A7" stroke-width="2"><path d="M12 22C6.5 22 2 17.5 2 12S6.5 2 12 2s10 4.5 10 10-4.5 10-10 10zM12 2v20"/></svg>';
+    html += '<input type="range" class="wa-fb-rng" id="wa-fb-opacity" min="0.05" max="1" step="0.05" value="'+lo+'" style="width:50px;" oninput="this.nextElementSibling.innerText=Math.round(this.value*100)+\'%\'">';
+    html += '<span style="color:#60A5FA; font-size:10px; font-family:monospace; min-width:24px; text-align:right;">'+Math.round(lo*100)+'%</span>';
+    html += '</div>';
+    
   } else {
     html += fbCpBtn('wa-fb-cp-border', cBorder, svgBorder, 'Màu nét / viền');
   }
@@ -3204,7 +3234,13 @@ function showFloatToolbar(ov, posX, posY) {
   bar.style.transform = 'translateY(6px) scale(0.97)';
   bar.style.transition = 'none';
   container.appendChild(bar);
-
+// CSS cho thanh trượt kéo trên Floating Toolbar
+if (!document.getElementById('wa-fb-rng-style')) {
+  var stRng = document.createElement('style');
+  stRng.id = 'wa-fb-rng-style';
+  stRng.innerHTML = '.wa-fb-rng{-webkit-appearance:none;height:3px;background:#273040;border-radius:2px;outline:none;cursor:pointer;}.wa-fb-rng::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#3B82F6;cursor:pointer;transition:transform 0.1s;}.wa-fb-rng::-webkit-slider-thumb:hover{transform:scale(1.2);}';
+  document.head.appendChild(stRng);
+}
   // Nhúng Style an toàn cho Popup Màu (đẹp chuẩn như Cài Đặt)
   if (!document.getElementById('wa-fb-pop-style')) {
     var st = document.createElement('style');
@@ -3316,7 +3352,56 @@ function showFloatToolbar(ov, posX, posY) {
         }
       });
     }
+// 🔥 BẮT SỰ KIỆN KÉO THANH TRƯỢT SIZE & OPACITY (CHỈ ÁP DỤNG CHO CỌ VẼ)
+if (cat === 'brush') {
+  var sizeSlider = bar.querySelector('#wa-fb-size');
+  var opSlider = bar.querySelector('#wa-fb-opacity');
 
+  function updateBrushStyle() {
+    if (!global.tvChart) return;
+    var objS = JSON.parse(JSON.stringify(ov.styles || {}));
+    if (!objS.line) objS.line = {};
+    
+    var newSize = sizeSlider ? parseInt(sizeSlider.value) : (objS.line.size || 3);
+    var newOp = opSlider ? parseFloat(opSlider.value) : 1;
+    var currentColor = objS.line.color || '#3B82F6';
+    
+    // Tách xuất mã HEX màu để nối với Opacity mới
+    var hex = '#3B82F6';
+    if (currentColor.startsWith('#')) {
+        hex = currentColor.slice(0, 7);
+    } else {
+        var m = currentColor.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        if (m) hex = '#' + parseInt(m[1]).toString(16).padStart(2,'0') + parseInt(m[2]).toString(16).padStart(2,'0') + parseInt(m[3]).toString(16).padStart(2,'0');
+    }
+    
+    var r = parseInt(hex.slice(1,3), 16)||0, g = parseInt(hex.slice(3,5), 16)||0, b = parseInt(hex.slice(5,7), 16)||0;
+    objS.line.color = 'rgba('+r+','+g+','+b+','+newOp+')';
+    objS.line.size = newSize;
+    
+    ov.styles = objS;
+    global.tvChart.overrideOverlay({ id: ov.id, styles: objS });
+    
+    // Lưu cấu hình vào biến nhớ để lần vẽ sau tự áp dụng
+    if (!toolStyles.brush) toolStyles.brush = {};
+    if (ov.name === 'highlighter') {
+        toolStyles.brush.hlWidth = newSize;
+        toolStyles.brush.hlOpacity = newOp;
+    } else {
+        toolStyles.brush.lineWidth = newSize;
+        toolStyles.brush.lineOpacity = newOp;
+    }
+    if (typeof saveStyles === 'function') saveStyles();
+    if (typeof saveAllOverlays === 'function') saveAllOverlays();
+  }
+
+  if (sizeSlider) sizeSlider.addEventListener('input', updateBrushStyle);
+  if (opSlider) opSlider.addEventListener('input', updateBrushStyle);
+  
+  // Chặn thao tác kéo thanh trượt bị nhầm thành thao tác kéo di chuyển Toolbar
+  if (sizeSlider) { sizeSlider.addEventListener('mousedown', function(e){ e.stopPropagation(); }); sizeSlider.addEventListener('touchstart', function(e){ e.stopPropagation(); }, {passive: false}); }
+  if (opSlider) { opSlider.addEventListener('mousedown', function(e){ e.stopPropagation(); }); opSlider.addEventListener('touchstart', function(e){ e.stopPropagation(); }, {passive: false}); }
+}
     // Callbacks xử lý đổi màu cho từng loại: CHỮ / VIỀN / NỀN
     bindColorPicker('wa-fb-cp-text', function(hex) {
       if (!global.tvChart) return;
