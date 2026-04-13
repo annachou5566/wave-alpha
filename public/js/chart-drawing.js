@@ -97,6 +97,50 @@
     function getDistance(c1, c2) { return Math.sqrt(Math.pow(c1.x - c2.x, 2) + Math.pow(c1.y - c2.y, 2)); }
     
     const extensions = [
+      
+      {
+        name: 'brush',
+        totalStep: Number.MAX_SAFE_INTEGER,
+        needDefaultPointFigure: true,
+        needDefaultXAxisFigure: false,
+        needDefaultYAxisFigure: false,
+        createPointFigures: function(ref) {
+          var c = ref.coordinates;
+          if (c.length < 2) return [];
+          
+          // Thuật toán làm mượt nét vẽ (Catmull-Rom Spline) giống Canva/Powerpoint
+          function smooth(points, seg) {
+            if (points.length < 3) return points.slice();
+            var out = [];
+            for (var i = 0; i < points.length - 1; i++) {
+              var p0 = points[i === 0 ? i : i - 1];
+              var p1 = points[i];
+              var p2 = points[i + 1];
+              var p3 = points[i + 2] || p2;
+              for (var j = 0; j < seg; j++) {
+                var t = j / seg, t2 = t * t, t3 = t2 * t;
+                out.push({
+                  x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+                  y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+                });
+              }
+            }
+            out.push(points[points.length - 1]);
+            return out;
+          }
+    
+          return [
+            {
+              type: 'line', // KLineCharts sẽ tự động render các tọa độ liên tiếp thành nét liền
+              attrs: { coordinates: smooth(c, 3) } 
+            }
+          ];
+        },
+        performEventPressedMove: function(ref) {
+          // Quan trọng nhất: Bắt sự kiện người dùng "giữ & kéo chuột" (drag) để thêm điểm vẽ
+          ref.points.push(ref.performPoint);
+        }
+      },
       // --- BATCH 1: LINES NÂNG CAO ---
       {
         name: 'extendedLine', totalStep: 3,
@@ -2147,6 +2191,7 @@
 
   const SVG = {
     ptr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>`,
+    brush: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>',
     line: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="5" r="1.5"/></svg>`,
     linesAdv: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="17" x2="22" y2="7"/><polyline points="2,17 6,13"/><polyline points="22,7 18,11"/><line x1="2" y1="22" x2="22" y2="22" stroke-dasharray="3 2"/></svg>`,
     fibo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>`,
@@ -2182,6 +2227,7 @@
       icon: SVG.shape, 
       tools: [ 
         {id: 'header', n: 'Hình Khối'},
+        { id: 'brush', n: 'Bút vẽ (Brush)' },
         {id: 'rectangle', n: 'Hình chữ nhật'}, {id: 'rotatedRectangle', n: 'Chữ nhật xoay'}, {id: 'circle', n: 'Vòng tròn'}, {id: 'ellipse', n: 'Hình ellipse'}, {id: 'triangle', n: 'Tam giác'}, {id: 'parallelogram', n: 'Hình bình hành'}, 
         {id: 'divider'},
         {id: 'header', n: 'Mũi Tên & Đường Dẫn'},
