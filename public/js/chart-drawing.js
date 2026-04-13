@@ -102,24 +102,41 @@
     // BATCH 9: FREEHAND DRAWING (BÚT VẼ TỰ DO & HIGHLIGHTER)
     {
       name: 'freehandBrush',
-      totalStep: 1, // Sửa lỗi dính trỏ chuột
+      totalStep: 1,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
         if (c.length < 2) return [];
 
-        // 🚀 Thuật toán Chaikin: Vát tròn góc gắt tự động (Triệt tiêu hoàn toàn gai nhọn & zigzag)
-        function smooth(points) {
+        function superSmooth(points) {
             if (points.length < 3) return points;
-            var out = points;
-            // Vát góc 2 lần để tạo độ mượt tuyệt đối nhưng không làm lag CPU
-            for (var k = 0; k < 2; k++) {
-                var next = [];
-                next.push(out[0]);
-                for (var i = 0; i < out.length - 1; i++) {
-                    next.push({ x: 0.75 * out[i].x + 0.25 * out[i+1].x, y: 0.75 * out[i].y + 0.25 * out[i+1].y });
-                    next.push({ x: 0.25 * out[i].x + 0.75 * out[i+1].x, y: 0.25 * out[i].y + 0.75 * out[i+1].y });
+            
+            // LỚP 1: LỌC NHIỄU ZIGZAG (Loại bỏ các điểm bị KLineChart snap dồn cục vào 1 nến)
+            var simplified = [points[0]];
+            var last = points[0];
+            for (var i = 1; i < points.length; i++) {
+                var dx = points[i].x - last.x;
+                var dy = points[i].y - last.y;
+                if (dx * dx + dy * dy > 64) { // Tương đương khoảng cách 8px
+                    simplified.push(points[i]);
+                    last = points[i];
+                }
+            }
+            if (simplified[simplified.length - 1] !== points[points.length - 1]) {
+                simplified.push(points[points.length - 1]);
+            }
+            if (simplified.length < 3) return simplified;
+
+            // LỚP 2: B-SPLINE CẤP ĐỘ 3 (Làm cong hoàn hảo không tì vết)
+            var out = simplified;
+            for (var k = 0; k < 3; k++) {
+                var next = [out[0]];
+                for (var j = 0; j < out.length - 1; j++) {
+                    var p0 = out[j];
+                    var p1 = out[j + 1];
+                    next.push({ x: 0.75 * p0.x + 0.25 * p1.x, y: 0.75 * p0.y + 0.25 * p1.y });
+                    next.push({ x: 0.25 * p0.x + 0.75 * p1.x, y: 0.25 * p0.y + 0.75 * p1.y });
                 }
                 next.push(out[out.length - 1]);
                 out = next;
@@ -127,28 +144,43 @@
             return out;
         }
 
-        return [{ type: 'line', attrs: { coordinates: smooth(c) } }];
+        return [{ type: 'line', attrs: { coordinates: superSmooth(c) } }];
       }
     },
     {
       name: 'highlighter',
-      totalStep: 1, // Sửa lỗi dính trỏ chuột
+      totalStep: 1,
       needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
       createPointFigures: function(ref) {
         var realCount = ref.overlay.points ? ref.overlay.points.length : 0;
         var c = ref.coordinates.slice(0, realCount);
         if (c.length < 2) return [];
 
-        // 🚀 Dùng chung thuật toán mượt mà cho bút Highlight
-        function smooth(points) {
+        function superSmooth(points) {
             if (points.length < 3) return points;
-            var out = points;
-            for (var k = 0; k < 2; k++) {
-                var next = [];
-                next.push(out[0]);
-                for (var i = 0; i < out.length - 1; i++) {
-                    next.push({ x: 0.75 * out[i].x + 0.25 * out[i+1].x, y: 0.75 * out[i].y + 0.25 * out[i+1].y });
-                    next.push({ x: 0.25 * out[i].x + 0.75 * out[i+1].x, y: 0.25 * out[i].y + 0.75 * out[i+1].y });
+            var simplified = [points[0]];
+            var last = points[0];
+            for (var i = 1; i < points.length; i++) {
+                var dx = points[i].x - last.x;
+                var dy = points[i].y - last.y;
+                if (dx * dx + dy * dy > 64) {
+                    simplified.push(points[i]);
+                    last = points[i];
+                }
+            }
+            if (simplified[simplified.length - 1] !== points[points.length - 1]) {
+                simplified.push(points[points.length - 1]);
+            }
+            if (simplified.length < 3) return simplified;
+
+            var out = simplified;
+            for (var k = 0; k < 3; k++) {
+                var next = [out[0]];
+                for (var j = 0; j < out.length - 1; j++) {
+                    var p0 = out[j];
+                    var p1 = out[j + 1];
+                    next.push({ x: 0.75 * p0.x + 0.25 * p1.x, y: 0.75 * p0.y + 0.25 * p1.y });
+                    next.push({ x: 0.25 * p0.x + 0.75 * p1.x, y: 0.25 * p0.y + 0.75 * p1.y });
                 }
                 next.push(out[out.length - 1]);
                 out = next;
@@ -156,7 +188,7 @@
             return out;
         }
 
-        return [{ type: 'line', attrs: { coordinates: smooth(c) } }];
+        return [{ type: 'line', attrs: { coordinates: superSmooth(c) } }];
       }
     },
 
