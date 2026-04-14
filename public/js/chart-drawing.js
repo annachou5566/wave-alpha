@@ -2493,13 +2493,13 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var posX, posY;
     var isEditMode = false;
     var name = ov ? (ov.name || toolId) : toolId;
+    var container = document.getElementById('sc-chart-container');
   
-    // 1. TÍNH TOẠ ĐỘ PIXEL PERFECT VÀ BÙ TRỪ KHOẢNG ĐỆM
+    // 1. TÍNH TOẠ ĐỘ PIXEL PERFECT TƯƠNG ĐỐI VỚI CONTAINER
     if (ov && ov.points && ov.points.length > 0) {
       try {
         var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
         if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
-        var container = document.getElementById('sc-chart-container');
         
         if (container && chartObj && typeof chartObj.convertToPixel === 'function') {
             var lastPt = ov.points[ov.points.length - 1];
@@ -2515,13 +2515,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
             );
   
             if (pixelInfo) {
-                var rect = container.getBoundingClientRect();
-                posX = rect.left + pixelInfo.x;
-                posY = rect.top + pixelInfo.y;
+                // 🔥 FIX LỆCH MOBILE: Lấy toạ độ tuyệt đối bên trong container (Không cộng thêm rect.top/left nữa)
+                posX = pixelInfo.x;
+                posY = pixelInfo.y;
                 
-                // KHẮC PHỤC LỖI LỆCH PIXEL DO LINE-HEIGHT CỦA HTML
-                var halfLeading = 3; // HTML tự sinh 3px khoảng trống trên/dưới chữ
-                posX -= 1; // Bù trừ lề trái tàng hình của Textarea
+                var halfLeading = 3; 
+                posX -= 1; 
   
                 if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
                 else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
@@ -2532,7 +2531,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 else if (name === 'flagMarker') { posX += 26; posY -= 23; }
                 else if (name === 'signpost') { 
                     posX += 18; 
-                    // Nếu signpost lật sang trái
                     if (ov.points.length > 1) {
                         var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
                         if (pt0 && pixelInfo.x < pt0.x) posX -= 36;
@@ -2545,11 +2543,14 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) { console.log(e); }
     }
   
-    // Fallback an toàn
-    if (!posX) posX = window.waMouseX || window.innerWidth / 2;
-    if (!posY) posY = window.waMouseY || window.innerHeight / 2;
+    // Fallback an toàn nếu chưa có tọa độ
+    if (!posX && container) {
+       var rect = container.getBoundingClientRect();
+       posX = (window.waMouseX || window.innerWidth / 2) - rect.left;
+       posY = (window.waMouseY || window.innerHeight / 2) - rect.top;
+    }
   
-    // 2. TẠO Ô NHẬP LIỆU (TÀNG HÌNH 100%, ĐỒNG BỘ NÉT CHỮ)
+    // 2. TẠO Ô NHẬP LIỆU (ÉP CHẾ ĐỘ ABSOLUTE ĐỂ CHỐNG TRƯỢT THEO BÀN PHÍM ẢO)
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     var defaultText = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
@@ -2559,7 +2560,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
     var textAlign = 'left';
   
-    // Fix căn lề phải cho biển chỉ dẫn lật ngược
     if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && typeof chartObj !== 'undefined') {
         var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
         if (pt0 && pixelInfo && pixelInfo.x < pt0.x) {
@@ -2568,11 +2568,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         }
     }
   
-    // Khớp line-height tuyệt đối với code Canvas (size + 6)
     var exactLineHeight = curSize + 6;
   
+    // 🔥 FIX LỆCH MOBILE: Đổi position thành absolute, nhúng thẳng vào container, gỡ bỏ mọi format gốc của Apple/Android
     input.style.cssText = `
-      position: fixed; 
+      position: absolute; 
       left: ${posX}px; 
       top: ${posY}px;
       transform: ${transformCSS};
@@ -2597,8 +2597,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       white-space: pre; 
       caret-color: ${curColor};
       box-sizing: content-box;
+      border-radius: 0;
+      -webkit-appearance: none;
     `;
-    document.body.appendChild(input);
+    
+    // 🔥 GẮN VÀO CONTAINER THAY VÌ DOCUMENT BODY
+    if (container) container.appendChild(input);
   
     function resizeInput() {
        input.style.height = '0px'; 
