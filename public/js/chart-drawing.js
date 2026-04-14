@@ -2012,18 +2012,19 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
       }
       .wa-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-      /* ===== FLOATING TOOLBAR ===== */
+    
+/* ===== FLOATING TOOLBAR ===== */
 .wa-float-bar {
   position: absolute;
   z-index: 1002;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* 🔥 KHÔNG CHO RỚT DÒNG */
   align-items: center;
-  gap: 1px;
-  padding: 4px 8px;
+  gap: 2px; /* Thu hẹp khoảng cách mặc định */
+  padding: 4px;
   background: #1C242E;
   border: 1px solid #273040;
-  border-radius: 10px;
+  border-radius: 8px; /* Bo góc gọn gàng hơn */
   box-shadow: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05);
   backdrop-filter: blur(20px);
   opacity: 0;
@@ -2032,8 +2033,17 @@
   pointer-events: none;
   user-select: none;
   font-family: Be Vietnam Pro, Inter, sans-serif;
+  
+  /* 🔥 GIỚI HẠN KÍCH THƯỚC & CUỘN NGANG MƯỢT MÀ TRÊN MOBILE */
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
+.wa-float-bar::-webkit-scrollbar { display: none; } /* Ẩn thanh cuộn cho thẩm mỹ */
 .wa-float-bar.wa-fb-show { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+
+
 .wa-fb-color-wrap {
   width: 26px; height: 26px; border-radius: 6px; position: relative;
   border: 1.5px solid #273040; overflow: hidden; cursor: pointer; flex-shrink: 0;
@@ -2134,8 +2144,17 @@
     opacity: 0 !important;
   }
   .wa-props-panel.show { transform: translateY(0) !important; opacity: 1 !important; }
-  .wa-float-bar { gap: 2px !important; padding: 6px 10px !important; }
-  .wa-fb-btn { min-width: 40px !important; min-height: 40px !important; }
+  
+  /* 🔥 ÉP THANH NỔI GỌN GÀNG CHUẨN TRADINGVIEW */
+  .wa-float-bar { gap: 0px !important; padding: 4px !important; border-radius: 8px !important; }
+  .wa-fb-btn { min-width: 32px !important; min-height: 32px !important; margin: 0 1px !important; }
+  .wa-fb-color-wrap { width: 22px !important; height: 22px !important; margin: 0 4px !important; }
+  .wa-fb-sep { margin: 0 4px !important; height: 16px !important; }
+  
+  /* Thu ngắn thanh kéo size/opacity để tiết kiệm không gian */
+  input[type="range"][style*="width:60px"], 
+  input[type="range"][style*="width:50px"] { width: 40px !important; }
+  
   ._rng { height: 8px !important; }
   ._rng::-webkit-slider-thumb { width: 18px !important; height: 18px !important; }
   ._cpb { min-height: 40px !important; }
