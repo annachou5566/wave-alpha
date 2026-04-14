@@ -2677,14 +2677,18 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var config = {
       name: toolId, extendData: initialData || '',
-onDrawEnd: function(event) {
-  isDrawingSessionActive = false;
-  if (!overlayId && event && event.overlay) {
-      overlayId = event.overlay.id;
-      openEditor(event.overlay ? event.overlay.extendData : '', event.overlay ? event.overlay.styles : {});
-  }
-  return false;
-},
+      onDrawEnd: function(event) {
+        isDrawingSessionActive = false;
+        var ov = event && event.overlay ? event.overlay : null;
+        if (ov) {
+            overlayId = ov.id;
+            // 🔥 TỰ ĐỘNG BẬT BÀN PHÍM: Gọi Editor ngay khi vừa chấm thả Text lên biểu đồ
+            setTimeout(function() {
+                openEditor(ov.extendData || '', ov.styles || {});
+            }, 50);
+        }
+        return false;
+      },
       onDoubleClick: function(event) {
         var ov = event && event.overlay ? event.overlay : null;
         if (ov) {
@@ -2741,9 +2745,12 @@ onDrawEnd: function(event) {
     return 'lines'; 
   }
 
-  function renderPanel(overlay) {
+  function renderPanel(overlay, forceOpen) {
     var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
+
+    // 🔥 BÍ QUYẾT: Chặn tự động mở bảng trên màn hình điện thoại (Chỉ mở khi bấm thủ công)
+    if (window.innerWidth <= 768 && !forceOpen) return;
 
     // --- BẮT ĐẦU: LOGIC KÉO THẢ ---
     if (!panel.dataset.dragSetup) {
@@ -3481,7 +3488,9 @@ if (cat === 'brush') {
 
     // Các tính năng cơ bản
     bar.querySelector('#wa-fb-vis').addEventListener('click', function() { _fbToggleVisible(ov); });
-    bar.querySelector('#wa-fb-cfg').addEventListener('click', function() { if (typeof renderPanel === 'function') renderPanel(ov); });
+    bar.querySelector('#wa-fb-cfg').addEventListener('click', function() { 
+      if (typeof renderPanel === 'function') renderPanel(ov, true); // Chuyền thêm biến 'true' để ép mở trên Mobile
+  });
     bar.querySelector('#wa-fb-lk').addEventListener('click', function() { _fbToggleLock(ov); });
     bar.querySelector('#wa-fb-rm').addEventListener('click', function() {
       if (!global.tvChart) return;
