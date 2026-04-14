@@ -2672,7 +2672,13 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         var ov = event && event.overlay ? event.overlay : null;
         if (ov) {
             overlayId = ov.id;
-            // 🔥 TỰ ĐỘNG BẬT BÀN PHÍM: Gọi Editor ngay khi vừa chấm thả Text lên biểu đồ
+            
+            // 🔥 FIX: Đưa công cụ Text vào bộ nhớ theo dõi trước khi gọi bàn phím để hệ thống kịp lưu
+            if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
+            if (typeof saveHistory === 'function') saveHistory('add', ov);
+            if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+            
+            // 🔥 TỰ ĐỘNG BẬT BÀN PHÍM
             setTimeout(function() {
                 openEditor(ov.extendData || '', ov.styles || {});
             }, 50);
@@ -4676,27 +4682,29 @@ global.tvChart.subscribeAction('onOverlayDeselected', function() {
   if (typeof window._syncDelSelBtn === 'function') window._syncDelSelBtn(false);
 });
 // ── HẾT THÊM ─────────────────────────────────────────────────
-  global.tvChart.subscribeAction('onDrawEnd', function(data) {
-    isDrawingSessionActive = false;
-    activateTool('pointer');
-    var toolbar = document.querySelector('.wa-toolbar');
-    if (toolbar) {
-      toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
-      var ptr = toolbar.querySelector('[data-tool=pointer]');
-      if (ptr) ptr.classList.add('active');
-    }
-    var overlayObj = Array.isArray(data) ? data[0] : data;
-    if (!overlayObj) return;
-    
-    _wa_trackOverlay(overlayObj); 
+global.tvChart.subscribeAction('onDrawEnd', function(data) {
+  isDrawingSessionActive = false;
+  activateTool('pointer');
+  var toolbar = document.querySelector('.wa-toolbar');
+  if (toolbar) {
+    toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+    var ptr = toolbar.querySelector('[data-tool=pointer]');
+    if (ptr) ptr.classList.add('active');
+  }
+  
+  // 🔥 FIX: Lấy chính xác object hình vẽ từ cấu trúc Event của KLineChart v9
+  var overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
+  if (!overlayObj || !overlayObj.id) return;
+  
+  _wa_trackOverlay(overlayObj); 
 
-    saveHistory('add', overlayObj);
-    currentSelectedOverlay = overlayObj;
-    window.currentSelectedOverlay = overlayObj;
-    if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
-    if (typeof renderPanel === 'function') renderPanel(currentSelectedOverlay);
-saveAllOverlays();
-  });
+  if (typeof saveHistory === 'function') saveHistory('add', overlayObj);
+  currentSelectedOverlay = overlayObj;
+  window.currentSelectedOverlay = overlayObj;
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
+  if (typeof renderPanel === 'function') renderPanel(currentSelectedOverlay);
+  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+});
 
   
 }
