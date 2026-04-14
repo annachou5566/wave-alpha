@@ -3068,7 +3068,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
         currentSelectedOverlay.styles = ns;
         global.tvChart.overrideOverlay({ id: currentSelectedOverlay.id, styles: ns, extendData: currentSelectedOverlay.extendData });
-        if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
+        
+        // 🔥 FIX 1: TẮT RENDER LẠI FLOAT TOOLBAR ĐỂ KHÔNG BỊ ĐỨNG MÁY (FREEZE)
+        // (Chúng ta không cần đập đi xây lại thanh công cụ nổi 60 lần/giây nữa)
+        // if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
       } catch(e) {}
     }
 
@@ -3106,9 +3109,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
       }, true);
 
-      // 2. Chó Săn: Bắt chước theo hành vi của Float Toolbar (Do biểu đồ quản lý)
-      // Nếu biểu đồ giấu FloatToolbar đi (khi bạn click vào nền trống của biểu đồ),
-      // Bảng Properties sẽ TỰ NHẬN BIẾT và lùi lại đóng theo ngay lập tức.
+      // 2. Chó Săn: Bắt chước theo hành vi của Float Toolbar (CÓ DELAY CHỐNG TẮT NHẦM)
+      var hiddenStrikes = 0;
       setInterval(function() {
         var p = document.getElementById('wa-props-panel');
         var f = document.getElementById('wa-float-bar');
@@ -3117,12 +3119,22 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (p && p.classList.contains('show')) {
           var isFloatHidden = !f || f.style.visibility === 'hidden' || f.style.opacity === '0' || f.style.display === 'none';
           if (isFloatHidden) {
-            if (typeof hidePanel === 'function') hidePanel();
-            else p.classList.remove('show');
-            window.currentSelectedOverlay = null; // Chốt hạ xóa bộ nhớ
+            hiddenStrikes++;
+            // 🔥 BÍ QUYẾT: Trễ nhịp. Phải tàng hình liên tục 3 nhịp (450ms) mới được đóng
+            // Điều này triệt tiêu hoàn toàn lỗi bảng tự tắt khi đang thao tác!
+            if (hiddenStrikes >= 3) {
+                if (typeof hidePanel === 'function') hidePanel();
+                else p.classList.remove('show');
+                window.currentSelectedOverlay = null; 
+                hiddenStrikes = 0;
+            }
+          } else {
+            hiddenStrikes = 0; // Trả lại bình thường
           }
+        } else {
+            hiddenStrikes = 0;
         }
-      }, 150); // Theo dõi mỗi 150ms, siêu nhẹ không giật lag
+      }, 150);
     }
   }
 
