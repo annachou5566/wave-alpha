@@ -2749,8 +2749,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var panel = document.getElementById('wa-props-panel');
     if (!panel || !overlay) return;
 
-    // 🔥 BÍ QUYẾT: Chặn tự động mở bảng trên màn hình điện thoại (Chỉ mở khi bấm thủ công)
-    if (window.innerWidth <= 768 && !forceOpen) return;
+    if (!forceOpen && !panel.classList.contains('show')) return;
 
     // --- BẮT ĐẦU: LOGIC KÉO THẢ ---
     if (!panel.dataset.dragSetup) {
@@ -3284,12 +3283,23 @@ if (!document.getElementById('wa-fb-rng-style')) {
 
   requestAnimationFrame(function() {
     // Positioning
-    if (savedLeft !== null) {
+    if (window._wa_fb_pinned_left !== undefined && window._wa_fb_pinned_top !== undefined) {
+      // 🔥 TRƯỜNG HỢP 1: Đã ghim -> Luôn xuất hiện ở vị trí bạn đã kéo tới
+      bar.style.left = window._wa_fb_pinned_left; 
+      bar.style.top = window._wa_fb_pinned_top;
+      bar.style.visibility = 'visible'; bar.style.transition = 'none';
+      bar.style.opacity = '1'; bar.style.transform = 'translateY(0) scale(1)';
+      bar.classList.add('wa-fb-show');
+      
+    } else if (savedLeft !== null) {
+      // Trường hợp 2: Đang chỉnh sửa liên tục -> Đứng yên tại chỗ cũ
       bar.style.left = savedLeft; bar.style.top = savedTop;
       bar.style.visibility = 'visible'; bar.style.transition = 'none';
       bar.style.opacity = '1'; bar.style.transform = 'translateY(0) scale(1)';
       bar.classList.add('wa-fb-show');
+      
     } else {
+      // Trường hợp 3: Lần đầu tiên hiện lên -> Tính toán xuất hiện ngay cạnh mũi chuột/hình vẽ
       var bW = bar.offsetWidth || 180, bH = bar.offsetHeight || 40;
       var MARGIN = 6, BAR_OFFSET_Y = 50;
       var safeBottom = (window.visualViewport && window.visualViewport.height) ? Math.max(0, window.innerHeight - window.visualViewport.height) : 0;
@@ -3299,6 +3309,7 @@ if (!document.getElementById('wa-fb-rng-style')) {
       if (top + bH > rect.height - MARGIN - safeBottom) top = rect.height - bH - MARGIN - safeBottom;
       left = Math.max(MARGIN, Math.min(left, rect.width - bW - MARGIN));
       bar.style.left = left + 'px'; bar.style.top = top + 'px';
+      
       bar.style.visibility = 'visible';
       bar.style.transition = 'opacity 0.16s ease, transform 0.16s cubic-bezier(0.34,1.56,0.64,1)';
       requestAnimationFrame(function() {
@@ -3537,8 +3548,10 @@ if (cat === 'brush') {
         if (isDragging) {
           isDragging = false; 
           dragHandle.style.cursor = 'grab';
-          var r = bar.getBoundingClientRect(); 
-          _fbX = r.left; _fbY = r.top;
+          
+          // 🔥 BÍ QUYẾT: Ghi nhớ vị trí cố định vĩnh viễn sau khi bạn kéo thả
+          window._wa_fb_pinned_left = bar.style.left;
+          window._wa_fb_pinned_top = bar.style.top;
           
           document.removeEventListener('mousemove', onDragMove);
           document.removeEventListener('touchmove', onDragMove);
