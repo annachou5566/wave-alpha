@@ -3495,22 +3495,48 @@ if (cat === 'brush') {
     var dragHandle = bar.querySelector('#wa-fb-drag');
     if (dragHandle) {
       var isDragging = false, startX, startY, initLeft, initTop;
-      dragHandle.addEventListener('mousedown', function(e) {
-        isDragging = true; startX = e.clientX; startY = e.clientY;
-        initLeft = parseFloat(bar.style.left) || 0; initTop = parseFloat(bar.style.top) || 0;
-        dragHandle.style.cursor = 'grabbing'; e.preventDefault();
-      });
-      document.addEventListener('mousemove', function(e) {
+      
+      function onDragMove(e) {
         if (!isDragging) return;
-        bar.style.left = (initLeft + e.clientX - startX) + 'px';
-        bar.style.top = (initTop + e.clientY - startY) + 'px';
-      });
-      document.addEventListener('mouseup', function() {
+        if (e.cancelable) e.preventDefault();
+        var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        bar.style.left = (initLeft + clientX - startX) + 'px';
+        bar.style.top = (initTop + clientY - startY) + 'px';
+      }
+
+      function onDragEnd() {
         if (isDragging) {
-          isDragging = false; dragHandle.style.cursor = 'grab';
-          var r = bar.getBoundingClientRect(); _fbX = r.left; _fbY = r.top;
+          isDragging = false; 
+          dragHandle.style.cursor = 'grab';
+          var r = bar.getBoundingClientRect(); 
+          _fbX = r.left; _fbY = r.top;
+          
+          document.removeEventListener('mousemove', onDragMove);
+          document.removeEventListener('touchmove', onDragMove);
+          document.removeEventListener('mouseup', onDragEnd);
+          document.removeEventListener('touchend', onDragEnd);
         }
-      });
+      }
+
+      function onDragStart(e) {
+        isDragging = true; 
+        var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        startX = clientX; startY = clientY;
+        initLeft = parseFloat(bar.style.left) || 0; 
+        initTop = parseFloat(bar.style.top) || 0;
+        dragHandle.style.cursor = 'grabbing'; 
+        if (e.type === 'mousedown') e.preventDefault();
+        
+        document.addEventListener('mousemove', onDragMove, { passive: false });
+        document.addEventListener('touchmove', onDragMove, { passive: false });
+        document.addEventListener('mouseup', onDragEnd);
+        document.addEventListener('touchend', onDragEnd);
+      }
+
+      dragHandle.addEventListener('mousedown', onDragStart);
+      dragHandle.addEventListener('touchstart', onDragStart, { passive: false });
     }
   });
 }
