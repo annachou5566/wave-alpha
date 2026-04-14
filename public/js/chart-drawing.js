@@ -4067,19 +4067,23 @@ window.__wa_onIntervalChange = function(newInterval) {
 };
 
 window.__wa_onSymbolChange = function(newSymbol) {
-  // ✅ Dùng bản SYNC để lưu tức thì
+  // 1. Lưu lập tức toàn bộ hình vẽ của Token CŨ vào LocalStorage
   if (typeof global.__wa_saveAllOverlays_SYNC === 'function') {
       global.__wa_saveAllOverlays_SYNC();
   }
-  window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
-};
-
-window.__wa_onChartReady = function() {
-  if (!global.tvChart) return;
-  global.tvChart.__wa_chart_events_bound = false;
-  if (typeof _bindChartEventsOnce === 'function') _bindChartEventsOnce();
   
+  // 2. Cập nhật tên token MỚI
+  window.__wa_currentSymbol = String(newSymbol).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  // 3. Dọn sạch rác của Token cũ trên biểu đồ và xóa lịch sử Undo/Redo để không bị dính nét
+  if (global.__wa_overlay_map) global.__wa_overlay_map.clear();
+  undoStack = []; 
+  redoStack = [];
+  if (global.tvChart) {
+      try { global.tvChart.removeOverlay(); } catch(e) {}
+  }
+  
+  // 4. Bắt đầu quét và tự động Load hình vẽ của Token MỚI lên màn hình
   if (typeof global.__wa_restoreOverlays === 'function') {
       global.__wa_restoreOverlays();
   }
