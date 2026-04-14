@@ -4369,33 +4369,29 @@ function _bindToolbarLocalEvents(toolbar, panel) {
       _getTbBtns().forEach(function(b) { b.classList.remove('active'); });
       menuItem.closest('.wa-tb-group').querySelector('.wa-tb-btn').classList.add('active');
 
-            // ── Đóng menu sau khi chọn tool ──────────────────────────────
+            // ── Đóng menu triệt để trên Mobile & Desktop ──
             var group = menuItem.closest('.wa-tb-group');
             var menu  = group ? group.querySelector('.wa-tb-menu') : null;
-            if (menu) {
-              // 1. Ẩn menu vừa click — dùng '' để trả quyền về CSS :hover
+            
+            if (menu && group) {
+              // 1. Cắt cầu dao lập tức: Ép ẩn menu ngay khi bấm chọn tool
               menu.style.display = 'none';
-setTimeout(function() { menu.style.display = ''; }, 200); // ← reset sau 200ms
-            
-              // 2. Desktop: mouseleave không cần làm gì thêm vì CSS đã tự ẩn
-              // (xóa hoàn toàn dòng group.addEventListener mouseleave)
-            
-              // 3. Mobile: closeMenuOutside — dùng '' thay 'none'
-              function closeMenuOutside(e) {
-                if (!group.contains(e.target)) {
-                  menu.style.display = '';  // ← đúng rồi, giữ nguyên
-                  document.removeEventListener('mousedown', closeMenuOutside);
-                  document.removeEventListener('touchstart', closeMenuOutside);
-                }
-              }
-              setTimeout(function() {
-                document.addEventListener('mousedown', closeMenuOutside);
-                document.addEventListener('touchstart', closeMenuOutside, { passive: true });
-              }, 0);
-            
-              // 4. Đóng tất cả menu khác — dùng '' thay 'none'
-              document.querySelectorAll('.wa-tb-menu').forEach(function(m) {
-                              });
+              
+              // 2. Lách luật Hover Trap trên Mobile:
+              // Trình duyệt giữ state :hover khi tap. Ta để yên nó ẩn, 
+              // chỉ mở khóa trả lại quyền hiển thị khi user chạm lại vào icon gốc.
+              var resetHover = function() {
+                  menu.style.display = '';
+                  group.removeEventListener('mouseenter', resetHover);
+                  group.removeEventListener('touchstart', resetHover);
+              };
+              
+              // Cài bẫy chờ user tương tác lại
+              group.addEventListener('mouseenter', resetHover);
+              group.addEventListener('touchstart', resetHover, { passive: true });
+
+              // 3. Hack nhỏ: Xóa cờ focus ảo trên Document để ngắt rác sự kiện của mobile
+              if (document.activeElement) document.activeElement.blur();
             }
 
     } else if (btn) {
