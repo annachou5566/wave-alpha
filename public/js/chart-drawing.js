@@ -2673,12 +2673,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (ov) {
             overlayId = ov.id;
             
-            // 🔥 FIX: Đưa công cụ Text vào bộ nhớ theo dõi trước khi gọi bàn phím để hệ thống kịp lưu
+            // 🔥 BẮT BUỘC THEO DÕI & LƯU LẠI TRƯỚC KHI POPUP BÀN PHÍM HIỆN RA
             if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
             if (typeof saveHistory === 'function') saveHistory('add', ov);
             if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
             
-            // 🔥 TỰ ĐỘNG BẬT BÀN PHÍM
+            // TỰ ĐỘNG BẬT BÀN PHÍM CHỮ
             setTimeout(function() {
                 openEditor(ov.extendData || '', ov.styles || {});
             }, 50);
@@ -3894,10 +3894,33 @@ function getDrawingKey() {
 
 function saveAllOverlays() {
   try {
+    if (!global.tvChart) return;
     let dataToSave = [];
-    global.__wa_overlay_map.forEach(function(data) {
-      dataToSave.push(data);
+    let validIds = [];
+    
+    // Quét qua danh sách ID, chủ động móc dữ liệu "tươi" nhất trực tiếp từ Biểu đồ
+    global.__wa_overlay_map.forEach(function(oldData, id) {
+        try {
+            let liveOv = global.tvChart.getOverlayById(id);
+            if (liveOv) {
+                validIds.push(id);
+                // Bắt buộc xóa dataIndex để chống lỗi khi nạp lại
+                let cleanPoints = (liveOv.points || []).map(function(p) { return { timestamp: p.timestamp, value: p.value }; });
+                let snapshot = { 
+                    name: liveOv.name, id: liveOv.id, points: cleanPoints, 
+                    styles: liveOv.styles, lock: !!liveOv.lock, extendData: liveOv.extendData 
+                };
+                dataToSave.push(snapshot);
+                global.__wa_overlay_map.set(id, snapshot); // Cập nhật luôn vào Map
+            }
+        } catch(err) {}
     });
+    
+    // Dọn dẹp rác (Xóa khỏi bộ nhớ những hình đã bị user xóa trên màn hình)
+    for (let id of global.__wa_overlay_map.keys()) {
+        if (!validIds.includes(id)) global.__wa_overlay_map.delete(id);
+    }
+    
     localStorage.setItem(getDrawingKey(), JSON.stringify(dataToSave));
   } catch(e) {}
 }
@@ -4692,20 +4715,22 @@ global.tvChart.subscribeAction('onDrawEnd', function(data) {
     if (ptr) ptr.classList.add('active');
   }
   
-  // 🔥 FIX: Lấy chính xác object hình vẽ từ cấu trúc Event của KLineChart v9
+  // 🔥 FIX TỐI THƯỢNG: Trích xuất chính xác object hình vẽ từ Event của KLineChart v9
   var overlayObj = (data && data.overlay) ? data.overlay : (Array.isArray(data) ? data[0] : data);
   if (!overlayObj || !overlayObj.id) return;
   
+  // Đưa vào bộ nhớ theo dõi
   _wa_trackOverlay(overlayObj); 
-
   if (typeof saveHistory === 'function') saveHistory('add', overlayObj);
+  
   currentSelectedOverlay = overlayObj;
   window.currentSelectedOverlay = overlayObj;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(currentSelectedOverlay, null, null);
   if (typeof renderPanel === 'function') renderPanel(currentSelectedOverlay);
+  
+  // Lưu ngay lập tức vào ổ cứng
   if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
 });
-
   
 }
 
