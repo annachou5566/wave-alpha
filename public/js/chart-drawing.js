@@ -2515,7 +2515,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    var curSize = tStyles.size || 14;
+    // 🔥 FIX 1: ÉP KIỂU SỐ NGUYÊN ĐỂ KHÔNG BỊ LỖI CỘNG CHUỖI THÀNH "146px"
+    var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
     var curStyle = tStyles.style || 'normal';
@@ -2525,20 +2526,52 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
-  
-    // 1. TẠO Ô NHẬP LIỆU (Của code cũ chạy rất tốt)
+    
+    // 🔥 FIX 2: TẠO MỎ NEO TỌA ĐỘ DỰ PHÒNG TỪ MŨI CHUỘT
+    var rect = container ? container.getBoundingClientRect() : {left: 0, top: 0};
+    var posX = (window.waMouseX || window.innerWidth / 2) - rect.left;
+    var posY = (window.waMouseY || window.innerHeight / 2) - rect.top;
+
+    if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
+        var pt = ov.points[ov.points.length - 1]; // Lấy điểm cuối cùng làm mỏ neo
+        var targetPaneId = 'candle_pane';
+        if (chartObj.getOverlayById) {
+            var info = chartObj.getOverlayById(ov.id);
+            if (info && info.paneId) targetPaneId = info.paneId;
+        }
+
+        try {
+            var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
+            if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y)) {
+                posX = pixelInfo.x;
+                posY = pixelInfo.y;
+                var halfLeading = 3; 
+                posX -= 1; 
+                if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
+                else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
+                else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
+                else if (name === 'comment') { posX += 10; posY -= 15; }
+                else if (name === 'priceLabel') { posX += 12; }
+                else if (name === 'pin') { posX += 14; posY -= 20; }
+                else if (name === 'flagMarker') { posX += 26; posY -= 23; }
+            }
+        } catch(e) {}
+    }
+
+    // TẠO Ô NHẬP LIỆU
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
-    var defaultText = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-    input.value = defaultText;
+    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
-    var textAlign = 'left';
     var exactLineHeight = curSize + 6;
   
     input.style.cssText = `
       position: absolute; 
+      left: ${posX}px; 
+      top: ${posY}px;
+      transform: ${transformCSS};
       background: transparent !important; 
       border: none !important;
       outline: none !important; 
@@ -2548,7 +2581,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       line-height: ${exactLineHeight}px;
       font-weight: ${curWeight}; 
       font-style: ${curStyle};
-      text-align: ${textAlign};
+      text-align: left;
       letter-spacing: normal;
       z-index: 999999; 
       min-width: 10px; 
@@ -2562,60 +2595,58 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       box-sizing: content-box;
       border-radius: 0;
       -webkit-appearance: none;
-      transform: ${transformCSS};
     `;
     
     if (container) container.appendChild(input);
   
-    // 🔥 2. ĐỘNG CƠ THEO DÕI THỜI GIAN THỰC (60FPS)
+    // 🔥 3. ĐỘNG CƠ THEO DÕI THỜI GIAN THỰC (BÁM DÍNH THEO NẾN)
     var isTracking = true;
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
-        
         if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
-            var lastPt = ov.points[ov.points.length - 1];
+            var pt = ov.points[ov.points.length - 1];
             var targetPaneId = 'candle_pane';
             if (chartObj.getOverlayById) {
                 var info = chartObj.getOverlayById(ov.id);
                 if (info && info.paneId) targetPaneId = info.paneId;
             }
-  
-            var pixelInfo = chartObj.convertToPixel(
-                { dataIndex: lastPt.dataIndex, timestamp: lastPt.timestamp, value: lastPt.value },
-                { finder: { paneId: targetPaneId } }
-            );
-  
-            if (pixelInfo) {
-                var posX = pixelInfo.x;
-                var posY = pixelInfo.y;
-                var halfLeading = 3; 
-                posX -= 1; 
-  
-                if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
-                else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
-                else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
-                else if (name === 'comment') { posX += 10; posY -= 15; }
-                else if (name === 'priceLabel') { posX += 12; }
-                else if (name === 'pin') { posX += 14; posY -= 20; }
-                else if (name === 'flagMarker') { posX += 26; posY -= 23; }
-                else if (name === 'signpost') { 
-                    posX += 18; 
-                    if (ov.points.length > 1) {
-                        var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
-                        if (pt0 && pixelInfo.x < pt0.x) {
-                            posX -= 36;
-                            input.style.textAlign = 'right';
-                            input.style.transform = 'translate(-100%, -50%)';
+
+            try {
+                var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
+                if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y)) {
+                    var curX = pixelInfo.x;
+                    var curY = pixelInfo.y;
+                    var halfLeading = 3; 
+                    curX -= 1; 
+      
+                    if (name === 'plainText' || name === 'anchoredText') { curY -= halfLeading; }
+                    else if (name === 'note') { curX += 10; curY += (10 - halfLeading); }
+                    else if (name === 'annotation' || name === 'priceNote') { curX += 8; }
+                    else if (name === 'comment') { curX += 10; curY -= 15; }
+                    else if (name === 'priceLabel') { curX += 12; }
+                    else if (name === 'pin') { curX += 14; curY -= 20; }
+                    else if (name === 'flagMarker') { curX += 26; curY -= 23; }
+                    else if (name === 'signpost') { 
+                        curX += 18; 
+                        if (ov.points.length > 1) {
+                            var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
+                            if (pt0 && curX < pt0.x) {
+                                curX -= 36;
+                                input.style.textAlign = 'right';
+                                input.style.transform = 'translate(-100%, -50%)';
+                            } else {
+                                input.style.textAlign = 'left';
+                                input.style.transform = 'translateY(-50%)';
+                            }
                         }
                     }
+                    
+                    input.style.left = curX + 'px';
+                    input.style.top = curY + 'px';
                 }
-                
-                // Liên tục cập nhật Toạ độ chính xác 100%
-                input.style.left = posX + 'px';
-                input.style.top = posY + 'px';
-            }
+            } catch(e) {}
         }
-        if (isTracking) requestAnimationFrame(syncPosition); // Lặp lại siêu mượt
+        if (isTracking) requestAnimationFrame(syncPosition);
     }
   
     function resizeInput() {
@@ -2627,19 +2658,16 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     requestAnimationFrame(function() {
       input.focus();
-      if (defaultText === '') input.select();
+      if (input.value === '') input.select();
       resizeInput();
-      syncPosition(); // Bật công tắc khởi động Động cơ bám dính
+      syncPosition(); 
     });
   
-    // 3. ĐỒNG BỘ REAL-TIME KHUNG NỀN CANVAS VỚI CHỮ
     input.addEventListener('input', function() {
         resizeInput();
         if (chartObj && ov && ov.id) {
             var liveText = input.value || ' ';
             chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
-            
-            // 🔥 BƠM FIX 1: ÉP LƯU TỪNG CHỮ VÀO BỘ NHỚ ĐỂ KHÔNG BỊ RỚT NHỊP
             if (global.__wa_overlay_map) {
                 let cached = global.__wa_overlay_map.get(ov.id);
                 if (cached) cached.extendData = liveText;
@@ -2647,39 +2675,27 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         }
     });
   
-    // 4. ẨN TEXT GỐC TRÊN CANVAS, ĐỂ LẠI KHUNG NỀN LÓT PHÍA SAU
+    // 4. Tự động ẩn text trên canvas để không bị đè chữ khi đang gõ
     var savedOriginalColor = null;
     if (chartObj && ov && ov.id) {
       try {
         var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
         if (!tempStyles.text) tempStyles.text = {};
-        
-        // 🔥 BƠM FIX 2: CHỐN LƯU MÀU TÀNG HÌNH
         if (tempStyles.text.color !== 'rgba(0,0,0,0)' && tempStyles.text.color !== 'transparent') {
             savedOriginalColor = tempStyles.text.color;
         }
-        
         tempStyles.text.color = 'rgba(0,0,0,0)';
         chartObj.overrideOverlay({ id: ov.id, styles: tempStyles });
       } catch(e) {}
     }
   
-    // 5. LƯU LẠI VÀ TRẢ LẠI MÀU CHỮ LÊN CANVAS KHI XONG
-    var isCommitted = false;
     function commit() {
-      if (isCommitted) return;
-      isCommitted = true;
-      isTracking = false; // Tắt Động cơ
-      
-      var el = document.getElementById('wa-text-editor');
-      if (!el) return;
-      var val = el.value.trim();
-      if (!val) val = 'Văn bản...'; 
-      
+      if (!isTracking) return;
+      isTracking = false; 
+      var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
       
-      // 🔥 BƠM FIX 3: TRẢ LẠI MÀU CHỮ ĐÚNG SAU KHI GÕ XONG
       var liveOv = chartObj ? chartObj.getOverlayById(ov.id) : null;
       var liveColor = (liveOv && liveOv.styles && liveOv.styles.text) ? liveOv.styles.text.color : null;
       
@@ -2690,10 +2706,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } else if (curColor && curColor !== 'rgba(0,0,0,0)' && curColor !== 'transparent') {
           updatedStyles.text.color = curColor;
       } else {
-          updatedStyles.text.color = '#E8EDF2'; // Fallback
+          updatedStyles.text.color = '#E8EDF2'; 
       }
       
-      el.remove();
+      input.remove();
       onConfirm(val, updatedStyles);
     }
   
