@@ -2617,7 +2617,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       try {
         var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
         if (!tempStyles.text) tempStyles.text = {};
-        savedOriginalColor = tempStyles.text.color;
+        
+        // 🔥 BÍ QUYẾT 1: Tuyệt đối không lưu đè màu tàng hình vào biến nhớ
+        if (tempStyles.text.color !== 'rgba(0,0,0,0)' && tempStyles.text.color !== 'transparent') {
+            savedOriginalColor = tempStyles.text.color;
+        }
+        
         tempStyles.text.color = 'rgba(0,0,0,0)';
         chartObj.overrideOverlay({ id: ov.id, styles: tempStyles });
       } catch(e) {}
@@ -2638,10 +2643,18 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
       
-      if (savedOriginalColor) {
+      // 🔥 BÍ QUYẾT 2: Trích xuất màu mới nhất trên biểu đồ (phòng khi user đổi màu qua thanh nổi lúc đang gõ)
+      var liveOv = chartObj ? chartObj.getOverlayById(ov.id) : null;
+      var liveColor = (liveOv && liveOv.styles && liveOv.styles.text) ? liveOv.styles.text.color : null;
+
+      if (liveColor && liveColor !== 'rgba(0,0,0,0)' && liveColor !== 'transparent') {
+          updatedStyles.text.color = liveColor;
+      } else if (savedOriginalColor && savedOriginalColor !== 'rgba(0,0,0,0)') {
           updatedStyles.text.color = savedOriginalColor;
-      } else {
+      } else if (curColor && curColor !== 'rgba(0,0,0,0)' && curColor !== 'transparent') {
           updatedStyles.text.color = curColor;
+      } else {
+          updatedStyles.text.color = '#E8EDF2'; // Fallback an toàn (màu trắng)
       }
       
       el.remove();
@@ -4052,11 +4065,16 @@ function restoreOverlays() {
 
     overlayDefs.forEach(function(o) {
       try {
-        // 🌟 BÍ QUYẾT ĐẦU NGÀNH: Ép KLineChart phải nghe lời bằng cách tự tính dataIndex mới!
-        var mappedPoints = (o.points || []).map(function(p) {
-            let newIdx = _wa_findNearestDataIndex(dataList, p.timestamp);
-            return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
-        });
+        // 🔥 BÍ QUYẾT 3: TỰ ĐỘNG "CỨU SỐNG" CÁC ĐOẠN CHỮ BỊ LỖI TÀNG HÌNH TRƯỚC ĐÂY
+        if (o.styles && o.styles.text && (o.styles.text.color === 'rgba(0,0,0,0)' || o.styles.text.color === 'transparent')) {
+          o.styles.text.color = '#00F0FF'; // Ép sáng lên thành màu xanh Neon
+      }
+
+      // 🌟 BÍ QUYẾT ĐẦU NGÀNH: Ép KLineChart phải nghe lời bằng cách tự tính dataIndex mới!
+      var mappedPoints = (o.points || []).map(function(p) {
+          let newIdx = _wa_findNearestDataIndex(dataList, p.timestamp);
+          return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
+      });
         
         let cfg = {
           id: o.id,
