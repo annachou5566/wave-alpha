@@ -2515,12 +2515,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    
-    // 🔥 TỰ ĐỘNG CỨU CHỮA: Nếu bị dính bug tàng hình từ trước, ép sáng lên màu xanh
-    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
-        curColor = '#00F0FF'; 
-    }
-    
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
@@ -2538,51 +2532,68 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (info && info.paneId) paneId = info.paneId;
     }
 
+    var rect = container.getBoundingClientRect();
+    // Tọa độ dự phòng cực chuẩn từ mũi chuột
+    var fallbackX = (window.waMouseX || window.innerWidth / 2) - rect.left;
+    var fallbackY = (window.waMouseY || window.innerHeight / 2) - rect.top;
+
+    // 🔥 HÀM LẤY TỌA ĐỘ THÔNG MINH (CHỐNG LỖI 0,0)
     function getChartPos() {
-        if (!ov || !ov.points || !ov.points.length) return { x: 100, y: 100 }; 
+        if (!ov || !ov.points || !ov.points.length) return null;
         var pt = ov.points[ov.points.length - 1]; 
-        var px = chartObj.convertToPixel(pt, { finder: { paneId: paneId } });
-        if (!px) return { x: 100, y: 100 };
+        if (pt.timestamp === undefined || pt.value === undefined) return null;
 
-        var cx = px.x, cy = px.y;
-        var halfLeading = 3; 
-        cx -= 1; 
+        try {
+            var px = chartObj.convertToPixel(pt, { finder: { paneId: paneId } });
+            // KHÔNG CHẤP NHẬN TỌA ĐỘ RÁC (0,0) HAY NaN
+            if (!px || isNaN(px.x) || isNaN(px.y) || (px.x === 0 && px.y === 0)) return null;
 
-        if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
-        else if (name === 'note') { cx += 10; cy += (10 - halfLeading); }
-        else if (name === 'annotation' || name === 'priceNote') { cx += 8; }
-        else if (name === 'comment') { cx += 10; cy -= 15; }
-        else if (name === 'priceLabel') { cx += 12; }
-        else if (name === 'pin') { cx += 14; cy -= 20; }
-        else if (name === 'flagMarker') { cx += 26; cy -= 23; }
-        else if (name === 'signpost') { 
-            cx += 18; 
-            if (ov.points.length > 1) {
-                var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: paneId } });
-                if (pt0 && cx < pt0.x) cx -= 36;
+            var cx = px.x, cy = px.y;
+            var halfLeading = 3; 
+            cx -= 1; 
+
+            if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
+            else if (name === 'note') { cx += 10; cy += (10 - halfLeading); }
+            else if (name === 'annotation' || name === 'priceNote') { cx += 8; }
+            else if (name === 'comment') { cx += 10; cy -= 15; }
+            else if (name === 'priceLabel') { cx += 12; }
+            else if (name === 'pin') { cx += 14; cy -= 20; }
+            else if (name === 'flagMarker') { cx += 26; cy -= 23; }
+            else if (name === 'signpost') { 
+                cx += 18; 
+                if (ov.points.length > 1) {
+                    var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: paneId } });
+                    if (pt0 && cx < pt0.x) cx -= 36;
+                }
             }
-        }
-        return { x: cx, y: cy };
+            return { x: cx, y: cy };
+        } catch(e) {}
+        return null;
     }
 
-    var pos = getChartPos();
+    // Lấy tọa độ chuẩn đét ngay từ khoảnh khắc đầu tiên
+    var initialPos = getChartPos() || { x: fallbackX, y: fallbackY };
 
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
-    var isRight = (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj && chartObj.convertToPixel(ov.points[ov.points.length - 1], {finder:{paneId:paneId}})?.x < chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}})?.x);
+    var isRight = false;
+    try {
+        isRight = (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj && chartObj.convertToPixel(ov.points[ov.points.length - 1], {finder:{paneId:paneId}})?.x < chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}})?.x);
+    } catch(e) {}
     
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
     if (isRight) transformCSS = 'translate(-100%, -50%)';
     var textAlign = isRight ? 'right' : 'left';
     var exactLineHeight = curSize + 6;
   
+    // Gán CSS với kích thước tối thiểu an toàn, tuyệt đối KHÔNG làm mất chữ
     input.style.cssText = `
       position: absolute; 
-      left: ${pos.x}px; 
-      top: ${pos.y}px;
+      left: ${initialPos.x}px; 
+      top: ${initialPos.y}px;
       transform: ${transformCSS};
       background: transparent !important; 
       border: none !important;
@@ -2619,7 +2630,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
         var newPos = getChartPos();
-        if (newPos.x !== 100 || newPos.y !== 100) { 
+        // Chỉ bám dính khi có tọa độ thật
+        if (newPos) { 
             input.style.left = newPos.x + 'px';
             input.style.top = newPos.y + 'px';
         }
@@ -2645,8 +2657,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         }
     });
 
-    // ❌ ĐÃ XÓA TOÀN BỘ LOGIC TÔ CHỮ TÀNG HÌNH Ở ĐÂY ❌
-
     var createTime = Date.now();
     var isCommitted = false;
     
@@ -2662,8 +2672,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
-      
-      updatedStyles.text.color = curColor; // Trả đúng màu, chấm dứt chuỗi ngày tàng hình
+      updatedStyles.text.color = curColor; 
       
       input.remove();
       onConfirm(val, updatedStyles);
