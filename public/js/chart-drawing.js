@@ -2515,12 +2515,21 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
+    
+    var ov = window.currentSelectedOverlay;
+    
+    // 🔥 FIX 1: CứU CHỮA LỖI TRONG SUỐT & BÓNG MA BẰNG BIẾN NHỚ
+    // Đảm bảo không bao giờ ô nhập chữ lấy nhầm màu tàng hình
+    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
+        curColor = (ov && ov._wa_real_color) ? ov._wa_real_color : '#E8EDF2'; 
+    }
+    if (ov) ov._wa_real_color = curColor; // Ghi nhớ màu thật
+
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
     var curStyle = tStyles.style || 'normal';
   
-    var ov = window.currentSelectedOverlay;
     var name = ov ? (ov.name || toolId) : toolId;
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
@@ -2532,47 +2541,42 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (info && info.paneId) paneId = info.paneId;
     }
 
-    var rect = container.getBoundingClientRect();
-    // Tọa độ dự phòng cực chuẩn từ mũi chuột
-    var fallbackX = (window.waMouseX || window.innerWidth / 2) - rect.left;
-    var fallbackY = (window.waMouseY || window.innerHeight / 2) - rect.top;
-
-    // 🔥 HÀM LẤY TỌA ĐỘ THÔNG MINH (CHỐNG LỖI 0,0)
+    // 🔥 FIX 2: HÀM LẤY TỌA ĐỘ CHUẨN KLINECHART (KHÔNG CHẶN STRICT NỮA)
     function getChartPos() {
         if (!ov || !ov.points || !ov.points.length) return null;
         var pt = ov.points[ov.points.length - 1]; 
-        if (pt.timestamp === undefined || pt.value === undefined) return null;
-
         try {
             var px = chartObj.convertToPixel(pt, { finder: { paneId: paneId } });
-            // KHÔNG CHẤP NHẬN TỌA ĐỘ RÁC (0,0) HAY NaN
-            if (!px || isNaN(px.x) || isNaN(px.y) || (px.x === 0 && px.y === 0)) return null;
+            if (px && !isNaN(px.x) && !isNaN(px.y)) {
+                var cx = px.x, cy = px.y;
+                var halfLeading = 3; 
+                cx -= 1; 
 
-            var cx = px.x, cy = px.y;
-            var halfLeading = 3; 
-            cx -= 1; 
-
-            if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
-            else if (name === 'note') { cx += 10; cy += (10 - halfLeading); }
-            else if (name === 'annotation' || name === 'priceNote') { cx += 8; }
-            else if (name === 'comment') { cx += 10; cy -= 15; }
-            else if (name === 'priceLabel') { cx += 12; }
-            else if (name === 'pin') { cx += 14; cy -= 20; }
-            else if (name === 'flagMarker') { cx += 26; cy -= 23; }
-            else if (name === 'signpost') { 
-                cx += 18; 
-                if (ov.points.length > 1) {
-                    var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: paneId } });
-                    if (pt0 && cx < pt0.x) cx -= 36;
+                if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
+                else if (name === 'note') { cx += 10; cy += (10 - halfLeading); }
+                else if (name === 'annotation' || name === 'priceNote') { cx += 8; }
+                else if (name === 'comment') { cx += 10; cy -= 15; }
+                else if (name === 'priceLabel') { cx += 12; }
+                else if (name === 'pin') { cx += 14; cy -= 20; }
+                else if (name === 'flagMarker') { cx += 26; cy -= 23; }
+                else if (name === 'signpost') { 
+                    cx += 18; 
+                    if (ov.points.length > 1) {
+                        var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: paneId } });
+                        if (pt0 && cx < pt0.x) cx -= 36;
+                    }
                 }
+                return { x: cx, y: cy };
             }
-            return { x: cx, y: cy };
         } catch(e) {}
         return null;
     }
 
-    // Lấy tọa độ chuẩn đét ngay từ khoảnh khắc đầu tiên
-    var initialPos = getChartPos() || { x: fallbackX, y: fallbackY };
+    var rect = container.getBoundingClientRect();
+    var fallbackX = (window.waMouseX || window.innerWidth / 2) - rect.left;
+    var fallbackY = (window.waMouseY || window.innerHeight / 2) - rect.top;
+
+    var pos = getChartPos() || { x: fallbackX, y: fallbackY };
 
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
@@ -2589,11 +2593,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var textAlign = isRight ? 'right' : 'left';
     var exactLineHeight = curSize + 6;
   
-    // Gán CSS với kích thước tối thiểu an toàn, tuyệt đối KHÔNG làm mất chữ
+    // Giao diện đã fix chuẩn để Mobile tự gọi bàn phím
     input.style.cssText = `
       position: absolute; 
-      left: ${initialPos.x}px; 
-      top: ${initialPos.y}px;
+      left: ${pos.x}px; 
+      top: ${pos.y}px;
       transform: ${transformCSS};
       background: transparent !important; 
       border: none !important;
@@ -2613,16 +2617,15 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       padding: 0; 
       margin: 0; 
       caret-color: ${curColor};
-      min-width: 20px;
+      min-width: 30px;
       min-height: ${exactLineHeight}px;
     `;
     
     container.appendChild(input);
 
     function resizeInput() {
-        input.style.width = '20px'; 
         input.style.height = exactLineHeight + 'px';
-        input.style.width = (input.scrollWidth + 5) + 'px'; 
+        input.style.width = (input.scrollWidth + 10) + 'px'; 
         input.style.height = input.scrollHeight + 'px';
     }
 
@@ -2630,7 +2633,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
         var newPos = getChartPos();
-        // Chỉ bám dính khi có tọa độ thật
+        // Chỉ bám khi có tọa độ thật, triệt tiêu vụ kẹt cứng ở con chuột
         if (newPos) { 
             input.style.left = newPos.x + 'px';
             input.style.top = newPos.y + 'px';
@@ -2638,31 +2641,50 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (isTracking) requestAnimationFrame(syncPosition); 
     }
 
-    requestAnimationFrame(function() {
+    // 🔥 FIX 3: MOBILE KEYBOARD HACK (Để chớp trỏ chuột và gọi phím ảo lên)
+    setTimeout(function() {
       input.focus();
-      if (input.value === '') input.select();
+      // Chuyển con trỏ chuột về cuối chữ để gõ tiếp
+      input.selectionStart = input.selectionEnd = input.value.length;
       resizeInput();
       syncPosition(); 
-    });
+    }, 50);
 
     input.addEventListener('input', function() {
         resizeInput();
         if (chartObj && ov && ov.id) {
             var liveText = input.value || ' ';
-            chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
+            // Vẫn gửi data để lưu vào hệ thống, nhưng BẮT BUỘC giữ màu tàng hình trên Canvas
+            var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
+            if (!tempStyles.text) tempStyles.text = {};
+            tempStyles.text.color = 'rgba(0,0,0,0)';
+            
+            chartObj.overrideOverlay({ id: ov.id, extendData: liveText, styles: tempStyles });
+            
             if (global.__wa_overlay_map) {
                 let cached = global.__wa_overlay_map.get(ov.id);
-                if (cached) cached.extendData = liveText;
+                if (cached) { cached.extendData = liveText; cached.styles = tempStyles; }
             }
         }
     });
 
+    // ẨN TEXT GỐC KHI ĐANG SỬA (Ngăn hiện 2 chữ lồng nhau)
+    if (chartObj && ov && ov.id) {
+      try {
+        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!tempStyles.text) tempStyles.text = {};
+        tempStyles.text.color = 'rgba(0,0,0,0)';
+        chartObj.overrideOverlay({ id: ov.id, styles: tempStyles });
+      } catch(e) {}
+    }
+
     var createTime = Date.now();
     var isCommitted = false;
     
+    // CHỐT SỔ VÀ BẬT SÁNG CHỮ
     function commit() {
       if (isCommitted) return;
-      if (Date.now() - createTime < 200) {
+      if (Date.now() - createTime < 300) {
           input.focus();
           return;
       }
@@ -2672,6 +2694,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
+      
+      // Trả lại ĐÚNG MÀU GỐC
       updatedStyles.text.color = curColor; 
       
       input.remove();
@@ -2683,7 +2707,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     }
 
     input.addEventListener('blur', function() {
-       setTimeout(function() { if (document.activeElement !== input) commit(); }, 50);
+       setTimeout(function() { if (document.activeElement !== input) commit(); }, 100);
     });
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
