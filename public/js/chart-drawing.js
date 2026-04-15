@@ -3834,7 +3834,31 @@ function _fbToggleLock(ov) {
         config.extendData = (typeof toolStyles !== 'undefined' && toolStyles.text && toolStyles.text.textInput) ? toolStyles.text.textInput : 'Văn bản...';
         config.styles.text = { color: s.textColor || '#E8EDF2', size: s.textSize || 14, weight: 'normal', style: 'normal', family: 'sans-serif' };
       }
-// THÊM 2 DÒNG NÀY TRƯỚC createOverlay:
+// --- ÉP KLINECHART BÁO CÁO KHI VẼ XONG TRỰC TIẾP VÀO CONFIG ---
+config.onDrawEnd = function(event) {
+  isDrawingSessionActive = false;
+  activateTool('pointer'); // Trả về con trỏ chuột sau khi vẽ xong
+  var toolbar = document.querySelector('.wa-toolbar');
+  if (toolbar) {
+    toolbar.querySelectorAll('.wa-tb-btn').forEach(function(b) { b.classList.remove('active'); });
+    var ptr = toolbar.querySelector('[data-tool=pointer]');
+    if (ptr) ptr.classList.add('active');
+  }
+
+  var ov = event && event.overlay ? event.overlay : null;
+  if (ov) {
+    // 🔥 BẮT GỌN ID HÌNH VẼ VÀ LƯU NGAY LẬP TỨC
+    if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
+    if (typeof saveHistory === 'function') saveHistory('add', ov);
+    currentSelectedOverlay = ov;
+    window.currentSelectedOverlay = ov;
+    if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+    if (typeof renderPanel === 'function') renderPanel(ov);
+    if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+  }
+  return true;
+};
+
 config.onSelected = function(event) {
   isDrawingSessionActive = false;
   var ov = event && event.overlay ? event.overlay : null;
@@ -3845,10 +3869,11 @@ config.onSelected = function(event) {
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
   if (typeof renderPanel === 'function') renderPanel(ov);
 };
+
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
 };
-// --- DÁN THÊM DOUBLE CLICK VÀO ĐÂY ---
+
 config.onDoubleClick = function(event) {
   var ov = event && event.overlay ? event.overlay : null;
   if (!ov) return false;
@@ -3865,14 +3890,16 @@ config.onDoubleClick = function(event) {
         ov.name, 
         function(newText, newStyles) {
           global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
         }
       );
     }
   }
   return false;
 };
-// -------------------------------------
-      global.tvChart.createOverlay(config);
+
+// TẠO HÌNH VẼ KÈM ĐẦY ĐỦ CÁC SỰ KIỆN LẮNG NGHE Ở TRÊN
+global.tvChart.createOverlay(config);
     } catch (err) { 
       if (typeof showToast === 'function') showToast('Lỗi khởi tạo công cụ. Hệ thống sẽ khôi phục về mặc định.'); 
     }
