@@ -2525,20 +2525,60 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
-  
-    // 1. TẠO Ô NHẬP LIỆU
+    
+    // --- BƯỚC 1: TÍNH TOẠ ĐỘ CHUẨN TỪ BIỂU ĐỒ TRƯỚC ---
+    var posX = 0, posY = 0;
+    var rect = container ? container.getBoundingClientRect() : {left: 0, top: 0};
+
+    if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
+        var lastPt = ov.points[ov.points.length - 1];
+        var targetPaneId = 'candle_pane';
+        if (chartObj.getOverlayById) {
+            var info = chartObj.getOverlayById(ov.id);
+            if (info && info.paneId) targetPaneId = info.paneId;
+        }
+
+        var pixelInfo = chartObj.convertToPixel(
+            { dataIndex: lastPt.dataIndex, timestamp: lastPt.timestamp, value: lastPt.value },
+            { finder: { paneId: targetPaneId } }
+        );
+
+        if (pixelInfo) {
+            posX = pixelInfo.x;
+            posY = pixelInfo.y;
+            // Áp dụng offset chuẩn cho từng loại tool để khớp với Canvas
+            var halfLeading = 3; 
+            posX -= 1; 
+            if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
+            else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
+            else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
+            else if (name === 'comment') { posX += 10; posY -= 15; }
+            else if (name === 'priceLabel') { posX += 12; }
+            else if (name === 'pin') { posX += 14; posY -= 20; }
+            else if (name === 'flagMarker') { posX += 26; posY -= 23; }
+        }
+    }
+
+    // Nếu biểu đồ chưa kịp tính (posX = 0), lúc này mới dùng chuột làm dự phòng để tránh nhảy xuống góc trái
+    if (posX === 0) {
+        posX = (window.waMouseX || window._waMouseX || window.innerWidth / 2) - rect.left;
+        posY = (window.waMouseY || window._waMouseY || window.innerHeight / 2) - rect.top;
+    }
+
+    // --- BƯỚC 2: TẠO Ô NHẬP LIỆU VỚI TOẠ ĐỘ ĐÃ TÍNH ---
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
-    var defaultText = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-    input.value = defaultText;
+    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
-    var textAlign = 'left';
     var exactLineHeight = curSize + 6;
   
     input.style.cssText = `
       position: absolute; 
+      left: ${posX}px; 
+      top: ${posY}px;
+      transform: ${transformCSS};
       background: transparent !important; 
       border: none !important;
       outline: none !important; 
@@ -2548,7 +2588,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       line-height: ${exactLineHeight}px;
       font-weight: ${curWeight}; 
       font-style: ${curStyle};
-      text-align: ${textAlign};
+      text-align: left;
       letter-spacing: normal;
       z-index: 999999; 
       min-width: 10px; 
@@ -2562,61 +2602,33 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       box-sizing: content-box;
       border-radius: 0;
       -webkit-appearance: none;
-      transform: ${transformCSS};
     `;
     
     if (container) container.appendChild(input);
   
-    // 🔥 2. ĐỘNG CƠ THEO DÕI THỜI GIAN THỰC (60FPS)
-    // Liên tục dán chặt ô chữ vào biểu đồ, chấp mọi thể loại bàn phím ảo làm co giãn trang web
+    // --- BƯỚC 3: ĐỘNG CƠ THEO DÕI (ĐỂ KHÓA VỊ TRÍ KHI CUỘN CHART) ---
     var isTracking = true;
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
-        
         if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
             var lastPt = ov.points[ov.points.length - 1];
-            var targetPaneId = 'candle_pane';
-            if (chartObj.getOverlayById) {
-                var info = chartObj.getOverlayById(ov.id);
-                if (info && info.paneId) targetPaneId = info.paneId;
-            }
-  
             var pixelInfo = chartObj.convertToPixel(
                 { dataIndex: lastPt.dataIndex, timestamp: lastPt.timestamp, value: lastPt.value },
-                { finder: { paneId: targetPaneId } }
+                { finder: { paneId: 'candle_pane' } }
             );
-  
+
             if (pixelInfo) {
-                var posX = pixelInfo.x;
-                var posY = pixelInfo.y;
-                var halfLeading = 3; 
-                posX -= 1; 
-  
-                if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
-                else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
-                else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
-                else if (name === 'comment') { posX += 10; posY -= 15; }
-                else if (name === 'priceLabel') { posX += 12; }
-                else if (name === 'pin') { posX += 14; posY -= 20; }
-                else if (name === 'flagMarker') { posX += 26; posY -= 23; }
-                else if (name === 'signpost') { 
-                    posX += 18; 
-                    if (ov.points.length > 1) {
-                        var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
-                        if (pt0 && pixelInfo.x < pt0.x) {
-                            posX -= 36;
-                            input.style.textAlign = 'right';
-                            input.style.transform = 'translate(-100%, -50%)';
-                        }
-                    }
-                }
+                var curX = pixelInfo.x;
+                var curY = pixelInfo.y;
+                if (name === 'plainText' || name === 'anchoredText') { curY -= halfLeading; }
+                else if (name === 'note') { curX += 10; curY += (10 - halfLeading); }
+                else if (name === 'annotation' || name === 'priceNote') { curX += 8; }
                 
-                // Liên tục cập nhật Toạ độ chính xác 100%
-                input.style.left = posX + 'px';
-                input.style.top = posY + 'px';
+                input.style.left = curX + 'px';
+                input.style.top = curY + 'px';
             }
         }
-        if (isTracking) requestAnimationFrame(syncPosition); // Lặp lại siêu mượt
+        if (isTracking) requestAnimationFrame(syncPosition);
     }
   
     function resizeInput() {
@@ -2628,74 +2640,42 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     requestAnimationFrame(function() {
       input.focus();
-      if (defaultText === '') input.select();
+      if (input.value === '') input.select();
       resizeInput();
-      syncPosition(); // Bật công tắc khởi động Động cơ bám dính
+      syncPosition(); 
     });
   
-    // 3. ĐỒNG BỘ REAL-TIME KHUNG NỀN CANVAS VỚI CHỮ
     input.addEventListener('input', function() {
-      resizeInput();
-      if (chartObj && ov && ov.id) {
-          var liveText = input.value || ' ';
-          chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
-          
-          // 🔥 FIX TỐI THƯỢNG 1: Ép từng chữ bạn gõ chui thẳng vào Bộ Nhớ Map.
-          // Để lỡ Auto-save có quét ngang qua thì cũng lấy được 100% chữ hiện tại!
-          if (global.__wa_overlay_map) {
-              let cached = global.__wa_overlay_map.get(ov.id);
-              if (cached) cached.extendData = liveText;
-          }
-      }
-  });
+        resizeInput();
+        if (chartObj && ov && ov.id) {
+            var liveText = input.value || ' ';
+            chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
+        }
+    });
   
-    // 4. ẨN TEXT GỐC TRÊN CANVAS, ĐỂ LẠI KHUNG NỀN LÓT PHÍA SAU
+    // Tự động ẩn text trên canvas để không bị đè chữ khi đang gõ
     var savedOriginalColor = null;
     if (chartObj && ov && ov.id) {
       try {
         var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
         if (!tempStyles.text) tempStyles.text = {};
-        
-        // 🔥 BÍ QUYẾT 1: Tuyệt đối không lưu đè màu tàng hình vào biến nhớ
         if (tempStyles.text.color !== 'rgba(0,0,0,0)' && tempStyles.text.color !== 'transparent') {
             savedOriginalColor = tempStyles.text.color;
         }
-        
         tempStyles.text.color = 'rgba(0,0,0,0)';
         chartObj.overrideOverlay({ id: ov.id, styles: tempStyles });
       } catch(e) {}
     }
   
-    // 5. LƯU LẠI VÀ TRẢ LẠI MÀU CHỮ LÊN CANVAS KHI XONG
-    var isCommitted = false;
     function commit() {
-      if (isCommitted) return;
-      isCommitted = true;
-      isTracking = false; // Tắt Động cơ
-      
-      var el = document.getElementById('wa-text-editor');
-      if (!el) return;
-      var val = el.value.trim();
-      if (!val) val = 'Văn bản...'; 
-      
+      if (!isTracking) return;
+      isTracking = false; 
+      var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
+      updatedStyles.text.color = savedOriginalColor || curColor;
       
-      // 🔥 BÍ QUYẾT 2: Trích xuất màu mới nhất trên biểu đồ (phòng khi user đổi màu qua thanh nổi lúc đang gõ)
-      var liveOv = chartObj ? chartObj.getOverlayById(ov.id) : null;
-      var liveColor = (liveOv && liveOv.styles && liveOv.styles.text) ? liveOv.styles.text.color : null;
-
-      if (liveColor && liveColor !== 'rgba(0,0,0,0)' && liveColor !== 'transparent') {
-          updatedStyles.text.color = liveColor;
-      } else if (savedOriginalColor && savedOriginalColor !== 'rgba(0,0,0,0)') {
-          updatedStyles.text.color = savedOriginalColor;
-      } else if (curColor && curColor !== 'rgba(0,0,0,0)' && curColor !== 'transparent') {
-          updatedStyles.text.color = curColor;
-      } else {
-          updatedStyles.text.color = '#E8EDF2'; // Fallback an toàn (màu trắng)
-      }
-      
-      el.remove();
+      input.remove();
       onConfirm(val, updatedStyles);
     }
   
@@ -2747,26 +2727,30 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return false;
         
-        if (typeof hidePanel === 'function') hidePanel();
-        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-        
-        if (typeof openTextEditor === 'function') {
-          openTextEditor(
-            ov.extendData || '', 
-            ov.styles || {}, 
-            ov.name, 
-            function(newText, newStyles) {
-              if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-              // Cập nhật vào bộ nhớ ngay lập tức
-              if (global.__wa_overlay_map) {
-                  let cached = global.__wa_overlay_map.get(ov.id);
-                  if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+        var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+        if (cat === 'text') {
+          if (typeof hidePanel === 'function') hidePanel();
+          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+          
+          if (typeof openTextEditor === 'function') {
+            openTextEditor(
+              ov.extendData || '', 
+              ov.styles || {}, 
+              ov.name, 
+              function(newText, newStyles) {
+                global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                
+                // 🔥 FIX TỐI THƯỢNG 2 (Khi nhấp đúp để sửa chữ cũ)
+                if (global.__wa_overlay_map) {
+                    let cached = global.__wa_overlay_map.get(ov.id);
+                    if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                }
+                if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
               }
-              if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-            }
-          );
+            );
+          }
         }
-        return true; // 🔥 BÍ QUYẾT: Ép biểu đồ không được zoom, nhường quyền bật bảng chữ!
+        return false;
       },
       onSelected: function(event) {
         isDrawingSessionActive = false;
