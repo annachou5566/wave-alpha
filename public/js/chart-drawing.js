@@ -1695,34 +1695,38 @@
 ];
 
 // 🔥 FIX TỐI THƯỢNG: TỰ ĐỘNG BỌC HITBOX TÀNG HÌNH CHO TẤT CẢ HÌNH VẼ
-// Giúp diện tích chạm (Hit Area) phình to ra 24px, click/chạm phát ăn ngay!
-extensions.forEach(e => { 
-  if (e.createPointFigures) {
-      var originalCreate = e.createPointFigures;
-      e.createPointFigures = function(ref) {
-          var figs = originalCreate.call(this, ref);
-          if (!figs || !Array.isArray(figs)) return figs;
-          
-          var enhancedFigs = [];
-          figs.forEach(function(fig) {
-              // Nếu là đường line/viền và được phép tương tác, nhân bản thành Hitbox tàng hình
-              if (!fig.ignoreEvent && (fig.type === 'line' || fig.type === 'polygon' || fig.type === 'arc')) {
-                  var hitFig = { type: fig.type, attrs: Object.assign({}, fig.attrs) };
-                  if (fig.type === 'line' || fig.type === 'arc') {
-                      hitFig.styles = { style: 'solid', color: 'rgba(255, 255, 255, 0.01)', size: 24 };
-                  } else if (fig.type === 'polygon') {
-                      hitFig.styles = { style: 'stroke', borderColor: 'rgba(255, 255, 255, 0.01)', borderSize: 24, color: 'rgba(0,0,0,0)' };
+    // Giúp diện tích chạm (Hit Area) phình to ra 24px, click/chạm phát ăn ngay!
+    extensions.forEach(e => { 
+      if (e.createPointFigures) {
+          var originalCreate = e.createPointFigures;
+          e.createPointFigures = function(ref) {
+              var figs = originalCreate.call(this, ref);
+              if (!figs || !Array.isArray(figs)) return figs;
+              
+              var enhancedFigs = [];
+              figs.forEach(function(fig) {
+                  // Nếu là đường line/viền và được phép tương tác, nhân bản thành Hitbox tàng hình
+                  if (!fig.ignoreEvent && (fig.type === 'line' || fig.type === 'polygon' || fig.type === 'arc')) {
+                      
+                      // 🔥 BÍ QUYẾT SỬA LỖI FIBO: Nếu là Mảng (nhiều đường cùng lúc) thì phải copy theo kiểu Mảng
+                      var hitAttrs = Array.isArray(fig.attrs) ? fig.attrs.slice() : Object.assign({}, fig.attrs);
+                      var hitFig = { type: fig.type, attrs: hitAttrs };
+                      
+                      if (fig.type === 'line' || fig.type === 'arc') {
+                          hitFig.styles = { style: 'solid', color: 'rgba(255, 255, 255, 0.01)', size: 24 };
+                      } else if (fig.type === 'polygon') {
+                          hitFig.styles = { style: 'stroke', borderColor: 'rgba(255, 255, 255, 0.01)', borderSize: 24, color: 'rgba(0,0,0,0)' };
+                      }
+                      enhancedFigs.push(hitFig);
                   }
-                  enhancedFigs.push(hitFig);
-              }
-              enhancedFigs.push(fig);
-          });
-          return enhancedFigs;
-      };
+                  enhancedFigs.push(fig);
+              });
+              return enhancedFigs;
+          };
+      }
+      try { kc.registerOverlay(e); } catch(err){} 
+    });
   }
-  try { kc.registerOverlay(e); } catch(err){} 
-});
-}
 
   // ======================================================
   // 3. UI GENERATION (SIDEBAR BÊN TRÁI & PANEL BÊN PHẢI)
