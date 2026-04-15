@@ -4102,24 +4102,31 @@ function restoreOverlays() {
           return { timestamp: p.timestamp, dataIndex: newIdx, value: p.value };
       });
         
-        let cfg = {
-          id: o.id,
-          name: o.name,
-          points: mappedPoints,
-          styles: o.styles,
-          lock: !!o.lock,
-          extendData: o.extendData,
-          onSelected: function(event) {
-            var ov = event && event.overlay ? event.overlay : null;
-            if (!ov) return;
-            currentSelectedOverlay = ov;
-            window.currentSelectedOverlay = ov;
-            if (typeof renderPanel === 'function') renderPanel(ov);
-          },
-          onDeselected: function() {},
+      let cfg = {
+        id: o.id,
+        name: o.name,
+        points: mappedPoints,
+        styles: o.styles,
+        lock: !!o.lock,
+        extendData: o.extendData,
+        onSelected: function(event) {
+          var ov = event && event.overlay ? event.overlay : null;
+          if (!ov) return;
+          currentSelectedOverlay = ov;
+          window.currentSelectedOverlay = ov;
           
-          // ✅ THÊM ĐOẠN NÀY ĐỂ HỖ TRỢ DOUBLE-CLICK CHO TEXT CŨ
-          onDoubleClick: function(event) {
+          // 🔥 FIX: Bổ sung lệnh gọi thanh Float Toolbar khi click vào hình đã lưu
+          if (document.getElementById('wa-text-editor-backdrop')) return;
+          if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+          if (typeof renderPanel === 'function') renderPanel(ov);
+        },
+        onDeselected: function() {
+          // 🔥 FIX: Ẩn thanh Float Toolbar khi bấm ra ngoài
+          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+        },
+        
+        // ✅ THÊM ĐOẠN NÀY ĐỂ HỖ TRỢ DOUBLE-CLICK CHO TEXT CŨ
+        onDoubleClick: function(event) {
             var ov = event && event.overlay ? event.overlay : null;
             if (!ov) return false;
 
