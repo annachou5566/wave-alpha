@@ -2537,9 +2537,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
     var exactLineHeight = curSize + 6;
   
-    // 🔥 FIX 2: Bỏ CSS Left/Top ban đầu. Để hệ thống nội suy chuẩn 100% từ nến
+    // 🔥 FIX 2: Trả lại Left/Top để khung chữ không rơi xuống đáy màn hình khi biểu đồ chưa kịp load
     input.style.cssText = `
       position: absolute; 
+      left: ${posX}px; 
+      top: ${posY}px;
       transform: ${transformCSS};
       background: transparent !important; 
       border: none !important;
@@ -2723,6 +2725,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
             
             if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
             if (typeof saveHistory === 'function') saveHistory('add', ov);
+            
+            // 🔥 FIX TỌA ĐỘ LẦN ĐẦU TIÊN: Đặt hình vừa vẽ thành Hình-đang-chọn 
+            // để "Động cơ bám dính" có mục tiêu bám vào ngay lập tức!
+            currentSelectedOverlay = ov;
+            window.currentSelectedOverlay = ov;
             
             setTimeout(function() {
                 openEditor(ov.extendData || '', ov.styles || {});
