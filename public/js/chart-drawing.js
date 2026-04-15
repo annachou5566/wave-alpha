@@ -2747,30 +2747,26 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return false;
         
-        var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
-        if (cat === 'text') {
-          if (typeof hidePanel === 'function') hidePanel();
-          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-          
-          if (typeof openTextEditor === 'function') {
-            openTextEditor(
-              ov.extendData || '', 
-              ov.styles || {}, 
-              ov.name, 
-              function(newText, newStyles) {
-                global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                
-                // 🔥 FIX TỐI THƯỢNG 2 (Khi nhấp đúp để sửa chữ cũ)
-                if (global.__wa_overlay_map) {
-                    let cached = global.__wa_overlay_map.get(ov.id);
-                    if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                }
-                if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+        if (typeof hidePanel === 'function') hidePanel();
+        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+        
+        if (typeof openTextEditor === 'function') {
+          openTextEditor(
+            ov.extendData || '', 
+            ov.styles || {}, 
+            ov.name, 
+            function(newText, newStyles) {
+              if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+              // Cập nhật vào bộ nhớ ngay lập tức
+              if (global.__wa_overlay_map) {
+                  let cached = global.__wa_overlay_map.get(ov.id);
+                  if (cached) { cached.extendData = newText; cached.styles = newStyles; }
               }
-            );
-          }
+              if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+            }
+          );
         }
-        return false;
+        return true; // 🔥 BÍ QUYẾT: Ép biểu đồ không được zoom, nhường quyền bật bảng chữ!
       },
       onSelected: function(event) {
         isDrawingSessionActive = false;
