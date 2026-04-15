@@ -1692,10 +1692,37 @@
       return figs;
     }
   }
-    ];
+];
 
-    extensions.forEach(e => { try { kc.registerOverlay(e); } catch(err){} });
+// 🔥 FIX TỐI THƯỢNG: TỰ ĐỘNG BỌC HITBOX TÀNG HÌNH CHO TẤT CẢ HÌNH VẼ
+// Giúp diện tích chạm (Hit Area) phình to ra 24px, click/chạm phát ăn ngay!
+extensions.forEach(e => { 
+  if (e.createPointFigures) {
+      var originalCreate = e.createPointFigures;
+      e.createPointFigures = function(ref) {
+          var figs = originalCreate.call(this, ref);
+          if (!figs || !Array.isArray(figs)) return figs;
+          
+          var enhancedFigs = [];
+          figs.forEach(function(fig) {
+              // Nếu là đường line/viền và được phép tương tác, nhân bản thành Hitbox tàng hình
+              if (!fig.ignoreEvent && (fig.type === 'line' || fig.type === 'polygon' || fig.type === 'arc')) {
+                  var hitFig = { type: fig.type, attrs: Object.assign({}, fig.attrs) };
+                  if (fig.type === 'line' || fig.type === 'arc') {
+                      hitFig.styles = { style: 'solid', color: 'rgba(255, 255, 255, 0.01)', size: 24 };
+                  } else if (fig.type === 'polygon') {
+                      hitFig.styles = { style: 'stroke', borderColor: 'rgba(255, 255, 255, 0.01)', borderSize: 24, color: 'rgba(0,0,0,0)' };
+                  }
+                  enhancedFigs.push(hitFig);
+              }
+              enhancedFigs.push(fig);
+          });
+          return enhancedFigs;
+      };
   }
+  try { kc.registerOverlay(e); } catch(err){} 
+});
+}
 
   // ======================================================
   // 3. UI GENERATION (SIDEBAR BÊN TRÁI & PANEL BÊN PHẢI)
@@ -4775,6 +4802,24 @@ window._syncDelSelBtn(false); // mờ mặc định khi load
 function _bindChartEventsOnce() {
   if (!global.tvChart || global.tvChart.__wa_chart_events_bound) return;
   global.tvChart.__wa_chart_events_bound = true;
+
+  // 🔥 FIX TRẢI NGHIỆM TRADINGVIEW: Định dạng lại Điểm Neo (Anchor) khi rề chuột
+  // Tự động bật lên các cục tròn Trắng-Viền Xanh khi user rà trúng hình vẽ
+  global.tvChart.setStyles({
+    overlay: {
+      point: {
+        color: '#E8EDF2',           // Lõi màu trắng sáng
+        borderColor: '#3B82F6',     // Viền màu xanh dương
+        borderSize: 2,              // Độ dày viền
+        radius: 4,                  // Kích thước điểm neo khi rề chuột
+        activeColor: '#FFFFFF',
+        activeBorderColor: '#3B82F6',
+        activeBorderSize: 2,
+        activeRadius: 6             // Phình to ra khi click chọn
+      }
+    }
+  });
+
 // ── THÊM: Sáng/mờ nút xóa theo trạng thái chọn ─────────────
 global.tvChart.subscribeAction('onOverlaySelected', function() {
   if (typeof window._syncDelSelBtn === 'function') window._syncDelSelBtn(true);
