@@ -2525,38 +2525,60 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
-    
+
+    // 🔥 FIX TỐI THƯỢNG: TÍNH TOẠ ĐỘ NGAY TỪ ĐẦU TRƯỚC KHI TẠO KHUNG
     var rect = container ? container.getBoundingClientRect() : {left: 0, top: 0};
     var posX = (window.waMouseX || window.innerWidth / 2) - rect.left;
     var posY = (window.waMouseY || window.innerHeight / 2) - rect.top;
+    var halfLeading = 3; 
 
-    if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
-        var pt = ov.points[ov.points.length - 1]; 
-        var targetPaneId = 'candle_pane';
-        if (chartObj.getOverlayById) {
-            var info = chartObj.getOverlayById(ov.id);
-            if (info && info.paneId) targetPaneId = info.paneId;
-        }
-
-        try {
-            // 🔥 BÍ QUYẾT 1: Chỉ lấy tọa độ từ biểu đồ nếu điểm neo đã có dữ liệu thật (chống nhảy góc)
-            if (pt.timestamp && pt.value !== undefined) {
-                var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
-                if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y) && (pixelInfo.x !== 0 || pixelInfo.y !== 0)) {
-                    posX = pixelInfo.x;
-                    posY = pixelInfo.y;
-                    var halfLeading = 3; 
-                    posX -= 1; 
-                    if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
-                    else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
-                    else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
-                    else if (name === 'comment') { posX += 10; posY -= 15; }
-                    else if (name === 'priceLabel') { posX += 12; }
-                    else if (name === 'pin') { posX += 14; posY -= 20; }
-                    else if (name === 'flagMarker') { posX += 26; posY -= 23; }
-                }
+    // Hàm tính tọa độ nội suy từ nến
+    function calcPos() {
+        if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
+            var pt = ov.points[ov.points.length - 1]; 
+            var targetPaneId = 'candle_pane';
+            if (chartObj.getOverlayById) {
+                var info = chartObj.getOverlayById(ov.id);
+                if (info && info.paneId) targetPaneId = info.paneId;
             }
-        } catch(e) {}
+            try {
+                if (pt.timestamp && pt.value !== undefined) {
+                    var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
+                    // Chặn tọa độ rác 0,0 của KLineChart khi chưa load xong
+                    if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y) && (pixelInfo.x !== 0 || pixelInfo.y !== 0)) {
+                        var curX = pixelInfo.x;
+                        var curY = pixelInfo.y;
+                        curX -= 1; 
+          
+                        if (name === 'plainText' || name === 'anchoredText') { curY -= halfLeading; }
+                        else if (name === 'note') { curX += 10; curY += (10 - halfLeading); }
+                        else if (name === 'annotation' || name === 'priceNote') { curX += 8; }
+                        else if (name === 'comment') { curX += 10; curY -= 15; }
+                        else if (name === 'priceLabel') { curX += 12; }
+                        else if (name === 'pin') { curX += 14; curY -= 20; }
+                        else if (name === 'flagMarker') { curX += 26; curY -= 23; }
+                        else if (name === 'signpost') { 
+                            curX += 18; 
+                            if (ov.points.length > 1) {
+                                var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
+                                if (pt0 && curX < pt0.x) {
+                                    curX -= 36;
+                                }
+                            }
+                        }
+                        return { x: curX, y: curY };
+                    }
+                }
+            } catch(e) {}
+        }
+        return null; // Fallback
+    }
+
+    // Khởi tạo tọa độ chuẩn đét ngay từ mili-giây đầu tiên
+    var initialPos = calcPos();
+    if (initialPos) {
+        posX = initialPos.x;
+        posY = initialPos.y;
     }
 
     var input = document.createElement('textarea');
@@ -2564,9 +2586,26 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
+    var isRight = false;
+    
+    // Cân chỉnh lề riêng cho signpost (biển chỉ dẫn) nếu quay ngược
+    if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
+         var ptLast = chartObj.convertToPixel(ov.points[ov.points.length - 1], { finder: { paneId: 'candle_pane' } });
+         var ptFirst = chartObj.convertToPixel(ov.points[0], { finder: { paneId: 'candle_pane' } });
+         if (ptLast && ptFirst && ptLast.x < ptFirst.x) {
+             isRight = true;
+         }
+    }
+
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
+    if (isRight && name === 'signpost') {
+        transformCSS = 'translate(-100%, -50%)';
+    }
+
+    var textAlign = (isRight && name === 'signpost') ? 'right' : 'left';
     var exactLineHeight = curSize + 6;
   
+    // Gán CSS tĩnh với tọa độ chuẩn
     input.style.cssText = `
       position: absolute; 
       left: ${posX}px; 
@@ -2581,7 +2620,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       line-height: ${exactLineHeight}px;
       font-weight: ${curWeight}; 
       font-style: ${curStyle};
-      text-align: left;
+      text-align: ${textAlign};
       letter-spacing: normal;
       z-index: 999999; 
       min-width: 20px; 
@@ -2599,54 +2638,14 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     
     if (container) container.appendChild(input);
   
+    // Động cơ bám dính khi cuộn màn hình
     var isTracking = true;
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
-        if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
-            var pt = ov.points[ov.points.length - 1];
-            var targetPaneId = 'candle_pane';
-            if (chartObj.getOverlayById) {
-                var info = chartObj.getOverlayById(ov.id);
-                if (info && info.paneId) targetPaneId = info.paneId;
-            }
-
-            try {
-                if (pt.timestamp && pt.value !== undefined) {
-                    var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
-                    // Chống lỗi tọa độ 0,0 rác của KLineChart
-                    if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y) && (pixelInfo.x !== 0 || pixelInfo.y !== 0)) {
-                        var curX = pixelInfo.x;
-                        var curY = pixelInfo.y;
-                        var halfLeading = 3; 
-                        curX -= 1; 
-          
-                        if (name === 'plainText' || name === 'anchoredText') { curY -= halfLeading; }
-                        else if (name === 'note') { curX += 10; curY += (10 - halfLeading); }
-                        else if (name === 'annotation' || name === 'priceNote') { curX += 8; }
-                        else if (name === 'comment') { curX += 10; curY -= 15; }
-                        else if (name === 'priceLabel') { curX += 12; }
-                        else if (name === 'pin') { curX += 14; curY -= 20; }
-                        else if (name === 'flagMarker') { curX += 26; curY -= 23; }
-                        else if (name === 'signpost') { 
-                            curX += 18; 
-                            if (ov.points.length > 1) {
-                                var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
-                                if (pt0 && curX < pt0.x) {
-                                    curX -= 36;
-                                    input.style.textAlign = 'right';
-                                    input.style.transform = 'translate(-100%, -50%)';
-                                } else {
-                                    input.style.textAlign = 'left';
-                                    input.style.transform = 'translateY(-50%)';
-                                }
-                            }
-                        }
-                        
-                        input.style.left = curX + 'px';
-                        input.style.top = curY + 'px';
-                    }
-                }
-            } catch(e) {}
+        var pos = calcPos();
+        if (pos) {
+            input.style.left = pos.x + 'px';
+            input.style.top = pos.y + 'px';
         }
         if (isTracking) requestAnimationFrame(syncPosition); 
     }
@@ -2668,7 +2667,14 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     input.addEventListener('input', function() {
         resizeInput();
-        // 🔥 BÍ QUYẾT 2: KHÔNG ép Canvas vẽ lại trên từng phím gõ để chống giật mất Focus!
+        if (chartObj && ov && ov.id) {
+            var liveText = input.value || ' ';
+            chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
+            if (global.__wa_overlay_map) {
+                let cached = global.__wa_overlay_map.get(ov.id);
+                if (cached) cached.extendData = liveText;
+            }
+        }
     });
   
     var savedOriginalColor = null;
@@ -2687,13 +2693,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var isCommitted = false;
     function commit() {
       if (isCommitted) return;
-      
-      // Chống lỗi mất khung chữ liền do Click ảo
       if (Date.now() - createTime < 200) {
           input.focus();
           return;
       }
-      
       isCommitted = true;
       isTracking = false; 
       
@@ -2722,7 +2725,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       }
     }
   
-    // 🔥 BÍ QUYẾT 3: Chỉ chốt sổ khi người dùng thực sự bấm ra ngoài khung chữ
     input.addEventListener('blur', function() {
        setTimeout(function() {
            if (document.activeElement !== input) commit();
