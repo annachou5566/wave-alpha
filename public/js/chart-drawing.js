@@ -2730,43 +2730,36 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         }
         return false;
       },
-      onDoubleClick: function(event) {
+      // 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
+      onClick: function(event) {
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return false;
-        
         var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
         if (cat === 'text') {
-          if (typeof hidePanel === 'function') hidePanel();
-          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-          
-          if (typeof openTextEditor === 'function') {
-            // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
-            setTimeout(function() {
-              openTextEditor(
-                ov.extendData || '', 
-                ov.styles || {}, 
-                ov.name, 
-                function(newText, newStyles) {
-                  global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                  
-                  if (global.__wa_overlay_map) {
-                      let cached = global.__wa_overlay_map.get(ov.id);
-                      if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                  }
-                  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-                }
-              );
-            }, 50);
-          }
+            let now = Date.now();
+            let lastTime = window._wa_last_selected_time || 0;
+            // Nếu click vào chữ ĐÃ ĐƯỢC CHỌN TỪ TRƯỚC (cách đây >250ms để tránh click đúp dính chùm)
+            if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
+                if (typeof hidePanel === 'function') hidePanel();
+                if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+                setTimeout(function() {
+                    openEditor(ov.extendData || '', ov.styles || {});
+                }, 50);
+                return true; // Ép dừng các sự kiện khác
+            }
         }
-        return true; // 🔥 Ép KLineChart KHÔNG ĐƯỢC ZOOM biểu đồ khi nhấp đúp
+        return false;
       },
+      onDoubleClick: function() { return true; }, // Khóa vĩnh viễn lỗi Zoom màn hình của KLineChart
       onSelected: function(event) {
         isDrawingSessionActive = false;
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
+        
+        window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
+        
         if (document.getElementById('wa-text-editor-backdrop')) return;
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
         if (typeof renderPanel === 'function') renderPanel(ov);
@@ -3924,45 +3917,49 @@ config.onSelected = function(event) {
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
+  
+  window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
+  
   if (document.getElementById('wa-text-editor-backdrop')) return;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
   if (typeof renderPanel === 'function') renderPanel(ov);
 };
-
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
 };
 
-config.onDoubleClick = function(event) {
+// 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
+config.onClick = function(event) {
   var ov = event && event.overlay ? event.overlay : null;
   if (!ov) return false;
-  
   var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
   if (cat === 'text') {
-    if (typeof hidePanel === 'function') hidePanel();
-    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-    
-    if (typeof openTextEditor === 'function') {
-      // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
-      setTimeout(function() {
-        openTextEditor(
-          ov.extendData || '', 
-          ov.styles || {}, 
-          ov.name, 
-          function(newText, newStyles) {
-            global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-            if (global.__wa_overlay_map) {
-                let cached = global.__wa_overlay_map.get(ov.id);
-                if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-            }
-            if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+      let now = Date.now();
+      let lastTime = window._wa_last_selected_time || 0;
+      if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
+          if (typeof hidePanel === 'function') hidePanel();
+          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+          if (typeof openTextEditor === 'function') {
+              setTimeout(function() {
+                  openTextEditor(
+                      ov.extendData || '', ov.styles || {}, ov.name, 
+                      function(newText, newStyles) {
+                          if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                          if (global.__wa_overlay_map) {
+                              let cached = global.__wa_overlay_map.get(ov.id);
+                              if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                          }
+                          if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                      }
+                  );
+              }, 50);
           }
-        );
-      }, 50);
-    }
+          return true;
+      }
   }
-  return true; // 🔥 Dập tắt hiệu ứng nhấp đúp giật màn hình
+  return false;
 };
+config.onDoubleClick = function() { return true; }; // Khóa vĩnh viễn lỗi Zoom
 
 // TẠO HÌNH VẼ KÈM ĐẦY ĐỦ CÁC SỰ KIỆN LẮNG NGHE Ở TRÊN
 global.tvChart.createOverlay(config);
@@ -4142,46 +4139,48 @@ function restoreOverlays() {
           currentSelectedOverlay = ov;
           window.currentSelectedOverlay = ov;
           
-          // 🔥 FIX: Bổ sung lệnh gọi thanh Float Toolbar khi click vào hình đã lưu
+          window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
+          
           if (document.getElementById('wa-text-editor-backdrop')) return;
           if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
           if (typeof renderPanel === 'function') renderPanel(ov);
         },
         onDeselected: function() {
-          // 🔥 FIX: Ẩn thanh Float Toolbar khi bấm ra ngoài
           if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
         },
         
-        // ✅ THÊM ĐOẠN NÀY ĐỂ HỖ TRỢ DOUBLE-CLICK CHO TEXT CŨ
-        onDoubleClick: function(event) {
+        // 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
+        onClick: function(event) {
           var ov = event && event.overlay ? event.overlay : null;
           if (!ov) return false;
-
-          if (typeof hidePanel === 'function') hidePanel();
-
-          window.currentSelectedOverlay = ov;
-          if (typeof openTextEditor === 'function') {
-              // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
-              setTimeout(function() {
-                  openTextEditor(
-                      ov.extendData || '', 
-                      ov.styles || {}, 
-                      ov.name, 
-                      function(newText, newStyles) {
-                          if (global.tvChart) {
-                              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                          }
-                          if (global.__wa_overlay_map) {
-                              let cached = global.__wa_overlay_map.get(ov.id);
-                              if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                          }
-                          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-                      }
-                  );
-              }, 50);
+          var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+          if (cat === 'text') {
+              let now = Date.now();
+              let lastTime = window._wa_last_selected_time || 0;
+              if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
+                  if (typeof hidePanel === 'function') hidePanel();
+                  if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+                  if (typeof openTextEditor === 'function') {
+                      setTimeout(function() {
+                          openTextEditor(
+                              ov.extendData || '', ov.styles || {}, ov.name, 
+                              function(newText, newStyles) {
+                                  if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                                  if (global.__wa_overlay_map) {
+                                      let cached = global.__wa_overlay_map.get(ov.id);
+                                      if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                                  }
+                                  if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                              }
+                          );
+                      }, 50);
+                  }
+                  return true;
+              }
           }
-          return true; // 🔥 Chặn lệnh Zoom/Scale của KLineChart
-        }
+          return false;
+        },
+        onDoubleClick: function() { return true; } // Khóa vĩnh viễn lỗi Zoom
         };
         
         let newId = global.tvChart.createOverlay(cfg);
