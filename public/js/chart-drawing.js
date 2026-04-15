@@ -2740,22 +2740,26 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
           if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
           
           if (typeof openTextEditor === 'function') {
-            openTextEditor(
-              ov.extendData || '', 
-              ov.styles || {}, 
-              ov.name, 
-              function(newText, newStyles) {
-                global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                // 🔥 Cập nhật map khi Double-click sửa chữ
-                if (global.__wa_overlay_map) {
-                    let cached = global.__wa_overlay_map.get(ov.id);
-                    if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+            // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
+            setTimeout(function() {
+              openTextEditor(
+                ov.extendData || '', 
+                ov.styles || {}, 
+                ov.name, 
+                function(newText, newStyles) {
+                  global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                  
+                  if (global.__wa_overlay_map) {
+                      let cached = global.__wa_overlay_map.get(ov.id);
+                      if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                  }
+                  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
                 }
-              }
-            );
+              );
+            }, 50);
           }
         }
-        return false;
+        return true; // 🔥 Ép KLineChart KHÔNG ĐƯỢC ZOOM biểu đồ khi nhấp đúp
       },
       onSelected: function(event) {
         isDrawingSessionActive = false;
@@ -4143,26 +4147,34 @@ function restoreOverlays() {
         
         // ✅ THÊM ĐOẠN NÀY ĐỂ HỖ TRỢ DOUBLE-CLICK CHO TEXT CŨ
         onDoubleClick: function(event) {
-            var ov = event && event.overlay ? event.overlay : null;
-            if (!ov) return false;
+          var ov = event && event.overlay ? event.overlay : null;
+          if (!ov) return false;
 
-            if (typeof hidePanel === 'function') hidePanel();
+          if (typeof hidePanel === 'function') hidePanel();
 
-            window.currentSelectedOverlay = ov;
-            if (typeof openTextEditor === 'function') {
-                openTextEditor(
-                    ov.extendData || '', 
-                    ov.styles || {}, 
-                    ov.name, 
-                    function(newText, newStyles) {
-                        if (global.tvChart) {
-                            global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                        }
-                    }
-                );
-            }
-            return false;
+          window.currentSelectedOverlay = ov;
+          if (typeof openTextEditor === 'function') {
+              // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
+              setTimeout(function() {
+                  openTextEditor(
+                      ov.extendData || '', 
+                      ov.styles || {}, 
+                      ov.name, 
+                      function(newText, newStyles) {
+                          if (global.tvChart) {
+                              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                          }
+                          if (global.__wa_overlay_map) {
+                              let cached = global.__wa_overlay_map.get(ov.id);
+                              if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                          }
+                          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+                      }
+                  );
+              }, 50);
           }
+          return true; // 🔥 Chặn lệnh Zoom/Scale của KLineChart
+        }
         };
         
         let newId = global.tvChart.createOverlay(cfg);
