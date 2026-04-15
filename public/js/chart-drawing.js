@@ -2604,12 +2604,19 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     // 3. ĐỒNG BỘ REAL-TIME KHUNG NỀN CANVAS VỚI CHỮ
     input.addEventListener('input', function() {
-        resizeInput();
-        if (chartObj && ov && ov.id) {
-            var liveText = input.value || ' ';
-            chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
-        }
-    });
+      resizeInput();
+      if (chartObj && ov && ov.id) {
+          var liveText = input.value || ' ';
+          chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
+          
+          // 🔥 FIX TỐI THƯỢNG 1: Ép từng chữ bạn gõ chui thẳng vào Bộ Nhớ Map.
+          // Để lỡ Auto-save có quét ngang qua thì cũng lấy được 100% chữ hiện tại!
+          if (global.__wa_overlay_map) {
+              let cached = global.__wa_overlay_map.get(ov.id);
+              if (cached) cached.extendData = liveText;
+          }
+      }
+  });
   
     // 4. ẨN TEXT GỐC TRÊN CANVAS, ĐỂ LẠI KHUNG NỀN LÓT PHÍA SAU
     var savedOriginalColor = null;
@@ -2674,7 +2681,16 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     function openEditor(currentText, currentStyles) {
       openTextEditor(currentText, currentStyles, toolId, function(newText, newStyles) {
-        if (overlayId) chart.overrideOverlay({ id: overlayId, extendData: newText, styles: newStyles });
+        if (overlayId) {
+            chart.overrideOverlay({ id: overlayId, extendData: newText, styles: newStyles });
+            
+            // 🔥 FIX TỐI THƯỢNG 2: Cập nhật Map và ÉP LƯU Ổ CỨNG NGAY KHI VỪA GÕ XONG!
+            if (global.__wa_overlay_map) {
+                let cached = global.__wa_overlay_map.get(overlayId);
+                if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+            }
+            if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+        }
       });
     }
 
@@ -2686,12 +2702,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (ov) {
             overlayId = ov.id;
             
-            // 🔥 BẮT BUỘC THEO DÕI & LƯU LẠI TRƯỚC KHI POPUP BÀN PHÍM HIỆN RA
             if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
             if (typeof saveHistory === 'function') saveHistory('add', ov);
             if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
             
-            // TỰ ĐỘNG BẬT BÀN PHÍM CHỮ
             setTimeout(function() {
                 openEditor(ov.extendData || '', ov.styles || {});
             }, 50);
@@ -2700,25 +2714,35 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       },
       onDoubleClick: function(event) {
         var ov = event && event.overlay ? event.overlay : null;
-        if (ov) {
-          overlayId = ov.id;
-          
-          // 1. Tắt các menu đang mở
+        if (!ov) return false;
+        
+        var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+        if (cat === 'text') {
           if (typeof hidePanel === 'function') hidePanel();
           if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
           
-          // 2. CHÚ Ý: Gán lại biến selected để hàm openEditor (hoặc openTextEditor) 
-          // biết chính xác text nào để làm tàng hình.
-          currentSelectedOverlay = ov;
-          window.currentSelectedOverlay = ov;
-          
-          // 3. Mở ô gõ chữ
-          openEditor(ov.extendData || '', ov.styles || {});
+          if (typeof openTextEditor === 'function') {
+            openTextEditor(
+              ov.extendData || '', 
+              ov.styles || {}, 
+              ov.name, 
+              function(newText, newStyles) {
+                global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                
+                // 🔥 FIX TỐI THƯỢNG 2 (Khi nhấp đúp để sửa chữ cũ)
+                if (global.__wa_overlay_map) {
+                    let cached = global.__wa_overlay_map.get(ov.id);
+                    if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                }
+                if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+              }
+            );
+          }
         }
         return false;
       },
       onSelected: function(event) {
-        isDrawingSessionActive = false; // Reset sau khi vẽ xong
+        isDrawingSessionActive = false;
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return;
         currentSelectedOverlay = ov;
@@ -2727,7 +2751,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
         if (typeof renderPanel === 'function') renderPanel(ov);
       },
-      onDeselected: function() {}
+      onDeselected: function() {
+        if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+      }
     };
     var id = chart.createOverlay(config);
     if (id) overlayId = id;
