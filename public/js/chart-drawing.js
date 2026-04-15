@@ -2515,7 +2515,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    // 🔥 FIX 1: ÉP KIỂU SỐ NGUYÊN ĐỂ KHÔNG BỊ LỖI CỘNG CHUỖI THÀNH "146px"
+    
+    // 🔥 FIX 1: Ép kiểu số nguyên tuyệt đối, chặn lỗi cộng chuỗi "146px"
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
@@ -2526,51 +2527,19 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
-    
-    // 🔥 FIX 2: TẠO MỎ NEO TỌA ĐỘ DỰ PHÒNG TỪ MŨI CHUỘT
-    var rect = container ? container.getBoundingClientRect() : {left: 0, top: 0};
-    var posX = (window.waMouseX || window.innerWidth / 2) - rect.left;
-    var posY = (window.waMouseY || window.innerHeight / 2) - rect.top;
-
-    if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
-        var pt = ov.points[ov.points.length - 1]; // Lấy điểm cuối cùng làm mỏ neo
-        var targetPaneId = 'candle_pane';
-        if (chartObj.getOverlayById) {
-            var info = chartObj.getOverlayById(ov.id);
-            if (info && info.paneId) targetPaneId = info.paneId;
-        }
-
-        try {
-            var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
-            if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y)) {
-                posX = pixelInfo.x;
-                posY = pixelInfo.y;
-                var halfLeading = 3; 
-                posX -= 1; 
-                if (name === 'plainText' || name === 'anchoredText') { posY -= halfLeading; }
-                else if (name === 'note') { posX += 10; posY += (10 - halfLeading); }
-                else if (name === 'annotation' || name === 'priceNote') { posX += 8; }
-                else if (name === 'comment') { posX += 10; posY -= 15; }
-                else if (name === 'priceLabel') { posX += 12; }
-                else if (name === 'pin') { posX += 14; posY -= 20; }
-                else if (name === 'flagMarker') { posX += 26; posY -= 23; }
-            }
-        } catch(e) {}
-    }
-
-    // TẠO Ô NHẬP LIỆU
+  
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
-    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    var defaultText = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    input.value = defaultText;
     
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
     var exactLineHeight = curSize + 6;
   
+    // 🔥 FIX 2: Bỏ CSS Left/Top ban đầu. Để hệ thống nội suy chuẩn 100% từ nến
     input.style.cssText = `
       position: absolute; 
-      left: ${posX}px; 
-      top: ${posY}px;
       transform: ${transformCSS};
       background: transparent !important; 
       border: none !important;
@@ -2599,10 +2568,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     
     if (container) container.appendChild(input);
   
-    // 🔥 3. ĐỘNG CƠ THEO DÕI THỜI GIAN THỰC (BÁM DÍNH THEO NẾN)
+    // 2. ĐỘNG CƠ THEO DÕI THỜI GIAN THỰC (BÁM DÍNH THEO NẾN)
     var isTracking = true;
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
+        
         if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
             var pt = ov.points[ov.points.length - 1];
             var targetPaneId = 'candle_pane';
@@ -2610,7 +2580,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 var info = chartObj.getOverlayById(ov.id);
                 if (info && info.paneId) targetPaneId = info.paneId;
             }
-
+  
             try {
                 var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
                 if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y)) {
@@ -2646,7 +2616,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 }
             } catch(e) {}
         }
-        if (isTracking) requestAnimationFrame(syncPosition);
+        if (isTracking) requestAnimationFrame(syncPosition); 
     }
   
     function resizeInput() {
@@ -2668,14 +2638,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (chartObj && ov && ov.id) {
             var liveText = input.value || ' ';
             chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
-            if (global.__wa_overlay_map) {
-                let cached = global.__wa_overlay_map.get(ov.id);
-                if (cached) cached.extendData = liveText;
-            }
         }
     });
   
-    // 4. Tự động ẩn text trên canvas để không bị đè chữ khi đang gõ
+    // Tự động làm tàng hình text trên canvas để không bị đè chữ khi đang gõ
     var savedOriginalColor = null;
     if (chartObj && ov && ov.id) {
       try {
@@ -2689,9 +2655,13 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
+    // CHỐT SỔ LƯU CHỮ
+    var isCommitted = false;
     function commit() {
-      if (!isTracking) return;
+      if (isCommitted) return;
+      isCommitted = true;
       isTracking = false; 
+      
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
@@ -2711,6 +2681,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       
       input.remove();
       onConfirm(val, updatedStyles);
+      
+      // 🔥 FIX 3: ÉP LƯU LẬP TỨC (SYNC) BẰNG BẢN CHÍNH THỨC ĐỂ KHÔNG BỊ TRƯỢT NHỊP NÀO!
+      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') {
+          global.__wa_saveAllOverlays_SYNC();
+      }
     }
   
     input.addEventListener('blur', commit);
@@ -2729,12 +2704,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (overlayId) {
             chart.overrideOverlay({ id: overlayId, extendData: newText, styles: newStyles });
             
-            // 🔥 FIX TỐI THƯỢNG 2: Cập nhật Map và ÉP LƯU Ổ CỨNG NGAY KHI VỪA GÕ XONG!
+            // 🔥 FIX 4: NHÉT CHỮ MỚI VÀO MAP TRƯỚC KHI Ổ CỨNG QUÉT NGANG
             if (global.__wa_overlay_map) {
                 let cached = global.__wa_overlay_map.get(overlayId);
                 if (cached) { cached.extendData = newText; cached.styles = newStyles; }
             }
-            if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
         }
       });
     }
@@ -2749,7 +2723,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
             
             if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
             if (typeof saveHistory === 'function') saveHistory('add', ov);
-            if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
             
             setTimeout(function() {
                 openEditor(ov.extendData || '', ov.styles || {});
@@ -2773,13 +2746,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
               ov.name, 
               function(newText, newStyles) {
                 global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                
-                // 🔥 FIX TỐI THƯỢNG 2 (Khi nhấp đúp để sửa chữ cũ)
+                // 🔥 Cập nhật map khi Double-click sửa chữ
                 if (global.__wa_overlay_map) {
                     let cached = global.__wa_overlay_map.get(ov.id);
                     if (cached) { cached.extendData = newText; cached.styles = newStyles; }
                 }
-                if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
               }
             );
           }
