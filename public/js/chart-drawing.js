@@ -2515,6 +2515,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
+    
+    // 🔥 TỰ ĐỘNG CỨU CHỮA: Nếu bị dính bug tàng hình từ trước, ép sáng lên màu xanh
+    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
+        curColor = '#00F0FF'; 
+    }
+    
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
@@ -2526,7 +2532,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj || !container) return;
 
-    // 1. TÍNH TỌA ĐỘ CHUẨN XÁC TỪ BIỂU ĐỒ (Tuyệt đối không dùng tọa độ chuột)
     var paneId = 'candle_pane';
     if (ov && chartObj.getOverlayById) {
         var info = chartObj.getOverlayById(ov.id);
@@ -2534,7 +2539,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     }
 
     function getChartPos() {
-        if (!ov || !ov.points || !ov.points.length) return { x: 100, y: 100 }; // Fallback an toàn
+        if (!ov || !ov.points || !ov.points.length) return { x: 100, y: 100 }; 
         var pt = ov.points[ov.points.length - 1]; 
         var px = chartObj.convertToPixel(pt, { finder: { paneId: paneId } });
         if (!px) return { x: 100, y: 100 };
@@ -2543,7 +2548,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         var halfLeading = 3; 
         cx -= 1; 
 
-        // Cân chỉnh lề cho từng công cụ khớp với biểu đồ gốc
         if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
         else if (name === 'note') { cx += 10; cy += (10 - halfLeading); }
         else if (name === 'annotation' || name === 'priceNote') { cx += 8; }
@@ -2563,7 +2567,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var pos = getChartPos();
 
-    // 2. TẠO KHUNG GÕ CHỮ
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
@@ -2576,7 +2579,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var textAlign = isRight ? 'right' : 'left';
     var exactLineHeight = curSize + 6;
   
-    // Đã xóa width:0px, thay bằng CSS tự co giãn an toàn
     input.style.cssText = `
       position: absolute; 
       left: ${pos.x}px; 
@@ -2606,20 +2608,18 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     
     container.appendChild(input);
 
-    // Thuật toán co giãn khung mượt mà, không làm mất chữ
     function resizeInput() {
-        input.style.width = '20px'; // Thu nhỏ tạm để lấy thước đo thật
+        input.style.width = '20px'; 
         input.style.height = exactLineHeight + 'px';
-        input.style.width = (input.scrollWidth + 5) + 'px'; // Trừ hao lề
+        input.style.width = (input.scrollWidth + 5) + 'px'; 
         input.style.height = input.scrollHeight + 'px';
     }
 
-    // 3. ENGINE BÁM DÍNH (Khóa dính chữ vào nến khi người dùng cuộn chuột)
     var isTracking = true;
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
         var newPos = getChartPos();
-        if (newPos.x !== 100 || newPos.y !== 100) { // Chỉ bám nếu tọa độ thật
+        if (newPos.x !== 100 || newPos.y !== 100) { 
             input.style.left = newPos.x + 'px';
             input.style.top = newPos.y + 'px';
         }
@@ -2633,7 +2633,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       syncPosition(); 
     });
 
-    // Gõ đến đâu, lưu biểu đồ đến đó
     input.addEventListener('input', function() {
         resizeInput();
         if (chartObj && ov && ov.id) {
@@ -2646,20 +2645,17 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         }
     });
 
-    // 4. LƯU MÀU GỐC & LÀM TÀNG HÌNH CHỮ CŨ TRÊN CANVAS
-    var savedColor = curColor;
-    if (ov && ov.styles && ov.styles.text && ov.styles.text.color && ov.styles.text.color !== 'rgba(0,0,0,0)') {
-        savedColor = ov.styles.text.color;
-    }
-    if (chartObj && ov && ov.id) {
-        // Tạm thời tô trong suốt để gõ không bị chồng nét
-        chartObj.overrideOverlay({ id: ov.id, styles: { text: { color: 'rgba(0,0,0,0)' } } });
-    }
+    // ❌ ĐÃ XÓA TOÀN BỘ LOGIC TÔ CHỮ TÀNG HÌNH Ở ĐÂY ❌
 
-    // 5. CHỐT SỔ VÀ TRẢ LẠI MÀU
+    var createTime = Date.now();
     var isCommitted = false;
+    
     function commit() {
       if (isCommitted) return;
+      if (Date.now() - createTime < 200) {
+          input.focus();
+          return;
+      }
       isCommitted = true;
       isTracking = false; 
       
@@ -2667,8 +2663,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
       
-      // Trả lại đúng màu gốc trước khi gõ
-      updatedStyles.text.color = savedColor;
+      updatedStyles.text.color = curColor; // Trả đúng màu, chấm dứt chuỗi ngày tàng hình
       
       input.remove();
       onConfirm(val, updatedStyles);
@@ -2679,7 +2674,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     }
 
     input.addEventListener('blur', function() {
-       // Tránh lỗi tắt nhầm khi thao tác quá nhanh
        setTimeout(function() { if (document.activeElement !== input) commit(); }, 50);
     });
     input.addEventListener('keydown', function(e) {
