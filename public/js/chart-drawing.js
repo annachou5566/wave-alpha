@@ -3943,18 +3943,25 @@ config.onDoubleClick = function(event) {
     if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
     
     if (typeof openTextEditor === 'function') {
-      openTextEditor(
-        ov.extendData || '', 
-        ov.styles || {}, 
-        ov.name, 
-        function(newText, newStyles) {
-          global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
-        }
-      );
+      // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
+      setTimeout(function() {
+        openTextEditor(
+          ov.extendData || '', 
+          ov.styles || {}, 
+          ov.name, 
+          function(newText, newStyles) {
+            global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+            if (global.__wa_overlay_map) {
+                let cached = global.__wa_overlay_map.get(ov.id);
+                if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+            }
+            if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+          }
+        );
+      }, 50);
     }
   }
-  return false;
+  return true; // 🔥 Dập tắt hiệu ứng nhấp đúp giật màn hình
 };
 
 // TẠO HÌNH VẼ KÈM ĐẦY ĐỦ CÁC SỰ KIỆN LẮNG NGHE Ở TRÊN
