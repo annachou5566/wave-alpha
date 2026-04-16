@@ -2516,14 +2516,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
     
+    // Cứu chữa lỗi tàng hình (nếu có)
     var ov = window.currentSelectedOverlay;
-    
-    // 🔥 FIX 1: CứU CHỮA LỖI TRONG SUỐT & BÓNG MA BẰNG BIẾN NHỚ
-    // Đảm bảo không bao giờ ô nhập chữ lấy nhầm màu tàng hình
     if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
         curColor = (ov && ov._wa_real_color) ? ov._wa_real_color : '#E8EDF2'; 
     }
-    if (ov) ov._wa_real_color = curColor; // Ghi nhớ màu thật
+    if (ov) ov._wa_real_color = curColor; 
 
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
@@ -2541,7 +2539,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (info && info.paneId) paneId = info.paneId;
     }
 
-    // 🔥 FIX 2: HÀM LẤY TỌA ĐỘ CHUẨN KLINECHART (KHÔNG CHẶN STRICT NỮA)
+    // Lấy tọa độ chuẩn xác 100%
     function getChartPos() {
         if (!ov || !ov.points || !ov.points.length) return null;
         var pt = ov.points[ov.points.length - 1]; 
@@ -2593,7 +2591,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var textAlign = isRight ? 'right' : 'left';
     var exactLineHeight = curSize + 6;
   
-    // Giao diện đã fix chuẩn để Mobile tự gọi bàn phím
     input.style.cssText = `
       position: absolute; 
       left: ${pos.x}px; 
@@ -2633,7 +2630,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
         var newPos = getChartPos();
-        // Chỉ bám khi có tọa độ thật, triệt tiêu vụ kẹt cứng ở con chuột
         if (newPos) { 
             input.style.left = newPos.x + 'px';
             input.style.top = newPos.y + 'px';
@@ -2641,24 +2637,36 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (isTracking) requestAnimationFrame(syncPosition); 
     }
 
-    // 🔥 FIX 3: MOBILE KEYBOARD HACK (Để chớp trỏ chuột và gọi phím ảo lên)
-    setTimeout(function() {
-      input.focus();
-      // Chuyển con trỏ chuột về cuối chữ để gõ tiếp
-      input.selectionStart = input.selectionEnd = input.value.length;
-      resizeInput();
-      syncPosition(); 
-    }, 50);
+    var createTime = Date.now();
+
+    // 🔥 FIX TỐI THƯỢNG CHO ĐIỆN THOẠI: Focus TỨC THÌ (Không dùng setTimeout) để bật Bàn Phím 
+    input.focus();
+    // Đưa con trỏ nhấp nháy `|` về cuối đoạn văn bản
+    input.selectionStart = input.selectionEnd = input.value.length;
+    
+    // 🔥 FIX CON TRỎ CHẠY THEO CHUỘT: Chặn sự kiện click "cũ" của Browser văng vào trong 150ms đầu
+    var lockCursor = function(e) {
+        if (Date.now() - createTime < 150) {
+            e.preventDefault();
+            input.selectionStart = input.selectionEnd = input.value.length;
+        } else {
+            input.removeEventListener('mousedown', lockCursor);
+            input.removeEventListener('touchstart', lockCursor);
+        }
+    };
+    input.addEventListener('mousedown', lockCursor);
+    input.addEventListener('touchstart', lockCursor, {passive: false});
+
+    resizeInput();
+    syncPosition(); 
 
     input.addEventListener('input', function() {
         resizeInput();
         if (chartObj && ov && ov.id) {
             var liveText = input.value || ' ';
-            // Vẫn gửi data để lưu vào hệ thống, nhưng BẮT BUỘC giữ màu tàng hình trên Canvas
             var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
             if (!tempStyles.text) tempStyles.text = {};
-            tempStyles.text.color = 'rgba(0,0,0,0)';
-            
+            tempStyles.text.color = 'rgba(0,0,0,0)'; // Giữ tàng hình khi gõ để tránh bóng ma
             chartObj.overrideOverlay({ id: ov.id, extendData: liveText, styles: tempStyles });
             
             if (global.__wa_overlay_map) {
@@ -2668,7 +2676,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         }
     });
 
-    // ẨN TEXT GỐC KHI ĐANG SỬA (Ngăn hiện 2 chữ lồng nhau)
     if (chartObj && ov && ov.id) {
       try {
         var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
@@ -2678,32 +2685,21 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
 
-    var createTime = Date.now();
     var isCommitted = false;
-    
-    // CHỐT SỔ VÀ BẬT SÁNG CHỮ
     function commit() {
       if (isCommitted) return;
-      if (Date.now() - createTime < 300) {
-          input.focus();
-          return;
-      }
+      if (Date.now() - createTime < 200) { input.focus(); return; }
       isCommitted = true;
       isTracking = false; 
       
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       if (!updatedStyles.text) updatedStyles.text = {};
-      
-      // Trả lại ĐÚNG MÀU GỐC
-      updatedStyles.text.color = curColor; 
+      updatedStyles.text.color = curColor; // Khôi phục màu thật
       
       input.remove();
       onConfirm(val, updatedStyles);
-      
-      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') {
-          global.__wa_saveAllOverlays_SYNC();
-      }
+      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
     }
 
     input.addEventListener('blur', function() {
@@ -2749,9 +2745,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
             currentSelectedOverlay = ov;
             window.currentSelectedOverlay = ov;
             
-            setTimeout(function() {
-                openEditor(ov.extendData || '', ov.styles || {});
-            }, 50);
+            openEditor(ov.extendData || '', ov.styles || {});
         }
         return false;
       },
@@ -3607,10 +3601,17 @@ if (cat === 'brush') {
         setTimeout(function() {
           window.currentSelectedOverlay = ov; 
           if (typeof openTextEditor === 'function') {
-            openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
-              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-              if (typeof saveAllOverlays === 'function') saveAllOverlays();
-            });
+            openTextEditor(
+              ov.extendData || '', ov.styles || {}, ov.name, 
+              function(newText, newStyles) {
+                  if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                  if (global.__wa_overlay_map) {
+                      let cached = global.__wa_overlay_map.get(ov.id);
+                      if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                  }
+                  if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+              }
+          );
           }
         }, 50);
       });
@@ -3966,17 +3967,17 @@ config.onClick = function(event) {
           if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
           if (typeof openTextEditor === 'function') {
               setTimeout(function() {
-                  openTextEditor(
-                      ov.extendData || '', ov.styles || {}, ov.name, 
-                      function(newText, newStyles) {
-                          if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                          if (global.__wa_overlay_map) {
-                              let cached = global.__wa_overlay_map.get(ov.id);
-                              if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                          }
-                          if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                openTextEditor(
+                  ov.extendData || '', ov.styles || {}, ov.name, 
+                  function(newText, newStyles) {
+                      if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                      if (global.__wa_overlay_map) {
+                          let cached = global.__wa_overlay_map.get(ov.id);
+                          if (cached) { cached.extendData = newText; cached.styles = newStyles; }
                       }
-                  );
+                      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                  }
+              );
               }, 50);
           }
           return true;
@@ -4187,17 +4188,17 @@ function restoreOverlays() {
                   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
                   if (typeof openTextEditor === 'function') {
                       setTimeout(function() {
-                          openTextEditor(
-                              ov.extendData || '', ov.styles || {}, ov.name, 
-                              function(newText, newStyles) {
-                                  if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                                  if (global.__wa_overlay_map) {
-                                      let cached = global.__wa_overlay_map.get(ov.id);
-                                      if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                                  }
-                                  if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                        openTextEditor(
+                          ov.extendData || '', ov.styles || {}, ov.name, 
+                          function(newText, newStyles) {
+                              if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                              if (global.__wa_overlay_map) {
+                                  let cached = global.__wa_overlay_map.get(ov.id);
+                                  if (cached) { cached.extendData = newText; cached.styles = newStyles; }
                               }
-                          );
+                              if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                          }
+                      );
                       }, 50);
                   }
                   return true;
