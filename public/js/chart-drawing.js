@@ -2515,19 +2515,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    
-    // Cứu chữa lỗi tàng hình (nếu có)
-    var ov = window.currentSelectedOverlay;
-    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
-        curColor = (ov && ov._wa_real_color) ? ov._wa_real_color : '#E8EDF2'; 
-    }
-    if (ov) ov._wa_real_color = curColor; 
-
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
     var curStyle = tStyles.style || 'normal';
   
+    var ov = window.currentSelectedOverlay;
     var name = ov ? (ov.name || toolId) : toolId;
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
@@ -2539,12 +2532,15 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (info && info.paneId) paneId = info.paneId;
     }
 
-    // Lấy tọa độ chuẩn xác 100%
+    // 🔥 FIX 1: Lấy tọa độ chuẩn tuyệt đối (Tách object để KLineChart v9 không bị lỗi)
     function getChartPos() {
         if (!ov || !ov.points || !ov.points.length) return null;
         var pt = ov.points[ov.points.length - 1]; 
         try {
-            var px = chartObj.convertToPixel(pt, { finder: { paneId: paneId } });
+            var px = chartObj.convertToPixel(
+                { dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, 
+                { finder: { paneId: paneId } }
+            );
             if (px && !isNaN(px.x) && !isNaN(px.y)) {
                 var cx = px.x, cy = px.y;
                 var halfLeading = 3; 
@@ -2560,7 +2556,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 else if (name === 'signpost') { 
                     cx += 18; 
                     if (ov.points.length > 1) {
-                        var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: paneId } });
+                        var pt0 = chartObj.convertToPixel(
+                            { dataIndex: ov.points[0].dataIndex, timestamp: ov.points[0].timestamp, value: ov.points[0].value }, 
+                            { finder: { paneId: paneId } }
+                        );
                         if (pt0 && cx < pt0.x) cx -= 36;
                     }
                 }
@@ -2580,10 +2579,19 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
+    // 🔥 FIX 2: Thay vì làm màu tàng hình gây lỗi hệ thống, ta đổi text trên Canvas thành khoảng trắng
+    if (ov && chartObj) {
+        chartObj.overrideOverlay({ id: ov.id, extendData: ' ' });
+    }
+    
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
     var isRight = false;
     try {
-        isRight = (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj && chartObj.convertToPixel(ov.points[ov.points.length - 1], {finder:{paneId:paneId}})?.x < chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}})?.x);
+        if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
+             var p1 = chartObj.convertToPixel({ dataIndex: ov.points[ov.points.length-1].dataIndex, timestamp: ov.points[ov.points.length-1].timestamp, value: ov.points[ov.points.length-1].value }, {finder:{paneId:paneId}});
+             var p0 = chartObj.convertToPixel({ dataIndex: ov.points[0].dataIndex, timestamp: ov.points[0].timestamp, value: ov.points[0].value }, {finder:{paneId:paneId}});
+             if (p1 && p0 && p1.x < p0.x) isRight = true;
+        }
     } catch(e) {}
     
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
@@ -2639,12 +2647,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var createTime = Date.now();
 
-    // 🔥 FIX TỐI THƯỢNG CHO ĐIỆN THOẠI: Focus TỨC THÌ (Không dùng setTimeout) để bật Bàn Phím 
+    // 🔥 FIX 3: Gọi Focus ngay lập tức để gọi bàn phím điện thoại
     input.focus();
-    // Đưa con trỏ nhấp nháy `|` về cuối đoạn văn bản
-    input.selectionStart = input.selectionEnd = input.value.length;
+    input.selectionStart = input.selectionEnd = input.value.length; // Đẩy trỏ về cuối chữ
     
-    // 🔥 FIX CON TRỎ CHẠY THEO CHUỘT: Chặn sự kiện click "cũ" của Browser văng vào trong 150ms đầu
+    // Ngăn chặn xung đột nhấp chuột làm mất con trỏ nhấp nháy
     var lockCursor = function(e) {
         if (Date.now() - createTime < 150) {
             e.preventDefault();
@@ -2660,46 +2667,25 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     resizeInput();
     syncPosition(); 
 
+    // Khi gõ chữ, chỉ co giãn cái khung, KHÔNG ghi đè xuống canvas để tránh bóng ma
     input.addEventListener('input', function() {
         resizeInput();
-        if (chartObj && ov && ov.id) {
-            var liveText = input.value || ' ';
-            var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
-            if (!tempStyles.text) tempStyles.text = {};
-            tempStyles.text.color = 'rgba(0,0,0,0)'; // Giữ tàng hình khi gõ để tránh bóng ma
-            chartObj.overrideOverlay({ id: ov.id, extendData: liveText, styles: tempStyles });
-            
-            if (global.__wa_overlay_map) {
-                let cached = global.__wa_overlay_map.get(ov.id);
-                if (cached) { cached.extendData = liveText; cached.styles = tempStyles; }
-            }
-        }
     });
-
-    if (chartObj && ov && ov.id) {
-      try {
-        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
-        if (!tempStyles.text) tempStyles.text = {};
-        tempStyles.text.color = 'rgba(0,0,0,0)';
-        chartObj.overrideOverlay({ id: ov.id, styles: tempStyles });
-      } catch(e) {}
-    }
 
     var isCommitted = false;
     function commit() {
       if (isCommitted) return;
-      if (Date.now() - createTime < 200) { input.focus(); return; }
+      if (Date.now() - createTime < 200) { input.focus(); return; } // Chống tắt nhầm
       isCommitted = true;
       isTracking = false; 
       
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-      if (!updatedStyles.text) updatedStyles.text = {};
-      updatedStyles.text.color = curColor; // Khôi phục màu thật
       
       input.remove();
+      
+      // Gọi lệnh cập nhật text mới và bật lại text gốc
       onConfirm(val, updatedStyles);
-      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
     }
 
     input.addEventListener('blur', function() {
@@ -2707,6 +2693,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     });
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+      // Nếu user bấm Hủy (Esc), trả lại text gốc
       if (e.key === 'Escape') { input.value = currentText || ''; commit(); }
     });
   }
