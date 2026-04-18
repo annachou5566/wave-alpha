@@ -2536,29 +2536,30 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     function getChartPos() {
         if (!ov || !ov.points || !ov.points.length) return null;
         
-        // Xác định điểm Neo dựa theo loại Tool
         var ptIndex = 0; 
         if (['anchoredText', 'annotation', 'signpost'].includes(name) && ov.points.length > 1) {
-            ptIndex = 1; // Neo ở điểm thứ 2
+            ptIndex = 1; 
         }
         var pt = ov.points[ptIndex]; 
         
         try {
             var px = null;
-            // Ưu tiên dùng API v9
-            if (typeof chartObj.dataToCoordinate === 'function') {
+            // 🔥 SỬA LỖI CỐT LÕI: KLineChart v9 dùng { paneId } trực tiếp, KHÔNG PHẢI { finder: { paneId } }
+            var finderArgs = { paneId: paneId };
+
+            if (typeof chartObj.convertToPixel === 'function') {
+                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, finderArgs);
+            } else if (typeof chartObj.dataToCoordinate === 'function') {
                 px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
-            } 
-            // Dự phòng v8
-            else if (typeof chartObj.convertToPixel === 'function') {
-                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: { paneId: paneId } });
             }
 
             if (px && !isNaN(px.x) && !isNaN(px.y)) {
                 var cx = px.x, cy = px.y;
+                var halfLeading = 3;
 
                 // 🎯 Offset Pixel-Perfect để Textarea đè khít 100% lên Canvas Text
-                if (name === 'note') { cx += 8; cy += 8; }
+                if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
+                else if (name === 'note') { cx += 8; cy += 8; }
                 else if (name === 'priceNote') { cx += 6; }
                 else if (name === 'annotation') { cx += 6; }
                 else if (name === 'comment') { cx += 8; cy -= 8; }
@@ -2568,7 +2569,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 else if (name === 'signpost') { 
                     var isRightAlign = true;
                     if (ov.points.length > 1) {
-                        var px0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], { finder: { paneId: paneId } });
+                        var px0 = chartObj.convertToPixel(ov.points[0], finderArgs);
                         if (px0 && cx < px0.x) isRightAlign = false;
                     }
                     cx += isRightAlign ? 16 : -22;
@@ -2590,7 +2591,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
-    // Lưu lại text thật và tạo "bóng ma" tàng hình
     if (ov && chartObj) {
         ov._wa_real_text = currentText; 
         chartObj.overrideOverlay({ id: ov.id, extendData: ' ' });
@@ -2600,13 +2600,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var isAlignRight = false;
     try {
         if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
-             var p1 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], {finder:{paneId:paneId}});
-             var p0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}});
+             var p1 = chartObj.convertToPixel(ov.points[1], {paneId:paneId});
+             var p0 = chartObj.convertToPixel(ov.points[0], {paneId:paneId});
              if (p1 && p0 && p1.x < p0.x) isAlignRight = true;
         }
     } catch(e) {}
     
-    // 🎨 Tính toán CSS Alignment để Textarea không bị lệch nhịp
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
     if (isAlignRight) transformCSS = isMiddle ? 'translate(-100%, -50%)' : 'translateX(-100%)';
     var textAlign = isAlignRight ? 'right' : 'left';
@@ -2660,16 +2659,16 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var createTime = Date.now();
     
-    // ⚡ FIX TRỌNG TÂM: Đảm bảo focus và set caret (con trỏ chuột) nhấp nháy tại ký tự cuối cùng
+    // ⚡ FIX TRỌNG TÂM: Đưa con trỏ (caret) nhấp nháy vào điểm cuối cùng cực mượt
     setTimeout(function() {
         input.focus();
-        input.selectionStart = input.selectionEnd = input.value.length;
-    }, 0);
+        input.setSelectionRange(input.value.length, input.value.length);
+    }, 10);
 
     var lockCursor = function(e) {
         if (e.type === 'mousedown' && Date.now() - createTime < 150) {
             e.preventDefault();
-            input.selectionStart = input.selectionEnd = input.value.length;
+            input.setSelectionRange(input.value.length, input.value.length);
         } else {
             input.removeEventListener('mousedown', lockCursor);
             input.removeEventListener('touchstart', lockCursor);
@@ -2693,7 +2692,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       
-      if (ov) delete ov._wa_real_text; // Dọn rác khi làm xong
+      if (ov) delete ov._wa_real_text; 
       input.remove();
       
       onConfirm(val, updatedStyles);
