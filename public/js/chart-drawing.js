@@ -2515,6 +2515,14 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
  
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
+    
+    // 🌟 CỨU HỘ KHẨN CẤP: Trị dứt điểm bệnh "Mất chữ".
+    // Nếu màu chữ bị kẹt ở trạng thái tàng hình từ bộ nhớ cũ, ép nó sáng lên lại!
+    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
+        curColor = '#00F0FF'; // Đưa về xanh Neon mặc định của Wave Alpha
+        tStyles.color = curColor; 
+    }
+
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
@@ -2532,10 +2540,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (info && info.paneId) paneId = info.paneId;
     }
 
-    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT (Khắc phục lỗi Stale Reference)
+    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT (Khắc phục lỗi nhảy chuột)
     function getChartPos() {
-        // 🔥 Lấy Overlay "tươi" nhất trực tiếp từ Chart Engine thay vì biến nhớ tạm
-        var liveOv = chartObj.getOverlayById(ov.id);
+        // 🔥 Lấy Overlay "tươi sống" trực tiếp từ lõi Chart Engine thay vì dùng event cũ
+        var liveOv = chartObj.getOverlayById(ov.id) || ov; 
         if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
         
         var ptIndex = 0; 
@@ -2546,6 +2554,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         
         try {
             var px = null;
+            // Dùng API v9 chuẩn xác
             if (typeof chartObj.dataToCoordinate === 'function') {
                 px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
             } else if (typeof chartObj.convertToPixel === 'function') {
@@ -2556,6 +2565,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 var cx = px.x, cy = px.y;
                 var halfLeading = 3;
 
+                // 🎯 Căn chỉnh Pixel-Perfect cho TỪNG LOẠI TOOL
                 if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
                 else if (name === 'note') { cx += 8; cy += 8; }
                 else if (name === 'priceNote') { cx += 6; }
@@ -2589,15 +2599,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
-    // 🔥 FIX 2: TÀNG HÌNH CHỮ TRÊN CANVAS ĐỂ ÉP KHUNG BAO CO GIÃN THEO
-    if (ov && chartObj) {
-        ov._wa_real_text = currentText; 
-        var tempStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-        if (!tempStyles.text) tempStyles.text = {};
-        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ tàng hình
-        chartObj.overrideOverlay({ id: ov.id, extendData: input.value, styles: tempStyles });
-    }
-    
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
     var isAlignRight = false;
     try {
@@ -2621,7 +2622,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       background: transparent !important; 
       border: none !important;
       outline: none !important; 
-      color: ${curColor}; 
+      color: ${curColor} !important; 
       font-family: ${curFont}; 
       font-size: ${curSize}px; 
       line-height: ${exactLineHeight}px;
@@ -2661,6 +2662,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var createTime = Date.now();
     
+    // ⚡ FIX: Chắc chắn đưa con trỏ chuột xuống đuôi chữ sau khi DOM đã render
     setTimeout(function() {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
@@ -2681,10 +2683,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     resizeInput();
     syncPosition(); 
 
-    // 🔥 FIX 2 (TIẾP THEO): Truyền realtime chữ đang gõ xuống Canvas để kéo dãn khung Polygon
+    // 🔥 ĐỒNG BỘ REALTIME: Gõ đến đâu, ép KLineChart vẽ lại khung nền đến đó
     input.addEventListener('input', function() { 
         resizeInput(); 
         if (ov && chartObj) {
+            // Chỉ cập nhật extendData, KHÔNG đụng vào styles để chống mất màu
             chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
         }
     });
@@ -2697,12 +2700,14 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       isTracking = false; 
       
       var val = input.value.trim() || 'Văn bản...'; 
-      // TRẢ LẠI STYLE GỐC (Màu chữ hiện lại bình thường)
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       
-      if (ov) delete ov._wa_real_text; 
-      input.remove();
+      // Phòng hờ nếu vẫn còn bị kẹt màu trong suốt thì trả lại màu đúng
+      if (updatedStyles.text && (updatedStyles.text.color === 'rgba(0,0,0,0)' || updatedStyles.text.color === 'transparent')) {
+          updatedStyles.text.color = curColor;
+      }
       
+      input.remove();
       onConfirm(val, updatedStyles);
     }
 
@@ -2711,7 +2716,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     });
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') { input.value = currentText || ''; commit(); }
+      if (e.key === 'Escape') { 
+          input.value = currentText || ''; 
+          if (ov && chartObj) chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
+          commit(); 
+      }
     });
   }
 
