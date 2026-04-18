@@ -2532,32 +2532,30 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (info && info.paneId) paneId = info.paneId;
     }
 
-    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT (Tương thích KLineChart v9)
+    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT (Khắc phục lỗi Stale Reference)
     function getChartPos() {
-        if (!ov || !ov.points || !ov.points.length) return null;
+        // 🔥 Lấy Overlay "tươi" nhất trực tiếp từ Chart Engine thay vì biến nhớ tạm
+        var liveOv = chartObj.getOverlayById(ov.id);
+        if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
         
         var ptIndex = 0; 
-        if (['anchoredText', 'annotation', 'signpost'].includes(name) && ov.points.length > 1) {
+        if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) {
             ptIndex = 1; 
         }
-        var pt = ov.points[ptIndex]; 
+        var pt = liveOv.points[ptIndex]; 
         
         try {
             var px = null;
-            // 🔥 SỬA LỖI CỐT LÕI: KLineChart v9 dùng { paneId } trực tiếp, KHÔNG PHẢI { finder: { paneId } }
-            var finderArgs = { paneId: paneId };
-
-            if (typeof chartObj.convertToPixel === 'function') {
-                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, finderArgs);
-            } else if (typeof chartObj.dataToCoordinate === 'function') {
+            if (typeof chartObj.dataToCoordinate === 'function') {
                 px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+            } else if (typeof chartObj.convertToPixel === 'function') {
+                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: { paneId: paneId } });
             }
 
             if (px && !isNaN(px.x) && !isNaN(px.y)) {
                 var cx = px.x, cy = px.y;
                 var halfLeading = 3;
 
-                // 🎯 Offset Pixel-Perfect để Textarea đè khít 100% lên Canvas Text
                 if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
                 else if (name === 'note') { cx += 8; cy += 8; }
                 else if (name === 'priceNote') { cx += 6; }
@@ -2568,8 +2566,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 else if (name === 'flagMarker') { cx += 28; cy -= 23; }
                 else if (name === 'signpost') { 
                     var isRightAlign = true;
-                    if (ov.points.length > 1) {
-                        var px0 = chartObj.convertToPixel(ov.points[0], finderArgs);
+                    if (liveOv.points.length > 1) {
+                        var px0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(liveOv.points[0], paneId) : chartObj.convertToPixel(liveOv.points[0], { finder: { paneId: paneId } });
                         if (px0 && cx < px0.x) isRightAlign = false;
                     }
                     cx += isRightAlign ? 16 : -22;
@@ -2577,7 +2575,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 
                 return { x: cx, y: cy };
             }
-        } catch(e) { console.warn("Lỗi tính tọa độ:", e); }
+        } catch(e) {}
         return null;
     }
 
@@ -2591,17 +2589,21 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
+    // 🔥 FIX 2: TÀNG HÌNH CHỮ TRÊN CANVAS ĐỂ ÉP KHUNG BAO CO GIÃN THEO
     if (ov && chartObj) {
         ov._wa_real_text = currentText; 
-        chartObj.overrideOverlay({ id: ov.id, extendData: ' ' });
+        var tempStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+        if (!tempStyles.text) tempStyles.text = {};
+        tempStyles.text.color = 'rgba(0,0,0,0)'; // Làm chữ tàng hình
+        chartObj.overrideOverlay({ id: ov.id, extendData: input.value, styles: tempStyles });
     }
     
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
     var isAlignRight = false;
     try {
         if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
-             var p1 = chartObj.convertToPixel(ov.points[1], {paneId:paneId});
-             var p0 = chartObj.convertToPixel(ov.points[0], {paneId:paneId});
+             var p1 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], {finder:{paneId:paneId}});
+             var p0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}});
              if (p1 && p0 && p1.x < p0.x) isAlignRight = true;
         }
     } catch(e) {}
@@ -2659,7 +2661,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var createTime = Date.now();
     
-    // ⚡ FIX TRỌNG TÂM: Đưa con trỏ (caret) nhấp nháy vào điểm cuối cùng cực mượt
     setTimeout(function() {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
@@ -2680,7 +2681,13 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     resizeInput();
     syncPosition(); 
 
-    input.addEventListener('input', function() { resizeInput(); });
+    // 🔥 FIX 2 (TIẾP THEO): Truyền realtime chữ đang gõ xuống Canvas để kéo dãn khung Polygon
+    input.addEventListener('input', function() { 
+        resizeInput(); 
+        if (ov && chartObj) {
+            chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
+        }
+    });
 
     var isCommitted = false;
     function commit() {
@@ -2690,6 +2697,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       isTracking = false; 
       
       var val = input.value.trim() || 'Văn bản...'; 
+      // TRẢ LẠI STYLE GỐC (Màu chữ hiện lại bình thường)
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       
       if (ov) delete ov._wa_real_text; 
