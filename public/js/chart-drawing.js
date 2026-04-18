@@ -2532,39 +2532,51 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (info && info.paneId) paneId = info.paneId;
     }
 
+    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT (Tương thích KLineChart v9)
     function getChartPos() {
         if (!ov || !ov.points || !ov.points.length) return null;
-        var pt = ov.points[ov.points.length - 1]; 
+        
+        // Xác định điểm Neo dựa theo loại Tool
+        var ptIndex = 0; 
+        if (['anchoredText', 'annotation', 'signpost'].includes(name) && ov.points.length > 1) {
+            ptIndex = 1; // Neo ở điểm thứ 2
+        }
+        var pt = ov.points[ptIndex]; 
+        
         try {
-            var px = chartObj.convertToPixel(
-                { dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, 
-                { finder: { paneId: paneId } }
-            );
+            var px = null;
+            // Ưu tiên dùng API v9
+            if (typeof chartObj.dataToCoordinate === 'function') {
+                px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+            } 
+            // Dự phòng v8
+            else if (typeof chartObj.convertToPixel === 'function') {
+                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: { paneId: paneId } });
+            }
+
             if (px && !isNaN(px.x) && !isNaN(px.y)) {
                 var cx = px.x, cy = px.y;
-                var halfLeading = 3; 
-                cx -= 1; 
 
-                if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
-                else if (name === 'note') { cx += 10; cy += (10 - halfLeading); }
-                else if (name === 'annotation' || name === 'priceNote') { cx += 8; }
-                else if (name === 'comment') { cx += 10; cy -= 15; }
+                // 🎯 Offset Pixel-Perfect để Textarea đè khít 100% lên Canvas Text
+                if (name === 'note') { cx += 8; cy += 8; }
+                else if (name === 'priceNote') { cx += 6; }
+                else if (name === 'annotation') { cx += 6; }
+                else if (name === 'comment') { cx += 8; cy -= 8; }
                 else if (name === 'priceLabel') { cx += 12; }
-                else if (name === 'pin') { cx += 14; cy -= 20; }
-                else if (name === 'flagMarker') { cx += 26; cy -= 23; }
+                else if (name === 'pin') { cx += 16; cy -= 20; }
+                else if (name === 'flagMarker') { cx += 28; cy -= 23; }
                 else if (name === 'signpost') { 
-                    cx += 18; 
+                    var isRightAlign = true;
                     if (ov.points.length > 1) {
-                        var pt0 = chartObj.convertToPixel(
-                            { dataIndex: ov.points[0].dataIndex, timestamp: ov.points[0].timestamp, value: ov.points[0].value }, 
-                            { finder: { paneId: paneId } }
-                        );
-                        if (pt0 && cx < pt0.x) cx -= 36;
+                        var px0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], { finder: { paneId: paneId } });
+                        if (px0 && cx < px0.x) isRightAlign = false;
                     }
+                    cx += isRightAlign ? 16 : -22;
                 }
+                
                 return { x: cx, y: cy };
             }
-        } catch(e) {}
+        } catch(e) { console.warn("Lỗi tính tọa độ:", e); }
         return null;
     }
 
@@ -2578,25 +2590,26 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     
-    // FIX: Lưu trữ Text gốc trước khi tạo bóng ma bằng dấu cách
+    // Lưu lại text thật và tạo "bóng ma" tàng hình
     if (ov && chartObj) {
         ov._wa_real_text = currentText; 
         chartObj.overrideOverlay({ id: ov.id, extendData: ' ' });
     }
     
     var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
-    var isRight = false;
+    var isAlignRight = false;
     try {
         if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
-             var p1 = chartObj.convertToPixel({ dataIndex: ov.points[ov.points.length-1].dataIndex, timestamp: ov.points[ov.points.length-1].timestamp, value: ov.points[ov.points.length-1].value }, {finder:{paneId:paneId}});
-             var p0 = chartObj.convertToPixel({ dataIndex: ov.points[0].dataIndex, timestamp: ov.points[0].timestamp, value: ov.points[0].value }, {finder:{paneId:paneId}});
-             if (p1 && p0 && p1.x < p0.x) isRight = true;
+             var p1 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], {finder:{paneId:paneId}});
+             var p0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}});
+             if (p1 && p0 && p1.x < p0.x) isAlignRight = true;
         }
     } catch(e) {}
     
+    // 🎨 Tính toán CSS Alignment để Textarea không bị lệch nhịp
     var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
-    if (isRight) transformCSS = 'translate(-100%, -50%)';
-    var textAlign = isRight ? 'right' : 'left';
+    if (isAlignRight) transformCSS = isMiddle ? 'translate(-100%, -50%)' : 'translateX(-100%)';
+    var textAlign = isAlignRight ? 'right' : 'left';
     var exactLineHeight = curSize + 6;
  
     input.style.cssText = `
@@ -2646,19 +2659,24 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     }
 
     var createTime = Date.now();
-    input.focus();
-    input.selectionStart = input.selectionEnd = input.value.length;
     
-    // FIX: Bỏ e.preventDefault() trên touchstart để không chết bàn phím ảo
+    // ⚡ FIX TRỌNG TÂM: Đảm bảo focus và set caret (con trỏ chuột) nhấp nháy tại ký tự cuối cùng
+    setTimeout(function() {
+        input.focus();
+        input.selectionStart = input.selectionEnd = input.value.length;
+    }, 0);
+
     var lockCursor = function(e) {
         if (e.type === 'mousedown' && Date.now() - createTime < 150) {
             e.preventDefault();
             input.selectionStart = input.selectionEnd = input.value.length;
         } else {
             input.removeEventListener('mousedown', lockCursor);
+            input.removeEventListener('touchstart', lockCursor);
         }
     };
     input.addEventListener('mousedown', lockCursor);
+    input.addEventListener('touchstart', lockCursor, {passive: false});
 
     resizeInput();
     syncPosition(); 
@@ -2675,8 +2693,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       
-      if (ov) delete ov._wa_real_text; // Dọn rác
+      if (ov) delete ov._wa_real_text; // Dọn rác khi làm xong
       input.remove();
+      
       onConfirm(val, updatedStyles);
     }
 
