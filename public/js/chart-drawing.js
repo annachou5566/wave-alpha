@@ -2556,7 +2556,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var originalExtendData = ov ? ov.extendData : currentText;
   
-    // ── 3. FIX GHOST TEXT: ẨN CANVAS CHUẨN XÁC ────────────────────────────
+    // ── 3. FIX GHOST TEXT: ẨN CANVAS 1 LẦN DUY NHẤT ────────────────────────
     function hideCanvasText() {
       if (!ov || !chartObj || !chartObj.overrideOverlay) return;
       try {
@@ -2575,10 +2575,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
-    // Gọi ẩn ngay lập tức
     hideCanvasText();
   
-    // ── 4. TỌA ĐỘ PIXEL-PERFECT (GIỮ NGUYÊN BẢN GỐC CỦA BẠN) ───────────────
+    // ── 4. TỌA ĐỘ PIXEL-PERFECT (MAP 1:1 VỚI CANVAS) ───────────────────────
     function getChartPos() {
       if (!ov) return null;
       try {
@@ -2590,46 +2589,52 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
           ptIndex = 1;
         }
         var pt = liveOv.points[ptIndex];
-        var px = null;
-  
-        if (typeof chartObj.dataToCoordinate === 'function') {
-          px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
-        } else if (typeof chartObj.convertToPixel === 'function') {
-          px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId });
-        }
+        
+        var px = (typeof chartObj.convertToPixel === 'function') 
+          ? chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId })
+          : chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
   
         if (px && !isNaN(px.x) && !isNaN(px.y)) {
           var cx = px.x, cy = px.y;
-          if (name === 'plainText' || name === 'anchoredText') cy -= 3;
-          else if (name === 'note') { cx += 8; cy += 8; }
-          else if (name === 'priceNote') cx += 6;
-          else if (name === 'annotation') cx += 6;
-          else if (name === 'comment') { cx += 8; cy -= 8; }
-          else if (name === 'priceLabel') cx += 12;
-          else if (name === 'pin') { cx += 16; cy -= 20; }
-          else if (name === 'flagMarker') { cx += 28; cy -= 23; }
-          else if (name === 'signpost') {
-            var isRightAlign = false;
+          var align = 'left', baseline = 'bottom';
+  
+          // Khớp tuyệt đối với createPointFigures của KLineChart
+          if (name === 'plainText' || name === 'anchoredText') {
+            align = 'left'; baseline = 'bottom';
+          } else if (name === 'note') {
+            cx += 8; cy += 8; align = 'left'; baseline = 'top';
+          } else if (name === 'priceNote') {
+            cx += 6; align = 'left'; baseline = 'middle';
+          } else if (name === 'annotation') {
+            cx += 6; align = 'left'; baseline = 'middle';
+          } else if (name === 'comment') {
+            cx += 8; cy -= 8; align = 'left'; baseline = 'bottom';
+          } else if (name === 'priceLabel') {
+            cx += 12; align = 'left'; baseline = 'middle';
+          } else if (name === 'pin') {
+            cx += 16; cy -= 20; align = 'left'; baseline = 'top';
+          } else if (name === 'flagMarker') {
+            cx += 28; cy -= 23; align = 'left'; baseline = 'middle';
+          } else if (name === 'signpost') {
+            var isRight = true;
             if (liveOv.points.length > 1) {
-              var px0 = null;
-              if (typeof chartObj.dataToCoordinate === 'function') {
-                px0 = chartObj.dataToCoordinate(liveOv.points[0], paneId);
-              } else if (typeof chartObj.convertToPixel === 'function') {
-                px0 = chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
-              }
-              if (px0 && px.x < px0.x) isRightAlign = true;
+              var px0 = chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
+              if (px0 && px.x < px0.x) isRight = false;
             }
-            cx += isRightAlign ? -22 : 16;
+            cx += isRight ? 16 : -22;
+            align = isRight ? 'left' : 'right';
+            baseline = 'middle';
           }
-          return { x: cx, y: cy };
+  
+          return { x: cx, y: cy, align: align, baseline: baseline };
         }
       } catch(e) {}
       
-      // Fallback chuẩn xác khi click từ float toolbar
       var rect = container.getBoundingClientRect();
       return { 
         x: (window.waMouseX || window.innerWidth / 2) - rect.left, 
-        y: (window.waMouseY || window.innerHeight / 2) - rect.top 
+        y: (window.waMouseY || window.innerHeight / 2) - rect.top,
+        align: 'left', baseline: 'middle'
       };
     }
   
@@ -2639,7 +2644,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       return;
     }
   
-    // ── 5. XÂY DỰNG DOM & STYLES (GIỮ NGUYÊN BẢN GỐC CỦA BẠN) ──────────────
+    // ── 5. XÂY DỰNG DOM & STYLES CHUẨN XÁC ─────────────────────────────────
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor-backdrop';
     backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998';
@@ -2649,26 +2654,19 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
   
-    var isMiddle = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
-    var isAlignRight = false;
-    try {
-      if (name === 'signpost' && ov && ov.points && ov.points.length > 1) {
-        var p1s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], { paneId: paneId });
-        var p0s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], { paneId: paneId });
-        if (p1s && p0s && p1s.x < p0s.x) isAlignRight = true;
-      }
-    } catch(e) {}
+    // Dịch mã Align & Baseline thành CSS Transform để KHỚP 100% Canvas
+    var tx = '0%', ty = '0%';
+    if (pos.align === 'center') tx = '-50%';
+    else if (pos.align === 'right') tx = '-100%';
   
-    var transformCSS = 'none';
-    if (isMiddle) transformCSS = isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)';
-    var textAlign = isAlignRight ? 'right' : 'left';
-    var exactLineHeight = curSize + 6;
+    if (pos.baseline === 'middle') ty = '-50%';
+    else if (pos.baseline === 'bottom') ty = '-100%';
   
     input.style.cssText = [
       'position:absolute',
       'left:' + pos.x + 'px',
       'top:' + pos.y + 'px',
-      'transform:' + transformCSS,
+      'transform: translate(' + tx + ', ' + ty + ')',
       'background:transparent!important',
       'border:none!important',
       'outline:none!important',
@@ -2677,30 +2675,29 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       'caret-color:' + curColor,
       'font-family:' + curFont,
       'font-size:' + curSize + 'px',
-      'line-height:' + exactLineHeight + 'px',
+      'line-height:normal', // Trả về normal để khớp tự nhiên với Canvas
       'font-weight:' + curWeight,
       'font-style:' + curStyle,
-      'text-align:' + textAlign,
+      'text-align:' + pos.align,
       'white-space:pre',
       'word-wrap:normal',
       'overflow:hidden',
       'resize:none',
       'padding:0',
       'margin:0',
-      'min-width:30px',
-      'min-height:' + exactLineHeight + 'px',
       'z-index:999999',
       'user-select:text'
     ].join(';');
   
     container.appendChild(input);
   
+    // Thuật toán resize mới: Ép về 0 để đo chuẩn, chặn méo/thu nhỏ
     function resizeInput() {
       if (!input.parentNode) return;
-      input.style.width = '4px';
-      input.style.height = exactLineHeight + 'px';
-      input.style.width = Math.max(30, input.scrollWidth + 4) + 'px';
-      input.style.height = Math.max(exactLineHeight, input.scrollHeight) + 'px';
+      input.style.width = '0px';
+      input.style.height = '0px';
+      input.style.width = (input.scrollWidth + 4) + 'px';
+      input.style.height = (input.scrollHeight + 2) + 'px';
     }
   
     var isTracking = true;
@@ -2715,8 +2712,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     }
   
     // ── 6. CƠ CHẾ FIX CURSOR JUMP THÔNG MINH (ORPHAN MOUSEUP) ──────────────
-    // Một cú click chuẩn của người dùng: mousedown -> mouseup
-    // Cú mouseup độc hại từ canvas "rơi" xuống textarea sẽ KHÔNG CÓ mousedown đi trước.
     var textareaHasSeenMousedown = false;
   
     input.addEventListener('mousedown', function() {
@@ -2725,7 +2720,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     input.addEventListener('mouseup', function(e) {
       if (!textareaHasSeenMousedown) {
-        // Đây là orphan mouseup (rớt xuống từ click tạo editor), ta chặn nó
+        // Nhận diện "orphan mouseup" từ cú click trước đó và chặn lại
         e.preventDefault();
         e.stopPropagation();
         var len = input.value.length;
@@ -2746,7 +2741,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       }
     }, { capture: true });
   
-    // Focus lúc khởi tạo
+    // Đẩy focus và caret về cuối
     try {
       input.focus({ preventScroll: true });
       var initLen = input.value.length;
@@ -2792,7 +2787,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     input.addEventListener('input', function() {
       resizeInput();
-      // TUYỆT ĐỐI KHÔNG restoreCanvasText Ở ĐÂY -> CHẤM DỨT GHOST TEXT / CHỚP TẮT
     });
   
     input.addEventListener('keydown', function(e) {
@@ -2819,6 +2813,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       commit();
     }, true);
   
+    // Khởi động giao diện
     resizeInput();
     syncPosition();
   }
