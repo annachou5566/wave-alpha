@@ -2520,317 +2520,349 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   }
 
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    // ── 1. DỌN DẸP EDITOR CŨ ──────────────────────────────────────────────
-    var existing = document.getElementById('wa-text-editor');
-    if (existing) {
-      try { existing.__wa_skip_blur = true; } catch(e) {}
-      existing.remove();
+    var old = document.getElementById('wa-text-editor');
+    if (old) {
+      try { old.__wa_skip_blur = true; } catch(e){}
+      old.remove();
     }
-    var existingBd = document.getElementById('wa-text-editor-backdrop');
-    if (existingBd) existingBd.remove();
-  
-    var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
-    var curColor = tStyles.color || '#E8EDF2';
-    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') curColor = '#00F0FF';
-  
-    var curSize   = parseInt(tStyles.size) || 14;
-    var curFont   = tStyles.family || 'Be Vietnam Pro, sans-serif';
-    var curWeight = tStyles.weight || '600';
-    var curStyle  = tStyles.style || 'normal';
+    var oldBd = document.getElementById('wa-text-editor-backdrop');
+    if (oldBd) oldBd.remove();
   
     var ov = window.currentSelectedOverlay;
     var name = ov ? ov.name : toolId;
-  
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
-    if (!chartObj || !container) return;
+    if (!container || !chartObj || !ov) return;
   
     var paneId = 'candle_pane';
-    var liveOv = null;
     try {
-      if (ov && chartObj.getOverlayById) {
-        liveOv = chartObj.getOverlayById(ov.id);
-        if (liveOv && liveOv.paneId) paneId = liveOv.paneId;
+      var info = chartObj.getOverlayById ? chartObj.getOverlayById(ov.id) : null;
+      if (info && info.paneId) paneId = info.paneId;
+    } catch(e){}
+  
+    var liveOv = null;
+    try { liveOv = chartObj.getOverlayById ? chartObj.getOverlayById(ov.id) : ov; } catch(e) { liveOv = ov; }
+  
+    var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
+    var curColor = tStyles.color || '#E8EDF2';
+    var curSize = parseInt(tStyles.size, 10) || 14;
+    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
+    var curWeight = tStyles.weight || '600';
+    var curStyle = tStyles.style || 'normal';
+    if (curColor === 'transparent' || curColor === 'rgba(0,0,0,0)') curColor = '#00F0FF';
+  
+    var originalText = typeof ov.extendData === 'string' ? ov.extendData : (currentText || '');
+  
+    function getTextCtx() {
+      var ctx = window.waTextCtx;
+      if (!ctx) {
+        ctx = document.createElement('canvas').getContext('2d');
+        window.waTextCtx = ctx;
       }
-    } catch(e) {}
-  
-    var originalExtendData = ov ? ov.extendData : currentText;
-  
-    // ── 2. GHOST TEXT: Tàng hình Text trên Canvas nhưng giữ nguyên Box ────
-    function getHiddenText(str) {
-      var s = str || 'Văn bản...';
-      return s.split('\n').map(function(line) {
-        return Array(line.length + 1).join(' '); // Thay thành dấu cách
-      }).join('\n');
+      return ctx;
     }
   
-    function hideCanvasText(str) {
-      if (!ov || !chartObj || !chartObj.overrideOverlay) return;
-      try {
-        var hiddenStr = getHiddenText(str);
-        ov.extendData = hiddenStr; 
-        chartObj.overrideOverlay({ id: ov.id, extendData: hiddenStr });
-      } catch(e) {}
-    }
-  
-    function restoreCanvasText(newText) {
-      if (!ov || !chartObj || !chartObj.overrideOverlay) return;
-      var textToShow = (newText !== undefined) ? newText : originalExtendData;
-      try {
-        ov.extendData = textToShow;
-        ov.warealtext = textToShow;
-        chartObj.overrideOverlay({ id: ov.id, extendData: textToShow });
-      } catch(e) {}
-    }
-  
-    hideCanvasText(originalExtendData);
-  
-    // ── 3. TÍNH TOÁN TỌA ĐỘ VÀ KÍCH THƯỚC CHÍNH XÁC TỪ BOUNDING BOX ────────
-    function getBoxMetrics() {
-      if (!ov) return null;
-      
-      // Tọa độ điểm gốc để fallback
-      var ptIndex = 0;
-      if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv && liveOv.points && liveOv.points.length > 1) {
-        ptIndex = 1;
+    function getWeightForMeasure() {
+      var isItalic = curStyle === 'italic';
+      if (name === 'anchoredText' || name === 'priceNote' || name === 'priceLabel' || name === 'signpost' || name === 'flagMarker') {
+        return isItalic ? 'italic' : '700';
       }
-      
-      var pt = (liveOv && liveOv.points) ? liveOv.points[ptIndex] : (ov.points ? ov.points[ptIndex] : null);
-      var px = null;
-      if (pt) {
+      return isItalic ? 'italic' : (curWeight || '600');
+    }
+  
+    function measureTextBlock(text) {
+      var lines = String(text || '').split('\n');
+      if (!lines.length) lines = [''];
+      var sizeByTool = curSize || (
+        name === 'anchoredText' ? 13 :
+        name === 'priceNote' ? 12 :
+        name === 'annotation' ? 12 :
+        name === 'priceLabel' ? 11 :
+        name === 'signpost' ? 12 :
+        name === 'flagMarker' ? 11 : 14
+      );
+  
+      var lineGap = 6;
+      var lh = sizeByTool + lineGap;
+  
+      var ctx = getTextCtx();
+      var weight = getWeightForMeasure();
+      ctx.font = (weight === 'italic' ? 'italic 600 ' : (weight + ' ')) + sizeByTool + 'px ' + curFont;
+  
+      var textW = 0;
+      lines.forEach(function(line) {
+        textW = Math.max(textW, ctx.measureText(line || '').width);
+      });
+  
+      return { lines: lines, textW: Math.ceil(textW), lh: lh, size: sizeByTool };
+    }
+  
+    function getToolMetrics(text) {
+      var m = measureTextBlock(text);
+      var pl = 0, pr = 0, pt = 0, pb = 0, bw = 0, bh = 0;
+      var anchorIndex = 0;
+      var anchor = null;
+      var transform = 'none';
+      var textAlign = 'left';
+  
+      if (name === 'anchoredText' || name === 'annotation' || name === 'signpost') anchorIndex = 1;
+      if (!liveOv.points || !liveOv.points.length) anchorIndex = 0;
+      if (!liveOv.points[anchorIndex]) anchorIndex = 0;
+  
+      var ptData = liveOv.points[anchorIndex];
+      if (ptData) {
         if (typeof chartObj.dataToCoordinate === 'function') {
-          px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+          anchor = chartObj.dataToCoordinate({
+            dataIndex: ptData.dataIndex,
+            timestamp: ptData.timestamp,
+            value: ptData.value
+          }, paneId);
         } else if (typeof chartObj.convertToPixel === 'function') {
-          px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId });
+          anchor = chartObj.convertToPixel({
+            dataIndex: ptData.dataIndex,
+            timestamp: ptData.timestamp,
+            value: ptData.value
+          }, { paneId: paneId });
         }
       }
   
-      var cx = px ? px.x : (window.waMouseX || window.innerWidth / 2);
-      var cy = px ? px.y : (window.waMouseY || window.innerHeight / 2);
-  
-      // XÁC ĐỊNH BÙ TRỪ VÀ PADDING DỰA THEO TOOL (Khớp với createPointFigures của bạn)
-      var isAlignRight = false;
-      if (name === 'signpost' && liveOv && liveOv.points && liveOv.points.length > 1) {
-        var p1s = (typeof chartObj.convertToPixel === 'function') ? chartObj.convertToPixel(liveOv.points[1], { paneId: paneId }) : chartObj.dataToCoordinate(liveOv.points[1], paneId);
-        var p0s = (typeof chartObj.convertToPixel === 'function') ? chartObj.convertToPixel(liveOv.points[0], { paneId: paneId }) : chartObj.dataToCoordinate(liveOv.points[0], paneId);
-        if (p1s && p0s && p1s.x < p0s.x) isAlignRight = true;
+      if (!anchor || isNaN(anchor.x) || isNaN(anchor.y)) {
+        var rect = container.getBoundingClientRect();
+        anchor = {
+          x: (window.waMouseX || rect.width / 2) - rect.left,
+          y: (window.waMouseY || rect.height / 2) - rect.top
+        };
       }
   
-      // Các số đo này khớp y xì với các biến pl, pr, pt, pb trong chart-drawing.js của bạn
-      var pl = 0, pr = 0, pt = 0, pb = 0;
-      var offsetX = 0, offsetY = 0;
-      var transformCSS = 'none';
-      var textAlign = isAlignRight ? 'right' : 'left';
+      if (name === 'plainText') {
+        pl = 0; pr = 0; pt = 0; pb = 0;
+        bw = m.textW;
+        bh = m.lines.length * m.lh;
+        return { left: anchor.x, top: anchor.y, width: Math.max(30, bw + 2), height: Math.max(m.lh, bh + 2), padding: [0,0,0,0], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
   
-      if (name === 'plainText' || name === 'anchoredText') {
-        cy -= 3;
-      } else if (name === 'note') {
+      if (name === 'anchoredText') {
+        pl = 4; pr = 12; pt = 6; pb = 6;
+        bw = m.textW + pl + pr;
+        bh = m.lines.length * m.lh + pt + pb;
+        return { left: anchor.x, top: anchor.y, width: Math.max(30, bw), height: Math.max(m.lh, bh), padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      if (name === 'note') {
         pl = 8; pr = 14; pt = 8; pb = 8;
-        cx += 8; cy += 8;
-      } else if (name === 'priceNote') {
-        pl = 6; pr = 12; pt = 5; pb = 5;
-        cx += 6; 
-        transformCSS = 'translateY(-50%)';
-      } else if (name === 'pin') {
-        pl = 6; pr = 12; pt = 0; pb = 0;
-        cx += 26; cy -= 20; // x+r+6 = x+10+6
-        transformCSS = 'translateY(-50%)';
-      } else if (name === 'annotation') {
-        pl = 6; pr = 12; pt = 5; pb = 5;
-        cx += 6;
-        transformCSS = 'translateY(-50%)';
-      } else if (name === 'comment') {
-        pl = 8; pr = 12; pt = 8; pb = 12;
-        cx += 8; cy -= 8;
-        transformCSS = 'translateY(-100%)';
-      } else if (name === 'priceLabel') {
-        pl = 12; pr = 6; pt = 5; pb = 5;
-        cx += 12;
-        transformCSS = 'translateY(-50%)';
-      } else if (name === 'flagMarker') {
-        pl = 4; pr = 8; pt = 4; pb = 4;
-        cx += 28; cy -= 23;
-        transformCSS = 'translateY(-50%)';
-      } else if (name === 'signpost') {
-        pl = 6; pr = 6; pt = 4; pb = 4;
-        cx += isAlignRight ? -22 : 16;
-        transformCSS = isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)';
+        bw = Math.max(60, m.textW + pl + pr);
+        bh = m.lines.length * m.lh + pt + pb;
+        return { left: anchor.x, top: anchor.y, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
       }
   
-      return { 
-        x: cx, y: cy, 
-        pl: pl, pr: pr, pt: pt, pb: pb, 
-        transform: transformCSS, 
-        align: textAlign 
-      };
+      if (name === 'priceNote') {
+        pl = 6; pr = 12; pt = 5; pb = 5;
+        bw = m.textW + pl + pr;
+        bh = m.lines.length * m.lh + 10;
+        return { left: anchor.x, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      if (name === 'annotation') {
+        pl = 6; pr = 12; pt = 5; pb = 5;
+        bw = m.textW + pl + pr;
+        bh = m.lines.length * m.lh + 10;
+        return { left: anchor.x, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      if (name === 'comment') {
+        pl = 8; pr = 14; pt = 7; pb = 7;
+        bw = Math.max(80, m.textW + pl + pr);
+        bh = m.lines.length * m.lh + 14;
+        var tail = 8;
+        return { left: anchor.x, top: anchor.y - bh - tail, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      if (name === 'priceLabel') {
+        pl = 12; pr = 12; pt = 5; pb = 5;
+        var arr = 6;
+        bw = m.textW + 6 + 12 + arr;
+        bh = m.lines.length * m.lh + 10;
+        return { left: anchor.x, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,arr + 6], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      if (name === 'pin') {
+        var r = 10;
+        pl = 6; pr = 8; pt = 4; pb = 4;
+        bw = m.textW + pl + pr;
+        bh = m.lines.length * m.lh + pt + pb;
+        return { left: anchor.x + r + 6, top: anchor.y - r - 10 - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      if (name === 'signpost') {
+        pl = 6; pr = 12; pt = 5; pb = 5;
+        bw = m.textW + pl + pr;
+        bh = m.lines.length * m.lh + 10;
+  
+        var isRight = false;
+        try {
+          if (liveOv.points && liveOv.points.length > 1) {
+            var p0 = typeof chartObj.dataToCoordinate === 'function'
+              ? chartObj.dataToCoordinate(liveOv.points[0], paneId)
+              : chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
+            if (p0 && anchor.x < p0.x) isRight = true;
+          }
+        } catch(e){}
+  
+        if (isRight) {
+          return { left: anchor.x - 10 - bw, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        }
+        return { left: anchor.x + 10, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      if (name === 'flagMarker') {
+        var fw = 22, ph = 30, fh = 14;
+        pl = 6; pr = 8; pt = 4; pb = 4;
+        bw = m.textW + pl + pr;
+        bh = m.lines.length * m.lh + pt + pb;
+        return { left: anchor.x + fw + 6, top: anchor.y - ph - fh / 2 - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+      }
+  
+      return { left: anchor.x, top: anchor.y, width: Math.max(30, m.textW + 2), height: Math.max(m.lh, m.lines.length * m.lh + 2), padding: [0,0,0,0], align: textAlign, fontSize: m.size, lineHeight: m.lh };
     }
   
-    var metrics = getBoxMetrics();
-    if (!metrics) {
-      restoreCanvasText(originalExtendData);
-      return;
+    function hiddenVersion(str) {
+      return String(str || '').split('\n').map(function(line) {
+        return line.replace(/./g, ' ');
+      }).join('\n');
     }
   
-    // ── 4. TẠO DOM VỚI PADDING CHUẨN XÁC ──────────────────────────────────
+    function updateGhost(text) {
+      if (!chartObj.overrideOverlay || !ov) return;
+      try {
+        chartObj.overrideOverlay({ id: ov.id, extendData: hiddenVersion(text) });
+      } catch(e){}
+    }
+  
+    function restoreText(text) {
+      if (!chartObj.overrideOverlay || !ov) return;
+      try {
+        chartObj.overrideOverlay({ id: ov.id, extendData: text });
+        ov.extendData = text;
+      } catch(e){}
+    }
+  
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor-backdrop';
-    backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998';
+    backdrop.style.cssText = 'position:absolute;inset:0;background:transparent;z-index:999998;';
     container.appendChild(backdrop);
   
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    input.setAttribute('spellcheck', 'false');
   
-    var exactLineHeight = curSize + (['plainText', 'anchoredText'].includes(name) ? 2 : 6); 
+    function applyMetrics() {
+      var box = getToolMetrics(input.value || ' ');
+      input.style.left = box.left + 'px';
+      input.style.top = box.top + 'px';
+      input.style.width = Math.max(30, box.width) + 'px';
+      input.style.height = Math.max(box.lineHeight, box.height) + 'px';
+      input.style.paddingTop = box.padding[0] + 'px';
+      input.style.paddingRight = box.padding[1] + 'px';
+      input.style.paddingBottom = box.padding[2] + 'px';
+      input.style.paddingLeft = box.padding[3] + 'px';
+      input.style.textAlign = box.align;
+      input.style.fontSize = box.fontSize + 'px';
+      input.style.lineHeight = box.lineHeight + 'px';
+    }
   
-    // Dùng padding y hệt Canvas thay vì chỉ chỉnh Width/Height
     input.style.cssText = [
       'position:absolute',
-      'left:' + metrics.x + 'px',
-      'top:' + metrics.y + 'px',
-      'transform:' + metrics.transform,
-      'padding-top:' + metrics.pt + 'px',
-      'padding-bottom:' + metrics.pb + 'px',
-      'padding-left:' + metrics.pl + 'px',
-      'padding-right:' + metrics.pr + 'px',
-      'background:transparent!important',
-      'border:none!important',
-      'outline:none!important',
-      'box-shadow:none!important',
-      'color:' + curColor + '!important',
+      'z-index:999999',
+      'margin:0',
+      'border:none',
+      'outline:none',
+      'resize:none',
+      'overflow:hidden',
+      'background:transparent',
+      'box-shadow:none',
+      'white-space:pre',
+      'word-break:normal',
+      'overflow-wrap:normal',
+      'color:' + curColor,
       'caret-color:' + curColor,
       'font-family:' + curFont,
-      'font-size:' + curSize + 'px',
-      'line-height:' + exactLineHeight + 'px',
       'font-weight:' + curWeight,
       'font-style:' + curStyle,
-      'text-align:' + metrics.align,
-      'white-space:pre',
-      'word-wrap:normal',
-      'overflow:hidden',
-      'resize:none',
-      'margin:0',
       'min-width:30px',
-      'min-height:' + exactLineHeight + 'px',
-      'z-index:999999',
       'user-select:text'
     ].join(';');
   
     container.appendChild(input);
   
-    // Resize Input giờ sẽ giãn tự nhiên theo padding, không bị giật
-    function resizeInput() {
-      if (!input.parentNode) return;
-      input.style.width = '10px'; 
-      input.style.height = exactLineHeight + 'px';
-      // Đảm bảo không bị co rút: scrollWidth đã bao gồm text
-      input.style.width = Math.max(30, input.scrollWidth + 2) + 'px';
-      input.style.height = Math.max(exactLineHeight, input.scrollHeight) + 'px';
+    var raf = 0;
+    function sync() {
+      applyMetrics();
+      raf = requestAnimationFrame(sync);
     }
   
-    var isTracking = true;
-    function syncPosition() {
-      if (!isTracking || !input.parentNode) return;
-      var nm = getBoxMetrics();
-      if (nm) {
-        input.style.left = nm.x + 'px';
-        input.style.top = nm.y + 'px';
-      }
-      requestAnimationFrame(syncPosition);
-    }
-  
-    // ── 5. FIX CURSOR JUMP THÔNG MINH ─────────────────────────────────────
-    var textareaHasSeenMousedown = false;
-    input.addEventListener('mousedown', function() { textareaHasSeenMousedown = true; }, { capture: true });
-    input.addEventListener('mouseup', function(e) {
-      if (!textareaHasSeenMousedown) {
-        e.preventDefault(); e.stopPropagation();
-        var len = input.value.length;
-        try { input.setSelectionRange(len, len); } catch(err) {}
-      }
-    }, { capture: true });
-    input.addEventListener('touchstart', function() { textareaHasSeenMousedown = true; }, { capture: true });
-    input.addEventListener('touchend', function(e) {
-      if (!textareaHasSeenMousedown) {
-        e.preventDefault(); e.stopPropagation();
-        var len = input.value.length;
-        try { input.setSelectionRange(len, len); } catch(err) {}
-      }
-    }, { capture: true });
-  
-    try {
-      input.focus({ preventScroll: true });
-      input.setSelectionRange(input.value.length, input.value.length);
-    } catch(e) {}
-  
-  
-    // ── 6. XỬ LÝ GÕ PHÍM VÀ LƯU ───────────────────────────────────────────
-    var isCommitted = false;
-    var suppressBlur = false;
-    var createTime = Date.now();
-  
-    function destroyEditor() {
-      isTracking = false;
-      try { input.__wa_skip_blur = true; } catch(e) {}
+    var committed = false;
+    function destroy() {
+      if (raf) cancelAnimationFrame(raf);
+      try { input.__wa_skip_blur = true; } catch(e){}
       if (input.parentNode) input.remove();
       if (backdrop.parentNode) backdrop.remove();
     }
   
     function commit() {
-      if (isCommitted) return;
-      if (Date.now() - createTime < 150) return;
-      isCommitted = true;
-      
+      if (committed) return;
+      committed = true;
       var val = input.value.trim() || 'Văn bản...';
-      var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-      if (!updatedStyles.text) updatedStyles.text = {};
-      if (updatedStyles.text.color === 'rgba(0,0,0,0)' || updatedStyles.text.color === 'transparent') {
-        updatedStyles.text.color = curColor;
-      }
-      
-      destroyEditor();
-      restoreCanvasText(val); // Trả lại chữ thật cho Canvas
-      if (typeof onConfirm === 'function') onConfirm(val, updatedStyles);
+      destroy();
+      restoreText(val);
+      if (typeof onConfirm === 'function') onConfirm(val, currentStyles || {});
     }
   
     function cancel() {
-      if (isCommitted) return;
-      isCommitted = true;
-      destroyEditor();
-      restoreCanvasText(originalExtendData);
+      if (committed) return;
+      committed = true;
+      destroy();
+      restoreText(originalText);
     }
   
     input.addEventListener('input', function() {
-      resizeInput();
-      hideCanvasText(input.value); // Ép hộp màu Polygon dưới Canvas giãn ra theo Text
+      applyMetrics();
+      updateGhost(input.value || ' ');
     });
-    
+  
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault(); e.stopPropagation();
-        commit(); return;
+        e.preventDefault();
+        commit();
+        return;
       }
       if (e.key === 'Escape') {
-        e.preventDefault(); e.stopPropagation();
-        suppressBlur = true; cancel(); return;
+        e.preventDefault();
+        cancel();
       }
     });
   
     input.addEventListener('blur', function() {
-      if (input.__wa_skip_blur || suppressBlur) return;
+      if (input.__wa_skip_blur) return;
       setTimeout(function() {
-        if (!input.parentNode || input.__wa_skip_blur) return;
-        if (document.activeElement !== input) commit();
+        if (!committed && document.activeElement !== input) commit();
       }, 0);
     });
   
     backdrop.addEventListener('mousedown', function(e) {
-      e.preventDefault(); e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
       commit();
     }, true);
   
-    resizeInput();
-    syncPosition();
+    updateGhost(originalText || input.value || ' ');
+    applyMetrics();
+    sync();
+  
+    try {
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(input.value.length, input.value.length);
+    } catch(e){}
   }
 
   function createTextOverlay(chart, toolId, initialData) {
