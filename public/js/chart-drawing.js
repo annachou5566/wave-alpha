@@ -2520,7 +2520,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   }
 
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    // 1. Dọn dẹp Editor cũ
+    // 1. DỌN DẸP EDITOR CŨ
     var existing = document.getElementById('wa-text-editor');
     if (existing) {
       try { existing.__wa_skip_blur = true; } catch(e) {}
@@ -2529,7 +2529,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var existingBd = document.getElementById('wa-text-editor-backdrop');
     if (existingBd) existingBd.remove();
   
-    // 2. Trích xuất Styles
+    // 2. TRÍCH XUẤT STYLES & CONTEXT
     var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
     if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') curColor = '#00F0FF';
@@ -2554,10 +2554,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       }
     } catch(e) {}
   
-    // Lưu lại text gốc phòng trường hợp user bấm ESC (Cancel)
     var originalExtendData = ov ? ov.extendData : currentText;
   
-    // --- GHOST TEXT FIX: Ẩn chữ trên Canvas bằng chuỗi rỗng ---
+    // 3. GHOST TEXT FIX: Tàng hình Text trên Canvas 1 LẦN DUY NHẤT
     function hideCanvasText() {
       if (!ov || !chartObj || !chartObj.overrideOverlay) return;
       try {
@@ -2576,54 +2575,59 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
-    // Chạy luôn lệnh tàng hình text (Các nét line của anchoredText vẫn hiện bình thường)
     hideCanvasText();
   
-    // 3. Tính tọa độ Pixel để đặt Textarea
+    // 4. TÍNH TỌA ĐỘ PIXEL-PERFECT (Khớp 100% với Canvas)
     function getChartPos() {
       if (!ov) return null;
       try {
         var liveOv = chartObj.getOverlayById ? chartObj.getOverlayById(ov.id) : ov;
         if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
   
-        var ptIndex = 0;
-        if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) {
-          ptIndex = 1; // Tool 2 điểm -> neo text vào điểm số 2
-        }
-  
+        // Xác định điểm neo (anchoredText, annotation, signpost neo vào điểm thứ 2 nếu có)
+        var ptIndex = (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) ? 1 : 0;
         var pt = liveOv.points[ptIndex];
-        var px = null;
-        if (typeof chartObj.dataToCoordinate === 'function') {
-          px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
-        } else if (typeof chartObj.convertToPixel === 'function') {
-          px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId });
-        }
+        
+        var px = (typeof chartObj.convertToPixel === 'function') 
+          ? chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId })
+          : chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
   
         if (px && !isNaN(px.x) && !isNaN(px.y)) {
           var cx = px.x, cy = px.y;
-          if (name === 'plainText' || name === 'anchoredText') cy -= 3;
-          else if (name === 'note') { cx += 8; cy += 8; }
-          else if (name === 'priceNote') cx += 6;
-          else if (name === 'annotation') cx += 6;
-          else if (name === 'comment') { cx += 8; cy -= 8; }
-          else if (name === 'priceLabel') cx += 12;
-          else if (name === 'pin') { cx += 16; cy -= 20; }
-          else if (name === 'flagMarker') { cx += 28; cy -= 23; }
-          else if (name === 'signpost') {
-            var isRightAlign = false;
+          var align = 'left', baseline = 'bottom';
+  
+          // Map chính xác logic offset của từng Tool trong createPointFigures
+          if (name === 'plainText' || name === 'anchoredText') {
+            align = 'left'; baseline = 'bottom';
+          } else if (name === 'note') {
+            cx += 8; cy += 8; align = 'left'; baseline = 'top';
+          } else if (name === 'priceNote' || name === 'annotation') {
+            cx += 6; align = 'left'; baseline = 'middle';
+          } else if (name === 'comment') {
+            cx += 8; cy -= 8; align = 'left'; baseline = 'bottom';
+          } else if (name === 'priceLabel') {
+            cx += 12; align = 'left'; baseline = 'middle';
+          } else if (name === 'pin') {
+            cx += 16; cy -= 20; align = 'left'; baseline = 'top';
+          } else if (name === 'flagMarker') {
+            cx += 28; cy -= 23; align = 'left'; baseline = 'middle';
+          } else if (name === 'signpost') {
+            var isRight = true;
             if (liveOv.points.length > 1) {
-              var px0 = (typeof chartObj.dataToCoordinate === 'function')
-                ? chartObj.dataToCoordinate(liveOv.points[0], paneId)
-                : chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
-              if (px0 && px.x < px0.x) isRightAlign = true;
+              var p0 = chartObj.convertToPixel(liveOv.points[0], {paneId: paneId});
+              if (p0 && px.x < p0.x) isRight = false;
             }
-            cx += isRightAlign ? -22 : 16;
+            cx += isRight ? 16 : -22;
+            align = isRight ? 'left' : 'right';
+            baseline = 'middle';
           }
-          return { x: cx, y: cy };
+  
+          return { x: cx, y: cy, align: align, baseline: baseline };
         }
       } catch(e) {}
+      
       var rect = container.getBoundingClientRect();
-      return { x: (window.waMouseX || window.innerWidth/2) - rect.left, y: (window.waMouseY || window.innerHeight/2) - rect.top };
+      return { x: (window.waMouseX || window.innerWidth/2) - rect.left, y: (window.waMouseY || window.innerHeight/2) - rect.top, align: 'left', baseline: 'middle' };
     }
   
     var pos = getChartPos();
@@ -2632,7 +2636,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       return;
     }
   
-    // 4. Tạo UI Editor
+    // 5. TẠO UI EDITOR KHÔNG LỆCH
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor-backdrop';
     backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998';
@@ -2640,35 +2644,46 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
-    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    var initialVal = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    input.value = initialVal;
   
-    var isMiddle = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
-    var isAlignRight = false;
-    try {
-      if (name === 'signpost' && ov && ov.points && ov.points.length > 1) {
-        var p1s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], { paneId: paneId });
-        var p0s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], { paneId: paneId });
-        if (p1s && p0s && p1s.x < p0s.x) isAlignRight = true;
-      }
-    } catch(e) {}
+    // Chuyển đổi align & baseline sang CSS transform để khớp chuẩn 100% Canvas
+    var tx = '0%', ty = '0%';
+    if (pos.align === 'center') tx = '-50%';
+    else if (pos.align === 'right') tx = '-100%';
   
-    var transformCSS = isMiddle ? (isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)') : 'none';
-    var textAlign = isAlignRight ? 'right' : 'left';
-    var exactLineHeight = curSize + 6;
+    if (pos.baseline === 'middle') ty = '-50%';
+    else if (pos.baseline === 'bottom') ty = '-100%';
+  
+    var exactLineHeight = curSize + (curSize > 14 ? 4 : 2); // Khớp padding tự nhiên
   
     input.style.cssText = [
-      'position:absolute', 'left:' + pos.x + 'px', 'top:' + pos.y + 'px',
-      'transform:' + transformCSS, 'background:transparent!important',
-      'border:none!important', 'outline:none!important', 'box-shadow:none!important',
-      'color:' + curColor + '!important', 'caret-color:' + curColor,
-      'font-family:' + curFont, 'font-size:' + curSize + 'px',
-      'line-height:' + exactLineHeight + 'px', 'font-weight:' + curWeight,
-      'font-style:' + curStyle, 'text-align:' + textAlign,
-      'white-space:pre', 'word-wrap:normal', 'overflow:hidden', 'resize:none',
-      'padding:0', 'margin:0', 'min-width:30px', 'min-height:' + exactLineHeight + 'px',
-      'z-index:999999', 'user-select:text',
-      // --- CURSOR JUMP FIX: Xuyên thủng pointer-events tạm thời ---
-      'pointer-events:none'
+      'position:absolute',
+      'left:' + pos.x + 'px',
+      'top:' + pos.y + 'px',
+      'transform: translate(' + tx + ', ' + ty + ')', // Cốt lõi sửa lỗi Lệch
+      'background:transparent!important',
+      'border:none!important',
+      'outline:none!important',
+      'box-shadow:none!important',
+      'color:' + curColor + '!important',
+      'caret-color:' + curColor,
+      'font-family:' + curFont,
+      'font-size:' + curSize + 'px',
+      'line-height:' + exactLineHeight + 'px',
+      'font-weight:' + curWeight,
+      'font-style:' + curStyle,
+      'text-align:' + pos.align,
+      'white-space:pre',
+      'word-wrap:normal',
+      'overflow:hidden',
+      'resize:none',
+      'padding:0',
+      'margin:0',
+      'min-width:30px',
+      'min-height:' + exactLineHeight + 'px',
+      'z-index:999999',
+      'user-select:text'
     ].join(';');
   
     container.appendChild(input);
@@ -2685,11 +2700,35 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     function syncPosition() {
       if (!isTracking || !input.parentNode) return;
       var np = getChartPos();
-      if (np) { input.style.left = np.x + 'px'; input.style.top = np.y + 'px'; }
+      if (np) {
+        input.style.left = np.x + 'px';
+        input.style.top = np.y + 'px';
+      }
       requestAnimationFrame(syncPosition);
     }
   
-    // 5. Quản lý Trạng thái & Commit
+    // 6. FIX CURSOR JUMP: Ép caret về cuối mượt mà, không chặn click user
+    var isOpening = true;
+    setTimeout(function() { isOpening = false; }, 150);
+  
+    input.addEventListener('mouseup', function(e) {
+      // Chỉ chặn browser bôi đen trong 150ms đầu (lúc mới nhấc chuột click/pen)
+      if (isOpening) {
+        e.preventDefault(); 
+      }
+    }, { capture: true });
+  
+    // Focus trick: Set rỗng rồi set lại tự động ép caret về cuối cùng cực kỳ ổn định
+    requestAnimationFrame(function() {
+      try {
+        input.focus({ preventScroll: true });
+        input.value = '';
+        input.value = initialVal;
+        input.setSelectionRange(initialVal.length, initialVal.length);
+      } catch(e) {}
+    });
+  
+    // 7. SỰ KIỆN GÕ PHÍM & COMMIT
     var isCommitted = false;
     var suppressBlur = false;
     var createTime = Date.now();
@@ -2703,7 +2742,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     function commit() {
       if (isCommitted) return;
-      if (Date.now() - createTime < 120) return; // Chống click nhầm quá lẹ
+      if (Date.now() - createTime < 150) return; // Chống nháy đúp
       isCommitted = true;
       
       var val = input.value.trim() || 'Văn bản...';
@@ -2714,7 +2753,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       }
       
       destroyEditor();
-      restoreCanvasText(val); // Phục hồi text lên Canvas
+      restoreCanvasText(val); // Phục hồi Canvas
       if (typeof onConfirm === 'function') onConfirm(val, updatedStyles);
     }
   
@@ -2722,33 +2761,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       if (isCommitted) return;
       isCommitted = true;
       destroyEditor();
-      restoreCanvasText(originalExtendData); // Phục hồi text ban đầu
+      restoreCanvasText(originalExtendData); // Hủy -> Trả lại text ban đầu
     }
   
-    // Focus & Đẩy Caret về cuối
-    try {
-      input.focus({ preventScroll: true });
-      var len = input.value.length;
-      input.setSelectionRange(len, len);
-    } catch(err) {}
-  
-    // --- MỞ KHÓA POINTER EVENTS ---
-    // Giải phóng textarea sau khi event "mouseup" độc hại trôi qua
-    function unlockPointer() {
-      if (input && input.style.pointerEvents === 'none') {
-        input.style.pointerEvents = 'auto';
-      }
-      window.removeEventListener('mouseup', unlockPointer, true);
-      window.removeEventListener('touchend', unlockPointer, true);
-    }
-    window.addEventListener('mouseup', unlockPointer, true);
-    window.addEventListener('touchend', unlockPointer, true);
-    setTimeout(unlockPointer, 200); // Fallback
-  
-    // 6. Xử lý Input & Phím tắt
     input.addEventListener('input', function() {
       resizeInput();
-      // TUYỆT ĐỐI KHÔNG GỌI restoreCanvasText() Ở ĐÂY ĐỂ TRÁNH LAG/GHOST TEXT
+      // TUYỆT ĐỐI KHÔNG restoreCanvasText Ở ĐÂY ĐỂ TRÁNH LAG/GHOST
     });
   
     input.addEventListener('keydown', function(e) {
@@ -2774,12 +2792,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       e.preventDefault(); e.stopPropagation();
       commit();
     }, true);
-    
-    backdrop.addEventListener('mouseup', function(e) {
-      e.preventDefault(); e.stopPropagation();
-    }, true);
   
-    // Khởi chạy
     resizeInput();
     syncPosition();
   }
