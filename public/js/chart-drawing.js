@@ -2520,7 +2520,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   }
 
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    // 1. DỌN DẸP EDITOR CŨ
+    // ── 1. DỌN DẸP EDITOR CŨ ──────────────────────────────────────────────
     var existing = document.getElementById('wa-text-editor');
     if (existing) {
       try { existing.__wa_skip_blur = true; } catch(e) {}
@@ -2529,7 +2529,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var existingBd = document.getElementById('wa-text-editor-backdrop');
     if (existingBd) existingBd.remove();
   
-    // 2. TRÍCH XUẤT STYLES & CONTEXT
+    // ── 2. TRÍCH XUẤT STYLES & CONTEXT ─────────────────────────────────────
     var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
     if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') curColor = '#00F0FF';
@@ -2556,11 +2556,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var originalExtendData = ov ? ov.extendData : currentText;
   
-    // 3. GHOST TEXT FIX: Tàng hình Text trên Canvas 1 LẦN DUY NHẤT
+    // ── 3. FIX GHOST TEXT: ẨN CANVAS CHUẨN XÁC ────────────────────────────
     function hideCanvasText() {
       if (!ov || !chartObj || !chartObj.overrideOverlay) return;
       try {
-        ov.extendData = '\u200B';
+        ov.extendData = '\u200B'; // Tàng hình trên canvas
         chartObj.overrideOverlay({ id: ov.id, extendData: '\u200B' });
       } catch(e) {}
     }
@@ -2575,59 +2575,62 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
+    // Gọi ẩn ngay lập tức
     hideCanvasText();
   
-    // 4. TÍNH TỌA ĐỘ PIXEL-PERFECT (Khớp 100% với Canvas)
+    // ── 4. TỌA ĐỘ PIXEL-PERFECT (GIỮ NGUYÊN BẢN GỐC CỦA BẠN) ───────────────
     function getChartPos() {
       if (!ov) return null;
       try {
         var liveOv = chartObj.getOverlayById ? chartObj.getOverlayById(ov.id) : ov;
         if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
   
-        // Xác định điểm neo (anchoredText, annotation, signpost neo vào điểm thứ 2 nếu có)
-        var ptIndex = (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) ? 1 : 0;
+        var ptIndex = 0;
+        if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) {
+          ptIndex = 1;
+        }
         var pt = liveOv.points[ptIndex];
-        
-        var px = (typeof chartObj.convertToPixel === 'function') 
-          ? chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId })
-          : chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+        var px = null;
+  
+        if (typeof chartObj.dataToCoordinate === 'function') {
+          px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+        } else if (typeof chartObj.convertToPixel === 'function') {
+          px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId });
+        }
   
         if (px && !isNaN(px.x) && !isNaN(px.y)) {
           var cx = px.x, cy = px.y;
-          var align = 'left', baseline = 'bottom';
-  
-          // Map chính xác logic offset của từng Tool trong createPointFigures
-          if (name === 'plainText' || name === 'anchoredText') {
-            align = 'left'; baseline = 'bottom';
-          } else if (name === 'note') {
-            cx += 8; cy += 8; align = 'left'; baseline = 'top';
-          } else if (name === 'priceNote' || name === 'annotation') {
-            cx += 6; align = 'left'; baseline = 'middle';
-          } else if (name === 'comment') {
-            cx += 8; cy -= 8; align = 'left'; baseline = 'bottom';
-          } else if (name === 'priceLabel') {
-            cx += 12; align = 'left'; baseline = 'middle';
-          } else if (name === 'pin') {
-            cx += 16; cy -= 20; align = 'left'; baseline = 'top';
-          } else if (name === 'flagMarker') {
-            cx += 28; cy -= 23; align = 'left'; baseline = 'middle';
-          } else if (name === 'signpost') {
-            var isRight = true;
+          if (name === 'plainText' || name === 'anchoredText') cy -= 3;
+          else if (name === 'note') { cx += 8; cy += 8; }
+          else if (name === 'priceNote') cx += 6;
+          else if (name === 'annotation') cx += 6;
+          else if (name === 'comment') { cx += 8; cy -= 8; }
+          else if (name === 'priceLabel') cx += 12;
+          else if (name === 'pin') { cx += 16; cy -= 20; }
+          else if (name === 'flagMarker') { cx += 28; cy -= 23; }
+          else if (name === 'signpost') {
+            var isRightAlign = false;
             if (liveOv.points.length > 1) {
-              var p0 = chartObj.convertToPixel(liveOv.points[0], {paneId: paneId});
-              if (p0 && px.x < p0.x) isRight = false;
+              var px0 = null;
+              if (typeof chartObj.dataToCoordinate === 'function') {
+                px0 = chartObj.dataToCoordinate(liveOv.points[0], paneId);
+              } else if (typeof chartObj.convertToPixel === 'function') {
+                px0 = chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
+              }
+              if (px0 && px.x < px0.x) isRightAlign = true;
             }
-            cx += isRight ? 16 : -22;
-            align = isRight ? 'left' : 'right';
-            baseline = 'middle';
+            cx += isRightAlign ? -22 : 16;
           }
-  
-          return { x: cx, y: cy, align: align, baseline: baseline };
+          return { x: cx, y: cy };
         }
       } catch(e) {}
       
+      // Fallback chuẩn xác khi click từ float toolbar
       var rect = container.getBoundingClientRect();
-      return { x: (window.waMouseX || window.innerWidth/2) - rect.left, y: (window.waMouseY || window.innerHeight/2) - rect.top, align: 'left', baseline: 'middle' };
+      return { 
+        x: (window.waMouseX || window.innerWidth / 2) - rect.left, 
+        y: (window.waMouseY || window.innerHeight / 2) - rect.top 
+      };
     }
   
     var pos = getChartPos();
@@ -2636,7 +2639,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       return;
     }
   
-    // 5. TẠO UI EDITOR KHÔNG LỆCH
+    // ── 5. XÂY DỰNG DOM & STYLES (GIỮ NGUYÊN BẢN GỐC CỦA BẠN) ──────────────
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor-backdrop';
     backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998';
@@ -2644,24 +2647,28 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
-    var initialVal = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-    input.value = initialVal;
+    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
   
-    // Chuyển đổi align & baseline sang CSS transform để khớp chuẩn 100% Canvas
-    var tx = '0%', ty = '0%';
-    if (pos.align === 'center') tx = '-50%';
-    else if (pos.align === 'right') tx = '-100%';
+    var isMiddle = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
+    var isAlignRight = false;
+    try {
+      if (name === 'signpost' && ov && ov.points && ov.points.length > 1) {
+        var p1s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], { paneId: paneId });
+        var p0s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], { paneId: paneId });
+        if (p1s && p0s && p1s.x < p0s.x) isAlignRight = true;
+      }
+    } catch(e) {}
   
-    if (pos.baseline === 'middle') ty = '-50%';
-    else if (pos.baseline === 'bottom') ty = '-100%';
-  
-    var exactLineHeight = curSize + (curSize > 14 ? 4 : 2); // Khớp padding tự nhiên
+    var transformCSS = 'none';
+    if (isMiddle) transformCSS = isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)';
+    var textAlign = isAlignRight ? 'right' : 'left';
+    var exactLineHeight = curSize + 6;
   
     input.style.cssText = [
       'position:absolute',
       'left:' + pos.x + 'px',
       'top:' + pos.y + 'px',
-      'transform: translate(' + tx + ', ' + ty + ')', // Cốt lõi sửa lỗi Lệch
+      'transform:' + transformCSS,
       'background:transparent!important',
       'border:none!important',
       'outline:none!important',
@@ -2673,7 +2680,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       'line-height:' + exactLineHeight + 'px',
       'font-weight:' + curWeight,
       'font-style:' + curStyle,
-      'text-align:' + pos.align,
+      'text-align:' + textAlign,
       'white-space:pre',
       'word-wrap:normal',
       'overflow:hidden',
@@ -2707,28 +2714,47 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       requestAnimationFrame(syncPosition);
     }
   
-    // 6. FIX CURSOR JUMP: Ép caret về cuối mượt mà, không chặn click user
-    var isOpening = true;
-    setTimeout(function() { isOpening = false; }, 150);
+    // ── 6. CƠ CHẾ FIX CURSOR JUMP THÔNG MINH (ORPHAN MOUSEUP) ──────────────
+    // Một cú click chuẩn của người dùng: mousedown -> mouseup
+    // Cú mouseup độc hại từ canvas "rơi" xuống textarea sẽ KHÔNG CÓ mousedown đi trước.
+    var textareaHasSeenMousedown = false;
+  
+    input.addEventListener('mousedown', function() {
+      textareaHasSeenMousedown = true;
+    }, { capture: true });
   
     input.addEventListener('mouseup', function(e) {
-      // Chỉ chặn browser bôi đen trong 150ms đầu (lúc mới nhấc chuột click/pen)
-      if (isOpening) {
-        e.preventDefault(); 
+      if (!textareaHasSeenMousedown) {
+        // Đây là orphan mouseup (rớt xuống từ click tạo editor), ta chặn nó
+        e.preventDefault();
+        e.stopPropagation();
+        var len = input.value.length;
+        try { input.setSelectionRange(len, len); } catch(err) {}
       }
     }, { capture: true });
   
-    // Focus trick: Set rỗng rồi set lại tự động ép caret về cuối cùng cực kỳ ổn định
-    requestAnimationFrame(function() {
-      try {
-        input.focus({ preventScroll: true });
-        input.value = '';
-        input.value = initialVal;
-        input.setSelectionRange(initialVal.length, initialVal.length);
-      } catch(e) {}
-    });
+    input.addEventListener('touchstart', function() {
+      textareaHasSeenMousedown = true;
+    }, { capture: true });
   
-    // 7. SỰ KIỆN GÕ PHÍM & COMMIT
+    input.addEventListener('touchend', function(e) {
+      if (!textareaHasSeenMousedown) {
+        e.preventDefault();
+        e.stopPropagation();
+        var len = input.value.length;
+        try { input.setSelectionRange(len, len); } catch(err) {}
+      }
+    }, { capture: true });
+  
+    // Focus lúc khởi tạo
+    try {
+      input.focus({ preventScroll: true });
+      var initLen = input.value.length;
+      input.setSelectionRange(initLen, initLen);
+    } catch(e) {}
+  
+  
+    // ── 7. SỰ KIỆN GÕ PHÍM & COMMIT ────────────────────────────────────────
     var isCommitted = false;
     var suppressBlur = false;
     var createTime = Date.now();
@@ -2742,7 +2768,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     function commit() {
       if (isCommitted) return;
-      if (Date.now() - createTime < 150) return; // Chống nháy đúp
+      if (Date.now() - createTime < 150) return; // Chống nháy click đúp nhanh
       isCommitted = true;
       
       var val = input.value.trim() || 'Văn bản...';
@@ -2753,7 +2779,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       }
       
       destroyEditor();
-      restoreCanvasText(val); // Phục hồi Canvas
+      restoreCanvasText(val);
       if (typeof onConfirm === 'function') onConfirm(val, updatedStyles);
     }
   
@@ -2761,12 +2787,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       if (isCommitted) return;
       isCommitted = true;
       destroyEditor();
-      restoreCanvasText(originalExtendData); // Hủy -> Trả lại text ban đầu
+      restoreCanvasText(originalExtendData);
     }
   
     input.addEventListener('input', function() {
       resizeInput();
-      // TUYỆT ĐỐI KHÔNG restoreCanvasText Ở ĐÂY ĐỂ TRÁNH LAG/GHOST
+      // TUYỆT ĐỐI KHÔNG restoreCanvasText Ở ĐÂY -> CHẤM DỨT GHOST TEXT / CHỚP TẮT
     });
   
     input.addEventListener('keydown', function(e) {
