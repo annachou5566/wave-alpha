@@ -2512,173 +2512,215 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
     var existing = document.getElementById('wa-text-editor');
     if (existing) { existing.blur(); existing.remove(); }
-  
-    var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
-    var curColor = tStyles.color || 'E8EDF2';
-    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') curColor = '00F0FF';
-  
-    var curSize = parseInt(tStyles.size) || 14;
-    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
-    var curWeight = tStyles.weight || '600';
-    var curStyle = tStyles.style || 'normal';
-  
-    var ov = window.currentSelectedOverlay;
-    var name = ov ? ov.name : (toolId || toolId);
+
+    var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
+    var curColor = tStyles.color || '#E8EDF2';
+    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
+        curColor = '#00F0FF';
+        tStyles.color = curColor;
+    }
+
+    var curSize   = parseInt(tStyles.size)   || 14;
+    var curFont   = tStyles.family           || 'Be Vietnam Pro, sans-serif';
+    var curWeight = tStyles.weight           || '600';
+    var curStyle  = tStyles.style            || 'normal';
+
+    var ov        = window.currentSelectedOverlay;
+    var name      = ov ? (ov.name || toolId) : toolId;
     var container = document.getElementById('sc-chart-container');
-    var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
+    var chartObj  = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj || !container) return;
-  
-    var paneId = 'candlepane';
+
+    var paneId = 'candle_pane';
     if (ov && chartObj.getOverlayById) {
-      var info = chartObj.getOverlayById(ov.id);
-      if (info && info.paneId) paneId = info.paneId;
+        var info = chartObj.getOverlayById(ov.id);
+        if (info && info.paneId) paneId = info.paneId;
     }
-  
-    // *** FIX GHOST TEXT: Ẩn text gốc trên canvas bằng cách set màu trong suốt TẠM THỜI ***
-    var ghostHidden = false;
+
+    // ─── FIX 1: GHOST TEXT — Ẩn chữ Canvas TRƯỚC khi mở textarea ───
+    var _ghostStylesSnap = JSON.parse(JSON.stringify(currentStyles || {}));  // Snapshot màu gốc
     if (ov && chartObj) {
-      try {
-        chartObj.overrideOverlay({ id: ov.id, styles: { text: { color: 'rgba(0,0,0,0)' } } });
-        ghostHidden = true;
-      } catch(e) {}
+        var ghostStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+        if (!ghostStyles.text)    ghostStyles.text    = {};
+        if (!ghostStyles.polygon) ghostStyles.polygon = {};
+        ghostStyles.text.color              = 'rgba(0,0,0,0)';
+        ghostStyles.text.backgroundColor    = 'rgba(0,0,0,0)';
+        ghostStyles.polygon.borderColor     = 'rgba(0,0,0,0)';
+        // Giữ nguyên polygon.color (nền hộp) để không mất background
+        chartObj.overrideOverlay({ id: ov.id, styles: ghostStyles });
     }
-  
-    // --- Tính toán vị trí (giữ nguyên logic getChartPos hiện có) ---
+
     function getChartPos() {
-      var liveOv = chartObj.getOverlayById ? chartObj.getOverlayById(ov ? ov.id : null) : ov;
-      if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
-      var ptIndex = 0;
-      if (['anchoredText','annotation','signpost'].includes(name) && liveOv.points.length > 1) ptIndex = 1;
-      var pt = liveOv.points[ptIndex];
-      try {
-        var px = null;
-        if (typeof chartObj.dataToCoordinate === 'function')
-          px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
-        else if (typeof chartObj.convertToPixel === 'function')
-          px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: 'paneId', paneId: paneId });
-        if (!px || isNaN(px.x) || isNaN(px.y)) return null;
-        var cx = px.x, cy = px.y;
-        var halfLeading = 3;
-        if (name === 'plainText' || name === 'anchoredText') cy -= halfLeading;
-        else if (name === 'note') { cx += 8; cy += 8; }
-        else if (name === 'priceNote') cx += 6;
-        else if (name === 'annotation') cx += 6;
-        else if (name === 'comment') { cx += 8; cy -= 8; }
-        else if (name === 'priceLabel') cx += 12;
-        else if (name === 'pin') { cx += 16; cy -= 20; }
-        else if (name === 'flagMarker') { cx += 28; cy -= 23; }
-        return { x: cx, y: cy };
-      } catch(e) { return null; }
+        var liveOv = chartObj.getOverlayById(ov.id) || ov;
+        if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
+        var ptIndex = 0;
+        if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) ptIndex = 1;
+        var pt = liveOv.points[ptIndex];
+        try {
+            var px = null;
+            if (typeof chartObj.dataToCoordinate === 'function') {
+                px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+            } else if (typeof chartObj.convertToPixel === 'function') {
+                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: { paneId: paneId } });
+            }
+            if (px && !isNaN(px.x) && !isNaN(px.y)) {
+                var cx = px.x, cy = px.y, halfLeading = 3;
+                if      (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
+                else if (name === 'note')       { cx +=  8; cy +=  8; }
+                else if (name === 'priceNote')  { cx +=  6; }
+                else if (name === 'annotation') { cx +=  6; }
+                else if (name === 'comment')    { cx +=  8; cy -=  8; }
+                else if (name === 'priceLabel') { cx += 12; }
+                else if (name === 'pin')        { cx += 16; cy -= 20; }
+                else if (name === 'flagMarker') { cx += 28; cy -= 23; }
+                else if (name === 'signpost') {
+                    var isRightAlign = true;
+                    if (liveOv.points.length > 1) {
+                        var px0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(liveOv.points[0], paneId) : chartObj.convertToPixel(liveOv.points[0], { finder: { paneId: paneId } });
+                        if (px0 && cx < px0.x) isRightAlign = false;
+                    }
+                    cx += isRightAlign ? 16 : -22;
+                }
+                return { x: cx, y: cy };
+            }
+        } catch(e) {}
+        return null;
     }
-  
-    var rect = container.getBoundingClientRect();
-    var fallbackX = (window.waMouseX || window.innerWidth / 2) - rect.left;
+
+    var rect      = container.getBoundingClientRect();
+    var fallbackX = (window.waMouseX || window.innerWidth  / 2) - rect.left;
     var fallbackY = (window.waMouseY || window.innerHeight / 2) - rect.top;
-    var pos = getChartPos() || { x: fallbackX, y: fallbackY };
-  
+    var pos       = getChartPos() || { x: fallbackX, y: fallbackY };
+
     var input = document.createElement('textarea');
-    input.id = 'wa-text-editor';
+    input.id  = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-  
-    var isMiddle = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
+
+    var isMiddle    = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
+    var isAlignRight = false;
+    try {
+        if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
+            var p1 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], {finder:{paneId:paneId}});
+            var p0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}});
+            if (p1 && p0 && p1.x < p0.x) isAlignRight = true;
+        }
+    } catch(e) {}
+
+    var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
+    if (isAlignRight) transformCSS = isMiddle ? 'translate(-100%, -50%)' : 'translateX(-100%)';
+    var textAlign       = isAlignRight ? 'right' : 'left';
     var exactLineHeight = curSize + 6;
+
     input.style.cssText = `
-      position:absolute; left:${pos.x}px; top:${pos.y}px;
-      transform:${isMiddle ? 'translateY(-50%)' : 'none'};
-      background:transparent!important; border:none!important; outline:none!important;
-      color:${curColor}!important; font-family:${curFont}; font-size:${curSize}px;
-      line-height:${exactLineHeight}px; font-weight:${curWeight}; font-style:${curStyle};
-      text-align:left; white-space:pre; word-wrap:normal; overflow:hidden; resize:none;
-      z-index:999999; padding:0; margin:0; caret-color:${curColor};
-      min-width:30px; min-height:${exactLineHeight}px;
+        position: absolute;
+        left: ${pos.x}px;
+        top: ${pos.y}px;
+        transform: ${transformCSS};
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        color: ${curColor} !important;
+        font-family: ${curFont};
+        font-size: ${curSize}px;
+        line-height: ${exactLineHeight}px;
+        font-weight: ${curWeight};
+        font-style: ${curStyle};
+        text-align: ${textAlign};
+        white-space: pre;
+        word-wrap: normal;
+        overflow: hidden;
+        resize: none;
+        z-index: 999999;
+        padding: 0;
+        margin: 0;
+        caret-color: ${curColor};
+        min-width: 30px;
+        min-height: ${exactLineHeight}px;
     `;
+
     container.appendChild(input);
-  
+
     function resizeInput() {
-      input.style.height = exactLineHeight + 'px';
-      input.style.width = (input.scrollWidth + 10) + 'px';
-      input.style.height = input.scrollHeight + 'px';
+        input.style.height = exactLineHeight + 'px';
+        input.style.width  = (input.scrollWidth + 10) + 'px';
+        input.style.height = input.scrollHeight + 'px';
     }
-  
+
     var isTracking = true;
     function syncPosition() {
-      if (!isTracking || !input.parentNode) return;
-      var newPos = getChartPos();
-      if (newPos) { input.style.left = newPos.x + 'px'; input.style.top = newPos.y + 'px'; }
-      if (isTracking) requestAnimationFrame(syncPosition);
+        if (!isTracking || !input.parentNode) return;
+        var newPos = getChartPos();
+        if (newPos) { input.style.left = newPos.x + 'px'; input.style.top = newPos.y + 'px'; }
+        if (isTracking) requestAnimationFrame(syncPosition);
     }
-  
+
     var createTime = Date.now();
-    var isCommitted = false;
-  
-    function commit() {
-      if (isCommitted) return;
-      if (Date.now() - createTime < 200) { input.focus(); return; }
-      isCommitted = true;
-      isTracking = false;
-  
-      // *** FIX GHOST TEXT: Restore lại màu gốc trước khi commit ***
-      if (ghostHidden && ov && chartObj) {
-        try {
-          chartObj.overrideOverlay({ id: ov.id, styles: { text: { color: curColor } } });
-        } catch(e) {}
-      }
-  
-      var val = input.value.trim() || 'Văn bản...';
-      var updatedStyles = JSON.parse(JSON.stringify(currentStyles));
-      if (updatedStyles.text) {
-        if (updatedStyles.text.color === 'rgba(0,0,0,0)' || updatedStyles.text.color === 'transparent')
-          updatedStyles.text.color = curColor;
-      }
-      input.remove();
-      onConfirm(val, updatedStyles);
+
+    // ─── FIX 2: CURSOR JUMP — Chặn mouseup đầu tiên xuyên vào input ───
+    // mouseup từ click gốc vẫn đang "bay" tới, nó sẽ override setSelectionRange.
+    // Bắt nó, re-set lại về cuối chữ, rồi gỡ listener.
+    var _firstMouseUpHandled = false;
+    function _forceEndCursor() {
+        if (_firstMouseUpHandled) return;
+        _firstMouseUpHandled = true;
+        input.setSelectionRange(input.value.length, input.value.length);
+        input.removeEventListener('mouseup',   _forceEndCursor);
+        input.removeEventListener('touchend',  _forceEndCursor);
+        input.removeEventListener('pointerup', _forceEndCursor);
     }
-  
-    // *** FIX LỖI NHÁY CHUỘT: Dùng pointerdown + preventDefault thay vì setTimeout focus ***
-    // Chặn mouseup "xuyên thấu" làm dịch con trỏ sau khi focus
-    input.addEventListener('pointerdown', function(e) {
-      e.stopPropagation();
-      // Chỉ chặn event trong 300ms đầu sau khi tạo (tức là lần click mở editor)
-      if (Date.now() - createTime < 300) {
-        e.preventDefault();
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-      }
-    });
-  
-    // Focus sau khi DOM render - không dùng setTimeout dài
+    input.addEventListener('mouseup',   _forceEndCursor);
+    input.addEventListener('touchend',  _forceEndCursor);
+    input.addEventListener('pointerup', _forceEndCursor);
+
+    // Focus bình thường, không cần setTimeout dài
     requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
-      });
     });
-  
+
     resizeInput();
     syncPosition();
-  
+
     input.addEventListener('input', function() {
-      resizeInput();
-      if (ov && chartObj) {
-        chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
-      }
+        resizeInput();
+        if (ov && chartObj) {
+            // Chỉ cập nhật text, ghost styles vẫn giữ — KHÔNG để lộ màu thật
+            chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
+        }
     });
-  
+
+    var isCommitted = false;
+    function commit() {
+        if (isCommitted) return;
+        if (Date.now() - createTime < 200) { input.focus(); return; }
+        isCommitted = true;
+        isTracking  = false;
+
+        var val         = input.value.trim() || 'Văn bản...';
+        var updatedStyles = JSON.parse(JSON.stringify(_ghostStylesSnap)); // ← Restore từ snapshot gốc
+
+        // Phòng hờ snapshot bị kẹt transparent
+        if (updatedStyles.text && (updatedStyles.text.color === 'rgba(0,0,0,0)' || updatedStyles.text.color === 'transparent')) {
+            updatedStyles.text.color = curColor;
+        }
+
+        input.remove();
+        onConfirm(val, updatedStyles); // onConfirm sẽ gọi overrideOverlay với styles đúng màu
+    }
+
     input.addEventListener('blur', function() {
-      setTimeout(function() {
-        if (document.activeElement !== input) commit();
-      }, 100);
+        setTimeout(function() { if (document.activeElement !== input) commit(); }, 100);
     });
-  
     input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') {
-        input.value = currentText;
-        if (ov && chartObj) chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
-        commit();
-      }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') {
+            // Hủy: restore canvas về màu gốc
+            if (ov && chartObj) chartObj.overrideOverlay({ id: ov.id, styles: _ghostStylesSnap, extendData: currentText || '' });
+            input.remove();
+            isTracking = false;
+        }
     });
-  }
+}
 
   function createTextOverlay(chart, toolId, initialData) {
     if (!chart) return null;
@@ -2748,17 +2790,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         
         window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
         
-        // FIX Xung đột Click: Ngăn việc mở lại Float Toolbar / Panel nếu Text Editor đang mở
-        if (document.getElementById('wa-text-editor')) return;
         if (document.getElementById('wa-text-editor-backdrop')) return;
-        
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
         if (typeof renderPanel === 'function') renderPanel(ov);
       },
       onDeselected: function() {
-        // FIX Xung đột Click: Ngăn việc Canvas hiểu nhầm là click ra ngoài làm đóng (blur) Text Editor
-        if (document.getElementById('wa-text-editor')) return;
-        
         if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
       }
     };
@@ -2766,6 +2802,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     if (id) overlayId = id;
     return id;
   }
+
   
 
   // ==========================================
