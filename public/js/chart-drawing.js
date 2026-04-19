@@ -1193,7 +1193,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       
@@ -1261,7 +1261,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       
@@ -1333,7 +1333,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y;
@@ -1379,7 +1379,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var pts = ref.overlay && ref.overlay.points ? ref.overlay.points : [];
       var priceVal = (pts[0] && pts[0].value !== null) ? pts[0].value : null;
       var dp = (ref.precision && ref.precision.price !== null) ? ref.precision.price : 4;
@@ -1428,7 +1428,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y, r = 10;
@@ -1467,7 +1467,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var figs = [];
@@ -1524,7 +1524,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y;
@@ -1569,7 +1569,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var pts = ref.overlay && ref.overlay.points ? ref.overlay.points : [];
       var priceVal = (pts[0] && pts[0].value !== null) ? pts[0].value : null;
       var dp = (ref.precision && ref.precision.price !== null) ? ref.precision.price : 4;
@@ -1619,7 +1619,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var tx = c.length > 1 ? c[1].x : c[0].x;
@@ -1674,7 +1674,7 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
+      if (window.__waEditingIds && window.__waEditingIds.has(ref.overlay.id)) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14;
