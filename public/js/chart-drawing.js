@@ -2537,6 +2537,15 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var ov        = window.currentSelectedOverlay;
     var name      = ov ? (ov.name || toolId) : toolId;
+    if (ov) ov._editing = true;
+// Ẩn canvas text để không bị trùng với textarea
+var _snapStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+if (ov && chartObj) {
+    var _hideS = JSON.parse(JSON.stringify(_snapStyles));
+    if (!_hideS.text) _hideS.text = {};
+    _hideS.text.color = 'rgba(0,0,0,0)';
+    chartObj.overrideOverlay({ id: ov.id, styles: _hideS });
+}
     var container = document.getElementById('sc-chart-container');
     var chartObj  = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj || !container) return;
@@ -2692,9 +2701,9 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (Date.now() - createTime < 200) { input.focus(); return; }
         isCommitted = true;
         isTracking  = false;
-
+        if (ov) delete ov._editing;
         var val = input.value.trim() || 'Văn bản...';
-
+        var updatedStyles = JSON.parse(JSON.stringify(_snapStyles));
         // Restore styles từ snapshot gốc (không phải từ _hiddenStyles)
         var restoredStyles = JSON.parse(JSON.stringify(_snapStyles));
         if (restoredStyles.text && (restoredStyles.text.color === 'rgba(0,0,0,0)' || restoredStyles.text.color === 'transparent')) {
