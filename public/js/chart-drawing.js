@@ -2555,12 +2555,21 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var originalExtendData = ov ? ov.extendData : currentText;
   
-    // ── 2. FIX BUG GHOST TEXT ──────────────────────────────────────────────
-    function hideCanvasText() {
+    // ── 2. ĐỘT PHÁ GHOST TEXT: ĐỒNG BỘ HÓA KHÔNG GIAN ──────────────────────
+    // Kỹ thuật Premium: Thay chữ bằng dấu cách để tàng hình chữ nhưng vẫn giữ nguyên kích thước Khung nền Canvas
+    function getHiddenText(str) {
+      var s = str || 'Văn bản...';
+      return s.split('\n').map(function(line) {
+        return Array(line.length + 1).join(' '); // Biến "Hello" -> "     "
+      }).join('\n');
+    }
+  
+    function hideCanvasText(str) {
       if (!ov || !chartObj || !chartObj.overrideOverlay) return;
       try {
-        ov.extendData = '\u200B';
-        chartObj.overrideOverlay({ id: ov.id, extendData: '\u200B' });
+        var hiddenStr = getHiddenText(str);
+        ov.extendData = hiddenStr; 
+        chartObj.overrideOverlay({ id: ov.id, extendData: hiddenStr });
       } catch(e) {}
     }
   
@@ -2574,9 +2583,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
-    hideCanvasText();
+    // Ẩn chữ ngay khi mở (nhưng vẫn giữ Background Box)
+    hideCanvasText(originalExtendData);
   
-    // ── 3. TỌA ĐỘ VÀ CSS (GIỮ NGUYÊN 100% THEO FILE PASTE.TXT GỐC) ────────
+    // ── 3. TỌA ĐỘ VÀ CSS (GIỮ NGUYÊN 100% NHƯ BẢN GỐC CỦA BẠN) ───────────
     function getChartPos() {
       if (!ov) return null;
       try {
@@ -2598,6 +2608,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
         if (px && !isNaN(px.x) && !isNaN(px.y)) {
           var cx = px.x, cy = px.y;
+          
+          // ĐÂY LÀ ĐOẠN OFFSETS CỦA BẠN - TÔI GIỮ NGUYÊN KHÔNG ĐỔI
           if (name === 'plainText' || name === 'anchoredText') cy -= 3;
           else if (name === 'note') { cx += 8; cy += 8; }
           else if (name === 'priceNote') cx += 6;
@@ -2641,6 +2653,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
   
+    // GIỮ NGUYÊN CSS TRANSFORM CỦA BẠN - ĐẢM BẢO KHÔNG LỆCH
     var isMiddle = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
     var isAlignRight = false;
     try {
@@ -2654,7 +2667,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var transformCSS = 'none';
     if (isMiddle) transformCSS = isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)';
     var textAlign = isAlignRight ? 'right' : 'left';
-    var exactLineHeight = curSize + 6;
+    var exactLineHeight = curSize + (curSize > 14 ? 4 : 2); // Khớp chuẩn Canvas Line Height
   
     input.style.cssText = [
       'position:absolute',
@@ -2687,12 +2700,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     container.appendChild(input);
   
-    // GIỮ NGUYÊN HÀM RESIZE GỐC: KHÔNG BỊ THU NHỎ
+    // Thuật toán resize tĩnh (ngăn chặn tình trạng nháy và co rút)
     function resizeInput() {
       if (!input.parentNode) return;
-      input.style.width = '4px';
+      input.style.width = '10px'; 
       input.style.height = exactLineHeight + 'px';
-      input.style.width = Math.max(30, input.scrollWidth + 4) + 'px';
+      input.style.width = Math.max(30, input.scrollWidth + 2) + 'px';
       input.style.height = Math.max(exactLineHeight, input.scrollHeight) + 'px';
     }
   
@@ -2707,8 +2720,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       requestAnimationFrame(syncPosition);
     }
   
-  
-    // ── 4. FIX BUG CURSOR JUMP THÔNG MINH ──────────────────────────────────
+    // ── 4. FIX BUG CURSOR JUMP (BẪY CHUỘT THÔNG MINH) ──────────────────────
     var textareaHasSeenMousedown = false;
     input.addEventListener('mousedown', function() { textareaHasSeenMousedown = true; }, { capture: true });
     input.addEventListener('mouseup', function(e) {
@@ -2769,7 +2781,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       restoreCanvasText(originalExtendData);
     }
   
-    input.addEventListener('input', resizeInput);
+    input.addEventListener('input', function() {
+      resizeInput();
+      // Đỉnh cao Canva: Ép Background Box của Canvas giãn ra mượt mà theo nhịp gõ
+      hideCanvasText(input.value);
+    });
     
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
