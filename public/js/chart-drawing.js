@@ -2520,7 +2520,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   }
 
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    // ── 1. DỌN DẸP EDITOR CŨ ──────────────────────────────────────────────
+    // ── 1. DỌN DẸP THEO CODE GỐC ───────────────────────────────────────────
     var existing = document.getElementById('wa-text-editor');
     if (existing) {
       try { existing.__wa_skip_blur = true; } catch(e) {}
@@ -2529,7 +2529,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var existingBd = document.getElementById('wa-text-editor-backdrop');
     if (existingBd) existingBd.remove();
   
-    // ── 2. TRÍCH XUẤT STYLES & CONTEXT ─────────────────────────────────────
     var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
     if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') curColor = '#00F0FF';
@@ -2556,11 +2555,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     var originalExtendData = ov ? ov.extendData : currentText;
   
-    // ── 3. FIX GHOST TEXT: ẨN CANVAS 1 LẦN DUY NHẤT ────────────────────────
+    // ── 2. FIX BUG GHOST TEXT ──────────────────────────────────────────────
     function hideCanvasText() {
       if (!ov || !chartObj || !chartObj.overrideOverlay) return;
       try {
-        ov.extendData = '\u200B'; // Tàng hình trên canvas
+        ov.extendData = '\u200B';
         chartObj.overrideOverlay({ id: ov.id, extendData: '\u200B' });
       } catch(e) {}
     }
@@ -2577,7 +2576,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     hideCanvasText();
   
-    // ── 4. TỌA ĐỘ PIXEL-PERFECT (MAP 1:1 VỚI CANVAS) ───────────────────────
+    // ── 3. TỌA ĐỘ VÀ CSS (GIỮ NGUYÊN 100% THEO FILE PASTE.TXT GỐC) ────────
     function getChartPos() {
       if (!ov) return null;
       try {
@@ -2588,54 +2587,43 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) {
           ptIndex = 1;
         }
+  
         var pt = liveOv.points[ptIndex];
-        
-        var px = (typeof chartObj.convertToPixel === 'function') 
-          ? chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId })
-          : chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+        var px = null;
+        if (typeof chartObj.dataToCoordinate === 'function') {
+          px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+        } else if (typeof chartObj.convertToPixel === 'function') {
+          px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId });
+        }
   
         if (px && !isNaN(px.x) && !isNaN(px.y)) {
           var cx = px.x, cy = px.y;
-          var align = 'left', baseline = 'bottom';
-  
-          // Khớp tuyệt đối với createPointFigures của KLineChart
-          if (name === 'plainText' || name === 'anchoredText') {
-            align = 'left'; baseline = 'bottom';
-          } else if (name === 'note') {
-            cx += 8; cy += 8; align = 'left'; baseline = 'top';
-          } else if (name === 'priceNote') {
-            cx += 6; align = 'left'; baseline = 'middle';
-          } else if (name === 'annotation') {
-            cx += 6; align = 'left'; baseline = 'middle';
-          } else if (name === 'comment') {
-            cx += 8; cy -= 8; align = 'left'; baseline = 'bottom';
-          } else if (name === 'priceLabel') {
-            cx += 12; align = 'left'; baseline = 'middle';
-          } else if (name === 'pin') {
-            cx += 16; cy -= 20; align = 'left'; baseline = 'top';
-          } else if (name === 'flagMarker') {
-            cx += 28; cy -= 23; align = 'left'; baseline = 'middle';
-          } else if (name === 'signpost') {
-            var isRight = true;
+          if (name === 'plainText' || name === 'anchoredText') cy -= 3;
+          else if (name === 'note') { cx += 8; cy += 8; }
+          else if (name === 'priceNote') cx += 6;
+          else if (name === 'annotation') cx += 6;
+          else if (name === 'comment') { cx += 8; cy -= 8; }
+          else if (name === 'priceLabel') cx += 12;
+          else if (name === 'pin') { cx += 16; cy -= 20; }
+          else if (name === 'flagMarker') { cx += 28; cy -= 23; }
+          else if (name === 'signpost') {
+            var isRightAlign = false;
             if (liveOv.points.length > 1) {
-              var px0 = chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
-              if (px0 && px.x < px0.x) isRight = false;
+              var px0 = null;
+              if (typeof chartObj.dataToCoordinate === 'function') {
+                px0 = chartObj.dataToCoordinate(liveOv.points[0], paneId);
+              } else if (typeof chartObj.convertToPixel === 'function') {
+                px0 = chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
+              }
+              if (px0 && px.x < px0.x) isRightAlign = true;
             }
-            cx += isRight ? 16 : -22;
-            align = isRight ? 'left' : 'right';
-            baseline = 'middle';
+            cx += isRightAlign ? -22 : 16;
           }
-  
-          return { x: cx, y: cy, align: align, baseline: baseline };
+          return { x: cx, y: cy };
         }
       } catch(e) {}
-      
       var rect = container.getBoundingClientRect();
-      return { 
-        x: (window.waMouseX || window.innerWidth / 2) - rect.left, 
-        y: (window.waMouseY || window.innerHeight / 2) - rect.top,
-        align: 'left', baseline: 'middle'
-      };
+      return { x: (window.waMouseX || window.innerWidth / 2) - rect.left, y: (window.waMouseY || window.innerHeight / 2) - rect.top };
     }
   
     var pos = getChartPos();
@@ -2644,7 +2632,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       return;
     }
   
-    // ── 5. XÂY DỰNG DOM & STYLES CHUẨN XÁC ─────────────────────────────────
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor-backdrop';
     backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998';
@@ -2654,19 +2641,26 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
   
-    // Dịch mã Align & Baseline thành CSS Transform để KHỚP 100% Canvas
-    var tx = '0%', ty = '0%';
-    if (pos.align === 'center') tx = '-50%';
-    else if (pos.align === 'right') tx = '-100%';
+    var isMiddle = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
+    var isAlignRight = false;
+    try {
+      if (name === 'signpost' && ov && ov.points && ov.points.length > 1) {
+        var p1s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], { paneId: paneId });
+        var p0s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], { paneId: paneId });
+        if (p1s && p0s && p1s.x < p0s.x) isAlignRight = true;
+      }
+    } catch(e) {}
   
-    if (pos.baseline === 'middle') ty = '-50%';
-    else if (pos.baseline === 'bottom') ty = '-100%';
+    var transformCSS = 'none';
+    if (isMiddle) transformCSS = isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)';
+    var textAlign = isAlignRight ? 'right' : 'left';
+    var exactLineHeight = curSize + 6;
   
     input.style.cssText = [
       'position:absolute',
       'left:' + pos.x + 'px',
       'top:' + pos.y + 'px',
-      'transform: translate(' + tx + ', ' + ty + ')',
+      'transform:' + transformCSS,
       'background:transparent!important',
       'border:none!important',
       'outline:none!important',
@@ -2675,29 +2669,31 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       'caret-color:' + curColor,
       'font-family:' + curFont,
       'font-size:' + curSize + 'px',
-      'line-height:normal', // Trả về normal để khớp tự nhiên với Canvas
+      'line-height:' + exactLineHeight + 'px',
       'font-weight:' + curWeight,
       'font-style:' + curStyle,
-      'text-align:' + pos.align,
+      'text-align:' + textAlign,
       'white-space:pre',
       'word-wrap:normal',
       'overflow:hidden',
       'resize:none',
       'padding:0',
       'margin:0',
+      'min-width:30px',
+      'min-height:' + exactLineHeight + 'px',
       'z-index:999999',
       'user-select:text'
     ].join(';');
   
     container.appendChild(input);
   
-    // Thuật toán resize mới: Ép về 0 để đo chuẩn, chặn méo/thu nhỏ
+    // GIỮ NGUYÊN HÀM RESIZE GỐC: KHÔNG BỊ THU NHỎ
     function resizeInput() {
       if (!input.parentNode) return;
-      input.style.width = '0px';
-      input.style.height = '0px';
-      input.style.width = (input.scrollWidth + 4) + 'px';
-      input.style.height = (input.scrollHeight + 2) + 'px';
+      input.style.width = '4px';
+      input.style.height = exactLineHeight + 'px';
+      input.style.width = Math.max(30, input.scrollWidth + 4) + 'px';
+      input.style.height = Math.max(exactLineHeight, input.scrollHeight) + 'px';
     }
   
     var isTracking = true;
@@ -2711,45 +2707,33 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       requestAnimationFrame(syncPosition);
     }
   
-    // ── 6. CƠ CHẾ FIX CURSOR JUMP THÔNG MINH (ORPHAN MOUSEUP) ──────────────
+  
+    // ── 4. FIX BUG CURSOR JUMP THÔNG MINH ──────────────────────────────────
     var textareaHasSeenMousedown = false;
-  
-    input.addEventListener('mousedown', function() {
-      textareaHasSeenMousedown = true;
-    }, { capture: true });
-  
+    input.addEventListener('mousedown', function() { textareaHasSeenMousedown = true; }, { capture: true });
     input.addEventListener('mouseup', function(e) {
       if (!textareaHasSeenMousedown) {
-        // Nhận diện "orphan mouseup" từ cú click trước đó và chặn lại
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         var len = input.value.length;
         try { input.setSelectionRange(len, len); } catch(err) {}
       }
     }, { capture: true });
-  
-    input.addEventListener('touchstart', function() {
-      textareaHasSeenMousedown = true;
-    }, { capture: true });
-  
+    input.addEventListener('touchstart', function() { textareaHasSeenMousedown = true; }, { capture: true });
     input.addEventListener('touchend', function(e) {
       if (!textareaHasSeenMousedown) {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         var len = input.value.length;
         try { input.setSelectionRange(len, len); } catch(err) {}
       }
     }, { capture: true });
   
-    // Đẩy focus và caret về cuối
     try {
       input.focus({ preventScroll: true });
-      var initLen = input.value.length;
-      input.setSelectionRange(initLen, initLen);
+      input.setSelectionRange(input.value.length, input.value.length);
     } catch(e) {}
   
   
-    // ── 7. SỰ KIỆN GÕ PHÍM & COMMIT ────────────────────────────────────────
+    // ── 5. XỬ LÝ SỰ KIỆN GÕ PHÍM ───────────────────────────────────────────
     var isCommitted = false;
     var suppressBlur = false;
     var createTime = Date.now();
@@ -2763,7 +2747,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     function commit() {
       if (isCommitted) return;
-      if (Date.now() - createTime < 150) return; // Chống nháy click đúp nhanh
+      if (Date.now() - createTime < 150) return;
       isCommitted = true;
       
       var val = input.value.trim() || 'Văn bản...';
@@ -2774,7 +2758,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       }
       
       destroyEditor();
-      restoreCanvasText(val);
+      restoreCanvasText(val); // Phục hồi Canvas chuẩn
       if (typeof onConfirm === 'function') onConfirm(val, updatedStyles);
     }
   
@@ -2785,10 +2769,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       restoreCanvasText(originalExtendData);
     }
   
-    input.addEventListener('input', function() {
-      resizeInput();
-    });
-  
+    input.addEventListener('input', resizeInput);
+    
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault(); e.stopPropagation();
