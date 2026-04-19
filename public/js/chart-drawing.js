@@ -2515,14 +2515,13 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
  
     var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    
-    // 🌟 CỨU HỘ KHẨN CẤP: Trị dứt điểm bệnh "Mất chữ".
-    // Nếu màu chữ bị kẹt ở trạng thái tàng hình từ bộ nhớ cũ, ép nó sáng lên lại!
+ 
+    // CỨU HỘ KHẨN CẤP: Trị dứt điểm bệnh "Mất chữ"
     if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
-        curColor = '#00F0FF'; // Đưa về xanh Neon mặc định của Wave Alpha
+        curColor = '#00F0FF';
         tStyles.color = curColor; 
     }
-
+ 
     var curSize = parseInt(tStyles.size) || 14; 
     var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
     var curWeight = tStyles.weight || '600'; 
@@ -2533,16 +2532,24 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj || !container) return;
-
+ 
     var paneId = 'candle_pane';
     if (ov && chartObj.getOverlayById) {
         var info = chartObj.getOverlayById(ov.id);
         if (info && info.paneId) paneId = info.paneId;
     }
 
-    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT (Khắc phục lỗi nhảy chuột)
+    // 🔥 FIX 1: TẠM ẨN CHỮ TRÊN CANVAS TRONG LÚC EDIT ĐỂ TRÁNH BÓNG MA (DOUBLE TEXT)
+    var hiddenTextStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+    if (!hiddenTextStyles.text) hiddenTextStyles.text = {};
+    hiddenTextStyles.text.color = 'rgba(0,0,0,0)'; // Tàng hình text
+    
+    if (ov && chartObj) {
+        chartObj.overrideOverlay({ id: ov.id, styles: hiddenTextStyles });
+    }
+ 
+    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT
     function getChartPos() {
-        // 🔥 Lấy Overlay "tươi sống" trực tiếp từ lõi Chart Engine thay vì dùng event cũ
         var liveOv = chartObj.getOverlayById(ov.id) || ov; 
         if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
         
@@ -2554,18 +2561,17 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         
         try {
             var px = null;
-            // Dùng API v9 chuẩn xác
+            // 🔥 FIX 2: SỬA LỖI TRUYỀN THAM SỐ PANEID THEO CHUẨN API v9
             if (typeof chartObj.dataToCoordinate === 'function') {
-                px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+                px = chartObj.dataToCoordinate(pt, { paneId: paneId });
             } else if (typeof chartObj.convertToPixel === 'function') {
-                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: { paneId: paneId } });
+                px = chartObj.convertToPixel(pt, { finder: { paneId: paneId } });
             }
-
+ 
             if (px && !isNaN(px.x) && !isNaN(px.y)) {
                 var cx = px.x, cy = px.y;
                 var halfLeading = 3;
-
-                // 🎯 Căn chỉnh Pixel-Perfect cho TỪNG LOẠI TOOL
+ 
                 if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
                 else if (name === 'note') { cx += 8; cy += 8; }
                 else if (name === 'priceNote') { cx += 6; }
@@ -2577,7 +2583,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
                 else if (name === 'signpost') { 
                     var isRightAlign = true;
                     if (liveOv.points.length > 1) {
-                        var px0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(liveOv.points[0], paneId) : chartObj.convertToPixel(liveOv.points[0], { finder: { paneId: paneId } });
+                        var px0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(liveOv.points[0], {paneId: paneId}) : chartObj.convertToPixel(liveOv.points[0], {finder:{paneId:paneId}});
                         if (px0 && cx < px0.x) isRightAlign = false;
                     }
                     cx += isRightAlign ? 16 : -22;
@@ -2588,13 +2594,13 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         } catch(e) {}
         return null;
     }
-
+ 
     var rect = container.getBoundingClientRect();
     var fallbackX = (window.waMouseX || window.innerWidth / 2) - rect.left;
     var fallbackY = (window.waMouseY || window.innerHeight / 2) - rect.top;
-
+ 
     var pos = getChartPos() || { x: fallbackX, y: fallbackY };
-
+ 
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
@@ -2603,8 +2609,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var isAlignRight = false;
     try {
         if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
-             var p1 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], {finder:{paneId:paneId}});
-             var p0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}});
+             var p1 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[1], {paneId: paneId}) : chartObj.convertToPixel(ov.points[1], {finder:{paneId:paneId}});
+             var p0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], {paneId: paneId}) : chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}});
              if (p1 && p0 && p1.x < p0.x) isAlignRight = true;
         }
     } catch(e) {}
@@ -2642,13 +2648,13 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     `;
     
     container.appendChild(input);
-
+ 
     function resizeInput() {
         input.style.height = exactLineHeight + 'px';
         input.style.width = (input.scrollWidth + 10) + 'px'; 
         input.style.height = input.scrollHeight + 'px';
     }
-
+ 
     var isTracking = true;
     function syncPosition() {
         if (!isTracking || !input.parentNode) return;
@@ -2659,39 +2665,45 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         }
         if (isTracking) requestAnimationFrame(syncPosition); 
     }
-
+ 
     var createTime = Date.now();
     
-    // ⚡ FIX: Chắc chắn đưa con trỏ chuột xuống đuôi chữ sau khi DOM đã render
     setTimeout(function() {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
     }, 10);
-
-    var lockCursor = function(e) {
-        if (e.type === 'mousedown' && Date.now() - createTime < 150) {
-            e.preventDefault();
-            input.setSelectionRange(input.value.length, input.value.length);
+ 
+    // 🔥 FIX 3: ÉP CON TRỎ LUÔN NẰM Ở CUỐI TRONG VÒNG 300ms ĐẦU, CHẶN SỰ KIỆN MOUSEUP
+    var snapCursor = function(e) {
+        if (Date.now() - createTime < 300) {
+            setTimeout(function() {
+                input.setSelectionRange(input.value.length, input.value.length);
+            }, 0);
         } else {
-            input.removeEventListener('mousedown', lockCursor);
-            input.removeEventListener('touchstart', lockCursor);
+            input.removeEventListener('mousedown', snapCursor);
+            input.removeEventListener('mouseup', snapCursor);
+            input.removeEventListener('click', snapCursor);
+            input.removeEventListener('touchstart', snapCursor);
+            input.removeEventListener('touchend', snapCursor);
         }
     };
-    input.addEventListener('mousedown', lockCursor);
-    input.addEventListener('touchstart', lockCursor, {passive: false});
-
+    input.addEventListener('mousedown', snapCursor);
+    input.addEventListener('mouseup', snapCursor);
+    input.addEventListener('click', snapCursor);
+    input.addEventListener('touchstart', snapCursor, {passive: false});
+    input.addEventListener('touchend', snapCursor);
+ 
     resizeInput();
     syncPosition(); 
-
-    // 🔥 ĐỒNG BỘ REALTIME: Gõ đến đâu, ép KLineChart vẽ lại khung nền đến đó
+ 
+    // Gõ đến đâu, ép KLineChart vẽ lại khung nền đến đó (GIỮ TEXT TÀNG HÌNH)
     input.addEventListener('input', function() { 
         resizeInput(); 
         if (ov && chartObj) {
-            // Chỉ cập nhật extendData, KHÔNG đụng vào styles để chống mất màu
-            chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
+            chartObj.overrideOverlay({ id: ov.id, extendData: input.value, styles: hiddenTextStyles });
         }
     });
-
+ 
     var isCommitted = false;
     function commit() {
       if (isCommitted) return;
@@ -2702,23 +2714,29 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       var val = input.value.trim() || 'Văn bản...'; 
       var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
       
-      // Phòng hờ nếu vẫn còn bị kẹt màu trong suốt thì trả lại màu đúng
-      if (updatedStyles.text && (updatedStyles.text.color === 'rgba(0,0,0,0)' || updatedStyles.text.color === 'transparent')) {
+      // 🔥 KHÔI PHỤC LẠI MÀU CHỮ GỐC SAU KHI EDIT XONG
+      if (updatedStyles.text) {
           updatedStyles.text.color = curColor;
       }
       
       input.remove();
       onConfirm(val, updatedStyles);
     }
-
+ 
     input.addEventListener('blur', function() {
        setTimeout(function() { if (document.activeElement !== input) commit(); }, 100);
     });
+    
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
       if (e.key === 'Escape') { 
           input.value = currentText || ''; 
-          if (ov && chartObj) chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
+          if (ov && chartObj) {
+              // Phục hồi lại màu luôn nếu huỷ
+              var restoreStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+              if (restoreStyles.text) restoreStyles.text.color = curColor;
+              chartObj.overrideOverlay({ id: ov.id, extendData: input.value, styles: restoreStyles });
+          }
           commit(); 
       }
     });
