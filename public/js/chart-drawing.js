@@ -2538,14 +2538,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var ov        = window.currentSelectedOverlay;
     var name      = ov ? (ov.name || toolId) : toolId;
     if (ov) ov._editing = true;
-// Ẩn canvas text để không bị trùng với textarea
-var _snapStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-if (ov && chartObj) {
-    var _hideS = JSON.parse(JSON.stringify(_snapStyles));
-    if (!_hideS.text) _hideS.text = {};
-    _hideS.text.color = 'rgba(0,0,0,0)';
-    chartObj.overrideOverlay({ id: ov.id, styles: _hideS });
-}
     var container = document.getElementById('sc-chart-container');
     var chartObj  = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
     if (!chartObj || !container) return;
