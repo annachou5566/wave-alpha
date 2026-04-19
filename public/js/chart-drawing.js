@@ -2520,7 +2520,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   }
 
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    // ── 1. DỌN DẸP THEO CODE GỐC ───────────────────────────────────────────
+    // ── 1. DỌN DẸP EDITOR CŨ ──────────────────────────────────────────────
     var existing = document.getElementById('wa-text-editor');
     if (existing) {
       try { existing.__wa_skip_blur = true; } catch(e) {}
@@ -2546,21 +2546,21 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     if (!chartObj || !container) return;
   
     var paneId = 'candle_pane';
+    var liveOv = null;
     try {
       if (ov && chartObj.getOverlayById) {
-        var info = chartObj.getOverlayById(ov.id);
-        if (info && info.paneId) paneId = info.paneId;
+        liveOv = chartObj.getOverlayById(ov.id);
+        if (liveOv && liveOv.paneId) paneId = liveOv.paneId;
       }
     } catch(e) {}
   
     var originalExtendData = ov ? ov.extendData : currentText;
   
-    // ── 2. ĐỘT PHÁ GHOST TEXT: ĐỒNG BỘ HÓA KHÔNG GIAN ──────────────────────
-    // Kỹ thuật Premium: Thay chữ bằng dấu cách để tàng hình chữ nhưng vẫn giữ nguyên kích thước Khung nền Canvas
+    // ── 2. GHOST TEXT: Tàng hình Text trên Canvas nhưng giữ nguyên Box ────
     function getHiddenText(str) {
       var s = str || 'Văn bản...';
       return s.split('\n').map(function(line) {
-        return Array(line.length + 1).join(' '); // Biến "Hello" -> "     "
+        return Array(line.length + 1).join(' '); // Thay thành dấu cách
       }).join('\n');
     }
   
@@ -2583,67 +2583,95 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       } catch(e) {}
     }
   
-    // Ẩn chữ ngay khi mở (nhưng vẫn giữ Background Box)
     hideCanvasText(originalExtendData);
   
-    // ── 3. TỌA ĐỘ VÀ CSS (GIỮ NGUYÊN 100% NHƯ BẢN GỐC CỦA BẠN) ───────────
-    function getChartPos() {
+    // ── 3. TÍNH TOÁN TỌA ĐỘ VÀ KÍCH THƯỚC CHÍNH XÁC TỪ BOUNDING BOX ────────
+    function getBoxMetrics() {
       if (!ov) return null;
-      try {
-        var liveOv = chartObj.getOverlayById ? chartObj.getOverlayById(ov.id) : ov;
-        if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
-  
-        var ptIndex = 0;
-        if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) {
-          ptIndex = 1;
-        }
-  
-        var pt = liveOv.points[ptIndex];
-        var px = null;
+      
+      // Tọa độ điểm gốc để fallback
+      var ptIndex = 0;
+      if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv && liveOv.points && liveOv.points.length > 1) {
+        ptIndex = 1;
+      }
+      
+      var pt = (liveOv && liveOv.points) ? liveOv.points[ptIndex] : (ov.points ? ov.points[ptIndex] : null);
+      var px = null;
+      if (pt) {
         if (typeof chartObj.dataToCoordinate === 'function') {
           px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
         } else if (typeof chartObj.convertToPixel === 'function') {
           px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { paneId: paneId });
         }
+      }
   
-        if (px && !isNaN(px.x) && !isNaN(px.y)) {
-          var cx = px.x, cy = px.y;
-          
-          // ĐÂY LÀ ĐOẠN OFFSETS CỦA BẠN - TÔI GIỮ NGUYÊN KHÔNG ĐỔI
-          if (name === 'plainText' || name === 'anchoredText') cy -= 3;
-          else if (name === 'note') { cx += 8; cy += 8; }
-          else if (name === 'priceNote') cx += 6;
-          else if (name === 'annotation') cx += 6;
-          else if (name === 'comment') { cx += 8; cy -= 8; }
-          else if (name === 'priceLabel') cx += 12;
-          else if (name === 'pin') { cx += 16; cy -= 20; }
-          else if (name === 'flagMarker') { cx += 28; cy -= 23; }
-          else if (name === 'signpost') {
-            var isRightAlign = false;
-            if (liveOv.points.length > 1) {
-              var px0 = null;
-              if (typeof chartObj.dataToCoordinate === 'function') {
-                px0 = chartObj.dataToCoordinate(liveOv.points[0], paneId);
-              } else if (typeof chartObj.convertToPixel === 'function') {
-                px0 = chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
-              }
-              if (px0 && px.x < px0.x) isRightAlign = true;
-            }
-            cx += isRightAlign ? -22 : 16;
-          }
-          return { x: cx, y: cy };
-        }
-      } catch(e) {}
-      var rect = container.getBoundingClientRect();
-      return { x: (window.waMouseX || window.innerWidth / 2) - rect.left, y: (window.waMouseY || window.innerHeight / 2) - rect.top };
+      var cx = px ? px.x : (window.waMouseX || window.innerWidth / 2);
+      var cy = px ? px.y : (window.waMouseY || window.innerHeight / 2);
+  
+      // XÁC ĐỊNH BÙ TRỪ VÀ PADDING DỰA THEO TOOL (Khớp với createPointFigures của bạn)
+      var isAlignRight = false;
+      if (name === 'signpost' && liveOv && liveOv.points && liveOv.points.length > 1) {
+        var p1s = (typeof chartObj.convertToPixel === 'function') ? chartObj.convertToPixel(liveOv.points[1], { paneId: paneId }) : chartObj.dataToCoordinate(liveOv.points[1], paneId);
+        var p0s = (typeof chartObj.convertToPixel === 'function') ? chartObj.convertToPixel(liveOv.points[0], { paneId: paneId }) : chartObj.dataToCoordinate(liveOv.points[0], paneId);
+        if (p1s && p0s && p1s.x < p0s.x) isAlignRight = true;
+      }
+  
+      // Các số đo này khớp y xì với các biến pl, pr, pt, pb trong chart-drawing.js của bạn
+      var pl = 0, pr = 0, pt = 0, pb = 0;
+      var offsetX = 0, offsetY = 0;
+      var transformCSS = 'none';
+      var textAlign = isAlignRight ? 'right' : 'left';
+  
+      if (name === 'plainText' || name === 'anchoredText') {
+        cy -= 3;
+      } else if (name === 'note') {
+        pl = 8; pr = 14; pt = 8; pb = 8;
+        cx += 8; cy += 8;
+      } else if (name === 'priceNote') {
+        pl = 6; pr = 12; pt = 5; pb = 5;
+        cx += 6; 
+        transformCSS = 'translateY(-50%)';
+      } else if (name === 'pin') {
+        pl = 6; pr = 12; pt = 0; pb = 0;
+        cx += 26; cy -= 20; // x+r+6 = x+10+6
+        transformCSS = 'translateY(-50%)';
+      } else if (name === 'annotation') {
+        pl = 6; pr = 12; pt = 5; pb = 5;
+        cx += 6;
+        transformCSS = 'translateY(-50%)';
+      } else if (name === 'comment') {
+        pl = 8; pr = 12; pt = 8; pb = 12;
+        cx += 8; cy -= 8;
+        transformCSS = 'translateY(-100%)';
+      } else if (name === 'priceLabel') {
+        pl = 12; pr = 6; pt = 5; pb = 5;
+        cx += 12;
+        transformCSS = 'translateY(-50%)';
+      } else if (name === 'flagMarker') {
+        pl = 4; pr = 8; pt = 4; pb = 4;
+        cx += 28; cy -= 23;
+        transformCSS = 'translateY(-50%)';
+      } else if (name === 'signpost') {
+        pl = 6; pr = 6; pt = 4; pb = 4;
+        cx += isAlignRight ? -22 : 16;
+        transformCSS = isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)';
+      }
+  
+      return { 
+        x: cx, y: cy, 
+        pl: pl, pr: pr, pt: pt, pb: pb, 
+        transform: transformCSS, 
+        align: textAlign 
+      };
     }
   
-    var pos = getChartPos();
-    if (!pos) {
+    var metrics = getBoxMetrics();
+    if (!metrics) {
       restoreCanvasText(originalExtendData);
       return;
     }
   
+    // ── 4. TẠO DOM VỚI PADDING CHUẨN XÁC ──────────────────────────────────
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor-backdrop';
     backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998';
@@ -2653,27 +2681,18 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
   
-    // GIỮ NGUYÊN CSS TRANSFORM CỦA BẠN - ĐẢM BẢO KHÔNG LỆCH
-    var isMiddle = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
-    var isAlignRight = false;
-    try {
-      if (name === 'signpost' && ov && ov.points && ov.points.length > 1) {
-        var p1s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], { paneId: paneId });
-        var p0s = (typeof chartObj.dataToCoordinate === 'function') ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], { paneId: paneId });
-        if (p1s && p0s && p1s.x < p0s.x) isAlignRight = true;
-      }
-    } catch(e) {}
+    var exactLineHeight = curSize + (['plainText', 'anchoredText'].includes(name) ? 2 : 6); 
   
-    var transformCSS = 'none';
-    if (isMiddle) transformCSS = isAlignRight ? 'translate(-100%,-50%)' : 'translateY(-50%)';
-    var textAlign = isAlignRight ? 'right' : 'left';
-    var exactLineHeight = curSize + (curSize > 14 ? 4 : 2); // Khớp chuẩn Canvas Line Height
-  
+    // Dùng padding y hệt Canvas thay vì chỉ chỉnh Width/Height
     input.style.cssText = [
       'position:absolute',
-      'left:' + pos.x + 'px',
-      'top:' + pos.y + 'px',
-      'transform:' + transformCSS,
+      'left:' + metrics.x + 'px',
+      'top:' + metrics.y + 'px',
+      'transform:' + metrics.transform,
+      'padding-top:' + metrics.pt + 'px',
+      'padding-bottom:' + metrics.pb + 'px',
+      'padding-left:' + metrics.pl + 'px',
+      'padding-right:' + metrics.pr + 'px',
       'background:transparent!important',
       'border:none!important',
       'outline:none!important',
@@ -2685,12 +2704,11 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       'line-height:' + exactLineHeight + 'px',
       'font-weight:' + curWeight,
       'font-style:' + curStyle,
-      'text-align:' + textAlign,
+      'text-align:' + metrics.align,
       'white-space:pre',
       'word-wrap:normal',
       'overflow:hidden',
       'resize:none',
-      'padding:0',
       'margin:0',
       'min-width:30px',
       'min-height:' + exactLineHeight + 'px',
@@ -2700,11 +2718,12 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     container.appendChild(input);
   
-    // Thuật toán resize tĩnh (ngăn chặn tình trạng nháy và co rút)
+    // Resize Input giờ sẽ giãn tự nhiên theo padding, không bị giật
     function resizeInput() {
       if (!input.parentNode) return;
       input.style.width = '10px'; 
       input.style.height = exactLineHeight + 'px';
+      // Đảm bảo không bị co rút: scrollWidth đã bao gồm text
       input.style.width = Math.max(30, input.scrollWidth + 2) + 'px';
       input.style.height = Math.max(exactLineHeight, input.scrollHeight) + 'px';
     }
@@ -2712,15 +2731,15 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var isTracking = true;
     function syncPosition() {
       if (!isTracking || !input.parentNode) return;
-      var np = getChartPos();
-      if (np) {
-        input.style.left = np.x + 'px';
-        input.style.top = np.y + 'px';
+      var nm = getBoxMetrics();
+      if (nm) {
+        input.style.left = nm.x + 'px';
+        input.style.top = nm.y + 'px';
       }
       requestAnimationFrame(syncPosition);
     }
   
-    // ── 4. FIX BUG CURSOR JUMP (BẪY CHUỘT THÔNG MINH) ──────────────────────
+    // ── 5. FIX CURSOR JUMP THÔNG MINH ─────────────────────────────────────
     var textareaHasSeenMousedown = false;
     input.addEventListener('mousedown', function() { textareaHasSeenMousedown = true; }, { capture: true });
     input.addEventListener('mouseup', function(e) {
@@ -2745,7 +2764,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     } catch(e) {}
   
   
-    // ── 5. XỬ LÝ SỰ KIỆN GÕ PHÍM ───────────────────────────────────────────
+    // ── 6. XỬ LÝ GÕ PHÍM VÀ LƯU ───────────────────────────────────────────
     var isCommitted = false;
     var suppressBlur = false;
     var createTime = Date.now();
@@ -2770,7 +2789,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       }
       
       destroyEditor();
-      restoreCanvasText(val); // Phục hồi Canvas chuẩn
+      restoreCanvasText(val); // Trả lại chữ thật cho Canvas
       if (typeof onConfirm === 'function') onConfirm(val, updatedStyles);
     }
   
@@ -2783,8 +2802,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     input.addEventListener('input', function() {
       resizeInput();
-      // Đỉnh cao Canva: Ép Background Box của Canvas giãn ra mượt mà theo nhịp gõ
-      hideCanvasText(input.value);
+      hideCanvasText(input.value); // Ép hộp màu Polygon dưới Canvas giãn ra theo Text
     });
     
     input.addEventListener('keydown', function(e) {
@@ -2811,7 +2829,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       commit();
     }, true);
   
-    // Khởi động giao diện
     resizeInput();
     syncPosition();
   }
