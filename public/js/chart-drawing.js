@@ -2722,6 +2722,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     function layout() {
       var box = getBox(input.value || ' ');
+      input.style.boxSizing = 'content-box'; // DÒNG QUAN TRỌNG CẦN THÊM
       input.style.left = Math.round(box.left) + 'px';
       input.style.top = Math.round(box.top) + 'px';
       input.style.width = Math.ceil(box.width) + 'px';
@@ -2733,7 +2734,6 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       input.style.fontSize = box.fs + 'px';
       input.style.lineHeight = box.lh + 'px';
     }
-  
     var done = false;
   
     function destroy() {
@@ -2762,7 +2762,10 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     }
   
     input.addEventListener('input', function() {
-      layout();
+      var box = getBox(input.value || ' ');
+      input.style.width = Math.ceil(box.width) + 'px';
+      input.style.height = Math.ceil(box.height) + 'px';
+      // KHÔNG gán lại input.style.left và input.style.top ở đây
     });
   
     input.addEventListener('keydown', function(e) {
