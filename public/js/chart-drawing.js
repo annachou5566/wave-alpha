@@ -16,10 +16,6 @@
   let isMagnetMode = false;
   let undoStack = [];
   let redoStack = [];
-  // ─── TEXT EDIT STATE (thay thế _wa_last_selected_time) ───────────────────────
-var _wa_textTarget   = null;  // id overlay text đang được chọn
-var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
-// ─────────────────────────────────────────────────────────────────────────────
   const MAX_HISTORY = 50;
   let lastClickTime = 0;
   let isDrawingSessionActive = false;
@@ -1196,6 +1192,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       
@@ -1263,6 +1260,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       
@@ -1334,6 +1332,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y;
@@ -1379,6 +1378,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var pts = ref.overlay && ref.overlay.points ? ref.overlay.points : [];
       var priceVal = (pts[0] && pts[0].value !== null) ? pts[0].value : null;
       var dp = (ref.precision && ref.precision.price !== null) ? ref.precision.price : 4;
@@ -1427,6 +1427,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y, r = 10;
@@ -1465,6 +1466,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var figs = [];
@@ -1521,6 +1523,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y;
@@ -1565,6 +1568,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var pts = ref.overlay && ref.overlay.points ? ref.overlay.points : [];
       var priceVal = (pts[0] && pts[0].value !== null) ? pts[0].value : null;
       var dp = (ref.precision && ref.precision.price !== null) ? ref.precision.price : 4;
@@ -1614,6 +1618,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var tx = c.length > 1 ? c[1].x : c[0].x;
@@ -1668,6 +1673,7 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
+      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14;
@@ -2513,267 +2519,213 @@ var _wa_textSelTime  = 0;     // timestamp lúc chọn overlay ĐÓ LẦN ĐẦU
 document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX; window.waMouseY = e.clientY; });
   }
 
-// Gọi từ onSelected của MỌI text overlay
-function _wa_onTextSelected(ov) {
-  if (!ov) return;
+  function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
+    var existing = document.getElementById('wa-text-editor');
+    if (existing) { existing.blur(); existing.remove(); }
+ 
+    var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
+    var curColor = tStyles.color || '#E8EDF2';
+    
+    // 🌟 CỨU HỘ KHẨN CẤP: Trị dứt điểm bệnh "Mất chữ".
+    // Nếu màu chữ bị kẹt ở trạng thái tàng hình từ bộ nhớ cũ, ép nó sáng lên lại!
+    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') {
+        curColor = '#00F0FF'; // Đưa về xanh Neon mặc định của Wave Alpha
+        tStyles.color = curColor; 
+    }
 
-  // Chỉ reset timer khi chọn overlay KHÁC — không reset khi click lại cùng overlay
-  if (_wa_textTarget !== ov.id) {
-      _wa_textTarget  = ov.id;
-      _wa_textSelTime = Date.now();
-  }
+    var curSize = parseInt(tStyles.size) || 14; 
+    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
+    var curWeight = tStyles.weight || '600'; 
+    var curStyle = tStyles.style || 'normal';
+ 
+    var ov = window.currentSelectedOverlay;
+    var name = ov ? (ov.name || toolId) : toolId;
+    if (ov) ov._editing = true;
+    var container = document.getElementById('sc-chart-container');
+    var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
+    if (!chartObj || !container) return;
 
-  currentSelectedOverlay       = ov;
-  window.currentSelectedOverlay = ov;
+    var paneId = 'candle_pane';
+    if (ov && chartObj.getOverlayById) {
+        var info = chartObj.getOverlayById(ov.id);
+        if (info && info.paneId) paneId = info.paneId;
+    }
 
-  if (document.getElementById('wa-text-editor')) return;
-  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
-  if (typeof renderPanel      === 'function') renderPanel(ov);
-}
+    // 🌟 THUẬT TOÁN TÍNH TỌA ĐỘ PIXEL-PERFECT (Khắc phục lỗi nhảy chuột)
+    function getChartPos() {
+        // 🔥 Lấy Overlay "tươi sống" trực tiếp từ lõi Chart Engine thay vì dùng event cũ
+        var liveOv = chartObj.getOverlayById(ov.id) || ov; 
+        if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
+        
+        var ptIndex = 0; 
+        if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) {
+            ptIndex = 1; 
+        }
+        var pt = liveOv.points[ptIndex]; 
+        
+        try {
+            var px = null;
+            // Dùng API v9 chuẩn xác
+            if (typeof chartObj.dataToCoordinate === 'function') {
+                px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
+            } else if (typeof chartObj.convertToPixel === 'function') {
+                px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: { paneId: paneId } });
+            }
 
-// Gọi từ onClick của MỌI text overlay — trả về true nếu đã xử lý
-function _wa_onTextClick(event) {
-  var ov = event && event.overlay ? event.overlay : null;
-  if (!ov) return false;
+            if (px && !isNaN(px.x) && !isNaN(px.y)) {
+                var cx = px.x, cy = px.y;
+                var halfLeading = 3;
 
-  var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
-  if (cat !== 'text') return false;
+                // 🎯 Căn chỉnh Pixel-Perfect cho TỪNG LOẠI TOOL
+                if (name === 'plainText' || name === 'anchoredText') { cy -= halfLeading; }
+                else if (name === 'note') { cx += 8; cy += 8; }
+                else if (name === 'priceNote') { cx += 6; }
+                else if (name === 'annotation') { cx += 6; }
+                else if (name === 'comment') { cx += 8; cy -= 8; }
+                else if (name === 'priceLabel') { cx += 12; }
+                else if (name === 'pin') { cx += 16; cy -= 20; }
+                else if (name === 'flagMarker') { cx += 28; cy -= 23; }
+                else if (name === 'signpost') { 
+                    var isRightAlign = true;
+                    if (liveOv.points.length > 1) {
+                        var px0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(liveOv.points[0], paneId) : chartObj.convertToPixel(liveOv.points[0], { finder: { paneId: paneId } });
+                        if (px0 && cx < px0.x) isRightAlign = false;
+                    }
+                    cx += isRightAlign ? 16 : -22;
+                }
+                
+                return { x: cx, y: cy };
+            }
+        } catch(e) {}
+        return null;
+    }
 
-  // Điều kiện mở editor:
-  // 1. Đúng overlay đang được chọn
-  // 2. Đã qua >300ms kể từ lần select ĐẦU TIÊN (không bị reset bởi re-click)
-  var elapsed = Date.now() - _wa_textSelTime;
-  var isSame  = window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id;
+    var rect = container.getBoundingClientRect();
+    var fallbackX = (window.waMouseX || window.innerWidth / 2) - rect.left;
+    var fallbackY = (window.waMouseY || window.innerHeight / 2) - rect.top;
 
-  if (isSame && elapsed > 300) {
-      var chart = global.tvChart;
-      if (typeof hidePanel          === 'function') hidePanel();
-      if (typeof hideFloatToolbar   === 'function') hideFloatToolbar();
+    var pos = getChartPos() || { x: fallbackX, y: fallbackY };
 
-      setTimeout(function() {
-          window.currentSelectedOverlay = ov;
-          if (typeof openTextEditor === 'function') {
-              openTextEditor(
-                  ov.extendData || '',
-                  ov.styles     || {},
-                  ov.name,
-                  function(newText, newStyles) {
-                      if (chart) chart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                      if (global.__wa_overlay_map) {
-                          var cached = global.__wa_overlay_map.get(ov.id);
-                          if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                      }
-                      // Reset timer sau khi edit xong → click tiếp theo cần select lại
-                      _wa_textTarget  = null;
-                      _wa_textSelTime = 0;
-                      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
-                  }
-              );
-          }
-      }, 50);
-      return true;
-  }
-  return false;
-}
-
-function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-  var existing = document.getElementById('wa-text-editor');
-  if (existing) { existing.blur(); existing.remove(); }
-
-  var tStyles  = currentStyles && currentStyles.text ? currentStyles.text : {};
-  var curColor = tStyles.color || '#E8EDF2';
-  if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') curColor = '#00F0FF';
-
-  var curSize   = parseInt(tStyles.size)   || 14;
-  var curFont   = tStyles.family           || 'Be Vietnam Pro, sans-serif';
-  var curWeight = tStyles.weight           || '600';
-  var curStyle  = tStyles.style            || 'normal';
-
-  var ov       = window.currentSelectedOverlay;
-  var name     = ov ? (ov.name || toolId) : toolId;
-  var container = document.getElementById('sc-chart-container');
-  var chartObj  = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
-  if (!chartObj || !container) return;
-
-  var paneId = 'candle_pane';
-  if (ov && chartObj.getOverlayById) {
-      var info = chartObj.getOverlayById(ov.id);
-      if (info && info.paneId) paneId = info.paneId;
-  }
-
-  // ─── FIX GHOST TEXT: Snapshot styles gốc, ẩn canvas text TRƯỚC khi mở textarea ───
-  var _originalStyles = JSON.parse(JSON.stringify(currentStyles || {}));
-  if (ov && chartObj) {
-      var hiddenStyles = JSON.parse(JSON.stringify(_originalStyles));
-      if (!hiddenStyles.text)    hiddenStyles.text    = {};
-      if (!hiddenStyles.polygon) hiddenStyles.polygon = {};
-      hiddenStyles.text.color           = 'rgba(0,0,0,0)';
-      hiddenStyles.text.backgroundColor = 'rgba(0,0,0,0)';
-      hiddenStyles.polygon.borderColor  = 'rgba(0,0,0,0)';
-      chartObj.overrideOverlay({ id: ov.id, styles: hiddenStyles });
-  }
-
-  function getChartPos() {
-      var liveOv = (ov && chartObj.getOverlayById) ? (chartObj.getOverlayById(ov.id) || ov) : ov;
-      if (!liveOv || !liveOv.points || !liveOv.points.length) return null;
-
-      var ptIndex = 0;
-      if (['anchoredText', 'annotation', 'signpost'].includes(name) && liveOv.points.length > 1) ptIndex = 1;
-      var pt = liveOv.points[ptIndex];
-
-      try {
-          var px = null;
-          if (typeof chartObj.dataToCoordinate === 'function') {
-              px = chartObj.dataToCoordinate({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, paneId);
-          } else if (typeof chartObj.convertToPixel === 'function') {
-              px = chartObj.convertToPixel({ dataIndex: pt.dataIndex, timestamp: pt.timestamp, value: pt.value }, { finder: { paneId: paneId } });
-          }
-          if (px && !isNaN(px.x) && !isNaN(px.y)) {
-              var cx = px.x, cy = px.y;
-              if      (name === 'plainText' || name === 'anchoredText') { cy -= 3; }
-              else if (name === 'note')       { cx +=  8; cy +=  8; }
-              else if (name === 'priceNote')  { cx +=  6; }
-              else if (name === 'annotation') { cx +=  6; }
-              else if (name === 'comment')    { cx +=  8; cy -=  8; }
-              else if (name === 'priceLabel') { cx += 12; }
-              else if (name === 'pin')        { cx += 16; cy -= 20; }
-              else if (name === 'flagMarker') { cx += 28; cy -= 23; }
-              else if (name === 'signpost') {
-                  var isR = true;
-                  if (liveOv.points.length > 1) {
-                      var fn = chartObj.dataToCoordinate || chartObj.convertToPixel;
-                      var arg2 = chartObj.dataToCoordinate ? paneId : { finder: { paneId: paneId } };
-                      try { var px0 = fn.call(chartObj, liveOv.points[0], arg2); if (px0 && cx < px0.x) isR = false; } catch(e){}
-                  }
-                  cx += isR ? 16 : -22;
-              }
-              return { x: cx, y: cy };
-          }
-      } catch(e) {}
-      return null;
-  }
-
-  var rect      = container.getBoundingClientRect();
-  var fallbackX = (window.waMouseX || window.innerWidth  / 2) - rect.left;
-  var fallbackY = (window.waMouseY || window.innerHeight / 2) - rect.top;
-  var pos       = getChartPos() || { x: fallbackX, y: fallbackY };
-
-  var isMiddle     = ['priceNote','pin','annotation','comment','priceLabel','signpost','flagMarker'].includes(name);
-  var isAlignRight = false;
-  try {
-      if (name === 'signpost' && ov && ov.points && ov.points.length > 1) {
-          var fn2   = chartObj.dataToCoordinate || chartObj.convertToPixel;
-          var arg2b = chartObj.dataToCoordinate ? paneId : { finder: { paneId: paneId } };
-          var p1 = fn2.call(chartObj, ov.points[1], arg2b);
-          var p0 = fn2.call(chartObj, ov.points[0], arg2b);
-          if (p1 && p0 && p1.x < p0.x) isAlignRight = true;
-      }
-  } catch(e) {}
-
-  var transformCSS   = isMiddle ? 'translateY(-50%)' : 'none';
-  if (isAlignRight)  transformCSS = isMiddle ? 'translate(-100%,-50%)' : 'translateX(-100%)';
-  var exactLineHeight = curSize + 6;
-
-  var input = document.createElement('textarea');
-  input.id  = 'wa-text-editor';
-  input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-  input.style.cssText = `
-      position: absolute;
-      left: ${pos.x}px; top: ${pos.y}px;
+    var input = document.createElement('textarea');
+    input.id = 'wa-text-editor';
+    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    
+    var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
+    var isAlignRight = false;
+    try {
+        if (name === 'signpost' && ov && ov.points && ov.points.length > 1 && chartObj) {
+             var p1 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[1], paneId) : chartObj.convertToPixel(ov.points[1], {finder:{paneId:paneId}});
+             var p0 = chartObj.dataToCoordinate ? chartObj.dataToCoordinate(ov.points[0], paneId) : chartObj.convertToPixel(ov.points[0], {finder:{paneId:paneId}});
+             if (p1 && p0 && p1.x < p0.x) isAlignRight = true;
+        }
+    } catch(e) {}
+    
+    var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
+    if (isAlignRight) transformCSS = isMiddle ? 'translate(-100%, -50%)' : 'translateX(-100%)';
+    var textAlign = isAlignRight ? 'right' : 'left';
+    var exactLineHeight = curSize + 6;
+ 
+    input.style.cssText = `
+      position: absolute; 
+      left: ${pos.x}px; 
+      top: ${pos.y}px;
       transform: ${transformCSS};
-      background: transparent !important;
-      border: none !important; outline: none !important;
-      color: ${curColor} !important;
-      font-family: ${curFont}; font-size: ${curSize}px;
+      background: transparent !important; 
+      border: none !important;
+      outline: none !important; 
+      color: ${curColor} !important; 
+      font-family: ${curFont}; 
+      font-size: ${curSize}px; 
       line-height: ${exactLineHeight}px;
-      font-weight: ${curWeight}; font-style: ${curStyle};
-      text-align: ${isAlignRight ? 'right' : 'left'};
-      white-space: pre; word-wrap: normal; overflow: hidden;
-      resize: none; z-index: 999999;
-      padding: 0; margin: 0;
+      font-weight: ${curWeight}; 
+      font-style: ${curStyle};
+      text-align: ${textAlign};
+      white-space: pre; 
+      word-wrap: normal;
+      overflow: hidden;
+      resize: none; 
+      z-index: 999999; 
+      padding: 0; 
+      margin: 0; 
       caret-color: ${curColor};
-      min-width: 30px; min-height: ${exactLineHeight}px;
-  `;
-  container.appendChild(input);
+      min-width: 30px;
+      min-height: ${exactLineHeight}px;
+    `;
+    
+    container.appendChild(input);
 
-  function resizeInput() {
-      input.style.height = exactLineHeight + 'px';
-      input.style.width  = (input.scrollWidth + 10) + 'px';
-      input.style.height = input.scrollHeight + 'px';
-  }
+    function resizeInput() {
+        input.style.height = exactLineHeight + 'px';
+        input.style.width = (input.scrollWidth + 10) + 'px'; 
+        input.style.height = input.scrollHeight + 'px';
+    }
 
-  var isTracking = true;
-  function syncPosition() {
-      if (!isTracking || !input.parentNode) return;
-      var np = getChartPos();
-      if (np) { input.style.left = np.x + 'px'; input.style.top = np.y + 'px'; }
-      if (isTracking) requestAnimationFrame(syncPosition);
-  }
+    var isTracking = true;
+    function syncPosition() {
+        if (!isTracking || !input.parentNode) return;
+        var newPos = getChartPos();
+        if (newPos) { 
+            input.style.left = newPos.x + 'px';
+            input.style.top = newPos.y + 'px';
+        }
+        if (isTracking) requestAnimationFrame(syncPosition); 
+    }
 
-  var createTime = Date.now();
+    var createTime = Date.now();
+    
+        // FIX cursor jump: focus ngay, dùng mouseup override lại vị trí sau khi browser xử lý
+        input.focus();
+        input.addEventListener('mouseup', function onFirstUp(e) {
+            e.preventDefault();
+            var len = input.value.length;
+            input.setSelectionRange(len, len);
+            input.removeEventListener('mouseup', onFirstUp);
+        }, { once: true });
 
-  // ─── FIX CURSOR JUMP ─────────────────────────────────────────────────────
-  // Browser đặt cursor theo vị trí mouseup. Bắt mouseup đó, dùng setTimeout(0)
-  // để chạy SAU KHI browser xử lý xong, rồi override lại về cuối chữ.
-  input.addEventListener('mouseup', function onInitMouseUp() {
-      input.removeEventListener('mouseup', onInitMouseUp);
-      setTimeout(function() {
-          if (document.activeElement === input) {
-              input.setSelectionRange(input.value.length, input.value.length);
-          }
-      }, 0);
-  }, { once: true });
+    resizeInput();
+    syncPosition(); 
 
-  // Focus ngay (không dùng setTimeout)
-  input.focus();
-  input.setSelectionRange(input.value.length, input.value.length);
-  // ─────────────────────────────────────────────────────────────────────────
+    // 🔥 ĐỒNG BỘ REALTIME: Gõ đến đâu, ép KLineChart vẽ lại khung nền đến đó
+    input.addEventListener('input', function() { 
+        resizeInput(); 
+        if (ov && chartObj) {
+            // Chỉ cập nhật extendData, KHÔNG đụng vào styles để chống mất màu
+            chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
+        }
+    });
 
-  resizeInput();
-  syncPosition();
-
-  input.addEventListener('input', function() {
-      resizeInput();
-      // Chỉ update extendData, KHÔNG update styles (giữ transparent để không ghost)
-      if (ov && chartObj) chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
-  });
-
-  var isCommitted = false;
-  function commit() {
+    var isCommitted = false;
+    function commit() {
       if (isCommitted) return;
       if (Date.now() - createTime < 200) { input.focus(); return; }
       isCommitted = true;
-      isTracking  = false;
-
-      var val = input.value.trim() || 'Văn bản...';
-
-      // Restore styles gốc (xóa transparent)
-      var restoredStyles = JSON.parse(JSON.stringify(_originalStyles));
-      if (restoredStyles.text && (restoredStyles.text.color === 'rgba(0,0,0,0)' || restoredStyles.text.color === 'transparent')) {
-          restoredStyles.text.color = curColor;
+      isTracking = false;
+      if (ov) delete ov._editing;
+      
+      var val = input.value.trim() || 'Văn bản...'; 
+      var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+      
+      // Phòng hờ nếu vẫn còn bị kẹt màu trong suốt thì trả lại màu đúng
+      if (updatedStyles.text && (updatedStyles.text.color === 'rgba(0,0,0,0)' || updatedStyles.text.color === 'transparent')) {
+          updatedStyles.text.color = curColor;
       }
-
+      
       input.remove();
-      onConfirm(val, restoredStyles);
-  }
+      onConfirm(val, updatedStyles);
+    }
 
-  input.addEventListener('blur', function() {
-      setTimeout(function() { if (document.activeElement !== input) commit(); }, 100);
-  });
-
-  input.addEventListener('keydown', function(e) {
-      e.stopPropagation();
+    input.addEventListener('blur', function() {
+       setTimeout(function() { if (document.activeElement !== input) commit(); }, 100);
+    });
+    input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
-      if (e.key === 'Escape') {
-          isTracking = false;
-          // Restore canvas về styles + text gốc
-          if (ov && chartObj) chartObj.overrideOverlay({ id: ov.id, styles: _originalStyles, extendData: currentText || '' });
-          input.remove();
+      if (e.key === 'Escape') { 
+          input.value = currentText || ''; 
+          if (ov && chartObj) chartObj.overrideOverlay({ id: ov.id, extendData: input.value });
+          commit(); 
       }
-  });
-  input.addEventListener('keyup',    function(e) { e.stopPropagation(); });
-  input.addEventListener('keypress', function(e) { e.stopPropagation(); });
-}
+    });
+  }
 
   function createTextOverlay(chart, toolId, initialData) {
     if (!chart) return null;
@@ -2836,13 +2788,20 @@ function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
       onDoubleClick: function() { return true; }, // Khóa vĩnh viễn lỗi Zoom màn hình của KLineChart
       onSelected: function(event) {
         isDrawingSessionActive = false;
-        _wa_onTextSelected(event && event.overlay);
+        var ov = event && event.overlay ? event.overlay : null;
+        if (!ov) return;
+        currentSelectedOverlay = ov;
+        window.currentSelectedOverlay = ov;
+        
+        window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
+        
+        if (document.getElementById('wa-text-editor-backdrop')) return;
+        if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+        if (typeof renderPanel === 'function') renderPanel(ov);
       },
       onDeselected: function() {
-        _wa_textTarget  = null;
-        _wa_textSelTime = 0;
         if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-      },
+      }
     };
     var id = chart.createOverlay(config);
     if (id) overlayId = id;
@@ -3996,15 +3955,53 @@ config.onDrawEnd = function(event) {
 
 config.onSelected = function(event) {
   isDrawingSessionActive = false;
-  _wa_onTextSelected(event && event.overlay);
+  var ov = event && event.overlay ? event.overlay : null;
+  if (!ov) return;
+  currentSelectedOverlay = ov;
+  window.currentSelectedOverlay = ov;
+  
+  window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
+  
+  if (document.getElementById('wa-text-editor-backdrop')) return;
+  if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+  if (typeof renderPanel === 'function') renderPanel(ov);
 };
 config.onDeselected = function() {
-  _wa_textTarget  = null;
-  _wa_textSelTime = 0;
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
 };
-config.onClick       = function(event) { return _wa_onTextClick(event); };
-config.onDoubleClick = function() { return true; };
+
+// 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
+config.onClick = function(event) {
+  var ov = event && event.overlay ? event.overlay : null;
+  if (!ov) return false;
+  var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+  if (cat === 'text') {
+      let now = Date.now();
+      let lastTime = window._wa_last_selected_time || 0;
+      if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
+          if (typeof hidePanel === 'function') hidePanel();
+          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+          if (typeof openTextEditor === 'function') {
+              setTimeout(function() {
+                openTextEditor(
+                  ov.extendData || '', ov.styles || {}, ov.name, 
+                  function(newText, newStyles) {
+                      if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                      if (global.__wa_overlay_map) {
+                          let cached = global.__wa_overlay_map.get(ov.id);
+                          if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                      }
+                      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                  }
+              );
+              }, 50);
+          }
+          return true;
+      }
+  }
+  return false;
+};
+config.onDoubleClick = function() { return true; }; // Khóa vĩnh viễn lỗi Zoom
 
 // TẠO HÌNH VẼ KÈM ĐẦY ĐỦ CÁC SỰ KIỆN LẮNG NGHE Ở TRÊN
 global.tvChart.createOverlay(config);
@@ -4178,14 +4175,54 @@ function restoreOverlays() {
         styles: o.styles,
         lock: !!o.lock,
         extendData: o.extendData,
-        onSelected:    function(event) { _wa_onTextSelected(event && event.overlay); },
-        onDeselected:  function() {
-          _wa_textTarget  = null;
-          _wa_textSelTime = 0;
+        onSelected: function(event) {
+          var ov = event && event.overlay ? event.overlay : null;
+          if (!ov) return;
+          currentSelectedOverlay = ov;
+          window.currentSelectedOverlay = ov;
+          
+          window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
+          
+          if (document.getElementById('wa-text-editor-backdrop')) return;
+          if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
+          if (typeof renderPanel === 'function') renderPanel(ov);
+        },
+        onDeselected: function() {
           if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
         },
-        onClick:       function(event) { return _wa_onTextClick(event); },
-        onDoubleClick: function() { return true; }
+        
+        // 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
+        onClick: function(event) {
+          var ov = event && event.overlay ? event.overlay : null;
+          if (!ov) return false;
+          var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
+          if (cat === 'text') {
+              let now = Date.now();
+              let lastTime = window._wa_last_selected_time || 0;
+              if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
+                  if (typeof hidePanel === 'function') hidePanel();
+                  if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+                  if (typeof openTextEditor === 'function') {
+                      setTimeout(function() {
+                        openTextEditor(
+                          ov.extendData || '', ov.styles || {}, ov.name, 
+                          function(newText, newStyles) {
+                              if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                              if (global.__wa_overlay_map) {
+                                  let cached = global.__wa_overlay_map.get(ov.id);
+                                  if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                              }
+                              if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+                          }
+                      );
+                      }, 50);
+                  }
+                  return true;
+              }
+          }
+          return false;
+        },
+        onDoubleClick: function() { return true; } // Khóa vĩnh viễn lỗi Zoom
         };
         
         let newId = global.tvChart.createOverlay(cfg);
