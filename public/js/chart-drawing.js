@@ -2520,260 +2520,274 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   }
 
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    var old = document.getElementById('wa-text-editor');
-    if (old) {
-      try { old.__wa_skip_blur = true; } catch(e){}
-      old.remove();
+    var existing = document.getElementById('wa-text-editor');
+    if (existing) {
+      try { existing.__wa_skip_blur = true; } catch(e) {}
+      existing.remove();
     }
-    var oldBd = document.getElementById('wa-text-editor-backdrop');
-    if (oldBd) oldBd.remove();
+    var existingBd = document.getElementById('wa-text-editor-backdrop');
+    if (existingBd) existingBd.remove();
   
     var ov = window.currentSelectedOverlay;
     var name = ov ? ov.name : toolId;
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
-    if (!container || !chartObj || !ov) return;
+    if (!chartObj || !container || !ov) return;
   
     var paneId = 'candle_pane';
+    var liveOv = ov;
     try {
-      var info = chartObj.getOverlayById ? chartObj.getOverlayById(ov.id) : null;
-      if (info && info.paneId) paneId = info.paneId;
-    } catch(e){}
-  
-    var liveOv = null;
-    try { liveOv = chartObj.getOverlayById ? chartObj.getOverlayById(ov.id) : ov; } catch(e) { liveOv = ov; }
+      if (chartObj.getOverlayById) {
+        liveOv = chartObj.getOverlayById(ov.id) || ov;
+        if (liveOv && liveOv.paneId) paneId = liveOv.paneId;
+      }
+    } catch(e) {}
   
     var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
     var curColor = tStyles.color || '#E8EDF2';
-    var curSize = parseInt(tStyles.size, 10) || 14;
-    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
-    var curWeight = tStyles.weight || '600';
-    var curStyle = tStyles.style || 'normal';
-    if (curColor === 'transparent' || curColor === 'rgba(0,0,0,0)') curColor = '#00F0FF';
+    if (curColor === 'rgba(0,0,0,0)' || curColor === 'transparent') curColor = '#00F0FF';
   
+    var curSize   = parseInt(tStyles.size, 10) || 14;
+    var curFont   = tStyles.family || 'Be Vietnam Pro, sans-serif';
+    var curWeight = tStyles.weight || '600';
+    var curStyle  = tStyles.style || 'normal';
     var originalText = typeof ov.extendData === 'string' ? ov.extendData : (currentText || '');
   
-    function getTextCtx() {
+    function setOverlayEditing(flag) {
+      if (!chartObj.overrideOverlay || !ov) return;
+      try {
+        chartObj.overrideOverlay({ id: ov.id, editing: !!flag });
+        ov.editing = !!flag;
+        if (liveOv) liveOv.editing = !!flag;
+      } catch(e) {}
+    }
+  
+    function getCtx(fontSize, weight, style) {
       var ctx = window.waTextCtx;
       if (!ctx) {
         ctx = document.createElement('canvas').getContext('2d');
         window.waTextCtx = ctx;
       }
+      ctx.font = (style === 'italic' ? 'italic ' : '') + weight + ' ' + fontSize + 'px ' + curFont;
       return ctx;
     }
   
-    function getWeightForMeasure() {
-      var isItalic = curStyle === 'italic';
-      if (name === 'anchoredText' || name === 'priceNote' || name === 'priceLabel' || name === 'signpost' || name === 'flagMarker') {
-        return isItalic ? 'italic' : '700';
-      }
-      return isItalic ? 'italic' : (curWeight || '600');
+    function getLiveAnchor(index) {
+      var src = liveOv && liveOv.points ? liveOv.points : (ov.points || []);
+      if (!src.length) return null;
+      var pt = src[index] || src[0];
+      if (!pt) return null;
+  
+      try {
+        if (typeof chartObj.dataToCoordinate === 'function') {
+          return chartObj.dataToCoordinate({
+            dataIndex: pt.dataIndex,
+            timestamp: pt.timestamp,
+            value: pt.value
+          }, paneId);
+        }
+        if (typeof chartObj.convertToPixel === 'function') {
+          return chartObj.convertToPixel({
+            dataIndex: pt.dataIndex,
+            timestamp: pt.timestamp,
+            value: pt.value
+          }, { paneId: paneId });
+        }
+      } catch(e) {}
+      return null;
     }
   
-    function measureTextBlock(text) {
+    function measureBlock(text) {
       var lines = String(text || '').split('\n');
       if (!lines.length) lines = [''];
-      var sizeByTool = curSize || (
+  
+      var size =
         name === 'anchoredText' ? 13 :
         name === 'priceNote' ? 12 :
         name === 'annotation' ? 12 :
         name === 'priceLabel' ? 11 :
         name === 'signpost' ? 12 :
-        name === 'flagMarker' ? 11 : 14
-      );
+        name === 'flagMarker' ? 11 : curSize;
   
-      var lineGap = 6;
-      var lh = sizeByTool + lineGap;
+      var weight =
+        (name === 'anchoredText' || name === 'priceNote' || name === 'priceLabel' || name === 'signpost' || name === 'flagMarker')
+          ? '700'
+          : curWeight;
   
-      var ctx = getTextCtx();
-      var weight = getWeightForMeasure();
-      ctx.font = (weight === 'italic' ? 'italic 600 ' : (weight + ' ')) + sizeByTool + 'px ' + curFont;
-  
+      var ctx = getCtx(size, weight, curStyle);
       var textW = 0;
       lines.forEach(function(line) {
-        textW = Math.max(textW, ctx.measureText(line || '').width);
+        textW = Math.max(textW, Math.ceil(ctx.measureText(line || '').width));
       });
   
-      return { lines: lines, textW: Math.ceil(textW), lh: lh, size: sizeByTool };
+      var lh = size + 6;
+      return { lines: lines, textW: textW, lh: lh, size: size, weight: weight };
     }
   
-    function getToolMetrics(text) {
-      var m = measureTextBlock(text);
-      var pl = 0, pr = 0, pt = 0, pb = 0, bw = 0, bh = 0;
-      var anchorIndex = 0;
-      var anchor = null;
-      var transform = 'none';
-      var textAlign = 'left';
-  
-      if (name === 'anchoredText' || name === 'annotation' || name === 'signpost') anchorIndex = 1;
-      if (!liveOv.points || !liveOv.points.length) anchorIndex = 0;
-      if (!liveOv.points[anchorIndex]) anchorIndex = 0;
-  
-      var ptData = liveOv.points[anchorIndex];
-      if (ptData) {
-        if (typeof chartObj.dataToCoordinate === 'function') {
-          anchor = chartObj.dataToCoordinate({
-            dataIndex: ptData.dataIndex,
-            timestamp: ptData.timestamp,
-            value: ptData.value
-          }, paneId);
-        } else if (typeof chartObj.convertToPixel === 'function') {
-          anchor = chartObj.convertToPixel({
-            dataIndex: ptData.dataIndex,
-            timestamp: ptData.timestamp,
-            value: ptData.value
-          }, { paneId: paneId });
-        }
-      }
-  
-      if (!anchor || isNaN(anchor.x) || isNaN(anchor.y)) {
-        var rect = container.getBoundingClientRect();
-        anchor = {
+    function getEditorBox(text) {
+      var m = measureBlock(text || ' ');
+      var a0 = getLiveAnchor(0);
+      var a1 = getLiveAnchor(1);
+      var rect = container.getBoundingClientRect();
+      if (!a0) {
+        a0 = {
           x: (window.waMouseX || rect.width / 2) - rect.left,
           y: (window.waMouseY || rect.height / 2) - rect.top
         };
       }
+      if (!a1) a1 = a0;
   
       if (name === 'plainText') {
-        pl = 0; pr = 0; pt = 0; pb = 0;
-        bw = m.textW;
-        bh = m.lines.length * m.lh;
-        return { left: anchor.x, top: anchor.y, width: Math.max(30, bw + 2), height: Math.max(m.lh, bh + 2), padding: [0,0,0,0], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        return {
+          left: a0.x,
+          top: a0.y,
+          width: Math.max(30, m.textW + 2),
+          height: Math.max(m.lh, m.lines.length * m.lh + 2),
+          padTop: 0, padRight: 0, padBottom: 0, padLeft: 0,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'anchoredText') {
-        pl = 4; pr = 12; pt = 6; pb = 6;
-        bw = m.textW + pl + pr;
-        bh = m.lines.length * m.lh + pt + pb;
-        return { left: anchor.x, top: anchor.y, width: Math.max(30, bw), height: Math.max(m.lh, bh), padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        return {
+          left: a1.x,
+          top: a1.y,
+          width: m.textW + 4 + 12,
+          height: m.lines.length * m.lh + 6 + 6,
+          padTop: 6, padRight: 12, padBottom: 6, padLeft: 4,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'note') {
-        pl = 8; pr = 14; pt = 8; pb = 8;
-        bw = Math.max(60, m.textW + pl + pr);
-        bh = m.lines.length * m.lh + pt + pb;
-        return { left: anchor.x, top: anchor.y, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        return {
+          left: a0.x,
+          top: a0.y,
+          width: Math.max(60, m.textW + 8 + 14),
+          height: m.lines.length * m.lh + 8 + 8,
+          padTop: 8, padRight: 14, padBottom: 8, padLeft: 8,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'priceNote') {
-        pl = 6; pr = 12; pt = 5; pb = 5;
-        bw = m.textW + pl + pr;
-        bh = m.lines.length * m.lh + 10;
-        return { left: anchor.x, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        var w1 = m.textW + 6 + 12;
+        var h1 = m.lines.length * m.lh + 10;
+        return {
+          left: a0.x,
+          top: a0.y - h1 / 2,
+          width: w1,
+          height: h1,
+          padTop: 5, padRight: 12, padBottom: 5, padLeft: 6,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'annotation') {
-        pl = 6; pr = 12; pt = 5; pb = 5;
-        bw = m.textW + pl + pr;
-        bh = m.lines.length * m.lh + 10;
-        return { left: anchor.x, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        var w2 = m.textW + 6 + 12;
+        var h2 = m.lines.length * m.lh + 10;
+        return {
+          left: a1.x,
+          top: a1.y - h2 / 2,
+          width: w2,
+          height: h2,
+          padTop: 5, padRight: 12, padBottom: 5, padLeft: 6,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'comment') {
-        pl = 8; pr = 14; pt = 7; pb = 7;
-        bw = Math.max(80, m.textW + pl + pr);
-        bh = m.lines.length * m.lh + 14;
+        var w3 = Math.max(80, m.textW + 8 + 14);
+        var h3 = m.lines.length * m.lh + 14;
         var tail = 8;
-        return { left: anchor.x, top: anchor.y - bh - tail, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        return {
+          left: a0.x,
+          top: a0.y - h3 - tail,
+          width: w3,
+          height: h3,
+          padTop: 7, padRight: 14, padBottom: 7, padLeft: 8,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'priceLabel') {
-        pl = 12; pr = 12; pt = 5; pb = 5;
         var arr = 6;
-        bw = m.textW + 6 + 12 + arr;
-        bh = m.lines.length * m.lh + 10;
-        return { left: anchor.x, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,arr + 6], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        var w4 = m.textW + 6 + 12 + arr;
+        var h4 = m.lines.length * m.lh + 10;
+        return {
+          left: a0.x,
+          top: a0.y - h4 / 2,
+          width: w4,
+          height: h4,
+          padTop: 5, padRight: 12, padBottom: 5, padLeft: 12,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'pin') {
         var r = 10;
-        pl = 6; pr = 8; pt = 4; pb = 4;
-        bw = m.textW + pl + pr;
-        bh = m.lines.length * m.lh + pt + pb;
-        return { left: anchor.x + r + 6, top: anchor.y - r - 10 - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        var w5 = m.textW + 6 + 8;
+        var h5 = m.lines.length * m.lh + 8;
+        return {
+          left: a0.x + r + 6,
+          top: a0.y - r - 10 - h5 / 2,
+          width: w5,
+          height: h5,
+          padTop: 4, padRight: 8, padBottom: 4, padLeft: 6,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
       if (name === 'signpost') {
-        pl = 6; pr = 12; pt = 5; pb = 5;
-        bw = m.textW + pl + pr;
-        bh = m.lines.length * m.lh + 10;
-  
-        var isRight = false;
-        try {
-          if (liveOv.points && liveOv.points.length > 1) {
-            var p0 = typeof chartObj.dataToCoordinate === 'function'
-              ? chartObj.dataToCoordinate(liveOv.points[0], paneId)
-              : chartObj.convertToPixel(liveOv.points[0], { paneId: paneId });
-            if (p0 && anchor.x < p0.x) isRight = true;
-          }
-        } catch(e){}
-  
-        if (isRight) {
-          return { left: anchor.x - 10 - bw, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
-        }
-        return { left: anchor.x + 10, top: anchor.y - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        var notch = 10;
+        var bw = m.textW + 6 + 12;
+        var bh = m.lines.length * m.lh + 10;
+        var isRight = a1.x < a0.x;
+        return {
+          left: isRight ? (a1.x - notch - bw) : (a1.x + notch),
+          top: a1.y - bh / 2,
+          width: bw,
+          height: bh,
+          padTop: 5, padRight: 12, padBottom: 5, padLeft: 6,
+          lineHeight: m.lh, fontSize: m.size, textAlign: isRight ? 'right' : 'left'
+        };
       }
   
       if (name === 'flagMarker') {
         var fw = 22, ph = 30, fh = 14;
-        pl = 6; pr = 8; pt = 4; pb = 4;
-        bw = m.textW + pl + pr;
-        bh = m.lines.length * m.lh + pt + pb;
-        return { left: anchor.x + fw + 6, top: anchor.y - ph - fh / 2 - bh / 2, width: bw, height: bh, padding: [pt,pr,pb,pl], align: 'left', fontSize: m.size, lineHeight: m.lh };
+        var w6 = m.textW + 6 + 8;
+        var h6 = m.lines.length * m.lh + 8;
+        return {
+          left: a0.x + fw + 6,
+          top: a0.y - ph - fh / 2 - h6 / 2,
+          width: w6,
+          height: h6,
+          padTop: 4, padRight: 8, padBottom: 4, padLeft: 6,
+          lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+        };
       }
   
-      return { left: anchor.x, top: anchor.y, width: Math.max(30, m.textW + 2), height: Math.max(m.lh, m.lines.length * m.lh + 2), padding: [0,0,0,0], align: textAlign, fontSize: m.size, lineHeight: m.lh };
-    }
-  
-    function hiddenVersion(str) {
-      return String(str || '').split('\n').map(function(line) {
-        return line.replace(/./g, ' ');
-      }).join('\n');
-    }
-  
-    function updateGhost(text) {
-      if (!chartObj.overrideOverlay || !ov) return;
-      try {
-        chartObj.overrideOverlay({ id: ov.id, extendData: hiddenVersion(text) });
-      } catch(e){}
-    }
-  
-    function restoreText(text) {
-      if (!chartObj.overrideOverlay || !ov) return;
-      try {
-        chartObj.overrideOverlay({ id: ov.id, extendData: text });
-        ov.extendData = text;
-      } catch(e){}
+      return {
+        left: a0.x,
+        top: a0.y,
+        width: Math.max(30, m.textW + 2),
+        height: Math.max(m.lh, m.lines.length * m.lh + 2),
+        padTop: 0, padRight: 0, padBottom: 0, padLeft: 0,
+        lineHeight: m.lh, fontSize: m.size, textAlign: 'left'
+      };
     }
   
     var backdrop = document.createElement('div');
     backdrop.id = 'wa-text-editor-backdrop';
-    backdrop.style.cssText = 'position:absolute;inset:0;background:transparent;z-index:999998;';
+    backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998;';
     container.appendChild(backdrop);
   
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
     input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
     input.setAttribute('spellcheck', 'false');
-  
-    function applyMetrics() {
-      var box = getToolMetrics(input.value || ' ');
-      input.style.left = box.left + 'px';
-      input.style.top = box.top + 'px';
-      input.style.width = Math.max(30, box.width) + 'px';
-      input.style.height = Math.max(box.lineHeight, box.height) + 'px';
-      input.style.paddingTop = box.padding[0] + 'px';
-      input.style.paddingRight = box.padding[1] + 'px';
-      input.style.paddingBottom = box.padding[2] + 'px';
-      input.style.paddingLeft = box.padding[3] + 'px';
-      input.style.textAlign = box.align;
-      input.style.fontSize = box.fontSize + 'px';
-      input.style.lineHeight = box.lineHeight + 'px';
-    }
-  
     input.style.cssText = [
       'position:absolute',
-      'z-index:999999',
       'margin:0',
       'border:none',
       'outline:none',
@@ -2782,62 +2796,84 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       'background:transparent',
       'box-shadow:none',
       'white-space:pre',
-      'word-break:normal',
+      'word-wrap:normal',
       'overflow-wrap:normal',
       'color:' + curColor,
       'caret-color:' + curColor,
       'font-family:' + curFont,
       'font-weight:' + curWeight,
       'font-style:' + curStyle,
-      'min-width:30px',
+      'z-index:999999',
       'user-select:text'
     ].join(';');
-  
     container.appendChild(input);
   
-    var raf = 0;
-    function sync() {
-      applyMetrics();
-      raf = requestAnimationFrame(sync);
+    function applyBox() {
+      var box = getEditorBox(input.value || ' ');
+      input.style.left = Math.round(box.left) + 'px';
+      input.style.top = Math.round(box.top) + 'px';
+      input.style.width = Math.ceil(box.width) + 'px';
+      input.style.height = Math.ceil(box.height) + 'px';
+      input.style.paddingTop = box.padTop + 'px';
+      input.style.paddingRight = box.padRight + 'px';
+      input.style.paddingBottom = box.padBottom + 'px';
+      input.style.paddingLeft = box.padLeft + 'px';
+      input.style.fontSize = box.fontSize + 'px';
+      input.style.lineHeight = box.lineHeight + 'px';
+      input.style.textAlign = box.textAlign;
     }
   
-    var committed = false;
-    function destroy() {
-      if (raf) cancelAnimationFrame(raf);
-      try { input.__wa_skip_blur = true; } catch(e){}
+    var rafId = 0;
+    function syncPosition() {
+      if (!input.parentNode) return;
+      try {
+        liveOv = chartObj.getOverlayById ? (chartObj.getOverlayById(ov.id) || liveOv) : liveOv;
+      } catch(e) {}
+      applyBox();
+      rafId = requestAnimationFrame(syncPosition);
+    }
+  
+    var isCommitted = false;
+    function destroyEditor() {
+      if (rafId) cancelAnimationFrame(rafId);
+      try { input.__wa_skip_blur = true; } catch(e) {}
       if (input.parentNode) input.remove();
       if (backdrop.parentNode) backdrop.remove();
     }
   
     function commit() {
-      if (committed) return;
-      committed = true;
+      if (isCommitted) return;
+      isCommitted = true;
       var val = input.value.trim() || 'Văn bản...';
-      destroy();
-      restoreText(val);
+      setOverlayEditing(false);
+      destroyEditor();
       if (typeof onConfirm === 'function') onConfirm(val, currentStyles || {});
     }
   
     function cancel() {
-      if (committed) return;
-      committed = true;
-      destroy();
-      restoreText(originalText);
+      if (isCommitted) return;
+      isCommitted = true;
+      setOverlayEditing(false);
+      destroyEditor();
+      try {
+        if (chartObj.overrideOverlay) chartObj.overrideOverlay({ id: ov.id, extendData: originalText });
+      } catch(e) {}
     }
   
     input.addEventListener('input', function() {
-      applyMetrics();
-      updateGhost(input.value || ' ');
+      applyBox();
     });
   
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        e.stopPropagation();
         commit();
         return;
       }
       if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         cancel();
       }
     });
@@ -2845,7 +2881,8 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     input.addEventListener('blur', function() {
       if (input.__wa_skip_blur) return;
       setTimeout(function() {
-        if (!committed && document.activeElement !== input) commit();
+        if (!input.parentNode || input.__wa_skip_blur) return;
+        if (document.activeElement !== input) commit();
       }, 0);
     });
   
@@ -2855,14 +2892,14 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
       commit();
     }, true);
   
-    updateGhost(originalText || input.value || ' ');
-    applyMetrics();
-    sync();
+    setOverlayEditing(true);
+    applyBox();
+    syncPosition();
   
     try {
       input.focus({ preventScroll: true });
       input.setSelectionRange(input.value.length, input.value.length);
-    } catch(e){}
+    } catch(e) {}
   }
 
   function createTextOverlay(chart, toolId, initialData) {
