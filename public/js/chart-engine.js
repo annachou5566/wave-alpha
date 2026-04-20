@@ -21,58 +21,7 @@ window.quantStats = {
 window.bookmapHistory = [];
 window.isHeatmapOn = true; 
 
-if (window.klinecharts && typeof window.klinecharts.registerIndicator === 'function') {
-    window.klinecharts.registerIndicator({
-        name: 'WAVE_BOOKMAP',
-        shortName: 'HMAP',
-        // ✅ SỬA LỖI 1: Trả về mảng an toàn để KLineChart không bị sập bộ tính toán
-        calc: (dataList) => dataList.map(() => ({})),
-        draw: ({ ctx, bounding }) => {
-            // Nếu tắt Heatmap hoặc chưa có dữ liệu thì không vẽ
-            if (!window.isHeatmapOn || !window.bookmapHistory.length || !window.tvChart) return;
-            
-            try {
-                ctx.save();
-                ctx.globalCompositeOperation = 'screen'; // Hiệu ứng cộng màu phát sáng
-                
-                window.bookmapHistory.forEach(snap => {
-                    // ✅ SỬA LỖI 2: Dùng hàm chuẩn của tvChart để lấy tọa độ an toàn 100%
-                    let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t, value: 0 });
-                    if (!basePoint) return;
-                    let x = basePoint.x;
 
-                    // Tối ưu đồ họa: Nằm ngoài màn hình thì không vẽ
-                    if (x < -10 || x > bounding.width + 10) return;
-
-                    const drawList = (map, isAsk) => {
-                        map.forEach((vol, priceStr) => {
-                            const p = parseFloat(priceStr);
-                            const valUSD = p * vol;
-                            if (valUSD < 5000) return; // Lọc các tường nhỏ dưới 5k$
-
-                            let point = window.tvChart.convertToPixel({ timestamp: snap.t, value: p });
-                            if (!point) return;
-                            let y = point.y;
-
-                            const ratio = Math.min(1, valUSD / 500000); 
-                            ctx.fillStyle = isAsk 
-                                ? `rgba(255, 80, 0, ${0.1 + ratio * 0.7})`  // Đỏ cam (Bán)
-                                : `rgba(0, 255, 150, ${0.1 + ratio * 0.7})`; // Xanh lá (Mua)
-                            
-                            // Vẽ 1 ô vuông (Pixel) đại diện cho tường tại giây đó
-                            ctx.fillRect(x - 2, y - 2, 4, 4);
-                        });
-                    };
-                    drawList(snap.asks, true);
-                    drawList(snap.bids, false);
-                });
-            } catch(e) {
-            } finally {
-                ctx.restore();
-            }
-        }
-    });
-}
 // ==========================================
 // 🌊 ĐỘNG CƠ WATERFALL (NỘI SUY TUYẾN TÍNH HFT KLINECHART)
 // ==========================================
@@ -384,15 +333,7 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
         }
 
 
-        // 🚀 KÍCH HOẠT HIỂN THỊ BOOKMAP
-        // ✅ SỬA LỖI 3: Thêm cờ khóa an toàn để CHỈ TẠO ĐÚNG 1 LẦN duy nhất
-        if (window.tvChart && window.isHeatmapOn && !window._isBookmapApplied) {
-            try {
-                // Tạo indicator đè lên nến (id: candle_pane)
-                window.tvChart.createIndicator('WAVE_BOOKMAP', true, { id: 'candle_pane' });
-                window._isBookmapApplied = true;
-            } catch(e) {}
-        }
+        
         
 
         let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
