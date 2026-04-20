@@ -277,7 +277,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        if (window.scLocalOrderBook && window.tvChart) {
+        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
@@ -286,12 +286,15 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 } else {
                     for (let p in orderMap) { let price = parseFloat(p); let valUSD = price * orderMap[p]; if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk }); }
                 }
-                return walls.sort((a, b) => b.v - a.v).slice(0, 5);
+                return walls.sort((a, b) => b.v - a.v).slice(0, 5); 
             };
 
             let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
             let dataList = window.tvChart.getDataList ? window.tvChart.getDataList() : [];
-            let lastTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
+            
+            // 🐛 LỖI CŨ: let lastTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
+            // ✅ FIX MỚI: Dùng timestamp của nến ĐẦU TIÊN bên trái, để tia luôn cắt ngang màn hình
+            let startTs = dataList && dataList.length > 0 ? dataList[0].timestamp : Date.now();
             let isTrad = window.currentTheme === 'trad';
 
             // ✅ FIX: Chỉ xóa/tạo đúng các overlay depth, KHÔNG đụng tới overlay vẽ tay
@@ -316,7 +319,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 try {
                     updated = window.tvChart.overrideOverlay({
                         id: wallId,
-                        points: [{ timestamp: lastTs, value: wall.p }],
+                        points: [{ timestamp: startTs, value: wall.p }], // <-- Đổi thành startTs
                         styles: { line: { color: lineColor, size: 1, style: 'solid' } }
                     });
                 } catch(e) {}
@@ -324,9 +327,9 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 if (!updated) {
                     try {
                         window.tvChart.createOverlay({
-                            name: 'horizontalRayLine',
+                            name: 'horizontalStraightLine', // <-- Đổi từ RayLine sang StraightLine (Đường thẳng vô cực)
                             id: wallId,
-                            points: [{ timestamp: lastTs, value: wall.p }],
+                            points: [{ timestamp: startTs, value: wall.p }], // <-- Đổi thành startTs
                             styles: { line: { color: lineColor, size: 1, style: 'solid' } },
                             lock: true,
                             mode: 'weak_magnet'
