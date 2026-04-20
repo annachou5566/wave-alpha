@@ -867,28 +867,24 @@ window.openProChart = function(t, isTimeSwitch = false) {
     // ĐỔI TIMEFRAME: Thoát SỚM trước khi dispose/init
     // Overlay sống trong chart instance — không được phép dispose
     // ═══════════════════════════════════════════════════════════
-    if (isTimeSwitch && window.tvChart) {
-        let isTick = window.currentChartInterval === 'tick';
-        window.tvChart.setStyles({
-            candle: { type: isTick ? 'area' : 'candle_solid' }
-        });
-        window.fetchBinanceHistory(t, window.currentChartInterval, isTick).then(histData => {
-            if (histData && histData.length > 0) {
-                // 🛑 VÁ LỖI KHỰNG: Giết chết "cây nến bóng ma" của khung giờ cũ trước khi nạp data mới
-                window._waTargetCandle = null;
-                window._waCurrentCandle = null;
-                
-                window.tvChart.applyNewData(histData);
-            }
-            
-            // 💡 VÁ LỖI: Đã BỎ dòng gọi WaveIndicatorAPI.restore() tại đây.
-            // Khi đổi khung giờ, applyNewData tự động recalculate data. Việc gọi restore() 
-            // sẽ xóa sạch indicator cũ và rebuild lại từ đầu gây ra hiện tượng đơ giật 1 giây.
+    // Trong đoạn isTimeSwitch của openProChart
+if (isTimeSwitch && window.tvChart) {
+    let isTick = window.currentChartInterval === 'tick';
+    window.tvChart.setStyles({ candle: { type: isTick ? 'area' : 'candle_solid' } });
 
-            if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
-        });
-        return; // Thoát openProChart hoàn toàn — KHÔNG dispose, KHÔNG init
-    }
+    // ✅ THÊM: Reset waterfall ngay lập tức để không render nến zombie
+    window._waTargetCandle = null;
+    window._waCurrentCandle = null;
+    window._waRafRunning = false; // ← Dừng RAF cũ
+
+    window.fetchBinanceHistory(t, window.currentChartInterval, isTick).then(histData => {
+        if (histData && histData.length > 0) {
+            window.tvChart.applyNewData(histData);
+        }
+        if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeChart(t, true);
+    });
+    return;
+}
 
     // [WA-DRAWING] Lưu drawings của timeframe CŨ trước khi destroy chart
     if (window.__wa_onBeforeChartInit) {
@@ -1200,27 +1196,25 @@ if (typeof window.connectRealtimeChart === 'function') window.connectRealtimeCha
     }, 100); 
 };
 
+// chart-ui.js — hàm changeChartInterval
 window.changeChartInterval = function(interval, btnEl) {
     if (window.currentChartInterval === interval) return;
-
-    // THÊM DÒNG NÀY ĐỂ BÁO LƯU TRƯỚC KHI ĐỔI TIME FRAME:
     if (window.__wa_onIntervalChange) window.__wa_onIntervalChange(interval);
 
     document.querySelectorAll('.sc-time-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
 
-    window.oldChartInterval = window.currentChartInterval; 
+    window.oldChartInterval = window.currentChartInterval;
     window.currentChartInterval = interval;
 
-    // THÊM DÒNG NÀY VÀO: Cập nhật chữ trên Header Chart
     let tfEl = document.getElementById('chart-legend-tf');
     if (tfEl) tfEl.innerText = interval.toUpperCase();
 
-    // Ngắt Data Realtime cũ
-    if (window.chartWs) {
-        window.chartWs.close();
-        window.chartWs = null;
-    }
+    // ❌ XÓA ĐOẠN NÀY (nó giết WS một cách vô ích)
+    // if (window.chartWs) {
+    //     window.chartWs.close();
+    //     window.chartWs = null;
+    // }
 
     if (window.currentChartToken) {
         window.openProChart(window.currentChartToken, true);

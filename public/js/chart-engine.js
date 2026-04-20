@@ -118,7 +118,13 @@ window.getSmartTokenContext = async function(t) {
     return { contract: cleanAddr, chainId: finalChainId };
 };
 
+// chart-engine.js — đầu hàm connectRealtimeChart
 window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
+    // ✅ THÊM: Luôn dừng sạch waterfall trước
+    window._waRafRunning = false;
+    window._waTargetCandle = null;
+    window._waCurrentCandle = null;
+    
     let rawId = (t.alphaId || t.id || '').toLowerCase().replace('alpha_', ''); 
     let sysSymbol = (t.symbol || '').toLowerCase() + 'usdt';
     let streamPrefix = rawId ? `alpha_${rawId}usdt` : sysSymbol;
