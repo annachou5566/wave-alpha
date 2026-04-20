@@ -192,36 +192,46 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     window.scActivePriceLines = []; 
 // 🚀 BƯỚC 1: LẤY SNAPSHOT FULL DEPTH TỪ RENDER TRƯỚC KHI MỞ WEBSOCKET
 let targetSymbol = rawId ? `ALPHA_${rawId.toUpperCase()}USDT` : sysSymbol.toUpperCase();
+    
+// LOG 1: Báo hiệu bắt đầu gọi
+console.log(`🌊 [DEPTH SNAPSHOT] Đang lấy sổ lệnh 500 nấc cho ${targetSymbol}...`);
+
 fetch(`${RENDER_BASE_URL}/api/full-depth?symbol=${targetSymbol}&limit=500`)
     .then(res => res.json())
     .then(json => {
-        // Bảo mật luồng: Nếu người dùng vừa đổi sang coin khác trong lúc API đang tải, lập tức hủy bỏ để tránh ghi đè dữ liệu sai.
         if (window.activeChartSessionId !== currentSession) return; 
 
         if (json.success && json.data) {
+            // LOG 2: Báo hiệu lấy data thành công
+            console.log(`✅ [DEPTH SNAPSHOT] Lấy thành công! Bids: ${json.data.bids.length} | Asks: ${json.data.asks.length}`);
+            
             let currentSym = json.data.symbol || targetSymbol;
             
-            // Khởi tạo sổ lệnh nếu WebSocket chưa kịp tạo
             if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
                 window.scLocalOrderBook = { sym: currentSym, asks: new Map(), bids: new Map() };
             }
             
-            // Nạp mảng Bids (Mua)
             (json.data.bids || []).forEach(item => {
                 let p = item[0], q = parseFloat(item[1]);
-                // Quan trọng: Phải giữ nguyên `p` là chuỗi (String) để khi WebSocket gửi Delta về, nó tìm đúng Key để Cập nhật/Xóa.
                 if (q > 0) window.scLocalOrderBook.bids.set(p, q);
             });
             
-            // Nạp mảng Asks (Bán)
             (json.data.asks || []).forEach(item => {
                 let p = item[0], q = parseFloat(item[1]);
                 if (q > 0) window.scLocalOrderBook.asks.set(p, q);
             });
-        }
-    }).catch(e => console.error("Snapshot Depth Error:", e));
 
-// 🚀 BƯỚC 2: MỞ WEBSOCKET ĐỂ HỨNG CÁC THAY ĐỔI (DELTA) ĐÈ LÊN SNAPSHOT BÊN TRÊN
+            // ÉP BUỘC BẬT HEATMAP ĐỂ TEST 
+            window.isHeatmapOn = true;
+            
+        } else {
+            console.error(`❌ [DEPTH SNAPSHOT] Render trả về lỗi:`, json);
+        }
+    }).catch(e => {
+        console.error("🔥 [DEPTH SNAPSHOT] Lỗi mạng hoặc Render chưa được Deploy:", e);
+    });
+
+// 🚀 BƯỚC 2: MỞ WEBSOCKET ĐỂ HỨNG DELTA...
 try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
     let params = [];
