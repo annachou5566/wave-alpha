@@ -1791,8 +1791,8 @@
         padding: 0 0 8px 0;
         transition: height 0.25s cubic-bezier(0.4,0,0.2,1), overflow 0.25s;
       }
-      .wa-toolbar.collapsed { height: 88px; overflow: hidden; }
-.wa-toolbar.collapsed .wa-toolbar-body { display: none; }
+            .wa-toolbar.collapsed { height: 88px; overflow: hidden; }
+      .wa-toolbar.collapsed .wa-toolbar-body { display: none; }
       
       /* Glow báo hiệu đang trong chế độ vẽ */
       .wa-drawing-mode .wa-toolbar {
@@ -2380,16 +2380,16 @@
 
   function buildToolbar() {
     let html = `<div class="wa-drag-grip" title="Kéo để di chuyển"></div>
-            <button class="wa-tb-btn" id="wa-toolbar-toggle" 
-              data-tooltip="Ẩn/Hiện thanh công cụ (1 chạm)"
-              onclick="(function(e){e.stopPropagation();var tb=e.currentTarget.closest('.wa-toolbar');if(tb){var c=tb.classList.toggle('collapsed');var icon=e.currentTarget.querySelector('svg');if(icon){icon.innerHTML=c?'<path d=\"M9 18l6-6-6-6\"/>':'<path d=\"M15 18l-6-6 6-6\"/>';}}})(event)"
-              style="margin-bottom:2px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 18l-6-6 6-6"/>
-              </svg>
-            </button>
-            <div class="wa-toolbar-body">
-            <button class="wa-tb-btn active" data-tool="pointer" ...>`;
+    <button class="wa-tb-btn" id="wa-toolbar-toggle"
+      data-tooltip="Ẩn/Hiện thanh công cụ (1 chạm)"
+      onclick="(function(e){e.stopPropagation();var tb=e.currentTarget.closest('.wa-toolbar');if(tb){var c=tb.classList.toggle('collapsed');var icon=e.currentTarget.querySelector('svg');if(icon){icon.innerHTML=c?'<path d=\\"M9 18l6-6-6-6\\"/>':'<path d=\\"M15 18l-6-6 6-6\\"/>';}}}})(event)"
+      style="margin-bottom:2px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+    </button>
+    <div class="wa-toolbar-body">
+    <button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột [Esc]">${SVG.ptr}</button>`;
     
     MENUS.forEach(m => {
       html += `<div class="wa-tb-group">
@@ -2417,8 +2417,8 @@
            </button>
            <button class="wa-tb-btn" id="wa-btn-hide-all" data-tooltip="Ẩn/Hiện tất cả"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
            <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xoá tất cả">${SVG.trash}</button>
-         </div>`;          
-         html += `</div>`;
+         </div>`;
+    html += `</div>`; // đóng wa-toolbar-body
     return html;
   }
 
