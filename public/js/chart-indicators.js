@@ -249,6 +249,16 @@
       builtIn: false,
     },
     {
+      name: 'WAVE_BOOKMAP',
+      shortName: 'HMAP',
+      description: 'Bản đồ nhiệt độ thanh khoản (Bookmap Style)',
+      category: 'wave_alpha',
+      isStack: true, // Cho phép vẽ đè trực tiếp lên giá (Nến)
+      defaultParams: [5000], // Mặc định chỉ vẽ tường > 5000$
+      paramLabels: ['Lọc Volume tối thiểu (USD)'],
+      builtIn: false,
+    },
+    {
       name: 'SUPERTREND',
       shortName: 'ST',
       description: 'ATR-based trend direction indicator — changes color with trend',
@@ -618,6 +628,72 @@
           
           return res;
         });
+      }
+    });
+    // ── WAVE_BOOKMAP (BẢN ĐỒ NHIỆT THANH KHOẢN) ─────────────────
+    kc.registerIndicator({
+      name: 'WAVE_BOOKMAP',
+      shortName: 'HMAP',
+      series: 'price',
+      calcParams: [5000], 
+      figures: [], // Không dùng đường thẳng mặc định
+      calc: function(dataList, indicator) {
+        // Trả về object rỗng để hệ thống không bị lỗi toán học
+        return dataList.map(() => ({}));
+      },
+      draw: function({ ctx, bounding, xAxis, yAxis, indicator }) {
+        // 1. Kiểm tra xem có dữ liệu lịch sử chưa
+        if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
+
+        const minValUSD = indicator.calcParams[0] || 5000; // Lấy thông số từ UI Cài đặt
+        const barSpace = xAxis.getBarSpace().width || 6;
+
+        try {
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen'; // Hiệu ứng hoà trộn ánh sáng
+
+          window.bookmapHistory.forEach(snap => {
+            // 2. Chuyển đổi Thời gian thực sang Tọa độ màn hình X
+            let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t, value: 0 });
+            if (!basePoint) return;
+            let x = basePoint.x;
+
+            // Nếu cột nến này bị cuộn ra khỏi màn hình thì bỏ qua không vẽ để mượt máy
+            if (x < -10 || x > bounding.width + 10) return;
+
+            // 3. Hàm vẽ điểm ảnh (Pixel)
+            const drawList = (map, isAsk) => {
+              map.forEach((vol, priceStr) => {
+                const p = parseFloat(priceStr);
+                const valUSD = p * vol;
+                
+                // Lọc rác
+                if (valUSD < minValUSD) return;
+
+                // Chuyển mức giá sang Tọa độ Y
+                let yPoint = window.tvChart.convertToPixel({ timestamp: snap.t, value: p });
+                if (!yPoint) return;
+                let y = yPoint.y;
+
+                // Tính toán độ đậm nhạt (500k$ = Đỏ chót/Xanh chót)
+                const ratio = Math.min(1, valUSD / 500000); 
+                ctx.fillStyle = isAsk 
+                  ? `rgba(255, 80, 0, ${0.1 + ratio * 0.7})`  // Phe Bán (Cam/Đỏ)
+                  : `rgba(0, 255, 150, ${0.1 + ratio * 0.7})`; // Phe Mua (Xanh lá Neon)
+                
+                // Vẽ ra dải màu
+                ctx.fillRect(x - barSpace/2, y - 2, barSpace, 4);
+              });
+            };
+            drawList(snap.asks, true);
+            drawList(snap.bids, false);
+          });
+        } catch(e) {
+          console.error("Bookmap Draw Error:", e);
+        } finally {
+          ctx.restore();
+        }
+        return false;
       }
     });
     // ── 3. SUPERTREND ─────────────────────────────────

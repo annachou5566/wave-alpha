@@ -337,8 +337,9 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
         if (window.activeChartSessionId !== currentSession) return;
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
+        // (Trong file chart-engine.js, hàm setInterval 1000ms)
         const now = Date.now();
-        // 🟢 [THÊM MỚI] Ghi lại "phim" sổ lệnh để vẽ đuôi Bookmap
+        if (!window.bookmapHistory) window.bookmapHistory = [];
         if (window.scLocalOrderBook) {
             window.bookmapHistory.push({
                 t: now,
