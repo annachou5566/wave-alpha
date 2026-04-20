@@ -318,14 +318,13 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        // ✅ Đã xóa điều kiện khóa khung giờ Tick/1s, cho phép hiển thị ở mọi khung giờ
-        if (window.isHeatmapOn && window.scLocalOrderBook && window.tvChart) {
+        // ✅ ĐÃ SỬA 1: Dùng !== false để lách lỗi undefined ban đầu
+        if (window.isHeatmapOn !== false && window.scLocalOrderBook && window.tvChart) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
-                // ✅ HẠ CHUẨN LỌC RÁC: Hạ xuống 10$ để chắc chắn các tường nhỏ cũng hiện lên lúc test
-                let minValUSD = 10; 
+                let minValUSD = 10; // Giữ nguyên 10$ để test cho dễ lên
                 
                 if (orderMap instanceof Map) {
                     for (let [p, vol] of orderMap) { 
@@ -338,7 +337,6 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
                         if (valUSD > minValUSD) walls.push({ p: price, v: valUSD, isAsk: isAsk }); 
                     }
                 }
-                // ✅ MỞ RỘNG TẦM NHÌN: Lấy 15 tường to nhất mỗi bên thay vì chỉ 5 tường
                 return walls.sort((a, b) => b.v - a.v).slice(0, 15);
             };
 
@@ -349,16 +347,18 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
             let range = typeof window.tvChart.getVisibleRange === 'function' ? window.tvChart.getVisibleRange() : null;
             let leftIndex = range && range.from >= 0 ? Math.floor(range.from) : 0;
             if (leftIndex >= dataList.length) leftIndex = Math.max(0, dataList.length - 1);
+            
+            // Lấy 2 điểm neo để bắn tia
             let safeTs = dataList && dataList[leftIndex] ? dataList[leftIndex].timestamp : Date.now();
+            let endTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
 
-            // ✅ XÓA TÀN DƯ CŨ
+            // Dọn dẹp tàn dư v6
             for (let i = 0; i < 30; i++) {
-                try { window.tvChart.removeOverlay(`depth_wall_v3_${i}`); } catch(e) {}
+                try { window.tvChart.removeOverlay(`wa_depth_wall_v6_${i}`); } catch(e) {}
             }
 
-            // ✅ VẼ 30 ĐƯỜNG (15 BIDS + 15 ASKS) TỪ DỮ LIỆU SNAPSHOT 500 NẤC
             for (let i = 0; i < 30; i++) {
-                let wallId = `wa_depth_wall_v6_${i}`;
+                let wallId = `wa_depth_wall_v7_${i}`;
                 let wall = newWalls[i];
 
                 if (!wall) {
@@ -372,21 +372,22 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
                 else if (wall.v > currentAvgTicket * 8)   { lineColor = isTrad ? 'rgba(255,152,0,0.5)'   : 'rgba(85,69,125,0.5)'; }
                 else                                       { lineColor = isTrad ? 'rgba(33,150,243,0.4)'  : 'rgba(22,96,73,0.4)'; }
 
+                // ✅ ĐÃ SỬA 2: Cung cấp đủ 2 tọa độ (points) cho rayLine bắn sang phải
                 let updated = false;
                 try {
                     updated = window.tvChart.overrideOverlay({
                         id: wallId,
-                        points: [{ timestamp: safeTs, value: wall.p }],
-                        styles: { line: { color: lineColor, size: 2, style: 'solid' } } // Tăng size lên 2 cho nét vẽ đậm và dễ thấy hơn
+                        points: [{ timestamp: safeTs, value: wall.p }, { timestamp: endTs, value: wall.p }],
+                        styles: { line: { color: lineColor, size: 2, style: 'solid' } }
                     });
                 } catch(e) {}
 
                 if (!updated) {
                     try {
                         window.tvChart.createOverlay({
-                            name: 'horizontalRayLine',
+                            name: 'rayLine', // ✅ ĐÃ SỬA 3: Dùng đúng tên rayLine
                             id: wallId,
-                            points: [{ timestamp: safeTs, value: wall.p }],
+                            points: [{ timestamp: safeTs, value: wall.p }, { timestamp: endTs, value: wall.p }],
                             styles: { line: { color: lineColor, size: 2, style: 'solid' } },
                             lock: true,
                             mode: 'weak_magnet'
@@ -394,9 +395,9 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
                     } catch(e) {}
                 }
             }
-        } else if (!window.isHeatmapOn && window.tvChart) {
+        } else if (window.isHeatmapOn === false && window.tvChart) {
             for (let i = 0; i < 30; i++) {
-                try { window.tvChart.removeOverlay(`wa_depth_wall_v6_${i}`); } catch(e) {}
+                try { window.tvChart.removeOverlay(`wa_depth_wall_v7_${i}`); } catch(e) {}
             }
         }
         
