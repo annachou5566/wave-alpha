@@ -277,7 +277,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        if (window.scLocalOrderBook && window.tvChart) {
+        if (window.isHeatmapOn && window.scLocalOrderBook && window.tvChart && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
@@ -298,20 +298,16 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             
             // Chọn điểm neo là cây nến đầu tiên ĐANG HIỂN THỊ bên trái màn hình.
             let leftIndex = range && range.from >= 0 ? Math.floor(range.from) : 0;
-            
-            // Đảm bảo không bị lố mảng dữ liệu
             if (leftIndex >= dataList.length) leftIndex = Math.max(0, dataList.length - 1);
             let safeTs = dataList && dataList[leftIndex] ? dataList[leftIndex].timestamp : Date.now();
 
-            // Dọn dẹp các tàn dư của phiên bản cũ đang tàng hình trên Chart
+            // Dọn dẹp id cũ
             for (let i = 0; i < 10; i++) {
-                try { window.tvChart.removeOverlay(`depth_wall_${i}`); } catch(e) {}
-                try { window.tvChart.removeOverlay(`depth_wall_v2_${i}`); } catch(e) {}
                 try { window.tvChart.removeOverlay(`depth_wall_v3_${i}`); } catch(e) {}
             }
 
             for (let i = 0; i < 10; i++) {
-                let wallId = `wa_depth_wall_v5_${i}`; // Khởi tạo ID hoàn toàn mới để xóa Cache
+                let wallId = `wa_depth_wall_v5_${i}`;
                 let wall = newWalls[i];
 
                 if (!wall) {
@@ -337,7 +333,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 if (!updated) {
                     try {
                         window.tvChart.createOverlay({
-                            name: 'horizontalRayLine', // Dùng lại hình dạng nguyên bản, chắc chắn không bị lỗi
+                            name: 'horizontalRayLine',
                             id: wallId,
                             points: [{ timestamp: safeTs, value: wall.p }],
                             styles: { line: { color: lineColor, size: 1, style: 'solid' } },
@@ -346,6 +342,12 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                         });
                     } catch(e) {}
                 }
+            }
+        } else if (!window.isHeatmapOn && window.tvChart) {
+            // Dọn dẹp khi người dùng tắt nút Heatmap
+            for (let i = 0; i < 10; i++) {
+                try { window.tvChart.removeOverlay(`wa_depth_wall_v5_${i}`); } catch(e) {}
+                try { window.tvChart.removeOverlay(`depth_wall_v3_${i}`); } catch(e) {}
             }
         }
 
