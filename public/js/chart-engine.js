@@ -277,7 +277,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
+        if (window.isHeatmapOn && window.scLocalOrderBook) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
@@ -292,32 +292,30 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
             if (!window.scActivePriceLines) window.scActivePriceLines = [];
             
-            if (window.tvHeatmapLayer) { 
-                for (let i = 0; i < newWalls.length; i++) {
-                    let wall = newWalls[i];
-                    let lineColor = ''; let thickness = 1;
-                    let isTrad = window.currentTheme === 'trad';
-                    if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
-                    else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
-                    else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
-                    else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
+            // MỚI — dùng KLineCharts overlay API thay vì createPriceLine
+if (window.tvChart) {
+    // Xóa các overlay depth cũ
+    try { window.tvChart.removeOverlay({ name: 'depth_wall' }); } catch(e) {}
 
-                    if (i < window.scActivePriceLines.length) { 
-                        // CHỐNG CRASH: Kiểm tra có hàm applyOptions
-                        if (window.scActivePriceLines[i] && typeof window.scActivePriceLines[i].applyOptions === 'function') {
-                            window.scActivePriceLines[i].applyOptions({ price: wall.p, color: lineColor, lineWidth: thickness }); 
-                        }
-                    } else {
-                        let priceLine = window.tvHeatmapLayer.createPriceLine({ price: wall.p, color: lineColor, lineWidth: thickness, lineStyle: 0, axisLabelVisible: false, title: '' });
-                        if (priceLine) window.scActivePriceLines.push(priceLine);
-                    }
-                }
-                for (let i = newWalls.length; i < window.scActivePriceLines.length; i++) { 
-                    if (window.scActivePriceLines[i] && typeof window.scActivePriceLines[i].applyOptions === 'function') {
-                        window.scActivePriceLines[i].applyOptions({ color: 'transparent' }); 
-                    }
-                }
-            }
+    for (let i = 0; i < newWalls.length; i++) {
+        let wall = newWalls[i];
+        let lineColor = '';
+        let isTrad = window.currentTheme === 'trad';
+        if (wall.v > currentAvgTicket * 30)      { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203,85,227,0.7)'; }
+        else if (wall.v > currentAvgTicket * 15)  { lineColor = isTrad ? 'rgba(255,50,50,0.5)'   : 'rgba(137,57,153,0.5)'; }
+        else if (wall.v > currentAvgTicket * 8)   { lineColor = isTrad ? 'rgba(255,152,0,0.4)'   : 'rgba(85,69,125,0.4)'; }
+        else                                       { lineColor = isTrad ? 'rgba(33,150,243,0.3)'  : 'rgba(22,96,73,0.3)'; }
+
+        window.tvChart.createOverlay({
+            name: 'horizontalRayLine',
+            id: `depth_wall_${i}`,
+            points: [{ value: wall.p }],
+            styles: { line: { color: lineColor, size: 1, style: 'solid' } },
+            lock: true,
+            mode: 'weak_magnet'
+        });
+    }
+}
         }
 
         let sym = window.currentChartToken ? window.currentChartToken.symbol : 'UNKNOWN';
