@@ -689,7 +689,6 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
         s.textContent = `
-            /* Desktop: Trượt ngang */
             @media (min-width: 992px) {
                 #sc-panel-content {
                     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease !important;
@@ -699,7 +698,6 @@ window.toggleProSidePanel = function(tabId, btnElement) {
                     width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none;
                 }
             }
-            /* Mobile: Trượt dọc */
             @media (max-width: 991px) {
                 #sc-panel-content {
                     transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.3s ease !important;
@@ -719,7 +717,6 @@ window.toggleProSidePanel = function(tabId, btnElement) {
                     100% { opacity: 1; transform: translateY(0); }
                 }
             }
-            /* ===== FIX SIDEBAR + NÚT TOGGLE (áp dụng mọi màn hình) ===== */
             .sc-sidebar-icons {
                 position: relative; z-index: 10; flex-shrink: 0;
                 background: var(--term-bg, #0b1217);
@@ -732,26 +729,22 @@ window.toggleProSidePanel = function(tabId, btnElement) {
             }
             .sc-chart-wrapper, #super-chart-overlay { overflow-x: hidden; }
             #sc-panel-toggle-btn {
-                background: transparent;
-                border: none;
+                background: transparent; border: none;
                 border-top: 1px solid rgba(255,255,255,0.06);
-                color: #527c82;
-                font-size: 13px;
-                padding: 10px 0;
-                cursor: pointer;
-                width: 100%;
-                text-align: center;
+                color: #527c82; font-size: 13px; padding: 10px 0;
+                cursor: pointer; width: 100%; text-align: center;
                 transition: color 0.2s, background 0.2s;
-                margin-top: auto;
-                display: block;
+                margin-top: auto; display: block;
             }
             #sc-panel-toggle-btn:hover { color: #00F0FF; background: rgba(0,240,255,0.05); }
         `;
         document.head.appendChild(s);
+    }
 
-        // Inject nút toggle vào cuối .sc-sidebar-icons (chỉ 1 lần)
+    // ✅ Inject nút — TÁCH RIÊNG, không phụ thuộc vào điều kiện style
+    if (!document.getElementById('sc-panel-toggle-btn')) {
         const sidebarIcons = document.querySelector('.sc-sidebar-icons');
-        if (sidebarIcons && !document.getElementById('sc-panel-toggle-btn')) {
+        if (sidebarIcons) {
             const toggleBtn = document.createElement('button');
             toggleBtn.id = 'sc-panel-toggle-btn';
             toggleBtn.title = 'Ẩn panel';
@@ -805,6 +798,32 @@ window.toggleProSidePanel = function(tabId, btnElement) {
 
     handleMobileUI(false);
     doResize();
+};
+
+window.togglePanelCollapse = function() {
+    const panelContent = document.getElementById('sc-panel-content');
+    if (!panelContent) return;
+    const isCollapsed = panelContent.classList.toggle('collapsed');
+    const isMobile = window.innerWidth <= 991;
+    const chartArea = document.querySelector('.sc-chart-area');
+    if (isMobile && chartArea) {
+        chartArea.dataset.mobileExpanded = isCollapsed ? 'true' : 'false';
+    }
+    const toggleBtn = document.getElementById('sc-panel-toggle-btn');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = isCollapsed
+            ? '<i class="fas fa-chevron-right"></i>'
+            : '<i class="fas fa-chevron-left"></i>';
+        toggleBtn.title = isCollapsed ? 'Mở panel' : 'Ẩn panel';
+    }
+    if (window.tvChart) {
+        const start = Date.now();
+        const animate = () => {
+            if (window.tvChart) window.tvChart.resize();
+            if (Date.now() - start < 450) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+    }
 };
 
 // ✅ Hàm toggle ẩn/hiện panel — 1 tap dứt khoát
