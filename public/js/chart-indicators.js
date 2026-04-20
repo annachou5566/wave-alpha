@@ -636,67 +636,61 @@
       shortName: 'HMAP',
       series: 'price',
       calcParams: [5000], 
-      figures: [], // Không dùng đường thẳng mặc định
+      figures: [],
       calc: function(dataList, indicator) {
-        // Trả về object rỗng để hệ thống không bị lỗi toán học
         return dataList.map(() => ({}));
       },
       draw: function({ ctx, bounding, xAxis, yAxis, indicator }) {
-        // 1. Kiểm tra xem có dữ liệu lịch sử chưa
         if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
 
-        const minValUSD = indicator.calcParams[0] || 5000; // Lấy thông số từ UI Cài đặt
-        // ✅ DÒNG MỚI (An toàn tuyệt đối chống sập Canvas):
-let barSpace = 5; // Mặc định 5 pixel cho dải nhiệt
-try {
-    if (window.tvChart && typeof window.tvChart.getBarSpace === 'function') {
-        let bs = window.tvChart.getBarSpace();
-        barSpace = (typeof bs === 'number') ? bs : (bs?.bar || 5);
-    }
-} catch(e) {}
+        const minValUSD = indicator.calcParams[0] || 5000; 
+        
+        // Lấy độ rộng thân nến an toàn
+        let barSpace = 5;
+        try {
+            if (typeof window.tvChart.getBarSpace === 'function') {
+                let bs = window.tvChart.getBarSpace();
+                barSpace = (typeof bs === 'number') ? bs : (bs?.bar || 5);
+            }
+        } catch(e) {}
 
         try {
           ctx.save();
-          ctx.globalCompositeOperation = 'screen'; // Hiệu ứng hoà trộn ánh sáng
+          ctx.globalCompositeOperation = 'screen'; 
 
           window.bookmapHistory.forEach(snap => {
-            // 2. Chuyển đổi Thời gian thực sang Tọa độ màn hình X
-            let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t, value: 0 });
+            // ✅ FIX 1: Thêm { paneId: 'candle_pane' } để KLineCharts biết vẽ ở đâu
+            let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t }, { paneId: 'candle_pane' });
             if (!basePoint) return;
             let x = basePoint.x;
 
-            // Nếu cột nến này bị cuộn ra khỏi màn hình thì bỏ qua không vẽ để mượt máy
             if (x < -10 || x > bounding.width + 10) return;
 
-            // 3. Hàm vẽ điểm ảnh (Pixel)
             const drawList = (map, isAsk) => {
               map.forEach((vol, priceStr) => {
                 const p = parseFloat(priceStr);
                 const valUSD = p * vol;
                 
-                // Lọc rác
                 if (valUSD < minValUSD) return;
 
-                // Chuyển mức giá sang Tọa độ Y
-                let yPoint = window.tvChart.convertToPixel({ timestamp: snap.t, value: p });
-                if (!yPoint) return;
-                let y = yPoint.y;
+                // ✅ FIX 2: Dùng yAxis có sẵn để chuyển đổi Giá thành Tọa độ Y siêu mượt
+                let y = yAxis.convertToPixel(p);
+                if (y === null || y === undefined) return;
 
-                // Tính toán độ đậm nhạt (500k$ = Đỏ chót/Xanh chót)
                 const ratio = Math.min(1, valUSD / 500000); 
                 ctx.fillStyle = isAsk 
-                  ? `rgba(255, 80, 0, ${0.1 + ratio * 0.7})`  // Phe Bán (Cam/Đỏ)
-                  : `rgba(0, 255, 150, ${0.1 + ratio * 0.7})`; // Phe Mua (Xanh lá Neon)
+                  ? `rgba(255, 80, 0, ${0.1 + ratio * 0.7})`  // Bán: Cam/Đỏ
+                  : `rgba(0, 255, 150, ${0.1 + ratio * 0.7})`; // Mua: Xanh lá
                 
-                // Vẽ ra dải màu
                 ctx.fillRect(x - barSpace/2, y - 2, barSpace, 4);
               });
             };
+            
             drawList(snap.asks, true);
             drawList(snap.bids, false);
           });
         } catch(e) {
-          console.error("Bookmap Draw Error:", e);
+          // Bắt lỗi im lặng để không làm sập các chỉ báo khác
         } finally {
           ctx.restore();
         }
