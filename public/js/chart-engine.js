@@ -128,11 +128,6 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let chainId = smartCtx.chainId;
 
     if (isTimeSwitch && window.chartWs && window.chartWs.readyState === 1) { 
-        // 🔪 CẮT ĐỨT GHOST CANDLE: Hủy diệt mục tiêu, đưa Waterfall vào trạng thái ngủ đông ngay lập tức
-        window._waTargetCandle = null;
-        window._waCurrentCandle = null;
-        window._waRafRunning = false;
-
         if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
             let oldK = contract ? `came@${contract}@${chainId}@kline_${window.oldChartInterval}` : `${streamPrefix}@kline_${window.oldChartInterval}`;
             window.chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [oldK], "id": Date.now() }));
@@ -434,7 +429,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     window.lastChartRender = nowT;
                     let timeSec = Math.floor(nowT / 1000);
                     
-                    if (!window._isTimeSwitching && window.tvChart && typeof window.tvChart.updateData === 'function') {
+                    if (window.tvChart && typeof window.tvChart.updateData === 'function') {
                         window.tvChart.updateData({
                             timestamp: timeSec * 1000,
                             open: currentClose, high: currentClose, low: currentClose, close: currentClose,
@@ -455,23 +450,32 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
+                // Cập nhật nến cho khung 1m trở lên
+                // Cập nhật nến cho khung 1m trở lên bằng WATERFALL
                 if (window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
+                    
                     let rawTk = parseInt(k.t || k.ot);
                     let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
 
-                    let freshCandle = {
-                        timestamp: correctTk, 
-                        open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: currentClose, 
-                        volume: isNaN(currentVol) ? 0 : currentVol
-                    };
+                    let dataList = window.tvChart.getDataList();
+                    let lastCandle = (dataList && dataList.length > 0) ? dataList[dataList.length - 1] : null;
 
-                    // KLINE LÀ NGUỒN CHUẨN: Quyết định tạo nến mới hay vuốt tiếp nến cũ
-                    if (!window._waTargetCandle || window._waTargetCandle.timestamp !== correctTk) {
-                        window._waTargetCandle = freshCandle;
-                        window._waCurrentCandle = { ...freshCandle };
-                        window.tvChart.updateData(window._waCurrentCandle); 
+                    if (lastCandle && lastCandle.timestamp === correctTk && k.x !== true) {
+                        // Nếu nến đang chạy, chỉ chốt Volume, giữ nguyên giá Realtime đang trượt
+                        if (window._waTargetCandle) {
+                            window._waTargetCandle.volume = isNaN(currentVol) ? 0 : currentVol; 
+                        }
                     } else {
-                        window._waTargetCandle.volume = freshCandle.volume; // Cập nhật volume chuẩn
+                        // Khi sang nến mới hoặc chốt sổ: Đẩy thẳng vào KLineChart và Reset Target
+                        window._waTargetCandle = {
+                            timestamp: correctTk, 
+                            open: parseFloat(k.o), 
+                            high: parseFloat(k.h), 
+                            low: parseFloat(k.l), 
+                            close: currentClose, 
+                            volume: isNaN(currentVol) ? 0 : currentVol
+                        };
+                        window.tvChart.updateData(window._waTargetCandle);
                     }
                 }
             }
@@ -514,20 +518,25 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            // 🌊 ĐẨY DATA VÀO ĐỘNG CƠ WATERFALL BẰNG LUỒNG CHẢY MỘT CHIỀU
+            // 🌊 ĐẨY DATA VÀO ĐỘNG CƠ WATERFALL THAY VÌ ÉP CHART VẼ TRỰC TIẾP
             if (window.currentChartInterval === 'tick') {
                 window._waTargetCandle = { timestamp: timeSec * 1000, open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p), volume: parseFloat(valUSD || 0) };
             } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
                 window._waTargetCandle = { timestamp: timeSec * 1000, open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close, volume: window.liveCandle1s.vol };
             } else {
-                // AN TOÀN TUYỆT ĐỐI: Chỉ cho phép vuốt nến khi KLINE đã tạo sẵn Base.
-                // Loại bỏ hoàn toàn getDataList(), chặn đứng khả năng hồi sinh Nến Ma gây khựng CPU.
-                if (window._waTargetCandle) {
+                let dataList = window.tvChart ? window.tvChart.getDataList() : [];
+                if (dataList && dataList.length > 0) {
+                    let lastCandle = dataList[dataList.length - 1];
+                    if (!window._waTargetCandle || window._waTargetCandle.timestamp !== lastCandle.timestamp) {
+                        window._waTargetCandle = { ...lastCandle };
+                    }
                     window._waTargetCandle.high = Math.max(window._waTargetCandle.high, p);
                     window._waTargetCandle.low = Math.min(window._waTargetCandle.low, p);
-                    window._waTargetCandle.close = p; 
+                    window._waTargetCandle.close = p; // Chỉ gán mục tiêu, không vẽ ngay lập tức
                 }
             }
+            
+            // Kích hoạt động cơ chạy ngầm (Nó sẽ tự động trượt nến cực mượt)
             if (typeof window.startWaterfallEngine === 'function') window.startWaterfallEngine();
 
             if (!window.isRenderingPrice) {
@@ -570,7 +579,6 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 };
 
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
-    window._isTimeSwitching = true; // KHÓA WEBSOCKET KHI ĐỔI KHUNG
     try {
         let limit = isArea ? 100 : 300; 
         let smartCtx = await window.getSmartTokenContext(t);
@@ -586,21 +594,18 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         const data = await res.json();
         if (!data || data.length === 0) return [];
 
-        setTimeout(() => { window._isTimeSwitching = false; }, 500); // MỞ KHÓA SAU 500MS
-
         return data.map(d => {
+            // 🛑 FIX LỖI 1970 TẠI ĐÂY: Nếu là giây (10 số) thì nhân 1000 thành mili-giây
             let rawTs = parseInt(d.time || d.t || d[0]);
             let correctTs = rawTs < 100000000000 ? rawTs * 1000 : rawTs;
+
             return {
                 timestamp: correctTs, 
                 open: parseFloat(d.open), high: parseFloat(d.high), low: parseFloat(d.low), close: parseFloat(d.close),
                 volume: parseFloat(d.volume)
             };
         });
-    } catch (e) { 
-        window._isTimeSwitching = false;
-        return []; 
-    }
+    } catch (e) { return []; }
 };
 
 const originalFetch = window.fetch;
