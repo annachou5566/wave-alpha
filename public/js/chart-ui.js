@@ -689,47 +689,78 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
         s.textContent = `
-            /* Desktop: Trượt ngang từ trái qua mượt mà */
-            @media (min-width: 992px) {
-                #sc-panel-content {
-                    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                                opacity 0.25s ease !important;
-                    overflow: hidden;
-                }
-                #sc-panel-content.collapsed { 
-                    width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; 
-                }
-            }
-            /* Mobile: Trượt dọc từ dưới lên êm ái, không giật mạnh */
-            @media (max-width: 991px) {
-                #sc-panel-content {
-                    /* Tăng thời gian lên 0.4s và dùng chuẩn mượt Ease-Out của hệ điều hành */
-                    transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1), 
-                                opacity 0.3s ease !important;
-                    width: 100% !important; 
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
-                }
-                #sc-panel-content.collapsed {
-                    flex: 0 0 0 !important;
-                    height: 0 !important; min-height: 0 !important;
-                    opacity: 0; 
-                    pointer-events: none;
-                    margin: 0 !important; padding: 0 !important; border: none !important;
-                }
-                /* Nội dung bên trong cũng trồi lên chậm hơn một nhịp để tạo chiều sâu */
-                .sc-tab-content { animation: none !important; }
-                .sc-tab-content.active {
-                    animation: contentSlideUp 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards !important;
-                }
-                @keyframes contentSlideUp {
-                    0% { opacity: 0; transform: translateY(20px); }
-                    100% { opacity: 1; transform: translateY(0); }
-                }
-            }
-        `;
-        document.head.appendChild(s);
+    /* Desktop: Trượt ngang từ trái qua mượt mà */
+    @media (min-width: 992px) {
+        #sc-panel-content {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                        opacity 0.25s ease !important;
+            overflow: hidden;
+        }
+        #sc-panel-content.collapsed { 
+            width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; 
+        }
+    }
+
+    /* Mobile: Trượt dọc từ dưới lên êm ái, không giật mạnh */
+    @media (max-width: 991px) {
+        #sc-panel-content {
+            transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1), 
+                        opacity 0.3s ease !important;
+            width: 100% !important; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #sc-panel-content.collapsed {
+            flex: 0 0 0 !important;
+            height: 0 !important; min-height: 0 !important;
+            opacity: 0; 
+            pointer-events: none;
+            margin: 0 !important; padding: 0 !important; border: none !important;
+        }
+        .sc-tab-content { animation: none !important; }
+        .sc-tab-content.active {
+            animation: contentSlideUp 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards !important;
+        }
+        @keyframes contentSlideUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================
+           FIX: SIDEBAR ICON KHÔNG BỊ ĐÈ BỞI PANEL
+           ============================================ */
+
+        /* Thanh icon công cụ vẽ luôn nằm trên cùng, không bị panel nội dung đè */
+        .sc-sidebar-icons {
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0;
+            background: var(--term-bg, #0b1217);
+        }
+
+        /* Panel nội dung (Watchlist, Alpha Flow...) nằm dưới thanh icon */
+        #sc-panel-content {
+            z-index: 5;
+            position: relative;
+        }
+
+        /* Nội dung bên trong panel cuộn được, không bị cắt xén */
+        .sc-tab-content {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iOS */
+            flex: 1 1 auto;
+            min-height: 0; /* Quan trọng: cho phép flex child co lại đúng */
+        }
+
+        /* Đảm bảo wrapper tổng không bị tràn ngang */
+        .sc-chart-wrapper,
+        #super-chart-overlay {
+            overflow-x: hidden;
+        }
+    }
+`;
+document.head.appendChild(s);
     }
 
     const panelContent = document.getElementById('sc-panel-content');
