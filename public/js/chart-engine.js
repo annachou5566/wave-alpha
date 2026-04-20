@@ -7,7 +7,7 @@ window.liquidationWs = null;
 window.futuresDataInterval = null;
 window.isReconnecting = false;
 window.currentChartToken = null; 
-
+window.isHeatmapOn = true;
 // Đổi Base URL về thẳng Render để không bị CSP chặn và không bị 404 Proxy
 const RENDER_BASE_URL = "https://alpha-realtime.onrender.com";
 
