@@ -646,7 +646,14 @@
         if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
 
         const minValUSD = indicator.calcParams[0] || 5000; // Lấy thông số từ UI Cài đặt
-        const barSpace = xAxis.getBarSpace().width || 6;
+        // ✅ DÒNG MỚI (An toàn tuyệt đối chống sập Canvas):
+let barSpace = 5; // Mặc định 5 pixel cho dải nhiệt
+try {
+    if (window.tvChart && typeof window.tvChart.getBarSpace === 'function') {
+        let bs = window.tvChart.getBarSpace();
+        barSpace = (typeof bs === 'number') ? bs : (bs?.bar || 5);
+    }
+} catch(e) {}
 
         try {
           ctx.save();
