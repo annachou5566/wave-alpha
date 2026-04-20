@@ -1889,6 +1889,8 @@
         max-height: 55vh; overflow-y: auto; overflow-x: hidden;
         backdrop-filter: blur(20px);
         animation: wa-fadein 0.18s ease;
+        -webkit-overflow-scrolling: touch; /* Bổ sung: Cuộn mượt trên tablet/mobile */
+        overscroll-behavior: contain;      /* Bổ sung: Chống cuộn xuyên xuống biểu đồ */
       }
       
       /* Scrollbar */
@@ -2539,32 +2541,36 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   
     // 🔥 FIX 2: Bỏ CSS Left/Top ban đầu. Để hệ thống nội suy chuẩn 100% từ nến
     input.style.cssText = `
-      position: absolute; 
-      transform: ${transformCSS};
-      background: transparent !important; 
-      border: none !important;
-      outline: none !important; 
-      color: ${curColor}; 
-      font-family: ${curFont}; 
-      font-size: ${curSize}px; 
-      line-height: ${exactLineHeight}px;
-      font-weight: ${curWeight}; 
-      font-style: ${curStyle};
-      text-align: left;
-      letter-spacing: normal;
-      z-index: 999999; 
-      min-width: 10px; 
-      min-height: ${exactLineHeight}px;
-      padding: 0; 
-      margin: 0; 
-      resize: none; 
-      overflow: hidden;
-      white-space: pre; 
-      caret-color: ${curColor};
-      box-sizing: content-box;
-      border-radius: 0;
-      -webkit-appearance: none;
-    `;
+      position: absolute; 
+      transform: ${transformCSS};
+      background: transparent !important; 
+      border: none !important;
+      outline: none !important; 
+      color: ${curColor}; 
+      font-family: ${curFont}; 
+      font-size: ${curSize}px; 
+      line-height: ${exactLineHeight}px;
+      font-weight: ${curWeight}; 
+      font-style: ${curStyle};
+      text-align: left;
+      letter-spacing: normal;
+      z-index: 999999; 
+      min-width: 10px; 
+      min-height: ${exactLineHeight}px;
+      max-height: 40vh; /* Bổ sung giới hạn chiều cao 40% màn hình */
+      padding: 0; 
+      margin: 0; 
+      resize: none; 
+      overflow-y: auto; /* Cho phép cuộn dọc */
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      white-space: pre; 
+      caret-color: ${curColor};
+      box-sizing: content-box;
+      border-radius: 0;
+      -webkit-appearance: none;
+    `;
     
     if (container) container.appendChild(input);
   
@@ -2620,11 +2626,15 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     }
   
     function resizeInput() {
-       input.style.height = '0px'; 
-       input.style.width = '0px';
-       input.style.width = (input.scrollWidth + 2) + 'px';
-       input.style.height = input.scrollHeight + 'px';
-    }
+             input.style.height = '0px'; 
+             input.style.width = '0px';
+             input.style.width = (input.scrollWidth + 2) + 'px';
+             
+             // Bổ sung giới hạn phình to để kích hoạt thanh cuộn
+             let newHeight = input.scrollHeight;
+             let maxH = window.innerHeight * 0.4; // Tối đa 40% chiều cao viewport
+             input.style.height = (newHeight > maxH ? maxH : newHeight) + 'px';
+          }
   
     requestAnimationFrame(function() {
       input.focus();
@@ -2860,7 +2870,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
         "._c_ctrl{display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end}" +
         "._sel{width:auto;min-width:60px;max-width:140px;height:26px;background:#1E2532;border:1px solid rgba(255,255,255,0.1);color:#E8EDF2;padding:0 22px 0 8px;border-radius:6px;font-size:12px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%238896A7'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;text-overflow:ellipsis}" +
         "._sel:focus{border-color:#3B82F6}" +
-        "._ta{width:100%;background:#1E2532;border:1px solid rgba(255,255,255,0.1);color:#E8EDF2;padding:8px 10px;border-radius:6px;font-size:13px;outline:none;resize:vertical;min-height:45px;margin-bottom:6px}" +
+        "._ta{width:100%;background:#1E2532;border:1px solid rgba(255,255,255,0.1);color:#E8EDF2;padding:8px 10px;border-radius:6px;font-size:13px;outline:none;resize:vertical;min-height:45px;max-height:180px;overflow-y:auto;margin-bottom:6px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}" +
         "._ta:focus{border-color:#3B82F6}" +
         "._rng{flex:1;width:80px;max-width:130px;-webkit-appearance:none;height:2px;background:rgba(255,255,255,0.15);border-radius:1px;outline:none;cursor:pointer}" +
         "._rng::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#3B82F6;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.5)}" +
