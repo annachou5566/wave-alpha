@@ -955,7 +955,7 @@ if (isTimeSwitch && window.tvChart) {
     
     if (window.tvChart) { try { klinecharts.dispose(container); } catch(e) {} window.tvChart = null; }
     window.scActivePriceLines = [];
-    window.tvHeatmapLayer = null;
+    
     // XÓA SẠCH CONTAINER (KHÔNG DÙNG WRAPPER ĐỂ TRÁNH VỠ LAYOUT)
     container.innerHTML = ''; 
 
@@ -1135,14 +1135,7 @@ if (isTimeSwitch && window.tvChart) {
 
         window.tvChart.setPriceVolumePrecision(prec, 2);
         window.tvChart.createIndicator('VOL', false, { height: 80 });
-        window.tvHeatmapLayer = window.tvChart.createIndicator({
-            name: 'VOL',
-            visible: false
-        }, true) ? null : null; // dummy — dùng cách khác bên dưới
-        
-        // KLineCharts dùng priceline qua series chính (paneId = 'candle_pane')
-        // tvHeatmapLayer là chính window.tvChart, tạo price line trực tiếp từ đó
-        window.tvHeatmapLayer = window.tvChart;
+
         // --- BẮT ĐẦU PATCH: TỐI ƯU RESIZE OBSERVER & CLEAR CACHE ---
         const chartArea = document.querySelector('.sc-chart-area');
         if (chartArea) delete chartArea.dataset.mobileExpanded;

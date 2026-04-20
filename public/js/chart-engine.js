@@ -277,7 +277,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        if (window.isHeatmapOn && window.scLocalOrderBook) {
+        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
@@ -294,8 +294,14 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             
             // MỚI — dùng KLineCharts overlay API thay vì createPriceLine
 if (window.tvChart) {
-    // Xóa các overlay depth cũ
-    try { window.tvChart.removeOverlay({ name: 'depth_wall' }); } catch(e) {}
+    // ✅ FIX: Xóa từng overlay depth cũ theo đúng id
+    for (let i = 0; i < 10; i++) {
+        try { window.tvChart.removeOverlay(`depth_wall_${i}`); } catch(e) {}
+    }
+
+    // ✅ FIX: Lấy timestamp của nến cuối cùng để point hợp lệ
+    let dataList = window.tvChart.getDataList ? window.tvChart.getDataList() : [];
+    let lastTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
 
     for (let i = 0; i < newWalls.length; i++) {
         let wall = newWalls[i];
@@ -309,7 +315,8 @@ if (window.tvChart) {
         window.tvChart.createOverlay({
             name: 'horizontalRayLine',
             id: `depth_wall_${i}`,
-            points: [{ value: wall.p }],
+            // ✅ FIX: Truyền đủ cả timestamp + value
+            points: [{ timestamp: lastTs, value: wall.p }],
             styles: { line: { color: lineColor, size: 1, style: 'solid' } },
             lock: true,
             mode: 'weak_magnet'
