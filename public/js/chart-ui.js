@@ -685,10 +685,10 @@ window.clearUserDrawings = function() {
 };
 
 window.toggleProSidePanel = function(tabId, btnElement) {
-    // 🔒 DEBOUNCE: Chặn double-click giật giật (chặn trong 320ms)
-    const _now = Date.now();
-    if (window._panelToggleLastMs && (_now - window._panelToggleLastMs) < 320) return;
-    window._panelToggleLastMs = _now;
+    // 🔒 Chặn double tap: nếu < 300ms thì bỏ qua, để dblclick handler xử lý
+    const _n = Date.now();
+    if (window._lastPanelTap && (_n - window._lastPanelTap) < 300) return;
+    window._lastPanelTap = _n;
 
     if (!document.getElementById('wa-panel-transition')) {
         const s = document.createElement('style');
@@ -818,7 +818,22 @@ document.head.appendChild(s);
     handleMobileUI(false); 
     doResize();
 };
-
+// ✅ FIX DOUBLE TAP MOBILE: Lắng nghe dblclick trên toàn bộ sidebar toolbar
+document.addEventListener('dblclick', function(e) {
+    const btn = e.target.closest('.sc-sidebar-icon');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const panelContent = document.getElementById('sc-panel-content');
+    if (!panelContent) return;
+    panelContent.classList.toggle('collapsed');
+    const isMobile = window.innerWidth <= 991;
+    const chartArea = document.querySelector('.sc-chart-area');
+    if (isMobile && chartArea) {
+        chartArea.dataset.mobileExpanded = panelContent.classList.contains('collapsed') ? 'true' : 'false';
+    }
+    if (window.tvChart) window.tvChart.resize();
+}, { passive: false });
 window.renderProWatchlist = function(passedSearchTerm) {
     const wlBody = document.getElementById('sc-watchlist-body');
     if (!wlBody) return;
