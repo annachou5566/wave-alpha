@@ -450,8 +450,9 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
+                // Cập nhật nến cho khung 1m trở lên
                 // Cập nhật nến cho khung 1m trở lên bằng WATERFALL
-                if (!window._isChartLoadingHistory && window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
+                if (window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
                     
                     let rawTk = parseInt(k.t || k.ot);
                     let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
@@ -518,32 +519,17 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             }
 
             // 🌊 ĐẨY DATA VÀO ĐỘNG CƠ WATERFALL THAY VÌ ÉP CHART VẼ TRỰC TIẾP
-            if (window._isChartLoadingHistory) {
-                // 🛑 ĐANG TẢI LỊCH SỬ CHUYỂN KHUNG -> BỎ QUA KHÔNG CHẠM VÀO KLINECHART (CHỐNG LAG)
-            } else if (window.currentChartInterval === 'tick') {
-                window._waTargetCandle = { timestamp: timeSec * 1000, open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p), volume: parseFloat(valUSD || 0) };
-            } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
-                window._waTargetCandle = { timestamp: timeSec * 1000, open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close, volume: window.liveCandle1s.vol };
-            } else {
-                let dataList = window.tvChart ? window.tvChart.getDataList() : [];
-                if (dataList && dataList.length > 0) {
-                    let lastCandle = dataList[dataList.length - 1];
-                    if (!window._waTargetCandle || window._waTargetCandle.timestamp !== lastCandle.timestamp) {
-                        window._waTargetCandle = { ...lastCandle };
-                    }
-                    window._waTargetCandle.high = Math.max(window._waTargetCandle.high, p);
-                    window._waTargetCandle.low = Math.min(window._waTargetCandle.low, p);
-                    window._waTargetCandle.close = p; // Chỉ gán mục tiêu, không vẽ ngay lập tức
+            // 💡 CHỈ cho phép aggTrade cập nhật khi đang xem Tick hoặc 1s (Chống khựng)
+            if (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') {
+                
+                if (window.currentChartInterval === 'tick') {
+                    window._waTargetCandle = { timestamp: timeSec * 1000, open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p), volume: parseFloat(valUSD || 0) };
+                } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                    window._waTargetCandle = { timestamp: timeSec * 1000, open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close, volume: window.liveCandle1s.vol };
                 }
+                
+                if (typeof window.startWaterfallEngine === 'function') window.startWaterfallEngine();
             }
-            
-            // Kích hoạt động cơ chạy ngầm (Chỉ chạy khi không bị khóa)
-            if (!window._isChartLoadingHistory && typeof window.startWaterfallEngine === 'function') {
-                window.startWaterfallEngine();
-            }
-            
-            // Kích hoạt động cơ chạy ngầm (Nó sẽ tự động trượt nến cực mượt)
-            if (typeof window.startWaterfallEngine === 'function') window.startWaterfallEngine();
 
             if (!window.isRenderingPrice) {
                 window.isRenderingPrice = true;
@@ -585,11 +571,6 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 };
 
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
-    // 🚀 BẬT KHÓA: Ngăn WebSocket làm loạn Chart trong lúc chuyển khung
-    window._isChartLoadingHistory = true; 
-    window._waRafRunning = false;
-    window._waTargetCandle = null;
-
     try {
         let limit = isArea ? 100 : 300; 
         let smartCtx = await window.getSmartTokenContext(t);
@@ -606,6 +587,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
         if (!data || data.length === 0) return [];
 
         return data.map(d => {
+            // 🛑 FIX LỖI 1970 TẠI ĐÂY: Nếu là giây (10 số) thì nhân 1000 thành mili-giây
             let rawTs = parseInt(d.time || d.t || d[0]);
             let correctTs = rawTs < 100000000000 ? rawTs * 1000 : rawTs;
 
@@ -615,12 +597,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
                 volume: parseFloat(d.volume)
             };
         });
-    } catch (e) { 
-        return []; 
-    } finally {
-        // 🚀 MỞ KHÓA SAU 500MS (Để KLineChart có đủ thời gian vẽ xong 300 nến mới)
-        setTimeout(() => { window._isChartLoadingHistory = false; }, 500);
-    }
+    } catch (e) { return []; }
 };
 
 const originalFetch = window.fetch;
