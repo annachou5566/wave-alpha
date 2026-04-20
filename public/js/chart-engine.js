@@ -136,7 +136,27 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
             window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() + 1 }));
         }
-        return; 
+
+        // 🚀 BẢN VÁ LỖI: DỌN DẸP SẠCH "BÓNG MA DỮ LIỆU" KHI ĐỔI KHUNG GIỜ
+        
+        // 1. Reset lại mục tiêu của Waterfall Engine để nó không đánh nhau với nến cũ
+        window._waTargetCandle = null;
+        window._waCurrentCandle = null;
+        window._waRafRunning = false; 
+        
+        // 2. Reset nến ảo 1 giây (Tránh kẹt dính khi từ Tick chuyển sang nến thường)
+        window.liveCandle1s = null;
+        window.lastChartRender = 0;
+
+        // 3. Xóa lịch sử Tick cục bộ của khung cũ để tránh nhảy volume sai
+        if(window.scTickHistory) window.scTickHistory = [];
+
+        // 4. Kích hoạt lại Quant Worker (Bản cũ của bạn bị lệnh return chặn mất phần này)
+        if (window.quantWorker) {
+            window.quantWorker.postMessage({ cmd: 'INIT' });
+        }
+
+        return; // Thoát hàm an toàn sau khi đã dọn dẹp xong
     }
 
     if (window.chartWs) window.chartWs.close();
