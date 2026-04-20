@@ -429,8 +429,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     window.lastChartRender = nowT;
                     let timeSec = Math.floor(nowT / 1000);
                     
-                    // 🛑 BẢO VỆ: Chỉ cập nhật Chart khi chốt an toàn đã mở
-                    if (window.tvChart && typeof window.tvChart.updateData === 'function' && !window._historyLoadingLock) {
+                    if (!window._isTimeSwitching && window.tvChart && typeof window.tvChart.updateData === 'function') {
                         window.tvChart.updateData({
                             timestamp: timeSec * 1000,
                             open: currentClose, high: currentClose, low: currentClose, close: currentClose,
@@ -451,12 +450,16 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
-                // Cập nhật nến cho khung 1m trở lên
-                // 🚀 VÁ LỖI: Bỏ qua Waterfall cho khung lớn, dùng trực tiếp updateData của KLineChart (rất mượt và nhẹ)
-                // 🛑 BẢO VỆ: Chặn KLineChart tính toán sai lệch khi chuyển khung
-                if (window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s' && !window._historyLoadingLock) {
+                if (!window._isTimeSwitching && window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
                     let rawTk = parseInt(k.t || k.ot);
                     let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
+
+                    let dataList = window.tvChart.getDataList();
+                    if (dataList && dataList.length > 0) {
+                        let lastTs = dataList[dataList.length - 1].timestamp;
+                        let expectedDiff = (window.currentChartInterval === '1m' ? 60000 : window.currentChartInterval === '5m' ? 300000 : window.currentChartInterval === '15m' ? 900000 : 3600000);
+                        if (Math.abs(correctTk - lastTs) > expectedDiff * 2) return; // Chặn nến có timestamp lệch pha gây lag chart
+                    }
 
                     window.tvChart.updateData({
                         timestamp: correctTk, 
@@ -507,9 +510,8 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            // 🌊 ĐẨY DATA VÀO ĐỘNG CƠ WATERFALL THAY VÌ ÉP CHART VẼ TRỰC TIẾP
-            // 🛑 3. CHỈ CHO PHÉP VUỐT NẾN KHI CHART KHÔNG BỊ KHÓA VÀ CHỈ DÙNG CHO TICK/1S
-            if (!window._historyLoadingLock) {
+            // 🌊 ĐẨY DATA VÀO ĐỘNG CƠ WATERFALL (CHỈ CHO TICK VÀ 1S)
+            if (!window._isTimeSwitching) {
                 if (window.currentChartInterval === 'tick') {
                     window._waTargetCandle = { timestamp: timeSec * 1000, open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p), volume: parseFloat(valUSD || 0) };
                     if (typeof window.startWaterfallEngine === 'function') window.startWaterfallEngine();
@@ -559,32 +561,27 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
 };
 
 window.fetchBinanceHistory = async function(t, interval, isArea = false) {
-    // 🛑 1. BẬT CHỐT AN TOÀN: Cấm KLineChart nhận nến Realtime khi đang tải dữ liệu
-    window._historyLoadingLock = true;
-
+    window._isTimeSwitching = true; // KHÓA WEBSOCKET KHI ĐỔI KHUNG
     try {
         let limit = isArea ? 100 : 300; 
         let smartCtx = await window.getSmartTokenContext(t);
         let contract = smartCtx.contract;
         let chainId = smartCtx.chainId;
-        if (!contract) { window._historyLoadingLock = false; return []; } 
+        if (!contract) return []; 
         
         let apiInterval = interval === 'tick' ? '1s' : interval;
         let apiUrl = `/api/klines?contract=${contract}&chainId=${chainId}&interval=${apiInterval}&limit=${limit}`;
         
         const res = await fetch(apiUrl);
-        if (!res.ok) { window._historyLoadingLock = false; return []; }
+        if (!res.ok) return [];
         const data = await res.json();
-        if (!data || data.length === 0) { window._historyLoadingLock = false; return []; }
+        if (!data || data.length === 0) return [];
 
-        // 🛑 2. MỞ CHỐT SAU 500MS: Khoảng lùi an toàn để KLineChart vẽ xong Lịch sử
-        setTimeout(() => { window._historyLoadingLock = false; }, 500);
+        setTimeout(() => { window._isTimeSwitching = false; }, 500); // MỞ KHÓA SAU 500MS
 
         return data.map(d => {
-            // 🛑 FIX LỖI 1970 TẠI ĐÂY: Nếu là giây (10 số) thì nhân 1000 thành mili-giây
             let rawTs = parseInt(d.time || d.t || d[0]);
             let correctTs = rawTs < 100000000000 ? rawTs * 1000 : rawTs;
-
             return {
                 timestamp: correctTs, 
                 open: parseFloat(d.open), high: parseFloat(d.high), low: parseFloat(d.low), close: parseFloat(d.close),
@@ -592,7 +589,7 @@ window.fetchBinanceHistory = async function(t, interval, isArea = false) {
             };
         });
     } catch (e) { 
-        window._historyLoadingLock = false;
+        window._isTimeSwitching = false;
         return []; 
     }
 };
