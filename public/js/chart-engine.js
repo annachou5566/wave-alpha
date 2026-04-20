@@ -128,20 +128,19 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let chainId = smartCtx.chainId;
 
     if (isTimeSwitch && window.chartWs && window.chartWs.readyState === 1) { 
-        // 🚀 BẢO VỆ CPU: Chỉ sub/unsub nếu là DEX. Hàng CEX đã đăng ký đủ 4 khung giờ từ đầu, gửi lệnh sẽ bị TRÙNG LẶP (Duplicate stream) gây khựng nhân đôi!
-        if (contract) {
-            if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
-                window.chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [`came@${contract}@${chainId}@kline_${window.oldChartInterval}`], "id": Date.now() }));
-            }
-            if (window.currentChartInterval !== 'tick') {
-                window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [`came@${contract}@${chainId}@kline_${window.currentChartInterval}`], "id": Date.now() + 1 }));
-            }
+        // 🔪 CẮT ĐỨT GHOST CANDLE: Hủy diệt mục tiêu, đưa Waterfall vào trạng thái ngủ đông ngay lập tức
+        window._waTargetCandle = null;
+        window._waCurrentCandle = null;
+        window._waRafRunning = false;
+
+        if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
+            let oldK = contract ? `came@${contract}@${chainId}@kline_${window.oldChartInterval}` : `${streamPrefix}@kline_${window.oldChartInterval}`;
+            window.chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [oldK], "id": Date.now() }));
         }
-        
-        // Làm sạch bộ nhớ đệm Smart Money khi chuyển khung để DOM không bị khựng
-        if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'INIT' });
-        window.scChartMarkers = []; 
-        window._lastMarkerCount = 0;
+        if (window.currentChartInterval !== 'tick') {
+            let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
+            window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() + 1 }));
+        }
         return; 
     }
 
@@ -456,20 +455,24 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
-                // Cập nhật nến cho khung 1m trở lên
-                // 🛑 KHÓA BẢO VỆ CUỐI CÙNG: Không cập nhật nến nếu đang bị kẹt tải lịch sử chuyển khung
-                if (!window._waEngineLock && window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
+                if (window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
                     let rawTk = parseInt(k.t || k.ot);
                     let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
 
-                    window.tvChart.updateData({
+                    let freshCandle = {
                         timestamp: correctTk, 
-                        open: parseFloat(k.o), 
-                        high: parseFloat(k.h), 
-                        low: parseFloat(k.l), 
-                        close: currentClose, 
+                        open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: currentClose, 
                         volume: isNaN(currentVol) ? 0 : currentVol
-                    });
+                    };
+
+                    // KLINE LÀ NGUỒN CHUẨN: Quyết định tạo nến mới hay vuốt tiếp nến cũ
+                    if (!window._waTargetCandle || window._waTargetCandle.timestamp !== correctTk) {
+                        window._waTargetCandle = freshCandle;
+                        window._waCurrentCandle = { ...freshCandle };
+                        window.tvChart.updateData(window._waCurrentCandle); 
+                    } else {
+                        window._waTargetCandle.volume = freshCandle.volume; // Cập nhật volume chuẩn
+                    }
                 }
             }
         }
@@ -511,16 +514,21 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 }
             }
 
-            // 🌊 ĐẨY DATA VÀO ĐỘNG CƠ WATERFALL (CHỈ CHO TICK VÀ 1S)
-            if (!window._isTimeSwitching) {
-                if (window.currentChartInterval === 'tick') {
-                    window._waTargetCandle = { timestamp: timeSec * 1000, open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p), volume: parseFloat(valUSD || 0) };
-                    if (typeof window.startWaterfallEngine === 'function') window.startWaterfallEngine();
-                } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
-                    window._waTargetCandle = { timestamp: timeSec * 1000, open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close, volume: window.liveCandle1s.vol };
-                    if (typeof window.startWaterfallEngine === 'function') window.startWaterfallEngine();
+            // 🌊 ĐẨY DATA VÀO ĐỘNG CƠ WATERFALL BẰNG LUỒNG CHẢY MỘT CHIỀU
+            if (window.currentChartInterval === 'tick') {
+                window._waTargetCandle = { timestamp: timeSec * 1000, open: parseFloat(p), high: parseFloat(p), low: parseFloat(p), close: parseFloat(p), volume: parseFloat(valUSD || 0) };
+            } else if (window.currentChartInterval === '1s' && window.liveCandle1s) {
+                window._waTargetCandle = { timestamp: timeSec * 1000, open: window.liveCandle1s.open, high: window.liveCandle1s.high, low: window.liveCandle1s.low, close: window.liveCandle1s.close, volume: window.liveCandle1s.vol };
+            } else {
+                // AN TOÀN TUYỆT ĐỐI: Chỉ cho phép vuốt nến khi KLINE đã tạo sẵn Base.
+                // Loại bỏ hoàn toàn getDataList(), chặn đứng khả năng hồi sinh Nến Ma gây khựng CPU.
+                if (window._waTargetCandle) {
+                    window._waTargetCandle.high = Math.max(window._waTargetCandle.high, p);
+                    window._waTargetCandle.low = Math.min(window._waTargetCandle.low, p);
+                    window._waTargetCandle.close = p; 
                 }
             }
+            if (typeof window.startWaterfallEngine === 'function') window.startWaterfallEngine();
 
             if (!window.isRenderingPrice) {
                 window.isRenderingPrice = true;
