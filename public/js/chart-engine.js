@@ -292,18 +292,19 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
             let dataList = window.tvChart.getDataList ? window.tvChart.getDataList() : [];
             
-            // 🐛 LỖI CŨ: let lastTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
-            // ✅ FIX MỚI: Dùng timestamp của nến ĐẦU TIÊN bên trái, để tia luôn cắt ngang màn hình
-            let startTs = dataList && dataList.length > 0 ? dataList[0].timestamp : Date.now();
+            // ✅ SỬ DỤNG LẠI lastTs: Điểm neo ở nến hiện tại luôn nằm trên màn hình nên KLineChart sẽ không bao giờ ẩn nó đi
+            let currentTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
             let isTrad = window.currentTheme === 'trad';
 
-            // ✅ FIX: Chỉ xóa/tạo đúng các overlay depth, KHÔNG đụng tới overlay vẽ tay
             for (let i = 0; i < 10; i++) {
-                let wallId = `depth_wall_${i}`;
+                // ✅ XÓA TRIỆT ĐỂ: Dọn dẹp sạch sẽ các tia RayLine cũ đang tàng hình
+                try { window.tvChart.removeOverlay(`depth_wall_${i}`); } catch(e) {}
+
+                // ✅ ĐỔI ID MỚI: Thêm tiền tố v2 để ép KLineChart tạo mới shape Đường thẳng (StraightLine)
+                let wallId = `depth_wall_v2_${i}`;
                 let wall = newWalls[i];
 
                 if (!wall) {
-                    // Không có wall ở slot này → xóa nếu đang tồn tại
                     try { window.tvChart.removeOverlay(wallId); } catch(e) {}
                     continue;
                 }
@@ -314,12 +315,11 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 else if (wall.v > currentAvgTicket * 8)   { lineColor = isTrad ? 'rgba(255,152,0,0.4)'   : 'rgba(85,69,125,0.4)'; }
                 else                                       { lineColor = isTrad ? 'rgba(33,150,243,0.3)'  : 'rgba(22,96,73,0.3)'; }
 
-                // ✅ FIX: Thử update trước, nếu không có thì mới tạo mới
                 let updated = false;
                 try {
                     updated = window.tvChart.overrideOverlay({
                         id: wallId,
-                        points: [{ timestamp: startTs, value: wall.p }], // <-- Đổi thành startTs
+                        points: [{ timestamp: currentTs, value: wall.p }],
                         styles: { line: { color: lineColor, size: 1, style: 'solid' } }
                     });
                 } catch(e) {}
@@ -327,9 +327,9 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 if (!updated) {
                     try {
                         window.tvChart.createOverlay({
-                            name: 'horizontalStraightLine', // <-- Đổi từ RayLine sang StraightLine (Đường thẳng vô cực)
+                            name: 'horizontalStraightLine', // Đường thẳng vô tận bắn ra 2 phía trái/phải
                             id: wallId,
-                            points: [{ timestamp: startTs, value: wall.p }], // <-- Đổi thành startTs
+                            points: [{ timestamp: currentTs, value: wall.p }],
                             styles: { line: { color: lineColor, size: 1, style: 'solid' } },
                             lock: true,
                             mode: 'weak_magnet'
