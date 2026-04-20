@@ -1349,3 +1349,18 @@ window.closeProChart = function() {
     window.currentChartToken = null; 
 };
 
+// Tự động thêm nút ẩn/hiện panel khi trang load xong
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarIcons = document.querySelector('.sc-sidebar-icons');
+    if (sidebarIcons && !document.getElementById('sc-panel-toggle-btn')) {
+        const btn = document.createElement('button');
+        btn.id = 'sc-panel-toggle-btn';
+        btn.title = 'Ẩn panel';
+        btn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        btn.style.cssText = 'background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.06);color:#527c82;font-size:13px;padding:10px 0;cursor:pointer;width:100%;text-align:center;margin-top:auto;display:block;';
+        btn.onmouseover = function(){ this.style.color='#00F0FF'; };
+        btn.onmouseout  = function(){ this.style.color='#527c82'; };
+        btn.onclick = function(){ window.togglePanelCollapse(); };
+        sidebarIcons.appendChild(btn);
+    }
+});
