@@ -689,69 +689,78 @@ window.toggleProSidePanel = function(tabId, btnElement) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
         s.textContent = `
-            @media (min-width: 992px) {
-                #sc-panel-content {
-                    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease !important;
-                    overflow: hidden;
-                }
-                #sc-panel-content.collapsed {
-                    width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none;
-                }
-            }
-            @media (max-width: 991px) {
-                #sc-panel-content {
-                    transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.3s ease !important;
-                    width: 100% !important; overflow: hidden; display: flex; flex-direction: column;
-                }
-                #sc-panel-content.collapsed {
-                    flex: 0 0 0 !important; height: 0 !important; min-height: 0 !important;
-                    opacity: 0; pointer-events: none;
-                    margin: 0 !important; padding: 0 !important; border: none !important;
-                }
-                .sc-tab-content { animation: none !important; }
-                .sc-tab-content.active {
-                    animation: contentSlideUp 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards !important;
-                }
-                @keyframes contentSlideUp {
-                    0% { opacity: 0; transform: translateY(20px); }
-                    100% { opacity: 1; transform: translateY(0); }
-                }
-            }
-            .sc-sidebar-icons {
-                position: relative; z-index: 10; flex-shrink: 0;
-                background: var(--term-bg, #0b1217);
-                display: flex; flex-direction: column;
-            }
-            #sc-panel-content { z-index: 5; position: relative; }
-            .sc-tab-content {
-                overflow-y: auto; -webkit-overflow-scrolling: touch;
-                flex: 1 1 auto; min-height: 0;
-            }
-            .sc-chart-wrapper, #super-chart-overlay { overflow-x: hidden; }
-            #sc-panel-toggle-btn {
-                background: transparent; border: none;
-                border-top: 1px solid rgba(255,255,255,0.06);
-                color: #527c82; font-size: 13px; padding: 10px 0;
-                cursor: pointer; width: 100%; text-align: center;
-                transition: color 0.2s, background 0.2s;
-                margin-top: auto; display: block;
-            }
-            #sc-panel-toggle-btn:hover { color: #00F0FF; background: rgba(0,240,255,0.05); }
-        `;
-        document.head.appendChild(s);
+    /* Desktop: Trượt ngang từ trái qua mượt mà */
+    @media (min-width: 992px) {
+        #sc-panel-content {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                        opacity 0.25s ease !important;
+            overflow: hidden;
+        }
+        #sc-panel-content.collapsed { 
+            width: 0 !important; min-width: 0 !important; opacity: 0; pointer-events: none; 
+        }
     }
 
-    // ✅ Inject nút — TÁCH RIÊNG, không phụ thuộc vào điều kiện style
-    if (!document.getElementById('sc-panel-toggle-btn')) {
-        const sidebarIcons = document.querySelector('.sc-sidebar-icons');
-        if (sidebarIcons) {
-            const toggleBtn = document.createElement('button');
-            toggleBtn.id = 'sc-panel-toggle-btn';
-            toggleBtn.title = 'Ẩn panel';
-            toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-            toggleBtn.onclick = function() { window.togglePanelCollapse(); };
-            sidebarIcons.appendChild(toggleBtn);
+    /* Mobile: Trượt dọc từ dưới lên êm ái, không giật mạnh */
+    @media (max-width: 991px) {
+        #sc-panel-content {
+            transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1), 
+                        opacity 0.3s ease !important;
+            width: 100% !important; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
+        #sc-panel-content.collapsed {
+            flex: 0 0 0 !important;
+            height: 0 !important; min-height: 0 !important;
+            opacity: 0; 
+            pointer-events: none;
+            margin: 0 !important; padding: 0 !important; border: none !important;
+        }
+        .sc-tab-content { animation: none !important; }
+        .sc-tab-content.active {
+            animation: contentSlideUp 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards !important;
+        }
+        @keyframes contentSlideUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================
+           FIX: SIDEBAR ICON KHÔNG BỊ ĐÈ BỞI PANEL
+           ============================================ */
+
+        /* Thanh icon công cụ vẽ luôn nằm trên cùng, không bị panel nội dung đè */
+        .sc-sidebar-icons {
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0;
+            background: var(--term-bg, #0b1217);
+        }
+
+        /* Panel nội dung (Watchlist, Alpha Flow...) nằm dưới thanh icon */
+        #sc-panel-content {
+            z-index: 5;
+            position: relative;
+        }
+
+        /* Nội dung bên trong panel cuộn được, không bị cắt xén */
+        .sc-tab-content {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iOS */
+            flex: 1 1 auto;
+            min-height: 0; /* Quan trọng: cho phép flex child co lại đúng */
+        }
+
+        /* Đảm bảo wrapper tổng không bị tràn ngang */
+        .sc-chart-wrapper,
+        #super-chart-overlay {
+            overflow-x: hidden;
+        }
+    }
+`;
+document.head.appendChild(s);
     }
 
     const panelContent = document.getElementById('sc-panel-content');
@@ -760,31 +769,36 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     const isMobile = window.innerWidth <= 991;
 
     const oldBackdrop = document.getElementById('sc-panel-backdrop');
-    if (oldBackdrop) oldBackdrop.remove();
+    if (oldBackdrop) oldBackdrop.remove(); 
 
     const doResize = function() {
         if (!window.tvChart) return;
         const start = Date.now();
         const animate = function() {
             if (window.tvChart) window.tvChart.resize();
-            if (Date.now() - start < 450) requestAnimationFrame(animate);
+            // Gọi liên tục trong 450ms (khớp với thời gian transition CSS)
+            if (Date.now() - start < 450) {
+                requestAnimationFrame(animate);
+            }
         };
         requestAnimationFrame(animate);
-    };
+    }
 
     const handleMobileUI = (isNowCollapsed) => {
         if (!isMobile) return;
         const chartArea = document.querySelector('.sc-chart-area');
-        if (chartArea) chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
+        if (chartArea) {
+            chartArea.dataset.mobileExpanded = isNowCollapsed ? 'true' : 'false';
+        }
     };
 
     if (btnElement && btnElement.classList.contains('active')) {
         panelContent.classList.toggle('collapsed');
         handleMobileUI(panelContent.classList.contains('collapsed'));
         doResize();
-        return;
+        return; 
     }
-
+    
     if (panelContent.classList.contains('collapsed')) {
         panelContent.classList.remove('collapsed');
     }
@@ -795,62 +809,9 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     allTabs.forEach(tab => { tab.style.display = 'none'; tab.classList.remove('active'); });
     const targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) { targetTab.style.display = 'flex'; targetTab.classList.add('active'); }
-
-    handleMobileUI(false);
+    
+    handleMobileUI(false); 
     doResize();
-};
-
-window.togglePanelCollapse = function() {
-    const panelContent = document.getElementById('sc-panel-content');
-    if (!panelContent) return;
-    const isCollapsed = panelContent.classList.toggle('collapsed');
-    const isMobile = window.innerWidth <= 991;
-    const chartArea = document.querySelector('.sc-chart-area');
-    if (isMobile && chartArea) {
-        chartArea.dataset.mobileExpanded = isCollapsed ? 'true' : 'false';
-    }
-    const toggleBtn = document.getElementById('sc-panel-toggle-btn');
-    if (toggleBtn) {
-        toggleBtn.innerHTML = isCollapsed
-            ? '<i class="fas fa-chevron-right"></i>'
-            : '<i class="fas fa-chevron-left"></i>';
-        toggleBtn.title = isCollapsed ? 'Mở panel' : 'Ẩn panel';
-    }
-    if (window.tvChart) {
-        const start = Date.now();
-        const animate = () => {
-            if (window.tvChart) window.tvChart.resize();
-            if (Date.now() - start < 450) requestAnimationFrame(animate);
-        };
-        requestAnimationFrame(animate);
-    }
-};
-
-// ✅ Hàm toggle ẩn/hiện panel — 1 tap dứt khoát
-window.togglePanelCollapse = function() {
-    const panelContent = document.getElementById('sc-panel-content');
-    if (!panelContent) return;
-    const isCollapsed = panelContent.classList.toggle('collapsed');
-    const isMobile = window.innerWidth <= 991;
-    const chartArea = document.querySelector('.sc-chart-area');
-    if (isMobile && chartArea) {
-        chartArea.dataset.mobileExpanded = isCollapsed ? 'true' : 'false';
-    }
-    const toggleBtn = document.getElementById('sc-panel-toggle-btn');
-    if (toggleBtn) {
-        toggleBtn.innerHTML = isCollapsed
-            ? '<i class="fas fa-chevron-right"></i>'
-            : '<i class="fas fa-chevron-left"></i>';
-        toggleBtn.title = isCollapsed ? 'Mở panel' : 'Ẩn panel';
-    }
-    if (window.tvChart) {
-        const start = Date.now();
-        const animate = () => {
-            if (window.tvChart) window.tvChart.resize();
-            if (Date.now() - start < 450) requestAnimationFrame(animate);
-        };
-        requestAnimationFrame(animate);
-    }
 };
 
 // ✅ NÚT ẨN/HIỆN PANEL — 1 tap/click dứt khoát, không giật
@@ -1349,18 +1310,3 @@ window.closeProChart = function() {
     window.currentChartToken = null; 
 };
 
-// Tự động thêm nút ẩn/hiện panel khi trang load xong
-document.addEventListener('DOMContentLoaded', function() {
-    const sidebarIcons = document.querySelector('.sc-sidebar-icons');
-    if (sidebarIcons && !document.getElementById('sc-panel-toggle-btn')) {
-        const btn = document.createElement('button');
-        btn.id = 'sc-panel-toggle-btn';
-        btn.title = 'Ẩn panel';
-        btn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-        btn.style.cssText = 'background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.06);color:#527c82;font-size:13px;padding:10px 0;cursor:pointer;width:100%;text-align:center;margin-top:auto;display:block;';
-        btn.onmouseover = function(){ this.style.color='#00F0FF'; };
-        btn.onmouseout  = function(){ this.style.color='#527c82'; };
-        btn.onclick = function(){ window.togglePanelCollapse(); };
-        sidebarIcons.appendChild(btn);
-    }
-});

@@ -2379,7 +2379,15 @@
 
   function buildToolbar() {
     let html = `<div class="wa-drag-grip" title="Kéo để di chuyển • Double-click thu gọn"></div>
-                <button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột [Esc]">${SVG.ptr}</button>`;
+            <button class="wa-tb-btn" id="wa-toolbar-toggle" 
+              data-tooltip="Ẩn/Hiện thanh công cụ"
+              onclick="(function(e){e.stopPropagation();var tb=e.currentTarget.closest('.wa-toolbar');if(tb){var c=tb.classList.toggle('collapsed');e.currentTarget.style.opacity=c?'0.4':'1';};})(event)"
+              style="opacity:1;transition:opacity 0.2s;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12h18M3 6h18M3 18h18"/>
+              </svg>
+            </button>
+            <button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột [Esc]">${SVG.ptr}</button>`;
     
     MENUS.forEach(m => {
       html += `<div class="wa-tb-group">
