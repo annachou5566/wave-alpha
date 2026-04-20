@@ -277,7 +277,33 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s')) {
+        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') && window.tvChart) {
+            // 🚀 ĐĂNG KÝ CUSTOM OVERLAY ĐỘC QUYỀN CHO KLINECHART (Tránh phụ thuộc trục X)
+            if (!window.isCyberDepthRegistered && window.klinecharts && typeof window.klinecharts.registerOverlay === 'function') {
+                window.klinecharts.registerOverlay({
+                    name: 'cyberDepth',
+                    needDefaultPointFigure: false,
+                    needDefaultXAxisFigure: false,
+                    needDefaultYAxisFigure: false,
+                    createPointFigures: ({ overlay, coordinates, bounding }) => {
+                        if (!coordinates || coordinates.length === 0) return [];
+                        let yPrice = coordinates[0].y;
+                        let colorVal = overlay.extendData ? overlay.extendData.color : 'rgba(255,255,255,0.5)';
+                        let thickness = overlay.extendData ? overlay.extendData.thickness : 1;
+                        
+                        return [
+                            {
+                                type: 'line',
+                                attrs: { coordinates: [ { x: 0, y: yPrice }, { x: bounding.width, y: yPrice } ] },
+                                ignoreEvent: true,
+                                styles: { style: 'solid', size: thickness, color: colorVal }
+                            }
+                        ];
+                    }
+                });
+                window.isCyberDepthRegistered = true;
+            }
+
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
@@ -290,18 +316,15 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             };
 
             let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
-            let dataList = window.tvChart.getDataList ? window.tvChart.getDataList() : [];
             
-            // ✅ SỬ DỤNG LẠI lastTs: Điểm neo ở nến hiện tại luôn nằm trên màn hình nên KLineChart sẽ không bao giờ ẩn nó đi
-            let currentTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
+            // Neo tọa độ vào giữa màn hình để KLineChart không tự động xóa (cull)
+            let dataList = window.tvChart.getDataList ? window.tvChart.getDataList() : [];
+            let midIndex = Math.floor((dataList.length || 0) / 2);
+            let safeTs = dataList && dataList.length > 0 ? dataList[midIndex].timestamp : Date.now();
             let isTrad = window.currentTheme === 'trad';
 
             for (let i = 0; i < 10; i++) {
-                // ✅ XÓA TRIỆT ĐỂ: Dọn dẹp sạch sẽ các tia RayLine cũ đang tàng hình
-                try { window.tvChart.removeOverlay(`depth_wall_${i}`); } catch(e) {}
-
-                // ✅ ĐỔI ID MỚI: Thêm tiền tố v2 để ép KLineChart tạo mới shape Đường thẳng (StraightLine)
-                let wallId = `depth_wall_v2_${i}`;
+                let wallId = `depth_wall_v3_${i}`;
                 let wall = newWalls[i];
 
                 if (!wall) {
@@ -309,33 +332,38 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     continue;
                 }
 
-                let lineColor = '';
-                if (wall.v > currentAvgTicket * 30)      { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203,85,227,0.7)'; }
-                else if (wall.v > currentAvgTicket * 15)  { lineColor = isTrad ? 'rgba(255,50,50,0.5)'   : 'rgba(137,57,153,0.5)'; }
-                else if (wall.v > currentAvgTicket * 8)   { lineColor = isTrad ? 'rgba(255,152,0,0.4)'   : 'rgba(85,69,125,0.4)'; }
-                else                                       { lineColor = isTrad ? 'rgba(33,150,243,0.3)'  : 'rgba(22,96,73,0.3)'; }
+                let lineColor = ''; let thickness = 1;
+                if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
+                else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
+                else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
+                else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
 
                 let updated = false;
                 try {
                     updated = window.tvChart.overrideOverlay({
                         id: wallId,
-                        points: [{ timestamp: currentTs, value: wall.p }],
-                        styles: { line: { color: lineColor, size: 1, style: 'solid' } }
+                        points: [{ timestamp: safeTs, value: wall.p }],
+                        extendData: { color: lineColor, thickness: thickness }
                     });
                 } catch(e) {}
 
                 if (!updated) {
                     try {
                         window.tvChart.createOverlay({
-                            name: 'horizontalStraightLine', // Đường thẳng vô tận bắn ra 2 phía trái/phải
+                            name: 'cyberDepth',
                             id: wallId,
-                            points: [{ timestamp: currentTs, value: wall.p }],
-                            styles: { line: { color: lineColor, size: 1, style: 'solid' } },
+                            points: [{ timestamp: safeTs, value: wall.p }],
+                            extendData: { color: lineColor, thickness: thickness },
                             lock: true,
                             mode: 'weak_magnet'
                         });
                     } catch(e) {}
                 }
+            }
+        } else if (!window.isHeatmapOn && window.tvChart) {
+            // Khi người dùng tắt Heatmap (bấm nút), tự động dọn dẹp các đường cũ
+            for (let i = 0; i < 10; i++) {
+                try { window.tvChart.removeOverlay(`depth_wall_v3_${i}`); } catch(e) {}
             }
         }
 
