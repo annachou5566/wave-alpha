@@ -277,33 +277,7 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
             algoEl.style.color = limitColor; algoEl.style.background = bgColor; algoEl.style.borderColor = bdColor;
         }
 
-        if (window.isHeatmapOn && window.scLocalOrderBook && (window.currentChartInterval === 'tick' || window.currentChartInterval === '1s') && window.tvChart) {
-            // 🚀 ĐĂNG KÝ CUSTOM OVERLAY ĐỘC QUYỀN CHO KLINECHART (Tránh phụ thuộc trục X)
-            if (!window.isCyberDepthRegistered && window.klinecharts && typeof window.klinecharts.registerOverlay === 'function') {
-                window.klinecharts.registerOverlay({
-                    name: 'cyberDepth',
-                    needDefaultPointFigure: false,
-                    needDefaultXAxisFigure: false,
-                    needDefaultYAxisFigure: false,
-                    createPointFigures: ({ overlay, coordinates, bounding }) => {
-                        if (!coordinates || coordinates.length === 0) return [];
-                        let yPrice = coordinates[0].y;
-                        let colorVal = overlay.extendData ? overlay.extendData.color : 'rgba(255,255,255,0.5)';
-                        let thickness = overlay.extendData ? overlay.extendData.thickness : 1;
-                        
-                        return [
-                            {
-                                type: 'line',
-                                attrs: { coordinates: [ { x: 0, y: yPrice }, { x: bounding.width, y: yPrice } ] },
-                                ignoreEvent: true,
-                                styles: { style: 'solid', size: thickness, color: colorVal }
-                            }
-                        ];
-                    }
-                });
-                window.isCyberDepthRegistered = true;
-            }
-
+        if (window.scLocalOrderBook && window.tvChart) {
             let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
             const processWalls = (orderMap, isAsk) => {
                 let walls = [];
@@ -312,19 +286,32 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 } else {
                     for (let p in orderMap) { let price = parseFloat(p); let valUSD = price * orderMap[p]; if (valUSD > 500) walls.push({ p: price, v: valUSD, isAsk: isAsk }); }
                 }
-                return walls.sort((a, b) => b.v - a.v).slice(0, 5); 
+                return walls.sort((a, b) => b.v - a.v).slice(0, 5);
             };
 
             let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
-            
-            // Neo tọa độ vào giữa màn hình để KLineChart không tự động xóa (cull)
             let dataList = window.tvChart.getDataList ? window.tvChart.getDataList() : [];
-            let midIndex = Math.floor((dataList.length || 0) / 2);
-            let safeTs = dataList && dataList.length > 0 ? dataList[midIndex].timestamp : Date.now();
             let isTrad = window.currentTheme === 'trad';
 
+            // 🚀 BÍ QUYẾT: Lấy khoảng hiển thị thực tế trên màn hình
+            let range = typeof window.tvChart.getVisibleRange === 'function' ? window.tvChart.getVisibleRange() : null;
+            
+            // Chọn điểm neo là cây nến đầu tiên ĐANG HIỂN THỊ bên trái màn hình.
+            let leftIndex = range && range.from >= 0 ? Math.floor(range.from) : 0;
+            
+            // Đảm bảo không bị lố mảng dữ liệu
+            if (leftIndex >= dataList.length) leftIndex = Math.max(0, dataList.length - 1);
+            let safeTs = dataList && dataList[leftIndex] ? dataList[leftIndex].timestamp : Date.now();
+
+            // Dọn dẹp các tàn dư của phiên bản cũ đang tàng hình trên Chart
             for (let i = 0; i < 10; i++) {
-                let wallId = `depth_wall_v3_${i}`;
+                try { window.tvChart.removeOverlay(`depth_wall_${i}`); } catch(e) {}
+                try { window.tvChart.removeOverlay(`depth_wall_v2_${i}`); } catch(e) {}
+                try { window.tvChart.removeOverlay(`depth_wall_v3_${i}`); } catch(e) {}
+            }
+
+            for (let i = 0; i < 10; i++) {
+                let wallId = `wa_depth_wall_v5_${i}`; // Khởi tạo ID hoàn toàn mới để xóa Cache
                 let wall = newWalls[i];
 
                 if (!wall) {
@@ -332,38 +319,33 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                     continue;
                 }
 
-                let lineColor = ''; let thickness = 1;
-                if (wall.v > currentAvgTicket * 30) { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203, 85, 227, 0.7)'; thickness = 6; }
-                else if (wall.v > currentAvgTicket * 15) { lineColor = isTrad ? 'rgba(255,50,50,0.5)' : 'rgba(137, 57, 153, 0.5)'; thickness = 4; }
-                else if (wall.v > currentAvgTicket * 8) { lineColor = isTrad ? 'rgba(255,152,0,0.4)' : 'rgba(85, 69, 125, 0.4)'; thickness = 3; }
-                else { lineColor = isTrad ? 'rgba(33,150,243,0.3)' : 'rgba(22, 96, 73, 0.3)'; thickness = 2; }
+                let lineColor = '';
+                if (wall.v > currentAvgTicket * 30)      { lineColor = isTrad ? 'rgba(255,255,255,0.7)' : 'rgba(203,85,227,0.7)'; }
+                else if (wall.v > currentAvgTicket * 15)  { lineColor = isTrad ? 'rgba(255,50,50,0.5)'   : 'rgba(137,57,153,0.5)'; }
+                else if (wall.v > currentAvgTicket * 8)   { lineColor = isTrad ? 'rgba(255,152,0,0.4)'   : 'rgba(85,69,125,0.4)'; }
+                else                                       { lineColor = isTrad ? 'rgba(33,150,243,0.3)'  : 'rgba(22,96,73,0.3)'; }
 
                 let updated = false;
                 try {
                     updated = window.tvChart.overrideOverlay({
                         id: wallId,
                         points: [{ timestamp: safeTs, value: wall.p }],
-                        extendData: { color: lineColor, thickness: thickness }
+                        styles: { line: { color: lineColor, size: 1, style: 'solid' } }
                     });
                 } catch(e) {}
 
                 if (!updated) {
                     try {
                         window.tvChart.createOverlay({
-                            name: 'cyberDepth',
+                            name: 'horizontalRayLine', // Dùng lại hình dạng nguyên bản, chắc chắn không bị lỗi
                             id: wallId,
                             points: [{ timestamp: safeTs, value: wall.p }],
-                            extendData: { color: lineColor, thickness: thickness },
+                            styles: { line: { color: lineColor, size: 1, style: 'solid' } },
                             lock: true,
                             mode: 'weak_magnet'
                         });
                     } catch(e) {}
                 }
-            }
-        } else if (!window.isHeatmapOn && window.tvChart) {
-            // Khi người dùng tắt Heatmap (bấm nút), tự động dọn dẹp các đường cũ
-            for (let i = 0; i < 10; i++) {
-                try { window.tvChart.removeOverlay(`depth_wall_v3_${i}`); } catch(e) {}
             }
         }
 
