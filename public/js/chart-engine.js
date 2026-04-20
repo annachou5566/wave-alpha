@@ -17,7 +17,46 @@ window.quantStats = {
     ofi: 0, zScore: 0, buyDominance: 50,
     longLiq: 0, shortLiq: 0, fundingRateObj: null, hftVerdict: null
 };
+// 🟢 [THÊM MỚI] Khởi tạo bộ nhớ lưu vết Bookmap
+window.bookmapHistory = [];
+window.isHeatmapOn = true; 
 
+if (window.klinecharts && typeof window.klinecharts.registerIndicator === 'function') {
+    window.klinecharts.registerIndicator({
+        name: 'WAVE_BOOKMAP',
+        shortName: 'HMAP',
+        calc: (dataList) => dataList,
+        draw: ({ ctx, bounding, xAxis, yAxis }) => {
+            if (!window.isHeatmapOn || !window.bookmapHistory.length) return;
+            
+            const barSpace = xAxis.getBarSpace().width;
+
+            window.bookmapHistory.forEach(snap => {
+                const x = xAxis.convertToPixel({ timestamp: snap.t });
+                if (x < 0 || x > bounding.width) return;
+
+                const drawList = (map, isAsk) => {
+                    map.forEach((vol, priceStr) => {
+                        const p = parseFloat(priceStr);
+                        const valUSD = p * vol;
+                        if (valUSD < 5000) return; // Chỉ hiện tường > 5000$
+
+                        const y = yAxis.convertToPixel(p);
+                        const ratio = Math.min(1, valUSD / 500000); 
+                        
+                        ctx.fillStyle = isAsk 
+                            ? `rgba(255, 80, 0, ${0.1 + ratio * 0.7})` 
+                            : `rgba(0, 255, 150, ${0.1 + ratio * 0.7})`; 
+                        
+                        ctx.fillRect(x - barSpace/2, y - 1, barSpace, 2);
+                    });
+                };
+                drawList(snap.asks, true);
+                drawList(snap.bids, false);
+            });
+        }
+    });
+}
 // ==========================================
 // 🌊 ĐỘNG CƠ WATERFALL (NỘI SUY TUYẾN TÍNH HFT KLINECHART)
 // ==========================================
@@ -283,6 +322,15 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
         if (!window.scTickHistory || window.scTickHistory.length === 0) return;
         
         const now = Date.now();
+        // 🟢 [THÊM MỚI] Ghi lại "phim" sổ lệnh để vẽ đuôi Bookmap
+        if (window.scLocalOrderBook) {
+            window.bookmapHistory.push({
+                t: now,
+                asks: new Map(window.scLocalOrderBook.asks),
+                bids: new Map(window.scLocalOrderBook.bids)
+            });
+            if (window.bookmapHistory.length > 600) window.bookmapHistory.shift();
+        }
         window.scTickHistory = window.scTickHistory.filter(x => now - x.t <= 300000);
         if (window.scTickHistory.length > 3000) window.scTickHistory = window.scTickHistory.slice(-3000);
 
@@ -319,126 +367,12 @@ try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'
         }
 
 
-        // ✅ ĐÃ SỬA: Phiên bản V8 - Nâng cấp giao diện Bookmap / Coinglass
-        if (window.isHeatmapOn !== false && window.scLocalOrderBook && window.tvChart) {
-            let currentAvgTicket = window.scTradeCount > 0 ? (window.scTotalVol / window.scTradeCount) : 1000;
-            
-            const processWalls = (orderMap, isAsk) => {
-                let walls = [];
-                let minValUSD = 10; 
-                
-                if (orderMap instanceof Map) {
-                    for (let [p, vol] of orderMap) { 
-                        let price = parseFloat(p); let valUSD = price * vol; 
-                        if (valUSD > minValUSD) walls.push({ p: price, v: valUSD, isAsk: isAsk }); 
-                    }
-                } else {
-                    for (let p in orderMap) { 
-                        let price = parseFloat(p); let valUSD = price * orderMap[p]; 
-                        if (valUSD > minValUSD) walls.push({ p: price, v: valUSD, isAsk: isAsk }); 
-                    }
-                }
-                // 🚀 MỞ RỘNG TẦM QUÉT: Lấy 40 tường mỗi bên (Tổng 80 dải nhiệt) để tạo độ mịn cho Heatmap
-                return walls.sort((a, b) => b.v - a.v).slice(0, 40);
-            };
-
-            let newWalls = [...processWalls(window.scLocalOrderBook.asks, true), ...processWalls(window.scLocalOrderBook.bids, false)];
-            let dataList = window.tvChart.getDataList ? window.tvChart.getDataList() : [];
-            
-            // 🚀 ĐO NHIỆT ĐỘ ĐỘNG: Tìm Bức Tường Lớn Nhất hiện tại để làm chuẩn 100% độ Nóng
-            let maxWallVol = Math.max(...newWalls.map(w => w.v), currentAvgTicket * 10);
-
-            // 🚀 CỐ ĐỊNH TỌA ĐỘ BẮT ĐẦU VÀ KẾT THÚC (Khóa mục tiêu, triệt tiêu chớp tắt do dời trục X)
-            let safeTs = dataList && dataList.length > 0 ? dataList[0].timestamp : Date.now();
-            let endTs = dataList && dataList.length > 0 ? dataList[dataList.length - 1].timestamp : Date.now();
-
-            // Khởi tạo RAM ảo để lưu trạng thái các tường đang vẽ
-            if (!window._waBookmapCache) window._waBookmapCache = {};
-            let currentActiveIds = new Set();
-
-            for (let i = 0; i < newWalls.length; i++) {
-                let wallId = `wa_bookmap_v8_${i}`; // ID mới để không bị dính với bản cũ
-                let wall = newWalls[i];
-                currentActiveIds.add(wallId);
-
-                // 🎨 BOOKMAP GRADIENT ENGINE: Tính tỷ lệ nóng lạnh của tường
-                let heatRatio = wall.v / maxWallVol;
-                let lineColor = '';
-                let thickness = 1;
-
-                if (heatRatio > 0.8) {
-                    lineColor = 'rgba(255, 230, 0, 0.9)'; // Lõi nhiệt: Vàng rực sáng (Nóng nhất)
-                    thickness = 4;
-                } else if (heatRatio > 0.5) {
-                    lineColor = 'rgba(255, 80, 0, 0.8)'; // Vùng ven lõi: Cam đỏ
-                    thickness = 3;
-                } else if (heatRatio > 0.25) {
-                    lineColor = 'rgba(180, 0, 255, 0.6)'; // Vùng trung bình: Tím Neon
-                    thickness = 2;
-                } else if (heatRatio > 0.1) {
-                    lineColor = 'rgba(0, 180, 255, 0.4)'; // Vùng lạnh: Xanh Ngọc
-                    thickness = 1;
-                } else {
-                    lineColor = 'rgba(0, 50, 255, 0.2)'; // Vùng đóng băng: Xanh Biển Nhạt (Yếu nhất)
-                    thickness = 1;
-                }
-
-                // 🛡️ ANTI-FLICKER (CHỐNG CHỚP TẮT): Tạo chữ ký cho dải nhiệt này
-                let cacheSignature = `${wall.p}_${lineColor}_${thickness}`;
-                
-                // Nếu dải nhiệt này đã tồn tại trên Chart với cùng Giá, Cùng Màu, Cùng Độ dày -> BỎ QUA VẼ LẠI
-                if (window._waBookmapCache[wallId] === cacheSignature) {
-                    continue; 
-                }
-                
-                // Cập nhật chữ ký mới vào RAM
-                window._waBookmapCache[wallId] = cacheSignature;
-
-                let updated = false;
-                try {
-                    updated = window.tvChart.overrideOverlay({
-                        id: wallId,
-                        points: [{ timestamp: safeTs, value: wall.p }, { timestamp: endTs, value: wall.p }],
-                        styles: { line: { color: lineColor, size: thickness, style: 'solid' } }
-                    });
-                } catch(e) {}
-
-                if (!updated) {
-                    try {
-                        window.tvChart.createOverlay({
-                            name: 'rayLine',
-                            id: wallId,
-                            points: [{ timestamp: safeTs, value: wall.p }, { timestamp: endTs, value: wall.p }],
-                            styles: { line: { color: lineColor, size: thickness, style: 'solid' } },
-                            lock: true,
-                            mode: 'weak_magnet'
-                        });
-                    } catch(e) {}
-                }
-            }
-
-            // 🧹 DỌN RÁC THÔNG MINH: Chỉ xóa những tường đã RỚT HẠNG (không còn trong top 80)
-            Object.keys(window._waBookmapCache).forEach(id => {
-                if (!currentActiveIds.has(id)) {
-                    try { window.tvChart.removeOverlay(id); } catch(e) {}
-                    delete window._waBookmapCache[id];
-                }
-            });
-
-            // Auto xóa các tàn dư của phiên bản cũ (v7) nếu nó còn kẹt lại trên màn hình
-            if (!window._clearedV7) {
-                for (let i = 0; i < 30; i++) { try { window.tvChart.removeOverlay(`wa_depth_wall_v7_${i}`); } catch(e) {} }
-                window._clearedV7 = true;
-            }
-
-        } else if (window.isHeatmapOn === false && window.tvChart) {
-            // Khi TẮT nút Heatmap, dọn sạch sành sanh
-            if (window._waBookmapCache) {
-                Object.keys(window._waBookmapCache).forEach(id => {
-                    try { window.tvChart.removeOverlay(id); } catch(e) {}
-                });
-                window._waBookmapCache = {};
-            }
+        // 🚀 KÍCH HOẠT HIỂN THỊ BOOKMAP
+        if (window.tvChart && window.isHeatmapOn) {
+            try {
+                // Tạo indicator đè lên nến (id: candle_pane)
+                window.tvChart.createIndicator('WAVE_BOOKMAP', true, { id: 'candle_pane' });
+            } catch(e) {}
         }
         
 
