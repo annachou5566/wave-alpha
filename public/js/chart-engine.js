@@ -128,14 +128,20 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     let chainId = smartCtx.chainId;
 
     if (isTimeSwitch && window.chartWs && window.chartWs.readyState === 1) { 
-        if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
-            let oldK = contract ? `came@${contract}@${chainId}@kline_${window.oldChartInterval}` : `${streamPrefix}@kline_${window.oldChartInterval}`;
-            window.chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [oldK], "id": Date.now() }));
+        // 🚀 BẢO VỆ CPU: Chỉ sub/unsub nếu là DEX. Hàng CEX đã đăng ký đủ 4 khung giờ từ đầu, gửi lệnh sẽ bị TRÙNG LẶP (Duplicate stream) gây khựng nhân đôi!
+        if (contract) {
+            if (window.oldChartInterval && window.oldChartInterval !== 'tick') {
+                window.chartWs.send(JSON.stringify({ "method": "UNSUBSCRIBE", "params": [`came@${contract}@${chainId}@kline_${window.oldChartInterval}`], "id": Date.now() }));
+            }
+            if (window.currentChartInterval !== 'tick') {
+                window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [`came@${contract}@${chainId}@kline_${window.currentChartInterval}`], "id": Date.now() + 1 }));
+            }
         }
-        if (window.currentChartInterval !== 'tick') {
-            let newK = contract ? `came@${contract}@${chainId}@kline_${window.currentChartInterval}` : `${streamPrefix}@kline_${window.currentChartInterval}`;
-            window.chartWs.send(JSON.stringify({ "method": "SUBSCRIBE", "params": [newK], "id": Date.now() + 1 }));
-        }
+        
+        // Làm sạch bộ nhớ đệm Smart Money khi chuyển khung để DOM không bị khựng
+        if (window.quantWorker) window.quantWorker.postMessage({ cmd: 'INIT' });
+        window.scChartMarkers = []; 
+        window._lastMarkerCount = 0;
         return; 
     }
 
@@ -450,16 +456,11 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
                 let isTrad = window.currentTheme === 'trad';
                 let volColor = isUpCandle ? (isTrad ? 'rgba(14,203,129,0.5)' : 'rgba(42, 245, 146, 0.5)') : (isTrad ? 'rgba(246,70,93,0.5)' : 'rgba(203, 85, 227, 0.5)');
 
-                if (!window._isTimeSwitching && window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
+                // Cập nhật nến cho khung 1m trở lên
+                // 🛑 KHÓA BẢO VỆ CUỐI CÙNG: Không cập nhật nến nếu đang bị kẹt tải lịch sử chuyển khung
+                if (!window._waEngineLock && window.tvChart && typeof window.tvChart.updateData === 'function' && window.currentChartInterval !== 'tick' && window.currentChartInterval !== '1s') {
                     let rawTk = parseInt(k.t || k.ot);
                     let correctTk = rawTk < 100000000000 ? rawTk * 1000 : rawTk;
-
-                    let dataList = window.tvChart.getDataList();
-                    if (dataList && dataList.length > 0) {
-                        let lastTs = dataList[dataList.length - 1].timestamp;
-                        let expectedDiff = (window.currentChartInterval === '1m' ? 60000 : window.currentChartInterval === '5m' ? 300000 : window.currentChartInterval === '15m' ? 900000 : 3600000);
-                        if (Math.abs(correctTk - lastTs) > expectedDiff * 2) return; // Chặn nến có timestamp lệch pha gây lag chart
-                    }
 
                     window.tvChart.updateData({
                         timestamp: correctTk, 
