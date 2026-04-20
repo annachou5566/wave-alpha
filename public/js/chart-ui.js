@@ -685,11 +685,6 @@ window.clearUserDrawings = function() {
 };
 
 window.toggleProSidePanel = function(tabId, btnElement) {
-    // 🔒 Chặn double tap: nếu < 300ms thì bỏ qua, để dblclick handler xử lý
-    const _n = Date.now();
-    if (window._lastPanelTap && (_n - window._lastPanelTap) < 300) return;
-    window._lastPanelTap = _n;
-
     if (!document.getElementById('wa-panel-transition')) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
@@ -766,6 +761,16 @@ window.toggleProSidePanel = function(tabId, btnElement) {
     }
 `;
 document.head.appendChild(s);
+// ✅ Thêm nút toggle vào sidebar (chỉ 1 lần)
+const sidebarIcons = document.querySelector('.sc-sidebar-icons');
+if (sidebarIcons && !document.getElementById('sc-panel-toggle-btn')) {
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = 'sc-panel-toggle-btn';
+    toggleBtn.title = 'Ẩn panel';
+    toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    toggleBtn.onclick = function() { window.togglePanelCollapse(); };
+    sidebarIcons.appendChild(toggleBtn);
+}
     }
 
     const panelContent = document.getElementById('sc-panel-content');
@@ -818,22 +823,35 @@ document.head.appendChild(s);
     handleMobileUI(false); 
     doResize();
 };
-// ✅ FIX DOUBLE TAP MOBILE: Lắng nghe dblclick trên toàn bộ sidebar toolbar
-document.addEventListener('dblclick', function(e) {
-    const btn = e.target.closest('.sc-sidebar-icon');
-    if (!btn) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
+
+// ✅ NÚT ẨN/HIỆN PANEL — 1 tap/click dứt khoát, không giật
+window.togglePanelCollapse = function() {
     const panelContent = document.getElementById('sc-panel-content');
     if (!panelContent) return;
-    panelContent.classList.toggle('collapsed');
+    const isCollapsed = panelContent.classList.toggle('collapsed');
     const isMobile = window.innerWidth <= 991;
     const chartArea = document.querySelector('.sc-chart-area');
     if (isMobile && chartArea) {
-        chartArea.dataset.mobileExpanded = panelContent.classList.contains('collapsed') ? 'true' : 'false';
+        chartArea.dataset.mobileExpanded = isCollapsed ? 'true' : 'false';
     }
-    if (window.tvChart) window.tvChart.resize();
-}, { passive: false });
+    // Cập nhật icon nút toggle
+    const toggleBtn = document.getElementById('sc-panel-toggle-btn');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = isCollapsed
+            ? '<i class="fas fa-chevron-right"></i>'
+            : '<i class="fas fa-chevron-left"></i>';
+        toggleBtn.title = isCollapsed ? 'Mở panel' : 'Ẩn panel';
+    }
+    if (window.tvChart) {
+        const start = Date.now();
+        const animate = () => {
+            if (window.tvChart) window.tvChart.resize();
+            if (Date.now() - start < 450) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+    }
+};
+
 window.renderProWatchlist = function(passedSearchTerm) {
     const wlBody = document.getElementById('sc-watchlist-body');
     if (!wlBody) return;
