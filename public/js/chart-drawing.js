@@ -1793,8 +1793,7 @@
       }
             .wa-toolbar.collapsed { height: auto; overflow: hidden; }
       .wa-toolbar.collapsed .wa-toolbar-body { display: none; }
-      /* ✅ THÊM VÀO ĐÂY — 2 rule mới */
-.wa-toolbar.collapsed .wa-bot-actions {
+      .wa-toolbar.collapsed .wa-bot-actions {
   display: none !important;
 }
 #wa-toolbar-toggle {
@@ -2400,28 +2399,34 @@
       <div class="wa-toolbar-body">
         <button class="wa-tb-btn active" data-tool="pointer" data-tooltip="Con trỏ chuột [Esc]">${SVG.ptr}</button>
     `;
-  
+    
     MENUS.forEach(m => {
       html += `<div class="wa-tb-group">
-        <button class="wa-tb-btn">${m.icon}</button>
-        <div class="wa-tb-menu"><div class="wa-tb-menu-inner">`;
+                <button class="wa-tb-btn">${m.icon}</button>
+                <div class="wa-tb-menu"><div class="wa-tb-menu-inner">`;
       m.tools.forEach(t => {
-        if (t.id === 'header') html += `<div class="wa-menu-header">${t.n}</div>`;
-        else if (t.id === 'divider') html += `<div class="wa-menu-divider"></div>`;
-        else html += `<div class="wa-menu-item" data-tool="${t.id}"><span style="font-size:12px;width:16px;text-align:center;flex-shrink:0;opacity:0.7"></span>${t.n}</div>`;
+        if (t.id === 'header') {
+          html += `<div class="wa-menu-header">${t.n}</div>`;
+        } else if (t.id === 'divider') {
+          html += `<div class="wa-menu-divider"></div>`;
+        } else {
+          // Thêm dấu › phía trước tên công cụ để phân cấp thị giác tốt hơn
+          html += `<div class="wa-menu-item" data-tool="${t.id}">
+                    <span style="font-size:12px;width:16px;text-align:center;flex-shrink:0;opacity:0.7">›</span>${t.n}
+                  </div>`;
+        }
       });
       html += `</div></div></div>`;
     });
-  
-    html += `
-      </div>
-      <div style="width:36px;height:1px;background:var(--wa-border-subtle);margin:4px 0"></div>
-      <div class="wa-bot-actions">
-        <button class="wa-tb-btn" id="wa-btn-del-sel" data-tooltip="Xóa hình đang chọn">...xóa svg...</button>
-        <button class="wa-tb-btn" id="wa-btn-hide-all" data-tooltip="Ẩn/Hiện tất cả">...eye svg...</button>
-        <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xóa tất cả">${SVG.trash}</button>
-      </div>
-    `;
+    
+    html += `<div style="width:36px;height:1px;background:var(--wa-border-subtle);margin:4px 0"></div>
+         <div class="wa-bot-actions">
+           <button class="wa-tb-btn" id="wa-btn-del-sel" data-tooltip="Xoá hình đang chọn">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+           </button>
+           <button class="wa-tb-btn" id="wa-btn-hide-all" data-tooltip="Ẩn/Hiện tất cả"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+           <button class="wa-tb-btn" id="wa-btn-clear" data-tooltip="Xoá tất cả">${SVG.trash}</button>
+         </div>`;          
     return html;
   }
 
