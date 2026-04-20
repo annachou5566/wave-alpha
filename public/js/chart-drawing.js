@@ -1192,7 +1192,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       
@@ -1229,7 +1228,7 @@
                 { x: c[0].x - pl, y: c[0].y - pt + bh }
             ]},
             styles: { style: 'stroke_fill', color: bgC, borderColor: bdC, borderSize: bdW },
-            ignoreEvent: false
+            ignoreEvent: true
           });
       }
       
@@ -1260,7 +1259,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       
@@ -1306,7 +1304,7 @@
                 { x: tx - pl, y: ty - pt + bh }
             ]},
             styles: { style: 'stroke_fill', color: bgC, borderColor: bdC, borderSize: bdW },
-            ignoreEvent: false
+            ignoreEvent: true
           });
       }
       
@@ -1332,7 +1330,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y;
@@ -1378,7 +1375,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var pts = ref.overlay && ref.overlay.points ? ref.overlay.points : [];
       var priceVal = (pts[0] && pts[0].value !== null) ? pts[0].value : null;
       var dp = (ref.precision && ref.precision.price !== null) ? ref.precision.price : 4;
@@ -1427,7 +1423,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y, r = 10;
@@ -1466,7 +1461,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var figs = [];
@@ -1523,7 +1517,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y;
@@ -1568,7 +1561,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var pts = ref.overlay && ref.overlay.points ? ref.overlay.points : [];
       var priceVal = (pts[0] && pts[0].value !== null) ? pts[0].value : null;
       var dp = (ref.precision && ref.precision.price !== null) ? ref.precision.price : 4;
@@ -1618,7 +1610,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var tx = c.length > 1 ? c[1].x : c[0].x;
@@ -1673,7 +1664,6 @@
     createPointFigures: function(ref) {
       var c = ref.coordinates;
       if (!c.length) return [];
-      if (ref.overlay && ref.overlay._editing) return [];
       var txt = ref.overlay.extendData;
       var lines = typeof txt === 'string' ? txt.split('\n') : String(txt || '').split('\n');
       var x = c[0].x, y = c[0].y, pw = 3, ph = 30, fw = 22, fh = 14;
@@ -2520,292 +2510,188 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
   }
 
   function openTextEditor(currentText, currentStyles, toolId, onConfirm) {
-    var old = document.getElementById('wa-text-editor');
-    if (old) {
-      try { old.__wa_skip_blur = true; } catch(e) {}
-      old.remove();
-    }
-    var oldBd = document.getElementById('wa-text-editor-backdrop');
-    if (oldBd) oldBd.remove();
+    var existing = document.getElementById('wa-text-editor');
+    if (existing) existing.remove();
+  
+    var tStyles = currentStyles && currentStyles.text ? currentStyles.text : {};
+    var curColor = tStyles.color || '#E8EDF2';
+    
+    // 🔥 FIX 1: Ép kiểu số nguyên tuyệt đối, chặn lỗi cộng chuỗi "146px"
+    var curSize = parseInt(tStyles.size) || 14; 
+    var curFont = tStyles.family || 'Be Vietnam Pro, sans-serif';
+    var curWeight = tStyles.weight || '600'; 
+    var curStyle = tStyles.style || 'normal';
   
     var ov = window.currentSelectedOverlay;
-    var name = ov ? ov.name : toolId;
+    var name = ov ? (ov.name || toolId) : toolId;
     var container = document.getElementById('sc-chart-container');
     var chartObj = (typeof global !== 'undefined' && global.tvChart) ? global.tvChart : window.tvChart;
-    if (!ov || !container || !chartObj) return;
-  
-    var paneId = 'candle_pane';
-    var liveOv = ov;
-    try {
-      if (chartObj.getOverlayById) {
-        liveOv = chartObj.getOverlayById(ov.id) || ov;
-        if (liveOv && liveOv.paneId) paneId = liveOv.paneId;
-      }
-    } catch(e) {}
-  
-    var tStyles = (currentStyles && currentStyles.text) ? currentStyles.text : {};
-    var curColor = tStyles.color || '#E8EDF2';
-    if (curColor === 'transparent' || curColor === 'rgba(0,0,0,0)') curColor = '#00F0FF';
-  
-    var curSize   = parseInt(tStyles.size, 10) || 14;
-    var curFont   = tStyles.family || 'Be Vietnam Pro, sans-serif';
-    var curWeight = tStyles.weight || '600';
-    var curStyle  = tStyles.style || 'normal';
-    var originalText = typeof ov.extendData === 'string' ? ov.extendData : (currentText || '');
-  
-    function setEditing(flag) {
-      try {
-        if (chartObj.overrideOverlay) chartObj.overrideOverlay({ id: ov.id, editing: !!flag });
-        ov.editing = !!flag;
-        if (liveOv) liveOv.editing = !!flag;
-      } catch(e) {}
-    }
-  
-    function getCoord(pt) {
-      if (!pt) return null;
-      try {
-        if (typeof chartObj.dataToCoordinate === 'function') {
-          return chartObj.dataToCoordinate({
-            dataIndex: pt.dataIndex,
-            timestamp: pt.timestamp,
-            value: pt.value
-          }, paneId);
-        }
-        if (typeof chartObj.convertToPixel === 'function') {
-          return chartObj.convertToPixel({
-            dataIndex: pt.dataIndex,
-            timestamp: pt.timestamp,
-            value: pt.value
-          }, { paneId: paneId });
-        }
-      } catch(e) {}
-      return null;
-    }
-  
-    function getTextCtx(fontSize, fontWeight, fontStyle) {
-      var ctx = window.waTextCtx;
-      if (!ctx) {
-        ctx = document.createElement('canvas').getContext('2d');
-        window.waTextCtx = ctx;
-      }
-      ctx.font = (fontStyle === 'italic' ? 'italic ' : '') + fontWeight + ' ' + fontSize + 'px ' + curFont;
-      return ctx;
-    }
-  
-    function toolFontSize() {
-      if (name === 'anchoredText') return 13;
-      if (name === 'priceNote') return 12;
-      if (name === 'annotation') return 12;
-      if (name === 'priceLabel') return 11;
-      if (name === 'signpost') return 12;
-      if (name === 'flagMarker') return 11;
-      return curSize;
-    }
-  
-    function toolFontWeight() {
-      if (name === 'anchoredText' || name === 'priceNote' || name === 'priceLabel' || name === 'signpost' || name === 'flagMarker') {
-        return '700';
-      }
-      return curWeight;
-    }
-  
-    function measure(text) {
-      var lines = String(text || '').split('\n');
-      if (!lines.length) lines = [''];
-  
-      var size = toolFontSize();
-      var weight = toolFontWeight();
-      var ctx = getTextCtx(size, weight, curStyle);
-      var textW = 0;
-      lines.forEach(function(line) {
-        textW = Math.max(textW, Math.ceil(ctx.measureText(line || '').width));
-      });
-  
-      return {
-        lines: lines,
-        size: size,
-        weight: weight,
-        lh: size + 6,
-        textW: textW
-      };
-    }
-  
-    function getBox(text) {
-      var m = measure(text || ' ');
-      var pts = (liveOv && liveOv.points) ? liveOv.points : (ov.points || []);
-      var p0 = getCoord(pts[0]);
-      var p1 = getCoord(pts[1]);
-      var rect = container.getBoundingClientRect();
-  
-      if (!p0) {
-        p0 = {
-          x: (window.waMouseX || rect.width / 2) - rect.left,
-          y: (window.waMouseY || rect.height / 2) - rect.top
-        };
-      }
-      if (!p1) p1 = p0;
-  
-      if (name === 'plainText') {
-        return { left:p0.x, top:p0.y, width:Math.max(30, m.textW + 2), height:Math.max(m.lh, m.lines.length * m.lh + 2), pt:0, pr:0, pb:0, pl:0, fs:m.size, lh:m.lh };
-      }
-      if (name === 'anchoredText') {
-        return { left:p1.x, top:p1.y, width:m.textW + 4 + 12, height:m.lines.length * m.lh + 6 + 6, pt:6, pr:12, pb:6, pl:4, fs:m.size, lh:m.lh };
-      }
-      if (name === 'note') {
-        return { left:p0.x, top:p0.y, width:Math.max(60, m.textW + 8 + 14), height:m.lines.length * m.lh + 8 + 8, pt:8, pr:14, pb:8, pl:8, fs:m.size, lh:m.lh };
-      }
-      if (name === 'priceNote') {
-        var h1 = m.lines.length * m.lh + 10;
-        return { left:p0.x, top:p0.y - h1/2, width:m.textW + 6 + 12, height:h1, pt:5, pr:12, pb:5, pl:6, fs:m.size, lh:m.lh };
-      }
-      if (name === 'annotation') {
-        var h2 = m.lines.length * m.lh + 10;
-        return { left:p1.x, top:p1.y - h2/2, width:m.textW + 6 + 12, height:h2, pt:5, pr:12, pb:5, pl:6, fs:m.size, lh:m.lh };
-      }
-      if (name === 'comment') {
-        var h3 = m.lines.length * m.lh + 14;
-        return { left:p0.x, top:p0.y - h3 - 8, width:Math.max(80, m.textW + 8 + 14), height:h3, pt:7, pr:14, pb:7, pl:8, fs:m.size, lh:m.lh };
-      }
-      if (name === 'priceLabel') {
-        var h4 = m.lines.length * m.lh + 10;
-        return { left:p0.x, top:p0.y - h4/2, width:m.textW + 6 + 12 + 6, height:h4, pt:5, pr:12, pb:5, pl:12, fs:m.size, lh:m.lh };
-      }
-      if (name === 'pin') {
-        var h5 = m.lines.length * m.lh + 8;
-        return { left:p0.x + 16, top:p0.y - 20 - h5/2, width:m.textW + 6 + 8, height:h5, pt:4, pr:8, pb:4, pl:6, fs:m.size, lh:m.lh };
-      }
-      if (name === 'signpost') {
-        var h6 = m.lines.length * m.lh + 10;
-        var bw6 = m.textW + 6 + 12;
-        var isRight = p1.x < p0.x;
-        return { left:isRight ? (p1.x - 10 - bw6) : (p1.x + 10), top:p1.y - h6/2, width:bw6, height:h6, pt:5, pr:12, pb:5, pl:6, fs:m.size, lh:m.lh };
-      }
-      if (name === 'flagMarker') {
-        var h7 = m.lines.length * m.lh + 8;
-        return { left:p0.x + 28, top:p0.y - 23 - h7/2, width:m.textW + 6 + 8, height:h7, pt:4, pr:8, pb:4, pl:6, fs:m.size, lh:m.lh };
-      }
-  
-      return { left:p0.x, top:p0.y, width:Math.max(30, m.textW + 2), height:Math.max(m.lh, m.lines.length * m.lh + 2), pt:0, pr:0, pb:0, pl:0, fs:m.size, lh:m.lh };
-    }
-  
-    var backdrop = document.createElement('div');
-    backdrop.id = 'wa-text-editor-backdrop';
-    backdrop.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:transparent;z-index:999998;';
-    container.appendChild(backdrop);
+    if (!chartObj && typeof chart !== 'undefined') chartObj = chart;
   
     var input = document.createElement('textarea');
     input.id = 'wa-text-editor';
-    input.value = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
-    input.setAttribute('spellcheck', 'false');
-    input.wrap = 'off';
-    input.style.cssText = [
-      'position:absolute',
-      'margin:0',
-      'border:none',
-      'outline:none',
-      'resize:none',
-      'overflow:hidden',
-      'background:transparent',
-      'box-shadow:none',
-      'white-space:pre',
-      'word-break:normal',
-      'overflow-wrap:normal',
-      'color:' + curColor,
-      'caret-color:' + curColor,
-      'font-family:' + curFont,
-      'font-weight:' + curWeight,
-      'font-style:' + curStyle,
-      'z-index:999999',
-      'user-select:text'
-    ].join(';');
-    container.appendChild(input);
+    var defaultText = (!currentText || currentText === 'Văn bản...') ? '' : currentText;
+    input.value = defaultText;
+    
+    var isMiddle = ['priceNote', 'pin', 'annotation', 'comment', 'priceLabel', 'signpost', 'flagMarker'].includes(name);
+    var transformCSS = isMiddle ? 'translateY(-50%)' : 'none';
+    var exactLineHeight = curSize + 6;
   
-    function layout() {
-      var box = getBox(input.value || ' ');
-      input.style.boxSizing = 'content-box'; // DÒNG QUAN TRỌNG CẦN THÊM
-      input.style.left = Math.round(box.left) + 'px';
-      input.style.top = Math.round(box.top) + 'px';
-      input.style.width = Math.ceil(box.width) + 'px';
-      input.style.height = Math.ceil(box.height) + 'px';
-      input.style.paddingTop = box.pt + 'px';
-      input.style.paddingRight = box.pr + 'px';
-      input.style.paddingBottom = box.pb + 'px';
-      input.style.paddingLeft = box.pl + 'px';
-      input.style.fontSize = box.fs + 'px';
-      input.style.lineHeight = box.lh + 'px';
+    // 🔥 FIX 2: Bỏ CSS Left/Top ban đầu. Để hệ thống nội suy chuẩn 100% từ nến
+    input.style.cssText = `
+      position: absolute; 
+      transform: ${transformCSS};
+      background: transparent !important; 
+      border: none !important;
+      outline: none !important; 
+      color: ${curColor}; 
+      font-family: ${curFont}; 
+      font-size: ${curSize}px; 
+      line-height: ${exactLineHeight}px;
+      font-weight: ${curWeight}; 
+      font-style: ${curStyle};
+      text-align: left;
+      letter-spacing: normal;
+      z-index: 999999; 
+      min-width: 10px; 
+      min-height: ${exactLineHeight}px;
+      padding: 0; 
+      margin: 0; 
+      resize: none; 
+      overflow: hidden;
+      white-space: pre; 
+      caret-color: ${curColor};
+      box-sizing: content-box;
+      border-radius: 0;
+      -webkit-appearance: none;
+    `;
+    
+    if (container) container.appendChild(input);
+  
+    // 2. ĐỘNG CƠ THEO DÕI THỜI GIAN THỰC (BÁM DÍNH THEO NẾN)
+    var isTracking = true;
+    function syncPosition() {
+        if (!isTracking || !input.parentNode) return;
+        
+        if (ov && ov.points && ov.points.length > 0 && chartObj && typeof chartObj.convertToPixel === 'function') {
+            var pt = ov.points[ov.points.length - 1];
+            var targetPaneId = 'candle_pane';
+            if (chartObj.getOverlayById) {
+                var info = chartObj.getOverlayById(ov.id);
+                if (info && info.paneId) targetPaneId = info.paneId;
+            }
+  
+            try {
+                var pixelInfo = chartObj.convertToPixel(pt, { finder: { paneId: targetPaneId } });
+                if (pixelInfo && !isNaN(pixelInfo.x) && !isNaN(pixelInfo.y)) {
+                    var curX = pixelInfo.x;
+                    var curY = pixelInfo.y;
+                    var halfLeading = 3; 
+                    curX -= 1; 
+      
+                    if (name === 'plainText' || name === 'anchoredText') { curY -= halfLeading; }
+                    else if (name === 'note') { curX += 10; curY += (10 - halfLeading); }
+                    else if (name === 'annotation' || name === 'priceNote') { curX += 8; }
+                    else if (name === 'comment') { curX += 10; curY -= 15; }
+                    else if (name === 'priceLabel') { curX += 12; }
+                    else if (name === 'pin') { curX += 14; curY -= 20; }
+                    else if (name === 'flagMarker') { curX += 26; curY -= 23; }
+                    else if (name === 'signpost') { 
+                        curX += 18; 
+                        if (ov.points.length > 1) {
+                            var pt0 = chartObj.convertToPixel(ov.points[0], { finder: { paneId: targetPaneId } });
+                            if (pt0 && curX < pt0.x) {
+                                curX -= 36;
+                                input.style.textAlign = 'right';
+                                input.style.transform = 'translate(-100%, -50%)';
+                            } else {
+                                input.style.textAlign = 'left';
+                                input.style.transform = 'translateY(-50%)';
+                            }
+                        }
+                    }
+                    
+                    input.style.left = curX + 'px';
+                    input.style.top = curY + 'px';
+                }
+            } catch(e) {}
+        }
+        if (isTracking) requestAnimationFrame(syncPosition); 
     }
-    var done = false;
   
-    function destroy() {
-      try { input.__wa_skip_blur = true; } catch(e) {}
-      if (input.parentNode) input.remove();
-      if (backdrop.parentNode) backdrop.remove();
+    function resizeInput() {
+       input.style.height = '0px'; 
+       input.style.width = '0px';
+       input.style.width = (input.scrollWidth + 2) + 'px';
+       input.style.height = input.scrollHeight + 'px';
     }
-  
-    function commit() {
-      if (done) return;
-      done = true;
-      var val = input.value.trim() || 'Văn bản...';
-      setEditing(false);
-      destroy();
-      if (typeof onConfirm === 'function') onConfirm(val, currentStyles || {});
-    }
-  
-    function cancel() {
-      if (done) return;
-      done = true;
-      setEditing(false);
-      destroy();
-      try {
-        if (chartObj.overrideOverlay) chartObj.overrideOverlay({ id: ov.id, extendData: originalText, editing: false });
-      } catch(e) {}
-    }
-  
-    input.addEventListener('input', function() {
-      var box = getBox(input.value || ' ');
-      input.style.width = Math.ceil(box.width) + 'px';
-      input.style.height = Math.ceil(box.height) + 'px';
-      // KHÔNG gán lại input.style.left và input.style.top ở đây
-    });
-  
-    input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        commit();
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        cancel();
-      }
-    });
-  
-    input.addEventListener('blur', function() {
-      if (input.__wa_skip_blur) return;
-      setTimeout(function() {
-        if (!done && document.activeElement !== input) commit();
-      }, 0);
-    });
-  
-    backdrop.addEventListener('mousedown', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      commit();
-    }, true);
-  
-    setEditing(true);
-    layout();
   
     requestAnimationFrame(function() {
+      input.focus();
+      if (input.value === '') input.select();
+      resizeInput();
+      syncPosition(); 
+    });
+  
+    input.addEventListener('input', function() {
+        resizeInput();
+        if (chartObj && ov && ov.id) {
+            var liveText = input.value || ' ';
+            chartObj.overrideOverlay({ id: ov.id, extendData: liveText });
+        }
+    });
+  
+    // Tự động làm tàng hình text trên canvas để không bị đè chữ khi đang gõ
+    var savedOriginalColor = null;
+    if (chartObj && ov && ov.id) {
       try {
-        input.focus({ preventScroll: true });
-        var len = input.value.length;
-        input.setSelectionRange(len, len);
-        input.scrollLeft = input.scrollWidth;
-        input.scrollTop = input.scrollHeight;
+        var tempStyles = JSON.parse(JSON.stringify(ov.styles || {}));
+        if (!tempStyles.text) tempStyles.text = {};
+        if (tempStyles.text.color !== 'rgba(0,0,0,0)' && tempStyles.text.color !== 'transparent') {
+            savedOriginalColor = tempStyles.text.color;
+        }
+        tempStyles.text.color = 'rgba(0,0,0,0)';
+        chartObj.overrideOverlay({ id: ov.id, styles: tempStyles });
       } catch(e) {}
+    }
+  
+    // CHỐT SỔ LƯU CHỮ
+    var isCommitted = false;
+    function commit() {
+      if (isCommitted) return;
+      isCommitted = true;
+      isTracking = false; 
+      
+      var val = input.value.trim() || 'Văn bản...'; 
+      var updatedStyles = JSON.parse(JSON.stringify(currentStyles || {}));
+      if (!updatedStyles.text) updatedStyles.text = {};
+      
+      var liveOv = chartObj ? chartObj.getOverlayById(ov.id) : null;
+      var liveColor = (liveOv && liveOv.styles && liveOv.styles.text) ? liveOv.styles.text.color : null;
+      
+      if (liveColor && liveColor !== 'rgba(0,0,0,0)' && liveColor !== 'transparent') {
+          updatedStyles.text.color = liveColor;
+      } else if (savedOriginalColor && savedOriginalColor !== 'rgba(0,0,0,0)') {
+          updatedStyles.text.color = savedOriginalColor;
+      } else if (curColor && curColor !== 'rgba(0,0,0,0)' && curColor !== 'transparent') {
+          updatedStyles.text.color = curColor;
+      } else {
+          updatedStyles.text.color = '#E8EDF2'; 
+      }
+      
+      input.remove();
+      onConfirm(val, updatedStyles);
+      
+      // 🔥 FIX 3: ÉP LƯU LẬP TỨC (SYNC) BẰNG BẢN CHÍNH THỨC ĐỂ KHÔNG BỊ TRƯỢT NHỊP NÀO!
+      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') {
+          global.__wa_saveAllOverlays_SYNC();
+      }
+    }
+  
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { input.value = currentText || ''; commit(); }
     });
   }
 
@@ -2814,28 +2700,16 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
     var overlayId = null;
 
     function openEditor(currentText, currentStyles) {
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          openTextEditor(currentText, currentStyles, toolId, function(newText, newStyles) {
-            if (!overlayId) return;
-    
-            chart.overrideOverlay({
-              id: overlayId,
-              extendData: newText,
-              styles: newStyles,
-              editing: false
-            });
-    
-            if (global.waoverlaymap) {
-              let cached = global.waoverlaymap.get(overlayId);
-              if (cached) {
-                cached.extendData = newText;
-                cached.styles = newStyles;
-                cached.editing = false;
-              }
+      openTextEditor(currentText, currentStyles, toolId, function(newText, newStyles) {
+        if (overlayId) {
+            chart.overrideOverlay({ id: overlayId, extendData: newText, styles: newStyles });
+            
+            // 🔥 FIX 4: NHÉT CHỮ MỚI VÀO MAP TRƯỚC KHI Ổ CỨNG QUÉT NGANG
+            if (global.__wa_overlay_map) {
+                let cached = global.__wa_overlay_map.get(overlayId);
+                if (cached) { cached.extendData = newText; cached.styles = newStyles; }
             }
-          });
-        });
+        }
       });
     }
 
@@ -2850,45 +2724,49 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
             if (typeof _wa_trackOverlay === 'function') _wa_trackOverlay(ov);
             if (typeof saveHistory === 'function') saveHistory('add', ov);
             
-            // 🔥 FIX TỌA ĐỘ LẦN ĐẦU TIÊN: Đặt hình vừa vẽ thành Hình-đang-chọn 
-            // để "Động cơ bám dính" có mục tiêu bám vào ngay lập tức!
-            currentSelectedOverlay = ov;
-            window.currentSelectedOverlay = ov;
-            
-            openEditor(ov.extendData || '', ov.styles || {});
+            setTimeout(function() {
+                openEditor(ov.extendData || '', ov.styles || {});
+            }, 50);
         }
         return false;
       },
-      // 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
-      onClick: function(event) {
+      onDoubleClick: function(event) {
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return false;
+        
         var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
         if (cat === 'text') {
-            let now = Date.now();
-            let lastTime = window._wa_last_selected_time || 0;
-            // Nếu click vào chữ ĐÃ ĐƯỢC CHỌN TỪ TRƯỚC (cách đây >250ms để tránh click đúp dính chùm)
-            if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
-                if (typeof hidePanel === 'function') hidePanel();
-                if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-                setTimeout(function() {
-                    openEditor(ov.extendData || '', ov.styles || {});
-                }, 50);
-                return true; // Ép dừng các sự kiện khác
-            }
+          if (typeof hidePanel === 'function') hidePanel();
+          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+          
+          if (typeof openTextEditor === 'function') {
+            // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
+            setTimeout(function() {
+              openTextEditor(
+                ov.extendData || '', 
+                ov.styles || {}, 
+                ov.name, 
+                function(newText, newStyles) {
+                  global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+                  
+                  if (global.__wa_overlay_map) {
+                      let cached = global.__wa_overlay_map.get(ov.id);
+                      if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                  }
+                  if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+                }
+              );
+            }, 50);
+          }
         }
-        return false;
+        return true; // 🔥 Ép KLineChart KHÔNG ĐƯỢC ZOOM biểu đồ khi nhấp đúp
       },
-      onDoubleClick: function() { return true; }, // Khóa vĩnh viễn lỗi Zoom màn hình của KLineChart
       onSelected: function(event) {
         isDrawingSessionActive = false;
         var ov = event && event.overlay ? event.overlay : null;
         if (!ov) return;
         currentSelectedOverlay = ov;
         window.currentSelectedOverlay = ov;
-        
-        window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
-        
         if (document.getElementById('wa-text-editor-backdrop')) return;
         if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
         if (typeof renderPanel === 'function') renderPanel(ov);
@@ -3009,7 +2887,7 @@ document.addEventListener('mousedown', function(e) { window.waMouseX = e.clientX
 
     var s = overlay.styles || {};
     var ext = (typeof overlay.extendData === 'object' && overlay.extendData) ? overlay.extendData : {};
-var rawExt = overlay._wa_real_text !== undefined ? overlay._wa_real_text : overlay.extendData;
+    var rawExt = overlay.extendData;
     var cat = typeof getToolCategory === 'function' ? getToolCategory(overlay.name) : 'lines';
 
     function mkRgba(hex, a) {
@@ -3711,17 +3589,10 @@ if (cat === 'brush') {
         setTimeout(function() {
           window.currentSelectedOverlay = ov; 
           if (typeof openTextEditor === 'function') {
-            openTextEditor(
-              ov.extendData || '', ov.styles || {}, ov.name, 
-              function(newText, newStyles) {
-                  if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                  if (global.__wa_overlay_map) {
-                      let cached = global.__wa_overlay_map.get(ov.id);
-                      if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                  }
-                  if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
-              }
-          );
+            openTextEditor(ov.extendData || '', ov.styles || {}, ov.name, function(newText, newStyles) {
+              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+              if (typeof saveAllOverlays === 'function') saveAllOverlays();
+            });
           }
         }, 50);
       });
@@ -4053,49 +3924,45 @@ config.onSelected = function(event) {
   if (!ov) return;
   currentSelectedOverlay = ov;
   window.currentSelectedOverlay = ov;
-  
-  window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
-  
   if (document.getElementById('wa-text-editor-backdrop')) return;
   if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
   if (typeof renderPanel === 'function') renderPanel(ov);
 };
+
 config.onDeselected = function() {
   if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
 };
 
-// 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
-config.onClick = function(event) {
+config.onDoubleClick = function(event) {
   var ov = event && event.overlay ? event.overlay : null;
   if (!ov) return false;
+  
   var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
   if (cat === 'text') {
-      let now = Date.now();
-      let lastTime = window._wa_last_selected_time || 0;
-      if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
-          if (typeof hidePanel === 'function') hidePanel();
-          if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-          if (typeof openTextEditor === 'function') {
-              setTimeout(function() {
-                openTextEditor(
-                  ov.extendData || '', ov.styles || {}, ov.name, 
-                  function(newText, newStyles) {
-                      if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                      if (global.__wa_overlay_map) {
-                          let cached = global.__wa_overlay_map.get(ov.id);
-                          if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                      }
-                      if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
-                  }
-              );
-              }, 50);
+    if (typeof hidePanel === 'function') hidePanel();
+    if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
+    
+    if (typeof openTextEditor === 'function') {
+      // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
+      setTimeout(function() {
+        openTextEditor(
+          ov.extendData || '', 
+          ov.styles || {}, 
+          ov.name, 
+          function(newText, newStyles) {
+            global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
+            if (global.__wa_overlay_map) {
+                let cached = global.__wa_overlay_map.get(ov.id);
+                if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+            }
+            if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
           }
-          return true;
-      }
+        );
+      }, 50);
+    }
   }
-  return false;
+  return true; // 🔥 Dập tắt hiệu ứng nhấp đúp giật màn hình
 };
-config.onDoubleClick = function() { return true; }; // Khóa vĩnh viễn lỗi Zoom
 
 // TẠO HÌNH VẼ KÈM ĐẦY ĐỦ CÁC SỰ KIỆN LẮNG NGHE Ở TRÊN
 global.tvChart.createOverlay(config);
@@ -4275,48 +4142,46 @@ function restoreOverlays() {
           currentSelectedOverlay = ov;
           window.currentSelectedOverlay = ov;
           
-          window._wa_last_selected_time = Date.now(); // ⏱️ LƯU MỐC THỜI GIAN CLICK LẦN 1
-          
+          // 🔥 FIX: Bổ sung lệnh gọi thanh Float Toolbar khi click vào hình đã lưu
           if (document.getElementById('wa-text-editor-backdrop')) return;
           if (typeof showFloatToolbar === 'function') showFloatToolbar(ov, null, null);
           if (typeof renderPanel === 'function') renderPanel(ov);
         },
         onDeselected: function() {
+          // 🔥 FIX: Ẩn thanh Float Toolbar khi bấm ra ngoài
           if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
         },
         
-        // 🔥 FIX UX TRADINGVIEW: CLICK LẦN 2 ĐỂ SỬA CHỮ
-        onClick: function(event) {
+        // ✅ THÊM ĐOẠN NÀY ĐỂ HỖ TRỢ DOUBLE-CLICK CHO TEXT CŨ
+        onDoubleClick: function(event) {
           var ov = event && event.overlay ? event.overlay : null;
           if (!ov) return false;
-          var cat = typeof getToolCategory === 'function' ? getToolCategory(ov.name) : '';
-          if (cat === 'text') {
-              let now = Date.now();
-              let lastTime = window._wa_last_selected_time || 0;
-              if (window.currentSelectedOverlay && window.currentSelectedOverlay.id === ov.id && (now - lastTime > 250)) {
-                  if (typeof hidePanel === 'function') hidePanel();
-                  if (typeof hideFloatToolbar === 'function') hideFloatToolbar();
-                  if (typeof openTextEditor === 'function') {
-                      setTimeout(function() {
-                        openTextEditor(
-                          ov.extendData || '', ov.styles || {}, ov.name, 
-                          function(newText, newStyles) {
-                              if (global.tvChart) global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
-                              if (global.__wa_overlay_map) {
-                                  let cached = global.__wa_overlay_map.get(ov.id);
-                                  if (cached) { cached.extendData = newText; cached.styles = newStyles; }
-                              }
-                              if (typeof global.__wa_saveAllOverlays_SYNC === 'function') global.__wa_saveAllOverlays_SYNC();
+
+          if (typeof hidePanel === 'function') hidePanel();
+
+          window.currentSelectedOverlay = ov;
+          if (typeof openTextEditor === 'function') {
+              // 🔥 BÍ QUYẾT: Trì hoãn 50ms để đợi KLineChart tính tọa độ xong!
+              setTimeout(function() {
+                  openTextEditor(
+                      ov.extendData || '', 
+                      ov.styles || {}, 
+                      ov.name, 
+                      function(newText, newStyles) {
+                          if (global.tvChart) {
+                              global.tvChart.overrideOverlay({ id: ov.id, extendData: newText, styles: newStyles });
                           }
-                      );
-                      }, 50);
-                  }
-                  return true;
-              }
+                          if (global.__wa_overlay_map) {
+                              let cached = global.__wa_overlay_map.get(ov.id);
+                              if (cached) { cached.extendData = newText; cached.styles = newStyles; }
+                          }
+                          if (typeof global.__wa_saveAllOverlays === 'function') global.__wa_saveAllOverlays();
+                      }
+                  );
+              }, 50);
           }
-          return false;
-        },
-        onDoubleClick: function() { return true; } // Khóa vĩnh viễn lỗi Zoom
+          return true; // 🔥 Chặn lệnh Zoom/Scale của KLineChart
+        }
         };
         
         let newId = global.tvChart.createOverlay(cfg);
