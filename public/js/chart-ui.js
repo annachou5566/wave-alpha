@@ -685,6 +685,11 @@ window.clearUserDrawings = function() {
 };
 
 window.toggleProSidePanel = function(tabId, btnElement) {
+    // 🔒 DEBOUNCE: Chặn double-click giật giật (chặn trong 320ms)
+    const _now = Date.now();
+    if (window._panelToggleLastMs && (_now - window._panelToggleLastMs) < 320) return;
+    window._panelToggleLastMs = _now;
+
     if (!document.getElementById('wa-panel-transition')) {
         const s = document.createElement('style');
         s.id = 'wa-panel-transition';
