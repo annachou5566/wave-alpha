@@ -190,8 +190,39 @@ window.connectRealtimeChart = async function(t, isTimeSwitch = false) {
     window.quantStats = cache.quantStats || { whaleBuyVol: 0, whaleSellVol: 0, botSweepBuy: 0, botSweepSell: 0, priceTrend: 0 };
     window.scCurrentCluster = null;
     window.scActivePriceLines = []; 
+// 🚀 BƯỚC 1: LẤY SNAPSHOT FULL DEPTH TỪ RENDER TRƯỚC KHI MỞ WEBSOCKET
+let targetSymbol = rawId ? `ALPHA_${rawId.toUpperCase()}USDT` : sysSymbol.toUpperCase();
+fetch(`${RENDER_BASE_URL}/api/full-depth?symbol=${targetSymbol}&limit=500`)
+    .then(res => res.json())
+    .then(json => {
+        // Bảo mật luồng: Nếu người dùng vừa đổi sang coin khác trong lúc API đang tải, lập tức hủy bỏ để tránh ghi đè dữ liệu sai.
+        if (window.activeChartSessionId !== currentSession) return; 
 
-    try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
+        if (json.success && json.data) {
+            let currentSym = json.data.symbol || targetSymbol;
+            
+            // Khởi tạo sổ lệnh nếu WebSocket chưa kịp tạo
+            if (!window.scLocalOrderBook || window.scLocalOrderBook.sym !== currentSym) {
+                window.scLocalOrderBook = { sym: currentSym, asks: new Map(), bids: new Map() };
+            }
+            
+            // Nạp mảng Bids (Mua)
+            (json.data.bids || []).forEach(item => {
+                let p = item[0], q = parseFloat(item[1]);
+                // Quan trọng: Phải giữ nguyên `p` là chuỗi (String) để khi WebSocket gửi Delta về, nó tìm đúng Key để Cập nhật/Xóa.
+                if (q > 0) window.scLocalOrderBook.bids.set(p, q);
+            });
+            
+            // Nạp mảng Asks (Bán)
+            (json.data.asks || []).forEach(item => {
+                let p = item[0], q = parseFloat(item[1]);
+                if (q > 0) window.scLocalOrderBook.asks.set(p, q);
+            });
+        }
+    }).catch(e => console.error("Snapshot Depth Error:", e));
+
+// 🚀 BƯỚC 2: MỞ WEBSOCKET ĐỂ HỨNG CÁC THAY ĐỔI (DELTA) ĐÈ LÊN SNAPSHOT BÊN TRÊN
+try { window.chartWs = new WebSocket('wss://nbstream.binance.com/w3w/wsa/stream'); } catch(e) { return; }
 
     let params = [];
     if (contract) {
