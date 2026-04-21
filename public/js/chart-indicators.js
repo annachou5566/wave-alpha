@@ -565,12 +565,12 @@
       }
     });
 // ── WAVE_COB (CURRENT ORDER BOOK / THÁP DOM) ─────────────────
-// ── WAVE_COB (CURRENT ORDER BOOK / THÁP DOM) V2 - ANTI-JITTER ──
+// ── WAVE_COB (CURRENT ORDER BOOK / THÁP DOM) V3 - PRO BOOKMAP ──
 kc.registerIndicator({
   name: 'WAVE_COB',
   shortName: 'COB',
   series: 'price',
-  calcParams: [100, 1000],
+  calcParams: [100, 1000], // [Độ rộng cột, Lọc USD]
   figures: [],
   calc: function(dataList) {
     return dataList.map(() => ({}));
@@ -584,48 +584,54 @@ kc.registerIndicator({
     const asks = window.scLocalOrderBook.asks;
     const bids = window.scLocalOrderBook.bids;
     
-    let targetMaxVol = 0; // Đỉnh Volume tạm thời của khung hình này
-    let validAsks = [];
-    let validBids = [];
+    // 🚀 THUẬT TOÁN 1: PRICE BINNING (Gom nhóm theo Pixel)
+    // Bookmap luôn gom các nấc giá sát nhau vào cùng 1 ô (Bin) để chống nhòe và chớp tắt
+    const barH = 4; // Chiều cao 1 ô DOM là 4 pixel
+    let yMapAsks = new Map();
+    let yMapBids = new Map();
 
-    // 1. Quét Sổ lệnh và ép tọa độ Y về SỐ NGUYÊN (Math.round) để chống nhòe
     asks.forEach((vol, p) => {
-        let price = parseFloat(p);
-        let valUSD = price * vol;
+        let valUSD = parseFloat(p) * vol;
         if (valUSD >= minVal) {
-            let y = Math.round(yAxis.convertToPixel(price));
-            if (y >= 0 && y <= bounding.height) {
-                if (valUSD > targetMaxVol) targetMaxVol = valUSD;
-                validAsks.push({ y, valUSD, p: price });
+            let exactY = yAxis.convertToPixel(parseFloat(p));
+            if (exactY >= 0 && exactY <= bounding.height) {
+                // Ép tọa độ Y vào lưới 4px (Làm tròn để các giá sát nhau gộp chung 1 cục)
+                let snappedY = Math.floor(exactY / barH) * barH;
+                yMapAsks.set(snappedY, (yMapAsks.get(snappedY) || 0) + valUSD);
             }
         }
     });
     
     bids.forEach((vol, p) => {
-        let price = parseFloat(p);
-        let valUSD = price * vol;
+        let valUSD = parseFloat(p) * vol;
         if (valUSD >= minVal) {
-            let y = Math.round(yAxis.convertToPixel(price));
-            if (y >= 0 && y <= bounding.height) {
-                if (valUSD > targetMaxVol) targetMaxVol = valUSD;
-                validBids.push({ y, valUSD, p: price });
+            let exactY = yAxis.convertToPixel(parseFloat(p));
+            if (exactY >= 0 && exactY <= bounding.height) {
+                let snappedY = Math.floor(exactY / barH) * barH;
+                yMapBids.set(snappedY, (yMapBids.get(snappedY) || 0) + valUSD);
             }
         }
     });
 
-    if (targetMaxVol === 0) return false;
+    // 🚀 THUẬT TOÁN 2: STICKY SCALE (Khóa ngàm thước đo, chống giật chiều ngang)
+    let currentFrameMax = 0;
+    yMapAsks.forEach(val => { if (val > currentFrameMax) currentFrameMax = val; });
+    yMapBids.forEach(val => { if (val > currentFrameMax) currentFrameMax = val; });
 
-    // 🚀 2. THUẬT TOÁN GIẢM XÓC (EASING DECAY) CHỐNG CO GIẬT TỶ LỆ
-    if (!window._waCobMaxVol) window._waCobMaxVol = targetMaxVol;
-    if (targetMaxVol > window._waCobMaxVol) {
-        // Có tường to hơn xuất hiện -> Phóng to tỷ lệ ngay lập tức
-        window._waCobMaxVol = targetMaxVol; 
+    if (currentFrameMax === 0) return false;
+
+    if (!window._waCobMaxVol) window._waCobMaxVol = currentFrameMax;
+    
+    if (currentFrameMax > window._waCobMaxVol) {
+        // Có tường mới to hơn -> Lập tức giãn Scale ra để chứa
+        window._waCobMaxVol = currentFrameMax; 
     } else {
-        // Tường bị rút đi -> Thu nhỏ tỷ lệ TỪ TỪ (Decay 5%) để tránh các thanh DOM khác bị giật
-        window._waCobMaxVol = window._waCobMaxVol * 0.95 + targetMaxVol * 0.05; 
+        // Tường bị rút -> KHÔNG THU LẠI NGAY. Để nó mòn đi cực kỳ chậm (0.2% mỗi khung hình) 
+        // Giúp toàn bộ cột COB đứng im phăng phắc, cực kỳ chuyên nghiệp
+        window._waCobMaxVol = window._waCobMaxVol * 0.998 + currentFrameMax * 0.002; 
     }
-
-    let renderMax = Math.max(window._waCobMaxVol, 10000); // Tránh lỗi chia cho 0
+    
+    let renderMax = Math.max(window._waCobMaxVol, 10000);
 
     try {
         ctx.save();
@@ -634,50 +640,50 @@ kc.registerIndicator({
         // Vẽ nền cột
         ctx.fillStyle = 'rgba(15, 20, 25, 0.65)';
         ctx.fillRect(startX, 0, colWidth, bounding.height);
-        
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.beginPath(); ctx.moveTo(startX, 0); ctx.lineTo(startX, bounding.height); ctx.stroke();
 
-        ctx.font = 'bold 10px sans-serif';
+        ctx.font = 'bold 9px sans-serif'; // Chữ nhỏ lại một chút cho gọn
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        const barH = 4;
 
-        // 🚀 3. TỐI ƯU HIỆU SUẤT VẼ (Gom lệnh vẽ để Canvas không bị nháy)
+        // 🚀 THUẬT TOÁN 3: VẼ THEO LÔ (Chống chớp Canvas)
+        // Thay vì vẽ từng lệnh nhỏ lẻ, ta vẽ nguyên 1 cục Asks, rồi 1 cục Bids
         
-        // VẼ ASKS (TƯỜNG BÁN)
-        ctx.fillStyle = 'rgba(255, 80, 0, 0.65)';
+        // VẼ ASKS
+        ctx.fillStyle = 'rgba(255, 80, 0, 0.75)';
         ctx.beginPath();
-        validAsks.forEach(ask => {
-            let w = Math.round((ask.valUSD / renderMax) * colWidth);
-            ctx.rect(bounding.width - w, ask.y - barH/2, w, barH);
+        yMapAsks.forEach((valUSD, y) => {
+            let w = Math.round((valUSD / renderMax) * colWidth);
+            // barH - 1: Tạo khe hở 1 pixel giữa các nấc giá cho giống Bookmap xịn
+            ctx.rect(bounding.width - w, y, w, barH - 1); 
         });
         ctx.fill();
 
-        // VẼ BIDS (TƯỜNG MUA)
-        ctx.fillStyle = 'rgba(0, 255, 150, 0.65)';
+        // VẼ BIDS
+        ctx.fillStyle = 'rgba(0, 255, 150, 0.75)';
         ctx.beginPath();
-        validBids.forEach(bid => {
-            let w = Math.round((bid.valUSD / renderMax) * colWidth);
-            ctx.rect(bounding.width - w, bid.y - barH/2, w, barH);
+        yMapBids.forEach((valUSD, y) => {
+            let w = Math.round((valUSD / renderMax) * colWidth);
+            ctx.rect(bounding.width - w, y, w, barH - 1);
         });
         ctx.fill();
 
-        // 4. VẼ CHỮ (Riêng biệt để không bị nhòe)
+        // 4. CHỈ IN CHỮ CHO CÁC TƯỜNG CỰC LỚN (Chống nhòe chữ)
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        validAsks.forEach(ask => {
-            let w = Math.round((ask.valUSD / renderMax) * colWidth);
-            if (w > 35) {
-                let shortVol = ask.valUSD >= 1000000 ? (ask.valUSD/1000000).toFixed(1) + 'M' : Math.round(ask.valUSD/1000) + 'K';
-                ctx.fillText(shortVol, bounding.width - w - 4, ask.y);
+        yMapAsks.forEach((valUSD, y) => {
+            let w = Math.round((valUSD / renderMax) * colWidth);
+            if (w > colWidth * 0.4) { // Chỉ in chữ nếu tường đó dài hơn 40% cột COB
+                let shortVol = valUSD >= 1000000 ? (valUSD/1000000).toFixed(1) + 'M' : Math.round(valUSD/1000) + 'K';
+                ctx.fillText(shortVol, bounding.width - w - 4, y + barH/2);
             }
         });
         
-        validBids.forEach(bid => {
-            let w = Math.round((bid.valUSD / renderMax) * colWidth);
-            if (w > 35) {
-                let shortVol = bid.valUSD >= 1000000 ? (bid.valUSD/1000000).toFixed(1) + 'M' : Math.round(bid.valUSD/1000) + 'K';
-                ctx.fillText(shortVol, bounding.width - w - 4, bid.y);
+        yMapBids.forEach((valUSD, y) => {
+            let w = Math.round((valUSD / renderMax) * colWidth);
+            if (w > colWidth * 0.4) {
+                let shortVol = valUSD >= 1000000 ? (valUSD/1000000).toFixed(1) + 'M' : Math.round(valUSD/1000) + 'K';
+                ctx.fillText(shortVol, bounding.width - w - 4, y + barH/2);
             }
         });
 
