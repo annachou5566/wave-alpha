@@ -777,7 +777,7 @@ kc.registerIndicator({
       renderBars(yMapAsks, ASK_BASE_RGB, ASK_GLOW, top3AskSet);
       renderBars(yMapBids, BID_BASE_RGB, BID_GLOW, top3BidSet);
 
-      ctx.font         = "bold 9px 'Roboto Mono', 'Consolas', monospace";
+      ctx.font         = "bold 9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign    = 'right';
       ctx.textBaseline = 'middle';
       ctx.shadowColor  = 'rgba(0,0,0,0.95)';
@@ -859,7 +859,7 @@ kc.registerIndicator({
         roundRect(ctx, panelX, panelY, panelW, panelH, 3);
         ctx.stroke();
 
-        ctx.font      = "8px 'Roboto Mono', 'Consolas', monospace";
+        ctx.font      = "9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = 'left';
 
         ctx.fillStyle = BID_TEXT;
@@ -902,7 +902,7 @@ kc.registerIndicator({
             roundRect(ctx, tipX, tipY, tipW, tipH, 4);
             ctx.stroke();
 
-            ctx.font      = "bold 8px 'Roboto Mono', monospace";
+            ctx.font      = "bold 9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
             ctx.textAlign = 'left';
             ctx.fillStyle = side === 'SELL' ? ASK_TEXT : BID_TEXT;
             ctx.fillText(side + ' WALL', tipX + 5, tipY + 11);
