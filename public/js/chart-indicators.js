@@ -250,12 +250,13 @@
     },
     {
       name: 'WAVE_BOOKMAP',
-      shortName: 'HMAP',
-      description: 'Bản đồ nhiệt độ thanh khoản (Bookmap Style)',
+      shortName: 'HEATMAP',
+      description: 'Bản đồ nhiệt độ thanh khoản',
       category: 'wave_alpha',
-      isStack: true, // Cho phép vẽ đè trực tiếp lên giá (Nến)
-      defaultParams: [5000], // Mặc định chỉ vẽ tường > 5000$
-      paramLabels: ['Lọc Volume tối thiểu (USD)'],
+      isStack: true, 
+      // 3 Thông số mặc định: [Lọc USD (>5000), Độ mờ % (30%), Ngưỡng Đỏ Rực (500000$)]
+      defaultParams: [5000, 30, 500000], 
+      paramLabels: ['Lọc Volume Tối Thiểu (USD)', 'Độ Mờ Nền (%)', 'Ngưỡng Đỏ Rực (USD)'],
       builtIn: false,
     },
     {
@@ -477,72 +478,82 @@
     }
 
     // ── 1. VWAP_BANDS ─────────────────────────────────
-    // Fix: uses utcDayIndex() instead of getUTCDate()
-    // Formula: Volume-Weighted Standard Deviation (TradingView standard)
+    // ── WAVE_BOOKMAP (BẢN ĐỒ NHIỆT THANH KHOẢN V9 - PRO) ──────────
     kc.registerIndicator({
-      name: 'VWAP_BANDS',
-      shortName: 'VWAP',
+      name: 'WAVE_BOOKMAP',
+      shortName: 'HMAP',
       series: 'price',
-      calcParams: [1, 2, 0], // mult1, mult2, anchorMode
-      figures: [
-        { key: 'upper2', title: 'UB2: ', type: 'line' },
-        { key: 'upper1', title: 'UB1: ', type: 'line' },
-        { key: 'vwap',   title: 'VWAP: ', type: 'line' },
-        { key: 'lower1', title: 'LB1: ', type: 'line' },
-        { key: 'lower2', title: 'LB2: ', type: 'line' },
-      ],
-      styles: {
-        lines: [
-          { color: COLOR.gold,  size: 1, style: 'dashed' }, // UB2
-          { color: COLOR.cyan,  size: 1, style: 'solid'  }, // UB1
-          { color: COLOR.white, size: 2, style: 'solid'  }, // VWAP
-          { color: COLOR.cyan,  size: 1, style: 'solid'  }, // LB1
-          { color: COLOR.gold,  size: 1, style: 'dashed' }, // LB2
-        ],
+      // Nhận 3 thông số từ UI người dùng chỉnh
+      calcParams: [5000, 30, 500000], 
+      figures: [],
+      calc: function(dataList, indicator) {
+        return dataList.map(() => ({}));
       },
-      calc: function (dataList, indicator) {
-        const p = indicator.calcParams || [1, 2, 0];
-        const mult1     = p[0] || 1;
-        const mult2     = p[1] || 2;
-        const anchorMode = p[2] || 0;
+      draw: function({ ctx, bounding, xAxis, yAxis, indicator }) {
+        if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
 
-        let cumVol = 0, cumTP_Vol = 0, cumTP2_Vol = 0;
-        let prevSession = -1;
+        // Lấy thông số thời gian thực từ bánh răng Cài đặt của user
+        const minValUSD = indicator.calcParams[0] || 5000; 
+        const opacityPct = indicator.calcParams[1] || 30; // Từ 1 đến 100
+        const maxValUSD = indicator.calcParams[2] || 500000; 
+        
+        const baseAlpha = opacityPct / 100; // Đổi % ra hệ thập phân (vd: 30% -> 0.3)
+        
+        let barSpace = 5;
+        try {
+            if (typeof window.tvChart.getBarSpace === 'function') {
+                let bs = window.tvChart.getBarSpace();
+                barSpace = (typeof bs === 'number') ? bs : (bs?.bar || 5);
+            }
+        } catch(e) {}
 
-        return dataList.map(function (d, i) {
-          const curSession = sessionIndex(d.timestamp, anchorMode);
+        try {
+          ctx.save();
+          // 🚀 BÍ QUYẾT BOOKMAP CHUẨN: destination-over ép toàn bộ hình vẽ chìm xuống MẶT LƯNG của nến
+          ctx.globalCompositeOperation = 'destination-over'; 
 
-          // RESET on new session boundary — correct UTC day comparison
-          if (curSession !== prevSession) {
-            cumVol = 0; cumTP_Vol = 0; cumTP2_Vol = 0;
-            prevSession = curSession;
-          }
+          window.bookmapHistory.forEach(snap => {
+            let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t }, { paneId: 'candle_pane' });
+            if (!basePoint) return;
+            let x = basePoint.x;
 
-          const tp  = (d.high + d.low + d.close) / 3;
-          const vol = d.volume || 0;
+            if (x < -10 || x > bounding.width + 10) return;
 
-          cumVol    += vol;
-          cumTP_Vol += tp * vol;
-          cumTP2_Vol += vol * tp * tp; // for volume-weighted variance
+            const drawList = (map, isAsk) => {
+              map.forEach((vol, priceStr) => {
+                const p = parseFloat(priceStr);
+                const valUSD = p * vol;
+                
+                // Lọc bỏ các lệnh bé hơn mức user quy định
+                if (valUSD < minValUSD) return;
 
-          if (cumVol === 0) return {};
+                let y = yAxis.convertToPixel(p);
+                if (y === null || y === undefined) return;
 
-          const vwap = cumTP_Vol / cumVol;
+                // Tính toán tỷ lệ nóng lạnh dựa trên Ngưỡng Đỏ Rực do user cài
+                const ratio = Math.min(1, valUSD / maxValUSD); 
+                
+                // Trộn độ mờ nền (baseAlpha) với độ rực rỡ của Volume
+                const finalAlpha = Math.min(1, baseAlpha + (ratio * 0.7));
 
-          // Volume-Weighted Variance = Σ(vol*(tp-vwap)²) / Σvol
-          // Equivalent: cumTP2_Vol/cumVol - vwap²  (algebraically identical, numerically stable)
-          const variance = Math.max(0, (cumTP2_Vol / cumVol) - vwap * vwap);
-          const sd       = Math.sqrt(variance);
-
-          return {
-            upper2: vwap + sd * mult2,
-            upper1: vwap + sd * mult1,
-            vwap:   vwap,
-            lower1: vwap - sd * mult1,
-            lower2: vwap - sd * mult2,
-          };
-        });
-      },
+                ctx.fillStyle = isAsk 
+                  ? `rgba(255, 80, 0, ${finalAlpha})`  // Tường Bán (Cam/Đỏ)
+                  : `rgba(0, 255, 150, ${finalAlpha})`; // Tường Mua (Xanh lá)
+                
+                // Vẽ dải pixel rộng ra 1 xíu để kết dính với nhau mượt hơn
+                ctx.fillRect(x - barSpace/2 - 1, y - 2, barSpace + 2, 4);
+              });
+            };
+            
+            drawList(snap.asks, true);
+            drawList(snap.bids, false);
+          });
+        } catch(e) {
+        } finally {
+          ctx.restore();
+        }
+        return false;
+      }
     });
 
     // ── 2. ANCHORED_VWAP ──────────────────────────────
