@@ -565,12 +565,12 @@
       }
     });
 // ── WAVE_COB (CURRENT ORDER BOOK / THÁP DOM) ─────────────────
-// ── WAVE_COB (CURRENT ORDER BOOK / DOM) V4 - COINGLASS STYLE ──
+// ── WAVE_COB (CURRENT ORDER BOOK / DOM) V5 - ANTI-FLICKER PRO ──
 kc.registerIndicator({
   name: 'WAVE_COB',
   shortName: 'COB',
   series: 'price',
-  calcParams: [120, 1000], // [Độ rộng tối đa (px), Lọc USD]
+  calcParams: [120, 1000], 
   figures: [],
   calc: function(dataList) {
     return dataList.map(() => ({}));
@@ -581,13 +581,24 @@ kc.registerIndicator({
     const colWidth = indicator.calcParams[0] || 120; 
     const minVal = indicator.calcParams[1] || 1000;  
     
-    const asks = window.scLocalOrderBook.asks;
-    const bids = window.scLocalOrderBook.bids;
+    // 🚀 BÍ QUYẾT 1: BỘ ĐỆM ĐÓNG BĂNG HÌNH ẢNH (250ms / 4 FPS)
+    // Dữ liệu WebSocket chạy 1000 lần/giây kệ nó, COB chỉ lấy data để vẽ 4 lần/giây cho mắt người đọc được.
+    const now = Date.now();
+    if (!window._waCobState || now - window._waCobState.lastUpdate > 250) {
+        window._waCobState = {
+            asks: new Map(window.scLocalOrderBook.asks),
+            bids: new Map(window.scLocalOrderBook.bids),
+            lastUpdate: now
+        };
+    }
+
+    const asks = window._waCobState.asks;
+    const bids = window._waCobState.bids;
     
-    // 1. Gom nhóm giá (Binning) để chống nhiễu
     const barH = 4; 
     let yMapAsks = new Map();
     let yMapBids = new Map();
+    let currentFrameMax = 0; // Tìm Max Volume để scale
 
     const processMap = (sourceMap, targetMap) => {
         sourceMap.forEach((vol, p) => {
@@ -595,6 +606,7 @@ kc.registerIndicator({
             if (valUSD >= minVal) {
                 let exactY = yAxis.convertToPixel(parseFloat(p));
                 if (exactY >= -20 && exactY <= bounding.height + 20) {
+                    if (valUSD > currentFrameMax) currentFrameMax = valUSD; // Lấy Max
                     let snappedY = Math.floor(exactY / barH) * barH;
                     targetMap.set(snappedY, (targetMap.get(snappedY) || 0) + valUSD);
                 }
@@ -605,20 +617,17 @@ kc.registerIndicator({
     processMap(asks, yMapAsks);
     processMap(bids, yMapBids);
 
-    // 2. STICKY SCALE (Thước đo lỳ lợm chống co giật)
-    let currentFrameMax = 0;
-    yMapAsks.forEach(val => { if (val > currentFrameMax) currentFrameMax = val; });
-    yMapBids.forEach(val => { if (val > currentFrameMax) currentFrameMax = val; });
-
+    // 🚀 BÍ QUYẾT 2: NGÀM KHÓA TỶ LỆ (SCALE RATCHET)
+    // Chống bệnh thụt ra thụt vào khi cá mập hủy lệnh ảo
     if (currentFrameMax === 0) return false;
-
     if (!window._waCobMaxVol) window._waCobMaxVol = currentFrameMax;
     
     if (currentFrameMax > window._waCobMaxVol) {
-        window._waCobMaxVol = currentFrameMax; 
+        window._waCobMaxVol = currentFrameMax; // Có tường to hơn -> Bung rộng ra ngay lập tức
     } else {
-        // Giảm độ bào mòn xuống cực chậm (0.1%) để khung COB gần như đứng im
-        window._waCobMaxVol = window._waCobMaxVol * 0.999 + currentFrameMax * 0.001; 
+        // Tường to nhất bị rút đi -> Giữ nguyên tỷ lệ, chỉ thu nhỏ cực kỳ chậm (0.05% mỗi frame)
+        // Việc này giúp toàn bộ khung COB đứng im phăng phắc!
+        window._waCobMaxVol = window._waCobMaxVol * 0.9995 + currentFrameMax * 0.0005; 
     }
     
     let renderMax = Math.max(window._waCobMaxVol, 10000);
@@ -626,22 +635,21 @@ kc.registerIndicator({
     try {
         ctx.save();
         
-        // XÓA BỎ HOÀN TOÀN KHUNG NỀN ĐEN Ở ĐÂY.
-        // Chỉ giữ lại một đường line kẻ dọc cực kỳ mờ để phân cách với nến
+        // Viền mờ phân cách COB và Chart
         let startX = Math.round(bounding.width - colWidth);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.beginPath(); ctx.moveTo(startX, 0); ctx.lineTo(startX, bounding.height); ctx.stroke();
 
-        // Cấu hình chữ có đổ bóng (Vì bỏ nền đen nên chữ phải có viền đen để không chìm vào nến)
+        // Font chữ sắc nét, có viền đen đổ bóng để nổi bật trên mọi nền nến
         ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 3;
+        ctx.shadowColor = 'rgba(0,0,0,0.9)';
+        ctx.shadowBlur = 2;
         ctx.shadowOffsetX = 1;
         ctx.shadowOffsetY = 1;
 
-        // 3. VẼ ASKS (ĐỎ CAM CHUẨN COINGLASS - Opacity thấp để nhìn xuyên thấu)
+        // VẼ TƯỜNG BÁN (ĐỎ CAM)
         ctx.fillStyle = 'rgba(255, 74, 74, 0.45)';
         ctx.beginPath();
         yMapAsks.forEach((valUSD, y) => {
@@ -650,7 +658,7 @@ kc.registerIndicator({
         });
         ctx.fill();
 
-        // 4. VẼ BIDS (XANH LÁ CHUẨN COINGLASS)
+        // VẼ TƯỜNG MUA (XANH LÁ)
         ctx.fillStyle = 'rgba(38, 166, 154, 0.45)';
         ctx.beginPath();
         yMapBids.forEach((valUSD, y) => {
@@ -659,13 +667,13 @@ kc.registerIndicator({
         });
         ctx.fill();
 
-        // 5. IN CHỮ SỐ LƯỢNG (Với viền bóng dâm nổi bật)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        // IN CHỮ (K, M) CHO CÁC TƯỜNG ĐỦ DÀI
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
         
         const drawText = (map) => {
             map.forEach((valUSD, y) => {
                 let w = Math.round((valUSD / renderMax) * colWidth);
-                if (w > colWidth * 0.35) { // Tường dài hơn 35% mới in chữ
+                if (w > colWidth * 0.35) { 
                     let shortVol = valUSD >= 1000000 ? (valUSD/1000000).toFixed(2) + 'M' : Math.round(valUSD/1000) + 'K';
                     ctx.fillText(shortVol, bounding.width - w - 4, y + barH/2);
                 }
