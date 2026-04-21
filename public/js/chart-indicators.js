@@ -824,11 +824,6 @@ kc.registerIndicator({
             const askY      = Math.round(yAxis.convertToPixel(bestAsk));
             const bidY      = Math.round(yAxis.convertToPixel(bestBid));
 
-            if (Math.abs(bidY - askY) > 1 && !isNaN(askY) && !isNaN(bidY)) {
-              ctx.fillStyle = 'rgba(255, 235, 59, 0.05)';
-              ctx.fillRect(startX, Math.min(askY, bidY), colWidth, Math.abs(bidY - askY));
-            }
-
             if (!isNaN(midY)) {
                 ctx.setLineDash([3, 5]);
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
