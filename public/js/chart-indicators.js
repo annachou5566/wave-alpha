@@ -574,19 +574,19 @@
     });
 
 // ─────────────────────────────────────────────────
-// INDICATOR REGISTRATION OBJECT (Version 6.0.0 Final)
+// INDICATOR: WAVE_COB (Version 6.1.0 - Anti-Lag Patch)
 // ─────────────────────────────────────────────────
 kc.registerIndicator({
   name:        'WAVE_COB',
   shortName:   'COB',
-  description: 'Current Order Book — Real-time DOM liquidity heatmap column overlaid on price chart',
+  description: 'Current Order Book (Tháp thanh khoản DOM chuẩn Pro)',
   category:    'wave_alpha',
   series:      'price',
-  isStack:     true,    // Draw over price chart
+  isStack:     true,    
 
   calcParams:  [120, 1000, 4, 9995, 250],
   paramLabels: [
-    'Độ Rộng COB (px)',
+    'Độ Rộng Cột COB (px)',
     'Lọc Vol Tối Thiểu (USD)',
     'Cao Bar (px)',
     'Scale Decay (x/10000)',
@@ -601,8 +601,6 @@ kc.registerIndicator({
 
   draw: function({ ctx, bounding, yAxis, indicator }) {
     if (!window.scLocalOrderBook)              return false;
-    if (!window.scLocalOrderBook.asks)         return false;
-    if (!window.scLocalOrderBook.bids)         return false;
     if (!bounding || bounding.width < 10)      return false;
 
     const p = indicator.calcParams;
@@ -617,7 +615,6 @@ kc.registerIndicator({
       window._waCob = {
         snapshot: { asks: new Map(), bids: new Map(), ts: 0 },
         scale:    { maxVol: 0, floor: 0 },
-        cache:    { askBars: [], bidBars: [] },
         stats:    { bidTotal: 0, askTotal: 0, ratio: 1 },
         hover:    { y: -1, side: null },
         debug:    false
@@ -635,10 +632,23 @@ kc.registerIndicator({
 
     const cob = window._waCob;
     const now = Date.now();
+    
+    // 🚀 FIX #2: SNAPSHOT CHỈ REPLACE KHI CÓ DATA THẬT
     if (now - cob.snapshot.ts >= refreshMs) {
-      cob.snapshot.asks = new Map(window.scLocalOrderBook.asks);
-      cob.snapshot.bids = new Map(window.scLocalOrderBook.bids);
-      cob.snapshot.ts   = now;
+      const rawAsks = window.scLocalOrderBook.asks;
+      const rawBids = window.scLocalOrderBook.bids;
+      
+      const hasData = (rawAsks && rawAsks.size > 0) || (rawBids && rawBids.size > 0);
+      
+      if (hasData) {
+        cob.snapshot.asks = new Map(rawAsks || []);
+        cob.snapshot.bids = new Map(rawBids || []);
+        cob.snapshot.ts   = now;
+      } 
+      // Reset timer nếu mất kết nối quá lâu (2s) để thử lại
+      else if (now - cob.snapshot.ts > 2000) {
+        cob.snapshot.ts = now; 
+      }
     }
 
     const asks = cob.snapshot.asks;
@@ -653,6 +663,7 @@ kc.registerIndicator({
     const H = bounding.height;
     const OVERFLOW = 20;
 
+    // 🚀 FIX #4: BẢO VỆ CONVERT-TO-PIXEL (NaN/undefined)
     const processBook = (source, target, isAsk) => {
       source.forEach((vol, priceStr) => {
         const price  = parseFloat(priceStr);
@@ -661,38 +672,42 @@ kc.registerIndicator({
         if (valUSD < minVal) return; 
 
         const exactY = yAxis.convertToPixel(price);
+        
+        // Ngăn chặn NaN phá hỏng key của Map và vẽ sai
+        if (exactY == null || isNaN(exactY)) return;
         if (exactY < -OVERFLOW || exactY > H + OVERFLOW) return; 
 
         const snappedY = Math.floor(exactY / barH) * barH;
         const existing = target.get(snappedY) || 0;
-        target.set(snappedY, existing + valUSD);
+        const merged   = existing + valUSD;
+        
+        target.set(snappedY, merged);
 
-        const merged = existing + valUSD;
         if (merged > currentFrameMax) currentFrameMax = merged;
 
-        if (isAsk) {
-          askTotal += valUSD;
-        } else {
-          bidTotal += valUSD;
-        }
+        if (isAsk) askTotal += valUSD; else bidTotal += valUSD;
       });
     };
 
-    processBook(asks, yMapAsks, true);
-    processBook(bids, yMapBids, false);
+    if (asks) processBook(asks, yMapAsks, true);
+    if (bids) processBook(bids, yMapBids, false);
 
-    if (yMapAsks.size === 0 && yMapBids.size === 0) return false;
-
-    if (currentFrameMax === 0) currentFrameMax = cob.scale.floor || 10000;
-
-    if (currentFrameMax > cob.scale.maxVol) {
-      cob.scale.maxVol = currentFrameMax;
-    } else {
-      cob.scale.maxVol = cob.scale.maxVol * decay + currentFrameMax * (1 - decay);
+    // 🚀 FIX #3: KHÔNG RETURN FALSE NẾU CHỈ LÀ TRỐNG TẠM THỜI
+    if (yMapAsks.size === 0 && yMapBids.size === 0) {
+      if (cob.scale.maxVol === 0) return false; // Chưa từng có data -> Xóa frame
     }
 
-    cob.scale.floor = cob.scale.maxVol * 0.10;
-    const renderMax = Math.max(cob.scale.maxVol, cob.scale.floor, 10000);
+    // 🚀 FIX #1: SCALE RATCHET BẢO VỆ CHỐNG COLLAPSE KHI RỖNG DATA
+    if (currentFrameMax > 0) {
+      if (currentFrameMax > cob.scale.maxVol) {
+        cob.scale.maxVol = currentFrameMax; // Bung rộng ngay lập tức
+      } else {
+        cob.scale.maxVol = cob.scale.maxVol * decay + currentFrameMax * (1 - decay); // Tụt từ từ
+      }
+      cob.scale.floor = cob.scale.maxVol * 0.10;
+    }
+    
+    const renderMax = Math.max(cob.scale.maxVol || 10000, cob.scale.floor || 1000, 10000);
 
     cob.stats.bidTotal = bidTotal;
     cob.stats.askTotal = askTotal;
@@ -800,8 +815,8 @@ kc.registerIndicator({
       if (window.tvChart) {
         try {
           let bestAsk = Infinity, bestBid = -Infinity;
-          asks.forEach((_, p) => { const n = parseFloat(p); if (n < bestAsk) bestAsk = n; });
-          bids.forEach((_, p) => { const n = parseFloat(p); if (n > bestBid) bestBid = n; });
+          if(asks) asks.forEach((_, p) => { const n = parseFloat(p); if (n < bestAsk) bestAsk = n; });
+          if(bids) bids.forEach((_, p) => { const n = parseFloat(p); if (n > bestBid) bestBid = n; });
 
           if (bestBid > 0 && bestAsk < Infinity) {
             const midPrice  = (bestAsk + bestBid) / 2;
@@ -809,19 +824,21 @@ kc.registerIndicator({
             const askY      = Math.round(yAxis.convertToPixel(bestAsk));
             const bidY      = Math.round(yAxis.convertToPixel(bestBid));
 
-            if (Math.abs(bidY - askY) > 1) {
+            if (Math.abs(bidY - askY) > 1 && !isNaN(askY) && !isNaN(bidY)) {
               ctx.fillStyle = 'rgba(255, 235, 59, 0.05)';
               ctx.fillRect(startX, Math.min(askY, bidY), colWidth, Math.abs(bidY - askY));
             }
 
-            ctx.setLineDash([3, 5]);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-            ctx.lineWidth   = 1;
-            ctx.beginPath();
-            ctx.moveTo(startX, midY + 0.5);
-            ctx.lineTo(bounding.width, midY + 0.5);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            if (!isNaN(midY)) {
+                ctx.setLineDash([3, 5]);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+                ctx.lineWidth   = 1;
+                ctx.beginPath();
+                ctx.moveTo(startX, midY + 0.5);
+                ctx.lineTo(bounding.width, midY + 0.5);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
           }
         } catch (_) {}
       }
@@ -895,7 +912,7 @@ kc.registerIndicator({
             ctx.fillStyle = side === 'SELL' ? ASK_TEXT : BID_TEXT;
             ctx.fillText(side + ' WALL', tipX + 5, tipY + 11);
 
-            if (price !== null) {
+            if (price !== null && !isNaN(price)) {
               ctx.fillStyle = '#BDBDBD';
               ctx.fillText('@ ' + price.toFixed(2), tipX + 5, tipY + 22);
             }
@@ -914,7 +931,6 @@ kc.registerIndicator({
     return false; 
   },
 
-  // 🚀 ĐÃ THÊM HÀM DESTROY DỌN RÁC (Garbage Collection) CHUẨN XÁC
   destroy: function() {
     if (window._waCob && window._waCob._onMouseMove) {
       window.removeEventListener('mousemove', window._waCob._onMouseMove);
@@ -943,7 +959,7 @@ function roundRect(ctx, x, y, w, h, r) {
   }
 }
 
-
+    
 // ── 1. VWAP_BANDS ─────────────────────────────────
     // Fix: uses utcDayIndex() instead of getUTCDate()
     // Formula: Volume-Weighted Standard Deviation (TradingView standard)
