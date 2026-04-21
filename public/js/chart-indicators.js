@@ -251,18 +251,12 @@
     {
       name: 'WAVE_BOOKMAP',
       shortName: 'HEATMAP',
-      description: 'Bản Đồ Nhiệt Thanh Khoản Lịch Sử',
+      description: 'Bản Đồ Nhiệt Thanh Khoản (Auto AI)',
       category: 'wave_alpha',
       isStack: true, 
-      // 5 Thông số mặc định (Nhập 0 để AI tự động tính toán)
-      defaultParams: [0, 30, 0, 500, 0], 
-      paramLabels: [
-        'Lọc Rác (USD) [0 = Auto AI]', 
-        'Độ Mờ Nền (%)', 
-        'Ngưỡng Đỏ Rực (USD) [0 = Auto AI]',
-        'Giới Hạn Lịch Sử',
-        'Độ Cao 1 Nấc Giá [0 = Auto]'
-      ],
+      // 3 Thông số mặc định (Nhập 0 để AI tự động tính)
+      defaultParams: [0, 30, 0], 
+      paramLabels: ['Lọc Volume Tối Thiểu (0=Auto)', 'Độ Mờ Nền (%)', 'Ngưỡng Đỏ Rực (0=Auto)'],
       builtIn: false,
     },
     {
@@ -501,678 +495,132 @@
       return;
     }
 
-    /**
- * ╔══════════════════════════════════════════════════════════════════════════════╗
- * ║  WAVE_BOOKMAP — Bản Đồ Nhiệt Lịch Sử Tiêu Chuẩn Pro (V8.5.0)                 ║
- * ║  Tích hợp: Viewport Culling, Offscreen Cache, LUT Colors, Auto-AI Scale      ║
- * ╚══════════════════════════════════════════════════════════════════════════════╝
- */
-
-(function initWaveBookmapNamespace() {
-  if (window._waHmap) return;
-
-  var H = window._waHmap = {
-    cache: {
-      key: '',
-      offscreen: null,
-      valid: false,
-      lastRender: 0,
-      meta: { columns: [], truncatedTotal: 0, showingCount: 0, warnings: [] }
-    },
-    lut: {
-      initialized: false, opacityKey: -1,
-      asks256: [], bids256: [], askGlow256: [], bidGlow256: [],
-      askBuckets16: [], bidBuckets16: [], askGlowBuckets16: [], bidGlowBuckets16: []
-    },
-    mouse: { x: -1, y: -1, lastUpdate: 0 },
-    debug: false,
-    stats: { lastFrameRects: 0, lastFrameMs: 0, cacheHits: 0 },
-    pools: {
-      askBuckets: new Array(16), bidBuckets: new Array(16),
-      askGlowBuckets: new Array(16), bidGlowBuckets: new Array(16)
-    },
-    interaction: { mouseBound: false, onMouseMove: null, onMouseOut: null },
-    helpers: {}
-  };
-
-  var hp = H.helpers;
-
-  hp.clamp = function(v, min, max) { return Math.max(min, Math.min(max, v)); };
-  hp.now = function() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); };
-  hp.safeWarn = function(err) { if (window._waHmap && window._waHmap.debug && typeof console !== 'undefined' && console.warn) console.warn('[WAVE_BOOKMAP]', err); };
-
-  hp.ensureMouseListener = function() {
-    var state = window._waHmap;
-    if (state.interaction.mouseBound) return;
-    state.interaction.mouseBound = true;
-
-    state.interaction.onMouseMove = function(ev) {
-      var now = Date.now();
-      if (now - state.mouse.lastUpdate < 50) return; 
-      state.mouse.x = ev.clientX;
-      state.mouse.y = ev.clientY;
-      state.mouse.lastUpdate = now;
-    };
-
-    state.interaction.onMouseOut = function(ev) {
-      if (!ev.relatedTarget) { state.mouse.x = -1; state.mouse.y = -1; }
-    };
-
-    window.addEventListener('mousemove', state.interaction.onMouseMove, { passive: true });
-    window.addEventListener('mouseout', state.interaction.onMouseOut, { passive: true });
-  };
-
-  hp.removeMouseListener = function() {
-    var state = window._waHmap;
-    if (!state || !state.interaction.mouseBound) return;
-    window.removeEventListener('mousemove', state.interaction.onMouseMove);
-    window.removeEventListener('mouseout', state.interaction.onMouseOut);
-    state.interaction.mouseBound = false;
-  };
-
-  hp.createCanvas = function(width, height) {
-    var c;
-    if (typeof OffscreenCanvas !== 'undefined') { c = new OffscreenCanvas(width, height); } 
-    else { c = document.createElement('canvas'); c.width = width; c.height = height; c.style.display = 'none'; }
-    return c;
-  };
-
-  hp.ensureOffscreen = function(width, height) {
-    var cache = window._waHmap.cache;
-    var c = cache.offscreen;
-    if (!c || c.width !== width || c.height !== height) {
-      c = hp.createCanvas(width, height);
-      cache.offscreen = c;
-      cache.valid = false;
-    }
-    return c;
-  };
-
-  hp.resetBuckets = function() {
-    var pools = window._waHmap.pools;
-    for (var i = 0; i < 16; i++) {
-      pools.askBuckets[i] = new Path2D(); pools.bidBuckets[i] = new Path2D();
-      pools.askGlowBuckets[i] = new Path2D(); pools.bidGlowBuckets[i] = new Path2D();
-    }
-  };
-
-  hp.lerp = function(a, b, t) { return a + (b - a) * t; };
-
-  hp.mixRgba = function(c1, c2, t, opacityMul) {
-    var r = Math.round(hp.lerp(c1[0], c2[0], t));
-    var g = Math.round(hp.lerp(c1[1], c2[1], t));
-    var b = Math.round(hp.lerp(c1[2], c2[2], t));
-    var a = hp.lerp(c1[3], c2[3], t) * opacityMul;
-    return 'rgba(' + r + ',' + g + ',' + b + ',' + a.toFixed(3) + ')';
-  };
-
-  hp.buildGradientLut = function(stops, opacityMul) {
-    var arr256 = new Array(256);
-    for (var i = 0; i < 256; i++) {
-      var t = i / 255, color;
-      if (t <= 0.35) color = hp.mixRgba(stops[0], stops[1], t / 0.35, opacityMul);
-      else if (t <= 0.75) color = hp.mixRgba(stops[1], stops[2], (t - 0.35) / 0.40, opacityMul);
-      else color = hp.mixRgba(stops[2], stops[3], (t - 0.75) / 0.25, opacityMul);
-      arr256[i] = color;
-    }
-    var arr16 = new Array(16);
-    for (var b = 0; b < 16; b++) arr16[b] = arr256[Math.min(255, b * 16 + 8)];
-    return { arr256: arr256, arr16: arr16 };
-  };
-
-  hp.rebuildLut = function(opacityMul) {
-    var lut = window._waHmap.lut;
-    if (lut.initialized && lut.opacityKey === opacityMul) return;
-
-    var askStops = [[180, 60, 0, 0.12], [220, 80, 0, 0.35], [255, 100, 0, 0.60], [255, 50, 50, 0.85]];
-    var bidStops = [[0, 120, 80, 0.12], [0, 180, 100, 0.35], [0, 220, 140, 0.60], [50, 255, 160, 0.85]];
-    var askGlowStops = [[180, 60, 0, 0.06], [220, 80, 0, 0.18], [255, 100, 0, 0.30], [255, 70, 70, 0.42]];
-    var bidGlowStops = [[0, 120, 80, 0.06], [0, 180, 100, 0.18], [0, 220, 140, 0.30], [80, 255, 180, 0.42]];
-
-    var ask = hp.buildGradientLut(askStops, opacityMul);
-    var bid = hp.buildGradientLut(bidStops, opacityMul);
-    var askGlow = hp.buildGradientLut(askGlowStops, opacityMul);
-    var bidGlow = hp.buildGradientLut(bidGlowStops, opacityMul);
-
-    lut.asks256 = ask.arr256; lut.bids256 = bid.arr256;
-    lut.askGlow256 = askGlow.arr256; lut.bidGlow256 = bidGlow.arr256;
-    lut.askBuckets16 = ask.arr16; lut.bidBuckets16 = bid.arr16;
-    lut.askGlowBuckets16 = askGlow.arr16; lut.bidGlowBuckets16 = bidGlow.arr16;
-    lut.opacityKey = opacityMul; lut.initialized = true;
-  };
-
-  hp.getBucketIndex = function(valUSD, redThreshold) {
-    if (valUSD <= 0 || redThreshold <= 0) return 0;
-    if (valUSD >= redThreshold) {
-      var extra = Math.min(1, (valUSD - redThreshold) / Math.max(redThreshold, 1));
-      return Math.min(255, 224 + Math.floor(extra * 31));
-    }
-    return Math.min(223, Math.floor((valUSD / redThreshold) * 223));
-  };
-
-  hp.getBarSpace = function() {
-    var barSpace = 6;
-    try {
-      var bsValue = window.tvChart && typeof window.tvChart.getBarSpace === 'function' ? window.tvChart.getBarSpace() : null;
-      if (typeof bsValue === 'number' && bsValue > 0) barSpace = bsValue;
-      else if (bsValue && typeof bsValue.bar === 'number' && bsValue.bar > 0) barSpace = bsValue.bar;
-      else if (bsValue && typeof bsValue.gapBar === 'number' && bsValue.gapBar > 0) barSpace = bsValue.gapBar;
-    } catch (e) {}
-    return hp.clamp(barSpace, 1, 50);
-  };
-
-  hp.getXForTimestamp = function(ts, xAxis) {
-    var x = null;
-    try {
-      if (xAxis && typeof xAxis.convertToPixel === 'function') {
-        var r1 = xAxis.convertToPixel({ timestamp: ts });
-        if (typeof r1 === 'number') x = r1;
-        else if (r1 && typeof r1.x === 'number') x = r1.x;
-        else { var r2 = xAxis.convertToPixel(ts); if (typeof r2 === 'number') x = r2; else if (r2 && typeof r2.x === 'number') x = r2.x; }
-      }
-    } catch (e) {}
-
-    if (x == null) {
-      try {
-        var pt = window.tvChart && typeof window.tvChart.convertToPixel === 'function' ? window.tvChart.convertToPixel({ timestamp: ts }, { paneId: 'candle_pane' }) : null;
-        if (typeof pt === 'number') x = pt; else if (pt && typeof pt.x === 'number') x = pt.x;
-      } catch (e2) {}
-    }
-    return (typeof x === 'number' && isFinite(x)) ? x : null;
-  };
-
-  hp.getYForPrice = function(price, yAxis) {
-    var y = null;
-    try { if (yAxis && typeof yAxis.convertToPixel === 'function') y = yAxis.convertToPixel(price); } catch (e) {}
-    return (typeof y === 'number' && isFinite(y)) ? y : null;
-  };
-
-  hp.getVisibleTimeRange = function(bounding, xAxis) {
-    var out = { from: null, to: null, key: 'na_na' };
-    try {
-      if (window.tvChart && typeof window.tvChart.convertFromPixel === 'function') {
-        var left = window.tvChart.convertFromPixel({ x: 0 }, { paneId: 'candle_pane' });
-        var right = window.tvChart.convertFromPixel({ x: bounding.width }, { paneId: 'candle_pane' });
-        var lf = left && (left.timestamp != null ? left.timestamp : left.x);
-        var rt = right && (right.timestamp != null ? right.timestamp : right.x);
-        if (typeof lf === 'number' && typeof rt === 'number' && isFinite(lf) && isFinite(rt)) {
-          out.from = Math.min(lf, rt); out.to = Math.max(lf, rt); out.key = String(out.from) + '_' + String(out.to);
-          return out;
-        }
-      }
-    } catch (e) {}
-
-    try {
-      var r = null;
-      if (xAxis && typeof xAxis.getVisibleRange === 'function') r = xAxis.getVisibleRange();
-      else if (xAxis && typeof xAxis.getRange === 'function') r = xAxis.getRange();
-      else if (xAxis && xAxis.visibleRange) r = xAxis.visibleRange;
-      if (r) {
-        var from = r.from != null ? r.from : r.left; var to = r.to != null ? r.to : r.right;
-        if (typeof from === 'number' && typeof to === 'number') {
-          out.from = Math.min(from, to); out.to = Math.max(from, to); out.key = String(out.from) + '_' + String(out.to);
-        }
-      }
-    } catch (e2) {}
-    return out;
-  };
-
-  hp.lowerBound = function(arr, target) {
-    var lo = 0, hi = arr.length;
-    while (lo < hi) { var mid = (lo + hi) >> 1; if (arr[mid].t < target) lo = mid + 1; else hi = mid; }
-    return lo;
-  };
-
-  hp.upperBound = function(arr, target) {
-    var lo = 0, hi = arr.length;
-    while (lo < hi) { var mid = (lo + hi) >> 1; if (arr[mid].t <= target) lo = mid + 1; else hi = mid; }
-    return lo;
-  };
-
-  hp.isSortedByTime = function(arr) {
-    for (var i = 1; i < arr.length; i++) if ((arr[i - 1].t || 0) > (arr[i].t || 0)) return false;
-    return true;
-  };
-
-  hp.sliceVisibleHistory = function(history, visibleRange) {
-    if (!history.length || visibleRange.from == null || visibleRange.to == null || !hp.isSortedByTime(history)) return history;
-    var start = Math.max(0, hp.lowerBound(history, visibleRange.from) - 2);
-    var end = Math.min(history.length, hp.upperBound(history, visibleRange.to) + 2);
-    return history.slice(start, end);
-  };
-
-  hp.iterateBookSide = function(side, fn) {
-    if (!side) return;
-    if (typeof side.forEach === 'function') { side.forEach(function(vol, priceStr) { fn(priceStr, vol); }); return; }
-    if (typeof side[Symbol.iterator] === 'function') { for (var entry of side) fn(entry[0], entry[1]); return; }
-    for (var k in side) if (Object.prototype.hasOwnProperty.call(side, k)) fn(k, side[k]);
-  };
-
-  hp.buildRenderGroups = function(snaps, mergeCount) {
-    if (mergeCount <= 1) return snaps;
-    var out = [];
-    for (var i = 0; i < snaps.length; i += mergeCount) {
-      var end = Math.min(snaps.length, i + mergeCount);
-      var askAgg = new Map(), bidAgg = new Map(), tsSum = 0, count = 0;
-      for (var j = i; j < end; j++) {
-        var s = snaps[j]; if (!s) continue; count++; tsSum += Number(s.t || 0);
-        hp.iterateBookSide(s.asks, function(pStr, vol) { askAgg.set(pStr, (askAgg.get(pStr) || 0) + Number(vol || 0)); });
-        hp.iterateBookSide(s.bids, function(pStr, vol) { bidAgg.set(pStr, (bidAgg.get(pStr) || 0) + Number(vol || 0)); });
-      }
-      if (!count) continue;
-      askAgg.forEach(function(v, k) { askAgg.set(k, v / count); });
-      bidAgg.forEach(function(v, k) { bidAgg.set(k, v / count); });
-      out.push({ t: Math.round(tsSum / count), asks: askAgg, bids: bidAgg, _merged: true, _count: count });
-    }
-    return out;
-  };
-
-  hp.formatUsd = function(v) {
-    var n = Number(v || 0), abs = Math.abs(n);
-    if (abs >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
-    if (abs >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
-    if (abs >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
-    return '$' + n.toFixed(0);
-  };
-
-  hp.formatPrice = function(v) { return Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-  hp.formatTime = function(ts) {
-    var d = new Date(Number(ts || 0));
-    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
-  };
-
-  hp.drawCenteredText = function(ctx, bounding, text, color, font) {
-    ctx.save(); ctx.fillStyle = color; ctx.font = font || '11px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, bounding.width / 2, bounding.height / 2); ctx.restore();
-  };
-
-  hp.roundRect = function(ctx, x, y, w, h, r) {
-    var rr = Math.min(r, w * 0.5, h * 0.5); ctx.beginPath(); ctx.moveTo(x + rr, y); ctx.lineTo(x + w - rr, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + rr); ctx.lineTo(x + w, y + h - rr); ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-    ctx.lineTo(x + rr, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - rr); ctx.lineTo(x, y + rr); ctx.quadraticCurveTo(x, y, x + rr, y); ctx.closePath();
-  };
-
-  hp.getMouseLocal = function(canvas) {
-    var state = window._waHmap;
-    if (!canvas || state.mouse.x < 0 || state.mouse.y < 0) return null;
-    var rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
-    if (!rect) return null; return { x: state.mouse.x - rect.left, y: state.mouse.y - rect.top };
-  };
-
-  hp.findNearestColumn = function(columns, mouseX) {
-    if (!columns || !columns.length) return null;
-    var lo = 0, hi = columns.length - 1;
-    while (lo < hi) { var mid = (lo + hi) >> 1; if (columns[mid].x < mouseX) lo = mid + 1; else hi = mid; }
-    var a = columns[lo], b = columns[Math.max(0, lo - 1)];
-    if (!b) return a; return Math.abs(a.x - mouseX) < Math.abs(b.x - mouseX) ? a : b;
-  };
-
-  hp.getNearestLevelInfo = function(snap, mouseY, yAxis) {
-    if (!snap) return null;
-    var nearest = null, nearestDy = Infinity;
-    function scan(sideName, side) {
-      hp.iterateBookSide(side, function(priceStr, vol) {
-        var price = parseFloat(priceStr); if (!isFinite(price)) return;
-        var y = hp.getYForPrice(price, yAxis); if (y == null) return;
-        var dy = Math.abs(y - mouseY);
-        if (dy < nearestDy) { nearestDy = dy; nearest = { side: sideName, price: price, y: y, vol: Number(vol || 0) }; }
-      });
-    }
-    scan('ask', snap.asks); scan('bid', snap.bids);
-    if (!nearest) return null;
-
-    function nearestValueUsd(side, targetPrice) {
-      var best = { usd: 0, diff: Infinity };
-      hp.iterateBookSide(side, function(priceStr, vol) {
-        var price = parseFloat(priceStr); if (!isFinite(price)) return;
-        var d = Math.abs(price - targetPrice);
-        if (d < best.diff) { best.diff = d; best.usd = price * Number(vol || 0); }
-      });
-      return best.usd;
-    }
-    var askUSD = nearestValueUsd(snap.asks, nearest.price);
-    var bidUSD = nearestValueUsd(snap.bids, nearest.price);
-    var ratio = askUSD > 0 ? (bidUSD / askUSD) : (bidUSD > 0 ? 9.99 : 1);
-    var dominance = ratio < 0.85 ? 'Áp đảo Bán' : (ratio > 1.15 ? 'Áp đảo Mua' : 'Cân bằng');
-    return { t: snap.t, price: nearest.price, askUSD: askUSD, bidUSD: bidUSD, ratio: ratio, dominance: dominance, topWall: Math.max(askUSD, bidUSD) };
-  };
-
-  hp.drawTooltip = function(ctx, bounding, mouse, info, redThreshold) {
-    if (!info) return;
-    var lines = [
-      '⏱ ' + hp.formatTime(info.t) + '  |  $' + hp.formatPrice(info.price),
-      '🔴 LỰC BÁN: ' + hp.formatUsd(info.askUSD) + (info.askUSD >= redThreshold ? ' (TOP WALL)' : ''),
-      '🟢 LỰC MUA: ' + hp.formatUsd(info.bidUSD),
-      '📊 Tỷ lệ: ' + info.ratio.toFixed(2) + ' (' + info.dominance + ')'
-    ];
-    var width = 208, height = 62;
-    var x = hp.clamp(mouse.x + 12, 6, Math.max(6, bounding.width - width - 6));
-    var y = hp.clamp(mouse.y - height - 8, 6, Math.max(6, bounding.height - height - 6));
-
-    ctx.save();
-    hp.roundRect(ctx, x, y, width, height, 4); ctx.fillStyle = 'rgba(15,15,15,0.92)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.font = "9px system-ui, -apple-system, sans-serif"; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    for (var i = 0; i < lines.length; i++) {
-      ctx.fillStyle = i === 1 ? 'rgba(255,110,90,0.95)' : (i === 2 ? 'rgba(100,255,180,0.95)' : 'rgba(245,245,245,0.95)');
-      ctx.fillText(lines[i], x + 8, y + 7 + i * 13);
-    }
-    ctx.restore();
-  };
-
-  hp.drawTopLeftNote = function(ctx, text, y, color) {
-    ctx.save(); ctx.font = "10px system-ui, -apple-system, sans-serif"; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillStyle = color || 'rgba(255,255,255,0.45)'; ctx.fillText(text, 8, y); ctx.restore();
-  };
-
-  hp.sortByY = function(a, b) { return a.y - b.y; };
-
-  hp.mergeLevelsIntoClusters = function(items, gapPx) {
-    if (!items || !items.length) return [];
-    items.sort(hp.sortByY);
-    var out = [], cur = null;
-    for (var i = 0; i < items.length; i++) {
-      var it = items[i];
-      if (!cur) { cur = { x: it.x, w: it.w, y1: it.y - it.h * 0.5, y2: it.y + it.h * 0.5, side: it.side, totalUsd: it.valUSD, levels: 1 }; continue; }
-      var sameColumn = Math.abs(cur.x - it.x) <= 0.5 && cur.side === it.side;
-      var nextY1 = it.y - it.h * 0.5, nextY2 = it.y + it.h * 0.5;
-      if (sameColumn && nextY1 - cur.y2 <= gapPx) { cur.y2 = Math.max(cur.y2, nextY2); cur.totalUsd += it.valUSD; cur.levels += 1; } 
-      else { out.push(cur); cur = { x: it.x, w: it.w, y1: nextY1, y2: nextY2, side: it.side, totalUsd: it.valUSD, levels: 1 }; }
-    }
-    if (cur) out.push(cur); return out;
-  };
-
-  hp.drawMergedClusters = function(ctx, clusters, barSpace) {
-    if (!clusters || !clusters.length) return;
-    ctx.save(); ctx.font = "9px system-ui, -apple-system, sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    for (var i = 0; i < clusters.length; i++) {
-      var c = clusters[i], grad = ctx.createLinearGradient(0, c.y1, 0, c.y2);
-      if (c.side === 'ask') { grad.addColorStop(0, 'rgba(255,120,80,0.12)'); grad.addColorStop(1, 'rgba(255,70,50,0.32)'); } 
-      else { grad.addColorStop(0, 'rgba(80,255,180,0.12)'); grad.addColorStop(1, 'rgba(40,220,140,0.32)'); }
-      ctx.fillStyle = grad; ctx.fillRect(c.x - c.w / 2, c.y1, c.w, Math.max(1, c.y2 - c.y1));
-      ctx.strokeStyle = c.side === 'ask' ? 'rgba(255,120,80,0.42)' : 'rgba(80,255,180,0.42)';
-      ctx.lineWidth = 1; ctx.strokeRect(c.x - c.w / 2, c.y1, c.w, Math.max(1, c.y2 - c.y1));
-      if (barSpace > 10 && c.levels >= 2 && (c.y2 - c.y1) >= 12) {
-        ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.fillText('CỤM ' + hp.formatUsd(c.totalUsd), c.x, (c.y1 + c.y2) * 0.5);
-      }
-    }
-    ctx.restore();
-  };
-
-  hp.drawMajorWallClusters = function(ctx, majorWalls) {
-    if (!majorWalls || !majorWalls.length) return;
-    majorWalls.sort(function(a, b) { if (Math.abs(a.x - b.x) > 0.5) return a.x - b.x; if (a.side !== b.side) return a.side === 'ask' ? -1 : 1; return a.y - b.y; });
-    var clusters = [], cur = null;
-    for (var i = 0; i < majorWalls.length; i++) {
-      var w = majorWalls[i], top = w.y - w.h * 0.5, bottom = w.y + w.h * 0.5;
-      if (!cur) { cur = { side: w.side, x: w.x, w: w.w, y1: top, y2: bottom, val: w.valUSD }; continue; }
-      var sameCol = Math.abs(cur.x - w.x) <= 0.5 && cur.side === w.side;
-      if (sameCol && top - cur.y2 < 5) { cur.y2 = Math.max(cur.y2, bottom); cur.val += w.valUSD; } 
-      else { clusters.push(cur); cur = { side: w.side, x: w.x, w: w.w, y1: top, y2: bottom, val: w.valUSD }; }
-    }
-    if (cur) clusters.push(cur);
-    ctx.save(); ctx.lineWidth = 1;
-    for (var j = 0; j < clusters.length; j++) {
-      var c = clusters[j]; ctx.strokeStyle = c.side === 'ask' ? 'rgba(255,180,160,0.68)' : 'rgba(180,255,220,0.68)';
-      ctx.strokeRect(c.x - c.w / 2, c.y1, c.w, Math.max(1, c.y2 - c.y1));
-    }
-    ctx.restore();
-  };
-})();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ĐĂNG KÝ CHỈ BÁO WAVE_BOOKMAP (V8.5.0)
-// ─────────────────────────────────────────────────────────────────────────────
-kc.registerIndicator({
-  name: 'WAVE_BOOKMAP',
-  shortName: 'HEATMAP',
-  description: 'Bản đồ nhiệt lịch sử thanh khoản (Production Grade)',
-  category: 'wave_alpha',
-  series: 'price',
-  isStack: true,
-  builtIn: false,
-
-  calcParams: [0, 30, 0, 500, 0],
-  paramLabels: [
-    'Lọc Rác (USD) [0 = Auto AI]',
-    'Độ Mờ Nền (%)',
-    'Ngưỡng Đỏ Rực (USD) [0 = Auto AI]',
-    'Giới Hạn Lịch Sử',
-    'Độ Cao 1 Nấc Giá [0 = Auto]'
-  ],
-  figures: [],
-
-  calc: function(dataList) { return dataList.map(function() { return {}; }); },
-
-  draw: function(args) {
-    var ctx = args.ctx; var bounding = args.bounding; var xAxis = args.xAxis; var yAxis = args.yAxis; var indicator = args.indicator;
-    var H = window._waHmap; var hp = H.helpers; var t0 = hp.now();
-
-    if (!ctx || !bounding || !indicator) return false;
-    hp.ensureMouseListener();
-    ctx.save();
-
-    try {
-      var history = Array.isArray(window.bookmapHistory) ? window.bookmapHistory : [];
-      var params = Array.isArray(indicator.calcParams) ? indicator.calcParams : [];
-
-      var rawMinVolUSD = Number(params[0] || 0);
-      var opacityPct = hp.clamp(Number(params[1] || 30), 5, 100);
-      var opacityMul = opacityPct / 100;
-      var rawRedThresh = Number(params[2] || 0);
-      var maxSnaps = hp.clamp(Number(params[3] || 500), 50, 2000);
-      var barMode = [0, 1, 2].indexOf(Number(params[4])) >= 0 ? Number(params[4]) : 0;
-
-      var width = Math.max(1, Math.floor(bounding.width || 0));
-      var height = Math.max(1, Math.floor(bounding.height || 0));
-      var barSpace = hp.getBarSpace();
-
-      ctx.globalCompositeOperation = 'source-over'; 
-      ctx.filter = 'none'; ctx.shadowBlur = 0;
-
-      if (!history.length) {
-        hp.drawCenteredText(ctx, bounding, '📊 Đang thu thập dữ liệu heatmap...', 'rgba(255,255,255,0.30)');
-        H.stats.lastFrameMs = hp.now() - t0; return false;
-      }
-
-      var truncatedTotal = history.length;
-      var limitedHistory = history.length > maxSnaps ? history.slice(history.length - maxSnaps) : history;
-      var visibleRange = hp.getVisibleTimeRange(bounding, xAxis);
-      var visibleHistory = hp.sliceVisibleHistory(limitedHistory, visibleRange);
-
-      // 🚀 AUTO-AI THRESHOLDS
-      var currentScreenMax = 0;
-      if (rawMinVolUSD === 0 || rawRedThresh === 0) {
-        for (var idx = 0; idx < visibleHistory.length; idx++) {
-          var s = visibleHistory[idx];
-          hp.iterateBookSide(s.asks, function(pStr, v) { var usd = parseFloat(pStr) * v; if (usd > currentScreenMax) currentScreenMax = usd; });
-          hp.iterateBookSide(s.bids, function(pStr, v) { var usd = parseFloat(pStr) * v; if (usd > currentScreenMax) currentScreenMax = usd; });
-        }
-      }
-
-      var minVolUSD = rawMinVolUSD > 0 ? rawMinVolUSD : Math.max(500, currentScreenMax * 0.015);
-      var redThreshold = rawRedThresh > 0 ? rawRedThresh : Math.max(10000, currentScreenMax * 0.8);
-
-      hp.rebuildLut(opacityMul);
-
-      var cacheKey = [
-        limitedHistory.length,
-        limitedHistory.length ? limitedHistory[0].t : 0,
-        limitedHistory.length ? limitedHistory[limitedHistory.length - 1].t : 0,
-        minVolUSD.toFixed(0), opacityPct, redThreshold.toFixed(0), maxSnaps, barMode,
-        width + 'x' + height, visibleRange.key, barSpace.toFixed(2)
-      ].join('_');
-
-      var offscreen = hp.ensureOffscreen(width, height);
-      var offctx = offscreen.getContext('2d');
-
-      if (H.cache.valid && H.cache.key === cacheKey && H.cache.offscreen) {
-        ctx.drawImage(H.cache.offscreen, 0, 0);
-        H.stats.cacheHits += 1;
-      } else {
-        H.cache.key = cacheKey; H.cache.valid = true; H.cache.lastRender = Date.now();
-        H.cache.meta.columns = []; H.cache.meta.truncatedTotal = truncatedTotal; H.cache.meta.showingCount = limitedHistory.length; H.cache.meta.warnings = [];
-
-        offctx.save(); offctx.clearRect(0, 0, width, height);
-        offctx.globalCompositeOperation = opacityPct > 50 ? 'screen' : 'source-over';
-        offctx.filter = 'none'; offctx.shadowBlur = 0; offctx.imageSmoothingEnabled = false;
-
-        if (barSpace < 2) {
-          hp.drawCenteredText(offctx, bounding, 'Phóng to (Zoom In) để xem chi tiết Heatmap', 'rgba(255,255,255,0.42)');
-          offctx.restore(); ctx.drawImage(H.cache.offscreen, 0, 0); return false;
-        }
-
-        var mergeCount = 1, barHeight = 4;
-        if (barMode === 1) barHeight = 3; else if (barMode === 2) barHeight = 5;
-        else {
-          if (barSpace >= 2 && barSpace <= 5) { mergeCount = 3; barHeight = 3; } 
-          else if (barSpace > 5 && barSpace <= 15) barHeight = 4; else if (barSpace > 15) barHeight = 6;
-        }
-
-        var renderGroups = hp.buildRenderGroups(visibleHistory, mergeCount);
-        var rectCount = 0, majorWalls = [], clusterSeedLevels = [], verticalLines = [];
-
-        hp.resetBuckets();
-
-        for (var i = 0; i < renderGroups.length; i++) {
-          var snap = renderGroups[i];
-          var x = hp.getXForTimestamp(snap.t, xAxis);
-          if (x == null || isNaN(x)) continue;
-
-          var drawWidth = hp.clamp(barSpace * mergeCount - 1, 1, 40);
-          if (x < -drawWidth || x > width + drawWidth) continue;
-          if (barSpace > 8) verticalLines.push(x);
-
-          H.cache.meta.columns.push({ x: x, w: drawWidth, snap: snap });
-
-          function processSide(side, isAsk) {
-            hp.iterateBookSide(side, function(priceStr, vol) {
-              var price = parseFloat(priceStr), volume = Number(vol || 0);
-              if (!isFinite(price) || !isFinite(volume) || volume <= 0) return;
-              var valUSD = price * volume;
-              if (valUSD < minVolUSD) return;
-              var y = hp.getYForPrice(price, yAxis);
-              if (y == null || y < -10 || y > height + 10) return;
-
-              var idx = hp.getBucketIndex(valUSD, redThreshold);
-              var bucket = idx >> 4;
-              var x0 = x - drawWidth * 0.5, y0 = y - barHeight * 0.5;
-
-              if (isAsk) H.pools.askBuckets[bucket].rect(x0, y0, drawWidth, barHeight);
-              else H.pools.bidBuckets[bucket].rect(x0, y0, drawWidth, barHeight);
-
-              rectCount++;
-              if (valUSD > redThreshold) {
-                clusterSeedLevels.push({ side: isAsk ? 'ask' : 'bid', x: x, w: drawWidth, y: y, h: barHeight, valUSD: valUSD });
-                if (isAsk) H.pools.askGlowBuckets[bucket].rect(x0, y0, drawWidth, barHeight);
-                else H.pools.bidGlowBuckets[bucket].rect(x0, y0, drawWidth, barHeight);
-              }
-              if (valUSD > redThreshold * 2) {
-                majorWalls.push({ side: isAsk ? 'ask' : 'bid', x: x, y: y, w: drawWidth, h: barHeight, valUSD: valUSD });
-              }
+    // ── WAVE_BOOKMAP (BẢN ĐỒ NHIỆT THANH KHOẢN - HYBRID V9) ────────
+    kc.registerIndicator({
+      name: 'WAVE_BOOKMAP',
+      shortName: 'HMAP',
+      series: 'price',
+      calcParams: [0, 30, 0], // Khớp đúng 3 thông số với Menu
+      figures: [],
+      calc: function(dataList, indicator) {
+        return dataList.map(() => ({}));
+      },
+      draw: function({ ctx, bounding, xAxis, yAxis, indicator }) {
+        if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
+
+        const p = indicator.calcParams;
+        let minValUSD  = +(p[0] || 0);
+        let opacityPct = +(p[1] || 30);
+        let maxValUSD  = +(p[2] || 0);
+
+        const baseAlpha = opacityPct / 100;
+
+        let barSpace = 5;
+        try {
+            if (typeof window.tvChart.getBarSpace === 'function') {
+                let bs = window.tvChart.getBarSpace();
+                barSpace = (typeof bs === 'number') ? bs : (bs?.bar || 5);
+            }
+        } catch(e) {}
+
+        // 1. CHỈ LẤY CÁC CỘT TRONG MÀN HÌNH (Chống lag)
+        let visibleSnaps = [];
+        let currentScreenMax = 0;
+
+        window.bookmapHistory.forEach(snap => {
+            // Giữ đúng đoạn code tọa độ X đã hoạt động tốt của bạn
+            let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t }, { paneId: 'candle_pane' });
+            if (!basePoint) return;
+            let x = basePoint.x;
+
+            if (x >= -20 && x <= bounding.width + 20) {
+                visibleSnaps.push({ snap, x });
+            }
+        });
+
+        if (visibleSnaps.length === 0) return false;
+
+        // 2. AUTO-AI (Nếu user nhập 0 -> Tự dò tường to nhất)
+        if (minValUSD === 0 || maxValUSD === 0) {
+            visibleSnaps.forEach(item => {
+                const findMax = (map) => {
+                    map.forEach((vol, priceStr) => {
+                        let vUSD = parseFloat(priceStr) * vol;
+                        if (vUSD > currentScreenMax) currentScreenMax = vUSD;
+                    });
+                };
+                if(item.snap.asks) findMax(item.snap.asks);
+                if(item.snap.bids) findMax(item.snap.bids);
             });
-          }
-          processSide(snap.asks, true); processSide(snap.bids, false);
         }
 
-        // BATCH DRAWING: Glow Layer First
-        offctx.save(); offctx.filter = 'blur(2px)';
-        for (var g1 = 0; g1 < 16; g1++) {
-          offctx.fillStyle = H.lut.askGlowBuckets16[g1]; offctx.fill(H.pools.askGlowBuckets[g1]);
-          offctx.fillStyle = H.lut.bidGlowBuckets16[g1]; offctx.fill(H.pools.bidGlowBuckets[g1]);
-        }
-        offctx.restore();
+        let renderMax = maxValUSD > 0 ? maxValUSD : (currentScreenMax > 0 ? currentScreenMax * 0.8 : 500000);
+        let renderMin = minValUSD > 0 ? minValUSD : (currentScreenMax > 0 ? currentScreenMax * 0.015 : 500);
 
-        // BATCH DRAWING: Main Heatmap Layer
-        for (var g2 = 0; g2 < 16; g2++) {
-          offctx.fillStyle = H.lut.askBuckets16[g2]; offctx.fill(H.pools.askBuckets[g2]);
-          offctx.fillStyle = H.lut.bidBuckets16[g2]; offctx.fill(H.pools.bidBuckets[g2]);
-        }
-
-        if (barSpace > 8 && verticalLines.length) {
-          offctx.save(); offctx.beginPath();
-          for (var vl = 0; vl < verticalLines.length; vl++) {
-            var xx = Math.round(verticalLines[vl]) + 0.5;
-            offctx.moveTo(xx, 0); offctx.lineTo(xx, height);
-          }
-          offctx.strokeStyle = 'rgba(255,255,255,0.03)'; offctx.lineWidth = 1; offctx.stroke(); offctx.restore();
-        }
-
-        if (majorWalls.length) {
-          offctx.save(); offctx.lineWidth = 1;
-          for (var mw = 0; mw < majorWalls.length; mw++) {
-            var wall = majorWalls[mw];
-            offctx.strokeStyle = wall.side === 'ask' ? 'rgba(255,170,140,0.85)' : 'rgba(160,255,220,0.85)';
-            offctx.beginPath(); offctx.moveTo(wall.x - wall.w * 0.5, wall.y + 0.5); offctx.lineTo(wall.x + wall.w * 0.5, wall.y + 0.5); offctx.stroke();
-          }
-          offctx.restore();
-          hp.drawMajorWallClusters(offctx, majorWalls);
-        }
-
-        if (clusterSeedLevels.length) {
-          var mergedClusters = hp.mergeLevelsIntoClusters(clusterSeedLevels, 5);
-          hp.drawMergedClusters(offctx, mergedClusters, barSpace);
-        }
-
-        if (barSpace > 15) {
-          offctx.save(); offctx.font = "9px system-ui, -apple-system, sans-serif"; offctx.textAlign = 'left'; offctx.textBaseline = 'middle'; offctx.fillStyle = 'rgba(255,255,255,0.32)';
-          var labelSkip = 0;
-          for (var c = 0; c < H.cache.meta.columns.length; c++) {
-            var colObj = H.cache.meta.columns[c];
-            if (labelSkip % 2 === 0) offctx.fillText(hp.formatTime(colObj.snap.t), colObj.x + 4, 10);
-            labelSkip++;
-          }
-          offctx.restore();
-        }
-
-        if (opacityPct < 10) H.cache.meta.warnings.push('Cảnh báo: Độ mờ Heatmap quá thấp');
-        if (visibleHistory.length === 0) hp.drawCenteredText(offctx, bounding, 'Không có dữ liệu trong khung thời gian này', 'rgba(255,255,255,0.32)');
-
-        offctx.restore();
-        ctx.drawImage(H.cache.offscreen, 0, 0);
-        H.stats.lastFrameRects = rectCount;
-      }
-
-      if (H.cache.meta.warnings && H.cache.meta.warnings.length) {
-        for (var w = 0; w < H.cache.meta.warnings.length; w++) {
-          hp.drawTopLeftNote(ctx, H.cache.meta.warnings[w], 6 + w * 12, 'rgba(255,255,255,0.42)');
-        }
-      }
-
-      var mouse = hp.getMouseLocal(ctx.canvas);
-      if (mouse && mouse.x >= 0 && mouse.x <= width && mouse.y >= 0 && mouse.y <= height) {
-        var col = hp.findNearestColumn(H.cache.meta.columns, mouse.x);
-        if (col) {
+        // 3. VẼ HÀNG LOẠT (Thay vì fillRect từng ô làm cháy CPU, gom màu lại vẽ 1 lần)
+        try {
           ctx.save();
-          ctx.fillStyle = 'rgba(255,255,255,0.05)';
-          ctx.fillRect(col.x - col.w * 0.5, 0, col.w, height);
+          ctx.globalCompositeOperation = 'destination-over'; // Chìm dưới nến
 
-          var info = hp.getNearestLevelInfo(col.snap, mouse.y, yAxis);
-          hp.drawTooltip(ctx, bounding, mouse, info, redThreshold);
+          const colorBatches = new Map();
+
+          visibleSnaps.forEach(item => {
+            let x = item.x;
+            const drawList = (map, isAsk) => {
+              map.forEach((vol, priceStr) => {
+                const price = parseFloat(priceStr);
+                const valUSD = price * vol;
+                
+                if (valUSD < renderMin) return;
+
+                // Giữ đúng đoạn code tọa độ Y siêu mượt của bạn
+                let y = yAxis.convertToPixel(price);
+                if (y === null || y === undefined) return;
+
+                const ratio = Math.min(1, valUSD / renderMax);
+                const finalAlpha = Math.min(1, baseAlpha + (ratio * (1 - baseAlpha)));
+                
+                // Gom nhóm dải màu (Làm tròn độ mờ)
+                const alphaBucket = (Math.round(finalAlpha * 20) / 20).toFixed(2);
+                const colorKey = isAsk 
+                  ? `rgba(239, 83, 80, ${alphaBucket})`  // Đỏ Cam
+                  : `rgba(38, 166, 154, ${alphaBucket})`; // Xanh Lá
+
+                if (!colorBatches.has(colorKey)) colorBatches.set(colorKey, []);
+                
+                colorBatches.get(colorKey).push({
+                    x: x - barSpace/2 - 0.5,
+                    y: y - 2,
+                    w: barSpace + 1,
+                    h: 4
+                });
+              });
+            };
+            
+            if(item.snap.asks) drawList(item.snap.asks, true);
+            if(item.snap.bids) drawList(item.snap.bids, false);
+          });
+
+          // Xuất kho ra màn hình
+          colorBatches.forEach((rectList, color) => {
+              ctx.fillStyle = color;
+              ctx.beginPath();
+              rectList.forEach(r => ctx.rect(r.x, r.y, r.w, r.h));
+              ctx.fill();
+          });
+
+        } catch(e) {
+        } finally {
           ctx.restore();
         }
+        return false;
       }
-
-      H.stats.lastFrameMs = hp.now() - t0;
-      return false;
-    } catch (err) {
-      hp.safeWarn(err);
-      return false;
-    } finally {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.filter = 'none';
-      ctx.shadowBlur = 0;
-      ctx.restore();
-    }
-  },
-
-  destroy: function() {
-    if (window._waHmap && window._waHmap.helpers) window._waHmap.helpers.removeMouseListener();
-    window._waHmap = null;
-  }
-});
+    });
 
 
+// ─────────────────────────────────────────────────
+// INDICATOR: WAVE_COB (Version 7.0 - Smooth Tweening)
+// ─────────────────────────────────────────────────
 // ─────────────────────────────────────────────────
 // INDICATOR: WAVE_COB (Version 7.1 - Tiếng Việt & Auto Filter)
 // ─────────────────────────────────────────────────
@@ -1679,9 +1127,73 @@ function roundRect(ctx, x, y, w, h, r) {
           return res;
         });
       }
+    });// ── WAVE_BOOKMAP (BẢN ĐỒ NHIỆT THANH KHOẢN) ─────────────────
+    kc.registerIndicator({
+      name: 'WAVE_BOOKMAP',
+      shortName: 'HMAP',
+      series: 'price',
+      calcParams: [5000], 
+      figures: [],
+      calc: function(dataList, indicator) {
+        return dataList.map(() => ({}));
+      },
+      draw: function({ ctx, bounding, xAxis, yAxis, indicator }) {
+        if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
+
+        const minValUSD = indicator.calcParams[0] || 5000; 
+        
+        // Lấy độ rộng thân nến an toàn
+        let barSpace = 5;
+        try {
+            if (typeof window.tvChart.getBarSpace === 'function') {
+                let bs = window.tvChart.getBarSpace();
+                barSpace = (typeof bs === 'number') ? bs : (bs?.bar || 5);
+            }
+        } catch(e) {}
+
+        try {
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen'; 
+
+          window.bookmapHistory.forEach(snap => {
+            // ✅ FIX 1: Thêm { paneId: 'candle_pane' } để KLineCharts biết vẽ ở đâu
+            let basePoint = window.tvChart.convertToPixel({ timestamp: snap.t }, { paneId: 'candle_pane' });
+            if (!basePoint) return;
+            let x = basePoint.x;
+
+            if (x < -10 || x > bounding.width + 10) return;
+
+            const drawList = (map, isAsk) => {
+              map.forEach((vol, priceStr) => {
+                const p = parseFloat(priceStr);
+                const valUSD = p * vol;
+                
+                if (valUSD < minValUSD) return;
+
+                // ✅ FIX 2: Dùng yAxis có sẵn để chuyển đổi Giá thành Tọa độ Y siêu mượt
+                let y = yAxis.convertToPixel(p);
+                if (y === null || y === undefined) return;
+
+                const ratio = Math.min(1, valUSD / 500000); 
+                ctx.fillStyle = isAsk 
+                  ? `rgba(255, 80, 0, ${0.1 + ratio * 0.7})`  // Bán: Cam/Đỏ
+                  : `rgba(0, 255, 150, ${0.1 + ratio * 0.7})`; // Mua: Xanh lá
+                
+                ctx.fillRect(x - barSpace/2, y - 2, barSpace, 4);
+              });
+            };
+            
+            drawList(snap.asks, true);
+            drawList(snap.bids, false);
+          });
+        } catch(e) {
+          // Bắt lỗi im lặng để không làm sập các chỉ báo khác
+        } finally {
+          ctx.restore();
+        }
+        return false;
+      }
     });
-    
-    
     
     // ── 3. SUPERTREND ─────────────────────────────────
     kc.registerIndicator({
