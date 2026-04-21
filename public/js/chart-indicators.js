@@ -576,6 +576,9 @@
 // ─────────────────────────────────────────────────
 // INDICATOR: WAVE_COB (Version 6.1.0 - Anti-Lag Patch)
 // ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────
+// INDICATOR: WAVE_COB (Version 7.0 - Smooth Tweening)
+// ─────────────────────────────────────────────────
 kc.registerIndicator({
   name:        'WAVE_COB',
   shortName:   'COB',
@@ -595,9 +598,7 @@ kc.registerIndicator({
 
   figures: [],
 
-  calc: function(dataList) {
-    return dataList.map(() => ({}));
-  },
+  calc: function(dataList) { return dataList.map(() => ({})); },
 
   draw: function({ ctx, bounding, yAxis, indicator }) {
     if (!window.scLocalOrderBook)              return false;
@@ -616,6 +617,7 @@ kc.registerIndicator({
         snapshot: { asks: new Map(), bids: new Map(), ts: 0 },
         scale:    { maxVol: 0, floor: 0 },
         stats:    { bidTotal: 0, askTotal: 0, ratio: 1 },
+        barCache: new Map(), // 🚀 BỘ NHỚ LƯU TRẠNG THÁI HIỆU ỨNG TỪNG THANH
         hover:    { y: -1, side: null },
         debug:    false
       };
@@ -633,58 +635,43 @@ kc.registerIndicator({
     const cob = window._waCob;
     const now = Date.now();
     
-    // 🚀 FIX #2: SNAPSHOT CHỈ REPLACE KHI CÓ DATA THẬT
     if (now - cob.snapshot.ts >= refreshMs) {
       const rawAsks = window.scLocalOrderBook.asks;
       const rawBids = window.scLocalOrderBook.bids;
-      
-      const hasData = (rawAsks && rawAsks.size > 0) || (rawBids && rawBids.size > 0);
-      
-      if (hasData) {
+      if ((rawAsks && rawAsks.size > 0) || (rawBids && rawBids.size > 0)) {
         cob.snapshot.asks = new Map(rawAsks || []);
         cob.snapshot.bids = new Map(rawBids || []);
         cob.snapshot.ts   = now;
-      } 
-      // Reset timer nếu mất kết nối quá lâu (2s) để thử lại
-      else if (now - cob.snapshot.ts > 2000) {
+      } else if (now - cob.snapshot.ts > 2000) {
         cob.snapshot.ts = now; 
       }
     }
 
     const asks = cob.snapshot.asks;
     const bids = cob.snapshot.bids;
-
     const yMapAsks = new Map(); 
     const yMapBids = new Map();
     let currentFrameMax = 0;
     let bidTotal = 0;
     let askTotal = 0;
-
     const H = bounding.height;
     const OVERFLOW = 20;
 
-    // 🚀 FIX #4: BẢO VỆ CONVERT-TO-PIXEL (NaN/undefined)
     const processBook = (source, target, isAsk) => {
       source.forEach((vol, priceStr) => {
         const price  = parseFloat(priceStr);
         const valUSD = price * vol;
-
         if (valUSD < minVal) return; 
 
         const exactY = yAxis.convertToPixel(price);
-        
-        // Ngăn chặn NaN phá hỏng key của Map và vẽ sai
-        if (exactY == null || isNaN(exactY)) return;
-        if (exactY < -OVERFLOW || exactY > H + OVERFLOW) return; 
+        if (exactY == null || isNaN(exactY) || exactY < -OVERFLOW || exactY > H + OVERFLOW) return; 
 
         const snappedY = Math.floor(exactY / barH) * barH;
         const existing = target.get(snappedY) || 0;
         const merged   = existing + valUSD;
         
         target.set(snappedY, merged);
-
         if (merged > currentFrameMax) currentFrameMax = merged;
-
         if (isAsk) askTotal += valUSD; else bidTotal += valUSD;
       });
     };
@@ -692,32 +679,55 @@ kc.registerIndicator({
     if (asks) processBook(asks, yMapAsks, true);
     if (bids) processBook(bids, yMapBids, false);
 
-    // 🚀 FIX #3: KHÔNG RETURN FALSE NẾU CHỈ LÀ TRỐNG TẠM THỜI
-    if (yMapAsks.size === 0 && yMapBids.size === 0) {
-      if (cob.scale.maxVol === 0) return false; // Chưa từng có data -> Xóa frame
-    }
+    if (yMapAsks.size === 0 && yMapBids.size === 0 && cob.scale.maxVol === 0) return false;
 
-    // 🚀 FIX #1: SCALE RATCHET BẢO VỆ CHỐNG COLLAPSE KHI RỖNG DATA
+    // SCALE RATCHET
     if (currentFrameMax > 0) {
-      if (currentFrameMax > cob.scale.maxVol) {
-        cob.scale.maxVol = currentFrameMax; // Bung rộng ngay lập tức
-      } else {
-        cob.scale.maxVol = cob.scale.maxVol * decay + currentFrameMax * (1 - decay); // Tụt từ từ
-      }
+      if (currentFrameMax > cob.scale.maxVol) cob.scale.maxVol = currentFrameMax; 
+      else cob.scale.maxVol = cob.scale.maxVol * decay + currentFrameMax * (1 - decay);
       cob.scale.floor = cob.scale.maxVol * 0.10;
     }
-    
     const renderMax = Math.max(cob.scale.maxVol || 10000, cob.scale.floor || 1000, 10000);
+
+    // 🚀 PHASE 4.5: ĐỘNG CƠ TWEENING (NỘI SUY CHUYỂN ĐỘNG)
+    // Đặt toàn bộ mục tiêu của thanh cũ về 0
+    cob.barCache.forEach(b => b.target = 0);
+
+    // Cập nhật mục tiêu mới (Target) từ dữ liệu thực
+    yMapAsks.forEach((val, y) => {
+        if (!cob.barCache.has(y)) cob.barCache.set(y, { current: 0, target: val, type: 'ask' });
+        else cob.barCache.get(y).target = val;
+    });
+    yMapBids.forEach((val, y) => {
+        if (!cob.barCache.has(y)) cob.barCache.set(y, { current: 0, target: val, type: 'bid' });
+        else cob.barCache.get(y).target = val;
+    });
+
+    const animAsks = new Map();
+    const animBids = new Map();
+
+    // Nội suy giá trị hiện tại (current) trượt dần về mục tiêu (target)
+    cob.barCache.forEach((b, y) => {
+        // Tốc độ trượt: 25% mỗi khung hình (Tạo cảm giác mượt như thanh máu game)
+        b.current += (b.target - b.current) * 0.25;
+
+        // Dọn dẹp RAM: Xóa nếu thanh đã tụt về 0 và không có lệnh mới
+        if (b.target === 0 && b.current < minVal) {
+            cob.barCache.delete(y);
+            return;
+        }
+        if (b.type === 'ask') animAsks.set(y, b.current);
+        else animBids.set(y, b.current);
+    });
 
     cob.stats.bidTotal = bidTotal;
     cob.stats.askTotal = askTotal;
     cob.stats.ratio    = askTotal > 0 ? bidTotal / askTotal : 1;
 
+    // 🚀 PHASE 5: RENDERING (Sử dụng dữ liệu đã mượt hóa - animAsks / animBids)
     try {
       ctx.save();
-
       const startX = Math.round(bounding.width - colWidth); 
-
       const ASK_BASE_RGB  = '239, 83, 80';   
       const BID_BASE_RGB  = '38, 166, 154';  
       const ASK_GLOW      = `rgba(${ASK_BASE_RGB}, 0.85)`;
@@ -739,6 +749,7 @@ kc.registerIndicator({
         arr.sort((a, b) => b.v - a.v);
         return arr.slice(0, 3);
       };
+      // Tìm top 3 dựa trên mục tiêu thực (target)
       const top3Asks = getTop3(yMapAsks);
       const top3Bids = getTop3(yMapBids);
       const top3AskSet = new Set(top3Asks.map(x => x.y));
@@ -774,8 +785,9 @@ kc.registerIndicator({
         });
       };
 
-      renderBars(yMapAsks, ASK_BASE_RGB, ASK_GLOW, top3AskSet);
-      renderBars(yMapBids, BID_BASE_RGB, BID_GLOW, top3BidSet);
+      // 🚀 VẼ BẰNG MẢNG ĐÃ ĐƯỢC TWEEN (NỘI SUY MƯỢT)
+      renderBars(animAsks, ASK_BASE_RGB, ASK_GLOW, top3AskSet);
+      renderBars(animBids, BID_BASE_RGB, BID_GLOW, top3BidSet);
 
       ctx.font         = "bold 9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign    = 'right';
@@ -804,39 +816,13 @@ kc.registerIndicator({
         });
       };
 
-      drawLabels(yMapAsks, ASK_TEXT, top3AskSet);
-      drawLabels(yMapBids, BID_TEXT, top3BidSet);
+      drawLabels(animAsks, ASK_TEXT, top3AskSet);
+      drawLabels(animBids, BID_TEXT, top3BidSet);
 
       ctx.shadowColor   = 'transparent';
       ctx.shadowBlur    = 0;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
-
-      if (window.tvChart) {
-        try {
-          let bestAsk = Infinity, bestBid = -Infinity;
-          if(asks) asks.forEach((_, p) => { const n = parseFloat(p); if (n < bestAsk) bestAsk = n; });
-          if(bids) bids.forEach((_, p) => { const n = parseFloat(p); if (n > bestBid) bestBid = n; });
-
-          if (bestBid > 0 && bestAsk < Infinity) {
-            const midPrice  = (bestAsk + bestBid) / 2;
-            const midY      = Math.round(yAxis.convertToPixel(midPrice));
-            const askY      = Math.round(yAxis.convertToPixel(bestAsk));
-            const bidY      = Math.round(yAxis.convertToPixel(bestBid));
-
-            if (!isNaN(midY)) {
-                ctx.setLineDash([3, 5]);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-                ctx.lineWidth   = 1;
-                ctx.beginPath();
-                ctx.moveTo(startX, midY + 0.5);
-                ctx.lineTo(bounding.width, midY + 0.5);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-          }
-        } catch (_) {}
-      }
 
       {
         const panelW  = colWidth - 4;
@@ -853,7 +839,6 @@ kc.registerIndicator({
         ctx.fillStyle = 'rgba(0, 0, 0, 0.60)';
         roundRect(ctx, panelX, panelY, panelW, panelH, 3);
         ctx.fill();
-
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth   = 1;
         roundRect(ctx, panelX, panelY, panelW, panelH, 3);
@@ -861,17 +846,14 @@ kc.registerIndicator({
 
         ctx.font      = "9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = 'left';
-
         ctx.fillStyle = BID_TEXT;
         ctx.fillText('BID', panelX + padX, panelY + lineH * 1 - 1);
         ctx.fillStyle = '#E0E0E0';
         ctx.fillText('$' + fmtVol(cob.stats.bidTotal), panelX + padX + 24, panelY + lineH * 1 - 1);
-
         ctx.fillStyle = ASK_TEXT;
         ctx.fillText('ASK', panelX + padX, panelY + lineH * 2 - 1);
         ctx.fillStyle = '#E0E0E0';
         ctx.fillText('$' + fmtVol(cob.stats.askTotal), panelX + padX + 24, panelY + lineH * 2 - 1);
-
         ctx.fillStyle = '#757575';
         ctx.fillText('RATIO', panelX + padX, panelY + lineH * 3 - 1);
         ctx.fillStyle = ratioColor;
@@ -882,6 +864,7 @@ kc.registerIndicator({
         const hy = cob.hover.y;
         if (hy >= 0 && hy <= H) {
           const snapY = Math.floor(hy / barH) * barH;
+          // Tooltip luôn đọc giá trị thực tế (yMap) thay vì giá trị ảo đang trượt
           const askVol = yMapAsks.get(snapY);
           const bidVol = yMapBids.get(snapY);
           const vol    = askVol || bidVol;
@@ -922,7 +905,6 @@ kc.registerIndicator({
     } finally {
       ctx.restore();
     }
-
     return false; 
   },
 
@@ -936,21 +918,10 @@ kc.registerIndicator({
 });
 
 function roundRect(ctx, x, y, w, h, r) {
-  if (ctx.roundRect) {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, r);
-  } else {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.closePath();
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); } else {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r); ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r); ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
   }
 }
 
