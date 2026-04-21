@@ -487,8 +487,7 @@
       return;
     }
 
-    // ── 1. VWAP_BANDS ─────────────────────────────────
-    // ── WAVE_BOOKMAP (BẢN ĐỒ NHIỆT THANH KHOẢN V9 - PRO) ──────────
+    // ── 0. WAVE_BOOKMAP (BẢN ĐỒ NHIỆT THANH KHOẢN V9 - PRO) ──────────
     kc.registerIndicator({
       name: 'WAVE_BOOKMAP',
       shortName: 'HEATMAP',
@@ -566,6 +565,7 @@
       }
     });
 // ── WAVE_COB (CURRENT ORDER BOOK / THÁP DOM) ─────────────────
+// ── WAVE_COB (CURRENT ORDER BOOK / THÁP DOM) V2 - ANTI-JITTER ──
 kc.registerIndicator({
   name: 'WAVE_COB',
   shortName: 'COB',
@@ -576,28 +576,26 @@ kc.registerIndicator({
     return dataList.map(() => ({}));
   },
   draw: function({ ctx, bounding, yAxis, indicator }) {
-    // Chỉ vẽ khi có dữ liệu Sổ lệnh hiện tại
     if (!window.scLocalOrderBook || !window.tvChart) return false;
 
-    const colWidth = indicator.calcParams[0] || 100; // Chiều rộng của cột COB
-    const minVal = indicator.calcParams[1] || 1000;  // Lọc rác
+    const colWidth = indicator.calcParams[0] || 100; 
+    const minVal = indicator.calcParams[1] || 1000;  
     
     const asks = window.scLocalOrderBook.asks;
     const bids = window.scLocalOrderBook.bids;
     
-    let maxVol = 0;
+    let targetMaxVol = 0; // Đỉnh Volume tạm thời của khung hình này
     let validAsks = [];
     let validBids = [];
 
-    // 1. Quét Sổ lệnh: Chỉ tính các mức giá ĐANG NẰM TRONG MÀN HÌNH
+    // 1. Quét Sổ lệnh và ép tọa độ Y về SỐ NGUYÊN (Math.round) để chống nhòe
     asks.forEach((vol, p) => {
         let price = parseFloat(p);
         let valUSD = price * vol;
         if (valUSD >= minVal) {
-            let y = yAxis.convertToPixel(price);
-            // Nếu tọa độ Y nằm trong phạm vi màn hình
+            let y = Math.round(yAxis.convertToPixel(price));
             if (y >= 0 && y <= bounding.height) {
-                if (valUSD > maxVol) maxVol = valUSD;
+                if (valUSD > targetMaxVol) targetMaxVol = valUSD;
                 validAsks.push({ y, valUSD, p: price });
             }
         }
@@ -607,64 +605,77 @@ kc.registerIndicator({
         let price = parseFloat(p);
         let valUSD = price * vol;
         if (valUSD >= minVal) {
-            let y = yAxis.convertToPixel(price);
+            let y = Math.round(yAxis.convertToPixel(price));
             if (y >= 0 && y <= bounding.height) {
-                if (valUSD > maxVol) maxVol = valUSD;
+                if (valUSD > targetMaxVol) targetMaxVol = valUSD;
                 validBids.push({ y, valUSD, p: price });
             }
         }
     });
 
-    // Nếu màn hình hiện tại không có tường nào, không cần vẽ
-    if (maxVol === 0) return false;
+    if (targetMaxVol === 0) return false;
+
+    // 🚀 2. THUẬT TOÁN GIẢM XÓC (EASING DECAY) CHỐNG CO GIẬT TỶ LỆ
+    if (!window._waCobMaxVol) window._waCobMaxVol = targetMaxVol;
+    if (targetMaxVol > window._waCobMaxVol) {
+        // Có tường to hơn xuất hiện -> Phóng to tỷ lệ ngay lập tức
+        window._waCobMaxVol = targetMaxVol; 
+    } else {
+        // Tường bị rút đi -> Thu nhỏ tỷ lệ TỪ TỪ (Decay 5%) để tránh các thanh DOM khác bị giật
+        window._waCobMaxVol = window._waCobMaxVol * 0.95 + targetMaxVol * 0.05; 
+    }
+
+    let renderMax = Math.max(window._waCobMaxVol, 10000); // Tránh lỗi chia cho 0
 
     try {
         ctx.save();
+        let startX = Math.round(bounding.width - colWidth);
         
-        // Tọa độ bắt đầu vẽ (Sát lề phải của khung hiển thị)
-        let startX = bounding.width - colWidth;
-        
-        // 2. Vẽ dải nền kính mờ (Glassmorphism) cho cột COB
+        // Vẽ nền cột
         ctx.fillStyle = 'rgba(15, 20, 25, 0.65)';
         ctx.fillRect(startX, 0, colWidth, bounding.height);
         
-        // Kẻ 1 đường viền phân cách mỏng bên trái cột
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.beginPath(); ctx.moveTo(startX, 0); ctx.lineTo(startX, bounding.height); ctx.stroke();
 
-        // Cấu hình chữ
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
+        const barH = 4;
 
-        const barH = 4; // Bề dày của mỗi nấc giá (Pixel)
-
-        // 3. VẼ CÁC TƯỜNG BÁN (ASKS - MÀU ĐỎ/CAM)
+        // 🚀 3. TỐI ƯU HIỆU SUẤT VẼ (Gom lệnh vẽ để Canvas không bị nháy)
+        
+        // VẼ ASKS (TƯỜNG BÁN)
+        ctx.fillStyle = 'rgba(255, 80, 0, 0.65)';
+        ctx.beginPath();
         validAsks.forEach(ask => {
-            // Chiều dài thanh DOM tỷ lệ thuận với Volume
-            let w = (ask.valUSD / maxVol) * colWidth;
-            
-            ctx.fillStyle = 'rgba(255, 80, 0, 0.65)'; // Đỏ Cam chuẩn Bookmap
-            // Vẽ thanh ngang từ phải sang trái
-            ctx.fillRect(bounding.width - w, ask.y - barH/2, w, barH);
-            
-            // In text số liệu (Ví dụ: 1.5M, 500K) lên các tường đủ dài
+            let w = Math.round((ask.valUSD / renderMax) * colWidth);
+            ctx.rect(bounding.width - w, ask.y - barH/2, w, barH);
+        });
+        ctx.fill();
+
+        // VẼ BIDS (TƯỜNG MUA)
+        ctx.fillStyle = 'rgba(0, 255, 150, 0.65)';
+        ctx.beginPath();
+        validBids.forEach(bid => {
+            let w = Math.round((bid.valUSD / renderMax) * colWidth);
+            ctx.rect(bounding.width - w, bid.y - barH/2, w, barH);
+        });
+        ctx.fill();
+
+        // 4. VẼ CHỮ (Riêng biệt để không bị nhòe)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        validAsks.forEach(ask => {
+            let w = Math.round((ask.valUSD / renderMax) * colWidth);
             if (w > 35) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                 let shortVol = ask.valUSD >= 1000000 ? (ask.valUSD/1000000).toFixed(1) + 'M' : Math.round(ask.valUSD/1000) + 'K';
-                ctx.fillText(shortVol, bounding.width - w - 4, ask.y); // Chữ nằm sát ngay đầu thanh
+                ctx.fillText(shortVol, bounding.width - w - 4, ask.y);
             }
         });
-
-        // 4. VẼ CÁC TƯỜNG MUA (BIDS - MÀU XANH)
+        
         validBids.forEach(bid => {
-            let w = (bid.valUSD / maxVol) * colWidth;
-            
-            ctx.fillStyle = 'rgba(0, 255, 150, 0.65)'; // Xanh lá Neon
-            ctx.fillRect(bounding.width - w, bid.y - barH/2, w, barH);
-            
+            let w = Math.round((bid.valUSD / renderMax) * colWidth);
             if (w > 35) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                 let shortVol = bid.valUSD >= 1000000 ? (bid.valUSD/1000000).toFixed(1) + 'M' : Math.round(bid.valUSD/1000) + 'K';
                 ctx.fillText(shortVol, bounding.width - w - 4, bid.y);
             }
@@ -678,6 +689,74 @@ kc.registerIndicator({
     return false;
   }
 });
+// ── 1. VWAP_BANDS ─────────────────────────────────
+    // Fix: uses utcDayIndex() instead of getUTCDate()
+    // Formula: Volume-Weighted Standard Deviation (TradingView standard)
+    kc.registerIndicator({
+      name: 'VWAP_BANDS',
+      shortName: 'VWAP',
+      series: 'price',
+      calcParams: [1, 2, 0], // mult1, mult2, anchorMode
+      figures: [
+        { key: 'upper2', title: 'UB2: ', type: 'line' },
+        { key: 'upper1', title: 'UB1: ', type: 'line' },
+        { key: 'vwap',   title: 'VWAP: ', type: 'line' },
+        { key: 'lower1', title: 'LB1: ', type: 'line' },
+        { key: 'lower2', title: 'LB2: ', type: 'line' },
+      ],
+      styles: {
+        lines: [
+          { color: COLOR.gold,  size: 1, style: 'dashed' }, // UB2
+          { color: COLOR.cyan,  size: 1, style: 'solid'  }, // UB1
+          { color: COLOR.white, size: 2, style: 'solid'  }, // VWAP
+          { color: COLOR.cyan,  size: 1, style: 'solid'  }, // LB1
+          { color: COLOR.gold,  size: 1, style: 'dashed' }, // LB2
+        ],
+      },
+      calc: function (dataList, indicator) {
+        const p = indicator.calcParams || [1, 2, 0];
+        const mult1     = p[0] || 1;
+        const mult2     = p[1] || 2;
+        const anchorMode = p[2] || 0;
+
+        let cumVol = 0, cumTP_Vol = 0, cumTP2_Vol = 0;
+        let prevSession = -1;
+
+        return dataList.map(function (d, i) {
+          const curSession = sessionIndex(d.timestamp, anchorMode);
+
+          // RESET on new session boundary — correct UTC day comparison
+          if (curSession !== prevSession) {
+            cumVol = 0; cumTP_Vol = 0; cumTP2_Vol = 0;
+            prevSession = curSession;
+          }
+
+          const tp  = (d.high + d.low + d.close) / 3;
+          const vol = d.volume || 0;
+
+          cumVol    += vol;
+          cumTP_Vol += tp * vol;
+          cumTP2_Vol += vol * tp * tp; // for volume-weighted variance
+
+          if (cumVol === 0) return {};
+
+          const vwap = cumTP_Vol / cumVol;
+
+          // Volume-Weighted Variance = Σ(vol*(tp-vwap)²) / Σvol
+          // Equivalent: cumTP2_Vol/cumVol - vwap²  (algebraically identical, numerically stable)
+          const variance = Math.max(0, (cumTP2_Vol / cumVol) - vwap * vwap);
+          const sd       = Math.sqrt(variance);
+
+          return {
+            upper2: vwap + sd * mult2,
+            upper1: vwap + sd * mult1,
+            vwap:   vwap,
+            lower1: vwap - sd * mult1,
+            lower2: vwap - sd * mult2,
+          };
+        });
+      },
+    });
     // ── 2. ANCHORED_VWAP ──────────────────────────────
     kc.registerIndicator({
       name: 'ANCHORED_VWAP',
