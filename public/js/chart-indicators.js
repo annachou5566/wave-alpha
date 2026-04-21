@@ -260,6 +260,16 @@
       builtIn: false,
     },
     {
+      name: 'WAVE_COB',
+      shortName: 'COB',
+      description: 'Current Order Book (Cột tháp thanh khoản DOM bên phải)',
+      category: 'wave_alpha',
+      isStack: true, // Vẽ đè lên biểu đồ giá
+      defaultParams: [100, 1000], // [Độ rộng cột (Pixel), Lọc Volume tối thiểu]
+      paramLabels: ['Độ Rộng Cột COB (px)', 'Lọc Volume Tối Thiểu (USD)'],
+      builtIn: false,
+    },
+    {
       name: 'SUPERTREND',
       shortName: 'ST',
       description: 'ATR-based trend direction indicator — changes color with trend',
@@ -481,7 +491,7 @@
     // ── WAVE_BOOKMAP (BẢN ĐỒ NHIỆT THANH KHOẢN V9 - PRO) ──────────
     kc.registerIndicator({
       name: 'WAVE_BOOKMAP',
-      shortName: 'HMAP',
+      shortName: 'HEATMAP',
       series: 'price',
       // Nhận 3 thông số từ UI người dùng chỉnh
       calcParams: [5000, 30, 500000], 
@@ -493,9 +503,9 @@
         if (!window.bookmapHistory || !window.bookmapHistory.length || !window.tvChart) return false;
 
         // Lấy thông số thời gian thực từ bánh răng Cài đặt của user
-        const minValUSD = indicator.calcParams[0] || 5000; 
+        const minValUSD = indicator.calcParams[0] || 500; 
         const opacityPct = indicator.calcParams[1] || 30; // Từ 1 đến 100
-        const maxValUSD = indicator.calcParams[2] || 500000; 
+        const maxValUSD = indicator.calcParams[2] || 50000; 
         
         const baseAlpha = opacityPct / 100; // Đổi % ra hệ thập phân (vd: 30% -> 0.3)
         
@@ -555,7 +565,119 @@
         return false;
       }
     });
+// ── WAVE_COB (CURRENT ORDER BOOK / THÁP DOM) ─────────────────
+kc.registerIndicator({
+  name: 'WAVE_COB',
+  shortName: 'COB',
+  series: 'price',
+  calcParams: [100, 1000],
+  figures: [],
+  calc: function(dataList) {
+    return dataList.map(() => ({}));
+  },
+  draw: function({ ctx, bounding, yAxis, indicator }) {
+    // Chỉ vẽ khi có dữ liệu Sổ lệnh hiện tại
+    if (!window.scLocalOrderBook || !window.tvChart) return false;
 
+    const colWidth = indicator.calcParams[0] || 100; // Chiều rộng của cột COB
+    const minVal = indicator.calcParams[1] || 1000;  // Lọc rác
+    
+    const asks = window.scLocalOrderBook.asks;
+    const bids = window.scLocalOrderBook.bids;
+    
+    let maxVol = 0;
+    let validAsks = [];
+    let validBids = [];
+
+    // 1. Quét Sổ lệnh: Chỉ tính các mức giá ĐANG NẰM TRONG MÀN HÌNH
+    asks.forEach((vol, p) => {
+        let price = parseFloat(p);
+        let valUSD = price * vol;
+        if (valUSD >= minVal) {
+            let y = yAxis.convertToPixel(price);
+            // Nếu tọa độ Y nằm trong phạm vi màn hình
+            if (y >= 0 && y <= bounding.height) {
+                if (valUSD > maxVol) maxVol = valUSD;
+                validAsks.push({ y, valUSD, p: price });
+            }
+        }
+    });
+    
+    bids.forEach((vol, p) => {
+        let price = parseFloat(p);
+        let valUSD = price * vol;
+        if (valUSD >= minVal) {
+            let y = yAxis.convertToPixel(price);
+            if (y >= 0 && y <= bounding.height) {
+                if (valUSD > maxVol) maxVol = valUSD;
+                validBids.push({ y, valUSD, p: price });
+            }
+        }
+    });
+
+    // Nếu màn hình hiện tại không có tường nào, không cần vẽ
+    if (maxVol === 0) return false;
+
+    try {
+        ctx.save();
+        
+        // Tọa độ bắt đầu vẽ (Sát lề phải của khung hiển thị)
+        let startX = bounding.width - colWidth;
+        
+        // 2. Vẽ dải nền kính mờ (Glassmorphism) cho cột COB
+        ctx.fillStyle = 'rgba(15, 20, 25, 0.65)';
+        ctx.fillRect(startX, 0, colWidth, bounding.height);
+        
+        // Kẻ 1 đường viền phân cách mỏng bên trái cột
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.beginPath(); ctx.moveTo(startX, 0); ctx.lineTo(startX, bounding.height); ctx.stroke();
+
+        // Cấu hình chữ
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        const barH = 4; // Bề dày của mỗi nấc giá (Pixel)
+
+        // 3. VẼ CÁC TƯỜNG BÁN (ASKS - MÀU ĐỎ/CAM)
+        validAsks.forEach(ask => {
+            // Chiều dài thanh DOM tỷ lệ thuận với Volume
+            let w = (ask.valUSD / maxVol) * colWidth;
+            
+            ctx.fillStyle = 'rgba(255, 80, 0, 0.65)'; // Đỏ Cam chuẩn Bookmap
+            // Vẽ thanh ngang từ phải sang trái
+            ctx.fillRect(bounding.width - w, ask.y - barH/2, w, barH);
+            
+            // In text số liệu (Ví dụ: 1.5M, 500K) lên các tường đủ dài
+            if (w > 35) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                let shortVol = ask.valUSD >= 1000000 ? (ask.valUSD/1000000).toFixed(1) + 'M' : Math.round(ask.valUSD/1000) + 'K';
+                ctx.fillText(shortVol, bounding.width - w - 4, ask.y); // Chữ nằm sát ngay đầu thanh
+            }
+        });
+
+        // 4. VẼ CÁC TƯỜNG MUA (BIDS - MÀU XANH)
+        validBids.forEach(bid => {
+            let w = (bid.valUSD / maxVol) * colWidth;
+            
+            ctx.fillStyle = 'rgba(0, 255, 150, 0.65)'; // Xanh lá Neon
+            ctx.fillRect(bounding.width - w, bid.y - barH/2, w, barH);
+            
+            if (w > 35) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                let shortVol = bid.valUSD >= 1000000 ? (bid.valUSD/1000000).toFixed(1) + 'M' : Math.round(bid.valUSD/1000) + 'K';
+                ctx.fillText(shortVol, bounding.width - w - 4, bid.y);
+            }
+        });
+
+    } catch (e) {
+    } finally {
+        ctx.restore();
+    }
+    
+    return false;
+  }
+});
     // ── 2. ANCHORED_VWAP ──────────────────────────────
     kc.registerIndicator({
       name: 'ANCHORED_VWAP',
