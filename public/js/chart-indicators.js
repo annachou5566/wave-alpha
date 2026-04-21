@@ -262,18 +262,18 @@
     {
       name: 'WAVE_COB',
       shortName: 'COB',
-      description: 'Current Order Book (Tháp thanh khoản DOM chuẩn Pro)',
+      description: 'Tháp Thanh Khoản DOM (Dữ liệu Sổ lệnh Real-time)',
       category: 'wave_alpha',
-      isStack: true, // Vẽ đè lên biểu đồ giá
-      // 5 Thông số mặc định cho bản V6
-      defaultParams: [120, 1000, 4, 9995, 250], 
-      // Tên hiển thị tương ứng cho 5 thông số trên UI
+      isStack: true, 
+      // Mặc định: [Rộng 120, Auto 0 (hoặc 50000), Dày 4, Lỳ 9995, Tốc độ 500ms]
+      // Tôi khuyên để mặc định là 0 để tính năng Tự Động làm việc của nó!
+      defaultParams: [120, 0, 4, 9995, 500], 
       paramLabels: [
         'Độ Rộng Cột COB (px)', 
-        'Lọc Volume Tối Thiểu (USD)',
+        'Lọc Rác (USD) [Nhập 0 để Auto]',
         'Độ Dày 1 Nấc Giá (px)',
-        'Độ Lỳ Khung Scale (x/10000)',
-        'Tốc Độ Cập Nhật - FPS (ms)'
+        'Độ Lỳ Của Khung (x/10000)',
+        'Tốc Độ Vẽ - FPS (ms)'
       ],
       builtIn: false,
     },
@@ -573,27 +573,28 @@
       }
     });
 
-// ─────────────────────────────────────────────────
-// INDICATOR: WAVE_COB (Version 6.1.0 - Anti-Lag Patch)
-// ─────────────────────────────────────────────────
+
 // ─────────────────────────────────────────────────
 // INDICATOR: WAVE_COB (Version 7.0 - Smooth Tweening)
+// ─────────────────────────────────────────────────
+// ─────────────────────────────────────────────────
+// INDICATOR: WAVE_COB (Version 7.1 - Tiếng Việt & Auto Filter)
 // ─────────────────────────────────────────────────
 kc.registerIndicator({
   name:        'WAVE_COB',
   shortName:   'COB',
-  description: 'Current Order Book (Tháp thanh khoản DOM chuẩn Pro)',
+  description: 'Tháp Thanh Khoản DOM',
   category:    'wave_alpha',
   series:      'price',
   isStack:     true,    
 
-  calcParams:  [120, 1000, 4, 9995, 250],
+  calcParams:  [120, 0, 4, 9995, 500],
   paramLabels: [
     'Độ Rộng Cột COB (px)',
-    'Lọc Vol Tối Thiểu (USD)',
-    'Cao Bar (px)',
-    'Scale Decay (x/10000)',
-    'Refresh Interval (ms)'
+    'Lọc Rác (USD) [Nhập 0 để Auto]',
+    'Độ Dày 1 Nấc Giá (px)',
+    'Độ Lỳ Của Khung (x/10000)',
+    'Tốc Độ Vẽ - FPS (ms)'
   ],
 
   figures: [],
@@ -606,18 +607,20 @@ kc.registerIndicator({
 
     const p = indicator.calcParams;
     const colWidth   = Math.max(60,   Math.min(300,   +p[0] || 120));
-    const minVal     = Math.max(100,  Math.min(50000, +p[1] || 1000));
+    let   minVal     = +p[1]; // Cho phép lấy số 0
+    if (isNaN(minVal) || minVal < 0) minVal = 0; // Guard lỗi nhập
+    
     const barH       = Math.max(3,    Math.min(8,     +p[2] || 4));
     const decayRaw   = Math.max(9900, Math.min(9999,  +p[3] || 9995));
     const decay      = decayRaw / 10000;
-    const refreshMs  = Math.max(50,   Math.min(1000,  +p[4] || 250));
+    const refreshMs  = Math.max(50,   Math.min(2000,  +p[4] || 500)); // Mặc định 500ms
 
     if (!window._waCob) {
       window._waCob = {
         snapshot: { asks: new Map(), bids: new Map(), ts: 0 },
         scale:    { maxVol: 0, floor: 0 },
         stats:    { bidTotal: 0, askTotal: 0, ratio: 1 },
-        barCache: new Map(), // 🚀 BỘ NHỚ LƯU TRẠNG THÁI HIỆU ỨNG TỪNG THANH
+        barCache: new Map(), 
         hover:    { y: -1, side: null },
         debug:    false
       };
@@ -635,6 +638,13 @@ kc.registerIndicator({
     const cob = window._waCob;
     const now = Date.now();
     
+    // 🚀 CHẾ ĐỘ AUTO FILTER (Nếu User nhập 0)
+    // Tự động tìm ngưỡng lọc: Lọc bỏ các lệnh rác có Volume bé hơn 1.5% so với tường to nhất
+    if (minVal === 0) {
+        minVal = cob.scale.maxVol * 0.015; 
+        if (minVal < 500) minVal = 500; // Sàn tối thiểu là 500$
+    }
+
     if (now - cob.snapshot.ts >= refreshMs) {
       const rawAsks = window.scLocalOrderBook.asks;
       const rawBids = window.scLocalOrderBook.bids;
@@ -661,7 +671,7 @@ kc.registerIndicator({
       source.forEach((vol, priceStr) => {
         const price  = parseFloat(priceStr);
         const valUSD = price * vol;
-        if (valUSD < minVal) return; 
+        if (valUSD < minVal) return; // Đã áp dụng Auto Filter hoặc số User nhập
 
         const exactY = yAxis.convertToPixel(price);
         if (exactY == null || isNaN(exactY) || exactY < -OVERFLOW || exactY > H + OVERFLOW) return; 
@@ -689,11 +699,8 @@ kc.registerIndicator({
     }
     const renderMax = Math.max(cob.scale.maxVol || 10000, cob.scale.floor || 1000, 10000);
 
-    // 🚀 PHASE 4.5: ĐỘNG CƠ TWEENING (NỘI SUY CHUYỂN ĐỘNG)
-    // Đặt toàn bộ mục tiêu của thanh cũ về 0
     cob.barCache.forEach(b => b.target = 0);
 
-    // Cập nhật mục tiêu mới (Target) từ dữ liệu thực
     yMapAsks.forEach((val, y) => {
         if (!cob.barCache.has(y)) cob.barCache.set(y, { current: 0, target: val, type: 'ask' });
         else cob.barCache.get(y).target = val;
@@ -706,12 +713,8 @@ kc.registerIndicator({
     const animAsks = new Map();
     const animBids = new Map();
 
-    // Nội suy giá trị hiện tại (current) trượt dần về mục tiêu (target)
     cob.barCache.forEach((b, y) => {
-        // Tốc độ trượt: 25% mỗi khung hình (Tạo cảm giác mượt như thanh máu game)
         b.current += (b.target - b.current) * 0.25;
-
-        // Dọn dẹp RAM: Xóa nếu thanh đã tụt về 0 và không có lệnh mới
         if (b.target === 0 && b.current < minVal) {
             cob.barCache.delete(y);
             return;
@@ -724,7 +727,6 @@ kc.registerIndicator({
     cob.stats.askTotal = askTotal;
     cob.stats.ratio    = askTotal > 0 ? bidTotal / askTotal : 1;
 
-    // 🚀 PHASE 5: RENDERING (Sử dụng dữ liệu đã mượt hóa - animAsks / animBids)
     try {
       ctx.save();
       const startX = Math.round(bounding.width - colWidth); 
@@ -749,7 +751,7 @@ kc.registerIndicator({
         arr.sort((a, b) => b.v - a.v);
         return arr.slice(0, 3);
       };
-      // Tìm top 3 dựa trên mục tiêu thực (target)
+      
       const top3Asks = getTop3(yMapAsks);
       const top3Bids = getTop3(yMapBids);
       const top3AskSet = new Set(top3Asks.map(x => x.y));
@@ -785,7 +787,6 @@ kc.registerIndicator({
         });
       };
 
-      // 🚀 VẼ BẰNG MẢNG ĐÃ ĐƯỢC TWEEN (NỘI SUY MƯỢT)
       renderBars(animAsks, ASK_BASE_RGB, ASK_GLOW, top3AskSet);
       renderBars(animBids, BID_BASE_RGB, BID_GLOW, top3BidSet);
 
@@ -824,6 +825,7 @@ kc.registerIndicator({
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
+      // KHUNG TỔNG QUAN (ĐÃ VIỆT HÓA)
       {
         const panelW  = colWidth - 4;
         const panelH  = 46;
@@ -846,33 +848,36 @@ kc.registerIndicator({
 
         ctx.font      = "9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = 'left';
+        
         ctx.fillStyle = BID_TEXT;
-        ctx.fillText('BID', panelX + padX, panelY + lineH * 1 - 1);
+        ctx.fillText('LỰC MUA', panelX + padX, panelY + lineH * 1 - 1);
         ctx.fillStyle = '#E0E0E0';
-        ctx.fillText('$' + fmtVol(cob.stats.bidTotal), panelX + padX + 24, panelY + lineH * 1 - 1);
+        ctx.fillText('$' + fmtVol(cob.stats.bidTotal), panelX + padX + 42, panelY + lineH * 1 - 1); // Xích qua phải 1 tí
+        
         ctx.fillStyle = ASK_TEXT;
-        ctx.fillText('ASK', panelX + padX, panelY + lineH * 2 - 1);
+        ctx.fillText('LỰC BÁN', panelX + padX, panelY + lineH * 2 - 1);
         ctx.fillStyle = '#E0E0E0';
-        ctx.fillText('$' + fmtVol(cob.stats.askTotal), panelX + padX + 24, panelY + lineH * 2 - 1);
+        ctx.fillText('$' + fmtVol(cob.stats.askTotal), panelX + padX + 42, panelY + lineH * 2 - 1);
+        
         ctx.fillStyle = '#757575';
-        ctx.fillText('RATIO', panelX + padX, panelY + lineH * 3 - 1);
+        ctx.fillText('TỶ LỆ', panelX + padX, panelY + lineH * 3 - 1);
         ctx.fillStyle = ratioColor;
-        ctx.fillText(ratio.toFixed(2) + ' ' + ratioIcon, panelX + padX + 36, panelY + lineH * 3 - 1);
+        ctx.fillText(ratio.toFixed(2) + ' ' + ratioIcon, panelX + padX + 42, panelY + lineH * 3 - 1);
       }
 
+      // TOOLTIP KHI RÀ CHUỘT (ĐÃ VIỆT HÓA)
       {
         const hy = cob.hover.y;
         if (hy >= 0 && hy <= H) {
           const snapY = Math.floor(hy / barH) * barH;
-          // Tooltip luôn đọc giá trị thực tế (yMap) thay vì giá trị ảo đang trượt
           const askVol = yMapAsks.get(snapY);
           const bidVol = yMapBids.get(snapY);
           const vol    = askVol || bidVol;
-          const side   = askVol ? 'SELL' : bidVol ? 'BUY' : null;
+          const side   = askVol ? 'TƯỜNG BÁN' : bidVol ? 'TƯỜNG MUA' : null;
 
           if (vol && side) {
             const price = yAxis.convertFromPixel ? yAxis.convertFromPixel(snapY) : null;
-            const tipW  = 130;
+            const tipW  = 135;
             const tipH  = 38;
             const tipX  = startX - tipW - 6;
             const tipY  = Math.min(snapY - 4, H - tipH - 4);
@@ -880,19 +885,19 @@ kc.registerIndicator({
             ctx.fillStyle = 'rgba(0,0,0,0.80)';
             roundRect(ctx, tipX, tipY, tipW, tipH, 4);
             ctx.fill();
-            ctx.strokeStyle = side === 'SELL' ? ASK_GLOW : BID_GLOW;
+            ctx.strokeStyle = side === 'TƯỜNG BÁN' ? ASK_GLOW : BID_GLOW;
             ctx.lineWidth = 1;
             roundRect(ctx, tipX, tipY, tipW, tipH, 4);
             ctx.stroke();
 
             ctx.font      = "bold 9px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
             ctx.textAlign = 'left';
-            ctx.fillStyle = side === 'SELL' ? ASK_TEXT : BID_TEXT;
-            ctx.fillText(side + ' WALL', tipX + 5, tipY + 11);
+            ctx.fillStyle = side === 'TƯỜNG BÁN' ? ASK_TEXT : BID_TEXT;
+            ctx.fillText(side, tipX + 5, tipY + 11);
 
             if (price !== null && !isNaN(price)) {
               ctx.fillStyle = '#BDBDBD';
-              ctx.fillText('@ ' + price.toFixed(2), tipX + 5, tipY + 22);
+              ctx.fillText('Giá: ' + price.toFixed(2), tipX + 5, tipY + 22);
             }
             ctx.fillStyle = '#FFFFFF';
             ctx.fillText('$' + fmtVol(vol) + '  (' + ((vol / renderMax) * 100).toFixed(1) + '%)', tipX + 5, tipY + 33);
