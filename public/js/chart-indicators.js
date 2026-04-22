@@ -285,16 +285,18 @@
     {
       name: 'WAVE_VPVR',
       shortName: 'VPVR',
-      description: 'Hồ Sơ Khối Lượng Vùng Hiển Thị (Volume Profile)',
+      description: 'Hồ Sơ Khối Lượng Vùng Hiển Thị ULTIMATE (Volume Profile)',
       category: 'wave_alpha',
-      isStack: true, // Vẽ đè lên biểu đồ giá
-      // [Số Hàng (Bins), Vùng Giá Trị VA (%), Độ Rộng (%), Vị trí (0=Phải, 1=Trái)]
-      defaultParams: [60, 70, 30, 0], 
+      isStack: true,
+      // [Bins, VA%, Width%, Pos, Chế Độ Phiên, Composite Base]
+      defaultParams: [60, 70, 30, 0, 0, 0],
       paramLabels: [
-        'Số Lượng Thanh Ngang (Bins)', 
-        'Vùng Giá Trị VA (%)', 
+        'Số Lượng Thanh Ngang (Bins)',
+        'Vùng Giá Trị VA (%)',
         'Độ Rộng VPVR (% Màn Hình)',
-        'Vị trí (0=Bên Phải, 1=Bên Trái)'
+        'Vị Trí (0=Bên Phải, 1=Bên Trái)',
+        'Chế Độ Phiên (0=Toàn màn, 1=Ngày, 2=Tuần)',
+        'Composite Mode (0=Tắt, 1=Bật)'
       ],
       builtIn: false,
     },
@@ -1516,248 +1518,311 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 /**
- * ╔══════════════════════════════════════════════════════════════════════════════╗
- * ║  WAVE_VPVR — Volume Profile Visible Range (Bản Vá Lỗi Tàng Hình V10.1)       ║
- * ║  Tích hợp: Value Area (VA), Point of Control (POC), Cập nhật Realtime        ║
- * ╚══════════════════════════════════════════════════════════════════════════════╝
+ * ╔══════════════════════════════════════════════════════════════════════════════════╗
+ * ║  WAVE_VPVR ULTIMATE — Volume Profile Visible Range v2.0                          ║
+ * ║  Tích hợp: Session Profiling, Naked POC, VAH/VAL Labels, Glassmorphism, Imbalance║
+ * ╚══════════════════════════════════════════════════════════════════════════════════╝
  */
+
+// ─────────────────────────────────────────────────────────────────
+// [7] CACHE ENGINE ĐA LỚP — LRU Map tối đa 10 entries
+// ─────────────────────────────────────────────────────────────────
+if (!window._waVpvrCache) window._waVpvrCache = new Map();
+
+function _waVpvrCacheSet(key, value) {
+  if (window._waVpvrCache.has(key)) window._waVpvrCache.delete(key);
+  window._waVpvrCache.set(key, value);
+  if (window._waVpvrCache.size > 10) {
+    const oldestKey = window._waVpvrCache.keys().next().value;
+    window._waVpvrCache.delete(oldestKey);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// THUẬT TOÁN LÕI & RENDERER ENGINE
+// ─────────────────────────────────────────────────────────────────
 kc.registerIndicator({
   name: 'WAVE_VPVR',
   shortName: 'VPVR',
-  description: 'Hồ Sơ Khối Lượng Vùng Hiển Thị (Volume Profile)',
+  description: 'Volume Profile ULTIMATE',
   category: 'wave_alpha',
   series: 'price',
-  isStack: true, 
+  isStack: true,
 
-  calcParams: [60, 70, 30, 0], 
-  paramLabels: [
-    'Số Lượng Thanh Ngang (Bins)', 
-    'Vùng Giá Trị VA (%)', 
-    'Độ Rộng VPVR (% Màn Hình)',
-    'Vị trí (0=Bên Phải, 1=Bên Trái)'
-  ],
+  calcParams: [60, 70, 30, 0, 0, 0],
   figures: [],
 
-  calc: function(dataList) {
-    return dataList.map(() => ({}));
-  },
+  calc: function(dataList) { return dataList.map(() => ({})); },
 
-  // 🚀 ĐÃ SỬA CÁCH NHẬN BIẾN (args) ĐỂ TƯƠNG THÍCH MỌI PHIÊN BẢN KLINECHARTS
   draw: function(args) {
-    const { ctx, bounding, xAxis, yAxis, indicator } = args;
-    
-    // Tự động nhận diện tên biến của cả KLineCharts v8 và v9
+    const { ctx, bounding, yAxis, indicator } = args;
     const dataList = args.kLineDataList || args.dataList || [];
     const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
 
     if (!dataList || dataList.length === 0 || !bounding) return false;
 
     const p = indicator.calcParams;
-    const rowCount   = Math.max(10, Math.min(200, +(p[0] || 60))); 
-    const vaPercent  = Math.max(10, Math.min(100, +(p[1] || 70))); 
-    const widthPct   = Math.max(10, Math.min(80,  +(p[2] || 30))); 
-    const isLeft     = +(p[3] || 0) === 1; 
+    const rowCount   = Math.max(10, Math.min(200, +(p[0] || 60)));
+    const vaPercent  = Math.max(10, Math.min(100, +(p[1] || 70)));
+    const widthPct   = Math.max(10, Math.min(80,  +(p[2] || 30)));
+    const isLeft     = +(p[3] || 0) === 1;
+    const sessionMode = +(p[4] || 0); // 0=Toàn bộ, 1=Ngày, 2=Tuần
+    const useComp    = +(p[5] || 0) === 1;
 
-    // Chốt chặn an toàn cho dải hiển thị
     let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
     let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
     if (from >= to) return false;
 
-    // 1. TẠO CACHE ENGINE
-    if (!window._waVpvr) window._waVpvr = { key: '', profile: [], maxVol: 0, poc: null };
-    const vState = window._waVpvr;
-    
-    // 🚀 LẤY VOL CỦA CÂY NẾN CUỐI ĐỂ ÉP CACHE UPDATE REALTIME KHI ĐANG CHẠY
-    const lastCandleVol = dataList[to - 1] ? (dataList[to - 1].volume || 0) : 0;
-    const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${lastCandleVol}`;
-
-    // 2. THUẬT TOÁN TÍNH TOÁN BINS
-    if (vState.key !== cacheKey) {
-        let maxP = -Infinity, minP = Infinity;
-        let totalVol = 0;
-
-        for (let i = from; i < to; i++) {
-            const d = dataList[i];
-            if (!d) continue;
-            if (d.high > maxP) maxP = d.high;
-            if (d.low < minP) minP = d.low;
+    // Khởi tạo Helper nội bộ
+    const _calcProfile = function(startIdx, endIdx, forceWidth) {
+        let maxP = -Infinity, minP = Infinity, totalVol = 0;
+        for (let i = startIdx; i < endIdx; i++) {
+            const d = dataList[i]; if (!d) continue;
+            if (d.high > maxP) maxP = d.high; if (d.low < minP) minP = d.low;
             totalVol += (d.volume || 0);
         }
-
-        if (maxP === -Infinity || totalVol === 0) return false;
+        if (maxP === -Infinity || totalVol === 0) return null;
 
         const step = (maxP - minP) / rowCount;
         const bins = new Array(rowCount).fill(0).map((_, i) => ({
-            idx: i,
-            pLow: minP + i * step,
-            pHigh: minP + (i + 1) * step,
-            upVol: 0,
-            downVol: 0,
-            total: 0,
-            inVA: false 
+            idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step,
+            upVol: 0, downVol: 0, total: 0, inVA: false
         }));
 
-        for (let i = from; i < to; i++) {
-            const d = dataList[i];
-            if (!d || !d.volume) continue;
-
+        for (let i = startIdx; i < endIdx; i++) {
+            const d = dataList[i]; if (!d || !d.volume) continue;
             const cRange = d.high - d.low;
             let upV = 0, dnV = 0;
-            if (cRange === 0) {
-                if (d.close >= d.open) upV = d.volume; else dnV = d.volume;
-            } else {
-                const upRatio = (d.close - d.low) / cRange;
-                upV = d.volume * upRatio;
-                dnV = d.volume - upV;
-            }
+            if (cRange === 0) { d.close >= d.open ? upV = d.volume : dnV = d.volume; } 
+            else { upV = d.volume * ((d.close - d.low) / cRange); dnV = d.volume - upV; }
 
-            const startIdx = Math.max(0, Math.floor((d.low - minP) / step));
-            const endIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
+            const sIdx = Math.max(0, Math.floor((d.low - minP) / step));
+            const eIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
 
-            for (let j = startIdx; j <= endIdx; j++) {
-                const bin = bins[j];
-                const overlapLow = Math.max(d.low, bin.pLow);
-                const overlapHigh = Math.min(d.high, bin.pHigh);
-                if (overlapHigh > overlapLow) {
-                    const ratio = (overlapHigh - overlapLow) / (cRange || 1);
-                    bin.upVol += upV * ratio;
-                    bin.downVol += dnV * ratio;
-                    bin.total += d.volume * ratio;
+            for (let j = sIdx; j <= eIdx; j++) {
+                const b = bins[j], oL = Math.max(d.low, b.pLow), oH = Math.min(d.high, b.pHigh);
+                if (oH > oL) {
+                    const r = (oH - oL) / (cRange || step);
+                    b.upVol += upV * r; b.downVol += dnV * r; b.total += d.volume * r;
                 }
             }
         }
 
         let pocBin = bins[0], maxBinVol = 0;
-        bins.forEach(b => {
-            if (b.total > maxBinVol) { maxBinVol = b.total; pocBin = b; }
-        });
+        bins.forEach(b => { if (b.total > maxBinVol) { maxBinVol = b.total; pocBin = b; } });
+        if (maxBinVol === 0) return null;
 
-        // Tính Value Area (Loang vết dầu)
-        if (pocBin) {
-            pocBin.inVA = true;
-            let currentVA_Vol = pocBin.total;
-            const targetVA_Vol = totalVol * (vaPercent / 100);
-            
-            let upIdx = pocBin.idx + 1;
-            let dnIdx = pocBin.idx - 1;
+        pocBin.inVA = true;
+        let cVAVol = pocBin.total, tVAVol = totalVol * (vaPercent / 100);
+        let uI = pocBin.idx + 1, dI = pocBin.idx - 1;
 
-            while (currentVA_Vol < targetVA_Vol && (upIdx < rowCount || dnIdx >= 0)) {
-                let volUp = 0, volDn = 0;
-                if (upIdx < rowCount) volUp += bins[upIdx].total;
-                if (upIdx + 1 < rowCount) volUp += bins[upIdx + 1].total;
-                
-                if (dnIdx >= 0) volDn += bins[dnIdx].total;
-                if (dnIdx - 1 >= 0) volDn += bins[dnIdx - 1].total;
+        while (cVAVol < tVAVol && (uI < rowCount || dI >= 0)) {
+            let vU = 0, vD = 0;
+            if (uI < rowCount) vU += bins[uI].total; if (uI + 1 < rowCount) vU += bins[uI + 1].total;
+            if (dI >= 0) vD += bins[dI].total; if (dI - 1 >= 0) vD += bins[dI - 1].total;
 
-                if (volUp >= volDn && upIdx < rowCount) {
-                    bins[upIdx].inVA = true;
-                    currentVA_Vol += bins[upIdx].total;
-                    upIdx++;
-                } else if (dnIdx >= 0) {
-                    bins[dnIdx].inVA = true;
-                    currentVA_Vol += bins[dnIdx].total;
-                    dnIdx--;
-                } else if (upIdx < rowCount) {
-                    bins[upIdx].inVA = true;
-                    currentVA_Vol += bins[upIdx].total;
-                    upIdx++;
-                } else {
-                    break;
-                }
-            }
+            if (vU >= vD && uI < rowCount) { bins[uI].inVA = true; cVAVol += bins[uI].total; uI++; } 
+            else if (dI >= 0) { bins[dI].inVA = true; cVAVol += bins[dI].total; dI--; } 
+            else if (uI < rowCount) { bins[uI].inVA = true; cVAVol += bins[uI].total; uI++; } 
+            else break;
         }
 
-        vState.key = cacheKey;
-        vState.profile = bins;
-        vState.maxVol = maxBinVol;
-        vState.poc = pocBin;
+        let vahBin = null, valBin = null;
+        for (let i = rowCount - 1; i >= 0; i--) { if (bins[i].inVA && !vahBin) vahBin = bins[i]; }
+        for (let i = 0; i < rowCount; i++) { if (bins[i].inVA && !valBin) valBin = bins[i]; }
+
+        return { 
+            bins, maxVol: maxBinVol, poc: pocBin, vahBin, valBin, 
+            startIdx, endIdx, wPct: forceWidth || widthPct 
+        };
+    };
+
+    const _getSessions = function() {
+        const groups = new Map();
+        for (let i = from; i < to; i++) {
+            const d = dataList[i]; if (!d || !d.timestamp) continue;
+            const dt = new Date(d.timestamp); let key;
+            if (sessionMode === 1) {
+                key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
+            } else {
+                const dow = dt.getUTCDay() || 7, mon = new Date(dt);
+                mon.setUTCDate(dt.getUTCDate() - dow + 1);
+                key = mon.getUTCFullYear() * 10000 + (mon.getUTCMonth() + 1) * 100 + mon.getUTCDate();
+            }
+            if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
+            else groups.get(key).end = i + 1;
+        }
+        return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-5);
+    };
+
+    // TẠO CACHE KEY
+    const lastVol = dataList[to - 1] ? (dataList[to - 1].volume || 0) : 0;
+    const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${sessionMode}_${useComp}_${lastVol}`;
+
+    let profilesToRender = [];
+    let compProfile = null;
+
+    if (window._waVpvrCache.has(cacheKey)) {
+        const cached = window._waVpvrCache.get(cacheKey);
+        profilesToRender = cached.profilesToRender;
+        compProfile = cached.compProfile;
+    } else {
+        if (sessionMode === 0) {
+            const prof = _calcProfile(from, to, widthPct);
+            if (prof) profilesToRender.push(prof);
+        } else {
+            const sessions = _getSessions();
+            // Nếu chia session, mỗi session chiếm max 20% màn hình để không đè lên nhau
+            sessions.forEach(s => {
+                const prof = _calcProfile(s.start, s.end, 20);
+                if (prof) profilesToRender.push(prof);
+            });
+        }
+
+        if (useComp && sessionMode !== 0) {
+            compProfile = _calcProfile(from, to, widthPct);
+        }
+        _waVpvrCacheSet(cacheKey, { profilesToRender, compProfile });
     }
 
     // ==========================================
-    // 3. XUẤT ĐỒ HỌA (RENDERING)
+    // RENDER ENGINE
     // ==========================================
-    if (!vState.profile.length || vState.maxVol === 0) return false;
-
     try {
         ctx.save();
-        ctx.globalCompositeOperation = 'source-over'; 
 
-        const maxWidthPx = bounding.width * (widthPct / 100);
-        const GAP = 1; 
+        const GAP = 1;
+        const cUpVA = 'rgba(38, 166, 154, 0.85)'; const cDnVA = 'rgba(239, 83, 80, 0.85)';
+        const cUpOut = 'rgba(38, 166, 154, 0.2)'; const cDnOut = 'rgba(239, 83, 80, 0.2)';
 
-        // Bảng màu phân biệt Rõ Ràng (Xanh/Đỏ) và (Sáng/Tối)
-        const colorUpVA = 'rgba(38, 166, 154, 0.7)';  // Xanh Mua (VA)
-        const colorDnVA = 'rgba(239, 83, 80, 0.7)';   // Đỏ Bán (VA)
-        const colorUpOut = 'rgba(38, 166, 154, 0.2)'; // Xanh Mua (Ngoài)
-        const colorDnOut = 'rgba(239, 83, 80, 0.2)';  // Đỏ Bán (Ngoài)
+        const _drawProfile = function(prof, isBackground) {
+            if (!prof || !prof.bins.length) return;
+            
+            // Nếu là layer background (Composite), vẽ mờ
+            ctx.globalAlpha = isBackground ? 0.25 : 1.0;
+            
+            const maxPx = bounding.width * (prof.wPct / 100);
+            
+            // [8] GRADIENT FILL GLASSMORPHISM
+            const gradUp = ctx.createLinearGradient(isLeft ? 0 : bounding.width, 0, isLeft ? maxPx : bounding.width - maxPx, 0);
+            gradUp.addColorStop(0, 'rgba(38, 166, 154, 0.9)'); gradUp.addColorStop(1, 'rgba(38, 166, 154, 0.2)');
+            const gradDn = ctx.createLinearGradient(isLeft ? 0 : bounding.width, 0, isLeft ? maxPx : bounding.width - maxPx, 0);
+            gradDn.addColorStop(0, 'rgba(239, 83, 80, 0.9)'); gradDn.addColorStop(1, 'rgba(239, 83, 80, 0.2)');
 
-        vState.profile.forEach(bin => {
-            if (bin.total <= 0) return;
+            prof.bins.forEach(bin => {
+                if (bin.total <= 0) return;
+                const yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
+                if (yB === null || yT === null) return;
 
-            let yBottom = yAxis.convertToPixel(bin.pLow);
-            let yTop = yAxis.convertToPixel(bin.pHigh);
-            if (yBottom === null || yTop === null) return;
+                const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT) - GAP);
+                const wUp = (bin.upVol / prof.maxVol) * maxPx;
+                const wDn = (bin.downVol / prof.maxVol) * maxPx;
 
-            const rectY = Math.min(yTop, yBottom);
-            const rectH = Math.max(1, Math.abs(yBottom - yTop) - GAP);
-
-            const wUp = (bin.upVol / vState.maxVol) * maxWidthPx;
-            const wDn = (bin.downVol / vState.maxVol) * maxWidthPx;
-
-            const cUp = bin.inVA ? colorUpVA : colorUpOut;
-            const cDn = bin.inVA ? colorDnVA : colorDnOut;
-
-            ctx.beginPath();
-            if (isLeft) {
-                ctx.fillStyle = cUp;
-                ctx.fillRect(0, rectY, wUp, rectH);
-                ctx.fillStyle = cDn;
-                ctx.fillRect(wUp, rectY, wDn, rectH);
-            } else {
-                const startX = bounding.width;
-                ctx.fillStyle = cDn; 
-                ctx.fillRect(startX - wDn, rectY, wDn, rectH);
-                ctx.fillStyle = cUp; 
-                ctx.fillRect(startX - wDn - wUp, rectY, wUp, rectH);
-            }
-        });
-
-        // VẼ ĐƯỜNG POC (Kháng cự/Hỗ trợ cực mạnh)
-        if (vState.poc) {
-            let pocY = yAxis.convertToPixel((vState.poc.pLow + vState.poc.pHigh) / 2);
-            if (pocY !== null) {
-                ctx.shadowColor = 'rgba(240, 185, 11, 0.9)';
-                ctx.shadowBlur = 4;
-                ctx.strokeStyle = '#F0B90B'; 
-                ctx.lineWidth = 1.5;
-                
                 ctx.beginPath();
                 if (isLeft) {
-                    ctx.moveTo(0, pocY);
-                    ctx.lineTo(maxWidthPx + 30, pocY);
+                    ctx.fillStyle = bin.inVA ? gradUp : cUpOut; ctx.fillRect(0, rY, wUp, rH);
+                    ctx.fillStyle = bin.inVA ? gradDn : cDnOut; ctx.fillRect(wUp, rY, wDn, rH);
                 } else {
-                    ctx.moveTo(bounding.width, pocY);
-                    ctx.lineTo(bounding.width - maxWidthPx - 30, pocY);
+                    const startX = bounding.width;
+                    ctx.fillStyle = bin.inVA ? gradDn : cDnOut; ctx.fillRect(startX - wDn, rY, wDn, rH);
+                    ctx.fillStyle = bin.inVA ? gradUp : cUpOut; ctx.fillRect(startX - wDn - wUp, rY, wUp, rH);
                 }
-                ctx.stroke();
 
-                ctx.shadowColor = 'transparent';
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#F0B90B';
-                ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
-                ctx.textBaseline = 'middle';
-                if (isLeft) {
-                    ctx.textAlign = 'left';
-                    ctx.fillText('POC', maxWidthPx + 35, pocY);
-                } else {
-                    ctx.textAlign = 'right';
-                    ctx.fillText('POC', bounding.width - maxWidthPx - 35, pocY);
+                // [9] DELTA IMBALANCE (Icon Mua/Bán Áp Đảo)
+                if (bin.inVA && !isBackground && rH > 4) {
+                    ctx.fillStyle = '#FFF';
+                    ctx.font = `${Math.min(8, rH)}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    let midX = isLeft ? (wUp + wDn + 6) : (bounding.width - wUp - wDn - 6);
+                    if (bin.upVol > bin.downVol * 3) ctx.fillText('▲', midX, rY + rH/2);
+                    else if (bin.downVol > bin.upVol * 3) ctx.fillText('▼', midX, rY + rH/2);
+                }
+            });
+
+            // Nếu là layer nền, bỏ qua vẽ Label/POC để đỡ rối mắt
+            if (isBackground) return;
+
+            // [1] VAH / VAL LABELS
+            const drawVaLine = (bin, label) => {
+                if (!bin) return;
+                const y = yAxis.convertToPixel((bin.pLow + bin.pHigh) / 2);
+                if (y === null) return;
+                
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = 'rgba(156, 39, 176, 0.7)'; // Màu Tím chuẩn UI
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                const endX = isLeft ? maxPx + 20 : bounding.width - maxPx - 20;
+                ctx.moveTo(isLeft ? 0 : bounding.width, y); ctx.lineTo(endX, y); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Label Text
+                ctx.fillStyle = 'rgba(156, 39, 176, 0.9)';
+                const txtW = 28;
+                ctx.fillRect(isLeft ? endX + 2 : endX - txtW - 2, y - 6, txtW, 12);
+                ctx.fillStyle = '#FFF';
+                ctx.font = '8px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, isLeft ? endX + 2 + txtW/2 : endX - 2 - txtW/2, y);
+            };
+            drawVaLine(prof.vahBin, 'VAH');
+            drawVaLine(prof.valBin, 'VAL');
+
+            // [2] POC & [4] NAKED POC
+            if (prof.poc) {
+                const pocP = (prof.poc.pLow + prof.poc.pHigh) / 2;
+                const pocY = yAxis.convertToPixel(pocP);
+                if (pocY !== null) {
+                    // Logic Naked POC: Xem giá có quay lại test chưa (từ cuối phiên đến cây nến hiện tại)
+                    let isNaked = true;
+                    if (prof.endIdx < to) {
+                        for (let i = prof.endIdx; i < to; i++) {
+                            const d = dataList[i];
+                            if (d && pocP >= d.low && pocP <= d.high) { isNaked = false; break; }
+                        }
+                    }
+
+                    ctx.shadowColor = 'rgba(240, 185, 11, 0.8)'; ctx.shadowBlur = 4;
+                    ctx.strokeStyle = isNaked ? '#0ECB81' : '#F0B90B'; // Màu xanh nếu là nPOC (Chưa test)
+                    ctx.lineWidth = 2;
+                    
+                    const endX = isLeft 
+                        ? (isNaked ? bounding.width * 0.8 : maxPx + 40) // nPOC kéo dài 80% màn hình
+                        : (isNaked ? bounding.width * 0.2 : bounding.width - maxPx - 40);
+
+                    ctx.beginPath();
+                    ctx.moveTo(isLeft ? 0 : bounding.width, pocY); ctx.lineTo(endX, pocY); ctx.stroke();
+                    ctx.shadowBlur = 0;
+
+                    // [2] POC PRICE BADGE (Badge nền vàng, chữ đen bo góc)
+                    const badgeW = 40, badgeH = 14, r = 3;
+                    const bX = isLeft ? endX + 4 : endX - badgeW - 4;
+                    const bY = pocY - badgeH/2;
+                    
+                    ctx.fillStyle = isNaked ? '#0ECB81' : '#F0B90B';
+                    ctx.beginPath();
+                    ctx.moveTo(bX + r, bY); ctx.arcTo(bX + badgeW, bY, bX + badgeW, bY + badgeH, r);
+                    ctx.arcTo(bX + badgeW, bY + badgeH, bX, bY + badgeH, r);
+                    ctx.arcTo(bX, bY + badgeH, bX, bY, r); ctx.arcTo(bX, bY, bX + badgeW, bY, r);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 9px system-ui, sans-serif';
+                    ctx.textAlign = 'center';
+                    const priceStr = Number(pocP).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    ctx.fillText(isNaked ? 'nPOC' : priceStr, bX + badgeW/2, pocY);
                 }
             }
-        }
+        };
+
+        // Render Layer Composite (Nền)
+        if (compProfile) _drawProfile(compProfile, true);
+
+        // Render Layer Main/Sessions
+        profilesToRender.forEach(p => _drawProfile(p, false));
 
     } catch (e) {
-        // console.error('[WAVE_VPVR]', e);
     } finally {
         ctx.restore();
     }
