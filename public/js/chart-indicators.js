@@ -299,6 +299,21 @@
       builtIn: false,
     },
     {
+      name: 'WAVE_TPO',
+      shortName: 'TPO',
+      description: 'Hồ Sơ Thời Gian Market Profile (Time Price Opportunity)',
+      category: 'wave_alpha',
+      isStack: true, // Vẽ đè lên biểu đồ giá
+      // [Số Hàng (Bins), Vùng Giá Trị VA (%), Vị trí (0=Trái, 1=Phải)]
+      defaultParams: [60, 70, 0], 
+      paramLabels: [
+        'Số Lượng Hàng (Bins)', 
+        'Vùng Giá Trị VA (%)', 
+        'Vị trí (0=Bên Trái, 1=Bên Phải)'
+      ],
+      builtIn: false,
+    },
+    {
       name: 'SUPERTREND',
       shortName: 'ST',
       description: 'ATR-based trend direction indicator — changes color with trend',
@@ -1743,6 +1758,247 @@ kc.registerIndicator({
 
     } catch (e) {
         // console.error('[WAVE_VPVR]', e);
+    } finally {
+        ctx.restore();
+    }
+
+    return false;
+  }
+});
+
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║  WAVE_TPO — Time Price Opportunity (Market Profile)                          ║
+ * ║  Hiệu ứng: Xếp gạch (Blocks) hiển thị thời gian giá dừng chân tại mỗi Level  ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ */
+kc.registerIndicator({
+  name: 'WAVE_TPO',
+  shortName: 'TPO',
+  description: 'Time Price Opportunity (Market Profile)',
+  category: 'wave_alpha',
+  series: 'price',
+  isStack: true, 
+
+  calcParams: [60, 70, 0], 
+  figures: [],
+
+  calc: function(dataList) {
+    return dataList.map(() => ({}));
+  },
+
+  draw: function(args) {
+    const { ctx, bounding, yAxis, indicator } = args;
+    
+    // Tương thích mọi phiên bản KLineCharts
+    const dataList = args.kLineDataList || args.dataList || [];
+    const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
+
+    if (!dataList || dataList.length === 0 || !bounding) return false;
+
+    const p = indicator.calcParams;
+    const rowCount   = Math.max(10, Math.min(200, +(p[0] || 60))); 
+    const vaPercent  = Math.max(10, Math.min(100, +(p[1] || 70))); 
+    const isLeft     = +(p[2] || 0) === 0; // 0 = Trái, 1 = Phải
+
+    let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
+    let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
+    if (from >= to) return false;
+
+    // 1. CACHE ENGINE
+    if (!window._waTpo) window._waTpo = { key: '', profile: [], maxTPO: 0, poc: null };
+    const tState = window._waTpo;
+    
+    // Lấy Close cuối cùng để force update nếu nến hiện tại đang giật
+    const lastClose = dataList[to - 1] ? (dataList[to - 1].close || 0) : 0;
+    const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${lastClose}`;
+
+    // 2. TÍNH TOÁN BINS (Đếm Thời Gian / Tick thay vì Khối Lượng)
+    if (tState.key !== cacheKey) {
+        let maxP = -Infinity, minP = Infinity;
+        let totalTPO = 0;
+
+        for (let i = from; i < to; i++) {
+            const d = dataList[i];
+            if (!d) continue;
+            if (d.high > maxP) maxP = d.high;
+            if (d.low < minP) minP = d.low;
+        }
+
+        if (maxP === -Infinity) return false;
+
+        const step = (maxP - minP) / rowCount;
+        const bins = new Array(rowCount).fill(0).map((_, i) => ({
+            idx: i,
+            pLow: minP + i * step,
+            pHigh: minP + (i + 1) * step,
+            count: 0, // Đếm số nến (thời gian) đi qua vùng này
+            inVA: false 
+        }));
+
+        // Đổ thời gian vào các Bins
+        for (let i = from; i < to; i++) {
+            const d = dataList[i];
+            if (!d) continue;
+
+            const startIdx = Math.max(0, Math.floor((d.low - minP) / step));
+            const endIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
+
+            for (let j = startIdx; j <= endIdx; j++) {
+                bins[j].count += 1;
+                totalTPO += 1;
+            }
+        }
+
+        if (totalTPO === 0) return false;
+
+        // Tìm POC (Vùng giá được giao dịch nhiều thời gian nhất)
+        let pocBin = bins[0], maxBinCount = 0;
+        bins.forEach(b => {
+            if (b.count > maxBinCount) { maxBinCount = b.count; pocBin = b; }
+        });
+
+        // Tính Value Area (Loang vết dầu)
+        if (pocBin) {
+            pocBin.inVA = true;
+            let currentVA_Count = pocBin.count;
+            const targetVA_Count = totalTPO * (vaPercent / 100);
+            
+            let upIdx = pocBin.idx + 1;
+            let dnIdx = pocBin.idx - 1;
+
+            while (currentVA_Count < targetVA_Count && (upIdx < rowCount || dnIdx >= 0)) {
+                let countUp = 0, countDn = 0;
+                if (upIdx < rowCount) countUp += bins[upIdx].count;
+                if (upIdx + 1 < rowCount) countUp += bins[upIdx + 1].count;
+                
+                if (dnIdx >= 0) countDn += bins[dnIdx].count;
+                if (dnIdx - 1 >= 0) countDn += bins[dnIdx - 1].count;
+
+                if (countUp >= countDn && upIdx < rowCount) {
+                    bins[upIdx].inVA = true;
+                    currentVA_Count += bins[upIdx].count;
+                    upIdx++;
+                } else if (dnIdx >= 0) {
+                    bins[dnIdx].inVA = true;
+                    currentVA_Count += bins[dnIdx].count;
+                    dnIdx--;
+                } else if (upIdx < rowCount) {
+                    bins[upIdx].inVA = true;
+                    currentVA_Count += bins[upIdx].count;
+                    upIdx++;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        tState.key = cacheKey;
+        tState.profile = bins;
+        tState.maxTPO = maxBinCount;
+        tState.poc = pocBin;
+    }
+
+    // ==========================================
+    // 3. XUẤT ĐỒ HỌA (RENDERING HIỆU ỨNG XẾP GẠCH)
+    // ==========================================
+    if (!tState.profile.length || tState.maxTPO === 0) return false;
+
+    try {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over'; 
+
+        // Giới hạn đồ thị chiếm tối đa 35% chiều ngang màn hình
+        const maxScreenPx = bounding.width * 0.35;
+        const GAP = 1; // Khoảng cách giữa các viên gạch
+        
+        // Màu sắc đặc trưng của TPO (Tím / Hồng) để phân biệt với VPVR (Xanh / Đỏ)
+        const colorVA = 'rgba(156, 39, 176, 0.75)';    // Trong Vùng Giá Trị (Tím đậm)
+        const colorOut = 'rgba(156, 39, 176, 0.15)';   // Ngoài Vùng Giá Trị (Tím nhạt)
+        const colorBorder = 'rgba(255, 255, 255, 0.1)';// Viền gạch
+
+        tState.profile.forEach(bin => {
+            if (bin.count <= 0) return;
+
+            let yBottom = yAxis.convertToPixel(bin.pLow);
+            let yTop = yAxis.convertToPixel(bin.pHigh);
+            if (yBottom === null || yTop === null) return;
+
+            const rectY = Math.min(yTop, yBottom);
+            // Chiều cao của 1 nấc giá
+            const rectH = Math.max(1, Math.abs(yBottom - yTop));
+            
+            // Tính toán bề ngang của 1 "viên gạch". 
+            // Nếu số lượng gạch quá nhiều, tự động bóp bề ngang lại để không tràn 35% màn hình
+            let blockW = rectH; // Mặc định gạch hình vuông
+            if (blockW * tState.maxTPO > maxScreenPx) {
+                blockW = maxScreenPx / tState.maxTPO;
+            }
+
+            ctx.fillStyle = bin.inVA ? colorVA : colorOut;
+            ctx.strokeStyle = colorBorder;
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            
+            // Vẽ TỪNG VIÊN GẠCH nối tiếp nhau
+            for (let c = 0; c < bin.count; c++) {
+                let x;
+                if (isLeft) {
+                    x = c * blockW;
+                } else {
+                    x = bounding.width - (c + 1) * blockW;
+                }
+                
+                // Trừ đi GAP để tạo khe hở
+                ctx.rect(x, rectY, Math.max(1, blockW - GAP), Math.max(1, rectH - GAP));
+            }
+            
+            ctx.fill();
+            // Nếu zoom đủ to, hiển thị viền của từng viên gạch cho sắc nét
+            if (blockW > 3 && rectH > 3) {
+                ctx.stroke();
+            }
+        });
+
+        // VẼ ĐƯỜNG POC CỦA TPO
+        if (tState.poc) {
+            let pocY = yAxis.convertToPixel((tState.poc.pLow + tState.poc.pHigh) / 2);
+            if (pocY !== null) {
+                ctx.shadowColor = 'rgba(240, 185, 11, 0.9)';
+                ctx.shadowBlur = 4;
+                ctx.strokeStyle = '#F0B90B'; 
+                ctx.lineWidth = 1.5;
+                
+                // Vẽ tia laser bắn ra từ đỉnh của hàng POC
+                const pocLengthPx = tState.poc.count * blockW;
+
+                ctx.beginPath();
+                if (isLeft) {
+                    ctx.moveTo(pocLengthPx, pocY);
+                    ctx.lineTo(pocLengthPx + 40, pocY);
+                } else {
+                    ctx.moveTo(bounding.width - pocLengthPx, pocY);
+                    ctx.lineTo(bounding.width - pocLengthPx - 40, pocY);
+                }
+                ctx.stroke();
+
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 9px system-ui, sans-serif';
+                ctx.textBaseline = 'middle';
+                if (isLeft) {
+                    ctx.textAlign = 'left';
+                    ctx.fillText('TPO POC', pocLengthPx + 45, pocY);
+                } else {
+                    ctx.textAlign = 'right';
+                    ctx.fillText('TPO POC', bounding.width - pocLengthPx - 45, pocY);
+                }
+            }
+        }
+
+    } catch (e) {
     } finally {
         ctx.restore();
     }
