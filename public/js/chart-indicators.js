@@ -283,6 +283,22 @@
       builtIn: false,
     },
     {
+      name: 'WAVE_VPVR',
+      shortName: 'VPVR',
+      description: 'Hồ Sơ Khối Lượng Vùng Hiển Thị (Volume Profile)',
+      category: 'wave_alpha',
+      isStack: true, // Vẽ đè lên biểu đồ giá
+      // [Số Hàng (Bins), Vùng Giá Trị VA (%), Độ Rộng (%), Vị trí (0=Phải, 1=Trái)]
+      defaultParams: [60, 70, 30, 0], 
+      paramLabels: [
+        'Số Lượng Thanh Ngang (Bins)', 
+        'Vùng Giá Trị VA (%)', 
+        'Độ Rộng VPVR (% Màn Hình)',
+        'Vị trí (0=Bên Phải, 1=Bên Trái)'
+      ],
+      builtIn: false,
+    },
+    {
       name: 'SUPERTREND',
       shortName: 'ST',
       description: 'ATR-based trend direction indicator — changes color with trend',
@@ -1130,9 +1146,7 @@ kc.registerIndicator({
 });
 
 
-// ─────────────────────────────────────────────────
-// INDICATOR: WAVE_COB (Version 7.0 - Smooth Tweening)
-// ─────────────────────────────────────────────────
+
 // ─────────────────────────────────────────────────
 // INDICATOR: WAVE_COB (Version 7.1 - Tiếng Việt & Auto Filter)
 // ─────────────────────────────────────────────────
@@ -1486,6 +1500,248 @@ function roundRect(ctx, x, y, w, h, r) {
   }
 }
 
+/**
+ * ╔══════════════════════════════════════════════════════════════════════════════╗
+ * ║  WAVE_VPVR — Volume Profile Visible Range (Hồ Sơ Khối Lượng Chuyên Nghiệp)   ║
+ * ║  Tích hợp: Value Area (VA), Point of Control (POC), Up/Down Delta Split      ║
+ * ╚══════════════════════════════════════════════════════════════════════════════╝
+ */
+kc.registerIndicator({
+  name: 'WAVE_VPVR',
+  shortName: 'VPVR',
+  description: 'Volume Profile Visible Range (Auto VA & POC)',
+  category: 'wave_alpha',
+  series: 'price',
+  isStack: true, 
+
+  calcParams: [60, 70, 30, 0], 
+  figures: [],
+
+  calc: function(dataList) {
+    return dataList.map(() => ({}));
+  },
+
+  draw: function({ ctx, bounding, xAxis, yAxis, visibleRange, indicator, dataList }) {
+    if (!dataList || dataList.length === 0 || !bounding) return false;
+
+    const p = indicator.calcParams;
+    const rowCount   = Math.max(10, Math.min(200, +(p[0] || 60))); // Chia bao nhiêu nấc giá
+    const vaPercent  = Math.max(10, Math.min(100, +(p[1] || 70))); // Vùng giá trị (Thường 70%)
+    const widthPct   = Math.max(10, Math.min(80,  +(p[2] || 30))); // Độ rộng hiển thị
+    const isLeft     = +(p[3] || 0) === 1; // 0 = Phải, 1 = Trái
+
+    const { from, to } = visibleRange;
+    if (from === null || to === null || from >= to) return false;
+
+    // 1. TẠO CACHE ENGINE (Chỉ tính toán lại VPVR khi kéo/zoom biểu đồ)
+    if (!window._waVpvr) window._waVpvr = { key: '', profile: [], maxVol: 0, poc: null };
+    const vState = window._waVpvr;
+    
+    // Tạo khóa Cache (Hash)
+    const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}`;
+
+    // 2. THUẬT TOÁN TÍNH TOÁN BINS (Nếu Cache bị lệch)
+    if (vState.key !== cacheKey) {
+        let maxP = -Infinity, minP = Infinity;
+        let totalVol = 0;
+
+        // 2.1 Quét khung màn hình hiện tại để tìm Đỉnh/Đáy
+        for (let i = from; i < to; i++) {
+            const d = dataList[i];
+            if (!d) continue;
+            if (d.high > maxP) maxP = d.high;
+            if (d.low < minP) minP = d.low;
+            totalVol += (d.volume || 0);
+        }
+
+        if (maxP === -Infinity || totalVol === 0) return false;
+
+        // 2.2 Tạo các khay chứa (Bins/Rows)
+        const step = (maxP - minP) / rowCount;
+        const bins = new Array(rowCount).fill(0).map((_, i) => ({
+            idx: i,
+            pLow: minP + i * step,
+            pHigh: minP + (i + 1) * step,
+            upVol: 0,
+            downVol: 0,
+            total: 0,
+            inVA: false // Nằm trong Value Area?
+        }));
+
+        // 2.3 Phân bổ khối lượng từng cây nến vào các Bins
+        for (let i = from; i < to; i++) {
+            const d = dataList[i];
+            if (!d || !d.volume) continue;
+
+            const cRange = d.high - d.low;
+            // Ước lượng Lực Mua/Bán (Delta)
+            let upV = 0, dnV = 0;
+            if (cRange === 0) {
+                if (d.close >= d.open) upV = d.volume; else dnV = d.volume;
+            } else {
+                const upRatio = (d.close - d.low) / cRange;
+                upV = d.volume * upRatio;
+                dnV = d.volume - upV;
+            }
+
+            // Chia nhỏ volume nhét vào các Bins mà cây nến này đi ngang qua
+            const startIdx = Math.max(0, Math.floor((d.low - minP) / step));
+            const endIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
+
+            for (let j = startIdx; j <= endIdx; j++) {
+                const bin = bins[j];
+                const overlapLow = Math.max(d.low, bin.pLow);
+                const overlapHigh = Math.min(d.high, bin.pHigh);
+                if (overlapHigh > overlapLow) {
+                    const ratio = (overlapHigh - overlapLow) / (cRange || 1);
+                    bin.upVol += upV * ratio;
+                    bin.downVol += dnV * ratio;
+                    bin.total += d.volume * ratio;
+                }
+            }
+        }
+
+        // 2.4 Tìm Point of Control (POC)
+        let pocBin = bins[0], maxBinVol = 0;
+        bins.forEach(b => {
+            if (b.total > maxBinVol) { maxBinVol = b.total; pocBin = b; }
+        });
+
+        // 2.5 Tính Value Area (VA) - Thuật toán loang vết dầu từ POC
+        pocBin.inVA = true;
+        let currentVA_Vol = pocBin.total;
+        const targetVA_Vol = totalVol * (vaPercent / 100);
+        
+        let upIdx = pocBin.idx + 1;
+        let dnIdx = pocBin.idx - 1;
+
+        while (currentVA_Vol < targetVA_Vol && (upIdx < rowCount || dnIdx >= 0)) {
+            // So sánh 2 bin ở trên và 2 bin ở dưới, lấy hướng nào có Vol to hơn
+            let volUp = 0, volDn = 0;
+            if (upIdx < rowCount) volUp += bins[upIdx].total;
+            if (upIdx + 1 < rowCount) volUp += bins[upIdx + 1].total;
+            
+            if (dnIdx >= 0) volDn += bins[dnIdx].total;
+            if (dnIdx - 1 >= 0) volDn += bins[dnIdx - 1].total;
+
+            if (volUp >= volDn && upIdx < rowCount) {
+                bins[upIdx].inVA = true;
+                currentVA_Vol += bins[upIdx].total;
+                upIdx++;
+            } else if (dnIdx >= 0) {
+                bins[dnIdx].inVA = true;
+                currentVA_Vol += bins[dnIdx].total;
+                dnIdx--;
+            } else if (upIdx < rowCount) {
+                bins[upIdx].inVA = true;
+                currentVA_Vol += bins[upIdx].total;
+                upIdx++;
+            } else {
+                break;
+            }
+        }
+
+        // Lưu Cache
+        vState.key = cacheKey;
+        vState.profile = bins;
+        vState.maxVol = maxBinVol;
+        vState.poc = pocBin;
+    }
+
+    // ==========================================
+    // 3. XUẤT ĐỒ HỌA (RENDERING)
+    // ==========================================
+    if (!vState.profile.length || vState.maxVol === 0) return false;
+
+    try {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over'; 
+
+        const maxWidthPx = bounding.width * (widthPct / 100);
+        const GAP = 1; // Khe hở 1px giữa các hàng cho đẹp
+
+        const colorUpVA = 'rgba(38, 166, 154, 0.65)'; // Xanh lá Mua (Trong Vùng Giá Trị)
+        const colorDnVA = 'rgba(239, 83, 80, 0.65)';  // Đỏ Bán (Trong Vùng Giá Trị)
+        const colorUpOut = 'rgba(38, 166, 154, 0.15)'; // Xanh lá Mua (Ngoài VA - Làm Mờ)
+        const colorDnOut = 'rgba(239, 83, 80, 0.15)';  // Đỏ Bán (Ngoài VA - Làm Mờ)
+
+        // 3.1 Vẽ các thanh Histogram (Bins)
+        vState.profile.forEach(bin => {
+            if (bin.total <= 0) return;
+
+            // Tính Pixel Y (Đảo ngược tọa độ vì Canvas Y hướng xuống)
+            const yBottom = yAxis.convertToPixel(bin.pLow);
+            const yTop = yAxis.convertToPixel(bin.pHigh);
+            const rectY = Math.min(yTop, yBottom);
+            const rectH = Math.max(1, Math.abs(yBottom - yTop) - GAP);
+
+            const wUp = (bin.upVol / vState.maxVol) * maxWidthPx;
+            const wDn = (bin.downVol / vState.maxVol) * maxWidthPx;
+
+            const cUp = bin.inVA ? colorUpVA : colorUpOut;
+            const cDn = bin.inVA ? colorDnVA : colorDnOut;
+
+            ctx.beginPath();
+            if (isLeft) {
+                // Vẽ từ trái sang phải
+                ctx.fillStyle = cUp;
+                ctx.fillRect(0, rectY, wUp, rectH);
+                ctx.fillStyle = cDn;
+                ctx.fillRect(wUp, rectY, wDn, rectH);
+            } else {
+                // Vẽ từ mép phải sang trái
+                const startX = bounding.width;
+                ctx.fillStyle = cDn; // Tường Đỏ nằm ngoài cùng
+                ctx.fillRect(startX - wDn, rectY, wDn, rectH);
+                ctx.fillStyle = cUp; // Tường Xanh nằm kề
+                ctx.fillRect(startX - wDn - wUp, rectY, wUp, rectH);
+            }
+        });
+
+        // 3.2 Vẽ đường POC (Point of Control) - Kháng cự/Hỗ trợ CỨNG NHẤT
+        if (vState.poc) {
+            const pocY = yAxis.convertToPixel((vState.poc.pLow + vState.poc.pHigh) / 2);
+            
+            // Vẽ dải sáng màu Vàng (Gold)
+            ctx.shadowColor = 'rgba(240, 185, 11, 0.8)';
+            ctx.shadowBlur = 4;
+            ctx.strokeStyle = 'rgba(240, 185, 11, 0.9)'; // Màu Gold Binance
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            if (isLeft) {
+                ctx.moveTo(0, pocY);
+                ctx.lineTo(maxWidthPx + 20, pocY);
+            } else {
+                ctx.moveTo(bounding.width, pocY);
+                ctx.lineTo(bounding.width - maxWidthPx - 20, pocY);
+            }
+            ctx.stroke();
+
+            // Chữ POC
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#F0B90B';
+            ctx.font = 'bold 10px system-ui, sans-serif';
+            ctx.textBaseline = 'middle';
+            if (isLeft) {
+                ctx.textAlign = 'left';
+                ctx.fillText('POC', maxWidthPx + 25, pocY);
+            } else {
+                ctx.textAlign = 'right';
+                ctx.fillText('POC', bounding.width - maxWidthPx - 25, pocY);
+            }
+        }
+
+    } catch (e) {
+        console.error('[WAVE_VPVR]', e);
+    } finally {
+        ctx.restore();
+    }
+
+    return false;
+  }
+});
     
 // ── 1. VWAP_BANDS ─────────────────────────────────
     // Fix: uses utcDayIndex() instead of getUTCDate()
