@@ -1530,7 +1530,7 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_VPVR ULTIMATE v3.1 — CORE ENGINE
+//  WAVE_VPVR ULTIMATE v3.2 — CORE ENGINE (Fix Color & Clean UI)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveVpvrCore() {
   'use strict';
@@ -1545,9 +1545,16 @@ function roundRect(ctx, x, y, w, h, r) {
     }
   }
 
-  // Chuyển đổi String Hex (VD: "#26A69A") sang RGBA
-  function _waHex2Rgba(hexStr, alpha) {
-    let hex = String(hexStr).replace('#', '');
+  // 🚀 FIX: Hàm này giờ đọc được cả Số Nguyên (Presets) và Chuỗi String (Tùy chỉnh UI)
+  function _waHex2Rgba(val, alpha) {
+    if (typeof val === 'number') {
+      const h = Math.round(val) >>> 0;
+      const r = (h >> 16) & 0xFF;
+      const g = (h >>  8) & 0xFF;
+      const b =  h        & 0xFF;
+      return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+    }
+    let hex = String(val).replace('#', '');
     if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
     const r = parseInt(hex.substring(0, 2), 16) || 0;
     const g = parseInt(hex.substring(2, 4), 16) || 0;
@@ -1690,36 +1697,31 @@ function roundRect(ctx, x, y, w, h, r) {
       }
       ctx.restore();
 
+      // 🚀 FIX: XÓA text "HVN" gây rối, chỉ giữ lại một viền mờ ranh giới mỏng
       if (bin.total > profile.maxVol * 0.80) {
         const totalW = wUp + wDn;
         const hvnX = isLeft ? 0 : bounding.width - totalW;
         ctx.save();
-        ctx.strokeStyle = _waHex2Rgba(C.clrHvn, 0.80); ctx.lineWidth = 1;
+        ctx.strokeStyle = _waHex2Rgba(C.clrHvn, 0.40); ctx.lineWidth = 1;
         ctx.strokeRect(hvnX, rectY, totalW, rectH);
-        ctx.fillStyle = _waHex2Rgba(C.clrHvn, 0.70);
-        ctx.font = `bold ${C.fontSize - 2}px system-ui,sans-serif`;
-        ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
-        ctx.fillText('HVN', isLeft ? totalW + 4 : bounding.width - totalW - 4, rectY + rectH / 2);
         ctx.restore();
       }
 
+      // 🚀 FIX: XÓA hoàn toàn text "LVN", chỉ giữ lại fill mờ đánh dấu vùng rỗng thanh khoản
       if (bin.total > 0 && bin.total < profile.maxVol * 0.10) {
         const lvnX = isLeft ? 0 : bounding.width - maxWidthPx;
         ctx.save();
-        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.18); ctx.fillRect(lvnX, rectY, maxWidthPx, rectH);
-        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.75);
-        ctx.font = `bold ${C.fontSize - 2}px system-ui,sans-serif`;
-        ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
-        ctx.fillText('LVN', isLeft ? maxWidthPx + 4 : bounding.width - maxWidthPx - 4, rectY + rectH / 2);
+        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.10); ctx.fillRect(lvnX, rectY, maxWidthPx, rectH);
         ctx.restore();
       }
 
       if (showDelta && bin.inVA && (bin.upVol + bin.downVol > 0)) {
         const dr = bin.upVol / (bin.upVol + bin.downVol);
-        const iconX = isLeft ? wUp + wDn + (bin.total > profile.maxVol * 0.8 ? 32 : 4) : bounding.width - wUp - wDn - (bin.total > profile.maxVol * 0.8 ? 32 : 4);
+        const iconX = isLeft ? wUp + wDn + 6 : bounding.width - wUp - wDn - 6;
         if (dr > 0.75 || dr < 0.25) {
           ctx.save();
-          ctx.font = `bold ${C.fontSize}px system-ui,sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
+          ctx.font = `bold ${Math.max(8, C.fontSize - 2)}px system-ui,sans-serif`; 
+          ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
           ctx.fillStyle = dr > 0.75 ? _waHex2Rgba(C.clrDeltaUp, 1) : _waHex2Rgba(C.clrDn, 1);
           ctx.fillText(dr > 0.75 ? '▲' : '▼', iconX, rectY + rectH / 2);
           ctx.restore();
@@ -1811,7 +1813,7 @@ function roundRect(ctx, x, y, w, h, r) {
   kc.registerIndicator({
     name: 'WAVE_VPVR',
     shortName: 'VPVR',
-    description: 'Volume Profile Visible Range ULTIMATE v3.1',
+    description: 'Volume Profile Visible Range ULTIMATE v3.2',
     category: 'wave_alpha',
     series: 'price',
     isStack: true,
@@ -1861,7 +1863,6 @@ function roundRect(ctx, x, y, w, h, r) {
       const GAP = 1;
       const liveVolume = dataList[to - 1] ? (dataList[to - 1].volume || 0) : 0;
       
-      // Không nạp C (Màu sắc) vào cacheKey để đổi màu không làm tụt FPS
       const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${sessionMode}_${compositeMode}_${liveVolume}`;
       let cached = window._waVpvrCache.get(cacheKey);
 
@@ -4119,31 +4120,43 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     }
 
 
-    // Build param inputs
+    // Build param inputs (ĐÃ NÂNG CẤP ĐỂ TỰ NHẬN DIỆN MÀU SẮC)
     currentParams.forEach(function (val, idx) {
       const label = labels[idx] || ('Thông số ' + (idx + 1));
+      
+      // Tự động phát hiện nếu giá trị là màu sắc (Bắt đầu bằng dấu #)
+      const isColor = typeof val === 'string' && val.startsWith('#');
+      const inputType = isColor ? 'color' : 'number';
+      const stepAttr = isColor ? '' : 'step="any"';
+      
+      // CSS phân biệt cho ô nhập Số và ô chọn Màu
+      const styleExtra = isColor 
+        ? 'padding:0px 2px; cursor:pointer; height:32px;' 
+        : 'padding:5px 10px; text-align:center;';
+
       const row   = document.createElement('div');
-      row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px;';
+      row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px;';
       row.innerHTML = [
         '<label style="color:' + COLOR.muted + '; font-size:12px; font-weight:600; flex:1;">' + label + '</label>',
-        '<input type="number" step="any" id="wa-param-' + idx + '" value="' + val + '"',
+        '<input type="' + inputType + '" ' + stepAttr + ' id="wa-param-' + idx + '" value="' + val + '"',
           'style="width:110px; background:rgba(0,0,0,0.5); border:1px solid ' + COLOR.border + ';',
-          'border-radius:6px; padding:5px 10px; color:' + COLOR.white + '; font-size:13px;',
-          'text-align:center; outline:none; transition:border-color .15s;">',
+          'border-radius:6px; color:' + COLOR.white + '; font-size:13px;',
+          styleExtra + ' outline:none; transition:border-color .15s;">',
       ].join('');
       body.appendChild(row);
     });
 
-    // Save
+    // Save (ĐÃ SỬA ĐỂ KHÔNG LÀM HỎNG MÃ MÀU HEX)
     if (btnSave._waHandler) btnSave.removeEventListener('click', btnSave._waHandler);
     btnSave._waHandler = function () {
       const newParams = currentParams.map(function (_, idx) {
         const inp = document.getElementById('wa-param-' + idx);
-        return inp ? parseFloat(inp.value) || 0 : 0;
+        if (!inp) return 0;
+        // Nếu là ô chọn màu thì lấy nguyên chuỗi String, nếu là số thì dùng parseFloat
+        return inp.type === 'color' ? inp.value : (parseFloat(inp.value) || 0);
       });
       try {
         global.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId);
-        // Update stored params
         const entry = global.scActiveIndicators.find(function (x) { return x.name === indicator.name; });
         if (entry) { entry.params = newParams; saveIndicatorState(); }
       } catch (e) {
