@@ -2,17 +2,15 @@ function formatCompact(num) {
     return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(num);
 }
 
-// --- BẮT ĐẦU: HÀM VẼ THANH LỘ TRÌNH 7 NGÀY ---
 function renderMultiplierPath(c) {
-    if (!c || !c.start) return ''; // Bỏ qua nếu không có ngày bắt đầu
+    // THÊM ĐIỀU KIỆN: Chỉ render nếu giải đấu này được Admin bật tính năng Early Bird
+    if (!c || !c.earlyBird) return ''; 
     
     const now = new Date();
-    // Chuyển đổi c.start (VD: "2026-04-22") thành timestamp
     const startTime = new Date(c.start + 'T' + (c.startTime || "13:00:00") + 'Z');
     const diffTime = now - startTime;
     let currentDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     
-    // Giới hạn max là ngày 7
     if (currentDay > 7) currentDay = 7;
     if (currentDay < 1) currentDay = 1;
     
@@ -22,17 +20,13 @@ function renderMultiplierPath(c) {
     multipliers.forEach((mul, index) => {
         const dayIdx = index + 1;
         let statusClass = dayIdx < currentDay ? 'passed' : (dayIdx === currentDay ? 'active' : '');
-        let flagHtml = dayIdx === currentDay ? `
-            <div class="path-flag">
-                <span class="mul-tag">${mul}x</span>
-                <i class="fas fa-flag"></i>
-            </div>` : '';
-            
-        dotsHtml += `<div class="path-dot ${statusClass}" data-mul="${mul}x">${flagHtml}</div>`;
+        
+        // ĐÃ BỎ CÂY CỜ (.path-flag), CHỈ GIỮ LẠI CHẤM
+        dotsHtml += `<div class="path-dot ${statusClass}" data-mul="${mul}x"></div>`;
     });
 
     return `
-        <div class="multiplier-path-container" title="Lộ trình Multiplier (Ngày ${currentDay})">
+        <div class="multiplier-path-container" title="Lộ trình Early Bird (Ngày ${currentDay})">
             <div class="multiplier-path-line">${dotsHtml}</div>
         </div>`;
 }
@@ -3185,7 +3179,7 @@ let logoInput = document.getElementById('c-logo');
     document.getElementById('c-winners').value = c.topWinners;
     document.getElementById('c-alphaType').value = c.alphaType;
     document.getElementById('c-rule').value = c.ruleType;
-
+    if (document.getElementById('c-earlyBird')) document.getElementById('c-earlyBird').value = c.earlyBird ? 'true' : 'false';
 
     document.getElementById('c-start').value = c.start;
     document.getElementById('c-start-time').value = c.startTime || "00:00"; 
@@ -3258,6 +3252,7 @@ function saveComp() {
 
         alphaType: document.getElementById('c-alphaType').value,
         ruleType: document.getElementById('c-rule').value,
+        earlyBird: document.getElementById('c-earlyBird').value === 'true',
         inputTokens: tokensArr,
         
         history: c.history || [],
