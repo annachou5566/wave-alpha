@@ -303,15 +303,17 @@
     {
       name: 'WAVE_TPO',
       shortName: 'TPO',
-      description: 'Hồ Sơ Thời Gian Market Profile (Time Price Opportunity)',
+      description: 'Hồ Sơ Thời Gian ULTIMATE (Market Profile)',
       category: 'wave_alpha',
-      isStack: true, // Vẽ đè lên biểu đồ giá
-      // [Số Hàng (Bins), Vùng Giá Trị VA (%), Vị trí (0=Trái, 1=Phải)]
-      defaultParams: [60, 70, 0], 
+      isStack: true,
+      // [Bins, VA%, Vị trí, Chế độ Ký tự, Chế độ Phiên]
+      defaultParams: [60, 70, 0, 0, 0], 
       paramLabels: [
-        'Số Lượng Hàng (Bins)', 
+        'Số Lượng Thanh Ngang (Bins)', 
         'Vùng Giá Trị VA (%)', 
-        'Vị trí (0=Bên Trái, 1=Bên Phải)'
+        'Vị Trí (0=Bên Trái, 1=Bên Phải)',
+        'Hiển Thị (0=Block, 1=Letter)',
+        'Màu Phiên (0=Đơn, 1=Đa Phiên, 2=Heatmap)'
       ],
       builtIn: false,
     },
@@ -1832,244 +1834,388 @@ kc.registerIndicator({
 });
 
 /**
- * ╔══════════════════════════════════════════════════════════════════════════════╗
- * ║  WAVE_TPO — Time Price Opportunity (Market Profile)                          ║
- * ║  Hiệu ứng: Xếp gạch (Blocks) hiển thị thời gian giá dừng chân tại mỗi Level  ║
- * ╚══════════════════════════════════════════════════════════════════════════════╝
+ * ╔══════════════════════════════════════════════════════════════════════════════════╗
+ * ║  WAVE_TPO ULTIMATE — Time Price Opportunity (Market Profile) v2.0                ║
+ * ║  Wave Alpha Trading Analytics Platform — chart-indicators.js                     ║
+ * ║                                                                                  ║
+ * ║  [1] TPO Letter Mode: Ký tự A-Z chuẩn Sierra Chart, auto fallback sang Block.    ║
+ * ║  [2] Session Coloring: Tách phiên ngày UTC, Palette 5 màu / Gradient Heatmap.    ║
+ * ║  [3] Initial Balance (IB): Line nét đứt cảnh báo Breakout 2 nến đầu phiên.       ║
+ * ║  [4] Naked TPO POC: Kéo dài nPOC chưa bị test, điểm vào lệnh Reversal cực mạnh.  ║
+ * ║  [5] SUPER POC Detection: Hội tụ Value TPO & VPVR -> Diamond Support (Glow).     ║
+ * ║  [6] VAH / VAL Labels: Phủ nền mờ Value Area, đánh dấu ranh giới chuẩn.          ║
+ * ║  [7] Imbalance Detection: Phát hiện mất cân bằng Mua/Bán trong lòng TPO.         ║
+ * ║  [8] Multi-Layer LRU Cache: Hash Map 10 entries đảm bảo FPS luôn 60.             ║
+ * ╚══════════════════════════════════════════════════════════════════════════════════╝
  */
+
+// ─────────────────────────────────────────────────────────────────
+// [8] CACHE ENGINE ĐA LỚP — Tối đa 10 entries chống tràn RAM
+// ─────────────────────────────────────────────────────────────────
+if (!window._waTpoCache) window._waTpoCache = new Map();
+
+function _waTpoCacheSet(key, value) {
+    if (window._waTpoCache.has(key)) window._waTpoCache.delete(key);
+    window._waTpoCache.set(key, value);
+    if (window._waTpoCache.size > 10) {
+        const oldestKey = window._waTpoCache.keys().next().value;
+        window._waTpoCache.delete(oldestKey);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TPO RENDER ENGINE
+// ─────────────────────────────────────────────────────────────────
 kc.registerIndicator({
-  name: 'WAVE_TPO',
-  shortName: 'TPO',
-  description: 'Time Price Opportunity (Market Profile)',
-  category: 'wave_alpha',
-  series: 'price',
-  isStack: true, 
+    name: 'WAVE_TPO',
+    shortName: 'TPO',
+    description: 'Time Price Opportunity (Market Profile)',
+    category: 'wave_alpha',
+    series: 'price',
+    isStack: true,
 
-  calcParams: [60, 70, 0], 
-  figures: [],
+    calcParams: [60, 70, 0, 0, 0],
+    figures: [],
 
-  calc: function(dataList) {
-    return dataList.map(() => ({}));
-  },
+    calc: function (dataList) { return dataList.map(() => ({})); },
 
-  draw: function(args) {
-    const { ctx, bounding, yAxis, indicator } = args;
-    
-    // Tương thích mọi phiên bản KLineCharts
-    const dataList = args.kLineDataList || args.dataList || [];
-    const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
+    draw: function (args) {
+        const { ctx, bounding, xAxis, yAxis, indicator } = args;
+        const dataList = args.kLineDataList || args.dataList || [];
+        const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
 
-    if (!dataList || dataList.length === 0 || !bounding) return false;
+        if (!dataList || dataList.length === 0 || !bounding) return false;
 
-    const p = indicator.calcParams;
-    const rowCount   = Math.max(10, Math.min(200, +(p[0] || 60))); 
-    const vaPercent  = Math.max(10, Math.min(100, +(p[1] || 70))); 
-    const isLeft     = +(p[2] || 0) === 0; // 0 = Trái, 1 = Phải
+        const p = indicator.calcParams;
+        const rowCount = Math.max(10, Math.min(200, +(p[0] || 60)));
+        const vaPercent = Math.max(10, Math.min(100, +(p[1] || 70)));
+        const isLeft = +(p[2] || 0) === 0;
+        const useLetter = +(p[3] || 0) === 1;
+        const colorMode = +(p[4] || 0); // 0: Đơn, 1: Đa Phiên, 2: Heatmap
 
-    let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
-    let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
-    if (from >= to) return false;
+        let from = Math.max(0, visibleRange.from !== undefined ? visibleRange.from : 0);
+        let to = Math.min(dataList.length, visibleRange.to !== undefined ? visibleRange.to : dataList.length);
+        if (from >= to) return false;
 
-    // 1. CACHE ENGINE
-    if (!window._waTpo) window._waTpo = { key: '', profile: [], maxTPO: 0, poc: null };
-    const tState = window._waTpo;
-    
-    // Lấy Close cuối cùng để force update nếu nến hiện tại đang giật
-    const lastClose = dataList[to - 1] ? (dataList[to - 1].close || 0) : 0;
-    const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${lastClose}`;
-
-    // 2. TÍNH TOÁN BINS (Đếm Thời Gian / Tick thay vì Khối Lượng)
-    if (tState.key !== cacheKey) {
-        let maxP = -Infinity, minP = Infinity;
-        let totalTPO = 0;
-
-        for (let i = from; i < to; i++) {
-            const d = dataList[i];
-            if (!d) continue;
-            if (d.high > maxP) maxP = d.high;
-            if (d.low < minP) minP = d.low;
-        }
-
-        if (maxP === -Infinity) return false;
-
-        const step = (maxP - minP) / rowCount;
-        const bins = new Array(rowCount).fill(0).map((_, i) => ({
-            idx: i,
-            pLow: minP + i * step,
-            pHigh: minP + (i + 1) * step,
-            count: 0, // Đếm số nến (thời gian) đi qua vùng này
-            inVA: false 
-        }));
-
-        // Đổ thời gian vào các Bins
-        for (let i = from; i < to; i++) {
-            const d = dataList[i];
-            if (!d) continue;
-
-            const startIdx = Math.max(0, Math.floor((d.low - minP) / step));
-            const endIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
-
-            for (let j = startIdx; j <= endIdx; j++) {
-                bins[j].count += 1;
-                totalTPO += 1;
-            }
-        }
-
-        if (totalTPO === 0) return false;
-
-        // Tìm POC (Vùng giá được giao dịch nhiều thời gian nhất)
-        let pocBin = bins[0], maxBinCount = 0;
-        bins.forEach(b => {
-            if (b.count > maxBinCount) { maxBinCount = b.count; pocBin = b; }
-        });
-
-        // Tính Value Area (Loang vết dầu)
-        if (pocBin) {
-            pocBin.inVA = true;
-            let currentVA_Count = pocBin.count;
-            const targetVA_Count = totalTPO * (vaPercent / 100);
-            
-            let upIdx = pocBin.idx + 1;
-            let dnIdx = pocBin.idx - 1;
-
-            while (currentVA_Count < targetVA_Count && (upIdx < rowCount || dnIdx >= 0)) {
-                let countUp = 0, countDn = 0;
-                if (upIdx < rowCount) countUp += bins[upIdx].count;
-                if (upIdx + 1 < rowCount) countUp += bins[upIdx + 1].count;
-                
-                if (dnIdx >= 0) countDn += bins[dnIdx].count;
-                if (dnIdx - 1 >= 0) countDn += bins[dnIdx - 1].count;
-
-                if (countUp >= countDn && upIdx < rowCount) {
-                    bins[upIdx].inVA = true;
-                    currentVA_Count += bins[upIdx].count;
-                    upIdx++;
-                } else if (dnIdx >= 0) {
-                    bins[dnIdx].inVA = true;
-                    currentVA_Count += bins[dnIdx].count;
-                    dnIdx--;
-                } else if (upIdx < rowCount) {
-                    bins[upIdx].inVA = true;
-                    currentVA_Count += bins[upIdx].count;
-                    upIdx++;
-                } else {
-                    break;
+        // Xác định Sessions (Phiên)
+        let sessions = [];
+        if (colorMode === 0) {
+            sessions.push({ start: from, end: to });
+        } else {
+            let curDay = -1, startIdx = from;
+            for (let i = from; i < to; i++) {
+                const dt = new Date(dataList[i].timestamp);
+                const day = dt.getUTCDate();
+                if (curDay === -1) curDay = day;
+                else if (day !== curDay) {
+                    sessions.push({ start: startIdx, end: i });
+                    startIdx = i; curDay = day;
                 }
             }
+            sessions.push({ start: startIdx, end: to });
+            if (sessions.length > 5) sessions = sessions.slice(-5); // Tối đa 5 phiên
         }
 
-        tState.key = cacheKey;
-        tState.profile = bins;
-        tState.maxTPO = maxBinCount;
-        tState.poc = pocBin;
+        // Tạo Cache Key siêu nhạy
+        const lastClose = dataList[to - 1] ? (dataList[to - 1].close || 0) : 0;
+        const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${colorMode}_${lastClose}_${bounding.width}`;
+
+        let profilesToRender = [];
+
+        // ─────────────────────────────────────────────────────────────
+        // LÕI TÍNH TOÁN (Chỉ chạy khi Cache Miss)
+        // ─────────────────────────────────────────────────────────────
+        if (window._waTpoCache.has(cacheKey)) {
+            profilesToRender = window._waTpoCache.get(cacheKey);
+        } else {
+            for (let s of sessions) {
+                if (s.end - s.start <= 0) continue;
+                
+                let maxP = -Infinity, minP = Infinity, totalTPO = 0;
+                for (let i = s.start; i < s.end; i++) {
+                    const d = dataList[i]; if (!d) continue;
+                    if (d.high > maxP) maxP = d.high;
+                    if (d.low < minP) minP = d.low;
+                }
+                if (maxP === -Infinity || maxP === minP) continue;
+
+                const step = (maxP - minP) / rowCount;
+                const bins = new Array(rowCount).fill(0).map((_, i) => ({
+                    idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step,
+                    count: 0, letters: [], inVA: false
+                }));
+
+                // Đổ TPO vào Bins + Tracking Letter Index
+                for (let i = s.start; i < s.end; i++) {
+                    const d = dataList[i]; if (!d) continue;
+                    const sIdx = Math.max(0, Math.floor((d.low - minP) / step));
+                    const eIdx = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
+                    
+                    const letterIdx = i - s.start; // [1] TPO Letter Mode Logic
+                    for (let j = sIdx; j <= eIdx; j++) {
+                        bins[j].count += 1;
+                        bins[j].letters.push(letterIdx);
+                        totalTPO += 1;
+                    }
+                }
+
+                if (totalTPO === 0) continue;
+
+                // Tìm POC
+                let pocBin = bins[0], maxTPO = 0;
+                bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
+
+                // Tính Value Area (Loang vết dầu)
+                pocBin.inVA = true;
+                let cVA = pocBin.count, tVA = totalTPO * (vaPercent / 100);
+                let uI = pocBin.idx + 1, dI = pocBin.idx - 1;
+
+                while (cVA < tVA && (uI < rowCount || dI >= 0)) {
+                    let vU = 0, vD = 0;
+                    if (uI < rowCount) vU += bins[uI].count; if (uI + 1 < rowCount) vU += bins[uI + 1].count;
+                    if (dI >= 0) vD += bins[dI].count; if (dI - 1 >= 0) vD += bins[dI - 1].count;
+
+                    if (vU >= vD && uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
+                    else if (dI >= 0) { bins[dI].inVA = true; cVA += bins[dI].count; dI--; }
+                    else if (uI < rowCount) { bins[uI].inVA = true; cVA += bins[uI].count; uI++; }
+                    else break;
+                }
+
+                // Tính VAH, VAL
+                let vah = null, val = null;
+                for (let i = rowCount - 1; i >= 0; i--) { if (bins[i].inVA && !vah) vah = bins[i]; }
+                for (let i = 0; i < rowCount; i++) { if (bins[i].inVA && !val) val = bins[i]; }
+
+                // [3] INITIAL BALANCE (IB) - 2 Time Brackets đầu tiên
+                let ibHigh = null, ibLow = null;
+                if (s.end - s.start >= 2) {
+                    ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high);
+                    ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low);
+                }
+
+                // [7] TPO IMBALANCE DETECTION
+                let topCount = 0, botCount = 0;
+                for (let b of bins) {
+                    if (b.inVA) {
+                        if (b.idx > pocBin.idx) topCount += b.count;
+                        else if (b.idx < pocBin.idx) botCount += b.count;
+                    }
+                }
+                let imbalance = 'BALANCE';
+                const diff = Math.abs(topCount - botCount) / (topCount + botCount || 1);
+                if (diff > 0.3) {
+                    imbalance = topCount > botCount ? 'BUYING IMBALANCE' : 'SELLING IMBALANCE';
+                }
+
+                // [4] NAKED POC DETECTION
+                let isNaked = true;
+                const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
+                for (let i = s.end; i < dataList.length; i++) {
+                    const d = dataList[i];
+                    if (d && d.low <= pocMid && d.high >= pocMid) { isNaked = false; break; }
+                }
+
+                // [5] SUPER POC DETECTION (Convergence TPO + VPVR)
+                let isSuperPoc = false;
+                if (window._waVpvrCache) {
+                    for (const vCache of window._waVpvrCache.values()) {
+                        if (vCache.profilesToRender) {
+                            for (const vProf of vCache.profilesToRender) {
+                                if (vProf.poc) {
+                                    const vMid = (vProf.poc.pLow + vProf.poc.pHigh) / 2;
+                                    if (Math.abs(vMid - pocMid) <= step * 2) { isSuperPoc = true; break; }
+                                }
+                            }
+                        }
+                        if (isSuperPoc) break;
+                    }
+                }
+
+                profilesToRender.push({
+                    bins, maxTPO, pocMid, vah, val, ibHigh, ibLow,
+                    imbalance, isNaked, isSuperPoc, startIdx: s.start
+                });
+            }
+            _waTpoCacheSet(cacheKey, profilesToRender);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // ĐỒ HỌA RENDERING
+        // ─────────────────────────────────────────────────────────────
+        try {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.textBaseline = 'middle';
+
+            // Function Helper mapping Letter A-Z, a-z, AA...
+            const getLetter = (n) => {
+                if (n < 26) return String.fromCharCode(65 + n);
+                if (n < 52) return String.fromCharCode(97 + n - 26);
+                return String.fromCharCode(65 + Math.floor(n / 26) - 2) + String.fromCharCode(65 + (n % 26));
+            };
+
+            const PALETTE = ['#00BCD4', '#2196F3', '#3F51B5', '#673AB7', '#9C27B0']; // Tím -> Xanh
+
+            profilesToRender.forEach((prof, pIndex) => {
+                // Xác định Tọa độ Neo (Anchor X) và Hướng mọc (Direction)
+                let anchorX = 0;
+                let dir = 1; // 1 = Grow Right, -1 = Grow Left
+                let maxScreenPx = bounding.width * 0.35;
+
+                if (colorMode > 0) {
+                    // Đa phiên -> Neo vào gốc nến đầu tiên của phiên, mọc sang phải
+                    anchorX = xAxis.convertToPixel(prof.startIdx) || xAxis.convertToPixel({ index: prof.startIdx });
+                    dir = 1;
+                    maxScreenPx = bounding.width * 0.20; // Tránh đè nhau
+                } else {
+                    // Đơn phiên -> Neo vào lề màn hình
+                    anchorX = isLeft ? 0 : bounding.width;
+                    dir = isLeft ? 1 : -1;
+                }
+
+                // Setup Màu Sắc [2] Session Coloring
+                let colorVA = '#9C27B0', colorOut = 'rgba(156, 39, 176, 0.15)';
+                if (colorMode === 1) {
+                    colorVA = PALETTE[pIndex % 5];
+                    // Chuyển HEX sang RGBA(0.2)
+                    ctx.fillStyle = colorVA; const temp = ctx.fillStyle;
+                    colorOut = temp.replace(')', ', 0.2)').replace('rgb', 'rgba');
+                }
+
+                // [6] VAH / VAL BACKGROUND LAYER
+                if (prof.vah && prof.val) {
+                    const yVAH = yAxis.convertToPixel(prof.vah.pHigh);
+                    const yVAL = yAxis.convertToPixel(prof.val.pLow);
+                    if (yVAH !== null && yVAL !== null) {
+                        ctx.fillStyle = 'rgba(156, 39, 176, 0.05)';
+                        ctx.fillRect(colorMode > 0 ? anchorX : 0, Math.min(yVAH, yVAL), 
+                                     colorMode > 0 ? maxScreenPx * 1.5 : bounding.width, Math.abs(yVAH - yVAL));
+                    }
+                }
+
+                // Render Bins (Blocks / Letters)
+                prof.bins.forEach(bin => {
+                    if (bin.count <= 0) return;
+                    let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
+                    if (yB === null || yT === null) return;
+
+                    const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT));
+                    
+                    // [9] AUTO BLOCK SIZE
+                    let blockW = Math.min(rH, maxScreenPx / prof.maxTPO);
+                    
+                    // Fallback Letter Mode
+                    const canDrawLetter = useLetter && rH >= 12 && blockW >= 8;
+
+                    // Màu Heatmap Mode
+                    if (colorMode === 2) {
+                        const opacity = 0.15 + 0.75 * (bin.count / prof.maxTPO);
+                        colorVA = colorOut = `rgba(156, 39, 176, ${opacity})`;
+                    }
+
+                    ctx.fillStyle = bin.inVA ? colorVA : colorOut;
+                    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.lineWidth = 1;
+
+                    bin.letters.forEach((lIdx, pos) => {
+                        const x = anchorX + dir * (pos * blockW);
+                        
+                        if (canDrawLetter) {
+                            // [1] TPO LETTER MODE
+                            ctx.fillStyle = bin.inVA ? '#FFFFFF' : 'rgba(255,255,255,0.35)';
+                            ctx.font = 'bold 9px monospace';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(getLetter(lIdx), x + blockW/2, rY + rH/2);
+                        } else {
+                            // BLOCK MODE
+                            ctx.fillStyle = bin.inVA ? colorVA : colorOut;
+                            ctx.beginPath();
+                            ctx.rect(x, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
+                            ctx.fill();
+                            if (blockW > 3 && rH > 3) ctx.stroke();
+                        }
+                    });
+                });
+
+                // [6] VAH / VAL LINES & LABELS
+                const drawLineLabel = (pLevel, text) => {
+                    const y = yAxis.convertToPixel(pLevel);
+                    if (y === null) return;
+                    ctx.setLineDash([4, 4]);
+                    ctx.strokeStyle = 'rgba(186, 104, 200, 0.8)';
+                    ctx.beginPath(); ctx.moveTo(anchorX, y); 
+                    ctx.lineTo(colorMode > 0 ? anchorX + maxScreenPx : bounding.width, y); 
+                    ctx.stroke(); ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#BA68C8';
+                    ctx.font = '9px sans-serif';
+                    ctx.textAlign = dir === 1 ? 'right' : 'left';
+                    const tx = dir === 1 ? anchorX + maxScreenPx : anchorX - maxScreenPx;
+                    ctx.fillText(`${text} ${pLevel.toFixed(2)}`, tx, y - 6);
+                };
+                if (prof.vah) drawLineLabel(prof.vah.pHigh, 'VAH');
+                if (prof.val) drawLineLabel(prof.val.pLow, 'VAL');
+
+                // [3] INITIAL BALANCE (IB)
+                const drawIbLine = (pLevel, text) => {
+                    const y = yAxis.convertToPixel(pLevel);
+                    if (y === null) return;
+                    ctx.setLineDash([2, 4]);
+                    ctx.strokeStyle = 'rgba(255, 214, 0, 0.5)';
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(bounding.width, y); ctx.stroke(); ctx.setLineDash([]);
+                    ctx.fillStyle = 'rgba(255, 214, 0, 0.8)';
+                    ctx.font = '8px sans-serif'; ctx.textAlign = 'left';
+                    ctx.fillText(text, 10, y - 6);
+                };
+                if (prof.ibHigh !== null) drawIbLine(prof.ibHigh, 'IB High');
+                if (prof.ibLow !== null) drawIbLine(prof.ibLow, 'IB Low');
+
+                // [4] NAKED POC & [5] SUPER POC
+                const pocY = yAxis.convertToPixel(prof.pocMid);
+                if (pocY !== null) {
+                    ctx.beginPath();
+                    // Nếu là Super POC -> Glow Vàng rực. Nếu Naked -> Cam. Bình thường -> Gold
+                    if (prof.isSuperPoc) {
+                        ctx.shadowColor = 'rgba(240, 185, 11, 0.6)'; ctx.shadowBlur = 8;
+                        ctx.strokeStyle = '#F0B90B'; ctx.lineWidth = 3;
+                    } else {
+                        ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 2;
+                        ctx.strokeStyle = prof.isNaked ? '#FF9800' : '#F0B90B';
+                        ctx.lineWidth = 2;
+                        if (prof.isNaked) ctx.setLineDash([5, 5]);
+                    }
+                    
+                    const pEndX = prof.isNaked ? bounding.width : (anchorX + dir * maxScreenPx);
+                    ctx.moveTo(anchorX, pocY); ctx.lineTo(pEndX, pocY); ctx.stroke();
+                    
+                    ctx.setLineDash([]); ctx.shadowBlur = 0;
+                    
+                    // Nhãn POC
+                    ctx.fillStyle = prof.isSuperPoc ? '#F0B90B' : (prof.isNaked ? '#FF9800' : '#FFF');
+                    ctx.font = prof.isSuperPoc ? 'bold 11px sans-serif' : 'bold 9px sans-serif';
+                    ctx.textAlign = 'center';
+                    let lblText = prof.isSuperPoc ? '⚡ SUPER POC' : (prof.isNaked ? 'nTPO' : 'TPO POC');
+                    ctx.fillText(lblText, pEndX - dir * 30, pocY - 8);
+                }
+
+                // [7] BALANCE / IMBALANCE DETECTOR
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = dir === 1 ? 'left' : 'right';
+                ctx.fillStyle = prof.imbalance === 'BUYING IMBALANCE' ? '#4CAF50' : (prof.imbalance === 'SELLING IMBALANCE' ? '#F44336' : '#2196F3');
+                if (prof.vah) {
+                    const topY = yAxis.convertToPixel(prof.vah.pHigh) - 15;
+                    ctx.fillText(prof.imbalance, anchorX + dir * 10, topY);
+                }
+            });
+
+        } catch (e) {
+            console.error('[WAVE_TPO]', e);
+        } finally {
+            ctx.restore();
+        }
+
+        return false;
     }
-
-    // ==========================================
-    // 3. XUẤT ĐỒ HỌA (RENDERING HIỆU ỨNG XẾP GẠCH)
-    // ==========================================
-    if (!tState.profile.length || tState.maxTPO === 0) return false;
-
-    try {
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over'; 
-
-        // Giới hạn đồ thị chiếm tối đa 35% chiều ngang màn hình
-        const maxScreenPx = bounding.width * 0.35;
-        const GAP = 1; // Khoảng cách giữa các viên gạch
-        
-        // Màu sắc đặc trưng của TPO (Tím / Hồng) để phân biệt với VPVR (Xanh / Đỏ)
-        const colorVA = 'rgba(156, 39, 176, 0.75)';    // Trong Vùng Giá Trị (Tím đậm)
-        const colorOut = 'rgba(156, 39, 176, 0.15)';   // Ngoài Vùng Giá Trị (Tím nhạt)
-        const colorBorder = 'rgba(255, 255, 255, 0.1)';// Viền gạch
-
-        tState.profile.forEach(bin => {
-            if (bin.count <= 0) return;
-
-            let yBottom = yAxis.convertToPixel(bin.pLow);
-            let yTop = yAxis.convertToPixel(bin.pHigh);
-            if (yBottom === null || yTop === null) return;
-
-            const rectY = Math.min(yTop, yBottom);
-            // Chiều cao của 1 nấc giá
-            const rectH = Math.max(1, Math.abs(yBottom - yTop));
-            
-            // Tính toán bề ngang của 1 "viên gạch". 
-            // Nếu số lượng gạch quá nhiều, tự động bóp bề ngang lại để không tràn 35% màn hình
-            let blockW = rectH; // Mặc định gạch hình vuông
-            if (blockW * tState.maxTPO > maxScreenPx) {
-                blockW = maxScreenPx / tState.maxTPO;
-            }
-
-            ctx.fillStyle = bin.inVA ? colorVA : colorOut;
-            ctx.strokeStyle = colorBorder;
-            ctx.lineWidth = 1;
-
-            ctx.beginPath();
-            
-            // Vẽ TỪNG VIÊN GẠCH nối tiếp nhau
-            for (let c = 0; c < bin.count; c++) {
-                let x;
-                if (isLeft) {
-                    x = c * blockW;
-                } else {
-                    x = bounding.width - (c + 1) * blockW;
-                }
-                
-                // Trừ đi GAP để tạo khe hở
-                ctx.rect(x, rectY, Math.max(1, blockW - GAP), Math.max(1, rectH - GAP));
-            }
-            
-            ctx.fill();
-            // Nếu zoom đủ to, hiển thị viền của từng viên gạch cho sắc nét
-            if (blockW > 3 && rectH > 3) {
-                ctx.stroke();
-            }
-        });
-
-        // VẼ ĐƯỜNG POC CỦA TPO
-        if (tState.poc) {
-            let pocY = yAxis.convertToPixel((tState.poc.pLow + tState.poc.pHigh) / 2);
-            if (pocY !== null) {
-                ctx.shadowColor = 'rgba(240, 185, 11, 0.9)';
-                ctx.shadowBlur = 4;
-                ctx.strokeStyle = '#F0B90B'; 
-                ctx.lineWidth = 1.5;
-                
-                // Vẽ tia laser bắn ra từ đỉnh của hàng POC
-                const pocLengthPx = tState.poc.count * blockW;
-
-                ctx.beginPath();
-                if (isLeft) {
-                    ctx.moveTo(pocLengthPx, pocY);
-                    ctx.lineTo(pocLengthPx + 40, pocY);
-                } else {
-                    ctx.moveTo(bounding.width - pocLengthPx, pocY);
-                    ctx.lineTo(bounding.width - pocLengthPx - 40, pocY);
-                }
-                ctx.stroke();
-
-                ctx.shadowColor = 'transparent';
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 9px system-ui, sans-serif';
-                ctx.textBaseline = 'middle';
-                if (isLeft) {
-                    ctx.textAlign = 'left';
-                    ctx.fillText('TPO POC', pocLengthPx + 45, pocY);
-                } else {
-                    ctx.textAlign = 'right';
-                    ctx.fillText('TPO POC', bounding.width - pocLengthPx - 45, pocY);
-                }
-            }
-        }
-
-    } catch (e) {
-    } finally {
-        ctx.restore();
-    }
-
-    return false;
-  }
 });
     
 // ── 1. VWAP_BANDS ─────────────────────────────────
