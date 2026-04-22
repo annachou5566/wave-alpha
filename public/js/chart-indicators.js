@@ -4092,194 +4092,164 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * @param {Object} indicator  — indicator instance from KLineCharts
    * @param {string} paneId
    */
+  /**
+   * Open indicator settings modal (FLOATING PANEL - LIVE PREVIEW)
+   * @param {Object} indicator  — indicator instance from KLineCharts
+   * @param {string} paneId
+   */
   global.openIndicatorSettings = function (indicator, paneId) {
-    const modal   = document.getElementById('sc-ind-settings-modal');
-    const title   = document.getElementById('sc-ind-settings-title');
-    const body    = document.getElementById('sc-ind-settings-body');
-    const btnSave = document.getElementById('sc-ind-btn-save');
-    const btnRst  = document.getElementById('sc-ind-btn-reset');
-    if (!modal || !title || !body) return;
-
+    // 1. LẤY DỮ LIỆU & FALLBACK (Giữ nguyên logic cực an toàn của bạn)
     const meta = INDICATOR_REGISTRY.find(function (x) { return x.name === indicator.name; });
-    title.textContent = '⚙️ ' + (indicator.shortName || indicator.name);
-    body.innerHTML = '';
-
-    // [FIX] Fallback về registry defaults nếu undefined/rỗng
     const rawParams = indicator.calcParams;
     const currentParams = (rawParams && rawParams.length > 0) 
         ? rawParams 
         : (meta && meta.defaultParams ? [...meta.defaultParams] : []);
     const labels = meta && meta.paramLabels ? meta.paramLabels : [];
-    const defaults = meta && meta.defaultParams ? meta.defaultParams : [];
+    const isVPVR = indicator.name === 'WAVE_VPVR';
 
-    // [FIX] VOL và built-in không có params -> hiện thông báo thay vì crash
+    // Xóa Panel cũ nếu đang mở
+    const oldPanel = document.getElementById('wa-floating-settings');
+    if (oldPanel) oldPanel.remove();
+
+    // Nếu không có thông số (như VOL), tạo popup báo lỗi rồi dừng
     if (currentParams.length === 0) {
-        body.innerHTML = `<div style="color:${COLOR.muted}; font-size:13px; text-align:center; padding:20px 0;">Chỉ báo này không có thông số để cài đặt.</div>`;
-        modal.style.display = 'flex';
+        alert('Chỉ báo này không có thông số để cài đặt.');
         return; 
     }
 
+    // 2. TẠO KHUNG PANEL NỔI KÉO THẢ ĐƯỢC (Không làm tối màn hình)
+    const panel = document.createElement('div');
+    panel.id = 'wa-floating-settings';
+    panel.style.cssText = `
+        position: fixed; top: 80px; right: 20px; width: 340px;
+        background: rgba(18, 19, 23, 0.95); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+        z-index: 99999; color: #EAECEF; display: flex; flex-direction: column;
+        backdrop-filter: blur(8px); cursor: default; user-select: none; font-family: sans-serif;
+    `;
 
-    // =========================================================================
-    // HỆ THỐNG UI/UX SETTINGS CHUẨN TERMINAL PRO (Hỗ trợ Grid & Tooltip)
-    // =========================================================================
-    
-    // 1. Nhúng CSS Styling cho Modal (Responsive Grid & Mini Color Picker)
-    const styleId = 'wa-settings-style';
-    if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.innerHTML = `
-            .wa-settings-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                gap: 16px;
-                max-height: 65vh;
-                overflow-y: auto;
-                padding-right: 8px;
-            }
-            /* Custom Scrollbar cho mượt */
-            .wa-settings-grid::-webkit-scrollbar { width: 6px; }
-            .wa-settings-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-            .wa-group-box {
-                background: rgba(255, 255, 255, 0.03);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 8px;
-                padding: 12px;
-            }
-            .wa-group-title {
-                color: #F0B90B;
-                font-size: 13px;
-                font-weight: 700;
-                text-transform: uppercase;
-                margin-bottom: 12px;
-                padding-bottom: 6px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            }
-            .wa-input-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
-                gap: 10px;
-            }
-            .wa-label-col { display: flex; flex-direction: column; flex: 1; }
-            .wa-label-main { color: #EAECEF; font-size: 12px; font-weight: 600; }
-            .wa-label-desc { color: #848E9C; font-size: 10px; margin-top: 2px; line-height: 1.3; }
-            
-            /* UI Nút nhập số */
-            .wa-num-input {
-                width: 70px; height: 28px;
-                background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
-                border-radius: 4px; color: #FFF; font-size: 12px; text-align: center;
-                outline: none; transition: border 0.2s;
-            }
-            .wa-num-input:focus { border-color: #F0B90B; }
-            
-            /* Mini Color Swatch (Nút chọn màu tinh tế) */
-            .wa-color-picker {
-                -webkit-appearance: none;
-                border: none; width: 28px; height: 28px;
-                border-radius: 4px; cursor: pointer; padding: 0; background: transparent;
-            }
-            .wa-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
-            .wa-color-picker::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; }
-        `;
-        document.head.appendChild(style);
-    }
+    // 3. HEADER (Nắm kéo thả ở đây)
+    const header = document.createElement('div');
+    header.style.cssText = `
+        padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); 
+        cursor: move; display: flex; justify-content: space-between; align-items: center;
+        background: rgba(0,0,0,0.2); border-top-left-radius: 8px; border-top-right-radius: 8px;
+    `;
+    header.innerHTML = `
+        <span style="font-size:13px; font-weight:bold; color:#F0B90B;">⚙️ ${indicator.shortName || indicator.name}</span>
+        <span id="wa-close-btn" style="cursor:pointer; font-size:16px; line-height:1; opacity:0.6; padding:0 4px;">&times;</span>
+    `;
+    panel.appendChild(header);
 
-    // 2. Chú thích chuyên sâu cho riêng VPVR
-    const vpvrDescriptions = [
-        "Số lượng thanh ngang (Càng to càng nét, 10-200)", // 0
-        "Tỷ lệ khối lượng lõi (Thường dùng 70%)", // 1
-        "Biểu đồ chiếm bao nhiêu % chiều ngang", // 2
-        "0 = Cạnh Phải, 1 = Cạnh Trái", // 3
-        "0: Toàn bộ, 1: Chia theo Ngày, 2: Chia Tuần", // 4
-        "0 = Tắt, 1 = Hiện mờ đằng sau các phiên", // 5
-        "Màu cho lực Mua (Chủ động)", // 6
-        "Màu cho lực Bán (Chủ động)", // 7
-        "Đường Point of Control (Giá khớp nhiều nhất)", // 8
-        "Viền Vùng Giá Trị Cao / Thấp", // 9
-        "Vùng thanh khoản tập trung Dày", // 10
-        "Vùng thanh khoản Mỏng (Khoảng trống)", // 11
-        "POC chưa bị test lại trong tương lai", // 12
-        "Mũi tên báo hiệu phe nào đang áp đảo", // 13
-        "Độ đậm nhạt của khối lượng trong VA (0-100)", // 14
-        "Độ đậm nhạt của khối lượng ngoài VA", // 15
-        "Độ dày đường nét (1-5px)", // 16
-        "Độ dày đường nét (1-4px)", // 17
-        "0: Nét đứt, 1: Chấm bi, 2: Nét liền", // 18
-        "0: Nét đứt, 1: Chấm bi, 2: Nét gạch dài", // 19
-        "Kích thước chữ nhãn giá (8-16px)", // 20
-        "0 = Ẩn nhãn, 1 = Hiện nhãn giá" // 21
-    ];
+    // 4. BODY (CSS Grid + Scrollbar)
+    const body = document.createElement('div');
+    body.style.cssText = `
+        padding: 16px; max-height: calc(100vh - 200px); overflow-y: auto;
+        display: flex; flex-direction: column; gap: 12px;
+    `;
+    panel.appendChild(body);
 
-    // 3. Nhóm các Setting lại thành từng Box (Dành riêng cho VPVR)
-    let isVPVR = indicator.name === 'WAVE_VPVR';
-    const groups = isVPVR ? [
-        { title: '⚙️ Cấu Hình Lõi', keys: [0, 1, 2, 3, 4, 5, 21] },
-        { title: '🎨 Bảng Màu Hiển Thị', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
-        { title: '📏 Kiểu Dáng & Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
-    ] : [ { title: '⚙️ Cài Đặt Chỉ Báo', keys: currentParams.map((_, i) => i) } ]; // Fallback cho chỉ báo khác
+    // Style cho thanh cuộn và input (Bơm thẳng vào panel để không rác thẻ <head>)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        #wa-floating-settings ::-webkit-scrollbar { width: 4px; }
+        #wa-floating-settings ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .wa-inp-row { display: flex; justify-content: space-between; align-items: center; gap:10px; margin-bottom:8px; }
+        .wa-inp-num { width: 70px; height: 26px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #FFF; text-align: center; font-size: 12px; outline: none; }
+        .wa-inp-num:focus { border-color: #F0B90B; }
+        .wa-inp-color { -webkit-appearance: none; border: none; width: 28px; height: 28px; border-radius: 4px; cursor: pointer; padding: 0; background: transparent; }
+        .wa-inp-color::-webkit-color-swatch-wrapper { padding: 0; }
+        .wa-inp-color::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; }
+    `;
+    panel.appendChild(style);
 
-    const gridContainer = document.createElement('div');
-    gridContainer.className = 'wa-settings-grid';
-
-    // 4. Render Layout
-    groups.forEach(group => {
+    // Group Box Helper
+    const createGroup = (title) => {
         const box = document.createElement('div');
-        box.className = 'wa-group-box';
-        box.innerHTML = `<div class="wa-group-title">${group.title}</div>`;
-        
-        group.keys.forEach(idx => {
-            const val = currentParams[idx];
-            if (val === undefined) return;
-            
-            const labelTitle = labels[idx] || ('Thông số ' + (idx + 1));
-            const labelDesc = (isVPVR && vpvrDescriptions[idx]) ? vpvrDescriptions[idx] : '';
-            
-            const isColor = typeof val === 'string' && val.startsWith('#');
-            const inputType = isColor ? 'color' : 'number';
-            const inputClass = isColor ? 'wa-color-picker' : 'wa-num-input';
-            const stepAttr = isColor ? '' : 'step="any"';
+        box.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px;';
+        box.innerHTML = `<div style="color:#848E9C; font-size:11px; font-weight:bold; margin-bottom:10px; text-transform:uppercase;">${title}</div>`;
+        return box;
+    };
 
-            const row = document.createElement('div');
-            row.className = 'wa-input-row';
-            row.innerHTML = `
-                <div class="wa-label-col">
-                    <span class="wa-label-main">${labelTitle}</span>
-                    ${labelDesc ? `<span class="wa-label-desc">${labelDesc}</span>` : ''}
-                </div>
-                <input type="${inputType}" ${stepAttr} id="wa-param-${idx}" class="${inputClass}" value="${val}">
-            `;
-            box.appendChild(row);
-        });
-        gridContainer.appendChild(box);
-    });
+    // Chia group nếu là VPVR, nếu chỉ báo khác thì gộp chung 1 cục
+    const groups = isVPVR ? [
+        { title: 'Cấu Hình Lõi', keys: [0, 1, 2, 3, 4, 5, 21] },
+        { title: 'Bảng Màu Hiển Thị', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
+        { title: 'Kiểu Dáng & Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
+    ] : [ { title: 'Cài Đặt', keys: currentParams.map((_, i) => i) } ];
 
-    body.appendChild(gridContainer);
-
-    // =========================================================================
-    // NÚT LƯU - TỰ ĐỘNG NHẬN DIỆN MÀU SẮC HAY SỐ
-    // =========================================================================
-    if (btnSave._waHandler) btnSave.removeEventListener('click', btnSave._waHandler);
-    btnSave._waHandler = function () {
-        const newParams = currentParams.map(function (_, idx) {
+    // ── LOGIC LIVE PREVIEW TỨC THÌ ──
+    const liveUpdateChart = () => {
+        const newParams = currentParams.map((_, idx) => {
             const inp = document.getElementById('wa-param-' + idx);
-            if (!inp) return 0;
-            // Quan trọng: Trả về chuỗi Color nếu là ô chọn màu, ngược lại ép kiểu Số
+            if (!inp) return currentParams[idx];
             return inp.type === 'color' ? inp.value : (parseFloat(inp.value) || 0);
         });
         try {
             global.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId);
-            const entry = global.scActiveIndicators.find(x => x.name === indicator.name);
-            if (entry) { entry.params = newParams; saveIndicatorState(); }
-        } catch (e) { console.error('[Wave Alpha] Lỗi lưu settings', e); }
-        modal.style.display = 'none';
+        } catch (e) {}
+        return newParams;
     };
-    btnSave.addEventListener('click', btnSave._waHandler);
 
-    modal.style.display = 'flex';
+    // Render Inputs
+    groups.forEach(g => {
+        const box = createGroup(g.title);
+        g.keys.forEach(idx => {
+            const val = currentParams[idx];
+            if (val === undefined) return;
+            
+            const isColor = typeof val === 'string' && val.startsWith('#');
+            const row = document.createElement('div');
+            row.className = 'wa-inp-row';
+            row.innerHTML = `
+                <label style="color:#EAECEF; font-size:12px; flex:1;">${labels[idx] || `Param ${idx + 1}`}</label>
+                <input type="${isColor ? 'color' : 'number'}" id="wa-param-${idx}" 
+                       class="${isColor ? 'wa-inp-color' : 'wa-inp-num'}" 
+                       value="${val}" step="any">
+            `;
+            box.appendChild(row);
+
+            // Bắt sự kiện 'input' để Live Preview ngay khi kéo màu hoặc gõ số
+            row.querySelector('input').addEventListener('input', liveUpdateChart);
+        });
+        body.appendChild(box);
+    });
+
+    // 5. FOOTER (Nút Lưu)
+    const footer = document.createElement('div');
+    footer.style.cssText = 'padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); display:flex;';
+    footer.innerHTML = `<button id="wa-save-btn" style="flex:1; padding:8px; background:#F0B90B; border:none; border-radius:4px; color:#000; font-weight:bold; cursor:pointer;">Xong & Lưu</button>`;
+    panel.appendChild(footer);
+
+    document.body.appendChild(panel);
+
+    // ── KÉO THẢ PANEL ──
+    let isDragging = false, offset = { x: 0, y: 0 };
+    header.onmousedown = (e) => {
+        isDragging = true;
+        offset.x = e.clientX - panel.offsetLeft;
+        offset.y = e.clientY - panel.offsetTop;
+    };
+    window.onmousemove = (e) => {
+        if (!isDragging) return;
+        panel.style.left = (e.clientX - offset.x) + 'px';
+        panel.style.top = (e.clientY - offset.y) + 'px';
+        panel.style.right = 'auto'; // Disable CSS right
+    };
+    window.onmouseup = () => isDragging = false;
+
+    // ── ĐÓNG & LƯU ──
+    const closePanel = () => panel.remove();
+    document.getElementById('wa-close-btn').onclick = closePanel;
+    document.getElementById('wa-save-btn').onclick = () => {
+        const finalParams = liveUpdateChart();
+        const entry = global.scActiveIndicators.find(x => x.name === indicator.name);
+        if (entry) {
+            entry.params = finalParams;
+            if (typeof global.saveIndicatorState === 'function') global.saveIndicatorState();
+        }
+        closePanel();
+    };
   };
 
   /**
