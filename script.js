@@ -2,6 +2,41 @@ function formatCompact(num) {
     return new Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 2 }).format(num);
 }
 
+// --- BẮT ĐẦU: HÀM VẼ THANH LỘ TRÌNH 7 NGÀY ---
+function renderMultiplierPath(c) {
+    if (!c || !c.start) return ''; // Bỏ qua nếu không có ngày bắt đầu
+    
+    const now = new Date();
+    // Chuyển đổi c.start (VD: "2026-04-22") thành timestamp
+    const startTime = new Date(c.start + 'T' + (c.startTime || "13:00:00") + 'Z');
+    const diffTime = now - startTime;
+    let currentDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Giới hạn max là ngày 7
+    if (currentDay > 7) currentDay = 7;
+    if (currentDay < 1) currentDay = 1;
+    
+    const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
+    let dotsHtml = '';
+    
+    multipliers.forEach((mul, index) => {
+        const dayIdx = index + 1;
+        let statusClass = dayIdx < currentDay ? 'passed' : (dayIdx === currentDay ? 'active' : '');
+        let flagHtml = dayIdx === currentDay ? `
+            <div class="path-flag">
+                <span class="mul-tag">${mul}x</span>
+                <i class="fas fa-flag"></i>
+            </div>` : '';
+            
+        dotsHtml += `<div class="path-dot ${statusClass}" data-mul="${mul}x">${flagHtml}</div>`;
+    });
+
+    return `
+        <div class="multiplier-path-container" title="Lộ trình Multiplier (Ngày ${currentDay})">
+            <div class="multiplier-path-line">${dotsHtml}</div>
+        </div>`;
+}
+
 function escHtml(str) {
     if (!str) return '';
     return String(str)
@@ -1119,6 +1154,7 @@ fullHtml += `
                                 </div>
                                 ${statusBadgeHtml}
                                 ${tourTimerHtml}
+                                ${renderMultiplierPath(c)}
                             </div>
                         </div>
                         <div class="card-head-right">
@@ -1630,10 +1666,10 @@ thead.innerHTML = `
                     ${chainBadge}
                 </div>
                 <div class="token-info-col" style="text-align:left;">
-                    <div class="token-name-row"><span class="token-name-text" style="font-weight:700">${escHtml(c.name)}</span>${badgeHtml}</div>
-                    ${contractHtml}
-                    ${multiTokenHtml}
-                </div></div>`;
+    <div class="token-name-row"><span class="token-name-text" style="font-weight:700">${escHtml(c.name)}</span>${badgeHtml}</div>
+    ${renderMultiplierPath(c)}
+    ${multiTokenHtml}
+</div></div>`;
 
             let sTime = c.startTime || "00:00:00"; if(sTime.length===5) sTime+=":00";
             let startDt = new Date(c.start + 'T' + sTime + 'Z');
@@ -1666,7 +1702,7 @@ let winPoolHtml = '';
 if (c.rewardType === 'tiered' && c.tiers_data && c.tiers_data.length > 0) {
     winPoolHtml = `<div class="cell-stack justify-content-center">
                     <span class="cell-primary text-warning fw-bold anim-breathe" onclick="event.stopPropagation(); showTiersModal('${c.db_id}')" style="cursor:pointer; border-bottom:1px dashed #ffc107;">Tiered <i class="fas fa-list-ol"></i></span>
-                    <span class="cell-secondary">Up to ${(parseFloat(c.rewardQty)||0).toLocaleString()} ${symName}</span>
+                    <span class="cell-secondary">Min ${(parseFloat(c.rewardQty)||0).toLocaleString()} ${symName}</span>
                    </div>`;
 } else {
     winPoolHtml = `<div class="cell-stack justify-content-center">

@@ -3510,3 +3510,88 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .legal-modal-body { font-size: 12px; }
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
+
+/* Multiplier Path Styles */
+.multiplier-path-container {
+    margin-top: 6px;
+    width: 140px;
+    position: relative;
+    padding-bottom: 12px;
+}
+
+.multiplier-path-line {
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    width: 100%;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.path-dot {
+    width: 6px;
+    height: 6px;
+    background: #333;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.path-dot.active {
+    background: var(--brand);
+    box-shadow: 0 0 8px var(--brand);
+}
+
+.path-dot.passed {
+    background: #848e9c;
+}
+
+/* Cây cờ cho ngày hiện tại */
+.path-flag {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: flagFloat 2s infinite ease-in-out;
+}
+
+.path-flag i {
+    color: var(--brand);
+    font-size: 10px;
+}
+
+.path-flag .mul-tag {
+    background: var(--brand);
+    color: #000;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 0px 3px;
+    border-radius: 2px;
+    line-height: 1;
+    margin-bottom: 1px;
+}
+
+@keyframes flagFloat {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+/* Tooltip cho từng chấm */
+.path-dot::after {
+    content: attr(data-mul);
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 7px;
+    color: #555;
+    font-weight: bold;
+}
+
+.path-dot.active::after {
+    color: var(--brand);
+}
