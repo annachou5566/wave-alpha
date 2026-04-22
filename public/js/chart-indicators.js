@@ -4120,61 +4120,164 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     }
 
 
-    // Build param inputs (ĐÃ NÂNG CẤP ĐỂ TỰ NHẬN DIỆN MÀU SẮC)
-    currentParams.forEach(function (val, idx) {
-      const label = labels[idx] || ('Thông số ' + (idx + 1));
-      
-      // Tự động phát hiện nếu giá trị là màu sắc (Bắt đầu bằng dấu #)
-      const isColor = typeof val === 'string' && val.startsWith('#');
-      const inputType = isColor ? 'color' : 'number';
-      const stepAttr = isColor ? '' : 'step="any"';
-      
-      // CSS phân biệt cho ô nhập Số và ô chọn Màu
-      const styleExtra = isColor 
-        ? 'padding:0px 2px; cursor:pointer; height:32px;' 
-        : 'padding:5px 10px; text-align:center;';
+    // =========================================================================
+    // HỆ THỐNG UI/UX SETTINGS CHUẨN TERMINAL PRO (Hỗ trợ Grid & Tooltip)
+    // =========================================================================
+    
+    // 1. Nhúng CSS Styling cho Modal (Responsive Grid & Mini Color Picker)
+    const styleId = 'wa-settings-style';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+            .wa-settings-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 16px;
+                max-height: 65vh;
+                overflow-y: auto;
+                padding-right: 8px;
+            }
+            /* Custom Scrollbar cho mượt */
+            .wa-settings-grid::-webkit-scrollbar { width: 6px; }
+            .wa-settings-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+            .wa-group-box {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                padding: 12px;
+            }
+            .wa-group-title {
+                color: #F0B90B;
+                font-size: 13px;
+                font-weight: 700;
+                text-transform: uppercase;
+                margin-bottom: 12px;
+                padding-bottom: 6px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .wa-input-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                gap: 10px;
+            }
+            .wa-label-col { display: flex; flex-direction: column; flex: 1; }
+            .wa-label-main { color: #EAECEF; font-size: 12px; font-weight: 600; }
+            .wa-label-desc { color: #848E9C; font-size: 10px; margin-top: 2px; line-height: 1.3; }
+            
+            /* UI Nút nhập số */
+            .wa-num-input {
+                width: 70px; height: 28px;
+                background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 4px; color: #FFF; font-size: 12px; text-align: center;
+                outline: none; transition: border 0.2s;
+            }
+            .wa-num-input:focus { border-color: #F0B90B; }
+            
+            /* Mini Color Swatch (Nút chọn màu tinh tế) */
+            .wa-color-picker {
+                -webkit-appearance: none;
+                border: none; width: 28px; height: 28px;
+                border-radius: 4px; cursor: pointer; padding: 0; background: transparent;
+            }
+            .wa-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+            .wa-color-picker::-webkit-color-swatch { border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; }
+        `;
+        document.head.appendChild(style);
+    }
 
-      const row   = document.createElement('div');
-      row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px;';
-      row.innerHTML = [
-        '<label style="color:' + COLOR.muted + '; font-size:12px; font-weight:600; flex:1;">' + label + '</label>',
-        '<input type="' + inputType + '" ' + stepAttr + ' id="wa-param-' + idx + '" value="' + val + '"',
-          'style="width:110px; background:rgba(0,0,0,0.5); border:1px solid ' + COLOR.border + ';',
-          'border-radius:6px; color:' + COLOR.white + '; font-size:13px;',
-          styleExtra + ' outline:none; transition:border-color .15s;">',
-      ].join('');
-      body.appendChild(row);
+    // 2. Chú thích chuyên sâu cho riêng VPVR
+    const vpvrDescriptions = [
+        "Số lượng thanh ngang (Càng to càng nét, 10-200)", // 0
+        "Tỷ lệ khối lượng lõi (Thường dùng 70%)", // 1
+        "Biểu đồ chiếm bao nhiêu % chiều ngang", // 2
+        "0 = Cạnh Phải, 1 = Cạnh Trái", // 3
+        "0: Toàn bộ, 1: Chia theo Ngày, 2: Chia Tuần", // 4
+        "0 = Tắt, 1 = Hiện mờ đằng sau các phiên", // 5
+        "Màu cho lực Mua (Chủ động)", // 6
+        "Màu cho lực Bán (Chủ động)", // 7
+        "Đường Point of Control (Giá khớp nhiều nhất)", // 8
+        "Viền Vùng Giá Trị Cao / Thấp", // 9
+        "Vùng thanh khoản tập trung Dày", // 10
+        "Vùng thanh khoản Mỏng (Khoảng trống)", // 11
+        "POC chưa bị test lại trong tương lai", // 12
+        "Mũi tên báo hiệu phe nào đang áp đảo", // 13
+        "Độ đậm nhạt của khối lượng trong VA (0-100)", // 14
+        "Độ đậm nhạt của khối lượng ngoài VA", // 15
+        "Độ dày đường nét (1-5px)", // 16
+        "Độ dày đường nét (1-4px)", // 17
+        "0: Nét đứt, 1: Chấm bi, 2: Nét liền", // 18
+        "0: Nét đứt, 1: Chấm bi, 2: Nét gạch dài", // 19
+        "Kích thước chữ nhãn giá (8-16px)", // 20
+        "0 = Ẩn nhãn, 1 = Hiện nhãn giá" // 21
+    ];
+
+    // 3. Nhóm các Setting lại thành từng Box (Dành riêng cho VPVR)
+    let isVPVR = indicator.name === 'WAVE_VPVR';
+    const groups = isVPVR ? [
+        { title: '⚙️ Cấu Hình Lõi', keys: [0, 1, 2, 3, 4, 5, 21] },
+        { title: '🎨 Bảng Màu Hiển Thị', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
+        { title: '📏 Kiểu Dáng & Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
+    ] : [ { title: '⚙️ Cài Đặt Chỉ Báo', keys: currentParams.map((_, i) => i) } ]; // Fallback cho chỉ báo khác
+
+    const gridContainer = document.createElement('div');
+    gridContainer.className = 'wa-settings-grid';
+
+    // 4. Render Layout
+    groups.forEach(group => {
+        const box = document.createElement('div');
+        box.className = 'wa-group-box';
+        box.innerHTML = `<div class="wa-group-title">${group.title}</div>`;
+        
+        group.keys.forEach(idx => {
+            const val = currentParams[idx];
+            if (val === undefined) return;
+            
+            const labelTitle = labels[idx] || ('Thông số ' + (idx + 1));
+            const labelDesc = (isVPVR && vpvrDescriptions[idx]) ? vpvrDescriptions[idx] : '';
+            
+            const isColor = typeof val === 'string' && val.startsWith('#');
+            const inputType = isColor ? 'color' : 'number';
+            const inputClass = isColor ? 'wa-color-picker' : 'wa-num-input';
+            const stepAttr = isColor ? '' : 'step="any"';
+
+            const row = document.createElement('div');
+            row.className = 'wa-input-row';
+            row.innerHTML = `
+                <div class="wa-label-col">
+                    <span class="wa-label-main">${labelTitle}</span>
+                    ${labelDesc ? `<span class="wa-label-desc">${labelDesc}</span>` : ''}
+                </div>
+                <input type="${inputType}" ${stepAttr} id="wa-param-${idx}" class="${inputClass}" value="${val}">
+            `;
+            box.appendChild(row);
+        });
+        gridContainer.appendChild(box);
     });
 
-    // Save (ĐÃ SỬA ĐỂ KHÔNG LÀM HỎNG MÃ MÀU HEX)
+    body.appendChild(gridContainer);
+
+    // =========================================================================
+    // NÚT LƯU - TỰ ĐỘNG NHẬN DIỆN MÀU SẮC HAY SỐ
+    // =========================================================================
     if (btnSave._waHandler) btnSave.removeEventListener('click', btnSave._waHandler);
     btnSave._waHandler = function () {
-      const newParams = currentParams.map(function (_, idx) {
-        const inp = document.getElementById('wa-param-' + idx);
-        if (!inp) return 0;
-        // Nếu là ô chọn màu thì lấy nguyên chuỗi String, nếu là số thì dùng parseFloat
-        return inp.type === 'color' ? inp.value : (parseFloat(inp.value) || 0);
-      });
-      try {
-        global.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId);
-        const entry = global.scActiveIndicators.find(function (x) { return x.name === indicator.name; });
-        if (entry) { entry.params = newParams; saveIndicatorState(); }
-      } catch (e) {
-        console.error('[Wave Alpha] overrideIndicator error', e);
-      }
-      modal.style.display = 'none';
+        const newParams = currentParams.map(function (_, idx) {
+            const inp = document.getElementById('wa-param-' + idx);
+            if (!inp) return 0;
+            // Quan trọng: Trả về chuỗi Color nếu là ô chọn màu, ngược lại ép kiểu Số
+            return inp.type === 'color' ? inp.value : (parseFloat(inp.value) || 0);
+        });
+        try {
+            global.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId);
+            const entry = global.scActiveIndicators.find(x => x.name === indicator.name);
+            if (entry) { entry.params = newParams; saveIndicatorState(); }
+        } catch (e) { console.error('[Wave Alpha] Lỗi lưu settings', e); }
+        modal.style.display = 'none';
     };
     btnSave.addEventListener('click', btnSave._waHandler);
-
-    // Reset defaults
-    if (btnRst._waHandler) btnRst.removeEventListener('click', btnRst._waHandler);
-    btnRst._waHandler = function () {
-      defaults.forEach(function (val, idx) {
-        const inp = document.getElementById('wa-param-' + idx);
-        if (inp) inp.value = val;
-      });
-    };
-    btnRst.addEventListener('click', btnRst._waHandler);
 
     modal.style.display = 'flex';
   };
