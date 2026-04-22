@@ -286,28 +286,30 @@
     {
       name: 'WAVE_VPVR',
       shortName: 'VPVR',
-      description: 'Volume Profile Visible Range ULTIMATE v3.0 — Full Customization',
+      description: 'Volume Profile ULTIMATE v3.1 (Tùy Chỉnh Màu)',
       category: 'wave_alpha',
       isStack: true,
       builtIn: false,
+      // Đã đổi màu sang dạng String (#HEX) để kích hoạt Color Picker
       defaultParams: [
         60, 70, 30, 0, 0, 0,
-        0x26A69A, 0xEF5350, 0xF0B90B, 0x9575CD,
-        0xFFFFFF, 0xFF9800, 0xF0B90B, 0x26A69A,
+        "#26A69A", "#EF5350", "#F0B90B", "#9575CD",
+        "#FFFFFF", "#FF9800", "#F0B90B", "#26A69A",
         80, 25, 2, 1, 0, 0, 10, 1
       ],
       paramLabels: [
         'Số Bins (10–200)', 'Value Area % (10–100)', 'Độ Rộng % (10–80)',
-        'Vị Trí (0=Phải, 1=Trái)', 'Chế Độ Phiên (0=Toàn, 1=Ngày, 2=Tuần)', 'Composite Mode (0=Tắt, 1=Bật)',
-        'Màu Thanh Mua [hex]', 'Màu Thanh Bán [hex]', 'Màu POC [hex]',
-        'Màu VAH/VAL [hex]', 'Màu HVN Viền [hex]', 'Màu LVN Fill [hex]',
-        'Màu Naked POC [hex]', 'Màu Delta Icon Mua [hex]',
-        'Opacity Bars Trong VA (0–100)', 'Opacity Bars Ngoài VA (0–100)',
-        'Độ Dày POC (1–5)', 'Độ Dày VAH/VAL (1–4)',
-        'Kiểu Nét VA (0=Đứt, 1=Chấm, 2=Liền)', 'Kiểu Nét nPOC (0=Đứt, 1=Chấm, 2=Dài)',
-        'Cỡ Chữ Label (8–16)', 'Hiện Nhãn Giá (0=Tắt, 1=Bật)',
+        'Vị Trí (0=Phải, 1=Trái)', 'Chế Độ Phiên (0=Toàn, 1=Ngày, 2=Tuần)', 'Lớp Nền Mờ (0=Tắt, 1=Bật)',
+        'Màu Lực Mua', 'Màu Lực Bán', 'Màu Đường POC',
+        'Màu Viền VAH/VAL', 'Màu Viền HVN', 'Màu Nền LVN',
+        'Màu Đường nPOC', 'Màu Icon Mua (▲)',
+        'Độ Mờ Vùng VA (%)', 'Độ Mờ Ngoài VA (%)',
+        'Độ Dày POC (1-5)', 'Độ Dày VAH/VAL (1-4)',
+        'Nét VA (0=Đứt, 1=Chấm, 2=Liền)', 'Nét nPOC (0=Đứt, 1=Chấm, 2=Dài)',
+        'Cỡ Chữ (8-16)', 'Hiện Giá (0=Tắt, 1=Bật)',
       ],
     },
+
     {
       name: 'WAVE_TPO',
       shortName: 'TPO',
@@ -1527,31 +1529,12 @@ function roundRect(ctx, x, y, w, h, r) {
   }
 }
 
-/**
- * ╔══════════════════════════════════════════════════════════════════════════════════╗
- * ║  WAVE_VPVR ULTIMATE — Volume Profile Visible Range v2.0                          ║
- * ║  Tích hợp: Session Profiling, Naked POC, VAH/VAL Labels, Glassmorphism, Imbalance║
- * ╚══════════════════════════════════════════════════════════════════════════════════╝
- */
-
-// ─────────────────────────────────────────────────────────────────
-// [7] CACHE ENGINE ĐA LỚP — LRU Map tối đa 10 entries
-// ─────────────────────────────────────────────────────────────────
-if (!window._waVpvrCache) window._waVpvrCache = new Map();
-
-function _waVpvrCacheSet(key, value) {
-  if (window._waVpvrCache.has(key)) window._waVpvrCache.delete(key);
-  window._waVpvrCache.set(key, value);
-  if (window._waVpvrCache.size > 10) {
-    const oldestKey = window._waVpvrCache.keys().next().value;
-    window._waVpvrCache.delete(oldestKey);
-  }
-}
-
+// ════════════════════════════════════════════════════════════════════════════════
+//  WAVE_VPVR ULTIMATE v3.1 — CORE ENGINE
+// ════════════════════════════════════════════════════════════════════════════════
 (function initWaveVpvrCore() {
   'use strict';
 
-  // ─── MULTI-LAYER LRU CACHE ────────────────────────────────────────────────────
   if (!window._waVpvrCache) window._waVpvrCache = new Map();
 
   function _waVpvrCacheSet(key, value) {
@@ -1562,84 +1545,65 @@ function _waVpvrCacheSet(key, value) {
     }
   }
 
-  // ─── HELPER: Chuyển hex number → CSS rgba string ─────────────────────────────
-  function _waHex2Rgba(hex, alpha) {
-    const h = Math.round(hex) >>> 0; 
-    const r = (h >> 16) & 0xFF;
-    const g = (h >>  8) & 0xFF;
-    const b =  h        & 0xFF;
+  // Chuyển đổi String Hex (VD: "#26A69A") sang RGBA
+  function _waHex2Rgba(hexStr, alpha) {
+    let hex = String(hexStr).replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
     return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
   }
 
-  // ─── HELPER: Lấy dash pattern từ style index ─────────────────────────────────
   function _waGetDash(styleIdx, type) {
-    if (styleIdx === 1) return [2, 3];             // Chấm
-    if (styleIdx === 2) return type === 'va'
-      ? []                                         // VA solid
-      : [12, 4];                                   // nPOC long-dash
-    return [6, 4];                                 // Default: dash 6-4
+    if (styleIdx === 1) return [2, 3];             
+    if (styleIdx === 2) return type === 'va' ? [] : [12, 4];
+    return [6, 4];                                 
   }
 
-  // ─── HELPER: Vẽ hình chữ nhật bo góc ────────────────────────────────────────
   function _waRoundRect(ctx, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
     ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y,     x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x,     y + h, r);
-    ctx.arcTo(x,     y + h, x,     y,     r);
-    ctx.arcTo(x,     y,     x + w, y,     r);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
 
-  // ─── TÍNH TOÁN VPVR PROFILE ──────────────────────────────────────────────────
   function _waCalcVpvrProfile(dataList, startIdx, endIdx, rowCount, vaPercent) {
     let maxP = -Infinity, minP = Infinity, totalVol = 0;
-
     for (let i = startIdx; i < endIdx; i++) {
-      const d = dataList[i];
-      if (!d) continue;
+      const d = dataList[i]; if (!d) continue;
       if (d.high > maxP) maxP = d.high;
       if (d.low  < minP) minP = d.low;
       totalVol += (d.volume || 0);
     }
-
     if (maxP === -Infinity || maxP === minP || totalVol === 0) return null;
 
     const step = (maxP - minP) / rowCount;
     if (step <= 0) return null;
 
     const bins = Array.from({ length: rowCount }, (_, i) => ({
-      idx: i,
-      pLow    : minP + i * step,
-      pHigh   : minP + (i + 1) * step,
-      upVol   : 0,
-      downVol : 0,
-      total   : 0,
-      inVA    : false,
+      idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step,
+      upVol: 0, downVol: 0, total: 0, inVA: false,
     }));
 
     for (let i = startIdx; i < endIdx; i++) {
-      const d = dataList[i];
-      if (!d || !d.volume) continue;
+      const d = dataList[i]; if (!d || !d.volume) continue;
       const cRange = d.high - d.low;
-      let upV = cRange === 0
-        ? (d.close >= d.open ? d.volume : 0)
-        : d.volume * ((d.close - d.low) / cRange);
+      let upV = cRange === 0 ? (d.close >= d.open ? d.volume : 0) : d.volume * ((d.close - d.low) / cRange);
       let dnV = d.volume - upV;
 
       const s = Math.max(0, Math.floor((d.low - minP) / step));
       const e = Math.min(rowCount - 1, Math.floor((d.high - minP) / step));
 
       for (let j = s; j <= e; j++) {
-        const bin = bins[j];
-        const oL  = Math.max(d.low,  bin.pLow);
-        const oH  = Math.min(d.high, bin.pHigh);
+        const bin = bins[j], oL = Math.max(d.low, bin.pLow), oH = Math.min(d.high, bin.pHigh);
         if (oH > oL) {
-          const ratio   = (oH - oL) / (cRange || step);
-          bin.upVol    += upV * ratio;
-          bin.downVol  += dnV * ratio;
-          bin.total    += d.volume * ratio;
+          const ratio = (oH - oL) / (cRange || step);
+          bin.upVol += upV * ratio; bin.downVol += dnV * ratio; bin.total += d.volume * ratio;
         }
       }
     }
@@ -1649,24 +1613,18 @@ function _waVpvrCacheSet(key, value) {
     if (maxBinVol === 0) return null;
 
     pocBin.inVA = true;
-    let curVA = pocBin.total;
-    const tgt = totalVol * (vaPercent / 100);
+    let curVA = pocBin.total, tgt = totalVol * (vaPercent / 100);
     let ui = pocBin.idx + 1, di = pocBin.idx - 1;
 
     while (curVA < tgt && (ui < rowCount || di >= 0)) {
       let vu = 0, vd = 0;
-      if (ui     < rowCount) vu += bins[ui].total;
-      if (ui + 1 < rowCount) vu += bins[ui + 1].total;
-      if (di     >= 0)       vd += bins[di].total;
-      if (di - 1 >= 0)       vd += bins[di - 1].total;
+      if (ui < rowCount) vu += bins[ui].total; if (ui + 1 < rowCount) vu += bins[ui + 1].total;
+      if (di >= 0) vd += bins[di].total; if (di - 1 >= 0) vd += bins[di - 1].total;
 
-      if (vu >= vd && ui < rowCount) {
-        bins[ui].inVA = true; curVA += bins[ui].total; ui++;
-      } else if (di >= 0) {
-        bins[di].inVA = true; curVA += bins[di].total; di--;
-      } else if (ui < rowCount) {
-        bins[ui].inVA = true; curVA += bins[ui].total; ui++;
-      } else break;
+      if (vu >= vd && ui < rowCount) { bins[ui].inVA = true; curVA += bins[ui].total; ui++; } 
+      else if (di >= 0) { bins[di].inVA = true; curVA += bins[di].total; di--; } 
+      else if (ui < rowCount) { bins[ui].inVA = true; curVA += bins[ui].total; ui++; } 
+      else break;
     }
 
     let vahBin = null, valBin = null;
@@ -1681,19 +1639,15 @@ function _waVpvrCacheSet(key, value) {
     };
   }
 
-  // ─── PHÂN NHÓM PHIÊN (NGÀY / TUẦN) ─────────────────────────────────────────
   function _waGroupBySession(dataList, from, to, sessionMode) {
     const groups = new Map();
     for (let i = from; i < to; i++) {
-      const d = dataList[i];
-      if (!d || !d.timestamp) continue;
-      const dt = new Date(d.timestamp);
-      let key;
+      const d = dataList[i]; if (!d || !d.timestamp) continue;
+      const dt = new Date(d.timestamp); let key;
       if (sessionMode === 1) {
         key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
       } else {
-        const dow = dt.getUTCDay() || 7;
-        const mon = new Date(dt);
+        const dow = dt.getUTCDay() || 7, mon = new Date(dt);
         mon.setUTCDate(dt.getUTCDate() - dow + 1);
         key = mon.getUTCFullYear() * 10000 + (mon.getUTCMonth() + 1) * 100 + mon.getUTCDate();
       }
@@ -1703,10 +1657,9 @@ function _waVpvrCacheSet(key, value) {
     return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-5);
   }
 
-  // ─── RENDER: GRADIENT BARS ───────────────────────────────────────────────────
   function _waDrawGradientBar(ctx, clrHex, startX, rectY, w, rectH, isLeft) {
     if (w <= 0 || rectH <= 0) return;
-    const x0 = isLeft ? startX     : startX + w;
+    const x0 = isLeft ? startX : startX + w;
     const x1 = isLeft ? startX + w : startX;
     const grad = ctx.createLinearGradient(x0, 0, x1, 0);
     grad.addColorStop(0, _waHex2Rgba(clrHex, 0.85));
@@ -1715,128 +1668,97 @@ function _waVpvrCacheSet(key, value) {
     ctx.fillRect(startX, rectY, w, rectH);
   }
 
-  // ─── RENDER: TẤT CẢ BINS ─────────────────────────────────────────────────────
-  function _waRenderBins(ctx, profile, maxVol, maxWidthPx, GAP, isLeft, bounding, yAxis, C, showDelta) {
+  function _waRenderBins(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C, showDelta) {
     profile.bins.forEach(bin => {
       if (bin.total <= 0) return;
-
-      const yB    = yAxis.convertToPixel(bin.pLow);
-      const yT    = yAxis.convertToPixel(bin.pHigh);
+      const yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
       if (yB === null || yT === null) return;
       
-      const rectY = Math.min(yT, yB);
-      const rectH = Math.max(1, Math.abs(yB - yT) - GAP);
-      const wUp   = (bin.upVol   / maxVol) * maxWidthPx;
-      const wDn   = (bin.downVol / maxVol) * maxWidthPx;
+      const rectY = Math.min(yT, yB), rectH = Math.max(1, Math.abs(yB - yT) - 1);
+      const wUp = (bin.upVol / profile.maxVol) * maxWidthPx;
+      const wDn = (bin.downVol / profile.maxVol) * maxWidthPx;
 
-      const alpha = bin.inVA ? C.opacityVA : C.opacityOut;
       ctx.save();
-      ctx.globalAlpha *= alpha;
+      ctx.globalAlpha = bin.inVA ? C.opacityVA : C.opacityOut;
 
       if (isLeft) {
-        _waDrawGradientBar(ctx, C.clrUp, 0,    rectY, wUp, rectH, true);
-        _waDrawGradientBar(ctx, C.clrDn, wUp,  rectY, wDn, rectH, true);
+        _waDrawGradientBar(ctx, C.clrUp, 0, rectY, wUp, rectH, true);
+        _waDrawGradientBar(ctx, C.clrDn, wUp, rectY, wDn, rectH, true);
       } else {
-        const sDn = bounding.width - wDn;
-        const sUp = bounding.width - wDn - wUp;
-        _waDrawGradientBar(ctx, C.clrDn, sDn, rectY, wDn, rectH, false);
-        _waDrawGradientBar(ctx, C.clrUp, sUp, rectY, wUp, rectH, false);
+        _waDrawGradientBar(ctx, C.clrDn, bounding.width - wDn, rectY, wDn, rectH, false);
+        _waDrawGradientBar(ctx, C.clrUp, bounding.width - wDn - wUp, rectY, wUp, rectH, false);
       }
       ctx.restore();
 
-      if (bin.total > maxVol * 0.80) {
+      if (bin.total > profile.maxVol * 0.80) {
         const totalW = wUp + wDn;
-        const hvnX   = isLeft ? 0 : bounding.width - totalW;
+        const hvnX = isLeft ? 0 : bounding.width - totalW;
         ctx.save();
-        ctx.strokeStyle = _waHex2Rgba(C.clrHvn, 0.80);
-        ctx.lineWidth   = 1;
+        ctx.strokeStyle = _waHex2Rgba(C.clrHvn, 0.80); ctx.lineWidth = 1;
         ctx.strokeRect(hvnX, rectY, totalW, rectH);
-        ctx.fillStyle    = _waHex2Rgba(C.clrHvn, 0.70);
-        ctx.font         = `bold ${C.fontSize - 2}px system-ui,sans-serif`;
-        ctx.textBaseline = 'middle';
-        ctx.textAlign    = isLeft ? 'left' : 'right';
+        ctx.fillStyle = _waHex2Rgba(C.clrHvn, 0.70);
+        ctx.font = `bold ${C.fontSize - 2}px system-ui,sans-serif`;
+        ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
         ctx.fillText('HVN', isLeft ? totalW + 4 : bounding.width - totalW - 4, rectY + rectH / 2);
         ctx.restore();
       }
 
-      if (bin.total > 0 && bin.total < maxVol * 0.10) {
+      if (bin.total > 0 && bin.total < profile.maxVol * 0.10) {
         const lvnX = isLeft ? 0 : bounding.width - maxWidthPx;
         ctx.save();
-        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.18);
-        ctx.fillRect(lvnX, rectY, maxWidthPx, rectH);
-        ctx.fillStyle    = _waHex2Rgba(C.clrLvn, 0.75);
-        ctx.font         = `bold ${C.fontSize - 2}px system-ui,sans-serif`;
-        ctx.textBaseline = 'middle';
-        ctx.textAlign    = isLeft ? 'left' : 'right';
+        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.18); ctx.fillRect(lvnX, rectY, maxWidthPx, rectH);
+        ctx.fillStyle = _waHex2Rgba(C.clrLvn, 0.75);
+        ctx.font = `bold ${C.fontSize - 2}px system-ui,sans-serif`;
+        ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
         ctx.fillText('LVN', isLeft ? maxWidthPx + 4 : bounding.width - maxWidthPx - 4, rectY + rectH / 2);
         ctx.restore();
       }
 
-      if (showDelta && bin.inVA) {
-        const td = bin.upVol + bin.downVol;
-        if (td > 0) {
-          const dr      = bin.upVol / td;
-          const totalW  = wUp + wDn;
-          const offset  = bin.total > maxVol * 0.80 ? 32 : 4;
-          const iconX   = isLeft ? totalW + offset : bounding.width - totalW - offset;
-          const iconY   = yAxis.convertToPixel((bin.pLow + bin.pHigh) / 2);
-          if (iconY !== null && (dr > 0.75 || dr < 0.25)) {
-            ctx.save();
-            ctx.font         = `bold ${C.fontSize}px system-ui,sans-serif`;
-            ctx.textBaseline = 'middle';
-            ctx.textAlign    = isLeft ? 'left' : 'right';
-            ctx.fillStyle    = dr > 0.75 ? _waHex2Rgba(C.clrDeltaUp, 1) : _waHex2Rgba(C.clrDn, 1);
-            ctx.fillText(dr > 0.75 ? '▲' : '▼', iconX, iconY);
-            ctx.restore();
-          }
+      if (showDelta && bin.inVA && (bin.upVol + bin.downVol > 0)) {
+        const dr = bin.upVol / (bin.upVol + bin.downVol);
+        const iconX = isLeft ? wUp + wDn + (bin.total > profile.maxVol * 0.8 ? 32 : 4) : bounding.width - wUp - wDn - (bin.total > profile.maxVol * 0.8 ? 32 : 4);
+        if (dr > 0.75 || dr < 0.25) {
+          ctx.save();
+          ctx.font = `bold ${C.fontSize}px system-ui,sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = isLeft ? 'left' : 'right';
+          ctx.fillStyle = dr > 0.75 ? _waHex2Rgba(C.clrDeltaUp, 1) : _waHex2Rgba(C.clrDn, 1);
+          ctx.fillText(dr > 0.75 ? '▲' : '▼', iconX, rectY + rectH / 2);
+          ctx.restore();
         }
       }
     });
   }
 
-  // ─── RENDER: POC LINE + BADGE + NAKED POC ────────────────────────────────────
   function _waRenderPOCLine(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, dataList, C) {
     if (!profile.poc) return;
     const pocMid = (profile.poc.pLow + profile.poc.pHigh) / 2;
-    const pocY   = yAxis.convertToPixel(pocMid);
+    const pocY = yAxis.convertToPixel(pocMid);
     if (pocY === null) return;
 
     let isNaked = false;
     if (dataList && profile.endIdx < dataList.length) {
       isNaked = true;
       for (let i = profile.endIdx; i < dataList.length; i++) {
-        const d = dataList[i];
-        if (d && d.low <= pocMid && pocMid <= d.high) { isNaked = false; break; }
+        const d = dataList[i]; if (d && d.low <= pocMid && pocMid <= d.high) { isNaked = false; break; }
       }
     }
 
     ctx.save();
-    ctx.shadowColor = _waHex2Rgba(C.clrPoc, 0.60);
-    ctx.shadowBlur  = 5;
-    ctx.strokeStyle = _waHex2Rgba(C.clrPoc, 0.95);
-    ctx.lineWidth   = C.pocLineWidth;
-    ctx.setLineDash([]);
+    ctx.shadowColor = _waHex2Rgba(C.clrPoc, 0.60); ctx.shadowBlur = 5;
+    ctx.strokeStyle = _waHex2Rgba(C.clrPoc, 0.95); ctx.lineWidth = C.pocLineWidth;
     ctx.beginPath();
     if (isLeft) { ctx.moveTo(0, pocY); ctx.lineTo(maxWidthPx + 20, pocY); }
     else        { ctx.moveTo(bounding.width, pocY); ctx.lineTo(bounding.width - maxWidthPx - 20, pocY); }
-    ctx.stroke();
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur  = 0;
+    ctx.stroke(); ctx.shadowBlur = 0;
 
     if (isNaked) {
-      ctx.strokeStyle = _waHex2Rgba(C.clrNpoc, 0.55);
-      ctx.lineWidth   = Math.max(1, C.pocLineWidth - 1);
-      ctx.setLineDash(_waGetDash(C.npocStyle, 'npoc'));
-      ctx.beginPath();
+      ctx.strokeStyle = _waHex2Rgba(C.clrNpoc, 0.55); ctx.lineWidth = Math.max(1, C.pocLineWidth - 1);
+      ctx.setLineDash(_waGetDash(C.npocStyle, 'npoc')); ctx.beginPath();
       if (isLeft) { ctx.moveTo(maxWidthPx + 20, pocY); ctx.lineTo(bounding.width, pocY); }
       else        { ctx.moveTo(bounding.width - maxWidthPx - 20, pocY); ctx.lineTo(0, pocY); }
-      ctx.stroke();
-      ctx.setLineDash([]);
-
+      ctx.stroke(); ctx.setLineDash([]);
+      
       if (C.showLabels) {
-        ctx.fillStyle    = _waHex2Rgba(C.clrNpoc, 0.88);
-        ctx.font         = `bold ${C.fontSize - 1}px system-ui,sans-serif`;
-        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = _waHex2Rgba(C.clrNpoc, 0.88); ctx.font = `bold ${C.fontSize - 1}px system-ui,sans-serif`; ctx.textBaseline = 'bottom';
         if (isLeft) { ctx.textAlign = 'right'; ctx.fillText('nPOC', bounding.width - 4, pocY - 2); }
         else        { ctx.textAlign = 'left';  ctx.fillText('nPOC', 4, pocY - 2); }
       }
@@ -1844,108 +1766,67 @@ function _waVpvrCacheSet(key, value) {
 
     if (C.showLabels) {
       const label = 'POC ' + pocMid.toLocaleString('en-US', { maximumFractionDigits: 2 });
-      ctx.font    = `bold ${C.fontSize}px system-ui,sans-serif`;
-      ctx.textBaseline = 'middle';
-      const tw  = ctx.measureText(label).width;
-      const bW  = tw + 10, bH = C.fontSize + 8;
-      const bX  = isLeft ? maxWidthPx + 25 : bounding.width - maxWidthPx - 25 - bW;
-      const bY  = pocY - bH / 2;
-
-      _waRoundRect(ctx, bX, bY, bW, bH, 3);
-      ctx.fillStyle = _waHex2Rgba(C.clrPoc, 1);
-      ctx.fill();
-      ctx.fillStyle = '#000000';
-      ctx.textAlign = 'left';
-      ctx.fillText(label, bX + 5, pocY);
-    } else {
-      ctx.fillStyle    = _waHex2Rgba(C.clrPoc, 0.90);
-      ctx.font         = `bold ${C.fontSize}px system-ui,sans-serif`;
-      ctx.textBaseline = 'middle';
-      ctx.textAlign    = isLeft ? 'left' : 'right';
-      ctx.fillText('POC', isLeft ? maxWidthPx + 25 : bounding.width - maxWidthPx - 25, pocY);
+      ctx.font = `bold ${C.fontSize}px system-ui,sans-serif`; ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(label).width, bW = tw + 10, bH = C.fontSize + 8;
+      const bX = isLeft ? maxWidthPx + 25 : bounding.width - maxWidthPx - 25 - bW;
+      _waRoundRect(ctx, bX, pocY - bH / 2, bW, bH, 3);
+      ctx.fillStyle = _waHex2Rgba(C.clrPoc, 1); ctx.fill();
+      ctx.fillStyle = '#000000'; ctx.textAlign = 'left'; ctx.fillText(label, bX + 5, pocY);
     }
     ctx.restore();
   }
 
-  // ─── RENDER: VAH / VAL LINES + LABELS ────────────────────────────────────────
   function _waRenderVALines(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C) {
-    if (!profile.vah && !profile.val) return;
     ctx.save();
-    ctx.strokeStyle = _waHex2Rgba(C.clrVa, 0.88);
-    ctx.lineWidth   = C.vaLineWidth;
-
+    ctx.strokeStyle = _waHex2Rgba(C.clrVa, 0.88); ctx.lineWidth = C.vaLineWidth;
     const dashPat = _waGetDash(C.vaStyle, 'va');
 
     if (profile.vah !== null) {
       const vahY = yAxis.convertToPixel(profile.vah);
       if (vahY !== null) {
-        ctx.setLineDash(dashPat);
-        ctx.beginPath();
-        ctx.moveTo(isLeft ? 0 : bounding.width, vahY);
-        ctx.lineTo(isLeft ? bounding.width : 0,  vahY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
+        ctx.setLineDash(dashPat); ctx.beginPath();
+        ctx.moveTo(isLeft ? 0 : bounding.width, vahY); ctx.lineTo(isLeft ? bounding.width : 0, vahY); ctx.stroke();
         if (C.showLabels) {
-          const lbl = 'VAH ' + profile.vah.toLocaleString('en-US', { maximumFractionDigits: 2 });
-          ctx.fillStyle    = _waHex2Rgba(C.clrVa, 0.95);
-          ctx.font         = `bold ${C.fontSize - 1}px system-ui,sans-serif`;
-          ctx.textBaseline = 'bottom';
-          ctx.textAlign    = isLeft ? 'left' : 'right';
-          ctx.fillText(lbl, isLeft ? 4 : bounding.width - 4, vahY - 2);
+          ctx.setLineDash([]); ctx.fillStyle = _waHex2Rgba(C.clrVa, 0.95); ctx.font = `bold ${C.fontSize - 1}px system-ui,sans-serif`;
+          ctx.textBaseline = 'bottom'; ctx.textAlign = isLeft ? 'left' : 'right';
+          ctx.fillText('VAH ' + profile.vah.toLocaleString('en-US', { maximumFractionDigits: 2 }), isLeft ? 4 : bounding.width - 4, vahY - 2);
         }
       }
     }
-
     if (profile.val !== null) {
       const valY = yAxis.convertToPixel(profile.val);
       if (valY !== null) {
-        ctx.setLineDash(dashPat);
-        ctx.beginPath();
-        ctx.moveTo(isLeft ? 0 : bounding.width, valY);
-        ctx.lineTo(isLeft ? bounding.width : 0,  valY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
+        ctx.setLineDash(dashPat); ctx.beginPath();
+        ctx.moveTo(isLeft ? 0 : bounding.width, valY); ctx.lineTo(isLeft ? bounding.width : 0, valY); ctx.stroke();
         if (C.showLabels) {
-          const lbl = 'VAL ' + profile.val.toLocaleString('en-US', { maximumFractionDigits: 2 });
-          ctx.fillStyle    = _waHex2Rgba(C.clrVa, 0.95);
-          ctx.font         = `bold ${C.fontSize - 1}px system-ui,sans-serif`;
-          ctx.textBaseline = 'top';
-          ctx.textAlign    = isLeft ? 'left' : 'right';
-          ctx.fillText(lbl, isLeft ? 4 : bounding.width - 4, valY + 2);
+          ctx.setLineDash([]); ctx.fillStyle = _waHex2Rgba(C.clrVa, 0.95); ctx.font = `bold ${C.fontSize - 1}px system-ui,sans-serif`;
+          ctx.textBaseline = 'top'; ctx.textAlign = isLeft ? 'left' : 'right';
+          ctx.fillText('VAL ' + profile.val.toLocaleString('en-US', { maximumFractionDigits: 2 }), isLeft ? 4 : bounding.width - 4, valY + 2);
         }
       }
     }
     ctx.restore();
   }
 
-  // ════════════════════════════════════════════════════════════════════════════════
-  //  ĐĂNG KÝ CHỈ BÁO — kc.registerIndicator
-  // ════════════════════════════════════════════════════════════════════════════════
   kc.registerIndicator({
-    name       : 'WAVE_VPVR',
-    shortName  : 'VPVR',
-    description: 'Volume Profile Visible Range ULTIMATE v3.0',
-    category   : 'wave_alpha',
-    series     : 'price',
-    isStack    : true,
+    name: 'WAVE_VPVR',
+    shortName: 'VPVR',
+    description: 'Volume Profile Visible Range ULTIMATE v3.1',
+    category: 'wave_alpha',
+    series: 'price',
+    isStack: true,
 
     calcParams: [
-      60, 70, 30, 0, 0, 0,           // Core params [0-5]
-      0x26A69A, 0xEF5350, 0xF0B90B,  // Màu Up, Dn, POC [6-8]
-      0x9575CD, 0xFFFFFF, 0xFF9800,  // Màu VA, HVN, LVN [9-11]
-      0xF0B90B, 0x26A69A,            // Màu nPOC, DeltaUp [12-13]
-      80, 25, 2, 1, 0, 0, 10, 1,     // Style params [14-21]
+      60, 70, 30, 0, 0, 0,
+      "#26A69A", "#EF5350", "#F0B90B", "#9575CD",
+      "#FFFFFF", "#FF9800", "#F0B90B", "#26A69A",
+      80, 25, 2, 1, 0, 0, 10, 1,
     ],
     figures: [],
 
-    calc: function(dataList) {
-      return dataList.map(() => ({}));
-    },
+    calc: function(dataList) { return dataList.map(() => ({})); },
 
     draw: function(args) {
-      // Hỗ trợ mọi phiên bản KLineCharts (v8 / v9)
       const dataList = args.kLineDataList || args.dataList || [];
       const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
       const { ctx, bounding, yAxis, indicator } = args;
@@ -1953,33 +1834,24 @@ function _waVpvrCacheSet(key, value) {
       if (!dataList || dataList.length === 0 || !bounding) return false;
 
       const p = indicator.calcParams;
-
-      // ── Đọc Core Params ───────────────────────────────────────────────────
-      const rowCount      = Math.max(10, Math.min(200, +(p[0] ?? 60)));
-      const vaPercent     = Math.max(10, Math.min(100, +(p[1] ?? 70)));
-      const widthPct      = Math.max(10, Math.min(80,  +(p[2] ?? 30)));
-      const isLeft        = +(p[3] ?? 0) === 1;
-      const sessionMode   = +(p[4] ?? 0);
+      const rowCount = Math.max(10, Math.min(200, +(p[0] ?? 60)));
+      const vaPercent = Math.max(10, Math.min(100, +(p[1] ?? 70)));
+      const widthPct = Math.max(10, Math.min(80, +(p[2] ?? 30)));
+      const isLeft = +(p[3] ?? 0) === 1;
+      const sessionMode = +(p[4] ?? 0);
       const compositeMode = +(p[5] ?? 0);
 
-      // ── Đọc Color & Style Params → gom vào object C ───────────────────────
       const C = {
-        clrUp      : +(p[6]  ?? 0x26A69A),
-        clrDn      : +(p[7]  ?? 0xEF5350),
-        clrPoc     : +(p[8]  ?? 0xF0B90B),
-        clrVa      : +(p[9]  ?? 0x9575CD),
-        clrHvn     : +(p[10] ?? 0xFFFFFF),
-        clrLvn     : +(p[11] ?? 0xFF9800),
-        clrNpoc    : +(p[12] ?? 0xF0B90B),
-        clrDeltaUp : +(p[13] ?? 0x26A69A),
-        opacityVA  : Math.max(0, Math.min(100, +(p[14] ?? 80))) / 100,
-        opacityOut : Math.max(0, Math.min(100, +(p[15] ?? 25))) / 100,
+        clrUp: p[6] || "#26A69A", clrDn: p[7] || "#EF5350", clrPoc: p[8] || "#F0B90B",
+        clrVa: p[9] || "#9575CD", clrHvn: p[10] || "#FFFFFF", clrLvn: p[11] || "#FF9800",
+        clrNpoc: p[12] || "#F0B90B", clrDeltaUp: p[13] || "#26A69A",
+        opacityVA: Math.max(0, Math.min(100, +(p[14] ?? 80))) / 100,
+        opacityOut: Math.max(0, Math.min(100, +(p[15] ?? 25))) / 100,
         pocLineWidth: Math.max(1, Math.min(5, +(p[16] ?? 2))),
-        vaLineWidth : Math.max(1, Math.min(4, +(p[17] ?? 1))),
-        vaStyle    : Math.round(+(p[18] ?? 0)),
-        npocStyle  : Math.round(+(p[19] ?? 0)),
-        fontSize   : Math.max(8, Math.min(16, +(p[20] ?? 10))),
-        showLabels : +(p[21] ?? 1) === 1,
+        vaLineWidth: Math.max(1, Math.min(4, +(p[17] ?? 1))),
+        vaStyle: Math.round(+(p[18] ?? 0)), npocStyle: Math.round(+(p[19] ?? 0)),
+        fontSize: Math.max(8, Math.min(16, +(p[20] ?? 10))),
+        showLabels: +(p[21] ?? 1) === 1,
       };
 
       const { from, to } = visibleRange;
@@ -1987,150 +1859,57 @@ function _waVpvrCacheSet(key, value) {
 
       const maxWidthPx = bounding.width * (widthPct / 100);
       const GAP = 1;
-
-      // ── Cache Engine Siêu Tốc (Chỉ khóa Logic, giải phóng Color) ──────────
       const liveVolume = dataList[to - 1] ? (dataList[to - 1].volume || 0) : 0;
+      
+      // Không nạp C (Màu sắc) vào cacheKey để đổi màu không làm tụt FPS
       const cacheKey = `${from}_${to}_${rowCount}_${vaPercent}_${sessionMode}_${compositeMode}_${liveVolume}`;
-
       let cached = window._waVpvrCache.get(cacheKey);
 
       if (!cached) {
         let mainProfile = null, sessions = [], compProfile = null;
-
         if (sessionMode === 0) {
           mainProfile = _waCalcVpvrProfile(dataList, from, to, rowCount, vaPercent);
         } else {
-          const groups = _waGroupBySession(dataList, from, to, sessionMode);
-          sessions = groups
-            .map((g, idx) => ({
-              profile  : _waCalcVpvrProfile(dataList, g.start, g.end, rowCount, vaPercent),
-              layerIdx : idx,
-              total    : groups.length,
-            }))
-            .filter(s => s.profile !== null);
+          sessions = _waGroupBySession(dataList, from, to, sessionMode).map((g, idx, arr) => ({
+            profile: _waCalcVpvrProfile(dataList, g.start, g.end, rowCount, vaPercent),
+            layerIdx: idx, total: arr.length
+          })).filter(s => s.profile !== null);
         }
-
-        if (compositeMode === 1) {
-          compProfile = _waCalcVpvrProfile(dataList, 0, dataList.length, rowCount, vaPercent);
-        }
-
+        if (compositeMode === 1) compProfile = _waCalcVpvrProfile(dataList, 0, dataList.length, rowCount, vaPercent);
+        
         cached = { mainProfile, sessions, compProfile };
         _waVpvrCacheSet(cacheKey, cached);
       }
 
-      const { mainProfile, sessions, compProfile } = cached;
-      const hasMain     = mainProfile && mainProfile.bins.length > 0 && mainProfile.maxVol > 0;
-      const hasSessions = sessions && sessions.length > 0;
-      const hasComp     = compProfile && compProfile.bins.length > 0 && compProfile.maxVol > 0;
-      if (!hasMain && !hasSessions) return false;
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
 
-      // ════════════════════════════════════════════════════════════════════
-      //  RENDER CHUẨN 60 FPS
-      // ════════════════════════════════════════════════════════════════════
-      try {
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-
-        // ── Composite Profile (lớp nền mờ 25%) ───────────────────────
-        if (compositeMode === 1 && hasComp) {
-          ctx.save();
-          ctx.globalAlpha = 0.25;
-          _waRenderBins(ctx, compProfile, compProfile.maxVol, maxWidthPx, GAP, isLeft, bounding, yAxis, C, false);
-          ctx.restore();
-        }
-
-        // ── Session Layers (Đa phiên) ────────────────────────────────────
-        if (hasSessions) {
-          sessions.forEach(({ profile, layerIdx, total }) => {
-            if (!profile || !profile.maxVol) return;
-            const alpha = total <= 1 ? 0.85 : 0.20 + (layerIdx / (total - 1)) * 0.65;
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            _waRenderBins(ctx, profile, profile.maxVol, maxWidthPx, GAP, isLeft, bounding, yAxis, C, true);
-            ctx.restore();
-            
-            // Vẽ POC và VA cho TẤT CẢ các phiên để thấy nPOC lịch sử
-            _waRenderPOCLine(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, dataList, C);
-            _waRenderVALines(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C);
-          });
-        }
-
-        // ── Main Profile (Toàn khung hình) ───────────────────────────────
-        if (hasMain) {
-          _waRenderBins(ctx, mainProfile, mainProfile.maxVol, maxWidthPx, GAP, isLeft, bounding, yAxis, C, true);
-          _waRenderPOCLine(ctx, mainProfile, maxWidthPx, isLeft, bounding, yAxis, dataList, C);
-          _waRenderVALines(ctx, mainProfile, maxWidthPx, isLeft, bounding, yAxis, C);
-        }
-
-      } catch (err) {
-        console.error('[WAVE_VPVR v3.0] Render error:', err);
-      } finally {
+      if (compositeMode === 1 && cached.compProfile) {
+        ctx.save(); ctx.globalAlpha = 0.25;
+        _waRenderBins(ctx, cached.compProfile, maxWidthPx, isLeft, bounding, yAxis, C, false);
         ctx.restore();
       }
 
+      if (sessionMode > 0 && cached.sessions.length > 0) {
+        cached.sessions.forEach(({ profile, layerIdx, total }) => {
+          if (!profile) return;
+          ctx.save(); ctx.globalAlpha = total <= 1 ? 0.85 : 0.20 + (layerIdx / (total - 1)) * 0.65;
+          _waRenderBins(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C, true);
+          ctx.restore();
+          _waRenderPOCLine(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, dataList, C);
+          _waRenderVALines(ctx, profile, maxWidthPx, isLeft, bounding, yAxis, C);
+        });
+      } else if (cached.mainProfile) {
+        _waRenderBins(ctx, cached.mainProfile, maxWidthPx, isLeft, bounding, yAxis, C, true);
+        _waRenderPOCLine(ctx, cached.mainProfile, maxWidthPx, isLeft, bounding, yAxis, dataList, C);
+        _waRenderVALines(ctx, cached.mainProfile, maxWidthPx, isLeft, bounding, yAxis, C);
+      }
+
+      ctx.restore();
       return false;
-    },
+    }
   });
 })();
-
-// ════════════════════════════════════════════════════════════════════════════════
-//  BONUS: TEMPLATE PRESETS — Gọi từ console hoặc UI để đổi theme nhanh
-// ════════════════════════════════════════════════════════════════════════════════
-window.WA_VPVR_PRESET = function(preset, chartInstance, paneId) {
-  const PRESETS = {
-    dark: {
-      clrUp: 0x26A69A, clrDn: 0xEF5350, clrPoc: 0xF0B90B, clrVa: 0x9575CD, 
-      clrHvn: 0xFFFFFF, clrLvn: 0xFF9800, clrNpoc: 0xF0B90B, clrDeltaUp: 0x26A69A,
-      opVA: 80, opOut: 25,
-    },
-    classic: {
-      clrUp: 0x2196F3, clrDn: 0xF44336, clrPoc: 0xFF9800, clrVa: 0x9C27B0, 
-      clrHvn: 0xFFFFFF, clrLvn: 0xFFC107, clrNpoc: 0xFF9800, clrDeltaUp: 0x2196F3,
-      opVA: 75, opOut: 20,
-    },
-    heatmap: {
-      clrUp: 0xFF6B35, clrDn: 0xE63946, clrPoc: 0xFFD166, clrVa: 0x06D6A0, 
-      clrHvn: 0xFFD166, clrLvn: 0xEF476F, clrNpoc: 0xFFD166, clrDeltaUp: 0xFF6B35,
-      opVA: 85, opOut: 30,
-    },
-    mono: {
-      clrUp: 0xBDBDBD, clrDn: 0x757575, clrPoc: 0xFFFFFF, clrVa: 0xE0E0E0, 
-      clrHvn: 0xFFFFFF, clrLvn: 0x9E9E9E, clrNpoc: 0xE0E0E0, clrDeltaUp: 0xBDBDBD,
-      opVA: 70, opOut: 20,
-    },
-    neon: {
-      clrUp: 0x00E5FF, clrDn: 0xFF1744, clrPoc: 0xFFEA00, clrVa: 0xE040FB, 
-      clrHvn: 0x00E5FF, clrLvn: 0xFF6D00, clrNpoc: 0xFFEA00, clrDeltaUp: 0x00E5FF,
-      opVA: 90, opOut: 28,
-    },
-  };
-
-  const t = PRESETS[preset];
-  if (!t) {
-    console.warn('[WAVE_VPVR] Preset không tồn tại. Chọn: dark | classic | heatmap | mono | neon');
-    return;
-  }
-
-  const newParams = [
-    60, 70, 30, 0, 0, 0, // Core (Giữ nguyên mặc định, nếu cần hãy đọc lại giá trị hiện tại)
-    t.clrUp, t.clrDn, t.clrPoc, t.clrVa, t.clrHvn, t.clrLvn, t.clrNpoc, t.clrDeltaUp,
-    t.opVA, t.opOut, 2, 1, 0, 0, 10, 1,
-  ];
-
-  if (window._waVpvrCache) window._waVpvrCache.clear();
-
-  if (chartInstance && paneId !== undefined) {
-    try {
-      chartInstance.overrideIndicator({ name: 'WAVE_VPVR', calcParams: newParams }, paneId);
-      console.log(`[WAVE_VPVR] ✅ Đã áp dụng Theme: ${preset}`);
-    } catch(e) {
-      console.error('[WAVE_VPVR] Lỗi overrideIndicator:', e);
-    }
-  } else {
-    console.log(`[WAVE_VPVR] Cấu hình màu (${preset}):`, newParams);
-  }
-  return newParams;
-};
 
 /**
  * ╔══════════════════════════════════════════════════════════════════════════════════╗
