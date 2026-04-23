@@ -1552,7 +1552,7 @@ function roundRect(ctx, x, y, w, h, r) {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.3 — SMART ENGINE (TIMEFRAME DECOUPLED & COLOR PANEL RESTORED)
+//  WAVE_TPO ULTIMATE v4.4 — SMART ENGINE (FIXED X-AXIS OFFSET & ALIGNMENT BUGS)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -1590,7 +1590,7 @@ function roundRect(ctx, x, y, w, h, r) {
   const _WA_TPO_SESSION_PALETTE = ['#4A148C', '#6A1B9A', '#8E24AA', '#AB47BC', '#00BCD4'];
 
   // ─── AI MARKET PROFILE ──────────────────────────────────────────────────
-  function _waTpoClassifyProfileShape(bins, pocIdx) { /* Giữ nguyên như cũ */
+  function _waTpoClassifyProfileShape(bins, pocIdx) {
       const counts = bins.map(b => b.count), total = counts.reduce((a, b) => a + b, 0);
       if (!total) return 'UNDEFINED';
       let top = 0, bot = 0;
@@ -1650,9 +1650,9 @@ function roundRect(ctx, x, y, w, h, r) {
       return false;
   }
 
-  // ─── THUẬT TOÁN NHÓM THỜI GIAN MỚI (CHART / NGÀY / TUẦN) ────────────────────
+  // ─── THUẬT TOÁN NHÓM THỜI GIAN CHUẨN UTC ────────────────────
   function _waTpoGroupData(dataList, from, to, mode) {
-      if (mode === 0) return [{ start: from, end: to }]; // 0: Gom toàn bộ màn hình
+      if (mode === 0) return [{ start: from, end: to }]; // 0: Gom toàn bộ màn hình (Cả Chart)
 
       const groups = new Map();
       for (let i = from; i < to; i++) {
@@ -1663,9 +1663,9 @@ function roundRect(ctx, x, y, w, h, r) {
           const dt = new Date(ts);
           let key;
 
-          if (mode === 1) { // 1: Từng Ngày (UTC)
+          if (mode === 1) { // 1: Từng Ngày
               key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
-          } else { // 2: Từng Tuần (Bắt đầu từ Thứ Hai)
+          } else { // 2: Từng Tuần (Thứ Hai làm gốc)
               const day = dt.getUTCDay();
               const diff = dt.getUTCDate() - day + (day === 0 ? -6 : 1);
               const monday = new Date(dt.getTime());
@@ -1676,16 +1676,15 @@ function roundRect(ctx, x, y, w, h, r) {
           if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
           else groups.get(key).end = i + 1;
       }
-      // Giới hạn vẽ 10 phiên gần nhất để giữ max FPS cho Web/Tablet
       return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10);
   }
 
-  // ─── HELPER PIXEL ────────────────────────────────────────────────────────
+  // ─── HELPER PIXEL (ĐÃ FIX LỖI TỌA ĐỘ TRỤC X CỦA KLINECHART V9) ─────────────────
   function _getYPixel(yAxis, price) {
       if (!yAxis) return null;
       if (typeof yAxis.convertToPixel === 'function') {
           const res = yAxis.convertToPixel(price);
-          return (typeof res === 'number') ? res : (res?.y ?? null);
+          return typeof res === 'number' ? res : (res?.y ?? null);
       }
       return typeof yAxis.getCoordinate === 'function' ? yAxis.getCoordinate(price) : null;
   }
@@ -1693,19 +1692,19 @@ function roundRect(ctx, x, y, w, h, r) {
   function _getXPixel(xAxis, dataIndex) {
       if (!xAxis) return null;
       if (typeof xAxis.convertToPixel === 'function') {
-          const res = xAxis.convertToPixel({ dataIndex });
-          return (typeof res === 'number') ? res : (res?.x ?? null);
+          // FIX TỬ HUYỆT: Tuyệt đối không bọc object {dataIndex} ở đây! Phải truyền số nguyên.
+          const res = xAxis.convertToPixel(dataIndex);
+          return typeof res === 'number' ? res : (res?.x ?? null);
       }
       return typeof xAxis.getCoordinate === 'function' ? xAxis.getCoordinate(dataIndex) : null;
   }
 
   // ─── ĐĂNG KÝ VÀ VẼ ───────────────────────────────────────────────────────
   kc.registerIndicator({
-      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.3',
+      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.4',
       category: 'wave_alpha', series: 'price', isStack: true,
       createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
       
-      // Trả mảng 30 tham số (bao gồm cả HEX code) để API KLineChart render Color Picker
       calcParams: [
           60, 70, 1, 0, 1, 0, 1, 1, 
           "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
@@ -1722,13 +1721,13 @@ function roundRect(ctx, x, y, w, h, r) {
           const C = {
               rowCount:    Math.max(10, Math.min(200, +(p[0]  ?? 60))),
               vaPercent:   Math.max(10, Math.min(100, +(p[1]  ?? 70))),
-              groupMode:   +(p[2] ?? 1), // 0: Chart, 1: Ngày, 2: Tuần
+              groupMode:   +(p[2] ?? 1), 
               isLeft:      +(p[3] ?? 0) === 0,
               useLetter:   +(p[4] ?? 1) === 1,
               colorMode:   +(p[5] ?? 0),
               densityMode: +(p[6] ?? 1),
               smartLabels: +(p[7] ?? 1) === 1,
-              // Lấy màu trực tiếp từ calcParams
+              
               clrVA: p[8], clrOut: p[9], clrPoc: p[10], clrNpoc: p[11], clrSuperPoc: p[12],
               clrVaLine: p[13], clrIbHigh: p[14], clrIbLow: p[15], clrImbalBuy: p[16], 
               clrImbalSell: p[17], clrAccept: p[18], clrReject: p[19],
@@ -1749,12 +1748,10 @@ function roundRect(ctx, x, y, w, h, r) {
           if (from >= to) return false;
 
           const lastClose = dataList[to - 1]?.close ?? 0;
-          // Cập nhật CacheKey theo groupMode
           const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.groupMode}_${lastClose}_${bounding.width}_${bounding.height}`;
           let profiles = window._waTpoCache.get(cacheKey);
 
           if (!profiles) {
-              // Sử dụng hàm gộp dữ liệu độc lập
               const sessions = _waTpoGroupData(dataList, from, to, C.groupMode);
 
               profiles = sessions.map((s, idx) => {
@@ -1857,7 +1854,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
               profiles.forEach((prof) => {
                   let anchorX, dir, maxBlocksPx;
-                  // Vị trí neo phụ thuộc vào groupMode thay vì colorMode
+                  
                   if (C.groupMode === 0) {
                       anchorX     = C.isLeft ? 0 : bounding.width;
                       dir         = C.isLeft ? 1 : -1;
@@ -1869,11 +1866,11 @@ function roundRect(ctx, x, y, w, h, r) {
                   }
 
                   let baseClr = C.clrVA, outClr = C.clrOut, alphaMul = 1;
-                  if (C.colorMode === 1) { // Đa Sắc
+                  if (C.colorMode === 1) { 
                       const ratio = prof.sessionTotal <= 1 ? 0 : prof.sessionIdx / (prof.sessionTotal - 1);
                       baseClr = outClr = _WA_TPO_SESSION_PALETTE[Math.min(4, Math.floor(ratio * 4))];
                       alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + ratio * C.fade;
-                  } else if (C.colorMode === 2) { // Nhiệt độ
+                  } else if (C.colorMode === 2) { 
                       alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
                   }
 
@@ -1901,7 +1898,8 @@ function roundRect(ctx, x, y, w, h, r) {
                           ctx.textBaseline= 'middle'; ctx.textAlign   = 'center';
                           bin.letters.forEach((lIdx, pos) => {
                               if (pos % stepDraw === 0) {
-                                  const lx = dir > 0 ? anchorX + pos * blockW + blockW / 2 : anchorX + dir * (pos * blockW) + blockW / 2;
+                                  // FIX LỖI TRÀN PHẢI: Tính toán tọa độ bù trừ chính xác khi xem bên phải
+                                  const lx = dir > 0 ? anchorX + pos * blockW + blockW / 2 : anchorX - pos * blockW - blockW / 2;
                                   ctx.fillText(_waTpoGetLetter(lIdx), lx, rY + rH / 2);
                               }
                           });
@@ -1909,7 +1907,8 @@ function roundRect(ctx, x, y, w, h, r) {
                           ctx.beginPath();
                           bin.letters.forEach((lIdx, pos) => {
                               if (pos % stepDraw === 0) {
-                                  const bx = dir > 0 ? anchorX + pos * blockW : anchorX + dir * (pos * blockW);
+                                  // FIX LỖI TRÀN PHẢI DẠNG KHỐI
+                                  const bx = dir > 0 ? anchorX + pos * blockW : anchorX - (pos + 1) * blockW;
                                   ctx.rect(bx, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
                               }
                           });
@@ -1917,7 +1916,7 @@ function roundRect(ctx, x, y, w, h, r) {
                       }
                   });
 
-                  // CÁC ĐƯỜNG KẺ & NHÃN
+                  // VẼ CÁC ĐƯỜNG MỨC
                   const drawLvl = (price, clr, w, dash, txt, isIB = false) => {
                       const y = _getYPixel(yAxis, price); if (y == null) return;
                       ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85); ctx.lineWidth   = w; ctx.setLineDash(dash);
@@ -1948,8 +1947,8 @@ function roundRect(ctx, x, y, w, h, r) {
                       if (prof.isNaked && !isSuper) ctx.setLineDash([5, 4]);
 
                       ctx.beginPath();
-                      const pocStart = (C.groupMode === 0 && C.isLeft) ? 0 : anchorX;
-                      const pocEnd   = (C.groupMode === 0 && C.isLeft) ? bounding.width : anchorX + maxBlocksPx * 1.5;
+                      const pocStart = C.groupMode === 0 ? 0 : anchorX;
+                      const pocEnd   = C.groupMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
                       ctx.moveTo(pocStart, pocY); ctx.lineTo(pocEnd, pocY);
                       if (prof.isNaked && C.groupMode !== 0) ctx.lineTo(bounding.width, pocY);
                       ctx.stroke(); ctx.setLineDash([]);
@@ -1982,7 +1981,7 @@ function roundRect(ctx, x, y, w, h, r) {
                   }
               });
           } catch (e) {
-              console.error('[WAVE_TPO v4.3]', e);
+              console.error('[WAVE_TPO v4.4]', e);
           } finally {
               ctx.restore();
           }
