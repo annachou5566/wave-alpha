@@ -20,6 +20,7 @@ function renderMultiplierPath(c) {
     let fillPct = Math.min(100, (elapsedDays / 6) * 100);
     const currentMul = multipliers[currentDayInt - 1];
 
+    // Đếm ngược
     const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
     const msLeft = nextBoundary - now;
     let countdownStr = '';
@@ -33,6 +34,7 @@ function renderMultiplierPath(c) {
 
     let runnerIcon = 'fa-running'; 
     if (currentMul >= 1.3) runnerIcon = 'fa-skating'; 
+    if (currentMul === 1.1) runnerIcon = 'fa-walking'; 
     if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered'; 
 
     let dotsHtml = '';
@@ -40,26 +42,26 @@ function renderMultiplierPath(c) {
     multipliers.forEach((mul, i) => {
         const day = i + 1;
         let cls = (day < currentDayInt) ? 'passed' : (day === currentDayInt ? 'active' : '');
-        dotsHtml += `<div class="eb-pro-dot ${cls}"></div>`;
-        labelsHtml += `<div class="eb-pro-label ${cls}">${mul}</div>`;
+        dotsHtml += `<div class="eb-sync-dot ${cls}"></div>`;
+        labelsHtml += `<div class="eb-sync-label ${cls}">${mul}</div>`;
     });
 
-    // Nếu icon vượt quá 70% thanh, đẩy chữ đếm ngược sang trái để không bị cắt viền
-    let alignClass = fillPct > 70 ? 'align-left' : 'align-right';
+    // Nếu khối động đi qua 65% quãng đường, cho đồng hồ nhảy sang trái để tránh tràn viền
+    let alignClass = fillPct > 65 ? 'align-left' : 'align-right';
 
     return `
-        <div class="eb-pro-container" title="Early Bird Boost: ${currentMul}x">
-            <div class="eb-pro-track">
-                <div class="eb-pro-fill" style="width: ${fillPct}%"></div>
-                <div class="eb-pro-dots-row">${dotsHtml}</div>
+        <div class="eb-sync-container" title="Boost hiện tại: ${currentMul}x">
+            <div class="eb-sync-track">
+                <div class="eb-sync-fill" style="width: ${fillPct}%"></div>
+                <div class="eb-sync-dots">${dotsHtml}</div>
                 
-                <div class="eb-pro-runner" style="left: ${fillPct}%">
-                    <i class="fas ${runnerIcon}"></i>
-                    ${countdownStr ? `<div class="eb-pro-countdown ${alignClass}">${countdownStr}</div>` : ''}
+                <div class="eb-sync-dynamic-block" style="left: ${fillPct}%">
+                    <i class="fas ${runnerIcon} eb-sync-icon"></i>
+                    ${countdownStr ? `<div class="eb-sync-timer ${alignClass}">${countdownStr}</div>` : ''}
                 </div>
             </div>
 
-            <div class="eb-pro-labels-row">
+            <div class="eb-sync-labels">
                 ${labelsHtml}
             </div>
         </div>`;
