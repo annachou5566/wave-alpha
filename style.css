@@ -3512,161 +3512,122 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 
 /* ===================================================
-   EARLY BIRD BOOST - PREMIUM UI
+   EARLY BIRD BOOST - FINAL PRO UI
 =================================================== */
-:root {
-    --brand-dim:  rgba(0, 240, 255, 0.18);
-    --brand-glow: rgba(0, 240, 255, 0.45);
-    --tier-gold:   #f6c90e;
-    --tier-silver: #a0aec0;
-    --tier-bronze: #e07830;
-    --transition-interactive: 300ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  .multiplier-path-container {
-    padding-top: 24px; /* Tạo vùng bay cho nhãn và icon */
-    position: relative;
-    width: 100%;
+.multiplier-path-container {
     margin-top: 8px;
-  }
-  
-  /* --- Track bar --- */
-  .multiplier-path-track {
+    width: 100%;
     position: relative;
-    height: 6px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.06);
-    overflow: visible;
-  }
-  
-  .path-fill {
-    position: absolute;
-    top: 0; left: 0;
-    height: 100%;
-    border-radius: 10px;
-    background: linear-gradient(90deg, rgba(0,240,255,0.15) 0%, var(--brand) 100%);
-    box-shadow: 0 0 8px var(--brand-glow);
-    z-index: 0;
-    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  .path-dots {
-    position: absolute;
-    inset: 0;
+    padding-bottom: 12px; /* Chừa chỗ cho các số mốc nhỏ xíu bên dưới */
+}
+
+/* Hàng trên cùng: Tiêu đề & Đếm ngược */
+.multiplier-path-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    z-index: 2;
-    pointer-events: none;
-  }
-  
-  .path-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.12);
-    border: 1.5px solid rgba(255,255,255,0.06);
-    transition: background var(--transition-interactive), box-shadow var(--transition-interactive), transform var(--transition-interactive);
-  }
-  
-  .path-dot.passed {
-    background: var(--brand);
-    border-color: transparent;
-    box-shadow: 0 0 4px var(--brand-glow);
-  }
-  
-  .path-dot.active {
-    background: var(--brand);
-    box-shadow: 0 0 8px var(--brand-glow);
-    transform: scale(1.5);
-  }
-  
-  /* --- Runner icon (viên đạn bay trên track) --- */
-  .path-runner {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    margin-top: -14px; /* Trồi lên trên vạch */
-    z-index: 10;
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    background: #171a24;
-    border: 1.5px solid var(--brand);
-    box-shadow: 0 0 10px var(--brand-glow), 0 2px 6px rgba(0,0,0,0.5);
-    color: var(--brand);
-    font-size: 11px;
-    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow var(--transition-interactive);
-  }
-  
-  /* --- Nhãn multiplier NỔI phía trên --- */
-  .path-tier-labels {
-    position: absolute;
-    inset: 0;
-    top: -40px; /* Nhấc lên trên cùng */
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    pointer-events: none;
-  }
-  
-  .tier-label {
-    font-family: var(--font-num);
+    margin-bottom: 20px; /* Chừa không gian cho Runner chạy ở giữa */
+}
+
+.mph-title {
     font-size: 0.65rem;
+    color: var(--text-sub);
     font-weight: 700;
-    color: rgba(255,255,255,0.2);
-    transition: color var(--transition-interactive);
-  }
-  
-  .tier-label.active { color: var(--brand); text-shadow: 0 0 5px var(--brand-glow); }
-  .tier-label.gold   { color: var(--tier-gold); }
-  .tier-label.silver { color: var(--tier-silver); }
-  .tier-label.bronze { color: var(--tier-bronze); }
-  
-  /* --- Footer: Giá trị + Đếm ngược --- */
-  .multiplier-path-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-  }
-  
-  .footer-left { display: flex; align-items: baseline; gap: 4px; }
-  
-  .multiplier-value {
-    font-family: var(--font-num);
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: var(--brand);
-    line-height: 1;
-    text-shadow: 0 0 6px var(--brand-glow);
-  }
-  
-  .multiplier-label { font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 700; letter-spacing: 0.5px; }
-  
-  /* Pill đếm ngược có dot nhấp nháy */
-  .countdown-pill {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.countdown-pill {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 15px;
-    padding: 2px 8px;
+    border-radius: 4px;
+    padding: 2px 6px;
     font-family: var(--font-num);
     font-size: 0.65rem;
-    color: #848e9c;
+    color: var(--brand);
     font-weight: 600;
-  }
-  
-  .countdown-pill .pulse-dot {
-    width: 6px; height: 6px;
+}
+
+/* Thanh Tiến Trình */
+.multiplier-path-track {
+    position: relative;
+    height: 4px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 0 4px; /* Tránh cho các chấm bị dính sát lề */
+}
+
+.path-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), var(--brand));
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.45);
+    border-radius: 10px;
+    transition: width 0.3s ease-in-out;
+}
+
+/* Cụm Runner + Text Hệ số (Di chuyển cùng nhau) */
+.path-runner-pill {
+    position: absolute;
+    top: -18px; /* Nằm ngay trên vạch */
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #171a24;
+    border: 1px solid var(--brand);
+    border-radius: 12px;
+    padding: 2px 6px;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    color: var(--brand);
+    font-size: 10px;
+    font-weight: 800;
+    font-family: var(--font-num);
+    z-index: 10;
+    transition: left 0.3s ease-out;
+    white-space: nowrap;
+}
+
+/* Dấu chấm mốc và Các số nhỏ xíu */
+.path-dots {
+    position: absolute;
+    inset: 0;
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.path-dot-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.path-dot {
+    width: 4px; height: 4px;
     border-radius: 50%;
-    background: var(--brand);
-    animation: pulseDot 1.5s ease-in-out infinite;
-    box-shadow: 0 0 5px var(--brand);
-  }
-  
-  @keyframes pulseDot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.6); }
-  }
+    background: rgba(255,255,255,0.2);
+    z-index: 1;
+}
+
+.path-dot.passed { background: var(--brand); }
+
+/* Các số mốc nhỏ xíu xiu đính chặt dưới chấm */
+.path-dot-label {
+    position: absolute;
+    top: 6px; /* Cách dấu chấm 2px */
+    font-family: var(--font-num);
+    font-size: 8px; /* Thu nhỏ tuyệt đối để không đè nhau */
+    color: rgba(255,255,255,0.3);
+    font-weight: 600;
+}
+
+.path-dot-label.active {
+    color: var(--brand);
+    text-shadow: 0 0 3px var(--brand);
+}

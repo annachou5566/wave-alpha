@@ -7,8 +7,7 @@ function renderMultiplierPath(c) {
     if (!c || !c.start || !isEarlyBird) return '';
 
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
-    const tierClass   = ['gold', 'gold', 'silver', 'silver', 'bronze', 'bronze', ''];
-
+    
     let sTime = c.startTime || "13:00:00";
     if (sTime.length === 5) sTime += ":00";
 
@@ -22,11 +21,10 @@ function renderMultiplierPath(c) {
     
     const currentMul = multipliers[currentDayInt - 1];
 
-    // Tính đếm ngược đến ngày tiếp theo
+    // Hàng trên cùng: Đếm ngược
     const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
     const msLeft = nextBoundary - now;
     let countdownStr = '';
-    
     if (msLeft > 0 && currentDayInt < 7) {
         const h = Math.floor(msLeft / 3600000);
         const m = Math.floor((msLeft % 3600000) / 60000);
@@ -35,53 +33,47 @@ function renderMultiplierPath(c) {
         countdownStr = 'Final day';
     }
 
-    // Icon chạy (Tương thích FontAwesome 5)
+    // Icon chạy sinh động
     let runnerIcon = 'fa-running';
     if (currentMul >= 1.3) runnerIcon = 'fa-skating';
     if (currentMul === 1.1) runnerIcon = 'fa-walking';
     if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered';
 
-    // Render Dots và Nhãn nổi (Labels)
+    // Xây dựng các mốc
     let dotsHtml = '';
-    let tierLabels = '';
-
     multipliers.forEach((mul, i) => {
         const d = i + 1;
         let dotCls = 'path-dot';
-        if (d < currentDayInt) dotCls += ' passed';
-        if (d === currentDayInt) dotCls += ' active';
-        dotsHtml += `<div class="${dotCls}" title="Ngày ${d}: ${mul}x"></div>`;
-
-        let lblCls = 'tier-label';
-        if (tierClass[i]) lblCls += ' ' + tierClass[i];
+        let lblCls = 'path-dot-label';
+        
+        if (d <= currentDayInt) dotCls += ' passed';
         if (d === currentDayInt) lblCls += ' active';
-        tierLabels += `<span class="${lblCls}">${mul}x</span>`;
+        
+        dotsHtml += `
+            <div class="path-dot-wrapper">
+                <div class="${dotCls}"></div>
+                <div class="${lblCls}">${mul}x</div>
+            </div>`;
     });
 
     return `
-        <div class="multiplier-path-container" title="Early Bird Boost Schedule">
-            <div class="path-tier-labels">${tierLabels}</div>
+        <div class="multiplier-path-container" title="Early Bird Boost">
+            <div class="multiplier-path-header">
+                <span class="mph-title"><i class="fas fa-bolt text-brand"></i> EARLY BIRD</span>
+                ${countdownStr ? `
+                <div class="countdown-pill">
+                    <i class="far fa-clock"></i> ${countdownStr}
+                </div>` : ''}
+            </div>
             
             <div class="multiplier-path-track">
                 <div class="path-fill" style="width:${fillPct}%"></div>
-                <div class="path-runner" style="left:${fillPct}%">
-                    <i class="fas ${runnerIcon}"></i>
+                
+                <div class="path-runner-pill" style="left:${fillPct}%">
+                    <i class="fas ${runnerIcon}"></i> ${currentMul}x
                 </div>
+                
                 <div class="path-dots">${dotsHtml}</div>
-            </div>
-            
-            <div class="multiplier-path-footer">
-                <div class="footer-left">
-                    <span class="multiplier-value">${currentMul}x</span>
-                    <span class="multiplier-label">BOOST</span>
-                </div>
-                <div class="footer-right">
-                    ${countdownStr ? `
-                    <div class="countdown-pill">
-                        <span class="pulse-dot"></span>
-                        ${countdownStr}
-                    </div>` : ''}
-                </div>
             </div>
         </div>`;
 }
