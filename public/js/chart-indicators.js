@@ -4108,8 +4108,9 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             const val = currentParams[idx];
             if (val === undefined) return;
             
-            // 🚀 Tự động nhận diện trường màu sắc thông minh
-            const isColorField = (labels[idx] && labels[idx].toLowerCase().includes('màu')) || 
+            // 🚀 Tự động nhận diện trường màu sắc thông minh (FIX LỖI MÀU PHIÊN)
+            const labelStr = (labels[idx] || '').toLowerCase();
+            const isColorField = (labelStr.includes('màu') && !labelStr.includes('màu phiên')) || 
                                  (typeof val === 'string' && (val.startsWith('#') || val === 'transparent'));
             
             let displayVal = val;
