@@ -4030,7 +4030,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * @param {string} indName
    * @param {Object} [options]  — optional overrides: { params, paneId }
    */
- global.addIndicatorToChart = function (indName, options) {
+  global.addIndicatorToChart = function (indName, options) {
     if (!global.tvChart) return;
     
     // [FIX 1] Mình đã xóa lệnh tắt modal ở đây để người dùng chọn nhiều chỉ báo không bị tắt bảng
@@ -4043,10 +4043,24 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     try {
         global.tvChart.createIndicator({
             name: indName,
-            // Logic đổi icon Mắt mở / Mắt nhắm
+            // 🚀 FIX: Kết hợp logic đổi icon Mắt VÀ giấu các tham số thừa thãi
             createTooltipDataSource: function({ indicator, defaultStyles }) {
                 const icons = defaultStyles.tooltip.icons;
                 const eyeIcon = indicator.visible ? icons[1] : icons[0];
+                
+                // Các chỉ báo Pro có quá nhiều tham số cần giấu đi cho sạch Chart
+                const hideParamsList = ['WAVE_VPVR', 'WAVE_TPO', 'WAVE_COB', 'WAVE_BOOKMAP'];
+                
+                if (hideParamsList.includes(indicator.name)) {
+                    return { 
+                        icons: [eyeIcon, icons[2], icons[3]],
+                        name: indicator.shortName || indicator.name,
+                        calcParamsText: ' ', // Khoảng trắng để chặn KLineCharts in số
+                        values: []           // Dọn sạch mảng giá trị hiển thị
+                    };
+                }
+                
+                // Các chỉ báo bình thường (như RSI, MA) vẫn hiển thị tham số như cũ
                 return { icons: [eyeIcon, icons[2], icons[3]] };
             }
         }, isStack, { id: paneId });
