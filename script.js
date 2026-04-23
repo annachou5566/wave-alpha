@@ -5,46 +5,61 @@ function formatCompact(num) {
 function renderMultiplierPath(c) {
     let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
     if (!c || !c.start || !isEarlyBird) return ''; 
-    
-    // --- XỬ LÝ THỜI GIAN BẮT ĐẦU CHUẨN XÁC ---
+
     let sTime = c.startTime || "13:00:00";
-    if (sTime.length === 5) sTime += ":00"; // Vá lỗi nếu Admin nhập "13:00" thiếu giây
+    if (sTime.length === 5) sTime += ":00";
     
     const now = new Date();
     const startTime = new Date(c.start + 'T' + sTime + 'Z');
-    
     const diffTime = now - startTime;
-    let elapsedDaysExact = diffTime / (1000 * 60 * 60 * 24);
     
-    // Nếu giải chưa tới giờ bắt đầu
+    let elapsedDaysExact = diffTime / (1000 * 60 * 60 * 24);
     if (elapsedDaysExact < 0) elapsedDaysExact = 0;
     
     let fillPercentage = (elapsedDaysExact / 6) * 100;
     if (fillPercentage > 100) fillPercentage = 100;
 
     let currentDayInt = Math.floor(elapsedDaysExact) + 1;
-    if (currentDayInt < 1) currentDayInt = 1;
     if (currentDayInt > 7) currentDayInt = 7;
 
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
-    let currentMul = multipliers[currentDayInt - 1]; // Lấy hệ số của ngày hôm nay
+    let currentMul = multipliers[currentDayInt - 1];
+
+    // --- LOGIC ĐỒNG HỒ ĐẾM NGƯỢC ---
+    // Tính mốc 13:00 UTC của ngày tiếp theo
+    let nextBoundary = new Date(startTime.getTime() + currentDayInt * 24 * 60 * 60 * 1000);
+    let msLeft = nextBoundary - now;
+    let countdownStr = "";
+    if (msLeft > 0 && currentDayInt < 7) {
+        let h = Math.floor(msLeft / 3600000);
+        let m = Math.floor((msLeft % 3600000) / 60000);
+        countdownStr = `${h}h${m}m left`;
+    }
+
+    // --- LOGIC CHỌN ICON SÁNG TẠO ---
+    let runnerIcon = "fa-running"; // Mặc định là đang chạy
+    if (currentMul >= 1.3) runnerIcon = "fa-skating"; // 1.4x - 1.3x: Đang trượt rất nhanh
+    if (currentMul === 1.2) runnerIcon = "fa-running"; // 1.2x: Chạy bộ
+    if (currentMul === 1.1) runnerIcon = "fa-walking"; // 1.1x: Đi bộ thong thả
+    if (currentDayInt === 7) runnerIcon = "fa-flag-checkered"; // Ngày cuối: Cán đích
 
     let dotsHtml = '';
     multipliers.forEach((mul, index) => {
-        let isPassed = elapsedDaysExact >= index;
-        let statusClass = isPassed ? 'passed' : '';
-        dotsHtml += `<div class="path-dot ${statusClass}"></div>`;
+        dotsHtml += `<div class="path-dot ${elapsedDaysExact >= index ? 'passed' : ''}"></div>`;
     });
 
     return `
-        <div class="multiplier-path-container" title="Lộ trình Early Bird">
-            <div style="font-size: 0.65rem; color: var(--brand); margin-bottom: 5px; font-weight: 700; letter-spacing: 0.5px;">
-                ⚡ BOOST: ${currentMul}x <span style="color:#848e9c; font-weight: 500;">(DAY ${currentDayInt})</span>
+        <div class="multiplier-path-container" title="Early Bird Boost Schedule">
+            <div class="d-flex justify-content-between align-items-center mb-1" style="line-height:1">
+                <span style="font-size: 0.7rem; color: var(--brand); font-weight: 800;">${currentMul}x</span>
+                <span class="countdown-text">${countdownStr}</span>
             </div>
             
             <div class="multiplier-path-line">
                 <div class="path-fill" style="width: ${fillPercentage}%"></div>
-                <div class="path-spark" style="left: ${fillPercentage}%"></div>
+                <div class="path-runner" style="left: ${fillPercentage}%">
+                    <i class="fas ${runnerIcon}"></i>
+                </div>
                 ${dotsHtml}
             </div>
         </div>`;

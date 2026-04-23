@@ -3511,56 +3511,52 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* --- UI MỚI CHO THANH EARLY BIRD --- */
+/* --- UI EARLY BIRD PRO: RUNNER & COUNTDOWN --- */
 .multiplier-path-container {
-    margin-top: 4px;
-    width: 140px;
+    margin-top: 6px;
+    width: 150px;
     position: relative;
-    padding-bottom: 8px;
+    padding-bottom: 5px;
 }
 
 .multiplier-path-line {
-    height: 3px;
-    background: rgba(255, 255, 255, 0.1);
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
     width: 100%;
     position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-radius: 2px;
+    border-radius: 10px;
 }
 
-/* Vệt màu chạy (Dùng gradient cho mượt) */
 .path-fill {
     position: absolute;
     top: 0;
     left: 0;
     height: 100%;
-    background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), var(--brand));
-    box-shadow: 0 0 5px var(--brand);
+    background: linear-gradient(90deg, rgba(0, 240, 255, 0.2), var(--brand));
+    box-shadow: 0 0 10px var(--brand-glow);
     z-index: 0;
-    transition: width 0.5s ease-in-out;
-    border-radius: 2px;
+    border-radius: 10px;
 }
 
-/* Viên bi phát sáng dẫn đầu (Thay cho cờ) */
-.path-spark {
+/* Icon người chạy/vận động viên */
+.path-runner {
     position: absolute;
     top: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #fff, 0 0 15px var(--brand);
+    transform: translate(-50%, -85%); /* Đẩy lên trên thanh một chút */
+    color: var(--brand);
+    font-size: 12px;
     z-index: 5;
-    transition: left 0.5s ease-out;
+    transition: left 0.3s ease-out;
+    filter: drop-shadow(0 0 3px var(--brand));
 }
 
 .path-dot {
-    width: 4px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.3);
+    width: 3px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     position: relative;
     z-index: 1;
@@ -3568,4 +3564,11 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 
 .path-dot.passed {
     background: var(--brand);
+}
+
+.countdown-text {
+    font-family: var(--font-num);
+    font-size: 0.65rem;
+    color: #848e9c;
+    font-weight: 500;
 }
