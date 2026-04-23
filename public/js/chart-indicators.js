@@ -1552,7 +1552,7 @@ function roundRect(ctx, x, y, w, h, r) {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.5 — SMART ENGINE (ARMORED PIXEL API & SELF-HEALING CACHE)
+//  WAVE_TPO ULTIMATE v4.6 — SMART ENGINE (FIXED SILENT DATA DROP BUG)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -1679,7 +1679,7 @@ function roundRect(ctx, x, y, w, h, r) {
       return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10);
   }
 
-  // ─── BỌC THÉP API LẤY TỌA ĐỘ PIXEL (CHỐNG CRASH 100%) ─────────────────
+  // ─── BỌC THÉP API LẤY TỌA ĐỘ PIXEL ─────────────────
   function _getXPixel(xAxis, dataIndex) {
       if (!xAxis) return 0;
       try {
@@ -1720,7 +1720,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
   // ─── ĐĂNG KÝ VÀ VẼ ───────────────────────────────────────────────────────
   kc.registerIndicator({
-      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.5',
+      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.6',
       category: 'wave_alpha', series: 'price', isStack: true,
       createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
       
@@ -1733,12 +1733,20 @@ function roundRect(ctx, x, y, w, h, r) {
       ],
       figures: [],
       calc: function(dataList) { return dataList.map(() => ({})); },
-      draw: function({ ctx, bounding, xAxis, yAxis, visibleRange, indicator, dataList }) {
+      
+      // 🚀 BẢN FIX: KHÔNG DÙNG DESTRUCTURING { dataList } Ở ĐÂY NỮA
+      draw: function(args) {
+          // Rút trích an toàn các tham số API
+          const { ctx, bounding, xAxis, yAxis, indicator } = args;
+          
+          // 🚀 BẢN FIX: Phải gọi đúng tên kLineDataList mà API v9 nhả ra
+          const dataList = args.kLineDataList || args.dataList || [];
+          const visibleRange = args.visibleRange || { from: 0, to: dataList.length };
+
           if (!dataList || dataList.length === 0 || !bounding) return false;
 
           const p = indicator.calcParams;
           
-          // 🚀 SELF-HEALING: Tự động khôi phục nếu phát hiện Cache cũ bị thiếu phần tử
           if (p && p.length < 30) {
               const defaults = [
                   60, 70, 1, 0, 1, 0, 1, 1, 
@@ -1780,7 +1788,7 @@ function roundRect(ctx, x, y, w, h, r) {
               verbosity:   Math.round(+(p[29] ?? 1)),
           };
 
-          const { from, to } = visibleRange || { from: 0, to: dataList.length };
+          const { from, to } = visibleRange;
           if (from >= to) return false;
 
           const lastClose = dataList[to - 1]?.close ?? 0;
@@ -1896,7 +1904,6 @@ function roundRect(ctx, x, y, w, h, r) {
                       dir         = C.isLeft ? 1 : -1;
                       maxBlocksPx = bounding.width * (compactMode ? 0.28 : 0.35);
                   } else {
-                      // Gọi hàm bọc thép lấy tọa độ Pixel
                       anchorX     = _getXPixel(xAxis, prof.startIdx);
                       dir         = 1;
                       maxBlocksPx = bounding.width * (compactMode ? 0.16 : 0.22);
@@ -1922,7 +1929,7 @@ function roundRect(ctx, x, y, w, h, r) {
                       if (yB === 0 && yT === 0) return;
 
                       const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT)), blockW = Math.max(1, Math.min(rH, unitW));
-                      const safeFontSize = Math.floor(Math.min(blockW, rH, C.fontSize)) || 1; // Bảo vệ lỗi NaN size
+                      const safeFontSize = Math.floor(Math.min(blockW, rH, C.fontSize)) || 1;
                       const canLetter = C.useLetter && rH >= 6 && blockW >= C.minLtrPx;
 
                       let fAlpha = (bin.inVA ? C.opVA : C.opOut) * alphaMul;
@@ -2016,7 +2023,7 @@ function roundRect(ctx, x, y, w, h, r) {
                   }
               });
           } catch (e) {
-              console.error('[WAVE_TPO v4.5]', e);
+              console.error('[WAVE_TPO v4.6]', e);
           } finally {
               ctx.restore();
           }
