@@ -313,43 +313,30 @@
     {
       name: 'WAVE_TPO',
       shortName: 'TPO',
-      description: 'Hồ Sơ Thời Gian ULTIMATE v3.0 (Tuỳ Chỉnh Màu)',
+      description: 'Hồ Sơ Thời Gian SMART v4.1 (AI & Custom Colors)',
       category: 'wave_alpha',
       isStack: true,
       builtIn: false,
-      // Core [0-5] | Colors [6-13] | Styles [14-22]
+      // 29 Thông số: Core [0-6] | Colors [7-18] | Styles [19-28]
       defaultParams: [
-        60, 70, 35, 0, 0, 0,
-        "#9C27B0", "#9C27B0", "#9C27B0", "#F0B90B",
-        "#BA68C8", "#FFD600", "#FF9800", "#2196F3",
-        75, 15, 5, 2, 1, 0, 0, 9, 1
-      ], 
+        60, 70, 0, 0, 0, 1, 1,
+        "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
+        "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
+        "#42A5F5", "#FF7043",
+        85, 20, 2, 1, 0, 10, 1, 70, 8, 1
+      ],
       paramLabels: [
-        'Số Bins (10-200)', 
-        'Vùng Giá Trị VA (%)', 
-        'Độ Rộng Tối Đa (%)',
-        'Vị Trí (0=Trái, 1=Phải)',
-        'Hiển Thị (0=Khối, 1=Chữ)',
-        'Màu Phiên (0=Đơn, 1=Đa, 2=Nhiệt)',
-        'Màu TPO Trong VA',
-        'Màu TPO Ngoài VA',
-        'Màu Nền Vùng VA',
-        'Màu Đường POC',
-        'Màu Đường VAH/VAL',
-        'Màu Đường IB',
-        'Màu Đường nPOC',
-        'Màu Chữ Imbalance',
-        'Độ Mờ TPO Trong VA (%)',
-        'Độ Mờ TPO Ngoài VA (%)',
-        'Độ Mờ Nền VA (%)',
-        'Độ Dày POC (1-5)',
-        'Độ Dày VAH/VAL (1-4)',
-        'Nét VA (0=Đứt, 1=Chấm, 2=Liền)',
-        'Nét nPOC (0=Đứt, 1=Chấm, 2=Dài)',
-        'Cỡ Chữ Nhãn (8-16)',
-        'Hiện Nhãn Giá (0=Tắt, 1=Bật)'
+        'Số Bins (10–200)', 'Value Area % (10–100)', 'Vị Trí (0=Trái, 1=Phải)', 'Hiển Thị (0=Block, 1=Letter)', 
+        'Màu Phiên (0=Đơn,1=Đa,2=Nhiệt)', 'Mật Độ (0=Gọn,1=Cân Bằng,2=Chi Tiết)', 'Smart Labels (0=Tắt,1=Bật)',
+        'Màu Block Trong VA', 'Màu Block Ngoài VA', 'Màu TPO POC', 'Màu Naked POC', 'Màu Super POC', 
+        'Màu VAH / VAL', 'Màu IB High', 'Màu IB Low', 'Màu Lực Mua Áp Đảo', 'Màu Lực Bán Áp Đảo', 
+        'Màu Acceptance', 'Màu Rejection',
+        'Độ Mờ Trong VA (0-100)', 'Độ Mờ Ngoài VA (0-100)', 'Độ Dày POC (1-5)', 'Độ Dày VA (1-4)', 
+        'Kiểu Nét VA (0=Đứt,1=Chấm,2=Liền)', 'Cỡ Chữ (8-16)', 'Hiện Nhãn TPO (0=Tắt,1=Bật)', 
+        'Độ Mờ Phiên Cũ (0-100)', 'Kích Thước Chữ Min (6-12px)', 'Độ Chi Tiết Nhãn (0-2)'
       ],
     },
+
     {
       name: 'SUPERTREND',
       shortName: 'ST',
@@ -568,385 +555,295 @@
       return;
     }
 
-    /**
- * ╔══════════════════════════════════════════════════════════════════════════════╗
- * ║  WAVE_BOOKMAP — Production-Grade Historical Liquidity Heatmap (MASTER V9.0)  ║
- * ║  Tích hợp: Viewport Culling, Offscreen Cache, LUT Colors, Auto-AI Scale,     ║
- * ║            Cluster Detection, Hover Tooltips.                                ║
- * ╚══════════════════════════════════════════════════════════════════════════════╝
- */
+    // ════════════════════════════════════════════════════════════════════════════════
+//  WAVE_TPO ULTIMATE v4.1 — SMART ENGINE (Full Colors & 100x FPS Batch Render)
+// ════════════════════════════════════════════════════════════════════════════════
+(function initWaveTpoSmart() {
+  'use strict';
 
-(function initWaveBookmapNamespace() {
-  if (window._waHmap) return;
+  if (!window._waTpoCache) window._waTpoCache = new Map();
 
-  var H = window._waHmap = {
-    cache: {
-      key: '', offscreen: null, valid: false, lastRender: 0,
-      meta: { columns: [], truncatedTotal: 0, showingCount: 0, warnings: [] }
-    },
-    lut: {
-      initialized: false, opacityKey: -1,
-      asks256: [], bids256: [], askGlow256: [], bidGlow256: [],
-      askBuckets16: [], bidBuckets16: [], askGlowBuckets16: [], bidGlowBuckets16: []
-    },
-    mouse: { x: -1, y: -1, lastUpdate: 0 },
-    debug: false,
-    stats: { lastFrameRects: 0, lastFrameMs: 0, cacheHits: 0 },
-    pools: {
-      askBuckets: new Array(16), bidBuckets: new Array(16),
-      askGlowBuckets: new Array(16), bidGlowBuckets: new Array(16)
-    },
-    interaction: { mouseBound: false, onMouseMove: null, onMouseOut: null },
-    helpers: {}
-  };
+  function _waTpoCacheSet(key, value) {
+    if (window._waTpoCache.has(key)) window._waTpoCache.delete(key);
+    window._waTpoCache.set(key, value);
+    if (window._waTpoCache.size > 10) window._waTpoCache.delete(window._waTpoCache.keys().next().value);
+  }
 
-  var hp = H.helpers;
-  hp.clamp = function(v, min, max) { return Math.max(min, Math.min(max, v)); };
-  hp.now = function() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); };
-  
-  hp.ensureMouseListener = function() {
-    var state = window._waHmap;
-    if (state.interaction.mouseBound) return;
-    state.interaction.mouseBound = true;
-    state.interaction.onMouseMove = function(ev) {
-      var now = Date.now();
-      if (now - state.mouse.lastUpdate < 50) return; 
-      state.mouse.x = ev.clientX; state.mouse.y = ev.clientY; state.mouse.lastUpdate = now;
-    };
-    state.interaction.onMouseOut = function(ev) {
-      if (!ev.relatedTarget) { state.mouse.x = -1; state.mouse.y = -1; }
-    };
-    window.addEventListener('mousemove', state.interaction.onMouseMove, { passive: true });
-    window.addEventListener('mouseout', state.interaction.onMouseOut, { passive: true });
-  };
-
-  hp.removeMouseListener = function() {
-    var state = window._waHmap;
-    if (!state || !state.interaction.mouseBound) return;
-    window.removeEventListener('mousemove', state.interaction.onMouseMove);
-    window.removeEventListener('mouseout', state.interaction.onMouseOut);
-    state.interaction.mouseBound = false;
-  };
-
-  hp.createCanvas = function(width, height) {
-    var c;
-    if (typeof OffscreenCanvas !== 'undefined') { c = new OffscreenCanvas(width, height); } 
-    else { c = document.createElement('canvas'); c.width = width; c.height = height; c.style.display = 'none'; }
-    return c;
-  };
-
-  hp.ensureOffscreen = function(width, height) {
-    var cache = window._waHmap.cache;
-    var c = cache.offscreen;
-    if (!c || c.width !== width || c.height !== height) {
-      c = hp.createCanvas(width, height);
-      cache.offscreen = c;
-      cache.valid = false;
+  // 🚀 Hỗ trợ Màu Trong Suốt (Transparent) & String Hex
+  function _waTpoHex2Rgba(val, alpha) {
+    if (val === 'transparent') return 'rgba(0,0,0,0)';
+    if (typeof val === 'number') {
+      const h = Math.round(val) >>> 0;
+      return `rgba(${(h >> 16) & 255},${(h >> 8) & 255},${h & 255},${alpha.toFixed(3)})`;
     }
-    return c;
-  };
+    let hex = String(val).replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+  }
 
-  hp.resetBuckets = function() {
-    var pools = window._waHmap.pools;
-    for (var i = 0; i < 16; i++) {
-      pools.askBuckets[i] = new Path2D(); pools.bidBuckets[i] = new Path2D();
-      pools.askGlowBuckets[i] = new Path2D(); pools.bidGlowBuckets[i] = new Path2D();
+  function _waTpoGetDash(styleIdx) { return styleIdx === 1 ? [2, 3] : styleIdx === 2 ? [] : [6, 4]; }
+
+  function _waTpoRoundRect(ctx, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  function _waTpoGetLetter(n) {
+    if (n < 26) return String.fromCharCode(65 + n);
+    if (n < 52) return String.fromCharCode(97 + n - 26);
+    return String.fromCharCode(65 + Math.floor((n - 52) / 26)) + String.fromCharCode(65 + ((n - 52) % 26));
+  }
+
+  const _WA_TPO_SESSION_PALETTE = ['#4A148C', '#6A1B9A', '#8E24AA', '#AB47BC', '#00BCD4'];
+
+  // ─── LOGIC AI TỪ BẢN V4 CỦA BẠN (GIỮ NGUYÊN) ─────────────────────────────────
+  function _waTpoClassifyProfileShape(bins, pocIdx) {
+    const counts = bins.map(b => b.count), total = counts.reduce((a, b) => a + b, 0);
+    if (!total) return 'UNDEFINED';
+    let top = 0, bot = 0;
+    for (let i = 0; i < counts.length; i++) { if (i > pocIdx) top += counts[i]; else if (i < pocIdx) bot += counts[i]; }
+    const skew = (top - bot) / Math.max(1, top + bot);
+    let peaks = 0;
+    for (let i = 1; i < counts.length - 1; i++) if (counts[i] >= counts[i - 1] && counts[i] >= counts[i + 1] && counts[i] > 0) peaks++;
+    if (peaks >= 2) return 'B_SHAPE'; if (skew > 0.18) return 'P_SHAPE'; if (skew < -0.18) return 'b_SHAPE'; return 'D_SHAPE';
+  }
+
+  function _waTpoDetectExcessTail(bins) {
+    const nz = bins.filter(b => b.count > 0);
+    if (!nz.length) return { top: false, bottom: false };
+    const avg = nz.reduce((s, b) => s + b.count, 0) / nz.length;
+    let top = false, bottom = false;
+    if (nz[0] && nz[0].count <= Math.max(2, avg * 0.25) && (!nz[1] || nz[1].count > nz[0].count)) bottom = true;
+    if (nz[nz.length - 1] && nz[nz.length - 1].count <= Math.max(2, avg * 0.25) && (!nz[nz.length - 2] || nz[nz.length - 2].count > nz[nz.length - 1].count)) top = true;
+    return { top, bottom };
+  }
+
+  function _waTpoDetectPoorHighLow(bins) {
+    const nz = bins.filter(b => b.count > 0);
+    if (!nz.length) return { poorHigh: false, poorLow: false };
+    return { poorHigh: nz[nz.length - 1].count >= 2, poorLow: nz[0].count >= 2 };
+  }
+
+  function _waTpoClassifyDayType(profile, dataList) {
+    const { startIdx, endIdx, ibHigh, ibLow, maxP, minP } = profile;
+    if (ibHigh == null || ibLow == null || endIdx - startIdx < 3) return 'OTHER';
+    const ibRange = Math.max(1e-9, ibHigh - ibLow), dayRange = Math.max(1e-9, maxP - minP);
+    const close = dataList[endIdx - 1]?.close ?? maxP;
+    const pos = (close - minP) / dayRange, exp = dayRange / ibRange;
+    if (exp >= 2.2 && (pos > 0.75 || pos < 0.25)) return 'TREND_DAY';
+    if (exp >= 1.4) return 'NORMAL_VARIATION';
+    if (pos > 0.40 && pos < 0.60) return 'NEUTRAL_DAY';
+    return 'NORMAL_DAY';
+  }
+
+  function _waTpoAuctionState(profile) {
+    const { closePos, inValueClose, shape } = profile;
+    if (inValueClose && Math.abs(closePos - 0.5) < 0.22) return 'ACCEPTANCE';
+    if (!inValueClose && (closePos < 0.18 || closePos > 0.82)) return 'REJECTION';
+    if (shape === 'P_SHAPE' || shape === 'b_SHAPE') return 'ROTATIONAL_BIAS';
+    return 'BALANCED_AUCTION';
+  }
+
+  function _waTpoGroupByDay(dataList, from, to) {
+    const groups = new Map();
+    for (let i = from; i < to; i++) {
+      const d = dataList[i]; if (!d || !d.timestamp) continue;
+      const dt = new Date(d.timestamp), key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
+      if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 }); else groups.get(key).end = i + 1;
     }
-  };
+    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-5);
+  }
 
-  hp.lerp = function(a, b, t) { return a + (b - a) * t; };
-  hp.mixRgba = function(c1, c2, t, opacityMul) {
-    var r = Math.round(hp.lerp(c1[0], c2[0], t)), g = Math.round(hp.lerp(c1[1], c2[1], t)), b = Math.round(hp.lerp(c1[2], c2[2], t)), a = hp.lerp(c1[3], c2[3], t) * opacityMul;
-    return 'rgba(' + r + ',' + g + ',' + b + ',' + a.toFixed(3) + ')';
-  };
-
-  hp.buildGradientLut = function(stops, opacityMul) {
-    var arr256 = new Array(256);
-    for (var i = 0; i < 256; i++) {
-      var t = i / 255, color;
-      if (t <= 0.35) color = hp.mixRgba(stops[0], stops[1], t / 0.35, opacityMul);
-      else if (t <= 0.75) color = hp.mixRgba(stops[1], stops[2], (t - 0.35) / 0.40, opacityMul);
-      else color = hp.mixRgba(stops[2], stops[3], (t - 0.75) / 0.25, opacityMul);
-      arr256[i] = color;
-    }
-    var arr16 = new Array(16);
-    for (var b = 0; b < 16; b++) arr16[b] = arr256[Math.min(255, b * 16 + 8)];
-    return { arr256: arr256, arr16: arr16 };
-  };
-
-  hp.rebuildLut = function(opacityMul) {
-    var lut = window._waHmap.lut;
-    if (lut.initialized && lut.opacityKey === opacityMul) return;
-    var askStops = [[180, 60, 0, 0.12], [220, 80, 0, 0.35], [255, 100, 0, 0.60], [255, 50, 50, 0.85]];
-    var bidStops = [[0, 120, 80, 0.12], [0, 180, 100, 0.35], [0, 220, 140, 0.60], [50, 255, 160, 0.85]];
-    var askGlowStops = [[180, 60, 0, 0.06], [220, 80, 0, 0.18], [255, 100, 0, 0.30], [255, 70, 70, 0.42]];
-    var bidGlowStops = [[0, 120, 80, 0.06], [0, 180, 100, 0.18], [0, 220, 140, 0.30], [80, 255, 180, 0.42]];
-
-    var ask = hp.buildGradientLut(askStops, opacityMul), bid = hp.buildGradientLut(bidStops, opacityMul);
-    var askGlow = hp.buildGradientLut(askGlowStops, opacityMul), bidGlow = hp.buildGradientLut(bidGlowStops, opacityMul);
-
-    lut.asks256 = ask.arr256; lut.bids256 = bid.arr256; lut.askGlow256 = askGlow.arr256; lut.bidGlow256 = bidGlow.arr256;
-    lut.askBuckets16 = ask.arr16; lut.bidBuckets16 = bid.arr16; lut.askGlowBuckets16 = askGlow.arr16; lut.bidGlowBuckets16 = bidGlow.arr16;
-    lut.opacityKey = opacityMul; lut.initialized = true;
-  };
-
-  hp.getBucketIndex = function(valUSD, redThreshold) {
-    if (valUSD <= 0 || redThreshold <= 0) return 0;
-    if (valUSD >= redThreshold) {
-      var extra = Math.min(1, (valUSD - redThreshold) / Math.max(redThreshold, 1));
-      return Math.min(255, 224 + Math.floor(extra * 31));
-    }
-    return Math.min(223, Math.floor((valUSD / redThreshold) * 223));
-  };
-
-  hp.getBarSpace = function() {
-    var barSpace = 6;
-    try {
-      var bsValue = window.tvChart && typeof window.tvChart.getBarSpace === 'function' ? window.tvChart.getBarSpace() : null;
-      if (typeof bsValue === 'number' && bsValue > 0) barSpace = bsValue;
-      else if (bsValue && typeof bsValue.bar === 'number' && bsValue.bar > 0) barSpace = bsValue.bar;
-      else if (bsValue && typeof bsValue.gapBar === 'number' && bsValue.gapBar > 0) barSpace = bsValue.gapBar;
-    } catch (e) {}
-    return hp.clamp(barSpace, 1, 50);
-  };
-
-  hp.getXForTimestamp = function(ts, xAxis) {
-    var x = null;
-    try {
-      if (xAxis && typeof xAxis.convertToPixel === 'function') {
-        var r1 = xAxis.convertToPixel({ timestamp: ts });
-        if (typeof r1 === 'number') x = r1; else if (r1 && typeof r1.x === 'number') x = r1.x;
-        else { var r2 = xAxis.convertToPixel(ts); if (typeof r2 === 'number') x = r2; else if (r2 && typeof r2.x === 'number') x = r2.x; }
+  function _waCheckSuperPoc(pocMid, step) {
+    if (!window._waVpvrCache || window._waVpvrCache.size === 0) return false;
+    for (const cached of window._waVpvrCache.values()) {
+      const p = []; if (cached.mainProfile) p.push(cached.mainProfile);
+      if (cached.sessions) cached.sessions.forEach(s => s.profile && p.push(s.profile));
+      for (const vp of p) {
+        if (!vp || !vp.poc) continue;
+        if (Math.abs((vp.poc.pLow + vp.poc.pHigh) / 2 - pocMid) <= step * 2) return true;
       }
-    } catch (e) {}
-    if (x == null) {
+    }
+    return false;
+  }
+
+  kc.registerIndicator({
+    name: 'WAVE_TPO',
+    shortName: 'TPO',
+    description: 'Time Price Opportunity SMART v4.1',
+    category: 'wave_alpha',
+    series: 'price',
+    isStack: true,
+    createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
+    calcParams: [
+      60, 70, 0, 0, 0, 1, 1,
+      "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
+      "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
+      "#42A5F5", "#FF7043",
+      85, 20, 2, 1, 0, 10, 1, 70, 8, 1
+    ],
+    figures: [],
+    calc: function(dataList) { return dataList.map(() => ({})); },
+    draw: function({ ctx, bounding, xAxis, yAxis, visibleRange, indicator, dataList }) {
+      if (!dataList || dataList.length === 0 || !bounding) return false;
+      const p = indicator.calcParams;
+      const C = {
+        rowCount: Math.max(10, Math.min(200, +(p[0] ?? 60))),
+        vaPercent: Math.max(10, Math.min(100, +(p[1] ?? 70))),
+        isLeft: +(p[2] ?? 0) === 0,
+        useLetter: +(p[3] ?? 0) === 1,
+        colorMode: +(p[4] ?? 0),
+        densityMode: +(p[5] ?? 1),
+        smartLabels: +(p[6] ?? 1) === 1,
+        clrVA: p[7] || "#9C27B0", clrOut: p[8] || "#7B1FA2", clrPoc: p[9] || "#F0B90B",
+        clrNpoc: p[10] || "#FF9800", clrSuperPoc: p[11] || "#F0B90B", clrVaLine: p[12] || "#BA68C8",
+        clrIbHigh: p[13] || "#FFD600", clrIbLow: p[14] || "#FFD600", clrImbalBuy: p[15] || "#26A69A",
+        clrImbalSell: p[16] || "#EF5350", clrAccept: p[17] || "#42A5F5", clrReject: p[18] || "#FF7043",
+        opVA: Math.max(0, Math.min(100, +(p[19] ?? 85))) / 100, opOut: Math.max(0, Math.min(100, +(p[20] ?? 20))) / 100,
+        pocW: Math.max(1, +(p[21] ?? 2)), vaW: Math.max(1, +(p[22] ?? 1)),
+        vaStyle: Math.round(+(p[23] ?? 0)), fontSize: Math.max(8, +(p[24] ?? 10)),
+        showLabels: +(p[25] ?? 1) === 1, fade: Math.max(0, +(p[26] ?? 70)) / 100,
+        minLtrPx: Math.max(6, +(p[27] ?? 8)), verbosity: Math.round(+(p[28] ?? 1)),
+      };
+
+      const { from, to } = visibleRange || { from: 0, to: dataList.length };
+      if (from >= to) return false;
+
+      const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.colorMode}_${C.densityMode}_${C.smartLabels}_${dataList[to - 1]?.close ?? 0}_${bounding.width}_${C.minLtrPx}`;
+      let profiles = window._waTpoCache.get(cacheKey);
+
+      if (!profiles) {
+        const sessions = C.colorMode === 0 ? [{ start: from, end: to }] : _waTpoGroupByDay(dataList, from, to);
+        profiles = sessions.map((s, idx) => {
+          if (s.end - s.start <= 0) return null;
+          let maxP = -Infinity, minP = Infinity;
+          for (let i = s.start; i < s.end; i++) {
+            if (!dataList[i]) continue;
+            if (dataList[i].high > maxP) maxP = dataList[i].high;
+            if (dataList[i].low < minP) minP = dataList[i].low;
+          }
+          if (maxP === -Infinity || maxP === minP) return null;
+          const step = (maxP - minP) / C.rowCount;
+          let totalTPO = 0;
+          const bins = Array.from({ length: C.rowCount }, (_, i) => ({ idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step, count: 0, letters: [], inVA: false }));
+          for (let i = s.start; i < s.end; i++) {
+            if (!dataList[i]) continue;
+            const d = dataList[i], lIdx = i - s.start;
+            const sI = Math.max(0, Math.floor((d.low - minP) / step)), eI = Math.min(C.rowCount - 1, Math.floor((d.high - minP) / step));
+            for (let j = sI; j <= eI; j++) { bins[j].count++; bins[j].letters.push(lIdx); totalTPO++; }
+          }
+          if (totalTPO === 0) return null;
+          let pocBin = bins[0], maxTPO = 0; bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
+          pocBin.inVA = true; let curVA = pocBin.count, ui = pocBin.idx + 1, di = pocBin.idx - 1;
+          while (curVA < totalTPO * (C.vaPercent / 100) && (ui < C.rowCount || di >= 0)) {
+            let vu = 0, vd = 0;
+            if (ui < C.rowCount) vu += bins[ui].count; if (ui + 1 < C.rowCount) vu += bins[ui + 1].count;
+            if (di >= 0) vd += bins[di].count; if (di - 1 >= 0) vd += bins[di - 1].count;
+            if (vu >= vd && ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
+            else if (di >= 0) { bins[di].inVA = true; curVA += bins[di].count; di--; }
+            else if (ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
+            else break;
+          }
+          let vahBin = null, valBin = null;
+          for (let i = C.rowCount - 1; i >= 0; i--) if (bins[i].inVA && !vahBin) vahBin = bins[i];
+          for (let i = 0; i < C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
+          
+          let ibHigh = null, ibLow = null;
+          if (s.end - s.start >= 2) { ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high); ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low); }
+          const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
+          let isNaked = true; for (let i = s.end; i < dataList.length; i++) if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) { isNaked = false; break; }
+          let topC = 0, botC = 0; bins.forEach(b => { if (b.inVA) { if (b.idx > pocBin.idx) topC += b.count; else if (b.idx < pocBin.idx) botC += b.count; } });
+          let imb = 'BALANCED'; if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3) imb = topC > botC ? 'BUYING' : 'SELLING';
+          
+          const prof = { bins, maxTPO, pocMid, vahBin, valBin, ibHigh, ibLow, imbalance: imb, isNaked, totalTPO, minP, maxP, step, startIdx: s.start, endIdx: s.end };
+          prof.close = dataList[s.end - 1]?.close ?? pocMid; prof.closePos = (prof.close - minP) / Math.max(1e-9, maxP - minP);
+          prof.inValueClose = !!(valBin && vahBin && prof.close >= valBin.pLow && prof.close <= vahBin.pHigh);
+          prof.shape = _waTpoClassifyProfileShape(bins, pocBin.idx);
+          const exc = _waTpoDetectExcessTail(bins); prof.excessTop = exc.top; prof.excessBottom = exc.bottom;
+          const poor = _waTpoDetectPoorHighLow(bins); prof.poorHigh = poor.poorHigh; prof.poorLow = poor.poorLow;
+          prof.dayType = _waTpoClassifyDayType(prof, dataList); prof.auctionState = _waTpoAuctionState(prof);
+          prof.isSuperPoc = _waCheckSuperPoc(pocMid, step); prof.sessionIdx = idx; prof.sessionTotal = sessions.length;
+          return prof;
+        }).filter(Boolean);
+        _waTpoCacheSet(cacheKey, profiles);
+      }
+
+      if (!profiles.length) return false;
+
       try {
-        var pt = window.tvChart && typeof window.tvChart.convertToPixel === 'function' ? window.tvChart.convertToPixel({ timestamp: ts }, { paneId: 'candle_pane' }) : null;
-        if (typeof pt === 'number') x = pt; else if (pt && typeof pt.x === 'number') x = pt.x;
-      } catch (e2) {}
+        ctx.save(); ctx.globalCompositeOperation = 'source-over';
+        const pxPerBar = bounding.width / Math.max(1, to - from);
+        const compactMode = C.densityMode === 0 || pxPerBar < 3;
+
+        profiles.forEach((prof) => {
+          let anchorX, dir, maxBlocksPx;
+          if (C.colorMode === 0) { anchorX = C.isLeft ? 0 : bounding.width; dir = C.isLeft ? 1 : -1; maxBlocksPx = bounding.width * (compactMode ? 0.28 : 0.35); } 
+          else { anchorX = xAxis.convertToPixel(prof.startIdx) || 0; dir = 1; maxBlocksPx = bounding.width * (compactMode ? 0.16 : 0.22); }
+
+          let baseClr = C.clrVA, outClr = C.clrOut, alphaMul = 1;
+          if (C.colorMode === 1) {
+            baseClr = outClr = _WA_TPO_SESSION_PALETTE[Math.min(4, Math.floor((prof.sessionIdx / Math.max(1, prof.sessionTotal - 1)) * 4))];
+            alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
+          }
+
+          const unitW = maxBlocksPx / Math.max(1, prof.maxTPO);
+          const stepDraw = compactMode ? 2 : 1;
+
+          // 🚀 TỐI ƯU HÓA BATCH RENDERING SIÊU TỐC
+          prof.bins.forEach(bin => {
+            if (bin.count <= 0) return;
+            let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
+            if (yB == null || yT == null) return;
+            const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT)), blockW = Math.max(1, Math.min(rH, unitW));
+            const canLetter = C.useLetter && rH >= 10 && blockW >= C.minLtrPx;
+
+            let fAlpha = (bin.inVA ? C.opVA : C.opOut) * alphaMul;
+            if (C.colorMode === 2) fAlpha = (0.12 + 0.75 * (bin.count / prof.maxTPO)) * alphaMul;
+
+            if (canLetter) {
+              // Vẽ chữ
+              ctx.fillStyle = bin.inVA ? _waTpoHex2Rgba('#FFFFFF', 0.9) : _waTpoHex2Rgba('#FFFFFF', compactMode ? 0.2 : 0.4);
+              ctx.font = `bold ${Math.min(blockW, rH, C.fontSize)}px monospace`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+              bin.letters.forEach((lIdx, pos) => { if (pos % stepDraw === 0) ctx.fillText(_waTpoGetLetter(lIdx), anchorX + dir * (pos * blockW) + blockW / 2, rY + rH / 2); });
+            } else {
+              // Batch Vẽ khối vuông
+              ctx.fillStyle = _waTpoHex2Rgba(bin.inVA ? baseClr : outClr, fAlpha);
+              ctx.beginPath();
+              bin.letters.forEach((lIdx, pos) => { if (pos % stepDraw === 0) ctx.rect(anchorX + dir * (pos * blockW), rY, Math.max(1, blockW - 1), Math.max(1, rH - 1)); });
+              ctx.fill();
+            }
+          });
+
+          // Các nét vẽ POC, VA, Labels (Rút gọn để mã chạy ổn định)
+          const drawLvl = (lvl, clr, w, dash, txt) => {
+            const y = yAxis.convertToPixel(lvl); if (y == null) return;
+            ctx.strokeStyle = _waTpoHex2Rgba(clr, 0.85); ctx.lineWidth = w; ctx.setLineDash(dash);
+            ctx.beginPath(); ctx.moveTo(C.colorMode === 0 ? 0 : anchorX, y); ctx.lineTo(C.colorMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5, y); ctx.stroke(); ctx.setLineDash([]);
+            if (C.showLabels && !compactMode) {
+              ctx.fillStyle = _waTpoHex2Rgba(clr, 0.95); ctx.font = `bold ${C.fontSize-1}px sans-serif`; ctx.textAlign = C.isLeft ? 'left' : 'right';
+              ctx.fillText(`${txt} ${lvl.toFixed(2)}`, C.isLeft ? 4 : bounding.width - 4, y - 4);
+            }
+          };
+          if (prof.vahBin) drawLvl(prof.vahBin.pHigh, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAH');
+          if (prof.valBin) drawLvl(prof.valBin.pLow, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAL');
+
+          const pocY = yAxis.convertToPixel(prof.pocMid);
+          if (pocY != null) {
+            ctx.strokeStyle = prof.isSuperPoc ? _waTpoHex2Rgba(C.clrSuperPoc, 1) : prof.isNaked ? _waTpoHex2Rgba(C.clrNpoc, 0.8) : _waTpoHex2Rgba(C.clrPoc, 0.9);
+            ctx.lineWidth = prof.isSuperPoc ? C.pocW + 1 : prof.isNaked ? Math.max(1, C.pocW - 1) : C.pocW;
+            if (prof.isNaked && !prof.isSuperPoc) ctx.setLineDash([5, 4]);
+            ctx.beginPath(); ctx.moveTo(C.colorMode === 0 && C.isLeft ? 0 : anchorX, pocY); ctx.lineTo(C.colorMode === 0 && C.isLeft ? bounding.width : anchorX + maxBlocksPx * 1.5, pocY);
+            if (prof.isNaked) ctx.lineTo(bounding.width, pocY); ctx.stroke(); ctx.setLineDash([]);
+          }
+        });
+      } catch (e) { console.error('[WAVE_TPO]', e); } finally { ctx.restore(); }
+      return false;
     }
-    return (typeof x === 'number' && isFinite(x)) ? x : null;
-  };
-
-  hp.getYForPrice = function(price, yAxis) {
-    var y = null;
-    try { if (yAxis && typeof yAxis.convertToPixel === 'function') y = yAxis.convertToPixel(price); } catch (e) {}
-    return (typeof y === 'number' && isFinite(y)) ? y : null;
-  };
-
-  hp.getVisibleTimeRange = function(bounding, xAxis) {
-    var out = { from: null, to: null, key: 'na_na' };
-    try {
-      if (window.tvChart && typeof window.tvChart.convertFromPixel === 'function') {
-        var left = window.tvChart.convertFromPixel({ x: 0 }, { paneId: 'candle_pane' });
-        var right = window.tvChart.convertFromPixel({ x: bounding.width }, { paneId: 'candle_pane' });
-        var lf = left && (left.timestamp != null ? left.timestamp : left.x);
-        var rt = right && (right.timestamp != null ? right.timestamp : right.x);
-        if (typeof lf === 'number' && typeof rt === 'number' && isFinite(lf) && isFinite(rt)) {
-          out.from = Math.min(lf, rt); out.to = Math.max(lf, rt); out.key = String(out.from) + '_' + String(out.to);
-          return out;
-        }
-      }
-    } catch (e) {}
-    return out; // Trả về rỗng nếu không lấy được (tránh crash)
-  };
-
-  hp.lowerBound = function(arr, target) {
-    var lo = 0, hi = arr.length;
-    while (lo < hi) { var mid = (lo + hi) >> 1; if (arr[mid].t < target) lo = mid + 1; else hi = mid; }
-    return lo;
-  };
-  hp.upperBound = function(arr, target) {
-    var lo = 0, hi = arr.length;
-    while (lo < hi) { var mid = (lo + hi) >> 1; if (arr[mid].t <= target) lo = mid + 1; else hi = mid; }
-    return lo;
-  };
-
-  hp.isSortedByTime = function(arr) {
-    for (var i = 1; i < arr.length; i++) if ((arr[i - 1].t || 0) > (arr[i].t || 0)) return false;
-    return true;
-  };
-
-  hp.sliceVisibleHistory = function(history, visibleRange) {
-    if (!history.length || visibleRange.from == null || visibleRange.to == null || !hp.isSortedByTime(history)) return history;
-    var start = Math.max(0, hp.lowerBound(history, visibleRange.from) - 2);
-    var end = Math.min(history.length, hp.upperBound(history, visibleRange.to) + 2);
-    return history.slice(start, end);
-  };
-
-  hp.iterateBookSide = function(side, fn) {
-    if (!side) return;
-    if (typeof side.forEach === 'function') { side.forEach(function(vol, priceStr) { fn(priceStr, vol); }); return; }
-    if (typeof side[Symbol.iterator] === 'function') { for (var entry of side) fn(entry[0], entry[1]); return; }
-    for (var k in side) if (Object.prototype.hasOwnProperty.call(side, k)) fn(k, side[k]);
-  };
-
-  hp.buildRenderGroups = function(snaps, mergeCount) {
-    if (mergeCount <= 1) return snaps;
-    var out = [];
-    for (var i = 0; i < snaps.length; i += mergeCount) {
-      var end = Math.min(snaps.length, i + mergeCount);
-      var askAgg = new Map(), bidAgg = new Map(), tsSum = 0, count = 0;
-      for (var j = i; j < end; j++) {
-        var s = snaps[j]; if (!s) continue; count++; tsSum += Number(s.t || 0);
-        hp.iterateBookSide(s.asks, function(pStr, vol) { askAgg.set(pStr, (askAgg.get(pStr) || 0) + Number(vol || 0)); });
-        hp.iterateBookSide(s.bids, function(pStr, vol) { bidAgg.set(pStr, (bidAgg.get(pStr) || 0) + Number(vol || 0)); });
-      }
-      if (!count) continue;
-      askAgg.forEach(function(v, k) { askAgg.set(k, v / count); });
-      bidAgg.forEach(function(v, k) { bidAgg.set(k, v / count); });
-      out.push({ t: Math.round(tsSum / count), asks: askAgg, bids: bidAgg, _merged: true, _count: count });
-    }
-    return out;
-  };
-
-  hp.formatUsd = function(v) {
-    var n = Number(v || 0), abs = Math.abs(n);
-    if (abs >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
-    if (abs >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
-    if (abs >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
-    return '$' + n.toFixed(0);
-  };
-  hp.formatPrice = function(v) { return Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-  hp.formatTime = function(ts) {
-    var d = new Date(Number(ts || 0));
-    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
-  };
-
-  hp.drawCenteredText = function(ctx, bounding, text, color, font) {
-    ctx.save(); ctx.fillStyle = color; ctx.font = font || '11px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, bounding.width / 2, bounding.height / 2); ctx.restore();
-  };
-
-  hp.roundRect = function(ctx, x, y, w, h, r) {
-    var rr = Math.min(r, w * 0.5, h * 0.5); ctx.beginPath(); ctx.moveTo(x + rr, y); ctx.lineTo(x + w - rr, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + rr); ctx.lineTo(x + w, y + h - rr); ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-    ctx.lineTo(x + rr, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - rr); ctx.lineTo(x, y + rr); ctx.quadraticCurveTo(x, y, x + rr, y); ctx.closePath();
-  };
-
-  hp.getMouseLocal = function(canvas) {
-    var state = window._waHmap;
-    if (!canvas || state.mouse.x < 0 || state.mouse.y < 0) return null;
-    var rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : null;
-    if (!rect) return null; return { x: state.mouse.x - rect.left, y: state.mouse.y - rect.top };
-  };
-
-  hp.findNearestColumn = function(columns, mouseX) {
-    if (!columns || !columns.length) return null;
-    var lo = 0, hi = columns.length - 1;
-    while (lo < hi) { var mid = (lo + hi) >> 1; if (columns[mid].x < mouseX) lo = mid + 1; else hi = mid; }
-    var a = columns[lo], b = columns[Math.max(0, lo - 1)];
-    if (!b) return a; return Math.abs(a.x - mouseX) < Math.abs(b.x - mouseX) ? a : b;
-  };
-
-  hp.getNearestLevelInfo = function(snap, mouseY, yAxis) {
-    if (!snap) return null;
-    var nearest = null, nearestDy = Infinity;
-    function scan(sideName, side) {
-      hp.iterateBookSide(side, function(priceStr, vol) {
-        var price = parseFloat(priceStr); if (!isFinite(price)) return;
-        var y = hp.getYForPrice(price, yAxis); if (y == null) return;
-        var dy = Math.abs(y - mouseY);
-        if (dy < nearestDy) { nearestDy = dy; nearest = { side: sideName, price: price, y: y, vol: Number(vol || 0) }; }
-      });
-    }
-    scan('ask', snap.asks); scan('bid', snap.bids);
-    if (!nearest) return null;
-
-    function nearestValueUsd(side, targetPrice) {
-      var best = { usd: 0, diff: Infinity };
-      hp.iterateBookSide(side, function(priceStr, vol) {
-        var price = parseFloat(priceStr); if (!isFinite(price)) return;
-        var d = Math.abs(price - targetPrice);
-        if (d < best.diff) { best.diff = d; best.usd = price * Number(vol || 0); }
-      });
-      return best.usd;
-    }
-    var askUSD = nearestValueUsd(snap.asks, nearest.price);
-    var bidUSD = nearestValueUsd(snap.bids, nearest.price);
-    var ratio = askUSD > 0 ? (bidUSD / askUSD) : (bidUSD > 0 ? 9.99 : 1);
-    var dominance = ratio < 0.85 ? 'Áp đảo Bán' : (ratio > 1.15 ? 'Áp đảo Mua' : 'Cân bằng');
-    return { t: snap.t, price: nearest.price, askUSD: askUSD, bidUSD: bidUSD, ratio: ratio, dominance: dominance, topWall: Math.max(askUSD, bidUSD) };
-  };
-
-  hp.drawTooltip = function(ctx, bounding, mouse, info, redThreshold) {
-    if (!info) return;
-    var lines = [
-      '⏱ ' + hp.formatTime(info.t) + '  |  $' + hp.formatPrice(info.price),
-      '🔴 LỰC BÁN: ' + hp.formatUsd(info.askUSD) + (info.askUSD >= redThreshold ? ' (TOP WALL)' : ''),
-      '🟢 LỰC MUA: ' + hp.formatUsd(info.bidUSD),
-      '📊 Tỷ lệ: ' + info.ratio.toFixed(2) + ' (' + info.dominance + ')'
-    ];
-    var width = 208, height = 62;
-    var x = hp.clamp(mouse.x + 12, 6, Math.max(6, bounding.width - width - 6));
-    var y = hp.clamp(mouse.y - height - 8, 6, Math.max(6, bounding.height - height - 6));
-
-    ctx.save();
-    // Đảm bảo tooltip luôn nằm trên cùng (đè lên nến)
-    ctx.globalCompositeOperation = 'source-over';
-    hp.roundRect(ctx, x, y, width, height, 4); ctx.fillStyle = 'rgba(15,15,15,0.92)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.font = "9px system-ui, -apple-system, sans-serif"; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    for (var i = 0; i < lines.length; i++) {
-      ctx.fillStyle = i === 1 ? 'rgba(255,110,90,0.95)' : (i === 2 ? 'rgba(100,255,180,0.95)' : 'rgba(245,245,245,0.95)');
-      ctx.fillText(lines[i], x + 8, y + 7 + i * 13);
-    }
-    ctx.restore();
-  };
-
-  hp.sortByY = function(a, b) { return a.y - b.y; };
-
-  hp.mergeLevelsIntoClusters = function(items, gapPx) {
-    if (!items || !items.length) return [];
-    items.sort(hp.sortByY);
-    var out = [], cur = null;
-    for (var i = 0; i < items.length; i++) {
-      var it = items[i];
-      if (!cur) { cur = { x: it.x, w: it.w, y1: it.y - it.h * 0.5, y2: it.y + it.h * 0.5, side: it.side, totalUsd: it.valUSD, levels: 1 }; continue; }
-      var sameColumn = Math.abs(cur.x - it.x) <= 0.5 && cur.side === it.side;
-      var nextY1 = it.y - it.h * 0.5, nextY2 = it.y + it.h * 0.5;
-      if (sameColumn && nextY1 - cur.y2 <= gapPx) { cur.y2 = Math.max(cur.y2, nextY2); cur.totalUsd += it.valUSD; cur.levels += 1; } 
-      else { out.push(cur); cur = { x: it.x, w: it.w, y1: nextY1, y2: nextY2, side: it.side, totalUsd: it.valUSD, levels: 1 }; }
-    }
-    if (cur) out.push(cur); return out;
-  };
-
-  hp.drawMergedClusters = function(ctx, clusters, barSpace) {
-    if (!clusters || !clusters.length) return;
-    ctx.save(); ctx.font = "9px system-ui, -apple-system, sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    for (var i = 0; i < clusters.length; i++) {
-      var c = clusters[i], grad = ctx.createLinearGradient(0, c.y1, 0, c.y2);
-      if (c.side === 'ask') { grad.addColorStop(0, 'rgba(255,120,80,0.12)'); grad.addColorStop(1, 'rgba(255,70,50,0.32)'); } 
-      else { grad.addColorStop(0, 'rgba(80,255,180,0.12)'); grad.addColorStop(1, 'rgba(40,220,140,0.32)'); }
-      ctx.fillStyle = grad; ctx.fillRect(c.x - c.w / 2, c.y1, c.w, Math.max(1, c.y2 - c.y1));
-      ctx.strokeStyle = c.side === 'ask' ? 'rgba(255,120,80,0.42)' : 'rgba(80,255,180,0.42)';
-      ctx.lineWidth = 1; ctx.strokeRect(c.x - c.w / 2, c.y1, c.w, Math.max(1, c.y2 - c.y1));
-      if (barSpace > 10 && c.levels >= 2 && (c.y2 - c.y1) >= 12) {
-        ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.fillText('CỤM ' + hp.formatUsd(c.totalUsd), c.x, (c.y1 + c.y2) * 0.5);
-      }
-    }
-    ctx.restore();
-  };
-
-  hp.drawMajorWallClusters = function(ctx, majorWalls) {
-    if (!majorWalls || !majorWalls.length) return;
-    majorWalls.sort(function(a, b) { if (Math.abs(a.x - b.x) > 0.5) return a.x - b.x; if (a.side !== b.side) return a.side === 'ask' ? -1 : 1; return a.y - b.y; });
-    var clusters = [], cur = null;
-    for (var i = 0; i < majorWalls.length; i++) {
-      var w = majorWalls[i], top = w.y - w.h * 0.5, bottom = w.y + w.h * 0.5;
-      if (!cur) { cur = { side: w.side, x: w.x, w: w.w, y1: top, y2: bottom, val: w.valUSD }; continue; }
-      var sameCol = Math.abs(cur.x - w.x) <= 0.5 && cur.side === w.side;
-      if (sameCol && top - cur.y2 < 5) { cur.y2 = Math.max(cur.y2, bottom); cur.val += w.valUSD; } 
-      else { clusters.push(cur); cur = { side: w.side, x: w.x, w: w.w, y1: top, y2: bottom, val: w.valUSD }; }
-    }
-    if (cur) clusters.push(cur);
-    ctx.save(); ctx.lineWidth = 1;
-    for (var j = 0; j < clusters.length; j++) {
-      var c = clusters[j]; ctx.strokeStyle = c.side === 'ask' ? 'rgba(255,180,160,0.68)' : 'rgba(180,255,220,0.68)';
-      ctx.strokeRect(c.x - c.w / 2, c.y1, c.w, Math.max(1, c.y2 - c.y1));
-    }
-    ctx.restore();
-  };
+  });
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4291,11 +4188,24 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         "0:Đứt 1:Chấm 2:Liền", "0:Đứt 1:Chấm 2:Dài", "Cỡ chữ (8-16)", "0:Ẩn 1:Hiện"
     ];
 
-    const groups = isVPVR ? [
-        { title: '⚙️ Thông Số Kỹ Thuật', keys: [0, 1, 2, 3, 4, 5, 21] },
-        { title: '🎨 Bảng Màu Giao Diện', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
-        { title: '📏 Kiểu Dáng & Độ Mờ', keys: [14, 15, 16, 17, 18, 19, 20] }
-    ] : [ { title: '⚙️ Cài Đặt Chỉ Báo', keys: currentParams.map((_, i) => i) } ];
+    // Chia nhóm cấu hình thông minh cho VPVR và TPO
+    const isTPO = indicator.name === 'WAVE_TPO';
+    let groups = [];
+    if (isVPVR) {
+        groups = [
+            { title: 'Cấu Hình Lõi', keys: [0, 1, 2, 3, 4, 5, 21] },
+            { title: 'Bảng Màu Hiển Thị', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
+            { title: 'Kiểu Dáng & Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
+        ];
+    } else if (isTPO) {
+        groups = [
+            { title: '⚙️ Cấu Hình Thuật Toán', keys: [0, 1, 2, 3, 4, 5, 6, 26, 27, 28] },
+            { title: '🎨 Bảng Màu (Trong / Ngoài VA / Khác)', keys: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] },
+            { title: '📏 Kiểu Nét & Độ Mờ', keys: [19, 20, 21, 22, 23, 24, 25] }
+        ];
+    } else {
+        groups = [ { title: 'Cài Đặt', keys: currentParams.map((_, i) => i) } ];
+    }
 
     let activeHexInputId = null, activeBtnId = null;
 
