@@ -3572,33 +3572,36 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .eb-sync-label.passed { color: rgba(0, 240, 255, 0.6); }
 
 /* ===================================================
-   KHỐI ĐỘNG (GỘP CHUNG ICON VÀ ĐỒNG HỒ)
+   KHỐI ĐỘNG (GỘP CHUNG ICON VÀ ĐỒNG HỒ - CHỐNG ĐÈ 100%)
 =================================================== */
+/* Biến khối cha thành một điểm neo (Anchor point 0x0) */
 .eb-sync-dynamic-block {
     position: absolute;
-    top: 50%; /* Canh giữa so với thanh ray */
-    transform: translate(-50%, -50%);
+    top: 0;
+    width: 0; 
+    height: 0;
     z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Icon người chạy */
+/* Icon người chạy: Canh tâm chính xác vào giữa điểm neo */
 .eb-sync-icon {
-    color: var(--brand); /* Màu đồng bộ */
+    position: absolute;
+    top: -4px; /* Hạ chân chạm ngay trên thanh tiến trình */
+    left: 0;
+    transform: translate(-50%, -50%);
+    color: var(--brand);
     font-size: 14px; 
-    margin-top: -12px; /* Kéo nhẹ lên trên để chân chạm vạch */
 }
 
-/* Đồng hồ đếm ngược bám sát theo khối động */
+/* Đồng hồ đếm ngược: Đứng cùng trục ngang với icon */
 .eb-sync-timer {
     position: absolute;
-    top: -18px; /* Nằm ngang hàng với đầu icon */
-    background: rgba(0, 0, 0, 0.7); /* Nền tối để số luôn rõ ràng */
-    border: 1px solid var(--brand); /* Viền màu đồng bộ */
-    color: var(--brand); /* Chữ màu đồng bộ */
+    top: -4px; /* Cùng thông số top với icon để thẳng hàng */
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.85); /* Nền tối đậm để chữ luôn nét */
+    border: 1px solid var(--brand); 
+    color: var(--brand); 
     font-size: 0.55rem;
     font-weight: 800;
     padding: 1px 6px;
@@ -3607,6 +3610,6 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     pointer-events: none;
 }
 
-/* Logic nhảy vị trí của Đồng hồ so với Tâm của Khối động */
-.eb-sync-timer.align-right { left: 8px; } /* Nhảy sang phải icon */
-.eb-sync-timer.align-left { right: 8px; } /* Nhảy sang trái icon */
+/* Đẩy đồng hồ ra xa tâm icon đúng 14px (Chừa khe hở 7px rất đẹp) */
+.eb-sync-timer.align-right { left: 14px; } 
+.eb-sync-timer.align-left { right: 14px; }
