@@ -20,35 +20,32 @@ function renderMultiplierPath(c) {
     let fillPct = Math.min(100, (elapsedDays / 6) * 100);
     const currentMul = multipliers[currentDayInt - 1];
 
-    // Tính đếm ngược
     const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
     const msLeft = nextBoundary - now;
     let countdownStr = '';
     if (msLeft > 0 && currentDayInt < 7) {
         const h = Math.floor(msLeft / 3600000);
         const m = Math.floor((msLeft % 3600000) / 60000);
-        countdownStr = `${h}h${m}m left`;
+        countdownStr = `${h}h${m}m`; // Đã bỏ chữ 'left' cho ngắn gọn hơn nữa
     } else if (currentDayInt === 7) {
-        countdownStr = 'Final Day';
+        countdownStr = 'Final';
     }
 
-    // Chọn Icon (Đã bỏ 1.4x và sấm sét)
     let runnerIcon = 'fa-running'; 
     if (currentMul >= 1.3) runnerIcon = 'fa-skating'; 
     if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered'; 
 
-    // Render Chấm và Nhãn dàn đều
     let dotsHtml = '';
     let labelsHtml = '';
     multipliers.forEach((mul, i) => {
         const day = i + 1;
         let cls = (day < currentDayInt) ? 'passed' : (day === currentDayInt ? 'active' : '');
         dotsHtml += `<div class="eb-pro-dot ${cls}"></div>`;
-        labelsHtml += `<div class="eb-pro-label ${cls}">${mul}x</div>`;
+        labelsHtml += `<div class="eb-pro-label ${cls}">${mul}</div>`; // Đã bỏ đuôi 'x' ở nhãn dưới để đỡ chật
     });
 
     return `
-        <div class="eb-pro-container">
+        <div class="eb-pro-container" title="Early Bird Boost: ${currentMul}x">
             <div class="eb-pro-top-row">
                 <div class="eb-pro-runner" style="left: ${fillPct}%">
                     <i class="fas ${runnerIcon}"></i>
