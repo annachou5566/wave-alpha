@@ -714,7 +714,7 @@
       let profiles = window._waTpoCache.get(cacheKey);
 
       if (!profiles) {
-        const sessions = C.colorMode === 0 ? [{ start: from, end: to }] : _waTpoGroupByDay(dataList, from, to);
+        const sessions = _waTpoGroupByDay(dataList, from, to);
         profiles = sessions.map((s, idx) => {
           if (s.end - s.start <= 0) return null;
           let maxP = -Infinity, minP = Infinity;
