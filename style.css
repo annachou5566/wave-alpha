@@ -3511,125 +3511,87 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* ===================================================
-   EARLY BIRD BOOST - COMPACT PILL EDITION
-=================================================== */
-.eb-compact-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-    width: 100%;
-}
-
-/* Hệ số 1.4x */
-.eb-mul {
-    font-family: var(--font-num);
-    font-weight: 800;
-    color: var(--brand);
-    font-size: 1.1rem;
-    line-height: 1;
-    text-shadow: 0 0 6px var(--brand-glow);
-    min-width: 36px;
-}
-
-/* Rãnh chạy (Làm dày lên 22px để chứa vừa viên thuốc) */
-.eb-track {
+/* Multiplier Path Styles */
+.multiplier-path-container {
+    margin-top: 6px;
+    width: 140px;
     position: relative;
-    flex-grow: 1;
-    height: 22px; 
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
+    padding-bottom: 12px;
 }
 
-.eb-fill {
-    position: absolute;
-    top: 0; left: 0;
-    height: 100%;
-    border-radius: 20px;
-    background: linear-gradient(90deg, rgba(0,240,255,0.1), var(--brand));
-    box-shadow: 0 0 8px var(--brand-glow);
-    z-index: 1;
-    transition: width 0.3s ease;
-}
-
-.eb-dots {
-    position: absolute;
-    inset: 0;
+.multiplier-path-line {
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    width: 100%;
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 8px;
-    z-index: 2;
 }
 
-.eb-dot {
-    width: 4px; height: 4px;
+.path-dot {
+    width: 6px;
+    height: 6px;
+    background: #333;
     border-radius: 50%;
-    background: rgba(255,255,255,0.2);
-}
-.eb-dot.passed {
-    background: rgba(0,0,0,0.4);
+    position: relative;
+    transition: all 0.3s ease;
 }
 
-/* Icon người chạy */
-.eb-runner {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    background: #171a24;
-    border: 1.5px solid var(--brand);
-    box-shadow: 0 0 10px var(--brand-glow), 0 2px 4px rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--brand);
-    font-size: 12px;
-    z-index: 5;
-    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* SỰ TRỞ LẠI CỦA VIÊN THUỐC (PILL) */
-.eb-countdown-pill {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: rgba(0, 0, 0, 0.55); /* Nền tối mờ để dễ đọc chữ */
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 12px;
-    padding: 2px 8px;
-    font-family: var(--font-num);
-    font-size: 0.65rem;
-    font-weight: 600;
-    z-index: 4;
-    transition: left 0.3s ease, right 0.3s ease;
-}
-
-.eb-countdown-pill .pulse-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
+.path-dot.active {
     background: var(--brand);
-    animation: pulseDot 1.5s ease-in-out infinite;
-    box-shadow: 0 0 5px var(--brand);
+    box-shadow: 0 0 8px var(--brand);
 }
 
-@keyframes pulseDot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.6); }
+.path-dot.passed {
+    background: #848e9c;
 }
 
-/* Vị trí nhảy của viên thuốc */
-.eb-countdown-pill.align-right {
-    right: 4px;
-    color: #fff;
+/* Cây cờ cho ngày hiện tại */
+.path-flag {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: flagFloat 2s infinite ease-in-out;
 }
-.eb-countdown-pill.align-left {
-    left: 4px;
-    color: #fff;
+
+.path-flag i {
+    color: var(--brand);
+    font-size: 10px;
+}
+
+.path-flag .mul-tag {
+    background: var(--brand);
+    color: #000;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 0px 3px;
+    border-radius: 2px;
+    line-height: 1;
+    margin-bottom: 1px;
+}
+
+@keyframes flagFloat {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+/* Tooltip cho từng chấm */
+.path-dot::after {
+    content: attr(data-mul);
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 7px;
+    color: #555;
+    font-weight: bold;
+}
+
+.path-dot.active::after {
+    color: var(--brand);
 }
