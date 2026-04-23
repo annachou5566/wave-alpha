@@ -3512,55 +3512,21 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 
 /* ===================================================
-   EARLY BIRD - MINI & COMPACT (KHÔNG PHÌNH TABLE)
+   EARLY BIRD - MINI (ĐẾM NGƯỢC BÁM SÁT NGƯỜI CHẠY)
 =================================================== */
 .eb-pro-container {
-    width: 120px; /* Ép cứng chiều rộng, không cho phình ra đẩy List */
-    margin-top: 4px;
-    font-family: var(--font-num);
-}
-
-/* Hàng trên: Icon và thời gian siêu nhỏ */
-.eb-pro-top-row {
-    position: relative;
-    height: 16px; /* Hạ chiều cao xuống */
-    width: 100%;
-    display: flex;
-    align-items: center;
+    width: 150px; /* <--- BẠN ĐIỀU CHỈNH CHIỀU DÀI Ở ĐÂY (Ví dụ: 120px, 160px, hoặc 100%) */
+    margin-top: 18px; /* Chừa không gian bên trên cho người chạy và đồng hồ bay */
     margin-bottom: 2px;
+    font-family: var(--font-num);
+    position: relative;
 }
 
-.eb-pro-runner {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    color: var(--brand);
-    font-size: 10px; /* Thu nhỏ icon người chạy */
-    z-index: 5;
-    filter: drop-shadow(0 0 3px var(--brand));
-    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.eb-pro-countdown {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.55rem; /* Thu nhỏ chữ thời gian */
-    color: #848e9c;
-    font-weight: 600;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 1px 5px;
-    border-radius: 3px;
-    pointer-events: none;
-    z-index: 1;
-}
-
-/* Thanh ray mỏng lại */
+/* Thanh ray */
 .eb-pro-track {
     position: relative;
     width: 100%;
-    height: 3px; /* Thanh mỏng hơn */
+    height: 3px; 
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
 }
@@ -3583,13 +3549,54 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 
 .eb-pro-dot {
-    width: 3px; height: 3px; /* Chấm nhỏ xíu */
+    width: 3px; height: 3px; 
     border-radius: 50%;
     background: rgba(255,255,255,0.3);
 }
 .eb-pro-dot.passed { background: var(--brand); box-shadow: 0 0 3px var(--brand); }
 
-/* Nhãn hệ số nhỏ gọn */
+/* Icon người chạy: Trồi lên vạch và giữ tâm chuẩn xác */
+.eb-pro-runner {
+    position: absolute;
+    top: -12px; /* Trồi lên trên vạch tiến trình */
+    transform: translateX(-50%);
+    color: var(--brand);
+    font-size: 12px; 
+    z-index: 5;
+    filter: drop-shadow(0 0 3px var(--brand));
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Đồng hồ đếm ngược bám sát bên cạnh người chạy */
+.eb-pro-countdown {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.6rem; 
+    color: #848e9c;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.65); /* Nền đen mờ để số luôn dễ đọc */
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Vị trí của đồng hồ so với người chạy */
+.eb-pro-countdown.align-right {
+    left: 100%;
+    margin-left: 6px; /* Bám phía bên phải icon */
+}
+.eb-pro-countdown.align-left {
+    right: 100%;
+    margin-right: 6px; /* Nhảy sang bám phía bên trái icon */
+}
+
+/* Nhãn hệ số nhỏ gọn bên dưới */
 .eb-pro-labels-row {
     display: flex;
     justify-content: space-between;

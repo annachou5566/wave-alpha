@@ -26,7 +26,7 @@ function renderMultiplierPath(c) {
     if (msLeft > 0 && currentDayInt < 7) {
         const h = Math.floor(msLeft / 3600000);
         const m = Math.floor((msLeft % 3600000) / 60000);
-        countdownStr = `${h}h${m}m`; // Đã bỏ chữ 'left' cho ngắn gọn hơn nữa
+        countdownStr = `${h}h${m}m`;
     } else if (currentDayInt === 7) {
         countdownStr = 'Final';
     }
@@ -41,21 +41,22 @@ function renderMultiplierPath(c) {
         const day = i + 1;
         let cls = (day < currentDayInt) ? 'passed' : (day === currentDayInt ? 'active' : '');
         dotsHtml += `<div class="eb-pro-dot ${cls}"></div>`;
-        labelsHtml += `<div class="eb-pro-label ${cls}">${mul}</div>`; // Đã bỏ đuôi 'x' ở nhãn dưới để đỡ chật
+        labelsHtml += `<div class="eb-pro-label ${cls}">${mul}</div>`;
     });
+
+    // Nếu icon vượt quá 70% thanh, đẩy chữ đếm ngược sang trái để không bị cắt viền
+    let alignClass = fillPct > 70 ? 'align-left' : 'align-right';
 
     return `
         <div class="eb-pro-container" title="Early Bird Boost: ${currentMul}x">
-            <div class="eb-pro-top-row">
-                <div class="eb-pro-runner" style="left: ${fillPct}%">
-                    <i class="fas ${runnerIcon}"></i>
-                </div>
-                ${countdownStr ? `<div class="eb-pro-countdown">${countdownStr}</div>` : ''}
-            </div>
-            
             <div class="eb-pro-track">
                 <div class="eb-pro-fill" style="width: ${fillPct}%"></div>
                 <div class="eb-pro-dots-row">${dotsHtml}</div>
+                
+                <div class="eb-pro-runner" style="left: ${fillPct}%">
+                    <i class="fas ${runnerIcon}"></i>
+                    ${countdownStr ? `<div class="eb-pro-countdown ${alignClass}">${countdownStr}</div>` : ''}
+                </div>
             </div>
 
             <div class="eb-pro-labels-row">
