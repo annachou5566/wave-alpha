@@ -3511,107 +3511,113 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* ===================================================
-   EARLY BIRD BOOST - COMPACT EDITION
-=================================================== */
-.eb-compact-container {
+/* ===== EARLY BIRD COMPACT / NO-OVERLAP VERSION ===== */
+.multiplier-path-container {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    padding-top: 10px;   /* chỉ chừa vừa đủ cho runner */
+}
+
+.multiplier-path-line {
+    position: relative;
+    height: 4px;
+    width: 100%;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    overflow: visible;
+}
+
+.path-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--brand);
+    opacity: 0.9;
+    transition: width 0.25s ease;
+}
+
+.path-runner {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin-top: -8px; /* chỉ nhô nhẹ lên trên */
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 6px;
-    margin-bottom: 4px;
-    width: 100%;
-}
-
-/* Chữ 1.4x siêu gọn bên trái */
-.eb-mul {
-    font-family: var(--font-num);
-    font-weight: 800;
+    justify-content: center;
+    background: var(--panel-bg, #11161c);
     color: var(--brand);
-    font-size: 1rem;
-    line-height: 1;
-    text-shadow: 0 0 5px var(--brand-glow);
-    min-width: 32px; /* Cố định width để thanh không bị giật khi hệ số đổi */
+    font-size: 9px;
+    border: 1px solid rgba(255,255,255,0.08);
+    z-index: 3;
+    transition: left 0.25s ease;
 }
 
-/* Thanh chạy chính */
-.eb-track {
-    position: relative;
-    flex-grow: 1;
-    height: 14px; /* Đủ độ dày để nhét chữ đếm ngược vào trong */
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-}
-
-/* Vệt sáng lấp đầy */
-.eb-fill {
-    position: absolute;
-    top: 0; left: 0;
-    height: 100%;
-    border-radius: 8px;
-    background: linear-gradient(90deg, rgba(0,240,255,0.1), var(--brand));
-    box-shadow: 0 0 8px var(--brand-glow);
-    z-index: 1;
-    transition: width 0.3s ease;
-}
-
-/* Các mốc chấm */
-.eb-dots {
+.path-dots {
     position: absolute;
     inset: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 4px;
     z-index: 2;
-}
-
-.eb-dot {
-    width: 3px; height: 3px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.3);
-}
-.eb-dot.passed {
-    background: rgba(0,0,0,0.5); /* Chấm tối màu khi nằm trên nền Cyan sáng */
-}
-
-/* Icon người chạy */
-.eb-runner {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: #171a24;
-    border: 1px solid var(--brand);
-    box-shadow: 0 0 8px var(--brand-glow), 0 2px 4px rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--brand);
-    font-size: 10px;
-    z-index: 5;
-    transition: left 0.3s ease;
-}
-
-/* Đồng hồ đếm ngược nằm hẳn TRONG thanh tiến trình */
-.eb-countdown {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-family: var(--font-num);
-    font-size: 0.65rem;
-    font-weight: 700;
-    z-index: 4;
     pointer-events: none;
 }
 
-/* Trạng thái 1: Nằm bên phải (chờ người chạy tới) */
-.eb-countdown.align-right {
-    right: 6px;
-    color: #848e9c;
+.path-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.16);
 }
 
-/* Trạng thái 2: Nhảy qua trái (khi người chạy áp sát) */
-.eb-countdown.align-left {
-    left: 6px;
-    color: #000; /* Đổi sang màu đen để nổi bật trên nền vệt sáng Cyan */
+.path-dot.passed {
+    background: var(--brand);
+}
+
+.path-dot.current {
+    background: var(--brand);
+    transform: scale(1.2);
+}
+
+.multiplier-path-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+    min-width: 0;
+}
+
+.multiplier-badge-compact {
+    font-family: var(--font-num);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--brand);
+    line-height: 1;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.countdown-text {
+    font-family: var(--font-num);
+    font-size: 0.66rem;
+    color: #848e9c;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1 1 auto;
+    text-align: right;
+}
+
+/* nếu khu vực quá chật thì tự ẩn countdown */
+@media (max-width: 420px) {
+    .countdown-text.is-optional {
+        display: none;
+    }
 }
