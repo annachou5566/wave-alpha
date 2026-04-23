@@ -3,8 +3,11 @@ function formatCompact(num) {
 }
 
 function renderMultiplierPath(c) {
-    // THÊM ĐIỀU KIỆN: Chỉ render nếu giải đấu này được Admin bật tính năng Early Bird
-    if (!c || !c.earlyBird) return ''; 
+    // Tự động tìm biến earlyBird ở lớp ngoài hoặc lớp data bên trong
+    let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
+    
+    // Nếu giải đấu không có ngày bắt đầu hoặc không bật tính năng này thì ẩn đi
+    if (!c || !c.start || !isEarlyBird) return ''; 
     
     const now = new Date();
     const startTime = new Date(c.start + 'T' + (c.startTime || "13:00:00") + 'Z');
