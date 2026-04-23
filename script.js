@@ -4,76 +4,62 @@ function formatCompact(num) {
 
 function renderMultiplierPath(c) {
     let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
-    if (!c || !c.start || !isEarlyBird) return '';
+    if (!c || !c.start || !isEarlyBird) return ''; 
 
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
-    
+
     let sTime = c.startTime || "13:00:00";
     if (sTime.length === 5) sTime += ":00";
-
+    
     const now = new Date();
     const startTime = new Date(c.start + 'T' + sTime + 'Z');
     const diffMs = now - startTime;
-
+    
     let elapsedDays = Math.max(0, diffMs / 86400000);
     let currentDayInt = Math.min(7, Math.floor(elapsedDays) + 1);
     let fillPct = Math.min(100, (elapsedDays / 6) * 100);
     
     const currentMul = multipliers[currentDayInt - 1];
 
-    // Hàng trên cùng: Đếm ngược
+    // Tính đếm ngược
     const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
     const msLeft = nextBoundary - now;
     let countdownStr = '';
+    
     if (msLeft > 0 && currentDayInt < 7) {
         const h = Math.floor(msLeft / 3600000);
         const m = Math.floor((msLeft % 3600000) / 60000);
         countdownStr = `${h}h ${m}m`;
     } else if (currentDayInt === 7) {
-        countdownStr = 'Final day';
+        countdownStr = 'Final';
     }
 
-    // Icon chạy sinh động
-    let runnerIcon = 'fa-running';
-    if (currentMul >= 1.3) runnerIcon = 'fa-skating';
-    if (currentMul === 1.1) runnerIcon = 'fa-walking';
-    if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered';
+    // Icon chạy tùy theo tốc độ (vẫn giữ độ sinh động)
+    let runnerIcon = 'fa-running'; 
+    if (currentMul >= 1.3) runnerIcon = 'fa-skating'; 
+    if (currentMul === 1.1) runnerIcon = 'fa-walking'; 
+    if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered'; 
 
-    // Xây dựng các mốc
+    // Các mốc (dots)
     let dotsHtml = '';
     multipliers.forEach((mul, i) => {
         const d = i + 1;
-        let dotCls = 'path-dot';
-        let lblCls = 'path-dot-label';
-        
-        if (d <= currentDayInt) dotCls += ' passed';
-        if (d === currentDayInt) lblCls += ' active';
-        
-        dotsHtml += `
-            <div class="path-dot-wrapper">
-                <div class="${dotCls}"></div>
-                <div class="${lblCls}">${mul}x</div>
-            </div>`;
+        dotsHtml += `<div class="eb-dot ${d <= currentDayInt ? 'passed' : ''}" title="Ngày ${d}: ${mul}x"></div>`;
     });
 
+    // LOGIC NHẢY CHỮ: Nếu icon chạy qua 60% thanh, chữ nhảy sang trái
+    let alignClass = fillPct > 60 ? 'align-left' : 'align-right';
+
     return `
-        <div class="multiplier-path-container" title="Early Bird Boost">
-            <div class="multiplier-path-header">
-                <span class="mph-title"><i class="fas fa-bolt text-brand"></i> EARLY BIRD</span>
-                ${countdownStr ? `
-                <div class="countdown-pill">
-                    <i class="far fa-clock"></i> ${countdownStr}
-                </div>` : ''}
-            </div>
-            
-            <div class="multiplier-path-track">
-                <div class="path-fill" style="width:${fillPct}%"></div>
-                
-                <div class="path-runner-pill" style="left:${fillPct}%">
-                    <i class="fas ${runnerIcon}"></i> ${currentMul}x
+        <div class="eb-compact-container" title="Early Bird Boost">
+            <div class="eb-mul">${currentMul}x</div>
+            <div class="eb-track">
+                <div class="eb-fill" style="width:${fillPct}%"></div>
+                <div class="eb-dots">${dotsHtml}</div>
+                <div class="eb-runner" style="left:${fillPct}%">
+                    <i class="fas ${runnerIcon}"></i>
                 </div>
-                
-                <div class="path-dots">${dotsHtml}</div>
+                ${countdownStr ? `<div class="eb-countdown ${alignClass}">${countdownStr}</div>` : ''}
             </div>
         </div>`;
 }

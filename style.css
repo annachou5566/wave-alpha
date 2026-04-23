@@ -3512,122 +3512,106 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 
 /* ===================================================
-   EARLY BIRD BOOST - FINAL PRO UI
+   EARLY BIRD BOOST - COMPACT EDITION
 =================================================== */
-.multiplier-path-container {
-    margin-top: 8px;
+.eb-compact-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    margin-bottom: 4px;
     width: 100%;
-    position: relative;
-    padding-bottom: 12px; /* Chừa chỗ cho các số mốc nhỏ xíu bên dưới */
 }
 
-/* Hàng trên cùng: Tiêu đề & Đếm ngược */
-.multiplier-path-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px; /* Chừa không gian cho Runner chạy ở giữa */
-}
-
-.mph-title {
-    font-size: 0.65rem;
-    color: var(--text-sub);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.countdown-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 4px;
-    padding: 2px 6px;
+/* Chữ 1.4x siêu gọn bên trái */
+.eb-mul {
     font-family: var(--font-num);
-    font-size: 0.65rem;
-    color: var(--brand);
-    font-weight: 600;
-}
-
-/* Thanh Tiến Trình */
-.multiplier-path-track {
-    position: relative;
-    height: 4px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    margin: 0 4px; /* Tránh cho các chấm bị dính sát lề */
-}
-
-.path-fill {
-    position: absolute;
-    top: 0; left: 0; height: 100%;
-    background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), var(--brand));
-    box-shadow: 0 0 8px rgba(0, 240, 255, 0.45);
-    border-radius: 10px;
-    transition: width 0.3s ease-in-out;
-}
-
-/* Cụm Runner + Text Hệ số (Di chuyển cùng nhau) */
-.path-runner-pill {
-    position: absolute;
-    top: -18px; /* Nằm ngay trên vạch */
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    background: #171a24;
-    border: 1px solid var(--brand);
-    border-radius: 12px;
-    padding: 2px 6px;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
-    color: var(--brand);
-    font-size: 10px;
     font-weight: 800;
-    font-family: var(--font-num);
-    z-index: 10;
-    transition: left 0.3s ease-out;
-    white-space: nowrap;
+    color: var(--brand);
+    font-size: 1rem;
+    line-height: 1;
+    text-shadow: 0 0 5px var(--brand-glow);
+    min-width: 32px; /* Cố định width để thanh không bị giật khi hệ số đổi */
 }
 
-/* Dấu chấm mốc và Các số nhỏ xíu */
-.path-dots {
+/* Thanh chạy chính */
+.eb-track {
+    position: relative;
+    flex-grow: 1;
+    height: 14px; /* Đủ độ dày để nhét chữ đếm ngược vào trong */
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+/* Vệt sáng lấp đầy */
+.eb-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(0,240,255,0.1), var(--brand));
+    box-shadow: 0 0 8px var(--brand-glow);
+    z-index: 1;
+    transition: width 0.3s ease;
+}
+
+/* Các mốc chấm */
+.eb-dots {
     position: absolute;
     inset: 0;
-    top: 0;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    padding: 0 4px;
+    z-index: 2;
+}
+
+.eb-dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+}
+.eb-dot.passed {
+    background: rgba(0,0,0,0.5); /* Chấm tối màu khi nằm trên nền Cyan sáng */
+}
+
+/* Icon người chạy */
+.eb-runner {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #171a24;
+    border: 1px solid var(--brand);
+    box-shadow: 0 0 8px var(--brand-glow), 0 2px 4px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand);
+    font-size: 10px;
+    z-index: 5;
+    transition: left 0.3s ease;
+}
+
+/* Đồng hồ đếm ngược nằm hẳn TRONG thanh tiến trình */
+.eb-countdown {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-num);
+    font-size: 0.65rem;
+    font-weight: 700;
+    z-index: 4;
     pointer-events: none;
 }
 
-.path-dot-wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+/* Trạng thái 1: Nằm bên phải (chờ người chạy tới) */
+.eb-countdown.align-right {
+    right: 6px;
+    color: #848e9c;
 }
 
-.path-dot {
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.2);
-    z-index: 1;
-}
-
-.path-dot.passed { background: var(--brand); }
-
-/* Các số mốc nhỏ xíu xiu đính chặt dưới chấm */
-.path-dot-label {
-    position: absolute;
-    top: 6px; /* Cách dấu chấm 2px */
-    font-family: var(--font-num);
-    font-size: 8px; /* Thu nhỏ tuyệt đối để không đè nhau */
-    color: rgba(255,255,255,0.3);
-    font-weight: 600;
-}
-
-.path-dot-label.active {
-    color: var(--brand);
-    text-shadow: 0 0 3px var(--brand);
+/* Trạng thái 2: Nhảy qua trái (khi người chạy áp sát) */
+.eb-countdown.align-left {
+    left: 6px;
+    color: #000; /* Đổi sang màu đen để nổi bật trên nền vệt sáng Cyan */
 }
