@@ -1552,7 +1552,7 @@ function roundRect(ctx, x, y, w, h, r) {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.4 — SMART ENGINE (FIXED X-AXIS OFFSET & ALIGNMENT BUGS)
+//  WAVE_TPO ULTIMATE v4.2 — SMART ENGINE (FIXED: API + GEAR PANEL + RENDERING)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -1579,7 +1579,9 @@ function roundRect(ctx, x, y, w, h, r) {
       return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
   }
 
-  function _waTpoGetDash(styleIdx) { return styleIdx === 1 ? [2, 3] : styleIdx === 2 ? [] : [6, 4]; }
+  function _waTpoGetDash(styleIdx) {
+      return styleIdx === 1 ? [2, 3] : styleIdx === 2 ? [] : [6, 4];
+  }
 
   function _waTpoGetLetter(n) {
       if (n < 26) return String.fromCharCode(65 + n);
@@ -1589,16 +1591,30 @@ function roundRect(ctx, x, y, w, h, r) {
 
   const _WA_TPO_SESSION_PALETTE = ['#4A148C', '#6A1B9A', '#8E24AA', '#AB47BC', '#00BCD4'];
 
-  // ─── AI MARKET PROFILE ──────────────────────────────────────────────────
+  // ─── DEFAULT COLORS (tách ra khỏi calcParams để gear panel không bị vỡ) ────
+  const _WA_DEFAULTS = {
+      clrVA:       "#9C27B0", clrOut:     "#7B1FA2", clrPoc:       "#F0B90B",
+      clrNpoc:     "#FF9800", clrSuperPoc:"#F0B90B", clrVaLine:    "#BA68C8",
+      clrIbHigh:   "#FFD600", clrIbLow:   "#FFD600", clrImbalBuy:  "#26A69A",
+      clrImbalSell:"#EF5350", clrAccept:  "#42A5F5", clrReject:    "#FF7043"
+  };
+
+  // ─── LÕI AI MARKET PROFILE ──────────────────────────────────────────────────
   function _waTpoClassifyProfileShape(bins, pocIdx) {
       const counts = bins.map(b => b.count), total = counts.reduce((a, b) => a + b, 0);
       if (!total) return 'UNDEFINED';
       let top = 0, bot = 0;
-      for (let i = 0; i < counts.length; i++) { if (i > pocIdx) top += counts[i]; else if (i < pocIdx) bot += counts[i]; }
+      for (let i = 0; i < counts.length; i++) {
+          if (i > pocIdx) top += counts[i]; else if (i < pocIdx) bot += counts[i];
+      }
       const skew = (top - bot) / Math.max(1, top + bot);
       let peaks = 0;
-      for (let i = 1; i < counts.length - 1; i++) if (counts[i] >= counts[i - 1] && counts[i] >= counts[i + 1] && counts[i] > 0) peaks++;
-      if (peaks >= 2) return 'B_SHAPE'; if (skew > 0.18) return 'P_SHAPE'; if (skew < -0.18) return 'b_SHAPE'; return 'D_SHAPE';
+      for (let i = 1; i < counts.length - 1; i++)
+          if (counts[i] >= counts[i - 1] && counts[i] >= counts[i + 1] && counts[i] > 0) peaks++;
+      if (peaks >= 2) return 'B_SHAPE';
+      if (skew > 0.18) return 'P_SHAPE';
+      if (skew < -0.18) return 'b_SHAPE';
+      return 'D_SHAPE';
   }
 
   function _waTpoDetectExcessTail(bins) {
@@ -1607,7 +1623,8 @@ function roundRect(ctx, x, y, w, h, r) {
       const avg = nz.reduce((s, b) => s + b.count, 0) / nz.length;
       return {
           bottom: nz[0] && nz[0].count <= Math.max(2, avg * 0.25) && (!nz[1] || nz[1].count > nz[0].count),
-          top: nz[nz.length - 1] && nz[nz.length - 1].count <= Math.max(2, avg * 0.25) && (!nz[nz.length - 2] || nz[nz.length - 2].count > nz[nz.length - 1].count)
+          top:    nz[nz.length - 1] && nz[nz.length - 1].count <= Math.max(2, avg * 0.25) &&
+                  (!nz[nz.length - 2] || nz[nz.length - 2].count > nz[nz.length - 1].count)
       };
   }
 
@@ -1637,10 +1654,26 @@ function roundRect(ctx, x, y, w, h, r) {
       return 'BALANCED_AUCTION';
   }
 
+  function _waTpoGroupByDay(dataList, from, to) {
+      const groups = new Map();
+      for (let i = from; i < to; i++) {
+          const d = dataList[i];
+          // FIX: KLineChart dùng 'timestamp' (ms). Bỏ fallback d.date tránh NaN.
+          const ts = d ? (d.timestamp ?? d.time ?? null) : null;
+          if (!ts || isNaN(ts)) continue;
+          const dt = new Date(ts);
+          const key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
+          if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
+          else groups.get(key).end = i + 1;
+      }
+      return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10);
+  }
+
   function _waCheckSuperPoc(pocMid, step) {
       if (!window._waVpvrCache || window._waVpvrCache.size === 0) return false;
       for (const cached of window._waVpvrCache.values()) {
-          const p = []; if (cached.mainProfile) p.push(cached.mainProfile);
+          const p = [];
+          if (cached.mainProfile) p.push(cached.mainProfile);
           if (cached.sessions) cached.sessions.forEach(s => s.profile && p.push(s.profile));
           for (const vp of p) {
               if (!vp || !vp.poc) continue;
@@ -1650,109 +1683,108 @@ function roundRect(ctx, x, y, w, h, r) {
       return false;
   }
 
-  // ─── THUẬT TOÁN NHÓM THỜI GIAN CHUẨN UTC ────────────────────
-  function _waTpoGroupData(dataList, from, to, mode) {
-      if (mode === 0) return [{ start: from, end: to }]; // 0: Gom toàn bộ màn hình (Cả Chart)
-
-      const groups = new Map();
-      for (let i = from; i < to; i++) {
-          const d = dataList[i];
-          const ts = d ? (d.timestamp ?? d.time ?? null) : null;
-          if (!ts || isNaN(ts)) continue;
-
-          const dt = new Date(ts);
-          let key;
-
-          if (mode === 1) { // 1: Từng Ngày
-              key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
-          } else { // 2: Từng Tuần (Thứ Hai làm gốc)
-              const day = dt.getUTCDay();
-              const diff = dt.getUTCDate() - day + (day === 0 ? -6 : 1);
-              const monday = new Date(dt.getTime());
-              monday.setUTCDate(diff);
-              key = monday.getUTCFullYear() * 10000 + (monday.getUTCMonth() + 1) * 100 + monday.getUTCDate();
-          }
-
-          if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
-          else groups.get(key).end = i + 1;
-      }
-      return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10);
-  }
-
-  // ─── HELPER PIXEL (ĐÃ FIX LỖI TỌA ĐỘ TRỤC X CỦA KLINECHART V9) ─────────────────
+  // ─── HELPER: Chuyển đổi pixel đúng API KLineChart ─────────────────────────
+  // FIX CHÍNH: yAxis.convertToPixel(price) → KHÔNG TỒN TẠI trong draw callback.
+  // Phải dùng helper function bắt yAxis object để tìm đúng method.
   function _getYPixel(yAxis, price) {
       if (!yAxis) return null;
+      // KLineChart v9: yAxis có method convertToPixel nhận object
       if (typeof yAxis.convertToPixel === 'function') {
-          const res = yAxis.convertToPixel(price);
-          return typeof res === 'number' ? res : (res?.y ?? null);
+          const result = yAxis.convertToPixel(price);
+          // Trả về số trực tiếp hoặc object {y}
+          if (typeof result === 'number') return result;
+          if (result && typeof result.y === 'number') return result.y;
       }
-      return typeof yAxis.getCoordinate === 'function' ? yAxis.getCoordinate(price) : null;
+      // Fallback: thử method getCoordinate (một số build dùng tên này)
+      if (typeof yAxis.getCoordinate === 'function') {
+          return yAxis.getCoordinate(price);
+      }
+      return null;
   }
 
   function _getXPixel(xAxis, dataIndex) {
       if (!xAxis) return null;
+      // FIX: Truyền object {dataIndex} thay vì số raw
       if (typeof xAxis.convertToPixel === 'function') {
-          // FIX TỬ HUYỆT: Tuyệt đối không bọc object {dataIndex} ở đây! Phải truyền số nguyên.
-          const res = xAxis.convertToPixel(dataIndex);
-          return typeof res === 'number' ? res : (res?.x ?? null);
+          const result = xAxis.convertToPixel({ dataIndex });
+          if (typeof result === 'number') return result;
+          if (result && typeof result.x === 'number') return result.x;
       }
-      return typeof xAxis.getCoordinate === 'function' ? xAxis.getCoordinate(dataIndex) : null;
+      if (typeof xAxis.getCoordinate === 'function') {
+          return xAxis.getCoordinate(dataIndex);
+      }
+      return null;
   }
 
-  // ─── ĐĂNG KÝ VÀ VẼ ───────────────────────────────────────────────────────
+  // ─── ĐĂNG KÝ VÀ VẼ ──────────────────────────────────────────────────────────
   kc.registerIndicator({
-      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.4',
-      category: 'wave_alpha', series: 'price', isStack: true,
-      createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
-      
-      calcParams: [
-          60, 70, 1, 0, 1, 0, 1, 1, 
-          "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
-          "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
-          "#42A5F5", "#FF7043",
-          85, 20, 2, 1, 0, 10, 1, 70, 8, 1
-      ],
+      name: 'WAVE_TPO',
+      shortName: 'TPO',
+      description: 'Time Price Opportunity SMART v4.2',
+      category: 'wave_alpha',
+      series: 'price',
+      isStack: true,
+
+      createTooltipDataSource: function() {
+          return { name: 'TPO', calcParamsText: ' ', values: [] };
+      },
+
+      // FIX QUAN TRỌNG: calcParams chỉ chứa SỐ để gear panel hoạt động.
+      // Màu hex được tách ra khỏi đây, lưu trong _WA_DEFAULTS.
+      // Bố cục 16 params số (index 0-15):
+      //  0: rowCount         1: vaPercent        2: isLeft (0/1)
+      //  3: useLetter (0/1)  4: colorMode (0-2)  5: densityMode (0/1)
+      //  6: smartLabels      7: opVA (0-100)      8: opOut (0-100)
+      //  9: pocW             10: vaW             11: vaStyle (0-2)
+      // 12: fontSize        13: showLabels       14: fade (0-100)
+      // 15: minLtrPx        16: verbosity
+      calcParams: [60, 70, 0, 0, 0, 1, 1, 85, 20, 2, 1, 0, 10, 1, 70, 8, 1],
+
       figures: [],
-      calc: function(dataList) { return dataList.map(() => ({})); },
+
+      calc: function(dataList) {
+          return dataList.map(() => ({}));
+      },
+
       draw: function({ ctx, bounding, xAxis, yAxis, visibleRange, indicator, dataList }) {
           if (!dataList || dataList.length === 0 || !bounding) return false;
 
           const p = indicator.calcParams;
+          // FIX: Đọc params theo index mới (chỉ số, không có màu)
           const C = {
               rowCount:    Math.max(10, Math.min(200, +(p[0]  ?? 60))),
               vaPercent:   Math.max(10, Math.min(100, +(p[1]  ?? 70))),
-              groupMode:   +(p[2] ?? 1), 
-              isLeft:      +(p[3] ?? 0) === 0,
-              useLetter:   +(p[4] ?? 1) === 1,
-              colorMode:   +(p[5] ?? 0),
-              densityMode: +(p[6] ?? 1),
-              smartLabels: +(p[7] ?? 1) === 1,
-              
-              clrVA: p[8], clrOut: p[9], clrPoc: p[10], clrNpoc: p[11], clrSuperPoc: p[12],
-              clrVaLine: p[13], clrIbHigh: p[14], clrIbLow: p[15], clrImbalBuy: p[16], 
-              clrImbalSell: p[17], clrAccept: p[18], clrReject: p[19],
-              
-              opVA:        Math.max(0, Math.min(100, +(p[20] ?? 85))) / 100,
-              opOut:       Math.max(0, Math.min(100, +(p[21] ?? 20))) / 100,
-              pocW:        Math.max(1, +(p[22] ?? 2)),
-              vaW:         Math.max(1, +(p[23] ?? 1)),
-              vaStyle:     Math.round(+(p[24] ?? 0)),
-              fontSize:    Math.max(8, +(p[25] ?? 10)),
-              showLabels:  +(p[26] ?? 1) === 1,
-              fade:        Math.max(0, +(p[27] ?? 70)) / 100,
-              minLtrPx:    Math.max(6, +(p[28] ?? 8)),
-              verbosity:   Math.round(+(p[29] ?? 1)),
+              isLeft:      +(p[2]  ?? 0) === 0,
+              useLetter:   +(p[3]  ?? 0) === 1,
+              colorMode:   +(p[4]  ?? 0),
+              densityMode: +(p[5]  ?? 1),
+              smartLabels: +(p[6]  ?? 1) === 1,
+              opVA:        Math.max(0, Math.min(100, +(p[7]  ?? 85))) / 100,
+              opOut:       Math.max(0, Math.min(100, +(p[8]  ?? 20))) / 100,
+              pocW:        Math.max(1, +(p[9]  ?? 2)),
+              vaW:         Math.max(1, +(p[10] ?? 1)),
+              vaStyle:     Math.round(+(p[11] ?? 0)),
+              fontSize:    Math.max(8, +(p[12] ?? 10)),
+              showLabels:  +(p[13] ?? 1) === 1,
+              fade:        Math.max(0, +(p[14] ?? 70)) / 100,
+              minLtrPx:    Math.max(6, +(p[15] ?? 8)),
+              verbosity:   Math.round(+(p[16] ?? 1)),
+              // Màu lấy từ defaults (không thay đổi qua calcParams)
+              ..._WA_DEFAULTS
           };
 
           const { from, to } = visibleRange || { from: 0, to: dataList.length };
           if (from >= to) return false;
 
+          // FIX: Thêm bounding.height vào cache key để invalidate khi resize
           const lastClose = dataList[to - 1]?.close ?? 0;
-          const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.groupMode}_${lastClose}_${bounding.width}_${bounding.height}`;
+          const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.colorMode}_${lastClose}_${bounding.width}_${bounding.height}`;
           let profiles = window._waTpoCache.get(cacheKey);
 
           if (!profiles) {
-              const sessions = _waTpoGroupData(dataList, from, to, C.groupMode);
+              const sessions = C.colorMode === 0
+                  ? [{ start: from, end: to }]
+                  : _waTpoGroupByDay(dataList, from, to);
 
               profiles = sessions.map((s, idx) => {
                   if (s.end - s.start <= 0) return null;
@@ -1767,7 +1799,10 @@ function roundRect(ctx, x, y, w, h, r) {
                   const step = (maxP - minP) / C.rowCount;
                   let totalTPO = 0;
                   const bins = Array.from({ length: C.rowCount }, (_, i) => ({
-                      idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step, count: 0, letters: [], inVA: false
+                      idx: i,
+                      pLow:  minP + i * step,
+                      pHigh: minP + (i + 1) * step,
+                      count: 0, letters: [], inVA: false
                   }));
 
                   for (let i = s.start; i < s.end; i++) {
@@ -1775,7 +1810,11 @@ function roundRect(ctx, x, y, w, h, r) {
                       const d = dataList[i], lIdx = i - s.start;
                       const sI = Math.max(0, Math.floor((d.low  - minP) / step));
                       const eI = Math.min(C.rowCount - 1, Math.floor((d.high - minP) / step));
-                      for (let j = sI; j <= eI; j++) { bins[j].count++; bins[j].letters.push(lIdx); totalTPO++; }
+                      for (let j = sI; j <= eI; j++) {
+                          bins[j].count++;
+                          bins[j].letters.push(lIdx);
+                          totalTPO++;
+                      }
                   }
                   if (totalTPO === 0) return null;
 
@@ -1786,17 +1825,22 @@ function roundRect(ctx, x, y, w, h, r) {
                   let curVA = pocBin.count, ui = pocBin.idx + 1, di = pocBin.idx - 1;
                   while (curVA < totalTPO * (C.vaPercent / 100) && (ui < C.rowCount || di >= 0)) {
                       let vu = 0, vd = 0;
-                      if (ui < C.rowCount) vu += bins[ui].count; if (ui + 1 < C.rowCount) vu += bins[ui + 1].count;
-                      if (di >= 0) vd += bins[di].count; if (di - 1 >= 0) vd += bins[di - 1].count;
-                      if (vu >= vd && ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
-                      else if (di >= 0) { bins[di].inVA = true; curVA += bins[di].count; di--; }
-                      else if (ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
-                      else break;
+                      if (ui < C.rowCount) vu += bins[ui].count;
+                      if (ui + 1 < C.rowCount) vu += bins[ui + 1].count;
+                      if (di >= 0) vd += bins[di].count;
+                      if (di - 1 >= 0) vd += bins[di - 1].count;
+                      if (vu >= vd && ui < C.rowCount) {
+                          bins[ui].inVA = true; curVA += bins[ui].count; ui++;
+                      } else if (di >= 0) {
+                          bins[di].inVA = true; curVA += bins[di].count; di--;
+                      } else if (ui < C.rowCount) {
+                          bins[ui].inVA = true; curVA += bins[ui].count; ui++;
+                      } else break;
                   }
 
                   let vahBin = null, valBin = null;
                   for (let i = C.rowCount - 1; i >= 0; i--) if (bins[i].inVA && !vahBin) vahBin = bins[i];
-                  for (let i = 0;              i <  C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
+                  for (let i = 0;               i <  C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
 
                   let ibHigh = null, ibLow = null;
                   if (s.end - s.start >= 2) {
@@ -1807,7 +1851,9 @@ function roundRect(ctx, x, y, w, h, r) {
                   const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
                   let isNaked = true;
                   for (let i = s.end; i < dataList.length; i++) {
-                      if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) { isNaked = false; break; }
+                      if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) {
+                          isNaked = false; break;
+                      }
                   }
 
                   let topC = 0, botC = 0;
@@ -1818,24 +1864,32 @@ function roundRect(ctx, x, y, w, h, r) {
                       }
                   });
                   let imb = 'BALANCED';
-                  if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3) imb = topC > botC ? 'BUYING' : 'SELLING';
+                  if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3)
+                      imb = topC > botC ? 'BUYING' : 'SELLING';
 
                   const closePrice = dataList[s.end - 1]?.close ?? pocMid;
                   const closePos   = (closePrice - minP) / Math.max(1e-9, maxP - minP);
                   const inValueClose = !!(valBin && vahBin && closePrice >= valBin.pLow && closePrice <= vahBin.pHigh);
 
                   const prof = {
-                      bins, maxTPO, pocBin, pocMid, vahBin, valBin, ibHigh, ibLow, imbalance: imb, isNaked,
-                      totalTPO, minP, maxP, step, startIdx: s.start, endIdx: s.end, close: closePrice, closePos, inValueClose,
+                      bins, maxTPO, pocBin, pocMid, vahBin, valBin,
+                      ibHigh, ibLow, imbalance: imb, isNaked,
+                      totalTPO, minP, maxP, step,
+                      startIdx: s.start, endIdx: s.end,
+                      close: closePrice, closePos, inValueClose,
                       sessionIdx: idx, sessionTotal: sessions.length
                   };
 
-                  prof.shape        = _waTpoClassifyProfileShape(bins, pocBin.idx);
-                  const exc         = _waTpoDetectExcessTail(bins); prof.excessTop = exc.top; prof.excessBottom = exc.bottom;
-                  const poor        = _waTpoDetectPoorHighLow(bins); prof.poorHigh = poor.poorHigh; prof.poorLow = poor.poorLow;
-                  prof.dayType      = _waTpoClassifyDayType(prof, dataList);
-                  prof.auctionState = _waTpoAuctionState(prof);
-                  prof.isSuperPoc   = _waCheckSuperPoc(pocMid, step);
+                  prof.shape       = _waTpoClassifyProfileShape(bins, pocBin.idx);
+                  const exc        = _waTpoDetectExcessTail(bins);
+                  prof.excessTop   = exc.top;
+                  prof.excessBottom= exc.bottom;
+                  const poor       = _waTpoDetectPoorHighLow(bins);
+                  prof.poorHigh    = poor.poorHigh;
+                  prof.poorLow     = poor.poorLow;
+                  prof.dayType     = _waTpoClassifyDayType(prof, dataList);
+                  prof.auctionState= _waTpoAuctionState(prof);
+                  prof.isSuperPoc  = _waCheckSuperPoc(pocMid, step);
 
                   return prof;
               }).filter(Boolean);
@@ -1853,38 +1907,45 @@ function roundRect(ctx, x, y, w, h, r) {
               const compactMode= C.densityMode === 0 || pxPerBar < 3;
 
               profiles.forEach((prof) => {
+                  // ── TÍNH anchorX và maxBlocksPx ──────────────────────────────
                   let anchorX, dir, maxBlocksPx;
-                  
-                  if (C.groupMode === 0) {
+                  if (C.colorMode === 0) {
                       anchorX     = C.isLeft ? 0 : bounding.width;
                       dir         = C.isLeft ? 1 : -1;
                       maxBlocksPx = bounding.width * (compactMode ? 0.28 : 0.35);
                   } else {
+                      // FIX: Dùng _getXPixel với object {dataIndex} thay vì số raw
                       anchorX     = _getXPixel(xAxis, prof.startIdx) ?? 0;
                       dir         = 1;
                       maxBlocksPx = bounding.width * (compactMode ? 0.16 : 0.22);
                   }
 
+                  // ── MÀU & ALPHA THEO PHIÊN ───────────────────────────────────
                   let baseClr = C.clrVA, outClr = C.clrOut, alphaMul = 1;
-                  if (C.colorMode === 1) { 
+                  if (C.colorMode === 1) {
                       const ratio = prof.sessionTotal <= 1 ? 0 : prof.sessionIdx / (prof.sessionTotal - 1);
                       baseClr = outClr = _WA_TPO_SESSION_PALETTE[Math.min(4, Math.floor(ratio * 4))];
                       alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + ratio * C.fade;
-                  } else if (C.colorMode === 2) { 
-                      alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
+                  } else if (C.colorMode === 2) {
+                      const ratio = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
+                      alphaMul = ratio;
                   }
 
                   const unitW    = maxBlocksPx / Math.max(1, prof.maxTPO);
                   const stepDraw = (compactMode && !C.useLetter) ? 2 : 1;
 
+                  // ── VẼ BINS ──────────────────────────────────────────────────
                   prof.bins.forEach(bin => {
                       if (bin.count <= 0) return;
 
+                      // FIX: Dùng _getYPixel helper thay vì yAxis.convertToPixel(val) trực tiếp
                       const yB = _getYPixel(yAxis, bin.pLow);
                       const yT = _getYPixel(yAxis, bin.pHigh);
                       if (yB == null || yT == null) return;
 
-                      const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT)), blockW = Math.max(1, Math.min(rH, unitW));
+                      const rY = Math.min(yT, yB);
+                      const rH = Math.max(1, Math.abs(yB - yT));
+                      const blockW = Math.max(1, Math.min(rH, unitW));
                       const safeFontSize = Math.floor(Math.min(blockW, rH, C.fontSize));
                       const canLetter = C.useLetter && rH >= 6 && blockW >= C.minLtrPx;
 
@@ -1895,11 +1956,13 @@ function roundRect(ctx, x, y, w, h, r) {
 
                       if (canLetter) {
                           ctx.font        = `bold ${safeFontSize}px monospace`;
-                          ctx.textBaseline= 'middle'; ctx.textAlign   = 'center';
+                          ctx.textBaseline= 'middle';
+                          ctx.textAlign   = 'center';
                           bin.letters.forEach((lIdx, pos) => {
                               if (pos % stepDraw === 0) {
-                                  // FIX LỖI TRÀN PHẢI: Tính toán tọa độ bù trừ chính xác khi xem bên phải
-                                  const lx = dir > 0 ? anchorX + pos * blockW + blockW / 2 : anchorX - pos * blockW - blockW / 2;
+                                  const lx = dir > 0
+                                      ? anchorX + pos * blockW + blockW / 2
+                                      : anchorX + dir * (pos * blockW) + blockW / 2;
                                   ctx.fillText(_waTpoGetLetter(lIdx), lx, rY + rH / 2);
                               }
                           });
@@ -1907,8 +1970,9 @@ function roundRect(ctx, x, y, w, h, r) {
                           ctx.beginPath();
                           bin.letters.forEach((lIdx, pos) => {
                               if (pos % stepDraw === 0) {
-                                  // FIX LỖI TRÀN PHẢI DẠNG KHỐI
-                                  const bx = dir > 0 ? anchorX + pos * blockW : anchorX - (pos + 1) * blockW;
+                                  const bx = dir > 0
+                                      ? anchorX + pos * blockW
+                                      : anchorX + dir * (pos * blockW);
                                   ctx.rect(bx, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
                               }
                           });
@@ -1916,72 +1980,97 @@ function roundRect(ctx, x, y, w, h, r) {
                       }
                   });
 
-                  // VẼ CÁC ĐƯỜNG MỨC
+                  // ── VẼ ĐƯỜNG MỨC & NHÃN ─────────────────────────────────────
                   const drawLvl = (price, clr, w, dash, txt, isIB = false) => {
-                      const y = _getYPixel(yAxis, price); if (y == null) return;
-                      ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85); ctx.lineWidth   = w; ctx.setLineDash(dash);
+                      // FIX: Dùng _getYPixel
+                      const y = _getYPixel(yAxis, price);
+                      if (y == null) return;
+
+                      ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85);
+                      ctx.lineWidth   = w;
+                      ctx.setLineDash(dash);
                       ctx.beginPath();
-                      const lineStart = C.groupMode === 0 ? 0 : anchorX;
-                      const lineEnd   = C.groupMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
-                      ctx.moveTo(lineStart, y); ctx.lineTo(lineEnd, y); ctx.stroke(); ctx.setLineDash([]);
+
+                      const lineStart = C.colorMode === 0 ? 0 : anchorX;
+                      const lineEnd   = C.colorMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
+                      ctx.moveTo(lineStart, y);
+                      ctx.lineTo(lineEnd, y);
+                      ctx.stroke();
+                      ctx.setLineDash([]);
 
                       if (C.showLabels && !compactMode) {
-                          ctx.fillStyle  = _waTpoHex2Rgba(clr, 0.95); ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
-                          ctx.textAlign  = (C.groupMode === 0 && C.isLeft) ? 'left' : 'right';
-                          const textX    = (C.groupMode === 0 && C.isLeft) ? 4 : (C.groupMode === 0 ? bounding.width - 4 : lineEnd);
+                          ctx.fillStyle  = _waTpoHex2Rgba(clr, 0.95);
+                          ctx.font       = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                          ctx.textAlign  = (C.colorMode === 0 && C.isLeft) ? 'left' : 'right';
+                          const textX    = (C.colorMode === 0 && C.isLeft) ? 4 : (C.colorMode === 0 ? bounding.width - 4 : lineEnd);
                           ctx.fillText(`${txt} ${price.toFixed(2)}`, textX, y - 4);
                       }
                   };
 
                   if (prof.vahBin) drawLvl(prof.vahBin.pHigh, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAH');
                   if (prof.valBin) drawLvl(prof.valBin.pLow,  C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAL');
-                  if (prof.ibHigh && C.groupMode !== 0) drawLvl(prof.ibHigh, C.clrIbHigh, 1, [2, 2], 'IBH', true);
-                  if (prof.ibLow  && C.groupMode !== 0) drawLvl(prof.ibLow,  C.clrIbLow,  1, [2, 2], 'IBL', true);
+                  if (prof.ibHigh && C.colorMode !== 0) drawLvl(prof.ibHigh, C.clrIbHigh, 1, [2, 2], 'IBH', true);
+                  if (prof.ibLow  && C.colorMode !== 0) drawLvl(prof.ibLow,  C.clrIbLow,  1, [2, 2], 'IBL', true);
 
+                  // ── VẼ POC ───────────────────────────────────────────────────
                   const pocY = _getYPixel(yAxis, prof.pocMid);
                   if (pocY != null) {
                       const isSuper = prof.isSuperPoc;
                       const clrPoc  = isSuper ? C.clrSuperPoc : (prof.isNaked ? C.clrNpoc : C.clrPoc);
+
                       ctx.strokeStyle = _waTpoHex2Rgba(clrPoc, 0.9);
                       ctx.lineWidth   = isSuper ? C.pocW + 1 : (prof.isNaked ? Math.max(1, C.pocW - 1) : C.pocW);
                       if (prof.isNaked && !isSuper) ctx.setLineDash([5, 4]);
 
                       ctx.beginPath();
-                      const pocStart = C.groupMode === 0 ? 0 : anchorX;
-                      const pocEnd   = C.groupMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
-                      ctx.moveTo(pocStart, pocY); ctx.lineTo(pocEnd, pocY);
-                      if (prof.isNaked && C.groupMode !== 0) ctx.lineTo(bounding.width, pocY);
-                      ctx.stroke(); ctx.setLineDash([]);
+                      const pocStart = (C.colorMode === 0 && C.isLeft) ? 0 : anchorX;
+                      const pocEnd   = (C.colorMode === 0 && C.isLeft) ? bounding.width : anchorX + maxBlocksPx * 1.5;
+                      ctx.moveTo(pocStart, pocY);
+                      ctx.lineTo(pocEnd, pocY);
+                      // Kéo dài Naked POC tới cuối chart (chỉ multi-session mode)
+                      if (prof.isNaked && C.colorMode !== 0) ctx.lineTo(bounding.width, pocY);
+                      ctx.stroke();
+                      ctx.setLineDash([]);
 
                       if (C.showLabels && !compactMode) {
-                          ctx.fillStyle = _waTpoHex2Rgba(clrPoc, 0.95); ctx.font = `bold ${C.fontSize}px sans-serif`;
-                          ctx.textAlign = (C.groupMode === 0 && C.isLeft) ? 'left' : 'right';
-                          const textX   = (C.groupMode === 0 && C.isLeft) ? 4 : (C.groupMode === 0 ? bounding.width - 4 : pocEnd);
+                          ctx.fillStyle = _waTpoHex2Rgba(clrPoc, 0.95);
+                          ctx.font      = `bold ${C.fontSize}px sans-serif`;
+                          ctx.textAlign = (C.colorMode === 0 && C.isLeft) ? 'left' : 'right';
+                          const textX   = (C.colorMode === 0 && C.isLeft) ? 4 : (C.colorMode === 0 ? bounding.width - 4 : pocEnd);
                           ctx.fillText(`POC ${prof.pocMid.toFixed(2)}`, textX, pocY - 4);
                       }
                   }
 
-                  if (C.smartLabels && C.groupMode !== 0 && !compactMode) {
+                  // ── SMART LABELS (AI Analysis) ───────────────────────────────
+                  if (C.smartLabels && C.colorMode !== 0 && !compactMode) {
                       const lblY = _getYPixel(yAxis, prof.maxP);
                       if (lblY != null) {
                           const ly = lblY - 15;
-                          ctx.textAlign = 'left'; ctx.font = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                          ctx.textAlign = 'left';
+                          ctx.font      = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
                           ctx.fillStyle = _waTpoHex2Rgba('#FFFFFF', 0.8);
                           ctx.fillText(`[${prof.shape}]`, anchorX, ly);
 
                           if (C.verbosity > 0) {
-                              const imbClr = prof.imbalance === 'BUYING'  ? C.clrImbalBuy : prof.imbalance === 'SELLING' ? C.clrImbalSell : '#888888';
-                              ctx.fillStyle = _waTpoHex2Rgba(imbClr, 0.8); ctx.fillText(` Imb: ${prof.imbalance}`, anchorX + 60, ly);
+                              const imbClr = prof.imbalance === 'BUYING'  ? C.clrImbalBuy
+                                           : prof.imbalance === 'SELLING' ? C.clrImbalSell
+                                           : '#888888';
+                              ctx.fillStyle = _waTpoHex2Rgba(imbClr, 0.8);
+                              ctx.fillText(` Imb: ${prof.imbalance}`, anchorX + 60, ly);
                           }
                           if (C.verbosity > 1) {
-                              const aucClr = prof.auctionState === 'ACCEPTANCE' ? C.clrAccept : prof.auctionState === 'REJECTION'  ? C.clrReject : '#888888';
-                              ctx.fillStyle = _waTpoHex2Rgba(aucClr, 0.8); ctx.fillText(` | ${prof.auctionState}`, anchorX, ly - 14);
+                              const aucClr = prof.auctionState === 'ACCEPTANCE' ? C.clrAccept
+                                           : prof.auctionState === 'REJECTION'  ? C.clrReject
+                                           : '#888888';
+                              ctx.fillStyle = _waTpoHex2Rgba(aucClr, 0.8);
+                              ctx.fillText(` | ${prof.auctionState}`, anchorX, ly - 14);
                           }
                       }
                   }
-              });
+              }); // end profiles.forEach
+
           } catch (e) {
-              console.error('[WAVE_TPO v4.4]', e);
+              console.error('[WAVE_TPO v4.2]', e);
           } finally {
               ctx.restore();
           }
