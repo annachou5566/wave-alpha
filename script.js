@@ -4,65 +4,64 @@ function formatCompact(num) {
 
 function renderMultiplierPath(c) {
     let isEarlyBird = c.earlyBird || (c.data && c.data.earlyBird) || false;
-    if (!c || !c.start || !isEarlyBird) return '';
+    if (!c || !c.start || !isEarlyBird) return ''; 
+
+    const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
 
     let sTime = c.startTime || "13:00:00";
     if (sTime.length === 5) sTime += ":00";
-
+    
     const now = new Date();
     const startTime = new Date(c.start + 'T' + sTime + 'Z');
-    const diffTime = now - startTime;
+    const diffMs = now - startTime;
+    
+    let elapsedDays = Math.max(0, diffMs / 86400000);
+    let currentDayInt = Math.min(7, Math.floor(elapsedDays) + 1);
+    let fillPct = Math.min(100, (elapsedDays / 6) * 100);
+    
+    const currentMul = multipliers[currentDayInt - 1];
 
-    let elapsedDaysExact = diffTime / (1000 * 60 * 60 * 24);
-    if (elapsedDaysExact < 0) elapsedDaysExact = 0;
-
-    let fillPercentage = (elapsedDaysExact / 6) * 100;
-    if (fillPercentage > 100) fillPercentage = 100;
-
-    let currentDayInt = Math.floor(elapsedDaysExact) + 1;
-    if (currentDayInt > 7) currentDayInt = 7;
-
-    const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
-    let currentMul = multipliers[currentDayInt - 1];
-
-    let nextBoundary = new Date(startTime.getTime() + currentDayInt * 24 * 60 * 60 * 1000);
-    let msLeft = nextBoundary - now;
-    let countdownStr = "";
-
+    // Đếm ngược
+    const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
+    const msLeft = nextBoundary - now;
+    let countdownStr = '';
+    
     if (msLeft > 0 && currentDayInt < 7) {
-        let h = Math.floor(msLeft / 3600000);
-        let m = Math.floor((msLeft % 3600000) / 60000);
+        const h = Math.floor(msLeft / 3600000);
+        const m = Math.floor((msLeft % 3600000) / 60000);
         countdownStr = `${h}h ${m}m`;
+    } else if (currentDayInt === 7) {
+        countdownStr = 'Final';
     }
 
-    let runnerIcon = "fa-running";
-    if (currentMul >= 1.3) runnerIcon = "fa-skating";
-    if (currentMul === 1.2) runnerIcon = "fa-running";
-    if (currentMul === 1.1) runnerIcon = "fa-walking";
-    if (currentDayInt === 7) runnerIcon = "fa-flag-checkered";
+    // Icon chạy
+    let runnerIcon = 'fa-running'; 
+    if (currentMul >= 1.3) runnerIcon = 'fa-skating'; 
+    if (currentMul === 1.1) runnerIcon = 'fa-walking'; 
+    if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered'; 
 
     let dotsHtml = '';
-    multipliers.forEach((mul, index) => {
-        const day = index + 1;
-        let cls = 'path-dot';
-        if (elapsedDaysExact >= index) cls += ' passed';
-        if (day === currentDayInt) cls += ' current';
-        dotsHtml += `<div class="${cls}"></div>`;
+    multipliers.forEach((mul, i) => {
+        const d = i + 1;
+        dotsHtml += `<div class="eb-dot ${d <= currentDayInt ? 'passed' : ''}" title="Ngày ${d}: ${mul}x"></div>`;
     });
 
+    // Nhảy "viên thuốc": Đổi mức nhảy về 55% vì viên thuốc có độ dài lớn hơn text
+    let alignClass = fillPct > 55 ? 'align-left' : 'align-right';
+
     return `
-        <div class="multiplier-path-container" title="Early Bird Boost Schedule">
-            <div class="multiplier-path-line">
-                <div class="path-fill" style="width:${fillPercentage}%"></div>
-                <div class="path-runner" style="left:${fillPercentage}%">
+        <div class="eb-compact-container" title="Early Bird Boost Schedule">
+            <div class="eb-mul">${currentMul}x</div>
+            <div class="eb-track">
+                <div class="eb-fill" style="width:${fillPct}%"></div>
+                <div class="eb-dots">${dotsHtml}</div>
+                <div class="eb-runner" style="left:${fillPct}%">
                     <i class="fas ${runnerIcon}"></i>
                 </div>
-                <div class="path-dots">${dotsHtml}</div>
-            </div>
-
-            <div class="multiplier-path-footer">
-                <span class="multiplier-badge-compact">${currentMul}x</span>
-                <span class="countdown-text is-optional">${countdownStr}</span>
+                ${countdownStr ? `
+                <div class="eb-countdown-pill ${alignClass}">
+                    <span class="pulse-dot"></span> ${countdownStr}
+                </div>` : ''}
             </div>
         </div>`;
 }

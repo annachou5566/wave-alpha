@@ -3511,113 +3511,125 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* ===== EARLY BIRD COMPACT / NO-OVERLAP VERSION ===== */
-.multiplier-path-container {
-    position: relative;
-    width: 100%;
-    min-width: 0;
-    padding-top: 10px;   /* chỉ chừa vừa đủ cho runner */
-}
-
-.multiplier-path-line {
-    position: relative;
-    height: 4px;
-    width: 100%;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.08);
-    overflow: visible;
-}
-
-.path-fill {
-    position: absolute;
-    inset: 0 auto 0 0;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--brand);
-    opacity: 0.9;
-    transition: width 0.25s ease;
-}
-
-.path-runner {
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    margin-top: -8px; /* chỉ nhô nhẹ lên trên */
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
+/* ===================================================
+   EARLY BIRD BOOST - COMPACT PILL EDITION
+=================================================== */
+.eb-compact-container {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: var(--panel-bg, #11161c);
-    color: var(--brand);
-    font-size: 9px;
-    border: 1px solid rgba(255,255,255,0.08);
-    z-index: 3;
-    transition: left 0.25s ease;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    width: 100%;
 }
 
-.path-dots {
+/* Hệ số 1.4x */
+.eb-mul {
+    font-family: var(--font-num);
+    font-weight: 800;
+    color: var(--brand);
+    font-size: 1.1rem;
+    line-height: 1;
+    text-shadow: 0 0 6px var(--brand-glow);
+    min-width: 36px;
+}
+
+/* Rãnh chạy (Làm dày lên 22px để chứa vừa viên thuốc) */
+.eb-track {
+    position: relative;
+    flex-grow: 1;
+    height: 22px; 
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.eb-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    border-radius: 20px;
+    background: linear-gradient(90deg, rgba(0,240,255,0.1), var(--brand));
+    box-shadow: 0 0 8px var(--brand-glow);
+    z-index: 1;
+    transition: width 0.3s ease;
+}
+
+.eb-dots {
     position: absolute;
     inset: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 8px;
     z-index: 2;
-    pointer-events: none;
 }
 
-.path-dot {
-    width: 4px;
-    height: 4px;
+.eb-dot {
+    width: 4px; height: 4px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.2);
+}
+.eb-dot.passed {
+    background: rgba(0,0,0,0.4);
 }
 
-.path-dot.passed {
-    background: var(--brand);
-}
-
-.path-dot.current {
-    background: var(--brand);
-    transform: scale(1.2);
-}
-
-.multiplier-path-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 6px;
-    min-width: 0;
-}
-
-.multiplier-badge-compact {
-    font-family: var(--font-num);
-    font-size: 0.72rem;
-    font-weight: 700;
+/* Icon người chạy */
+.eb-runner {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: #171a24;
+    border: 1.5px solid var(--brand);
+    box-shadow: 0 0 10px var(--brand-glow), 0 2px 4px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
     color: var(--brand);
-    line-height: 1;
-    white-space: nowrap;
-    flex: 0 0 auto;
+    font-size: 12px;
+    z-index: 5;
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.countdown-text {
+/* SỰ TRỞ LẠI CỦA VIÊN THUỐC (PILL) */
+.eb-countdown-pill {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.55); /* Nền tối mờ để dễ đọc chữ */
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 2px 8px;
     font-family: var(--font-num);
-    font-size: 0.66rem;
-    color: #848e9c;
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1 1 auto;
-    text-align: right;
+    font-size: 0.65rem;
+    font-weight: 600;
+    z-index: 4;
+    transition: left 0.3s ease, right 0.3s ease;
 }
 
-/* nếu khu vực quá chật thì tự ẩn countdown */
-@media (max-width: 420px) {
-    .countdown-text.is-optional {
-        display: none;
-    }
+.eb-countdown-pill .pulse-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--brand);
+    animation: pulseDot 1.5s ease-in-out infinite;
+    box-shadow: 0 0 5px var(--brand);
+}
+
+@keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.6); }
+}
+
+/* Vị trí nhảy của viên thuốc */
+.eb-countdown-pill.align-right {
+    right: 4px;
+    color: #fff;
+}
+.eb-countdown-pill.align-left {
+    left: 4px;
+    color: #fff;
 }
