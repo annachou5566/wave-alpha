@@ -3252,7 +3252,7 @@ function saveComp() {
 
         alphaType: document.getElementById('c-alphaType').value,
         ruleType: document.getElementById('c-rule').value,
-        earlyBird: document.getElementById('c-earlyBird').value === 'true',
+        earlyBird: document.getElementById('c-earlyBird') ? document.getElementById('c-earlyBird').value === 'true' : false,
         inputTokens: tokensArr,
         
         history: c.history || [],
