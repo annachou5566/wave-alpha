@@ -1625,28 +1625,32 @@ function roundRect(ctx, x, y, w, h, r) {
     const total = counts.reduce((a, b) => a + b, 0);
     if (!total) return 'UNDEFINED';
 
-    // 1. Tính độ lệch (Skewness) giữa phần trên và phần dưới POC
-    let top = 0, bot = 0;
-    for (let i = 0; i < counts.length; i++) { 
-        if (i > pocIdx) top += counts[i]; 
-        else if (i < pocIdx) bot += counts[i]; 
+    // 1. Tính độ lệch (Skew) dựa trên TRỤC GIỮA CỦA KHUNG GIÁ (Midpoint)
+    const midIdx = Math.floor(counts.length / 2);
+    let topVol = 0, botVol = 0;
+    for (let i = 0; i < counts.length; i++) {
+        if (i >= midIdx) topVol += counts[i];
+        else botVol += counts[i];
     }
-    const skew = (top - bot) / Math.max(1, top + bot);
+    
+    // Skew > 0: Nửa trên của khung giá chứa nhiều Volume hơn -> P-Shape
+    // Skew < 0: Nửa dưới của khung giá chứa nhiều Volume hơn -> b-Shape
+    const skew = (topVol - botVol) / total;
 
-    // 2. Tìm các "Bụng" lớn thực sự (Lọc nhiễu)
+    // 2. Tìm các "Bụng" lớn thực sự (Lọc nhiễu cho B-Shape)
     let maxCount = Math.max(...counts);
     let majorPeaks = 0;
     let peakIndices = [];
-    // Yêu cầu các bụng phải cách nhau ít nhất 10% chiều cao của TPO
-    const gapRequirement = Math.floor(counts.length * 0.10); 
+    // Yêu cầu các bụng phải cách nhau ít nhất 15% chiều cao của TPO để không bị đếm nhầm đỉnh rác
+    const gapRequirement = Math.floor(counts.length * 0.15); 
 
     for (let i = 2; i < counts.length - 2; i++) {
-        // ĐIỀU KIỆN 1: Bụng phải to bằng ít nhất 40% POC mới được tính
-        if (counts[i] >= maxCount * 0.40) {
-            // ĐIỀU KIỆN 2: Phải là đỉnh nhô ra rõ rệt so với 2 hàng trên và 2 hàng dưới
-            if (counts[i] > counts[i - 1] && counts[i] > counts[i - 2] &&
-                counts[i] > counts[i + 1] && counts[i] > counts[i + 2]) {
-
+        // ĐIỀU KIỆN 1: Bụng phải to bằng ít nhất 45% POC mới được tính
+        if (counts[i] >= maxCount * 0.45) {
+            // ĐIỀU KIỆN 2: Phải là đỉnh nhô ra rõ rệt
+            if (counts[i] >= counts[i - 1] && counts[i] >= counts[i - 2] &&
+                counts[i] >= counts[i + 1] && counts[i] >= counts[i + 2]) {
+                
                 // ĐIỀU KIỆN 3: Các bụng không được dính chùm vào nhau
                 let isDistant = true;
                 for (let pIdx of peakIndices) {
@@ -1662,14 +1666,15 @@ function roundRect(ctx, x, y, w, h, r) {
         }
     }
 
-    // 3. Phân loại theo thứ tự ưu tiên
-    // Lệch cực mạnh lên trên (Phe bán kẹp hàng, Phe mua đẩy giá)
-    if (skew > 0.22) return 'P_SHAPE';   
-    // Lệch cực mạnh xuống dưới (Phe mua kẹp hàng, Phe bán đè giá)
-    if (skew < -0.22) return 'b_SHAPE';  
-    // Cân bằng nhưng có từ 2 bụng lớn trở lên (Giá tích lũy ở 2 vùng khác biệt)
+    // 3. Phân loại ưu tiên
+    // Ngưỡng 0.15 (15%) chênh lệch volume là đủ để xác nhận hình dáng
+    if (skew > 0.15) return 'P_SHAPE';   
+    if (skew < -0.15) return 'b_SHAPE';  
+    
+    // Nếu volume khá cân bằng, xét xem có phân phối kép không
     if (majorPeaks >= 2) return 'B_SHAPE'; 
-    // Phân phối chuẩn chuông Gauss (Bình thường)
+    
+    // Bình thường (Chuông Gauss)
     return 'D_SHAPE'; 
 }
 
