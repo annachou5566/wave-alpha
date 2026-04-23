@@ -25,8 +25,6 @@ function renderMultiplierPath(c) {
     const multipliers = [1.4, 1.3, 1.2, 1.2, 1.1, 1.1, 1.0];
     let currentMul = multipliers[currentDayInt - 1];
 
-    // --- LOGIC ĐỒNG HỒ ĐẾM NGƯỢC ---
-    // Tính mốc 13:00 UTC của ngày tiếp theo
     let nextBoundary = new Date(startTime.getTime() + currentDayInt * 24 * 60 * 60 * 1000);
     let msLeft = nextBoundary - now;
     let countdownStr = "";
@@ -36,12 +34,11 @@ function renderMultiplierPath(c) {
         countdownStr = `${h}h${m}m left`;
     }
 
-    // --- LOGIC CHỌN ICON SÁNG TẠO ---
-    let runnerIcon = "fa-running"; // Mặc định là đang chạy
-    if (currentMul >= 1.3) runnerIcon = "fa-skating"; // 1.4x - 1.3x: Đang trượt rất nhanh
-    if (currentMul === 1.2) runnerIcon = "fa-running"; // 1.2x: Chạy bộ
-    if (currentMul === 1.1) runnerIcon = "fa-walking"; // 1.1x: Đi bộ thong thả
-    if (currentDayInt === 7) runnerIcon = "fa-flag-checkered"; // Ngày cuối: Cán đích
+    let runnerIcon = "fa-running"; 
+    if (currentMul >= 1.3) runnerIcon = "fa-skating"; 
+    if (currentMul === 1.2) runnerIcon = "fa-running"; 
+    if (currentMul === 1.1) runnerIcon = "fa-walking"; 
+    if (currentDayInt === 7) runnerIcon = "fa-flag-checkered"; 
 
     let dotsHtml = '';
     multipliers.forEach((mul, index) => {
@@ -50,7 +47,7 @@ function renderMultiplierPath(c) {
 
     return `
         <div class="multiplier-path-container" title="Early Bird Boost Schedule">
-            <div class="d-flex justify-content-between align-items-center mb-1" style="line-height:1">
+            <div class="multiplier-path-header">
                 <span style="font-size: 0.7rem; color: var(--brand); font-weight: 800;">${currentMul}x</span>
                 <span class="countdown-text">${countdownStr}</span>
             </div>
