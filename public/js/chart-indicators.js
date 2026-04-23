@@ -556,7 +556,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.1 — SMART ENGINE (FINAL FIX: 29/29 PARAMS MAPPED)
+//  WAVE_TPO ULTIMATE v4.2 — SMART ENGINE (FIXED: API + GEAR PANEL + RENDERING)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -564,343 +564,522 @@
   if (!window._waTpoCache) window._waTpoCache = new Map();
 
   function _waTpoCacheSet(key, value) {
-    if (window._waTpoCache.has(key)) window._waTpoCache.delete(key);
-    window._waTpoCache.set(key, value);
-    if (window._waTpoCache.size > 10) window._waTpoCache.delete(window._waTpoCache.keys().next().value);
+      if (window._waTpoCache.has(key)) window._waTpoCache.delete(key);
+      window._waTpoCache.set(key, value);
+      if (window._waTpoCache.size > 10) window._waTpoCache.delete(window._waTpoCache.keys().next().value);
   }
 
   function _waTpoHex2Rgba(val, alpha) {
-    if (val === 'transparent') return 'rgba(0,0,0,0)';
-    if (typeof val === 'number') {
-      const h = Math.round(val) >>> 0;
-      return `rgba(${(h >> 16) & 255},${(h >> 8) & 255},${h & 255},${alpha.toFixed(3)})`;
-    }
-    let hex = String(val).replace('#', '');
-    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
-    const r = parseInt(hex.substring(0, 2), 16) || 0;
-    const g = parseInt(hex.substring(2, 4), 16) || 0;
-    const b = parseInt(hex.substring(4, 6), 16) || 0;
-    return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+      if (val === 'transparent') return 'rgba(0,0,0,0)';
+      if (typeof val === 'number') {
+          const h = Math.round(val) >>> 0;
+          return `rgba(${(h >> 16) & 255},${(h >> 8) & 255},${h & 255},${alpha.toFixed(3)})`;
+      }
+      let hex = String(val).replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      const r = parseInt(hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.substring(4, 6), 16) || 0;
+      return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
   }
 
-  function _waTpoGetDash(styleIdx) { return styleIdx === 1 ? [2, 3] : styleIdx === 2 ? [] : [6, 4]; }
+  function _waTpoGetDash(styleIdx) {
+      return styleIdx === 1 ? [2, 3] : styleIdx === 2 ? [] : [6, 4];
+  }
 
   function _waTpoGetLetter(n) {
-    if (n < 26) return String.fromCharCode(65 + n);
-    if (n < 52) return String.fromCharCode(97 + n - 26);
-    return String.fromCharCode(65 + Math.floor((n - 52) / 26)) + String.fromCharCode(65 + ((n - 52) % 26));
+      if (n < 26) return String.fromCharCode(65 + n);
+      if (n < 52) return String.fromCharCode(97 + n - 26);
+      return String.fromCharCode(65 + Math.floor((n - 52) / 26)) + String.fromCharCode(65 + ((n - 52) % 26));
   }
 
   const _WA_TPO_SESSION_PALETTE = ['#4A148C', '#6A1B9A', '#8E24AA', '#AB47BC', '#00BCD4'];
 
+  // ─── DEFAULT COLORS (tách ra khỏi calcParams để gear panel không bị vỡ) ────
+  const _WA_DEFAULTS = {
+      clrVA:       "#9C27B0", clrOut:     "#7B1FA2", clrPoc:       "#F0B90B",
+      clrNpoc:     "#FF9800", clrSuperPoc:"#F0B90B", clrVaLine:    "#BA68C8",
+      clrIbHigh:   "#FFD600", clrIbLow:   "#FFD600", clrImbalBuy:  "#26A69A",
+      clrImbalSell:"#EF5350", clrAccept:  "#42A5F5", clrReject:    "#FF7043"
+  };
+
   // ─── LÕI AI MARKET PROFILE ──────────────────────────────────────────────────
-  function _waTpoClassifyProfileShape(bins, pocIdx) { 
-    const counts = bins.map(b => b.count), total = counts.reduce((a, b) => a + b, 0);
-    if (!total) return 'UNDEFINED';
-    let top = 0, bot = 0;
-    for (let i = 0; i < counts.length; i++) { if (i > pocIdx) top += counts[i]; else if (i < pocIdx) bot += counts[i]; }
-    const skew = (top - bot) / Math.max(1, top + bot);
-    let peaks = 0;
-    for (let i = 1; i < counts.length - 1; i++) if (counts[i] >= counts[i - 1] && counts[i] >= counts[i + 1] && counts[i] > 0) peaks++;
-    if (peaks >= 2) return 'B_SHAPE'; if (skew > 0.18) return 'P_SHAPE'; if (skew < -0.18) return 'b_SHAPE'; return 'D_SHAPE';
+  function _waTpoClassifyProfileShape(bins, pocIdx) {
+      const counts = bins.map(b => b.count), total = counts.reduce((a, b) => a + b, 0);
+      if (!total) return 'UNDEFINED';
+      let top = 0, bot = 0;
+      for (let i = 0; i < counts.length; i++) {
+          if (i > pocIdx) top += counts[i]; else if (i < pocIdx) bot += counts[i];
+      }
+      const skew = (top - bot) / Math.max(1, top + bot);
+      let peaks = 0;
+      for (let i = 1; i < counts.length - 1; i++)
+          if (counts[i] >= counts[i - 1] && counts[i] >= counts[i + 1] && counts[i] > 0) peaks++;
+      if (peaks >= 2) return 'B_SHAPE';
+      if (skew > 0.18) return 'P_SHAPE';
+      if (skew < -0.18) return 'b_SHAPE';
+      return 'D_SHAPE';
   }
 
   function _waTpoDetectExcessTail(bins) {
-    const nz = bins.filter(b => b.count > 0);
-    if (!nz.length) return { top: false, bottom: false };
-    const avg = nz.reduce((s, b) => s + b.count, 0) / nz.length;
-    return { 
-        bottom: nz[0] && nz[0].count <= Math.max(2, avg * 0.25) && (!nz[1] || nz[1].count > nz[0].count),
-        top: nz[nz.length - 1] && nz[nz.length - 1].count <= Math.max(2, avg * 0.25) && (!nz[nz.length - 2] || nz[nz.length - 2].count > nz[nz.length - 1].count)
-    };
+      const nz = bins.filter(b => b.count > 0);
+      if (!nz.length) return { top: false, bottom: false };
+      const avg = nz.reduce((s, b) => s + b.count, 0) / nz.length;
+      return {
+          bottom: nz[0] && nz[0].count <= Math.max(2, avg * 0.25) && (!nz[1] || nz[1].count > nz[0].count),
+          top:    nz[nz.length - 1] && nz[nz.length - 1].count <= Math.max(2, avg * 0.25) &&
+                  (!nz[nz.length - 2] || nz[nz.length - 2].count > nz[nz.length - 1].count)
+      };
   }
 
   function _waTpoDetectPoorHighLow(bins) {
-    const nz = bins.filter(b => b.count > 0);
-    if (!nz.length) return { poorHigh: false, poorLow: false };
-    return { poorHigh: nz[nz.length - 1].count >= 2, poorLow: nz[0].count >= 2 };
+      const nz = bins.filter(b => b.count > 0);
+      if (!nz.length) return { poorHigh: false, poorLow: false };
+      return { poorHigh: nz[nz.length - 1].count >= 2, poorLow: nz[0].count >= 2 };
   }
 
   function _waTpoClassifyDayType(profile, dataList) {
-    const { startIdx, endIdx, ibHigh, ibLow, maxP, minP } = profile;
-    if (ibHigh == null || ibLow == null || endIdx - startIdx < 3) return 'OTHER';
-    const ibRange = Math.max(1e-9, ibHigh - ibLow), dayRange = Math.max(1e-9, maxP - minP);
-    const close = dataList[endIdx - 1]?.close ?? maxP;
-    const pos = (close - minP) / dayRange, exp = dayRange / ibRange;
-    if (exp >= 2.2 && (pos > 0.75 || pos < 0.25)) return 'TREND_DAY';
-    if (exp >= 1.4) return 'NORMAL_VARIATION';
-    if (pos > 0.40 && pos < 0.60) return 'NEUTRAL_DAY';
-    return 'NORMAL_DAY';
+      const { startIdx, endIdx, ibHigh, ibLow, maxP, minP } = profile;
+      if (ibHigh == null || ibLow == null || endIdx - startIdx < 3) return 'OTHER';
+      const ibRange = Math.max(1e-9, ibHigh - ibLow), dayRange = Math.max(1e-9, maxP - minP);
+      const close = dataList[endIdx - 1]?.close ?? maxP;
+      const pos = (close - minP) / dayRange, exp = dayRange / ibRange;
+      if (exp >= 2.2 && (pos > 0.75 || pos < 0.25)) return 'TREND_DAY';
+      if (exp >= 1.4) return 'NORMAL_VARIATION';
+      if (pos > 0.40 && pos < 0.60) return 'NEUTRAL_DAY';
+      return 'NORMAL_DAY';
   }
 
   function _waTpoAuctionState(profile) {
-    const { closePos, inValueClose, shape } = profile;
-    if (inValueClose && Math.abs(closePos - 0.5) < 0.22) return 'ACCEPTANCE';
-    if (!inValueClose && (closePos < 0.18 || closePos > 0.82)) return 'REJECTION';
-    if (shape === 'P_SHAPE' || shape === 'b_SHAPE') return 'ROTATIONAL_BIAS';
-    return 'BALANCED_AUCTION';
+      const { closePos, inValueClose, shape } = profile;
+      if (inValueClose && Math.abs(closePos - 0.5) < 0.22) return 'ACCEPTANCE';
+      if (!inValueClose && (closePos < 0.18 || closePos > 0.82)) return 'REJECTION';
+      if (shape === 'P_SHAPE' || shape === 'b_SHAPE') return 'ROTATIONAL_BIAS';
+      return 'BALANCED_AUCTION';
   }
 
   function _waTpoGroupByDay(dataList, from, to) {
-    const groups = new Map();
-    for (let i = from; i < to; i++) {
-      const d = dataList[i]; 
-      const ts = d ? (d.timestamp || d.time || d.date) : null; 
-      if (!ts) continue; 
-      const dt = new Date(ts);
-      const key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
-      if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 }); else groups.get(key).end = i + 1;
-    }
-    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10); 
+      const groups = new Map();
+      for (let i = from; i < to; i++) {
+          const d = dataList[i];
+          // FIX: KLineChart dùng 'timestamp' (ms). Bỏ fallback d.date tránh NaN.
+          const ts = d ? (d.timestamp ?? d.time ?? null) : null;
+          if (!ts || isNaN(ts)) continue;
+          const dt = new Date(ts);
+          const key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
+          if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
+          else groups.get(key).end = i + 1;
+      }
+      return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10);
   }
 
   function _waCheckSuperPoc(pocMid, step) {
-    if (!window._waVpvrCache || window._waVpvrCache.size === 0) return false;
-    for (const cached of window._waVpvrCache.values()) {
-      const p = []; if (cached.mainProfile) p.push(cached.mainProfile);
-      if (cached.sessions) cached.sessions.forEach(s => s.profile && p.push(s.profile));
-      for (const vp of p) {
-        if (!vp || !vp.poc) continue;
-        if (Math.abs((vp.poc.pLow + vp.poc.pHigh) / 2 - pocMid) <= step * 2) return true;
+      if (!window._waVpvrCache || window._waVpvrCache.size === 0) return false;
+      for (const cached of window._waVpvrCache.values()) {
+          const p = [];
+          if (cached.mainProfile) p.push(cached.mainProfile);
+          if (cached.sessions) cached.sessions.forEach(s => s.profile && p.push(s.profile));
+          for (const vp of p) {
+              if (!vp || !vp.poc) continue;
+              if (Math.abs((vp.poc.pLow + vp.poc.pHigh) / 2 - pocMid) <= step * 2) return true;
+          }
       }
-    }
-    return false;
+      return false;
+  }
+
+  // ─── HELPER: Chuyển đổi pixel đúng API KLineChart ─────────────────────────
+  // FIX CHÍNH: yAxis.convertToPixel(price) → KHÔNG TỒN TẠI trong draw callback.
+  // Phải dùng helper function bắt yAxis object để tìm đúng method.
+  function _getYPixel(yAxis, price) {
+      if (!yAxis) return null;
+      // KLineChart v9: yAxis có method convertToPixel nhận object
+      if (typeof yAxis.convertToPixel === 'function') {
+          const result = yAxis.convertToPixel(price);
+          // Trả về số trực tiếp hoặc object {y}
+          if (typeof result === 'number') return result;
+          if (result && typeof result.y === 'number') return result.y;
+      }
+      // Fallback: thử method getCoordinate (một số build dùng tên này)
+      if (typeof yAxis.getCoordinate === 'function') {
+          return yAxis.getCoordinate(price);
+      }
+      return null;
+  }
+
+  function _getXPixel(xAxis, dataIndex) {
+      if (!xAxis) return null;
+      // FIX: Truyền object {dataIndex} thay vì số raw
+      if (typeof xAxis.convertToPixel === 'function') {
+          const result = xAxis.convertToPixel({ dataIndex });
+          if (typeof result === 'number') return result;
+          if (result && typeof result.x === 'number') return result.x;
+      }
+      if (typeof xAxis.getCoordinate === 'function') {
+          return xAxis.getCoordinate(dataIndex);
+      }
+      return null;
   }
 
   // ─── ĐĂNG KÝ VÀ VẼ ──────────────────────────────────────────────────────────
   kc.registerIndicator({
-    name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.1',
-    category: 'wave_alpha', series: 'price', isStack: true,
-    createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
-    calcParams: [
-      60, 70, 0, 0, 0, 1, 1,
-      "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
-      "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
-      "#42A5F5", "#FF7043",
-      85, 20, 2, 1, 0, 10, 1, 70, 8, 1
-    ],
-    figures: [],
-    calc: function(dataList) { return dataList.map(() => ({})); },
-    draw: function({ ctx, bounding, xAxis, yAxis, visibleRange, indicator, dataList }) {
-      if (!dataList || dataList.length === 0 || !bounding) return false;
-      const p = indicator.calcParams;
-      const C = {
-        rowCount: Math.max(10, Math.min(200, +(p[0] ?? 60))),
-        vaPercent: Math.max(10, Math.min(100, +(p[1] ?? 70))),
-        isLeft: +(p[2] ?? 0) === 0,
-        useLetter: +(p[3] ?? 0) === 1,
-        colorMode: +(p[4] ?? 0),
-        densityMode: +(p[5] ?? 1),
-        smartLabels: +(p[6] ?? 1) === 1,
-        clrVA: p[7] || "#9C27B0", clrOut: p[8] || "#7B1FA2", clrPoc: p[9] || "#F0B90B",
-        clrNpoc: p[10] || "#FF9800", clrSuperPoc: p[11] || "#F0B90B", clrVaLine: p[12] || "#BA68C8",
-        clrIbHigh: p[13] || "#FFD600", clrIbLow: p[14] || "#FFD600", clrImbalBuy: p[15] || "#26A69A",
-        clrImbalSell: p[16] || "#EF5350", clrAccept: p[17] || "#42A5F5", clrReject: p[18] || "#FF7043",
-        opVA: Math.max(0, Math.min(100, +(p[19] ?? 85))) / 100, opOut: Math.max(0, Math.min(100, +(p[20] ?? 20))) / 100,
-        pocW: Math.max(1, +(p[21] ?? 2)), vaW: Math.max(1, +(p[22] ?? 1)),
-        vaStyle: Math.round(+(p[23] ?? 0)), fontSize: Math.max(8, +(p[24] ?? 10)),
-        showLabels: +(p[25] ?? 1) === 1, fade: Math.max(0, +(p[26] ?? 70)) / 100,
-        minLtrPx: Math.max(6, +(p[27] ?? 8)), verbosity: Math.round(+(p[28] ?? 1)),
-      };
+      name: 'WAVE_TPO',
+      shortName: 'TPO',
+      description: 'Time Price Opportunity SMART v4.2',
+      category: 'wave_alpha',
+      series: 'price',
+      isStack: true,
 
-      const { from, to } = visibleRange || { from: 0, to: dataList.length };
-      if (from >= to) return false;
+      createTooltipDataSource: function() {
+          return { name: 'TPO', calcParamsText: ' ', values: [] };
+      },
 
-      const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.colorMode}_${dataList[to - 1]?.close ?? 0}_${bounding.width}`;
-      let profiles = window._waTpoCache.get(cacheKey);
+      // FIX QUAN TRỌNG: calcParams chỉ chứa SỐ để gear panel hoạt động.
+      // Màu hex được tách ra khỏi đây, lưu trong _WA_DEFAULTS.
+      // Bố cục 16 params số (index 0-15):
+      //  0: rowCount         1: vaPercent        2: isLeft (0/1)
+      //  3: useLetter (0/1)  4: colorMode (0-2)  5: densityMode (0/1)
+      //  6: smartLabels      7: opVA (0-100)      8: opOut (0-100)
+      //  9: pocW             10: vaW             11: vaStyle (0-2)
+      // 12: fontSize        13: showLabels       14: fade (0-100)
+      // 15: minLtrPx        16: verbosity
+      calcParams: [60, 70, 0, 0, 0, 1, 1, 85, 20, 2, 1, 0, 10, 1, 70, 8, 1],
 
-      if (!profiles) {
-        // LOGIC CHUẨN: Màu Đơn (0) = Cả Chart | Đa/Nhiệt (1,2) = Từng Ngày Session
-        const sessions = C.colorMode === 0 ? [{ start: from, end: to }] : _waTpoGroupByDay(dataList, from, to);
-        
-        profiles = sessions.map((s, idx) => {
-          if (s.end - s.start <= 0) return null;
-          let maxP = -Infinity, minP = Infinity;
-          for (let i = s.start; i < s.end; i++) {
-            if (!dataList[i]) continue;
-            if (dataList[i].high > maxP) maxP = dataList[i].high;
-            if (dataList[i].low < minP) minP = dataList[i].low;
-          }
-          if (maxP === -Infinity || maxP === minP) return null;
-          const step = (maxP - minP) / C.rowCount;
-          let totalTPO = 0;
-          const bins = Array.from({ length: C.rowCount }, (_, i) => ({ idx: i, pLow: minP + i * step, pHigh: minP + (i + 1) * step, count: 0, letters: [], inVA: false }));
-          for (let i = s.start; i < s.end; i++) {
-            if (!dataList[i]) continue;
-            const d = dataList[i], lIdx = i - s.start;
-            const sI = Math.max(0, Math.floor((d.low - minP) / step)), eI = Math.min(C.rowCount - 1, Math.floor((d.high - minP) / step));
-            for (let j = sI; j <= eI; j++) { bins[j].count++; bins[j].letters.push(lIdx); totalTPO++; }
-          }
-          if (totalTPO === 0) return null;
-          let pocBin = bins[0], maxTPO = 0; bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
-          pocBin.inVA = true; let curVA = pocBin.count, ui = pocBin.idx + 1, di = pocBin.idx - 1;
-          while (curVA < totalTPO * (C.vaPercent / 100) && (ui < C.rowCount || di >= 0)) {
-            let vu = 0, vd = 0;
-            if (ui < C.rowCount) vu += bins[ui].count; if (ui + 1 < C.rowCount) vu += bins[ui + 1].count;
-            if (di >= 0) vd += bins[di].count; if (di - 1 >= 0) vd += bins[di - 1].count;
-            if (vu >= vd && ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
-            else if (di >= 0) { bins[di].inVA = true; curVA += bins[di].count; di--; }
-            else if (ui < C.rowCount) { bins[ui].inVA = true; curVA += bins[ui].count; ui++; }
-            else break;
-          }
-          let vahBin = null, valBin = null;
-          for (let i = C.rowCount - 1; i >= 0; i--) if (bins[i].inVA && !vahBin) vahBin = bins[i];
-          for (let i = 0; i < C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
-          
-          let ibHigh = null, ibLow = null;
-          if (s.end - s.start >= 2) { ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high); ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low); }
-          const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
-          let isNaked = true; for (let i = s.end; i < dataList.length; i++) if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) { isNaked = false; break; }
-          let topC = 0, botC = 0; bins.forEach(b => { if (b.inVA) { if (b.idx > pocBin.idx) topC += b.count; else if (b.idx < pocBin.idx) botC += b.count; } });
-          let imb = 'BALANCED'; if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3) imb = topC > botC ? 'BUYING' : 'SELLING';
-          
-          const prof = { bins, maxTPO, pocMid, vahBin, valBin, ibHigh, ibLow, imbalance: imb, isNaked, totalTPO, minP, maxP, step, startIdx: s.start, endIdx: s.end };
-          prof.close = dataList[s.end - 1]?.close ?? pocMid; prof.closePos = (prof.close - minP) / Math.max(1e-9, maxP - minP);
-          prof.inValueClose = !!(valBin && vahBin && prof.close >= valBin.pLow && prof.close <= vahBin.pHigh);
-          prof.shape = _waTpoClassifyProfileShape(bins, pocBin.idx);
-          const exc = _waTpoDetectExcessTail(bins); prof.excessTop = exc.top; prof.excessBottom = exc.bottom;
-          const poor = _waTpoDetectPoorHighLow(bins); prof.poorHigh = poor.poorHigh; prof.poorLow = poor.poorLow;
-          prof.dayType = _waTpoClassifyDayType(prof, dataList); prof.auctionState = _waTpoAuctionState(prof);
-          prof.isSuperPoc = _waCheckSuperPoc(pocMid, step); prof.sessionIdx = idx; prof.sessionTotal = sessions.length;
-          return prof;
-        }).filter(Boolean);
-        _waTpoCacheSet(cacheKey, profiles);
-      }
+      figures: [],
 
-      if (!profiles.length) return false;
+      calc: function(dataList) {
+          return dataList.map(() => ({}));
+      },
 
-      try {
-        ctx.save(); ctx.globalCompositeOperation = 'source-over';
-        const pxPerBar = bounding.width / Math.max(1, to - from);
-        const compactMode = C.densityMode === 0 || pxPerBar < 3;
+      draw: function({ ctx, bounding, xAxis, yAxis, visibleRange, indicator, dataList }) {
+          if (!dataList || dataList.length === 0 || !bounding) return false;
 
-        profiles.forEach((prof) => {
-          let anchorX, dir, maxBlocksPx;
-          
-          // XỬ LÝ VỊ TRÍ: Trái/Phải chỉ áp dụng cho Cả Chart. Từng ngày luôn đẩy về bên phải nến.
-          if (C.colorMode === 0) { 
-              anchorX = C.isLeft ? 0 : bounding.width; 
-              dir = C.isLeft ? 1 : -1; 
-              maxBlocksPx = bounding.width * (compactMode ? 0.28 : 0.35); 
-          } else { 
-              anchorX = xAxis.convertToPixel(prof.startIdx) || 0; 
-              dir = 1; 
-              maxBlocksPx = bounding.width * (compactMode ? 0.16 : 0.22); 
-          }
-
-          // QUẢN LÝ MÀU VÀ ĐỘ MỜ THEO PHIÊN
-          let baseClr = C.clrVA, outClr = C.clrOut, alphaMul = 1;
-          if (C.colorMode === 1) { // Đa Sắc
-            baseClr = outClr = _WA_TPO_SESSION_PALETTE[Math.min(4, Math.floor((prof.sessionIdx / Math.max(1, prof.sessionTotal - 1)) * 4))];
-            alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
-          } else if (C.colorMode === 2) { // Nhiệt độ
-            alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
-          }
-
-          const unitW = maxBlocksPx / Math.max(1, prof.maxTPO);
-          const stepDraw = (compactMode && !C.useLetter) ? 2 : 1;
-
-          prof.bins.forEach(bin => {
-            if (bin.count <= 0) return;
-            let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
-            if (yB == null || yT == null) return;
-            const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT)), blockW = Math.max(1, Math.min(rH, unitW));
-            const safeFontSize = Math.floor(Math.min(blockW, rH, C.fontSize));
-            const canLetter = C.useLetter && rH >= 6 && blockW >= C.minLtrPx;
-
-            // FIX: Áp dụng Opacity (Trong/Ngoài VA) cho cả 2 chế độ Block và Letter
-            let fAlpha = (bin.inVA ? C.opVA : C.opOut) * alphaMul;
-            if (C.colorMode === 2) fAlpha = (0.12 + 0.75 * (bin.count / prof.maxTPO)) * alphaMul;
-            
-            ctx.fillStyle = _waTpoHex2Rgba(bin.inVA ? baseClr : outClr, fAlpha);
-
-            if (canLetter) {
-              ctx.font = `bold ${safeFontSize}px monospace`; 
-              ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-              bin.letters.forEach((lIdx, pos) => { 
-                  if (pos % stepDraw === 0) ctx.fillText(_waTpoGetLetter(lIdx), anchorX + dir * (pos * blockW) + blockW / 2, rY + rH / 2); 
-              });
-            } else {
-              ctx.beginPath();
-              bin.letters.forEach((lIdx, pos) => { 
-                  if (pos % stepDraw === 0) ctx.rect(anchorX + dir * (pos * blockW), rY, Math.max(1, blockW - 1), Math.max(1, rH - 1)); 
-              });
-              ctx.fill();
-            }
-          });
-
-          // VẼ CÁC ĐƯỜNG KẺ & NHÃN (RESTORED 100%)
-          const drawLvl = (lvl, clr, w, dash, txt, isIB = false) => {
-            const y = yAxis.convertToPixel(lvl); if (y == null) return;
-            ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85); ctx.lineWidth = w; ctx.setLineDash(dash);
-            ctx.beginPath(); 
-            const startX = C.colorMode === 0 ? 0 : anchorX;
-            const endX = C.colorMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
-            ctx.moveTo(startX, y); ctx.lineTo(endX, y); ctx.stroke(); ctx.setLineDash([]);
-            
-            // Chức năng bật tắt Nhãn (Labels)
-            if (C.showLabels && !compactMode) {
-              ctx.fillStyle = _waTpoHex2Rgba(clr, 0.95); 
-              ctx.font = `bold ${C.fontSize - 1}px sans-serif`; 
-              ctx.textAlign = (C.colorMode === 0 && C.isLeft) ? 'left' : 'right';
-              const textX = (C.colorMode === 0 && C.isLeft) ? 4 : (C.colorMode === 0 ? bounding.width - 4 : endX);
-              ctx.fillText(`${txt} ${lvl.toFixed(2)}`, textX, y - 4);
-            }
+          const p = indicator.calcParams;
+          // FIX: Đọc params theo index mới (chỉ số, không có màu)
+          const C = {
+              rowCount:    Math.max(10, Math.min(200, +(p[0]  ?? 60))),
+              vaPercent:   Math.max(10, Math.min(100, +(p[1]  ?? 70))),
+              isLeft:      +(p[2]  ?? 0) === 0,
+              useLetter:   +(p[3]  ?? 0) === 1,
+              colorMode:   +(p[4]  ?? 0),
+              densityMode: +(p[5]  ?? 1),
+              smartLabels: +(p[6]  ?? 1) === 1,
+              opVA:        Math.max(0, Math.min(100, +(p[7]  ?? 85))) / 100,
+              opOut:       Math.max(0, Math.min(100, +(p[8]  ?? 20))) / 100,
+              pocW:        Math.max(1, +(p[9]  ?? 2)),
+              vaW:         Math.max(1, +(p[10] ?? 1)),
+              vaStyle:     Math.round(+(p[11] ?? 0)),
+              fontSize:    Math.max(8, +(p[12] ?? 10)),
+              showLabels:  +(p[13] ?? 1) === 1,
+              fade:        Math.max(0, +(p[14] ?? 70)) / 100,
+              minLtrPx:    Math.max(6, +(p[15] ?? 8)),
+              verbosity:   Math.round(+(p[16] ?? 1)),
+              // Màu lấy từ defaults (không thay đổi qua calcParams)
+              ..._WA_DEFAULTS
           };
-          
-          if (prof.vahBin) drawLvl(prof.vahBin.pHigh, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAH');
-          if (prof.valBin) drawLvl(prof.valBin.pLow, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAL');
-          if (prof.ibHigh && C.colorMode !== 0) drawLvl(prof.ibHigh, C.clrIbHigh, 1, [2, 2], 'IBH', true);
-          if (prof.ibLow && C.colorMode !== 0) drawLvl(prof.ibLow, C.clrIbLow, 1, [2, 2], 'IBL', true);
 
-          // POC
-          const pocY = yAxis.convertToPixel(prof.pocMid);
-          if (pocY != null) {
-            const isSuper = prof.isSuperPoc;
-            const clrPoc = isSuper ? C.clrSuperPoc : (prof.isNaked ? C.clrNpoc : C.clrPoc);
-            ctx.strokeStyle = _waTpoHex2Rgba(clrPoc, 0.9);
-            ctx.lineWidth = isSuper ? C.pocW + 1 : (prof.isNaked ? Math.max(1, C.pocW - 1) : C.pocW);
-            if (prof.isNaked && !isSuper) ctx.setLineDash([5, 4]);
-            
-            ctx.beginPath(); 
-            const startX = C.colorMode === 0 && C.isLeft ? 0 : anchorX;
-            const endX = C.colorMode === 0 && C.isLeft ? bounding.width : anchorX + maxBlocksPx * 1.5;
-            ctx.moveTo(startX, pocY); ctx.lineTo(endX, pocY);
-            if (prof.isNaked && C.colorMode !== 0) ctx.lineTo(bounding.width, pocY); // Kéo dài naked POC
-            ctx.stroke(); ctx.setLineDash([]);
+          const { from, to } = visibleRange || { from: 0, to: dataList.length };
+          if (from >= to) return false;
 
-            if (C.showLabels && !compactMode) {
-                ctx.fillStyle = _waTpoHex2Rgba(clrPoc, 0.95);
-                ctx.font = `bold ${C.fontSize}px sans-serif`;
-                ctx.textAlign = (C.colorMode === 0 && C.isLeft) ? 'left' : 'right';
-                const textX = (C.colorMode === 0 && C.isLeft) ? 4 : (C.colorMode === 0 ? bounding.width - 4 : endX);
-                ctx.fillText(`POC ${prof.pocMid.toFixed(2)}`, textX, pocY - 4);
-            }
+          // FIX: Thêm bounding.height vào cache key để invalidate khi resize
+          const lastClose = dataList[to - 1]?.close ?? 0;
+          const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.colorMode}_${lastClose}_${bounding.width}_${bounding.height}`;
+          let profiles = window._waTpoCache.get(cacheKey);
+
+          if (!profiles) {
+              const sessions = C.colorMode === 0
+                  ? [{ start: from, end: to }]
+                  : _waTpoGroupByDay(dataList, from, to);
+
+              profiles = sessions.map((s, idx) => {
+                  if (s.end - s.start <= 0) return null;
+                  let maxP = -Infinity, minP = Infinity;
+                  for (let i = s.start; i < s.end; i++) {
+                      if (!dataList[i]) continue;
+                      if (dataList[i].high > maxP) maxP = dataList[i].high;
+                      if (dataList[i].low  < minP) minP = dataList[i].low;
+                  }
+                  if (maxP === -Infinity || maxP === minP) return null;
+
+                  const step = (maxP - minP) / C.rowCount;
+                  let totalTPO = 0;
+                  const bins = Array.from({ length: C.rowCount }, (_, i) => ({
+                      idx: i,
+                      pLow:  minP + i * step,
+                      pHigh: minP + (i + 1) * step,
+                      count: 0, letters: [], inVA: false
+                  }));
+
+                  for (let i = s.start; i < s.end; i++) {
+                      if (!dataList[i]) continue;
+                      const d = dataList[i], lIdx = i - s.start;
+                      const sI = Math.max(0, Math.floor((d.low  - minP) / step));
+                      const eI = Math.min(C.rowCount - 1, Math.floor((d.high - minP) / step));
+                      for (let j = sI; j <= eI; j++) {
+                          bins[j].count++;
+                          bins[j].letters.push(lIdx);
+                          totalTPO++;
+                      }
+                  }
+                  if (totalTPO === 0) return null;
+
+                  let pocBin = bins[0], maxTPO = 0;
+                  bins.forEach(b => { if (b.count > maxTPO) { maxTPO = b.count; pocBin = b; } });
+
+                  pocBin.inVA = true;
+                  let curVA = pocBin.count, ui = pocBin.idx + 1, di = pocBin.idx - 1;
+                  while (curVA < totalTPO * (C.vaPercent / 100) && (ui < C.rowCount || di >= 0)) {
+                      let vu = 0, vd = 0;
+                      if (ui < C.rowCount) vu += bins[ui].count;
+                      if (ui + 1 < C.rowCount) vu += bins[ui + 1].count;
+                      if (di >= 0) vd += bins[di].count;
+                      if (di - 1 >= 0) vd += bins[di - 1].count;
+                      if (vu >= vd && ui < C.rowCount) {
+                          bins[ui].inVA = true; curVA += bins[ui].count; ui++;
+                      } else if (di >= 0) {
+                          bins[di].inVA = true; curVA += bins[di].count; di--;
+                      } else if (ui < C.rowCount) {
+                          bins[ui].inVA = true; curVA += bins[ui].count; ui++;
+                      } else break;
+                  }
+
+                  let vahBin = null, valBin = null;
+                  for (let i = C.rowCount - 1; i >= 0; i--) if (bins[i].inVA && !vahBin) vahBin = bins[i];
+                  for (let i = 0;               i <  C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
+
+                  let ibHigh = null, ibLow = null;
+                  if (s.end - s.start >= 2) {
+                      ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high);
+                      ibLow  = Math.min(dataList[s.start].low,  dataList[s.start + 1].low);
+                  }
+
+                  const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
+                  let isNaked = true;
+                  for (let i = s.end; i < dataList.length; i++) {
+                      if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) {
+                          isNaked = false; break;
+                      }
+                  }
+
+                  let topC = 0, botC = 0;
+                  bins.forEach(b => {
+                      if (b.inVA) {
+                          if (b.idx > pocBin.idx) topC += b.count;
+                          else if (b.idx < pocBin.idx) botC += b.count;
+                      }
+                  });
+                  let imb = 'BALANCED';
+                  if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3)
+                      imb = topC > botC ? 'BUYING' : 'SELLING';
+
+                  const closePrice = dataList[s.end - 1]?.close ?? pocMid;
+                  const closePos   = (closePrice - minP) / Math.max(1e-9, maxP - minP);
+                  const inValueClose = !!(valBin && vahBin && closePrice >= valBin.pLow && closePrice <= vahBin.pHigh);
+
+                  const prof = {
+                      bins, maxTPO, pocBin, pocMid, vahBin, valBin,
+                      ibHigh, ibLow, imbalance: imb, isNaked,
+                      totalTPO, minP, maxP, step,
+                      startIdx: s.start, endIdx: s.end,
+                      close: closePrice, closePos, inValueClose,
+                      sessionIdx: idx, sessionTotal: sessions.length
+                  };
+
+                  prof.shape       = _waTpoClassifyProfileShape(bins, pocBin.idx);
+                  const exc        = _waTpoDetectExcessTail(bins);
+                  prof.excessTop   = exc.top;
+                  prof.excessBottom= exc.bottom;
+                  const poor       = _waTpoDetectPoorHighLow(bins);
+                  prof.poorHigh    = poor.poorHigh;
+                  prof.poorLow     = poor.poorLow;
+                  prof.dayType     = _waTpoClassifyDayType(prof, dataList);
+                  prof.auctionState= _waTpoAuctionState(prof);
+                  prof.isSuperPoc  = _waCheckSuperPoc(pocMid, step);
+
+                  return prof;
+              }).filter(Boolean);
+
+              _waTpoCacheSet(cacheKey, profiles);
           }
 
-          // SMART LABELS (Phân tích AI khôi phục lại)
-          if (C.smartLabels && C.colorMode !== 0 && !compactMode) {
-              let lblY = yAxis.convertToPixel(prof.maxP);
-              if (lblY != null) {
-                  lblY -= 15;
-                  ctx.textAlign = 'left'; ctx.font = `bold ${C.fontSize - 1}px sans-serif`;
-                  ctx.fillStyle = _waTpoHex2Rgba('#FFFFFF', 0.8);
-                  ctx.fillText(`[${prof.shape}]`, anchorX, lblY);
-                  
-                  if (C.verbosity > 0) {
-                      ctx.fillStyle = _waTpoHex2Rgba(prof.imbalance === 'BUYING' ? C.clrImbalBuy : (prof.imbalance === 'SELLING' ? C.clrImbalSell : '#888'), 0.8);
-                      ctx.fillText(` Imb: ${prof.imbalance}`, anchorX + 60, lblY);
+          if (!profiles.length) return false;
+
+          try {
+              ctx.save();
+              ctx.globalCompositeOperation = 'source-over';
+
+              const pxPerBar   = bounding.width / Math.max(1, to - from);
+              const compactMode= C.densityMode === 0 || pxPerBar < 3;
+
+              profiles.forEach((prof) => {
+                  // ── TÍNH anchorX và maxBlocksPx ──────────────────────────────
+                  let anchorX, dir, maxBlocksPx;
+                  if (C.colorMode === 0) {
+                      anchorX     = C.isLeft ? 0 : bounding.width;
+                      dir         = C.isLeft ? 1 : -1;
+                      maxBlocksPx = bounding.width * (compactMode ? 0.28 : 0.35);
+                  } else {
+                      // FIX: Dùng _getXPixel với object {dataIndex} thay vì số raw
+                      anchorX     = _getXPixel(xAxis, prof.startIdx) ?? 0;
+                      dir         = 1;
+                      maxBlocksPx = bounding.width * (compactMode ? 0.16 : 0.22);
                   }
-                  if (C.verbosity > 1) {
-                       ctx.fillStyle = _waTpoHex2Rgba(prof.auctionState === 'ACCEPTANCE' ? C.clrAccept : (prof.auctionState === 'REJECTION' ? C.clrReject : '#888'), 0.8);
-                       ctx.fillText(` | ${prof.auctionState}`, anchorX, lblY - 12);
+
+                  // ── MÀU & ALPHA THEO PHIÊN ───────────────────────────────────
+                  let baseClr = C.clrVA, outClr = C.clrOut, alphaMul = 1;
+                  if (C.colorMode === 1) {
+                      const ratio = prof.sessionTotal <= 1 ? 0 : prof.sessionIdx / (prof.sessionTotal - 1);
+                      baseClr = outClr = _WA_TPO_SESSION_PALETTE[Math.min(4, Math.floor(ratio * 4))];
+                      alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + ratio * C.fade;
+                  } else if (C.colorMode === 2) {
+                      const ratio = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
+                      alphaMul = ratio;
                   }
-              }
+
+                  const unitW    = maxBlocksPx / Math.max(1, prof.maxTPO);
+                  const stepDraw = (compactMode && !C.useLetter) ? 2 : 1;
+
+                  // ── VẼ BINS ──────────────────────────────────────────────────
+                  prof.bins.forEach(bin => {
+                      if (bin.count <= 0) return;
+
+                      // FIX: Dùng _getYPixel helper thay vì yAxis.convertToPixel(val) trực tiếp
+                      const yB = _getYPixel(yAxis, bin.pLow);
+                      const yT = _getYPixel(yAxis, bin.pHigh);
+                      if (yB == null || yT == null) return;
+
+                      const rY = Math.min(yT, yB);
+                      const rH = Math.max(1, Math.abs(yB - yT));
+                      const blockW = Math.max(1, Math.min(rH, unitW));
+                      const safeFontSize = Math.floor(Math.min(blockW, rH, C.fontSize));
+                      const canLetter = C.useLetter && rH >= 6 && blockW >= C.minLtrPx;
+
+                      let fAlpha = (bin.inVA ? C.opVA : C.opOut) * alphaMul;
+                      if (C.colorMode === 2) fAlpha = (0.12 + 0.75 * (bin.count / prof.maxTPO)) * alphaMul;
+
+                      ctx.fillStyle = _waTpoHex2Rgba(bin.inVA ? baseClr : outClr, Math.min(1, Math.max(0, fAlpha)));
+
+                      if (canLetter) {
+                          ctx.font        = `bold ${safeFontSize}px monospace`;
+                          ctx.textBaseline= 'middle';
+                          ctx.textAlign   = 'center';
+                          bin.letters.forEach((lIdx, pos) => {
+                              if (pos % stepDraw === 0) {
+                                  const lx = dir > 0
+                                      ? anchorX + pos * blockW + blockW / 2
+                                      : anchorX + dir * (pos * blockW) + blockW / 2;
+                                  ctx.fillText(_waTpoGetLetter(lIdx), lx, rY + rH / 2);
+                              }
+                          });
+                      } else {
+                          ctx.beginPath();
+                          bin.letters.forEach((lIdx, pos) => {
+                              if (pos % stepDraw === 0) {
+                                  const bx = dir > 0
+                                      ? anchorX + pos * blockW
+                                      : anchorX + dir * (pos * blockW);
+                                  ctx.rect(bx, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
+                              }
+                          });
+                          ctx.fill();
+                      }
+                  });
+
+                  // ── VẼ ĐƯỜNG MỨC & NHÃN ─────────────────────────────────────
+                  const drawLvl = (price, clr, w, dash, txt, isIB = false) => {
+                      // FIX: Dùng _getYPixel
+                      const y = _getYPixel(yAxis, price);
+                      if (y == null) return;
+
+                      ctx.strokeStyle = _waTpoHex2Rgba(clr, isIB ? 0.6 : 0.85);
+                      ctx.lineWidth   = w;
+                      ctx.setLineDash(dash);
+                      ctx.beginPath();
+
+                      const lineStart = C.colorMode === 0 ? 0 : anchorX;
+                      const lineEnd   = C.colorMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5;
+                      ctx.moveTo(lineStart, y);
+                      ctx.lineTo(lineEnd, y);
+                      ctx.stroke();
+                      ctx.setLineDash([]);
+
+                      if (C.showLabels && !compactMode) {
+                          ctx.fillStyle  = _waTpoHex2Rgba(clr, 0.95);
+                          ctx.font       = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                          ctx.textAlign  = (C.colorMode === 0 && C.isLeft) ? 'left' : 'right';
+                          const textX    = (C.colorMode === 0 && C.isLeft) ? 4 : (C.colorMode === 0 ? bounding.width - 4 : lineEnd);
+                          ctx.fillText(`${txt} ${price.toFixed(2)}`, textX, y - 4);
+                      }
+                  };
+
+                  if (prof.vahBin) drawLvl(prof.vahBin.pHigh, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAH');
+                  if (prof.valBin) drawLvl(prof.valBin.pLow,  C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAL');
+                  if (prof.ibHigh && C.colorMode !== 0) drawLvl(prof.ibHigh, C.clrIbHigh, 1, [2, 2], 'IBH', true);
+                  if (prof.ibLow  && C.colorMode !== 0) drawLvl(prof.ibLow,  C.clrIbLow,  1, [2, 2], 'IBL', true);
+
+                  // ── VẼ POC ───────────────────────────────────────────────────
+                  const pocY = _getYPixel(yAxis, prof.pocMid);
+                  if (pocY != null) {
+                      const isSuper = prof.isSuperPoc;
+                      const clrPoc  = isSuper ? C.clrSuperPoc : (prof.isNaked ? C.clrNpoc : C.clrPoc);
+
+                      ctx.strokeStyle = _waTpoHex2Rgba(clrPoc, 0.9);
+                      ctx.lineWidth   = isSuper ? C.pocW + 1 : (prof.isNaked ? Math.max(1, C.pocW - 1) : C.pocW);
+                      if (prof.isNaked && !isSuper) ctx.setLineDash([5, 4]);
+
+                      ctx.beginPath();
+                      const pocStart = (C.colorMode === 0 && C.isLeft) ? 0 : anchorX;
+                      const pocEnd   = (C.colorMode === 0 && C.isLeft) ? bounding.width : anchorX + maxBlocksPx * 1.5;
+                      ctx.moveTo(pocStart, pocY);
+                      ctx.lineTo(pocEnd, pocY);
+                      // Kéo dài Naked POC tới cuối chart (chỉ multi-session mode)
+                      if (prof.isNaked && C.colorMode !== 0) ctx.lineTo(bounding.width, pocY);
+                      ctx.stroke();
+                      ctx.setLineDash([]);
+
+                      if (C.showLabels && !compactMode) {
+                          ctx.fillStyle = _waTpoHex2Rgba(clrPoc, 0.95);
+                          ctx.font      = `bold ${C.fontSize}px sans-serif`;
+                          ctx.textAlign = (C.colorMode === 0 && C.isLeft) ? 'left' : 'right';
+                          const textX   = (C.colorMode === 0 && C.isLeft) ? 4 : (C.colorMode === 0 ? bounding.width - 4 : pocEnd);
+                          ctx.fillText(`POC ${prof.pocMid.toFixed(2)}`, textX, pocY - 4);
+                      }
+                  }
+
+                  // ── SMART LABELS (AI Analysis) ───────────────────────────────
+                  if (C.smartLabels && C.colorMode !== 0 && !compactMode) {
+                      const lblY = _getYPixel(yAxis, prof.maxP);
+                      if (lblY != null) {
+                          const ly = lblY - 15;
+                          ctx.textAlign = 'left';
+                          ctx.font      = `bold ${Math.max(8, C.fontSize - 1)}px sans-serif`;
+                          ctx.fillStyle = _waTpoHex2Rgba('#FFFFFF', 0.8);
+                          ctx.fillText(`[${prof.shape}]`, anchorX, ly);
+
+                          if (C.verbosity > 0) {
+                              const imbClr = prof.imbalance === 'BUYING'  ? C.clrImbalBuy
+                                           : prof.imbalance === 'SELLING' ? C.clrImbalSell
+                                           : '#888888';
+                              ctx.fillStyle = _waTpoHex2Rgba(imbClr, 0.8);
+                              ctx.fillText(` Imb: ${prof.imbalance}`, anchorX + 60, ly);
+                          }
+                          if (C.verbosity > 1) {
+                              const aucClr = prof.auctionState === 'ACCEPTANCE' ? C.clrAccept
+                                           : prof.auctionState === 'REJECTION'  ? C.clrReject
+                                           : '#888888';
+                              ctx.fillStyle = _waTpoHex2Rgba(aucClr, 0.8);
+                              ctx.fillText(` | ${prof.auctionState}`, anchorX, ly - 14);
+                          }
+                      }
+                  }
+              }); // end profiles.forEach
+
+          } catch (e) {
+              console.error('[WAVE_TPO v4.2]', e);
+          } finally {
+              ctx.restore();
           }
-        });
-      } catch (e) { console.error('[WAVE_TPO]', e); } finally { ctx.restore(); }
-      return false;
-    }
+          return false;
+      }
   });
 })();
 
