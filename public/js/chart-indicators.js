@@ -1583,7 +1583,7 @@ function roundRect(ctx, x, y, w, h, r) {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.9 — SMART ENGINE (DYNAMIC SESSION LIMITER)
+//  WAVE_TPO ULTIMATE v5.0 — SMART ENGINE (PATH2D BATCHING & VIEWPORT CULLING)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -1620,6 +1620,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
   const _WA_TPO_SESSION_PALETTE = ['#4A148C', '#6A1B9A', '#8E24AA', '#AB47BC', '#00BCD4'];
 
+  // ─── AI MARKET PROFILE: VALLEY SCAN ──────────────────────────────
   function _waTpoClassifyProfileShape(bins) {
       const counts = bins.map(b => b.count);
       const total = counts.reduce((a, b) => a + b, 0);
@@ -1719,7 +1720,6 @@ function roundRect(ctx, x, y, w, h, r) {
       return false;
   }
 
-  // 🚀 BỔ SUNG BIẾN MAX COUNT ĐỂ CẮT MẢNG
   function _waTpoGroupData(dataList, from, to, mode, maxCount) {
       if (mode === 0) return [{ start: from, end: to }]; 
       const groups = new Map();
@@ -1741,7 +1741,6 @@ function roundRect(ctx, x, y, w, h, r) {
           if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
           else groups.get(key).end = i + 1;
       }
-      // Giới hạn số lượng hiển thị dựa trên tham số cài đặt
       return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-maxCount);
   }
 
@@ -1780,7 +1779,7 @@ function roundRect(ctx, x, y, w, h, r) {
   }
 
   kc.registerIndicator({
-      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.9',
+      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v5.0',
       category: 'wave_alpha', series: 'price', isStack: true,
       createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
       
@@ -1802,7 +1801,7 @@ function roundRect(ctx, x, y, w, h, r) {
           if (!dataList || dataList.length === 0 || !bounding) return false;
 
           const p = indicator.calcParams;
-          if (p && p.length < 31) { // 🚀 Chống lỗi Cache 31 thông số
+          if (p && p.length < 31) { 
               const defaults = [
                   60, 70, 1, 0, 1, 0, 1, 1, "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
                   "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350", "#42A5F5", "#FF7043",
@@ -1823,8 +1822,6 @@ function roundRect(ctx, x, y, w, h, r) {
               pocW: Math.max(1, +(p[22] ?? 2)), vaW: Math.max(1, +(p[23] ?? 1)), vaStyle: Math.round(+(p[24] ?? 0)),
               fontSize: Math.max(8, +(p[25] ?? 10)), showLabels: +(p[26] ?? 1) === 1,
               fade: Math.max(0, +(p[27] ?? 70)) / 100, minLtrPx: Math.max(6, +(p[28] ?? 8)), verbosity: Math.round(+(p[29] ?? 1)),
-              
-              // 🚀 Lấy thông số Số lượng phiên hiển thị
               maxProfiles: Math.max(1, Math.min(100, +(p[30] ?? 30))), 
           };
 
@@ -1832,12 +1829,10 @@ function roundRect(ctx, x, y, w, h, r) {
           if (from >= to) return false;
 
           const lastClose = dataList[to - 1]?.close ?? 0;
-          // Ép biến maxProfiles vào CacheKey để Render lại ngay khi bạn kéo thanh trượt
           const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.groupMode}_${C.maxProfiles}_${lastClose}_${bounding.width}_${bounding.height}`;
           let profiles = window._waTpoCache.get(cacheKey);
 
           if (!profiles) {
-              // Truyền C.maxProfiles vào hàm
               const sessions = _waTpoGroupData(dataList, from, to, C.groupMode, C.maxProfiles);
 
               profiles = sessions.map((s, idx) => {
@@ -1958,6 +1953,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
               const pxPerBar   = bounding.width / Math.max(1, to - from);
               const compactMode= C.densityMode === 0 || pxPerBar < 3;
+              const isHeatmap = C.colorMode === 2;
 
               profiles.forEach((prof) => {
                   let anchorX, dir;
@@ -1974,13 +1970,28 @@ function roundRect(ctx, x, y, w, h, r) {
                       const ratio = prof.sessionTotal <= 1 ? 0 : prof.sessionIdx / (prof.sessionTotal - 1);
                       baseClr = outClr = _WA_TPO_SESSION_PALETTE[Math.min(4, Math.floor(ratio * 4))];
                       alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + ratio * C.fade;
-                  } else if (C.colorMode === 2) { 
+                  } else if (isHeatmap) { 
                       alphaMul = prof.sessionTotal <= 1 ? 1 : (1 - C.fade) + (prof.sessionIdx / (prof.sessionTotal - 1)) * C.fade;
                   }
 
                   const maxBlocksPx = C.groupMode === 0 ? bounding.width * (compactMode ? 0.28 : 0.35) : bounding.width * (compactMode ? 0.16 : 0.22);
                   const unitW    = maxBlocksPx / Math.max(1, prof.maxTPO);
                   const stepDraw = (compactMode && !C.useLetter) ? 2 : 1;
+
+                  // 🚀 STATE HOISTING: Tính toán Font Size một lần duy nhất cho toàn bộ Profile
+                  const rH_global = Math.max(1, Math.abs(_getYPixel(yAxis, prof.bins[0].pLow) - _getYPixel(yAxis, prof.bins[0].pHigh)));
+                  const safeFontSize = Math.floor(Math.min(unitW, rH_global, C.fontSize)) || 1;
+                  const canLetterGlobal = C.useLetter && rH_global >= 6 && unitW >= C.minLtrPx;
+
+                  if (canLetterGlobal) {
+                      ctx.font = `bold ${safeFontSize}px monospace`;
+                      ctx.textBaseline = 'middle'; 
+                      ctx.textAlign = 'center';
+                  }
+
+                  // 🚀 PATH2D BATCHING: Chuẩn bị 2 giỏ chứa (Trong VA và Ngoài VA)
+                  const pathInVA = typeof Path2D !== 'undefined' ? new Path2D() : null;
+                  const pathOutVA = typeof Path2D !== 'undefined' ? new Path2D() : null;
 
                   prof.bins.forEach(bin => {
                       if (bin.count <= 0) return;
@@ -1990,34 +2001,66 @@ function roundRect(ctx, x, y, w, h, r) {
                       if (yB === 0 && yT === 0) return;
 
                       const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT)), blockW = Math.max(1, Math.min(rH, unitW));
-                      const safeFontSize = Math.floor(Math.min(blockW, rH, C.fontSize)) || 1;
-                      const canLetter = C.useLetter && rH >= 6 && blockW >= C.minLtrPx;
+                      
+                      // 🚀 Y-AXIS CULLING: Loại bỏ nét vẽ bị lọt ra ngoài mép trên/dưới của màn hình
+                      if (rY > bounding.height || rY + rH < 0) return;
 
                       let fAlpha = (bin.inVA ? C.opVA : C.opOut) * alphaMul;
-                      if (C.colorMode === 2) fAlpha = (0.12 + 0.75 * (bin.count / prof.maxTPO)) * alphaMul;
+                      if (isHeatmap) fAlpha = (0.12 + 0.75 * (bin.count / prof.maxTPO)) * alphaMul;
 
-                      ctx.fillStyle = _waTpoHex2Rgba(bin.inVA ? baseClr : outClr, Math.min(1, Math.max(0, fAlpha)));
+                      const fillStyle = _waTpoHex2Rgba(bin.inVA ? baseClr : outClr, Math.min(1, Math.max(0, fAlpha)));
 
-                      if (canLetter) {
-                          ctx.font        = `bold ${safeFontSize}px monospace`;
-                          ctx.textBaseline= 'middle'; ctx.textAlign   = 'center';
+                      if (canLetterGlobal) {
+                          ctx.fillStyle = fillStyle;
                           bin.letters.forEach((lIdx, pos) => {
                               if (pos % stepDraw === 0) {
                                   const lx = dir > 0 ? anchorX + pos * blockW + blockW / 2 : anchorX - pos * blockW - blockW / 2;
-                                  ctx.fillText(_waTpoGetLetter(lIdx), lx, rY + rH / 2);
+                                  // 🚀 X-AXIS CULLING: Không vẽ chữ nếu bị khuất khỏi mép Trái/Phải
+                                  if (lx > 0 && lx < bounding.width) {
+                                      ctx.fillText(_waTpoGetLetter(lIdx), lx, rY + rH / 2);
+                                  }
                               }
                           });
                       } else {
-                          ctx.beginPath();
-                          bin.letters.forEach((lIdx, pos) => {
-                              if (pos % stepDraw === 0) {
-                                  const bx = dir > 0 ? anchorX + pos * blockW : anchorX - (pos + 1) * blockW;
-                                  ctx.rect(bx, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
-                              }
-                          });
-                          ctx.fill();
+                          if (isHeatmap || !pathInVA) {
+                              // Heatmap không Batch được vì mỗi ô vuông 1 màu khác nhau
+                              ctx.fillStyle = fillStyle;
+                              ctx.beginPath();
+                              bin.letters.forEach((lIdx, pos) => {
+                                  if (pos % stepDraw === 0) {
+                                      const bx = dir > 0 ? anchorX + pos * blockW : anchorX - (pos + 1) * blockW;
+                                      if (bx + blockW > 0 && bx < bounding.width) {
+                                          ctx.rect(bx, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
+                                      }
+                                  }
+                              });
+                              ctx.fill();
+                          } else {
+                              // 🚀 GOM NHÓM VÀO PATH2D (Chế độ màu chuẩn)
+                              const targetPath = bin.inVA ? pathInVA : pathOutVA;
+                              bin.letters.forEach((lIdx, pos) => {
+                                  if (pos % stepDraw === 0) {
+                                      const bx = dir > 0 ? anchorX + pos * blockW : anchorX - (pos + 1) * blockW;
+                                      if (bx + blockW > 0 && bx < bounding.width) {
+                                          targetPath.rect(bx, rY, Math.max(1, blockW - 1), Math.max(1, rH - 1));
+                                      }
+                                  }
+                              });
+                          }
                       }
                   });
+
+                  // 🚀 ĐỔ MÀU MỘT LẦN CHO TOÀN BỘ KHỐI PATH2D (Siêu tốc độ)
+                  if (!canLetterGlobal && !isHeatmap && pathInVA) {
+                      if (C.opVA > 0) {
+                          ctx.fillStyle = _waTpoHex2Rgba(baseClr, Math.min(1, Math.max(0, C.opVA * alphaMul)));
+                          ctx.fill(pathInVA);
+                      }
+                      if (C.opOut > 0) {
+                          ctx.fillStyle = _waTpoHex2Rgba(outClr, Math.min(1, Math.max(0, C.opOut * alphaMul)));
+                          ctx.fill(pathOutVA);
+                      }
+                  }
 
                   const endSessionX = _getXPixel(xAxis, prof.endIdx);
                   
@@ -2085,7 +2128,7 @@ function roundRect(ctx, x, y, w, h, r) {
                   }
               });
           } catch (e) {
-              console.error('[WAVE_TPO v4.9]', e);
+              console.error('[WAVE_TPO v5.0]', e);
           } finally {
               ctx.restore();
           }
