@@ -3516,14 +3516,12 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 =================================================== */
 .eb-pro-container {
     width: 150px; 
-    /* Nếu bạn kéo icon lên quá cao, hãy tăng margin-top này lên để không bị đè hàng trên */
     margin-top: 18px; 
     margin-bottom: 2px;
     font-family: var(--font-num);
     position: relative;
 }
 
-/* Thanh ray */
 .eb-pro-track {
     position: relative;
     width: 100%;
@@ -3532,7 +3530,6 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     border-radius: 4px;
 }
 
-/* Vệt màu (Đã bỏ shadow và gradient màu mè, chỉ để màu trơn) */
 .eb-pro-fill {
     height: 100%;
     background: var(--brand); 
@@ -3554,37 +3551,27 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     border-radius: 50%;
     background: rgba(255,255,255,0.3);
 }
-/* Đã bỏ box-shadow của chấm */
 .eb-pro-dot.passed { background: var(--brand); } 
 
 
-/* ===================================================
-   👇 ĐIỀU CHỈNH KHOẢNG CÁCH ICON VÀ ĐỒNG HỒ Ở ĐÂY 👇
-=================================================== */
+
 .eb-pro-runner {
     position: absolute;
     
-    /* CHỈNH THÔNG SỐ TOP: 
-       -12px : Khoảng cách mặc định hiện tại
-       -18px : Nâng lên cao hơn nữa (xa thanh tiến trình hơn)
-       -6px  : Hạ xuống sát rịt vào thanh tiến trình
-    */
+    
     top: -14px; 
     
     transform: translateX(-50%);
     color: var(--brand);
     font-size: 12px; 
     z-index: 5;
-    /* Đã bỏ filter drop-shadow (hiệu ứng glow) */
     transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     align-items: center;
     justify-content: center;
 }
-/* =================================================== */
 
 
-/* Đồng hồ đếm ngược bám sát bên cạnh người chạy */
 .eb-pro-countdown {
     position: absolute;
     top: 50%;
@@ -3603,12 +3590,13 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .eb-pro-countdown.align-right { left: 100%; margin-left: 6px; }
 .eb-pro-countdown.align-left { right: 100%; margin-right: 6px; }
 
-/* Nhãn hệ số bên dưới */
 .eb-pro-labels-row {
     display: flex;
     justify-content: space-between;
     margin-top: 4px;
-    padding: 0;
+    
+    margin-left: -7.5px; 
+    margin-right: -7.5px; 
 }
 
 .eb-pro-label {
@@ -3618,6 +3606,6 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     text-align: center;
     width: 18px; 
 }
-/* Đã bỏ text-shadow (hiệu ứng glow chữ) */
+
 .eb-pro-label.active { color: var(--brand); font-size: 0.6rem; }
 .eb-pro-label.passed { color: rgba(0, 240, 255, 0.6); }
