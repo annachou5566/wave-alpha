@@ -3582,3 +3582,21 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 .path-dot.active::after {
     color: var(--brand);
 }
+/* Lá cờ mini chạy trên thanh tiến trình */
+.moving-flag {
+    position: absolute;
+    top: -11px; /* Nhấc cờ lên ngay trên vạch */
+    transform: translateX(-50%);
+    color: var(--brand); /* Màu neon của dự án */
+    font-size: 10px;
+    z-index: 5; /* Nổi lên trên tất cả các chấm */
+    transition: left 0.5s ease-out; /* Chạy mượt khi data update */
+    text-shadow: 0px 0px 4px #000; /* Đổ bóng để không bị chìm vào nền */
+}
+
+/* Ẩn bớt độ sáng của chấm active cũ vì giờ ta đã có cờ làm điểm nhấn */
+.path-dot.active {
+    background: var(--brand);
+    box-shadow: 0 0 5px var(--brand);
+    transform: scale(1); /* Không phóng to nữa */
+}
