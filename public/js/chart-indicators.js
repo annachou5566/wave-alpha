@@ -1159,7 +1159,7 @@ function roundRect(ctx, x, y, w, h, r) {
     ctx.arcTo(x, y + h, x, y + h - r, r); ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
   }
 }
-
+;
 // ════════════════════════════════════════════════════════════════════════════════
 //  WAVE_VPVR ULTIMATE v3.2 — CORE ENGINE (Fix Color & Clean UI)
 // ════════════════════════════════════════════════════════════════════════════════
@@ -3941,13 +3941,17 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         ];
     } else if (isTPO) {
         groups = [
-            { title: '⚙️ Cấu Hình Thuật Toán', keys: [0, 1, 2, 3, 4, 5, 6, 26, 27, 28] },
-            { title: '🎨 Bảng Màu (Trong / Ngoài VA / Khác)', keys: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] },
-            { title: '📏 Kiểu Nét & Độ Mờ', keys: [19, 20, 21, 22, 23, 24, 25] }
+            // 8 biến cấu hình chính + 3 biến hiển thị số liệu AI (Đã map đủ 30 keys)
+            { title: '⚙️ Cấu Hình Thuật Toán', keys: [0, 1, 2, 3, 4, 5, 6, 7, 27, 28, 29] },
+            // Trả lại 12 biến Bảng Màu
+            { title: '🎨 Bảng Màu Giao Dịch', keys: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] },
+            // 7 biến cấu hình nét vẽ
+            { title: '📏 Kiểu Nét & Độ Mờ', keys: [20, 21, 22, 23, 24, 25, 26] }
         ];
     } else {
         groups = [ { title: 'Cài Đặt', keys: currentParams.map((_, i) => i) } ];
     }
+        
 
     let activeHexInputId = null, activeBtnId = null;
 
