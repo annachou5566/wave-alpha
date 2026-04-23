@@ -18,58 +18,51 @@ function renderMultiplierPath(c) {
     let elapsedDays = Math.max(0, diffMs / 86400000);
     let currentDayInt = Math.min(7, Math.floor(elapsedDays) + 1);
     let fillPct = Math.min(100, (elapsedDays / 6) * 100);
-    
     const currentMul = multipliers[currentDayInt - 1];
 
-    // Đếm ngược
+    // Tính đếm ngược
     const nextBoundary = new Date(startTime.getTime() + currentDayInt * 86400000);
     const msLeft = nextBoundary - now;
     let countdownStr = '';
     if (msLeft > 0 && currentDayInt < 7) {
         const h = Math.floor(msLeft / 3600000);
         const m = Math.floor((msLeft % 3600000) / 60000);
-        countdownStr = `${h}h ${m}m`;
+        countdownStr = `${h}h${m}m left`;
     } else if (currentDayInt === 7) {
         countdownStr = 'Final Day';
     }
 
-    // Đổi icon theo tốc độ
+    // Chọn Icon (Đã bỏ 1.4x và sấm sét)
     let runnerIcon = 'fa-running'; 
     if (currentMul >= 1.3) runnerIcon = 'fa-skating'; 
-    if (currentMul === 1.1) runnerIcon = 'fa-walking'; 
     if (currentDayInt === 7) runnerIcon = 'fa-flag-checkered'; 
 
-    // Vẽ 7 chấm và 7 nhãn bằng Tọa độ Tuyệt đối (%)
+    // Render Chấm và Nhãn dàn đều
     let dotsHtml = '';
     let labelsHtml = '';
-    
     multipliers.forEach((mul, i) => {
         const day = i + 1;
-        const positionPct = (i / 6) * 100; // Ra kết quả: 0%, 16.6%, 33.3%, 50%, 66.6%, 83.3%, 100%
-        
-        let cls = '';
-        if (day < currentDayInt) cls = 'passed';
-        else if (day === currentDayInt) cls = 'active';
-
-        dotsHtml += `<div class="eb-full-dot ${cls}" style="left: ${positionPct}%;"></div>`;
-        labelsHtml += `<div class="eb-full-label ${cls}" style="left: ${positionPct}%;">${mul}x</div>`;
+        let cls = (day < currentDayInt) ? 'passed' : (day === currentDayInt ? 'active' : '');
+        dotsHtml += `<div class="eb-pro-dot ${cls}"></div>`;
+        labelsHtml += `<div class="eb-pro-label ${cls}">${mul}x</div>`;
     });
 
     return `
-        <div class="eb-full-container" title="Early Bird Boost">
-            <div class="eb-full-header">
-                <div class="eb-mul-title">⚡ ${currentMul}x</div>
-                ${countdownStr ? `<div class="eb-countdown-clean"><i class="far fa-clock"></i> ${countdownStr}</div>` : ''}
-            </div>
-            
-            <div class="eb-full-track">
-                <div class="eb-full-fill" style="width: ${fillPct}%"></div>
-                ${dotsHtml}
-                ${labelsHtml}
-                
-                <div class="eb-full-runner" style="left: ${fillPct}%">
+        <div class="eb-pro-container">
+            <div class="eb-pro-top-row">
+                <div class="eb-pro-runner" style="left: ${fillPct}%">
                     <i class="fas ${runnerIcon}"></i>
                 </div>
+                ${countdownStr ? `<div class="eb-pro-countdown">${countdownStr}</div>` : ''}
+            </div>
+            
+            <div class="eb-pro-track">
+                <div class="eb-pro-fill" style="width: ${fillPct}%"></div>
+                <div class="eb-pro-dots-row">${dotsHtml}</div>
+            </div>
+
+            <div class="eb-pro-labels-row">
+                ${labelsHtml}
             </div>
         </div>`;
 }

@@ -3512,92 +3512,100 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 }
 
 /* ===================================================
-   EARLY BIRD - FULL WIDTH ROADMAP (CHỐNG DÍNH CHÙM)
+   EARLY BIRD - CLEAN & WIDE (PRO VERSION)
 =================================================== */
-.eb-full-container {
+.eb-pro-container {
     width: 100%;
-    min-width: 180px; /* Đảm bảo luôn có độ rộng tối thiểu */
-    margin-top: 8px;
-    margin-bottom: 8px; /* Chừa chỗ cho các nhãn phía dưới */
+    margin-top: 10px;
     font-family: var(--font-num);
 }
 
-/* Hàng 1: Header (Hệ số + Đếm ngược) */
-.eb-full-header {
+/* Hàng trên: Chứa icon người chạy trượt tự do và Thời gian ở cuối */
+.eb-pro-top-row {
+    position: relative;
+    height: 24px; /* Không gian cho icon chạy */
+    width: 100%;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 16px; /* Cách thanh ngang một khoảng an toàn cho người chạy */
+    align-items: center;
+    margin-bottom: 4px;
 }
 
-.eb-mul-title {
-    font-size: 0.8rem;
+/* Icon người chạy: Trượt theo % */
+.eb-pro-runner {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
     color: var(--brand);
-    font-weight: 800;
-    line-height: 1;
-    text-shadow: 0 0 5px var(--brand-glow);
+    font-size: 16px;
+    z-index: 5;
+    filter: drop-shadow(0 0 5px var(--brand));
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.eb-countdown-clean {
-    font-size: 0.65rem;
+/* Thời gian còn lại: Nằm cố định bên phải hàng ngang của người chạy */
+.eb-pro-countdown {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
     color: #848e9c;
     font-weight: 600;
     background: rgba(255, 255, 255, 0.05);
     padding: 2px 8px;
-    border-radius: 12px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 1;
 }
 
-/* Hàng 2: Thanh tiến trình 100% */
-.eb-full-track {
+/* Thanh ray */
+.eb-pro-track {
+    position: relative;
     width: 100%;
     height: 4px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
-    position: relative;
 }
 
-.eb-full-fill {
+.eb-pro-fill {
     height: 100%;
-    background: linear-gradient(90deg, rgba(0,240,255,0.1), var(--brand));
-    box-shadow: 0 0 8px var(--brand-glow);
+    background: linear-gradient(90deg, rgba(0,240,255,0.2), var(--brand));
+    box-shadow: 0 0 10px var(--brand-glow);
     border-radius: 4px;
-    transition: width 0.3s ease;
+    transition: width 0.4s ease;
 }
 
-/* Định vị tuyệt đối cho chấm và nhãn, ÉP giãn đều 100% */
-.eb-full-dot {
+/* 7 Chấm và 7 Nhãn dàn đều 100% bên dưới */
+.eb-pro-dots-row {
     position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
+    inset: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+}
+
+.eb-pro-dot {
+    width: 4px; height: 4px;
     border-radius: 50%;
-    background: #333;
-    border: 1px solid #111;
-    z-index: 1;
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-1px);
 }
-.eb-full-dot.passed { background: var(--brand); box-shadow: 0 0 5px var(--brand); border-color: transparent; }
-.eb-full-dot.active { background: #fff; box-shadow: 0 0 8px #fff; transform: translate(-50%, -50%) scale(1.4); z-index: 2;}
+.eb-pro-dot.passed { background: var(--brand); box-shadow: 0 0 5px var(--brand); }
 
-.eb-full-label {
-    position: absolute;
-    top: 8px; /* Đẩy chữ xuống dưới thanh ngang */
-    transform: translateX(-50%);
-    font-size: 0.55rem;
-    font-weight: 600;
+.eb-pro-labels-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding: 0;
+}
+
+.eb-pro-label {
+    font-size: 0.6rem;
+    font-weight: 700;
     color: rgba(255, 255, 255, 0.2);
+    text-align: center;
+    width: 30px; /* Đảm bảo con số không bị lệch tâm chấm */
 }
-.eb-full-label.passed { color: rgba(0, 240, 255, 0.5); }
-.eb-full-label.active { color: var(--brand); font-weight: 800; font-size: 0.65rem; text-shadow: 0 0 5px var(--brand-glow); }
-
-/* Icon người chạy */
-.eb-full-runner {
-    position: absolute;
-    top: -14px; /* Nằm ngay trên vạch, không đè chữ ở Header */
-    transform: translateX(-50%);
-    color: var(--brand);
-    font-size: 14px;
-    z-index: 5;
-    filter: drop-shadow(0 0 4px var(--brand));
-    transition: left 0.3s ease;
-}
+.eb-pro-label.active { color: var(--brand); text-shadow: 0 0 5px var(--brand-glow); font-size: 0.65rem; }
+.eb-pro-label.passed { color: rgba(0, 240, 255, 0.6); }
