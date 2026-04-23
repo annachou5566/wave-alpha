@@ -1545,8 +1545,10 @@ function roundRect(ctx, x, y, w, h, r) {
     }
   }
 
-  // 🚀 FIX: Hàm này giờ đọc được cả Số Nguyên (Presets) và Chuỗi String (Tùy chỉnh UI)
   function _waHex2Rgba(val, alpha) {
+    // 🚀 FIX: Dạy cho Canvas hiểu màu Trong Suốt
+    if (val === 'transparent') return 'rgba(0,0,0,0)';
+    
     if (typeof val === 'number') {
       const h = Math.round(val) >>> 0;
       const r = (h >> 16) & 0xFF;
@@ -4093,7 +4095,7 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
    * @param {string} paneId
    */
   // =========================================================================
-  // HỆ THỐNG FLOATING SETTINGS V5.0 (CUSTOM PALETTE & HEX INPUT)
+  // HỆ THỐNG FLOATING SETTINGS V6.0 (TRANSPARENT, RESET & AUTO-HEX)
   // =========================================================================
   global.openIndicatorSettings = function (indicator, paneId) {
     const meta = INDICATOR_REGISTRY.find(function (x) { return x.name === indicator.name; });
@@ -4109,13 +4111,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         return; 
     }
 
-    // 1. XÓA PANEL & POPOVER CŨ TRÁNH TRÙNG LẶP
     const oldPanel = document.getElementById('wa-floating-settings');
     if (oldPanel) oldPanel.remove();
     const oldPopover = document.getElementById('wa-color-popover');
     if (oldPopover) oldPopover.remove();
 
-    // 2. TẠO KHUNG PANEL CHÍNH
     const panel = document.createElement('div');
     panel.id = 'wa-floating-settings';
     panel.style.cssText = `
@@ -4126,7 +4126,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         backdrop-filter: blur(8px); font-family: sans-serif; user-select: none;
     `;
 
-    // 3. HEADER (Nắm kéo)
     const header = document.createElement('div');
     header.style.cssText = `
         padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); 
@@ -4139,7 +4138,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     `;
     panel.appendChild(header);
 
-    // 4. BODY (Nội dung settings)
     const body = document.createElement('div');
     body.style.cssText = `
         padding: 16px; max-height: calc(100vh - 200px); overflow-y: auto;
@@ -4147,7 +4145,6 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     `;
     panel.appendChild(body);
 
-    // ── CSS CHUYÊN BIỆT CHO UI KHÔNG DÙNG THẺ <input type="color"> ──
     const style = document.createElement('style');
     style.innerHTML = `
         #wa-floating-settings ::-webkit-scrollbar { width: 4px; }
@@ -4156,19 +4153,23 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         .wa-group-title { color:#848E9C; font-size:11px; font-weight:bold; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; }
         .wa-inp-row { display: flex; justify-content: space-between; align-items: center; gap:10px; margin-bottom:10px; }
         
-        /* Ô nhập số bình thường */
         .wa-inp-num { width: 60px; height: 26px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #FFF; text-align: center; font-size: 12px; outline: none; transition: border 0.2s;}
         .wa-inp-num:focus { border-color: #F0B90B; }
         
-        /* Ô nhập mã HEX */
-        .wa-inp-hex { width: 70px; height: 26px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #FFF; text-align: center; font-size: 11px; font-family: monospace; outline: none; text-transform: uppercase;}
+        .wa-inp-hex { width: 75px; height: 26px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #FFF; text-align: center; font-size: 11px; font-family: monospace; outline: none; text-transform: uppercase;}
         .wa-inp-hex:focus { border-color: #F0B90B; }
         
-        /* Cục vuông hiển thị màu */
         .wa-color-swatch-btn { width: 26px; height: 26px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: transform 0.1s; }
         .wa-color-swatch-btn:hover { border-color: #FFF; transform: scale(1.05); }
 
-        /* Bảng Màu Mini (Pop-over) */
+        /* 🚀 Hiệu ứng Caro cho màu Transparent */
+        .wa-is-transparent {
+            background-color: #2b2b2b !important;
+            background-image: linear-gradient(45deg, #1f1f1f 25%, transparent 25%), linear-gradient(-45deg, #1f1f1f 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1f1f1f 75%), linear-gradient(-45deg, transparent 75%, #1f1f1f 75%) !important;
+            background-size: 10px 10px !important;
+            background-position: 0 0, 0 5px, 5px -5px, -5px 0px !important;
+        }
+
         #wa-color-popover {
             position: fixed; background: #1E222D; border: 1px solid #434651; border-radius: 6px;
             padding: 8px; display: none; grid-template-columns: repeat(6, 20px); gap: 4px;
@@ -4179,41 +4180,41 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     `;
     panel.appendChild(style);
 
-    // ── MA TRẬN 30 MÀU CHUẨN TRADINGVIEW (6 Cột x 5 Hàng) ──
+    // ── 36 MÀU TRADING CÓ KÈM TRANSPARENT ──
     const TRADING_PALETTE = [
-        '#FFFFFF', '#D1D4DC', '#B2B5BE', '#787B86', '#434651', '#000000', // Grayscale
-        '#F44336', '#EF5350', '#E53935', '#D32F2F', '#C62828', '#B71C1C', // Reds
-        '#FF9800', '#FFB74D', '#FFA726', '#F57C00', '#E65100', '#F0B90B', // Oranges & Gold
-        '#4CAF50', '#66BB6A', '#26A69A', '#00897B', '#009688', '#0ECB81', // Greens
-        '#2196F3', '#2962FF', '#00BCD4', '#9C27B0', '#673AB7', '#9575CD'  // Blues & Purples
+        'transparent', '#FFFFFF', '#D1D4DC', '#B2B5BE', '#787B86', '#000000',
+        '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#E65100', '#F0B90B',
+        '#F44336', '#EF5350', '#E53935', '#D32F2F', '#C62828', '#B71C1C',
+        '#4CAF50', '#66BB6A', '#26A69A', '#00897B', '#009688', '#0ECB81',
+        '#2196F3', '#2962FF', '#00BCD4', '#9C27B0', '#673AB7', '#9575CD',
+        '#E91E63', '#D50000', '#AA00FF', '#6200EA', '#304FFE', '#00B8D4'
     ];
 
-    // Tạo Popover chứa Bảng màu Mini
     const colorPopover = document.createElement('div');
     colorPopover.id = 'wa-color-popover';
     TRADING_PALETTE.forEach(hex => {
         const cDiv = document.createElement('div');
         cDiv.className = 'wa-mini-color';
-        cDiv.style.background = hex;
+        if (hex === 'transparent') cDiv.classList.add('wa-is-transparent');
+        else cDiv.style.background = hex;
         cDiv.dataset.hex = hex;
+        cDiv.title = hex === 'transparent' ? 'Trong Suốt' : hex;
         colorPopover.appendChild(cDiv);
     });
     document.body.appendChild(colorPopover);
 
-    // Hàm Update Live (Cập nhật Chart)
     const liveUpdateChart = () => {
         const newParams = currentParams.map((_, idx) => {
             const inpNum = document.getElementById('wa-param-num-' + idx);
             const inpHex = document.getElementById('wa-param-hex-' + idx);
-            if (inpHex) return inpHex.value; // Nếu là màu, lấy value chuỗi #HEX
-            if (inpNum) return parseFloat(inpNum.value) || 0; // Nếu là số, parse
+            if (inpHex) return inpHex.value; 
+            if (inpNum) return parseFloat(inpNum.value) || 0; 
             return currentParams[idx];
         });
         try { global.tvChart.overrideIndicator({ name: indicator.name, calcParams: newParams }, paneId); } catch (e) {}
         return newParams;
     };
 
-    // Chú thích chuyên biệt
     const vpvrDescriptions = [
         "Thanh ngang (10-200)", "Lõi Volume (70%)", "Chiều ngang (%)",
         "0: Phải, 1: Trái", "0: Toàn, 1: Ngày, 2: Tuần", "0: Tắt, 1: Nền mờ",
@@ -4229,10 +4230,8 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
         { title: '📏 Kiểu Dáng & Độ Mờ', keys: [14, 15, 16, 17, 18, 19, 20] }
     ] : [ { title: '⚙️ Cài Đặt Chỉ Báo', keys: currentParams.map((_, i) => i) } ];
 
-    let activeHexInputId = null;
-    let activeBtnId = null;
+    let activeHexInputId = null, activeBtnId = null;
 
-    // Render danh sách Input
     groups.forEach(g => {
         const box = document.createElement('div');
         box.className = 'wa-group-box';
@@ -4242,24 +4241,33 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             const val = currentParams[idx];
             if (val === undefined) return;
             
-            const isColor = typeof val === 'string' && val.startsWith('#');
-            const desc = (isVPVR && vpvrDescriptions[idx]) ? vpvrDescriptions[idx] : '';
+            // 🚀 Tự động nhận diện trường màu sắc thông minh
+            const isColorField = (labels[idx] && labels[idx].toLowerCase().includes('màu')) || 
+                                 (typeof val === 'string' && (val.startsWith('#') || val === 'transparent'));
             
+            let displayVal = val;
+            // Nếu mặc định là số nguyên (0x26A69A) thì convert sang #HEX
+            if (isColorField && typeof val === 'number') {
+                let hStr = Math.round(val).toString(16).toUpperCase();
+                while (hStr.length < 6) hStr = '0' + hStr;
+                displayVal = '#' + hStr;
+            }
+
+            const desc = (isVPVR && vpvrDescriptions[idx]) ? vpvrDescriptions[idx] : '';
             const row = document.createElement('div');
             row.className = 'wa-inp-row';
             
             let controlHTML = '';
-            if (isColor) {
-                // UI dành riêng cho Màu: Ô nhập HEX + Nút Vuông Mở Bảng Màu
+            if (isColorField) {
+                const isTrans = displayVal === 'transparent';
                 controlHTML = `
                     <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="text" id="wa-param-hex-${idx}" class="wa-inp-hex" value="${val}" autocomplete="off" maxlength="7">
-                        <div id="wa-color-btn-${idx}" class="wa-color-swatch-btn" style="background:${val};"></div>
+                        <input type="text" id="wa-param-hex-${idx}" class="wa-inp-hex" value="${displayVal}" autocomplete="off" maxlength="11" placeholder="Mã HEX">
+                        <div id="wa-color-btn-${idx}" class="wa-color-swatch-btn ${isTrans ? 'wa-is-transparent' : ''}" style="background:${isTrans ? 'transparent' : displayVal};"></div>
                     </div>
                 `;
             } else {
-                // UI dành cho Số bình thường
-                controlHTML = `<input type="number" id="wa-param-num-${idx}" class="wa-inp-num" value="${val}" step="any">`;
+                controlHTML = `<input type="number" id="wa-param-num-${idx}" class="wa-inp-num" value="${displayVal}" step="any">`;
             }
 
             row.innerHTML = `
@@ -4271,73 +4279,114 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             `;
             box.appendChild(row);
 
-            // Gắn Event Listeners
-            if (isColor) {
+            if (isColorField) {
                 const hexInp = row.querySelector(`#wa-param-hex-${idx}`);
                 const colorBtn = row.querySelector(`#wa-color-btn-${idx}`);
                 
-                // 1. Type tay vào ô HEX -> Đổi màu cục vuông & Chart
                 hexInp.addEventListener('input', (e) => {
-                    const v = e.target.value;
-                    if (/^#[0-9A-F]{6}$/i.test(v) || /^#[0-9A-F]{3}$/i.test(v)) {
-                        colorBtn.style.background = v;
+                    const v = e.target.value.toLowerCase();
+                    if (v === 'transparent' || /^#[0-9A-F]{6}$/i.test(v) || /^#[0-9A-F]{3}$/i.test(v)) {
+                        if (v === 'transparent') {
+                            colorBtn.style.background = 'transparent';
+                            colorBtn.classList.add('wa-is-transparent');
+                        } else {
+                            colorBtn.style.background = v;
+                            colorBtn.classList.remove('wa-is-transparent');
+                        }
                         liveUpdateChart();
                     }
                 });
 
-                // 2. Click cục vuông -> Hiện Popover Bảng màu mini
                 colorBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     activeHexInputId = `wa-param-hex-${idx}`;
                     activeBtnId = `wa-color-btn-${idx}`;
-                    
                     const rect = colorBtn.getBoundingClientRect();
                     colorPopover.style.display = 'grid';
-                    
-                    // Tính tọa độ sao cho popover không tràn màn hình
-                    let popX = rect.left - 140; // Đẩy sang trái nút
-                    let popY = rect.bottom + 5;
+                    let popX = rect.left - 140, popY = rect.bottom + 5;
                     if (popX < 10) popX = 10;
                     colorPopover.style.left = popX + 'px';
                     colorPopover.style.top = popY + 'px';
                 });
             } else {
-                // Đổi số -> Cập nhật chart
                 row.querySelector('input').addEventListener('input', liveUpdateChart);
             }
         });
         body.appendChild(box);
     });
 
-    // Lắng nghe sự kiện click vào 1 ô màu trong Popover
     colorPopover.addEventListener('click', (e) => {
         if (e.target.classList.contains('wa-mini-color')) {
             const chosenHex = e.target.dataset.hex;
             if (activeHexInputId && activeBtnId) {
-                document.getElementById(activeHexInputId).value = chosenHex;
-                document.getElementById(activeBtnId).style.background = chosenHex;
-                liveUpdateChart(); // Cập nhật Chart tức thì
+                const hexInp = document.getElementById(activeHexInputId);
+                const btn = document.getElementById(activeBtnId);
+                hexInp.value = chosenHex;
+                if (chosenHex === 'transparent') {
+                    btn.style.background = 'transparent';
+                    btn.classList.add('wa-is-transparent');
+                } else {
+                    btn.style.background = chosenHex;
+                    btn.classList.remove('wa-is-transparent');
+                }
+                liveUpdateChart();
             }
-            colorPopover.style.display = 'none'; // Ẩn popover
-        }
-    });
-
-    // Bấm ra ngoài thì ẩn Popover bảng màu
-    document.addEventListener('click', (e) => {
-        if (!colorPopover.contains(e.target)) {
             colorPopover.style.display = 'none';
         }
     });
 
-    // 5. FOOTER (Nút Lưu)
+    document.addEventListener('click', (e) => {
+        if (!colorPopover.contains(e.target)) colorPopover.style.display = 'none';
+    });
+
+    // 5. FOOTER (Reset & Save)
     const footer = document.createElement('div');
-    footer.style.cssText = 'padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); display:flex;';
-    footer.innerHTML = `<button id="wa-save-btn" style="flex:1; padding:8px; background:#F0B90B; border:none; border-radius:6px; color:#000; font-weight:bold; cursor:pointer; letter-spacing:0.5px;">✓ XONG & LƯU</button>`;
+    footer.style.cssText = 'padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); display:flex; gap:8px;';
+    
+    // 🚀 NÚT RESET MẶC ĐỊNH
+    const btnReset = document.createElement('button');
+    btnReset.innerText = '↺ Mặc Định';
+    btnReset.style.cssText = 'flex:0.6; padding:8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#FFF; font-weight:bold; cursor:pointer;';
+    btnReset.onclick = () => {
+        const defaults = meta && meta.defaultParams ? meta.defaultParams : [];
+        defaults.forEach((defVal, idx) => {
+            const inpNum = document.getElementById('wa-param-num-' + idx);
+            const inpHex = document.getElementById('wa-param-hex-' + idx);
+            const colorBtn = document.getElementById('wa-color-btn-' + idx);
+            
+            if (inpHex && colorBtn) {
+                let dVal = defVal;
+                if (typeof defVal === 'number') {
+                    let hStr = Math.round(defVal).toString(16).toUpperCase();
+                    while (hStr.length < 6) hStr = '0' + hStr;
+                    dVal = '#' + hStr;
+                }
+                inpHex.value = dVal;
+                if (dVal === 'transparent') {
+                    colorBtn.style.background = 'transparent';
+                    colorBtn.classList.add('wa-is-transparent');
+                } else {
+                    colorBtn.style.background = dVal;
+                    colorBtn.classList.remove('wa-is-transparent');
+                }
+            } else if (inpNum) {
+                inpNum.value = defVal;
+            }
+        });
+        liveUpdateChart();
+    };
+
+    const btnSave = document.createElement('button');
+    btnSave.innerText = '✓ XONG & LƯU';
+    btnSave.style.cssText = 'flex:1; padding:8px; background:#F0B90B; border:none; border-radius:6px; color:#000; font-weight:bold; cursor:pointer;';
+
+    footer.appendChild(btnReset);
+    footer.appendChild(btnSave);
     panel.appendChild(footer);
 
     document.body.appendChild(panel);
 
-    // ── KÉO THẢ PANEL ──
+    // KÉO THẢ
     let isDragging = false, offset = { x: 0, y: 0 };
     header.onmousedown = (e) => {
         isDragging = true;
@@ -4352,14 +4401,10 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
     };
     window.onmouseup = () => isDragging = false;
 
-    // ── ĐÓNG & LƯU ──
-    const closePanel = () => {
-        panel.remove();
-        colorPopover.remove();
-    };
-    
+    const closePanel = () => { panel.remove(); colorPopover.remove(); };
     document.getElementById('wa-close-btn').onclick = closePanel;
-    document.getElementById('wa-save-btn').onclick = () => {
+    
+    btnSave.onclick = () => {
         const finalParams = liveUpdateChart();
         const entry = global.scActiveIndicators.find(x => x.name === indicator.name);
         if (entry) {
