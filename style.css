@@ -3560,7 +3560,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
 
 .eb-dynamic-pill {
     position: absolute;
-    top: -22px; /* Khoảng cách bay lơ lửng so với thanh bar */
+    top: -18px; /* Khoảng cách bay lơ lửng so với thanh bar */
     transform: translateX(-50%);
     display: flex;
     align-items: center;
@@ -3572,7 +3572,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
     /* 👇 1. CHỈNH ĐỘ DÀY/MỎNG CỦA KHỐI Ở ĐÂY 👇 */
-    padding: 1px 6px; /* Mặc định cũ là 2px 8px. Giảm số này xuống thì cái khung đen sẽ ôm sát vào chữ và icon hơn */
+    padding: 1px 7px; /* Mặc định cũ là 2px 8px. Giảm số này xuống thì cái khung đen sẽ ôm sát vào chữ và icon hơn */
     
     /* 👇 2. CHỈNH KHOẢNG CÁCH GIỮA NGƯỜI VÀ CHỮ Ở ĐÂY 👇 */
     gap: 4px; /* Mặc định cũ là 6px. Giảm xuống thì người và chữ đứng sát nhau hơn */
