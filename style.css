@@ -3511,74 +3511,162 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* --- UI EARLY BIRD PRO: CHỮ NẰM DƯỚI --- */
-.multiplier-path-container {
-    margin-top: 16px; /* Chừa không gian rộng rãi phía trên cho icon chạy */
-    width: 150px;
+/* ===================================================
+   EARLY BIRD BOOST - PREMIUM UI
+=================================================== */
+:root {
+    --brand-dim:  rgba(0, 240, 255, 0.18);
+    --brand-glow: rgba(0, 240, 255, 0.45);
+    --tier-gold:   #f6c90e;
+    --tier-silver: #a0aec0;
+    --tier-bronze: #e07830;
+    --transition-interactive: 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .multiplier-path-container {
+    padding-top: 24px; /* Tạo vùng bay cho nhãn và icon */
     position: relative;
-    padding-bottom: 5px;
-}
-
-.multiplier-path-line {
-    height: 4px;
-    background: rgba(255, 255, 255, 0.08);
     width: 100%;
+    margin-top: 8px;
+  }
+  
+  /* --- Track bar --- */
+  .multiplier-path-track {
     position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    height: 6px;
     border-radius: 10px;
-}
-
-.path-fill {
+    background: rgba(255, 255, 255, 0.06);
+    overflow: visible;
+  }
+  
+  .path-fill {
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 0; left: 0;
     height: 100%;
-    background: linear-gradient(90deg, rgba(0, 240, 255, 0.2), var(--brand));
-    box-shadow: 0 0 10px var(--brand-glow);
-    z-index: 0;
     border-radius: 10px;
-    transition: width 0.3s ease-in-out;
-}
-
-/* Icon người chạy bây giờ tha hồ tung hoành ở trên */
-.path-runner {
+    background: linear-gradient(90deg, rgba(0,240,255,0.15) 0%, var(--brand) 100%);
+    box-shadow: 0 0 8px var(--brand-glow);
+    z-index: 0;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .path-dots {
     position: absolute;
-    top: -16px; /* Kéo hẳn lên trên thanh */
-    transform: translateX(-50%);
-    color: var(--brand);
-    font-size: 14px; /* Cho icon to lên một chút cho rõ ràng */
-    z-index: 5;
-    transition: left 0.3s ease-out;
-    filter: drop-shadow(0 0 3px var(--brand));
-}
-
-.path-dot {
-    width: 3px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    position: relative;
-    z-index: 1;
-}
-
-.path-dot.passed {
-    background: var(--brand);
-}
-
-/* Chữ được đưa xuống dưới */
-.multiplier-path-footer {
+    inset: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+  
+  .path-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.06);
+    transition: background var(--transition-interactive), box-shadow var(--transition-interactive), transform var(--transition-interactive);
+  }
+  
+  .path-dot.passed {
+    background: var(--brand);
+    border-color: transparent;
+    box-shadow: 0 0 4px var(--brand-glow);
+  }
+  
+  .path-dot.active {
+    background: var(--brand);
+    box-shadow: 0 0 8px var(--brand-glow);
+    transform: scale(1.5);
+  }
+  
+  /* --- Runner icon (viên đạn bay trên track) --- */
+  .path-runner {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin-top: -14px; /* Trồi lên trên vạch */
+    z-index: 10;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #171a24;
+    border: 1.5px solid var(--brand);
+    box-shadow: 0 0 10px var(--brand-glow), 0 2px 6px rgba(0,0,0,0.5);
+    color: var(--brand);
+    font-size: 11px;
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow var(--transition-interactive);
+  }
+  
+  /* --- Nhãn multiplier NỔI phía trên --- */
+  .path-tier-labels {
+    position: absolute;
+    inset: 0;
+    top: -40px; /* Nhấc lên trên cùng */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+  
+  .tier-label {
+    font-family: var(--font-num);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.2);
+    transition: color var(--transition-interactive);
+  }
+  
+  .tier-label.active { color: var(--brand); text-shadow: 0 0 5px var(--brand-glow); }
+  .tier-label.gold   { color: var(--tier-gold); }
+  .tier-label.silver { color: var(--tier-silver); }
+  .tier-label.bronze { color: var(--tier-bronze); }
+  
+  /* --- Footer: Giá trị + Đếm ngược --- */
+  .multiplier-path-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+  }
+  
+  .footer-left { display: flex; align-items: baseline; gap: 4px; }
+  
+  .multiplier-value {
+    font-family: var(--font-num);
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--brand);
     line-height: 1;
-    margin-top: 8px; /* Khoảng cách từ thanh tiến trình xuống chữ */
-}
-
-.countdown-text {
+    text-shadow: 0 0 6px var(--brand-glow);
+  }
+  
+  .multiplier-label { font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 700; letter-spacing: 0.5px; }
+  
+  /* Pill đếm ngược có dot nhấp nháy */
+  .countdown-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 15px;
+    padding: 2px 8px;
     font-family: var(--font-num);
     font-size: 0.65rem;
     color: #848e9c;
-    font-weight: 500;
-}
+    font-weight: 600;
+  }
+  
+  .countdown-pill .pulse-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--brand);
+    animation: pulseDot 1.5s ease-in-out infinite;
+    box-shadow: 0 0 5px var(--brand);
+  }
+  
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.6); }
+  }
