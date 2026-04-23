@@ -313,17 +313,17 @@
     {
       name: 'WAVE_TPO',
       shortName: 'TPO',
-      description: 'Hồ Sơ Thời Gian SMART v4.3 (Độc Lập Thời Gian & Màu Sắc)',
+      description: 'Hồ Sơ Thời Gian SMART v4.9 (Tùy chỉnh số phiên)',
       category: 'wave_alpha',
       isStack: true,
       builtIn: false,
-      // 30 Thông số: Thuật Toán [0-7] | Màu Sắc [8-19] | Kiểu Dáng [20-29]
+      // 31 Thông số: Thuật Toán [0-7, 27-30] | Màu Sắc [8-19] | Kiểu Dáng [20-26]
       defaultParams: [
         60, 70, 1, 0, 1, 0, 1, 1, 
         "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
         "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
         "#42A5F5", "#FF7043",
-        85, 20, 2, 1, 0, 10, 1, 70, 8, 1
+        85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30
       ],
       paramLabels: [
         'Số Bins (10–200)', 'Value Area % (10–100)', 'Chế Độ Gộp (0=Cả Chart, 1=Ngày, 2=Tuần)', 'Vị Trí Cả Chart (0=Trái, 1=Phải)', 
@@ -333,7 +333,7 @@
         'Màu Acceptance', 'Màu Rejection',
         'Độ Mờ Trong VA (0-100)', 'Độ Mờ Ngoài VA (0-100)', 'Độ Dày POC (1-5)', 'Độ Dày VA (1-4)', 
         'Kiểu Nét VA (0=Đứt,1=Chấm,2=Liền)', 'Cỡ Chữ (8-16)', 'Hiện Nhãn TPO (0=Tắt,1=Bật)', 
-        'Độ Mờ Phiên Cũ (0-100)', 'Kích Thước Chữ Min (6-12px)', 'Độ Chi Tiết Nhãn (0-2)'
+        'Độ Mờ Phiên Cũ (0-100)', 'Kích Thước Chữ Min (6-12px)', 'Độ Chi Tiết Nhãn (0-2)', 'Số Phiên Tối Đa (1-100)'
       ],
     },
 
@@ -1583,7 +1583,7 @@ function roundRect(ctx, x, y, w, h, r) {
 })();
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.8 — SMART ENGINE (TRUE PEAK/VALLEY AI & IB PRECISION)
+//  WAVE_TPO ULTIMATE v4.9 — SMART ENGINE (DYNAMIC SESSION LIMITER)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -1620,13 +1620,11 @@ function roundRect(ctx, x, y, w, h, r) {
 
   const _WA_TPO_SESSION_PALETTE = ['#4A148C', '#6A1B9A', '#8E24AA', '#AB47BC', '#00BCD4'];
 
-  // ─── AI MARKET PROFILE: THUẬT TOÁN TÌM THUNG LŨNG (VALLEY-SCAN) ─────────
   function _waTpoClassifyProfileShape(bins) {
       const counts = bins.map(b => b.count);
       const total = counts.reduce((a, b) => a + b, 0);
       if (!total) return 'UNDEFINED';
 
-      // 1. TÍNH ĐỘ LỆCH (SKEWNESS) QUA TRỤC GIỮA
       const midIdx = Math.floor(counts.length / 2);
       let topVol = 0, botVol = 0;
       for (let i = 0; i < counts.length; i++) {
@@ -1635,16 +1633,13 @@ function roundRect(ctx, x, y, w, h, r) {
       }
       const skew = (topVol - botVol) / total;
 
-      // 2. NHẬN DIỆN B-SHAPE BẰNG THUNG LŨNG (DOUBLE DISTRIBUTION)
       let maxCount = Math.max(...counts);
-      let threshold = maxCount * 0.40; // Bụng phải to bằng 40% POC mới tính là đỉnh
+      let threshold = maxCount * 0.40; 
       let peaks = [];
 
-      // Tìm các vùng bụng thực sự (Bỏ qua đỉnh rác trên cao nguyên phẳng)
       for (let i = 1; i < counts.length - 1; i++) {
           if (counts[i] >= threshold && counts[i] >= counts[i-1] && counts[i] >= counts[i+1]) {
               let right = i;
-              // Nếu là dải đi ngang (Plateau), gom nó lại thành 1 đỉnh ở giữa
               while (right < counts.length - 1 && counts[right+1] === counts[i]) right++;
               let midPlateau = Math.floor((i + right) / 2);
               peaks.push({ idx: midPlateau, val: counts[i] });
@@ -1653,31 +1648,22 @@ function roundRect(ctx, x, y, w, h, r) {
       }
 
       let isBShape = false;
-      // Kiểm tra xem giữa 2 cái bụng bất kỳ có "Thung lũng" sâu không?
       for (let i = 0; i < peaks.length - 1; i++) {
           for (let j = i + 1; j < peaks.length; j++) {
               let p1 = peaks[i], p2 = peaks[j];
-              
-              // Khoảng cách giữa 2 bụng phải đủ rộng (ít nhất 10% chiều cao chart)
               if (Math.abs(p1.idx - p2.idx) < counts.length * 0.10) continue;
-
-              // Tìm điểm thấp nhất (eo thắt) giữa 2 bụng
               let minValley = Infinity;
               for (let k = p1.idx + 1; k < p2.idx; k++) {
                   if (counts[k] < minValley) minValley = counts[k];
               }
-
-              // Nếu eo thắt nhỏ hơn 25% POC (Rất mỏng) => Chuẩn B_Shape
               let smallerPeak = Math.min(p1.val, p2.val);
               if (minValley <= maxCount * 0.25 || minValley <= smallerPeak * 0.5) {
-                  isBShape = true;
-                  break;
+                  isBShape = true; break;
               }
           }
           if (isBShape) break;
       }
 
-      // 3. QUYẾT ĐỊNH MÔ HÌNH (ƯU TIÊN B-SHAPE TRƯỚC)
       if (isBShape) return 'B_SHAPE'; 
       if (skew > 0.16) return 'P_SHAPE';   
       if (skew < -0.16) return 'b_SHAPE';  
@@ -1733,7 +1719,8 @@ function roundRect(ctx, x, y, w, h, r) {
       return false;
   }
 
-  function _waTpoGroupData(dataList, from, to, mode) {
+  // 🚀 BỔ SUNG BIẾN MAX COUNT ĐỂ CẮT MẢNG
+  function _waTpoGroupData(dataList, from, to, mode, maxCount) {
       if (mode === 0) return [{ start: from, end: to }]; 
       const groups = new Map();
       for (let i = from; i < to; i++) {
@@ -1754,7 +1741,8 @@ function roundRect(ctx, x, y, w, h, r) {
           if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 });
           else groups.get(key).end = i + 1;
       }
-      return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-30);
+      // Giới hạn số lượng hiển thị dựa trên tham số cài đặt
+      return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-maxCount);
   }
 
   function _getXPixel(xAxis, dataIndex) {
@@ -1792,15 +1780,16 @@ function roundRect(ctx, x, y, w, h, r) {
   }
 
   kc.registerIndicator({
-      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.8',
+      name: 'WAVE_TPO', shortName: 'TPO', description: 'Time Price Opportunity SMART v4.9',
       category: 'wave_alpha', series: 'price', isStack: true,
       createTooltipDataSource: function() { return { name: 'TPO', calcParamsText: ' ', values: [] }; },
+      
       calcParams: [
           60, 70, 1, 0, 1, 0, 1, 1, 
           "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
           "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350",
           "#42A5F5", "#FF7043",
-          85, 20, 2, 1, 0, 10, 1, 70, 8, 1
+          85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30
       ],
       figures: [],
       calc: function(dataList) { return dataList.map(() => ({})); },
@@ -1813,13 +1802,13 @@ function roundRect(ctx, x, y, w, h, r) {
           if (!dataList || dataList.length === 0 || !bounding) return false;
 
           const p = indicator.calcParams;
-          if (p && p.length < 30) {
+          if (p && p.length < 31) { // 🚀 Chống lỗi Cache 31 thông số
               const defaults = [
                   60, 70, 1, 0, 1, 0, 1, 1, "#9C27B0", "#7B1FA2", "#F0B90B", "#FF9800", "#F0B90B",
                   "#BA68C8", "#FFD600", "#FFD600", "#26A69A", "#EF5350", "#42A5F5", "#FF7043",
-                  85, 20, 2, 1, 0, 10, 1, 70, 8, 1
+                  85, 20, 2, 1, 0, 10, 1, 70, 8, 1, 30
               ];
-              for (let i = 0; i < 30; i++) {
+              for (let i = 0; i < 31; i++) {
                   if (p[i] === undefined || (i >= 8 && i <= 19 && typeof p[i] !== 'string')) p[i] = defaults[i];
               }
           }
@@ -1834,17 +1823,22 @@ function roundRect(ctx, x, y, w, h, r) {
               pocW: Math.max(1, +(p[22] ?? 2)), vaW: Math.max(1, +(p[23] ?? 1)), vaStyle: Math.round(+(p[24] ?? 0)),
               fontSize: Math.max(8, +(p[25] ?? 10)), showLabels: +(p[26] ?? 1) === 1,
               fade: Math.max(0, +(p[27] ?? 70)) / 100, minLtrPx: Math.max(6, +(p[28] ?? 8)), verbosity: Math.round(+(p[29] ?? 1)),
+              
+              // 🚀 Lấy thông số Số lượng phiên hiển thị
+              maxProfiles: Math.max(1, Math.min(100, +(p[30] ?? 30))), 
           };
 
           const { from, to } = visibleRange;
           if (from >= to) return false;
 
           const lastClose = dataList[to - 1]?.close ?? 0;
-          const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.groupMode}_${lastClose}_${bounding.width}_${bounding.height}`;
+          // Ép biến maxProfiles vào CacheKey để Render lại ngay khi bạn kéo thanh trượt
+          const cacheKey = `${from}_${to}_${C.rowCount}_${C.vaPercent}_${C.groupMode}_${C.maxProfiles}_${lastClose}_${bounding.width}_${bounding.height}`;
           let profiles = window._waTpoCache.get(cacheKey);
 
           if (!profiles) {
-              const sessions = _waTpoGroupData(dataList, from, to, C.groupMode);
+              // Truyền C.maxProfiles vào hàm
+              const sessions = _waTpoGroupData(dataList, from, to, C.groupMode, C.maxProfiles);
 
               profiles = sessions.map((s, idx) => {
                   if (s.end - s.start <= 0) return null;
@@ -1903,7 +1897,6 @@ function roundRect(ctx, x, y, w, h, r) {
                   for (let i = C.rowCount - 1; i >= 0; i--) if (bins[i].inVA && !vahBin) vahBin = bins[i];
                   for (let i = 0;              i <  C.rowCount; i++) if (bins[i].inVA && !valBin) valBin = bins[i];
 
-                  // 🚀 FIX LỖI 1 TIẾNG IB BỊ LỐ THÀNH 2 TIẾNG (Dùng dấu < thay vì <=)
                   let ibHigh = -Infinity, ibLow = Infinity;
                   let sessionStartTime = dataList[s.start].timestamp || dataList[s.start].time || 0;
                   for (let i = s.start; i < s.end; i++) {
@@ -1944,7 +1937,7 @@ function roundRect(ctx, x, y, w, h, r) {
                       sessionIdx: idx, sessionTotal: sessions.length
                   };
 
-                  prof.shape        = _waTpoClassifyProfileShape(bins); // Chạy AI Quét Thung Lũng
+                  prof.shape        = _waTpoClassifyProfileShape(bins);
                   const exc         = _waTpoDetectExcessTail(bins); prof.excessTop = exc.top; prof.excessBottom = exc.bottom;
                   const poor        = _waTpoDetectPoorHighLow(bins); prof.poorHigh = poor.poorHigh; prof.poorLow = poor.poorLow;
                   prof.dayType      = _waTpoClassifyDayType(prof, dataList);
@@ -2092,7 +2085,7 @@ function roundRect(ctx, x, y, w, h, r) {
                   }
               });
           } catch (e) {
-              console.error('[WAVE_TPO v4.8]', e);
+              console.error('[WAVE_TPO v4.9]', e);
           } finally {
               ctx.restore();
           }
@@ -4049,13 +4042,11 @@ gradOS.addColorStop(1, 'rgba(255, 82, 82, 0.55)');
             { title: 'Bảng Màu Hiển Thị', keys: [6, 7, 8, 9, 10, 11, 12, 13] },
             { title: 'Kiểu Dáng & Nét Vẽ', keys: [14, 15, 16, 17, 18, 19, 20] }
         ];
-    } else if (isTPO) {
+      } else if (isTPO) {
         groups = [
-            // 8 biến cấu hình chính + 3 biến hiển thị số liệu AI (Đã map đủ 30 keys)
-            { title: '⚙️ Cấu Hình Thuật Toán', keys: [0, 1, 2, 3, 4, 5, 6, 7, 27, 28, 29] },
-            // Trả lại 12 biến Bảng Màu
+            // Thêm key 30 vào nhóm Cấu hình thuật toán
+            { title: '⚙️ Cấu Hình Thuật Toán', keys: [0, 1, 2, 3, 4, 5, 6, 7, 27, 28, 29, 30] },
             { title: '🎨 Bảng Màu Giao Dịch', keys: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] },
-            // 7 biến cấu hình nét vẽ
             { title: '📏 Kiểu Nét & Độ Mờ', keys: [20, 21, 22, 23, 24, 25, 26] }
         ];
     } else {
