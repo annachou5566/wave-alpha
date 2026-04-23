@@ -1819,7 +1819,13 @@ function roundRect(ctx, x, y, w, h, r) {
     category: 'wave_alpha',
     series: 'price',
     isStack: true,
-
+    createTooltipDataSource: function(args) {
+      return {
+          name: 'VPVR', 
+          calcParamsText: '', 
+          values: []
+      };
+  },
     calcParams: [
       60, 70, 30, 0, 0, 0,
       "#26A69A", "#EF5350", "#F0B90B", "#9575CD",
