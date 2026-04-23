@@ -3511,7 +3511,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     .btn-legal-accept { width: 100%; padding: 12px; }
 }
 
-/* Multiplier Path Styles */
+/* Multiplier Path Styles - Đã update vệt chạy lấp đầy (Progress Fill) */
 .multiplier-path-container {
     margin-top: 6px;
     width: 140px;
@@ -3527,60 +3527,47 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-radius: 2px;
 }
 
+/* Vệt màu chạy lấp đầy thanh */
+.path-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: var(--brand); 
+    box-shadow: 0 0 5px var(--brand);
+    z-index: 0; /* Nằm dưới các dấu chấm */
+    transition: width 0.5s ease-in-out;
+    border-radius: 2px;
+}
+
+/* Chấm mốc ngày */
 .path-dot {
     width: 6px;
     height: 6px;
     background: #333;
     border-radius: 50%;
     position: relative;
+    z-index: 1; /* Nổi lên trên vệt màu */
     transition: all 0.3s ease;
 }
 
+/* Ngày đã trôi qua */
+.path-dot.passed {
+    background: var(--brand);
+    opacity: 0.5; /* Mờ đi để biết là đã nhận hệ số xong */
+}
+
+/* Ngày hiện tại (Active) */
 .path-dot.active {
     background: var(--brand);
-    box-shadow: 0 0 8px var(--brand);
+    box-shadow: 0 0 10px var(--brand);
+    transform: scale(1.4); /* Phóng to nổi bật chấm của hôm nay */
 }
 
-.path-dot.passed {
-    background: #848e9c;
-}
-
-/* Cây cờ cho ngày hiện tại */
-.path-flag {
-    position: absolute;
-    top: -18px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    animation: flagFloat 2s infinite ease-in-out;
-}
-
-.path-flag i {
-    color: var(--brand);
-    font-size: 10px;
-}
-
-.path-flag .mul-tag {
-    background: var(--brand);
-    color: #000;
-    font-size: 8px;
-    font-weight: 800;
-    padding: 0px 3px;
-    border-radius: 2px;
-    line-height: 1;
-    margin-bottom: 1px;
-}
-
-@keyframes flagFloat {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-3px); }
-}
-
-/* Tooltip cho từng chấm */
+/* Text hiển thị hệ số (1.4x, 1.3x...) ở dưới chấm */
 .path-dot::after {
     content: attr(data-mul);
     position: absolute;

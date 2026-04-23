@@ -24,13 +24,18 @@ function renderMultiplierPath(c) {
         const dayIdx = index + 1;
         let statusClass = dayIdx < currentDay ? 'passed' : (dayIdx === currentDay ? 'active' : '');
         
-        // ĐÃ BỎ CÂY CỜ (.path-flag), CHỈ GIỮ LẠI CHẤM
         dotsHtml += `<div class="path-dot ${statusClass}" data-mul="${mul}x"></div>`;
     });
 
+    // TÍNH TOÁN % LẤP ĐẦY CHO VỆT MÀU CHẠY (Có 6 đoạn đường giữa 7 điểm)
+    let fillPercentage = ((currentDay - 1) / 6) * 100;
+
     return `
         <div class="multiplier-path-container" title="Lộ trình Early Bird (Ngày ${currentDay})">
-            <div class="multiplier-path-line">${dotsHtml}</div>
+            <div class="multiplier-path-line">
+                <div class="path-fill" style="width: ${fillPercentage}%"></div>
+                ${dotsHtml}
+            </div>
         </div>`;
 }
 
