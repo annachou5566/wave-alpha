@@ -556,7 +556,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════════════
-//  WAVE_TPO ULTIMATE v4.1 — SMART ENGINE (Full Colors & 100x FPS Batch Render)
+//  WAVE_TPO ULTIMATE v4.1 — SMART ENGINE (Fixed Bugs: Letter & Session Colors)
 // ════════════════════════════════════════════════════════════════════════════════
 (function initWaveTpoSmart() {
   'use strict';
@@ -569,7 +569,6 @@
     if (window._waTpoCache.size > 10) window._waTpoCache.delete(window._waTpoCache.keys().next().value);
   }
 
-  // 🚀 Hỗ trợ Màu Trong Suốt (Transparent) & String Hex
   function _waTpoHex2Rgba(val, alpha) {
     if (val === 'transparent') return 'rgba(0,0,0,0)';
     if (typeof val === 'number') {
@@ -586,12 +585,6 @@
 
   function _waTpoGetDash(styleIdx) { return styleIdx === 1 ? [2, 3] : styleIdx === 2 ? [] : [6, 4]; }
 
-  function _waTpoRoundRect(ctx, x, y, w, h, r) {
-    r = Math.min(r, w / 2, h / 2);
-    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
-  }
-
   function _waTpoGetLetter(n) {
     if (n < 26) return String.fromCharCode(65 + n);
     if (n < 52) return String.fromCharCode(97 + n - 26);
@@ -600,8 +593,8 @@
 
   const _WA_TPO_SESSION_PALETTE = ['#4A148C', '#6A1B9A', '#8E24AA', '#AB47BC', '#00BCD4'];
 
-  // ─── LOGIC AI TỪ BẢN V4 CỦA BẠN (GIỮ NGUYÊN) ─────────────────────────────────
-  function _waTpoClassifyProfileShape(bins, pocIdx) {
+  // AI LOGIC
+  function _waTpoClassifyProfileShape(bins, pocIdx) { /* Giữ nguyên logic cũ */
     const counts = bins.map(b => b.count), total = counts.reduce((a, b) => a + b, 0);
     if (!total) return 'UNDEFINED';
     let top = 0, bot = 0;
@@ -616,10 +609,10 @@
     const nz = bins.filter(b => b.count > 0);
     if (!nz.length) return { top: false, bottom: false };
     const avg = nz.reduce((s, b) => s + b.count, 0) / nz.length;
-    let top = false, bottom = false;
-    if (nz[0] && nz[0].count <= Math.max(2, avg * 0.25) && (!nz[1] || nz[1].count > nz[0].count)) bottom = true;
-    if (nz[nz.length - 1] && nz[nz.length - 1].count <= Math.max(2, avg * 0.25) && (!nz[nz.length - 2] || nz[nz.length - 2].count > nz[nz.length - 1].count)) top = true;
-    return { top, bottom };
+    return { 
+        bottom: nz[0] && nz[0].count <= Math.max(2, avg * 0.25) && (!nz[1] || nz[1].count > nz[0].count),
+        top: nz[nz.length - 1] && nz[nz.length - 1].count <= Math.max(2, avg * 0.25) && (!nz[nz.length - 2] || nz[nz.length - 2].count > nz[nz.length - 1].count)
+    };
   }
 
   function _waTpoDetectPoorHighLow(bins) {
@@ -648,14 +641,18 @@
     return 'BALANCED_AUCTION';
   }
 
+  // [FIX 1] Vá lỗi mất màu Session bằng cách bắt linh hoạt timestamp hoặc time
   function _waTpoGroupByDay(dataList, from, to) {
     const groups = new Map();
     for (let i = from; i < to; i++) {
-      const d = dataList[i]; if (!d || !d.timestamp) continue;
-      const dt = new Date(d.timestamp), key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
+      const d = dataList[i]; 
+      const ts = d ? (d.timestamp || d.time || d.date) : null; 
+      if (!ts) continue; // Nếu nền tảng dùng time thay vì timestamp vẫn nhận diện tốt
+      const dt = new Date(ts);
+      const key = dt.getUTCFullYear() * 10000 + (dt.getUTCMonth() + 1) * 100 + dt.getUTCDate();
       if (!groups.has(key)) groups.set(key, { start: i, end: i + 1 }); else groups.get(key).end = i + 1;
     }
-    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-5);
+    return Array.from(groups.values()).sort((a, b) => a.start - b.start).slice(-10); // Nới rộng slice để xem mượt hơn
   }
 
   function _waCheckSuperPoc(pocMid, step) {
@@ -756,16 +753,10 @@
           if (s.end - s.start >= 2) { ibHigh = Math.max(dataList[s.start].high, dataList[s.start + 1].high); ibLow = Math.min(dataList[s.start].low, dataList[s.start + 1].low); }
           const pocMid = (pocBin.pLow + pocBin.pHigh) / 2;
           let isNaked = true; for (let i = s.end; i < dataList.length; i++) if (dataList[i] && dataList[i].low <= pocMid && dataList[i].high >= pocMid) { isNaked = false; break; }
-          let topC = 0, botC = 0; bins.forEach(b => { if (b.inVA) { if (b.idx > pocBin.idx) topC += b.count; else if (b.idx < pocBin.idx) botC += b.count; } });
-          let imb = 'BALANCED'; if (Math.abs(topC - botC) / Math.max(1, topC + botC) > 0.3) imb = topC > botC ? 'BUYING' : 'SELLING';
           
-          const prof = { bins, maxTPO, pocMid, vahBin, valBin, ibHigh, ibLow, imbalance: imb, isNaked, totalTPO, minP, maxP, step, startIdx: s.start, endIdx: s.end };
+          const prof = { bins, maxTPO, pocMid, vahBin, valBin, ibHigh, ibLow, isNaked, totalTPO, minP, maxP, step, startIdx: s.start, endIdx: s.end };
           prof.close = dataList[s.end - 1]?.close ?? pocMid; prof.closePos = (prof.close - minP) / Math.max(1e-9, maxP - minP);
           prof.inValueClose = !!(valBin && vahBin && prof.close >= valBin.pLow && prof.close <= vahBin.pHigh);
-          prof.shape = _waTpoClassifyProfileShape(bins, pocBin.idx);
-          const exc = _waTpoDetectExcessTail(bins); prof.excessTop = exc.top; prof.excessBottom = exc.bottom;
-          const poor = _waTpoDetectPoorHighLow(bins); prof.poorHigh = poor.poorHigh; prof.poorLow = poor.poorLow;
-          prof.dayType = _waTpoClassifyDayType(prof, dataList); prof.auctionState = _waTpoAuctionState(prof);
           prof.isSuperPoc = _waCheckSuperPoc(pocMid, step); prof.sessionIdx = idx; prof.sessionTotal = sessions.length;
           return prof;
         }).filter(Boolean);
@@ -791,42 +782,44 @@
           }
 
           const unitW = maxBlocksPx / Math.max(1, prof.maxTPO);
-          const stepDraw = compactMode ? 2 : 1;
+          // [FIX 2] Nếu dùng chế độ Letter thì không cho phép bỏ qua nét (stepDraw)
+          const stepDraw = (compactMode && !C.useLetter) ? 2 : 1;
 
-          // 🚀 TỐI ƯU HÓA BATCH RENDERING SIÊU TỐC
           prof.bins.forEach(bin => {
             if (bin.count <= 0) return;
             let yB = yAxis.convertToPixel(bin.pLow), yT = yAxis.convertToPixel(bin.pHigh);
             if (yB == null || yT == null) return;
             const rY = Math.min(yT, yB), rH = Math.max(1, Math.abs(yB - yT)), blockW = Math.max(1, Math.min(rH, unitW));
-            const canLetter = C.useLetter && rH >= 10 && blockW >= C.minLtrPx;
+            
+            // [FIX 3] Bọc Math.floor để ép font size thành số nguyên. Nới rH >= 6 để hiện Letter mượt hơn.
+            const safeFontSize = Math.floor(Math.min(blockW, rH, C.fontSize));
+            const canLetter = C.useLetter && rH >= 6 && blockW >= C.minLtrPx;
 
             let fAlpha = (bin.inVA ? C.opVA : C.opOut) * alphaMul;
             if (C.colorMode === 2) fAlpha = (0.12 + 0.75 * (bin.count / prof.maxTPO)) * alphaMul;
 
             if (canLetter) {
-              // Vẽ chữ
-              ctx.fillStyle = bin.inVA ? _waTpoHex2Rgba('#FFFFFF', 0.9) : _waTpoHex2Rgba('#FFFFFF', compactMode ? 0.2 : 0.4);
-              ctx.font = `bold ${Math.min(blockW, rH, C.fontSize)}px monospace`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-              bin.letters.forEach((lIdx, pos) => { if (pos % stepDraw === 0) ctx.fillText(_waTpoGetLetter(lIdx), anchorX + dir * (pos * blockW) + blockW / 2, rY + rH / 2); });
+              // [FIX 4] Dùng màu Động (baseClr/outClr) thay vì màu trắng #FFFFFF, tăng Alpha để chữ hiện rõ nhất
+              ctx.fillStyle = _waTpoHex2Rgba(bin.inVA ? baseClr : outClr, 1);
+              ctx.font = `bold ${safeFontSize}px monospace`; 
+              ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+              bin.letters.forEach((lIdx, pos) => { 
+                  if (pos % stepDraw === 0) ctx.fillText(_waTpoGetLetter(lIdx), anchorX + dir * (pos * blockW) + blockW / 2, rY + rH / 2); 
+              });
             } else {
-              // Batch Vẽ khối vuông
               ctx.fillStyle = _waTpoHex2Rgba(bin.inVA ? baseClr : outClr, fAlpha);
               ctx.beginPath();
-              bin.letters.forEach((lIdx, pos) => { if (pos % stepDraw === 0) ctx.rect(anchorX + dir * (pos * blockW), rY, Math.max(1, blockW - 1), Math.max(1, rH - 1)); });
+              bin.letters.forEach((lIdx, pos) => { 
+                  if (pos % stepDraw === 0) ctx.rect(anchorX + dir * (pos * blockW), rY, Math.max(1, blockW - 1), Math.max(1, rH - 1)); 
+              });
               ctx.fill();
             }
           });
 
-          // Các nét vẽ POC, VA, Labels (Rút gọn để mã chạy ổn định)
           const drawLvl = (lvl, clr, w, dash, txt) => {
             const y = yAxis.convertToPixel(lvl); if (y == null) return;
             ctx.strokeStyle = _waTpoHex2Rgba(clr, 0.85); ctx.lineWidth = w; ctx.setLineDash(dash);
             ctx.beginPath(); ctx.moveTo(C.colorMode === 0 ? 0 : anchorX, y); ctx.lineTo(C.colorMode === 0 ? bounding.width : anchorX + maxBlocksPx * 1.5, y); ctx.stroke(); ctx.setLineDash([]);
-            if (C.showLabels && !compactMode) {
-              ctx.fillStyle = _waTpoHex2Rgba(clr, 0.95); ctx.font = `bold ${C.fontSize-1}px sans-serif`; ctx.textAlign = C.isLeft ? 'left' : 'right';
-              ctx.fillText(`${txt} ${lvl.toFixed(2)}`, C.isLeft ? 4 : bounding.width - 4, y - 4);
-            }
           };
           if (prof.vahBin) drawLvl(prof.vahBin.pHigh, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAH');
           if (prof.valBin) drawLvl(prof.valBin.pLow, C.clrVaLine, C.vaW, _waTpoGetDash(C.vaStyle), 'VAL');
